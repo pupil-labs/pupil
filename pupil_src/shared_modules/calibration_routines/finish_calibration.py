@@ -72,13 +72,13 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             # right now we solve using a few permutations of K
             smallest_residual = 1000
             scales = list(np.linspace(0.7,1.4,20))
-            K = camera_intrinsics["camera_matrix"]
+            K = np.asarray(camera_intrinsics["camera_matrix"])
 
             for s in scales:
                 scale = np.ones(K.shape)
                 scale[0,0] *= s
                 scale[1,1] *= s
-                camera_intrinsics["camera_matrix"] = K*scale
+                camera_intrinsics["camera_matrix"] = (K*scale).tolist()
 
                 ref_dir, gaze0_dir, gaze1_dir = calibrate.preprocess_3d_data(matched_binocular_data,
                                                 camera_intrinsics = camera_intrinsics )
@@ -171,10 +171,10 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                                     'eye_camera_to_world_matrix0':eye_camera_to_world_matrix0,
                                     'eye_camera_to_world_matrix1':eye_camera_to_world_matrix1 ,
                                     'camera_intrinsics': camera_intrinsics ,
-                                    'cal_points_3d': points,
-                                    'cal_ref_points_3d': points_a,
-                                    'cal_gaze_points0_3d': points_b,
-                                    'cal_gaze_points1_3d': points_c})
+                                    'cal_points_3d': [p.tolist() for p in points],
+                                    'cal_ref_points_3d': [p.tolist() for p in points_a],
+                                    'cal_gaze_points0_3d': [p.tolist() for p in points_b],
+                                    'cal_gaze_points1_3d': [p.tolist() for p in points_c]})
 
 
         elif matched_monocular_data:
@@ -184,12 +184,12 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             # right now we solve using a few permutations of K
             smallest_residual = 1000
             scales = list(np.linspace(0.7,1.4,20))
-            K = camera_intrinsics["camera_matrix"]
+            K = np.asarray(camera_intrinsics["camera_matrix"])
             for s in scales:
                 scale = np.ones(K.shape)
                 scale[0,0] *= s
                 scale[1,1] *= s
-                camera_intrinsics["camera_matrix"] = K*scale
+                camera_intrinsics["camera_matrix"] = (K*scale).tolist()
                 ref_dir , gaze_dir, _ = calibrate.preprocess_3d_data(matched_monocular_data,
                                                 camera_intrinsics = camera_intrinsics )
                 # save_object((ref_dir,gaze_dir),os.path.join(g_pool.user_dir, "testdata"))
@@ -278,9 +278,9 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             g_pool.plugins.add(Vector_Gaze_Mapper,args=
                 {'eye_camera_to_world_matrix':eye_camera_to_world_matrix ,
                 'camera_intrinsics': camera_intrinsics ,
-                'cal_points_3d': points_in_world,
-                'cal_ref_points_3d': points_a,
-                'cal_gaze_points_3d': points_b,
+                'cal_points_3d': [p.tolist() for p in points_in_world],
+                'cal_ref_points_3d': [p.tolist() for p in points_a],
+                'cal_gaze_points_3d': [p.tolist() for p in points_b],
                 'gaze_distance':500})
 
         else:

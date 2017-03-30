@@ -32,7 +32,7 @@ cdef class Detector_2D:
     cdef Detector2D* thisptr
     cdef unsigned char[:,:,:] debugImage
 
-    cdef dict detectProperties
+    cdef object detectProperties
     cdef bint windowShouldOpen, windowShouldClose
     cdef object _window
     cdef object menu
@@ -49,7 +49,7 @@ cdef class Detector_2D:
         self.windowShouldOpen = False
         self.windowShouldClose = False
         self.gPool = g_pool
-        self.detectProperties = settings or {}
+        self.detectProperties = settings._asdict_strict() if settings else {}
         self.coarseDetectionPreviousWidth = -1
         self.coarseDetectionPreviousPosition =  (0,0)
         if not self.detectProperties:

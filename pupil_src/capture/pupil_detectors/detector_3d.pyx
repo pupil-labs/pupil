@@ -35,7 +35,7 @@ cdef class Detector_3D:
     cdef Detector2D* detector2DPtr
     cdef EyeModelFitter *detector3DPtr
 
-    cdef dict detectProperties2D, detectProperties3D
+    cdef object detectProperties2D, detectProperties3D
     cdef object menu2D, menu3D
     cdef object gPool
     cdef object debugVisualizer3D
@@ -59,8 +59,8 @@ cdef class Detector_3D:
         #debug window
         self.debugVisualizer3D = Eye_Visualizer(g_pool ,self.detector3DPtr.getFocalLength() )
         self.gPool = g_pool
-        self.detectProperties2D = settings['2D_Settings'] if settings else {}
-        self.detectProperties3D = settings['3D_Settings'] if settings else {}
+        self.detectProperties2D = settings['2D_Settings']._asdict_strict() if settings else {}
+        self.detectProperties3D = settings['3D_Settings']._asdict_strict() if settings else {}
 
         if not self.detectProperties2D:
             self.detectProperties2D["coarse_detection"] = True
