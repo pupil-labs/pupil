@@ -95,7 +95,7 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-assert pyglui_version >= '1.3'
+assert pyglui_version >= '1.2'
 
 # since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
@@ -237,7 +237,7 @@ def session(rec_dir):
     cygl.utils.init()
 
     # load pupil_positions, gaze_positions
-    pupil_data = load_object(pupil_data_path)
+    pupil_data = load_object(pupil_data_path, use_mutable=False)
     pupil_list = pupil_data['pupil_positions']
     gaze_list = pupil_data['gaze_positions']
     g_pool.pupil_data = pupil_data
@@ -391,8 +391,8 @@ def session(rec_dir):
     g_pool.gui.append(g_pool.main_menu)
 
     # we always load these plugins
-    system_plugins = ('Trim_Marks', {}), ('Seek_Bar', {})
-    default_plugins = ('Log_Display', {}), ('Vis_Scan_Path', {}), ('Vis_Polyline', {}), ('Vis_Circle', {}), ('Video_Export_Launcher', {})
+    system_plugins = [('Trim_Marks', {}), ('Seek_Bar', {})]
+    default_plugins = [('Log_Display', {}), ('Vis_Scan_Path', {}), ('Vis_Polyline', {}), ('Vis_Circle', {}), ('Video_Export_Launcher', {})]
     previous_plugins = session_settings.get('loaded_plugins', default_plugins)
     g_pool.notifications = []
     g_pool.delayed_notifications = {}

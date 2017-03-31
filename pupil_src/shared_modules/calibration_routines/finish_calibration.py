@@ -39,8 +39,8 @@ def finish_calibration(g_pool,pupil_list,ref_list):
     camera_intrinsics = load_camera_calibration(g_pool)
 
     # match eye data and check if biocular and or monocular
-    pupil0 = [p for p in pupil_list if p['id']==0]
-    pupil1 = [p for p in pupil_list if p['id']==1]
+    pupil0 = [p for p in pupil_list if p['id'] == 0]
+    pupil1 = [p for p in pupil_list if p['id'] == 1]
 
     #TODO unify this and don't do both
     matched_binocular_data = calibrate.closest_matches_binocular(ref_list,pupil_list)
@@ -78,7 +78,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 scale = np.ones(K.shape)
                 scale[0,0] *= s
                 scale[1,1] *= s
-                camera_intrinsics["camera_matrix"] = (K*scale).tolist()
+                camera_intrinsics["camera_matrix"] = K*scale
 
                 ref_dir, gaze0_dir, gaze1_dir = calibrate.preprocess_3d_data(matched_binocular_data,
                                                 camera_intrinsics = camera_intrinsics )
@@ -140,12 +140,12 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 line_a = np.array([0,0,0]) , np.array(a) #observation as line
                 line_b = toWorld0(np.array([0,0,0])) , toWorld0(b)  #eye0 observation line in world coords
                 line_c = toWorld1(np.array([0,0,0])) , toWorld1(c)  #eye1 observation line in world coords
-                close_point_a,_ =  math_helper.nearest_linepoint_to_point( point , line_a )
-                close_point_b,_ =  math_helper.nearest_linepoint_to_point( point , line_b )
-                close_point_c,_ =  math_helper.nearest_linepoint_to_point( point , line_c )
-                points_a.append(close_point_a)
-                points_b.append(close_point_b)
-                points_c.append(close_point_c)
+                close_point_a, _ = math_helper.nearest_linepoint_to_point(point, line_a)
+                close_point_b, _ = math_helper.nearest_linepoint_to_point(point, line_b)
+                close_point_c, _ = math_helper.nearest_linepoint_to_point(point, line_c)
+                points_a.append(close_point_a.tolist())
+                points_b.append(close_point_b.tolist())
+                points_c.append(close_point_c.tolist())
 
 
             # we need to take the sphere position into account
@@ -166,15 +166,16 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             eye_camera_to_world_matrix1[:3,:3] = R_world1
             eye_camera_to_world_matrix1[:3,3:4] = np.reshape(camera_translation, (3,1) )
 
+            camera_intrinsics['camera_matrix'] = camera_intrinsics['camera_matrix'].tolist()
             g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
                                                          'name': 'Binocular_Vector_Gaze_Mapper',
-                                                         'args': {'eye_camera_to_world_matrix0': eye_camera_to_world_matrix0,
-                                                                  'eye_camera_to_world_matrix1': eye_camera_to_world_matrix1 ,
-                                                                  'camera_intrinsics': camera_intrinsics ,
-                                                                  'cal_points_3d': [p.tolist() for p in points],
-                                                                  'cal_ref_points_3d': [p.tolist() for p in points_a],
-                                                                  'cal_gaze_points0_3d': [p.tolist() for p in points_b],
-                                                                  'cal_gaze_points1_3d': [p.tolist() for p in points_c]}})
+                                                         'args': {'eye_camera_to_world_matrix0': eye_camera_to_world_matrix0.tolist(),
+                                                                  'eye_camera_to_world_matrix1': eye_camera_to_world_matrix1.tolist(),
+                                                                  'camera_intrinsics': camera_intrinsics,
+                                                                  'cal_points_3d': points,
+                                                                  'cal_ref_points_3d': points_a,
+                                                                  'cal_gaze_points0_3d': points_b,
+                                                                  'cal_gaze_points1_3d': points_c}})
 
         elif matched_monocular_data:
             method = 'monocular 3d model'
@@ -188,7 +189,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 scale = np.ones(K.shape)
                 scale[0,0] *= s
                 scale[1,1] *= s
-                camera_intrinsics["camera_matrix"] = (K*scale).tolist()
+                camera_intrinsics["camera_matrix"] = K*scale
                 ref_dir , gaze_dir, _ = calibrate.preprocess_3d_data(matched_monocular_data,
                                                 camera_intrinsics = camera_intrinsics )
                 # save_object((ref_dir,gaze_dir),os.path.join(g_pool.user_dir, "testdata"))
@@ -246,7 +247,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             def toWorld(p):
                 return np.dot(R_eye, p)+np.array(t_eye)
 
-            points_in_world = [toWorld(p) for p in points_in_eye]
+            points_in_world = [toWorld(p).tolist() for p in points_in_eye]
 
             points_a = [] #world coords
             points_b = [] #cam2 coords
@@ -254,12 +255,12 @@ def finish_calibration(g_pool,pupil_list,ref_list):
 
                 line_a = np.array([0,0,0]) , np.array(a) #observation as line
                 line_b = toWorld(np.array([0,0,0])) , toWorld(b)  #cam2 observation line in cam1 coords
-                close_point_a,_ =  math_helper.nearest_linepoint_to_point( point , line_a )
-                close_point_b,_ =  math_helper.nearest_linepoint_to_point( point , line_b )
+                close_point_a, _ = math_helper.nearest_linepoint_to_point(point, line_a)
+                close_point_b, _ = math_helper.nearest_linepoint_to_point(point, line_b)
                 # print np.linalg.norm(point-close_point_a),np.linalg.norm(point-close_point_b)
 
-                points_a.append(close_point_a)
-                points_b.append(close_point_b)
+                points_a.append(close_point_a.tolist())
+                points_b.append(close_point_b.tolist())
 
 
             # we need to take the sphere position into account
@@ -273,14 +274,16 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             eye_camera_to_world_matrix[:3,:3] = R_eye
             eye_camera_to_world_matrix[:3,3:4] = np.reshape(camera_translation, (3,1) )
 
+            camera_intrinsics['camera_matrix'] = camera_intrinsics['camera_matrix'].tolist()
+            print(camera_intrinsics)
             g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
                                                          'name': 'Vector_Gaze_Mapper',
                                                          'args': {'eye_camera_to_world_matrix': eye_camera_to_world_matrix.tolist(),
                                                                   'camera_intrinsics': camera_intrinsics,
-                                                                  'cal_points_3d': [p.tolist() for p in points_in_world],
-                                                                  'cal_ref_points_3d': [p.tolist() for p in points_a],
-                                                                  'cal_gaze_points_3d': [p.tolist() for p in points_b],
-                                                                  'gaze_distance':500}})
+                                                                  'cal_points_3d': points_in_world,
+                                                                  'cal_ref_points_3d': points_a,
+                                                                  'cal_gaze_points_3d': points_b,
+                                                                  'gaze_distance': 500}})
 
         else:
             logger.error(not_enough_data_error_msg)

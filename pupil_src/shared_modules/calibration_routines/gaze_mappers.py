@@ -292,7 +292,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
     def __init__(self, g_pool, eye_camera_to_world_matrix0, eye_camera_to_world_matrix1 , camera_intrinsics , cal_points_3d = [],cal_ref_points_3d = [], cal_gaze_points0_3d = [], cal_gaze_points1_3d = [] ):
         super().__init__(g_pool)
 
-        self.eye_camera_to_world_matricies = np.asarray(eye_camera_to_world_matrix0), np.asrray(eye_camera_to_world_matrix1)
+        self.eye_camera_to_world_matricies = np.asarray(eye_camera_to_world_matrix0), np.asarray(eye_camera_to_world_matrix1)
         self.rotation_matricies = self.eye_camera_to_world_matricies[0][:3,:3],self.eye_camera_to_world_matricies[1][:3, :3]
         self.rotation_vectors = cv2.Rodrigues(self.eye_camera_to_world_matricies[0][:3,:3]  )[0] , cv2.Rodrigues( self.eye_camera_to_world_matricies[1][:3,:3])[0]
         self.translation_vectors  = self.eye_camera_to_world_matricies[0][:3, 3], self.eye_camera_to_world_matricies[1][:3, 3]
@@ -470,7 +470,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
         self.intersection_points_debug = []
 
     def get_init_dict(self):
-       return {'eye_camera_to_world_matrix0':self.eye_camera_to_world_matricies[0] ,'eye_camera_to_world_matrix1':self.eye_camera_to_world_matricies[1] ,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points0_3d':self.cal_gaze_points0_3d, 'cal_gaze_points1_3d':self.cal_gaze_points1_3d,  "camera_intrinsics":self.camera_intrinsics}
+       return {'eye_camera_to_world_matrix0':self.eye_camera_to_world_matricies[0].tolist() ,'eye_camera_to_world_matrix1':self.eye_camera_to_world_matricies[1].tolist() ,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points0_3d':self.cal_gaze_points0_3d, 'cal_gaze_points1_3d':self.cal_gaze_points1_3d,  "camera_intrinsics":self.camera_intrinsics}
 
 
     def deinit_gui(self):

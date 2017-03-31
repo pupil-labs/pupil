@@ -15,7 +15,7 @@ except ImportError:
     import pickle
 
 UnpicklingError = pickle.UnpicklingError
-from collections import namedtuple, Mapping
+from collections import namedtuple
 import msgpack
 import os
 import traceback as tb
@@ -48,14 +48,14 @@ class Persistent_Dict(dict):
         self.save()
 
 
-def load_legacy_object(file_path):
+def load_object_legacy(file_path):
     file_path = os.path.expanduser(file_path)
     with open(file_path, 'rb') as fh:
         data = pickle.load(fh, encoding='bytes')
     return data
 
 
-def save_legacy_object(object_, file_path):
+def save_object_legacy(object_, file_path):
     file_path = os.path.expanduser(file_path)
     with open(file_path, 'wb') as fh:
         pickle.dump(object_, fh, -1)
@@ -126,15 +126,16 @@ def _serialize_Immutable_Dict(obj):
     return obj
 
 
-def load_object(file_path):
+def load_object(file_path, use_mutable=True):
     file_path = os.path.expanduser(file_path)
+    obj_hook = None if use_mutable else create_Immutable_Dict
     with open(file_path, 'rb') as fh:
         try:
-            data = msgpack.unpack(fh, encoding='utf-8', use_list=False,
-                                  object_pairs_hook=create_Immutable_Dict)
+            data = msgpack.unpack(fh, encoding='utf-8', use_list=use_mutable,
+                                  object_pairs_hook=obj_hook)
         except Exception as e:
             logger.info('{} has a deprecated format. It will be upgraded automatically.'.format(os.path.split(file_path)[1]))
-            data = load_legacy_object(file_path)
+            data = load_object_legacy(file_path)
     return data
 
 
