@@ -50,7 +50,7 @@ class Offline_Pupil_Detection(Plugin):
 
         # Pupil Offline Detection
         timebase = Value(c_double, 0)
-        eyes_are_alive = Value(c_bool, 0), Value(c_bool, 0)
+        self.eyes_are_alive = Value(c_bool, 0), Value(c_bool, 0)
 
         logger.info('Starting eye process communication channel...')
         self.ipc_pub_url, self.ipc_sub_url, self.ipc_push_url = self.initialize_ipc()
@@ -61,23 +61,26 @@ class Offline_Pupil_Detection(Plugin):
 
         for eye_id in (0, 1):
             eye_vid = os.path.join(self.g_pool.rec_dir, 'eye{}.mp4'.format(eye_id))
-            timestamps_path = os.path.join(self.g_pool.rec_dir,
-                                           'eye{}_timestamps.npy'.format(eye_id))
-            self.eye_timestamps[eye_id] = list(np.load(timestamps_path))
-            self.detection_progress[str(eye_id)] = 0.
-            overwrite_cap_settings = 'File_Source', {
-                'source_path': eye_vid,
-                'timestamps': self.eye_timestamps[eye_id],
-                'timed_playback': False
-            }
-            eye_p = Process(target=eye, name='eye{}'.format(eye_id),
-                            args=(timebase, eyes_are_alive[eye_id],
-                                  self.ipc_pub_url, self.ipc_sub_url,
-                                  self.ipc_push_url, self.g_pool.user_dir,
-                                  self.g_pool.version, eye_id,
-                                  overwrite_cap_settings))
-            eye_p.start()
-            self.eye_processes[eye_id] = eye_p
+            try:
+                timestamps_path = os.path.join(self.g_pool.rec_dir,
+                                               'eye{}_timestamps.npy'.format(eye_id))
+                self.eye_timestamps[eye_id] = list(np.load(timestamps_path))
+                self.detection_progress[str(eye_id)] = 0.
+                overwrite_cap_settings = 'File_Source', {
+                    'source_path': eye_vid,
+                    'timestamps': self.eye_timestamps[eye_id],
+                    'timed_playback': False
+                }
+                eye_p = Process(target=eye, name='eye{}'.format(eye_id),
+                                args=(timebase, self.eyes_are_alive[eye_id],
+                                      self.ipc_pub_url, self.ipc_sub_url,
+                                      self.ipc_push_url, self.g_pool.user_dir,
+                                      self.g_pool.version, eye_id,
+                                      overwrite_cap_settings))
+                eye_p.start()
+                self.eye_processes[eye_id] = eye_p
+            except IOError:
+                continue
 
         if not self.eye_processes[0] and not self.eye_processes[1]:
             logger.error('No eye recordings forund. Unloading plugin...')
@@ -88,6 +91,8 @@ class Offline_Pupil_Detection(Plugin):
             topic, payload = self.data_sub.recv()
             self.pupil_positions.append(payload)
             self.update_progress(payload)
+        if not self.eyes_are_alive[0].value and not self.eyes_are_alive[1].value:
+            self.alive = False
 
     def update_progress(self, pupil_position):
         eye_id = pupil_position['id']
@@ -103,7 +108,17 @@ class Offline_Pupil_Detection(Plugin):
         for proc in self.eye_processes:
             if proc:
                 proc.join()
+        # close sockets before context is terminated
+        del self.data_sub
+        del self.eye_control
+        self.zmq_ctx.term()
         self.deinit_gui()
+
+    def redetect(self):
+        self.eye_control.notify({'subject': 'file_source.restart',
+                                 'source_path': os.path.join(self.g_pool.rec_dir, 'eye0.mp4')})
+        self.eye_control.notify({'subject': 'file_source.restart',
+                                 'source_path': os.path.join(self.g_pool.rec_dir, 'eye1.mp4')})
 
     def initialize_ipc(self):
         self.zmq_ctx = zmq.Context()
@@ -128,6 +143,14 @@ class Offline_Pupil_Detection(Plugin):
         pull_socket.bind(ipc_push_url)
         ipc_push_url = pull_socket.last_endpoint.decode('utf8').replace("0.0.0.0", "127.0.0.1")
 
+        def catchTerminatedContext(function):
+            def wrapped_func(*args, **kwargs):
+                try:
+                    function(*args, **kwargs)
+                except zmq.error.ContextTerminated as err:
+                    pass
+            return wrapped_func
+
         # Reliable msg dispatch to the IPC via push bridge.
         def pull_pub(ipc_pub_url, pull):
             ctx = zmq.Context.instance()
@@ -140,13 +163,13 @@ class Offline_Pupil_Detection(Plugin):
 
         # Starting communication threads:
         # A ZMQ Proxy Device serves as our IPC Backbone
-        ipc_backbone_thread = Thread(target=zmq.proxy, args=(xsub_socket, xpub_socket))
-        ipc_backbone_thread.setDaemon(True)
-        ipc_backbone_thread.start()
+        self.ipc_backbone_thread = Thread(target=catchTerminatedContext(zmq.proxy), args=(xsub_socket, xpub_socket))
+        self.ipc_backbone_thread.setDaemon(True)
+        self.ipc_backbone_thread.start()
 
-        pull_pub = Thread(target=pull_pub, args=(ipc_pub_url, pull_socket))
-        pull_pub.setDaemon(True)
-        pull_pub.start()
+        self.pull_pub = Thread(target=catchTerminatedContext(pull_pub), args=(ipc_pub_url, pull_socket))
+        self.pull_pub.setDaemon(True)
+        self.pull_pub.start()
 
         del xsub_socket, xpub_socket, pull_socket
         return ipc_pub_url, ipc_sub_url, ipc_push_url
@@ -166,7 +189,12 @@ class Offline_Pupil_Detection(Plugin):
                 progress_slider.read_only = True
                 self.menu.append(progress_slider)
 
+        self.menu.append(ui.Button('Redetect', self.redetect))
+
     def deinit_gui(self):
         if hasattr(self, 'menu'):
             self.g_pool.gui.remove(self.menu)
             self.menu = None
+
+    def get_init_dict(self):
+        return {}
