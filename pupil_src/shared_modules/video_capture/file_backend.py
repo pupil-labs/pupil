@@ -91,7 +91,6 @@ class File_Source(Base_Source):
 
         # minimal attribute set
         self._initialised = True
-        self.source_path  = None
         self.slowdown     = 0.0
         self.source_path  = source_path
         self.timestamps   = None
@@ -294,6 +293,10 @@ class File_Source(Base_Source):
             self.display_time = 0
             self.target_frame_idx = seek_pos
 
+    def on_notify(self, notification):
+        if notification['subject'] == 'file_source.restart' and notification.get('source_path') == self.source_path:
+            self._initialised = True
+            self.seek_to_frame(0)
 
     def init_gui(self):
         from pyglui import ui
