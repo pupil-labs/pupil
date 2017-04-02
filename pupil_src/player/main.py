@@ -95,7 +95,7 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-assert pyglui_version >= '1.0'
+assert pyglui_version >= '1.3'
 
 # since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
@@ -156,12 +156,17 @@ def session(rec_dir):
 
     # Callback functions
     def on_resize(window, w, h):
-        g_pool.gui.update_window(w, h)
-        g_pool.gui.collect_menus()
-        graph.adjust_size(w, h)
-        gl_utils.adjust_gl_view(w, h)
-        for p in g_pool.plugins:
-            p.on_window_resize(window, w, h)
+        if gl_utils.is_window_visible(window):
+            hdpi_factor = float(glfwGetFramebufferSize(window)[0] / glfwGetWindowSize(window)[0])
+            g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
+            g_pool.gui.update_window(w, h)
+            g_pool.gui.collect_menus()
+            for g in g_pool.graphs:
+                g.scale = hdpi_factor
+                g.adjust_window_size(w, h)
+            gl_utils.adjust_gl_view(w, h)
+            for p in g_pool.plugins:
+                p.on_window_resize(window, w, h)
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key, scancode, action, mods)
@@ -236,6 +241,10 @@ def session(rec_dir):
     glfwMakeContextCurrent(main_window)
     cygl.utils.init()
 
+    def set_scale(new_scale):
+        g_pool.gui_user_scale = new_scale
+        on_resize(main_window, *glfwGetFramebufferSize(main_window))
+
     # load pupil_positions, gaze_positions
     pupil_data = load_object(pupil_data_path)
     pupil_list = pupil_data['pupil_positions']
@@ -277,10 +286,6 @@ def session(rec_dir):
             logger.warning("End of video - restart at beginning.")
         g_pool.play = new_state
 
-    def set_scale(new_scale):
-        g_pool.gui.scale = new_scale
-        g_pool.gui.collect_menus()
-
     def set_data_confidence(new_confidence):
         g_pool.min_data_confidence = new_confidence
         notification = {'subject': 'min_data_confidence_changed'}
@@ -317,10 +322,10 @@ def session(rec_dir):
         g_pool.notifications.append(notification)
 
     g_pool.gui = ui.UI()
-    g_pool.gui.scale = session_settings.get('gui_scale', 1)
+    g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
     g_pool.main_menu = ui.Scrolling_Menu("Settings", pos=(-350, 20), size=(300, 500))
     g_pool.main_menu.append(ui.Button("Close Pupil Player", lambda: glfwSetWindowShouldClose(main_window, True)))
-    g_pool.main_menu.append(ui.Slider('scale', g_pool.gui, setter=set_scale, step=.05, min=0.75, max=2.5, label='Interface Size'))
+    g_pool.main_menu.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.5, .75, 1., 1.5, 2.], label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: {}'.format(g_pool.version)))
     g_pool.main_menu.append(ui.Info_Text('Capture Version: {}'.format(meta_info['Capture Software Version'])))
     g_pool.main_menu.append(ui.Info_Text('Data Format Version: {}'.format(meta_info['Data Format Version'])))
@@ -407,8 +412,6 @@ def session(rec_dir):
     glfwSetCursorPosCallback(main_window, on_pos)
     glfwSetScrollCallback(main_window, on_scroll)
     glfwSetDropCallback(main_window, on_drop)
-    # trigger on_resize
-    on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
     g_pool.gui.configuration = session_settings.get('ui_config', {})
 
@@ -436,6 +439,10 @@ def session(rec_dir):
     pupil_graph.pos = (260, 110)
     pupil_graph.update_rate = 5
     pupil_graph.label = "Confidence: %0.2f"
+    g_pool.graphs = [cpu_graph, fps_graph, pupil_graph]
+
+    # trigger on_resize
+    on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
     while not glfwWindowShouldClose(main_window):
         # grab new frame
@@ -506,11 +513,9 @@ def session(rec_dir):
         for p in g_pool.plugins:
             p.gl_display()
 
-        graph.push_view()
         fps_graph.draw()
         cpu_graph.draw()
         pupil_graph.draw()
-        graph.pop_view()
         g_pool.gui.update()
 
         # present frames at appropriate speed
@@ -521,7 +526,7 @@ def session(rec_dir):
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['min_data_confidence'] = g_pool.min_data_confidence
-    session_settings['gui_scale'] = g_pool.gui.scale
+    session_settings['gui_scale'] = g_pool.gui_user_scale
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
@@ -570,7 +575,6 @@ def show_no_rec_window():
     glfwSetWindowPos(window, window_pos[0], window_pos[1])
     glfwSetDropCallback(window, on_drop)
 
-    gl_utils.adjust_gl_view(w, h)
     glfont = fontstash.Context()
     glfont.add_font('roboto', get_roboto_font_path())
     glfont.set_align_string(v_align="center", h_align="middle")
@@ -581,19 +585,24 @@ def show_no_rec_window():
     tip = '(Tip: You can drop a recording directory onto the app icon.)'
     # text = "Please supply a Pupil recording directory as first arg when calling Pupil Player."
     while not glfwWindowShouldClose(window):
+
+        fb_size = glfwGetFramebufferSize(window)
+        hdpi_factor = float(fb_size[0] / glfwGetWindowSize(window)[0])
+        gl_utils.adjust_gl_view(*fb_size)
+
         gl_utils.clear_gl_screen()
         glfont.set_blur(10.5)
         glfont.set_color_float((0.0, 0.0, 0.0, 1.))
-        glfont.set_size(w/25.)
-        glfont.draw_text(w/2, .3*h, text)
-        glfont.set_size(w/30.)
-        glfont.draw_text(w/2, .4*h, tip)
+        glfont.set_size(w/25.*hdpi_factor)
+        glfont.draw_text(w/2*hdpi_factor, .3*h*hdpi_factor, text)
+        glfont.set_size(w/30.*hdpi_factor)
+        glfont.draw_text(w/2*hdpi_factor, .4*h*hdpi_factor, tip)
         glfont.set_blur(0.96)
         glfont.set_color_float((1., 1., 1., 1.))
-        glfont.set_size(w/25.)
-        glfont.draw_text(w/2, .3*h, text)
-        glfont.set_size(w/30.)
-        glfont.draw_text(w/2, .4*h, tip)
+        glfont.set_size(w/25.*hdpi_factor)
+        glfont.draw_text(w/2*hdpi_factor, .3*h*hdpi_factor, text)
+        glfont.set_size(w/30.*hdpi_factor)
+        glfont.draw_text(w/2*hdpi_factor, .4*h*hdpi_factor, tip)
         glfwSwapBuffers(window)
         glfwPollEvents()
 
