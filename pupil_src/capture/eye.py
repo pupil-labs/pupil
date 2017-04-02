@@ -157,7 +157,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                 g_pool.gui.collect_menus()
                 for g in g_pool.graphs:
                     g.scale = hdpi_factor
-                    g.adjust_size(w, h)
+                    g.adjust_window_size(w, h)
                 adjust_gl_view(w, h)
                 glfw.glfwMakeContextCurrent(active_window)
 
@@ -571,10 +571,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                                             sharpness=1.)
 
                     # render graphs
-                    graph.push_view(*glfw.glfwGetFramebufferSize(main_window))
                     fps_graph.draw()
                     cpu_graph.draw()
-                    graph.pop_view()
 
                     # render GUI
                     g_pool.gui.update()

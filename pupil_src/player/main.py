@@ -163,7 +163,7 @@ def session(rec_dir):
             g_pool.gui.collect_menus()
             for g in g_pool.graphs:
                 g.scale = hdpi_factor
-                g.adjust_size(w, h)
+                g.adjust_window_size(w, h)
             gl_utils.adjust_gl_view(w, h)
             for p in g_pool.plugins:
                 p.on_window_resize(window, w, h)
@@ -513,11 +513,9 @@ def session(rec_dir):
         for p in g_pool.plugins:
             p.gl_display()
 
-        graph.push_view(*glfwGetFramebufferSize(main_window))
         fps_graph.draw()
         cpu_graph.draw()
         pupil_graph.draw()
-        graph.pop_view()
         g_pool.gui.update()
 
         # present frames at appropriate speed

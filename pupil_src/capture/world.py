@@ -181,7 +181,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             g_pool.gui.collect_menus()
             for g in g_pool.graphs:
                 g.scale = hdpi_factor
-                g.adjust_size(w, h)
+                g.adjust_window_size(w, h)
             gl_utils.adjust_gl_view(w, h)
             for p in g_pool.plugins:
                 p.on_window_resize(window, w, h)
@@ -489,10 +489,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             for p in g_pool.plugins:
                 p.gl_display()
 
-            graph.push_view(*glfw.glfwGetFramebufferSize(main_window))
             for g in g_pool.graphs:
                 g.draw()
-            graph.pop_view()
 
             g_pool.gui.update()
             glfw.glfwSwapBuffers(main_window)
