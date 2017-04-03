@@ -275,7 +275,6 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             eye_camera_to_world_matrix[:3,3:4] = np.reshape(camera_translation, (3,1) )
 
             camera_intrinsics['camera_matrix'] = camera_intrinsics['camera_matrix'].tolist()
-            print(camera_intrinsics)
             g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
                                                          'name': 'Vector_Gaze_Mapper',
                                                          'args': {'eye_camera_to_world_matrix': eye_camera_to_world_matrix.tolist(),
