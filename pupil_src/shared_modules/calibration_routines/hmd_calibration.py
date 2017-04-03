@@ -149,13 +149,23 @@ class HMD_Calibration(Calibration_Plugin):
             params1 = None
 
         if params0 and params1:
-            g_pool.plugins.add(Dual_Monocular_Gaze_Mapper,args={'params0':params0,'params1':params1})
+            g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
+                                                         'name': 'Dual_Monocular_Gaze_Mapper',
+                                                         'args': {'params_eye0': params_eye0,
+                                                                  'params_eye1': params_eye1}})
             method = 'dual monocular polynomial regression'
         elif params0:
             g_pool.plugins.add(Monocular_Gaze_Mapper,args={'params':params0})
+            g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
+                                                         'name': 'Monocular_Gaze_Mapper',
+                                                         'args': {'params': params0,
+                                                                  }})
             method = 'monocular polynomial regression'
         elif params1:
-            g_pool.plugins.add(Monocular_Gaze_Mapper,args={'params':params1})
+            g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
+                                                         'name': 'Monocular_Gaze_Mapper',
+                                                         'args': {'params': params1,
+                                                                  }})
             method = 'monocular polynomial regression'
         else:
             logger.error('Calibration failed for both eyes. No data found')
@@ -230,9 +240,6 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
         self.notify_all({'subject':'calibration.started'})
         self.pupil_list = []
         self.ref_list = []
-
-
-
 
 
     def stop(self):
@@ -327,6 +334,7 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
         points_a = points #world coords
         points_b = [] #eye0 coords
         points_c = [] #eye1 coords
+
         for a,b,c,point in zip(points , eye0['observations'],eye1['observations'],points):
             line_a = np.array([0,0,0]) , np.array(a) #observation as line
             line_b = toWorld0(np.array([0,0,0])) , toWorld0(b)  #eye0 observation line in world coords
@@ -359,16 +367,6 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
 
         scene_dummy_cam = idealized_camera_calibration((1280,720), 700)
 
-
-        self.g_pool.plugins.add(Binocular_Vector_Gaze_Mapper,args={
-                                'eye_camera_to_world_matrix0':eye_camera_to_world_matrix0,
-                                'eye_camera_to_world_matrix1':eye_camera_to_world_matrix1 ,
-                                'camera_intrinsics': scene_dummy_cam ,
-                                'cal_points_3d': points,
-                                'cal_ref_points_3d': [],
-                                'cal_gaze_points0_3d': points_b,
-                                'cal_gaze_points1_3d': points_c})
-
         method = 'binocular 3d model'
         ts = g_pool.get_timestamp()
         g_pool.active_calibration_plugin.notify_all({'subject':'calibration.successful','method':method,'timestamp': ts, 'record':True})
@@ -377,3 +375,15 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
         # this is only used by show calibration. TODO: rewrite show calibraiton.
         user_calibration_data = {'timestamp': ts,'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
         save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
+
+
+        camera_intrinsics['camera_matrix'] = camera_intrinsics['camera_matrix'].tolist()
+        self.g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
+                                                         'name': 'Binocular_Vector_Gaze_Mapper',
+                                                         'args': {'eye_camera_to_world_matrix0': eye_camera_to_world_matrix0.tolist(),
+                                                                  'eye_camera_to_world_matrix1': eye_camera_to_world_matrix1.tolist(),
+                                                                  'camera_intrinsics': camera_intrinsics,
+                                                                  'cal_points_3d': points,
+                                                                  'cal_ref_points_3d': points_a,
+                                                                  'cal_gaze_points0_3d': points_b,
+                                                                  'cal_gaze_points1_3d': points_c}})
