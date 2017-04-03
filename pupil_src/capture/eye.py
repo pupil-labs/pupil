@@ -211,7 +211,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(g_pool.user_dir, 'user_settings_eye{}'.format(eye_id)))
-        if session_settings.get("version", VersionFormat('0.0')) < g_pool.version:
+        if VersionFormat(session_settings.get("version", '0.0')) < g_pool.version:
             logger.info("Session setting are from older version of this app. I will not use those.")
             session_settings.clear()
 
@@ -607,7 +607,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         session_settings['capture_manager_settings'] = g_pool.capture_manager.class_name, g_pool.capture_manager.get_init_dict()
         session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
         session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
-        session_settings['version'] = g_pool.version
+        session_settings['version'] = str(g_pool.version)
         session_settings['last_pupil_detector'] = g_pool.pupil_detector.__class__.__name__
         session_settings['pupil_detector_settings'] = g_pool.pupil_detector.get_settings()
         session_settings.close()

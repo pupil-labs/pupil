@@ -46,13 +46,13 @@ def calibrate_2d_polynomial(cal_pt_cloud,screen_size=(1,1),threshold = 35, binoc
         logger.info('used {} data points out of the full dataset {}: subset is {:.2f} percent'.format(
             used_num, complete_num, 100*float(used_num)/complete_num))
 
-        return map_fn, err_dist <= threshold, (cx, cy, model_n)
+        return map_fn, err_dist <= threshold, ([p.tolist() for p in cx], [p.tolist() for p in cy], model_n)
 
     else:  # did disregard all points. The data cannot be represented by the model in a meaningful way:
         map_fn = make_map_function(cx,cy,model_n)
         logger.error('First iteration. root-mean-square residuals: {} in pixel, this is bad!'.format(err_rms))
         logger.error('The data cannot be represented by the model in a meaningfull way.')
-        return map_fn,err_dist<=threshold,(cx,cy,model_n)
+        return map_fn,err_dist<=threshold,([p.tolist() for p in cx], [p.tolist() for p in cy], model_n)
 
 
 
@@ -331,9 +331,9 @@ def preprocess_2d_data_binocular(matched_data):
         cal_data.append( data_pt )
     return cal_data
 
-def preprocess_3d_data(matched_data, camera_intrinsics ):
-    camera_matrix = camera_intrinsics["camera_matrix"]
-    dist_coefs = camera_intrinsics["dist_coefs"]
+def preprocess_3d_data(matched_data, camera_intrinsics):
+    camera_matrix = np.asarray(camera_intrinsics["camera_matrix"])
+    dist_coefs = np.asarray(camera_intrinsics["dist_coefs"])
 
     ref_processed = []
     pupil0_processed = []

@@ -91,7 +91,9 @@ class Vis_Scan_Path(Plugin):
         #update info for next frame.
         self.prev_gray = gray_img
         self.prev_frame_idx = frame.index
-        self.past_gaze_positions = events['gaze_positions']
+        # make mutable copies if required Immutable_Dict is encountered
+        self.past_gaze_positions = [gaze._asdict() if not isinstance(gaze, dict) else gaze
+                                    for gaze in events['gaze_positions']]
 
     def init_gui(self):
         # initialize the menu
