@@ -170,26 +170,26 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.clicks_to_close = 5
         self.open_window("Calibration")
 
-    def open_window(self,title='new_window'):
+    def open_window(self, title='new_window'):
         if not self._window:
             if self.fullscreen:
                 monitor = glfwGetMonitors()[self.monitor_idx]
-                width,height,redBits,blueBits,greenBits,refreshRate = glfwGetVideoMode(monitor)
+                width, height, redBits, blueBits, greenBits, refreshRate = glfwGetVideoMode(monitor)
             else:
                 monitor = None
                 width,height= 640,360
 
             self._window = glfwCreateWindow(width, height, title, monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen:
-                glfwSetWindowPos(self._window,self.window_position_default[0],self.window_position_default[1])
+                glfwSetWindowPos(self._window, self.window_position_default[0], self.window_position_default[1])
 
-            glfwSetInputMode(self._window,GLFW_CURSOR,GLFW_CURSOR_HIDDEN)
+            glfwSetInputMode(self._window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN)
 
-            #Register callbacks
-            glfwSetFramebufferSizeCallback(self._window,on_resize)
-            glfwSetKeyCallback(self._window,self.on_key)
-            glfwSetMouseButtonCallback(self._window,self.on_button)
-            on_resize(self._window,*glfwGetFramebufferSize(self._window))
+            # Register callbacks
+            glfwSetFramebufferSizeCallback(self._window, on_resize)
+            glfwSetKeyCallback(self._window, self.on_key)
+            glfwSetMouseButtonCallback(self._window, self.on_button)
+            on_resize(self._window, *glfwGetFramebufferSize(self._window))
 
             # gl_state settings
             active_window = glfwGetCurrentContext()
@@ -228,8 +228,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def close_window(self):
         if self._window:
             # enable mouse display
-            active_window = glfwGetCurrentContext();
-            glfwSetInputMode(self._window,GLFW_CURSOR,GLFW_CURSOR_NORMAL)
+            active_window = glfwGetCurrentContext()
+            glfwSetInputMode(self._window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
             glfwDestroyWindow(self._window)
             self._window = None
             glfwMakeContextCurrent(active_window)
@@ -305,11 +305,11 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         # debug mode within world will show green ellipses around detected ellipses
         if self.active and self.detected:
             for marker in self.markers:
-                e = marker[-1] #outermost ellipse
-                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
-                                    (int(e[1][0]/2),int(e[1][1]/2)),
-                                    int(e[-1]),0,360,15)
-                draw_polyline(pts,1,RGBA(0.,1.,0.,1.))
+                e = marker[-1]  # outermost ellipse
+                pts = cv2.ellipse2Poly((int(e[0][0]), int(e[0][1])),
+                                       (int(e[1][0]/2), int(e[1][1]/2)),
+                                       int(e[-1]), 0, 360, 15)
+                draw_polyline(pts, 1, RGBA(0.,1.,0.,1.))
 
         else:
             pass
@@ -331,8 +331,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         r = 110*self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
-        p_window_size = glfwGetWindowSize(self._window)
-        gl.glOrtho(0,p_window_size[0],p_window_size[1],0 ,-1,1)
+        p_window_size = glfwGetFramebufferSize(self._window)
+        gl.glOrtho(0, p_window_size[0], p_window_size[1], 0, -1, 1)
         # Switch back to Model View Matrix
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
