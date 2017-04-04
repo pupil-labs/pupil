@@ -211,7 +211,6 @@ def update_recording_v091_to_v093(rec_dir):
     logger.info("Updating recording from v0.9.1 format to v0.9.3 format")
     meta_info_path = os.path.join(rec_dir,"info.csv")
     pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
-    print(pupil_data.keys())
     for g in pupil_data.get('gaze_positions', []):
         # fixing recordings made with bug https://github.com/pupil-labs/pupil/issues/598
         g['norm_pos'] = float(g['norm_pos'][0]), float(g['norm_pos'][1])
