@@ -16,7 +16,7 @@ import errno
 from glob import glob
 from copy import deepcopy
 from time import time
-from multiprocessing import freeze_support
+from multiprocessing.spawn import freeze_support
 
 # UI Platform tweaks
 if platform.system() == 'Linux':
