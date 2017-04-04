@@ -22,6 +22,7 @@ from audio import Audio_Input_Dict
 from file_methods import save_object, load_object
 from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
+from ndsi import H264Writer
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 # logging
 import logging
@@ -176,7 +177,6 @@ class Recorder(Plugin):
             self.notify_all({'subject': 'recording.should_start', 'session_name': self.session_name})
             self.notify_all({'subject': 'recording.should_start', 'session_name': self.session_name, 'remote_notify': 'all'})
 
-
     def on_notify(self, notification):
         """Handles recorder notifications
 
@@ -218,7 +218,6 @@ class Recorder(Plugin):
         return strftime("%H:%M:%S", rec_time)
 
     def start(self):
-        self.timestamps = []
         self.data = {'pupil_positions': [], 'gaze_positions': [], 'notifications': []}
         self.frame_count = 0
         self.running = True
@@ -260,11 +259,15 @@ class Recorder(Plugin):
         else:
             self.audio_writer = None
 
+        self.video_path = os.path.join(self.rec_path, "world.mp4")
         if self.raw_jpeg and self.g_pool.capture.jpeg_support:
-            self.video_path = os.path.join(self.rec_path, "world.mp4")
             self.writer = JPEG_Writer(self.video_path, self.g_pool.capture.frame_rate)
+        elif hasattr(self.g_pool.capture._recent_frame, 'h264_buffer'):
+            self.writer = H264Writer(self.video_path,
+                                     self.g_pool.capture.frame_size[0],
+                                     self.g_pool.capture.frame_size[1],
+                                     self.g_pool.capture.frame_rate)
         else:
-            self.video_path = os.path.join(self.rec_path, "world.mp4")
             self.writer = AV_Writer(self.video_path, fps=self.g_pool.capture.frame_rate)
 
         try:
@@ -319,7 +322,6 @@ class Recorder(Plugin):
 
             if 'frame' in events:
                 frame = events['frame']
-                self.timestamps.append(frame.timestamp)
                 self.writer.write_video_frame(frame)
                 self.frame_count += 1
 
@@ -333,11 +335,6 @@ class Recorder(Plugin):
         self.writer = None
 
         save_object(self.data, os.path.join(self.rec_path, "pupil_data"))
-
-        timestamps_path = os.path.join(self.rec_path, "world_timestamps.npy")
-        # ts = sanitize_timestamps(np.array(self.timestamps))
-        ts = np.array(self.timestamps)
-        np.save(timestamps_path, ts)
 
         try:
             copy2(os.path.join(self.g_pool.user_dir, "surface_definitions"),
@@ -379,7 +376,6 @@ class Recorder(Plugin):
         self.menu.read_only = False
         self.button.status_text = ''
 
-        self.timestamps = []
         self.data = {'pupil_positions': [], 'gaze_positions': []}
         self.pupil_pos_list = []
         self.gaze_pos_list = []
