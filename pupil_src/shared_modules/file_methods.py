@@ -72,9 +72,10 @@ def save_object(object_, file_path):
     def ndarrray_to_list(o, _warned=[False]): # Use a mutlable default arg to hold a fn interal temp var.
         if isinstance(o, np.ndarray):
             if not _warned[0]:
-                logger.warning("numpy array {} will be serialized as list".format(o))
+                logger.warning("numpy array will be serialized as list. \nInvoked at:"+''.join(tb.format_list(tb.extract_stack())))
                 _warned[0] = True
             return o.tolist()
+        return o
 
     file_path = os.path.expanduser(file_path)
     with open(file_path, 'wb') as fh:
