@@ -220,7 +220,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir, 'user_settings_world'))
-    if session_settings.get("version", VersionFormat('0.0')) < g_pool.version:
+    if VersionFormat(session_settings.get("version", '0.0')) < g_pool.version:
         logger.info("Session setting are from older version of this app. I will not use those.")
         session_settings.clear()
 
@@ -502,7 +502,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
-    session_settings['version'] = g_pool.version
+    session_settings['version'] = str(g_pool.version)
     session_settings['eye0_process_alive'] = eyes_are_alive[0].value
     session_settings['eye1_process_alive'] = eyes_are_alive[1].value
     session_settings['detection_mapping_mode'] = g_pool.detection_mapping_mode

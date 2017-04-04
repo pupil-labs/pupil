@@ -95,7 +95,9 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
+
 assert pyglui_version >= '1.3'
+
 
 # since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
@@ -229,7 +231,7 @@ def session(rec_dir):
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))
-    if session_settings.get("version", VersionFormat('0.0')) < get_version(version_file):
+    if VersionFormat(session_settings.get("version", '0.0')) < get_version(version_file):
         logger.info("Session setting are from older version of this app. I will not use those.")
         session_settings.clear()
 
@@ -530,7 +532,7 @@ def session(rec_dir):
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
-    session_settings['version'] = g_pool.version
+    session_settings['version'] = str(g_pool.version)
     session_settings.close()
 
     # de-init all running plugins
@@ -561,7 +563,7 @@ def show_no_rec_window():
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))
-    if session_settings.get("version", VersionFormat('0.0')) < get_version(version_file):
+    if VersionFormat(session_settings.get("version", '0.0')) < get_version(version_file):
         logger.info("Session setting are from older version of this app. I will not use those.")
         session_settings.clear()
     w, h = session_settings.get('window_size', (1280, 720))
@@ -607,7 +609,7 @@ def show_no_rec_window():
         glfwPollEvents()
 
     session_settings['window_position'] = glfwGetWindowPos(window)
-    session_settings['version'] = get_version(version_file)
+    session_settings['version'] = str(get_version(version_file))
     session_settings.close()
     del glfont
     glfwDestroyWindow(window)
