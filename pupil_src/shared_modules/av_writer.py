@@ -61,18 +61,16 @@ to be valid and should only now be accesed.
 """
 
 
-class Timestamp_Writer(object):
-    '''Mixin class that writes self.timestamps to disk'''
-    def write_timestamps(self):
-        directory, video_file = os.path.split(self.file_loc)
-        name, ext = os.path.splitext(video_file)
-        ts_file = '{}_timestamps.npy'.format(name)
-        ts_loc = os.path.join(directory, ts_file)
-        ts = np.array(self.timestamps)
-        np.save(ts_loc, ts)
+def write_timestamps(file_loc, timestamps):
+    directory, video_file = os.path.split(file_loc)
+    name, ext = os.path.splitext(video_file)
+    ts_file = '{}_timestamps.npy'.format(name)
+    ts_loc = os.path.join(directory, ts_file)
+    ts = np.array(timestamps)
+    np.save(ts_loc, ts)
 
 
-class AV_Writer(Timestamp_Writer):
+class AV_Writer(object):
     """
     AV_Writer class
         - file_loc: path to file out
@@ -160,13 +158,13 @@ class AV_Writer(Timestamp_Writer):
 
         self.container.close()
         logger.debug("Closed media container")
-        self.write_timestamps()
+        write_timestamps(self.file_loc, self.timestamps)
 
     def release(self):
         self.close()
 
 
-class JPEG_Writer(Timestamp_Writer):
+class JPEG_Writer(object):
     """
     PyAV based jpeg writer.
     """
@@ -215,7 +213,7 @@ class JPEG_Writer(Timestamp_Writer):
         except(RuntimeError):
             logger.error("Media file does not contain any frames.")
         logger.debug("Closed media container")
-        self.write_timestamps()
+        write_timestamps(self.file_loc, self.timestamps)
 
     def release(self):
         self.close()
