@@ -47,7 +47,11 @@ if platform.system() == 'Darwin':
     app = BUNDLE(coll,
                  name='Pupil Capture.app',
                  icon='pupil-capture.icns',
-                 version = str(dpkg_deb_version()))
+                 version = str(dpkg_deb_version()),
+                 info_plist={
+                          'NSHighResolutionCapable': 'True'
+                            },
+                )
 
 
 elif platform.system() == 'Linux':
