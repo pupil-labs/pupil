@@ -26,7 +26,7 @@ class Persistent_Dict(dict):
         super().__init__(*args, **kwargs)
         self.file_path = os.path.expanduser(file_path)
         try:
-            self.update(**load_object(self.file_path))
+            self.update(**load_object(self.file_path,allow_legacy=False))
         except IOError:
             logger.debug("Session settings file '{}' not found. Will make new one on exit.".format(self.file_path))
         except:  # KeyError, EOFError
