@@ -69,9 +69,11 @@ def load_object(file_path,allow_legacy=True):
 
 def save_object(object_, file_path):
 
-    def ndarrray_to_list(o):
+    def ndarrray_to_list(o, _warned=[False]): # Use a mutlable default arg to hold a fn interal temp var.
         if isinstance(o, np.ndarray):
-            # logger.warning("numpy array {} will be serialized as list".format(o))
+            if not _warned[0]:
+                logger.warning("numpy array {} will be serialized as list".format(o))
+                _warned[0] = True
             return o.tolist()
 
     file_path = os.path.expanduser(file_path)
@@ -99,20 +101,20 @@ if __name__ == '__main__':
         t = time()
         l = load_object('/Users/mkassner/Downloads/data/pupil_data')
         # print(l['notifications'])
-        print(t-time())
+        print(time()-t)
         # t = time()
-        t = time()
-        save_object(np.ones((2,2)),'/Users/mkassner/Downloads/data/arrry')
+        save_object((np.ones((2,2)),np.ones((2,2))),'/Users/mkassner/Downloads/data/arrry')
         print(load_object('/Users/mkassner/Downloads/data/arrry'))
+        t = time()
         save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
-        print(t-time())
+        print(time()-t)
 
         t = time()
         l = load_object('/Users/mkassner/Downloads/data/pupil_data2')
         # print(l['gaze_positions'][:100])
 
-        print(t-time())
-        save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
+        print(time()-t)
+        # save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
 
     run()
     exit()
