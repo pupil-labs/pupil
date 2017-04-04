@@ -245,7 +245,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             if not s.locate_from_cache(frame.index):
                 s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
             if s.detected:
-                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
+                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
 
         if self.mode == "Show marker IDs":
             draw_markers(frame.img,self.markers)
