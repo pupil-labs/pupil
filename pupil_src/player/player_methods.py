@@ -16,7 +16,7 @@ import collections
 # logging
 import logging
 logger = logging.getLogger(__name__)
-from file_methods import save_object_legacy, load_object_legacy, UnpicklingError, save_object
+from file_methods import save_object, load_object, UnpicklingError
 from version_utils import VersionFormat
 from version_utils import read_rec_version
 
@@ -40,7 +40,6 @@ def correlate_data(data, timestamps):
     frame_idx = 0
     data_index = 0
 
-    data = list(data)
     data.sort(key=lambda d: d['timestamp'])
 
     while True:
@@ -55,11 +54,7 @@ def correlate_data(data, timestamps):
             break
 
         if datum['timestamp'] <= ts:
-            try:
-                datum['index'] = frame_idx
-            except TypeError:
-                # Immutable_Dict encountered, create extended shallow copy
-                datum = datum.extend_copy(index=frame_idx)
+            datum['index'] = frame_idx
             data_by_frame[frame_idx].append(datum)
             data_index +=1
         else:
@@ -139,7 +134,7 @@ def update_recording_v074_to_v082(rec_dir):
 
 def update_recording_v082_to_v083(rec_dir):
     logger.info("Updating recording from v0.8.2 format to v0.8.3 format")
-    pupil_data = load_object_legacy(os.path.join(rec_dir, "pupil_data"))
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     meta_info_path = os.path.join(rec_dir,"info.csv")
 
 
@@ -147,7 +142,7 @@ def update_recording_v082_to_v083(rec_dir):
         if 'base' in d:
             d['base_data'] = d.pop('base')
 
-    save_object_legacy(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
@@ -158,14 +153,14 @@ def update_recording_v082_to_v083(rec_dir):
 
 def update_recording_v083_to_v086(rec_dir):
     logger.info("Updating recording from v0.8.3 format to v0.8.6 format")
-    pupil_data = load_object_legacy(os.path.join(rec_dir, "pupil_data"))
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     meta_info_path = os.path.join(rec_dir,"info.csv")
 
     for topic in pupil_data.keys():
         for d in pupil_data[topic]:
             d['topic'] = topic
 
-    save_object_legacy(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
@@ -176,7 +171,7 @@ def update_recording_v083_to_v086(rec_dir):
 
 def update_recording_v086_to_v087(rec_dir):
     logger.info("Updating recording from v0.8.6 format to v0.8.7 format")
-    pupil_data = load_object_legacy(os.path.join(rec_dir, "pupil_data"))
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     meta_info_path = os.path.join(rec_dir,"info.csv")
 
     def _clamp_norm_point(pos):
@@ -192,7 +187,7 @@ def update_recording_v086_to_v087(rec_dir):
             g['topic'] = 'gaze'
         g['norm_pos'] = _clamp_norm_point(g['norm_pos'])
 
-    save_object_legacy(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
@@ -215,13 +210,13 @@ def update_recording_v087_to_v091(rec_dir):
 def update_recording_v091_to_v093(rec_dir):
     logger.info("Updating recording from v0.9.1 format to v0.9.3 format")
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    pupil_data = load_object_legacy(os.path.join(rec_dir, "pupil_data"))
-
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+    print(pupil_data.keys())
     for g in pupil_data.get('gaze_positions', []):
         # fixing recordings made with bug https://github.com/pupil-labs/pupil/issues/598
         g['norm_pos'] = float(g['norm_pos'][0]), float(g['norm_pos'][1])
 
-    save_object_legacy(pupil_data, os.path.join(rec_dir, "pupil_data"))
+    save_object(pupil_data, os.path.join(rec_dir, "pupil_data"))
 
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
@@ -238,33 +233,16 @@ def update_recording_v093_to_v094(rec_dir):
             continue
         rec_file = os.path.join(rec_dir, file)
 
-        def convert(data):
-            '''
-            Convert numpy arrays to lists. Recursion is needed for nested structures
-            (e.g. `{key: <np.ndarray>}` or `[<np.ndarray>]`). str is a special case because
-            `str([*'abc'])` results in `"['a', 'b', 'c']"`
-            '''
-            if isinstance(data, np.ndarray):
-                return data.tolist()
-            elif isinstance(data, str):
-                return data
-            elif isinstance(data, collections.Mapping):
-                return dict(map(convert, data.items()))
-            elif isinstance(data, collections.Iterable):
-                return type(data)(map(convert, data))
-            else:
-                return data
-
         try:
-            rec_object = load_object_legacy(rec_file)
-            converted_object = convert(rec_object)
-            if converted_object != rec_object:
-                logger.warning('`{}` contained non-serializable data'.format(file))
-        except (UnpicklingError, IsADirectoryError, EOFError, ValueError):
-            continue
-
-        logger.info('Converted `{}` from pickle to msgpack'.format(file))
-        save_object(rec_object, rec_file)
+            rec_object = load_object(rec_file,allow_legacy=False)
+            save_object(rec_object, rec_file)
+        except:
+            try:
+                rec_object = load_object(rec_file,allow_legacy=True)
+                save_object(rec_object, rec_file)
+                logger.info('Converted `{}` from pickle to msgpack'.format(file))
+            except:
+                logger.warning("did not convert {}".format(rec_file))
 
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
@@ -292,11 +270,11 @@ def update_recording_bytes_to_unicode(rec_dir):
             continue
         rec_file = os.path.join(rec_dir, file)
         try:
-            rec_object = load_object_legacy(rec_file)
+            rec_object = load_object(rec_file)
             converted_object = convert(rec_object)
             if converted_object != rec_object:
                 logger.info('Converted `{}` from bytes to unicode'.format(file))
-                save_object_legacy(converted_object, rec_file)
+                save_object(converted_object, rec_file)
         except (UnpicklingError, IsADirectoryError):
             continue
 
@@ -310,7 +288,7 @@ def update_recording_bytes_to_unicode(rec_dir):
 
 def update_recording_v073_to_v074(rec_dir):
     logger.info("Updating recording from v0.7x format to v0.7.4 format")
-    pupil_data = load_object_legacy(os.path.join(rec_dir, "pupil_data"))
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     modified = False
     for p in pupil_data['pupil_positions']:
         if p['method'] == "3D c++":
@@ -325,21 +303,21 @@ def update_recording_v073_to_v074(rec_dir):
             p['diameter_3d'] = p.pop('diameter_3D')
             modified = True
     if modified:
-        save_object_legacy(load_object_legacy(os.path.join(rec_dir, "pupil_data")),os.path.join(rec_dir, "pupil_data_old"))
+        save_object(load_object(os.path.join(rec_dir, "pupil_data")),os.path.join(rec_dir, "pupil_data_old"))
     try:
-        save_object_legacy(pupil_data,os.path.join(rec_dir, "pupil_data"))
+        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
     except IOError:
         pass
 
 
 def update_recording_v05_to_v074(rec_dir):
     logger.info("Updating recording from v0.5x/v0.6x/v0.7x format to v0.7.4 format")
-    pupil_data = load_object_legacy(os.path.join(rec_dir, "pupil_data"))
-    save_object_legacy(pupil_data,os.path.join(rec_dir, "pupil_data_old"))
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+    save_object(pupil_data,os.path.join(rec_dir, "pupil_data_old"))
     for p in pupil_data['pupil_positions']:
         p['method'] = '2d python'
     try:
-        save_object_legacy(pupil_data,os.path.join(rec_dir, "pupil_data"))
+        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
     except IOError:
         pass
 
@@ -362,7 +340,7 @@ def update_recording_v04_to_v074(rec_dir):
 
     pupil_data = {'pupil_positions':pupil_list,'gaze_positions':gaze_list}
     try:
-        save_object_legacy(pupil_data,os.path.join(rec_dir, "pupil_data"))
+        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
     except IOError:
         pass
 
@@ -380,7 +358,7 @@ def update_recording_v03_to_v074(rec_dir):
 
     pupil_data = {'pupil_positions':pupil_list,'gaze_positions':gaze_list}
     try:
-        save_object_legacy(pupil_data,os.path.join(rec_dir, "pupil_data"))
+        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
     except IOError:
         pass
 

@@ -34,20 +34,19 @@ class Manual_Gaze_Correction(Plugin):
         self.y_offset = float(y_offset)
         self._set_offset()
 
+
+
     def _set_offset(self):
-        x, y = self.x_offset,self.y_offset
+        x,y = self.x_offset,self.y_offset
         for f in range(len(self.g_pool.gaze_positions_by_frame)):
             for i in range(len(self.g_pool.gaze_positions_by_frame[f])):
                 gaze_pos = self.untouched_gaze_positions_by_frame[f][i]['norm_pos']
                 gaze_pos = gaze_pos[0]+x, gaze_pos[1]+y
-                try:
-                    self.g_pool.gaze_positions_by_frame[f][i]['norm_pos'] = gaze_pos
-                except TypeError:
-                    current_frame = self.g_pool.gaze_positions_by_frame[f]
-                    current_frame[i] = current_frame[i].update_copy(norm_pos=gaze_pos)
-        self.notify_all({'subject': 'gaze_positions_changed', 'delay': 3})
+                self.g_pool.gaze_positions_by_frame[f][i]['norm_pos'] =  gaze_pos
+        self.notify_all({'subject':'gaze_positions_changed','delay':3})
 
-    def _set_offset_x(self, offset_x):
+
+    def _set_offset_x(self,offset_x):
         self.x_offset = offset_x
         self._set_offset()
 
@@ -84,4 +83,3 @@ class Manual_Gaze_Correction(Plugin):
         self.g_pool.gaze_positions_by_frame = self.untouched_gaze_positions_by_frame
         self.notify_all({'subject':'gaze_positions_changed'})
         self.deinit_gui()
-

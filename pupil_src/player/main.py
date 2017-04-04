@@ -248,7 +248,7 @@ def session(rec_dir):
         on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
     # load pupil_positions, gaze_positions
-    pupil_data = load_object(pupil_data_path, use_mutable=False)
+    pupil_data = load_object(pupil_data_path)
     pupil_list = pupil_data['pupil_positions']
     gaze_list = pupil_data['gaze_positions']
     g_pool.pupil_data = pupil_data

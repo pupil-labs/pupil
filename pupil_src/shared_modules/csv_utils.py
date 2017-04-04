@@ -45,10 +45,9 @@ def write_key_value_file(csvfile,dictionary,append=False):
     """
     writer = csv.writer(csvfile, delimiter=',')
     if not append:
-        writer.writerow(['key', 'value'])
-    for key in dictionary.keys():
-        writer.writerow([key, dictionary[key]])
-
+        writer.writerow(['key','value'])
+    for key,val in dictionary.items():
+        writer.writerow([key,val])
 
 if __name__ == '__main__':
     test = {'foo':'bar','oh':'rl","y','it was':'not me'}
