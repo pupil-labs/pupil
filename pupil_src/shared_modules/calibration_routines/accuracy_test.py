@@ -97,7 +97,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         submenu.append(ui.Info_Text(accuracy_help))
         submenu.append(ui.Text_Input('accuracy',self,'angular accuracy'))
         submenu.append(ui.Info_Text(precision_help))
-        submenu.append(ui.Text_Input('precision',self,'diagonal resolution'))
+        submenu.append(ui.Text_Input('precision',self,'angluar precision'))
         self.menu.append(submenu)
 
 
