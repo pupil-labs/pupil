@@ -220,7 +220,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 initial_points = np.array(gaze_dir)*500
 
 
-                success,residual, observers, points_in_eye  = bundle_adjust_calibration(initial_observers , initial_points, fix_points=True )
+                success, residual, observers, points_in_eye  = bundle_adjust_calibration(initial_observers , initial_points, fix_points=True )
                 if residual <= smallest_residual:
                     smallest_residual = residual
                     scales[-1] = s
