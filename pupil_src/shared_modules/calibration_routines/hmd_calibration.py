@@ -343,9 +343,9 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
             close_point_a,_ =  math_helper.nearest_linepoint_to_point( point , line_a )
             close_point_b,_ =  math_helper.nearest_linepoint_to_point( point , line_b )
             close_point_c,_ =  math_helper.nearest_linepoint_to_point( point , line_c )
-            points_a.append(close_point_a)
-            points_b.append(close_point_b)
-            points_c.append(close_point_c)
+            points_a.append(close_point_a.tolist())
+            points_b.append(close_point_b.tolist())
+            points_c.append(close_point_c.tolist())
 
 
         # we need to take the sphere position into account
