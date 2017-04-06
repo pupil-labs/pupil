@@ -20,8 +20,9 @@ from . calibration_plugin_base import Calibration_Plugin
 from . finish_calibration import not_enough_data_error_msg, solver_failed_to_converge_error_msg
 from . import calibrate
 from . gaze_mappers import Monocular_Gaze_Mapper, Dual_Monocular_Gaze_Mapper, Binocular_Vector_Gaze_Mapper
+from . optimization_calibration import bundle_adjust_calibration
 from . camera_intrinsics_estimation import idealized_camera_calibration
-from math_helper import *
+import math_helper
 
 # logging
 import logging
@@ -151,8 +152,8 @@ class HMD_Calibration(Calibration_Plugin):
         if params0 and params1:
             g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
                                                          'name': 'Dual_Monocular_Gaze_Mapper',
-                                                         'args': {'params_eye0': params_eye0,
-                                                                  'params_eye1': params_eye1}})
+                                                         'args': {'params_eye0': params0,
+                                                                  'params_eye1': params1}})
             method = 'dual monocular polynomial regression'
         elif params0:
             g_pool.plugins.add(Monocular_Gaze_Mapper,args={'params':params0})
@@ -306,7 +307,7 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
             initial_points = np.array(ref_points_3d)
 
 
-            success,residual, observers, points  = bundle_adjust_calibration(initial_observers , initial_points, fix_points=True )
+            success, residual, observers, points = bundle_adjust_calibration(initial_observers , initial_points, fix_points=True )
 
             if residual <= smallest_residual:
                 smallest_residual = residual
@@ -318,7 +319,7 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
             return
 
 
-        eye0,eye1 = observers
+        eye0, eye1 = observers
 
         t_world0 = np.array(eye0['translation'])
         R_world0 = math_helper.quaternion_rotation_matrix(np.array(eye0['rotation']))
@@ -365,7 +366,6 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
         eye_camera_to_world_matrix1[:3,:3] = R_world1
         eye_camera_to_world_matrix1[:3,3:4] = np.reshape(camera_translation, (3,1) )
 
-        scene_dummy_cam = idealized_camera_calibration((1280,720), 700)
 
         method = 'binocular 3d model'
         ts = g_pool.get_timestamp()
@@ -376,13 +376,12 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
         user_calibration_data = {'timestamp': ts,'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
         save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
 
-
-        camera_intrinsics['camera_matrix'] = camera_intrinsics['camera_matrix'].tolist()
+        scene_dummy_cam = idealized_camera_calibration((1280,720), 700)
         self.g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
                                                          'name': 'Binocular_Vector_Gaze_Mapper',
                                                          'args': {'eye_camera_to_world_matrix0': eye_camera_to_world_matrix0.tolist(),
                                                                   'eye_camera_to_world_matrix1': eye_camera_to_world_matrix1.tolist(),
-                                                                  'camera_intrinsics': camera_intrinsics,
+                                                                  'camera_intrinsics': scene_dummy_cam,
                                                                   'cal_points_3d': points,
                                                                   'cal_ref_points_3d': points_a,
                                                                   'cal_gaze_points0_3d': points_b,
