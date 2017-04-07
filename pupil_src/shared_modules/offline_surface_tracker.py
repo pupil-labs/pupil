@@ -14,13 +14,7 @@ import platform
 import cv2
 import numpy as np
 import csv
-
-#threading and processing
-if platform.system() in ('Darwin'):
-    from multiprocessing import get_context
-    mp = get_context('forkserver')
-else:
-    import multiprocessing as mp
+import multiprocessing as mp
 
 from ctypes import c_bool
 

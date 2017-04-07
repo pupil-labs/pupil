@@ -19,16 +19,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 from ctypes import c_bool, c_int
-
-#threading and processing
-if platform.system() in ('Darwin'):
-    from multiprocessing import get_context
-    mp = get_context('forkserver')
-    Value = mp.Value
-    cpu_count = mp.cpu_count
-else:
-    import multiprocessing as mp
-    from multiprocessing import Value, cpu_count
+import multiprocessing as mp
+from multiprocessing import Value, cpu_count
 
 
 from exporter import export
