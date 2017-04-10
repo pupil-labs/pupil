@@ -152,8 +152,8 @@ class HMD_Calibration(Calibration_Plugin):
         if params0 and params1:
             g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
                                                          'name': 'Dual_Monocular_Gaze_Mapper',
-                                                         'args': {'params_eye0': params0,
-                                                                  'params_eye1': params1}})
+                                                         'args': {'params0': params0,
+                                                                  'params1': params1}})
             method = 'dual monocular polynomial regression'
         elif params0:
             g_pool.plugins.add(Monocular_Gaze_Mapper,args={'params':params0})
