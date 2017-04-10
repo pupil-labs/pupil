@@ -19,6 +19,7 @@ from plugin import Plugin
 from pyglui import ui
 from time import sleep
 from threading import Thread
+from player_methods import correlate_data
 if platform.system() in ('Darwin', 'Linux'):
     from multiprocessing import get_context
     mp = get_context('forkserver')
@@ -43,10 +44,14 @@ class Offline_Pupil_Detection(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
+        self.original_pupil_pos = self.g_pool.pupil_data
+        self.original_pupil_pos_by_frame = self.g_pool.pupil_positions_by_frame
+
         self.eye_processes = [None, None]
         self.eye_timestamps = [None, None]
         self.detection_progress = {'0': 0., '1': 0.}
         self.pupil_positions = []
+        self.detection_finished_flag = False
 
         # Pupil Offline Detection
         timebase = Value(c_double, 0)
@@ -91,8 +96,18 @@ class Offline_Pupil_Detection(Plugin):
             topic, payload = self.data_sub.recv()
             self.pupil_positions.append(payload)
             self.update_progress(payload)
+        if not self.detection_finished_flag:
+            eye0_finished = self.detection_progress['0'] == 1. if self.eye_processes[0] is not None else True
+            eye1_finished = self.detection_progress['1'] == 1. if self.eye_processes[1] is not None else True
+            if eye0_finished and eye1_finished:
+                self.detection_finished_flag = True
+                self.g_pool.pupil_data = self.pupil_positions
+                self.g_pool.pupil_positions_by_frame = correlate_data(self.pupil_positions, self.g_pool.timestamps)
+                self.notify_all({'subject': 'pupil_positions_changed'})
+                logger.debug('pupil positions changed')
+
         if not self.eyes_are_alive[0].value and not self.eyes_are_alive[1].value:
-            self.alive = False
+            self.alive = False  # close the plugin if the eye windows were closed
 
     def update_progress(self, pupil_position):
         eye_id = pupil_position['id']
@@ -114,7 +129,14 @@ class Offline_Pupil_Detection(Plugin):
         self.zmq_ctx.term()
         self.deinit_gui()
 
+        self.g_pool.pupil_data = self.original_pupil_pos
+        self.g_pool.pupil_positions_by_frame = self.original_pupil_pos_by_frame
+        self.notify_all({'subject': 'pupil_positions_changed'})
+        logger.debug('pupil positions changed')
+
     def redetect(self):
+        del self.pupil_positions[:]  # delete previously detected pupil positions
+        self.detection_finished_flag = False
         self.eye_control.notify({'subject': 'file_source.restart',
                                  'source_path': os.path.join(self.g_pool.rec_dir, 'eye0.mp4')})
         self.eye_control.notify({'subject': 'file_source.restart',
