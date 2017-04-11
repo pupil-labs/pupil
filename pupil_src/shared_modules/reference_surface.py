@@ -27,6 +27,8 @@ from pyglui.ui import get_opensans_font_path
 #ctypes import for atb_vars:
 from time import time
 
+from calibration_routines import Camera_Intrinsics_Estimation_Fisheye
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -254,7 +256,12 @@ class Reference_Surface(object):
             # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
             # compute the homography transform from marker into the undistored normalized image space
             # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
-            xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
+            # xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
+            if self.use_distortion:
+                xy_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(xy.reshape(-1,2), np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs']))
+            else:
+                xy_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(xy.reshape(-1,2), np.asarray(camera_calibration['camera_matrix']),np.asarray([[ 1./3.,2./15.,17./315.,62./2835.]]))
+
             m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized, method=cv2.RANSAC,ransacReprojThreshold=0.1)
             if not mask.all():
                 detected = False
@@ -262,8 +269,13 @@ class Reference_Surface(object):
             # project the corners of the surface to undistored space
             corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
             # project and distort these points  and normalize them
-            corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), np.asarray(camera_calibration['camera_matrix']), np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
-            corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), np.asarray(camera_calibration['camera_matrix']), np.asarray(camera_calibration['dist_coefs'])*0)
+            # corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), np.asarray(camera_calibration['camera_matrix']), np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
+            if self.use_distortion:
+                corners_redistorted = Camera_Intrinsics_Estimation_Fisheye.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.asarray(camera_calibration['camera_matrix']), np.asarray(camera_calibration['dist_coefs']))
+            else:
+                corners_redistorted = Camera_Intrinsics_Estimation_Fisheye.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.asarray(camera_calibration['camera_matrix']), np.asarray([[ 1./3.,2./15.,17./315.,62./2835.]]))
+            # corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), np.asarray(camera_calibration['camera_matrix']), np.asarray(camera_calibration['dist_coefs'])*0)
+            corners_nulldistorted = Camera_Intrinsics_Estimation_Fisheye.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space),np.asarray(camera_calibration['camera_matrix']),np.asarray([[1. / 3., 2. / 15., 17. / 315., 62. / 2835.]]))
 
             #normalize to pupil norm space
             corners_redistorted.shape = -1,2
@@ -313,7 +325,7 @@ class Reference_Surface(object):
 
             camera_pose_3d = None
             if locate_3d:
-                dist_coef, = np.asarray(camera_calibration['dist_coefs'])
+                dist_coef = np.asarray(camera_calibration['dist_coefs'])
                 img_size = camera_calibration['resolution']
                 K = np.asarray(camera_calibration['camera_matrix'])
 
@@ -326,7 +338,8 @@ class Reference_Surface(object):
                 uv3d[:,:-1] = uv
                 xy.shape = -1,1,2
                 # compute pose of object relative to camera center
-                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, xy, K, dist_coef,flags=cv2.SOLVEPNP_EPNP)
+                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = Camera_Intrinsics_Estimation_Fisheye.solvePnP(uv3d, xy, K, dist_coef,flags=cv2.SOLVEPNP_EPNP)
+                print("{} \t {} \t {}".format(translate3d_cam_to_object[0], translate3d_cam_to_object[1], translate3d_cam_to_object[2]))
 
                 if is3dPoseAvailable:
 
@@ -447,7 +460,10 @@ class Reference_Surface(object):
             support_marker = Support_Marker(marker['id'])
             marker_verts = np.array(marker['verts'])
             marker_verts.shape = (-1,1,2)
-            marker_verts_undistorted_normalized = cv2.undistortPoints(marker_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
+            if self.use_distortion:
+                marker_verts_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(marker_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs']))
+            else:
+                marker_verts_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(marker_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs']))
             marker_uv_coords =  cv2.perspectiveTransform(marker_verts_undistorted_normalized,res['m_from_undistored_norm_space'])
             support_marker.load_uv_coords(marker_uv_coords)
             self.markers[marker['id']] = support_marker
@@ -777,6 +793,7 @@ class Support_Marker(object):
 
 def draw_frustum(img_size, K, scale=1):
     # average focal length
+    K = np.asarray(K)
     f = (K[0, 0] + K[1, 1]) / 2
     # compute distances for setting up the camera pyramid
     W = 0.5*(img_size[0])
