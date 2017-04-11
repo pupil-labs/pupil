@@ -14,13 +14,7 @@ import platform
 import cv2
 import numpy as np
 import csv
-
-#threading and processing
-if platform.system() in ('Darwin'):
-    from multiprocessing import get_context
-    mp = get_context('forkserver')
-else:
-    import multiprocessing as mp
+import multiprocessing as mp
 
 from ctypes import c_bool
 
@@ -95,10 +89,10 @@ class Offline_Surface_Tracker(Surface_Tracker):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
         if self.surface_definitions.get('offline_square_marker_surfaces',[]) != []:
             logger.debug("Found ref surfaces defined or copied in previous session.")
-            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
+            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('offline_square_marker_surfaces',[])]
         elif self.surface_definitions.get('realtime_square_marker_surfaces',[]) != []:
             logger.debug("Did not find ref surfaces def created or used by the user in player from earlier session. Loading surfaces defined during capture.")
-            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[])]
         else:
             logger.debug("No surface defs found. Please define using GUI.")
             self.surfaces = []
@@ -245,7 +239,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             if not s.locate_from_cache(frame.index):
                 s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
             if s.detected:
-                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
+                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
 
         if self.mode == "Show marker IDs":
             draw_markers(frame.img,self.markers)

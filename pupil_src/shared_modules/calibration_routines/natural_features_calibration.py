@@ -105,7 +105,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
                     self.detected = True
                     self.point = nextPts
                     self.first_img = gray.copy()
-                    nextPts = nextPts[0]
+                    nextPts = nextPts[0].tolist() #we prefer python types.
                     self.pos = normalize(nextPts,(gray.shape[1],gray.shape[0]),flip_y=True)
                     self.count -=1
 

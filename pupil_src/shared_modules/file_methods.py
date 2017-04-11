@@ -9,16 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
-UnpicklingError = pickle.UnpicklingError
+import pickle
+import msgpack
 import os
+import numpy as np
 import traceback as tb
 import logging
 logger = logging.getLogger(__name__)
+UnpicklingError = pickle.UnpicklingError
 
 
 class Persistent_Dict(dict):
@@ -27,7 +26,7 @@ class Persistent_Dict(dict):
         super().__init__(*args, **kwargs)
         self.file_path = os.path.expanduser(file_path)
         try:
-            self.update(load_object(self.file_path))
+            self.update(**load_object(self.file_path,allow_legacy=False))
         except IOError:
             logger.debug("Session settings file '{}' not found. Will make new one on exit.".format(self.file_path))
         except:  # KeyError, EOFError
@@ -37,26 +36,52 @@ class Persistent_Dict(dict):
     def save(self):
         d = {}
         d.update(self)
-        try:
-            save_object(d, self.file_path)
-        except IOError:
-            logger.warning("Could not save session settings to '{}'".format(self.file_path))
+        save_object(d, self.file_path)
 
     def close(self):
         self.save()
 
 
-def load_object(file_path):
+def _load_object_legacy(file_path):
     file_path = os.path.expanduser(file_path)
     with open(file_path, 'rb') as fh:
         data = pickle.load(fh, encoding='bytes')
     return data
 
 
+def load_object(file_path,allow_legacy=True):
+    import gc
+    file_path = os.path.expanduser(file_path)
+    with open(file_path, 'rb') as fh:
+        try:
+            gc.disable()  # speeds deserialization up.
+            data = msgpack.unpack(fh, encoding='utf-8')
+        except Exception as e:
+            if not allow_legacy:
+                raise e
+            else:
+                logger.info('{} has a deprecated format: Will be updated on save'.format(file_path))
+                data = _load_object_legacy(file_path)
+        finally:
+            gc.enable()
+    return data
+
+
 def save_object(object_, file_path):
+
+    def ndarrray_to_list(o, _warned=[False]): # Use a mutlable default arg to hold a fn interal temp var.
+        if isinstance(o, np.ndarray):
+            if not _warned[0]:
+                logger.warning("numpy array will be serialized as list. Invoked at:\n"+''.join(tb.format_stack()))
+                _warned[0] = True
+            return o.tolist()
+        return o
+
     file_path = os.path.expanduser(file_path)
     with open(file_path, 'wb') as fh:
-        pickle.dump(object_,fh, -1)
+        msgpack.pack(object_, fh, use_bin_type=True,default=ndarrray_to_list)
+
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
@@ -70,16 +95,30 @@ if __name__ == '__main__':
     # settings = Persistent_Dict('~/Desktop/pupil_settings/user_settings_eye')
     # print settings['roi']
 
+    def run():
 
-    # example. Write out pupil data into csv file.
-    from time import time
-    t = time()
-    l = load_object('/Users/mkassner/Downloads/data/pupil_data')
-    print(l['notifications'])
-    print(t-time())
-    # t = time()
-    # save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
-    # print(t-time())
+        # example. Write out pupil data into csv file.
+        from time import time
+        t = time()
+        l = load_object('/Users/mkassner/Downloads/data/pupil_data')
+        # print(l['notifications'])
+        print(time()-t)
+        # t = time()
+        save_object((np.ones((2,2)),np.ones((2,2))),'/Users/mkassner/Downloads/data/arrry')
+        print(load_object('/Users/mkassner/Downloads/data/arrry'))
+        t = time()
+        save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
+        print(time()-t)
+
+        t = time()
+        l = load_object('/Users/mkassner/Downloads/data/pupil_data2')
+        # print(l['gaze_positions'][:100])
+
+        print(time()-t)
+        # save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
+
+    run()
+    exit()
     import csv
     with open(os.path.join('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_postions.csv'), 'w') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')

@@ -35,49 +35,49 @@ logger = logging.getLogger(__name__)
 pre_recorded_calibrations = {
                             'Pupil Cam1 ID2':{
                                 (1280, 720):{
-                                'dist_coefs': np.array([[-0.6746215 ,  0.46527537,  0.01448595, -0.00070578, -0.17128751]]),
+                                'dist_coefs': [[-0.6746215 ,  0.46527537,  0.01448595, -0.00070578, -0.17128751]],
                                 'camera_name': 'Pupil Cam1 ID2',
                                 'resolution': (1280, 720),
-                                'camera_matrix': np.array([[  1.08891909e+03,   0.00000000e+00,   6.67944178e+02],
+                                'camera_matrix': [[  1.08891909e+03,   0.00000000e+00,   6.67944178e+02],
                                                              [  0.00000000e+00,   1.03230180e+03,   3.52772854e+02],
-                                                             [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
+                                                             [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]]
                                     }
                                 },
                             'Logitech Webcam C930e':{
                                 (1280, 720):{
-                                    'dist_coefs': np.array([[ 0.06330768, -0.17328079,  0.00074967,  0.000353  ,  0.07648477]]),
+                                    'dist_coefs': [[ 0.06330768, -0.17328079,  0.00074967,  0.000353  ,  0.07648477]],
                                     'camera_name': 'Logitech Webcam C930e',
                                     'resolution': (1280, 720),
-                                    'camera_matrix': np.array([[ 739.72227378,    0.        ,  624.44490772],
+                                    'camera_matrix': [[ 739.72227378,    0.        ,  624.44490772],
                                                                 [   0.        ,  717.84832227,  350.46000651],
-                                                                [   0.        ,    0.        ,    1.        ]])
+                                                                [   0.        ,    0.        ,    1.        ]]
                                     }
                                 },
                             }
 
 def idealized_camera_calibration(resolution,f=1000.):
-    return {   'dist_coefs': np.array([[ 0.,0.,0.,0.,0.]]),
+    return {   'dist_coefs': [[ 0.,0.,0.,0.,0.]],
                'camera_name': 'ideal camera with focal length {}'.format(f),
                'resolution': resolution,
-               'camera_matrix': np.array([[  f,     0., resolution[0]/2.],
-                                          [    0.,  f,  resolution[1]/2.],
-                                          [    0.,     0.,    1.  ]])
+               'camera_matrix': [[  f,     0., resolution[0]/2.],
+                                 [    0.,  f,  resolution[1]/2.],
+                                 [    0.,     0.,    1.  ]]
            }
 
 
 def load_camera_calibration(g_pool):
     if g_pool.app != 'player':
         try:
-            camera_calibration = load_object(os.path.join(g_pool.user_dir,'camera_calibration'))
+            camera_calibration = load_object(os.path.join(g_pool.user_dir,'camera_calibration'),allow_legacy=False)
             camera_calibration['camera_name']
-        except KeyError:
+        except (KeyError,ValueError):
             camera_calibration = None
             logger.warning('Invalid or Deprecated camera calibration found. Please recalibrate camera.')
         except:
             camera_calibration = None
         else:
             same_name = camera_calibration['camera_name'] == g_pool.capture.name
-            same_resolution =  camera_calibration['resolution'] == g_pool.capture.frame_size
+            same_resolution = tuple(camera_calibration['resolution']) == g_pool.capture.frame_size
             if not (same_name and same_resolution):
                 logger.warning('Loaded camera calibration but camera name and/or resolution has changed.')
                 camera_calibration = None
@@ -275,7 +275,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.count = 10
         rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(np.array(self.obj_points), np.array(self.img_points),self.g_pool.capture.frame_size,None,None)
         logger.info("Calibrated Camera, RMS:{}".format(rms))
-        camera_calibration = {'camera_matrix':camera_matrix,'dist_coefs':dist_coefs,'camera_name':self.g_pool.capture.name,'resolution':self.g_pool.capture.frame_size}
+        camera_calibration = {'camera_matrix':camera_matrix.tolist(),'dist_coefs':dist_coefs.tolist(),'camera_name':self.g_pool.capture.name,'resolution':self.g_pool.capture.frame_size}
         save_object(camera_calibration,os.path.join(self.g_pool.user_dir,"camera_calibration"))
         logger.info("Calibration saved to user folder")
         self.camera_intrinsics = camera_matrix,dist_coefs,self.g_pool.capture.frame_size

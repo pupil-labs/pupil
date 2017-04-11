@@ -66,8 +66,8 @@ class Surface_Tracker(Plugin):
 
     def load_surface_definitions_from_file(self):
         # all registered surfaces
-        self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.user_dir,'surface_definitions') )
-        self.surfaces = [Reference_Surface(saved_definition=d) for d in  self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+        self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.user_dir,'surface_definitions'))
+        self.surfaces = [Reference_Surface(saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[])]
 
     def save_surface_definitions_to_file(self):
         self.surface_definitions["realtime_square_marker_surfaces"] = [rs.save_to_dict() for rs in self.surfaces if rs.defined]
@@ -220,10 +220,10 @@ class Surface_Tracker(Plugin):
             else:
                 s.gaze_on_srf =[]
 
-        events['surface'] = []
+        events['surfaces'] = []
         for s in self.surfaces:
             if s.detected:
-                events['surface'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
+                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
 
 
         if self.running:

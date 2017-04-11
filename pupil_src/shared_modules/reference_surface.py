@@ -115,7 +115,7 @@ class Reference_Surface(object):
         """
         save all markers and name of this surface to a dict.
         """
-        markers = dict([(m_id,m.uv_coords) for m_id,m in self.markers.items()])
+        markers = dict([(m_id,m.uv_coords.tolist()) for m_id,m in self.markers.items()])
         return {'name':self.name,'uid':self.uid,'markers':markers,'real_world_size':self.real_world_size}
 
 
@@ -130,7 +130,7 @@ class Reference_Surface(object):
         marker_dict = d['markers']
         for m_id,uv_coords in marker_dict.items():
             self.markers[m_id] = Support_Marker(m_id)
-            self.markers[m_id].load_uv_coords(uv_coords)
+            self.markers[m_id].load_uv_coords(np.asarray(uv_coords))
 
         #flag this surface as fully defined
         self.defined = True
@@ -151,7 +151,7 @@ class Reference_Surface(object):
         all_verts = np.array(all_verts,dtype=np.float32)
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
         # all_verts_undistorted_normalized centered in img center flipped in y and range [-1,1]
-        all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
+        all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
         hull = cv2.convexHull(all_verts_undistorted_normalized,clockwise=False)
 
         #simplify until we have excatly 4 verts
@@ -254,7 +254,7 @@ class Reference_Surface(object):
             # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
             # compute the homography transform from marker into the undistored normalized image space
             # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
-            xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
+            xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
             m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized, method=cv2.RANSAC,ransacReprojThreshold=0.1)
             if not mask.all():
                 detected = False
@@ -262,8 +262,8 @@ class Reference_Surface(object):
             # project the corners of the surface to undistored space
             corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
             # project and distort these points  and normalize them
-            corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*self.use_distortion)
-            corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*0)
+            corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), np.asarray(camera_calibration['camera_matrix']), np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
+            corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), np.asarray(camera_calibration['camera_matrix']), np.asarray(camera_calibration['dist_coefs'])*0)
 
             #normalize to pupil norm space
             corners_redistorted.shape = -1,2
@@ -313,9 +313,9 @@ class Reference_Surface(object):
 
             camera_pose_3d = None
             if locate_3d:
-                dist_coef, = camera_calibration['dist_coefs']
+                dist_coef, = np.asarray(camera_calibration['dist_coefs'])
                 img_size = camera_calibration['resolution']
-                K = camera_calibration['camera_matrix']
+                K = np.asarray(camera_calibration['camera_matrix'])
 
                 # 3d marker support pose estimation:
                 # scale normalized object points to world space units (think m,cm,mm)
@@ -447,7 +447,7 @@ class Reference_Surface(object):
             support_marker = Support_Marker(marker['id'])
             marker_verts = np.array(marker['verts'])
             marker_verts.shape = (-1,1,2)
-            marker_verts_undistorted_normalized = cv2.undistortPoints(marker_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
+            marker_verts_undistorted_normalized = cv2.undistortPoints(marker_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
             marker_uv_coords =  cv2.perspectiveTransform(marker_verts_undistorted_normalized,res['m_from_undistored_norm_space'])
             support_marker.load_uv_coords(marker_uv_coords)
             self.markers[marker['id']] = support_marker

@@ -19,6 +19,7 @@ from . adjust_calibration import Adjust_Calibration
 from . accuracy_test import Accuracy_Test
 from . hmd_calibration import HMD_Calibration, HMD_Calibration_3D
 from . gaze_mappers import Dummy_Gaze_Mapper, Monocular_Gaze_Mapper, Binocular_Gaze_Mapper,Vector_Gaze_Mapper,Binocular_Vector_Gaze_Mapper,Dual_Monocular_Gaze_Mapper
+from . calibration_plugin_base import Calibration_Plugin
 
 calibration_plugins = [Screen_Marker_Calibration,
                        Manual_Marker_Calibration,

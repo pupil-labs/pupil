@@ -110,6 +110,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         from version_utils import VersionFormat
         from methods import normalize, denormalize, timer
         from av_writer import JPEG_Writer, AV_Writer
+        from ndsi import H264Writer
         from video_capture import source_classes
         from video_capture import manager_classes
 
@@ -151,8 +152,13 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             if is_window_visible(window):
                 active_window = glfw.glfwGetCurrentContext()
                 glfw.glfwMakeContextCurrent(window)
+                hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+                g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
                 g_pool.gui.update_window(w, h)
-                graph.adjust_size(w, h)
+                g_pool.gui.collect_menus()
+                for g in g_pool.graphs:
+                    g.scale = hdpi_factor
+                    g.adjust_window_size(w, h)
                 adjust_gl_view(w, h)
                 glfw.glfwMakeContextCurrent(active_window)
 
@@ -206,7 +212,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(g_pool.user_dir, 'user_settings_eye{}'.format(eye_id)))
-        if session_settings.get("version", VersionFormat('0.0')) < g_pool.version:
+        if VersionFormat(session_settings.get("version", '0.0')) < g_pool.version:
             logger.info("Session setting are from older version of this app. I will not use those.")
             session_settings.clear()
 
@@ -261,11 +267,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         g_pool.pupil_detector = last_pupil_detector(
             g_pool, pupil_detector_settings)
 
-        # UI callback functions
-        def set_scale(new_scale):
-            g_pool.gui.scale = new_scale
-            g_pool.gui.collect_menus()
-
         def set_display_mode_info(val):
             g_pool.display_mode = val
             g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
@@ -287,6 +288,11 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
 
+        # UI callback functions
+        def set_scale(new_scale):
+            g_pool.gui_user_scale = new_scale
+            on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
+
         # gl_state settings
         basic_gl_setup()
         g_pool.image_tex = Named_Texture()
@@ -294,18 +300,16 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         # setup GUI
         g_pool.gui = ui.UI()
-        g_pool.gui.scale = session_settings.get('gui_scale', 1)
+        g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
         g_pool.sidebar = ui.Scrolling_Menu("Settings",
                                            pos=(-300, 0),
                                            size=(0, 0),
                                            header_pos='left')
         general_settings = ui.Growing_Menu('General')
-        general_settings.append(ui.Slider(  'scale',g_pool.gui,
-                                            setter=set_scale,
-                                            step = .05,
-                                            min=1.,
-                                            max=2.5,
-                                            label='Interface Size'))
+        general_settings.append(ui.Selector('gui_user_scale', g_pool,
+                                          setter=set_scale,
+                                          selection=[0.5, 0.75, 1., 1.5, 2.],
+                                          label='Interface Size'))
         general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,*g_pool.capture.frame_size)) )
         general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
         general_settings.append(ui.Selector('display_mode',
@@ -350,7 +354,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                 logger.info("Done recording.")
                 g_pool.writer.release()
                 g_pool.writer = None
-                np.save(timestamps_path,np.asarray(timestamps))
 
         g_pool.replace_source = replace_source # for ndsi capture
 
@@ -379,9 +382,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         glfw.glfwSetCursorPosCallback(main_window, on_pos)
         glfw.glfwSetScrollCallback(main_window, on_scroll)
 
-        # set the last saved window size
-        on_resize(main_window, *glfw.glfwGetWindowSize(main_window))
-
         # load last gui configuration
         g_pool.gui.configuration = session_settings.get('ui_config', {})
 
@@ -400,6 +400,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         fps_graph.pos = (140, 130)
         fps_graph.update_rate = 5
         fps_graph.label = "%0.0f FPS"
+        g_pool.graphs = [cpu_graph, fps_graph]
+
+        # set the last saved window size
+        on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
         should_publish_frames = False
         frame_publish_format = 'jpeg'
@@ -437,20 +441,21 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         record_path = notification['rec_path']
                         raw_mode = notification['compression']
                         logger.info("Will save eye video to: {}".format(record_path))
-                        timestamps_path = os.path.join(record_path, "eye{}_timestamps.npy".format(eye_id))
+                        video_path = os.path.join(record_path, "eye{}.mp4".format(eye_id))
                         if raw_mode and frame and g_pool.capture.jpeg_support:
-                            video_path = os.path.join(record_path, "eye{}.mp4".format(eye_id))
                             g_pool.writer = JPEG_Writer(video_path, g_pool.capture.frame_rate)
+                        elif hasattr(g_pool.capture._recent_frame, 'h264_buffer'):
+                            g_pool.writer = H264Writer(video_path,
+                                                       g_pool.capture.frame_size[0],
+                                                       g_pool.capture.frame_size[1],
+                                                       g_pool.capture.frame_rate)
                         else:
-                            video_path = os.path.join(record_path, "eye{}.mp4".format(eye_id))
                             g_pool.writer = AV_Writer(video_path, g_pool.capture.frame_rate)
-                        timestamps = []
                 elif subject == 'recording.stopped':
                     if g_pool.writer:
                         logger.info("Done recording.")
                         g_pool.writer.release()
                         g_pool.writer = None
-                        np.save(timestamps_path,np.asarray(timestamps))
                 elif subject.startswith('meta.should_doc'):
                     ipc_socket.notify({
                         'subject': 'meta.doc',
@@ -495,20 +500,15 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         '__raw_data__': [data]
                     })
 
-
                 t = frame.timestamp
-                dt,ts = t-ts,t
+                dt, ts = t - ts, t
                 try:
                     fps_graph.add(1./dt)
                 except ZeroDivisionError:
                     pass
 
-
-
                 if g_pool.writer:
                     g_pool.writer.write_video_frame(frame)
-                    timestamps.append(frame.timestamp)
-
 
                 # pupil ellipse detection
                 result = g_pool.pupil_detector.detect(frame, g_pool.u_r, g_pool.display_mode == 'algorithm')
@@ -567,10 +567,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                                             sharpness=1.)
 
                     # render graphs
-                    graph.push_view()
                     fps_graph.draw()
                     cpu_graph.draw()
-                    graph.pop_view()
 
                     # render GUI
                     g_pool.gui.update()
@@ -591,12 +589,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         if g_pool.writer:
             logger.info("Done recording eye.")
             g_pool.writer = None
-            np.save(timestamps_path,np.asarray(timestamps))
-
 
         glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
         # save session persistent settings
-        session_settings['gui_scale'] = g_pool.gui.scale
+        session_settings['gui_scale'] = g_pool.gui_user_scale
         session_settings['roi'] = g_pool.u_r.get()
         session_settings['flip'] = g_pool.flip
         session_settings['display_mode'] = g_pool.display_mode
@@ -605,7 +601,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         session_settings['capture_manager_settings'] = g_pool.capture_manager.class_name, g_pool.capture_manager.get_init_dict()
         session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
         session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
-        session_settings['version'] = g_pool.version
+        session_settings['version'] = str(g_pool.version)
         session_settings['last_pupil_detector'] = g_pool.pupil_detector.__class__.__name__
         session_settings['pupil_detector_settings'] = g_pool.pupil_detector.get_settings()
         session_settings.close()
