@@ -18,8 +18,11 @@ from methods import normalize, denormalize
 from video_capture import File_Source, EndofVideoFileError
 from circle_detector import find_concetric_circles
 
-from queue import Full, Empty
-from multiprocessing import Event, Queue, Process
+from calibration_routines import Dummy_Gaze_Mapper
+from calibration_routines.finish_calibration import finish_calibration
+
+import background_helper as bh
+from itertools import chain
 
 import logging
 logger = logging.getLogger(__name__)
@@ -29,8 +32,7 @@ class Global_Container(object):
     pass
 
 
-def detect_marker_positions(alive_flag, detection_queue, source_path, timestamps_path):
-    alive_flag.set()  # mark detection process as alive
+def detect_marker_positions(cmd_pipe, data_pipe, source_path, timestamps_path):
     timestamps = np.load(timestamps_path)
     min_ts = timestamps[0]
     max_ts = timestamps[-1]
@@ -47,9 +49,14 @@ def detect_marker_positions(alive_flag, detection_queue, source_path, timestamps
     logger.info('Starting calibration marker detection...')
 
     try:
-        while alive_flag.is_set():
-            cur_ts = frame.timestamp
-            print('\rDetection progress: {:3.0f} %'.format(100 * (cur_ts - min_ts) / (max_ts - min_ts)), end="")
+        while True:
+            for event in bh.recent_events(cmd_pipe):
+                if event == bh.TERM_SIGNAL:
+                    raise RuntimeError()
+
+            progress = 100 * (frame.timestamp - min_ts) / (max_ts - min_ts)
+            cmd_pipe.send('progress')
+            cmd_pipe.send(progress)
 
             gray_img = frame.gray
             markers = find_concetric_circles(gray_img, min_ring_count=3)
@@ -97,21 +104,22 @@ def detect_marker_positions(alive_flag, detection_queue, source_path, timestamps
                         ref["norm_pos"] = pos
                         ref["screen_pos"] = marker_pos
                         ref["timestamp"] = frame.timestamp
+                        ref['index'] = frame.index
                         # if events.get('fixations', []):
                         #     self.counter -= self.fixation_boost
                         if counter <= 0:
                             print("Sampled {} datapoints. Stopping to sample. Looking for steady marker again.".format(counter_max))
-                        try:
-                            detection_queue.put(ref, timeout=.05)
-                        except Full:
-                            pass
+                        data_pipe.send(ref)
             # end of tracking logic
 
             frame = src.get_frame()
 
-    except EndofVideoFileError:
+    except (EndofVideoFileError, RuntimeError, EOFError, OSError, BrokenPipeError):
         pass
-    alive_flag.clear()
+    finally:
+        cmd_pipe.send('finished')
+        cmd_pipe.close()
+        data_pipe.close()
 
 
 class Offline_Calibration(Plugin):
@@ -120,48 +128,83 @@ class Offline_Calibration(Plugin):
         self.ref_positions = []
         self.original_gaze_pos_by_frame = self.g_pool.gaze_positions_by_frame
 
-        source_path = g_pool.capture.source_path
-        timestamps_path = os.path.join(g_pool.rec_dir, "world_timestamps.npy")
+        self.g_pool.detection_mapping_mode = '3d'
+        self.g_pool.plugins.add(Dummy_Gaze_Mapper)
+        self.g_pool.active_calibration_plugin = self
 
-        self.detect_process_is_alive = Event()
-        self.detection_queue = Queue()
-        self.detection_process = Process(target=detect_marker_positions,
-                                         name='Calibration Marker Detection',
-                                         args=(self.detect_process_is_alive,
-                                               self.detection_queue,
-                                               source_path, timestamps_path))
-        self.detection_process.start()
-        # self.detect_process_is_alive.wait()  # optional
+        self.detection_proxy = None
+        self.detection_progress = 0.0
+        self.start_detection_task()
+
+    def start_detection_task(self):
+        # cancel current detection if running
+        bh.cancel_background_task(self.detection_proxy, False)
+
+        source_path = self.g_pool.capture.source_path
+        timestamps_path = os.path.join(self.g_pool.rec_dir, "world_timestamps.npy")
+
+        self.detection_proxy = bh.start_background_task(detect_marker_positions,
+                                                        name='Calibration Marker Detection',
+                                                        args=(source_path, timestamps_path))
 
     def init_gui(self):
+        if not hasattr(self.g_pool, 'sidebar'):
+            # Will be required when loading gaze mappers
+            self.g_pool.sidebar = ui.Scrolling_Menu("Sidebar", pos=(-700, 20), size=(300, 500))
+            self.g_pool.gui.append(self.g_pool.sidebar)
+
         def close():
             self.alive = False
-        self.menu = ui.Scrolling_Menu("Offline Calibration", size=(200, 300))
-        self.g_pool.gui.append(self.menu)
+        self.menu = ui.Growing_Menu("Offline Calibration")
+        self.g_pool.sidebar.insert(0, self.menu)
         self.menu.append(ui.Button('Close', close))
 
+        progress_slider = ui.Slider('detection_progress', self, label='Detection Progress')
+        progress_slider.display_format = '%3.0f%%'
+        progress_slider.read_only = True
+        self.menu.append(progress_slider)
         # self.menu.append(ui.Button('Redetect', self.redetect))
 
     def deinit_gui(self):
         if hasattr(self, 'menu'):
-            self.g_pool.gui.remove(self.menu)
+            self.g_pool.sidebar.remove(self.menu)
             self.menu = None
 
     def get_init_dict(self):
         return {}
 
+    def on_notify(self, notification):
+        if notification['subject'] == 'pupil_positions_changed' and not self.detection_proxy:
+            self.calibrate()  # do not calibrate while detection task is still running
+        elif notification['subject'] == 'calibration.successful':
+            logger.info('Offline calibration successful. Starting mapping...')
+
     def recent_events(self, events):
-        try:
-            while True:
-                ref_pos = self.detection_queue.get_nowait()
+        if self.detection_proxy:
+            for ref_pos in bh.recent_events(self.detection_proxy.data):
                 self.ref_positions.append(ref_pos)
-        except Empty:
-            pass
+            for msg in bh.recent_events(self.detection_proxy.cmd):
+                if msg == 'progress':
+                    self.detection_progress = self.detection_proxy.cmd.recv()
+                elif msg == 'finished':
+                    self.detection_proxy = None
+                    self.calibrate()
+
+    def calibrate(self):
+        if not self.ref_positions:
+            logger.error('No markers have been found. Cannot calibrate.')
+            return
+
+        first_idx = self.ref_positions[0]['index']
+        last_idx = self.ref_positions[-1]['index']
+        pupil_list = list(chain(*self.g_pool.pupil_positions_by_frame[first_idx:last_idx]))
+        finish_calibration(self.g_pool, pupil_list, self.ref_positions)
 
     def cleanup(self):
-        self.detect_process_is_alive.clear()
-        self.detection_process.join()
+        bh.cancel_background_task(self.detection_proxy)
         self.g_pool.gaze_positions_by_frame = self.original_gaze_pos_by_frame
         self.notify_all({'subject': 'gaze_positions_changed'})
         self.deinit_gui()
-
+        self.g_pool.active_gaze_mapping_plugin.alive = False
+        del self.g_pool.detection_mapping_mode
+        del self.g_pool.active_calibration_plugin

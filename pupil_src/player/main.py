@@ -250,6 +250,7 @@ def session(rec_dir):
     g_pool.version = app_version
     g_pool.capture = cap
     g_pool.timestamps = timestamps
+    g_pool.get_timestamp = lambda: 0.
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir

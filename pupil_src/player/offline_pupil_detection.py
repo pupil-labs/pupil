@@ -44,7 +44,7 @@ class Offline_Pupil_Detection(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
-        self.original_pupil_pos = self.g_pool.pupil_data
+        self.original_pupil_pos = self.g_pool.pupil_data['pupil_positions']
         self.original_pupil_pos_by_frame = self.g_pool.pupil_positions_by_frame
 
         self.eye_processes = [None, None]
@@ -97,11 +97,11 @@ class Offline_Pupil_Detection(Plugin):
             self.pupil_positions.append(payload)
             self.update_progress(payload)
         if not self.detection_finished_flag:
-            eye0_finished = self.detection_progress['0'] == 1. if self.eye_processes[0] is not None else True
-            eye1_finished = self.detection_progress['1'] == 1. if self.eye_processes[1] is not None else True
+            eye0_finished = self.detection_progress['0'] == 100. if self.eye_processes[0] is not None else True
+            eye1_finished = self.detection_progress['1'] == 100. if self.eye_processes[1] is not None else True
             if eye0_finished and eye1_finished:
                 self.detection_finished_flag = True
-                self.g_pool.pupil_data = self.pupil_positions
+                self.g_pool.pupil_data['pupil_positions'] = self.pupil_positions
                 self.g_pool.pupil_positions_by_frame = correlate_data(self.pupil_positions, self.g_pool.timestamps)
                 self.notify_all({'subject': 'pupil_positions_changed'})
                 logger.debug('pupil positions changed')
@@ -129,7 +129,7 @@ class Offline_Pupil_Detection(Plugin):
         self.zmq_ctx.term()
         self.deinit_gui()
 
-        self.g_pool.pupil_data = self.original_pupil_pos
+        self.g_pool.pupil_data['pupil_positions'] = self.original_pupil_pos
         self.g_pool.pupil_positions_by_frame = self.original_pupil_pos_by_frame
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
@@ -206,9 +206,8 @@ class Offline_Pupil_Detection(Plugin):
         for eye_id in (0, 1):
             if self.eye_timestamps[eye_id]:
                 progress_slider = ui.Slider(str(eye_id), self.detection_progress,
-                                            label='Progress Eye {}'.format(eye_id),
-                                            min=0.0, max=1., step=0.01)
-                progress_slider.display_format = '{:3.0f} %'
+                                            label='Progress Eye {}'.format(eye_id))
+                progress_slider.display_format = '%3.0f%%'
                 progress_slider.read_only = True
                 self.menu.append(progress_slider)
 

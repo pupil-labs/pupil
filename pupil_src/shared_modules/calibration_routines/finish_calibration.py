@@ -333,5 +333,10 @@ def finish_calibration(g_pool,pupil_list,ref_list):
 
     #this is only used by show calibration. TODO: rewrite show calibraiton.
     user_calibration_data = {'timestamp': ts,'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
-    save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
 
+    if g_pool.app != 'player':
+        save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
+    else:
+        result_dir = os.path.join(g_pool.rec_dir, 'offline_results')
+        os.makedirs(result_dir, exist_ok=True)
+        save_object(user_calibration_data, os.path.join(result_dir, "user_calibration_data"))
