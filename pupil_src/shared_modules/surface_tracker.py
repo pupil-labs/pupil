@@ -95,8 +95,8 @@ class Surface_Tracker(Plugin):
 
             if action == GLFW_RELEASE:
                 if self.edit_surf_verts:
-                    #if we had draged a vertex lets let other know the surfaces changed.
-                    self.notify_all({'subject':'surfaces_changed','delay':2})
+                    # if we had draged a vertex lets let other know the surfaces changed.
+                    self.notify_all({'subject': 'surfaces_changed', 'delay': 2})
                 self.edit_surf_verts = []
 
             elif action == GLFW_PRESS:
@@ -122,8 +122,10 @@ class Surface_Tracker(Plugin):
                                     self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
                                     self.notify_all({'subject':'surfaces_changed','delay':1})
 
-    def add_surface(self,_):
-        self.surfaces.append(Reference_Surface())
+    def add_surface(self, _):
+        surf = Reference_Surface()
+        surf.on_finish_define = self.save_surface_definitions_to_file
+        self.surfaces.append(surf)
         self.update_gui_markers()
 
     def remove_surface(self,i):
@@ -133,10 +135,10 @@ class Surface_Tracker(Plugin):
         if remove_surface in self.edit_surfaces:
             self.edit_surfaces.remove(remove_surface)
 
-
         self.surfaces[i].cleanup()
         del self.surfaces[i]
         self.update_gui_markers()
+        self.notify_all({'subject': 'surfaces_changed'})
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Surface Tracker')
@@ -180,8 +182,8 @@ class Surface_Tracker(Plugin):
             s_menu = ui.Growing_Menu("Surface {}".format(idx))
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
-            s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
-            s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
+            s_menu.append(ui.Text_Input('x', s.real_world_size, label='X size'))
+            s_menu.append(ui.Text_Input('y', s.real_world_size, label='Y size'))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
