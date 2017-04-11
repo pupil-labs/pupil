@@ -77,7 +77,7 @@ def load_camera_calibration(g_pool):
             camera_calibration = None
         else:
             same_name = camera_calibration['camera_name'] == g_pool.capture.name
-            same_resolution = camera_calibration['resolution'] == g_pool.capture.frame_size
+            same_resolution = tuple(camera_calibration['resolution']) == g_pool.capture.frame_size
             if not (same_name and same_resolution):
                 logger.warning('Loaded camera calibration but camera name and/or resolution has changed.')
                 camera_calibration = None
