@@ -115,7 +115,7 @@ class Offline_Pupil_Detection(Plugin):
         cur_ts = pupil_position['timestamp']
         min_ts = timestamps[0]
         max_ts = timestamps[-1]
-        self.detection_progress[str(eye_id)] = (cur_ts - min_ts) / (max_ts - min_ts)
+        self.detection_progress[str(eye_id)] = 100 * (cur_ts - min_ts) / (max_ts - min_ts)
 
     def cleanup(self):
         self.eye_control.notify({'subject': 'eye_process.should_stop', 'eye_id': 0})
@@ -208,6 +208,7 @@ class Offline_Pupil_Detection(Plugin):
                 progress_slider = ui.Slider(str(eye_id), self.detection_progress,
                                             label='Progress Eye {}'.format(eye_id),
                                             min=0.0, max=1., step=0.01)
+                progress_slider.display_format = '{:3.0f} %'
                 progress_slider.read_only = True
                 self.menu.append(progress_slider)
 

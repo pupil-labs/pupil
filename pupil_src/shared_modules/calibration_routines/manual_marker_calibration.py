@@ -145,15 +145,13 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 marker_pos = self.markers[0][0][0] #first marker innermost ellipse, pos
                 self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
-
             else:
                 self.detected = False
-                self.pos = None #indicate that no reference is detected
-
+                self.pos = None  # indicate that no reference is detected
 
             # center dark or white?
             if self.detected:
-                second_ellipse =  self.markers[0][1]
+                second_ellipse = self.markers[0][1]
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
                 marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
@@ -161,9 +159,9 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 center = marker_gray[int(second_ellipse[1][1])//2, int(second_ellipse[1][0])//2]
                 rel_shade = center-avg
 
-                #auto_stop logic
+                # auto_stop logic
                 if rel_shade > 30:
-                    #bright marker center found
+                    # bright marker center found
                     self.auto_stop +=1
                     self.stop_marker_found = True
 

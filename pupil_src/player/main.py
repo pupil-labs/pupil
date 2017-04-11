@@ -89,6 +89,7 @@ from annotations import Annotation_Player
 from raw_data_exporter import Raw_Data_Exporter
 from log_history import Log_History
 from offline_pupil_detection import Offline_Pupil_Detection
+from offline_calibration import Offline_Calibration
 
 
 import logging
@@ -148,7 +149,7 @@ def session(rec_dir):
                               Manual_Gaze_Correction, Video_Export_Launcher,
                               Offline_Surface_Tracker, Raw_Data_Exporter,
                               Batch_Exporter, Annotation_Player,
-                              Offline_Pupil_Detection], key=lambda x: x.__name__)
+                              Offline_Pupil_Detection, Offline_Calibration], key=lambda x: x.__name__)
 
     other_plugins = sorted([Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
     user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
