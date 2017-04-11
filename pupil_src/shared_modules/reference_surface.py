@@ -338,7 +338,7 @@ class Reference_Surface(object):
                 uv3d[:,:-1] = uv
                 xy.shape = -1,1,2
                 # compute pose of object relative to camera center
-                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = Camera_Intrinsics_Estimation_Fisheye.solvePnP(uv3d, xy, K, dist_coef,flags=cv2.SOLVEPNP_EPNP)
+                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = Camera_Intrinsics_Estimation_Fisheye.solvePnP(uv3d, xy, K, dist_coef)
                 print("{} \t {} \t {}".format(translate3d_cam_to_object[0], translate3d_cam_to_object[1], translate3d_cam_to_object[2]))
 
                 if is3dPoseAvailable:

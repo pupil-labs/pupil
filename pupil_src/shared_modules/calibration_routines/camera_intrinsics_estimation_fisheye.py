@@ -397,9 +397,9 @@ class Camera_Intrinsics_Estimation_Fisheye(Calibration_Plugin):
         undistorted = np.expand_dims(undistorted, 1)
         return undistorted
     @staticmethod
-    def solvePnP(uv3d, xy, K, D, flags=cv2.SOLVEPNP_ITERATIVE):
+    def solvePnP(uv3d, xy, K, D):
         xy_undist = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(xy, K, D)
-        res = cv2.solvePnP(uv3d, xy_undist, K, np.array([[0,0,0,0,0]]), flags=flags)
+        res = cv2.solvePnP(uv3d, xy_undist, K, np.array([[0,0,0,0,0]]), flags=cv2.SOLVEPNP_ITERATIVE)
         return res
 
     def gl_display(self):
