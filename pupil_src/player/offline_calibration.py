@@ -19,7 +19,6 @@ from methods import normalize
 from video_capture import File_Source, EndofVideoFileError
 from circle_detector import find_concetric_circles
 
-from calibration_routines import Dummy_Gaze_Mapper
 from calibration_routines.finish_calibration import finish_calibration
 
 import background_helper as bh
@@ -116,26 +115,31 @@ def map_pupil_positions(cmd_pipe, data_pipe, pupil_list, gaze_mapper_cls, kwargs
 
 
 class Offline_Calibration(Plugin):
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, detection_mapping_mode='3d'):
         super().__init__(g_pool)
-        self.ref_positions = []
-        self.gaze_positions = []
+        self.original_gaze_pos = self.g_pool.pupil_data['gaze_positions']
         self.original_gaze_pos_by_frame = self.g_pool.gaze_positions_by_frame
-
-        self.g_pool.detection_mapping_mode = '3d'
-        self.g_pool.plugins.add(Dummy_Gaze_Mapper)
-        self.g_pool.active_calibration_plugin = self
 
         self.mapping_progress = 0.
         self.mapping_proxy = None
+        self.detection_progress = 0.0
         self.detection_proxy = None
+
+        self.g_pool.detection_mapping_mode = detection_mapping_mode
+        self.g_pool.active_calibration_plugin = self
+        if getattr(g_pool, 'active_gaze_mapping_plugin', None) is None:
+            self.notify_all({'subject': 'start_plugin',
+                             'name': 'Dummy_Gaze_Mapper'})
+        else:
+            self.start_mapping_task()
+
         self.start_detection_task()
 
-    def start_detection_task(self):
+    def start_detection_task(self, *_):
         # cancel current detection if running
-        self.detection_progress = 0.0
         bh.cancel_background_task(self.detection_proxy, False)
 
+        self.ref_positions = []
         source_path = self.g_pool.capture.source_path
         timestamps_path = os.path.join(self.g_pool.rec_dir, "world_timestamps.npy")
 
@@ -143,11 +147,12 @@ class Offline_Calibration(Plugin):
                                                         name='Calibration Marker Detection',
                                                         args=(source_path, timestamps_path))
 
-    def start_mapping_task(self):
+    def start_mapping_task(self, *_):
         # cancel current mapping if running
         self.mapping_progress = 0.
         bh.cancel_background_task(self.mapping_proxy, False)
 
+        self.gaze_positions = []
         pupil_list = self.g_pool.pupil_data['pupil_positions']
         gaze_mapper_cls = type(self.g_pool.active_gaze_mapping_plugin)
         gaze_mapper_kwargs = self.g_pool.active_gaze_mapping_plugin.get_init_dict()
@@ -157,27 +162,27 @@ class Offline_Calibration(Plugin):
                                                       args=(pupil_list, gaze_mapper_cls, gaze_mapper_kwargs))
 
     def init_gui(self):
-        if not hasattr(self.g_pool, 'sidebar'):
-            # Will be required when loading gaze mappers
-            self.g_pool.sidebar = ui.Scrolling_Menu("Sidebar", pos=(-660, 20), size=(300, 500))
-            self.g_pool.gui.append(self.g_pool.sidebar)
-
         def close():
             self.alive = False
         self.menu = ui.Growing_Menu("Offline Calibration")
         self.g_pool.sidebar.insert(0, self.menu)
         self.menu.append(ui.Button('Close', close))
 
+        self.menu.append(ui.Info_Text('"Detection" searches for calibration markers in the world video.'))
+        self.menu.append(ui.Button('Redetect', self.start_detection_task))
         slider = ui.Slider('detection_progress', self, label='Detection Progress')
         slider.display_format = '%3.0f%%'
         slider.read_only = True
         self.menu.append(slider)
 
+        self.menu.append(ui.Info_Text('"Mapping" recalculates all gaze positions using the current gaze mapper.'))
+        self.menu.append(ui.Selector('detection_mapping_mode', self.g_pool, selection=['2d', '3d'],
+                                     label='Mapping Mode'))
+        self.menu.append(ui.Button('Remap', self.start_mapping_task))
         slider = ui.Slider('mapping_progress', self, label='Mapping Progress')
         slider.display_format = '%3.0f%%'
         slider.read_only = True
         self.menu.append(slider)
-        # self.menu.append(ui.Button('Redetect', self.redetect))
 
     def deinit_gui(self):
         if hasattr(self, 'menu'):
@@ -185,12 +190,13 @@ class Offline_Calibration(Plugin):
             self.menu = None
 
     def get_init_dict(self):
-        return {}
+        return {'detection_mapping_mode': self.g_pool.detection_mapping_mode}
 
     def on_notify(self, notification):
-        if notification['subject'] == 'pupil_positions_changed' and not self.detection_proxy:
+        subject = notification['subject']
+        if subject == 'pupil_positions_changed' and not self.detection_proxy:
             self.calibrate()  # do not calibrate while detection task is still running
-        elif notification['subject'] == 'calibration.successful':
+        elif subject == 'calibration.successful':
             logger.info('Offline calibration successful. Starting mapping...')
             self.start_mapping_task()
 
@@ -233,9 +239,8 @@ class Offline_Calibration(Plugin):
     def cleanup(self):
         bh.cancel_background_task(self.detection_proxy)
         bh.cancel_background_task(self.mapping_proxy)
+        self.g_pool.pupil_data['gaze_positions'] = self.original_gaze_pos
         self.g_pool.gaze_positions_by_frame = self.original_gaze_pos_by_frame
         self.notify_all({'subject': 'gaze_positions_changed'})
         self.deinit_gui()
-        self.g_pool.active_gaze_mapping_plugin.alive = False
-        del self.g_pool.detection_mapping_mode
-        del self.g_pool.active_calibration_plugin
+        self.g_pool.active_calibration_plugin = None
