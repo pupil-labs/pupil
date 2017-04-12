@@ -326,7 +326,7 @@ def session(rec_dir):
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
     g_pool.main_menu = ui.Scrolling_Menu("Settings", pos=(-350, 20), size=(300, 500))
-    g_pool.main_menu.append(ui.Button("Close Pupil Player", lambda: glfwSetWindowShouldClose(main_window, True)))
+    g_pool.main_menu.append(ui.Button('Reset window size', lambda: glfwSetWindowSize(main_window,g_pool.capture.frame_size[0],g_pool.capture.frame_size[1])) )
     g_pool.main_menu.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.5, .75, 1., 1.5, 2.], label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: {}'.format(g_pool.version)))
     g_pool.main_menu.append(ui.Info_Text('Capture Version: {}'.format(meta_info['Capture Software Version'])))
