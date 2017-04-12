@@ -10,11 +10,12 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import os
+import cv2
 import numpy as np
 from pyglui import ui
 from plugin import Plugin
 from player_methods import correlate_data
-from methods import normalize, denormalize
+from methods import normalize
 from video_capture import File_Source, EndofVideoFileError
 from circle_detector import find_concetric_circles
 
@@ -40,12 +41,6 @@ def detect_marker_positions(cmd_pipe, data_pipe, source_path, timestamps_path):
     src = File_Source(Global_Container(), source_path, timestamps, timed_playback=False)
     frame = src.get_frame()
 
-    smooth_pos = 0., 0.
-    smooth_vel = 0.
-    sample_site = (-2, -2)
-    counter = 0
-    counter_max = 1
-
     logger.info('Starting calibration marker detection...')
 
     try:
@@ -55,8 +50,7 @@ def detect_marker_positions(cmd_pipe, data_pipe, source_path, timestamps_path):
                     raise RuntimeError()
 
             progress = 100 * (frame.timestamp - min_ts) / (max_ts - min_ts)
-            cmd_pipe.send('progress')
-            cmd_pipe.send(progress)
+            cmd_pipe.send(('progress', progress))
 
             gray_img = frame.gray
             markers = find_concetric_circles(gray_img, min_ring_count=3)
@@ -64,59 +58,37 @@ def detect_marker_positions(cmd_pipe, data_pipe, source_path, timestamps_path):
                 detected = True
                 marker_pos = markers[0][0][0]  # first marker innermost ellipse, pos
                 pos = normalize(marker_pos, (frame.width, frame.height), flip_y=True)
+
             else:
                 detected = False
                 pos = None
 
-            # tracking logic
             if detected:
-                # calculate smoothed manhattan velocity
-                smoother = 0.3
-                smooth_pos = np.array(smooth_pos)
-                pos = np.array(pos)
-                new_smooth_pos = smooth_pos + smoother*(pos-smooth_pos)
-                smooth_vel_vec = new_smooth_pos - smooth_pos
-                smooth_pos = list(new_smooth_pos)
-                # manhattan distance for velocity
-                new_vel = abs(smooth_vel_vec[0])+abs(smooth_vel_vec[1])
-                smooth_vel = smooth_vel + smoother * (new_vel - smooth_vel)
+                second_ellipse = markers[0][1]
+                col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
+                row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
+                marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
+                avg = cv2.mean(marker_gray)[0]
+                center = marker_gray[int(second_ellipse[1][1])//2, int(second_ellipse[1][0])//2]
+                rel_shade = center-avg
 
-                # distance to last sampled site
-                sample_ref_dist = smooth_pos - np.array(sample_site)
-                sample_ref_dist = abs(sample_ref_dist[0])+abs(sample_ref_dist[1])
+                ref = {}
+                ref["norm_pos"] = pos
+                ref["screen_pos"] = marker_pos
+                ref["timestamp"] = frame.timestamp
+                ref['index'] = frame.index
+                if rel_shade > 30:
+                    ref['type'] = 'stop_marker'
+                else:
+                    ref['type'] = 'calibration_marker'
 
-                # start counter if ref is resting in place and not at last sample site
-                if counter <= 0:
-
-                    if smooth_vel < 0.01 and sample_ref_dist > 0.1:
-                        sample_site = smooth_pos
-                        counter = counter_max
-                        print("Steady marker found. Starting to sample {} datapoints".format(counter_max))
-
-                if counter > 0:
-                    if smooth_vel > 0.01:
-                        counter = 0
-                        print("Marker moved too quickly: Aborted sample. Sampled {} datapoints. Looking for steady marker again.".format(counter_max-counter))
-                    else:
-                        counter -= 1
-                        ref = {}
-                        ref["norm_pos"] = pos
-                        ref["screen_pos"] = marker_pos
-                        ref["timestamp"] = frame.timestamp
-                        ref['index'] = frame.index
-                        # if events.get('fixations', []):
-                        #     self.counter -= self.fixation_boost
-                        if counter <= 0:
-                            print("Sampled {} datapoints. Stopping to sample. Looking for steady marker again.".format(counter_max))
-                        data_pipe.send(ref)
-            # end of tracking logic
-
+                data_pipe.send(ref)
             frame = src.get_frame()
 
     except (EndofVideoFileError, RuntimeError, EOFError, OSError, BrokenPipeError):
         pass
     finally:
-        cmd_pipe.send('finished')
+        cmd_pipe.send(('finished',))  # one-element tuple required
         cmd_pipe.close()
         data_pipe.close()
 
@@ -133,13 +105,12 @@ def map_pupil_positions(cmd_pipe, data_pipe, pupil_list, gaze_mapper_cls, kwargs
             if mapped_gaze:
                 data_pipe.send(mapped_gaze)
                 progress = 100 * (idx+1)/len(pupil_list)
-                cmd_pipe.send('progress')
-                cmd_pipe.send(progress)
+                cmd_pipe.send(('progress', progress))
 
     except (RuntimeError, EOFError, OSError, BrokenPipeError):
         pass
     finally:
-        cmd_pipe.send('finished')
+        cmd_pipe.send(('finished',))  # one-element tuple required
         cmd_pipe.close()
         data_pipe.close()
 
@@ -228,9 +199,9 @@ class Offline_Calibration(Plugin):
             for ref_pos in bh.recent_events(self.detection_proxy.data):
                 self.ref_positions.append(ref_pos)
             for msg in bh.recent_events(self.detection_proxy.cmd):
-                if msg == 'progress':
-                    self.detection_progress = self.detection_proxy.cmd.recv()
-                elif msg == 'finished':
+                if msg[0] == 'progress':
+                    self.detection_progress = msg[1]
+                elif msg[0] == 'finished':
                     self.detection_proxy = None
                     self.calibrate()
 
@@ -238,9 +209,9 @@ class Offline_Calibration(Plugin):
             for mapped_gaze in bh.recent_events(self.mapping_proxy.data):
                 self.gaze_positions.extend(mapped_gaze)
             for msg in bh.recent_events(self.mapping_proxy.cmd):
-                if msg == 'progress':
-                    self.mapping_progress = self.mapping_proxy.cmd.recv()
-                elif msg == 'finished':
+                if msg[0] == 'progress':
+                    self.mapping_progress = msg[1]
+                elif msg[0] == 'finished':
                     self.mapping_proxy = None
                     self.finish_mapping()
 
