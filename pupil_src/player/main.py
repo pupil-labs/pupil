@@ -549,17 +549,10 @@ def session(rec_dir):
 def show_no_rec_window():
     from pyglui.pyfontstash import fontstash
     from pyglui.ui import get_roboto_font_path
-
+    global rec_dir
     def on_drop(window, count, paths):
-        for x in range(count):
-            new_rec_dir = paths[x].decode('utf-8')
-            if is_pupil_rec_dir(new_rec_dir):
-                logger.debug("Starting new session with '{}'".format(new_rec_dir))
-                global rec_dir
-                rec_dir = new_rec_dir
-                glfwSetWindowShouldClose(window, True)
-            else:
-                logger.error("'{}' is not a valid pupil recording".format(new_rec_dir))
+        global rec_dir
+        rec_dir = paths[0].decode('utf-8')
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))
@@ -592,6 +585,16 @@ def show_no_rec_window():
         hdpi_factor = float(fb_size[0] / glfwGetWindowSize(window)[0])
         gl_utils.adjust_gl_view(*fb_size)
 
+        if rec_dir:
+            if is_pupil_rec_dir(rec_dir):
+                logger.info("Starting new session with '{}'".format(rec_dir))
+                text = "Updating recording format."
+                tip = "This may take a while!"
+            else:
+                logger.error("'{}' is not a valid pupil recording".format(rec_dir))
+                tip = "Oops! That was not a valid recording."
+                rec_dir = None
+
         gl_utils.clear_gl_screen()
         glfont.set_blur(10.5)
         glfont.set_color_float((0.0, 0.0, 0.0, 1.))
@@ -605,7 +608,13 @@ def show_no_rec_window():
         glfont.draw_text(w/2*hdpi_factor, .3*h*hdpi_factor, text)
         glfont.set_size(w/30.*hdpi_factor)
         glfont.draw_text(w/2*hdpi_factor, .4*h*hdpi_factor, tip)
+
         glfwSwapBuffers(window)
+
+        if rec_dir:
+            update_recording_to_recent(rec_dir)
+            glfwSetWindowShouldClose(window, True)
+
         glfwPollEvents()
 
     session_settings['window_position'] = glfwGetWindowPos(window)
