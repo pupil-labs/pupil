@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import sys, os
-import platform
 import cv2
 import numpy as np
 import csv
@@ -21,8 +20,8 @@ from ctypes import c_bool
 
 from itertools import chain
 from OpenGL.GL import *
-from methods import normalize, denormalize
-from file_methods import Persistent_Dict, save_object
+from methods import normalize
+from file_methods import Persistent_Dict
 from cache_list import Cache_List
 from glfw import *
 from pyglui import ui
@@ -469,10 +468,6 @@ class Offline_Surface_Tracker(Surface_Tracker):
         for s in self.surfaces:
             # per surface names:
             surface_name = '_'+s.name.replace('/','')+'_'+s.uid
-
-
-            # save surface_positions as pickle file
-            save_object(s.cache.to_list(),os.path.join(metrics_dir,'srf_positions'+surface_name))
 
             #save surface_positions as csv
             with open(os.path.join(metrics_dir,'srf_positons'+surface_name+'.csv'),'w',encoding='utf-8',newline='') as csvfile:
