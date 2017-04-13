@@ -192,7 +192,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     mCurrentInitialSphere = mActiveModelPtr->getInitialSphere();
 
     result.sphere = mCurrentSphere;
-     // project the sphere back to 2D
+    // project the sphere back to 2D
     // needed to draw it in the eye window
     result.projectedSphere = project(mCurrentSphere, mFocalLength);
     // project the circle back to 2D
