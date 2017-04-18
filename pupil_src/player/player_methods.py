@@ -373,7 +373,7 @@ def is_pupil_rec_dir(rec_dir):
         return False
     try:
         meta_info = load_meta_info(rec_dir)
-        meta_info["Capture Software Version"]  # Test key existence
+        meta_info["Recording Name"]  # Test key existence
     except:
         logger.error("Could not read info.csv file: Not a valid Pupil recording.")
         return False
