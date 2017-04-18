@@ -19,13 +19,17 @@ from methods import normalize
 from video_capture import File_Source, EndofVideoFileError
 from circle_detector import find_concetric_circles
 
-from calibration_routines.finish_calibration import finish_calibration
+from calibration_routines import gaze_mapping_plugins
+from calibration_routines.finish_calibration import select_calibration_method
+from file_methods import Persistent_Dict
 
 import background_helper as bh
 from itertools import chain
 
 import logging
 logger = logging.getLogger(__name__)
+
+gaze_mapping_plugins_by_name = {p.__name__: p for p in gaze_mapping_plugins}
 
 
 class Global_Container(object):
@@ -92,8 +96,9 @@ def detect_marker_positions(cmd_pipe, data_pipe, source_path, timestamps_path):
         data_pipe.close()
 
 
-def map_pupil_positions(cmd_pipe, data_pipe, pupil_list, gaze_mapper_cls, kwargs):
+def map_pupil_positions(cmd_pipe, data_pipe, pupil_list, gaze_mapper_cls_name, kwargs):
     try:
+        gaze_mapper_cls = gaze_mapping_plugins_by_name[gaze_mapper_cls_name]
         gaze_mapper = gaze_mapper_cls(Global_Container(), **kwargs)
         for idx, datum in enumerate(pupil_list):
             for event in bh.recent_events(cmd_pipe):
@@ -115,25 +120,29 @@ def map_pupil_positions(cmd_pipe, data_pipe, pupil_list, gaze_mapper_cls, kwargs
 
 
 class Offline_Calibration(Plugin):
-    def __init__(self, g_pool, detection_mapping_mode='3d'):
+    def __init__(self, g_pool, mapping_cls_name='Dummy_Gaze_Mapper', mapping_args={}, detection_mapping_mode='3d'):
         super().__init__(g_pool)
         self.original_gaze_pos = self.g_pool.pupil_data['gaze_positions']
         self.original_gaze_pos_by_frame = self.g_pool.gaze_positions_by_frame
 
+        self.mapping_cls_name = mapping_cls_name
+        self.mapping_args = mapping_args
+
+        self.gaze_positions = []
         self.mapping_progress = 0.
         self.mapping_proxy = None
-        self.detection_progress = 0.0
+
+        self.load_previously_detected_markers()
         self.detection_proxy = None
+        if self.ref_positions:
+            self.detection_progress = 100.0
+        else:
+            self.detection_progress = 0.0
+            self.start_detection_task()
 
         self.g_pool.detection_mapping_mode = detection_mapping_mode
         self.g_pool.active_calibration_plugin = self
-        if getattr(g_pool, 'active_gaze_mapping_plugin', None) is None:
-            self.notify_all({'subject': 'start_plugin',
-                             'name': 'Dummy_Gaze_Mapper'})
-        else:
-            self.start_mapping_task()
-
-        self.start_detection_task()
+        self.start_mapping_task()
 
     def start_detection_task(self, *_):
         # cancel current detection if running
@@ -154,18 +163,25 @@ class Offline_Calibration(Plugin):
 
         self.gaze_positions = []
         pupil_list = self.g_pool.pupil_data['pupil_positions']
-        gaze_mapper_cls = type(self.g_pool.active_gaze_mapping_plugin)
-        gaze_mapper_kwargs = self.g_pool.active_gaze_mapping_plugin.get_init_dict()
 
         self.mapping_proxy = bh.start_background_task(map_pupil_positions,
                                                       name='Gaze Mapping',
-                                                      args=(pupil_list, gaze_mapper_cls, gaze_mapper_kwargs))
+                                                      args=(pupil_list, self.mapping_cls_name, self.mapping_args))
+
+    def load_previously_detected_markers(self):
+        loaded = Persistent_Dict(os.path.join(self.g_pool.rec_dir, 'circle_markers'))
+        self.ref_positions = loaded.get('offline_detected', [])
+
+    def save_detected_markers(self):
+        storage = Persistent_Dict(os.path.join(self.g_pool.rec_dir, 'circle_markers'))
+        storage['offline_detected'] = self.ref_positions
+        storage.save()
 
     def init_gui(self):
         def close():
             self.alive = False
-        self.menu = ui.Growing_Menu("Offline Calibration")
-        self.g_pool.sidebar.insert(0, self.menu)
+        self.menu = ui.Scrolling_Menu("Offline Calibration", pos=(-660, 20), size=(300, 500))
+        self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Button('Close', close))
 
         self.menu.append(ui.Info_Text('"Detection" searches for calibration markers in the world video.'))
@@ -186,19 +202,18 @@ class Offline_Calibration(Plugin):
 
     def deinit_gui(self):
         if hasattr(self, 'menu'):
-            self.g_pool.sidebar.remove(self.menu)
+            self.g_pool.gui.remove(self.menu)
             self.menu = None
 
     def get_init_dict(self):
-        return {'detection_mapping_mode': self.g_pool.detection_mapping_mode}
+        return {'mapping_cls_name': self.mapping_cls_name,
+                'mapping_args': self.mapping_args,
+                'detection_mapping_mode': self.g_pool.detection_mapping_mode}
 
     def on_notify(self, notification):
         subject = notification['subject']
         if subject == 'pupil_positions_changed' and not self.detection_proxy:
             self.calibrate()  # do not calibrate while detection task is still running
-        elif subject == 'calibration.successful':
-            logger.info('Offline calibration successful. Starting mapping...')
-            self.start_mapping_task()
 
     def recent_events(self, events):
         if self.detection_proxy:
@@ -229,7 +244,14 @@ class Offline_Calibration(Plugin):
         first_idx = self.ref_positions[0]['index']
         last_idx = self.ref_positions[-1]['index']
         pupil_list = list(chain(*self.g_pool.pupil_positions_by_frame[first_idx:last_idx]))
-        finish_calibration(self.g_pool, pupil_list, self.ref_positions)
+        logger.info('Calibrating...')
+        method, result = select_calibration_method(self.g_pool, pupil_list, self.ref_positions)
+        if result['subject'] != 'calibration.failed':
+            logger.info('Offline calibration successful. Starting mapping using {}.'.format(method))
+            self.mapping_cls_name = result['name']
+            self.mapping_args = result['args']
+            self.start_mapping_task()
+        self.save_detected_markers()
 
     def finish_mapping(self):
         self.g_pool.pupil_data['gaze_positions'] = self.gaze_positions

@@ -90,7 +90,6 @@ from raw_data_exporter import Raw_Data_Exporter
 from log_history import Log_History
 from offline_pupil_detection import Offline_Pupil_Detection
 from offline_calibration import Offline_Calibration
-from calibration_routines import calibration_plugins, gaze_mapping_plugins
 
 import logging
 # set up root logger before other imports
@@ -142,7 +141,7 @@ class Global_Container(object):
 
 
 def session(rec_dir):
-    system_plugins = [Log_Display, Seek_Bar, Trim_Marks] + calibration_plugins + gaze_mapping_plugins
+    system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
     vis_plugins = sorted([Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross,
                           Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path], key=lambda x: x.__name__)
 
@@ -331,8 +330,6 @@ def session(rec_dir):
 
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
-    g_pool.sidebar = ui.Scrolling_Menu("Sidebar", pos=(-660, 20), size=(300, 500))
-    g_pool.gui.append(g_pool.sidebar)
     g_pool.main_menu = ui.Scrolling_Menu("Settings", pos=(-350, 20), size=(300, 500))
     g_pool.main_menu.append(ui.Button('Reset window size',
                                       lambda: glfwSetWindowSize(main_window, cap.frame_size[0], cap.frame_size[1])))
