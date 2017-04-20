@@ -26,7 +26,7 @@ if __name__ == '__main__':
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
 
 from plugin import Plugin
-from video_export_launcher import Export_Process, Value, cpu_count
+from video_export_launcher import mp, Export_Process
 
 from exporter import export
 from player_methods import is_pupil_rec_dir
@@ -67,8 +67,8 @@ class Batch_Exporter(Plugin):
         self.source_dir = default_path
 
         self.run = False
-        self.workers = [None for x in range(cpu_count())]
-        logger.info("Using a maximum of {} CPUs to process visualizations in parallel...".format(cpu_count()))
+        self.workers = [None for x in range(mp.cpu_count())]
+        logger.info("Using a maximum of {} CPUs to process visualizations in parallel...".format(mp.cpu_count()))
 
     def unset_alive(self):
         self.alive = False
@@ -142,9 +142,9 @@ class Batch_Exporter(Plugin):
         outfiles = set()
         for d in self.new_exports:
             logger.debug("Adding new export.")
-            should_terminate = Value(c_bool, False)
-            frames_to_export = Value(c_int, 0)
-            current_frame = Value(c_int, 0)
+            should_terminate = mp.Value(c_bool, False)
+            frames_to_export = mp.Value(c_int, 0)
+            current_frame = mp.Value(c_int, 0)
             start_frame = None
             end_frame = None
             export_dir = d
@@ -295,7 +295,7 @@ def main():
 
     recording_dirs = get_recording_dirs(data_dir)
     # start multiprocessing engine
-    n_cpu = cpu_count()
+    n_cpu = mp.cpu_count()
     logger.info("Using a maximum of {} CPUs to process visualizations in parallel...".format(n_cpu))
 
     jobs = []
@@ -303,9 +303,9 @@ def main():
     for d in recording_dirs:
         j = Temp()
         logger.info("Adding new export: {}".format(d))
-        j.should_terminate = Value(c_bool, 0)
-        j.frames_to_export = Value(c_int, 0)
-        j.current_frame = Value(c_int, 0)
+        j.should_terminate = mp.Value(c_bool, 0)
+        j.frames_to_export = mp.Value(c_int, 0)
+        j.current_frame = mp.Value(c_int, 0)
         j.data_dir = d
         j.user_dir = None
         j.start_frame = None
@@ -330,7 +330,7 @@ def main():
             j.out_file_path = None
 
         j.args = (j.should_terminate, j.frames_to_export, j.current_frame, j.data_dir, j.user_dir,
-                  j.start_frame, j.end_frame, j.plugin_initializers, j.out_file_path)
+                  j.start_frame, j.end_frame, j.plugin_initializers, j.out_file_path,None)
         jobs.append(j)
 
     todo = jobs[:]

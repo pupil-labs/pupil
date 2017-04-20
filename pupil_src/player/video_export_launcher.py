@@ -10,29 +10,13 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from plugin import Plugin
-import numpy as np
-import os,sys
-import platform
+import os
 import time
+import multiprocessing as mp
 from pyglui import ui
 import logging
 logger = logging.getLogger(__name__)
-
 from ctypes import c_bool, c_int
-import multiprocessing as mp
-from multiprocessing import Value, cpu_count
-
-#threading and processing
-if platform.system() in ('Darwin'):
-    from multiprocessing import get_context
-    mp = get_context('spawn')
-    Value = mp.Value
-    cpu_count = mp.cpu_count
-else:
-    import multiprocessing as mp
-    from multiprocessing import Value, cpu_count
-
-
 from exporter import export
 
 class Export_Process(mp.Process):
