@@ -23,7 +23,7 @@ class Export_Process(mp.Process):
     """small aditions to the process class"""
     def __init__(self, target,args):
         super().__init__(target=target,args=args)
-        self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,_,_,self.out_file_path = args
+        self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,_,_,self.out_file_path,_ = args
     def status(self):
         return self.current_frame.value
     def cancel(self):
@@ -133,7 +133,7 @@ class Video_Export_Launcher(Plugin):
         plugins = self.g_pool.plugins.get_initializers()
 
         out_file_path=verify_out_file_path(self.rec_name,export_dir)
-        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,self.g_pool.min_data_confidence,start_frame,end_frame,plugins,out_file_path))
+        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,self.g_pool.min_data_confidence,start_frame,end_frame,plugins,out_file_path,self.g_pool.pupil_data))
         self.new_export = process
 
     def launch_export(self, new_export):
