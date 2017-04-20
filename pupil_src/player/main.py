@@ -59,7 +59,7 @@ from OpenGL.GL import glClearColor
 from video_capture import File_Source, EndofVideoFileError, FileSeekError
 
 # helpers/utils
-from version_utils import VersionFormat, read_rec_version, get_version
+from version_utils import VersionFormat, get_version
 from methods import normalize, denormalize, delta_t, get_system_info
 from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 
