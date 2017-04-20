@@ -306,7 +306,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
     g_pool.sidebar = ui.Scrolling_Menu("Settings", pos=(-350, 0), size=(0, 0), header_pos='left')
     general_settings = ui.Growing_Menu('General')
-    general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[0.5, 0.75, 1., 1.5, 2.], label='Interface size'))
+    general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0],g_pool.capture.frame_size[1])) )
     general_settings.append(ui.Selector('audio_mode',audio,selection=audio.audio_modes))
     general_settings.append(ui.Selector('detection_mapping_mode',

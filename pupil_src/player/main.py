@@ -328,7 +328,7 @@ def session(rec_dir):
     g_pool.main_menu = ui.Scrolling_Menu("Settings", pos=(-350, 20), size=(300, 500))
     g_pool.main_menu.append(ui.Button('Reset window size',
                                       lambda: glfwSetWindowSize(main_window, cap.frame_size[0], cap.frame_size[1])))
-    g_pool.main_menu.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.5, .75, 1., 1.5, 2.], label='Interface Size'))
+    g_pool.main_menu.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: {}'.format(g_pool.version)))
     g_pool.main_menu.append(ui.Info_Text('Capture Version: {}'.format(meta_info['Capture Software Version'])))
     g_pool.main_menu.append(ui.Info_Text('Data Format Version: {}'.format(meta_info['Data Format Version'])))

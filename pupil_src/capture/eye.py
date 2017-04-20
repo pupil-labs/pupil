@@ -308,7 +308,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         general_settings = ui.Growing_Menu('General')
         general_settings.append(ui.Selector('gui_user_scale', g_pool,
                                           setter=set_scale,
-                                          selection=[0.5, 0.75, 1., 1.5, 2.],
+                                          selection=[.8, .9, 1., 1.1, 1.2],
                                           label='Interface Size'))
         general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,*g_pool.capture.frame_size)) )
         general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
