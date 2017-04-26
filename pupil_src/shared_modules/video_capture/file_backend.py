@@ -207,11 +207,11 @@ class File_Source(Base_Source):
         raise EndofVideoFileError("end of file.")
 
     @ensure_initialisation()
-    def pts_to_idx(self,pts):
+    def pts_to_idx(self, pts):
         # some older mkv did not use perfect timestamping so we are doing int(round()) to clear that.
         # With properly spaced pts (any v0.6.100+ recording) just int() would suffice.
         # print float(pts*self.video_stream.time_base*self.video_stream.average_rate),round(pts*self.video_stream.time_base*self.video_stream.average_rate)
-        return int(round(pts*self.video_stream.time_base*self.video_stream.average_rate))
+        return int(round(pts*self.video_stream.time_base*(self.video_stream.average_rate or 30.)))
 
     @ensure_initialisation()
     def pts_to_time(self,pts):
@@ -220,7 +220,7 @@ class File_Source(Base_Source):
 
     @ensure_initialisation()
     def idx_to_pts(self,idx):
-        return int(idx/self.video_stream.average_rate/self.video_stream.time_base)
+        return int(idx/(self.video_stream.average_rate or 30.)/self.video_stream.time_base)
 
     @ensure_initialisation()
     def get_frame(self):
