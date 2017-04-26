@@ -69,7 +69,7 @@ class Offline_Pupil_Detection(Plugin):
             try:
                 timestamps_path = os.path.join(self.g_pool.rec_dir,
                                                'eye{}_timestamps.npy'.format(eye_id))
-                self.eye_timestamps[eye_id] = list(np.load(timestamps_path))
+                self.eye_timestamps[eye_id] = np.load(timestamps_path).tolist()
                 self.detection_progress[str(eye_id)] = 0.
                 overwrite_cap_settings = 'File_Source', {
                     'source_path': eye_vid,

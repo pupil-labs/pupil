@@ -213,7 +213,8 @@ def session(rec_dir):
 
     update_recording_to_recent(rec_dir)
 
-    video_path = [f for f in glob(os.path.join(rec_dir, "world.*")) if f[-3:] in ('mp4', 'mkv', 'avi')][0]
+    video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
+                  if os.path.splitext(f)[1] in ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
