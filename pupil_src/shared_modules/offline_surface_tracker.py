@@ -72,12 +72,16 @@ class Offline_Surface_Tracker(Surface_Tracker):
         if cache is None:
             self.cache = Cache_List([False for _ in self.g_pool.timestamps])
             self.persistent_cache['version'] = self.marker_cache_version
+            self.persistent_cache['inverted_markers'] = self.invert_image
         elif version != self.marker_cache_version:
             self.persistent_cache['version'] = self.marker_cache_version
+            self.invert_image = self.persistent_cache.get('inverted_markers',False)
             self.cache = Cache_List([False for _ in self.g_pool.timestamps])
             logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
         else:
             self.cache = Cache_List(cache)
+            #we overwrite the inverted_image setting from init with the one save in the marker cache.
+            self.invert_image = self.persistent_cache.get('inverted_markers',False)
             logger.debug("Loaded marker cache {} / {} frames had been searched before".format(len(self.cache)-self.cache.count(False),len(self.cache)) )
 
     def clear_marker_cache(self):
@@ -549,6 +553,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         self.surface_definitions.close()
 
         self.close_marker_cacher()
+        self.persistent_cache['inverted_markers'] = self.invert_image
         self.persistent_cache["marker_cache"] = self.cache.to_list()
         self.persistent_cache.close()
 
