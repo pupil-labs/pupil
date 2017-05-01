@@ -181,7 +181,10 @@ class Recorder(Plugin):
         """Handles recorder notifications
 
         Reacts to notifications:
-            ``recording.should_start``: Starts a new recording session
+            ``recording.should_start``: Starts a new recording session.
+                fields: 'session_name' change session name
+                    use `/` to att dirs.
+                    start with `/` to ingore the rec base dir and start from root instead.
             ``recording.should_stop``: Stops current recording session
 
         Emits notifications:
