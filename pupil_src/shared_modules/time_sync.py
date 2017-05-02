@@ -100,6 +100,7 @@ class Time_Sync(Plugin):
         self.g_pool.sidebar.append(self.menu)
 
     def recent_events(self, events):
+        should_announce = False
         for evt in self.discovery.recent_events():
             if evt.type == 'SHOUT':
                 try:
@@ -108,16 +109,19 @@ class Time_Sync(Plugin):
                     logger.debug('Garbage raised `{}` -- dropping.'.format(e))
                 self.evaluate_leaderboard()
             elif evt.type == 'JOIN' and evt.group == self.sync_group:
+                should_announce = True
                 self.announce_clock_master_info()
             elif (evt.type == 'LEAVE' and evt.group == self.sync_group) or evt.type == 'EXIT':
                 self.remove_from_leaderboard(evt.peer_uuid)
                 self.evaluate_leaderboard()
 
+        if should_announce:
+            self.announce_clock_master_info()
+
         if not self.has_been_synced and self.follower_service and self.follower_service.in_sync:
             self.has_been_synced = 1.
             self.announce_clock_master_info()
             self.evaluate_leaderboard()
-
 
     def update_leaderboard(self, uuid, name, rank, port):
         for cs in self.leaderboard:
@@ -143,7 +147,7 @@ class Time_Sync(Plugin):
 
     def evaluate_leaderboard(self):
         if not self.leaderboard:
-            logger.debug("nobondy on the leader board.")
+            logger.debug("nobody on the leader board.")
             return
 
         current_leader = self.leaderboard[0]
@@ -212,14 +216,10 @@ class Time_Sync(Plugin):
         if self.discovery:
             if self.discovery.name() == name:
                 return
-
             else:
                 self.discovery.leave(self.sync_group)
                 self.discovery.stop()
                 self.leaderboard = []
-                if self.follower_service:
-                    self.follower_service.terminate()
-                    self.follower = None
 
         self.node_name = name or gethostname()
         self.discovery = Pyre(self.node_name)
