@@ -25,7 +25,7 @@ logger.setLevel(logging.DEBUG)
 
 
 class Clock_Service(object):
-    """docstring for Clock_Service"""
+    """Represents a remote clock service and is sortable by rank."""
     def __init__(self, uuid, rank, port):
         super(Clock_Service, self).__init__()
         self.uuid = uuid
@@ -41,8 +41,11 @@ class Clock_Service(object):
 
 
 class Time_Sync(Plugin):
-    """Synchronize time of Actors
-        across local network.
+    """Synchronize time across local network.
+
+    Implements the Pupil Time Sync protocol.
+    Acts as clock service and as follower if required.
+    See `time_sync_spec.md` for details.
     """
 
     def __init__(self, g_pool, node_name=None, sync_group='time_sync_default', base_bias=1.):
@@ -78,10 +81,16 @@ class Time_Sync(Plugin):
         self.menu.append(ui.Text_Input('sync_group', self, label='Sync Group', setter=self.change_sync_group))
 
         def sync_status():
-            return 'Clock Master' if self.followed_service is None else 'Clock Follower'
+            if self.followed_service:
+                status = 'In Sync' if self.followed_service.in_sync else 'Syncing'
+                return 'Clock Follower — ' + status
+            else:
+                return 'Clock Master'
         self.menu.append(ui.Text_Input('sync status', getter=sync_status, setter=lambda _: _, label='Status'))
 
         def set_bias(bias):
+            if bias < 0:
+                bias = 0.
             if bias != self.base_bias:
                 self.base_bias = bias
                 self.make_clock_service_announcement()
@@ -93,6 +102,7 @@ class Time_Sync(Plugin):
         self.g_pool.sidebar.append(self.menu)
 
     def recent_events(self, events):
+        should_announce = False
         for evt in self.discovery.recent_events():
             if evt.type == 'SHOUT':
                 try:
@@ -100,9 +110,17 @@ class Time_Sync(Plugin):
                 except Exception as e:
                     logger.debug('Garbage raised `{}` -- dropping.'.format(e))
             elif evt.type == 'JOIN' and evt.group == self.sync_group:
-                self.make_clock_service_announcement()
+                should_announce = True
             elif (evt.type == 'LEAVE' and evt.group == self.sync_group) or evt.type == 'EXIT':
                 self.remove_clock_service(evt.peer_uuid)
+
+        if not self.has_been_synced and self.followed_service and self.followed_service.in_sync:
+            self.has_been_synced = 1.
+            self.evaluate_leaderboard()
+            should_announce = True
+
+        if should_announce:
+            self.make_clock_service_announcement()
 
     def update_clock_service(self, uuid, rank, port):
         for cs in self.leaderboard:
@@ -131,7 +149,6 @@ class Time_Sync(Plugin):
         if self.leaderboard:
             current_leader = self.leaderboard[0]
             if self.own_rank < current_leader.rank:
-                logger.debug('Me < leader: {} {}'.format(self.own_rank, current_leader.rank))
                 leader_ep = self.discovery.peer_address(current_leader.uuid)
                 leader_addr = urlparse(leader_ep).netloc.split(':')[0]
                 if self.followed_service is None:
@@ -141,19 +158,22 @@ class Time_Sync(Plugin):
                                                                 time_fn=self.get_time,
                                                                 jump_fn=self.jump_time,
                                                                 slew_fn=self.slew_time)
-                    self.has_been_synced = 1.  # assume successful sync
-                    self.make_clock_service_announcement()
+                    logger.debug('Become clock follower with rank {}'.format(self.own_rank))
                 else:
                     self.followed_service.host = leader_addr
                     self.followed_service.port = current_leader.port
                 return
         # self should be clockmaster
-        logger.debug('I make my own time. {}'.format(self.own_rank))
         if self.followed_service is not None:
             self.followed_service.terminate()
             self.followed_service = None
-        self.has_been_master = 1.
-        self.make_clock_service_announcement()
+
+        if not self.has_been_master:
+            self.has_been_master = 1.
+            self.evaluate_leaderboard()
+        else:
+            logger.debug('Become clock master with rank {}'.format(self.own_rank))
+            self.make_clock_service_announcement()
 
     def make_clock_service_announcement(self):
         self.discovery.shout(self.sync_group, [repr(self.own_rank).encode(),
@@ -166,10 +186,10 @@ class Time_Sync(Plugin):
     def get_time(self):
         return self.g_pool.get_timestamp()
 
-    def slew_time(self,offset):
+    def slew_time(self, offset):
         self.g_pool.timebase.value += offset
 
-    def jump_time(self,offset):
+    def jump_time(self, offset):
         ok_to_change = True
         for p in self.g_pool.plugins:
             if p.class_name == 'Recorder':
