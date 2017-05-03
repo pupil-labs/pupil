@@ -26,14 +26,15 @@ logger.setLevel(logging.DEBUG)
 
 class Clock_Service(object):
     """Represents a remote clock service and is sortable by rank."""
-    def __init__(self, uuid, rank, port):
+    def __init__(self, uuid,name, rank, port):
         super(Clock_Service, self).__init__()
         self.uuid = uuid
         self.rank = rank
         self.port = port
+        self.name = name
 
-    def __str__(self):
-        return '<Clock Service: {} rank={} port={}>'.format(self.uuid.hex, self.rank, self.port)
+    def __repr__(self):
+        return '{:.2f}:{}'.format(self.rank,self.name)
 
     def __lt__(self, other):
         # "smallest" object has highest rank
@@ -60,8 +61,8 @@ class Time_Sync(Plugin):
         self.tie_breaker = random.random()
         self.base_bias = base_bias
 
-        self.own_service = Clock_Sync_Master(self.g_pool.get_timestamp)
-        self.followed_service = None  # only set if there is a better server than us
+        self.master_service = Clock_Sync_Master(self.g_pool.get_timestamp)
+        self.follower_service = None  # only set if there is a better server than us
 
         self.restart_discovery(node_name)
 
@@ -75,15 +76,12 @@ class Time_Sync(Plugin):
         self.menu.append(ui.Info_Text(help_str))
         help_str = "All pupil nodes of one group share a Master clock."
         self.menu.append(ui.Info_Text(help_str))
-        # self.menu.append(ui.Text_Input('sync status',getter=sync_status_info,setter=lambda _: _))
-        # self.menu[-1].read_only = True
         self.menu.append(ui.Text_Input('node_name', self, label='Node Name', setter=self.restart_discovery))
         self.menu.append(ui.Text_Input('sync_group', self, label='Sync Group', setter=self.change_sync_group))
 
         def sync_status():
-            if self.followed_service:
-                status = 'In Sync' if self.followed_service.in_sync else 'Syncing'
-                return 'Clock Follower — ' + status
+            if self.follower_service:
+                return str(self.follower_service)
             else:
                 return 'Clock Master'
         self.menu.append(ui.Text_Input('sync status', getter=sync_status, setter=lambda _: _, label='Status'))
@@ -91,14 +89,14 @@ class Time_Sync(Plugin):
         def set_bias(bias):
             if bias < 0:
                 bias = 0.
-            if bias != self.base_bias:
-                self.base_bias = bias
-                self.make_clock_service_announcement()
-                self.evaluate_leaderboard()
+            self.base_bias = bias
+            self.announce_clock_master_info()
+            self.evaluate_leaderboard()
 
-        help_str = "The clock service with the highest bias becomes clock master. The base bias influences this value greatly."
+        help_str = "The clock service with the highest bias becomes clock master."
         self.menu.append(ui.Info_Text(help_str))
-        self.menu.append(ui.Text_Input('base_bias', self, label='Base Bias', setter=set_bias))
+        self.menu.append(ui.Text_Input('base_bias', self, label='Master Bias', setter=set_bias))
+        self.menu.append(ui.Text_Input('leaderboard',self,label='Master Nodes in Group'))
         self.g_pool.sidebar.append(self.menu)
 
     def recent_events(self, events):
@@ -106,81 +104,90 @@ class Time_Sync(Plugin):
         for evt in self.discovery.recent_events():
             if evt.type == 'SHOUT':
                 try:
-                    self.update_clock_service(evt.peer_uuid, float(evt.msg[0]), int(evt.msg[1]))
+                    self.update_leaderboard(evt.peer_uuid,evt.peer_name, float(evt.msg[0]), int(evt.msg[1]))
                 except Exception as e:
                     logger.debug('Garbage raised `{}` -- dropping.'.format(e))
+                self.evaluate_leaderboard()
             elif evt.type == 'JOIN' and evt.group == self.sync_group:
                 should_announce = True
+                self.announce_clock_master_info()
             elif (evt.type == 'LEAVE' and evt.group == self.sync_group) or evt.type == 'EXIT':
-                self.remove_clock_service(evt.peer_uuid)
-
-        if not self.has_been_synced and self.followed_service and self.followed_service.in_sync:
-            self.has_been_synced = 1.
-            self.evaluate_leaderboard()
-            should_announce = True
+                self.remove_from_leaderboard(evt.peer_uuid)
+                self.evaluate_leaderboard()
 
         if should_announce:
-            self.make_clock_service_announcement()
+            self.announce_clock_master_info()
 
-    def update_clock_service(self, uuid, rank, port):
+        if not self.has_been_synced and self.follower_service and self.follower_service.in_sync:
+            self.has_been_synced = 1.
+            self.announce_clock_master_info()
+            self.evaluate_leaderboard()
+
+    def update_leaderboard(self, uuid, name, rank, port):
         for cs in self.leaderboard:
             if cs.uuid == uuid:
                 if (cs.rank != rank) or (cs.port != port):
-                    cs.rank = rank
-                    cs.port = port
-                    self.evaluate_leaderboard()
-                return
+                    self.remove_from_leaderboard(cs.uuid)
+                    break
+                else:
+                    #no changes. Just leave as is
+                    return
 
-        # clock service was not encountered before -- adding it to leaderboard
-        cs = Clock_Service(uuid, rank, port)
+        # clock service was not encountered before or has changed adding it to leaderboard
+        cs = Clock_Service(uuid, name, rank, port)
         heappush(self.leaderboard, cs)
         logger.debug('{} added'.format(cs))
-        self.evaluate_leaderboard()
 
-    def remove_clock_service(self, uuid):
+    def remove_from_leaderboard(self, uuid):
         for cs in self.leaderboard:
             if cs.uuid == uuid:
                 self.leaderboard.remove(cs)
                 logger.debug('{} removed'.format(cs))
-                self.evaluate_leaderboard()
-                return  # stop iteration
+                break
 
     def evaluate_leaderboard(self):
-        if self.leaderboard:
-            current_leader = self.leaderboard[0]
-            if self.own_rank < current_leader.rank:
-                leader_ep = self.discovery.peer_address(current_leader.uuid)
-                leader_addr = urlparse(leader_ep).netloc.split(':')[0]
-                if self.followed_service is None:
-                    self.followed_service = Clock_Sync_Follower(leader_addr,
-                                                                port=current_leader.port,
-                                                                interval=10,
-                                                                time_fn=self.get_time,
-                                                                jump_fn=self.jump_time,
-                                                                slew_fn=self.slew_time)
-                    logger.debug('Become clock follower with rank {}'.format(self.own_rank))
-                else:
-                    self.followed_service.host = leader_addr
-                    self.followed_service.port = current_leader.port
-                return
-        # self should be clockmaster
-        if self.followed_service is not None:
-            self.followed_service.terminate()
-            self.followed_service = None
+        if not self.leaderboard:
+            logger.debug("nobody on the leader board.")
+            return
+
+        current_leader = self.leaderboard[0]
+        if self.discovery.uuid() !=  current_leader.uuid:
+            #we are not the leader!
+            leader_ep = self.discovery.peer_address(current_leader.uuid)
+            leader_addr = urlparse(leader_ep).netloc.split(':')[0]
+            if self.follower_service is None:
+                #make new follower
+                self.follower_service = Clock_Sync_Follower(leader_addr,
+                                                            port=current_leader.port,
+                                                            interval=10,
+                                                            time_fn=self.get_time,
+                                                            jump_fn=self.jump_time,
+                                                            slew_fn=self.slew_time)
+            else:
+                #update follower_service
+                self.follower_service.host = leader_addr
+                self.follower_service.port = current_leader.port
+            return
+
+        # we are the leader
+        logger.debug("we are the leader")
+        if self.follower_service is not None:
+            self.follower_service.terminate()
+            self.follower_service = None
 
         if not self.has_been_master:
             self.has_been_master = 1.
-            self.evaluate_leaderboard()
-        else:
-            logger.debug('Become clock master with rank {}'.format(self.own_rank))
-            self.make_clock_service_announcement()
+            logger.debug('Become clock master with rank {}'.format(self.rank))
+            self.announce_clock_master_info()
 
-    def make_clock_service_announcement(self):
-        self.discovery.shout(self.sync_group, [repr(self.own_rank).encode(),
-                                               repr(self.own_service.port).encode()])
+
+    def announce_clock_master_info(self):
+        self.discovery.shout(self.sync_group, [repr(self.rank).encode(),
+                                               repr(self.master_service.port).encode()])
+        self.update_leaderboard(self.discovery.uuid(),self.node_name,self.rank,self.master_service.port)
 
     @property
-    def own_rank(self):
+    def rank(self):
         return 4*self.base_bias + 2*self.has_been_master + self.has_been_synced + self.tie_breaker
 
     def get_time(self):
@@ -205,26 +212,32 @@ class Time_Sync(Plugin):
             return False
 
     def restart_discovery(self, name):
+
         if self.discovery:
             if self.discovery.name() == name:
                 return
-            self.discovery.leave(self.sync_group)
-            self.discovery.stop()
+            else:
+                self.discovery.leave(self.sync_group)
+                self.discovery.stop()
+                self.leaderboard = []
 
         self.node_name = name or gethostname()
         self.discovery = Pyre(self.node_name)
+        # Either joining network for the first time or rejoining the same group.
         self.discovery.join(self.sync_group)
         self.discovery.start()
+        self.announce_clock_master_info()
 
     def change_sync_group(self, new_group):
         if new_group != self.sync_group:
             self.discovery.leave(self.sync_group)
             self.leaderboard = []
+            if self.follower_service:
+                self.follower_service.terminate()
+                self.follower = None
             self.sync_group = new_group
             self.discovery.join(new_group)
-            if not self.discovery.peers_by_group(new_group):
-                # new_group is empty
-                self.evaluate_leaderboard()
+            self.announce_clock_master_info()
 
     def deinit_gui(self):
         if self.menu:
@@ -240,4 +253,6 @@ class Time_Sync(Plugin):
         self.deinit_gui()
         self.discovery.leave(self.sync_group)
         self.discovery.stop()
-        self.own_service.stop()
+        self.master_service.stop()
+        if self.follower_service:
+            self.follower_service.stop()

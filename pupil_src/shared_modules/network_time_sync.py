@@ -249,7 +249,7 @@ class Clock_Sync_Follower(threading.Thread):
             if self.offset_remains:
                 return "NOT in sync with {}".format(self.host)
             else:
-                return 'Synced with {} with  {:.2f}ms jitter'.format(self.host,self.sync_jitter/self.ms)
+                return 'Synced with {}:{} with  {:.2f}ms jitter'.format(self.host,self.port,self.sync_jitter/self.ms)
         else:
             return "Connecting to {}".format(self.host)
 
