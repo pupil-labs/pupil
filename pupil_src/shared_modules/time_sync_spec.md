@@ -56,8 +56,8 @@ following parts:
     else `0.0`
 3. `has_been_synced`: `1.0` if the service's clock has been synced to an other
     clock master before else `0.0`
-4. `tie_breaker`: A random float between `0.0` and `1.0` with enough significant
-    bits to be unique and act as tie breaker.^1
+4. `tie_breaker`: A random float between `0.0` and `1.0` with enough bits to be
+    unique and act as tie breaker.^1
 
 The total rank SHOULD be calculated using this formular:
 ```
