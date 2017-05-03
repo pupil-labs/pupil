@@ -19,9 +19,10 @@ from plugin import Plugin
 from time import strftime, localtime, time, gmtime
 from shutil import copy2
 from audio import Audio_Input_Dict
-from file_methods import save_object
+from file_methods import save_object, load_object
 from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
+from ndsi import H264Writer
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 # logging
 import logging
@@ -148,7 +149,13 @@ class Recorder(Plugin):
         self.menu.append(ui.Selector('raw_jpeg', self, selection=[True, False], labels=["bigger file, less CPU", "smaller file, more CPU"], label='Compression'))
         self.menu.append(ui.Info_Text('Recording the raw eye video is optional. We use it for debugging.'))
         self.menu.append(ui.Switch('record_eye', self, on_val=True, off_val=False, label='Record eye'))
-        self.menu.append(ui.Selector('audio_src', self, selection=list(self.audio_devices_dict.keys()), label='Audio Source'))
+
+        def audio_dev_getter():
+            # fetch list of currently available
+            self.audio_devices_dict = Audio_Input_Dict()
+            devices = list(self.audio_devices_dict.keys())
+            return devices, devices
+        self.menu.append(ui.Selector('audio_src', self, selection_getter=audio_dev_getter, label='Audio Source'))
 
         self.button = ui.Thumb('running', self, setter=self.toggle, label='R', hotkey='r')
         self.button.on_color[:] = (1, .0, .0, .8)
@@ -170,12 +177,14 @@ class Recorder(Plugin):
             self.notify_all({'subject': 'recording.should_start', 'session_name': self.session_name})
             self.notify_all({'subject': 'recording.should_start', 'session_name': self.session_name, 'remote_notify': 'all'})
 
-
     def on_notify(self, notification):
         """Handles recorder notifications
 
         Reacts to notifications:
-            ``recording.should_start``: Starts a new recording session
+            ``recording.should_start``: Starts a new recording session.
+                fields: 'session_name' change session name
+                    use `/` to att dirs.
+                    start with `/` to ingore the rec base dir and start from root instead.
             ``recording.should_stop``: Stops current recording session
 
         Emits notifications:
@@ -187,7 +196,10 @@ class Recorder(Plugin):
         """
         # notification wants to be recorded
         if notification.get('record', False) and self.running:
-            self.data['notifications'].append(notification)
+            if 'timestamp' not in notification:
+                logger.error("Notification without timestamp will not be saved.")
+            else:
+                self.data['notifications'].append(notification)
         elif notification['subject'] == 'recording.should_start':
             if self.running:
                 logger.info('Recording already running!')
@@ -209,7 +221,6 @@ class Recorder(Plugin):
         return strftime("%H:%M:%S", rec_time)
 
     def start(self):
-        self.timestamps = []
         self.data = {'pupil_positions': [], 'gaze_positions': [], 'notifications': []}
         self.frame_count = 0
         self.running = True
@@ -251,12 +262,25 @@ class Recorder(Plugin):
         else:
             self.audio_writer = None
 
+        self.video_path = os.path.join(self.rec_path, "world.mp4")
         if self.raw_jpeg and self.g_pool.capture.jpeg_support:
-            self.video_path = os.path.join(self.rec_path, "world.mp4")
             self.writer = JPEG_Writer(self.video_path, self.g_pool.capture.frame_rate)
+        elif hasattr(self.g_pool.capture._recent_frame, 'h264_buffer'):
+            self.writer = H264Writer(self.video_path,
+                                     self.g_pool.capture.frame_size[0],
+                                     self.g_pool.capture.frame_size[1],
+                                     self.g_pool.capture.frame_rate)
         else:
-            self.video_path = os.path.join(self.rec_path, "world.mp4")
             self.writer = AV_Writer(self.video_path, fps=self.g_pool.capture.frame_rate)
+
+        try:
+            cal_pt_path = os.path.join(self.g_pool.user_dir, "user_calibration_data")
+            cal_data = load_object(cal_pt_path)
+            notification = {'subject': 'calibration.calibration_data', 'record': True}
+            notification.update(cal_data)
+            self.data['notifications'].append(notification)
+        except:
+            pass
 
         if self.show_info_menu:
             self.open_info_menu()
@@ -301,7 +325,6 @@ class Recorder(Plugin):
 
             if 'frame' in events:
                 frame = events['frame']
-                self.timestamps.append(frame.timestamp)
                 self.writer.write_video_frame(frame)
                 self.frame_count += 1
 
@@ -316,21 +339,11 @@ class Recorder(Plugin):
 
         save_object(self.data, os.path.join(self.rec_path, "pupil_data"))
 
-        timestamps_path = os.path.join(self.rec_path, "world_timestamps.npy")
-        # ts = sanitize_timestamps(np.array(self.timestamps))
-        ts = np.array(self.timestamps)
-        np.save(timestamps_path, ts)
-
         try:
             copy2(os.path.join(self.g_pool.user_dir, "surface_definitions"),
                   os.path.join(self.rec_path, "surface_definitions"))
         except:
             logger.info("No surface_definitions data found. You may want this if you do marker tracking.")
-        try:
-            copy2(os.path.join(self.g_pool.user_dir, "user_calibration_data"),
-                  os.path.join(self.rec_path, "user_calibration_data"))
-        except:
-            logger.warning("No user calibration data found. Please calibrate first.")
 
         camera_calibration = load_camera_calibration(self.g_pool)
         if camera_calibration is not None:
@@ -345,6 +358,7 @@ class Recorder(Plugin):
                     'World Camera Frames': self.frame_count,
                     'World Camera Resolution': str(self.g_pool.capture.frame_size[0])+"x"+str(self.g_pool.capture.frame_size[1]),
                     'Capture Software Version': self.g_pool.version,
+                    'Data Format Version': self.g_pool.version,
                     'System Info': get_system_info()
                 }, append=True)
         except Exception:
@@ -365,7 +379,6 @@ class Recorder(Plugin):
         self.menu.read_only = False
         self.button.status_text = ''
 
-        self.timestamps = []
         self.data = {'pupil_positions': [], 'gaze_positions': []}
         self.pupil_pos_list = []
         self.gaze_pos_list = []

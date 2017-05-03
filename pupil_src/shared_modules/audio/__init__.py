@@ -44,7 +44,7 @@ if os_name == "Linux":
     ffmpeg_bin = "avconv"
     arecord_bin = 'arecord'
 
-    if 'Ubuntu' in platform.linux_distribution():
+    if platform.linux_distribution()[0] in ('Ubuntu', 'debian'):
         def beep():
             if 'sound' in audio_mode:
                 try:
@@ -86,7 +86,7 @@ if os_name == "Linux":
             super().__init__()
             self['No Audio'] = -1
             try:
-                ret = sp.check_output([arecord_bin,"-l"]).decode()
+                ret = sp.check_output([arecord_bin,"-l"]).decode(sys.stdout.encoding)
             except OSError:
                 logger.warning("Could not enumerate audio input devices. Calling arecord failed.")
                 return

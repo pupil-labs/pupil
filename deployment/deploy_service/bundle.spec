@@ -6,16 +6,20 @@ import platform, sys, os, os.path, numpy, ntpath,glob
 av_hidden_imports = ['av.format','av.packet','av.buffer','av.bytesource','av.frame','av.stream','av.descriptor','av.plane','av.audio.plane','av.container.streams','av.dictionary', 'av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane','av.option']
 pyglui_hidden_imports = ['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']
 
+from pyglui import ui
+
 
 if platform.system() == 'Darwin':
+    sys.path.append('.')
     from version import dpkg_deb_version
+    del sys.path[-1]
 
     a = Analysis(['../../pupil_src/capture/main.py'],
                  pathex=['../../pupil_src/shared_modules/'],
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None,
-                 excludes=['pyx_compiler','matplotlib'])
+                 excludes=['matplotlib'])
     pyz = PYZ(a.pure)
     exe = EXE(pyz,
               a.scripts,
@@ -32,10 +36,10 @@ if platform.system() == 'Darwin':
                    a.binaries - libSystem,
                    a.zipfiles,
                    a.datas,
-                   [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.1.2/lib/libglfw3.dylib','BINARY')],
-                   [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
-                   [('Roboto-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
-                   [('fontawesome-webfont.ttf','/usr/local/lib/python2.7/site-packages/pyglui/fontawesome-webfont.ttf','DATA')],
+                   [('libglfw.dylib', '/usr/local/lib/libglfw.dylib','BINARY')],
+                   [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
+                   [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
+                   [('fontawesome-webfont.ttf',ui.get_fontawesome_font_path(),'DATA')],
                    strip=None,
                    upx=True,
                    name='Pupil Service')
@@ -43,7 +47,12 @@ if platform.system() == 'Darwin':
     app = BUNDLE(coll,
                  name='Pupil Service.app',
                  icon='pupil-service.icns',
-                 version = str(dpkg_deb_version()))
+                 version = str(dpkg_deb_version()),
+                 info_plist={
+                          'NSHighResolutionCapable': 'True'
+                            },
+                )
+
 
 
 elif platform.system() == 'Linux':
@@ -52,7 +61,7 @@ elif platform.system() == 'Linux':
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None,
-                 excludes=['pyx_compiler','matplotlib'])
+                 excludes=['matplotlib'])
 
     pyz = PYZ(a.pure)
     exe = EXE(pyz,
@@ -65,14 +74,14 @@ elif platform.system() == 'Linux':
               console=True)
 
 
-    # any libX file should be taken from distro else not protable between Ubuntu 12.04 and 14.04
-    binaries = [b for b in a.binaries if not "libX" in b[0] and not "libxcb" in b[0]]
     # libc is also not meant to travel with the bundle. Otherwise pyre.helpers with segfault.
-    binaries = [b for b in binaries if not "libc.so" in b[0]]
+    binaries = [b for b in a.binaries if not "libc.so" in b[0]]
 
     # libstdc++ is also not meant to travel with the bundle. Otherwise nvideo opengl drivers will fail to load.
     binaries = [b for b in binaries if not "libstdc++.so" in b[0]]
-    binaries = [b for b in binaries if not "libtasn1.so" in b[0]]
+
+    # required for 14.04 16.04 interoperability.
+    binaries = [b for b in binaries if not "libgomp.so.1" in b[0]]
 
     coll = COLLECT(exe,
                    binaries,
@@ -80,9 +89,9 @@ elif platform.system() == 'Linux':
                    a.datas,
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
                    [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
-                   [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/OpenSans-Regular.ttf','DATA')],
-                   [('Roboto-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/Roboto-Regular.ttf','DATA')],
-                   [('fontawesome-webfont.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/fontawesome-webfont.ttf','DATA')],
+                   [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
+                   [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
+                   [('fontawesome-webfont.ttf',ui.get_fontawesome_font_path(),'DATA')],
                    strip=True,
                    upx=True,
                    name='pupil_service')
@@ -92,7 +101,7 @@ elif platform.system() == 'Windows':
 
         np_path = os.path.dirname(numpy.__file__)
         np_dlls = glob.glob(np_path + '/core/*.dll')
-        np_dll_list = [] 
+        np_dll_list = []
 
         for dll_path in np_dlls:
             dll_p, dll_f = ntpath.split(dll_path)
@@ -129,7 +138,7 @@ elif platform.system() == 'Windows':
                      runtime_hooks=None,
                      win_no_prefer_redirects=False,
                      win_private_assemblies=False,
-                     excludes=['pyx_compiler','matplotlib'])
+                     excludes=['matplotlib'])
 
 
         pyz = PYZ(a.pure)

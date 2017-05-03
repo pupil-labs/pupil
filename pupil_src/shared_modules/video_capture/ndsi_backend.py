@@ -16,7 +16,7 @@ import ndsi
 
 from .base_backend import Base_Source, Base_Manager
 
-assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.14'
+assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.16'
 logger = logging.getLogger(__name__)
 
 
@@ -179,11 +179,20 @@ class NDSI_Source(Base_Source):
 
     @property
     def frame_rate(self):
+        if self.online:
+            # FIXME: Hacky way to calculate frame rate. Depends on control option's caption
+            fr_ctrl = self.sensor.controls.get('CAM_FRAME_RATE_CONTROL')
+            if fr_ctrl:
+                current_fr = fr_ctrl.get('value')
+                map_ = {mapping['value']: mapping['caption'] for mapping in fr_ctrl.get('map', [])}
+                current_fr_cap = map_[current_fr].replace('Hz', '').strip()
+                return float(current_fr_cap)
+
         return self._frame_rate
 
     @property
     def jpeg_support(self):
-        return True
+        return isinstance(self._recent_frame, ndsi.frame.JPEGFrame)
 
     def get_init_dict(self):
         settings = super().get_init_dict()
@@ -386,7 +395,7 @@ class NDSI_Manager(Base_Manager):
             labels=src_sel_labels,
             getter=lambda: None,
             setter=activate,
-            label='Activate source'
+            label='Source'
         ))
 
         self.g_pool.capture_selector_menu.extend(ui_elements)

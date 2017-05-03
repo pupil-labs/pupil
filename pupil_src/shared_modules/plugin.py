@@ -52,6 +52,12 @@ class Plugin(object):
         pass
 
     def recent_events(self, events):
+        '''
+        Called in Player and Capture.
+        Gets called once every frame.
+        If you plan to update data inplace, note that this will affect all plugins executed after you.
+        Use self.order to deal with this appropriately
+        '''
         if not hasattr(self, '_warn_once'):
             depr_warn = "{}: Update will be deprecated soon. Use 'recent_events instead.'"
             logger.warning(depr_warn.format(self.__class__.__name__))
@@ -61,22 +67,19 @@ class Plugin(object):
 
     def update(self, frame=None, events={}):
         """
-        called in Player and Capture
-        gets called once every frame
-        if you plan to update data inplace, note that this will affect all plugins executed after you.
-        Use self.order to deal with this appropriately
+        deprecated use revent events instead
         """
         pass
 
     def gl_display(self):
         """
-        gets called once every frame when its time to draw onto the gl canvas.
+        Gets called once every frame when its time to draw onto the gl canvas.
         """
         pass
 
     def on_click(self, pos, button, action):
         """
-        gets called when the user clicks in the window screen
+        Gets called when the user clicks in the window screen
         """
         pass
 

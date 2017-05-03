@@ -12,11 +12,11 @@ See COPYING and COPYING.LESSER for license details.
 import time
 import logging
 import uvc
-
+from version_utils import VersionFormat
 from .base_backend import InitialisationError, Base_Source, Base_Manager
 
 # check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.91'
+assert VersionFormat(uvc.__version__) >= VersionFormat('0.10')
 
 # logging
 logger = logging.getLogger(__name__)
@@ -180,10 +180,10 @@ class UVC_Source(Base_Source):
             try:
                 self._re_init_capture_by_names(self.name_backup)
             except (InitialisationError, uvc.InitError):
-                time.sleep(0.05)
+                time.sleep(0.02)
                 self.deinit_gui()
                 self.init_gui()
-            self._restart_in = int(5/0.05)
+            self._restart_in = int(5/0.02)
         else:
             self._restart_in -= 1
 
@@ -196,7 +196,7 @@ class UVC_Source(Base_Source):
             self._restart_logic()
         except (AttributeError, uvc.InitError):
             self._recent_frame = None
-            time.sleep(0.05)
+            time.sleep(0.02)
             self._restart_logic()
         else:
             self._recent_frame = frame

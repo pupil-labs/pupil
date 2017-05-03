@@ -93,17 +93,15 @@ class Base_Source(Plugin):
         """
         raise NotImplementedError()
 
-
     def gl_display(self):
         if self._recent_frame is not None:
             self.g_pool.image_tex.update_from_frame(self._recent_frame)
             gl_utils.glFlush()
         gl_utils.make_coord_system_norm_based()
         self.g_pool.image_tex.draw()
-        if self._recent_frame is None:
-            cygl.utils.draw_gl_texture(np.zeros((1,1,3),dtype=np.uint8),alpha=0.4)
-        gl_utils.make_coord_system_pixel_based((self.frame_size[1],self.frame_size[0],3))
-
+        if not self.online:
+            cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8), alpha=0.4)
+        gl_utils.make_coord_system_pixel_based((self.frame_size[1], self.frame_size[0], 3))
 
     @property
     def name(self):
@@ -121,7 +119,7 @@ class Base_Source(Plugin):
         raise NotImplementedError()
 
     @frame_size.setter
-    def frame_size(self,new_size):
+    def frame_size(self, new_size):
         raise NotImplementedError()
 
     @property
@@ -131,8 +129,9 @@ class Base_Source(Plugin):
             int/float: Frame rate
         """
         raise NotImplementedError()
+
     @frame_rate.setter
-    def frame_rate(self,new_rate):
+    def frame_rate(self, new_rate):
         pass
 
     @property
@@ -150,7 +149,6 @@ class Base_Source(Plugin):
             bool: Source is avaible and streaming images.
         """
         return True
-
 
 
 class Base_Manager(Plugin):

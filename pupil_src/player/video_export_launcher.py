@@ -10,29 +10,20 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from plugin import Plugin
-import numpy as np
-import os,sys
-from platform import system
+import os
 import time
+import multiprocessing as mp
 from pyglui import ui
 import logging
 logger = logging.getLogger(__name__)
-
-from ctypes import c_bool, c_int,create_string_buffer
-
-#threading and processing
-from multiprocessing import Process, cpu_count, set_start_method
-from multiprocessing.sharedctypes import Value
-
-
+from ctypes import c_bool, c_int
 from exporter import export
 
-class Export_Process(Process):
+class Export_Process(mp.Process):
     """small aditions to the process class"""
     def __init__(self, target,args):
         super().__init__(target=target,args=args)
-        self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,_,_,self.out_file_path = args
-
+        self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,_,_,self.out_file_path,_ = args
     def status(self):
         return self.current_frame.value
     def cancel(self):
@@ -126,13 +117,10 @@ class Video_Export_Launcher(Plugin):
             self.add_export(notification['range'],notification['export_dir'])
 
     def add_export(self,export_range,export_dir):
-        if system() == 'Darwin':
-            set_start_method('spawn')
-
         logger.debug("Adding new video export process.")
-        should_terminate = Value(c_bool,False)
-        frames_to_export  = Value(c_int,0)
-        current_frame = Value(c_int,0)
+        should_terminate = mp.Value(c_bool,False)
+        frames_to_export  = mp.Value(c_int,0)
+        current_frame = mp.Value(c_int,0)
 
         rec_dir = self.g_pool.rec_dir
         user_dir = self.g_pool.user_dir
@@ -145,7 +133,7 @@ class Video_Export_Launcher(Plugin):
         plugins = self.g_pool.plugins.get_initializers()
 
         out_file_path=verify_out_file_path(self.rec_name,export_dir)
-        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,self.g_pool.min_data_confidence,start_frame,end_frame,plugins,out_file_path))
+        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,self.g_pool.min_data_confidence,start_frame,end_frame,plugins,out_file_path,self.g_pool.pupil_data))
         self.new_export = process
 
     def launch_export(self, new_export):
@@ -169,5 +157,9 @@ class Video_Export_Launcher(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
-
-
+        for e in self.exports:
+            e.cancel()
+            e.join(1.0)
+            if e.is_alive():
+                logger.error("Export unresponsive - terminating.")
+                e.terminate()

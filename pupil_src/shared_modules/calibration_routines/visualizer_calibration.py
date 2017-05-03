@@ -26,8 +26,8 @@ class Calibration_Visualizer(Visualizer):
 		self.focal_length = 620
 		self.image_height = 480
 
-		self.eye_camera_to_world_matrix0 = eye_camera_to_world_matrix0
-		self.eye_camera_to_world_matrix1 = eye_camera_to_world_matrix1
+		self.eye_camera_to_world_matrix0 = np.asarray(eye_camera_to_world_matrix0)
+		self.eye_camera_to_world_matrix1 = np.asarray(eye_camera_to_world_matrix1)
 
 		self.cal_ref_points_3d = cal_ref_points_3d
 		self.cal_observed_points_3d = cal_observed_points_3d

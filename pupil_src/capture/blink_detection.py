@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 class Blink_Detection(Plugin):
     """
-    DisplayGaze shows the three most
-    recent gaze position on the screen
+    This plugin implements a blink detection algorithm, based on sudden drops in the
+    pupil detection confidence.
     """
     order = .8
 
@@ -30,8 +30,8 @@ class Blink_Detection(Plugin):
         super(Blink_Detection, self).__init__(g_pool)
         self.history_length_per_fps = 0.2
 
-        # The maximum length of the history needs to be set a priori. If we are assuming a maximum framerat of 120 FPS
-        # and a genorous maximum on-set duratio of a blink of 0.5 seconds, 60 frames of history should always be enough
+        # The maximum length of the history needs to be set a priori. If we are assuming a maximum frame rate of 120 FPS
+        # and a generous maximum onset duration of a blink of 0.5 seconds, 60 frames of history should always be enough
         self.confidence_histories = (deque(maxlen=60), deque(maxlen=60))
         self.timestamp_histories = (deque(maxlen=60), deque(maxlen=60))
         self.eyes_are_alive = g_pool.eyes_are_alive
@@ -61,13 +61,14 @@ class Blink_Detection(Plugin):
         self.recent_events(events)
 
     def recent_events(self, events={}):
+
         # Process all pupil_positions events
         for pt in events.get('pupil_positions', []):
             # Update history
             self.confidence_histories[pt['id']].appendleft(pt['confidence'])
             self.timestamp_histories[pt['id']].appendleft(pt['timestamp'])
 
-            # Wait for at least 5 frames of history to compute the current framerate with
+            # Wait for at least 5 frames of history to compute the current frame rate with
             if len(self.timestamp_histories[pt['id']]) < 60:
                 continue
             else:
@@ -76,8 +77,6 @@ class Blink_Detection(Plugin):
                 self.history_length = int(self.history_length_per_fps * fps)
 
             # Build filter_ based on current history length
-            filter_ = np.asarray([-1 for i in range(int(math.floor(self.history_length / 2.0)))] + [1 for i in range(
-                int(math.ceil(self.history_length / 2.0)))])
             filter_ = np.ones(self.history_length)
             filter_[self.history_length // 2:] = -1
 
@@ -85,18 +84,24 @@ class Blink_Detection(Plugin):
             if self.eyes_are_alive[0].value:
                 if len(self.confidence_histories[0]) >= self.history_length:
                     slice = np.asarray(deque(islice(self.confidence_histories[0], 0, self.history_length)))
-                    # Normalize deviations in the overall magnitude and legth of the used filter_
-                    slice = (slice - slice.min()) / (slice.max() - slice.min())
-                    act0 = np.dot(slice, filter_) / self.history_length
+                    # Normalize deviations in the overall magnitude and length of the used filter_
+                    if slice.max() > slice.min():
+                        slice = (slice - slice.min()) / (slice.max() - slice.min())
+                        act0 = np.dot(slice, filter_) / self.history_length
+                    else:
+                        act0 = 0.0
                 else:
                     continue
 
             if self.eyes_are_alive[1].value:
                 if len(self.confidence_histories[1]) >= self.history_length:
                     slice = np.asarray(deque(islice(self.confidence_histories[1], 0, self.history_length)))
-                    # Normalize deviations in the overall magnitude and legth of the used filter_
-                    slice = (slice - slice.min()) / (slice.max() - slice.min())
-                    act1 = np.dot(slice, filter_) / self.history_length
+                    # Normalize deviations in the overall magnitude and length of the used filter_
+                    if slice.max() > slice.min():
+                        slice = (slice - slice.min()) / (slice.max() - slice.min())
+                        act1 = np.dot(slice, filter_) / self.history_length
+                    else:
+                        act1 = 0.0
                 else:
                     continue
 

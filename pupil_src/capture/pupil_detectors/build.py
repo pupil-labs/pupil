@@ -9,11 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from .setup import extensions
-
+import sys
 import logging
 logger = logging.getLogger(__name__)
-
 
 def build_cpp_extension():
     import subprocess as sp
@@ -22,9 +20,9 @@ def build_cpp_extension():
     install_loc = os.path.split(src_loc)[0]
     cwd = os.getcwd()
     os.chdir(src_loc)
-    logger.info('Building extention modules... {}'.format([ext.name for ext in extensions]))
+    logger.info('Building extention modules...')
     build_cmd = "{} setup.py install --install-lib={}"
-    ret = sp.check_output(build_cmd.format(sys.executable, install_loc), shell=True).decode()
+    ret = sp.check_output(build_cmd.format(sys.executable, install_loc), shell=True).decode(sys.stdout.encoding)
     logger.debug('Build log:\n{}'.format(ret))
     os.chdir(cwd)
 
