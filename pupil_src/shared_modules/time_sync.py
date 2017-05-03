@@ -12,72 +12,191 @@ See COPYING and COPYING.LESSER for license details.
 
 from plugin import Plugin
 from pyglui import ui
-import logging
-logger = logging.getLogger(__name__)
-
-from network_time_sync import Clock_Sync_Master,Clock_Sync_Follower
+from socket import gethostname
+from heapq import heappush
+from pyre import Pyre
+from urllib.parse import urlparse
+from network_time_sync import Clock_Sync_Master, Clock_Sync_Follower
 import random
 
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
+class Clock_Service(object):
+    """Represents a remote clock service and is sortable by rank."""
+    def __init__(self, uuid,name, rank, port):
+        super(Clock_Service, self).__init__()
+        self.uuid = uuid
+        self.rank = rank
+        self.port = port
+        self.name = name
+
+    def __repr__(self):
+        return '{:.2f}:{}'.format(self.rank,self.name)
+
+    def __lt__(self, other):
+        # "smallest" object has highest rank
+        return (self.rank > other.rank) if isinstance(other, Clock_Service) else False
+
+
 class Time_Sync(Plugin):
-    """Synchronize time of Actors
-        across local network.
+    """Synchronize time across local network.
+
+    Implements the Pupil Time Sync protocol.
+    Acts as clock service and as follower if required.
+    See `time_sync_spec.md` for details.
     """
 
-
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, node_name=None, sync_group='time_sync_default', base_bias=1.):
         super().__init__(g_pool)
         self.menu = None
+        self.sync_group = sync_group
+        self.discovery = None
 
-        #variables for the time sync logic
-        self.time_sync_node = None
+        self.leaderboard = []
+        self.has_been_master = 0.
+        self.has_been_synced = 0.
+        self.tie_breaker = random.random()
+        self.base_bias = base_bias
 
-        #constants for the time sync logic
-        self._ti_break = random.random()/10.
-        self.master_announce_interval = 5
-        self.master_announce_timeout = self.master_announce_interval * 4
-        self.master_announce_timeout_notification = {'subject':"time_sync.master_announce_timeout", 'delay':self.master_announce_timeout}
-        self.master_announce_interval_notification = {'subject':"time_sync.master_announce_interval", 'delay':self.master_announce_interval}
+        self.master_service = Clock_Sync_Master(self.g_pool.get_timestamp)
+        self.follower_service = None  # only set if there is a better server than us
 
-        self.notify_all(self.master_announce_timeout_notification)
+        self.restart_discovery(node_name)
+
+    def init_gui(self):
+        def close():
+            self.alive = False
+
+        help_str = "Synchonize time of Pupil Captures across the local network."
+        self.menu = ui.Growing_Menu('Network Time Sync')
+        self.menu.append(ui.Button('Close', close))
+        self.menu.append(ui.Info_Text(help_str))
+        help_str = "All pupil nodes of one group share a Master clock."
+        self.menu.append(ui.Info_Text(help_str))
+        self.menu.append(ui.Text_Input('node_name', self, label='Node Name', setter=self.restart_discovery))
+        self.menu.append(ui.Text_Input('sync_group', self, label='Sync Group', setter=self.change_sync_group))
+
+        def sync_status():
+            if self.follower_service:
+                return str(self.follower_service)
+            else:
+                return 'Clock Master'
+        self.menu.append(ui.Text_Input('sync status', getter=sync_status, setter=lambda _: _, label='Status'))
+
+        def set_bias(bias):
+            if bias < 0:
+                bias = 0.
+            self.base_bias = bias
+            self.announce_clock_master_info()
+            self.evaluate_leaderboard()
+
+        help_str = "The clock service with the highest bias becomes clock master."
+        self.menu.append(ui.Info_Text(help_str))
+        self.menu.append(ui.Text_Input('base_bias', self, label='Master Bias', setter=set_bias))
+        self.menu.append(ui.Text_Input('leaderboard',self,label='Master Nodes in Group'))
+        self.g_pool.sidebar.append(self.menu)
+
+    def recent_events(self, events):
+        should_announce = False
+        for evt in self.discovery.recent_events():
+            if evt.type == 'SHOUT':
+                try:
+                    self.update_leaderboard(evt.peer_uuid,evt.peer_name, float(evt.msg[0]), int(evt.msg[1]))
+                except Exception as e:
+                    logger.debug('Garbage raised `{}` -- dropping.'.format(e))
+                self.evaluate_leaderboard()
+            elif evt.type == 'JOIN' and evt.group == self.sync_group:
+                should_announce = True
+                self.announce_clock_master_info()
+            elif (evt.type == 'LEAVE' and evt.group == self.sync_group) or evt.type == 'EXIT':
+                self.remove_from_leaderboard(evt.peer_uuid)
+                self.evaluate_leaderboard()
+
+        if should_announce:
+            self.announce_clock_master_info()
+
+        if not self.has_been_synced and self.follower_service and self.follower_service.in_sync:
+            self.has_been_synced = 1.
+            self.announce_clock_master_info()
+            self.evaluate_leaderboard()
+
+    def update_leaderboard(self, uuid, name, rank, port):
+        for cs in self.leaderboard:
+            if cs.uuid == uuid:
+                if (cs.rank != rank) or (cs.port != port):
+                    self.remove_from_leaderboard(cs.uuid)
+                    break
+                else:
+                    #no changes. Just leave as is
+                    return
+
+        # clock service was not encountered before or has changed adding it to leaderboard
+        cs = Clock_Service(uuid, name, rank, port)
+        heappush(self.leaderboard, cs)
+        logger.debug('{} added'.format(cs))
+
+    def remove_from_leaderboard(self, uuid):
+        for cs in self.leaderboard:
+            if cs.uuid == uuid:
+                self.leaderboard.remove(cs)
+                logger.debug('{} removed'.format(cs))
+                break
+
+    def evaluate_leaderboard(self):
+        if not self.leaderboard:
+            logger.debug("nobody on the leader board.")
+            return
+
+        current_leader = self.leaderboard[0]
+        if self.discovery.uuid() !=  current_leader.uuid:
+            #we are not the leader!
+            leader_ep = self.discovery.peer_address(current_leader.uuid)
+            leader_addr = urlparse(leader_ep).netloc.split(':')[0]
+            if self.follower_service is None:
+                #make new follower
+                self.follower_service = Clock_Sync_Follower(leader_addr,
+                                                            port=current_leader.port,
+                                                            interval=10,
+                                                            time_fn=self.get_time,
+                                                            jump_fn=self.jump_time,
+                                                            slew_fn=self.slew_time)
+            else:
+                #update follower_service
+                self.follower_service.host = leader_addr
+                self.follower_service.port = current_leader.port
+            return
+
+        # we are the leader
+        logger.debug("we are the leader")
+        if self.follower_service is not None:
+            self.follower_service.terminate()
+            self.follower_service = None
+
+        if not self.has_been_master:
+            self.has_been_master = 1.
+            logger.debug('Become clock master with rank {}'.format(self.rank))
+            self.announce_clock_master_info()
+
+
+    def announce_clock_master_info(self):
+        self.discovery.shout(self.sync_group, [repr(self.rank).encode(),
+                                               repr(self.master_service.port).encode()])
+        self.update_leaderboard(self.discovery.uuid(),self.node_name,self.rank,self.master_service.port)
 
     @property
-    def is_master(self):
-        return isinstance(self.time_sync_node,Clock_Sync_Master)
-
-    @property
-    def is_follower(self):
-        return isinstance(self.time_sync_node,Clock_Sync_Follower)
-
-    @property
-    def is_nothing(self):
-        return self.time_sync_node is None
-
-    def clock_master_worthiness(self):
-        '''
-        How worthy am I to be the clock master?
-        A measure 0 (unworthy) to 1 (destined)
-
-        range is from 0. - 0.9 the rest is reserved for ti-breaking
-        '''
-
-        worthiness = 0.
-        if self.g_pool.timebase.value != 0:
-            worthiness += 0.4
-        worthiness +=self._ti_break
-        return worthiness
-
-    ###time sync fns these are used by the time sync node to get and adjust time
-    def get_unadjusted_time(self):
-        #return time not influced by outside clocks.
-        return self.g_pool.get_now()
+    def rank(self):
+        return 4*self.base_bias + 2*self.has_been_master + self.has_been_synced + self.tie_breaker
 
     def get_time(self):
         return self.g_pool.get_timestamp()
 
-    def slew_time(self,offset):
-        self.g_pool.timebase.value +=offset
+    def slew_time(self, offset):
+        self.g_pool.timebase.value += offset
 
-    def jump_time(self,offset):
+    def jump_time(self, offset):
         ok_to_change = True
         for p in self.g_pool.plugins:
             if p.class_name == 'Recorder':
@@ -92,120 +211,48 @@ class Time_Sync(Plugin):
         else:
             return False
 
+    def restart_discovery(self, name):
 
-    def init_gui(self):
-
-        def close():
-            self.alive = False
-
-        def sync_status_info():
-            if self.time_sync_node is None:
-                return 'Waiting for time sync msg.'
+        if self.discovery:
+            if self.discovery.name() == name:
+                return
             else:
-                return str(self.time_sync_node)
+                self.discovery.leave(self.sync_group)
+                self.discovery.stop()
+                self.leaderboard = []
 
-        help_str = "Synchonize time of Pupil captures across the local network."
-        self.menu = ui.Growing_Menu('Network Time Sync')
-        self.menu.append(ui.Button('Close',close))
-        self.menu.append(ui.Info_Text(help_str))
-        help_str = "All pupil nodes of one group share a Master clock."
-        self.menu.append(ui.Info_Text(help_str))
-        self.menu.append(ui.Text_Input('sync status',getter=sync_status_info,setter=lambda _: _))
-        # self.menu[-1].read_only = True
-        self.g_pool.sidebar.append(self.menu)
+        self.node_name = name or gethostname()
+        self.discovery = Pyre(self.node_name)
+        # Either joining network for the first time or rejoining the same group.
+        self.discovery.join(self.sync_group)
+        self.discovery.start()
+        self.announce_clock_master_info()
 
+    def change_sync_group(self, new_group):
+        if new_group != self.sync_group:
+            self.discovery.leave(self.sync_group)
+            self.leaderboard = []
+            if self.follower_service:
+                self.follower_service.terminate()
+                self.follower = None
+            self.sync_group = new_group
+            self.discovery.join(new_group)
+            self.announce_clock_master_info()
 
     def deinit_gui(self):
         if self.menu:
             self.g_pool.sidebar.remove(self.menu)
             self.menu = None
 
-
-    def on_notify(self,notification):
-        """Synchronize time of Actors across local network.
-
-        The notification scheme is used to handle interal timing
-        and to talk to remote pers via the `Pupil_Groups` plugin.
-
-        Reacts to notifications:
-            ``time_sync.master_announcement``: React accordingly to annouce notification from remote peer.
-            ``time_sync.master_announce_interval``: Re-annouce clock masterhood.
-            ``time_sync.master_announce_timeout``: React accordingly when no master announcement has appeard whithin timeout.
-
-
-        Emits notifications:
-            ``time_sync.master_announcement``: Announce masterhood to remote peers (remote notification).
-            ``time_sync.master_announce_interval``: Re-announce masterhood reminder (delayed notification).
-            ``time_sync.master_announce_timeout``:  Timeout for foreind master announcement (delayed notification).
-
-        """
-        if notification['subject'].startswith('time_sync.master_announcement'):
-            if self.is_master:
-                if notification['worthiness'] > self.clock_master_worthiness():
-                    #We need to yield.
-                    self.time_sync_node.stop()
-                    self.time_sync_node = None
-                else:
-                    #Denounce the lesser competition.
-                    n = {   'subject':'time_sync.master_announcement',
-                            'host':self.time_sync_node.host,
-                            'port':self.time_sync_node.port,
-                            'worthiness':self.clock_master_worthiness(),
-                            'remote_notify':'all'
-                        }
-                    self.notify_all(n)
-
-            if self.is_follower:
-                # update follower info
-                self.time_sync_node.host = notification['host']
-                self.time_sync_node.port = notification['port']
-
-            if self.is_nothing:
-                # Create follower.
-                logger.debug("Clock will sync with {}".format(notification['host']))
-                self.time_sync_node = Clock_Sync_Follower(notification['host'],port=notification['port'],interval=10,time_fn=self.get_time,jump_fn=self.jump_time,slew_fn=self.slew_time)
-
-            if not self.is_master:
-                #(Re)set the timer.
-                self.notify_all(self.master_announce_timeout_notification)
-
-
-        elif notification['subject'].startswith('time_sync.master_announce_timeout'):
-            if self.is_master:
-                pass
-            else:
-                #We have not heard from a master in too long.
-                logger.info("Elevate self to clock master.")
-                self.time_sync_node = Clock_Sync_Master(self.g_pool.get_timestamp)
-                n = {   'subject':'time_sync.master_announcement',
-                        'host':self.time_sync_node.host,
-                        'port':self.time_sync_node.port,
-                        'worthiness':self.clock_master_worthiness(),
-                        'remote_notify':'all'
-                    }
-                self.notify_all(n)
-                self.notify_all(self.master_announce_interval_notification)
-
-
-        elif notification['subject'].startswith('time_sync.master_announce_interval'):
-            # The time has come to remind others of our master hood.
-            if self.is_master:
-                n = {   'subject':'time_sync.master_announcement',
-                        'host':self.time_sync_node.host,
-                        'port':self.time_sync_node.port,
-                        'worthiness':self.clock_master_worthiness(),
-                        'remote_notify':'all' }
-                self.notify_all(n)
-                # Set the next annouce timer.
-                self.notify_all(self.master_announce_interval_notification)
-
-
     def get_init_dict(self):
-        return {}
+        return {'node_name': self.node_name,
+                'sync_group': self.sync_group,
+                'base_bias': self.base_bias}
 
     def cleanup(self):
-        if self.time_sync_node:
-            self.time_sync_node.terminate()
         self.deinit_gui()
-
-
+        self.discovery.leave(self.sync_group)
+        self.discovery.stop()
+        self.master_service.stop()
+        if self.follower_service:
+            self.follower_service.stop()
