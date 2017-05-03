@@ -45,11 +45,12 @@ class Time_Echo(asyncore.dispatcher_with_send):
     def handle_read(self):
         data = self.recv(1024)
         if data:
-            self.send(repr(self.time_fn()))
+            self.send(repr(self.time_fn()).encode())
 
     def __del__(self):
         pass
         # print 'goodbye'
+
 
 class Time_Echo_Server(asyncore.dispatcher):
     '''
@@ -211,7 +212,7 @@ class Clock_Sync_Follower(threading.Thread):
             times=[]
             for request in range(60):
                 t0 = self.get_time()
-                server_socket.send('sync')
+                server_socket.send(b'sync')
                 message = server_socket.recv(1024)
                 t2 = self.get_time()
                 t1 = float(message)
@@ -219,7 +220,7 @@ class Clock_Sync_Follower(threading.Thread):
 
             server_socket.close()
 
-            times.sort(key=lambda t0,t1,t2: t2-t0)
+            times.sort(key=lambda t: t[2]-t[0])
             times = times[:int(len(times)*0.69)]
             delays = [t2-t0 for t0, t1, t2 in times]
             offsets = [t0-((t1+(t2-t0)/2)) for t0, t1, t2 in times]
