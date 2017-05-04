@@ -23,14 +23,11 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-pyre_requirement = 'Pyre >= 0.3.1 is required for Time Sync to work'
 try:
     from pyre import __version__
-except ImportError:
-    logger.error(pyre_requirement)
-else:
-    if __version__ < '0.3.1':
-        logger.error(pyre_requirement)
+    assert __version__ >= '0.3.1'
+except (ImportError, AssertionError):
+    raise Exception("Pyre version is to old. Please upgrade")
 
 
 class Clock_Service(object):
@@ -119,7 +116,6 @@ class Time_Sync(Plugin):
                 self.evaluate_leaderboard()
             elif evt.type == 'JOIN' and evt.group == self.sync_group:
                 should_announce = True
-                self.announce_clock_master_info()
             elif (evt.type == 'LEAVE' and evt.group == self.sync_group) or evt.type == 'EXIT':
                 self.remove_from_leaderboard(evt.peer_uuid)
                 self.evaluate_leaderboard()
