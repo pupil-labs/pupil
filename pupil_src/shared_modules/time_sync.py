@@ -23,10 +23,19 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+pyre_requirement = 'Pyre >= 0.3.1 is required for Time Sync to work'
+try:
+    from pyre import __version__
+except ImportError:
+    logger.error(pyre_requirement)
+else:
+    if __version__ < '0.3.1':
+        logger.error(pyre_requirement)
+
 
 class Clock_Service(object):
     """Represents a remote clock service and is sortable by rank."""
-    def __init__(self, uuid,name, rank, port):
+    def __init__(self, uuid, name, rank, port):
         super(Clock_Service, self).__init__()
         self.uuid = uuid
         self.rank = rank
@@ -34,7 +43,7 @@ class Clock_Service(object):
         self.name = name
 
     def __repr__(self):
-        return '{:.2f}:{}'.format(self.rank,self.name)
+        return '{:.2f}:{}'.format(self.rank, self.name)
 
     def __lt__(self, other):
         # "smallest" object has highest rank
