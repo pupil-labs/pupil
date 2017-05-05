@@ -23,10 +23,16 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+try:
+    from pyre import __version__
+    assert __version__ >= '0.3.1'
+except (ImportError, AssertionError):
+    raise Exception("Pyre version is to old. Please upgrade")
+
 
 class Clock_Service(object):
     """Represents a remote clock service and is sortable by rank."""
-    def __init__(self, uuid,name, rank, port):
+    def __init__(self, uuid, name, rank, port):
         super(Clock_Service, self).__init__()
         self.uuid = uuid
         self.rank = rank
@@ -34,7 +40,7 @@ class Clock_Service(object):
         self.name = name
 
     def __repr__(self):
-        return '{:.2f}:{}'.format(self.rank,self.name)
+        return '{:.2f}:{}'.format(self.rank, self.name)
 
     def __lt__(self, other):
         # "smallest" object has highest rank
@@ -110,7 +116,6 @@ class Time_Sync(Plugin):
                 self.evaluate_leaderboard()
             elif evt.type == 'JOIN' and evt.group == self.sync_group:
                 should_announce = True
-                self.announce_clock_master_info()
             elif (evt.type == 'LEAVE' and evt.group == self.sync_group) or evt.type == 'EXIT':
                 self.remove_from_leaderboard(evt.peer_uuid)
                 self.evaluate_leaderboard()
