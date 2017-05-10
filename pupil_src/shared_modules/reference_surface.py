@@ -212,8 +212,9 @@ class Reference_Surface(object):
             m.compute_robust_mean()
 
         self.defined = True
-        self.on_finish_define()
-        del self.on_finish_define
+        if hasattr(self,'on_finish_define'):
+            self.on_finish_define()
+            del self.on_finish_define
 
 
     def locate(self, visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence, locate_3d=False,):
