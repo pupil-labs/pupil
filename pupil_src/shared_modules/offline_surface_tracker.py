@@ -10,25 +10,18 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import sys, os
-import platform
 import cv2
 import numpy as np
 import csv
-
-#threading and processing
-if platform.system() in ('Darwin'):
-    from multiprocessing import get_context
-    mp = get_context('forkserver')
-else:
-    import multiprocessing as mp
+import multiprocessing as mp
 
 from ctypes import c_bool
 
 
 from itertools import chain
 from OpenGL.GL import *
-from methods import normalize, denormalize
-from file_methods import Persistent_Dict, save_object
+from methods import normalize
+from file_methods import Persistent_Dict
 from cache_list import Cache_List
 from glfw import *
 from pyglui import ui
@@ -79,12 +72,16 @@ class Offline_Surface_Tracker(Surface_Tracker):
         if cache is None:
             self.cache = Cache_List([False for _ in self.g_pool.timestamps])
             self.persistent_cache['version'] = self.marker_cache_version
+            self.persistent_cache['inverted_markers'] = self.invert_image
         elif version != self.marker_cache_version:
             self.persistent_cache['version'] = self.marker_cache_version
+            self.invert_image = self.persistent_cache.get('inverted_markers',False)
             self.cache = Cache_List([False for _ in self.g_pool.timestamps])
             logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
         else:
             self.cache = Cache_List(cache)
+            #we overwrite the inverted_image setting from init with the one save in the marker cache.
+            self.invert_image = self.persistent_cache.get('inverted_markers',False)
             logger.debug("Loaded marker cache {} / {} frames had been searched before".format(len(self.cache)-self.cache.count(False),len(self.cache)) )
 
     def clear_marker_cache(self):
@@ -95,10 +92,10 @@ class Offline_Surface_Tracker(Surface_Tracker):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
         if self.surface_definitions.get('offline_square_marker_surfaces',[]) != []:
             logger.debug("Found ref surfaces defined or copied in previous session.")
-            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
+            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('offline_square_marker_surfaces',[])]
         elif self.surface_definitions.get('realtime_square_marker_surfaces',[]) != []:
             logger.debug("Did not find ref surfaces def created or used by the user in player from earlier session. Loading surfaces defined during capture.")
-            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[])]
         else:
             logger.debug("No surface defs found. Please define using GUI.")
             self.surfaces = []
@@ -245,7 +242,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             if not s.locate_from_cache(frame.index):
                 s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
             if s.detected:
-                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
+                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
 
         if self.mode == "Show marker IDs":
             draw_markers(frame.img,self.markers)
@@ -476,10 +473,6 @@ class Offline_Surface_Tracker(Surface_Tracker):
             # per surface names:
             surface_name = '_'+s.name.replace('/','')+'_'+s.uid
 
-
-            # save surface_positions as pickle file
-            save_object(s.cache.to_list(),os.path.join(metrics_dir,'srf_positions'+surface_name))
-
             #save surface_positions as csv
             with open(os.path.join(metrics_dir,'srf_positons'+surface_name+'.csv'),'w',encoding='utf-8',newline='') as csvfile:
                 csv_writer =csv.writer(csvfile, delimiter=',')
@@ -560,6 +553,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         self.surface_definitions.close()
 
         self.close_marker_cacher()
+        self.persistent_cache['inverted_markers'] = self.invert_image
         self.persistent_cache["marker_cache"] = self.cache.to_list()
         self.persistent_cache.close()
 

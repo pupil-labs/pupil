@@ -46,7 +46,8 @@ from version_utils import get_version
 app_version = get_version(version_file)
 
 #threading and processing
-from multiprocessing import Process, Value,active_children,freeze_support,set_start_method
+from multiprocessing import Process, Value,active_children,set_start_method
+from multiprocessing.spawn import freeze_support
 from threading import Thread
 from ctypes import c_double,c_bool
 

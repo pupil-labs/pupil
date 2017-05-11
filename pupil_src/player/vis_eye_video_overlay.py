@@ -265,7 +265,7 @@ class Vis_Eye_Video_Overlay(Plugin):
 
             if self.show_ellipses and events['pupil_positions']:
                 for pd in events['pupil_positions']:
-                    if pd['id'] == eye_index:
+                    if pd['id'] == eye_index and pd['timestamp'] == self.eye_frames[eye_index].timestamp:
                         break
 
                 el = pd['ellipse']

@@ -30,7 +30,7 @@ if platform.system() == 'Darwin':
               debug=False,
               strip=None,
               upx=False,
-              console=False)
+              console=True)
 
     #exclude system lib.
     libSystem = [bn for bn in a.binaries if 'libSystem.dylib' in bn]
@@ -38,7 +38,7 @@ if platform.system() == 'Darwin':
                    a.binaries - libSystem,
                    a.zipfiles,
                    a.datas,
-                   [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.1.2/lib/libglfw3.dylib','BINARY')],
+                   [('libglfw.dylib', '/usr/local/lib/libglfw.dylib','BINARY')],
                    [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
                    [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
                    [('fontawesome-webfont.ttf',ui.get_fontawesome_font_path(),'DATA')],
@@ -49,7 +49,12 @@ if platform.system() == 'Darwin':
     app = BUNDLE(coll,
                  name='Pupil Player.app',
                  icon='pupil-player.icns',
-                 version = str(dpkg_deb_version()))
+                 version = str(dpkg_deb_version()),
+                 info_plist={
+                          'NSHighResolutionCapable': 'True'
+                            },
+                )
+
 
 elif platform.system() == 'Linux':
     a = Analysis(['../../pupil_src/player/main.py'],

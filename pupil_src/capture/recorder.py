@@ -20,7 +20,8 @@ from time import strftime, localtime, time, gmtime
 from shutil import copy2
 from file_methods import save_object, load_object
 from methods import get_system_info
-from av_writer import JPEG_Writer, AV_Writer
+from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
+from ndsi import H264Writer
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 # logging
 import logging
@@ -165,7 +166,10 @@ class Recorder(Plugin):
         """Handles recorder notifications
 
         Reacts to notifications:
-            ``recording.should_start``: Starts a new recording session
+            ``recording.should_start``: Starts a new recording session.
+                fields: 'session_name' change session name
+                    use `/` to att dirs.
+                    start with `/` to ingore the rec base dir and start from root instead.
             ``recording.should_stop``: Stops current recording session
 
         Emits notifications:
@@ -202,7 +206,6 @@ class Recorder(Plugin):
         return strftime("%H:%M:%S", rec_time)
 
     def start(self):
-        self.timestamps = []
         self.data = {'pupil_positions': [], 'gaze_positions': [], 'notifications': []}
         self.frame_count = 0
         self.running = True
@@ -238,11 +241,21 @@ class Recorder(Plugin):
                 'Start Time': strftime("%H:%M:%S", localtime(self.start_time))
             })
 
-        if self.raw_jpeg and self.g_pool.capture.jpeg_support:
-            self.video_path = os.path.join(self.rec_path, "world.mp4")
-            self.writer = JPEG_Writer(self.video_path, self.g_pool.capture.frame_rate)
+        if self.audio_src != 'No Audio':
+            audio_path = os.path.join(self.rec_path, "world.wav")
+            self.audio_writer = Audio_Capture(audio_path, self.audio_devices_dict[self.audio_src])
         else:
-            self.video_path = os.path.join(self.rec_path, "world.mp4")
+            self.audio_writer = None
+
+        self.video_path = os.path.join(self.rec_path, "world.mp4")
+        if self.raw_jpeg and self.g_pool.capture.jpeg_support:
+            self.writer = JPEG_Writer(self.video_path, self.g_pool.capture.frame_rate)
+        elif hasattr(self.g_pool.capture._recent_frame, 'h264_buffer'):
+            self.writer = H264Writer(self.video_path,
+                                     self.g_pool.capture.frame_size[0],
+                                     self.g_pool.capture.frame_size[1],
+                                     self.g_pool.capture.frame_rate)
+        else:
             self.writer = AV_Writer(self.video_path, fps=self.g_pool.capture.frame_rate)
 
         try:
@@ -297,7 +310,6 @@ class Recorder(Plugin):
 
             if 'frame' in events:
                 frame = events['frame']
-                self.timestamps.append(frame.timestamp)
                 self.writer.write_video_frame(frame)
                 self.frame_count += 1
 
@@ -314,11 +326,6 @@ class Recorder(Plugin):
         self.writer = None
 
         save_object(self.data, os.path.join(self.rec_path, "pupil_data"))
-
-        timestamps_path = os.path.join(self.rec_path, "world_timestamps.npy")
-        # ts = sanitize_timestamps(np.array(self.timestamps))
-        ts = np.array(self.timestamps)
-        np.save(timestamps_path, ts)
 
         try:
             copy2(os.path.join(self.g_pool.user_dir, "surface_definitions"),
@@ -357,7 +364,6 @@ class Recorder(Plugin):
         self.menu.read_only = False
         self.button.status_text = ''
 
-        self.timestamps = []
         self.data = {'pupil_positions': [], 'gaze_positions': []}
         self.pupil_pos_list = []
         self.gaze_pos_list = []

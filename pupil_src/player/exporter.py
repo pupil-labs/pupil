@@ -23,7 +23,6 @@ from glob import glob
 import numpy as np
 from video_capture import File_Source, EndofVideoFileError
 from player_methods import correlate_data, update_recording_to_recent, load_meta_info
-from version_utils import read_rec_version
 from av_writer import AV_Writer
 from file_methods import load_object
 
@@ -49,7 +48,7 @@ class Global_Container(object):
 
 
 def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir, min_data_confidence,
-           start_frame=None, end_frame=None, plugin_initializers=(), out_file_path=None):
+           start_frame=None, end_frame=None, plugin_initializers=(), out_file_path=None,pupil_data=None):
 
     vis_plugins = sorted([Vis_Circle,Vis_Cross,Vis_Polyline,Vis_Light_Points,
         Vis_Watermark,Vis_Scan_Path,Vis_Eye_Video_Overlay], key=lambda x: x.__name__)
@@ -70,7 +69,6 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
     meta_info = load_meta_info(rec_dir)
-    rec_version = read_rec_version(meta_info)
 
     g_pool = Global_Container()
     g_pool.app = 'exporter'
@@ -122,15 +120,15 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     g_pool.capture = cap
     g_pool.rec_dir = rec_dir
     g_pool.user_dir = user_dir
-    g_pool.rec_version = rec_version
+    g_pool.meta_info = meta_info
     g_pool.timestamps = timestamps
     g_pool.delayed_notifications = {}
     g_pool.notifications = []
-
     # load pupil_positions, gaze_positions
-    pupil_data = load_object(pupil_data_path)
+    pupil_data = pupil_data or load_object(pupil_data_path)
     pupil_list = pupil_data['pupil_positions']
     gaze_list = pupil_data['gaze_positions']
+
     g_pool.pupil_positions_by_frame = correlate_data(pupil_list, g_pool.timestamps)
     g_pool.gaze_positions_by_frame = correlate_data(gaze_list, g_pool.timestamps)
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin

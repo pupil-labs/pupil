@@ -66,8 +66,8 @@ class Surface_Tracker(Plugin):
 
     def load_surface_definitions_from_file(self):
         # all registered surfaces
-        self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.user_dir,'surface_definitions') )
-        self.surfaces = [Reference_Surface(saved_definition=d) for d in  self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+        self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.user_dir,'surface_definitions'))
+        self.surfaces = [Reference_Surface(saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[])]
 
     def save_surface_definitions_to_file(self):
         self.surface_definitions["realtime_square_marker_surfaces"] = [rs.save_to_dict() for rs in self.surfaces if rs.defined]
@@ -95,8 +95,8 @@ class Surface_Tracker(Plugin):
 
             if action == GLFW_RELEASE:
                 if self.edit_surf_verts:
-                    #if we had draged a vertex lets let other know the surfaces changed.
-                    self.notify_all({'subject':'surfaces_changed','delay':2})
+                    # if we had draged a vertex lets let other know the surfaces changed.
+                    self.notify_all({'subject': 'surfaces_changed', 'delay': 2})
                 self.edit_surf_verts = []
 
             elif action == GLFW_PRESS:
@@ -122,8 +122,10 @@ class Surface_Tracker(Plugin):
                                     self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
                                     self.notify_all({'subject':'surfaces_changed','delay':1})
 
-    def add_surface(self,_):
-        self.surfaces.append(Reference_Surface())
+    def add_surface(self, _):
+        surf = Reference_Surface()
+        surf.on_finish_define = self.save_surface_definitions_to_file
+        self.surfaces.append(surf)
         self.update_gui_markers()
 
     def remove_surface(self,i):
@@ -133,10 +135,10 @@ class Surface_Tracker(Plugin):
         if remove_surface in self.edit_surfaces:
             self.edit_surfaces.remove(remove_surface)
 
-
         self.surfaces[i].cleanup()
         del self.surfaces[i]
         self.update_gui_markers()
+        self.notify_all({'subject': 'surfaces_changed'})
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Surface Tracker')
@@ -180,8 +182,8 @@ class Surface_Tracker(Plugin):
             s_menu = ui.Growing_Menu("Surface {}".format(idx))
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
-            s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
-            s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
+            s_menu.append(ui.Text_Input('x', s.real_world_size, label='X size'))
+            s_menu.append(ui.Text_Input('y', s.real_world_size, label='Y size'))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
@@ -220,10 +222,10 @@ class Surface_Tracker(Plugin):
             else:
                 s.gaze_on_srf =[]
 
-        events['surface'] = []
+        events['surfaces'] = []
         for s in self.surfaces:
             if s.detected:
-                events['surface'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
+                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
 
 
         if self.running:
