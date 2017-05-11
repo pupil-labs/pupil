@@ -28,6 +28,10 @@ logger.setLevel(logging.DEBUG)
 av.logging.set_level(av.logging.ERROR)
 
 
+NOT_REC_STR = 'Start a new recording to save audio.'
+REC_STR = 'Saving audio to "audio.wav".'
+
+
 class Audio_Capture(Plugin):
     """docstring for Audio_Capture"""
     def __init__(self, g_pool, audio_src='No Audio'):
@@ -68,9 +72,6 @@ class Audio_Capture(Plugin):
         help_str = 'Creates events for audio input.'
         self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text(help_str))
-        state_label = ui.Text_Input('running', self, label='Running:', getter=lambda: self.running.is_set())
-        state_label.read_only = True
-        self.menu.append(state_label)
 
         def audio_dev_getter():
             # fetch list of currently available
@@ -83,6 +84,8 @@ class Audio_Capture(Plugin):
                                      label='Audio Source',
                                      setter=self.start_capture))
 
+        self.menu.append(ui.Info_Text(NOT_REC_STR))
+
     def get_init_dict(self):
         return {'audio_src': self.audio_src}
 
@@ -92,6 +95,8 @@ class Audio_Capture(Plugin):
             self.menu = None
 
     def cleanup(self):
+        if self.audio_container is not None:
+            self.close_audio_recording()
         self.running.clear()
         self.deinit_gui()
         if self.thread and self.thread.is_alive():
@@ -104,6 +109,10 @@ class Audio_Capture(Plugin):
                 rec_file = os.path.join(self.rec_dir, 'audio.wav')
                 self.audio_container = av.open(rec_file, 'w')
                 self.timestamps = []
+
+                self.menu[-2].read_only = True
+                del self.menu[-1]
+                self.menu.append(ui.Info_Text(REC_STR))
             elif not self.running.is_set():
                 logger.warning('Recording was started without an active audio capture')
             else:
@@ -120,6 +129,10 @@ class Audio_Capture(Plugin):
         self.timestamps = None
         self.audio_out_stream = None
         self.audio_container = None
+
+        self.menu[-2].read_only = False
+        del self.menu[-1]
+        self.menu.append(ui.Info_Text(NOT_REC_STR))
 
     def write_audio_packet(self, packet):
         # Test if audio outstream has been initialized
