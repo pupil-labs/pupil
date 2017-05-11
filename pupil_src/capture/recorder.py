@@ -241,12 +241,6 @@ class Recorder(Plugin):
                 'Start Time': strftime("%H:%M:%S", localtime(self.start_time))
             })
 
-        if self.audio_src != 'No Audio':
-            audio_path = os.path.join(self.rec_path, "world.wav")
-            self.audio_writer = Audio_Capture(audio_path, self.audio_devices_dict[self.audio_src])
-        else:
-            self.audio_writer = None
-
         self.video_path = os.path.join(self.rec_path, "world.mp4")
         if self.raw_jpeg and self.g_pool.capture.jpeg_support:
             self.writer = JPEG_Writer(self.video_path, self.g_pool.capture.frame_rate)
@@ -301,7 +295,7 @@ class Recorder(Plugin):
     def recent_events(self,events):
         if self.running:
             for key, data in events.items():
-                if key not in ('dt','frame'):
+                if key not in ('dt', 'frame', 'audio_packets'):
                     try:
                         self.data[key] += data
                     except KeyError:
@@ -312,9 +306,6 @@ class Recorder(Plugin):
                 frame = events['frame']
                 self.writer.write_video_frame(frame)
                 self.frame_count += 1
-
-            for audio_packet in events.get('audio_packets', []):
-                self.writer.write_audio_packet(audio_packet)
 
             # # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
 

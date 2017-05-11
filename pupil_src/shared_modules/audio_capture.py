@@ -9,8 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+import os
 import av
 import queue
+import numpy as np
 
 from plugin import Plugin
 from pyglui import ui
@@ -38,6 +40,8 @@ class Audio_Capture(Plugin):
 
         self.thread = None
         self.running = Event()
+        self.audio_container = None
+        self.audio_out_stream = None
         self.queue = queue.Queue()
         self.start_capture(self.audio_src)
 
@@ -50,6 +54,9 @@ class Audio_Capture(Plugin):
                 break
             audio_packets.append(packet)
         events['audio_packets'] = audio_packets
+        if self.audio_container is not None:
+            for packet in audio_packets:
+                self.write_audio_packet(packet)
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Audio Capture')
@@ -89,6 +96,44 @@ class Audio_Capture(Plugin):
         self.deinit_gui()
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=1)
+
+    def on_notify(self, notification):
+        if notification['subject'] == 'recording.started':
+            if self.running.is_set() and self.audio_container is None:
+                self.rec_dir = notification['rec_path']
+                rec_file = os.path.join(self.rec_dir, 'audio.wav')
+                self.audio_container = av.open(rec_file, 'w')
+                self.timestamps = []
+            elif not self.running.is_set():
+                logger.warning('Recording was started without an active audio capture')
+            else:
+                logger.warning('Audio is already being recorded')
+        elif notification['subject'] == 'recording.stopped':
+            if self.audio_container is not None and self.audio_out_stream is not None:
+                self.close_audio_recording()
+
+    def close_audio_recording(self):
+        self.audio_container.close()
+        ts_loc = os.path.join(self.rec_dir, 'audio_timestamps.npy')
+        np.save(ts_loc, np.asarray(self.timestamps))
+
+        self.timestamps = None
+        self.audio_out_stream = None
+        self.audio_container = None
+
+    def write_audio_packet(self, packet):
+        # Test if audio outstream has been initialized
+        if self.audio_out_stream is None:
+            try:
+                self.audio_out_stream = self.audio_container.add_stream(template=packet.stream)
+            except ValueError as e:
+                # packet.stream codec is not supported in target container.
+                logger.error('Failed to create audio stream. Aborting recording.')
+                logger.debug('Reason: {}'.format(e))
+                self.close_audio_recording()
+
+        self.timestamps.append(packet.timestamp)
+        self.audio_container.mux(packet)
 
     def start_capture(self, audio_src):
 

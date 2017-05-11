@@ -162,7 +162,7 @@ class AV_Writer(object):
         self.close()
 
 
-class JPEG_Writer(Audio_Writer):
+class JPEG_Writer(object):
     """
     PyAV based jpeg writer.
     """
