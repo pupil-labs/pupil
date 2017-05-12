@@ -30,6 +30,10 @@ except (ImportError, AssertionError):
     raise Exception("Pyre version is to old. Please upgrade")
 
 
+PTS_GROUP_POSTFIX = '-time_sync-v0.2'
+PTS_GROUP_INFO_FMT = 'Syncing time with nodes in group "{}"'
+
+
 class Clock_Service(object):
     """Represents a remote clock service and is sortable by rank."""
     def __init__(self, uuid, name, rank, port):
@@ -55,10 +59,10 @@ class Time_Sync(Plugin):
     See `time_sync_spec.md` for details.
     """
 
-    def __init__(self, g_pool, node_name=None, sync_group='time_sync_default', base_bias=1.):
+    def __init__(self, g_pool, node_name=None, sync_group_prefix='default', base_bias=1.):
         super().__init__(g_pool)
         self.menu = None
-        self.sync_group = sync_group
+        self.sync_group_prefix = sync_group_prefix
         self.discovery = None
 
         self.leaderboard = []
@@ -72,6 +76,14 @@ class Time_Sync(Plugin):
 
         self.restart_discovery(node_name)
 
+    @property
+    def sync_group(self):
+        return self.sync_group_prefix + PTS_GROUP_POSTFIX
+
+    @sync_group.setter
+    def sync_group(self, full_name):
+        self.sync_group_prefix = full_name.rsplit(PTS_GROUP_POSTFIX, maxsplit=1)[0]
+
     def init_gui(self):
         def close():
             self.alive = False
@@ -83,7 +95,10 @@ class Time_Sync(Plugin):
         help_str = "All pupil nodes of one group share a Master clock."
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('node_name', self, label='Node Name', setter=self.restart_discovery))
-        self.menu.append(ui.Text_Input('sync_group', self, label='Sync Group', setter=self.change_sync_group))
+        self.menu.append(ui.Text_Input('sync_group_prefix', self, label='Sync Group', setter=self.change_sync_group))
+
+        self.sync_group_info_text = ui.Info_Text(PTS_GROUP_INFO_FMT.format(self.sync_group))
+        self.menu.append(self.sync_group_info_text)
 
         def sync_status():
             if self.follower_service:
@@ -102,7 +117,7 @@ class Time_Sync(Plugin):
         help_str = "The clock service with the highest bias becomes clock master."
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('base_bias', self, label='Master Bias', setter=set_bias))
-        self.menu.append(ui.Text_Input('leaderboard',self,label='Master Nodes in Group'))
+        self.menu.append(ui.Text_Input('leaderboard', self, label='Master Nodes in Group'))
         self.g_pool.sidebar.append(self.menu)
 
     def recent_events(self, events):
@@ -185,7 +200,6 @@ class Time_Sync(Plugin):
             logger.debug('Become clock master with rank {}'.format(self.rank))
             self.announce_clock_master_info()
 
-
     def announce_clock_master_info(self):
         self.discovery.shout(self.sync_group, [repr(self.rank).encode(),
                                                repr(self.master_service.port).encode()])
@@ -233,16 +247,17 @@ class Time_Sync(Plugin):
         self.discovery.start()
         self.announce_clock_master_info()
 
-    def change_sync_group(self, new_group):
-        if new_group != self.sync_group:
+    def change_sync_group(self, new_group_prefix):
+        if new_group_prefix != self.sync_group_prefix:
             self.discovery.leave(self.sync_group)
             self.leaderboard = []
             if self.follower_service:
                 self.follower_service.terminate()
                 self.follower = None
-            self.sync_group = new_group
-            self.discovery.join(new_group)
+            self.sync_group_prefix = new_group_prefix
+            self.discovery.join(self.sync_group)
             self.announce_clock_master_info()
+            self.sync_group_info_text.text = PTS_GROUP_INFO_FMT.format(self.sync_group)
 
     def deinit_gui(self):
         if self.menu:
@@ -251,7 +266,7 @@ class Time_Sync(Plugin):
 
     def get_init_dict(self):
         return {'node_name': self.node_name,
-                'sync_group': self.sync_group,
+                'sync_group_prefix': self.sync_group_prefix,
                 'base_bias': self.base_bias}
 
     def cleanup(self):

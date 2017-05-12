@@ -1,5 +1,7 @@
 # Pupil Time Sync Protocol
 
+Protocol version: v0.2
+
 The Pupil Time Sync -- hereinafter referred to as _PTS_ -- protocol consists of two parts:
 1. Clock service discovery
 2. Time synchronization
@@ -22,9 +24,10 @@ of existing libraries (e.g. [zyre](https://github.com/zeromq/zyre), [Pyre](https
 
 ### Synchronization scope
 
-All PTS actors that should be synchronized SHALL join a user-definable ZRE
-group -- hereinafter referred to as _PTS group_ -- which is by default
-`time_sync_default`.
+All PTS actors that should be synchronized SHALL join a ZRE group -- hereinafter
+referred to as _PTS group_. The name of the PTS group is composed of a user-definable
+prefix -- by default `default` -- and the fixed string `-time_sync-v0.2`. Therefore the
+default PTS group name is `default-time_sync-v0.2`.
 
 All clock services SHALL SHOUT their announcements (see below) into the PTS group.
 
