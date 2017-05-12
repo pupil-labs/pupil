@@ -74,7 +74,6 @@ class Fake_Source(Base_Source):
 
     def cleanup(self):
         self.info_text = None
-        self._img = None
         self.preferred_source = None
         super().cleanup()
 
