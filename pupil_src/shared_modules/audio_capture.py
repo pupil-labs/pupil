@@ -194,10 +194,14 @@ class Audio_Capture(Plugin):
             running.clear()
             return
 
-        now = self.g_pool.get_now()
+        stream_start_ts = self.g_pool.get_now()
         for packet in in_container.demux(in_stream):
             try:
-                packet.timestamp = (packet.pts - in_stream.start_time) * in_stream.time_base + now
+                # ffmpeg timestamps - in_stream.startime = packte pts relative to startime
+                # multiply with stream_timebase to get seconds
+                # add start time of this stream in pupil time unadjusted
+                # finally add pupil timebase offset to adjust for settable timebase.
+                packet.timestamp = (packet.pts - in_stream.start_time) * in_stream.time_base + stream_start_ts - self.g_pool.timebase.value
                 self.queue.put_nowait(packet)
             except queue.Full:
                 pass  # drop packet
