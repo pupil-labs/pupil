@@ -16,11 +16,7 @@ import ndsi
 
 from .base_backend import Base_Source, Base_Manager
 
-try:
-    from ndsi import __version__
-    assert __version__ >= '0.3.0'
-except (ImportError, AssertionError):
-    raise Exception("pyndsi version is to old. Please upgrade")
+assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.16'
 logger = logging.getLogger(__name__)
 
 
