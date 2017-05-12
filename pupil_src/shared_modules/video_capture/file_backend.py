@@ -27,17 +27,20 @@ import os.path
 import logging
 logger = logging.getLogger(__name__)
 
+
 class FileCaptureError(Exception):
     """General Exception for this module"""
     def __init__(self, arg):
         super().__init__()
         self.arg = arg
 
+
 class EndofVideoFileError(Exception):
     """docstring for EndofVideoFileError"""
     def __init__(self, arg):
         super().__init__()
         self.arg = arg
+
 
 class FileSeekError(Exception):
     """docstring for EndofVideoFileError"""
@@ -73,9 +76,8 @@ class Frame(object):
     @property
     def gray(self):
         if self._gray is None:
-            self._gray = np.frombuffer(self._av_frame.planes[0],np.uint8).reshape(self.height,self.width)
+            self._gray = np.frombuffer(self._av_frame.planes[0], np.uint8).reshape(self.height,self.width)
         return self._gray
-
 
 
 class File_Source(Base_Source):
@@ -148,7 +150,19 @@ class File_Source(Base_Source):
         else:
             logger.debug('using timestamps from list')
             self.timestamps = timestamps
+
         self.next_frame = self._next_frame()
+
+        if self.video_stream.average_rate:
+            self.average_rate = self.video_stream.average_rate
+        else:
+            pts = [next(self.next_frame).pts for i in range(2)]
+            # pts[0] == 0
+            # => pts[1] - pts[0] == pts[1]
+            rate = 1 / (self.video_stream.time_base * pts[1])
+            logger.debug('Estimated average rate: {}'.format(rate))
+            self.average_rate = rate
+            self.seek_to_frame(0)
 
     def ensure_initialisation(fallback_func=None):
         from functools import wraps
@@ -171,12 +185,12 @@ class File_Source(Base_Source):
     @property
     @ensure_initialisation(fallback_func=lambda: (1270, 720))
     def frame_size(self):
-        return int(self.video_stream.format.width),int(self.video_stream.format.height)
+        return int(self.video_stream.format.width), int(self.video_stream.format.height)
 
     @property
     @ensure_initialisation(fallback_func=lambda: 20)
     def frame_rate(self):
-        return float(self.video_stream.average_rate)
+        return float(self.average_rate)
 
     def get_init_dict(self):
         settings = super().get_init_dict()
@@ -211,16 +225,16 @@ class File_Source(Base_Source):
         # some older mkv did not use perfect timestamping so we are doing int(round()) to clear that.
         # With properly spaced pts (any v0.6.100+ recording) just int() would suffice.
         # print float(pts*self.video_stream.time_base*self.video_stream.average_rate),round(pts*self.video_stream.time_base*self.video_stream.average_rate)
-        return int(round(pts*self.video_stream.time_base*(self.video_stream.average_rate or 30.)))
+        return int(round(pts*self.video_stream.time_base*self.average_rate))
 
     @ensure_initialisation()
-    def pts_to_time(self,pts):
+    def pts_to_time(self, pts):
         ### we do not use this one, since we have our timestamps list.
         return int(pts*self.video_stream.time_base)
 
     @ensure_initialisation()
-    def idx_to_pts(self,idx):
-        return int(idx/(self.video_stream.average_rate or 30.)/self.video_stream.time_base)
+    def idx_to_pts(self, idx):
+        return int(idx/self.average_rate/self.video_stream.time_base)
 
     @ensure_initialisation()
     def get_frame(self):
@@ -263,6 +277,7 @@ class File_Source(Base_Source):
         except EndofVideoFileError:
             logger.info('Video has ended.')
             self._initialised = False
+            print('D')
         else:
             self._recent_frame = frame
             events['frame'] = frame
@@ -285,7 +300,7 @@ class File_Source(Base_Source):
     def seek_to_frame_fast(self, seek_pos):
         ###frame accurate seeking
         try:
-            self.video_stream.seek(self.idx_to_pts(seek_pos),mode='time', any_frame=True)
+            self.video_stream.seek(self.idx_to_pts(seek_pos), mode='time', any_frame=True)
         except av.AVError as e:
             raise FileSeekError()
         else:

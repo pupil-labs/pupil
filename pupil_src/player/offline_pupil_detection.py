@@ -49,6 +49,7 @@ class Offline_Pupil_Detection(Plugin):
 
         self.eye_processes = [None, None]
         self.eye_timestamps = [None, None]
+        self.eye_video_loc = [None, None]
         self.detection_progress = {'0': 0., '1': 0.}
         self.pupil_positions = []
         self.detection_finished_flag = False
@@ -61,21 +62,27 @@ class Offline_Pupil_Detection(Plugin):
         self.ipc_pub_url, self.ipc_sub_url, self.ipc_push_url = self.initialize_ipc()
         sleep(0.2)
 
-        self.data_sub = zmq_tools.Msg_Receiver(self.zmq_ctx, self.ipc_sub_url, topics=('pupil.',))
+        self.data_sub = zmq_tools.Msg_Receiver(self.zmq_ctx, self.ipc_sub_url, topics=('pupil.', 'logging'))
         self.eye_control = zmq_tools.Msg_Dispatcher(self.zmq_ctx, self.ipc_push_url)
 
         for eye_id in (0, 1):
-            eye_vid = os.path.join(self.g_pool.rec_dir, 'eye{}.mp4'.format(eye_id))
+            potential_locs = [os.path.join(self.g_pool.rec_dir, 'eye{}{}'.format(eye_id, ext)) for ext in ('.mjpeg', '.mp4')]
+            existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
+            if not existing_locs:
+                continue
+            video_loc = existing_locs[0]
+
             try:
                 timestamps_path = os.path.join(self.g_pool.rec_dir,
                                                'eye{}_timestamps.npy'.format(eye_id))
                 self.eye_timestamps[eye_id] = np.load(timestamps_path).tolist()
                 self.detection_progress[str(eye_id)] = 0.
                 overwrite_cap_settings = 'File_Source', {
-                    'source_path': eye_vid,
+                    'source_path': video_loc,
                     'timestamps': self.eye_timestamps[eye_id],
                     'timed_playback': False
                 }
+                self.eyes_are_alive[eye_id].value = True
                 eye_p = Process(target=eye, name='eye{}'.format(eye_id),
                                 args=(timebase, self.eyes_are_alive[eye_id],
                                       self.ipc_pub_url, self.ipc_sub_url,
@@ -84,18 +91,22 @@ class Offline_Pupil_Detection(Plugin):
                                       overwrite_cap_settings))
                 eye_p.start()
                 self.eye_processes[eye_id] = eye_p
+                self.eye_video_loc[eye_id] = video_loc
             except IOError:
                 continue
-
         if not self.eye_processes[0] and not self.eye_processes[1]:
-            logger.error('No eye recordings forund. Unloading plugin...')
+            logger.error('No eye recordings found. Unloading plugin...')
             self.alive = False
 
     def recent_events(self, events):
         while self.data_sub.new_data:
             topic, payload = self.data_sub.recv()
-            self.pupil_positions.append(payload)
-            self.update_progress(payload)
+            if topic.startswith('logging'):
+                record = logging.makeLogRecord(payload)
+                logger.handle(record)
+            else:
+                self.pupil_positions.append(payload)
+                self.update_progress(payload)
         if not self.detection_finished_flag:
             eye0_finished = self.detection_progress['0'] == 100. if self.eye_processes[0] is not None else True
             eye1_finished = self.detection_progress['1'] == 100. if self.eye_processes[1] is not None else True
@@ -137,10 +148,10 @@ class Offline_Pupil_Detection(Plugin):
     def redetect(self):
         del self.pupil_positions[:]  # delete previously detected pupil positions
         self.detection_finished_flag = False
-        self.eye_control.notify({'subject': 'file_source.restart',
-                                 'source_path': os.path.join(self.g_pool.rec_dir, 'eye0.mp4')})
-        self.eye_control.notify({'subject': 'file_source.restart',
-                                 'source_path': os.path.join(self.g_pool.rec_dir, 'eye1.mp4')})
+        for eye_id in range(2):
+            if self.eye_video_loc[eye_id]:
+                self.eye_control.notify({'subject': 'file_source.restart',
+                                         'source_path': self.eye_video_loc[eye_id]})
 
     def initialize_ipc(self):
         self.zmq_ctx = zmq.Context()
@@ -199,7 +210,7 @@ class Offline_Pupil_Detection(Plugin):
     def init_gui(self):
         def close():
             self.alive = False
-        self.menu = ui.Scrolling_Menu("Offline Pupil Detection", size=(200,300))
+        self.menu = ui.Scrolling_Menu("Offline Pupil Detection", size=(200, 300))
         self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Button('Close', close))
 
