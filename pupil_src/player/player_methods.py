@@ -139,7 +139,7 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         time_file_name = os.path.split(time_loc)[1]
         time_name, time_ext = os.path.splitext(time_file_name)
 
-        potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.h264', '.mp4')]
+        potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.mp4')]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
         if not existing_locs:
             continue
@@ -151,7 +151,7 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         elif time_name in ('Pupil Cam1 ID2', 'Logitech Webcam C930e'):
             time_name = 'world'  # assume world file
 
-        timestamps = np.fromfile(time_loc, dtype='>f4')
+        timestamps = np.fromfile(time_loc, dtype='>f8')
         timestamp_loc = os.path.join(rec_dir, '{}_timestamps.npy'.format(time_name))
         logger.info('Creating "{}"'.format(os.path.split(timestamp_loc)[1]))
         np.save(timestamp_loc, timestamps)
