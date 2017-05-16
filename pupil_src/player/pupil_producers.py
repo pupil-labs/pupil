@@ -29,6 +29,7 @@ else:
     import multiprocessing as mp
     from multiprocessing import Value, Process
 
+import pupil_detectors  # trigger module compilation
 from ctypes import c_double, c_bool
 if 'profiled' in sys.argv:
     from eye import eye_profiled as eye
