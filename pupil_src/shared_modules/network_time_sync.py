@@ -13,6 +13,7 @@ from uvc import get_time_monotonic
 import socket
 import threading
 import asyncore
+import struct
 from random import random
 
 import logging
@@ -44,9 +45,10 @@ class Time_Echo(asyncore.dispatcher_with_send):
         asyncore.dispatcher_with_send.__init__(self, sock)
 
     def handle_read(self):
-        data = self.recv(1024)
+        # expecting `sync` message
+        data = self.recv(4)
         if data:
-            self.send(repr(self.time_fn()).encode())
+            self.send(struct.pack('<d', self.time_fn()))
 
     def __del__(self):
         pass
@@ -211,9 +213,9 @@ class Clock_Sync_Follower(threading.Thread):
             for request in range(60):
                 t0 = self.get_time()
                 server_socket.send(b'sync')
-                message = server_socket.recv(1024)
+                message = server_socket.recv(8)
                 t2 = self.get_time()
-                t1 = float(message)
+                t1 = struct.unpack('<d', message)[0]
                 times.append((t0, t1, t2))
 
             server_socket.close()
