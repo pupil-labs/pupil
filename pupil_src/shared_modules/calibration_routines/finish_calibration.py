@@ -334,6 +334,9 @@ def match_data(g_pool, pupil_list, ref_list):
 
 def select_calibration_method(g_pool, pupil_list, ref_list):
     matched_data = match_data(g_pool, pupil_list, ref_list)  # calculate matching data
+    if not isinstance(matched_data, tuple):
+        return None, matched_data  # matched_data is a error notification
+
     # unpack matching data
     (camera_intrinsics, matched_binocular_data, matched_monocular_data,
         matched_pupil0_data, matched_pupil1_data, pupil0, pupil1) = matched_data

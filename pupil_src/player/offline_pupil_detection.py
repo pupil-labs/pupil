@@ -129,21 +129,22 @@ class Offline_Pupil_Detection(Plugin):
         self.detection_progress[str(eye_id)] = 100 * (cur_ts - min_ts) / (max_ts - min_ts)
 
     def cleanup(self):
-        self.eye_control.notify({'subject': 'eye_process.should_stop', 'eye_id': 0})
-        self.eye_control.notify({'subject': 'eye_process.should_stop', 'eye_id': 1})
-        for proc in self.eye_processes:
-            if proc:
-                proc.join()
-        # close sockets before context is terminated
-        del self.data_sub
-        del self.eye_control
-        self.zmq_ctx.term()
-        self.deinit_gui()
+        if self.eye_control:
+            self.eye_control.notify({'subject': 'eye_process.should_stop', 'eye_id': 0})
+            self.eye_control.notify({'subject': 'eye_process.should_stop', 'eye_id': 1})
+            for proc in self.eye_processes:
+                if proc:
+                    proc.join()
+            # close sockets before context is terminated
+            self.data_sub = None
+            self.eye_control = None
+            self.zmq_ctx.term()
+            self.deinit_gui()
 
-        self.g_pool.pupil_data['pupil_positions'] = self.original_pupil_pos
-        self.g_pool.pupil_positions_by_frame = self.original_pupil_pos_by_frame
-        self.notify_all({'subject': 'pupil_positions_changed'})
-        logger.debug('pupil positions changed')
+            self.g_pool.pupil_data['pupil_positions'] = self.original_pupil_pos
+            self.g_pool.pupil_positions_by_frame = self.original_pupil_pos_by_frame
+            self.notify_all({'subject': 'pupil_positions_changed'})
+            logger.debug('pupil positions changed')
 
     def redetect(self):
         del self.pupil_positions[:]  # delete previously detected pupil positions
