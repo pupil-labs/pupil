@@ -145,10 +145,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
-    calibration_plugins += [p for p in runtime_plugins if issubclass(p,Calibration_Plugin)]
-    runtime_plugins = [p for p in runtime_plugins if not issubclass(p,Calibration_Plugin)]
-    manager_classes += [p for p in runtime_plugins if issubclass(p,Base_Manager)]
-    runtime_plugins = [p for p in runtime_plugins if not issubclass(p,Base_Manager)]
+    calibration_plugins += [p for p in runtime_plugins if issubclass(p, Calibration_Plugin)]
+    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Calibration_Plugin)]
+    manager_classes += [p for p in runtime_plugins if issubclass(p, Base_Manager)]
+    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Base_Manager)]
     user_launchable_plugins = [Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
                                Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection,
                                Remote_Recorder] + runtime_plugins

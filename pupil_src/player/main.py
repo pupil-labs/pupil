@@ -88,8 +88,8 @@ from log_display import Log_Display
 from annotations import Annotation_Player
 from raw_data_exporter import Raw_Data_Exporter
 from log_history import Log_History
-from offline_pupil_detection import Offline_Pupil_Detection
-from offline_calibration import Offline_Calibration
+from pupil_producers import pupil_producers, Pupil_Producer_Base
+from gaze_producers import gaze_producers, Gaze_Producer_Base
 
 import logging
 # set up root logger before other imports
@@ -141,6 +141,8 @@ class Global_Container(object):
 
 
 def session(rec_dir):
+    runtime_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
+
     system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
     vis_plugins = sorted([Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross,
                           Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path], key=lambda x: x.__name__)
@@ -149,13 +151,20 @@ def session(rec_dir):
                               Pupil_Angle_3D_Fixation_Detector,
                               Manual_Gaze_Correction, Video_Export_Launcher,
                               Offline_Surface_Tracker, Raw_Data_Exporter,
-                              Batch_Exporter, Annotation_Player,
-                              Offline_Pupil_Detection, Offline_Calibration], key=lambda x: x.__name__)
+                              Batch_Exporter, Annotation_Player], key=lambda x: x.__name__)
+
+    global pupil_producers
+    global gaze_producers
+
+    pupil_producers += [p for p in runtime_plugins if issubclass(p, Pupil_Producer_Base)]
+    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Pupil_Producer_Base)]
+
+    gaze_producers += [p for p in runtime_plugins if issubclass(p, Gaze_Producer_Base)]
+    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Gaze_Producer_Base)]
 
     other_plugins = sorted([Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
-    user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
 
-    user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
+    user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + runtime_plugins + pupil_producers + gaze_producers
     available_plugins = system_plugins + user_launchable_plugins
     name_by_index = [p.__name__ for p in available_plugins]
     plugin_by_name = dict(zip(name_by_index, available_plugins))
@@ -254,9 +263,9 @@ def session(rec_dir):
 
     # load pupil_positions, gaze_positions
     pupil_data = load_object(pupil_data_path)
-    pupil_list = pupil_data['pupil_positions']
-    gaze_list = pupil_data['gaze_positions']
-    g_pool.pupil_data = pupil_data
+    g_pool.pupil_data = {'pupil_positions': [],  # set by pupil producers
+                         'gaze_positions': [],  # set by gaze producers
+                         'notifications': pupil_data['notifications']}
     g_pool.binocular = meta_info.get('Eye Mode', 'monocular') == 'binocular'
     g_pool.version = app_version
     g_pool.capture = cap
@@ -268,8 +277,8 @@ def session(rec_dir):
     g_pool.rec_dir = rec_dir
     g_pool.meta_info = meta_info
     g_pool.min_data_confidence = session_settings.get('min_data_confidence', 0.6)
-    g_pool.pupil_positions_by_frame = correlate_data(pupil_list, g_pool.timestamps)
-    g_pool.gaze_positions_by_frame = correlate_data(gaze_list, g_pool.timestamps)
+    g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]
+    g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
 
     def next_frame(_):
@@ -343,15 +352,26 @@ def session(rec_dir):
 
     selector_label = "Select to load"
 
-    vis_labels = ["   " + p.__name__.replace('_', ' ') for p in vis_plugins]
-    analysis_labels = ["   " + p.__name__.replace('_', ' ') for p in analysis_plugins]
-    other_labels = ["   " + p.__name__.replace('_', ' ') for p in other_plugins]
-    user_labels = ["   " + p.__name__.replace('_', ' ') for p in user_plugins]
+    space = "   "
+    vis_labels = [space + p.__name__.replace('_', ' ') for p in vis_plugins]
+    pupil_prod_labels = [space + p.__name__.replace('_', ' ') for p in pupil_producers]
+    gaze_prod_labels = [space + p.__name__.replace('_', ' ') for p in gaze_producers]
+    analysis_labels = [space + p.__name__.replace('_', ' ') for p in analysis_plugins]
+    other_labels = [space + p.__name__.replace('_', ' ') for p in other_plugins]
+    user_labels = [space + p.__name__.replace('_', ' ') for p in runtime_plugins]
 
-    plugins = ([selector_label, selector_label] + vis_plugins + [selector_label] + analysis_plugins + [selector_label]
-               + other_plugins + [selector_label] + user_plugins)
-    labels = ([selector_label, "Visualization"] + vis_labels + ["Analysis"] + analysis_labels + ["Other"]
-              + other_labels + ["User added"] + user_labels)
+    plugins = ([selector_label, selector_label] + vis_plugins
+               + [selector_label] + pupil_producers
+               + [selector_label] + gaze_producers
+               + [selector_label] + analysis_plugins
+               + [selector_label] + other_plugins
+               + [selector_label] + runtime_plugins)
+    labels = ([selector_label, "Visualization"] + vis_labels
+              + ["Pupil Producers"] + pupil_prod_labels
+              + ["Gaze Producers"] + gaze_prod_labels
+              + ["Analysis"] + analysis_labels
+              + ["Other"] + other_labels
+              + ["User added"] + user_labels)
 
     g_pool.main_menu.append(ui.Selector('Open plugin:',
                                         selection=plugins,
@@ -404,7 +424,9 @@ def session(rec_dir):
 
     # we always load these plugins
     system_plugins = [('Trim_Marks', {}), ('Seek_Bar', {})]
-    default_plugins = [('Log_Display', {}), ('Vis_Scan_Path', {}), ('Vis_Polyline', {}), ('Vis_Circle', {}), ('Video_Export_Launcher', {})]
+    default_plugins = [('Log_Display', {}), ('Vis_Scan_Path', {}), ('Vis_Polyline', {}),
+                       ('Vis_Circle', {}), ('Video_Export_Launcher', {}),
+                       ('Pupil_From_Recording', {}), ('Gaze_From_Recording', {})]
     previous_plugins = session_settings.get('loaded_plugins', default_plugins)
     g_pool.notifications = []
     g_pool.delayed_notifications = {}

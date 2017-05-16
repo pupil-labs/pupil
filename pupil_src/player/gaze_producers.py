@@ -21,7 +21,7 @@ from circle_detector import find_concetric_circles
 
 from calibration_routines import gaze_mapping_plugins
 from calibration_routines.finish_calibration import select_calibration_method
-from file_methods import Persistent_Dict
+from file_methods import Persistent_Dict, load_object
 
 import background_helper as bh
 from itertools import chain
@@ -30,6 +30,23 @@ import logging
 logger = logging.getLogger(__name__)
 
 gaze_mapping_plugins_by_name = {p.__name__: p for p in gaze_mapping_plugins}
+
+
+class Gaze_Producer_Base(Plugin):
+    uniqueness = 'by_base_class'
+    order = .02
+
+
+class Gaze_From_Recording(Gaze_Producer_Base):
+    def __init__(self, g_pool):
+        super().__init__(g_pool)
+        gaze_data_path = os.path.join(g_pool.rec_dir, "pupil_data")
+        gaze_data = load_object(gaze_data_path)
+        gaze_list = gaze_data['gaze_positions']
+        g_pool.pupil_data['gaze_positions'] = gaze_list
+        g_pool.gaze_positions_by_frame = correlate_data(gaze_list, g_pool.timestamps)
+        self.notify_all({'subject': 'gaze_positions_changed'})
+        logger.debug('gaze positions changed')
 
 
 class Global_Container(object):
@@ -119,12 +136,9 @@ def map_pupil_positions(cmd_pipe, data_pipe, pupil_list, gaze_mapper_cls_name, k
         data_pipe.close()
 
 
-class Offline_Calibration(Plugin):
+class Offline_Calibration(Gaze_Producer_Base):
     def __init__(self, g_pool, mapping_cls_name='Dummy_Gaze_Mapper', mapping_args={}, detection_mapping_mode='3d'):
         super().__init__(g_pool)
-        self.original_gaze_pos = self.g_pool.pupil_data['gaze_positions']
-        self.original_gaze_pos_by_frame = self.g_pool.gaze_positions_by_frame
-
         self.mapping_cls_name = mapping_cls_name
         self.mapping_args = mapping_args
 
@@ -178,11 +192,8 @@ class Offline_Calibration(Plugin):
         storage.save()
 
     def init_gui(self):
-        def close():
-            self.alive = False
         self.menu = ui.Scrolling_Menu("Offline Calibration", pos=(-660, 20), size=(300, 500))
         self.g_pool.gui.append(self.menu)
-        self.menu.append(ui.Button('Close', close))
 
         self.menu.append(ui.Info_Text('"Detection" searches for calibration markers in the world video.'))
         self.menu.append(ui.Button('Redetect', self.start_detection_task))
@@ -261,8 +272,8 @@ class Offline_Calibration(Plugin):
     def cleanup(self):
         bh.cancel_background_task(self.detection_proxy)
         bh.cancel_background_task(self.mapping_proxy)
-        self.g_pool.pupil_data['gaze_positions'] = self.original_gaze_pos
-        self.g_pool.gaze_positions_by_frame = self.original_gaze_pos_by_frame
-        self.notify_all({'subject': 'gaze_positions_changed'})
         self.deinit_gui()
         self.g_pool.active_calibration_plugin = None
+
+
+gaze_producers = [Gaze_From_Recording, Offline_Calibration]
