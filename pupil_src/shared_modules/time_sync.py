@@ -30,7 +30,7 @@ except (ImportError, AssertionError):
     raise Exception("Pyre version is to old. Please upgrade")
 
 
-__protocol_version__ = 'v0.3'
+__protocol_version__ = 'v1'
 
 
 class Clock_Service(object):
