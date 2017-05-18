@@ -128,11 +128,12 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     g_pool.notifications = []
     # load pupil_positions, gaze_positions
     pupil_data = pupil_data or load_object(pupil_data_path)
-    pupil_list = pupil_data['pupil_positions']
-    gaze_list = pupil_data['gaze_positions']
+    g_pool.pupil_positions = []
+    g_pool.gaze_positions = []
+    g_pool.fixations = []
 
-    g_pool.pupil_positions_by_frame = correlate_data(pupil_list, g_pool.timestamps)
-    g_pool.gaze_positions_by_frame = correlate_data(gaze_list, g_pool.timestamps)
+    g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]
+    g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
 
     # add plugins

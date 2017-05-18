@@ -156,12 +156,6 @@ def session(rec_dir):
     global pupil_producers
     global gaze_producers
 
-    pupil_producers += [p for p in runtime_plugins if issubclass(p, Pupil_Producer_Base)]
-    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Pupil_Producer_Base)]
-
-    gaze_producers += [p for p in runtime_plugins if issubclass(p, Gaze_Producer_Base)]
-    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Gaze_Producer_Base)]
-
     other_plugins = sorted([Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
 
     user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + runtime_plugins + pupil_producers + gaze_producers
@@ -262,10 +256,7 @@ def session(rec_dir):
         on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
     # load pupil_positions, gaze_positions
-    pupil_data = load_object(pupil_data_path)
-    g_pool.pupil_data = {'pupil_positions': [],  # set by pupil producers
-                         'gaze_positions': [],  # set by gaze producers
-                         'notifications': pupil_data['notifications']}
+    g_pool.pupil_data = load_object(pupil_data_path)
     g_pool.binocular = meta_info.get('Eye Mode', 'monocular') == 'binocular'
     g_pool.version = app_version
     g_pool.capture = cap
@@ -277,6 +268,11 @@ def session(rec_dir):
     g_pool.rec_dir = rec_dir
     g_pool.meta_info = meta_info
     g_pool.min_data_confidence = session_settings.get('min_data_confidence', 0.6)
+
+    g_pool.pupil_positions = []
+    g_pool.gaze_positions = []
+    g_pool.fixations = []
+
     g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]
     g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin

@@ -49,11 +49,8 @@ class Pupil_Producer_Base(Plugin):
 class Pupil_From_Recording(Pupil_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        pupil_data_path = os.path.join(g_pool.rec_dir, "pupil_data")
-        pupil_data = load_object(pupil_data_path)
-        pupil_list = pupil_data['pupil_positions']
-        g_pool.pupil_data['pupil_positions'] = pupil_list
-        g_pool.pupil_positions_by_frame = correlate_data(pupil_list, g_pool.timestamps)
+        g_pool.pupil_positions = g_pool.pupil_data['pupil_positions']
+        g_pool.pupil_positions_by_frame = correlate_data(g_pool.pupil_positions, g_pool.timestamps)
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
 
@@ -128,7 +125,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             eye1_finished = self.detection_progress['1'] == 100. if self.eye_processes[1] is not None else True
             if eye0_finished and eye1_finished:
                 self.detection_finished_flag = True
-                self.g_pool.pupil_data['pupil_positions'] = self.pupil_positions
+                self.g_pool.pupil_positions = self.pupil_positions
                 self.g_pool.pupil_positions_by_frame = correlate_data(self.pupil_positions, self.g_pool.timestamps)
                 self.notify_all({'subject': 'pupil_positions_changed'})
                 logger.debug('pupil positions changed')

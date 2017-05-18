@@ -40,11 +40,8 @@ class Gaze_Producer_Base(Plugin):
 class Gaze_From_Recording(Gaze_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        gaze_data_path = os.path.join(g_pool.rec_dir, "pupil_data")
-        gaze_data = load_object(gaze_data_path)
-        gaze_list = gaze_data['gaze_positions']
-        g_pool.pupil_data['gaze_positions'] = gaze_list
-        g_pool.gaze_positions_by_frame = correlate_data(gaze_list, g_pool.timestamps)
+        g_pool.gaze_positions = g_pool.pupil_data['gaze_positions']
+        g_pool.gaze_positions_by_frame = correlate_data(g_pool.gaze_positions, g_pool.timestamps)
         self.notify_all({'subject': 'gaze_positions_changed'})
         logger.debug('gaze positions changed')
 
@@ -265,7 +262,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.save_detected_markers()
 
     def finish_mapping(self):
-        self.g_pool.pupil_data['gaze_positions'] = self.gaze_positions
+        self.g_pool.gaze_positions = self.gaze_positions
         self.g_pool.gaze_positions_by_frame = correlate_data(self.gaze_positions, self.g_pool.timestamps)
         self.notify_all({'subject': 'gaze_positions_changed'})
 
