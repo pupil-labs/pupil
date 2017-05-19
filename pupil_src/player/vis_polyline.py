@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Plugin
+from plugin import Visualizer_Plugin_Base
 import numpy as np
 
 import cv2
@@ -17,8 +17,10 @@ import cv2
 from pyglui import ui
 from methods import denormalize
 
-class Vis_Polyline(Plugin):
+
+class Vis_Polyline(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
+
     def __init__(self, g_pool,color=(1.0,0.0,0.4,1.0),thickness=2):
         super().__init__(g_pool)
         self.order = .9
@@ -51,7 +53,6 @@ class Vis_Polyline(Plugin):
         color_menu.append(ui.Slider('g',self,min=0.0,step=0.05,max=1.0,label='Green'))
         color_menu.append(ui.Slider('b',self,min=0.0,step=0.05,max=1.0,label='Blue'))
         self.menu.append(color_menu)
-
 
     def deinit_gui(self):
         if self.menu:

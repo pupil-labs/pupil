@@ -27,7 +27,7 @@ from glfw import *
 from pyglui import ui
 from pyglui.cygl.utils import *
 
-from plugin import Plugin
+from plugin import Analysis_Plugin_Base
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ from offline_reference_surface import Offline_Reference_Surface
 from math import sqrt
 
 
-class Offline_Surface_Tracker(Surface_Tracker):
+class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
     """
     Special version of surface tracker for use with videofile source.
     It uses a seperate process to search all frames in the world video file for markers.

@@ -13,7 +13,7 @@ import os
 import cv2
 import numpy as np
 from pyglui import ui
-from plugin import Plugin
+from plugin import Producer_Plugin_Base
 from player_methods import correlate_data
 from methods import normalize
 from video_capture import File_Source, EndofVideoFileError
@@ -21,7 +21,7 @@ from circle_detector import find_concetric_circles
 
 from calibration_routines import gaze_mapping_plugins
 from calibration_routines.finish_calibration import select_calibration_method
-from file_methods import Persistent_Dict, load_object
+from file_methods import Persistent_Dict
 
 import background_helper as bh
 from itertools import chain
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 gaze_mapping_plugins_by_name = {p.__name__: p for p in gaze_mapping_plugins}
 
 
-class Gaze_Producer_Base(Plugin):
+class Gaze_Producer_Base(Producer_Plugin_Base):
     uniqueness = 'by_base_class'
     order = .02
 

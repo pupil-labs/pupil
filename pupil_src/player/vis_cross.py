@@ -9,14 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Plugin
+from plugin import Visualizer_Plugin_Base
 import numpy as np
 import cv2
 
 from pyglui import ui
 from methods import denormalize
 
-class Vis_Cross(Plugin):
+
+class Vis_Cross(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
 
     def __init__(self, g_pool,inner=20,outer=100,color=(1.,0.0,0.0,1.0),thickness=1):
@@ -56,8 +57,6 @@ class Vis_Cross(Plugin):
         color_menu.append(ui.Slider('b',self,min=0.0,step=0.05,max=1.0,label='Blue'))
         self.menu.append(color_menu)
 
-
-
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
@@ -78,5 +77,3 @@ class Vis_Cross(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
-
-

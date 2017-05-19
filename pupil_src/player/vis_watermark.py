@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from player_methods import transparent_image_overlay
-from plugin import Plugin
+from plugin import Visualizer_Plugin_Base
 import numpy as np
 import cv2
 from glob import glob
@@ -23,7 +23,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Vis_Watermark(Plugin):
+class Vis_Watermark(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
 
     def __init__(self, g_pool,selected_watermark_path = None,pos = (20,20)):
@@ -68,7 +68,6 @@ class Vis_Watermark(Plugin):
             self.pos[0] = pos[0]+self.drag_offset[0]
             self.pos[1] = pos[1]+self.drag_offset[1]
 
-
         if self.watermark is not None:
             #keep in image bounds, do this even when not dragging because the image sizes could change.
             self.pos[1] = max(0,min(frame.img.shape[0]-self.watermark.shape[0],max(self.pos[1],0)))
@@ -79,14 +78,12 @@ class Vis_Watermark(Plugin):
             w_roi = slice(0,img.shape[0]-pos[1]),slice(0,img.shape[1]-pos[0])
             img[roi] = self.watermark[w_roi]*self.alpha_mask[w_roi] + img[roi]*(1-self.alpha_mask[w_roi])
 
-
     def on_click(self,pos,button,action):
         if self.move_watermark and action == 1:
             if self.pos[0] < pos[0] < self.pos[0]+ self.watermark.shape[0] and self.pos[1] < pos[1] < self.pos[1]+ self.watermark.shape[1]:
                 self.drag_offset = self.pos[0]-pos[0],self.pos[1]-pos[1]
         else:
             self.drag_offset = None
-
 
     def init_gui(self):
         # initialize the menu
@@ -121,5 +118,3 @@ class Vis_Watermark(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
-
-

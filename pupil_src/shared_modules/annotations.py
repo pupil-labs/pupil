@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import csv
 from pyglui import ui
-from plugin import Plugin
+from plugin import Plugin, Analysis_Plugin_Base
 from file_methods import load_object,save_object
 from itertools import chain
 
@@ -25,6 +25,7 @@ from pyglui.ui import get_opensans_font_path
 #logging
 import logging
 logger = logging.getLogger(__name__)
+
 
 class Annotation_Capture(Plugin):
     """Describe your plugin here
@@ -56,7 +57,6 @@ class Annotation_Capture(Plugin):
         self.menu.append(self.sub_menu)
         self.update_buttons()
 
-
     def update_buttons(self):
         for b in self.buttons:
             self.g_pool.quickbar.remove(b)
@@ -76,8 +76,6 @@ class Annotation_Capture(Plugin):
             self.buttons.append(thumb)
             self.g_pool.quickbar.append(thumb)
             self.sub_menu.append(ui.Button(e_name+" <"+hotkey+">",make_remove(e_name,hotkey)))
-
-
 
     def deinit_gui(self):
         if self.menu:
@@ -105,7 +103,6 @@ class Annotation_Capture(Plugin):
         notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','record':True} #you may add more field to this dictionary if you want.
         self.notify_all(notification)
 
-
     def get_init_dict(self):
         return {'annotations':self.annotations}
 
@@ -117,7 +114,7 @@ class Annotation_Capture(Plugin):
         self.deinit_gui()
 
 
-class Annotation_Player(Annotation_Capture):
+class Annotation_Player(Analysis_Plugin_Base):
     """Describe your plugin here
     View,edit and add Annotations.
     """
@@ -178,7 +175,6 @@ class Annotation_Player(Annotation_Capture):
         #self.glfont.set_color_float((0.2,0.5,0.9,1.0))
         self.glfont.set_align_string(v_align='center',h_align='middle')
 
-
     def on_window_resize(self,window,w,h):
         self.window_size = w,h
         self.h_pad = self.padding * self.frame_count/float(w)
@@ -205,7 +201,6 @@ class Annotation_Player(Annotation_Capture):
             annotation['index']
         )
 
-
     def export_annotations(self,export_range,export_dir):
 
         if not self.annotations:
@@ -222,7 +217,6 @@ class Annotation_Player(Annotation_Capture):
             for a in annotations_in_section:
                 csv_writer.writerow(self.csv_representation_for_annotations(a))
             logger.info("Created 'annotations.csv' file.")
-
 
     def update(self,frame,events):
         self.last_frame_ts = frame.timestamp
@@ -248,7 +242,6 @@ class Annotation_Player(Annotation_Capture):
 
     def unset_alive(self):
         self.alive = False
-
 
     def gl_display(self):
         #TODO: implement this

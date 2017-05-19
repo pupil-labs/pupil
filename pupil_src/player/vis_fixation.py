@@ -10,13 +10,14 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from player_methods import transparent_circle
-from plugin import Plugin
+from plugin import Visualizer_Plugin_Base
 import numpy as np
 import cv2
 from methods import denormalize
 from pyglui import ui
 
-class Vis_Fixation(Plugin):
+
+class Vis_Fixation(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
 
     def __init__(self, g_pool,radius=20,color=(0.0,0.7,0.25,0.2),thickness=2,fill=True):
@@ -51,7 +52,6 @@ class Vis_Fixation(Plugin):
             for pt in not_fixation_pts:
                 transparent_circle(frame.img, pt, radius=7.0, color=(0.2, 0.0, 0.7, 0.5), thickness=thickness)
 
-
     def init_gui(self):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Fixation Circle')
@@ -70,7 +70,6 @@ class Vis_Fixation(Plugin):
         color_menu.append(ui.Slider('b',self,min=0.0,step=0.05,max=1.0,label='Blue'))
         color_menu.append(ui.Slider('a',self,min=0.0,step=0.05,max=1.0,label='Alpha'))
         self.menu.append(color_menu)
-
 
     def deinit_gui(self):
         if self.menu:
@@ -92,5 +91,3 @@ class Vis_Fixation(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
-
-

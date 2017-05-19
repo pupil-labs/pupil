@@ -15,12 +15,11 @@ import platform
 import zmq
 import zmq_tools
 import numpy as np
-from plugin import Plugin
+from plugin import Producer_Plugin_Base
 from pyglui import ui
 from time import sleep
 from threading import Thread
 from player_methods import correlate_data
-from file_methods import load_object
 if platform.system() in ('Darwin', 'Linux'):
     from multiprocessing import get_context
     mp = get_context('forkserver')
@@ -41,7 +40,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Pupil_Producer_Base(Plugin):
+class Pupil_Producer_Base(Producer_Plugin_Base):
     uniqueness = 'by_base_class'
     order = 0.01
 

@@ -10,15 +10,13 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from player_methods import transparent_circle
-from plugin import Plugin
-import numpy as np
-
-# TODO: Import pyglui
+from plugin import Visualizer_Plugin_Base
 from pyglui import ui
 
 from methods import denormalize
 
-class Vis_Circle(Plugin):
+
+class Vis_Circle(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
 
     def __init__(self, g_pool,radius=20,color=(0.0,0.7,0.25,0.2),thickness=2,fill=True):
@@ -65,7 +63,6 @@ class Vis_Circle(Plugin):
         color_menu.append(ui.Slider('a',self,min=0.0,step=0.05,max=1.0,label='Alpha'))
         self.menu.append(color_menu)
 
-
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
@@ -86,5 +83,3 @@ class Vis_Circle(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
-
-
