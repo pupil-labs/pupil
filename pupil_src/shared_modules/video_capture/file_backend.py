@@ -247,7 +247,7 @@ class File_Source(Base_Source):
                 pass
                 # print 'skip frame to seek','now at:',index
             else:
-                logger.error('Frame index not consistent.')
+                logger.debug('Frame index not consistent.')
                 break
         if not frame:
             raise EndofVideoFileError('Reached end of videofile')

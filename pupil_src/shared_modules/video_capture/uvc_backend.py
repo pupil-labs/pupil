@@ -293,7 +293,7 @@ class UVC_Source(Base_Source):
             self.frame_size = new_size
 
         if self.uvc_capture is None:
-            ui_elements.append(ui.Info_Text('Capture initialization faild.'))
+            ui_elements.append(ui.Info_Text('Capture initialization failed.'))
             self.g_pool.capture_source_menu.extend(ui_elements)
             return
 

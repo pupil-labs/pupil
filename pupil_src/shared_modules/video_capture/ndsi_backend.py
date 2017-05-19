@@ -16,7 +16,12 @@ import ndsi
 
 from .base_backend import Base_Source, Base_Manager
 
-assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.16'
+try:
+    from ndsi import __version__
+    assert __version__ >= '0.3.0'
+    from ndsi import __protocol_version__
+except (ImportError, AssertionError):
+    raise Exception("pyndsi version is to old. Please upgrade")
 logger = logging.getLogger(__name__)
 
 
@@ -337,6 +342,7 @@ class NDSI_Manager(Base_Manager):
         from pyglui import ui
         ui_elements = []
         ui_elements.append(ui.Info_Text('Remote Pupil Mobile sources'))
+        ui_elements.append(ui.Info_Text('Pupil Mobile Commspec v{}'.format(__protocol_version__)))
 
         def host_selection_list():
             devices = {

@@ -215,13 +215,13 @@ class Pupil_Groups(Plugin):
                 if notification[remote_key] == 'all':
                     del notification[remote_key]
                     serialized = serializer.dumps(notification)
-                    group_member.shout(self.active_group,serialized)
+                    group_member.shout(self.active_group, serialized)
                 else:
                     peer_uuid_bytes = notification[remote_key]
                     del notification[remote_key]
                     serialized = serializer.dumps(notification)
                     peer_uuid = uuid.UUID(bytes=peer_uuid_bytes)
-                    group_member.whisper(peer_uuid,serialized)
+                    group_member.whisper(peer_uuid, serialized)
 
             if group_member.socket() in readable:
                 event = PyreEvent(group_member)
@@ -229,7 +229,7 @@ class Pupil_Groups(Plugin):
                     for msg in event.msg:
                         try:
                             # try to unpack data
-                            notification = serializer.loads(msg)
+                            notification = serializer.loads(msg, encoding='utf-8')
                             # test if dictionary and if `subject` key is present
                             notification['subject']
                             # add peer information

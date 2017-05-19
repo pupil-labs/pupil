@@ -144,8 +144,8 @@ class Reference_Surface(object):
         - map all markers into surface space
         - build up list of found markers and their uv coords
         """
-
-        all_verts = [m['verts'] for m in visible_markers if m['perimeter']>=min_marker_perimeter]
+        usable_markers = [m for m in visible_markers if m['perimeter']>=min_marker_perimeter]
+        all_verts = [m['verts'] for m in usable_markers]
         if not all_verts:
             return
         all_verts = np.array(all_verts,dtype=np.float32)
@@ -184,7 +184,7 @@ class Reference_Surface(object):
         marker_uv_coords.shape = (-1,4,1,2) #[marker,marker...] marker = [ [[r,c]],[[r,c]] ]
 
         # build up a dict of discovered markers. Each with a history of uv coordinates
-        for m,uv in zip (visible_markers,marker_uv_coords):
+        for m,uv in zip(usable_markers, marker_uv_coords):
             try:
                 self.markers[m['id']].add_uv_coords(uv)
             except KeyError:
@@ -212,8 +212,9 @@ class Reference_Surface(object):
             m.compute_robust_mean()
 
         self.defined = True
-        self.on_finish_define()
-        del self.on_finish_define
+        if hasattr(self,'on_finish_define'):
+            self.on_finish_define()
+            del self.on_finish_define
 
 
     def locate(self, visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence, locate_3d=False,):

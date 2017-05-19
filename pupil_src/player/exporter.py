@@ -23,7 +23,6 @@ from glob import glob
 import numpy as np
 from video_capture import File_Source, EndofVideoFileError
 from player_methods import correlate_data, update_recording_to_recent, load_meta_info
-from version_utils import read_rec_version
 from av_writer import AV_Writer
 from file_methods import load_object
 
@@ -70,7 +69,6 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
     meta_info = load_meta_info(rec_dir)
-    rec_version = read_rec_version(meta_info)
 
     g_pool = Global_Container()
     g_pool.app = 'exporter'
@@ -122,7 +120,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     g_pool.capture = cap
     g_pool.rec_dir = rec_dir
     g_pool.user_dir = user_dir
-    g_pool.rec_version = rec_version
+    g_pool.meta_info = meta_info
     g_pool.timestamps = timestamps
     g_pool.delayed_notifications = {}
     g_pool.notifications = []
