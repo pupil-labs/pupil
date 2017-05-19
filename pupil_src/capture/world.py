@@ -174,8 +174,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                        ('Display_Recent_Gaze', {}),
                        ('Screen_Marker_Calibration', {}),
                        ('Recorder', {}),
-                       ('Pupil_Remote', {}),
-                       ('Fixation_Detector_3D', {})]
+                       ('Pupil_Remote', {})]
 
     # Callback functions
     def on_resize(window, w, h):
