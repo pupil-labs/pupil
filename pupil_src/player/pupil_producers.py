@@ -233,6 +233,3 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def get_init_dict(self):
         return {}
-
-
-pupil_producers = [Pupil_From_Recording, Offline_Pupil_Detection]

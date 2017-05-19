@@ -61,13 +61,13 @@ from video_capture import File_Source, EndofVideoFileError, FileSeekError
 # helpers/utils
 from version_utils import VersionFormat, get_version
 from methods import normalize, denormalize, delta_t, get_system_info
-from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
+from player_methods import is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 
 # monitoring
 import psutil
 
 # Plug-ins
-from plugin import Plugin_List, import_runtime_plugins
+from plugin import Plugin_List, import_runtime_plugins, Visualizer_Plugin_Base, Analysis_Plugin_Base, Producer_Plugin_Base
 from vis_circle import Vis_Circle
 from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
@@ -88,8 +88,8 @@ from log_display import Log_Display
 from annotations import Annotation_Player
 from raw_data_exporter import Raw_Data_Exporter
 from log_history import Log_History
-from pupil_producers import pupil_producers, Pupil_Producer_Base
-from gaze_producers import gaze_producers, Gaze_Producer_Base
+from pupil_producers import Pupil_Producer_Base, Pupil_From_Recording, Offline_Pupil_Detection
+from gaze_producers import Gaze_Producer_Base, Gaze_From_Recording, Offline_Calibration
 
 import logging
 # set up root logger before other imports
@@ -141,24 +141,17 @@ class Global_Container(object):
 
 
 def session(rec_dir):
-    runtime_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
+    runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
 
     system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
-    vis_plugins = sorted([Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross,
-                          Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path], key=lambda x: x.__name__)
 
-    analysis_plugins = sorted([Gaze_Position_2D_Fixation_Detector,
-                              Pupil_Angle_3D_Fixation_Detector,
-                              Manual_Gaze_Correction, Video_Export_Launcher,
-                              Offline_Surface_Tracker, Raw_Data_Exporter,
-                              Batch_Exporter, Annotation_Player], key=lambda x: x.__name__)
+    user_launchable_plugins = [Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross, Vis_Watermark,
+                               Vis_Eye_Video_Overlay, Vis_Scan_Path, Gaze_Position_2D_Fixation_Detector,
+                               Pupil_Angle_3D_Fixation_Detector, Manual_Gaze_Correction, Video_Export_Launcher,
+                               Offline_Surface_Tracker, Raw_Data_Exporter, Batch_Exporter, Annotation_Player,
+                               Log_History, Marker_Auto_Trim_Marks, Pupil_From_Recording, Offline_Pupil_Detection,
+                               Gaze_From_Recording, Offline_Calibration] + runtime_plugins
 
-    global pupil_producers
-    global gaze_producers
-
-    other_plugins = sorted([Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
-
-    user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + runtime_plugins + pupil_producers + gaze_producers
     available_plugins = system_plugins + user_launchable_plugins
     name_by_index = [p.__name__ for p in available_plugins]
     plugin_by_name = dict(zip(name_by_index, available_plugins))
@@ -336,7 +329,7 @@ def session(rec_dir):
 
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
-    g_pool.main_menu = ui.Scrolling_Menu("Settings", pos=(-350, 20), size=(300, 500))
+    g_pool.main_menu = ui.Scrolling_Menu("Settings", pos=(-350, 20), size=(300, 560))
     g_pool.main_menu.append(ui.Button('Reset window size',
                                       lambda: glfwSetWindowSize(main_window, cap.frame_size[0], cap.frame_size[1])))
     g_pool.main_menu.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface Size'))
@@ -346,34 +339,32 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Slider('min_data_confidence', g_pool, setter=set_data_confidence,
                                       step=.05, min=0.0, max=1.0, label='Confidence threshold'))
 
+    g_pool.main_menu.append(ui.Info_Text('Open plugins'))
+
     selector_label = "Select to load"
 
-    space = "   "
-    vis_labels = [space + p.__name__.replace('_', ' ') for p in vis_plugins]
-    pupil_prod_labels = [space + p.__name__.replace('_', ' ') for p in pupil_producers]
-    gaze_prod_labels = [space + p.__name__.replace('_', ' ') for p in gaze_producers]
-    analysis_labels = [space + p.__name__.replace('_', ' ') for p in analysis_plugins]
-    other_labels = [space + p.__name__.replace('_', ' ') for p in other_plugins]
-    user_labels = [space + p.__name__.replace('_', ' ') for p in runtime_plugins]
+    def append_selector(label, plugins):
+        plugins.sort(key=lambda p: p.__name__)
+        plugin_labels = [p.__name__.replace('_', ' ') for p in plugins]
+        g_pool.main_menu.append(ui.Selector(label,
+                                            selection=[selector_label] + plugins,
+                                            labels=[selector_label] + plugin_labels,
+                                            setter=open_plugin,
+                                            getter=lambda: selector_label))
 
-    plugins = ([selector_label, selector_label] + vis_plugins
-               + [selector_label] + pupil_producers
-               + [selector_label] + gaze_producers
-               + [selector_label] + analysis_plugins
-               + [selector_label] + other_plugins
-               + [selector_label] + runtime_plugins)
-    labels = ([selector_label, "Visualization"] + vis_labels
-              + ["Pupil Producers"] + pupil_prod_labels
-              + ["Gaze Producers"] + gaze_prod_labels
-              + ["Analysis"] + analysis_labels
-              + ["Other"] + other_labels
-              + ["User added"] + user_labels)
+    base_plugins = [Visualizer_Plugin_Base, Analysis_Plugin_Base, Producer_Plugin_Base]
+    base_labels = ['Visualizer:', 'Analyser:', 'Producer:']
+    launchable = user_launchable_plugins.copy()
+    for base_class, label in zip(base_plugins, base_labels):
+        member_plugins = []
+        for p in user_launchable_plugins:
+            if issubclass(p, base_class):
+                member_plugins.append(p)
+                launchable.remove(p)
+        append_selector(label, member_plugins)
 
-    g_pool.main_menu.append(ui.Selector('Open plugin:',
-                                        selection=plugins,
-                                        labels=labels,
-                                        setter=open_plugin,
-                                        getter=lambda: selector_label))
+    # launchable only contains plugins that could not be assigned to any of the above categories
+    append_selector('Other', launchable)
 
     g_pool.main_menu.append(ui.Button('Close all plugins', purge_plugins))
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))

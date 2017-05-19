@@ -114,7 +114,7 @@ class Annotation_Capture(Plugin):
         self.deinit_gui()
 
 
-class Annotation_Player(Analysis_Plugin_Base):
+class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
     """Describe your plugin here
     View,edit and add Annotations.
     """
