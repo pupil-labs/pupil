@@ -1,5 +1,8 @@
 # Pupil Time Sync Protocol
 
+Protocol version: v1
+Protocol status: draft
+
 The Pupil Time Sync -- hereinafter referred to as _PTS_ -- protocol consists of two parts:
 1. Clock service discovery
 2. Time synchronization
@@ -22,9 +25,10 @@ of existing libraries (e.g. [zyre](https://github.com/zeromq/zyre), [Pyre](https
 
 ### Synchronization scope
 
-All PTS actors that should be synchronized SHALL join a user-definable ZRE
-group -- hereinafter referred to as _PTS group_ -- which is by default
-`time_sync_default`.
+All PTS actors that should be synchronized SHALL join a ZRE group -- hereinafter
+referred to as _PTS group_. The name of the PTS group is composed of a user-definable
+prefix -- by default `default` -- and the fixed string `-time_sync-v1`. Therefore the
+default PTS group name is `default-time_sync-v1`.
 
 All clock services SHALL SHOUT their announcements (see below) into the PTS group.
 
@@ -92,14 +96,13 @@ and is able to change its clock appropriately.
 
 ### Timestamp unit
 
-Timestamps are floats in seconds.
+Timestamps are 64-bit little-endian floats in seconds.
 
 ### Clock service
 
-The clock service is a simple TCP server that sends the string representation
-of its own current timestamp upon receiving the message `sync` from a follower.
-The TCP server's network port SHALL be announced as part of the clock service
-announcement (see above).
+The clock service is a simple TCP server that sends its own current timestamp
+upon receiving the message `sync` from a follower. The TCP server's network port
+SHALL be announced as part of the clock serviceannouncement (see above).
 
 ### Clock follower
 
