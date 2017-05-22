@@ -68,9 +68,6 @@ class Time_Echo_Server(asyncore.dispatcher):
         self.set_reuse_addr()
         self.bind((host, 0))
         self.port = self.socket.getsockname()[1]
-        # FIXME: gethostbyname might fail on unix
-        self.host = host or socket.gethostbyname(socket.gethostname())
-        self.protocol = 'tcp://'
         self.listen(5)
         logger.debug('Timer Server ready on port: {}'.format(self.port))
 
@@ -78,6 +75,7 @@ class Time_Echo_Server(asyncore.dispatcher):
         pair = self.accept()
         if pair is not None:
             sock, addr = pair
+            logger.debug("syching with %s"%str(addr))
             Time_Echo(sock, self.time_fn)
 
     def __del__(self):
@@ -267,7 +265,7 @@ if __name__ == '__main__':
     # it is thus recommended for Linux to use uvc.get_time_monotonic.
     master = Clock_Sync_Master(get_time_monotonic)
     port = master.port
-    host = master.host
+    host = 127.0.0.1
     epoch = 0.0
     # sleep(3)
     # master.stop()
