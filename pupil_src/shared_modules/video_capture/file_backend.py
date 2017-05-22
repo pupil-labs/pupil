@@ -149,7 +149,13 @@ class File_Source(Base_Source):
         else:
             logger.debug('using timestamps from list')
             self.timestamps = timestamps
+
+
+        #set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
         self.next_frame = self._next_frame()
+        f0, f1 = next(self.next_frame), next(self.next_frame)
+        self.pts_rate = float(1/f1.pts/self.video_stream.time_base)
+        self.seek_to_frame(0)
 
     def ensure_initialisation(fallback_func=None):
         from functools import wraps
@@ -212,7 +218,7 @@ class File_Source(Base_Source):
         # some older mkv did not use perfect timestamping so we are doing int(round()) to clear that.
         # With properly spaced pts (any v0.6.100+ recording) just int() would suffice.
         # print float(pts*self.video_stream.time_base*self.video_stream.average_rate),round(pts*self.video_stream.time_base*self.video_stream.average_rate)
-        return int(round(pts*self.video_stream.time_base*self.video_stream.average_rate))
+        return int(round(pts*self.video_stream.time_base*self.pts_rate))
 
     @ensure_initialisation()
     def pts_to_time(self,pts):
@@ -228,6 +234,8 @@ class File_Source(Base_Source):
         frame = None
         for frame in self.next_frame:
             index = self.pts_to_idx(frame.pts)
+            print(frame.pts,float(frame.pts*self.video_stream.time_base*self.pts_rate))
+
             if index == self.target_frame_idx:
                 break
             elif index < self.target_frame_idx:
