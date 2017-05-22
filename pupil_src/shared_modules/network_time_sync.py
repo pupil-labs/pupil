@@ -265,7 +265,7 @@ if __name__ == '__main__':
     # it is thus recommended for Linux to use uvc.get_time_monotonic.
     master = Clock_Sync_Master(get_time_monotonic)
     port = master.port
-    host = 127.0.0.1
+    host = "127.0.0.1"
     epoch = 0.0
     # sleep(3)
     # master.stop()

@@ -174,6 +174,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                        ('Display_Recent_Gaze', {}),
                        ('Screen_Marker_Calibration', {}),
                        ('Recorder', {}),
+                       ('Time_Sync', {}),
                        ('Pupil_Remote', {})]
 
     # Callback functions
