@@ -248,7 +248,7 @@ class Recorder(Plugin):
             self.writer = H264Writer(self.video_path,
                                      self.g_pool.capture.frame_size[0],
                                      self.g_pool.capture.frame_size[1],
-                                     self.g_pool.capture.frame_rate)
+                                     int(self.g_pool.capture.frame_rate))
         else:
             self.writer = AV_Writer(self.video_path, fps=self.g_pool.capture.frame_rate)
 
