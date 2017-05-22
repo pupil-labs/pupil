@@ -109,18 +109,18 @@ SHALL be announced as part of the clock serviceannouncement (see above).
 The clock follower calculates its clock's offset and offset-jitter regularly in
 the following manner:
 
-1. Open a TCP connection to the time service.
-2. Repeat the following steps 60 times:
-    2.1. Measure the follower's current timestamp `t0`
-    2.2. Send `sync` to the clock master
-    2.3. Receive the clock master's response as `t1` and convert it into a float
-    2.4. Measure the follower's current timestamp as `t2`
-    2.5. Store entry `t0`, `t1`, `t2`
-3. Sort entries by _roundtrip time_ (`t2 - t0`) in ascending order
-4. Remove last 30% entries, i.e. remove outliers
-5. Calculate _offset_ for each entry: `t0 - (t1 + (t2 - t0) / 2)`
-6. Calculate _mean offset_
-7. Calculate _offset variance_
-8. Use mean offset as _offset_ and clock variance as _offset jitter_
-9. Adjust the follower's clock according to the offset and the offset jitter
+- Open a TCP connection to the time service.
+- Repeat the following steps 60 times:
+    - Measure the follower's current timestamp `t0`
+    - Send `sync` to the clock master
+    - Receive the clock master's response as `t1` and convert it into a float
+    - Measure the follower's current timestamp as `t2`
+    - Store entry `t0`, `t1`, `t2`
+- Sort entries by _roundtrip time_ (`t2 - t0`) in ascending order
+- Remove last 30% entries, i.e. remove outliers
+- Calculate _offset_ for each entry: `t0 - (t1 + (t2 - t0) / 2)`
+- Calculate _mean offset_
+- Calculate _offset variance_
+- Use mean offset as _offset_ and clock variance as _offset jitter_
+- Adjust the follower's clock according to the offset and the offset jitter
 
