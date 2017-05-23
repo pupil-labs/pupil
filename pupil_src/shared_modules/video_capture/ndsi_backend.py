@@ -18,7 +18,7 @@ from .base_backend import Base_Source, Base_Manager
 
 try:
     from ndsi import __version__
-    assert __version__ >= '0.3.0'
+    assert __version__ >= '0.3.2'
     from ndsi import __protocol_version__
 except (ImportError, AssertionError):
     raise Exception("pyndsi version is to old. Please upgrade")
