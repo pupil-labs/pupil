@@ -39,7 +39,8 @@ from vis_watermark import Vis_Watermark
 from vis_scan_path import Vis_Scan_Path
 from vis_eye_video_overlay import Vis_Eye_Video_Overlay
 
-from manual_gaze_correction import Manual_Gaze_Correction
+# we are not importing manual gaze corrction. In Player corrections have already been applied.
+# in batch exporter this plugin makes little sense.
 from fixation_detector import Pupil_Angle_3D_Fixation_Detector,Gaze_Position_2D_Fixation_Detector
 
 
@@ -52,7 +53,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
 
     vis_plugins = sorted([Vis_Circle,Vis_Cross,Vis_Polyline,Vis_Light_Points,
         Vis_Watermark,Vis_Scan_Path,Vis_Eye_Video_Overlay], key=lambda x: x.__name__)
-    analysis_plugins = sorted([Manual_Gaze_Correction, Pupil_Angle_3D_Fixation_Detector,
+    analysis_plugins = sorted([ Pupil_Angle_3D_Fixation_Detector,
                                Gaze_Position_2D_Fixation_Detector], key=lambda x: x.__name__)
     user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
 
@@ -126,11 +127,9 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     g_pool.notifications = []
     # load pupil_positions, gaze_positions
     pupil_data = pupil_data or load_object(pupil_data_path)
-    pupil_list = pupil_data['pupil_positions']
-    gaze_list = pupil_data['gaze_positions']
-
-    g_pool.pupil_positions_by_frame = correlate_data(pupil_list, g_pool.timestamps)
-    g_pool.gaze_positions_by_frame = correlate_data(gaze_list, g_pool.timestamps)
+    g_pool.pupil_data = pupil_data
+    g_pool.pupil_positions_by_frame = correlate_data(pupil_data['pupil_positions'], g_pool.timestamps)
+    g_pool.gaze_positions_by_frame = correlate_data(pupil_data['gaze_positions'], g_pool.timestamps)
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
 
     # add plugins

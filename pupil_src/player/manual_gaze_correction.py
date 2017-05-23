@@ -14,6 +14,7 @@ from copy import deepcopy
 from plugin import Plugin
 import numpy as np
 from methods import denormalize,normalize
+from player_methods import correlate_data
 from pyglui import ui
 import logging
 logger = logging.getLogger(__name__)
@@ -28,8 +29,7 @@ class Manual_Gaze_Correction(Plugin):
         #let the plugin work before most other plugins.
         self.order = .3
         self.menu = None
-
-        self.untouched_gaze_positions_by_frame = deepcopy(self.g_pool.gaze_positions_by_frame)
+        self.untouched_gaze_positions_by_frame = correlate_data(deepcopy(g_pool.pupil_data["gaze_positions"]), g_pool.timestamps)
         self.x_offset = float(x_offset)
         self.y_offset = float(y_offset)
         self._set_offset()
