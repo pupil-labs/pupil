@@ -61,7 +61,7 @@ from video_capture import File_Source, EndofVideoFileError, FileSeekError
 # helpers/utils
 from version_utils import VersionFormat, get_version
 from methods import normalize, denormalize, delta_t, get_system_info
-from player_methods import is_pupil_rec_dir, update_recording_to_recent, load_meta_info
+from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 
 # monitoring
 import psutil
@@ -266,6 +266,7 @@ def session(rec_dir):
     g_pool.gaze_positions = []
     g_pool.fixations = []
 
+    g_pool.notifications_by_frame = correlate_data(g_pool.pupil_data['notifications'], g_pool.timestamps)
     g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]
     g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
