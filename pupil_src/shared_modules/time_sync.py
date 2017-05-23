@@ -274,3 +274,7 @@ class Time_Sync(Plugin):
         self.master_service.stop()
         if self.follower_service:
             self.follower_service.stop()
+        self.master_service = None
+        self.follower_service = None
+        self.discovery = None
+
