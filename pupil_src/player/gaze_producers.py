@@ -32,6 +32,13 @@ logger = logging.getLogger(__name__)
 gaze_mapping_plugins_by_name = {p.__name__: p for p in gaze_mapping_plugins}
 
 
+def parse_range(range_str, upper_bound):
+    range_split = range_str.split('-')
+    start = max(0, int(range_split[0]))  # left bound at 0
+    end = min(int(range_split[1]), upper_bound)  # right bound at max_ts
+    return slice(min(start, end), max(start, end))  # left bound <= right bound
+
+
 class Gaze_Producer_Base(Producer_Plugin_Base):
     uniqueness = 'by_base_class'
     order = .02
@@ -134,16 +141,22 @@ def map_pupil_positions(cmd_pipe, data_pipe, pupil_list, gaze_mapper_cls_name, k
 
 
 class Offline_Calibration(Gaze_Producer_Base):
-    def __init__(self, g_pool, mapping_cls_name='Dummy_Gaze_Mapper', mapping_args={}, detection_mapping_mode='3d'):
+    def __init__(self, g_pool, detection_mapping_mode='3d'):
+        # mapping_cls_name='Dummy_Gaze_Mapper', mapping_args={},
         super().__init__(g_pool)
-        self.mapping_cls_name = mapping_cls_name
-        self.mapping_args = mapping_args
+        self.persistent = Persistent_Dict(os.path.join(self.g_pool.rec_dir, 'offline_calibration'))
+        self.persistent['version'] = 1
+        self.sections = self.persistent.get('sections', [])
+        if not self.sections:
+            init_range = '0-{}'.format(len(g_pool.timestamps))
+            self.sections.append(self.create_section(init_range, init_range))
 
         self.gaze_positions = []
         self.mapping_progress = 0.
         self.mapping_proxy = None
 
-        self.load_previously_detected_markers()
+        self.ref_positions = self.persistent.get('ref_positions', [])
+        self.ref_positions_by_frame = correlate_data(self.ref_positions, self.g_pool.timestamps)
         self.detection_proxy = None
         if self.ref_positions:
             self.detection_progress = 100.0
@@ -153,7 +166,14 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         self.g_pool.detection_mapping_mode = detection_mapping_mode
         self.g_pool.active_calibration_plugin = self
-        self.start_mapping_task()
+
+    @classmethod
+    def create_section(self, calib_range, map_range, detection_mode='3d', mapper_cls_name='Dummy_Gaze_Mapper', mapper_args={}):
+        return {'calibration_range': calib_range,
+                'mapping_range': map_range,
+                'mapper_cls_name': mapper_cls_name,
+                'label': 'Unnamed',
+                'mapper_args': mapper_args}
 
     def start_detection_task(self, *_):
         # cancel current detection if running
@@ -179,14 +199,9 @@ class Offline_Calibration(Gaze_Producer_Base):
                                                       name='Gaze Mapping',
                                                       args=(pupil_list, self.mapping_cls_name, self.mapping_args))
 
-    def load_previously_detected_markers(self):
-        loaded = Persistent_Dict(os.path.join(self.g_pool.rec_dir, 'circle_markers'))
-        self.ref_positions = loaded.get('offline_detected', [])
-
     def save_detected_markers(self):
-        storage = Persistent_Dict(os.path.join(self.g_pool.rec_dir, 'circle_markers'))
-        storage['offline_detected'] = self.ref_positions
-        storage.save()
+        self.persistent['ref_positions'] = self.ref_positions
+        self.persistent.save()
 
     def init_gui(self):
         self.menu = ui.Scrolling_Menu("Offline Calibration", pos=(-660, 20), size=(300, 500))
@@ -199,14 +214,41 @@ class Offline_Calibration(Gaze_Producer_Base):
         slider.read_only = True
         self.menu.append(slider)
 
-        self.menu.append(ui.Info_Text('"Mapping" recalculates all gaze positions using the current gaze mapper.'))
+        # self.menu.append(ui.Info_Text('"Mapping" recalculates all gaze positions using the current gaze mapper.'))
         self.menu.append(ui.Selector('detection_mapping_mode', self.g_pool, selection=['2d', '3d'],
                                      label='Mapping Mode'))
-        self.menu.append(ui.Button('Remap', self.start_mapping_task))
-        slider = ui.Slider('mapping_progress', self, label='Mapping Progress')
-        slider.display_format = '%3.0f%%'
-        slider.read_only = True
-        self.menu.append(slider)
+        # self.menu.append(ui.Button('Remap', self.start_mapping_task))
+        # slider = ui.Slider('mapping_progress', self, label='Mapping Progress')
+        # slider.display_format = '%3.0f%%'
+        # slider.read_only = True
+        # self.menu.append(slider)
+
+        max_ts = len(self.g_pool.timestamps)
+
+        def make_range_validator(sec, key):
+            def validate(range_str):
+                try:
+                    range_ = parse_range(range_str, max_ts)
+                except (ValueError, IndexError):
+                    pass  # value error if not parsable by int(), index error of not given 2 ints
+                else:
+                    sec[key] = '{}-{}'.format(range_.start, range_.stop)
+            return validate
+
+        def make_calibrator(sec):
+            def calibrate():
+                self.calibrate(sec)
+            return calibrate
+
+        for idx, sec in enumerate(self.sections):
+            section_menu = ui.Growing_Menu('Section {}'.format(idx + 1))
+            section_menu.append(ui.Text_Input('label', sec, label='Label'))
+            section_menu.append(ui.Text_Input('calibration_range', sec, label='Calibration range',
+                                              setter=make_range_validator(sec, 'calibration_range')))
+            section_menu.append(ui.Text_Input('mapping_range', sec, label='Mapping range',
+                                              setter=make_range_validator(sec, 'mapping_range')))
+            section_menu.append(ui.Button('Recalibrate', make_calibrator(sec)))
+            self.menu.append(section_menu)
 
     def deinit_gui(self):
         if hasattr(self, 'menu'):
@@ -214,9 +256,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.menu = None
 
     def get_init_dict(self):
-        return {'mapping_cls_name': self.mapping_cls_name,
-                'mapping_args': self.mapping_args,
-                'detection_mapping_mode': self.g_pool.detection_mapping_mode}
+        return {'detection_mapping_mode': self.g_pool.detection_mapping_mode}
 
     def on_notify(self, notification):
         subject = notification['subject']
@@ -244,22 +284,23 @@ class Offline_Calibration(Gaze_Producer_Base):
                     self.mapping_proxy = None
                     self.finish_mapping()
 
-    def calibrate(self):
+    def calibrate(self, section):
         if not self.ref_positions:
             logger.error('No markers have been found. Cannot calibrate.')
             return
 
-        first_idx = self.ref_positions[0]['index']
-        last_idx = self.ref_positions[-1]['index']
-        pupil_list = list(chain(*self.g_pool.pupil_positions_by_frame[first_idx:last_idx]))
+        calib_slc = parse_range(section['calibration_range'], len(self.g_pool.timestamps))
+        ref_list = list(chain(*self.ref_positions_by_frame[calib_slc]))
+        pupil_list = list(chain(*self.g_pool.pupil_positions_by_frame[calib_slc]))
+
         logger.info('Calibrating...')
-        method, result = select_calibration_method(self.g_pool, pupil_list, self.ref_positions)
+        method, result = select_calibration_method(self.g_pool, pupil_list, ref_list)
         if result['subject'] != 'calibration.failed':
             logger.info('Offline calibration successful. Starting mapping using {}.'.format(method))
-            self.mapping_cls_name = result['name']
-            self.mapping_args = result['args']
-            self.start_mapping_task()
-        self.save_detected_markers()
+            section['mapper_cls_name'] = result['name']
+            section['mapper_args'] = result['args']
+            # self.start_mapping_task()
+        self.persistent.save()
 
     def finish_mapping(self):
         self.g_pool.gaze_positions = self.gaze_positions
@@ -271,6 +312,4 @@ class Offline_Calibration(Gaze_Producer_Base):
         bh.cancel_background_task(self.mapping_proxy)
         self.deinit_gui()
         self.g_pool.active_calibration_plugin = None
-
-
-gaze_producers = [Gaze_From_Recording, Offline_Calibration]
+        self.persistent.save()
