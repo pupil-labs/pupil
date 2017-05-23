@@ -100,7 +100,11 @@ class NDSI_Source(Base_Source):
 
     @property
     def name(self):
-        return '{} @ {}'.format(self._sensor_name, self._host_name)
+        return '{}'.format(self._sensor_name)
+    @property
+    def host(self):
+        return '{}'.format(self._host_name)
+
 
     @property
     def online(self):
