@@ -234,7 +234,6 @@ class File_Source(Base_Source):
         frame = None
         for frame in self.next_frame:
             index = self.pts_to_idx(frame.pts)
-            print(frame.pts,float(frame.pts*self.video_stream.time_base*self.pts_rate))
 
             if index == self.target_frame_idx:
                 break
