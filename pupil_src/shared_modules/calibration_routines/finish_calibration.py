@@ -295,7 +295,6 @@ def calibrate_2d_monocular(g_pool, matched_monocular_data):
                                                                 g_pool.capture.frame_size,
                                                                 binocular=False)
     if not inliers.any():
-        g_pool.active_calibration_plugin.notify_all()
         return method, {'subject': 'calibration.failed', 'reason': solver_failed_to_converge_error_msg,
                         'timestamp': g_pool.get_timestamp(), 'record': True}
 

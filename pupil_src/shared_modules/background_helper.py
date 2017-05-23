@@ -9,52 +9,102 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from multiprocessing import Process, Pipe
-from collections import namedtuple
+from multiprocessing import Process, Pipe, Value
+from ctypes import c_bool
 
-TERM_SIGNAL = '$TERM'
-Task_Proxy = namedtuple('Task_Proxy', ('process', 'cmd', 'data'))
-
-
-def recent_events(pipe):
-    # expects pipe to be of type multiprocessing.Connection
-    try:
-        # poll returns True when pipe was closed from the other side
-        # Calling recv on such a closed pipe will raise an EOFError
-        while pipe.poll(0):
-            yield pipe.recv()
-    except EOFError:
-        pass
+import logging
+logger = logging.getLogger(__name__)
 
 
-def all_events(pipe):
-    # expects pipe to be of type multiprocessing.Connection
-    try:
-        while True:
-            yield pipe.recv()
-    except EOFError:
-        pass
+class EarlyCancellationError(Exception):
+    pass
 
 
-def start_background_task(task, args=(), kwargs={}, name='Pupil Background Helper'):
-    cmd_pipe_to_bg, cmd_pipe_from_bg = Pipe()
-    data_pipe_recv, data_pipe_send = Pipe(False)
+class Task_Proxy(object):
+    '''Future like object that runs a given generator in the background and returns is able to return the results incrementally'''
+    def __init__(self, name, generator, args=(), kwargs={}):
+        super(Task_Proxy, self).__init__()
+        self.should_terminate_flag = Value(c_bool, 0)
+        self.is_done_flag = Value(c_bool, 0)
 
-    args_incl_pipes = (cmd_pipe_from_bg, data_pipe_send) + args
-    proc = Process(target=task, name=name, args=args_incl_pipes, kwargs=kwargs)
-    proc.start()
+        pipe_recv, pipe_send = Pipe(False)
+        wrapper_args = [pipe_send, self.should_terminate_flag, self.is_done_flag, generator]
+        wrapper_args.extend(args)
+        self.process = Process(target=self._wrapper, name=name, args=wrapper_args, kwargs=kwargs)
+        self.process.start()
+        self.pipe = pipe_recv
 
-    return Task_Proxy(proc, cmd_pipe_to_bg, data_pipe_recv)
-
-
-def cancel_background_task(proxy, return_remaining_msgs=False):
-    # expects proxy to be of type Task_Proxy
-    if proxy and proxy.process.is_alive():
+    def _wrapper(self, pipe, should_terminate_flag, is_done_flag, generator, *args, **kwargs):
+        '''Executed in background, pipes generator results to foreground'''
+        logger.debug('Entering _wrapper')
         try:
-            proxy.cmd.send(TERM_SIGNAL)
-        except (OSError, BrokenPipeError):
-            pass  # proxy.cmd was already closed
-        if return_remaining_msgs:
-            remaining_cmds = tuple(recent_events(proxy.cmd))
-            remaining_data = tuple(recent_events(proxy.data))
-            return remaining_cmds, remaining_data
+            for datum in generator(*args, **kwargs):
+                if should_terminate_flag.value:
+                    raise EarlyCancellationError('Task was cancelled')
+                pipe.send(datum)
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            pipe.send(e)
+        else:
+            is_done_flag.value = True
+        finally:
+            pipe.close()
+            logger.debug('Exiting _wrapper')
+
+    def fetch(self):
+        '''Fetches progress and available results from background'''
+        logger.debug('Fetching')
+        while self.pipe.poll(0):
+            datum = self.pipe.recv()
+            if isinstance(datum, Exception):
+                raise datum
+            else:
+                yield datum
+
+    def cancel(self, wait=False):
+        self.should_terminate_flag.value = True
+        if wait:
+            self.process.join()
+
+    @property
+    def completed(self):
+        return self.is_done_flag.value
+
+    def __del__(self):
+        self.cancel()
+        self.process = None
+        self.pipe.close()
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(processName)s - [%(levelname)s] %(name)s: %(message)s')
+
+    def example_generator(mu=0., sigma=1., steps=100):
+        '''samples `N(\mu, \sigma^2)`'''
+        import numpy as np
+        from time import sleep
+        for i in range(steps):
+            # yield progress, datum
+            yield (i + 1) / steps, sigma * np.random.randn() + mu
+            sleep(np.random.rand() * .1)
+
+    # initialize task proxy
+    task = Task_Proxy('Background', example_generator, args=(5., 3.), kwargs={'steps': 50})
+
+    from time import time, sleep
+    start = time()
+    maximal_duration = 2.
+    while time() - start < maximal_duration:
+        # fetch all available results
+        for progress, random_number in task.fetch():
+            logger.debug('[{:3.0f}%] {:0.2f}'.format(progress * 100, random_number))
+
+        # test if task is completed
+        if task.completed:
+            break
+        sleep(1.)
+
+    logger.debug('Canceling task')
+    task.cancel(wait=True)
+    logger.debug('Task done')
