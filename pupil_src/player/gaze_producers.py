@@ -162,11 +162,10 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.start_detection_task()
 
     @classmethod
-    def create_section(self, calib_range, map_range, detection_mode='3d', mapper_cls_name='Dummy_Gaze_Mapper', mapper_args={}):
+    def create_section(self, calib_range, map_range, mapper_cls_name='Dummy_Gaze_Mapper', mapper_args={}):
         return {'calibration_range': calib_range,
                 'mapping_range': map_range,
                 'mapper_cls_name': mapper_cls_name,
-                'detection_mode': detection_mode,
                 'progress': '{:3.0f}%'.format(0.),
                 'label': 'Unnamed',
                 'mapper_args': mapper_args}
@@ -219,7 +218,6 @@ class Offline_Calibration(Gaze_Producer_Base):
         for idx, sec in enumerate(self.sections):
             section_menu = ui.Growing_Menu('Section {}'.format(idx + 1))
             section_menu.append(ui.Text_Input('label', sec, label='Label'))
-            section_menu.append(ui.Selector('detection_mode', sec, label='Mapping mode', selection=['2d', '3d']))
 
             section_menu.append(ui.Text_Input('calibration_range', sec, label='Calibration range',
                                               setter=make_range_validator(sec, 'calibration_range')))
@@ -240,7 +238,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def on_notify(self, notification):
         subject = notification['subject']
-        if subject == 'pupil_positions_changed' and not self.detection_proxy:
+        if subject == 'pupil_positions_changed' and self.detection_proxy is None:
             self.calibrate()  # do not calibrate while detection task is still running
 
     def recent_events(self, events):
@@ -253,6 +251,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                 self.detection_progress = progress[-1]
 
             if self.detection_proxy.completed:
+                self.ref_positions_by_frame = correlate_data(self.ref_positions, self.g_pool.timestamps)
                 self.detection_progress = 100.
                 self.detection_proxy = None
                 self.calibrate()
@@ -263,14 +262,13 @@ class Offline_Calibration(Gaze_Producer_Base):
                 recent = [d for d in proxy.fetch()]
                 if recent:
                     progress, data = zip(*recent)
-                    self.interim_data[idx].extend(data)
+                    # data is a list of list since the mapper returns its results as list with 0-n gaze positions
+                    self.interim_data[idx].extend(chain(*data))
                     self.sections[idx]['progress'] = '{:3.0f}%'.format(progress[-1])
 
                 if proxy.completed:
-                    self.g_pool.gaze_positions.extend(self.interim_data[idx])
-                    self.g_pool.gaze_positions.sort(key=lambda gp: gp['timestamp'])
+                    self.g_pool.gaze_positions = sorted(chain(*self.interim_data), key=lambda d: d['timestamp'])
                     self.g_pool.gaze_positions_by_frame = correlate_data(self.g_pool.gaze_positions, self.g_pool.timestamps)
-                    self.interim_data[idx] = []
                     self.bg_tasks[idx] = None
 
                     changed_range = self.sections[idx]['mapping_range']
@@ -287,19 +285,26 @@ class Offline_Calibration(Gaze_Producer_Base):
             if self.bg_tasks[idx] is not None:
                 self.bg_tasks[idx].cancel()
 
-            fake = setup_fake_pool(self.g_pool.capture.frame_size, sec['detection_mode'])
-
             calib_slc = parse_range(sec['calibration_range'], len(self.g_pool.timestamps))
-            ref_list = list(chain(*self.ref_positions_by_frame[calib_slc]))
             calib_list = list(chain(*self.g_pool.pupil_positions_by_frame[calib_slc]))
+            ref_list = list(chain(*self.ref_positions_by_frame[calib_slc]))
+
+            if not calib_list or not ref_list:
+                logger.error('There is not enough data to calibrate section "{}"'.format(sec['label']))
+                return
+
+            # select median pupil datum from calibration list and use its detection method as mapping method
+            mapping_method = '3d' if '3d' in calib_list[len(calib_list)//2]['method'] else '2d'
 
             map_slc = parse_range(sec['mapping_range'], len(self.g_pool.timestamps))
             map_list = list(chain(*self.g_pool.pupil_positions_by_frame[map_slc]))
 
+            fake = setup_fake_pool(self.g_pool.capture.frame_size, mapping_method)
             generator_args = (fake, ref_list, calib_list, map_list)
 
             logger.info('Calibrating...')
             sec['progress'] = '{:3.0f}%'.format(0.)
+            self.interim_data[idx] = []  # reset interim buffer for given section
             self.bg_tasks[idx] = bh.Task_Proxy(sec['label'], calibrate_and_map, args=generator_args)
         self.persistent.save()
 
