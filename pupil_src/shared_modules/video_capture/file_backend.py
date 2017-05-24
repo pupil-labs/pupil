@@ -13,9 +13,8 @@ import os,sys
 import av
 assert av.__version__ >= '0.2.5'
 
-av.logging.set_level(av.logging.ERROR)
 
-from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
+from .base_backend import Base_Source, Base_Manager
 
 import numpy as np
 from time import time,sleep
@@ -26,6 +25,9 @@ import os.path
 #logging
 import logging
 logger = logging.getLogger(__name__)
+
+av.logging.set_level(av.logging.ERROR)
+logging.getLogger('libav').setLevel(logging.ERROR)
 
 class FileCaptureError(Exception):
     """General Exception for this module"""
