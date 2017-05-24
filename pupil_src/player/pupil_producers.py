@@ -227,7 +227,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         return ipc_pub_url, ipc_sub_url, ipc_push_url
 
     def init_gui(self):
-        self.menu = ui.Scrolling_Menu("Offline Pupil Detection", size=(200, 300))
+        self.menu = ui.Scrolling_Menu("Offline Pupil Detection", size=(220, 300))
         self.g_pool.gui.append(self.menu)
 
         for eye_id in (0, 1):

@@ -97,7 +97,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-assert pyglui_version >= '1.3'
+assert pyglui_version >= '1.4'
 
 
 # since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.

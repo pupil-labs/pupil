@@ -25,16 +25,16 @@ class Task_Proxy(object):
     def __init__(self, name, generator, args=(), kwargs={}):
         super(Task_Proxy, self).__init__()
         self.should_terminate_flag = Value(c_bool, 0)
-        self.is_done_flag = Value(c_bool, 0)
+        self._completed = False
 
         pipe_recv, pipe_send = Pipe(False)
-        wrapper_args = [pipe_send, self.should_terminate_flag, self.is_done_flag, generator]
+        wrapper_args = [pipe_send, self.should_terminate_flag, generator]
         wrapper_args.extend(args)
         self.process = Process(target=self._wrapper, name=name, args=wrapper_args, kwargs=kwargs)
         self.process.start()
         self.pipe = pipe_recv
 
-    def _wrapper(self, pipe, should_terminate_flag, is_done_flag, generator, *args, **kwargs):
+    def _wrapper(self, pipe, should_terminate_flag, generator, *args, **kwargs):
         '''Executed in background, pipes generator results to foreground'''
         logger.debug('Entering _wrapper')
         try:
@@ -47,7 +47,7 @@ class Task_Proxy(object):
             print(traceback.format_exc())
             pipe.send(e)
         else:
-            is_done_flag.value = True
+            pipe.send(0xDeadBeef)
         finally:
             pipe.close()
             logger.debug('Exiting _wrapper')
@@ -57,7 +57,10 @@ class Task_Proxy(object):
         logger.debug('Fetching')
         while self.pipe.poll(0):
             datum = self.pipe.recv()
-            if isinstance(datum, Exception):
+            if datum == 0xDeadBeef:
+                self._completed = True
+                return
+            elif isinstance(datum, Exception):
                 raise datum
             else:
                 yield datum
@@ -69,7 +72,7 @@ class Task_Proxy(object):
 
     @property
     def completed(self):
-        return self.is_done_flag.value
+        return self._completed
 
     def __del__(self):
         self.cancel()

@@ -112,6 +112,9 @@ def detect_marker_positions(source_path, timestamps_path):
                     ref['type'] = 'calibration_marker'
 
                 yield progress, ref
+            else:
+                yield progress, None
+
             frame = src.get_frame()
     except EndofVideoFileError:
         pass
@@ -120,7 +123,7 @@ def detect_marker_positions(source_path, timestamps_path):
 def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
     method, result = select_calibration_method(g_pool, calib_list, ref_list)
     if result['subject'] != 'calibration.failed':
-        logger.info('Offline calibration successful. Starting mapping using {}.'.format(method))
+        logger.info('Offline calibration successful. Starting mapping {} pupil positions using {}.'.format(len(map_list), method))
         name, args = result['name'], result['args']
         gaze_mapper_cls = gaze_mapping_plugins_by_name[name]
         gaze_mapper = gaze_mapper_cls(Global_Container(), **args)
@@ -136,6 +139,7 @@ class Offline_Calibration(Gaze_Producer_Base):
     def __init__(self, g_pool):
         # mapping_cls_name='Dummy_Gaze_Mapper', mapping_args={},
         super().__init__(g_pool)
+        self.menu = None
 
         result_dir = os.path.join(g_pool.rec_dir, 'offline_results')
         os.makedirs(result_dir, exist_ok=True)
@@ -144,6 +148,8 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         if 'sections' in self.persistent:
             self.sections = self.persistent['sections']
+            for sec in self.sections:
+                sec['progress'] = '{:3.0f}%'.format(0.)
         else:
             init_range = '0-{}'.format(len(g_pool.timestamps))
             self.sections = [self.create_section(init_range, init_range)]
@@ -153,6 +159,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         self.ref_positions = self.persistent.get('ref_positions', [])
         self.ref_positions_by_frame = correlate_data(self.ref_positions, self.g_pool.timestamps)
+
         self.detection_proxy = None
         if self.ref_positions:
             self.detection_progress = 100.0
@@ -161,14 +168,21 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.detection_progress = 0.0
             self.start_detection_task()
 
-    @classmethod
-    def create_section(self, calib_range, map_range, mapper_cls_name='Dummy_Gaze_Mapper', mapper_args={}):
+    def append_section(self):
+        init_range = '0-{}'.format(len(self.g_pool.timestamps))
+        sec = self.create_section(init_range, init_range)
+        self.sections.append(sec)
+        self.interim_data.append([])
+        self.bg_tasks.append(None)
+
+        if self.menu is not None:
+            self.append_section_menu(sec, collapsed=False)
+
+    def create_section(self, calib_range, map_range):
         return {'calibration_range': calib_range,
                 'mapping_range': map_range,
-                'mapper_cls_name': mapper_cls_name,
                 'progress': '{:3.0f}%'.format(0.),
-                'label': 'Unnamed',
-                'mapper_args': mapper_args}
+                'label': 'Unnamed'}
 
     def start_detection_task(self, *_):
         # cancel current detection if running
@@ -198,9 +212,25 @@ class Offline_Calibration(Gaze_Producer_Base):
         slider.read_only = True
         self.menu.append(slider)
 
+        self.menu.append(ui.Button('Add section', self.append_section))
+        self.menu_section_start = len(self.menu)
+
+        for sec in self.sections:
+            self.append_section_menu(sec)
+
+    def append_section_menu(self, sec, collapsed=True):
+        section_menu = ui.Growing_Menu('Section "{}"'.format(sec['label']))
+        section_menu.collapsed = collapsed
+
+        def set_label(val):
+            sec['label'] = val
+            section_menu.label = 'Section "{}"'.format(val)
+
+        section_menu.append(ui.Text_Input('label', sec, label='Label', setter=set_label))
+
         max_ts = len(self.g_pool.timestamps)
 
-        def make_range_validator(sec, key):
+        def make_validate_fn(sec, key):
             def validate(range_str):
                 try:
                     range_ = parse_range(range_str, max_ts)
@@ -210,23 +240,33 @@ class Offline_Calibration(Gaze_Producer_Base):
                     sec[key] = '{}-{}'.format(range_.start, range_.stop)
             return validate
 
-        def make_calibrator(sec):
+        def make_calibrate_fn(sec):
             def calibrate():
                 self.calibrate(sec)
             return calibrate
 
-        for idx, sec in enumerate(self.sections):
-            section_menu = ui.Growing_Menu('Section {}'.format(idx + 1))
-            section_menu.append(ui.Text_Input('label', sec, label='Label'))
+        def make_remove_fn(sec):
+            def remove():
+                idx = self.sections.index(sec)
+                if self.bg_tasks[idx] is not None:
+                    self.bg_tasks.cancel()
 
-            section_menu.append(ui.Text_Input('calibration_range', sec, label='Calibration range',
-                                              setter=make_range_validator(sec, 'calibration_range')))
-            section_menu.append(ui.Text_Input('mapping_range', sec, label='Mapping range',
-                                              setter=make_range_validator(sec, 'mapping_range')))
+                del self.bg_tasks[idx]
+                del self.interim_data[idx]
+                del self.sections[idx]
+                del self.menu[self.menu_section_start + idx]
+                self.recalculate_gaze_positions()
+            return remove
 
-            section_menu.append(ui.Button('Recalibrate', make_calibrator(sec)))
-            section_menu.append(ui.Text_Input('progress', sec, label='Mapping progress', setter=lambda _: _))
-            self.menu.append(section_menu)
+        section_menu.append(ui.Text_Input('calibration_range', sec, label='Calibration range',
+                                          setter=make_validate_fn(sec, 'calibration_range')))
+        section_menu.append(ui.Text_Input('mapping_range', sec, label='Mapping range',
+                                          setter=make_validate_fn(sec, 'mapping_range')))
+
+        section_menu.append(ui.Button('Recalibrate', make_calibrate_fn(sec)))
+        section_menu.append(ui.Text_Input('progress', sec, label='Mapping progress', setter=lambda _: _))
+        section_menu.append(ui.Button('Remove section', make_remove_fn(sec)))
+        self.menu.append(section_menu)
 
     def deinit_gui(self):
         if hasattr(self, 'menu'):
@@ -247,11 +287,12 @@ class Offline_Calibration(Gaze_Producer_Base):
 
             if recent:
                 progress, data = zip(*recent)
-                self.ref_positions.extend(data)
+                self.ref_positions.extend([d for d in data if d is not None])
                 self.detection_progress = progress[-1]
 
             if self.detection_proxy.completed:
                 self.ref_positions_by_frame = correlate_data(self.ref_positions, self.g_pool.timestamps)
+                self.save_detected_markers()
                 self.detection_progress = 100.
                 self.detection_proxy = None
                 self.calibrate()
@@ -267,12 +308,13 @@ class Offline_Calibration(Gaze_Producer_Base):
                     self.sections[idx]['progress'] = '{:3.0f}%'.format(progress[-1])
 
                 if proxy.completed:
-                    self.g_pool.gaze_positions = sorted(chain(*self.interim_data), key=lambda d: d['timestamp'])
-                    self.g_pool.gaze_positions_by_frame = correlate_data(self.g_pool.gaze_positions, self.g_pool.timestamps)
+                    self.recalculate_gaze_positions()
                     self.bg_tasks[idx] = None
 
-                    changed_range = self.sections[idx]['mapping_range']
-                    self.notify_all({'subject': 'gaze_positions_changed', 'range': changed_range})
+    def recalculate_gaze_positions(self):
+        self.g_pool.gaze_positions = sorted(chain(*self.interim_data), key=lambda d: d['timestamp'])
+        self.g_pool.gaze_positions_by_frame = correlate_data(self.g_pool.gaze_positions, self.g_pool.timestamps)
+        self.notify_all({'subject': 'gaze_positions_changed'})
 
     def calibrate(self, section=None):
         if not self.ref_positions:
@@ -280,10 +322,14 @@ class Offline_Calibration(Gaze_Producer_Base):
             return
 
         # calibrate given section or all known sections
-        sections_to_calibrate = (section,) if section else self.sections
-        for idx, sec in enumerate(sections_to_calibrate):
+        sections_to_calibrate = (section,) if section is not None else self.sections
+        for sec in sections_to_calibrate:
+            idx = self.sections.index(sec )
             if self.bg_tasks[idx] is not None:
                 self.bg_tasks[idx].cancel()
+
+            sec['progress'] = '{:3.0f}%'.format(0.)
+            self.interim_data[idx] = []  # reset interim buffer for given section
 
             calib_slc = parse_range(sec['calibration_range'], len(self.g_pool.timestamps))
             calib_list = list(chain(*self.g_pool.pupil_positions_by_frame[calib_slc]))
@@ -302,9 +348,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             fake = setup_fake_pool(self.g_pool.capture.frame_size, mapping_method)
             generator_args = (fake, ref_list, calib_list, map_list)
 
-            logger.info('Calibrating...')
-            sec['progress'] = '{:3.0f}%'.format(0.)
-            self.interim_data[idx] = []  # reset interim buffer for given section
+            logger.info('Calibrating "{}"...'.format(sec['label']))
             self.bg_tasks[idx] = bh.Task_Proxy(sec['label'], calibrate_and_map, args=generator_args)
         self.persistent.save()
 
