@@ -13,6 +13,7 @@ import os, cv2, csv_utils
 import numpy as np
 import collections
 import glob
+import av
 
 # logging
 import logging
@@ -20,6 +21,8 @@ logger = logging.getLogger(__name__)
 from file_methods import save_object, load_object, UnpicklingError
 from version_utils import VersionFormat
 from version_utils import read_rec_version
+from calibration_routines.camera_intrinsics_estimation import pre_recorded_calibrations, idealized_camera_calibration
+
 
 def correlate_data(data, timestamps):
     '''
@@ -149,6 +152,25 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         if time_name in ('Pupil Cam1 ID0', 'Pupil Cam1 ID1'):
             time_name = 'eye'+time_name[-1]  # rename eye files
         elif time_name in ('Pupil Cam1 ID2', 'Logitech Webcam C930e'):
+            cam_calib_loc = os.path.join(rec_dir, 'camera_calibration')
+            try:
+                camera_calibration = load_object(cam_calib_loc)
+            except:
+                # no camera calibration found
+                frame_size = 0, 0
+                video = av.open(video_loc, 'r')
+                for stream in video.streams:
+                    if stream.type == b'video':
+                        frame_size = stream.format.width, stream.format.height
+                        break
+                del video
+                if time_name in pre_recorded_calibrations and frame_size in pre_recorded_calibrations[time_name]:
+                    camera_calibration = pre_recorded_calibrations[time_name][frame_size]
+                else:
+                    camera_calibration = idealized_camera_calibration(frame_size)
+                    logger.warning('Camera calibration not found. Will assume idealized camera.')
+                save_object(camera_calibration, cam_calib_loc)
+
             time_name = 'world'  # assume world file
 
         timestamps = np.fromfile(time_loc, dtype='>f8')
