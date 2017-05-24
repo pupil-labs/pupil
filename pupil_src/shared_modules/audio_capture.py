@@ -24,7 +24,6 @@ import logging
 
 assert(av.__version__ >= '0.3.1')
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 av.logging.set_level(av.logging.ERROR)
 
 
