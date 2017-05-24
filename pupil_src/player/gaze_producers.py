@@ -123,7 +123,7 @@ def detect_marker_positions(source_path, timestamps_path):
 def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
     method, result = select_calibration_method(g_pool, calib_list, ref_list)
     if result['subject'] != 'calibration.failed':
-        logger.info('Offline calibration successful. Starting mapping {} pupil positions using {}.'.format(len(map_list), method))
+        logger.info('Offline calibration successful. Starting mapping using {}.'.format(method))
         name, args = result['name'], result['args']
         gaze_mapper_cls = gaze_mapping_plugins_by_name[name]
         gaze_mapper = gaze_mapper_cls(Global_Container(), **args)
@@ -207,9 +207,8 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         self.menu.append(ui.Info_Text('"Detection" searches for calibration markers in the world video.'))
         self.menu.append(ui.Button('Redetect', self.start_detection_task))
-        slider = ui.Slider('detection_progress', self, label='Detection Progress')
+        slider = ui.Slider('detection_progress', self, label='Detection Progress', setter=lambda _: _)
         slider.display_format = '%3.0f%%'
-        slider.read_only = True
         self.menu.append(slider)
 
         self.menu.append(ui.Button('Add section', self.append_section))
@@ -223,8 +222,9 @@ class Offline_Calibration(Gaze_Producer_Base):
         section_menu.collapsed = collapsed
 
         def set_label(val):
-            sec['label'] = val
-            section_menu.label = 'Section "{}"'.format(val)
+            if val:
+                sec['label'] = val
+                section_menu.label = 'Section "{}"'.format(val)
 
         section_menu.append(ui.Text_Input('label', sec, label='Label', setter=set_label))
 

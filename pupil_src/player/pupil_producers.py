@@ -233,9 +233,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         for eye_id in (0, 1):
             if self.eye_timestamps[eye_id]:
                 progress_slider = ui.Slider(str(eye_id), self.detection_progress,
-                                            label='Progress Eye {}'.format(eye_id))
+                                            label='Progress Eye {}'.format(eye_id), setter=lambda _: _)
                 progress_slider.display_format = '%3.0f%%'
-                progress_slider.read_only = True
                 self.menu.append(progress_slider)
 
         self.menu.append(ui.Selector('detection_method', self, label='Detection Method',
