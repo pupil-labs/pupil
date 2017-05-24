@@ -18,6 +18,8 @@ from player_methods import correlate_data
 from methods import normalize
 from video_capture import File_Source, EndofVideoFileError
 from circle_detector import find_concetric_circles
+from OpenGL.GL import *
+from pyglui.cygl.utils import *
 
 from calibration_routines import gaze_mapping_plugins
 from calibration_routines.finish_calibration import select_calibration_method
@@ -182,7 +184,8 @@ class Offline_Calibration(Gaze_Producer_Base):
         return {'calibration_range': calib_range,
                 'mapping_range': map_range,
                 'progress': '{:3.0f}%'.format(0.),
-                'label': 'Unnamed'}
+                'label': 'Unnamed',
+                'color': tuple(np.random.rand(3))}
 
     def start_detection_task(self, *_):
         # cancel current detection if running
@@ -220,6 +223,7 @@ class Offline_Calibration(Gaze_Producer_Base):
     def append_section_menu(self, sec, collapsed=True):
         section_menu = ui.Growing_Menu('Section "{}"'.format(sec['label']))
         section_menu.collapsed = collapsed
+        section_menu.color = RGBA(*sec['color'], 1.)
 
         def set_label(val):
             if val:
@@ -351,6 +355,42 @@ class Offline_Calibration(Gaze_Producer_Base):
             logger.info('Calibrating "{}"...'.format(sec['label']))
             self.bg_tasks[idx] = bh.Task_Proxy(sec['label'], calibrate_and_map, args=generator_args)
         self.persistent.save()
+
+    def gl_display(self):
+        padding = 30.
+        max_ts = len(self.g_pool.timestamps)
+
+        glMatrixMode(GL_PROJECTION)
+        glPushMatrix()
+        glLoadIdentity()
+        width, height = self.win_size
+        h_pad = padding * (max_ts-2)/float(width)
+        v_pad = padding * 1./(height-2)
+        # ranging from 0 to len(timestamps)-1 (horizontal) and 0 to 1 (vertical)
+        glOrtho(-h_pad,  (max_ts-1)+h_pad, -v_pad, 1+v_pad, -1, 1)
+
+
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glLoadIdentity()
+
+        glTranslatef(0, .03, 0)
+        for s in self.sections:
+            cal_slc = parse_range(s['calibration_range'], max_ts)
+            map_slc = parse_range(s['mapping_range'], max_ts)
+            color = RGBA(*s['color'], .8)
+
+            draw_polyline([(cal_slc.start, 0), (cal_slc.stop, 0)], color=color, line_type=GL_LINES, thickness=4)
+            draw_polyline([(map_slc.start, 0), (map_slc.stop, 0)], color=color, line_type=GL_LINES, thickness=2)
+            glTranslatef(0, .015, 0)
+
+        glMatrixMode(GL_PROJECTION)
+        glPopMatrix()
+        glMatrixMode(GL_MODELVIEW)
+        glPopMatrix()
+
+    def on_window_resize(self, window, w, h):
+        self.win_size = w, h
 
     def cleanup(self):
         if self.detection_proxy:
