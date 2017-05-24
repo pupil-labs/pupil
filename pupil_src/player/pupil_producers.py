@@ -56,9 +56,9 @@ class Pupil_From_Recording(Pupil_Producer_Base):
 
 class Offline_Pupil_Detection(Pupil_Producer_Base):
     """docstring for Offline_Pupil_Detection"""
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, detection_method='3d'):
         super().__init__(g_pool)
-
+        self.detection_method = detection_method
         self.eye_processes = [None, None]
         self.eye_timestamps = [None, None]
         self.eye_video_loc = [None, None]
@@ -74,7 +74,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.ipc_pub_url, self.ipc_sub_url, self.ipc_push_url = self.initialize_ipc()
         sleep(0.2)
 
-        self.data_sub = zmq_tools.Msg_Receiver(self.zmq_ctx, self.ipc_sub_url, topics=('pupil.', 'logging'))
+        self.data_sub = zmq_tools.Msg_Receiver(self.zmq_ctx, self.ipc_sub_url, topics=('pupil.', 'logging', 'notify.'))
         self.eye_control = zmq_tools.Msg_Dispatcher(self.zmq_ctx, self.ipc_push_url)
 
         for eye_id in (0, 1):
@@ -116,6 +116,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             if topic.startswith('logging'):
                 record = logging.makeLogRecord(payload)
                 logger.handle(record)
+            elif topic.startswith('notify.'):
+                self.on_notify(payload)
             else:
                 self.pupil_positions.append(payload)
                 self.update_progress(payload)
@@ -128,6 +130,10 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 self.g_pool.pupil_positions_by_frame = correlate_data(self.pupil_positions, self.g_pool.timestamps)
                 self.notify_all({'subject': 'pupil_positions_changed'})
                 logger.debug('pupil positions changed')
+
+    def on_notify(self, notification):
+        if notification['subject'] == 'eye_process.started':
+            self.set_detection_mapping_mode(self.detection_method)
 
     def update_progress(self, pupil_position):
         eye_id = pupil_position['id']
@@ -153,10 +159,18 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     def redetect(self):
         del self.pupil_positions[:]  # delete previously detected pupil positions
         self.detection_finished_flag = False
+        self.detection_progress['0'] = 0.
+        self.detection_progress['1'] = 0.
         for eye_id in range(2):
             if self.eye_video_loc[eye_id]:
                 self.eye_control.notify({'subject': 'file_source.restart',
                                          'source_path': self.eye_video_loc[eye_id]})
+
+    def set_detection_mapping_mode(self, new_mode):
+        n = {'subject': 'set_detection_mapping_mode', 'mode': new_mode}
+        self.eye_control.notify(n)
+        self.redetect()
+        self.detection_method = new_mode
 
     def initialize_ipc(self):
         self.zmq_ctx = zmq.Context()
@@ -224,6 +238,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 progress_slider.read_only = True
                 self.menu.append(progress_slider)
 
+        self.menu.append(ui.Selector('detection_method', self, label='Detection Method',
+                                     selection=['2d', '3d'], setter=self.set_detection_mapping_mode))
         self.menu.append(ui.Button('Redetect', self.redetect))
 
     def deinit_gui(self):
@@ -232,4 +248,4 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             self.menu = None
 
     def get_init_dict(self):
-        return {}
+        return {'detection_method': self.detection_method}

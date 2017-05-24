@@ -277,7 +277,6 @@ class File_Source(Base_Source):
         except EndofVideoFileError:
             logger.info('Video has ended.')
             self._initialised = False
-            print('D')
         else:
             self._recent_frame = frame
             events['frame'] = frame
