@@ -153,7 +153,11 @@ class Reference_Surface(object):
         all_verts = np.array(all_verts,dtype=np.float32)
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
         # all_verts_undistorted_normalized centered in img center flipped in y and range [-1,1]
-        all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
+        # all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
+        if self.use_distortion:
+            all_verts_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(all_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs']))
+        else:
+            all_verts_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(all_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray([[ 1./3.,2./15.,17./315.,62./2835.]]))
         hull = cv2.convexHull(all_verts_undistorted_normalized,clockwise=False)
 
         #simplify until we have excatly 4 verts
@@ -262,7 +266,7 @@ class Reference_Surface(object):
             else:
                 xy_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(xy.reshape(-1,2), np.asarray(camera_calibration['camera_matrix']),np.asarray([[ 1./3.,2./15.,17./315.,62./2835.]]))
 
-            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized, method=cv2.RANSAC,ransacReprojThreshold=0.1)
+            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized, method=cv2.RANSAC,ransacReprojThreshold=100)
             if not mask.all():
                 detected = False
             m_from_undistored_norm_space,mask = cv2.findHomography(xy_undistorted_normalized,uv)
@@ -511,8 +515,8 @@ class Reference_Surface(object):
             alpha = min(1,self.build_up_status/self.required_build_up)
             if highlight:
                 draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*.1),line_type=GL_POLYGON)
-            draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*alpha))
-            draw_polyline_norm(hat.reshape((4,2)),1,RGBA(r,g,b,a*alpha))
+            # draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*alpha))
+            # draw_polyline_norm(hat.reshape((4,2)),1,RGBA(r,g,b,a*alpha))
             text_anchor = frame.reshape((5,-1))[2]
             text_anchor[1] = 1-text_anchor[1]
             text_anchor *=img_size[1],img_size[0]
