@@ -237,7 +237,6 @@ class One_Target_Calibration(Calibration_Plugin):
 
             # use np.arrays for per element wise math
             self.on_position = on_position
-            # self.button.status_text = '{} / {}'.format(self.active_site, 9) # TODO what to do about this?
 
 
     def gl_display(self):
