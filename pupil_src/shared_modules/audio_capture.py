@@ -183,7 +183,7 @@ class Audio_Capture(Plugin):
             return
 
         in_stream = None
-        for idx, stream in enumerate(in_container.streams):
+        for stream in in_container.streams:
             if stream.type == 'audio':
                 in_stream = stream
                 break
