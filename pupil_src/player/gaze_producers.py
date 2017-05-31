@@ -20,6 +20,7 @@ from video_capture import File_Source, EndofVideoFileError
 from circle_detector import find_concetric_circles
 from OpenGL.GL import *
 from pyglui.cygl.utils import *
+from glfw import *
 
 from calibration_routines import gaze_mapping_plugins
 from calibration_routines.finish_calibration import select_calibration_method
@@ -219,6 +220,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         for sec in self.sections:
             self.append_section_menu(sec)
+        self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
 
     def append_section_menu(self, sec, collapsed=True):
         section_menu = ui.Growing_Menu('Section "{}"'.format(sec['label']))
