@@ -13,6 +13,7 @@ from uvc import get_time_monotonic
 import socket
 import threading
 import asyncore
+import struct
 from random import random
 
 import logging
@@ -44,9 +45,10 @@ class Time_Echo(asyncore.dispatcher_with_send):
         asyncore.dispatcher_with_send.__init__(self, sock)
 
     def handle_read(self):
-        data = self.recv(1024)
+        # expecting `sync` message
+        data = self.recv(4)
         if data:
-            self.send(repr(self.time_fn()).encode())
+            self.send(struct.pack('<d', self.time_fn()))
 
     def __del__(self):
         pass
@@ -66,9 +68,6 @@ class Time_Echo_Server(asyncore.dispatcher):
         self.set_reuse_addr()
         self.bind((host, 0))
         self.port = self.socket.getsockname()[1]
-        # FIXME: gethostbyname might fail on unix
-        self.host = host or socket.gethostbyname(socket.gethostname())
-        self.protocol = 'tcp://'
         self.listen(5)
         logger.debug('Timer Server ready on port: {}'.format(self.port))
 
@@ -76,6 +75,7 @@ class Time_Echo_Server(asyncore.dispatcher):
         pair = self.accept()
         if pair is not None:
             sock, addr = pair
+            logger.debug("syching with %s"%str(addr))
             Time_Echo(sock, self.time_fn)
 
     def __del__(self):
@@ -211,9 +211,9 @@ class Clock_Sync_Follower(threading.Thread):
             for request in range(60):
                 t0 = self.get_time()
                 server_socket.send(b'sync')
-                message = server_socket.recv(1024)
+                message = server_socket.recv(8)
                 t2 = self.get_time()
-                t1 = float(message)
+                t1 = struct.unpack('<d', message)[0]
                 times.append((t0, t1, t2))
 
             server_socket.close()
@@ -265,7 +265,7 @@ if __name__ == '__main__':
     # it is thus recommended for Linux to use uvc.get_time_monotonic.
     master = Clock_Sync_Master(get_time_monotonic)
     port = master.port
-    host = master.host
+    host = "127.0.0.1"
     epoch = 0.0
     # sleep(3)
     # master.stop()

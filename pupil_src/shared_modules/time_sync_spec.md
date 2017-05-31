@@ -1,5 +1,8 @@
 # Pupil Time Sync Protocol
 
+Protocol version: v1
+Protocol status: draft
+
 The Pupil Time Sync -- hereinafter referred to as _PTS_ -- protocol consists of two parts:
 1. Clock service discovery
 2. Time synchronization
@@ -22,9 +25,10 @@ of existing libraries (e.g. [zyre](https://github.com/zeromq/zyre), [Pyre](https
 
 ### Synchronization scope
 
-All PTS actors that should be synchronized SHALL join a user-definable ZRE
-group -- hereinafter referred to as _PTS group_ -- which is by default
-`time_sync_default`.
+All PTS actors that should be synchronized SHALL join a ZRE group -- hereinafter
+referred to as _PTS group_. The name of the PTS group is composed of a user-definable
+prefix -- by default `default` -- and the fixed string `-time_sync-v1`. Therefore the
+default PTS group name is `default-time_sync-v1`.
 
 All clock services SHALL SHOUT their announcements (see below) into the PTS group.
 
@@ -92,32 +96,31 @@ and is able to change its clock appropriately.
 
 ### Timestamp unit
 
-Timestamps are floats in seconds.
+Timestamps are 64-bit little-endian floats in seconds.
 
 ### Clock service
 
-The clock service is a simple TCP server that sends the string representation
-of its own current timestamp upon receiving the message `sync` from a follower.
-The TCP server's network port SHALL be announced as part of the clock service
-announcement (see above).
+The clock service is a simple TCP server that sends its own current timestamp
+upon receiving the message `sync` from a follower. The TCP server's network port
+SHALL be announced as part of the clock serviceannouncement (see above).
 
 ### Clock follower
 
 The clock follower calculates its clock's offset and offset-jitter regularly in
 the following manner:
 
-1. Open a TCP connection to the time service.
-2. Repeat the following steps 60 times:
-    2.1. Measure the follower's current timestamp `t0`
-    2.2. Send `sync` to the clock master
-    2.3. Receive the clock master's response as `t1` and convert it into a float
-    2.4. Measure the follower's current timestamp as `t2`
-    2.5. Store entry `t0`, `t1`, `t2`
-3. Sort entries by _roundtrip time_ (`t2 - t0`) in ascending order
-4. Remove last 30% entries, i.e. remove outliers
-5. Calculate _offset_ for each entry: `t0 - (t1 + (t2 - t0) / 2)`
-6. Calculate _mean offset_
-7. Calculate _offset variance_
-8. Use mean offset as _offset_ and clock variance as _offset jitter_
-9. Adjust the follower's clock according to the offset and the offset jitter
+- Open a TCP connection to the time service.
+- Repeat the following steps 60 times:
+    - Measure the follower's current timestamp `t0`
+    - Send `sync` to the clock master
+    - Receive the clock master's response as `t1` and convert it into a float
+    - Measure the follower's current timestamp as `t2`
+    - Store entry `t0`, `t1`, `t2`
+- Sort entries by _roundtrip time_ (`t2 - t0`) in ascending order
+- Remove last 30% entries, i.e. remove outliers
+- Calculate _offset_ for each entry: `t0 - (t1 + (t2 - t0) / 2)`
+- Calculate _mean offset_
+- Calculate _offset variance_
+- Use mean offset as _offset_ and clock variance as _offset jitter_
+- Adjust the follower's clock according to the offset and the offset jitter
 

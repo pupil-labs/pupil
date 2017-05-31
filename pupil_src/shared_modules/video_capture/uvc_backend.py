@@ -16,7 +16,7 @@ from version_utils import VersionFormat
 from .base_backend import InitialisationError, Base_Source, Base_Manager
 
 # check versions for our own depedencies as they are fast-changing
-assert VersionFormat(uvc.__version__) >= VersionFormat('0.10')
+assert VersionFormat(uvc.__version__) >= VersionFormat('0.11')
 
 # logging
 logger = logging.getLogger(__name__)

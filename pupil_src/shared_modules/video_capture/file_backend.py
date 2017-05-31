@@ -13,9 +13,8 @@ import os,sys
 import av
 assert av.__version__ >= '0.2.5'
 
-av.logging.set_level(av.logging.ERROR)
 
-from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
+from .base_backend import Base_Source, Base_Manager
 
 import numpy as np
 from time import time,sleep
@@ -27,6 +26,8 @@ import os.path
 import logging
 logger = logging.getLogger(__name__)
 
+av.logging.set_level(av.logging.ERROR)
+logging.getLogger('libav').setLevel(logging.ERROR)
 
 class FileCaptureError(Exception):
     """General Exception for this module"""
@@ -151,7 +152,11 @@ class File_Source(Base_Source):
             logger.debug('using timestamps from list')
             self.timestamps = timestamps
 
+        # set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
         self.next_frame = self._next_frame()
+        f0, f1 = next(self.next_frame), next(self.next_frame)
+        self.pts_rate = float(1/f1.pts/self.video_stream.time_base)
+        self.seek_to_frame(0)
 
         if self.video_stream.average_rate:
             self.average_rate = self.video_stream.average_rate
@@ -166,13 +171,14 @@ class File_Source(Base_Source):
 
     def ensure_initialisation(fallback_func=None):
         from functools import wraps
+
         def decorator(func):
             @wraps(func)
-            def run_func(self,*args,**kwargs):
+            def run_func(self, *args, **kwargs):
                 if self._initialised and self.video_stream:
-                    return func(self,*args,**kwargs)
+                    return func(self, *args, **kwargs)
                 elif fallback_func:
-                    return fallback_func(*args,**kwargs)
+                    return fallback_func(*args, **kwargs)
                 else:
                     logger.debug('Initialisation required.')
             return run_func
@@ -225,7 +231,7 @@ class File_Source(Base_Source):
         # some older mkv did not use perfect timestamping so we are doing int(round()) to clear that.
         # With properly spaced pts (any v0.6.100+ recording) just int() would suffice.
         # print float(pts*self.video_stream.time_base*self.video_stream.average_rate),round(pts*self.video_stream.time_base*self.video_stream.average_rate)
-        return int(round(pts*self.video_stream.time_base*self.average_rate))
+        return int(round(pts*self.video_stream.time_base*self.pts_rate))
 
     @ensure_initialisation()
     def pts_to_time(self, pts):
@@ -241,6 +247,7 @@ class File_Source(Base_Source):
         frame = None
         for frame in self.next_frame:
             index = self.pts_to_idx(frame.pts)
+
             if index == self.target_frame_idx:
                 break
             elif index < self.target_frame_idx:
