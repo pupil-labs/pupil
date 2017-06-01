@@ -43,7 +43,9 @@ def on_resize(window,w,h):
 
 
 class One_Target_Calibration(Calibration_Plugin):
-    """Calibrate using a marker on your screen. Move your head for example in a spiral motion while gazing at the marker to quickly sample a wide range gaze angles.
+    """Calibrate using a marker on your screen. 
+       Move your head for example in a spiral motion while gazing 
+       at the marker to quickly sample a wide range gaze angles.
     """
 
     def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
