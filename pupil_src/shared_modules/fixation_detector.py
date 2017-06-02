@@ -38,8 +38,14 @@ class Offline_Base_Fixation_Detector(Plugin):
 
 class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
     '''
-    This plugin classifies fixations and saccades by measuring dispersion and duration of gaze points
+    This plugin classifies fixations and saccades by measuring dispersion and duration of gaze points.
+    The implementation allows optimum threshold inquiries.
 
+    Fixations detection algorithm
+        + Salvucci & Goldberg (2000). 10.1145/355017.355028
+    
+    Fixations optimum threshold notion
+        + Blignaut (2009). 10.3758/APP.71.4.881
 
     Fixations general knowledge from literature review
         + Goldberg et al. - fixations rarely < 100ms and range between 200ms and 400ms in duration (Irwin, 1992 - fixations dependent on task between 150ms - 600ms)
