@@ -145,6 +145,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.get_now = get_time_monotonic
 
     # manage plugins
+    user_calibration_plugins_path = os.path.join('plugins','calibration_routines')
+    runtime_calibration_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, user_calibration_plugins_path))
+    calibration_plugins = calibration_plugins + runtime_calibration_plugins
+    
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
     calibration_plugins += [p for p in runtime_plugins if issubclass(p,Calibration_Plugin)]
     runtime_plugins = [p for p in runtime_plugins if not issubclass(p,Calibration_Plugin)]
