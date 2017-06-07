@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os
+import os,platform
 import cv2
 import numpy as np
 from pyglui import ui
@@ -194,6 +194,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         self.detection_proxy = bh.Task_Proxy('Calibration Marker Detection',
                                              detect_marker_positions,
+                                            force_spawn=platform.system() == 'Darwin',
                                              args=(source_path, timestamps_path))
 
     def save_detected_markers(self):
