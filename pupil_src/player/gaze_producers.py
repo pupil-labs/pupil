@@ -70,22 +70,17 @@ class Global_Container(object):
 
 
 def detect_marker_positions(source_path, timestamps_path):
-    timestamps = np.load(timestamps_path)
-    min_ts = timestamps[0]
-    max_ts = timestamps[-1]
 
     try:
-        src = File_Source(Global_Container(), source_path, timestamps, timed_playback=False)
+        src = File_Source(Global_Container(), source_path, np.load(timestamps_path), timed_playback=False)
         frame = src.get_frame()
-
         logger.info('Starting calibration marker detection...')
+        frame_count = src.get_frame_count()
 
         while True:
+            progress = 100.*frame.index/frame_count
 
-            progress = 100 * (frame.timestamp - min_ts) / (max_ts - min_ts)
-
-            gray_img = frame.gray
-            markers = find_concetric_circles(gray_img, min_ring_count=3)
+            markers = find_concetric_circles(frame.gray, min_ring_count=3)
             if len(markers) > 0:
                 detected = True
                 marker_pos = markers[0][0][0]  # first marker innermost ellipse, pos
@@ -359,6 +354,9 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.persistent.save()
 
     def gl_display(self):
+        ref_points_norm = [r['norm_pos'] for r in self.ref_positions_by_frame[self.g_pool.capture.get_frame_index()] if r]
+        draw_points_norm(ref_points_norm,color=RGBA(0,.5,0.5,.7))
+
         padding = 30.
         max_ts = len(self.g_pool.timestamps)
 

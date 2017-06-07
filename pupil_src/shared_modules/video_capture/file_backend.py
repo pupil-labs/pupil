@@ -157,17 +157,7 @@ class File_Source(Base_Source):
         f0, f1 = next(self.next_frame), next(self.next_frame)
         self.pts_rate = float(1/f1.pts/self.video_stream.time_base)
         self.seek_to_frame(0)
-
-        if self.video_stream.average_rate:
-            self.average_rate = self.video_stream.average_rate
-        else:
-            pts = [next(self.next_frame).pts for i in range(2)]
-            # pts[0] == 0
-            # => pts[1] - pts[0] == pts[1]
-            rate = 1 / (self.video_stream.time_base * pts[1])
-            logger.debug('Estimated average rate: {}'.format(rate))
-            self.average_rate = rate
-            self.seek_to_frame(0)
+        self.average_rate = (self.timestamps[-1]-self.timestamps[0])/len(self.timestamps)
 
     def ensure_initialisation(fallback_func=None):
         from functools import wraps
@@ -240,7 +230,7 @@ class File_Source(Base_Source):
 
     @ensure_initialisation()
     def idx_to_pts(self, idx):
-        return int(idx/self.average_rate/self.video_stream.time_base)
+        return int(idx/self.video_stream.time_base/self.pts_rate)
 
     @ensure_initialisation()
     def get_frame(self):

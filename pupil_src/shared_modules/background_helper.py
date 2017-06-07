@@ -9,7 +9,8 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from multiprocessing import Process, Pipe, Value
+import platform
+import multiprocessing as mp
 from ctypes import c_bool
 
 import logging
@@ -22,15 +23,20 @@ class EarlyCancellationError(Exception):
 
 class Task_Proxy(object):
     '''Future like object that runs a given generator in the background and returns is able to return the results incrementally'''
-    def __init__(self, name, generator, args=(), kwargs={}):
+    def __init__(self, name, generator,force_spawn=platform.system() == 'Darwin', args=(), kwargs={}):
         super(Task_Proxy, self).__init__()
-        self.should_terminate_flag = Value(c_bool, 0)
+
+        if force_spawn:
+            import multiprocessing as mp
+            mp = mp.get_context('spawn')
+
+        self.should_terminate_flag = mp.Value(c_bool, 0)
         self._completed = False
 
-        pipe_recv, pipe_send = Pipe(False)
+        pipe_recv, pipe_send = mp.Pipe(False)
         wrapper_args = [pipe_send, self.should_terminate_flag, generator]
         wrapper_args.extend(args)
-        self.process = Process(target=self._wrapper, name=name, args=wrapper_args, kwargs=kwargs)
+        self.process = mp.Process(target=self._wrapper, name=name, args=wrapper_args, kwargs=kwargs)
         self.process.start()
         self.pipe = pipe_recv
 
