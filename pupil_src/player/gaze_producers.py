@@ -219,16 +219,9 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
 
     def append_section_menu(self, sec, collapsed=True):
-        section_menu = ui.Growing_Menu('Section "{}"'.format(sec['label']))
+        section_menu = ui.Growing_Menu('Calibration Section {}'.format(self.sections.index(sec)))
         section_menu.collapsed = collapsed
         section_menu.color = RGBA(*sec['color'], 1.)
-
-        def set_label(val):
-            if val:
-                sec['label'] = val
-                section_menu.label = 'Section "{}"'.format(val)
-
-        section_menu.append(ui.Text_Input('label', sec, label='Label', setter=set_label))
 
         max_ts = len(self.g_pool.timestamps)
 
