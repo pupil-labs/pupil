@@ -197,13 +197,13 @@ class Vis_Eye_Video_Overlay(Plugin):
         self.menu.append(ui.Slider('eye_scale_factor',self,min=0.2,step=0.1,max=1.0,label='Video Scale'))
         self.menu.append(ui.Switch('move_around',self,label="Move Overlay"))
         if len(self.eye_cap) == 2:
-            self.menu.append(ui.Selector('showeyes',self,label='Show',selection=[(0,),(1,),(0,1)],labels= ['eye 1','eye 2','both'],setter=self.set_showeyes))
+            self.menu.append(ui.Selector('showeyes',self,label='Show',selection=[(0,),(1,),(0,1)],labels= ['Eye 0','Eye 1','both'],setter=self.set_showeyes))
         if 0 in self.showeyes:
-            self.menu.append(ui.Switch('0',self.mirror,label="Eye 1: Horiz. Flip"))
-            self.menu.append(ui.Switch('0',self.flip,label="Eye 1: Vert. Flip"))
+            self.menu.append(ui.Switch('0',self.mirror,label="Eye 0: Horiz. Flip"))
+            self.menu.append(ui.Switch('0',self.flip,label="Eye 0: Vert. Flip"))
         if 1 in self.showeyes:
-            self.menu.append(ui.Switch('1',self.mirror,label="Eye 2: Horiz Flip"))
-            self.menu.append(ui.Switch('1',self.flip,label="Eye 2: Vert Flip"))
+            self.menu.append(ui.Switch('1',self.mirror,label="Eye 1: Horiz Flip"))
+            self.menu.append(ui.Switch('1',self.flip,label="Eye 1: Vert Flip"))
         self.menu.append(ui.Switch('show_ellipses', self, label="Visualize Ellipses"))
 
 
@@ -268,22 +268,27 @@ class Vis_Eye_Video_Overlay(Plugin):
                     if pd['id'] == eye_index and pd['timestamp'] == self.eye_frames[eye_index].timestamp:
                         break
 
-                el = pd['ellipse']
-                conf = int(pd.get('model_confidence', pd.get('confidence', 0.1)) * 255)
-                center = list(map(lambda val: int(self.eye_scale_factor*val), el['center']))
-                el['axes'] = tuple(map(lambda val: int(self.eye_scale_factor*val/2), el['axes']))
-                el['angle'] = int(el['angle'])
-                el_points = cv2.ellipse2Poly(tuple(center), el['axes'], el['angle'], 0, 360, 1)
+                try:
+                    el = pd['ellipse']
+                except KeyError:
+                    logger.warning('3d pupil data is required to visualize detected ellipses')
+                    self.show_ellipses = False
+                else:
+                    conf = int(pd.get('model_confidence', pd.get('confidence', 0.1)) * 255)
+                    center = list(map(lambda val: int(self.eye_scale_factor*val), el['center']))
+                    el['axes'] = tuple(map(lambda val: int(self.eye_scale_factor*val/2), el['axes']))
+                    el['angle'] = int(el['angle'])
+                    el_points = cv2.ellipse2Poly(tuple(center), el['axes'], el['angle'], 0, 360, 1)
 
-                if self.mirror[str(eye_index)]:
-                    el_points = [(self.video_size[0] - x, y) for x, y in el_points]
-                    center[0] = self.video_size[0] - center[0]
-                if self.flip[str(eye_index)]:
-                    el_points = [(x, self.video_size[1] - y) for x, y in el_points]
-                    center[1] = self.video_size[1] - center[1]
+                    if self.mirror[str(eye_index)]:
+                        el_points = [(self.video_size[0] - x, y) for x, y in el_points]
+                        center[0] = self.video_size[0] - center[0]
+                    if self.flip[str(eye_index)]:
+                        el_points = [(x, self.video_size[1] - y) for x, y in el_points]
+                        center[1] = self.video_size[1] - center[1]
 
-                cv2.polylines(eyeimage, [np.asarray(el_points)], True, (0, 0, 255, conf), thickness=math.ceil(2*self.eye_scale_factor))
-                cv2.circle(eyeimage, tuple(center), int(5*self.eye_scale_factor), (0, 0, 255, conf), thickness=-1)
+                    cv2.polylines(eyeimage, [np.asarray(el_points)], True, (0, 0, 255, conf), thickness=math.ceil(2*self.eye_scale_factor))
+                    cv2.circle(eyeimage, tuple(center), int(5*self.eye_scale_factor), (0, 0, 255, conf), thickness=-1)
 
             # 5. finally overlay the image
             x, y = int(self.pos[eye_index][0]), int(self.pos[eye_index][1])
