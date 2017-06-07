@@ -354,6 +354,9 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.persistent.save()
 
     def gl_display(self):
+        ref_points_norm = [r['norm_pos'] for r in self.ref_positions_by_frame[self.g_pool.capture.get_frame_index()] if r]
+        draw_points_norm(ref_points_norm,color=RGBA(0,.5,0.5,.7))
+
         padding = 30.
         max_ts = len(self.g_pool.timestamps)
 
