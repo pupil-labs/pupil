@@ -226,17 +226,16 @@ def launcher():
             topic,n = cmd_sub.recv()
             if "notify.eye_process.should_start" in topic:
                 eye_id = n['eye_id']
-                if not eyes_are_alive[eye_id].value:
-                    Process(target=eye, name='eye{}'.format(eye_id), args=(
-                            timebase,
-                            eyes_are_alive[eye_id],
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            eye_id
-                            )).start()
+                Process(target=eye, name='eye{}'.format(eye_id), args=(
+                        timebase,
+                        eyes_are_alive[eye_id],
+                        ipc_pub_url,
+                        ipc_sub_url,
+                        ipc_push_url,
+                        user_dir,
+                        app_version,
+                        eye_id
+                        )).start()
             elif "notify.launcher_process.should_stop" in topic:
                 break
             elif "notify.meta.should_doc" in topic:
