@@ -20,9 +20,9 @@ from pyglui import ui
 from time import sleep
 from threading import Thread
 from player_methods import correlate_data
-if platform.system() in ('Darwin', 'Linux'):
+if platform.system() == 'Darwin':
     from multiprocessing import get_context
-    mp = get_context('forkserver')
+    mp = get_context('spawn')
     Value = mp.Value
     Process = mp.Process
 else:

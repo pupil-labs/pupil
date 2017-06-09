@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os
+import os,platform
 import cv2
 import numpy as np
 from pyglui import ui
@@ -194,6 +194,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         self.detection_proxy = bh.Task_Proxy('Calibration Marker Detection',
                                              detect_marker_positions,
+                                            force_spawn=platform.system() == 'Darwin',
                                              args=(source_path, timestamps_path))
 
     def save_detected_markers(self):
@@ -218,16 +219,9 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
 
     def append_section_menu(self, sec, collapsed=True):
-        section_menu = ui.Growing_Menu('Section "{}"'.format(sec['label']))
+        section_menu = ui.Growing_Menu('Calibration Section {}'.format(self.sections.index(sec)))
         section_menu.collapsed = collapsed
         section_menu.color = RGBA(*sec['color'], 1.)
-
-        def set_label(val):
-            if val:
-                sec['label'] = val
-                section_menu.label = 'Section "{}"'.format(val)
-
-        section_menu.append(ui.Text_Input('label', sec, label='Label', setter=set_label))
 
         max_ts = len(self.g_pool.timestamps)
 
@@ -354,9 +348,11 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.persistent.save()
 
     def gl_display(self):
-        ref_points_norm = [r['norm_pos'] for r in self.ref_positions_by_frame[self.g_pool.capture.get_frame_index()] if r]
-        draw_points_norm(ref_points_norm,color=RGBA(0,.5,0.5,.7))
-
+        try:
+            ref_points_norm = [r['norm_pos'] for r in self.ref_positions_by_frame[self.g_pool.capture.get_frame_index()] if r]
+            draw_points_norm(ref_points_norm,color=RGBA(0,.5,0.5,.7))
+        except IndexError:
+            pass
         padding = 30.
         max_ts = len(self.g_pool.timestamps)
 
