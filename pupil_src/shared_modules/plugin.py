@@ -322,3 +322,16 @@ def import_runtime_plugins(plugin_dir):
             except Exception as e:
                 logger.warning("Failed to load '{}'. Reason: '{}' ".format(d, e))
     return runtime_plugins
+
+
+# Base plugin definitons
+class Visualizer_Plugin_Base(Plugin):
+    pass
+
+
+class Analysis_Plugin_Base(Plugin):
+    pass
+
+
+class Producer_Plugin_Base(Plugin):
+    pass

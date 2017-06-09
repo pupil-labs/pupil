@@ -15,7 +15,6 @@ from methods import dist_pts_ellipse
 
 
 def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
-
     # get threshold image used to get crisp-clean edges using blur to remove small features
     edges = cv2.adaptiveThreshold(cv2.blur(gray_img,(3,3)), 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 5, 11)
     _, contours, hierarchy = cv2.findContours(edges,

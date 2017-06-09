@@ -12,6 +12,8 @@ See COPYING and COPYING.LESSER for license details.
 import os, cv2, csv_utils
 import numpy as np
 import collections
+import glob
+import av
 
 # logging
 import logging
@@ -19,6 +21,8 @@ logger = logging.getLogger(__name__)
 from file_methods import save_object, load_object, UnpicklingError
 from version_utils import VersionFormat
 from version_utils import read_rec_version
+from calibration_routines.camera_intrinsics_estimation import pre_recorded_calibrations, idealized_camera_calibration
+
 
 def correlate_data(data, timestamps):
     '''
@@ -56,9 +60,9 @@ def correlate_data(data, timestamps):
         if datum['timestamp'] <= ts:
             datum['index'] = frame_idx
             data_by_frame[frame_idx].append(datum)
-            data_index +=1
+            data_index += 1
         else:
-            frame_idx+=1
+            frame_idx += 1
 
     return data_by_frame
 
@@ -67,6 +71,12 @@ def update_recording_to_recent(rec_dir):
 
     meta_info = load_meta_info(rec_dir)
     update_meta_info(rec_dir, meta_info)
+
+    if (meta_info.get('Capture Software', 'Pupil Capture') == 'Pupil Mobile'
+            and 'Data Format Version' not in meta_info):
+        convert_pupil_mobile_recording_to_v094(rec_dir)
+        meta_info['Data Format Version'] = 'v0.9.4'
+        update_meta_info(rec_dir, meta_info)
 
     # Reference format: v0.7.4
     rec_version = read_rec_version(meta_info)
@@ -124,6 +134,63 @@ def update_meta_info(rec_dir, meta_info):
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 
+def convert_pupil_mobile_recording_to_v094(rec_dir):
+    logger.info("Converting Pupil Mobile recording to v0.9.4 format")
+    # convert time files and rename corresponding videos
+    time_pattern = os.path.join(rec_dir, '*.time')
+    for time_loc in glob.glob(time_pattern):
+        time_file_name = os.path.split(time_loc)[1]
+        time_name, time_ext = os.path.splitext(time_file_name)
+
+        potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.mp4')]
+        existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
+        if not existing_locs:
+            continue
+        else:
+            video_loc = existing_locs[0]
+
+        if time_name in ('Pupil Cam1 ID0', 'Pupil Cam1 ID1'):
+            time_name = 'eye'+time_name[-1]  # rename eye files
+        elif time_name in ('Pupil Cam1 ID2', 'Logitech Webcam C930e'):
+            cam_calib_loc = os.path.join(rec_dir, 'camera_calibration')
+            try:
+                camera_calibration = load_object(cam_calib_loc)
+            except:
+                # no camera calibration found
+                frame_size = 0, 0
+                video = av.open(video_loc, 'r')
+                for stream in video.streams:
+                    if stream.type == b'video':
+                        frame_size = stream.format.width, stream.format.height
+                        break
+                del video
+                if time_name in pre_recorded_calibrations and frame_size in pre_recorded_calibrations[time_name]:
+                    camera_calibration = pre_recorded_calibrations[time_name][frame_size]
+                else:
+                    camera_calibration = idealized_camera_calibration(frame_size)
+                    logger.warning('Camera calibration not found. Will assume idealized camera.')
+                save_object(camera_calibration, cam_calib_loc)
+
+            time_name = 'world'  # assume world file
+
+        timestamps = np.fromfile(time_loc, dtype='>f8')
+        timestamp_loc = os.path.join(rec_dir, '{}_timestamps.npy'.format(time_name))
+        logger.info('Creating "{}"'.format(os.path.split(timestamp_loc)[1]))
+        np.save(timestamp_loc, timestamps)
+
+        video_dst = os.path.join(rec_dir, time_name) + os.path.splitext(video_loc)[1]
+
+        logger.info('Renaming "{}" to "{}"'.format(os.path.split(video_loc)[1], os.path.split(video_dst)[1]))
+        os.rename(video_loc, video_dst)
+
+    pupil_data_loc = os.path.join(rec_dir, 'pupil_data')
+    if not os.path.exists(pupil_data_loc):
+        logger.info('Creating "pupil_data"')
+        save_object({'pupil_positions': [],
+                     'gaze_positions': [],
+                     'notifications': []}, pupil_data_loc)
+
+
 def update_recording_v074_to_v082(rec_dir):
     meta_info_path = os.path.join(rec_dir,"info.csv")
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
@@ -136,7 +203,6 @@ def update_recording_v082_to_v083(rec_dir):
     logger.info("Updating recording from v0.8.2 format to v0.8.3 format")
     pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     meta_info_path = os.path.join(rec_dir,"info.csv")
-
 
     for d in pupil_data['gaze_positions']:
         if 'base' in d:

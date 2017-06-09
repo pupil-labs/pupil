@@ -25,7 +25,7 @@ if __name__ == '__main__':
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
 
-from plugin import Plugin
+from plugin import Analysis_Plugin_Base
 from video_export_launcher import mp, Export_Process
 
 from exporter import export
@@ -48,7 +48,7 @@ def get_recording_dirs(data_dir):
     return filtered_recording_dirs
 
 
-class Batch_Exporter(Plugin):
+class Batch_Exporter(Analysis_Plugin_Base):
     """docstring for Batch_Exporter
     this plugin can export videos in a seperate process using exporter
     """

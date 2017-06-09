@@ -67,7 +67,7 @@ from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to
 import psutil
 
 # Plug-ins
-from plugin import Plugin_List, import_runtime_plugins
+from plugin import Plugin_List, import_runtime_plugins, Visualizer_Plugin_Base, Analysis_Plugin_Base, Producer_Plugin_Base
 from vis_circle import Vis_Circle
 from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
@@ -88,7 +88,8 @@ from log_display import Log_Display
 from annotations import Annotation_Player
 from raw_data_exporter import Raw_Data_Exporter
 from log_history import Log_History
-
+from pupil_producers import Pupil_Producer_Base, Pupil_From_Recording, Offline_Pupil_Detection
+from gaze_producers import Gaze_Producer_Base, Gaze_From_Recording, Offline_Calibration
 
 import logging
 # set up root logger before other imports
@@ -96,7 +97,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-assert pyglui_version >= '1.3'
+assert pyglui_version >= '1.4'
 
 
 # since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
@@ -140,18 +141,17 @@ class Global_Container(object):
 
 
 def session(rec_dir):
+    runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
+
     system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
-    vis_plugins = sorted([Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross,
-                          Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path], key=lambda x: x.__name__)
 
-    analysis_plugins = sorted([Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector,
-                               Manual_Gaze_Correction, Video_Export_Launcher, Offline_Surface_Tracker,
-                               Raw_Data_Exporter, Batch_Exporter, Annotation_Player], key=lambda x: x.__name__)
+    user_launchable_plugins = [Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross, Vis_Watermark,
+                               Vis_Eye_Video_Overlay, Vis_Scan_Path, Gaze_Position_2D_Fixation_Detector,
+                               Pupil_Angle_3D_Fixation_Detector, Manual_Gaze_Correction, Video_Export_Launcher,
+                               Offline_Surface_Tracker, Raw_Data_Exporter, Batch_Exporter, Annotation_Player,
+                               Log_History, Marker_Auto_Trim_Marks, Pupil_From_Recording, Offline_Pupil_Detection,
+                               Gaze_From_Recording, Offline_Calibration] + runtime_plugins
 
-    other_plugins = sorted([Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
-    user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
-
-    user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
     available_plugins = system_plugins + user_launchable_plugins
     name_by_index = [p.__name__ for p in available_plugins]
     plugin_by_name = dict(zip(name_by_index, available_plugins))
@@ -209,7 +209,8 @@ def session(rec_dir):
 
     update_recording_to_recent(rec_dir)
 
-    video_path = [f for f in glob(os.path.join(rec_dir, "world.*")) if f[-3:] in ('mp4', 'mkv', 'avi')][0]
+    video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
+                  if os.path.splitext(f)[1] in ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
@@ -248,22 +249,26 @@ def session(rec_dir):
         on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
     # load pupil_positions, gaze_positions
-    pupil_data = load_object(pupil_data_path)
-    pupil_list = pupil_data['pupil_positions']
-    gaze_list = pupil_data['gaze_positions']
-    g_pool.pupil_data = pupil_data
+    g_pool.pupil_data = load_object(pupil_data_path)
     g_pool.binocular = meta_info.get('Eye Mode', 'monocular') == 'binocular'
     g_pool.version = app_version
     g_pool.capture = cap
     g_pool.timestamps = timestamps
+    g_pool.get_timestamp = lambda: 0.
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.meta_info = meta_info
     g_pool.min_data_confidence = session_settings.get('min_data_confidence', 0.6)
-    g_pool.pupil_positions_by_frame = correlate_data(pupil_list, g_pool.timestamps)
-    g_pool.gaze_positions_by_frame = correlate_data(gaze_list, g_pool.timestamps)
+
+    g_pool.pupil_positions = []
+    g_pool.gaze_positions = []
+    g_pool.fixations = []
+
+    g_pool.notifications_by_frame = correlate_data(g_pool.pupil_data['notifications'], g_pool.timestamps)
+    g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]
+    g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
 
     def next_frame(_):
@@ -325,7 +330,7 @@ def session(rec_dir):
 
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
-    g_pool.main_menu = ui.Scrolling_Menu("Settings", pos=(-350, 20), size=(300, 500))
+    g_pool.main_menu = ui.Scrolling_Menu("Settings", pos=(-350, 20), size=(300, 560))
     g_pool.main_menu.append(ui.Button('Reset window size',
                                       lambda: glfwSetWindowSize(main_window, cap.frame_size[0], cap.frame_size[1])))
     g_pool.main_menu.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface Size'))
@@ -335,23 +340,32 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Slider('min_data_confidence', g_pool, setter=set_data_confidence,
                                       step=.05, min=0.0, max=1.0, label='Confidence threshold'))
 
+    g_pool.main_menu.append(ui.Info_Text('Open plugins'))
+
     selector_label = "Select to load"
 
-    vis_labels = ["   " + p.__name__.replace('_', ' ') for p in vis_plugins]
-    analysis_labels = ["   " + p.__name__.replace('_', ' ') for p in analysis_plugins]
-    other_labels = ["   " + p.__name__.replace('_', ' ') for p in other_plugins]
-    user_labels = ["   " + p.__name__.replace('_', ' ') for p in user_plugins]
+    def append_selector(label, plugins):
+        plugins.sort(key=lambda p: p.__name__)
+        plugin_labels = [p.__name__.replace('_', ' ') for p in plugins]
+        g_pool.main_menu.append(ui.Selector(label,
+                                            selection=[selector_label] + plugins,
+                                            labels=[selector_label] + plugin_labels,
+                                            setter=open_plugin,
+                                            getter=lambda: selector_label))
 
-    plugins = ([selector_label, selector_label] + vis_plugins + [selector_label] + analysis_plugins + [selector_label]
-               + other_plugins + [selector_label] + user_plugins)
-    labels = ([selector_label, "Visualization"] + vis_labels + ["Analysis"] + analysis_labels + ["Other"]
-              + other_labels + ["User added"] + user_labels)
+    base_plugins = [Visualizer_Plugin_Base, Analysis_Plugin_Base, Producer_Plugin_Base]
+    base_labels = ['Visualizer:', 'Analyser:', 'Producer:']
+    launchable = user_launchable_plugins.copy()
+    for base_class, label in zip(base_plugins, base_labels):
+        member_plugins = []
+        for p in user_launchable_plugins:
+            if issubclass(p, base_class):
+                member_plugins.append(p)
+                launchable.remove(p)
+        append_selector(label, member_plugins)
 
-    g_pool.main_menu.append(ui.Selector('Open plugin:',
-                                        selection=plugins,
-                                        labels=labels,
-                                        setter=open_plugin,
-                                        getter=lambda: selector_label))
+    # launchable only contains plugins that could not be assigned to any of the above categories
+    append_selector('Other', launchable)
 
     g_pool.main_menu.append(ui.Button('Close all plugins', purge_plugins))
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))
@@ -398,7 +412,9 @@ def session(rec_dir):
 
     # we always load these plugins
     system_plugins = [('Trim_Marks', {}), ('Seek_Bar', {})]
-    default_plugins = [('Log_Display', {}), ('Vis_Scan_Path', {}), ('Vis_Polyline', {}), ('Vis_Circle', {}), ('Video_Export_Launcher', {})]
+    default_plugins = [('Log_Display', {}), ('Vis_Scan_Path', {}), ('Vis_Polyline', {}),
+                       ('Vis_Circle', {}), ('Video_Export_Launcher', {}),
+                       ('Pupil_From_Recording', {}), ('Gaze_From_Recording', {})]
     previous_plugins = session_settings.get('loaded_plugins', default_plugins)
     g_pool.notifications = []
     g_pool.delayed_notifications = {}
@@ -494,6 +510,8 @@ def session(rec_dir):
         # notify each plugin if there are new notifactions:
         while g_pool.notifications:
             n = g_pool.notifications.pop(0)
+            if n['subject'] == 'start_plugin':
+                g_pool.plugins.add(plugin_by_name[n['name']], args=n.get('args', {}))
             for p in g_pool.plugins:
                 p.on_notify(n)
 

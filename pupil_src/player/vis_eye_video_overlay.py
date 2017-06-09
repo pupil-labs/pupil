@@ -17,7 +17,7 @@ import numpy as np
 from file_methods import Persistent_Dict
 from pyglui import ui
 from player_methods import transparent_image_overlay
-from plugin import Plugin
+from plugin import Visualizer_Plugin_Base
 from copy import copy
 
 # helpers/utils
@@ -119,7 +119,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
 
     return eye_world_frame_map
 
-class Vis_Eye_Video_Overlay(Plugin):
+class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
     """docstring This plugin allows the user to overlay the eye recording on the recording of his field of vision
         Features: flip video across horiz/vert axes, click and drag around interface, scale video size from 20% to 100%,
         show only 1 or 2 or both eyes

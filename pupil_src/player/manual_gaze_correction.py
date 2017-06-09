@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import cv2
 from copy import deepcopy
-from plugin import Plugin
+from plugin import Analysis_Plugin_Base
 import numpy as np
 from methods import denormalize,normalize
 from player_methods import correlate_data
@@ -19,7 +19,8 @@ from pyglui import ui
 import logging
 logger = logging.getLogger(__name__)
 
-class Manual_Gaze_Correction(Plugin):
+
+class Manual_Gaze_Correction(Analysis_Plugin_Base):
     """docstring
     correct gaze with manually set x and y offset
     """
@@ -34,8 +35,6 @@ class Manual_Gaze_Correction(Plugin):
         self.y_offset = float(y_offset)
         self._set_offset()
 
-
-
     def _set_offset(self):
         x,y = self.x_offset,self.y_offset
         for f in range(len(self.g_pool.gaze_positions_by_frame)):
@@ -44,7 +43,6 @@ class Manual_Gaze_Correction(Plugin):
                 gaze_pos = gaze_pos[0]+x, gaze_pos[1]+y
                 self.g_pool.gaze_positions_by_frame[f][i]['norm_pos'] =  gaze_pos
         self.notify_all({'subject':'gaze_positions_changed','delay':3})
-
 
     def _set_offset_x(self,offset_x):
         self.x_offset = offset_x
@@ -73,7 +71,6 @@ class Manual_Gaze_Correction(Plugin):
 
     def get_init_dict(self):
         return {'x_offset':self.x_offset,'y_offset':self.y_offset}
-
 
     def cleanup(self):
         """ called when the plugin gets terminated.
