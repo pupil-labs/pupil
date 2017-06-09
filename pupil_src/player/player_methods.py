@@ -329,7 +329,8 @@ def update_recording_v04_to_v074(rec_dir):
 
     for datum in pupil_array:
         ts, confidence, id, x, y, diameter = datum[:6]
-        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':id,'norm_pos':[x,y],'diameter':diameter,'method':'2d python'})
+        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':id,'norm_pos':[x,y],'diameter':diameter,
+                          'method':'2d python','ellipse': {'angle': 0.0, 'center': [0.0, 0.0], 'axes': [0.0, 0.0]}})
 
     pupil_by_ts = dict([(p['timestamp'],p) for p in pupil_list])
 
