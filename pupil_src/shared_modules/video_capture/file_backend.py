@@ -128,6 +128,7 @@ class File_Source(Base_Source):
 
         self.display_time = 0.
         self.target_frame_idx = 0
+        self.fcurrent_frame_idx = 0
 
         #we will use below for av playback
         # self.selected_streams = [s for s in (self.video_stream,self.audio_stream) if s]
@@ -203,7 +204,7 @@ class File_Source(Base_Source):
             return 'File source in ghost mode'
 
     def get_frame_index(self):
-        return self.target_frame_idx
+        return self.current_frame_idx
 
     def get_frame_count(self):
         return len(self.timestamps)
@@ -257,6 +258,7 @@ class File_Source(Base_Source):
 
         self.show_time = timestamp
         self.target_frame_idx = index+1
+        self.current_frame_idx = index
         return Frame(timestamp,frame,index=index)
 
     def wait(self,frame):
