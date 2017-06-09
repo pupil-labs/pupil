@@ -29,8 +29,6 @@ class Is_Alive_Manager(object):
         self.eye_id = eye_id
 
     def __enter__(self):
-        if self.is_alive.value:
-            raise Exception("eye process already running!")
         self.is_alive.value = True
         self.ipc_socket.notify({'subject': 'eye_process.started',
                                 'eye_id': self.eye_id})
