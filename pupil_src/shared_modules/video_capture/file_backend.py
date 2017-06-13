@@ -128,7 +128,7 @@ class File_Source(Base_Source):
 
         self.display_time = 0.
         self.target_frame_idx = 0
-        self.fcurrent_frame_idx = 0
+        self.current_frame_idx = 0
 
         #we will use below for av playback
         # self.selected_streams = [s for s in (self.video_stream,self.audio_stream) if s]
