@@ -114,6 +114,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v091_to_v093(rec_dir)
     if rec_version < VersionFormat('0.9.4'):
         update_recording_v093_to_v094(rec_dir)
+    if rec_version < VersionFormat('0.9.13'):
+        update_recording_v094_to_v0913(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -312,6 +314,36 @@ def update_recording_v093_to_v094(rec_dir):
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Data Format Version'] = 'v0.9.4'
+    update_meta_info(rec_dir, meta_info)
+
+def update_recording_v094_to_v0913(rec_dir):
+    logger.info("Updating recording from v0.9.4 to v0.9.13")
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+
+
+    wav_file_loc = os.path.join(rec_dir, 'audio.wav')
+    aac_file_loc = os.path.join(rec_dir, 'audio.mp4')
+    audio_ts_loc = os.path.join(rec_dir, 'audio_timestamps.npy')
+    if os.path.exists(wav_file_loc) and os.path.exists(audio_ts_loc):
+        in_container = av.open(wav_file_loc)
+        out_container = av.open(aac_file_loc, 'w')
+        out_stream = out_container.add_stream('aac')
+        for in_packet in in_container.demux():
+            for audio_frame in in_packet.decode():
+                out_packet = out_stream.encode(audio_frame)
+                if out_packet is not None:
+                    out_container.mux(out_packet)
+
+        # flush encoder
+        out_packet = out_stream.encode(None)
+        while out_packet is not None:
+            out_container.mux(out_packet)
+            out_packet = out_stream.encode(None)
+        out_container.close()
+
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v0.9.13'
     update_meta_info(rec_dir, meta_info)
 
 

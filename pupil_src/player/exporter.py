@@ -68,6 +68,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     video_path = [f for f in glob(os.path.join(rec_dir, "world.*")) if f[-3:] in ('mp4', 'mkv', 'avi')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
+    audio_path = os.path.join(rec_dir, "audio.mp4")
 
     meta_info = load_meta_info(rec_dir)
 
@@ -112,7 +113,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     logger.debug(exp_info.format(start_frame, start_frame + frames_to_export.value, frames_to_export.value))
 
     # setup of writer
-    writer = AV_Writer(out_file_path, fps=cap.frame_rate, use_timestamps=True)
+    writer = AV_Writer(out_file_path, fps=cap.frame_rate, audio_loc=audio_path, use_timestamps=True)
 
     cap.seek_to_frame(start_frame)
 
