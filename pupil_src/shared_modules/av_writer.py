@@ -166,7 +166,7 @@ class AV_Writer(object):
                 audio_packet.pts = audio_pts
                 audio_packet.dts = audio_pts
                 audio_packet.stream = self.audio_export
-                self.audio_packets_decoded += 16
+                self.audio_packets_decoded += 1
 
                 if audio_pts * self.audio_export.time_base < 0:
                     print('Seeking: {} -> {}'.format(audio_pts * self.audio_export.time_base, self.start_time))

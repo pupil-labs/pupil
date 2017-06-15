@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import os, cv2, csv_utils
 import numpy as np
+from scipy.interpolate import interp1d
 import collections
 import glob
 import av
@@ -50,7 +51,7 @@ def correlate_data(data, timestamps):
         try:
             datum = data[data_index]
             # we can take the midpoint between two frames in time: More appropriate for SW timestamps
-            ts = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
+            ts = (timestamps[frame_idx]+timestamps[frame_idx+1]) / 2.
             # or the time of the next frame: More appropriate for Sart Of Exposure Timestamps (HW timestamps).
             # ts = timestamps[frame_idx+1]
         except IndexError:
@@ -316,20 +317,30 @@ def update_recording_v093_to_v094(rec_dir):
         meta_info['Data Format Version'] = 'v0.9.4'
     update_meta_info(rec_dir, meta_info)
 
+
 def update_recording_v094_to_v0913(rec_dir):
     logger.info("Updating recording from v0.9.4 to v0.9.13")
     meta_info_path = os.path.join(rec_dir, "info.csv")
 
-
     wav_file_loc = os.path.join(rec_dir, 'audio.wav')
     aac_file_loc = os.path.join(rec_dir, 'audio.mp4')
     audio_ts_loc = os.path.join(rec_dir, 'audio_timestamps.npy')
+    backup_ts_loc = os.path.join(rec_dir, 'audio_timestamps_old.npy')
     if os.path.exists(wav_file_loc) and os.path.exists(audio_ts_loc):
         in_container = av.open(wav_file_loc)
+        in_stream = in_container.streams.audio[0]
+        in_frame_size = 0
+        in_frame_num = 0
+
         out_container = av.open(aac_file_loc, 'w')
         out_stream = out_container.add_stream('aac')
+
         for in_packet in in_container.demux():
             for audio_frame in in_packet.decode():
+                if not in_frame_size:
+                    in_frame_size = audio_frame.samples
+                print(audio_frame.samples)
+                in_frame_num += 1
                 out_packet = out_stream.encode(audio_frame)
                 if out_packet is not None:
                     out_container.mux(out_packet)
@@ -339,7 +350,39 @@ def update_recording_v094_to_v0913(rec_dir):
         while out_packet is not None:
             out_container.mux(out_packet)
             out_packet = out_stream.encode(None)
+
+        out_frame_size = out_stream.frame_size
+        out_frame_num = out_stream.frames
+        out_frame_rate = out_stream.rate
+
+        in_frame_rate = in_stream.rate
+
+        print('rate, frm_size, frm_num')
+        print(in_frame_rate, in_frame_size, in_frame_num)
+        print(out_frame_rate, out_frame_size, out_frame_num)
+
         out_container.close()
+
+        old_ts = np.load(audio_ts_loc)
+        np.save(backup_ts_loc, old_ts)
+
+        print('Given frame size', in_frame_size)
+        if len(old_ts) != in_frame_num:
+            in_frame_size = len(old_ts) / in_frame_num
+            print('Corrected frame size', in_frame_size)
+
+        old_ts_idx = np.arange(0, len(old_ts) * in_frame_size, in_frame_size) * out_frame_rate / in_frame_rate
+        new_ts_idx = np.arange(0, out_frame_num * out_frame_size, out_frame_size)
+        interpolate = interp1d(old_ts_idx, old_ts, bounds_error=False, fill_value='extrapolate')
+        new_ts = interpolate(new_ts_idx)
+
+        from matplotlib import pyplot as plt
+        plt.plot(old_ts_idx, old_ts, c='r')
+        plt.plot(new_ts_idx, new_ts, c='b')
+        plt.show()
+
+        # raise RuntimeError
+        np.save(audio_ts_loc, new_ts)
 
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)

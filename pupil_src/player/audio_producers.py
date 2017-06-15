@@ -47,11 +47,10 @@ class Audio_From_Recording(Producer_Plugin_Base):
                     if audio_format is None:
                         audio_format = dtype_from_format(frm.format.name)
                     audio = np.frombuffer(audio_plane.to_bytes(), dtype=audio_format)
-                    if ts_idx+8 >= len(audio_ts):
+                    if ts_idx >= len(audio_ts):
                         break
-                    self.wave_points.append((audio_ts[ts_idx], audio[:512].mean()*5))
-                    self.wave_points.append((audio_ts[ts_idx+8], audio[512:].mean()*5))
-                    ts_idx += 16
+                    self.wave_points.append((audio_ts[ts_idx], audio.mean()*5))
+                    ts_idx += 1
             print(ts_idx, len(audio_ts))
 
             self.notify_all({'subject': 'audio_changed'})
