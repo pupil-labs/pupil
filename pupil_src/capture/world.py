@@ -225,8 +225,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir, 'user_settings_world'))
-    if VersionFormat(session_settings.get("version", '0.0')) < g_pool.version:
-        logger.info("Session setting are from older version of this app. I will not use those.")
+    if VersionFormat(session_settings.get("version", '0.0')) != g_pool.version:
+        logger.info("Session setting are from a different version of this app. I will not use those.")
         session_settings.clear()
 
     g_pool.iconified = False

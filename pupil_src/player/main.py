@@ -555,8 +555,8 @@ def show_no_rec_window():
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))
-    if VersionFormat(session_settings.get("version", '0.0')) < get_version(version_file):
-        logger.info("Session setting are from older version of this app. I will not use those.")
+    if VersionFormat(session_settings.get("version", '0.0')) != get_version(version_file):
+        logger.info("Session setting are from a  different version of this app. I will not use those.")
         session_settings.clear()
     w, h = session_settings.get('window_size', (1280, 720))
     window_pos = session_settings.get('window_position', window_position_default)
