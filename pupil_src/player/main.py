@@ -154,7 +154,7 @@ def session(rec_dir):
                                Raw_Data_Exporter, Batch_Exporter, Annotation_Player], key=lambda x: x.__name__)
 
     other_plugins = sorted([Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
-    user_plugins = sorted(runtime_plugins), key=lambda x: x.__name__)
+    user_plugins = sorted(runtime_plugins, key=lambda x: x.__name__)
 
     user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
     available_plugins = system_plugins + user_launchable_plugins
