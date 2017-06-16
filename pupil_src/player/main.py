@@ -140,6 +140,11 @@ class Global_Container(object):
 
 
 def session(rec_dir):
+    plugin_dir = os.path.join(user_dir, 'plugins')
+    if not os.path.isdir(plugin_dir):
+        os.mkdir(plugin_dir)
+    runtime_plugins = import_runtime_plugins(plugin_dir)
+
     system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
     vis_plugins = sorted([Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross,
                           Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path], key=lambda x: x.__name__)
@@ -149,7 +154,7 @@ def session(rec_dir):
                                Raw_Data_Exporter, Batch_Exporter, Annotation_Player], key=lambda x: x.__name__)
 
     other_plugins = sorted([Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
-    user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
+    user_plugins = sorted(runtime_plugins), key=lambda x: x.__name__)
 
     user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
     available_plugins = system_plugins + user_launchable_plugins
