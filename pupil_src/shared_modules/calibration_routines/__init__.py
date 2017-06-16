@@ -13,7 +13,7 @@ See COPYING and COPYING.LESSER for license details.
 # import detector classes from sibling files
 from . screen_marker_calibration import Screen_Marker_Calibration
 from . manual_marker_calibration import Manual_Marker_Calibration
-from . one_target_calibration import Single_Marker_Calibration
+from . single_marker_calibration import Single_Marker_Calibration
 from . natural_features_calibration import Natural_Features_Calibration
 from . camera_intrinsics_estimation import Camera_Intrinsics_Estimation
 from . adjust_calibration import Adjust_Calibration

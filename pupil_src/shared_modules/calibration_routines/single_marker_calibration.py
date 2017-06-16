@@ -41,9 +41,9 @@ def on_resize(window,w,h):
     glfwMakeContextCurrent(active_window)
 
 
-class One_Target_Calibration(Calibration_Plugin):
-    """Calibrate using a marker on your screen. 
-       Move your head for example in a spiral motion while gazing 
+class Single_Marker_Calibration(Calibration_Plugin):
+    """Calibrate using a single marker.
+       Move your head for example in a spiral motion while gazing
        at the marker to quickly sample a wide range gaze angles.
     """
 
