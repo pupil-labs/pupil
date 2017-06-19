@@ -90,6 +90,7 @@ from raw_data_exporter import Raw_Data_Exporter
 from log_history import Log_History
 from pupil_producers import Pupil_Producer_Base, Pupil_From_Recording, Offline_Pupil_Detection
 from gaze_producers import Gaze_Producer_Base, Gaze_From_Recording, Offline_Calibration
+from audio_producers import Audio_From_Recording
 
 import logging
 # set up root logger before other imports
@@ -150,7 +151,7 @@ def session(rec_dir):
                                Pupil_Angle_3D_Fixation_Detector, Manual_Gaze_Correction, Video_Export_Launcher,
                                Offline_Surface_Tracker, Raw_Data_Exporter, Batch_Exporter, Annotation_Player,
                                Log_History, Marker_Auto_Trim_Marks, Pupil_From_Recording, Offline_Pupil_Detection,
-                               Gaze_From_Recording, Offline_Calibration] + runtime_plugins
+                               Gaze_From_Recording, Offline_Calibration, Audio_From_Recording] + runtime_plugins
 
     available_plugins = system_plugins + user_launchable_plugins
     name_by_index = [p.__name__ for p in available_plugins]
@@ -273,7 +274,7 @@ def session(rec_dir):
 
     def next_frame(_):
         try:
-            cap.seek_to_frame(cap.get_frame_index())
+            cap.seek_to_frame(cap.get_frame_index() + 1)
         except(FileSeekError):
             logger.warning("Could not seek to next frame.")
         else:

@@ -180,7 +180,6 @@ class Offline_Calibration(Gaze_Producer_Base):
         return {'calibration_range': calib_range,
                 'mapping_range': map_range,
                 'progress': '{:3.0f}%'.format(0.),
-                'label': 'Unnamed',
                 'color': tuple(np.random.rand(3))}
 
     def start_detection_task(self, *_):
@@ -219,7 +218,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
 
     def append_section_menu(self, sec, collapsed=True):
-        section_menu = ui.Growing_Menu('Calibration Section {}'.format(self.sections.index(sec)))
+        section_menu = ui.Growing_Menu('Gaze Section {}'.format(self.sections.index(sec) + 1))
         section_menu.collapsed = collapsed
         section_menu.color = RGBA(*sec['color'], 1.)
 
@@ -348,11 +347,8 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.persistent.save()
 
     def gl_display(self):
-        try:
-            ref_points_norm = [r['norm_pos'] for r in self.ref_positions_by_frame[self.g_pool.capture.get_frame_index()] if r]
-            draw_points_norm(ref_points_norm,color=RGBA(0,.5,0.5,.7))
-        except IndexError:
-            pass
+        ref_points_norm = [r['norm_pos'] for r in self.ref_positions_by_frame[self.g_pool.capture.get_frame_index()] if r]
+        draw_points_norm(ref_points_norm,color=RGBA(0,.5,0.5,.7))
         padding = 30.
         max_ts = len(self.g_pool.timestamps)
 

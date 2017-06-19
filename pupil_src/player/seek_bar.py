@@ -58,7 +58,7 @@ class Seek_Bar(Plugin):
                 try:
                     # logger.info('seeking to {} form {}'.format(seek_pos,self.current_frame_index))
                     self.cap.seek_to_frame(seek_pos)
-                    self.current_frame_index = self.cap.get_frame_index()
+                    self.current_frame_index = self.cap.get_frame_index() + 1
                 except:
                     pass
             self.g_pool.new_seek = True
