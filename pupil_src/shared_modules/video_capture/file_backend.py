@@ -307,9 +307,8 @@ class File_Source(Base_Source):
             self.target_frame_idx = seek_pos
 
     def on_notify(self, notification):
-        if notification['subject'] == 'file_source.restart' and notification.get('source_path') == self.source_path:
-            self._initialised = True
-            self.seek_to_frame(0)
+        if notification['subject'] == 'file_source.seek' and notification.get('source_path') == self.source_path:
+            self.seek_to_frame(notification['frame_index'])
 
     def init_gui(self):
         from pyglui import ui

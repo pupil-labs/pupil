@@ -163,7 +163,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.detection_progress['1'] = 0.
         for eye_id in range(2):
             if self.eye_video_loc[eye_id]:
-                self.eye_control.notify({'subject': 'file_source.restart',
+                self.eye_control.notify({'subject': 'file_source.seek',
+                                        'frame_index':0,
                                          'source_path': self.eye_video_loc[eye_id]})
 
     def set_detection_mapping_mode(self, new_mode):
