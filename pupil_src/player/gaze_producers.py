@@ -18,7 +18,7 @@ from player_methods import correlate_data
 from methods import normalize
 from video_capture import File_Source, EndofVideoFileError
 from circle_detector import find_concetric_circles
-from OpenGL.GL import *
+import OpenGL.GL as gl
 from pyglui.cygl.utils import *
 from glfw import *
 
@@ -94,7 +94,7 @@ def detect_marker_positions(source_path, timestamps_path):
                 second_ellipse = markers[0][1]
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
-                marker_gray = gray_img[slice(*row_slice), slice(*col_slice)]
+                marker_gray = frame.gray[slice(*row_slice), slice(*col_slice)]
                 avg = cv2.mean(marker_gray)[0]
                 center = marker_gray[int(second_ellipse[1][1])//2, int(second_ellipse[1][0])//2]
                 rel_shade = center-avg
@@ -179,6 +179,7 @@ class Offline_Calibration(Gaze_Producer_Base):
     def create_section(self, calib_range, map_range):
         return {'calibration_range': calib_range,
                 'mapping_range': map_range,
+                'mapping_method': 'not mapped',
                 'progress': '{:3.0f}%'.format(0.),
                 'color': tuple(np.random.rand(3))}
 
@@ -251,7 +252,8 @@ class Offline_Calibration(Gaze_Producer_Base):
                 del self.menu[self.menu_section_start + idx]
                 self.recalculate_gaze_positions()
             return remove
-
+        section_menu.append(ui.Text_Input('mapping_method', sec, label='dection and mapping mode'))
+        section_menu[-1].read_only=True
         section_menu.append(ui.Text_Input('calibration_range', sec, label='Calibration range',
                                           setter=make_validate_fn(sec, 'calibration_range')))
         section_menu.append(ui.Text_Input('mapping_range', sec, label='Mapping range',
@@ -330,20 +332,20 @@ class Offline_Calibration(Gaze_Producer_Base):
             ref_list = list(chain(*self.ref_positions_by_frame[calib_slc]))
 
             if not calib_list or not ref_list:
-                logger.error('There is not enough data to calibrate section "{}"'.format(sec['label']))
+                logger.error('There is not enough data to calibrate section "{}"'.format(self.sections.index(sec) + 1))
                 return
 
             # select median pupil datum from calibration list and use its detection method as mapping method
-            mapping_method = '3d' if '3d' in calib_list[len(calib_list)//2]['method'] else '2d'
+            sec["mapping_method"] = '3d' if '3d' in calib_list[len(calib_list)//2]['method'] else '2d'
 
             map_slc = parse_range(sec['mapping_range'], len(self.g_pool.timestamps))
             map_list = list(chain(*self.g_pool.pupil_positions_by_frame[map_slc]))
 
-            fake = setup_fake_pool(self.g_pool.capture.frame_size, mapping_method)
+            fake = setup_fake_pool(self.g_pool.capture.frame_size, sec["mapping_method"])
             generator_args = (fake, ref_list, calib_list, map_list)
 
-            logger.info('Calibrating "{}"...'.format(sec['label']))
-            self.bg_tasks[idx] = bh.Task_Proxy(sec['label'], calibrate_and_map, args=generator_args)
+            logger.info('Calibrating "{}"...'.format(self.sections.index(sec) + 1))
+            self.bg_tasks[idx] = bh.Task_Proxy('{}'.format(self.sections.index(sec) + 1), calibrate_and_map, args=generator_args)
         self.persistent.save()
 
     def gl_display(self):
@@ -352,34 +354,34 @@ class Offline_Calibration(Gaze_Producer_Base):
         padding = 30.
         max_ts = len(self.g_pool.timestamps)
 
-        glMatrixMode(GL_PROJECTION)
-        glPushMatrix()
-        glLoadIdentity()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
         width, height = self.win_size
         h_pad = padding * (max_ts-2)/float(width)
         v_pad = padding * 1./(height-2)
         # ranging from 0 to len(timestamps)-1 (horizontal) and 0 to 1 (vertical)
-        glOrtho(-h_pad,  (max_ts-1)+h_pad, -v_pad, 1+v_pad, -1, 1)
+        gl.glOrtho(-h_pad,  (max_ts-1)+h_pad, -v_pad, 1+v_pad, -1, 1)
 
 
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        glLoadIdentity()
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
 
-        glTranslatef(0, .03, 0)
+        gl.glTranslatef(0, .03, 0)
         for s in self.sections:
             cal_slc = parse_range(s['calibration_range'], max_ts)
             map_slc = parse_range(s['mapping_range'], max_ts)
             color = RGBA(*s['color'], .8)
 
-            draw_polyline([(cal_slc.start, 0), (cal_slc.stop, 0)], color=color, line_type=GL_LINES, thickness=4)
-            draw_polyline([(map_slc.start, 0), (map_slc.stop, 0)], color=color, line_type=GL_LINES, thickness=2)
-            glTranslatef(0, .015, 0)
+            draw_polyline([(cal_slc.start, 0), (cal_slc.stop, 0)], color=color, line_type=gl.GL_LINES, thickness=4)
+            draw_polyline([(map_slc.start, 0), (map_slc.stop, 0)], color=color, line_type=gl.GL_LINES, thickness=2)
+            gl.glTranslatef(0, .015, 0)
 
-        glMatrixMode(GL_PROJECTION)
-        glPopMatrix()
-        glMatrixMode(GL_MODELVIEW)
-        glPopMatrix()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPopMatrix()
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPopMatrix()
 
     def on_window_resize(self, window, w, h):
         self.win_size = w, h
