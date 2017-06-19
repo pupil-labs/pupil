@@ -145,7 +145,7 @@ class Plugin(object):
 
         You may add more fields as you like.
 
-        All notifications must be serializable
+        All notifications must be serializable by msgpack.
 
         """
         if self.g_pool.app in ('player', 'exporter'):
