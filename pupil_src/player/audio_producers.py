@@ -51,29 +51,30 @@ class Audio_From_Recording(Producer_Plugin_Base):
                         break
                     self.wave_points.append((audio_ts[ts_idx], audio.mean()*5))
                     ts_idx += 1
-            print(ts_idx, len(audio_ts))
 
             self.notify_all({'subject': 'audio_changed'})
         else:
             logger.error('Could not find audio in recording.')
             self._alive = False
 
+        if self.wave_points:
+            self.wave_points = np.asarray(self.wave_points)
+            std = self.wave_points[:, 1].std() * 25
+            # in-place clipping to [- std, std]
+            self.wave_points[:, 1].clip(min=-std, max=std, out=self.wave_points[:, 1])
+            self.wave_points /= np.abs(self.wave_points[:, 1]).max()  # scale such that  all values lie between [-1, 1]
+            # self.wave_points = self.wave_points.tolist()
+
         self.requires_display = True
         self.win_size = g_pool.capture.frame_size
-        w_min_ts = self.wave_points[0][0]
-        w_max_ts = self.wave_points[-1][0]
-        g_min_ts = self.g_pool.timestamps[0]
-        g_max_ts = self.g_pool.timestamps[-1]
-        print('Audio time range', w_min_ts, w_max_ts)
-        print('Video time range', g_min_ts, g_max_ts)
 
     def gl_display(self):
-        # if self.requires_display:
-        #     self.requires_display = False
+        # `if self.wave_points:` raises ValueError if self.wave_points is a np.ndarray
+        if len(self.wave_points) > 0:
 
             padding = 30.
-            min_ts = self.wave_points[0][0]
-            max_ts = self.wave_points[-1][0]
+            min_ts = self.wave_points[0, 0]
+            max_ts = self.wave_points[-1, 0]
             # min_ts = self.g_pool.timestamps[0]
             # max_ts = self.g_pool.timestamps[-1]
             glMatrixMode(GL_PROJECTION)
@@ -81,9 +82,9 @@ class Audio_From_Recording(Producer_Plugin_Base):
             glLoadIdentity()
             width, height = self.win_size
             h_pad = padding * (max_ts - min_ts) / float(width)
-            v_pad = padding * 1./(height-2)
-            # ranging from 0 to len(timestamps)-1 (horizontal) and 0 to 1 (vertical)
-            glOrtho(-h_pad + min_ts, h_pad + max_ts , -v_pad, 1+v_pad, -1, 1)
+            v_pad = padding * 2. / (height)
+            # ranging from min_ts tp max_ts (horizontal) and -1 to 1 (vertical)
+            glOrtho(-h_pad + min_ts, h_pad + max_ts, -v_pad, 1 + v_pad, -1, 1)
 
 
             glMatrixMode(GL_MODELVIEW)
@@ -91,7 +92,7 @@ class Audio_From_Recording(Producer_Plugin_Base):
             glLoadIdentity()
 
             glTranslatef(0, .03, 0)
-            draw_polyline(self.wave_points, color=RGBA(0., 1., 0., 1.))
+            draw_polyline(self.wave_points, color=RGBA(0., 1., 0., .5))
 
             # for s in self.sections:
             #     cal_slc = parse_range(s['calibration_range'], max_ts)
