@@ -18,6 +18,7 @@ from plugin import Plugin
 from pyglui import ui
 from audio import Audio_Input_Dict
 from threading import Thread, Event
+from scipy.interpolate import interp1d
 
 import platform
 import logging
@@ -195,12 +196,9 @@ class Audio_Capture(Plugin):
             return
 
         in_stream = None
-        for stream in in_container.streams:
-            if stream.type == 'audio':
-                in_stream = stream
-                break
-
-        if not in_stream:
+        try:
+            in_stream = in_container.streams.audio[0]
+        except IndexError:
             logger.warning('No audio stream found for selected device.')
             running.clear()
             return
@@ -208,17 +206,32 @@ class Audio_Capture(Plugin):
         out_container = None
         out_stream = None
         timestamps = None
+        out_frame_num = 0
+        in_frame_size = 0
 
         def close_recording():
-            nonlocal out_container, out_stream, timestamps
+            # Bind nonlocal variables, https://www.python.org/dev/peps/pep-3104/
+            nonlocal out_container, out_stream, in_stream, in_frame_size, timestamps, out_frame_num
             if out_container is not None:
                 packet = out_stream.encode(audio_frame)
                 while packet is not None:
+                    out_frame_num += 1
                     out_container.mux(packet)
                     packet = out_stream.encode(audio_frame)
                 out_container.close()
+
+                in_frame_rate = in_stream.rate
+                # in_stream.frame_size does not return the correct value.
+                out_frame_size = out_stream.frame_size
+                out_frame_rate = out_stream.rate
+
+                old_ts_idx = np.arange(0, len(timestamps) * in_frame_size, in_frame_size) * out_frame_rate / in_frame_rate
+                new_ts_idx = np.arange(0, out_frame_num * out_frame_size, out_frame_size)
+                interpolate = interp1d(old_ts_idx, timestamps, bounds_error=False, fill_value='extrapolate')
+                new_ts = interpolate(new_ts_idx)
+
                 ts_loc = os.path.join(self.rec_dir, 'audio_timestamps.npy')
-                np.save(ts_loc, np.asarray(timestamps))
+                np.save(ts_loc, new_ts)
             out_container = None
             out_stream = None
             timestamps = None
@@ -236,11 +249,13 @@ class Audio_Capture(Plugin):
                         rec_file = os.path.join(self.rec_dir, 'audio.mp4')
                         out_container = av.open(rec_file, 'w')
                         out_stream = out_container.add_stream('aac')
+                        in_frame_size = audio_frame.samples  # set here to make sure full packet size is used
                         timestamps = []
 
                     timestamps.append(audio_frame.timestamp)
                     packet = out_stream.encode(audio_frame)
                     if packet is not None:
+                        out_frame_num += 1
                         out_container.mux(packet)
                 elif out_container is not None:
                     # recording stopped

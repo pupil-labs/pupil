@@ -109,6 +109,7 @@ class AV_Writer(object):
                 self.audio_export = self.container.add_stream(template=self.audio_rec.streams.audio[0])
             else:
                 logger.warning('Could not mux audio. File not found.')
+                self.audio_export = False
         else:
             self.audio_export = False
 
@@ -160,7 +161,7 @@ class AV_Writer(object):
         if self.audio_export:
             for audio_packet in self.audio_rec.demux():
                 if self.audio_packets_decoded >= len(self.audio_ts):
-                    print('non-matching indices: {} > {}'.format(self.audio_packets_decoded, len(self.audio_ts)))
+                    logger.debug('More audio frames decoded than there are timestamps: {} > {}'.format(self.audio_packets_decoded, len(self.audio_ts)))
                     break
                 audio_pts = int((self.audio_ts[self.audio_packets_decoded]-self.start_time) / self.audio_export.time_base)
                 audio_packet.pts = audio_pts
@@ -169,7 +170,7 @@ class AV_Writer(object):
                 self.audio_packets_decoded += 1
 
                 if audio_pts * self.audio_export.time_base < 0:
-                    print('Seeking: {} -> {}'.format(audio_pts * self.audio_export.time_base, self.start_time))
+                    logger.debug('Seeking: {} -> {}'.format(audio_pts * self.audio_export.time_base, self.start_time))
                     continue  # seek to start_time
 
                 self.container.mux(audio_packet)
