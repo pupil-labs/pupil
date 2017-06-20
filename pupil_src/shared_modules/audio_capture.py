@@ -23,13 +23,13 @@ from scipy.interpolate import interp1d
 import platform
 import logging
 
-assert(av.__version__ >= '0.3.1')
+assert(av.__version__ >= '0.3.0')
 logger = logging.getLogger(__name__)
 av.logging.set_level(av.logging.ERROR)
 
 
 NOT_REC_STR = 'Start a new recording to save audio.'
-REC_STR = 'Saving audio to "audio.wav".'
+REC_STR = 'Saving audio to "audio.mp4".'
 
 
 class Audio_Capture(Plugin):
@@ -191,6 +191,7 @@ class Audio_Capture(Plugin):
                 in_container = av.open('hw:{}'.format(audio_src), format="alsa")
             else:
                 raise av.AVError('Platform does not support audio capture.')
+            stream_start_ts = self.g_pool.get_now()
         except av.AVError:
             running.clear()
             return
@@ -236,14 +237,13 @@ class Audio_Capture(Plugin):
             out_stream = None
             timestamps = None
 
-        stream_start_ts = self.g_pool.get_now()
         for packet in in_container.demux(in_stream):
             # ffmpeg timestamps - in_stream.startime = packte pts relative to startime
             # multiply with stream_timebase to get seconds
             # add start time of this stream in pupil time unadjusted
             # finally add pupil timebase offset to adjust for settable timebase.
             for audio_frame in packet.decode():
-                audio_frame.timestamp = (audio_frame.pts - in_stream.start_time) * in_stream.time_base + stream_start_ts - self.g_pool.timebase.value
+                timestamp = (audio_frame.pts - in_stream.start_time) * in_stream.time_base + stream_start_ts - self.g_pool.timebase.value
                 if recording.is_set():
                     if out_container is None:
                         rec_file = os.path.join(self.rec_dir, 'audio.mp4')
@@ -252,7 +252,7 @@ class Audio_Capture(Plugin):
                         in_frame_size = audio_frame.samples  # set here to make sure full packet size is used
                         timestamps = []
 
-                    timestamps.append(audio_frame.timestamp)
+                    timestamps.append(timestamp)
                     packet = out_stream.encode(audio_frame)
                     if packet is not None:
                         out_frame_num += 1
