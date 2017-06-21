@@ -139,7 +139,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         super().__init__(g_pool)
         self.menu = None
 
-        result_dir = os.path.join(g_pool.rec_dir, 'offline_results')
+        result_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(result_dir, exist_ok=True)
         self.persistent = Persistent_Dict(os.path.join(result_dir, 'offline_calibration'))
         self.persistent['version'] = 2
