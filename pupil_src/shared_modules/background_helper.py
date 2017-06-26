@@ -50,9 +50,9 @@ class Task_Proxy(object):
                     raise EarlyCancellationError('Task was cancelled')
                 pipe.send(datum)
         except Exception as e:
-            import traceback
-            print(traceback.format_exc())
-            pipe.send(e)
+            if not isinstance(e, EarlyCancellationError):
+                import traceback
+                logger.warning(traceback.format_exc())
         else:
             pipe.send(0xDeadBeef)
         finally:
