@@ -55,6 +55,9 @@ class Pupil_From_Recording(Pupil_Producer_Base):
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
 
+    def get_init_dict(self):
+        return {}
+
 
 class Offline_Pupil_Detection(Pupil_Producer_Base):
     """docstring for Offline_Pupil_Detection"""
