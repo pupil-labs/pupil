@@ -19,6 +19,7 @@ from pyglui import ui
 from audio import Audio_Input_Dict
 from threading import Thread, Event
 from scipy.interpolate import interp1d
+from time import time
 
 import platform
 import logging
@@ -109,7 +110,7 @@ class Audio_Capture(Plugin):
         if notification['subject'] == 'recording.started':
             self.rec_dir = notification['rec_path']
             self.recording.set()
-            if self.running.is_set(): # and self.audio_container is None:
+            if self.running.is_set():  # and self.audio_container is None:
                 # rec_file = os.path.join(self.rec_dir, 'audio.mp4')
                 # self.audio_container = av.open(rec_file, 'w')
                 # self.timestamps = []
@@ -127,19 +128,6 @@ class Audio_Capture(Plugin):
             self.close_audio_recording()
 
     def close_audio_recording(self):
-        # packet = self.audio_out_stream.encode(None)
-        # while packet is not None:
-        #     self.audio_container.mux(packet)
-        #     packet = self.audio_out_stream.encode(None)
-
-        # self.audio_container.close()
-        # ts_loc = os.path.join(self.rec_dir, 'audio_timestamps.npy')
-        # np.save(ts_loc, np.asarray(self.timestamps))
-
-        # self.timestamps = None
-        # self.audio_out_stream = None
-        # self.audio_container = None
-
         self.menu[-2].read_only = False
         del self.menu[-1]
         self.menu.append(ui.Info_Text(NOT_REC_STR))
@@ -191,9 +179,10 @@ class Audio_Capture(Plugin):
                 in_container = av.open('hw:{}'.format(audio_src), format="alsa")
             else:
                 raise av.AVError('Platform does not support audio capture.')
-            stream_start_ts = self.g_pool.get_now()
-        except av.AVError:
+        except av.AVError as err:
             running.clear()
+            self.audio_src = 'No Audio'
+            logger.warning('Error starting audio capture: {}'.format(err))
             return
 
         in_stream = None
@@ -202,6 +191,7 @@ class Audio_Capture(Plugin):
         except IndexError:
             logger.warning('No audio stream found for selected device.')
             running.clear()
+            self.audio_src = 'No Audio'
             return
 
         out_container = None
@@ -209,6 +199,23 @@ class Audio_Capture(Plugin):
         timestamps = None
         out_frame_num = 0
         in_frame_size = 0
+
+        stream_epoch = in_stream.start_time * in_stream.time_base
+        uvc_clock_dif = abs(stream_epoch - self.g_pool.get_now())
+        pyt_clock_dif = abs(stream_epoch - time())
+        max_clock_dif = 4.
+
+        if uvc_clock_dif > max_clock_dif and pyt_clock_dif > max_clock_dif:
+            logger.error('Could not identify audio stream clock.')
+            running.clear()
+            self.audio_src = 'No Audio'
+            return
+        elif uvc_clock_dif > pyt_clock_dif:
+            logger.info('Audio stream uses time.time() as clock (Δ {}s)'.format(pyt_clock_dif))
+            clock_differences = self.g_pool.get_now() - time()
+        else:
+            logger.info('Audio stream uses uvc.get_time_monotonic() as clock')
+            clock_differences = 0
 
         def close_recording():
             # Bind nonlocal variables, https://www.python.org/dev/peps/pep-3104/
@@ -226,8 +233,8 @@ class Audio_Capture(Plugin):
                 out_frame_size = out_stream.frame_size
                 out_frame_rate = out_stream.rate
 
-                old_ts_idx = np.arange(0, len(timestamps) * in_frame_size, in_frame_size) * out_frame_rate / in_frame_rate
-                new_ts_idx = np.arange(0, out_frame_num * out_frame_size, out_frame_size)
+                old_ts_idx = np.arange(0, len(timestamps) * in_frame_size, in_frame_size) / in_frame_rate
+                new_ts_idx = np.arange(0, out_frame_num * out_frame_size, out_frame_size) / out_frame_rate
                 interpolate = interp1d(old_ts_idx, timestamps, bounds_error=False, fill_value='extrapolate')
                 new_ts = interpolate(new_ts_idx)
 
@@ -243,12 +250,13 @@ class Audio_Capture(Plugin):
             # add start time of this stream in pupil time unadjusted
             # finally add pupil timebase offset to adjust for settable timebase.
             for audio_frame in packet.decode():
-                timestamp = (audio_frame.pts - in_stream.start_time) * in_stream.time_base + stream_start_ts - self.g_pool.timebase.value
+                timestamp = audio_frame.pts * in_stream.time_base + clock_differences - self.g_pool.timebase.value
                 if recording.is_set():
                     if out_container is None:
                         rec_file = os.path.join(self.rec_dir, 'audio.mp4')
                         out_container = av.open(rec_file, 'w')
                         out_stream = out_container.add_stream('aac')
+                        out_frame_num = 0
                         in_frame_size = audio_frame.samples  # set here to make sure full packet size is used
                         timestamps = []
 
