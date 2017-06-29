@@ -337,6 +337,7 @@ class NDSI_Manager(Base_Manager):
         self.selected_host = None
         self._recover_in = 3
         self._rejoin_in = 400
+        logger.warning("Make sure the `time_sync` plugin is loaded!")
 
     def cleanup(self):
         self.deinit_gui()

@@ -39,8 +39,7 @@ else:
     version_file = None
 
 # create folder for user settings, tmp data
-if not os.path.isdir(user_dir):
-    os.mkdir(user_dir)
+os.makedirs(os.path.join(user_dir, 'plugins'), exist_ok=True)
 
 # imports
 from file_methods import Persistent_Dict, load_object
@@ -142,9 +141,7 @@ class Global_Container(object):
 
 def session(rec_dir):
     runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
-
     system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
-
     user_launchable_plugins = [Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross, Vis_Watermark,
                                Vis_Eye_Video_Overlay, Vis_Scan_Path, Gaze_Position_2D_Fixation_Detector,
                                Pupil_Angle_3D_Fixation_Detector, Video_Export_Launcher,
@@ -576,8 +573,8 @@ def show_no_rec_window():
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))
-    if VersionFormat(session_settings.get("version", '0.0')) < get_version(version_file):
-        logger.info("Session setting are from older version of this app. I will not use those.")
+    if VersionFormat(session_settings.get("version", '0.0')) != get_version(version_file):
+        logger.info("Session setting are from a  different version of this app. I will not use those.")
         session_settings.clear()
     w, h = session_settings.get('window_size', (1280, 720))
     window_pos = session_settings.get('window_position', window_position_default)

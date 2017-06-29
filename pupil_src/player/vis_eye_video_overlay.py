@@ -197,13 +197,13 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
         self.menu.append(ui.Slider('eye_scale_factor',self,min=0.2,step=0.1,max=1.0,label='Video Scale'))
         self.menu.append(ui.Switch('move_around',self,label="Move Overlay"))
         if len(self.eye_cap) == 2:
-            self.menu.append(ui.Selector('showeyes',self,label='Show',selection=[(0,),(1,),(0,1)],labels= ['eye 1','eye 2','both'],setter=self.set_showeyes))
+            self.menu.append(ui.Selector('showeyes',self,label='Show',selection=[(0,),(1,),(0,1)],labels= ['Eye 0','Eye 1','both'],setter=self.set_showeyes))
         if 0 in self.showeyes:
-            self.menu.append(ui.Switch('0',self.mirror,label="Eye 1: Horiz. Flip"))
-            self.menu.append(ui.Switch('0',self.flip,label="Eye 1: Vert. Flip"))
+            self.menu.append(ui.Switch('0',self.mirror,label="Eye 0: Horiz. Flip"))
+            self.menu.append(ui.Switch('0',self.flip,label="Eye 0: Vert. Flip"))
         if 1 in self.showeyes:
-            self.menu.append(ui.Switch('1',self.mirror,label="Eye 2: Horiz Flip"))
-            self.menu.append(ui.Switch('1',self.flip,label="Eye 2: Vert Flip"))
+            self.menu.append(ui.Switch('1',self.mirror,label="Eye 1: Horiz Flip"))
+            self.menu.append(ui.Switch('1',self.flip,label="Eye 1: Vert Flip"))
         self.menu.append(ui.Switch('show_ellipses', self, label="Visualize Ellipses"))
 
 
