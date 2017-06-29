@@ -6,6 +6,9 @@ Thumbs.db
 *.pyc
 *.pstats
 
+# object files #
+*.o
+
 # binaries #
 *.so
 
@@ -40,4 +43,3 @@ SphereCircleTest.cpp
 *.mp4
 *.mkv
 *.egg-info
-*.o
