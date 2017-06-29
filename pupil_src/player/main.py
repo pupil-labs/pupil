@@ -349,7 +349,7 @@ def session(rec_dir):
                                             getter=lambda: selector_label))
 
     base_plugins = [Visualizer_Plugin_Base, Analysis_Plugin_Base, Producer_Plugin_Base]
-    base_labels = ['Visualizer:', 'Analyser:', 'Producer:']
+    base_labels = ['Visualizer:', 'Analyser:', 'Data Source:']
     launchable = user_launchable_plugins.copy()
     for base_class, label in zip(base_plugins, base_labels):
         member_plugins = []
