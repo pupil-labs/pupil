@@ -97,7 +97,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-assert pyglui_version >= '1.4'
+assert pyglui_version >= '1.5'
 
 
 # since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
@@ -178,11 +178,6 @@ def session(rec_dir):
 
     def on_button(window, button, action, mods):
         g_pool.gui.update_button(button, action, mods)
-        pos = glfwGetCursorPos(window)
-        pos = normalize(pos, glfwGetWindowSize(window))
-        pos = denormalize(pos, (frame.img.shape[1], frame.img.shape[0]))  # Position in img pixels
-        for p in g_pool.plugins:
-            p.on_click(pos, button, action)
 
     def on_pos(window, x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
@@ -535,7 +530,15 @@ def session(rec_dir):
         fps_graph.draw()
         cpu_graph.draw()
         pupil_graph.draw()
-        g_pool.gui.update()
+        unused_buttons = g_pool.gui.update()
+        for b in unused_buttons:
+            button,action,mods = b
+            pos = glfwGetCursorPos(main_window)
+            pos = normalize(pos, glfwGetWindowSize(main_window))
+            pos = denormalize(pos, (frame.img.shape[1], frame.img.shape[0]))  # Position in img pixels
+            for p in g_pool.plugins:
+                p.on_click(pos, button, action)
+
 
         # present frames at appropriate speed
         cap.wait(frame)
