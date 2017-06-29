@@ -131,7 +131,11 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         plugins = self.g_pool.plugins.get_initializers()
 
         out_file_path=verify_out_file_path(self.rec_name,export_dir)
-        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,self.g_pool.min_data_confidence,start_frame,end_frame,plugins,out_file_path,self.g_pool.pupil_data))
+        pre_computed = {'gaze_positions':self.g_pool.gaze_positions,
+                        'pupil_positions':self.g_pool.pupil_positions,
+                        'pupil_data':self.g_pool.pupil_data}
+        pre_computed = {}
+        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,self.g_pool.min_data_confidence,start_frame,end_frame,plugins,out_file_path,pre_computed))
         self.new_export = process
 
     def launch_export(self, new_export):

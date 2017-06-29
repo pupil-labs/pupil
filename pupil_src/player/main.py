@@ -267,8 +267,8 @@ def session(rec_dir):
     g_pool.fixations = []
 
     g_pool.notifications_by_frame = correlate_data(g_pool.pupil_data['notifications'], g_pool.timestamps)
-    g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]
-    g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]
+    g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps] # populated by producer`
+    g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps] # populated by producer
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
 
     def next_frame(_):
