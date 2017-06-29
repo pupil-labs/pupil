@@ -282,10 +282,8 @@ class Offline_Calibration(Gaze_Producer_Base):
     def on_notify(self, notification):
         subject = notification['subject']
         if subject == 'pupil_positions_changed':
-            # do not calibrate while detection task is still running
-            if len(self.circle_marker_positions) == len(self.g_pool.timestamps):
-                for s in self.sections:
-                    self.calibrate_section(s)
+            for s in self.sections:
+                self.calibrate_section(s)
 
     def on_click(self,pos,button,action):
         if action == GLFW_PRESS and self.manual_ref_edit_mode:
@@ -366,15 +364,13 @@ class Offline_Calibration(Gaze_Producer_Base):
         sec['bg_task'] = bh.Task_Proxy('{}'.format(self.sections.index(sec) + 1), calibrate_and_map, args=generator_args)
 
     def gl_display(self):
-        if len(self.circle_marker_positions) > self.g_pool.capture.get_frame_index():
-            ref_point_norm = self.circle_marker_positions[self.g_pool.capture.get_frame_index()]['norm_pos']
-            draw_points_norm((ref_point_norm,),size=35, color=RGBA(0, .5, 0.5, .7))
-            draw_points_norm((ref_point_norm,),size=5, color=RGBA(.0, .9, 0.0, 1.0))
+        ref_point_norm = [r['norm_pos'] for r in self.circle_marker_positions if  self.g_pool.capture.get_frame_index() == r['index']]
+        draw_points_norm(ref_point_norm,size=35, color=RGBA(0, .5, 0.5, .7))
+        draw_points_norm(ref_point_norm,size=5, color=RGBA(.0, .9, 0.0, 1.0))
 
         manual_refs_in_frame = [r['norm_pos'] for r in self.manual_ref_positions if  self.g_pool.capture.get_frame_index() in r['index_range']]
-        if manual_refs_in_frame:
-            draw_points_norm((manual_refs_in_frame),size=35, color=RGBA(.0, .0, 0.9, .8))
-            draw_points_norm((manual_refs_in_frame),size=5, color=RGBA(.0, .9, 0.0, 1.0))
+        draw_points_norm(manual_refs_in_frame,size=35, color=RGBA(.0, .0, 0.9, .8))
+        draw_points_norm(manual_refs_in_frame,size=5, color=RGBA(.0, .9, 0.0, 1.0))
 
         padding = 30.
         max_ts = len(self.g_pool.timestamps)
