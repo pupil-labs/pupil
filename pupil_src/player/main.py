@@ -82,7 +82,7 @@ from video_export_launcher import Video_Export_Launcher
 from offline_surface_tracker import Offline_Surface_Tracker
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from fixation_detector import Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector
-from manual_gaze_correction import Manual_Gaze_Correction
+# from manual_gaze_correction import Manual_Gaze_Correction
 from batch_exporter import Batch_Exporter
 from log_display import Log_Display
 from annotations import Annotation_Player
@@ -147,7 +147,7 @@ def session(rec_dir):
 
     user_launchable_plugins = [Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross, Vis_Watermark,
                                Vis_Eye_Video_Overlay, Vis_Scan_Path, Gaze_Position_2D_Fixation_Detector,
-                               Pupil_Angle_3D_Fixation_Detector, Manual_Gaze_Correction, Video_Export_Launcher,
+                               Pupil_Angle_3D_Fixation_Detector, Video_Export_Launcher,
                                Offline_Surface_Tracker, Raw_Data_Exporter, Batch_Exporter, Annotation_Player,
                                Log_History, Marker_Auto_Trim_Marks, Pupil_From_Recording, Offline_Pupil_Detection,
                                Gaze_From_Recording, Offline_Calibration] + runtime_plugins
