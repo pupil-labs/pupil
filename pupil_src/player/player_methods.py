@@ -157,16 +157,13 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
                 camera_calibration = load_object(cam_calib_loc)
             except:
                 # no camera calibration found
-                frame_size = 0, 0
                 video = av.open(video_loc, 'r')
-                for stream in video.streams:
-                    if stream.type == b'video':
-                        frame_size = stream.format.width, stream.format.height
-                        break
+                frame_size = video.streams.video[0].format.width, video.streams.video[0].format.height
                 del video
-                if time_name in pre_recorded_calibrations and frame_size in pre_recorded_calibrations[time_name]:
+                try:
                     camera_calibration = pre_recorded_calibrations[time_name][frame_size]
-                else:
+                except KeyError:
+
                     camera_calibration = idealized_camera_calibration(frame_size)
                     logger.warning('Camera calibration not found. Will assume idealized camera.')
                 save_object(camera_calibration, cam_calib_loc)
