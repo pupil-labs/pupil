@@ -38,11 +38,11 @@ gaze_mapping_plugins_by_name = {p.__name__: p for p in gaze_mapping_plugins}
 
 
 Fake_Capture = namedtuple('Fake_Capture', ['frame_size'])
-Fake_Pool = namedtuple('Fake_Pool', ['app', 'get_timestamp', 'capture', 'detection_mapping_mode'])
+Fake_Pool = namedtuple('Fake_Pool', ['app', 'get_timestamp', 'capture', 'detection_mapping_mode','rec_dir'])
 
 
-def setup_fake_pool(frame_size, detection_mode):
-    return Fake_Pool('player', lambda: 0., Fake_Capture(frame_size), detection_mode)
+def setup_fake_pool(frame_size, detection_mode,rec_dir):
+    return Fake_Pool('player', lambda: 0., Fake_Capture(frame_size), detection_mode,rec_dir)
 
 random_colors = ( (0, .8, 0, .8),
                    (.8, 0, 0, .8),
@@ -357,7 +357,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         map_list = list(chain(*self.g_pool.pupil_positions_by_frame[slice(*sec['mapping_range'])]))
 
-        fake = setup_fake_pool(self.g_pool.capture.frame_size, sec["mapping_method"])
+        fake = setup_fake_pool(self.g_pool.capture.frame_size, sec["mapping_method"],self.g_pool.rec_dir)
         generator_args = (fake, ref_list, calib_list, map_list)
 
         logger.info('Calibrating "{}"...'.format(self.sections.index(sec) + 1))
