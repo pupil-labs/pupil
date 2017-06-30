@@ -394,9 +394,9 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         for s in self.sections:
             if s['calibration_method'] == "natural_features":
-                draw_points([(m['index'],0) for m in self.manual_ref_positions],size=8,color=RGBA(.0, .0, 0.9, .8))
+                draw_points([(m['index'],0) for m in self.manual_ref_positions],size=12,color=RGBA(.0, .0, 0.9, .8))
             else:
-                draw_points([(m['index'],0) for m in self.circle_marker_positions],size=8,color=RGBA(0, .5, 0.5, .7))
+                draw_points([(m['index'],0) for m in self.circle_marker_positions],size=12,color=RGBA(0, .5, 0.5, .7))
             cal_slc = slice(*s['calibration_range'])
             map_slc = slice(*s['mapping_range'])
             color = RGBA(*s['color'])
