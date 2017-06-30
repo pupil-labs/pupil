@@ -6,6 +6,9 @@ Thumbs.db
 *.pyc
 *.pstats
 
+# object files #
+*.o
+
 # binaries #
 *.so
 *.o

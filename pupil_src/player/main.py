@@ -39,8 +39,7 @@ else:
     version_file = None
 
 # create folder for user settings, tmp data
-if not os.path.isdir(user_dir):
-    os.mkdir(user_dir)
+os.makedirs(os.path.join(user_dir, 'plugins'), exist_ok=True)
 
 # imports
 from file_methods import Persistent_Dict, load_object
@@ -82,7 +81,7 @@ from video_export_launcher import Video_Export_Launcher
 from offline_surface_tracker import Offline_Surface_Tracker
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from fixation_detector import Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector
-from manual_gaze_correction import Manual_Gaze_Correction
+# from manual_gaze_correction import Manual_Gaze_Correction
 from batch_exporter import Batch_Exporter
 from log_display import Log_Display
 from annotations import Annotation_Player
@@ -90,7 +89,6 @@ from raw_data_exporter import Raw_Data_Exporter
 from log_history import Log_History
 from pupil_producers import Pupil_Producer_Base, Pupil_From_Recording, Offline_Pupil_Detection
 from gaze_producers import Gaze_Producer_Base, Gaze_From_Recording, Offline_Calibration
-from audio_producers import Audio_From_Recording
 
 import logging
 # set up root logger before other imports
@@ -98,7 +96,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-assert pyglui_version >= '1.4'
+assert pyglui_version >= '1.5'
 
 
 # since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
@@ -143,15 +141,13 @@ class Global_Container(object):
 
 def session(rec_dir):
     runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
-
     system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
-
     user_launchable_plugins = [Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross, Vis_Watermark,
                                Vis_Eye_Video_Overlay, Vis_Scan_Path, Gaze_Position_2D_Fixation_Detector,
-                               Pupil_Angle_3D_Fixation_Detector, Manual_Gaze_Correction, Video_Export_Launcher,
+                               Pupil_Angle_3D_Fixation_Detector, Video_Export_Launcher,
                                Offline_Surface_Tracker, Raw_Data_Exporter, Batch_Exporter, Annotation_Player,
                                Log_History, Marker_Auto_Trim_Marks, Pupil_From_Recording, Offline_Pupil_Detection,
-                               Gaze_From_Recording, Offline_Calibration, Audio_From_Recording] + runtime_plugins
+                               Gaze_From_Recording, Offline_Calibration] + runtime_plugins
 
     available_plugins = system_plugins + user_launchable_plugins
     name_by_index = [p.__name__ for p in available_plugins]
@@ -179,11 +175,6 @@ def session(rec_dir):
 
     def on_button(window, button, action, mods):
         g_pool.gui.update_button(button, action, mods)
-        pos = glfwGetCursorPos(window)
-        pos = normalize(pos, glfwGetWindowSize(window))
-        pos = denormalize(pos, (frame.img.shape[1], frame.img.shape[0]))  # Position in img pixels
-        for p in g_pool.plugins:
-            p.on_click(pos, button, action)
 
     def on_pos(window, x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
@@ -268,8 +259,8 @@ def session(rec_dir):
     g_pool.fixations = []
 
     g_pool.notifications_by_frame = correlate_data(g_pool.pupil_data['notifications'], g_pool.timestamps)
-    g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]
-    g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]
+    g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps] # populated by producer`
+    g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps] # populated by producer
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
 
     def next_frame(_):
@@ -355,7 +346,7 @@ def session(rec_dir):
                                             getter=lambda: selector_label))
 
     base_plugins = [Visualizer_Plugin_Base, Analysis_Plugin_Base, Producer_Plugin_Base]
-    base_labels = ['Visualizer:', 'Analyser:', 'Producer:']
+    base_labels = ['Visualizer:', 'Analyser:', 'Data Source:']
     launchable = user_launchable_plugins.copy()
     for base_class, label in zip(base_plugins, base_labels):
         member_plugins = []
@@ -536,7 +527,15 @@ def session(rec_dir):
         fps_graph.draw()
         cpu_graph.draw()
         pupil_graph.draw()
-        g_pool.gui.update()
+        unused_buttons = g_pool.gui.update()
+        for b in unused_buttons:
+            button,action,mods = b
+            pos = glfwGetCursorPos(main_window)
+            pos = normalize(pos, glfwGetWindowSize(main_window))
+            pos = denormalize(pos, (frame.img.shape[1], frame.img.shape[0]))  # Position in img pixels
+            for p in g_pool.plugins:
+                p.on_click(pos, button, action)
+
 
         # present frames at appropriate speed
         cap.wait(frame)
@@ -574,8 +573,8 @@ def show_no_rec_window():
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))
-    if VersionFormat(session_settings.get("version", '0.0')) < get_version(version_file):
-        logger.info("Session setting are from older version of this app. I will not use those.")
+    if VersionFormat(session_settings.get("version", '0.0')) != get_version(version_file):
+        logger.info("Session setting are from a  different version of this app. I will not use those.")
         session_settings.clear()
     w, h = session_settings.get('window_size', (1280, 720))
     window_pos = session_settings.get('window_position', window_position_default)
