@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import multiprocessing as mp
 from ctypes import c_bool
 
 import logging
@@ -22,7 +21,7 @@ class EarlyCancellationError(Exception):
 
 class Task_Proxy(object):
     '''Future like object that runs a given generator in the background and returns is able to return the results incrementally'''
-    def __init__(self, name, generator,force_spawn=False, args=(), kwargs={}):
+    def __init__(self, name, generator, force_spawn=False, args=(), kwargs={}):
         super(Task_Proxy, self).__init__()
 
         if force_spawn:
@@ -100,7 +99,7 @@ if __name__ == '__main__':
             sleep(np.random.rand() * .1)
 
     # initialize task proxy
-    task = Task_Proxy('Background', example_generator, args=(5., 3.), kwargs={'steps': 50})
+    task = Task_Proxy('Background', example_generator, args=(5., 3.), kwargs={'steps': 100})
 
     from time import time, sleep
     start = time()
