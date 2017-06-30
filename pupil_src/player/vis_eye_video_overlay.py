@@ -34,6 +34,7 @@ from methods import normalize,denormalize
 import logging
 logger = logging.getLogger(__name__)
 
+
 def get_past_timestamp(idx,timestamps):
     """
     recursive function to find the most recent valid timestamp in the past
@@ -158,7 +159,9 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
         #try to load eye video and ts for each eye.
         for video,ts in zip(eye_video_path,eye_timestamps_path):
             try:
-                self.eye_cap.append(File_Source(self.g_pool,source_path=glob(video)[0],timestamps=np.load(ts)))
+                class empty(object):
+                    pass
+                self.eye_cap.append(File_Source(empty(),source_path=glob(video)[0],timestamps=np.load(ts)))
             except(IndexError,FileCaptureError):
                 pass
             else:
