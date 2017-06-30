@@ -156,7 +156,7 @@ class File_Source(Base_Source):
         # set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
         self.next_frame = self._next_frame()
         f0, f1 = next(self.next_frame), next(self.next_frame)
-        self.pts_rate = float(1/f1.pts/self.video_stream.time_base)
+        self.pts_rate = f1.pts
         self.seek_to_frame(0)
         self.average_rate = (self.timestamps[-1]-self.timestamps[0])/len(self.timestamps)
 
@@ -180,7 +180,6 @@ class File_Source(Base_Source):
         return self._initialised
 
     @property
-    @ensure_initialisation(fallback_func=lambda: (1270, 720))
     def frame_size(self):
         return int(self.video_stream.format.width), int(self.video_stream.format.height)
 
@@ -222,16 +221,11 @@ class File_Source(Base_Source):
         # some older mkv did not use perfect timestamping so we are doing int(round()) to clear that.
         # With properly spaced pts (any v0.6.100+ recording) just int() would suffice.
         # print float(pts*self.video_stream.time_base*self.video_stream.average_rate),round(pts*self.video_stream.time_base*self.video_stream.average_rate)
-        return int(round(pts*self.video_stream.time_base*self.pts_rate))
-
-    @ensure_initialisation()
-    def pts_to_time(self, pts):
-        ### we do not use this one, since we have our timestamps list.
-        return int(pts*self.video_stream.time_base)
+        return int(pts/self.pts_rate)
 
     @ensure_initialisation()
     def idx_to_pts(self, idx):
-        return int(idx/self.video_stream.time_base/self.pts_rate)
+        return idx*self.pts_rate
 
     @ensure_initialisation()
     def get_frame(self):
