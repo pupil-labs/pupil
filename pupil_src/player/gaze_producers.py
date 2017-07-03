@@ -21,7 +21,7 @@ from circle_detector import find_concetric_circles
 import OpenGL.GL as gl
 from pyglui.cygl.utils import *
 from glfw import *
-
+from time import time
 from calibration_routines import gaze_mapping_plugins
 from calibration_routines.finish_calibration import select_calibration_method
 from file_methods import load_object, save_object
@@ -29,7 +29,6 @@ from file_methods import load_object, save_object
 import background_helper as bh
 from itertools import chain
 import random
-from collections import namedtuple
 
 import logging
 logger = logging.getLogger(__name__)
@@ -37,19 +36,27 @@ logger = logging.getLogger(__name__)
 gaze_mapping_plugins_by_name = {p.__name__: p for p in gaze_mapping_plugins}
 
 
-Fake_Capture = namedtuple('Fake_Capture', ['frame_size'])
-Fake_Pool = namedtuple('Fake_Pool', ['app', 'get_timestamp', 'capture', 'detection_mapping_mode','rec_dir'])
-
+class Empty(object):
+        pass
 
 def setup_fake_pool(frame_size, detection_mode,rec_dir):
-    return Fake_Pool('player', lambda: 0., Fake_Capture(frame_size), detection_mode,rec_dir)
+    cap = Empty()
+    cap.frame_size = frame_size
+    pool = Empty()
+    pool.capture = cap
+    pool.get_timestamp = time
+    pool.detection_mapping_mode = detection_mode
+    pool.rec_dir = rec_dir
+    pool.app = 'player'
+    return pool
 
-random_colors = ( (0, .8, 0, .8),
-                   (.8, 0, 0, .8),
-                   (0, 0, .8, .8),
-                   (.8, 0, .6, .8),
-                    )
 
+random_colors = ((0.66015625, 0.859375, 0.4609375, 0.8),
+                 (0.99609375, 0.84375, 0.3984375, 0.8),
+                 (0.46875, 0.859375, 0.90625, 0.8),
+                 (0.984375, 0.59375, 0.40234375, 0.8),
+                 (0.66796875, 0.61328125, 0.9453125, 0.8),
+                 (0.99609375, 0.37890625, 0.53125, 0.8))
 
 class Gaze_Producer_Base(Producer_Plugin_Base):
     uniqueness = 'by_base_class'
@@ -418,6 +425,8 @@ class Offline_Calibration(Gaze_Producer_Base):
         if self.detection_proxy:
             self.detection_proxy.cancel()
         for sec in self.sections:
+            if sec['bg_task']:
+                sec['bg_task'].cancel()
             sec['bg_task'] = None
             sec["gaze_positions"] = []
 
