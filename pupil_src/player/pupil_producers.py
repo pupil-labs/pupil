@@ -22,7 +22,7 @@ from time import sleep
 from threading import Thread
 from player_methods import correlate_data
 from file_methods import load_object,save_object
-if platform.system() == 'Darwin':
+if platform.system() in ('Darwin',"Linux"):
     from multiprocessing import get_context
     mp = get_context('spawn')
     Value = mp.Value
