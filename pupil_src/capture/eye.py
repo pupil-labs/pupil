@@ -495,7 +495,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         data = frame.gray
                     pupil_socket.send('frame.eye.%s'%eye_id,{
                         'width': frame.width,
-                        'height': frame.width,
+                        'height': frame.height,
                         'index': frame.index,
                         'timestamp': frame.timestamp,
                         'format': frame_publish_format,
