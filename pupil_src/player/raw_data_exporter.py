@@ -13,13 +13,13 @@ import os
 import csv
 from itertools import chain
 import logging
-from plugin import Plugin
+from plugin import Analysis_Plugin_Base
 from pyglui import ui
 # logging
 logger = logging.getLogger(__name__)
 
 
-class Raw_Data_Exporter(Plugin):
+class Raw_Data_Exporter(Analysis_Plugin_Base):
     '''
     pupil_positions.csv
     keys:

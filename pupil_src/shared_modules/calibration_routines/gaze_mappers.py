@@ -104,7 +104,6 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
             return []
 
 
-
 class Dummy_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     """docstring for Dummy_Gaze_Mapper"""
     def __init__(self, g_pool):
@@ -212,7 +211,6 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
         self.cal_points_3d = cal_points_3d
         self.cal_ref_points_3d = cal_ref_points_3d
         self.cal_gaze_points_3d = cal_gaze_points_3d
-        self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics ,cal_points_3d, cal_ref_points_3d,eye_camera_to_world_matrix, cal_gaze_points_3d)
         self.g_pool = g_pool
         self.gaze_pts_debug = []
         self.sphere = {}
@@ -225,6 +223,10 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
         return np.dot(self.eye_camera_to_world_matrix , point)[:3]
 
     def init_gui(self):
+        self.visualizer = Calibration_Visualizer(self.g_pool, self.camera_intrinsics ,
+                                                 self.cal_points_3d, self.cal_ref_points_3d,
+                                                 self.eye_camera_to_world_matrix,
+                                                 self.cal_gaze_points_3d)
 
         def open_close_window(new_state):
             if new_state:
@@ -262,7 +264,7 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
                 'timestamp':p['timestamp'],
                 'base_data':[p]}
 
-        if self.visualizer.window:
+        if hasattr(self, 'visualizer') and self.visualizer.window:
             self.gaze_pts_debug.append( gaze_3d )
             self.sphere['center'] = eye_center #eye camera coordinates
             self.sphere['radius'] = p['sphere']['radius']
@@ -284,7 +286,8 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     def cleanup(self):
         super().cleanup()
         self.deinit_gui()
-        self.visualizer.close_window()
+        if hasattr(self, 'visualizer'):
+            self.visualizer.close_window()
 
 
 class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
@@ -308,14 +311,6 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
         self.dist_coefs = np.asarray(camera_intrinsics['dist_coefs'])
         self.world_frame_size = camera_intrinsics['resolution']
         self.camera_intrinsics = camera_intrinsics
-        self.visualizer = Calibration_Visualizer(g_pool,
-                                                world_camera_intrinsics=camera_intrinsics ,
-                                                cal_ref_points_3d = cal_points_3d,
-                                                cal_observed_points_3d = cal_ref_points_3d,
-                                                eye_camera_to_world_matrix0=  self.eye_camera_to_world_matricies[0],
-                                                cal_gaze_points0_3d = cal_gaze_points0_3d,
-                                                eye_camera_to_world_matrix1=  self.eye_camera_to_world_matricies[1],
-                                                cal_gaze_points1_3d =  cal_gaze_points1_3d)
         self.g_pool = g_pool
         self.gaze_pts_debug0 = []
         self.gaze_pts_debug1 = []
@@ -337,6 +332,14 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
 
 
     def init_gui(self):
+        self.visualizer = Calibration_Visualizer(self.g_pool,
+                                                 world_camera_intrinsics=self.camera_intrinsics ,
+                                                 cal_ref_points_3d=self.cal_points_3d,
+                                                 cal_observed_points_3d=self.cal_ref_points_3d,
+                                                 eye_camera_to_world_matrix0=self.eye_camera_to_world_matricies[0],
+                                                 cal_gaze_points0_3d=self.cal_gaze_points0_3d,
+                                                 eye_camera_to_world_matrix1=self.eye_camera_to_world_matricies[1],
+                                                 cal_gaze_points1_3d=self.cal_gaze_points1_3d)
 
         def open_close_window(new_state):
             if new_state:
@@ -379,7 +382,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
                 'base_data':[p]}
 
 
-        if self.visualizer.window:
+        if hasattr(self, 'visualizer') and self.visualizer.window:
             if p_id == 0:
                 self.gaze_pts_debug0.append(gaze_3d)
                 self.sphere0['center'] = eye_center
@@ -434,7 +437,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
             image_point = _clamp_norm_point(image_point)
 
 
-        if self.visualizer.window:
+        if hasattr(self, 'visualizer') and self.visualizer.window:
             gaze0_3d =  s0_normal * self.last_gaze_distance  + s0_center
             gaze1_3d =  s1_normal * self.last_gaze_distance  + s1_center
             self.gaze_pts_debug0.append(  gaze0_3d)
@@ -482,4 +485,5 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
     def cleanup(self):
         super().cleanup()
         self.deinit_gui()
-        self.visualizer.close_window()
+        if hasattr(self, 'visualizer'):
+            self.visualizer.close_window()

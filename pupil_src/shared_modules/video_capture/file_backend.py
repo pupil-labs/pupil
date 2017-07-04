@@ -35,11 +35,13 @@ class FileCaptureError(Exception):
         super().__init__()
         self.arg = arg
 
+
 class EndofVideoFileError(Exception):
     """docstring for EndofVideoFileError"""
     def __init__(self, arg):
         super().__init__()
         self.arg = arg
+
 
 class FileSeekError(Exception):
     """docstring for EndofVideoFileError"""
@@ -75,9 +77,8 @@ class Frame(object):
     @property
     def gray(self):
         if self._gray is None:
-            self._gray = np.frombuffer(self._av_frame.planes[0],np.uint8).reshape(self.height,self.width)
+            self._gray = np.frombuffer(self._av_frame.planes[0], np.uint8).reshape(self.height,self.width)
         return self._gray
-
 
 
 class File_Source(Base_Source):
@@ -93,7 +94,6 @@ class File_Source(Base_Source):
 
         # minimal attribute set
         self._initialised = True
-        self.source_path  = None
         self.slowdown     = 0.0
         self.source_path  = source_path
         self.timestamps   = None
@@ -128,6 +128,7 @@ class File_Source(Base_Source):
 
         self.display_time = 0.
         self.target_frame_idx = 0
+        self.current_frame_idx = 0
 
         #we will use below for av playback
         # self.selected_streams = [s for s in (self.video_stream,self.audio_stream) if s]
@@ -152,22 +153,23 @@ class File_Source(Base_Source):
             logger.debug('using timestamps from list')
             self.timestamps = timestamps
 
-
-        #set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
+        # set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
         self.next_frame = self._next_frame()
         f0, f1 = next(self.next_frame), next(self.next_frame)
-        self.pts_rate = float(1/f1.pts/self.video_stream.time_base)
+        self.pts_rate = f1.pts
         self.seek_to_frame(0)
+        self.average_rate = (self.timestamps[-1]-self.timestamps[0])/len(self.timestamps)
 
     def ensure_initialisation(fallback_func=None):
         from functools import wraps
+
         def decorator(func):
             @wraps(func)
-            def run_func(self,*args,**kwargs):
+            def run_func(self, *args, **kwargs):
                 if self._initialised and self.video_stream:
-                    return func(self,*args,**kwargs)
+                    return func(self, *args, **kwargs)
                 elif fallback_func:
-                    return fallback_func(*args,**kwargs)
+                    return fallback_func(*args, **kwargs)
                 else:
                     logger.debug('Initialisation required.')
             return run_func
@@ -178,14 +180,13 @@ class File_Source(Base_Source):
         return self._initialised
 
     @property
-    @ensure_initialisation(fallback_func=lambda: (1270, 720))
     def frame_size(self):
-        return int(self.video_stream.format.width),int(self.video_stream.format.height)
+        return int(self.video_stream.format.width), int(self.video_stream.format.height)
 
     @property
     @ensure_initialisation(fallback_func=lambda: 20)
     def frame_rate(self):
-        return float(self.video_stream.average_rate)
+        return float(self.average_rate)
 
     def get_init_dict(self):
         settings = super().get_init_dict()
@@ -202,7 +203,7 @@ class File_Source(Base_Source):
             return 'File source in ghost mode'
 
     def get_frame_index(self):
-        return self.target_frame_idx
+        return self.current_frame_idx
 
     def get_frame_count(self):
         return len(self.timestamps)
@@ -216,20 +217,15 @@ class File_Source(Base_Source):
         raise EndofVideoFileError("end of file.")
 
     @ensure_initialisation()
-    def pts_to_idx(self,pts):
+    def pts_to_idx(self, pts):
         # some older mkv did not use perfect timestamping so we are doing int(round()) to clear that.
         # With properly spaced pts (any v0.6.100+ recording) just int() would suffice.
         # print float(pts*self.video_stream.time_base*self.video_stream.average_rate),round(pts*self.video_stream.time_base*self.video_stream.average_rate)
-        return int(round(pts*self.video_stream.time_base*self.pts_rate))
+        return int(pts/self.pts_rate)
 
     @ensure_initialisation()
-    def pts_to_time(self,pts):
-        ### we do not use this one, since we have our timestamps list.
-        return int(pts*self.video_stream.time_base)
-
-    @ensure_initialisation()
-    def idx_to_pts(self,idx):
-        return int(idx/self.video_stream.average_rate/self.video_stream.time_base)
+    def idx_to_pts(self, idx):
+        return idx*self.pts_rate
 
     @ensure_initialisation()
     def get_frame(self):
@@ -256,6 +252,7 @@ class File_Source(Base_Source):
 
         self.show_time = timestamp
         self.target_frame_idx = index+1
+        self.current_frame_idx = index
         return Frame(timestamp,frame,index=index)
 
     def wait(self,frame):
@@ -295,7 +292,7 @@ class File_Source(Base_Source):
     def seek_to_frame_fast(self, seek_pos):
         ###frame accurate seeking
         try:
-            self.video_stream.seek(self.idx_to_pts(seek_pos),mode='time', any_frame=True)
+            self.video_stream.seek(self.idx_to_pts(seek_pos), mode='time', any_frame=True)
         except av.AVError as e:
             raise FileSeekError()
         else:
@@ -303,6 +300,9 @@ class File_Source(Base_Source):
             self.display_time = 0
             self.target_frame_idx = seek_pos
 
+    def on_notify(self, notification):
+        if notification['subject'] == 'file_source.seek' and notification.get('source_path') == self.source_path:
+            self.seek_to_frame(notification['frame_index'])
 
     def init_gui(self):
         from pyglui import ui

@@ -19,7 +19,7 @@ from itertools import chain
 from math import atan, tan
 from operator import itemgetter
 from methods import denormalize
-from plugin import Plugin
+from plugin import Plugin, Analysis_Plugin_Base
 from pyglui import ui
 
 # logging
@@ -30,7 +30,7 @@ def angle_between_normals(v1, v2):
     return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0))
 
 
-class Offline_Base_Fixation_Detector(Plugin):
+class Offline_Base_Fixation_Detector(Analysis_Plugin_Base):
     """ base class for different fixation detection algorithms """
     def __init__(self, g_pool):
         super().__init__(g_pool)
