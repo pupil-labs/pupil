@@ -52,20 +52,6 @@ class Audio_Capture(Plugin):
         self.queue = queue.Queue()
         self.start_capture(self.audio_src)
 
-    # def recent_events(self, events):
-    #     audio_packets = []
-    #     while True:
-    #         try:
-    #             packet = self.queue.get_nowait()
-    #         except queue.Empty:
-    #             break
-    #         audio_packets.append(packet)
-    #     events['audio_packets'] = audio_packets
-    #     if self.audio_container is not None:
-    #         print('Write', len(audio_packets), 'frames')
-    #         for packet in audio_packets:
-    #             self.write_audio_packet(packet)
-
     def init_gui(self):
         self.menu = ui.Growing_Menu('Audio Capture')
         self.menu.collapsed = True
@@ -111,20 +97,13 @@ class Audio_Capture(Plugin):
             self.rec_dir = notification['rec_path']
             self.recording.set()
             if self.running.is_set():  # and self.audio_container is None:
-                # rec_file = os.path.join(self.rec_dir, 'audio.mp4')
-                # self.audio_container = av.open(rec_file, 'w')
-                # self.timestamps = []
-
                 self.menu[-2].read_only = True
                 del self.menu[-1]
                 self.menu.append(ui.Info_Text(REC_STR))
             elif not self.running.is_set():
                 logger.warning('Recording was started without an active audio capture')
-            # else:
-            #     logger.warning('Audio is already being recorded')
         elif notification['subject'] == 'recording.stopped':
             self.recording.clear()
-            # if self.audio_container is not None and self.audio_out_stream is not None:
             self.close_audio_recording()
 
     def close_audio_recording(self):
@@ -268,11 +247,6 @@ class Audio_Capture(Plugin):
                 elif out_container is not None:
                     # recording stopped
                     close_recording()
-
-                # try:
-                #     self.queue.put_nowait(audio_frame)
-                # except queue.Full:
-                #     pass  # drop packet
             if not running.is_set():
                 close_recording()
                 return
