@@ -10,14 +10,15 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import cv2
-from plugin import Plugin
+from plugin import Visualizer_Plugin_Base
 import numpy as np
 from pyglui import ui
 from methods import denormalize,normalize
 import logging
 logger = logging.getLogger(__name__)
 
-class Vis_Scan_Path(Plugin):
+
+class Vis_Scan_Path(Visualizer_Plugin_Base):
     """docstring
     using this plugin will extend the recent_gaze_positions by x extra dots from previous frames.
     lock recent gaze points onto pixels.
@@ -117,4 +118,3 @@ class Vis_Scan_Path(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
-

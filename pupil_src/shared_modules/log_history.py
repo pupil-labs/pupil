@@ -61,7 +61,7 @@ class Log_History(Plugin):
             logger.addHandler(self.log_handler)
             self.log_handler.setLevel(logging.INFO)
 
-    def update(self,frame,events):
+    def recent_events(self,events):
         if self._socket:
             while self._socket.new_data:
                 t,s = self._socket.recv()

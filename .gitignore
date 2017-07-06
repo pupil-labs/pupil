@@ -6,8 +6,12 @@ Thumbs.db
 *.pyc
 *.pstats
 
+# object files #
+*.o
+
 # binaries #
 *.so
+*.o
 
 #cython build files
 *.c

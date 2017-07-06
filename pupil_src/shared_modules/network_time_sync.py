@@ -13,10 +13,12 @@ from uvc import get_time_monotonic
 import socket
 import threading
 import asyncore
+import struct
 from random import random
 
 import logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 '''
 A Master/Follower scheme for sychronizing clock in a network.
@@ -38,18 +40,20 @@ class Time_Echo(asyncore.dispatcher_with_send):
     reply to request with timestamp
     '''
 
-    def __init__(self,sock,time_fn):
+    def __init__(self, sock, time_fn):
         self.time_fn = time_fn
-        asyncore.dispatcher_with_send.__init__(self,sock)
+        asyncore.dispatcher_with_send.__init__(self, sock)
 
     def handle_read(self):
-        data = self.recv(1024)
+        # expecting `sync` message
+        data = self.recv(4)
         if data:
-            self.send(repr(self.time_fn()))
+            self.send(struct.pack('<d', self.time_fn()))
 
     def __del__(self):
         pass
         # print 'goodbye'
+
 
 class Time_Echo_Server(asyncore.dispatcher):
     '''
@@ -57,16 +61,13 @@ class Time_Echo_Server(asyncore.dispatcher):
     bind at next open port and listen for time sync requests.
     '''
 
-    def __init__(self,time_fn,socket_map,host = ""):
-        asyncore.dispatcher.__init__(self,socket_map)
+    def __init__(self, time_fn, socket_map, host=""):
+        asyncore.dispatcher.__init__(self, socket_map)
         self.time_fn = time_fn
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
         self.bind((host, 0))
         self.port = self.socket.getsockname()[1]
-        # FIXME: gethostbyname might fail on unix
-        self.host = host or socket.gethostbyname(socket.gethostname())
-        self.protocol = 'tcp://'
         self.listen(5)
         logger.debug('Timer Server ready on port: {}'.format(self.port))
 
@@ -74,7 +75,8 @@ class Time_Echo_Server(asyncore.dispatcher):
         pair = self.accept()
         if pair is not None:
             sock, addr = pair
-            Time_Echo(sock,self.time_fn)
+            logger.debug("syching with %s"%str(addr))
+            Time_Echo(sock, self.time_fn)
 
     def __del__(self):
         logger.debug("Server closed")
@@ -85,19 +87,17 @@ class Clock_Sync_Master(threading.Thread):
     A class that serves clock info to nodes in a local
     network so the can sync their clocks with the Masters one.
     '''
-    def __init__(self,time_fn):
+    def __init__(self, time_fn):
         threading.Thread.__init__(self)
         self.socket_map = {}
-        self.server = Time_Echo_Server(time_fn,self.socket_map)
+        self.server = Time_Echo_Server(time_fn, self.socket_map)
         self.start()
 
-
     def run(self):
-        asyncore.loop(use_poll=True,timeout=1)
-
+        asyncore.loop(use_poll=True, timeout=1)
 
     def stop(self):
-        #we dont use server.close() as this raises a bad file decritoor exception in loop
+        # we dont use server.close() as this raises a bad file decritoor exception in loop
         self.server.connected = False
         self.server.accepting = False
         self.server.del_channel()
@@ -133,7 +133,7 @@ class Clock_Sync_Follower(threading.Thread):
     retry_interval = 1.0
     slew_interval = 0.1
 
-    def __init__(self,host,port,interval,time_fn,jump_fn,slew_fn):
+    def __init__(self, host, port, interval, time_fn, jump_fn, slew_fn):
         threading.Thread.__init__(self)
         self.setDaemon(1)
         self.host = host
@@ -148,10 +148,10 @@ class Clock_Sync_Follower(threading.Thread):
         # this error can come from application_runtime jitter, network_jitter,master_clock_jitter and slave_clock_jitter
         self.sync_jitter = 1000000.
 
-        #slave was not able to set the clock at current
+        # slave was not able to set the clock at current
         self.offset_remains = True
 
-        #is this node synced?
+        # is this node synced?
         self.in_sync = False
 
         self.start()
@@ -160,9 +160,9 @@ class Clock_Sync_Follower(threading.Thread):
         while self.running:
             result = self._get_offset()
             if result:
-                offset,jitter = result
+                offset, jitter = result
                 self.sync_jitter = jitter
-                if abs(offset) > max(jitter,self.tolerance):
+                if abs(offset) > max(jitter, self.tolerance):
                     if abs(offset) > self.min_jump:
                         if self.jump_time(offset):
                             self.in_sync = True
@@ -176,7 +176,7 @@ class Clock_Sync_Follower(threading.Thread):
                     else:
                         # print 'time slewed required  %sms.'%(offset/self.ms)
                         for x in range(self.slew_iterations):
-                            slew_time = max(-self.max_slew, min(self.max_slew,offset) )
+                            slew_time = max(-self.max_slew, min(self.max_slew, offset))
                             # print offset/self.ms,slew_time/self.ms
                             self.slew_time(slew_time)
                             offset -= slew_time
@@ -199,45 +199,43 @@ class Clock_Sync_Follower(threading.Thread):
                 self.in_sync = False
                 sleep(self.retry_interval)
 
-            sleep(random()) #wait for a bit to balance load with other nodes.
-
+            sleep(random())  # wait for a bit to balance load with other nodes.
 
     def _get_offset(self):
         try:
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_socket.settimeout(1.)
             server_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            server_socket.connect((self.host,self.port))
-            times=[]
+            server_socket.connect((self.host, self.port))
+            times = []
             for request in range(60):
                 t0 = self.get_time()
-                server_socket.send('sync')
-                message = server_socket.recv(1024)
+                server_socket.send(b'sync')
+                message = server_socket.recv(8)
                 t2 = self.get_time()
-                t1 = float(message)
-                times.append((t0,t1,t2))
+                t1 = struct.unpack('<d', message)[0]
+                times.append((t0, t1, t2))
 
             server_socket.close()
 
-            times.sort(key=lambda t0,t1,t2: t2-t0)
+            times.sort(key=lambda t: t[2]-t[0])
             times = times[:int(len(times)*0.69)]
-            delays = [t2-t0 for t0, t1, t2 in times]
+            # delays = [t2-t0 for t0, t1, t2 in times]
             offsets = [t0-((t1+(t2-t0)/2)) for t0, t1, t2 in times]
             mean_offset = sum(offsets)/len(offsets)
-            offset_jitter = sum( [abs(mean_offset-o)for o in offsets] )/len(offsets)
-            mean_delay = sum(delays)/len(delays)
-            delay_jitter = sum( [abs(mean_delay-o)for o in delays] )/len(delays)
+            offset_jitter = sum([abs(mean_offset-o)for o in offsets])/len(offsets)
+            # mean_delay = sum(delays)/len(delays)
+            # delay_jitter = sum([abs(mean_delay-o)for o in delays])/len(delays)
 
             # logger.debug('offset: %s (%s),delay %s(%s)'%(mean_offset/self.ms,offset_jitter/self.ms,mean_delay/self.ms,delay_jitter/self.ms))
-            return mean_offset,offset_jitter
+            return mean_offset, offset_jitter
 
         except socket.error as e:
-            logger.debug(str(e))
+            logger.debug('{} for {}:{}'.format(e, self.host, self.port))
             return None
         # except Exception as e:
         #     logger.error(str(e))
         #     return 0,0
-
 
     def stop(self):
         self.running = False
@@ -251,7 +249,7 @@ class Clock_Sync_Follower(threading.Thread):
             if self.offset_remains:
                 return "NOT in sync with {}".format(self.host)
             else:
-                return 'Synced with {} with  {:.2f}ms jitter'.format(self.host,self.sync_jitter/self.ms)
+                return 'Synced with {}:{} with  {:.2f}ms jitter'.format(self.host,self.port,self.sync_jitter/self.ms)
         else:
             return "Connecting to {}".format(self.host)
 
@@ -267,7 +265,7 @@ if __name__ == '__main__':
     # it is thus recommended for Linux to use uvc.get_time_monotonic.
     master = Clock_Sync_Master(get_time_monotonic)
     port = master.port
-    host = master.host
+    host = "127.0.0.1"
     epoch = 0.0
     # sleep(3)
     # master.stop()

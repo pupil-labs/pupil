@@ -16,7 +16,7 @@ from version_utils import VersionFormat
 from .base_backend import InitialisationError, Base_Source, Base_Manager
 
 # check versions for our own depedencies as they are fast-changing
-assert VersionFormat(uvc.__version__) >= VersionFormat('0.10')
+assert VersionFormat(uvc.__version__) >= VersionFormat('0.11')
 
 # logging
 logger = logging.getLogger(__name__)
@@ -293,7 +293,7 @@ class UVC_Source(Base_Source):
             self.frame_size = new_size
 
         if self.uvc_capture is None:
-            ui_elements.append(ui.Info_Text('Capture initialization faild.'))
+            ui_elements.append(ui.Info_Text('Capture initialization failed.'))
             self.g_pool.capture_source_menu.extend(ui_elements)
             return
 

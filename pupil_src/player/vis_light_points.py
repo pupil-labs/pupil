@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import cv2
-from plugin import Plugin
+from plugin import Visualizer_Plugin_Base
 import numpy as np
 
 from pyglui import ui
@@ -18,7 +18,8 @@ from methods import denormalize
 import logging
 logger = logging.getLogger(__name__)
 
-class Vis_Light_Points(Plugin):
+
+class Vis_Light_Points(Visualizer_Plugin_Base):
     """docstring
     show gaze dots at light dots on numpy.
 

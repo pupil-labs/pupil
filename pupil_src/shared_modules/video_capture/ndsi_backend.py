@@ -16,7 +16,12 @@ import ndsi
 
 from .base_backend import Base_Source, Base_Manager
 
-assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.16'
+try:
+    from ndsi import __version__
+    assert __version__ >= '0.3.2'
+    from ndsi import __protocol_version__
+except (ImportError, AssertionError):
+    raise Exception("pyndsi version is to old. Please upgrade")
 logger = logging.getLogger(__name__)
 
 
@@ -95,7 +100,11 @@ class NDSI_Source(Base_Source):
 
     @property
     def name(self):
-        return '{} @ {}'.format(self._sensor_name, self._host_name)
+        return '{}'.format(self._sensor_name)
+    @property
+    def host(self):
+        return '{}'.format(self._host_name)
+
 
     @property
     def online(self):
@@ -328,6 +337,7 @@ class NDSI_Manager(Base_Manager):
         self.selected_host = None
         self._recover_in = 3
         self._rejoin_in = 400
+        logger.warning("Make sure the `time_sync` plugin is loaded!")
 
     def cleanup(self):
         self.deinit_gui()
@@ -337,6 +347,7 @@ class NDSI_Manager(Base_Manager):
         from pyglui import ui
         ui_elements = []
         ui_elements.append(ui.Info_Text('Remote Pupil Mobile sources'))
+        ui_elements.append(ui.Info_Text('Pupil Mobile Commspec v{}'.format(__protocol_version__)))
 
         def host_selection_list():
             devices = {

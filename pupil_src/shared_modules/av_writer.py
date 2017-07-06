@@ -18,7 +18,6 @@ requires:
 import os,sys,platform
 import av
 from av.packet import Packet
-av.logging.set_level(av.logging.ERROR)
 
 import numpy as np
 from time import time
@@ -75,13 +74,11 @@ class AV_Writer(object):
     AV_Writer class
         - file_loc: path to file out
         - video_stream:
-        - audio_stream:
-
 
     We are creating a
     """
 
-    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 15000*10e3}, audio_stream=None,use_timestamps=False):
+    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 15000*10e3}, use_timestamps=False):
         super().__init__()
         self.use_timestamps = use_timestamps
         self.timestamps = []

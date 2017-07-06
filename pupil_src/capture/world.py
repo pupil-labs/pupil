@@ -112,6 +112,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from video_capture import source_classes, manager_classes,Base_Manager
     from pupil_data_relay import Pupil_Data_Relay
     from remote_recorder import Remote_Recorder
+    from audio_capture import Audio_Capture
 
     # UI Platform tweaks
     if platform.system() == 'Linux':
@@ -145,11 +146,11 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
-    calibration_plugins += [p for p in runtime_plugins if issubclass(p,Calibration_Plugin)]
-    runtime_plugins = [p for p in runtime_plugins if not issubclass(p,Calibration_Plugin)]
-    manager_classes += [p for p in runtime_plugins if issubclass(p,Base_Manager)]
-    runtime_plugins = [p for p in runtime_plugins if not issubclass(p,Base_Manager)]
-    user_launchable_plugins = [Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
+    calibration_plugins += [p for p in runtime_plugins if issubclass(p, Calibration_Plugin)]
+    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Calibration_Plugin)]
+    manager_classes += [p for p in runtime_plugins if issubclass(p, Base_Manager)]
+    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Base_Manager)]
+    user_launchable_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
                                Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection,
                                Remote_Recorder] + runtime_plugins
     system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay]
@@ -173,8 +174,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                        ('Display_Recent_Gaze', {}),
                        ('Screen_Marker_Calibration', {}),
                        ('Recorder', {}),
-                       ('Pupil_Remote', {}),
-                       ('Fixation_Detector_3D', {})]
+                       ('Pupil_Remote', {})]
 
     # Callback functions
     def on_resize(window, w, h):
@@ -224,8 +224,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir, 'user_settings_world'))
-    if VersionFormat(session_settings.get("version", '0.0')) < g_pool.version:
-        logger.info("Session setting are from older version of this app. I will not use those.")
+    if VersionFormat(session_settings.get("version", '0.0')) != g_pool.version:
+        logger.info("Session setting are from a different version of this app. I will not use those.")
         session_settings.clear()
 
     g_pool.iconified = False
@@ -306,7 +306,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
     g_pool.sidebar = ui.Scrolling_Menu("Settings", pos=(-350, 0), size=(0, 0), header_pos='left')
     general_settings = ui.Growing_Menu('General')
-    general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[0.5, 0.75, 1., 1.5, 2.], label='Interface size'))
+    general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0],g_pool.capture.frame_size[1])) )
     general_settings.append(ui.Selector('audio_mode',audio,selection=audio.audio_modes))
     general_settings.append(ui.Selector('detection_mapping_mode',
@@ -479,8 +479,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         del events['pupil_positions']  # already on the wire
         del events['gaze_positions']  # sent earlier
         if 'frame' in events:
-            del events['frame']  #send explicity with frame publisher
-        del events['dt']  #no need to send this
+            del events['frame']  # send explicity with frame publisher
+        if 'audio_packets' in events:
+            del events['audio_packets']
+        del events['dt']  # no need to send this
         for topic, data in events.items():
             assert(isinstance(data, (list, tuple)))
             for d in data:

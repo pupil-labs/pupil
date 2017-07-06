@@ -29,6 +29,8 @@ class Is_Alive_Manager(object):
         self.eye_id = eye_id
 
     def __enter__(self):
+        if self.is_alive.value:
+            raise Exception("eye process already running!")
         self.is_alive.value = True
         self.ipc_socket.notify({'subject': 'eye_process.started',
                                 'eye_id': self.eye_id})
@@ -212,8 +214,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(g_pool.user_dir, 'user_settings_eye{}'.format(eye_id)))
-        if VersionFormat(session_settings.get("version", '0.0')) < g_pool.version:
-            logger.info("Session setting are from older version of this app. I will not use those.")
+        if VersionFormat(session_settings.get("version", '0.0')) != g_pool.version:
+            logger.info("Session setting are from a different version of this app. I will not use those.")
             session_settings.clear()
 
 
@@ -308,7 +310,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         general_settings = ui.Growing_Menu('General')
         general_settings.append(ui.Selector('gui_user_scale', g_pool,
                                           setter=set_scale,
-                                          selection=[0.5, 0.75, 1., 1.5, 2.],
+                                          selection=[.8, .9, 1., 1.1, 1.2],
                                           label='Interface Size'))
         general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,*g_pool.capture.frame_size)) )
         general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
