@@ -248,7 +248,6 @@ def launcher():
             #listen for relevant messages.
             if cmd_sub.socket.poll(timeout=1000):
                 topic,n = cmd_sub.recv()
-                print(topic,n)
                 if "notify.eye_process.should_start" in topic:
                     eye_id = n['eye_id']
                     Process(target=eye, name='eye{}'.format(eye_id), args=(
