@@ -491,7 +491,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         glfw.glfwMakeContextCurrent(main_window)
         # render visual feedback from loaded plugins
         if window_should_update() and gl_utils.is_window_visible(main_window):
-            g_pool.capture.gl_display()
             for p in g_pool.plugins:
                 p.gl_display()
 
@@ -519,11 +518,11 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     for p in g_pool.plugins:
         p.alive = False
     g_pool.plugins.clean()
+
     g_pool.gui.terminate()
     glfw.glfwDestroyWindow(main_window)
     glfw.glfwTerminate()
 
-    g_pool.capture.deinit_gui()
 
     # shut down eye processes:
     stop_eye_process(0)
@@ -532,10 +531,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     logger.info("Process shutting down.")
     ipc_pub.notify({'subject': 'world_process.stopped'})
 
-    # shut down launcher
-    n = {'subject': 'launcher_process.should_stop'}
-    ipc_pub.notify(n)
-    zmq_ctx.destroy()
 
 
 def world_profiled(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,

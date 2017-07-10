@@ -15,17 +15,21 @@ import os, sys, platform
 # sys.argv.append('debug')
 # sys.argv.append('service')
 
-app = 'capture'
+app = 'player'
 
 if getattr(sys, 'frozen', False):
     if 'pupil_service' in sys.executable:
         app = 'service'
+    elif 'pupil_player' in sys.executable:
+        app = 'player'
     # Specifiy user dir.
     user_dir = os.path.expanduser(os.path.join('~', 'pupil_{}_settings'.format(app)))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
 else:
     if 'service' in sys.argv:
         app = 'service'
+    if 'player' in sys.argv:
+        app = 'player'
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
     # Specifiy user dir.
@@ -63,13 +67,15 @@ from os_utils import Prevent_Idle_Sleep
 
 #functions to run in seperate processes
 if 'profiled' in sys.argv:
-    from world import world_profiled as world
-    from service import service_profiled as service
-    from eye import eye_profiled as eye
+    from launchables.world import world_profiled as world
+    from launchables.service import service_profiled as service
+    from launchables.eye import eye_profiled as eye
+
 else:
-    from world import world
-    from service import service
-    from eye import eye
+    from launchables.world import world
+    from launchables.service import service
+    from launchables.eye import eye
+from launchables.player import player,player_drop
 
 
 
@@ -192,6 +198,9 @@ def launcher():
     sleep(0.2)
 
     topics = (  'notify.eye_process.',
+                'notify.player_process.',
+                'notify.world_process.',
+                'notify.player_drop_process.',
                 'notify.launcher_process.',
                 'notify.meta.should_doc')
     cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
@@ -208,7 +217,7 @@ def launcher():
                             user_dir,
                             app_version
                             )).start()
-    else:
+    elif  app == 'capture':
         Process(target=world,
                       name= 'world',
                       args=(timebase,
@@ -219,30 +228,62 @@ def launcher():
                             user_dir,
                             app_version,
                             )).start()
+    elif app == 'player':
+        if len(sys.argv) > 1:
+            rec_dir = os.path.expanduser(sys.argv[1])
+        else:
+            rec_dir = None
+        Process(target=player_drop,
+                      name= 'player_drop',
+                      args=(rec_dir,
+                            ipc_pub_url,
+                            ipc_sub_url,
+                            ipc_push_url,
+                            user_dir,
+                            app_version,
+                            )).start()
 
     with Prevent_Idle_Sleep():
-        while True:
-            #block and listen for relevant messages.
-            topic,n = cmd_sub.recv()
-            if "notify.eye_process.should_start" in topic:
-                eye_id = n['eye_id']
-                Process(target=eye, name='eye{}'.format(eye_id), args=(
-                        timebase,
-                        eyes_are_alive[eye_id],
-                        ipc_pub_url,
-                        ipc_sub_url,
-                        ipc_push_url,
-                        user_dir,
-                        app_version,
-                        eye_id
-                        )).start()
-            elif "notify.launcher_process.should_stop" in topic:
-                break
-            elif "notify.meta.should_doc" in topic:
-                cmd_push.notify({
-                    'subject':'meta.doc',
-                    'actor':'launcher',
-                    'doc':launcher.__doc__})
+        while active_children():
+            #listen for relevant messages.
+            if cmd_sub.socket.poll(timeout=1000):
+                topic,n = cmd_sub.recv()
+                print(topic,n)
+                if "notify.eye_process.should_start" in topic:
+                    eye_id = n['eye_id']
+                    Process(target=eye, name='eye{}'.format(eye_id), args=(
+                            timebase,
+                            eyes_are_alive[eye_id],
+                            ipc_pub_url,
+                            ipc_sub_url,
+                            ipc_push_url,
+                            user_dir,
+                            app_version,
+                            eye_id
+                            )).start()
+                elif "notify.player_process.should_start" in topic:
+                    Process(target=player, name='player', args=(
+                            n['rec_dir'],
+                            ipc_pub_url,
+                            ipc_sub_url,
+                            ipc_push_url,
+                            user_dir,
+                            app_version,
+                            )).start()
+                elif "notify.player_drop_process.should_start" in topic:
+                    Process(target=player_drop, name='player', args=(
+                            n['rec_dir'],
+                            ipc_pub_url,
+                            ipc_sub_url,
+                            ipc_push_url,
+                            user_dir,
+                            app_version,
+                            )).start()
+                elif "notify.meta.should_doc" in topic:
+                    cmd_push.notify({
+                        'subject':'meta.doc',
+                        'actor':'launcher',
+                        'doc':launcher.__doc__})
 
         for p in active_children(): p.join()
 
