@@ -15,7 +15,7 @@ import os, sys, platform
 # sys.argv.append('debug')
 # sys.argv.append('service')
 
-app = 'player'
+app = 'capture'
 
 if getattr(sys, 'frozen', False):
     if 'pupil_service' in sys.executable:
@@ -24,7 +24,7 @@ if getattr(sys, 'frozen', False):
         app = 'player'
     # Specifiy user dir.
     user_dir = os.path.expanduser(os.path.join('~', 'pupil_{}_settings'.format(app)))
-    version_file = os.path.join(sys._MEIPASS,'_version_string_')
+    version_file = os.path.join(sys._MEIPASS, '_version_string_')
 else:
     if 'service' in sys.argv:
         app = 'service'
@@ -33,7 +33,7 @@ else:
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
     # Specifiy user dir.
-    user_dir = os.path.join(pupil_base_dir,'{}_settings'.format(app))
+    user_dir = os.path.join(pupil_base_dir, '{}_settings'.format(app))
     version_file = None
 
 # create folder for user settings, tmp data
@@ -41,31 +41,31 @@ if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
 # create folder for user plugins
-plugin_dir = os.path.join(user_dir,'plugins')
+plugin_dir = os.path.join(user_dir, 'plugins')
 if not os.path.isdir(plugin_dir):
     os.mkdir(plugin_dir)
 
-#app version
+# app version
 from version_utils import get_version
 app_version = get_version(version_file)
 
-#threading and processing
+# threading and processing
 from multiprocessing import Process, Value,active_children,set_start_method
 from multiprocessing.spawn import freeze_support
 from threading import Thread
 from ctypes import c_double,c_bool
 
-#networking
+# networking
 import zmq
 import zmq_tools
 
-#time
-from time import time,sleep
+# time
+from time import time, sleep
 
 # os utilities
 from os_utils import Prevent_Idle_Sleep
 
-#functions to run in seperate processes
+# functions to run in seperate processes
 if 'profiled' in sys.argv:
     from launchables.world import world_profiled as world
     from launchables.service import service_profiled as service
@@ -75,8 +75,8 @@ else:
     from launchables.world import world
     from launchables.service import service
     from launchables.eye import eye
-from launchables.player import player,player_drop
-
+from launchables.player import player, player_drop
+from launchables.marker_detectors import circle_detector
 
 
 def launcher():
@@ -195,16 +195,24 @@ def launcher():
     delay_thread.start()
 
     del xsub_socket,xpub_socket,pull_socket
-    sleep(0.2)
 
     topics = (  'notify.eye_process.',
                 'notify.player_process.',
                 'notify.world_process.',
                 'notify.player_drop_process.',
                 'notify.launcher_process.',
-                'notify.meta.should_doc')
-    cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
-    cmd_push = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
+                'notify.meta.should_doc',
+                'notify.circle_detector.should_start',
+                'notify.ipc_startup')
+    cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url, topics=topics)
+    cmd_push = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
+
+    while True:
+        # Wait until subscriptions were successfull
+        cmd_push.notify({'subject': 'ipc_startup'})
+        if cmd_sub.socket.poll(timeout=50):
+            cmd_sub.recv()
+            break
 
     if app == 'service':
         Process(target=service,
@@ -229,8 +237,8 @@ def launcher():
                             app_version,
                             )).start()
     elif app == 'player':
-        if len(sys.argv) > 1:
-            rec_dir = os.path.expanduser(sys.argv[1])
+        if len(sys.argv) > 2:
+            rec_dir = os.path.expanduser(sys.argv[-1])
         else:
             rec_dir = None
         Process(target=player_drop,
@@ -244,12 +252,13 @@ def launcher():
                             )).start()
 
     with Prevent_Idle_Sleep():
-        while active_children():
-            #listen for relevant messages.
+        while True:
+            # listen for relevant messages.
             if cmd_sub.socket.poll(timeout=1000):
-                topic,n = cmd_sub.recv()
+                topic, n = cmd_sub.recv()
                 if "notify.eye_process.should_start" in topic:
                     eye_id = n['eye_id']
+                    overwrite_cap_settings = n.get('overwrite_cap_settings')
                     Process(target=eye, name='eye{}'.format(eye_id), args=(
                             timebase,
                             eyes_are_alive[eye_id],
@@ -258,7 +267,8 @@ def launcher():
                             ipc_push_url,
                             user_dir,
                             app_version,
-                            eye_id
+                            eye_id,
+                            overwrite_cap_settings
                             )).start()
                 elif "notify.player_process.should_start" in topic:
                     Process(target=player, name='player', args=(
@@ -283,6 +293,20 @@ def launcher():
                         'subject':'meta.doc',
                         'actor':'launcher',
                         'doc':launcher.__doc__})
+                elif "notify.circle_detector.should_start" in topic:
+                    source_path = n.get('source_path', '')
+                    timestamps_path = n.get('timestamps_path', '')
+                    Process(target=circle_detector, name='circle_detector', args=(
+                            ipc_pub_url,
+                            ipc_sub_url,
+                            ipc_push_url,
+                            source_path,
+                            timestamps_path
+                            )).start()
+
+            else:
+                if not active_children():
+                    break
 
         for p in active_children(): p.join()
 

@@ -144,7 +144,10 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         self.exports.append(new_export)
         self._update_gui()
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         if self.new_export:
             self.launch_export(self.new_export)
             self.new_export = None

@@ -34,7 +34,10 @@ class Vis_Circle(Visualizer_Plugin_Base):
         self.thickness = thickness
         self.fill = fill
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         if self.fill:
             thickness = -1
         else:

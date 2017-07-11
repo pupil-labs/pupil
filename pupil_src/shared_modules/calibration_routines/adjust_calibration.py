@@ -124,7 +124,10 @@ class Adjust_Calibration(Calibration_Plugin):
         finish_calibration(self.g_pool,self.pupil_list,self.ref_list)
 
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         """
         gets called once every frame.
         reference positon need to be published to shared_pos
