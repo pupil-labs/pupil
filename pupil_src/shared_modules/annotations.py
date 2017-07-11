@@ -218,7 +218,10 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
                 csv_writer.writerow(self.csv_representation_for_annotations(a))
             logger.info("Created 'annotations.csv' file.")
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         self.last_frame_ts = frame.timestamp
         if frame.index != self.current_frame:
             self.current_frame = frame.index

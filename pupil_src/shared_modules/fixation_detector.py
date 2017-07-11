@@ -297,7 +297,10 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
             logger.info("Created 'fixation_report.csv' file.")
 
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         self.last_frame_ts = frame.timestamp
         from player_methods import transparent_circle
         events['fixations'] = self.g_pool.fixations_by_frame[frame.index]
@@ -469,7 +472,10 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
         self.merge_strategy = merge_strategy
         super().__init__(g_pool, max_dispersion, min_duration, h_fov, v_fov, show_fixations)
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         self.last_frame_ts = frame.timestamp
         from player_methods import transparent_circle
         events['fixations'] = self.g_pool.fixations_by_frame[frame.index]

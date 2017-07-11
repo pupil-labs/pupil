@@ -33,7 +33,10 @@ class Vis_Light_Points(Visualizer_Plugin_Base):
 
         self.falloff = falloff
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         falloff = self.falloff
 
         img = frame.img

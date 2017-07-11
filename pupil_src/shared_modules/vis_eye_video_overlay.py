@@ -220,7 +220,10 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
             self.g_pool.gui.remove(self.menu)
             self.menu = None
 
-    def update(self, frame, events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         for eye_index in self.showeyes:
             requested_eye_frame_idx = self.eye_world_frame_map[eye_index][frame.index]
 
