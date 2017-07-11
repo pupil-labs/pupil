@@ -19,24 +19,10 @@ import numpy as np
 from plugin import Producer_Plugin_Base
 from pyglui import ui
 from time import sleep
-from threading import Thread
 from player_methods import correlate_data
 from file_methods import load_object,save_object
-if platform.system() in ('Darwin',"Linux"):
-    from multiprocessing import get_context
-    mp = get_context('spawn')
-    Value = mp.Value
-    Process = mp.Process
-else:
-    import multiprocessing as mp
-    from multiprocessing import Value, Process
 
 import pupil_detectors  # trigger module compilation
-from ctypes import c_double, c_bool
-if 'profiled' in sys.argv:
-    from eye import eye_profiled as eye
-else:
-    from eye import eye
 
 import logging
 logger = logging.getLogger(__name__)
@@ -82,14 +68,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.detection_progress = session_data['detection_progress']
         self.detection_status = session_data['detection_status']
 
-        # Pupil Offline Detection
-        self.eyes_are_alive = Value(c_bool, 0), Value(c_bool, 0)
 
-        logger.debug('Starting eye process communication channel...')
-        self.ipc_pub_url, self.ipc_sub_url, self.ipc_push_url = self.initialize_ipc()
-        sleep(0.2)
-        self.data_sub = zmq_tools.Msg_Receiver(self.zmq_ctx, self.ipc_sub_url, topics=('',))
-        self.eye_control = zmq_tools.Msg_Dispatcher(self.zmq_ctx, self.ipc_push_url)
 
         self.menu = None
 
