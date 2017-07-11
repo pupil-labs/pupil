@@ -12,6 +12,7 @@ import sys
 import os
 import platform
 
+
 class Global_Container(object):
     pass
 
@@ -27,8 +28,9 @@ else:
     scroll_factor = 1.0
     window_position_default = (0, 0)
 
+
 def player(rec_dir, ipc_pub_url, ipc_sub_url,
-          ipc_push_url, user_dir, app_version):
+           ipc_push_url, user_dir, app_version):
     # general imports
     import logging
     import errno
@@ -190,7 +192,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))
-    if VersionFormat(session_settings.get("version", '0.0')) == app_version:
+    if VersionFormat(session_settings.get("version", '0.0')) != app_version:
         logger.info("Session setting are a different version of this app. I will not use those.")
         session_settings.clear()
 
@@ -240,7 +242,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     def prev_frame(_):
         try:
-            cap.seek_to_frame(cap.get_frame_index()-2)
+            cap.seek_to_frame(cap.get_frame_index() - 1)
         except(FileSeekError):
             logger.warning("Could not seek to previous frame.")
         else:
@@ -420,8 +422,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     # trigger on_resize
     on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
-
-
     def handle_notifications(n):
         subject = n['subject']
         if subject == 'start_plugin':
@@ -438,8 +438,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                                     'actor': p.class_name,
                                     'doc': p.on_notify.__doc__})
 
-
-
     while not glfw.glfwWindowShouldClose(main_window):
 
         # fetch newest notifications
@@ -453,7 +451,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             handle_notifications(n)
             for p in g_pool.plugins:
                 p.on_notify(n)
-
 
         # grab new frame
         if g_pool.play or g_pool.new_seek:
@@ -493,7 +490,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         # always update the CPU graph
         cpu_graph.update()
 
-
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
             p.recent_events(events)
@@ -523,7 +519,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             for p in g_pool.plugins:
                 p.on_click(pos, button, action)
 
-
         # present frames at appropriate speed
         cap.wait(frame)
 
@@ -552,15 +547,14 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     ipc_pub.notify({'subject': 'player_process.stopped'})
 
 
-
-
 def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
-          ipc_push_url, user_dir, app_version):
+                ipc_push_url, user_dir, app_version):
     # general imports
     import logging
     # networking
     import zmq
     import zmq_tools
+    from time import sleep
 
 
     # zmq ipc setup
@@ -661,3 +655,4 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
     glfw.glfwDestroyWindow(window)
     if rec_dir:
         ipc_pub.notify({"subject": "player_process.should_start", "rec_dir": rec_dir})
+    sleep(1.0)
