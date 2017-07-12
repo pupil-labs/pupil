@@ -27,6 +27,7 @@ from calibration_routines.finish_calibration import select_calibration_method
 from file_methods import load_object, save_object
 
 import background_helper as bh
+import zmq_tools
 from itertools import chain
 import random
 
@@ -111,6 +112,8 @@ class Offline_Calibration(Gaze_Producer_Base):
         super().__init__(g_pool)
         self.manual_ref_edit_mode = manual_ref_edit_mode
         self.menu = None
+        self.process_pipe = None
+
 
         self.result_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.result_dir, exist_ok=True)
@@ -147,11 +150,12 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.append_section_menu(sec, collapsed=False)
 
     def start_detection_task(self):
+        self.process_pipe = zmq_tools.Msg_Pair_Server(self.g_pool.zmq_ctx)
         self.circle_marker_positions = []
         source_path = self.g_pool.capture.source_path
         timestamps_path = os.path.join(self.g_pool.rec_dir, "world_timestamps.npy")
-        self.notify_all({'subject': 'circle_detector.should_start',
-                         'source_path': source_path, 'timestamps_path': timestamps_path})
+        self.notify_all({'subject': 'circle_detector_process.should_start',
+                         'source_path': source_path, 'timestamps_path': timestamps_path,"pair_url":self.process_pipe.url})
 
     def init_gui(self):
         def clear_markers():
@@ -230,19 +234,6 @@ class Offline_Calibration(Gaze_Producer_Base):
         if subject == 'pupil_positions_changed':
             for s in self.sections:
                 self.calibrate_section(s)
-        elif subject == 'circle_detector.progressed':
-            recent = notification.get('data', [])
-            progress, data = zip(*recent)
-            self.circle_marker_positions.extend([d for d in data if d])
-            self.detection_progress = progress[-1]
-        elif subject == 'circle_detector.finished':
-            self.detection_progress = 100.
-            for s in self.sections:
-                self.calibrate_section(s)
-        elif subject == 'circle_detector.finished':
-            self.detection_progress = 0.
-            logger.info('Marker detection was interrupted')
-            logger.debug('Reason: {}'.format(notification.get('reason', 'n/a')))
 
     def on_click(self, pos, button, action):
         if action == GLFW_PRESS and self.manual_ref_edit_mode:
@@ -260,6 +251,26 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.manual_ref_positions.append(new_ref)
 
     def recent_events(self, events):
+
+        if self.process_pipe and self.process_pipe.new_data:
+            topic, msg = self.process_pipe.recv()
+            if topic == 'progress':
+                recent = msg.get('data', [])
+                progress, data = zip(*recent)
+                self.circle_marker_positions.extend([d for d in data if d])
+                self.detection_progress = progress[-1]
+            elif topic == 'finished':
+                self.detection_progress = 100.
+                self.process_pipe = None
+                for s in self.sections:
+                    self.calibrate_section(s)
+            elif topic == 'exception':
+                self.process_pipe = None
+                self.detection_progress = 0.
+                logger.info('Marker detection was interrupted')
+                logger.debug('Reason: {}'.format(msg.get('reason', 'n/a')))
+
+
         for sec in self.sections:
             if sec["bg_task"]:
                 recent  = [d for d in sec["bg_task"].fetch()]
@@ -360,7 +371,10 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.win_size = w, h
 
     def cleanup(self):
-        self.notify_all({'subject': 'circle_detector.should_stop'})
+        if self.process_pipe:
+            self.process_pipe.send(topic='terminate',payload={})
+            self.process_pipe.socket.close()
+            self.process_pipe = None
         for sec in self.sections:
             if sec['bg_task']:
                 sec['bg_task'].cancel()

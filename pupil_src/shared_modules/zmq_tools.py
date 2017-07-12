@@ -37,7 +37,11 @@ class ZMQ_handler(logging.Handler):
                          record.__dict__)
 
 
-class Msg_Receiver(object):
+class ZMQ_Socket(object):
+    def __del__(self):
+        self.socket.close()
+
+class Msg_Receiver(ZMQ_Socket):
     '''
     Recv messages on a sub port.
     Not threadsafe. Make a new one for each thread
@@ -94,13 +98,10 @@ class Msg_Receiver(object):
     def new_data(self):
         return self.socket.get(zmq.EVENTS)
 
-    def __del__(self):
-        self.socket.close()
 
-
-class Msg_Streamer(object):
+class Msg_Streamer(ZMQ_Socket):
     '''
-    Send messages on fast and efficiat but without garatees.
+    Send messages on fast and efficient but without garatees.
     Not threadsave. Make a new one for each thread
     '''
     def __init__(self, ctx, url):
@@ -131,8 +132,6 @@ class Msg_Streamer(object):
                 self.socket.send(frame, flags=zmq.SNDMORE, copy=True)
             self.socket.send(extra_frames[-1], copy=True)
 
-    def __del__(self):
-        self.socket.close()
 
 
 class Msg_Dispatcher(Msg_Streamer):
@@ -157,6 +156,50 @@ class Msg_Dispatcher(Msg_Streamer):
         else:
             self.send("notify.{}".format(notification['subject']),
                       notification)
+
+class Msg_Pair_Base(Msg_Streamer,Msg_Receiver):
+
+    @property
+    def new_data(self):
+        return self.socket.get(zmq.EVENTS) & 1
+
+    def subscribe(self, topic):
+        raise NotImplementedError()
+
+    def unsubscribe(self, topic):
+        raise NotImplementedError()
+
+class Msg_Pair_Server(Msg_Pair_Base):
+
+    def __init__(self, ctx, url='tcp://*:*'):
+        self.socket = zmq.Socket(ctx, zmq.PAIR)
+        self.socket.bind(url)
+
+    @property
+    def url(self):
+        return self.socket.last_endpoint.decode('utf8').replace("0.0.0.0","127.0.0.1")
+
+
+class Msg_Pair_Client(Msg_Pair_Base):
+
+    def __init__(self, ctx, url, block_until_connected=True):
+        self.socket = zmq.Socket(ctx, zmq.PAIR)
+
+        if block_until_connected:
+            # connect node and block until a connecetion has been made
+            monitor = self.socket.get_monitor_socket()
+            self.socket.connect(url)
+            while True:
+                status = recv_monitor_message(monitor)
+                if status['event'] == zmq.EVENT_CONNECTED:
+                    break
+                elif status['event'] == zmq.EVENT_CONNECT_DELAYED:
+                    pass
+                else:
+                    raise Exception("ZMQ connection failed")
+            self.socket.disable_monitor()
+        else:
+            self.socket.connect(url)
 
 
 if __name__ == '__main__':

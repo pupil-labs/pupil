@@ -10,38 +10,33 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import cv2
-import zmq
 import numpy as np
-import zmq_tools
 from time import sleep
-from circle_detector import find_concetric_circles
-from video_capture import File_Source, EndofVideoFileError
-from methods import normalize
-
-import logging
-logger = logging.getLogger(__name__)
-
 
 class Empty(object):
         pass
 
-
-def circle_detector(ipc_pub_url, ipc_sub_url, ipc_push_url,
+def circle_detector(ipc_push_url, pair_url,
                     source_path, timestamps_path, batch_size=20):
 
+    from circle_detector import find_concetric_circles
+    from video_capture import File_Source, EndofVideoFileError
+    from methods import normalize
+    import zmq
+    import zmq_tools
     zmq_ctx = zmq.Context()
     ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
-    ipc_sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url,
-                                     topics=('notify.circle_detector.',))
+    process_pipe = zmq_tools.Msg_Pair_Client(zmq_ctx,pair_url)
+    # logging setup
+    import logging
+    logger = logging.getLogger()
+    logger.handlers = []
+    logger.setLevel(logging.INFO)
+    logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url))
+    # create logger for the context of this function
+    logger = logging.getLogger(__name__)
 
-    while True:
-        # Wait until subscriptions were successfull
-        ipc_pub.notify({'subject': 'circle_detector.startup'})
-        if ipc_sub.socket.poll(timeout=50):
-            ipc_sub.recv()
-            break
 
-    finished_successfull = False
 
     try:
         src = File_Source(Empty(), source_path, np.load(timestamps_path), timed_playback=False)
@@ -52,11 +47,13 @@ def circle_detector(ipc_pub_url, ipc_sub_url, ipc_push_url,
         queue = []
 
         while True:
-            while ipc_sub.socket.poll(timeout=0):
-                topic, n = ipc_sub.recv()
-                if topic == 'notify.circle_detector.should_stop':
-                    reason = 'Early cancellation'
-                    break
+            while process_pipe.new_data:
+                topic, n = process_pipe.recv()
+                if topic == 'terminate':
+                    process_pipe.send(topic='exception', payload={"reason":"User terminated."})
+                    logger.debug("Process terminated")
+                    sleep(1.0)
+                    return
 
             progress = 100.*frame.index/frame_count
 
@@ -97,18 +94,19 @@ def circle_detector(ipc_pub_url, ipc_sub_url, ipc_push_url,
                 # dequeue batch
                 data = queue[:batch_size]
                 del queue[:batch_size]
-                ipc_pub.notify({'subject': 'circle_detector.progressed', 'data': data})
+                process_pipe.send(topic='progress', payload={'data': data})
 
             frame = src.get_frame()
+
     except EndofVideoFileError:
-        finished_successfull = True
-        ipc_pub.notify({'subject': 'circle_detector.progressed', 'data': queue})
+        process_pipe.send(topic='progress', payload={'data': queue})
+        process_pipe.send(topic='finished', payload={})
+        logger.debug("Process finished")
+
     except:
         import traceback
-        reason = traceback.format_exc()
+        process_pipe.send(topic='exception', payload={'reason': traceback.format_exc()})
+        logger.debug("Process raised Exception")
 
-    if finished_successfull:
-        ipc_pub.notify({'subject': 'circle_detector.finished'})
-    else:
-        ipc_pub.notify({'subject': 'Empty.exception', 'reason': reason})
+
     sleep(1.0)

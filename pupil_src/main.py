@@ -202,7 +202,7 @@ def launcher():
                 'notify.player_drop_process.',
                 'notify.launcher_process.',
                 'notify.meta.should_doc',
-                'notify.circle_detector.should_start',
+                'notify.circle_detector_process.should_start',
                 'notify.ipc_startup')
     cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url, topics=topics)
     cmd_push = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
@@ -258,7 +258,6 @@ def launcher():
                 topic, n = cmd_sub.recv()
                 if "notify.eye_process.should_start" in topic:
                     eye_id = n['eye_id']
-                    overwrite_cap_settings = n.get('overwrite_cap_settings')
                     Process(target=eye, name='eye{}'.format(eye_id), args=(
                             timebase,
                             eyes_are_alive[eye_id],
@@ -268,7 +267,7 @@ def launcher():
                             user_dir,
                             app_version,
                             eye_id,
-                            overwrite_cap_settings
+                            n.get('overwrite_cap_settings')
                             )).start()
                 elif "notify.player_process.should_start" in topic:
                     Process(target=player, name='player', args=(
@@ -288,22 +287,18 @@ def launcher():
                             user_dir,
                             app_version,
                             )).start()
+                elif "notify.circle_detector_process.should_start" in topic:
+                    Process(target=circle_detector, name='circle_detector', args=(
+                            ipc_push_url,
+                            n['pair_url'],
+                            n['source_path'],
+                            n['timestamps_path']
+                            )).start()
                 elif "notify.meta.should_doc" in topic:
                     cmd_push.notify({
                         'subject':'meta.doc',
                         'actor':'launcher',
                         'doc':launcher.__doc__})
-                elif "notify.circle_detector.should_start" in topic:
-                    source_path = n.get('source_path', '')
-                    timestamps_path = n.get('timestamps_path', '')
-                    Process(target=circle_detector, name='circle_detector', args=(
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            source_path,
-                            timestamps_path
-                            )).start()
-
             else:
                 if not active_children():
                     break
