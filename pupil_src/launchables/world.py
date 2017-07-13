@@ -109,7 +109,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from log_history import Log_History
     from frame_publisher import Frame_Publisher
     from blink_detection import Blink_Detection
-    from video_capture import source_classes, manager_classes,Base_Manager
+    from video_capture import source_classes, manager_classes, Base_Manager
     from pupil_data_relay import Pupil_Data_Relay
     from remote_recorder import Remote_Recorder
     from audio_capture import Audio_Capture
