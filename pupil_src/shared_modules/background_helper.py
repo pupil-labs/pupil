@@ -10,7 +10,8 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from ctypes import c_bool
-
+import multiprocessing as mp
+mp = mp.get_context('fork')
 import logging
 logger = logging.getLogger(__name__)
 
@@ -21,14 +22,11 @@ class EarlyCancellationError(Exception):
 
 class Task_Proxy(object):
     '''Future like object that runs a given generator in the background and returns is able to return the results incrementally'''
-    def __init__(self, name, generator, force_spawn=False, args=(), kwargs={}):
+    def __init__(self, name, generator, args=(), kwargs={}):
         super(Task_Proxy, self).__init__()
 
-        if force_spawn:
-            import multiprocessing as mp
-            mp = mp.get_context('spawn')
-        else:
-            import multiprocessing as mp
+
+
 
         self._should_terminate_flag = mp.Value(c_bool, 0)
         self._completed = False
