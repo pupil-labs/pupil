@@ -9,13 +9,12 @@ pyndsi_hidden_imports = ['pyre']
 
 from pyglui import ui
 
-
 if platform.system() == 'Darwin':
     sys.path.append('.')
     from version import dpkg_deb_version
     del sys.path[-1]
 
-    a = Analysis(['../../pupil_src/player/main.py'],
+    a = Analysis(['../../pupil_src/main.py'],
                  pathex=['../../pupil_src/shared_modules/'],
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports+pyndsi_hidden_imports,
                  hookspath=None,
@@ -57,7 +56,7 @@ if platform.system() == 'Darwin':
 
 
 elif platform.system() == 'Linux':
-    a = Analysis(['../../pupil_src/player/main.py'],
+    a = Analysis(['../../pupil_src/main.py'],
                  pathex=['../../pupil_src/shared_modules/'],
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports+pyndsi_hidden_imports,
                  hookspath=None,
@@ -135,7 +134,7 @@ elif platform.system() == 'Windows':
         scipy_imports += ['scipy.integrate._ode', 'scipy.integrate.quadrature', 'scipy.integrate.odepack', 'scipy.integrate._odepack', 'scipy.integrate.quadpack', 'scipy.integrate._quadpack']
         scipy_imports += ['scipy.integrate.vode', 'scipy.integrate.lsoda', 'scipy.integrate._dop', 'scipy.special._ufuncs', 'scipy.special._ufuncs_cxx']
 
-        a = Analysis(['../../pupil_src/player/main.py'],
+        a = Analysis(['../../pupil_src/main.py'],
                      pathex=['../../pupil_src/shared_modules/', '../../pupil_external'],
                      hiddenimports=['pyglui.cygl.shader']+scipy_imports+av_hidden_imports+pyndsi_hidden_imports,
                      hookspath=None,
