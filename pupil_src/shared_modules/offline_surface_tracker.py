@@ -13,7 +13,6 @@ import sys, os
 import cv2
 import numpy as np
 import csv
-import multiprocessing as mp
 
 from ctypes import c_bool
 
@@ -36,7 +35,10 @@ from surface_tracker import Surface_Tracker
 from square_marker_detect import draw_markers,m_marker_to_screen
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 from offline_reference_surface import Offline_Reference_Surface
-from math import sqrt
+
+
+import multiprocessing
+mp = multiprocessing.get_context("fork")
 
 
 class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
@@ -170,7 +172,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         elif notification['subject'] == 'min_marker_perimeter_changed':
             logger.info('Min marker perimeter adjusted. Re-detecting surfaces.')
             self.invalidate_surface_caches()
-        elif notification['subject'] is "should_export":
+        elif notification['subject'] == "should_export":
             self.save_surface_statsics_to_file(notification['range'],notification['export_dir'])
 
 
@@ -397,9 +399,9 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
         """
         metrics_dir = os.path.join(export_dir,'surfaces')
-        section = export_range
-        in_mark = export_range.start
-        out_mark = export_range.stop
+        section = slice(*export_range)
+        in_mark = section.start
+        out_mark = section.stop
         logger.info("exporting metrics to {}".format(metrics_dir))
         if os.path.isdir(metrics_dir):
             logger.info("Will overwrite previous export for this section")
