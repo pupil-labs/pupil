@@ -207,7 +207,7 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
             logger.warning('No annotations in this recording nothing to export')
             return
 
-        annotations_in_section = chain(*self.annotations_by_frame[export_range])
+        annotations_in_section = chain(*self.annotations_by_frame[slice(*export_range)])
         annotations_in_section = list({a['index']: a for a in annotations_in_section}.values())  # remove duplicates
         annotations_in_section.sort(key=lambda a:a['index'])
 

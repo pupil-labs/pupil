@@ -128,6 +128,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
             self.export_data(notification['range'], notification['export_dir'])
 
     def export_data(self, export_range, export_dir):
+        export_range = slice(*export_range)
         with open(os.path.join(export_dir, 'pupil_positions.csv'), 'w', encoding='utf-8', newline='') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',')
 

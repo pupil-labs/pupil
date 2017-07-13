@@ -272,8 +272,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.plugins.clean()
 
     def do_export(_):
-        export_range = slice(g_pool.trim_marks.in_mark, g_pool.trim_marks.out_mark)
-        export_dir = os.path.join(g_pool.rec_dir, 'exports', '{}-{}'.format(export_range.start, export_range.stop))
+        export_range = g_pool.trim_marks.in_mark, g_pool.trim_marks.out_mark
+        export_dir = os.path.join(g_pool.rec_dir, 'exports', '{}-{}'.format(*export_range))
         try:
             os.makedirs(export_dir)
         except OSError as e:
@@ -282,12 +282,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                 raise e
             else:
                 overwrite_warning = "Previous export for range [{}-{}] already exsits - overwriting."
-                logger.warning(overwrite_warning.format(export_range.start, export_range.stop))
+                logger.warning(overwrite_warning.format(*export_range))
         else:
             logger.info('Created export dir at "{}"'.format(export_dir))
 
         notification = {'subject': 'should_export', 'range': export_range, 'export_dir': export_dir}
-        g_pool.notifications.append(notification)
+        g_pool.ipc_pub.notify(notification)
 
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
@@ -377,8 +377,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                        ('Vis_Circle', {}), ('Video_Export_Launcher', {}),
                        ('Pupil_From_Recording', {}), ('Gaze_From_Recording', {})]
     previous_plugins = session_settings.get('loaded_plugins', default_plugins)
-    g_pool.notifications = []
-    g_pool.delayed_notifications = {}
     g_pool.plugins = Plugin_List(g_pool, plugin_by_name, system_plugins+previous_plugins)
 
 
