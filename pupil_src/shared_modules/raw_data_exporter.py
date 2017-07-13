@@ -124,7 +124,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
             self.menu = None
 
     def on_notify(self, notification):
-        if notification['subject'] is "should_export":
+        if notification['subject'] == "should_export":
             self.export_data(notification['range'], notification['export_dir'])
 
     def export_data(self, export_range, export_dir):

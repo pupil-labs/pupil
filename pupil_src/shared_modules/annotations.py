@@ -240,7 +240,7 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
             self.buttons = []
 
     def on_notify(self,notification):
-        if notification['subject'] is "should_export":
+        if notification['subject'] == "should_export":
             self.export_annotations(notification['range'],notification['export_dir'])
 
     def unset_alive(self):

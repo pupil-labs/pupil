@@ -143,7 +143,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
             self._classify()
         elif notification['subject'] == 'fixations_should_recalculate':
             self._classify()
-        elif notification['subject'] is "should_export":
+        elif notification['subject'] == "should_export":
             self.export_fixations(notification['range'],notification['export_dir'])
 
 
