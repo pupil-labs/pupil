@@ -21,15 +21,15 @@ from circle_detector import find_concetric_circles
 import OpenGL.GL as gl
 from pyglui.cygl.utils import *
 from glfw import *
-
+from time import time
 from calibration_routines import gaze_mapping_plugins
 from calibration_routines.finish_calibration import select_calibration_method
 from file_methods import load_object, save_object
 
 import background_helper as bh
+import zmq_tools
 from itertools import chain
 import random
-from collections import namedtuple
 
 import logging
 logger = logging.getLogger(__name__)
@@ -37,18 +37,28 @@ logger = logging.getLogger(__name__)
 gaze_mapping_plugins_by_name = {p.__name__: p for p in gaze_mapping_plugins}
 
 
-Fake_Capture = namedtuple('Fake_Capture', ['frame_size'])
-Fake_Pool = namedtuple('Fake_Pool', ['app', 'get_timestamp', 'capture', 'detection_mapping_mode','rec_dir'])
+class Empty(object):
+        pass
 
 
 def setup_fake_pool(frame_size, detection_mode,rec_dir):
-    return Fake_Pool('player', lambda: 0., Fake_Capture(frame_size), detection_mode,rec_dir)
+    cap = Empty()
+    cap.frame_size = frame_size
+    pool = Empty()
+    pool.capture = cap
+    pool.get_timestamp = time
+    pool.detection_mapping_mode = detection_mode
+    pool.rec_dir = rec_dir
+    pool.app = 'player'
+    return pool
 
-random_colors = ( (0, .8, 0, .8),
-                   (.8, 0, 0, .8),
-                   (0, 0, .8, .8),
-                   (.8, 0, .6, .8),
-                    )
+
+random_colors = ((0.66015625, 0.859375, 0.4609375, 0.8),
+                 (0.99609375, 0.84375, 0.3984375, 0.8),
+                 (0.46875, 0.859375, 0.90625, 0.8),
+                 (0.984375, 0.59375, 0.40234375, 0.8),
+                 (0.66796875, 0.61328125, 0.9453125, 0.8),
+                 (0.99609375, 0.37890625, 0.53125, 0.8))
 
 
 class Gaze_Producer_Base(Producer_Plugin_Base):
@@ -65,68 +75,13 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         logger.debug('gaze positions changed')
 
 
-
-
-class Global_Container(object):
-    pass
-
-
-def detect_marker_positions(source_path, timestamps_path):
-
-    try:
-        src = File_Source(Global_Container(), source_path, np.load(timestamps_path), timed_playback=False)
-        frame = src.get_frame()
-        logger.info('Starting calibration marker detection...')
-        frame_count = src.get_frame_count()
-
-        while True:
-            progress = 100.*frame.index/frame_count
-
-            markers = find_concetric_circles(frame.gray, min_ring_count=3)
-            if len(markers) > 0:
-                detected = True
-                marker_pos = markers[0][0][0]  # first marker innermost ellipse, pos
-                pos = normalize(marker_pos, (frame.width, frame.height), flip_y=True)
-
-            else:
-                detected = False
-                pos = None
-
-            if detected:
-                second_ellipse = markers[0][1]
-                col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
-                row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
-                marker_gray = frame.gray[slice(*row_slice), slice(*col_slice)]
-                avg = cv2.mean(marker_gray)[0]
-                center = marker_gray[int(second_ellipse[1][1])//2, int(second_ellipse[1][0])//2]
-                rel_shade = center-avg
-
-                ref = {}
-                ref["norm_pos"] = pos
-                ref["screen_pos"] = marker_pos
-                ref["timestamp"] = frame.timestamp
-                ref['index'] = frame.index
-                if rel_shade > 30:
-                    ref['type'] = 'stop_marker'
-                else:
-                    ref['type'] = 'calibration_marker'
-
-                yield progress, ref
-            else:
-                yield progress, None
-
-            frame = src.get_frame()
-    except EndofVideoFileError:
-        pass
-
-
 def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
     method, result = select_calibration_method(g_pool, calib_list, ref_list)
     if result['subject'] != 'calibration.failed':
         logger.info('Offline calibration successful. Starting mapping using {}.'.format(method))
         name, args = result['name'], result['args']
         gaze_mapper_cls = gaze_mapping_plugins_by_name[name]
-        gaze_mapper = gaze_mapper_cls(Global_Container(), **args)
+        gaze_mapper = gaze_mapper_cls(Empty(), **args)
 
         for idx, datum in enumerate(map_list):
             mapped_gaze = gaze_mapper.on_pupil_datum(datum)
@@ -149,6 +104,7 @@ def make_section_dict(calib_range, map_range):
                 'gaze_positions':[],
                 'bg_task':None}
 
+
 class Offline_Calibration(Gaze_Producer_Base):
     session_data_version = 3
 
@@ -156,6 +112,8 @@ class Offline_Calibration(Gaze_Producer_Base):
         super().__init__(g_pool)
         self.manual_ref_edit_mode = manual_ref_edit_mode
         self.menu = None
+        self.process_pipe = None
+
 
         self.result_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.result_dir, exist_ok=True)
@@ -174,7 +132,6 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.sections = session_data['sections']
         self.circle_marker_positions = session_data['circle_marker_positions']
         self.manual_ref_positions = session_data['manual_ref_positions']
-        self.detection_proxy = None
         if self.circle_marker_positions:
             self.detection_progress = 100.0
             for s in self.sections:
@@ -182,7 +139,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.correlate_and_publish()
         else:
             self.detection_progress = 0.0
-            self.start_detection_task(None)
+            self.start_detection_task()
 
     def append_section(self):
         map_range = [0, len(self.g_pool.timestamps)]
@@ -192,20 +149,13 @@ class Offline_Calibration(Gaze_Producer_Base):
         if self.menu is not None:
             self.append_section_menu(sec, collapsed=False)
 
-    def start_detection_task(self, _):
-        # cancel current detection if running
-        if self.detection_proxy is not None:
-            self.detection_proxy.cancel()
-
+    def start_detection_task(self):
+        self.process_pipe = zmq_tools.Msg_Pair_Server(self.g_pool.zmq_ctx)
         self.circle_marker_positions = []
         source_path = self.g_pool.capture.source_path
         timestamps_path = os.path.join(self.g_pool.rec_dir, "world_timestamps.npy")
-
-        self.detection_proxy = bh.Task_Proxy('Calibration Marker Detection',
-                                             detect_marker_positions,
-                                            force_spawn=platform.system() == 'Darwin',
-                                             args=(source_path, timestamps_path))
-
+        self.notify_all({'subject': 'circle_detector_process.should_start',
+                         'source_path': source_path, 'timestamps_path': timestamps_path,"pair_url":self.process_pipe.url})
 
     def init_gui(self):
         def clear_markers():
@@ -214,7 +164,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.g_pool.gui.append(self.menu)
 
         self.menu.append(ui.Info_Text('"Detection" searches for calibration markers in the world video.'))
-        self.menu.append(ui.Button('Redetect', self.start_detection_task))
+        # self.menu.append(ui.Button('Redetect', self.start_detection_task))
         slider = ui.Slider('detection_progress', self, label='Detection Progress', setter=lambda _: _)
         slider.display_format = '%3.0f%%'
         self.menu.append(slider)
@@ -285,11 +235,11 @@ class Offline_Calibration(Gaze_Producer_Base):
             for s in self.sections:
                 self.calibrate_section(s)
 
-    def on_click(self,pos,button,action):
+    def on_click(self, pos, button, action):
         if action == GLFW_PRESS and self.manual_ref_edit_mode:
             manual_refs_in_frame = [r for r in self.manual_ref_positions if self.g_pool.capture.get_frame_index() in r['index_range'] ]
             for ref in manual_refs_in_frame:
-                if np.sqrt((pos[0]-ref['screen_pos'][0])**2 + (pos[1]-ref['screen_pos'][1])**2) <15: #img pixels
+                if np.sqrt((pos[0]-ref['screen_pos'][0])**2 + (pos[1]-ref['screen_pos'][1])**2) < 15:  # img pixels
                     del self.manual_ref_positions[self.manual_ref_positions.index(ref)]
                     return
             new_ref = { 'screen_pos': pos,
@@ -301,19 +251,25 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.manual_ref_positions.append(new_ref)
 
     def recent_events(self, events):
-        if self.detection_proxy:
-            recent = [d for d in self.detection_proxy.fetch()]
 
-            if recent:
+        if self.process_pipe and self.process_pipe.new_data:
+            topic, msg = self.process_pipe.recv()
+            if topic == 'progress':
+                recent = msg.get('data', [])
                 progress, data = zip(*recent)
                 self.circle_marker_positions.extend([d for d in data if d])
                 self.detection_progress = progress[-1]
-
-            if self.detection_proxy.completed:
+            elif topic == 'finished':
                 self.detection_progress = 100.
-                self.detection_proxy = None
+                self.process_pipe = None
                 for s in self.sections:
                     self.calibrate_section(s)
+            elif topic == 'exception':
+                self.process_pipe = None
+                self.detection_progress = 0.
+                logger.info('Marker detection was interrupted')
+                logger.debug('Reason: {}'.format(msg.get('reason', 'n/a')))
+
 
         for sec in self.sections:
             if sec["bg_task"]:
@@ -415,9 +371,13 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.win_size = w, h
 
     def cleanup(self):
-        if self.detection_proxy:
-            self.detection_proxy.cancel()
+        if self.process_pipe:
+            self.process_pipe.send(topic='terminate',payload={})
+            self.process_pipe.socket.close()
+            self.process_pipe = None
         for sec in self.sections:
+            if sec['bg_task']:
+                sec['bg_task'].cancel()
             sec['bg_task'] = None
             sec["gaze_positions"] = []
 
@@ -429,5 +389,5 @@ class Offline_Calibration(Gaze_Producer_Base):
             session_data['circle_marker_positions'] = self.circle_marker_positions
         else:
             session_data['circle_marker_positions'] = []
-        save_object(session_data,os.path.join(self.result_dir, 'offline_calibration_gaze'))
+        save_object(session_data, os.path.join(self.result_dir, 'offline_calibration_gaze'))
         self.deinit_gui()

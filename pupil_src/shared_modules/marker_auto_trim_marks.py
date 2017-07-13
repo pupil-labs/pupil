@@ -140,7 +140,10 @@ class Marker_Auto_Trim_Marks(Plugin):
             self.menu[0].text  = "Marker Auto Trim Marks: Turn on Offline_Surface_Tracker!"
 
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         self.current_frame_idx = frame.index
         if self.video_export_queue:
             self.video_export(self.video_export_queue.pop(0))

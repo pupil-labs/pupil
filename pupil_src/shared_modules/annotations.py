@@ -207,7 +207,7 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
             logger.warning('No annotations in this recording nothing to export')
             return
 
-        annotations_in_section = chain(*self.annotations_by_frame[export_range])
+        annotations_in_section = chain(*self.annotations_by_frame[slice(*export_range)])
         annotations_in_section = list({a['index']: a for a in annotations_in_section}.values())  # remove duplicates
         annotations_in_section.sort(key=lambda a:a['index'])
 
@@ -218,7 +218,10 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
                 csv_writer.writerow(self.csv_representation_for_annotations(a))
             logger.info("Created 'annotations.csv' file.")
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         self.last_frame_ts = frame.timestamp
         if frame.index != self.current_frame:
             self.current_frame = frame.index
@@ -237,7 +240,7 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
             self.buttons = []
 
     def on_notify(self,notification):
-        if notification['subject'] is "should_export":
+        if notification['subject'] == "should_export":
             self.export_annotations(notification['range'],notification['export_dir'])
 
     def unset_alive(self):

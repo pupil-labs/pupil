@@ -281,7 +281,10 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.camera_intrinsics = camera_matrix,dist_coefs,self.g_pool.capture.frame_size
         self.show_undistortion_switch.read_only=False
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         if self.collect_new:
             img = frame.img
             status, grid_points = cv2.findCirclesGrid(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)

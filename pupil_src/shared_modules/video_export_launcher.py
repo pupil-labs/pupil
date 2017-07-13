@@ -12,7 +12,9 @@ See COPYING and COPYING.LESSER for license details.
 from plugin import Analysis_Plugin_Base
 import os
 import time
-import multiprocessing as mp
+import multiprocessing
+mp = multiprocessing.get_context("fork")
+
 from pyglui import ui
 import logging
 logger = logging.getLogger(__name__)
@@ -111,32 +113,34 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         return {}
 
     def on_notify(self,notification):
-        if notification['subject'] is "should_export":
+        if notification['subject'] == "should_export":
             self.add_export(notification['range'],notification['export_dir'])
 
     def add_export(self,export_range,export_dir):
-        logger.debug("Adding new video export process.")
-        should_terminate = mp.Value(c_bool,False)
-        frames_to_export  = mp.Value(c_int,0)
-        current_frame = mp.Value(c_int,0)
+        export_range = slice(*export_range)
+        logger.warning("Adding new video export process.")
+        should_terminate = mp.Value(c_bool, False)
+        frames_to_export  = mp.Value(c_int, 0)
+        current_frame = mp.Value(c_int, 0)
 
         rec_dir = self.g_pool.rec_dir
         user_dir = self.g_pool.user_dir
-        start_frame= export_range.start
-        end_frame= export_range.stop+1 #end_frame is exclusive
+        start_frame = export_range.start
+        end_frame = export_range.stop+1 # end_frame is exclusive
         frames_to_export.value = end_frame-start_frame
 
         # Here we make clones of every plugin that supports it.
         # So it runs in the current config when we lauch the exporter.
         plugins = self.g_pool.plugins.get_initializers()
 
-        out_file_path=verify_out_file_path(self.rec_name,export_dir)
+        out_file_path = verify_out_file_path(self.rec_name,export_dir)
         pre_computed = {'gaze_positions':self.g_pool.gaze_positions,
                         'pupil_positions':self.g_pool.pupil_positions,
                         'pupil_data':self.g_pool.pupil_data}
         pre_computed = {}
         process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,self.g_pool.min_data_confidence,start_frame,end_frame,plugins,out_file_path,pre_computed))
         self.new_export = process
+        logger.warning("adding export")
 
     def launch_export(self, new_export):
         logger.debug("Starting export as new process %s" %new_export)
@@ -144,7 +148,7 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         self.exports.append(new_export)
         self._update_gui()
 
-    def update(self,frame,events):
+    def recent_events(self, events):
         if self.new_export:
             self.launch_export(self.new_export)
             self.new_export = None

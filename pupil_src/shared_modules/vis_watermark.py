@@ -60,7 +60,10 @@ class Vis_Watermark(Visualizer_Plugin_Base):
             self.alpha_mask = np.dstack((self.alpha_mask,self.alpha_mask,self.alpha_mask))
             self.watermark_path = path
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         if self.drag_offset is not None:
             pos = glfwGetCursorPos(glfwGetCurrentContext())
             pos = normalize(pos,glfwGetWindowSize(glfwGetCurrentContext()))

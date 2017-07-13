@@ -58,17 +58,6 @@ class Plugin(object):
         If you plan to update data inplace, note that this will affect all plugins executed after you.
         Use self.order to deal with this appropriately
         '''
-        if not hasattr(self, '_warn_once'):
-            depr_warn = "{}: Update will be deprecated soon. Use 'recent_events instead.'"
-            logger.warning(depr_warn.format(self.__class__.__name__))
-            self._warn_once = True
-        if 'frame' in events:
-            self.update(events['frame'], events)
-
-    def update(self, frame=None, events={}):
-        """
-        deprecated use revent events instead
-        """
         pass
 
     def gl_display(self):
@@ -148,7 +137,7 @@ class Plugin(object):
         All notifications must be serializable by msgpack.
 
         """
-        if self.g_pool.app in ('player', 'exporter'):
+        if self.g_pool.app ==  'exporter':
             if notification.get('delay', 0):
                 notification['_notify_time_'] = time()+notification['delay']
                 self.g_pool.delayed_notifications[notification['subject']] = notification

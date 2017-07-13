@@ -179,7 +179,10 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.active_exports = self.exports[:]
         self.run = True
 
-    def update(self, frame, events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         if self.run:
             for i in range(len(self.workers)):
                 if self.workers[i] and self.workers[i].is_alive():

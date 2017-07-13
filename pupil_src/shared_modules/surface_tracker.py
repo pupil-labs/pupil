@@ -192,7 +192,10 @@ class Surface_Tracker(Plugin):
             s_menu.append(ui.Button('remove',remove_s))
             self.menu.append(s_menu)
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         self.img_shape = frame.height,frame.width,3
 
         if self.running:
