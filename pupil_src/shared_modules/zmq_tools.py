@@ -161,7 +161,7 @@ class Msg_Pair_Base(Msg_Streamer,Msg_Receiver):
 
     @property
     def new_data(self):
-        return self.socket.get(zmq.EVENTS) & 1
+        return self.socket.get(zmq.EVENTS) & zmq.POLLIN
 
     def subscribe(self, topic):
         raise NotImplementedError()
