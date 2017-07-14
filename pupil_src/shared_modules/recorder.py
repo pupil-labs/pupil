@@ -20,7 +20,7 @@ from time import strftime, localtime, time, gmtime
 from shutil import copy2
 from file_methods import save_object, load_object
 from methods import get_system_info
-from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
+from av_writer import JPEG_Writer, AV_Writer
 from ndsi import H264Writer
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 # logging
