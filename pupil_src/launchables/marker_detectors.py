@@ -17,24 +17,29 @@ class Empty(object):
 def circle_detector(ipc_push_url, pair_url,
                     source_path, timestamps_path, batch_size=20):
 
-    import cv2
-    import numpy as np
-    from time import sleep
-    from circle_detector import find_concetric_circles
-    from video_capture import File_Source, EndofVideoFileError
-    from methods import normalize
+    # ipc setup
     import zmq
     import zmq_tools
     zmq_ctx = zmq.Context()
     process_pipe = zmq_tools.Msg_Pair_Client(zmq_ctx, pair_url)
+
     # logging setup
     import logging
+    logging.getLogger("OpenGL").setLevel(logging.ERROR)
     logger = logging.getLogger()
     logger.handlers = []
     logger.setLevel(logging.INFO)
     logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url))
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
+
+    # imports
+    import cv2
+    import numpy as np
+    from time import sleep
+    from circle_detector import find_concetric_circles
+    from video_capture import File_Source, EndofVideoFileError
+    from methods import normalize
 
     try:
         src = File_Source(Empty(), source_path, np.load(timestamps_path), timed_playback=False)
