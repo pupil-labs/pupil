@@ -177,7 +177,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
 
     def append_section_menu(self, sec, collapsed=True):
-        section_menu = ui.Growing_Menu('Gaze Section {}'.format(self.sections.index(sec) + 1))
+        section_menu = ui.Growing_Menu('Gaze Section')
         section_menu.collapsed = collapsed
         section_menu.color = RGBA(*sec['color'])
 
