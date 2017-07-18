@@ -74,6 +74,9 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.notify_all({'subject': 'gaze_positions_changed'})
         logger.debug('gaze positions changed')
 
+    def get_init_dict(self):
+        return {}
+
 
 def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
     method, result = select_calibration_method(g_pool, calib_list, ref_list)
