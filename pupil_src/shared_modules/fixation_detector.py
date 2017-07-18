@@ -749,7 +749,7 @@ class Fixation_Detector_3D(Online_Base_Fixation_Detector):
         self.dispersion_slider_stp = 0.05
         self.detection_windows = [Detection_Window(), Detection_Window()]
 
-    def update(self,frame=None,events={}):
+    def recent_events(self, events):
         recent = [[],[]]
         events['fixations'] = []
         for gp in events['gaze_positions']:

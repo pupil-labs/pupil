@@ -185,12 +185,11 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
             for g in new_gaze_data:
                 gaze_pub.send('gaze', g)
 
-            # simulate the update loop.
             events = {}
             events['gaze_positions'] = new_gaze_data
             events['pupil_positions'] = [p]
             for plugin in g_pool.plugins:
-                plugin.update(frame=None, events=events)
+                plugin.recent_events(events=events)
 
         if notify_sub.socket in socks:
             t, n = notify_sub.recv()
