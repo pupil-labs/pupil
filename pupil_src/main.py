@@ -50,17 +50,16 @@ from version_utils import get_version
 app_version = get_version(version_file)
 
 # threading and processing
-from multiprocessing import Process, Value,active_children,set_start_method
-from multiprocessing.spawn import freeze_support
+from multiprocessing import Process, Value, active_children, set_start_method, freeze_support
 from threading import Thread
-from ctypes import c_double,c_bool
+from ctypes import c_double, c_bool
 
 # networking
 import zmq
 import zmq_tools
 
 # time
-from time import time, sleep
+from time import time
 
 # os utilities
 from os_utils import Prevent_Idle_Sleep
