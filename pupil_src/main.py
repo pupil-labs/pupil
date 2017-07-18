@@ -133,7 +133,7 @@ def launcher():
         else:
             logger.setLevel(logging.INFO)
         #Stream to file
-        fh = logging.FileHandler(os.path.join(user_dir,'capture.log'),mode='w')
+        fh = logging.FileHandler(os.path.join(user_dir,'{}.log'.format(app)),mode='w')
         fh.setFormatter(logging.Formatter('%(asctime)s - %(processName)s - [%(levelname)s] %(name)s: %(message)s'))
         logger.addHandler(fh)
         #Stream to console.
