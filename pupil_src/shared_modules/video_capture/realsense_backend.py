@@ -15,7 +15,7 @@ import cv2
 
 import pyrealsense as pyrs
 from pyrealsense.stream import ColorStream, DepthStream
-from pyrealsense.constants import rs_stream
+from pyrealsense.constants import rs_stream, rs_option
 
 from version_utils import VersionFormat
 from .base_backend import Base_Source, Base_Manager
@@ -44,7 +44,8 @@ class ColorFrame(object):
 
 class DepthFrame(object):
     def __init__(self, device):
-        depth = 255 * (device.depth / device.depth.max()) * (65 / 4)
+        range_slice = 65 / 3
+        depth = 255 * (device.depth / device.depth.max()) * range_slice
 
         depth = depth.astype(np.uint8)
         self.mapped_depth = cv2.applyColorMap(depth, cv2.COLORMAP_BONE)
@@ -52,6 +53,41 @@ class DepthFrame(object):
     @property
     def bgr(self):
         return self.mapped_depth
+
+
+class Control(object):
+    def __init__(self, device, opt_range, value):
+        self._dev = device
+        self._value = value
+        self.range = opt_range
+        self.label = rs_option.name_for_value[opt_range.option]
+        self.label = self.label.replace('RS_OPTION_', '').replace('_', ' ').capitalize()
+        self.label = self.label
+        self.description = self._dev.get_device_option_description(opt_range.option)
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, val):
+        try:
+            self._dev.set_device_option(self.range.option, val)
+        except pyrs.RealsenseError as err:
+            logger.error('Setting option "{}" failed:'.format(self.label))
+            logger.debug('Reason: {}'.format(err))
+        else:
+            self._value = val
+
+
+class Realsense_Controls(dict):
+    def __init__(self, device, presets={}):
+        if presets:
+            pass  # TODO set options as bulk
+        controls = {}
+        for opt_range, value in device.get_available_options():
+            controls[opt_range.option] = Control(device, opt_range, value)
+        super().__init__(controls)
 
 
 class Realsense_Source(Base_Source):
@@ -127,8 +163,7 @@ class Realsense_Source(Base_Source):
 
         self.device = self.service.Device(device_id, streams=self.streams.values())
 
-        if not device_options:
-            pass  # apply device options
+        self.controls = Realsense_Controls(self.device, device_options) if self.device else {}
 
     def _enumerate_formats(self, device_id):
         '''Enumerate formats into hierachical structure:
@@ -255,6 +290,19 @@ class Realsense_Source(Base_Source):
             label='Depth Frame Rate'
         ))
 
+        sensor_control = ui.Growing_Menu(label='Sensor Settings')
+        for ctrl in sorted(self.controls.values(), key=lambda x: x.range.option):
+            # sensor_control.append(ui.Info_Text(ctrl.description))
+            if ctrl.range.min == 0.0 and ctrl.range.max == 1.0 and ctrl.range.step == 1.0:
+                sensor_control.append(ui.Switch('value', ctrl, label=ctrl.label,
+                                                off_val=0.0, on_val=1.0))
+            else:
+                sensor_control.append(ui.Slider('value', ctrl,
+                                                label=ctrl.label,
+                                                min=ctrl.range.min,
+                                                max=ctrl.range.max,
+                                                step=ctrl.range.step))
+        ui_elements.append(sensor_control)
         self.g_pool.capture_source_menu.extend(ui_elements)
 
     def gl_display(self):
