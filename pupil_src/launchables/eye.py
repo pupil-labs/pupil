@@ -622,7 +622,7 @@ def eye_profiled(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url
     import cProfile
     import subprocess
     import os
-    from eye import eye
+    from .eye import eye
     cProfile.runctx("eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings)",
                     {'timebase': timebase, 'is_alive_flag': is_alive_flag, 'ipc_pub_url': ipc_pub_url,
                      'ipc_sub_url': ipc_sub_url, 'ipc_push_url': ipc_push_url, 'user_dir': user_dir,

@@ -538,7 +538,7 @@ def world_profiled(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     import cProfile
     import subprocess
     import os
-    from world import world
+    from .world import world
     cProfile.runctx("world(timebase, eyes_are_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
                     {'timebase': timebase, 'eyes_are_alive': eyes_are_alive, 'ipc_pub_url': ipc_pub_url,
                      'ipc_sub_url': ipc_sub_url, 'ipc_push_url': ipc_push_url, 'user_dir': user_dir,
