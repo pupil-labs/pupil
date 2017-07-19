@@ -48,7 +48,7 @@ class DepthFrame(object):
         depth = 255 * (device.depth / device.depth.max()) * range_slice
 
         depth = depth.astype(np.uint8)
-        self.mapped_depth = cv2.applyColorMap(depth, cv2.COLORMAP_BONE)
+        self.mapped_depth = cv2.applyColorMap(depth, cv2.COLORMAP_JET)
 
     @property
     def bgr(self):
