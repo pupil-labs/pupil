@@ -247,7 +247,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         ipc_pub.notify(n)
 
     def stop_eye_process(eye_id):
-        n = {'subject': 'eye_process.should_stop', 'eye_id': eye_id}
+        n = {'subject': 'eye_process.should_stop.{}'.format(eye_id), 'eye_id': eye_id,'delay':0.2}
         ipc_pub.notify(n)
 
     def start_stop_eye(eye_id, make_alive):

@@ -426,7 +426,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             if notify_sub.new_data:
                 t, notification = notify_sub.recv()
                 subject = notification['subject']
-                if subject == 'eye_process.should_stop':
+                if subject.startswith('eye_process.should_stop'):
                     if notification['eye_id'] == eye_id:
                         break
                 elif subject == 'set_detection_mapping_mode':
