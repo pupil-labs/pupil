@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import time
-import cv2
 
 import pyrealsense as pyrs
 from pyrealsense.stream import ColorStream, DepthStream
@@ -28,9 +27,9 @@ import numpy as np
 assert VersionFormat(pyrs.__version__) >= VersionFormat('2.1')
 
 # logging
-logging.getLogger('pyrealsense').setLevel(logging.WARNING)
+logging.getLogger('pyrealsense').setLevel(logging.ERROR + 1)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 class ColorFrame(object):
@@ -44,15 +43,14 @@ class ColorFrame(object):
 
 class DepthFrame(object):
     def __init__(self, device):
-        range_slice = 65 / 3
-        depth = 255 * (device.depth / device.depth.max()) * range_slice
-
-        depth = depth.astype(np.uint8)
-        self.mapped_depth = cv2.applyColorMap(depth, cv2.COLORMAP_JET)
+        self._bgr = None
+        self.depth = device.depth
 
     @property
     def bgr(self):
-        return self.mapped_depth
+        if self._bgr is None:
+            self._bgr = cygl.utils.cumhist_color_map16(self.depth)
+        return self._bgr
 
 
 class Control(object):
@@ -61,8 +59,10 @@ class Control(object):
         self._value = value
         self.range = opt_range
         self.label = rs_option.name_for_value[opt_range.option]
-        self.label = self.label.replace('RS_OPTION_', '').replace('_', ' ').capitalize()
-        self.label = self.label
+        self.label = self.label.replace('RS_OPTION_', '')
+        self.label = self.label.replace('R200_', '')
+        self.label = self.label.replace('_', ' ')
+        self.label = self.label.title()
         self.description = self._dev.get_device_option_description(opt_range.option)
 
     @property
@@ -74,20 +74,35 @@ class Control(object):
         try:
             self._dev.set_device_option(self.range.option, val)
         except pyrs.RealsenseError as err:
-            logger.error('Setting option "{}" failed:'.format(self.label))
+            logger.error('Setting option "{}" failed'.format(self.label))
             logger.debug('Reason: {}'.format(err))
         else:
             self._value = val
 
+    def refresh(self):
+        self._value = self._dev.get_device_option(self.range.option)
+
 
 class Realsense_Controls(dict):
-    def __init__(self, device, presets={}):
+    def __init__(self, device, presets=()):
         if presets:
-            pass  # TODO set options as bulk
+            # presets: list of (option, value)-tuples
+            try:
+                device.set_device_options(*zip(*presets))
+            except pyrs.RealsenseError as err:
+                logger.error('Setting device option presets failed')
+                logger.debug('Reason: {}'.format(err))
         controls = {}
         for opt_range, value in device.get_available_options():
             controls[opt_range.option] = Control(device, opt_range, value)
         super().__init__(controls)
+
+    def export_presets(self):
+        return [(opt, ctrl.value) for opt, ctrl in self.items()]
+
+    def refresh(self):
+        for ctrl in self.values():
+            ctrl.refresh()
 
 
 class Realsense_Source(Base_Source):
@@ -98,21 +113,23 @@ class Realsense_Source(Base_Source):
                  frame_size=(640, 480), frame_rate=30,
                  depth_frame_size=(640, 480), depth_frame_rate=30,
                  align_streams=False, rectify_streams=False,
-                 preview_depth=False, device_options={}):
+                 preview_depth=False, device_options=()):
         super().__init__(g_pool)
         self.device = None
         self.service = pyrs.Service()
         self.align_streams = align_streams
         self.rectify_streams = rectify_streams
         self.preview_depth = preview_depth
-        self._initialize_device(device_id, tuple(frame_size), frame_rate,
-                                tuple(depth_frame_size), depth_frame_rate, device_options)
+        self._initialize_device(device_id, frame_size, frame_rate,
+                                depth_frame_size, depth_frame_rate, device_options)
 
     def _initialize_device(self, device_id,
                            color_frame_size, color_fps,
                            depth_frame_size, depth_fps,
-                           device_options=None):
+                           device_options=()):
         devices = tuple(self.service.get_devices())
+        color_frame_size = tuple(color_frame_size)
+        depth_frame_size = tuple(depth_frame_size)
         if not devices:
             logger.error("Camera failed to initialize. No cameras connected.")
             self.device = None
@@ -165,6 +182,9 @@ class Realsense_Source(Base_Source):
 
         self.controls = Realsense_Controls(self.device, device_options) if self.device else {}
 
+        self.deinit_gui()
+        self.init_gui()
+
     def _enumerate_formats(self, device_id):
         '''Enumerate formats into hierachical structure:
 
@@ -206,13 +226,13 @@ class Realsense_Source(Base_Source):
     def get_init_dict(self):
         return {'device_id': self.device.device_id,
                 'frame_size': self.frame_size,
-                # 'device_options': self.device_options,  # shoud enumerate current state
                 'frame_rate': self.frame_rate,
                 'depth_frame_size': self.depth_frame_size,
                 'depth_frame_rate': self.depth_frame_rate,
                 'preview_depth': self.preview_depth,
                 'align_streams': self.align_streams,
-                'rectify_streams': self.rectify_streams}
+                'rectify_streams': self.rectify_streams,
+                'device_options': self.controls.export_presets()}
 
     def get_frame(self, frame_cls):
         if self.device.poll_for_frame() != 0:
@@ -285,12 +305,22 @@ class Realsense_Source(Base_Source):
             return avail_fps, [str(fps) for fps in avail_fps]
         ui_elements.append(ui.Selector(
             'depth_frame_rate', self,
-            # setter=,
             selection_getter=depth_fps_getter,
             label='Depth Frame Rate'
         ))
 
+        def reset_options():
+            if self.device:
+                try:
+                    self.device.reset_device_options_to_default(self.controls.keys())
+                except pyrs.RealsenseError as err:
+                    logger.error('Resetting device options failed')
+                    logger.debug('Reason: {}'.format(err))
+                finally:
+                    self.controls.refresh()
+
         sensor_control = ui.Growing_Menu(label='Sensor Settings')
+        sensor_control.append(ui.Button('Reset device options to default', reset_options))
         for ctrl in sorted(self.controls.values(), key=lambda x: x.range.option):
             # sensor_control.append(ui.Info_Text(ctrl.description))
             if ctrl.range.min == 0.0 and ctrl.range.max == 1.0 and ctrl.range.step == 1.0:
@@ -315,6 +345,34 @@ class Realsense_Source(Base_Source):
             cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8), alpha=0.4)
         gl_utils.make_coord_system_pixel_based((self.frame_size[1], self.frame_size[0], 3))
 
+    def restart_device(self, device_id=None, color_frame_size=None, color_fps=None,
+                       depth_frame_size=None, depth_fps=None, device_options=None):
+        if device_id is None:
+            device_id = self.device.device_id
+        if color_frame_size is None:
+            color_frame_size = self.frame_size
+        if color_fps is None:
+            color_fps = self.frame_rate
+        if depth_frame_size is None:
+            depth_frame_size = self.depth_frame_size
+        if depth_fps is None:
+            depth_fps = self.depth_frame_rate
+        if device_options is None:
+            device_options = self.controls.export_presets()
+        self.notify_all({'subject': 'realsense_source.restart',
+                         'device_id': device_id,
+                         'color_frame_size': color_frame_size,
+                         'color_fps': color_fps,
+                         'depth_frame_size': depth_frame_size,
+                         'depth_fps': depth_fps,
+                         'device_options': device_options})
+
+    def on_notify(self, notification):
+        if notification['subject'] == 'realsense_source.restart':
+            kwargs = notification.copy()
+            del kwargs['subject']
+            self._initialize_device(**kwargs)
+
     @property
     def frame_size(self):
         stream = self.streams[rs_stream.RS_STREAM_COLOR]
@@ -323,10 +381,7 @@ class Realsense_Source(Base_Source):
     @frame_size.setter
     def frame_size(self, new_size):
         if self.device is not None and new_size != self.frame_size:
-            self._initialize_device(self.device.device_id,
-                                    new_size, self.frame_rate,
-                                    self.depth_frame_size, self.depth_frame_rate,
-                                    device_options=None)
+            self.restart_device(color_frame_size=new_size)
 
     @property
     def frame_rate(self):
@@ -335,10 +390,7 @@ class Realsense_Source(Base_Source):
     @frame_rate.setter
     def frame_rate(self, new_rate):
         if self.device is not None and new_rate != self.frame_rate:
-            self._initialize_device(self.device.device_id,
-                                    self.frame_size, new_rate,
-                                    self.depth_frame_size, self.depth_frame_rate,
-                                    device_options=None)
+            self.restart_device(color_fps=new_rate)
 
     @property
     def depth_frame_size(self):
@@ -348,10 +400,7 @@ class Realsense_Source(Base_Source):
     @depth_frame_size.setter
     def depth_frame_size(self, new_size):
         if self.device is not None and new_size != self.depth_frame_size:
-            self._initialize_device(self.device.device_id,
-                                    self.frame_size, self.frame_rate,
-                                    new_size, self.depth_frame_rate,
-                                    device_options=None)
+            self.restart_device(depth_frame_size=new_size)
 
     @property
     def depth_frame_rate(self):
@@ -360,10 +409,7 @@ class Realsense_Source(Base_Source):
     @depth_frame_rate.setter
     def depth_frame_rate(self, new_rate):
         if self.device is not None and new_rate != self.depth_frame_rate:
-            self._initialize_device(self.device.device_id,
-                                    self.frame_size, self.frame_rate,
-                                    self.depth_frame_size, new_rate,
-                                    device_options=None)
+            self.restart_device(depth_fps=new_rate)
 
     @property
     def jpeg_support(self):
