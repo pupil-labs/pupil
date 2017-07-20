@@ -67,22 +67,22 @@ cdef class Detector_3D:
             self.detectProperties2D["coarse_filter_min"] = 128
             self.detectProperties2D["coarse_filter_max"] = 280
             self.detectProperties2D["intensity_range"] = 23
-            self.detectProperties2D["blur_size"] = 5
-            self.detectProperties2D["canny_treshold"] = 160
-            self.detectProperties2D["canny_ration"] = 2
+            self.detectProperties2D["blur_size"] = 3
+            self.detectProperties2D["canny_treshold"] = 200
+            self.detectProperties2D["canny_ration"] = 3
             self.detectProperties2D["canny_aperture"] = 5
-            self.detectProperties2D["pupil_size_max"] = 200
+            self.detectProperties2D["pupil_size_max"] = 150
             self.detectProperties2D["pupil_size_min"] = 30
-            self.detectProperties2D["strong_perimeter_ratio_range_min"] = 0.6
+            self.detectProperties2D["strong_perimeter_ratio_range_min"] = 0.8
             self.detectProperties2D["strong_perimeter_ratio_range_max"] = 1.1
-            self.detectProperties2D["strong_area_ratio_range_min"] = 0.8
+            self.detectProperties2D["strong_area_ratio_range_min"] = 0.6
             self.detectProperties2D["strong_area_ratio_range_max"] = 1.1
             self.detectProperties2D["contour_size_min"] = 5
-            self.detectProperties2D["ellipse_roundness_ratio"] = 0.09
-            self.detectProperties2D["initial_ellipse_fit_treshhold"] = 4.3
-            self.detectProperties2D["final_perimeter_ratio_range_min"] = 0.5
-            self.detectProperties2D["final_perimeter_ratio_range_max"] = 1.0
-            self.detectProperties2D["ellipse_true_support_min_dist"] = 3.0
+            self.detectProperties2D["ellipse_roundness_ratio"] = 0.1
+            self.detectProperties2D["initial_ellipse_fit_treshhold"] = 1.8
+            self.detectProperties2D["final_perimeter_ratio_range_min"] = 0.6
+            self.detectProperties2D["final_perimeter_ratio_range_max"] = 1.2
+            self.detectProperties2D["ellipse_true_support_min_dist"] = 2.5
 
 
         if not self.detectProperties3D:
