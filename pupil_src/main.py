@@ -76,7 +76,7 @@ else:
     from launchables.eye import eye
 from launchables.player import player, player_drop
 from launchables.marker_detectors import circle_detector
-
+from launchables.world import reset_restart
 
 def launcher():
     """Starts eye processes. Hosts the IPC Backbone and Logging functions.
@@ -198,6 +198,7 @@ def launcher():
     topics = (  'notify.eye_process.',
                 'notify.player_process.',
                 'notify.world_process.',
+                'notify.reset_restart_process.',
                 'notify.player_drop_process.',
                 'notify.launcher_process.',
                 'notify.meta.should_doc',
@@ -214,41 +215,16 @@ def launcher():
             break
 
     if app == 'service':
-        Process(target=service,
-                      name= 'service',
-                      args=(timebase,
-                            eyes_are_alive,
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version
-                            )).start()
+       cmd_push.notify({'subject':'service_process.should_start'})
     elif  app == 'capture':
-        Process(target=world,
-                      name= 'world',
-                      args=(timebase,
-                            eyes_are_alive,
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            )).start()
+       cmd_push.notify({'subject':'world_process.should_start'})
     elif app == 'player':
         if len(sys.argv) > 2:
             rec_dir = os.path.expanduser(sys.argv[-1])
         else:
             rec_dir = None
-        Process(target=player_drop,
-                      name= 'player_drop',
-                      args=(rec_dir,
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            )).start()
+        cmd_push.notify({'subject':'player_drop_process.should_start','rec_dir':rec_dir})
+
 
     with Prevent_Idle_Sleep():
         while True:
@@ -277,6 +253,34 @@ def launcher():
                             user_dir,
                             app_version,
                             )).start()
+                elif "notify.world_process.should_start" in topic:
+                    Process(target=world,
+                              name= 'world',
+                              args=(timebase,
+                                    eyes_are_alive,
+                                    ipc_pub_url,
+                                    ipc_sub_url,
+                                    ipc_push_url,
+                                    user_dir,
+                                    app_version,
+                                    )).start()
+                elif "notify.reset_restart_process.should_start" in topic:
+                    Process(target=reset_restart,
+                              name= 'reset_restart',
+                              args=(ipc_push_url,
+                                    user_dir,
+                                    )).start()
+                elif "notify.service_process.should_start" in topic:
+                    Process(target=service,
+                              name= 'service',
+                              args=(timebase,
+                                    eyes_are_alive,
+                                    ipc_pub_url,
+                                    ipc_sub_url,
+                                    ipc_push_url,
+                                    user_dir,
+                                    app_version
+                                    )).start()
                 elif "notify.player_drop_process.should_start" in topic:
                     Process(target=player_drop, name='player', args=(
                             n['rec_dir'],

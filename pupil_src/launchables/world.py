@@ -301,14 +301,20 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         g_pool.gui_user_scale = new_scale
         on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
+    def reset_restart():
+        logger.warning("Resetting all settings and restarting Capture.")
+        glfw.glfwSetWindowShouldClose(main_window, True)
+        ipc_pub.notify({'subject': 'reset_restart_process.should_start'})
+
     # setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
     g_pool.sidebar = ui.Scrolling_Menu("Settings", pos=(-350, 0), size=(0, 0), header_pos='left')
     general_settings = ui.Growing_Menu('General')
+    general_settings.append(ui.Button('Reset to default settings',reset_restart))
     general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface size'))
-    general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0],g_pool.capture.frame_size[1])) )
-    general_settings.append(ui.Selector('audio_mode',audio,selection=audio.audio_modes))
+    general_settings.append(ui.Button('Reset window size', lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0],g_pool.capture.frame_size[1])) )
+    general_settings.append(ui.Selector('audio_mode', audio, selection=audio.audio_modes))
     general_settings.append(ui.Selector('detection_mapping_mode',
                                         g_pool,
                                         label='detection & mapping mode',
@@ -531,6 +537,26 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     logger.info("Process shutting down.")
     ipc_pub.notify({'subject': 'world_process.stopped'})
 
+
+
+def reset_restart(ipc_push_url,user_dir):
+    import glob, os, time
+
+    # networking
+    import zmq
+    import zmq_tools
+    # zmq ipc setup
+    zmq_ctx = zmq.Context()
+    ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
+
+    time.sleep(1)
+
+    for f in glob.glob(os.path.join(user_dir,'user_settings_*')):
+        print(f)
+        os.remove(f)
+
+    ipc_pub.notify({'subject': 'world_process.should_start'})
+    time.sleep(1)
 
 
 def world_profiled(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
