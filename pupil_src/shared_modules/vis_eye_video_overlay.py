@@ -272,24 +272,22 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
             if self.show_ellipses and events['pupil_positions']:
                 for pd in events['pupil_positions']:
                     if pd['id'] == eye_index and pd['timestamp'] == self.eye_frames[eye_index].timestamp:
-                        break
+                        el = pd['ellipse']
+                        conf = int(pd.get('model_confidence', pd.get('confidence', 0.1)) * 255)
+                        center = list(map(lambda val: int(self.eye_scale_factor*val), el['center']))
+                        el['axes'] = tuple(map(lambda val: int(self.eye_scale_factor*val/2), el['axes']))
+                        el['angle'] = int(el['angle'])
+                        el_points = cv2.ellipse2Poly(tuple(center), el['axes'], el['angle'], 0, 360, 1)
 
-                el = pd['ellipse']
-                conf = int(pd.get('model_confidence', pd.get('confidence', 0.1)) * 255)
-                center = list(map(lambda val: int(self.eye_scale_factor*val), el['center']))
-                el['axes'] = tuple(map(lambda val: int(self.eye_scale_factor*val/2), el['axes']))
-                el['angle'] = int(el['angle'])
-                el_points = cv2.ellipse2Poly(tuple(center), el['axes'], el['angle'], 0, 360, 1)
+                        if self.mirror[str(eye_index)]:
+                            el_points = [(self.video_size[0] - x, y) for x, y in el_points]
+                            center[0] = self.video_size[0] - center[0]
+                        if self.flip[str(eye_index)]:
+                            el_points = [(x, self.video_size[1] - y) for x, y in el_points]
+                            center[1] = self.video_size[1] - center[1]
 
-                if self.mirror[str(eye_index)]:
-                    el_points = [(self.video_size[0] - x, y) for x, y in el_points]
-                    center[0] = self.video_size[0] - center[0]
-                if self.flip[str(eye_index)]:
-                    el_points = [(x, self.video_size[1] - y) for x, y in el_points]
-                    center[1] = self.video_size[1] - center[1]
-
-                cv2.polylines(eyeimage, [np.asarray(el_points)], True, (0, 0, 255, conf), thickness=math.ceil(2*self.eye_scale_factor))
-                cv2.circle(eyeimage, tuple(center), int(5*self.eye_scale_factor), (0, 0, 255, conf), thickness=-1)
+                        cv2.polylines(eyeimage, [np.asarray(el_points)], True, (0, 0, 255, conf), thickness=math.ceil(2*self.eye_scale_factor))
+                        cv2.circle(eyeimage, tuple(center), int(5*self.eye_scale_factor), (0, 0, 255, conf), thickness=-1)
 
             # 5. finally overlay the image
             x, y = int(self.pos[eye_index][0]), int(self.pos[eye_index][1])

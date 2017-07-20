@@ -388,9 +388,4 @@ def finish_calibration(g_pool, pupil_list, ref_list):
         user_calibration_data = {'timestamp': ts, 'pupil_list': pupil_list,
                                  'ref_list': ref_list, 'calibration_method': method}
 
-        if g_pool.app != 'player':
-            save_object(user_calibration_data, os.path.join(g_pool.user_dir, "user_calibration_data"))
-        else:
-            result_dir = os.path.join(g_pool.rec_dir, 'offline_results')
-            os.makedirs(result_dir, exist_ok=True)
-            save_object(user_calibration_data, os.path.join(result_dir, "user_calibration_data"))
+        save_object(user_calibration_data, os.path.join(g_pool.user_dir, "user_calibration_data"))

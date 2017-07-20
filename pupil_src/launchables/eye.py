@@ -426,7 +426,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             if notify_sub.new_data:
                 t, notification = notify_sub.recv()
                 subject = notification['subject']
-                if subject == 'eye_process.should_stop':
+                if subject.startswith('eye_process.should_stop'):
                     if notification['eye_id'] == eye_id:
                         break
                 elif subject == 'set_detection_mapping_mode':
@@ -622,7 +622,7 @@ def eye_profiled(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url
     import cProfile
     import subprocess
     import os
-    from eye import eye
+    from .eye import eye
     cProfile.runctx("eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings)",
                     {'timebase': timebase, 'is_alive_flag': is_alive_flag, 'ipc_pub_url': ipc_pub_url,
                      'ipc_sub_url': ipc_sub_url, 'ipc_push_url': ipc_push_url, 'user_dir': user_dir,

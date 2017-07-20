@@ -258,7 +258,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.min_data_confidence = new_confidence
         notification = {'subject': 'min_data_confidence_changed'}
         notification['_notify_time_'] = time()+.8
-        g_pool.delayed_notifications[notification['subject']] = notification
+        g_pool.ipc_pub.notify(notification)
 
     def open_plugin(plugin):
         if plugin == "Select to load":

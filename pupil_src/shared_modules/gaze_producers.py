@@ -74,8 +74,12 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.notify_all({'subject': 'gaze_positions_changed'})
         logger.debug('gaze positions changed')
 
+    def get_init_dict(self):
+        return {}
+
 
 def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
+    yield "calibrating",[]
     method, result = select_calibration_method(g_pool, calib_list, ref_list)
     if result['subject'] != 'calibration.failed':
         logger.info('Offline calibration successful. Starting mapping using {}.'.format(method))
@@ -92,12 +96,14 @@ def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
                 else:
                     progress = "Mapping..{}%".format(int(progress))
                 yield progress, mapped_gaze
+    else:
+        yield "calibration failed",[]
 
 
 def make_section_dict(calib_range, map_range):
         return {'calibration_range': calib_range,
                 'mapping_range': map_range,
-                'mapping_method': 'unknown',
+                'mapping_method': '3d',
                 'calibration_method':"circle_marker",
                 'status': 'unmapped',
                 'color': random.choice(random_colors),
@@ -177,7 +183,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
 
     def append_section_menu(self, sec, collapsed=True):
-        section_menu = ui.Growing_Menu('Gaze Section {}'.format(self.sections.index(sec) + 1))
+        section_menu = ui.Growing_Menu('Gaze Section')
         section_menu.collapsed = collapsed
         section_menu.color = RGBA(*sec['color'])
 
@@ -209,8 +215,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             return remove
 
         section_menu.append(ui.Selector('calibration_method',sec,label="Calibration Method",selection=['circle_marker','natural_features'] ))
-        section_menu.append(ui.Text_Input('mapping_method', sec, label='Dection and mapping mode'))
-        section_menu[-1].read_only = True
+        section_menu.append(ui.Selector('mapping_method', sec, label='Calibration Mode',selection=['2d','3d']))
         section_menu.append(ui.Text_Input('status', sec, label='Calbiration Status', setter=lambda _: _))
         section_menu[-1].read_only = True
         section_menu.append(ui.Text_Input('calibration_range', sec, label='Calibration range',
@@ -292,12 +297,14 @@ class Offline_Calibration(Gaze_Producer_Base):
         if sec['bg_task']:
             sec['bg_task'].cancel()
 
-        sec['status'] = 'failed to calibrate'#this will be overwritten on sucess
+        sec['status'] = 'starting calibration'#this will be overwritten on sucess
         sec['gaze_positions'] = []  # reset interim buffer for given section
 
         calib_list = list(chain(*self.g_pool.pupil_positions_by_frame[slice(*sec['calibration_range'])]))
+        map_list = list(chain(*self.g_pool.pupil_positions_by_frame[slice(*sec['mapping_range'])]))
+
         if sec['calibration_method'] == 'circle_marker':
-            ref_list = self.circle_marker_positions
+            ref_list = [r for r in self.circle_marker_positions if sec['calibration_range'][0] <= r['index'] <= sec['calibration_range'][1]]
         elif sec['calibration_method'] == 'natural_features':
             ref_list = self.manual_ref_positions
         if not calib_list:
@@ -308,15 +315,17 @@ class Offline_Calibration(Gaze_Producer_Base):
             logger.error('No referece marker data to calibrate section "{}"'.format(self.sections.index(sec) + 1))
             return
 
-        # select median pupil datum from calibration list and use its detection method as mapping method
-        sec["mapping_method"] = '3d' if '3d' in calib_list[len(calib_list)//2]['method'] else '2d'
+        if sec["mapping_method"] == '3d' and '2d' in calib_list[len(calib_list)//2]['method']:
+            # select median pupil datum from calibration list and use its detection method as mapping method
+            logger.warning("Pupil data is 2d, calibration and mapping mode forced to 2d.")
+            sec["mapping_method"] = '2d'
 
-        map_list = list(chain(*self.g_pool.pupil_positions_by_frame[slice(*sec['mapping_range'])]))
 
-        fake = setup_fake_pool(self.g_pool.capture.frame_size, sec["mapping_method"],self.g_pool.rec_dir)
+
+        fake = setup_fake_pool(self.g_pool.capture.frame_size, detection_mode=sec["mapping_method"],rec_dir=self.g_pool.rec_dir)
         generator_args = (fake, ref_list, calib_list, map_list)
 
-        logger.info('Calibrating "{}"...'.format(self.sections.index(sec) + 1))
+        logger.info('Calibrating "{}" in {} mode...'.format(self.sections.index(sec) + 1,sec["mapping_method"]))
         sec['bg_task'] = bh.Task_Proxy('{}'.format(self.sections.index(sec) + 1), calibrate_and_map, args=generator_args)
 
     def gl_display(self):

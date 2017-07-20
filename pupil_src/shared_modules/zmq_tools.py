@@ -19,7 +19,6 @@ import logging
 import msgpack as serializer
 import zmq
 from zmq.utils.monitor import recv_monitor_message
-from uuid import UUID
 # import ujson as serializer # uncomment for json serialization
 
 assert zmq.__version__ > '15.1'
@@ -34,8 +33,8 @@ class ZMQ_handler(logging.Handler):
         self.socket = Msg_Dispatcher(ctx, ipc_pub_url)
 
     def emit(self, record):
-            self.socket.send('logging.{0}'.format(record.levelname.lower()),
-                             record.__dict__)
+        self.socket.send('logging.{0}'.format(record.levelname.lower()),
+                         record.__dict__)
 
 
 class ZMQ_Socket(object):
@@ -123,15 +122,7 @@ class Msg_Streamer(ZMQ_Socket):
         '''
         if '__raw_data__' not in payload:
             self.socket.send_string(topic, flags=zmq.SNDMORE)
-            try:
-                self.socket.send(serializer.dumps(payload, use_bin_type=True))
-            except TypeError:
-                # mspack could not serialze object - probabaly uuid.
-                def uuid_to_str(obj):
-                    if isinstance(obj, UUID):
-                        return str(obj)
-                    return obj
-                self.socket.send(serializer.dumps(payload, use_bin_type=True, default=uuid_to_str))
+            self.socket.send(serializer.dumps(payload, use_bin_type=True))
         else:
             extra_frames = payload.pop('__raw_data__')
             assert(isinstance(extra_frames, (list, tuple)))

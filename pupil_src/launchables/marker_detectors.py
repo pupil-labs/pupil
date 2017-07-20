@@ -9,26 +9,23 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import cv2
-import numpy as np
-from time import sleep
 
 class Empty(object):
         pass
 
+
 def circle_detector(ipc_push_url, pair_url,
                     source_path, timestamps_path, batch_size=20):
 
-    from circle_detector import find_concetric_circles
-    from video_capture import File_Source, EndofVideoFileError
-    from methods import normalize
+    # ipc setup
     import zmq
     import zmq_tools
     zmq_ctx = zmq.Context()
-    ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
-    process_pipe = zmq_tools.Msg_Pair_Client(zmq_ctx,pair_url)
+    process_pipe = zmq_tools.Msg_Pair_Client(zmq_ctx, pair_url)
+
     # logging setup
     import logging
+    logging.getLogger("OpenGL").setLevel(logging.ERROR)
     logger = logging.getLogger()
     logger.handlers = []
     logger.setLevel(logging.INFO)
@@ -36,7 +33,13 @@ def circle_detector(ipc_push_url, pair_url,
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
-
+    # imports
+    import cv2
+    import numpy as np
+    from time import sleep
+    from circle_detector import find_concetric_circles
+    from video_capture import File_Source, EndofVideoFileError
+    from methods import normalize
 
     try:
         src = File_Source(Empty(), source_path, np.load(timestamps_path), timed_playback=False)
@@ -50,7 +53,7 @@ def circle_detector(ipc_push_url, pair_url,
             while process_pipe.new_data:
                 topic, n = process_pipe.recv()
                 if topic == 'terminate':
-                    process_pipe.send(topic='exception', payload={"reason":"User terminated."})
+                    process_pipe.send(topic='exception', payload={"reason": "User terminated."})
                     logger.debug("Process terminated")
                     sleep(1.0)
                     return
@@ -69,8 +72,8 @@ def circle_detector(ipc_push_url, pair_url,
 
             if detected:
                 second_ellipse = markers[0][1]
-                col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
-                row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
+                col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2), int(second_ellipse[0][0]+second_ellipse[1][0]/2)
+                row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2), int(second_ellipse[0][1]+second_ellipse[1][1]/2)
                 marker_gray = frame.gray[slice(*row_slice), slice(*col_slice)]
                 avg = cv2.mean(marker_gray)[0]
                 center = marker_gray[int(second_ellipse[1][1])//2, int(second_ellipse[1][0])//2]
@@ -107,6 +110,5 @@ def circle_detector(ipc_push_url, pair_url,
         import traceback
         process_pipe.send(topic='exception', payload={'reason': traceback.format_exc()})
         logger.debug("Process raised Exception")
-
 
     sleep(1.0)
