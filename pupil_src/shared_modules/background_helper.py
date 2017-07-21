@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 from ctypes import c_bool
 import multiprocessing as mp
-mp = mp.get_context('fork')
+# mp = mp.get_context('fork')
 import logging
 logger = logging.getLogger(__name__)
 
