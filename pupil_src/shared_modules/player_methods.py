@@ -145,7 +145,7 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         time_file_name = os.path.split(time_loc)[1]
         time_name, time_ext = os.path.splitext(time_file_name)
 
-        potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.mp4')]
+        potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.mp4','.m4a')]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
         if not existing_locs:
             continue
@@ -172,16 +172,22 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
                 save_object(camera_calibration, cam_calib_loc)
 
             time_name = 'world'  # assume world file
+        elif time_name.startswith('audio_'):
+            time_name = 'audio'
 
         timestamps = np.fromfile(time_loc, dtype='>f8')
         timestamp_loc = os.path.join(rec_dir, '{}_timestamps.npy'.format(time_name))
         logger.info('Creating "{}"'.format(os.path.split(timestamp_loc)[1]))
         np.save(timestamp_loc, timestamps)
 
-        video_dst = os.path.join(rec_dir, time_name) + os.path.splitext(video_loc)[1]
-
-        logger.info('Renaming "{}" to "{}"'.format(os.path.split(video_loc)[1], os.path.split(video_dst)[1]))
-        os.rename(video_loc, video_dst)
+        if time_name == 'audio':
+            video_dst = os.path.join(rec_dir, time_name) + '.mp4'
+            logger.info('Renaming "{}" to "{}"'.format(os.path.split(video_loc)[1], os.path.split(video_dst)[1]))
+            os.rename(video_loc, video_dst)
+        else:
+            video_dst = os.path.join(rec_dir, time_name) + os.path.splitext(video_loc)[1]
+            logger.info('Renaming "{}" to "{}"'.format(os.path.split(video_loc)[1], os.path.split(video_dst)[1]))
+            os.rename(video_loc, video_dst)
 
     pupil_data_loc = os.path.join(rec_dir, 'pupil_data')
     if not os.path.exists(pupil_data_loc):
