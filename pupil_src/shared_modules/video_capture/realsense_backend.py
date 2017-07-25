@@ -275,6 +275,7 @@ class Realsense_Source(Base_Source):
                 'depth_frame_size': self.depth_frame_size,
                 'depth_frame_rate': self.depth_frame_rate,
                 'preview_depth': self.preview_depth,
+                'record_depth': self.record_depth,
                 'align_streams': self.align_streams,
                 'rectify_streams': self.rectify_streams,
                 'device_options': self.controls.export_presets()}
