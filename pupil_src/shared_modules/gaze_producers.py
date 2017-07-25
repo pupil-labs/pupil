@@ -309,18 +309,18 @@ class Offline_Calibration(Gaze_Producer_Base):
             ref_list = self.manual_ref_positions
         if not calib_list:
             logger.error('No pupil data to calibrate section "{}"'.format(self.sections.index(sec) + 1))
+            sec['status'] = 'calibration failed'
             return
 
         if not calib_list:
             logger.error('No referece marker data to calibrate section "{}"'.format(self.sections.index(sec) + 1))
+            sec['status'] = 'calibration failed'
             return
 
         if sec["mapping_method"] == '3d' and '2d' in calib_list[len(calib_list)//2]['method']:
             # select median pupil datum from calibration list and use its detection method as mapping method
             logger.warning("Pupil data is 2d, calibration and mapping mode forced to 2d.")
             sec["mapping_method"] = '2d'
-
-
 
         fake = setup_fake_pool(self.g_pool.capture.frame_size, detection_mode=sec["mapping_method"],rec_dir=self.g_pool.rec_dir)
         generator_args = (fake, ref_list, calib_list, map_list)

@@ -105,7 +105,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
     from gaze_producers import Gaze_From_Recording, Offline_Calibration
 
-    assert pyglui_version >= '1.5'
+    assert pyglui_version >= '1.6'
 
     runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
     system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
@@ -508,14 +508,22 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         fps_graph.draw()
         cpu_graph.draw()
         pupil_graph.draw()
-        unused_buttons = g_pool.gui.update()
-        for b in unused_buttons:
-            button,action,mods = b
+        unused_elements = g_pool.gui.update()
+        for b in unused_elements.buttons:
+            button, action, mods = b
             pos = glfw.glfwGetCursorPos(main_window)
             pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
             pos = denormalize(pos, (frame.img.shape[1], frame.img.shape[0]))  # Position in img pixels
             for p in g_pool.plugins:
                 p.on_click(pos, button, action)
+
+        for key, scancode, action, mods in unused_elements.keys:
+            for p in g_pool.plugins:
+                p.on_unconsumed_key(key, scancode, action, mods)
+
+        for char_ in unused_elements.chars:
+            for p in g_pool.plugins:
+                p.on_unconsumed_char(char_)
 
         # present frames at appropriate speed
         cap.wait(frame)
