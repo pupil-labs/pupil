@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import time
+import cv2
 import os
 
 import pyrealsense as pyrs
@@ -37,22 +38,60 @@ logger.setLevel(logging.DEBUG)
 class ColorFrame(object):
     def __init__(self, device):
         self._rgb = device.color
+        self._gray = None
+
+    @property
+    def height(self):
+        return self._rgb.shape[0]
+
+    @property
+    def width(self):
+        return self._rgb.shape[1]
 
     @property
     def bgr(self):
         return self._rgb
 
+    @property
+    def img(self):
+        return self.bgr
+
+    @property
+    def gray(self):
+        if self._gray is None:
+            self._gray = cv2.cvtColor(self._bgr, cv2.cv2.COLOR_BGR2GRAY)
+        return self._gray
+
 
 class DepthFrame(object):
     def __init__(self, device):
         self._bgr = None
+        self._gray = None
         self.depth = device.depth
+
+    @property
+    def height(self):
+        return self.depth.shape[0]
+
+    @property
+    def width(self):
+        return self.depth.shape[1]
 
     @property
     def bgr(self):
         if self._bgr is None:
             self._bgr = cygl.utils.cumhist_color_map16(self.depth)
         return self._bgr
+
+    @property
+    def img(self):
+        return self.bgr
+
+    @property
+    def gray(self):
+        if self._gray is None:
+            self._gray = cv2.cvtColor(self.bgr, cv2.cv2.COLOR_BGR2GRAY)
+        return self._gray
 
 
 class Control(object):
