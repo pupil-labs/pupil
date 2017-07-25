@@ -480,6 +480,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         del events['gaze_positions']  # sent earlier
         if 'frame' in events:
             del events['frame']  # send explicity with frame publisher
+        if 'depth_frame' in events:
+            del events['depth_frame']
         if 'audio_packets' in events:
             del events['audio_packets']
         del events['dt']  # no need to send this

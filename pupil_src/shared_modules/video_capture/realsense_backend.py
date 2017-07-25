@@ -306,6 +306,7 @@ class Realsense_Source(Base_Source):
                 self._recent_frame = color_frame
                 self._recent_depth_frame = depth_frame
                 events['frame'] = color_frame
+                events['depth_frame'] = depth_frame
                 self._restart_in = 3
 
                 if self.depth_video_writer is not None:
