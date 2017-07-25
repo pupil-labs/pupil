@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import time
+import os
 
 import pyrealsense as pyrs
 from pyrealsense.stream import ColorStream, DepthStream
@@ -18,6 +19,7 @@ from pyrealsense.constants import rs_stream, rs_option
 
 from version_utils import VersionFormat
 from .base_backend import Base_Source, Base_Manager
+from av_writer import AV_Writer
 
 import gl_utils
 from pyglui import cygl
@@ -113,13 +115,15 @@ class Realsense_Source(Base_Source):
                  frame_size=(640, 480), frame_rate=30,
                  depth_frame_size=(640, 480), depth_frame_rate=30,
                  align_streams=False, rectify_streams=False,
-                 preview_depth=False, device_options=()):
+                 preview_depth=False, device_options=(), record_depth=True):
         super().__init__(g_pool)
         self.device = None
         self.service = pyrs.Service()
         self.align_streams = align_streams
         self.rectify_streams = rectify_streams
         self.preview_depth = preview_depth
+        self.record_depth = record_depth
+        self.depth_video_writer = None
         self._initialize_device(device_id, frame_size, frame_rate,
                                 depth_frame_size, depth_frame_rate, device_options)
 
@@ -220,6 +224,8 @@ class Realsense_Source(Base_Source):
         return formats
 
     def cleanup(self):
+        if self.depth_video_writer is not None:
+            self.stop_depth_recording()
         self.service.stop()
         super().cleanup()
 
@@ -234,32 +240,37 @@ class Realsense_Source(Base_Source):
                 'rectify_streams': self.rectify_streams,
                 'device_options': self.controls.export_presets()}
 
-    def get_frame(self, frame_cls):
+    def get_frames(self):
         if self.device.poll_for_frame() != 0:
-            return frame_cls(self.device)
+            return ColorFrame(self.device), DepthFrame(self.device)
         else:
             max_fps = max([s.fps for s in self.streams.values()])
             time.sleep(0.5/max_fps)
+            return None, None
 
     def recent_events(self, events):
         try:
-            if self.preview_depth:
-                frame = self.get_frame(DepthFrame)
-            else:
-                frame = self.get_frame(ColorFrame)
+            color_frame, depth_frame = self.get_frames()
         except TimeoutError:
             self._recent_frame = None
+            self._recent_depth_frame = None
             # react to timeout
         except pyrs.RealsenseError as err:
             self._recent_frame = None
+            self._recent_depth_frame = None
             # act according to err.function
             # self._restart_logic()
         else:
-            if frame:
-                frame.timestamp = self.g_pool.get_timestamp()
-                self._recent_frame = frame
-                events['frame'] = frame
+            if color_frame and depth_frame:
+                color_frame.timestamp = self.g_pool.get_timestamp()
+                depth_frame.timestamp = color_frame.timestamp
+                self._recent_frame = color_frame
+                self._recent_depth_frame = depth_frame
+                events['frame'] = color_frame
                 self._restart_in = 3
+
+                if self.depth_video_writer is not None:
+                    self.depth_video_writer.write_video_frame(depth_frame)
 
     def init_gui(self):
         from pyglui import ui
@@ -270,6 +281,7 @@ class Realsense_Source(Base_Source):
             self.g_pool.capture_source_menu.extend(ui_elements)
             return
 
+        ui_elements.append(ui.Switch('record_depth', self, label='Record Depth Stream'))
         ui_elements.append(ui.Switch('preview_depth', self, label='Preview Depth'))
         ui_elements.append(ui.Switch('rectify_streams', self, label='Rectify Streams'))
         ui_elements.append(ui.Switch('align_streams', self, label='Align Streams'))
@@ -336,8 +348,13 @@ class Realsense_Source(Base_Source):
         self.g_pool.capture_source_menu.extend(ui_elements)
 
     def gl_display(self):
-        if self._recent_frame is not None:
-            self.g_pool.image_tex.update_from_ndarray(self._recent_frame.bgr)
+        if self.preview_depth:
+            recent_frame = self._recent_depth_frame
+        else:
+            recent_frame = self._recent_frame
+
+        if recent_frame is not None:
+            self.g_pool.image_tex.update_from_ndarray(recent_frame.bgr)
             gl_utils.glFlush()
         gl_utils.make_coord_system_norm_based()
         self.g_pool.image_tex.draw()
@@ -372,6 +389,29 @@ class Realsense_Source(Base_Source):
             kwargs = notification.copy()
             del kwargs['subject']
             self._initialize_device(**kwargs)
+        elif notification['subject'] == 'recording.started':
+            self.start_depth_recording(notification['rec_path'])
+        elif notification['subject'] == 'recording.stopped':
+            self.stop_depth_recording()
+
+    def start_depth_recording(self, rec_loc):
+        if not self.record_depth:
+            return
+
+        if self.depth_video_writer is not None:
+            logger.warning('Depth video recording has been started already')
+            return
+
+        video_path = os.path.join(rec_loc, 'depth.mp4')
+        self.depth_video_writer = AV_Writer(video_path, fps=self.depth_frame_rate, use_timestamps=True)
+
+    def stop_depth_recording(self):
+        if self.depth_video_writer is None:
+            logger.warning('Depth video recording was not running')
+            return
+
+        self.depth_video_writer.close()
+        self.depth_video_writer = None
 
     @property
     def frame_size(self):
