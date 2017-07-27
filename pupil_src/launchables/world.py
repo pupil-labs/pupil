@@ -97,7 +97,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # Plug-ins
     from plugin import Plugin, Plugin_List, import_runtime_plugins
     from calibration_routines import calibration_plugins, gaze_mapping_plugins, Calibration_Plugin
-    from fixation_detector import Fixation_Detector_3D
+    from fixation_detector import Fixation_Detector_3D, Naive_Fixation_Detector
     from recorder import Recorder
     from display_recent_gaze import Display_Recent_Gaze
     from time_sync import Time_Sync
@@ -151,8 +151,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     manager_classes += [p for p in runtime_plugins if issubclass(p, Base_Manager)]
     runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Base_Manager)]
     user_launchable_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
-                               Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection,
-                               Remote_Recorder] + runtime_plugins
+                               Annotation_Capture, Log_History, Naive_Fixation_Detector, Fixation_Detector_3D,
+                               Blink_Detection, Remote_Recorder] + runtime_plugins
     system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay]
     plugin_by_index = (system_plugins + user_launchable_plugins + calibration_plugins
                        + gaze_mapping_plugins + manager_classes + source_classes)

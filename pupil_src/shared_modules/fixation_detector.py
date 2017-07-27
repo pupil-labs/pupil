@@ -10,13 +10,14 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 
-import os, time
+import os
+import time
 import csv
 import numpy as np
 import cv2
 import logging
+from collections import deque
 from itertools import chain
-from math import atan, tan
 from operator import itemgetter
 from methods import denormalize
 from plugin import Plugin, Analysis_Plugin_Base
@@ -25,6 +26,7 @@ from pyglui import ui
 # logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 
 def angle_between_normals(v1, v2):
     return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0))
@@ -799,6 +801,63 @@ class Fixation_Detector_3D(Online_Base_Fixation_Detector):
 
     def get_init_dict(self):
         return {'max_dispersion': self.max_dispersion, 'min_duration':self.min_duration}
+
+    def cleanup(self):
+        self.deinit_gui()
+
+
+class Naive_Fixation_Detector(Online_Base_Fixation_Detector):
+    """docstring for Online_Fixation_Detector_Pupil_Angle_Dispersion_Duration
+    """
+    def __init__(self, g_pool, max_dispersion=5, sample_number=10, visualize=False):
+        super().__init__(g_pool)
+        self.visualize = visualize
+        self.sample_number = sample_number
+        self.max_dispersion = max_dispersion
+        self.queue = deque(maxlen=sample_number)
+
+    def recent_events(self, events):
+        events['fixations'] = []
+        fs = self.g_pool.capture.frame_size
+        self.queue.extend((denormalize(gp['norm_pos'], fs) for gp in events['gaze_positions'] if gp['confidence'] > 0.75))
+
+        if len(self.queue) < self.sample_number:
+            return  # wait for more samples
+
+        mat = np.array(self.queue, dtype=np.float32)
+        center, radius = cv2.minEnclosingCircle(mat)
+        if radius < self.max_dispersion:
+            pass  # new fixation
+
+    def init_gui(self):
+        def close():
+            self.alive = False
+
+        help_str = "Naive 2D fixation detector."
+        self.menu = ui.Growing_Menu('Naive Fixation Detector')
+        self.menu.collapsed = True
+        self.menu.append(ui.Button('Close', close))
+        self.menu.append(ui.Info_Text(help_str))
+
+        def set_sample_num(new_value):
+            self.sample_number = new_value
+            self.queue = deque(self.queue, maxlen=new_value)
+
+        self.menu.append(ui.Text_Input('sample_number', self,
+                                       label='Number of samples',
+                                       setter=set_sample_num))
+
+        self.menu.append(ui.Slider('max_dispersion', self, min=0.0, max=0.5,
+                                   label='Dispersion pixel threshold'))
+        self.g_pool.sidebar.append(self.menu)
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
+
+    def get_init_dict(self):
+        return {'max_std': self.max_std, 'sample_number': self.sample_number, 'visualize': self.visualize}
 
     def cleanup(self):
         self.deinit_gui()
