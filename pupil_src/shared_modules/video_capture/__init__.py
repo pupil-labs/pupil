@@ -33,11 +33,13 @@ from .file_backend import File_Source, File_Manager
 from .ndsi_backend import NDSI_Source, NDSI_Manager
 from .uvc_backend import UVC_Source,  UVC_Manager
 
+source_classes = [File_Source,  NDSI_Source,  UVC_Source, Fake_Source]
+manager_classes = [File_Manager, NDSI_Manager, UVC_Manager, Fake_Manager]
+
 try:
     from .realsense_backend import Realsense_Source, Realsense_Manager
 except ImportError:
     logger.info('Install pyrealsense to use the Intel RealSense backend')
-    raise
-
-source_classes = [File_Source,  NDSI_Source,  UVC_Source, Fake_Source, Realsense_Source]
-manager_classes = [File_Manager, NDSI_Manager, UVC_Manager, Fake_Manager, Realsense_Manager]
+else:
+    source_classes.append(Realsense_Source)
+    manager_classes.append(Realsense_Manager)

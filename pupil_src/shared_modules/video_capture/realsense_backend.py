@@ -15,7 +15,7 @@ import cv2
 import os
 
 import pyrealsense as pyrs
-from pyrealsense.stream import ColorStream, DepthStream
+from pyrealsense.stream import ColorStream, DepthStream, DACStream
 from pyrealsense.constants import rs_stream, rs_option
 
 from version_utils import VersionFormat
@@ -37,20 +37,47 @@ logger.setLevel(logging.DEBUG)
 
 class ColorFrame(object):
     def __init__(self, device):
-        self._rgb = device.color
+        # we need to keep this since there is no cv2 conversion for our planar format
+        self._yuv422 = device.color
+        self._shape = self._yuv422.shape[:2]
+        self._yuv = np.empty(self._yuv422.size, dtype=np.uint8)
+        y_plane = self._yuv422.size//2
+        u_plane = y_plane//2
+        self._yuv[:y_plane] = self._yuv422[:, :, 0].flatten()
+        self._yuv[y_plane:y_plane+u_plane] = self._yuv422[:, ::2, 1].flatten()
+        self._yuv[y_plane+u_plane:] = self._yuv422[:, 1::2, 1].flatten()
+        self._bgr = None
         self._gray = None
 
     @property
     def height(self):
-        return self._rgb.shape[0]
+        return self._shape[0]
 
     @property
     def width(self):
-        return self._rgb.shape[1]
+        return self._shape[1]
+
+    @property
+    def yuv_buffer(self):
+        return self._yuv
+
+    @property
+    def yuv422(self):
+        Y = self._yuv[:self._yuv.size//2]
+        U = self._yuv[self._yuv.size//2:3*self._yuv.size//4]
+        V = self._yuv[3*self._yuv.size//4:]
+
+        Y.shape = self._shape
+        U.shape = self._shape[0], self._shape[1]//2
+        V.shape = self._shape[0], self._shape[1]//2
+
+        return Y, U, V
 
     @property
     def bgr(self):
-        return self._rgb
+        if self._bgr is None:
+            self._bgr = cv2.cvtColor(self._yuv422, cv2.COLOR_YUV2BGR_YUVY)
+        return self._bgr
 
     @property
     def img(self):
@@ -59,7 +86,8 @@ class ColorFrame(object):
     @property
     def gray(self):
         if self._gray is None:
-            self._gray = cv2.cvtColor(self._bgr, cv2.cv2.COLOR_BGR2GRAY)
+            self._gray = self._yuv[:self._yuv.size//2]
+            self._gray.shape = self._shape
         return self._gray
 
 
@@ -68,6 +96,7 @@ class DepthFrame(object):
         self._bgr = None
         self._gray = None
         self.depth = device.depth
+        self.yuv_buffer = None
 
     @property
     def height(self):
@@ -126,6 +155,10 @@ class Control(object):
 
 class Realsense_Controls(dict):
     def __init__(self, device, presets=()):
+        if not device:
+            super().__init__()
+            return
+
         if presets:
             # presets: list of (option, value)-tuples
             try:
@@ -153,13 +186,12 @@ class Realsense_Source(Base_Source):
     def __init__(self, g_pool, device_id=0,
                  frame_size=(640, 480), frame_rate=30,
                  depth_frame_size=(640, 480), depth_frame_rate=30,
-                 align_streams=False, rectify_streams=False,
-                 preview_depth=False, device_options=(), record_depth=True):
+                 align_streams=False, preview_depth=False,
+                 device_options=(), record_depth=True):
         super().__init__(g_pool)
         self.device = None
         self.service = pyrs.Service()
         self.align_streams = align_streams
-        self.rectify_streams = rectify_streams
         self.preview_depth = preview_depth
         self.record_depth = record_depth
         self.depth_video_writer = None
@@ -186,44 +218,50 @@ class Realsense_Source(Base_Source):
             device_id = 0
 
         # use default streams to filter modes by rs_stream and rs_format
-        self.streams = {s.stream: s for s in (ColorStream(), DepthStream())}
+        self.streams = [ColorStream(), DepthStream()]
         self._available_modes = self._enumerate_formats(device_id)
 
         # make sure that given frame sizes and rates are available
         color_modes = self._available_modes[rs_stream.RS_STREAM_COLOR]
         if color_frame_size not in color_modes:
             # automatically select highest resolution
-            color_frame_size = sorted(color_modes.keys(), reversed=True)[0]
+            color_frame_size = sorted(color_modes.keys(), reverse=True)[0]
 
         if color_fps not in color_modes[color_frame_size]:
             # automatically select highest frame rate
             color_fps = color_modes[color_frame_size][0]
 
+        depth_modes = self._available_modes[rs_stream.RS_STREAM_DEPTH]
         if self.align_streams:
             depth_frame_size = color_frame_size
-            depth_fps = color_fps
         else:
-            depth_modes = self._available_modes[rs_stream.RS_STREAM_DEPTH]
             if depth_frame_size not in depth_modes:
                 # automatically select highest resolution
-                depth_frame_size = sorted(depth_modes.keys(), reversed=True)[0]
+                depth_frame_size = sorted(depth_modes.keys(), reverse=True)[0]
 
-            if depth_fps not in depth_modes[depth_frame_size]:
-                # automatically select highest frame rate
-                depth_fps = depth_modes[depth_frame_size][0]
+        if depth_fps not in depth_modes[depth_frame_size]:
+            # automatically select highest frame rate
+            depth_fps = depth_modes[depth_frame_size][0]
 
         colorstream = ColorStream(width=color_frame_size[0],
                                   height=color_frame_size[1],
-                                  fps=color_fps, use_bgr=True)
+                                  fps=color_fps, color_format='yuv')
         depthstream = DepthStream(width=depth_frame_size[0],
                                   height=depth_frame_size[1], fps=depth_fps)
 
+        self.streams = [colorstream, depthstream]
+        if self.align_streams:
+            dacstream = DACStream(width=depth_frame_size[0],
+                                  height=depth_frame_size[1], fps=depth_fps)
+            dacstream.name = 'depth'  # rename data accessor
+            self.streams.append(dacstream)
+
         # update with correctly initialized streams
-        self.streams.update({s.stream: s for s in (colorstream, depthstream)})
+        # always initiliazes color + depth, adds rectified/aligned versions as necessary
 
-        self.device = self.service.Device(device_id, streams=self.streams.values())
+        self.device = self.service.Device(device_id, streams=self.streams)
 
-        self.controls = Realsense_Controls(self.device, device_options) if self.device else {}
+        self.controls = Realsense_Controls(self.device, device_options)
 
         self.deinit_gui()
         self.init_gui()
@@ -238,11 +276,11 @@ class Realsense_Source(Base_Source):
         formats = {}
         # only lists modes for native streams (RS_STREAM_COLOR/RS_STREAM_DEPTH)
         for mode in self.service.get_device_modes(device_id):
-            if mode.stream in self.streams:
+            if mode.stream in (rs_stream.RS_STREAM_COLOR, rs_stream.RS_STREAM_DEPTH):
                 # check if frame size dict is available
                 if mode.stream not in formats:
                     formats[mode.stream] = {}
-                stream_obj = self.streams[mode.stream]
+                stream_obj = next((s for s in self.streams if s.stream == mode.stream))
                 if mode.format == stream_obj.format:
                     size = mode.width, mode.height
                     # check if framerate list is already available
@@ -277,14 +315,13 @@ class Realsense_Source(Base_Source):
                 'preview_depth': self.preview_depth,
                 'record_depth': self.record_depth,
                 'align_streams': self.align_streams,
-                'rectify_streams': self.rectify_streams,
                 'device_options': self.controls.export_presets()}
 
     def get_frames(self):
-        if self.device.poll_for_frame() != 0:
+        if self.device and self.device.poll_for_frame() != 0:
             return ColorFrame(self.device), DepthFrame(self.device)
         else:
-            max_fps = max([s.fps for s in self.streams.values()])
+            max_fps = max([s.fps for s in self.streams])
             time.sleep(0.5/max_fps)
             return None, None
 
@@ -317,22 +354,29 @@ class Realsense_Source(Base_Source):
         from pyglui import ui
         ui_elements = []
 
+        # avoid duplicated elements since _initialize_device() calls init_gui as well
+        self.deinit_gui()
+
         if self.device is None:
             ui_elements.append(ui.Info_Text('Capture initialization failed.'))
             self.g_pool.capture_source_menu.extend(ui_elements)
             return
 
+        def align_and_restart(val):
+            self.align_streams = val
+            self.restart_device()
+
         ui_elements.append(ui.Switch('record_depth', self, label='Record Depth Stream'))
         ui_elements.append(ui.Switch('preview_depth', self, label='Preview Depth'))
-        ui_elements.append(ui.Switch('rectify_streams', self, label='Rectify Streams'))
-        ui_elements.append(ui.Switch('align_streams', self, label='Align Streams'))
+        ui_elements.append(ui.Switch('align_streams', self, label='Align Streams',
+                                     setter=align_and_restart))
 
         color_sizes = sorted(self._available_modes[rs_stream.RS_STREAM_COLOR], reverse=True)
         ui_elements.append(ui.Selector(
             'frame_size', self,
             # setter=,
             selection=color_sizes,
-            label='Color Resolution'
+            label= 'Resolution' if self.align_streams else 'Color Resolution'
         ))
 
         def color_fps_getter():
@@ -345,13 +389,14 @@ class Realsense_Source(Base_Source):
             label='Color Frame Rate'
         ))
 
-        depth_sizes = sorted(self._available_modes[rs_stream.RS_STREAM_DEPTH], reverse=True)
-        ui_elements.append(ui.Selector(
-            'depth_frame_size', self,
-            # setter=,
-            selection=depth_sizes,
-            label='Depth Resolution'
-        ))
+        if not self.align_streams:
+            depth_sizes = sorted(self._available_modes[rs_stream.RS_STREAM_DEPTH], reverse=True)
+            ui_elements.append(ui.Selector(
+                'depth_frame_size', self,
+                # setter=,
+                selection=depth_sizes,
+                label='Depth Resolution'
+            ))
 
         def depth_fps_getter():
             avail_fps = self._available_modes[rs_stream.RS_STREAM_DEPTH][self.depth_frame_size]
@@ -389,14 +434,13 @@ class Realsense_Source(Base_Source):
         self.g_pool.capture_source_menu.extend(ui_elements)
 
     def gl_display(self):
-        if self.preview_depth:
-            recent_frame = self._recent_depth_frame
-        else:
-            recent_frame = self._recent_frame
-
-        if recent_frame is not None:
-            self.g_pool.image_tex.update_from_ndarray(recent_frame.bgr)
+        if self.preview_depth and self._recent_depth_frame is not None:
+            self.g_pool.image_tex.update_from_ndarray(self._recent_depth_frame.bgr)
             gl_utils.glFlush()
+        elif not self.preview_depth and self._recent_frame is not None:
+            self.g_pool.image_tex.update_from_frame(self._recent_frame)
+            gl_utils.glFlush()
+
         gl_utils.make_coord_system_norm_based()
         self.g_pool.image_tex.draw()
         if not self.online:
@@ -456,7 +500,7 @@ class Realsense_Source(Base_Source):
 
     @property
     def frame_size(self):
-        stream = self.streams[rs_stream.RS_STREAM_COLOR]
+        stream = self.streams[0]
         return stream.width, stream.height
 
     @frame_size.setter
@@ -466,7 +510,7 @@ class Realsense_Source(Base_Source):
 
     @property
     def frame_rate(self):
-        return self.streams[rs_stream.RS_STREAM_COLOR].fps
+        return self.streams[0].fps
 
     @frame_rate.setter
     def frame_rate(self, new_rate):
@@ -475,7 +519,7 @@ class Realsense_Source(Base_Source):
 
     @property
     def depth_frame_size(self):
-        stream = self.streams[rs_stream.RS_STREAM_DEPTH]
+        stream = self.streams[1]
         return stream.width, stream.height
 
     @depth_frame_size.setter
@@ -485,7 +529,7 @@ class Realsense_Source(Base_Source):
 
     @property
     def depth_frame_rate(self):
-        return self.streams[rs_stream.RS_STREAM_DEPTH].fps
+        return self.streams[1].fps
 
     @depth_frame_rate.setter
     def depth_frame_rate(self, new_rate):
