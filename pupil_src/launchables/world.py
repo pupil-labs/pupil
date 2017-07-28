@@ -152,8 +152,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Base_Manager)]
     user_launchable_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
                                Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection,
-                               Remote_Recorder] + runtime_plugins
-    system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay]
+                               Recorder,Remote_Recorder] + runtime_plugins
+    system_plugins = [Log_Display, Display_Recent_Gaze, Pupil_Data_Relay]
     plugin_by_index = (system_plugins + user_launchable_plugins + calibration_plugins
                        + gaze_mapping_plugins + manager_classes + source_classes)
     name_by_index = [p.__name__ for p in plugin_by_index]
@@ -270,8 +270,12 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                     g_pool.plugins.add(plugin_by_name['Dummy_Gaze_Mapper'])
             g_pool.detection_mapping_mode = n['mode']
         elif subject == 'start_plugin':
-            g_pool.plugins.add(
-                plugin_by_name[n['name']], args=n.get('args', {}))
+            g_pool.plugins.add(plugin_by_name[n['name']], args=n.get('args', {}))
+        elif subject == 'stop_plugin':
+            for p in g_pool.plugins:
+                if p.class_name == n['name']:
+                    p.alive = False
+                    g_pool.plugins.clean()
         elif subject == 'eye_process.started':
             n = {'subject': 'set_detection_mapping_mode',
                  'mode': g_pool.detection_mapping_mode}
