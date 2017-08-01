@@ -176,7 +176,7 @@ class Visualizer(object):
             glfwSetWindowIconifyCallback(self.window,self.on_iconify)
             glfwSetKeyCallback(self.window,self.on_window_key)
             glfwSetCharCallback(self.window,self.on_window_char)
-            glfwSetMouseButtonCallback(self.window,self.on_button)
+            glfwSetMouseButtonCallback(self.window,self.on_window_mouse_button)
             glfwSetCursorPosCallback(self.window,self.on_pos)
             glfwSetScrollCallback(self.window,self.on_scroll)
 
@@ -208,7 +208,7 @@ class Visualizer(object):
         self.adjust_gl_view(w,h)
         glfwMakeContextCurrent(active_window)
 
-    def on_button(self,window,button, action, mods):
+    def on_window_mouse_button(self,window,button, action, mods):
         # self.gui.update_button(button,action,mods)
         if action == GLFW_PRESS:
             self.input['button'] = button

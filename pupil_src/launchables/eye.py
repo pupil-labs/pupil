@@ -173,7 +173,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         def on_iconify(window, iconified):
             g_pool.iconified = iconified
 
-        def on_button(window, button, action, mods):
+        def on_window_mouse_button(window, button, action, mods):
             if g_pool.display_mode == 'roi':
                 if action == glfw.GLFW_RELEASE and g_pool.u_r.active_edit_pt:
                     g_pool.u_r.active_edit_pt = False
@@ -380,7 +380,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         glfw.glfwSetWindowIconifyCallback(main_window, on_iconify)
         glfw.glfwSetKeyCallback(main_window, on_window_key)
         glfw.glfwSetCharCallback(main_window, on_window_char)
-        glfw.glfwSetMouseButtonCallback(main_window, on_button)
+        glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
         glfw.glfwSetCursorPosCallback(main_window, on_pos)
         glfw.glfwSetScrollCallback(main_window, on_scroll)
 

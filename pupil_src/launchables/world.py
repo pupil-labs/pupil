@@ -199,7 +199,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     def on_window_char(window, char):
         g_pool.gui.update_char(char)
 
-    def on_button(window, button, action, mods):
+    def on_window_mouse_button(window, button, action, mods):
         g_pool.gui.update_button(button, action, mods)
 
     def on_pos(window, x, y):
@@ -381,7 +381,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     glfw.glfwSetWindowIconifyCallback(main_window, on_iconify)
     glfw.glfwSetKeyCallback(main_window, on_window_key)
     glfw.glfwSetCharCallback(main_window, on_window_char)
-    glfw.glfwSetMouseButtonCallback(main_window, on_button)
+    glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
     glfw.glfwSetCursorPosCallback(main_window, on_pos)
     glfw.glfwSetScrollCallback(main_window, on_scroll)
 

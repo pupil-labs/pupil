@@ -663,7 +663,7 @@ class Reference_Surface(object):
             glfwSetFramebufferSizeCallback(self._window,self.on_resize)
             glfwSetKeyCallback(self._window,self.on_window_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
-            glfwSetMouseButtonCallback(self._window,self.on_button)
+            glfwSetMouseButtonCallback(self._window,self.on_window_mouse_button)
             glfwSetCursorPosCallback(self._window,self.on_pos)
             glfwSetScrollCallback(self._window,self.on_scroll)
 
@@ -710,7 +710,7 @@ class Reference_Surface(object):
         self.close_window()
 
 
-    def on_button(self,window,button, action, mods):
+    def on_window_mouse_button(self,window,button, action, mods):
         if action == GLFW_PRESS:
             self.input['down'] = True
             self.input['mouse'] = glfwGetCursorPos(window)

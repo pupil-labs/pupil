@@ -145,7 +145,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
             # Register callbacks
             glfwSetFramebufferSizeCallback(self._window, on_resize)
             glfwSetKeyCallback(self._window, self.on_window_key)
-            glfwSetMouseButtonCallback(self._window, self.on_button)
+            glfwSetMouseButtonCallback(self._window, self.on_window_mouse_button)
             on_resize(self._window, *glfwGetFramebufferSize(self._window))
 
             # gl_state settings
@@ -164,7 +164,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
                 self.clicks_to_close = 0
 
 
-    def on_button(self,window,button, action, mods):
+    def on_window_mouse_button(self,window,button, action, mods):
         if action ==GLFW_PRESS:
             self.clicks_to_close -=1
 
