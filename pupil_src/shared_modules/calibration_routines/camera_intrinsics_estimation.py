@@ -230,9 +230,9 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
             #Register callbacks
             glfwSetFramebufferSizeCallback(self._window,on_resize)
-            glfwSetKeyCallback(self._window,self.on_key)
+            glfwSetKeyCallback(self._window,self.on_window_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
-            glfwSetMouseButtonCallback(self._window,self.on_button)
+            glfwSetMouseButtonCallback(self._window,self.on_window_mouse_button)
 
             on_resize(self._window,*glfwGetFramebufferSize(self._window))
 
@@ -247,13 +247,13 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
 
 
-    def on_key(self,window, key, scancode, action, mods):
+    def on_window_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
             if key == GLFW_KEY_ESCAPE:
                 self.on_close()
 
 
-    def on_button(self,window,button, action, mods):
+    def on_window_mouse_button(self,window,button, action, mods):
         if action ==GLFW_PRESS:
             self.clicks_to_close -=1
         if self.clicks_to_close ==0:

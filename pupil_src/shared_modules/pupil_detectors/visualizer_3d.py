@@ -246,7 +246,7 @@ class Eye_Visualizer(Visualizer):
         Visualizer.on_resize(self,window,w, h)
         self.trackball.set_window_size(w,h)
 
-    def on_char(self,window,char):
+    def on_window_char(self,window,char):
         if char == ord('r'):
             self.trackball.distance = [0,0,-0.1]
             self.trackball.pitch = 0

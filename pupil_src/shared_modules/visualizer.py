@@ -174,9 +174,9 @@ class Visualizer(object):
             # Register callbacks window
             glfwSetFramebufferSizeCallback(self.window,self.on_resize)
             glfwSetWindowIconifyCallback(self.window,self.on_iconify)
-            glfwSetKeyCallback(self.window,self.on_key)
-            glfwSetCharCallback(self.window,self.on_char)
-            glfwSetMouseButtonCallback(self.window,self.on_button)
+            glfwSetKeyCallback(self.window,self.on_window_key)
+            glfwSetCharCallback(self.window,self.on_window_char)
+            glfwSetMouseButtonCallback(self.window,self.on_window_mouse_button)
             glfwSetCursorPosCallback(self.window,self.on_pos)
             glfwSetScrollCallback(self.window,self.on_scroll)
 
@@ -208,7 +208,7 @@ class Visualizer(object):
         self.adjust_gl_view(w,h)
         glfwMakeContextCurrent(active_window)
 
-    def on_button(self,window,button, action, mods):
+    def on_window_mouse_button(self,window,button, action, mods):
         # self.gui.update_button(button,action,mods)
         if action == GLFW_PRESS:
             self.input['button'] = button
@@ -229,7 +229,7 @@ class Visualizer(object):
             self.trackball.pan_to(x-old_x,y-old_y)
             self.input['mouse'] = x,y
 
-    def on_char(self,window,char):
+    def on_window_char(self,window,char):
         pass
 
     def on_scroll(self,window,x,y):
@@ -238,5 +238,5 @@ class Visualizer(object):
     def on_iconify(self,window,iconified):
         pass
 
-    def on_key(self,window, key, scancode, action, mods):
+    def on_window_key(self,window, key, scancode, action, mods):
         pass

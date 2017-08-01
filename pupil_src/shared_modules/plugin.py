@@ -68,7 +68,26 @@ class Plugin(object):
 
     def on_click(self, pos, button, action):
         """
-        Gets called when the user clicks in the window screen
+        Gets called when the user clicks in the window screen and the event has
+        not been consumed by the GUI.
+        """
+        pass
+
+    def on_key(self, key, scancode, action, mods):
+        """
+        Gets called on key events that were not consumed by the GUI.
+
+        See http://www.glfw.org/docs/latest/input_guide.html#input_key for
+        more information key events.
+        """
+        pass
+
+    def on_char(self, character):
+        """
+        Gets called on char events that were not consumed by the GUI.
+
+        See http://www.glfw.org/docs/latest/input_guide.html#input_char for
+        more information char events.
         """
         pass
 
