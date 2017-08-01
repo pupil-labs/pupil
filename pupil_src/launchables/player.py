@@ -519,11 +519,11 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
         for key, scancode, action, mods in unused_elements.keys:
             for p in g_pool.plugins:
-                p.on_unconsumed_key(key, scancode, action, mods)
+                p.on_key(key, scancode, action, mods)
 
         for char_ in unused_elements.chars:
             for p in g_pool.plugins:
-                p.on_unconsumed_char(char_)
+                p.on_char(char_)
 
         # present frames at appropriate speed
         cap.wait(frame)
