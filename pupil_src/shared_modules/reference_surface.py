@@ -661,7 +661,7 @@ class Reference_Surface(object):
 
             #Register callbacks
             glfwSetFramebufferSizeCallback(self._window,self.on_resize)
-            glfwSetKeyCallback(self._window,self.on_key)
+            glfwSetKeyCallback(self._window,self.on_window_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
             glfwSetMouseButtonCallback(self._window,self.on_button)
             glfwSetCursorPosCallback(self._window,self.on_pos)
@@ -701,7 +701,7 @@ class Reference_Surface(object):
         adjust_gl_view(w,h)
         glfwMakeContextCurrent(active_window)
 
-    def on_key(self,window, key, scancode, action, mods):
+    def on_window_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
             if key == GLFW_KEY_ESCAPE:
                 self.on_close()

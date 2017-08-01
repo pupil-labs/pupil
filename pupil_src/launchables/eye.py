@@ -164,10 +164,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                 adjust_gl_view(w, h)
                 glfw.glfwMakeContextCurrent(active_window)
 
-        def on_key(window, key, scancode, action, mods):
+        def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
 
-        def on_char(window, char):
+        def on_window_char(window, char):
             g_pool.gui.update_char(char)
 
         def on_iconify(window, iconified):
@@ -378,8 +378,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
         glfw.glfwSetWindowIconifyCallback(main_window, on_iconify)
-        glfw.glfwSetKeyCallback(main_window, on_key)
-        glfw.glfwSetCharCallback(main_window, on_char)
+        glfw.glfwSetKeyCallback(main_window, on_window_key)
+        glfw.glfwSetCharCallback(main_window, on_window_char)
         glfw.glfwSetMouseButtonCallback(main_window, on_button)
         glfw.glfwSetCursorPosCallback(main_window, on_pos)
         glfw.glfwSetScrollCallback(main_window, on_scroll)

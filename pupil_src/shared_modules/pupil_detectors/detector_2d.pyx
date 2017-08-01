@@ -215,7 +215,7 @@ cdef class Detector_2D:
 
             #Register callbacks
             glfw.glfwSetWindowSizeCallback(self._window,self.on_resize)
-            # glfwSetKeyCallback(self._window,self.on_key)
+            # glfwSetKeyCallback(self._window,self.on_window_key)
             glfw.glfwSetWindowCloseCallback(self._window,self.on_close)
 
             # gl_state settings

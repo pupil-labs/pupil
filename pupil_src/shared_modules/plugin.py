@@ -73,7 +73,7 @@ class Plugin(object):
         """
         pass
 
-    def on_unconsumed_key(self, key, scancode, action, mods):
+    def on_key(self, key, scancode, action, mods):
         """
         Gets called on key events that were not consumed by the GUI.
 
@@ -82,7 +82,7 @@ class Plugin(object):
         """
         pass
 
-    def on_unconsumed_char(self, character):
+    def on_char(self, character):
         """
         Gets called on char events that were not consumed by the GUI.
 

@@ -134,10 +134,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             for p in g_pool.plugins:
                 p.on_window_resize(window, w, h)
 
-    def on_key(window, key, scancode, action, mods):
+    def on_window_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key, scancode, action, mods)
 
-    def on_char(window, char):
+    def on_window_char(window, char):
         g_pool.gui.update_char(char)
 
     def on_button(window, button, action, mods):
@@ -382,8 +382,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
-    glfw.glfwSetKeyCallback(main_window, on_key)
-    glfw.glfwSetCharCallback(main_window, on_char)
+    glfw.glfwSetKeyCallback(main_window, on_window_key)
+    glfw.glfwSetCharCallback(main_window, on_window_char)
     glfw.glfwSetMouseButtonCallback(main_window, on_button)
     glfw.glfwSetCursorPosCallback(main_window, on_pos)
     glfw.glfwSetScrollCallback(main_window, on_scroll)
