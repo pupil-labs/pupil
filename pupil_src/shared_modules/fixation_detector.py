@@ -19,7 +19,8 @@ import logging
 from collections import deque
 from itertools import chain
 from operator import itemgetter
-from methods import denormalize
+from methods import denormalize, normalize
+from pyglui.cygl.utils import draw_circle, RGBA
 from plugin import Plugin, Analysis_Plugin_Base
 from pyglui import ui
 
@@ -686,15 +687,16 @@ class Detection_Window(object):
         confidence = sum(p['confidence'] for p in self.pupil_data)/fix_sup_len
         avg_diameter = sum(p['diameter'] for p in self.pupil_data)/fix_sup_len
         new_fixation = {
-            'topic'            :'fixation',
-            'norm_pos'         :fixation_centroid,
-            'base_data'        :self.gaze_data,
-            'duration'         :self.duration,
-            'dispersion'       :self.max_distance_deg,
-            'timestamp'        :self.gaze_data[0]['timestamp'],
-            'pupil_diameter'   :avg_diameter,
-            'confidence'       :confidence,
-            'eye_id'           :self.pupil_data[0]['id']
+            'topic': 'fixation',
+            'norm_pos': fixation_centroid,
+            'base_data': self.gaze_data,
+            'duration': self.duration,
+            'dispersion': self.max_distance_deg,
+            'timestamp': self.gaze_data[0]['timestamp'],
+            'pupil_diameter': avg_diameter,
+            'confidence': confidence,
+            'eye_id': self.pupil_data[0]['id'],
+            'method': '3D angles'
         }
 
         self.remove_n_datums(len(self.gaze_data))
@@ -809,17 +811,28 @@ class Fixation_Detector_3D(Online_Base_Fixation_Detector):
 class Naive_Fixation_Detector(Online_Base_Fixation_Detector):
     """docstring for Online_Fixation_Detector_Pupil_Angle_Dispersion_Duration
     """
-    def __init__(self, g_pool, max_dispersion=5, sample_number=10, visualize=False):
+    def __init__(self, g_pool, max_dispersion=5, sample_number=10, confidence_threshold=0.75):
         super().__init__(g_pool)
-        self.visualize = visualize
         self.sample_number = sample_number
         self.max_dispersion = max_dispersion
         self.queue = deque(maxlen=sample_number)
+        self.confidence_threshold = confidence_threshold
 
     def recent_events(self, events):
+        self.recent_fixation = None
         events['fixations'] = []
         fs = self.g_pool.capture.frame_size
-        self.queue.extend((denormalize(gp['norm_pos'], fs) for gp in events['gaze_positions'] if gp['confidence'] > 0.75))
+        gaze = events['gaze_positions']
+
+        try:
+            for gp in gaze:
+                if gp['confidence'] <= self.confidence_threshold:
+                    # remove one entry for each gaze point that has low confidence
+                    self.queue.popleft()
+        except IndexError:
+            pass
+
+        self.queue.extend((denormalize(gp['norm_pos'], fs) for gp in gaze if gp['confidence'] > self.confidence_threshold))
 
         if len(self.queue) < self.sample_number:
             return  # wait for more samples
@@ -827,7 +840,24 @@ class Naive_Fixation_Detector(Online_Base_Fixation_Detector):
         mat = np.array(self.queue, dtype=np.float32)
         center, radius = cv2.minEnclosingCircle(mat)
         if radius < self.max_dispersion:
-            pass  # new fixation
+            new_fixation = {
+                'topic': 'fixation',
+                'norm_pos': normalize(center, fs),
+                'dispersion': radius,  # in pixel
+                'timestamp': self.g_pool.get_timestamp(),
+                'method': 'naive'
+            }
+            events['fixations'].append(new_fixation)
+            self.recent_fixation = new_fixation
+
+    def gl_display(self):
+        if self.recent_fixation:
+            # draw_points_norm([['norm_pos']],
+            #                  size=50.,
+            #                  color=RGBA(1., 1., 0., 1.))
+            fs = self.g_pool.capture.frame_size  # frame height
+            pt = denormalize(self.recent_fixation['norm_pos'], fs, flip_y=True)
+            draw_circle(pt, radius=48., stroke_width=10., color=RGBA(1., 1., 0., 1.))
 
     def init_gui(self):
         def close():
@@ -847,8 +877,9 @@ class Naive_Fixation_Detector(Online_Base_Fixation_Detector):
                                        label='Number of samples',
                                        setter=set_sample_num))
 
-        self.menu.append(ui.Slider('max_dispersion', self, min=0.0, max=0.5,
-                                   label='Dispersion pixel threshold'))
+        self.menu.append(ui.Text_Input('max_dispersion', self,
+                                       label='Dispersion pixel threshold'))
+        self.menu.append(ui.Slider('confidence_threshold', self, min=0.0, max=1.0, label='Confidence Threshold'))
         self.g_pool.sidebar.append(self.menu)
 
     def deinit_gui(self):
@@ -857,7 +888,7 @@ class Naive_Fixation_Detector(Online_Base_Fixation_Detector):
             self.menu = None
 
     def get_init_dict(self):
-        return {'max_std': self.max_std, 'sample_number': self.sample_number, 'visualize': self.visualize}
+        return {'max_dispersion': self.max_dispersion, 'sample_number': self.sample_number, 'confidence_threshold': self.confidence_threshold}
 
     def cleanup(self):
         self.deinit_gui()
