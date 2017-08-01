@@ -105,7 +105,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
     from gaze_producers import Gaze_From_Recording, Offline_Calibration
 
-    assert pyglui_version >= '1.5'
+    assert pyglui_version >= '1.6'
 
     runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
     system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
@@ -134,13 +134,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             for p in g_pool.plugins:
                 p.on_window_resize(window, w, h)
 
-    def on_key(window, key, scancode, action, mods):
+    def on_window_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key, scancode, action, mods)
 
-    def on_char(window, char):
+    def on_window_char(window, char):
         g_pool.gui.update_char(char)
 
-    def on_button(window, button, action, mods):
+    def on_window_mouse_button(window, button, action, mods):
         g_pool.gui.update_button(button, action, mods)
 
     def on_pos(window, x, y):
@@ -382,9 +382,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
-    glfw.glfwSetKeyCallback(main_window, on_key)
-    glfw.glfwSetCharCallback(main_window, on_char)
-    glfw.glfwSetMouseButtonCallback(main_window, on_button)
+    glfw.glfwSetKeyCallback(main_window, on_window_key)
+    glfw.glfwSetCharCallback(main_window, on_window_char)
+    glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
     glfw.glfwSetCursorPosCallback(main_window, on_pos)
     glfw.glfwSetScrollCallback(main_window, on_scroll)
     glfw.glfwSetDropCallback(main_window, on_drop)
@@ -508,14 +508,22 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         fps_graph.draw()
         cpu_graph.draw()
         pupil_graph.draw()
-        unused_buttons = g_pool.gui.update()
-        for b in unused_buttons:
-            button,action,mods = b
+        unused_elements = g_pool.gui.update()
+        for b in unused_elements.buttons:
+            button, action, mods = b
             pos = glfw.glfwGetCursorPos(main_window)
             pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
             pos = denormalize(pos, (frame.img.shape[1], frame.img.shape[0]))  # Position in img pixels
             for p in g_pool.plugins:
                 p.on_click(pos, button, action)
+
+        for key, scancode, action, mods in unused_elements.keys:
+            for p in g_pool.plugins:
+                p.on_key(key, scancode, action, mods)
+
+        for char_ in unused_elements.chars:
+            for p in g_pool.plugins:
+                p.on_char(char_)
 
         # present frames at appropriate speed
         cap.wait(frame)

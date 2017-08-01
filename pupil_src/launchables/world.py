@@ -73,7 +73,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # display
     import glfw
     from pyglui import ui, graph, cygl, __version__ as pyglui_version
-    assert pyglui_version >= '1.3'
+    assert pyglui_version >= '1.6'
     from pyglui.cygl.utils import Named_Texture
     import gl_utils
 
@@ -193,20 +193,14 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     def on_iconify(window, iconified):
         g_pool.iconified = iconified
 
-    def on_key(window, key, scancode, action, mods):
+    def on_window_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key, scancode, action, mods)
 
-    def on_char(window, char):
+    def on_window_char(window, char):
         g_pool.gui.update_char(char)
 
-    def on_button(window, button, action, mods):
+    def on_window_mouse_button(window, button, action, mods):
         g_pool.gui.update_button(button, action, mods)
-        pos = glfw.glfwGetCursorPos(window)
-        pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
-        # Position in img pixels
-        pos = denormalize(pos, g_pool.capture.frame_size)
-        for p in g_pool.plugins:
-            p.on_click(pos, button, action)
 
     def on_pos(window, x, y):
         hdpi_factor = float(glfw.glfwGetFramebufferSize(
@@ -389,9 +383,9 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
     glfw.glfwSetWindowIconifyCallback(main_window, on_iconify)
-    glfw.glfwSetKeyCallback(main_window, on_key)
-    glfw.glfwSetCharCallback(main_window, on_char)
-    glfw.glfwSetMouseButtonCallback(main_window, on_button)
+    glfw.glfwSetKeyCallback(main_window, on_window_key)
+    glfw.glfwSetCharCallback(main_window, on_window_char)
+    glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
     glfw.glfwSetCursorPosCallback(main_window, on_pos)
     glfw.glfwSetScrollCallback(main_window, on_scroll)
 
@@ -507,7 +501,23 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             for g in g_pool.graphs:
                 g.draw()
 
-            g_pool.gui.update()
+            unused_elements = g_pool.gui.update()
+            for button, action, mods in unused_elements.buttons:
+                pos = glfw.glfwGetCursorPos(main_window)
+                pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
+                # Position in img pixels
+                pos = denormalize(pos, g_pool.capture.frame_size)
+                for p in g_pool.plugins:
+                    p.on_click(pos, button, action)
+
+            for key, scancode, action, mods in unused_elements.keys:
+                for p in g_pool.plugins:
+                    p.on_key(key, scancode, action, mods)
+
+            for char_ in unused_elements.chars:
+                for p in g_pool.plugins:
+                    p.on_char(char_)
+
             glfw.glfwSwapBuffers(main_window)
         glfw.glfwPollEvents()
 
