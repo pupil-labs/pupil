@@ -152,8 +152,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Base_Manager)]
     user_launchable_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
                                Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection,
-                               Recorder,Remote_Recorder] + runtime_plugins
-    system_plugins = [Log_Display, Display_Recent_Gaze, Pupil_Data_Relay]
+                               Remote_Recorder] + runtime_plugins
+    system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay]
     plugin_by_index = (system_plugins + user_launchable_plugins + calibration_plugins
                        + gaze_mapping_plugins + manager_classes + source_classes)
     name_by_index = [p.__name__ for p in plugin_by_index]

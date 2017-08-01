@@ -131,12 +131,9 @@ class Recorder(Plugin):
         return d
 
     def init_gui(self):
-        def close():
-            self.alive = False
         self.menu = ui.Growing_Menu('Recorder')
         self.menu.collapsed = True
         self.g_pool.sidebar.insert(3, self.menu)
-        self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text('Pupil recordings are saved like this: "path_to_recordings/recording_session_name/nnn" where "nnn" is an increasing number to avoid overwrites. You can use "/" in your session name to create subdirectories.'))
         self.menu.append(ui.Info_Text('Recordings are saved to "~/pupil_recordings". You can change the path here but note that invalid input will be ignored.'))
         self.menu.append(ui.Text_Input('rec_dir', self, setter=self.set_rec_dir, label='Path to recordings'))
