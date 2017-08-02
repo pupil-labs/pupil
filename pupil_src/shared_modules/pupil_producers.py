@@ -56,7 +56,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         zmq_ctx = zmq.Context()
-        self.data_sub = zmq_tools.Msg_Receiver(zmq_ctx, g_pool.ipc_sub_url, topics=('pupil',))
+        self.data_sub = zmq_tools.Msg_Receiver(zmq_ctx, g_pool.ipc_sub_url, topics=('pupil','notify.file_source.video_finished'))
 
         self.data_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.data_dir , exist_ok=True)
@@ -128,18 +128,18 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             if topic.startswith('pupil.'):
                 self.pupil_positions.append(payload)
                 self.update_progress(payload)
-        if self.eye_processes[0] and self.detection_progress[0] == 100.:
-            logger.debug("eye 0 process complete")
-            self.detection_status[0] = "complete"
-            self.stop_eye_process(0)
-            if self.eye_processes == [None,None]:
-                self.correlate_publish()
-        if self.eye_processes[1] and self.detection_progress[1] == 100.:
-            logger.debug("eye 1 process complete")
-            self.detection_status[1] = "complete"
-            self.stop_eye_process(1)
-            if self.eye_processes == [None,None]:
-                self.correlate_publish()
+            elif payload['subject'] == 'file_source.video_finished':
+                if self.eye_processes[0] and self.eye_processes[0].video_path == payload['source_path']:
+                    logger.debug("eye 0 process complete")
+                    self.detection_status[0] = "complete"
+                    self.stop_eye_process(0)
+                elif self.eye_processes[1] and self.eye_processes[1].video_path == payload['source_path']:
+                    logger.debug("eye 1 process complete")
+                    self.detection_status[1] = "complete"
+                    self.stop_eye_process(1)
+                if self.eye_processes == [None, None]:
+                    self.correlate_publish()
+
 
     def correlate_publish(self):
         self.g_pool.pupil_positions = self.pupil_positions
@@ -157,6 +157,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         min_ts = self.eye_processes[eye_id].min_ts
         max_ts = self.eye_processes[eye_id].max_ts
         self.detection_progress[eye_id] = 100 * (cur_ts - min_ts) / (max_ts - min_ts)
+
 
     def cleanup(self):
         self.stop_eye_process(0)

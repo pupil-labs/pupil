@@ -11,9 +11,13 @@ See COPYING and COPYING.LESSER for license details.
 
 from plugin import Analysis_Plugin_Base
 import os
+import platform
 import time
 import multiprocessing
-mp = multiprocessing.get_context("fork")
+if platform.system() == 'Darwin':
+    mp = multiprocessing.get_context("fork")
+else:
+    mp = multiprocessing.get_context()
 
 from pyglui import ui
 import logging

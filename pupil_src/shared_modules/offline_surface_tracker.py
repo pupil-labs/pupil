@@ -36,9 +36,12 @@ from square_marker_detect import draw_markers,m_marker_to_screen
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 from offline_reference_surface import Offline_Reference_Surface
 
-
 import multiprocessing
-mp = multiprocessing.get_context("fork")
+import platform
+if platform.system() == 'Darwin':
+    mp = multiprocessing.get_context("fork")
+else:
+    mp = multiprocessing.get_context()
 
 
 class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):

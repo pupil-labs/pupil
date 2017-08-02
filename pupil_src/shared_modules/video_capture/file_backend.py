@@ -214,7 +214,7 @@ class File_Source(Base_Source):
             for frame in packet.decode():
                 if frame:
                     yield frame
-        raise EndofVideoFileError("end of file.")
+        raise StopIteration()
 
     @ensure_initialisation()
     def pts_to_idx(self, pts):
@@ -232,22 +232,22 @@ class File_Source(Base_Source):
         frame = None
         for frame in self.next_frame:
             index = self.pts_to_idx(frame.pts)
-
             if index == self.target_frame_idx:
                 break
             elif index < self.target_frame_idx:
                 pass
-                # print 'skip frame to seek','now at:',index
+                # logger.info('Frame index not consistent. Skipping forward')
             else:
                 logger.debug('Frame index not consistent.')
                 break
         if not frame:
+            logger.info("End of videofile %s %s"%(self.current_frame_idx,len(self.timestamps)))
             raise EndofVideoFileError('Reached end of videofile')
 
         try:
             timestamp = self.timestamps[index]
         except IndexError:
-            logger.warning("Reached end of timestamps list.")
+            logger.info("Reached end of timestamps list.")
             raise EndofVideoFileError("Reached end of timestamps list.")
 
         self.show_time = timestamp
@@ -269,6 +269,7 @@ class File_Source(Base_Source):
             frame = self.get_frame()
         except EndofVideoFileError:
             logger.info('Video has ended.')
+            self.notify_all({"subject":'file_source.video_finished', 'source_path':self.source_path})
             self._initialised = False
         else:
             self._recent_frame = frame
