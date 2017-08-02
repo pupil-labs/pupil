@@ -52,16 +52,8 @@ class Log_Display(Plugin):
 
         self.window_size = glfwGetFramebufferSize(glfwGetCurrentContext())
         self.tex = Render_Target(*self.window_size)
-        if self.g_pool.app == 'capture':
-            self._socket = zmq_tools.Msg_Receiver(self.g_pool.zmq_ctx,self.g_pool.ipc_sub_url,('logging',))
-            self._poller = zmq_tools.zmq.Poller()
-            self._poller.register(self._socket.socket)
-        else:
-            self._socket = None
-            self.log_handler = Log_to_Callback(self.on_log)
-            logger = logging.getLogger()
-            logger.addHandler(self.log_handler)
-            self.log_handler.setLevel(logging.INFO)
+        self._socket = zmq_tools.Msg_Receiver(self.g_pool.zmq_ctx,self.g_pool.ipc_sub_url,('logging',))
+
 
     def on_log(self,record):
         if self.alpha < 1.0:
