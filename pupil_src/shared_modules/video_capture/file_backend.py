@@ -269,6 +269,7 @@ class File_Source(Base_Source):
             frame = self.get_frame()
         except EndofVideoFileError:
             logger.info('Video has ended.')
+            self.notify_all({"subject":'file_source.video_finished', 'source_path':self.source_path})
             self._initialised = False
         else:
             self._recent_frame = frame
