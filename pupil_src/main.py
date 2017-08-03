@@ -15,7 +15,7 @@ import os, sys, platform
 # sys.argv.append('debug')
 # sys.argv.append('service')
 
-app = 'capture'
+app = 'service'
 
 if getattr(sys, 'frozen', False):
     if 'pupil_service' in sys.executable:
@@ -198,6 +198,7 @@ def launcher():
     topics = (  'notify.eye_process.',
                 'notify.player_process.',
                 'notify.world_process.',
+                'notify.service_process',
                 'notify.reset_restart_process.',
                 'notify.player_drop_process.',
                 'notify.launcher_process.',
