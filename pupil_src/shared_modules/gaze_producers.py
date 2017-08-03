@@ -163,7 +163,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                          'source_path': source_path, 'timestamps_path': timestamps_path,"pair_url":self.process_pipe.url})
 
     def init_gui(self):
-        def clear_markers():
+        def clear_natural_features():
             self.manual_ref_positions = []
         self.menu = ui.Scrolling_Menu("Offline Calibration", pos=(-660, 20), size=(300, 500))
         self.g_pool.gui.append(self.menu)
@@ -173,8 +173,8 @@ class Offline_Calibration(Gaze_Producer_Base):
         slider = ui.Slider('detection_progress', self, label='Detection Progress', setter=lambda _: _)
         slider.display_format = '%3.0f%%'
         self.menu.append(slider)
-        self.menu.append(ui.Switch('manual_ref_edit_mode',self,label="Manual feature edit mode"))
-        self.menu.append(ui.Button('Clear manual features',clear_markers))
+        self.menu.append(ui.Switch('manual_ref_edit_mode',self,label="Natural feature edit mode"))
+        self.menu.append(ui.Button('Clear natural features',clear_natural_features))
         self.menu.append(ui.Button('Add section', self.append_section))
 
         for sec in self.sections:
@@ -215,8 +215,8 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         section_menu.append(ui.Selector('calibration_method', sec,
                                         label="Calibration Method",
-                                        labels=['Circle Marker', 'Manual Features'],
-                                        selection=['circle_marker', 'manual_features']))
+                                        labels=['Circle Marker', 'Natural Features'],
+                                        selection=['circle_marker', 'natural_features']))
         section_menu.append(ui.Selector('mapping_method', sec, label='Calibration Mode',selection=['2d','3d']))
         section_menu.append(ui.Text_Input('status', sec, label='Calbiration Status', setter=lambda _: _))
         section_menu[-1].read_only = True
@@ -308,7 +308,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         if sec['calibration_method'] == 'circle_marker':
             ref_list = [r for r in self.circle_marker_positions if sec['calibration_range'][0] <= r['index'] <= sec['calibration_range'][1]]
-        elif sec['calibration_method'] == 'manual_features':
+        elif sec['calibration_method'] == 'natural_features':
             ref_list = self.manual_ref_positions
         if not calib_list:
             logger.error('No pupil data to calibrate section "{}"'.format(self.sections.index(sec) + 1))
@@ -361,7 +361,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
 
         for s in self.sections:
-            if s['calibration_method'] == "manual_features":
+            if s['calibration_method'] == "natural_features":
                 draw_points([(m['index'],0) for m in self.manual_ref_positions],size=12,color=RGBA(.0, .0, 0.9, .8))
             else:
                 draw_points([(m['index'],0) for m in self.circle_marker_positions],size=12,color=RGBA(0, .5, 0.5, .7))
