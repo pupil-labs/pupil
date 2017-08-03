@@ -808,14 +808,15 @@ class Fixation_Detector_3D(Online_Base_Fixation_Detector):
         self.deinit_gui()
 
 
-class Naive_Fixation_Detector(Online_Base_Fixation_Detector):
+class Online_Fixation_Detector(Online_Base_Fixation_Detector):
     """docstring for Online_Fixation_Detector_Pupil_Angle_Dispersion_Duration
     """
-    def __init__(self, g_pool, max_dispersion=5, sample_number=10, confidence_threshold=0.75):
+    def __init__(self, g_pool, dispersion_2d=5, dispersion_3d=3.0, duration=300, confidence_threshold=0.75):
         super().__init__(g_pool)
-        self.sample_number = sample_number
-        self.max_dispersion = max_dispersion
-        self.queue = deque(maxlen=sample_number)
+        self.queue = deque()
+        self.duration = duration
+        self.dispersion_2d = dispersion_2d
+        self.dispersion_3d = dispersion_3d
         self.confidence_threshold = confidence_threshold
 
     def recent_events(self, events):
@@ -824,37 +825,63 @@ class Naive_Fixation_Detector(Online_Base_Fixation_Detector):
         fs = self.g_pool.capture.frame_size
         gaze = events['gaze_positions']
 
-        try:
-            for gp in gaze:
-                if gp['confidence'] <= self.confidence_threshold:
-                    # remove one entry for each gaze point that has low confidence
-                    self.queue.popleft()
+        self.queue.extend((gp for gp in gaze if gp['confidence'] > self.confidence_threshold))
+
+        try:  # use newest gaze point to determine age threshold
+            age_threshold = self.queue[-1]['timestamp'] - self.duration / 1000.
+            while self.queue[1]['timestamp'] < age_threshold:
+                self.queue.popleft()  # remove outdated gaze points
         except IndexError:
             pass
 
-        self.queue.extend((denormalize(gp['norm_pos'], fs) for gp in gaze if gp['confidence'] > self.confidence_threshold))
+        gaze_3d = [gp for gp in self.queue if '3d' in gp['base_data'][0]['method']]
+        use_3d = len(gaze_3d) > 0.8 * len(self.queue)
 
-        if len(self.queue) < self.sample_number:
-            return  # wait for more samples
+        if use_3d:
+            base_data = gaze_3d
+            points0 = [(pp['theta'], pp['phi']) for pp in chain(*(gp['base_data'] for gp in gaze_3d)) if pp['id'] == 0]
+            points1 = [(pp['theta'], pp['phi']) for pp in chain(*(gp['base_data'] for gp in gaze_3d)) if pp['id'] == 1]
+            points = np.array(points0 if len(points0) > len(points1) else points1, dtype=np.float32)
+        else:
+            base_data = list(self.queue)
+            points = np.array([denormalize(gp['norm_pos'], fs) for gp in base_data], dtype=np.float32)
 
-        mat = np.array(self.queue, dtype=np.float32)
-        center, radius = cv2.minEnclosingCircle(mat)
-        if radius < self.max_dispersion:
+        if points.shape[0] <= 2 or base_data[-1]['timestamp'] - base_data[0]['timestamp'] < self.duration / 1000.:
+            self.recent_fixation = None
+            return
+
+        center, radius = cv2.minEnclosingCircle(points)
+        radius *= 2  # all dispersion measures use the diameter instead of radius
+        if use_3d and radius < np.deg2rad(self.dispersion_3d):
+            norm_pos = np.mean([gp['norm_pos'] for gp in base_data], axis=0).tolist()
+            method = '3d pupil angle [deg]'
+            dispersion = np.rad2deg(radius)  # in degrees
+
+        elif not use_3d and radius < self.dispersion_2d:
+            norm_pos = normalize(center, fs)
+            method = '2d gaze [px]'
+            dispersion = radius
+        else:
+            base_data = None
+
+        if base_data:
             new_fixation = {
                 'topic': 'fixation',
-                'norm_pos': normalize(center, fs),
-                'dispersion': radius,  # in pixel
-                'timestamp': self.g_pool.get_timestamp(),
-                'method': 'naive'
+                'norm_pos': norm_pos,
+                'dispersion': dispersion,
+                'method': method,
+                'base_data': base_data,
+                'timestamp': base_data[0]['timestamp'],
+                'duration': base_data[-1]['timestamp'] - base_data[0]['timestamp'],
+                'confidence': float(np.mean([gp['confidence'] for gp in base_data]))
             }
             events['fixations'].append(new_fixation)
             self.recent_fixation = new_fixation
+        else:
+            self.recent_fixation = None
 
     def gl_display(self):
         if self.recent_fixation:
-            # draw_points_norm([['norm_pos']],
-            #                  size=50.,
-            #                  color=RGBA(1., 1., 0., 1.))
             fs = self.g_pool.capture.frame_size  # frame height
             pt = denormalize(self.recent_fixation['norm_pos'], fs, flip_y=True)
             draw_circle(pt, radius=48., stroke_width=10., color=RGBA(1., 1., 0., 1.))
@@ -863,22 +890,23 @@ class Naive_Fixation_Detector(Online_Base_Fixation_Detector):
         def close():
             self.alive = False
 
-        help_str = "Naive 2D fixation detector."
-        self.menu = ui.Growing_Menu('Naive Fixation Detector')
+        self.menu = ui.Growing_Menu('Online Fixation Detector')
         self.menu.collapsed = True
         self.menu.append(ui.Button('Close', close))
+
+        help_str = "Dispersion-duration-based fixation detector."
         self.menu.append(ui.Info_Text(help_str))
 
-        def set_sample_num(new_value):
-            self.sample_number = new_value
-            self.queue = deque(self.queue, maxlen=new_value)
+        help_str = "Uses 3d pupil angles as dispersion measure. Falls back to 2d pixel gaze positions if no 3d data is available."
+        self.menu.append(ui.Info_Text(help_str))
 
-        self.menu.append(ui.Text_Input('sample_number', self,
-                                       label='Number of samples',
-                                       setter=set_sample_num))
+        self.menu.append(ui.Text_Input('duration', self,
+                                       label='Duration [ms]'))
+        self.menu.append(ui.Text_Input('dispersion_3d', self,
+                                       label='3d dispersion [deg]'))
+        self.menu.append(ui.Text_Input('dispersion_2d', self,
+                                       label='2d dispersion [px]'))
 
-        self.menu.append(ui.Text_Input('max_dispersion', self,
-                                       label='Dispersion pixel threshold'))
         self.menu.append(ui.Slider('confidence_threshold', self, min=0.0, max=1.0, label='Confidence Threshold'))
         self.g_pool.sidebar.append(self.menu)
 
@@ -888,7 +916,8 @@ class Naive_Fixation_Detector(Online_Base_Fixation_Detector):
             self.menu = None
 
     def get_init_dict(self):
-        return {'max_dispersion': self.max_dispersion, 'sample_number': self.sample_number, 'confidence_threshold': self.confidence_threshold}
+        return {'dispersion_2d': self.dispersion_2d, 'dispersion_3d': self.dispersion_3d,
+                'confidence_threshold': self.confidence_threshold, 'duration': self.duration}
 
     def cleanup(self):
         self.deinit_gui()

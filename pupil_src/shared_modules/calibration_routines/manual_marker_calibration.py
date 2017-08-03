@@ -211,9 +211,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                         ref["timestamp"] = frame.timestamp
                         self.ref_list.append(ref)
                         if events.get('fixations', []):
-                            method = events['fixations'][0]['method']
-                            fixation_boost = 2 if method == 'naive' else 10
-                            self.counter -= fixation_boost
+                            self.counter -= 5
                         if self.counter <= 0:
                             #last sample before counter done and moving on
                             audio.tink()

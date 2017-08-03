@@ -271,8 +271,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.pupil_list.append(p_pt)
 
             if on_position and self.detected and events.get('fixations', []):
-                method = events['fixations'][0]['method']
-                fixation_boost = 2 if method == 'naive' else 10
+                fixation_boost = 5
                 self.screen_marker_state = min(
                     self.sample_duration+self.lead_in,
                     self.screen_marker_state+fixation_boost)
