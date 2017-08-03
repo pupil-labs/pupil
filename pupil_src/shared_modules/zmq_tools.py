@@ -41,6 +41,7 @@ class ZMQ_Socket(object):
     def __del__(self):
         self.socket.close()
 
+
 class Msg_Receiver(ZMQ_Socket):
     '''
     Recv messages on a sub port.
@@ -121,13 +122,15 @@ class Msg_Streamer(ZMQ_Socket):
         require exposing the pyhton memoryview interface.
         '''
         if '__raw_data__' not in payload:
+            serialized_payload = serializer.dumps(payload, use_bin_type=True)
             self.socket.send_string(topic, flags=zmq.SNDMORE)
-            self.socket.send(serializer.dumps(payload, use_bin_type=True))
+            self.socket.send(serialized_payload)
         else:
             extra_frames = payload.pop('__raw_data__')
             assert(isinstance(extra_frames, (list, tuple)))
+            serialized_payload = serializer.dumps(payload, use_bin_type=True)
             self.socket.send_string(topic, flags=zmq.SNDMORE)
-            self.socket.send(serializer.dumps(payload), flags=zmq.SNDMORE)
+            self.socket.send(serialized_payload, flags=zmq.SNDMORE)
             for frame in extra_frames[:-1]:
                 self.socket.send(frame, flags=zmq.SNDMORE, copy=True)
             self.socket.send(extra_frames[-1], copy=True)
@@ -157,6 +160,7 @@ class Msg_Dispatcher(Msg_Streamer):
             self.send("notify.{}".format(notification['subject']),
                       notification)
 
+
 class Msg_Pair_Base(Msg_Streamer,Msg_Receiver):
 
     @property
@@ -168,6 +172,7 @@ class Msg_Pair_Base(Msg_Streamer,Msg_Receiver):
 
     def unsubscribe(self, topic):
         raise NotImplementedError()
+
 
 class Msg_Pair_Server(Msg_Pair_Base):
 

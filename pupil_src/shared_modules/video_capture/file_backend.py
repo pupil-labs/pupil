@@ -150,6 +150,7 @@ class File_Source(Base_Source):
             else:
                 logger.debug("Auto loaded %s timestamps from %s"%(len(self.timestamps),timestamps))
         else:
+            assert type(timestamps) in (list, tuple), 'Timestamps need to be Python primitives'
             logger.debug('using timestamps from list')
             self.timestamps = timestamps
 

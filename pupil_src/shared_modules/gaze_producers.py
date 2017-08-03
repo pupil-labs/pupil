@@ -79,7 +79,7 @@ class Gaze_From_Recording(Gaze_Producer_Base):
 
 
 def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
-    yield "calibrating",[]
+    yield "calibrating", []
     method, result = select_calibration_method(g_pool, calib_list, ref_list)
     if result['subject'] != 'calibration.failed':
         logger.info('Offline calibration successful. Starting mapping using {}.'.format(method))
@@ -97,7 +97,7 @@ def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
                     progress = "Mapping..{}%".format(int(progress))
                 yield progress, mapped_gaze
     else:
-        yield "calibration failed",[]
+        yield "calibration failed", []
 
 
 def make_section_dict(calib_range, map_range):
@@ -119,7 +119,6 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.manual_ref_edit_mode = manual_ref_edit_mode
         self.menu = None
         self.process_pipe = None
-
 
         self.result_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.result_dir, exist_ok=True)
@@ -270,6 +269,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                 for s in self.sections:
                     self.calibrate_section(s)
             elif topic == 'exception':
+                logger.warning('Calibration marker detection raised exception:\n{}'.format(msg['reason']))
                 self.process_pipe = None
                 self.detection_progress = 0.
                 logger.info('Marker detection was interrupted')
