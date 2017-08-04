@@ -24,6 +24,7 @@ from av_writer import AV_Writer
 
 import gl_utils
 from pyglui import cygl
+import cython_methods
 import numpy as np
 
 # check versions for our own depedencies as they are fast-changing
@@ -109,7 +110,7 @@ class DepthFrame(object):
     @property
     def bgr(self):
         if self._bgr is None:
-            self._bgr = cygl.utils.cumhist_color_map16(self.depth)
+            self._bgr = cython_methods.cumhist_color_map16(self.depth)
         return self._bgr
 
     @property
