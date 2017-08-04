@@ -105,7 +105,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
     from gaze_producers import Gaze_From_Recording, Offline_Calibration
 
-    assert pyglui_version >= '1.6'
+    assert pyglui_version >= '1.7'
 
     runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
     system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
@@ -498,7 +498,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         # render camera image
         glfw.glfwMakeContextCurrent(main_window)
         gl_utils.make_coord_system_norm_based()
-        g_pool.image_tex.update_from_frame(frame)
+        g_pool.image_tex.update_from_ndarray(frame.bgr)
         g_pool.image_tex.draw()
         gl_utils.make_coord_system_pixel_based(frame.img.shape)
         # render visual feedback from loaded plugins

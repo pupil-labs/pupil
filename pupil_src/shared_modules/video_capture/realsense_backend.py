@@ -438,7 +438,7 @@ class Realsense_Source(Base_Source):
             self.g_pool.image_tex.update_from_ndarray(self._recent_depth_frame.bgr)
             gl_utils.glFlush()
         elif not self.preview_depth and self._recent_frame is not None:
-            self.g_pool.image_tex.update_from_frame(self._recent_frame)
+            self.g_pool.image_tex.update_from_ndarray(self._recent_frame)
             gl_utils.glFlush()
 
         gl_utils.make_coord_system_norm_based()
