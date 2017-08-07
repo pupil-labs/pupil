@@ -86,7 +86,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
     frame_idx = 0
     try:
         current_e_ts = e_ts.pop(0)
-    except:
+    except IndexError:
         logger.warning("No eye timestamps found.")
         return eye_timestamps_by_world_index
 
@@ -158,20 +158,16 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
 
         #try to load eye video and ts for each eye.
         for video,ts in zip(eye_video_path,eye_timestamps_path):
-            try:
-                class empty(object):
-                    pass
-                self.eye_cap.append(File_Source(empty(),source_path=glob(video)[0],timestamps=np.load(ts)))
-            except(IndexError,FileCaptureError):
+            class empty(object):
                 pass
+            try:
+                eye_timestamps = np.load(ts)
+                self.eye_cap.append(File_Source(empty(),source_path=glob(video)[0],timestamps=eye_timestamps))
+            except Exception as e:
+                raise e
             else:
                 self.eye_frames.append(self.eye_cap[-1].get_frame())
-            try:
-                eye_timestamps = list(np.load(ts))
-            except:
-                pass
-            else:
-                self.eye_world_frame_map.append(correlate_eye_world(eye_timestamps,g_pool.timestamps))
+                self.eye_world_frame_map.append(correlate_eye_world(eye_timestamps.tolist(),g_pool.timestamps))
 
         if len(self.eye_cap) == 2:
             logger.debug("Loaded binocular eye video data.")
@@ -236,6 +232,7 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
                 if requested_eye_frame_idx != self.eye_cap[eye_index].get_frame_index():
                     # only now do I need to seek
                     self.eye_cap[eye_index].seek_to_frame(requested_eye_frame_idx)
+                    logger.warning("seek to %s"%requested_eye_frame_idx)
                 # reading the new eye frame frame
                 try:
                     self.eye_frames[eye_index] = self.eye_cap[eye_index].get_frame()
