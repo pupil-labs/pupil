@@ -188,7 +188,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     g_pool.ipc_push_url = ipc_push_url
 
     # Initialize capture
-    cap = File_Source(g_pool, video_path, timestamps=list(timestamps))
+    cap = File_Source(g_pool, video_path, timestamps=timestamps)
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))

@@ -77,7 +77,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     g_pool = Global_Container()
     g_pool.app = 'exporter'
     g_pool.min_data_confidence = min_data_confidence
-    timestamps = np.load(timestamps_path).tolist()
+    timestamps = np.load(timestamps_path)
     cap = File_Source(g_pool, video_path, timestamps=timestamps)
 
     # Out file path verification, we do this before but if one uses a seperate tool, this will kick in.

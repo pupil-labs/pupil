@@ -142,7 +142,7 @@ class File_Source(Base_Source):
             timestamps_path,ext =  os.path.splitext(source_path)
             timestamps = timestamps_path+'_timestamps.npy'
             try:
-                self.timestamps = np.load(timestamps).tolist()
+                self.timestamps = np.load(timestamps)
             except IOError:
                 logger.warning("did not find timestamps file, making timetamps up based on fps and frame count. Frame count and timestamps are not accurate!")
                 frame_rate = float(self.video_stream.average_rate)
@@ -150,7 +150,7 @@ class File_Source(Base_Source):
             else:
                 logger.debug("Auto loaded %s timestamps from %s"%(len(self.timestamps),timestamps))
         else:
-            assert type(timestamps) in (list, tuple), 'Timestamps need to be Python primitives'
+            assert isinstance(timestamps[0],float), 'Timestamps need to be Python instances of python float'
             logger.debug('using timestamps from list')
             self.timestamps = timestamps
 
