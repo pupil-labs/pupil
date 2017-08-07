@@ -87,7 +87,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
     try:
         current_e_ts = e_ts.pop(0)
     except IndexError:
-        logger.warning("No eye timestamps found.")
+        # logger.warning("No eye timestamps at all in the section.")
         return eye_timestamps_by_world_index
 
     while e_ts:
@@ -232,12 +232,11 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
                 if requested_eye_frame_idx != self.eye_cap[eye_index].get_frame_index():
                     # only now do I need to seek
                     self.eye_cap[eye_index].seek_to_frame(requested_eye_frame_idx)
-                    logger.warning("seek to %s"%requested_eye_frame_idx)
                 # reading the new eye frame frame
                 try:
                     self.eye_frames[eye_index] = self.eye_cap[eye_index].get_frame()
                 except EndofVideoFileError:
-                    logger.warning("Reached the end of the eye video for eye video {}.".format(eye_index))
+                    logger.info("Reached the end of the eye video for eye video {}.".format(eye_index))
             else:
                 #our old frame is still valid because we are doing upsampling
                 pass
