@@ -163,8 +163,8 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
             try:
                 eye_timestamps = np.load(ts)
                 self.eye_cap.append(File_Source(empty(),source_path=glob(video)[0],timestamps=eye_timestamps))
-            except Exception as e:
-                raise e
+            except (FileNotFoundError,IndexError,FileCaptureError) as e:
+                pass
             else:
                 self.eye_frames.append(self.eye_cap[-1].get_frame())
                 self.eye_world_frame_map.append(correlate_eye_world(eye_timestamps.tolist(),g_pool.timestamps))
