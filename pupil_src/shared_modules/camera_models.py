@@ -63,7 +63,7 @@ def load_intrinsics(g_pool, cam_name, resolution):
     elif intrinsics['cam_type'] == 'fisheye':
         return Fisheye_Dist_Camera(intrinsics['camera_matrix'], intrinsics['dist_coefs'], resolution, cam_name)
     elif intrinsics['cam_type'] == 'dist_pinhole':
-        return Dist_Pinhole_Camera(intrinsics['camera_matrix'], intrinsics['dist_coefs'], resolution, cam_name)
+        return Radial_Dist_Camera(intrinsics['camera_matrix'], intrinsics['dist_coefs'], resolution, cam_name)
 
 
 def save_intrinsics(g_pool, cam_name, resolution, intrinsics):

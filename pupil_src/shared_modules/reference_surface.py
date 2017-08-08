@@ -27,7 +27,7 @@ from pyglui.ui import get_opensans_font_path
 #ctypes import for atb_vars:
 from time import time
 
-from calibration_routines import Camera_Intrinsics_Estimation_Fisheye
+from calibration_routines import Camera_Intrinsics_Estimation
 
 import logging
 logger = logging.getLogger(__name__)

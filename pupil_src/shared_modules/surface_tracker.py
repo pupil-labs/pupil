@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 from square_marker_detect import detect_markers,detect_markers_robust, draw_markers,m_marker_to_screen
 from reference_surface import Reference_Surface
-from calibration_routines.camera_intrinsics_estimation_fisheye import load_camera_calibration
+from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 
 from math import sqrt
 

@@ -15,9 +15,11 @@ import numpy as np
 from file_methods import save_object,load_object
 from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup,make_coord_system_pixel_based,make_coord_system_norm_based
 from methods import normalize
+from camera_models import Fisheye_Dist_Camera, Radial_Dist_Camera
 
 
 import OpenGL.GL as gl
+from os import stat
 from pyglui import ui
 from pyglui.cygl.utils import draw_polyline,draw_points,RGBA,draw_gl_texture
 from pyglui.pyfontstash import fontstash
@@ -35,28 +37,24 @@ logger = logging.getLogger(__name__)
 pre_recorded_calibrations = {
                             'Pupil Cam1 ID2':{
                                 (1280, 720):{
-                                'dist_coefs': [[-0.6746215 ,  0.46527537,  0.01448595, -0.00070578, -0.17128751]],
+                                'dist_coefs': [[-0.14688911927649967], [-0.11345479375084214], [0.1881071629376831], [-0.10071646750776073]],
                                 'camera_name': 'Pupil Cam1 ID2',
                                 'resolution': (1280, 720),
-                                'camera_matrix': [[  1.08891909e+03,   0.00000000e+00,   6.67944178e+02],
-                                                             [  0.00000000e+00,   1.03230180e+03,   3.52772854e+02],
-                                                             [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]]
+                                'camera_matrix': [[848.7613106866924, 0.0, 650.4202362234881], [0.0, 817.2486157816005, 349.62847947455015], [0.0, 0.0, 1.0]]
                                     }
                                 },
                             'Logitech Webcam C930e':{
                                 (1280, 720):{
-                                    'dist_coefs': [[ 0.06330768, -0.17328079,  0.00074967,  0.000353  ,  0.07648477]],
+                                    'dist_coefs': [[0.3828165020558424], [0.32332222569113217], [-1.1181997066586369], [0.9835933020958403]],
                                     'camera_name': 'Logitech Webcam C930e',
                                     'resolution': (1280, 720),
-                                    'camera_matrix': [[ 739.72227378,    0.        ,  624.44490772],
-                                                                [   0.        ,  717.84832227,  350.46000651],
-                                                                [   0.        ,    0.        ,    1.        ]]
+                                    'camera_matrix': [[760.4092598632442, 0.0, 643.1354671418516], [0.0, 732.6537504697109, 374.91086611596864], [0.0, 0.0, 1.0]]
                                     }
                                 },
                             }
 
 def idealized_camera_calibration(resolution,f=1000.):
-    return {   'dist_coefs': [[ 0.,0.,0.,0.,0.]],
+    return {   'dist_coefs': [[ 1./3.,2./15.,17./315.,62./2835.]], # For fisheye distortion this yields the identity function
                'camera_name': 'ideal camera with focal length {}'.format(f),
                'resolution': resolution,
                'camera_matrix': [[  f,     0., resolution[0]/2.],
@@ -66,11 +64,11 @@ def idealized_camera_calibration(resolution,f=1000.):
 
 
 def load_camera_calibration(g_pool):
-    if g_pool.app != 'player':
+    if g_pool.app == 'capture':
         try:
-            camera_calibration = load_object(os.path.join(g_pool.user_dir,'camera_calibration'),allow_legacy=False)
+            camera_calibration = load_object(os.path.join(g_pool.user_dir,'{}.intrisics'.format(g_pool.capture.name)))
             camera_calibration['camera_name']
-        except (KeyError,ValueError):
+        except KeyError:
             camera_calibration = None
             logger.warning('Invalid or Deprecated camera calibration found. Please recalibrate camera.')
         except:
@@ -122,7 +120,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         This method is used to calculate camera intrinsics.
     """
     def __init__(self,g_pool,fullscreen = False):
-        raise NotImplementedError("Needs to be updated!")
         super().__init__(g_pool)
         self.collect_new = False
         self.calculated = False
@@ -140,6 +137,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.window_should_close = False
         self.fullscreen = fullscreen
         self.monitor_idx = 0
+        self.dist_mode = "Fisheye"
 
 
         self.glfont = fontstash.Context()
@@ -154,15 +152,14 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.show_undistortion = False
         self.show_undistortion_switch = None
 
+        self.capture = g_pool.capture
 
-        self.camera_calibration = load_camera_calibration(self.g_pool)
-        if self.camera_calibration:
-            logger.info('Loaded camera calibration. Click show undistortion to verify.')
+
+        if hasattr(self.capture, 'intrinsics') and self.capture.intrinsics:
+            logger.info('Click show undistortion to verify camera intrinsics calibration.')
             logger.info('Hint: Straight lines in the real world should be straigt in the image.')
-            self.camera_intrinsics = self.camera_calibration['camera_matrix'],self.camera_calibration['dist_coefs'],self.camera_calibration['resolution']
         else:
-            self.camera_intrinsics = None
-
+            logger.info('No camera intrinsics calibration is currently set for this camera!')
 
     def init_gui(self):
 
@@ -174,11 +171,12 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.menu = ui.Growing_Menu('Controls')
         self.menu.append(ui.Button('show Pattern',self.open_window))
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(monitor_names)),labels=monitor_names,label='Monitor'))
+        dist_modes = ["Fisheye", "Radial"]
+        self.menu.append(ui.Selector('dist_mode', self, selection=dist_modes, label='Distortion Model'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
         self.show_undistortion_switch = ui.Switch('show_undistortion',self,label='show undistorted image')
         self.menu.append(self.show_undistortion_switch)
-        if not self.camera_intrinsics:
-            self.show_undistortion_switch.read_only=True
+        self.show_undistortion_switch.read_only = not (hasattr(self.capture, 'intrinsics') and self.capture.intrinsics)
         self.g_pool.calibration_menu.append(self.menu)
 
         self.button = ui.Thumb('collect_new',self,setter=self.advance,label='C',hotkey='c')
@@ -246,20 +244,16 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
             self.clicks_to_close = 5
 
-
-
     def on_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
             if key == GLFW_KEY_ESCAPE:
                 self.on_close()
-
 
     def on_button(self,window,button, action, mods):
         if action ==GLFW_PRESS:
             self.clicks_to_close -=1
         if self.clicks_to_close ==0:
             self.on_close()
-
 
     def on_close(self,window=None):
         self.window_should_close = True
@@ -270,16 +264,52 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             glfwDestroyWindow(self._window)
             self._window = None
 
-
     def calculate(self):
         self.calculated = True
         self.count = 10
-        rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(np.array(self.obj_points), np.array(self.img_points),self.g_pool.capture.frame_size,None,None)
+        img_shape = self.g_pool.capture.frame_size
+
+        # Compute calibration
+        if self.dist_mode == "Fisheye":
+            calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_CHECK_COND + cv2.fisheye.CALIB_FIX_SKEW
+            max_iter=30
+            eps=1e-6
+            camera_matrix = np.zeros((3, 3))
+            dist_coefs = np.zeros((4, 1))
+            rvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(self.count)]
+            tvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(self.count)]
+            objPoints = [x.reshape(1,-1,3) for x in self.obj_points]
+            imgPoints = self.img_points
+            rms, _, _, _, _ = \
+                cv2.fisheye.calibrate(
+                    objPoints,
+                    imgPoints,
+                    img_shape,
+                    camera_matrix,
+                    dist_coefs,
+                    rvecs,
+                    tvecs,
+                    calibration_flags,
+                    (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, max_iter, eps)
+                )
+            camera_model = Fisheye_Dist_Camera(camera_matrix, dist_coefs, img_shape, self.g_pool.capture.name)
+        elif self.dist_mode == "Radial":
+            rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(np.array(self.obj_points),
+                                                                               np.array(self.img_points),
+                                                                               self.g_pool.capture.frame_size, None,
+                                                                               None)
+            camera_model = Radial_Dist_Camera(camera_matrix, dist_coefs, img_shape, self.g_pool.capture.name)
+        else:
+            raise ValueError("Unkown distortion model: {}".format(self.dist_mode))
+
         logger.info("Calibrated Camera, RMS:{}".format(rms))
-        camera_calibration = {'camera_matrix':camera_matrix.tolist(),'dist_coefs':dist_coefs.tolist(),'camera_name':self.g_pool.capture.name,'resolution':self.g_pool.capture.frame_size}
-        save_object(camera_calibration,os.path.join(self.g_pool.user_dir,"camera_calibration"))
-        logger.info("Calibration saved to user folder")
-        self.camera_intrinsics = camera_matrix,dist_coefs,self.g_pool.capture.frame_size
+
+        camera_model.save(self.g_pool)
+        self.capture.intrinsics = camera_model
+
+
+
+        # self.camera_intrinsics = camera_matrix.tolist(),dist_coefs.tolist(),self.g_pool.capture.frame_size TODO delete this, used anywhere?
         self.show_undistortion_switch.read_only=False
 
     def update(self,frame,events):
@@ -302,9 +332,17 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             self.close_window()
 
         if self.show_undistortion:
+            assert self.capture.intrinsics
+            # This function is not yet compatible with the fisheye camera model and would have to be manually implemented.
+            # adjusted_k,roi = cv2.getOptimalNewCameraMatrix(cameraMatrix= np.array(self.camera_intrinsics[0]), distCoeffs=np.array(self.camera_intrinsics[1]), imageSize=self.camera_intrinsics[2], alpha=0.5,newImgSize=self.camera_intrinsics[2],centerPrincipalPoint=1)
+            self.undist_img = self.capture.intrinsics.undistort(frame.img)
 
-            adjusted_k,roi = cv2.getOptimalNewCameraMatrix(cameraMatrix= self.camera_intrinsics[0], distCoeffs=self.camera_intrinsics[1], imageSize=self.camera_intrinsics[2], alpha=0.5,newImgSize=self.camera_intrinsics[2],centerPrincipalPoint=1)
-            self.undist_img = cv2.undistort(frame.img, self.camera_intrinsics[0], self.camera_intrinsics[1],newCameraMatrix=adjusted_k)
+
+    @staticmethod
+    def solvePnP(uv3d, xy, K, D):
+        xy_undist = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(xy, K, D)
+        res = cv2.solvePnP(uv3d, xy_undist, K, np.array([[0,0,0,0,0]]), flags=cv2.SOLVEPNP_ITERATIVE)
+        return res
 
     def gl_display(self):
 
@@ -320,6 +358,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             make_coord_system_norm_based()
             draw_gl_texture(self.undist_img)
             gl.glPopMatrix()
+
     def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(self._window)
@@ -350,10 +389,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
 
-
     def get_init_dict(self):
         return {}
-
 
     def cleanup(self):
         """gets called when the plugin get terminated.
@@ -363,7 +400,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         if self._window:
             self.close_window()
         self.deinit_gui()
-
 
 def _gen_pattern_grid(size=(4,11)):
     pattern_grid = []
