@@ -15,7 +15,6 @@ import numpy as np
 from . import calibrate
 from math_helper import *
 from file_methods import load_object,save_object
-from . camera_intrinsics_estimation import load_camera_calibration
 
 from . optimization_calibration import bundle_adjust_calibration
 from . calibrate import find_rigid_transform
@@ -28,59 +27,45 @@ not_enough_data_error_msg = 'Did not collect enough data during calibration.'
 solver_failed_to_converge_error_msg = 'Paramters could not be estimated from data.'
 
 
-def calibrate_3d_binocular(g_pool, camera_intrinsics, matched_binocular_data, pupil0, pupil1):
+def calibrate_3d_binocular(g_pool, matched_binocular_data, pupil0, pupil1):
     method = 'binocular 3d model'
     hardcoded_translation0 = np.array([20, 15, -20])
     hardcoded_translation1 = np.array([-40, 15, -20])
 
     # TODO model the world as cv2 pinhole camera with distorion and focal in ceres.
     # right now we solve using a few permutations of K
-    smallest_residual = 1000
-    scales = list(np.linspace(0.7, 1.4, 20))
-    K = np.asarray(camera_intrinsics["camera_matrix"])
 
-    for s in scales:
-        scale = np.ones(K.shape)
-        scale[0, 0] *= s
-        scale[1, 1] *= s
-        camera_intrinsics["camera_matrix"] = K*scale
+    ref_dir, gaze0_dir, gaze1_dir = calibrate.preprocess_3d_data(matched_binocular_data, g_pool)
 
-        ref_dir, gaze0_dir, gaze1_dir = calibrate.preprocess_3d_data(matched_binocular_data,
-                                                                     camera_intrinsics=camera_intrinsics)
+    if len(ref_dir) < 1 or len(gaze0_dir) < 1 or len(gaze1_dir) < 1:
+        logger.error(not_enough_data_error_msg)
+        return method, {'subject': 'calibration.failed', 'reason': not_enough_data_error_msg,
+                        'timestamp': g_pool.get_timestamp(), 'record': True}
 
-        if len(ref_dir) < 1 or len(gaze0_dir) < 1 or len(gaze1_dir) < 1:
-            logger.error(not_enough_data_error_msg)
-            return method, {'subject': 'calibration.failed', 'reason': not_enough_data_error_msg,
-                            'timestamp': g_pool.get_timestamp(), 'record': True}
+    sphere_pos0 = pupil0[-1]['sphere']['center']
+    sphere_pos1 = pupil1[-1]['sphere']['center']
 
-        sphere_pos0 = pupil0[-1]['sphere']['center']
-        sphere_pos1 = pupil1[-1]['sphere']['center']
+    initial_R0, initial_t0 = find_rigid_transform(np.array(gaze0_dir)*500,np.array(ref_dir)*500)
+    initial_rotation0 = math_helper.quaternion_from_rotation_matrix(initial_R0)
+    # initial_translation0 = np.array(initial_t0).reshape(3)  # currently not used
 
-        initial_R0, initial_t0 = find_rigid_transform(np.array(gaze0_dir)*500,np.array(ref_dir)*500)
-        initial_rotation0 = math_helper.quaternion_from_rotation_matrix(initial_R0)
-        # initial_translation0 = np.array(initial_t0).reshape(3)  # currently not used
+    initial_R1, initial_t1 = find_rigid_transform(np.array(gaze1_dir)*500,np.array(ref_dir)*500)
+    initial_rotation1 = math_helper.quaternion_from_rotation_matrix(initial_R1)
+    # initial_translation1 = np.array(initial_t1).reshape(3)  # currently not used
 
-        initial_R1, initial_t1 = find_rigid_transform(np.array(gaze1_dir)*500,np.array(ref_dir)*500)
-        initial_rotation1 = math_helper.quaternion_from_rotation_matrix(initial_R1)
-        # initial_translation1 = np.array(initial_t1).reshape(3)  # currently not used
+    eye0 = {"observations": gaze0_dir, "translation": hardcoded_translation0,
+            "rotation": initial_rotation0, 'fix': ['translation']}
 
-        eye0 = {"observations": gaze0_dir, "translation": hardcoded_translation0,
-                "rotation": initial_rotation0, 'fix': ['translation']}
+    eye1 = {"observations": gaze1_dir, "translation": hardcoded_translation1,
+            "rotation": initial_rotation1, 'fix': ['translation']}
+    world = {"observations": ref_dir, "translation": (0, 0, 0),
+             "rotation": (1, 0, 0, 0), 'fix': ['translation', 'rotation']}
+    initial_observers = [eye0, eye1, world]
+    initial_points = np.array(ref_dir)*500
 
-        eye1 = {"observations": gaze1_dir, "translation": hardcoded_translation1,
-                "rotation": initial_rotation1, 'fix': ['translation']}
-        world = {"observations": ref_dir, "translation": (0, 0, 0),
-                 "rotation": (1, 0, 0, 0), 'fix': ['translation', 'rotation']}
-        initial_observers = [eye0, eye1, world]
-        initial_points = np.array(ref_dir)*500
-
-        success, residual, observers, points = bundle_adjust_calibration(initial_observers,
-                                                                         initial_points,
-                                                                         fix_points=False)
-
-        if residual <= smallest_residual:
-            smallest_residual = residual
-            scales[-1] = s
+    success, residual, observers, points = bundle_adjust_calibration(initial_observers,
+                                                                     initial_points,
+                                                                     fix_points=False)
 
     if not success:
         logger.error("Calibration solver faild to converge.")
@@ -134,70 +119,59 @@ def calibrate_3d_binocular(g_pool, camera_intrinsics, matched_binocular_data, pu
     eye_camera_to_world_matrix1[:3, :3] = R_world1
     eye_camera_to_world_matrix1[:3, 3:4] = np.reshape(camera_translation, (3, 1))
 
-    camera_intrinsics['camera_matrix'] = camera_intrinsics['camera_matrix'].tolist()
     return method, {'subject': 'start_plugin', 'name': 'Binocular_Vector_Gaze_Mapper',
                     'args': {'eye_camera_to_world_matrix0': eye_camera_to_world_matrix0.tolist(),
                              'eye_camera_to_world_matrix1': eye_camera_to_world_matrix1.tolist(),
-                             'camera_intrinsics': camera_intrinsics,
                              'cal_points_3d': points,
                              'cal_ref_points_3d': points_a,
                              'cal_gaze_points0_3d': points_b,
                              'cal_gaze_points1_3d': points_c}}
 
 
-def calibrate_3d_monocular(g_pool, camera_intrinsics, matched_monocular_data):
+def calibrate_3d_monocular(g_pool, matched_monocular_data):
     method = 'monocular 3d model'
     hardcoded_translation0 = np.array([20, 15, -20])
     hardcoded_translation1 = np.array([-40, 15, -20])
     # TODO model the world as cv2 pinhole camera with distorion and focal in ceres.
     # right now we solve using a few permutations of K
     smallest_residual = 1000
-    scales = list(np.linspace(0.7, 1.4, 20))
-    K = np.asarray(camera_intrinsics["camera_matrix"])
-    for s in scales:
-        scale = np.ones(K.shape)
-        scale[0, 0] *= s
-        scale[1, 1] *= s
-        camera_intrinsics["camera_matrix"] = K*scale
-        ref_dir, gaze_dir, _ = calibrate.preprocess_3d_data(matched_monocular_data,
-                                                            camera_intrinsics=camera_intrinsics)
-        # save_object((ref_dir,gaze_dir),os.path.join(g_pool.user_dir, "testdata"))
-        if len(ref_dir) < 1 or len(gaze_dir) < 1:
-            logger.error(not_enough_data_error_msg + " Using:" + method)
-            return method, {'subject': 'calibration.failed', 'reason': not_enough_data_error_msg,
-                            'timestamp': g_pool.get_timestamp(), 'record': True}
 
-        # monocular calibration strategy: mimize the reprojection error by moving the world camera.
-        # we fix the eye points and work in the eye coord system.
-        initial_R, initial_t = find_rigid_transform(np.array(ref_dir)*500, np.array(gaze_dir)*500)
-        initial_rotation = math_helper.quaternion_from_rotation_matrix(initial_R)
-        # initial_translation = np.array(initial_t).reshape(3)  # currently not used
-        # this problem is scale invariant so we scale to some sensical value.
+    # TODO do this across different scales?
+    ref_dir, gaze_dir, _ = calibrate.preprocess_3d_data(matched_monocular_data, g_pool)
+    # save_object((ref_dir,gaze_dir),os.path.join(g_pool.user_dir, "testdata"))
+    if len(ref_dir) < 1 or len(gaze_dir) < 1:
+        logger.error(not_enough_data_error_msg + " Using:" + method)
+        return method, {'subject': 'calibration.failed', 'reason': not_enough_data_error_msg,
+                        'timestamp': g_pool.get_timestamp(), 'record': True}
 
-        if matched_monocular_data[0]['pupil']['id'] == 0:
-            hardcoded_translation = hardcoded_translation0
-        else:
-            hardcoded_translation = hardcoded_translation1
+    # monocular calibration strategy: mimize the reprojection error by moving the world camera.
+    # we fix the eye points and work in the eye coord system.
+    initial_R, initial_t = find_rigid_transform(np.array(ref_dir)*500, np.array(gaze_dir)*500)
+    initial_rotation = math_helper.quaternion_from_rotation_matrix(initial_R)
+    # initial_translation = np.array(initial_t).reshape(3)  # currently not used
+    # this problem is scale invariant so we scale to some sensical value.
 
-        eye = {"observations": gaze_dir,
-               "translation": (0, 0, 0),
-               "rotation": (1, 0, 0, 0),
-               'fix': ['translation', 'rotation']}
+    if matched_monocular_data[0]['pupil']['id'] == 0:
+        hardcoded_translation = hardcoded_translation0
+    else:
+        hardcoded_translation = hardcoded_translation1
 
-        world = {"observations": ref_dir,
-                 "translation": np.dot(initial_R, -hardcoded_translation),
-                 "rotation": initial_rotation,
-                 'fix': ['translation']}
+    eye = {"observations": gaze_dir,
+           "translation": (0, 0, 0),
+           "rotation": (1, 0, 0, 0),
+           'fix': ['translation', 'rotation']}
 
-        initial_observers = [eye, world]
-        initial_points = np.array(gaze_dir)*500
+    world = {"observations": ref_dir,
+             "translation": np.dot(initial_R, -hardcoded_translation),
+             "rotation": initial_rotation,
+             'fix': ['translation']}
 
-        success, residual, observers, points_in_eye = bundle_adjust_calibration(initial_observers,
-                                                                                initial_points,
-                                                                                fix_points=True)
-        if residual <= smallest_residual:
-            smallest_residual = residual
-            scales[-1] = s
+    initial_observers = [eye, world]
+    initial_points = np.array(gaze_dir)*500
+
+    success, residual, observers, points_in_eye = bundle_adjust_calibration(initial_observers,
+                                                                            initial_points,
+                                                                            fix_points=True)
 
     eye, world = observers
 
@@ -245,10 +219,8 @@ def calibrate_3d_monocular(g_pool, camera_intrinsics, matched_monocular_data):
     eye_camera_to_world_matrix[:3, :3] = R_eye
     eye_camera_to_world_matrix[:3, 3:4] = np.reshape(camera_translation, (3, 1))
 
-    camera_intrinsics['camera_matrix'] = camera_intrinsics['camera_matrix'].tolist()
     return method, {'subject': 'start_plugin', 'name': 'Vector_Gaze_Mapper',
                     'args': {'eye_camera_to_world_matrix': eye_camera_to_world_matrix.tolist(),
-                             'camera_intrinsics': camera_intrinsics,
                              'cal_points_3d': points_in_world,
                              'cal_ref_points_3d': points_a,
                              'cal_gaze_points_3d': points_b,
@@ -309,7 +281,6 @@ def match_data(g_pool, pupil_list, ref_list):
         return {'subject': 'calibration.failed', 'reason': not_enough_data_error_msg,
                 'timestamp': g_pool.get_timestamp(), 'record': True}
 
-    camera_intrinsics = load_camera_calibration(g_pool)
 
     # match eye data and check if biocular and or monocular
     pupil0 = [p for p in pupil_list if p['id'] == 0]
@@ -327,7 +298,7 @@ def match_data(g_pool, pupil_list, ref_list):
 
     logger.info('Collected {} monocular calibration data.'.format(len(matched_monocular_data)))
     logger.info('Collected {} binocular calibration data.'.format(len(matched_binocular_data)))
-    return (camera_intrinsics, matched_binocular_data, matched_monocular_data,
+    return (matched_binocular_data, matched_monocular_data,
             matched_pupil0_data, matched_pupil1_data, pupil0, pupil1)
 
 
@@ -337,20 +308,20 @@ def select_calibration_method(g_pool, pupil_list, ref_list):
         return None, matched_data  # matched_data is a error notification
 
     # unpack matching data
-    (camera_intrinsics, matched_binocular_data, matched_monocular_data,
+    (matched_binocular_data, matched_monocular_data,
         matched_pupil0_data, matched_pupil1_data, pupil0, pupil1) = matched_data
 
     mode = g_pool.detection_mapping_mode
 
-    if mode == '3d' and not camera_intrinsics:
+    if mode == '3d' and not (hasattr(g_pool.capture, 'intrinsics') or g_pool.capture.intrinsics):
         mode = '2d'
         logger.warning("Please calibrate your world camera using 'camera intrinsics estimation' for 3d gaze mapping.")
 
     if mode == '3d':
         if matched_binocular_data:
-            return calibrate_3d_binocular(g_pool, camera_intrinsics, matched_binocular_data, pupil0, pupil1)
+            return calibrate_3d_binocular(g_pool, matched_binocular_data, pupil0, pupil1)
         elif matched_monocular_data:
-            return calibrate_3d_monocular(g_pool, camera_intrinsics, matched_monocular_data)
+            return calibrate_3d_monocular(g_pool, matched_monocular_data)
         else:
             logger.error(not_enough_data_error_msg)
             return None, {'subject': 'calibration.failed', 'reason': not_enough_data_error_msg,

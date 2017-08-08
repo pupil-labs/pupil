@@ -12,7 +12,6 @@ See COPYING and COPYING.LESSER for license details.
 import numpy as np
 import cv2
 
-from methods import undistort_unproject_pts
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -331,10 +330,7 @@ def preprocess_2d_data_binocular(matched_data):
         cal_data.append( data_pt )
     return cal_data
 
-def preprocess_3d_data(matched_data, camera_intrinsics):
-    camera_matrix = np.asarray(camera_intrinsics["camera_matrix"])
-    dist_coefs = np.asarray(camera_intrinsics["dist_coefs"])
-
+def preprocess_3d_data(matched_data, g_pool):
     ref_processed = []
     pupil0_processed = []
     pupil1_processed = []
@@ -353,11 +349,16 @@ def preprocess_3d_data(matched_data, camera_intrinsics):
                 pupil1_processed.append( gaze_vector1 )
 
             # projected point uv to normal ray vector of camera
-            ref = data_point['ref']
-            ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+            ref = data_point['ref']['screen_pos']
+            ref_vector = np.array(ref).reshape(-1,1,2)
+            ref_vector = g_pool.capture.intrinsics.undistortPoints(ref_vector)
+            ref_vector = cv2.convertPointsToHomogeneous(np.float32(ref_vector))
+            ref_vector.shape = (-1, 3)
+            ref_vector = ref_vector.tolist()[0]
+
             ref_vector = ref_vector / np.linalg.norm(ref_vector)
             # assuming a fixed (assumed) distance we get a 3d point in world camera 3d coords.
-            ref_processed.append( np.array(ref_vector) )
+            ref_processed.append(ref_vector)
 
         except KeyError as e:
             # this pupil data point did not have 3d detected data.

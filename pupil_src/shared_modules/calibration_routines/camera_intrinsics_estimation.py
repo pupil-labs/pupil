@@ -122,6 +122,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         This method is used to calculate camera intrinsics.
     """
     def __init__(self,g_pool,fullscreen = False):
+        raise NotImplementedError("Needs to be updated!")
         super().__init__(g_pool)
         self.collect_new = False
         self.calculated = False
