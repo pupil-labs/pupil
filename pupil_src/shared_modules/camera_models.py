@@ -91,7 +91,7 @@ def save_intrinsics(g_pool, cam_name, resolution, intrinsics):
     logger.info("Calibration for camera {} at resolution {} saved to user folder".format(cam_name, resolution))
 
 
-class Fisheye_Dist_Camera():
+class Fisheye_Dist_Camera(object):
     """ Camera model assuming a lense with fisheye distortion.
         Provides functionality to make use of a fisheye camera calibration.
         The implementation of cv2.fisheye is buggy and some functions had to be customized.
@@ -214,7 +214,7 @@ class Fisheye_Dist_Camera():
         save_intrinsics(g_pool, self.name, self.resolution, intrinsics)
 
 
-class Radial_Dist_Camera():
+class Radial_Dist_Camera(object):
     """ Camera model assuming a lense with radial distortion (this is the defaut model in opencv).
         Provides functionality to make use of a pinhole camera calibration that is also compensating for lense distortion
     """
