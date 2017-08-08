@@ -78,7 +78,7 @@ class AV_Writer(object):
     We are creating a
     """
 
-    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 15000*10e3}, use_timestamps=False):
+    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 15000*10e3}, audio_loc=None, use_timestamps=False):
         super().__init__()
         self.use_timestamps = use_timestamps
         self.timestamps = []
@@ -99,6 +99,20 @@ class AV_Writer(object):
         else:
             self.time_base = Fraction(1000, self.fps*1000)  # timebase is fps
 
+        if audio_loc:
+            audio_dir = os.path.split(audio_loc)[0]
+            audio_ts_loc = os.path.join(audio_dir, 'audio_timestamps.npy')
+            audio_exists = os.path.exists(audio_loc) and os.path.exists(audio_ts_loc)
+            if audio_exists:
+                self.audio_rec = av.open(audio_loc)
+                self.audio_ts = np.load(audio_ts_loc)
+                self.audio_export = self.container.add_stream(template=self.audio_rec.streams.audio[0])
+            else:
+                logger.warning('Could not mux audio. File not found.')
+                self.audio_export = False
+        else:
+            self.audio_export = False
+
         self.video_stream = self.container.add_stream(video_stream['codec'], 1/self.time_base)
         self.video_stream.bit_rate = video_stream['bit_rate']
         self.video_stream.bit_rate_tolerance = video_stream['bit_rate']/20
@@ -108,6 +122,7 @@ class AV_Writer(object):
         self.start_time = None
 
         self.current_frame_idx = 0
+        self.audio_packets_decoded = 0
 
     def write_video_frame(self, input_frame):
         if not self.configured:
@@ -143,6 +158,24 @@ class AV_Writer(object):
             self.container.mux(packet)
         self.current_frame_idx += 1
         self.timestamps.append(input_frame.timestamp)
+        if self.audio_export:
+            for audio_packet in self.audio_rec.demux():
+                if self.audio_packets_decoded >= len(self.audio_ts):
+                    logger.debug('More audio frames decoded than there are timestamps: {} > {}'.format(self.audio_packets_decoded, len(self.audio_ts)))
+                    break
+                audio_pts = int((self.audio_ts[self.audio_packets_decoded]-self.start_time) / self.audio_export.time_base)
+                audio_packet.pts = audio_pts
+                audio_packet.dts = audio_pts
+                audio_packet.stream = self.audio_export
+                self.audio_packets_decoded += 1
+
+                if audio_pts * self.audio_export.time_base < 0:
+                    logger.debug('Seeking: {} -> {}'.format(audio_pts * self.audio_export.time_base, self.start_time))
+                    continue  # seek to start_time
+
+                self.container.mux(audio_packet)
+                if audio_pts * self.audio_export.time_base > self.frame.pts * self.time_base:
+                    break  # wait for next image
 
     def close(self):
         # flush encoder
@@ -268,86 +301,10 @@ def rec_thread(file_loc, in_container, audio_src, should_close):
     out_container.close()
 
 
-class Audio_Capture(object):
-    """
-    PyAV based audio capture.
-    """
-
-    def __init__(self, file_loc, audio_src=0):
-        super().__init__()
-        self.thread = None
-
-        try:
-            file_path, ext = file_loc.rsplit('.', 1)
-        except:
-            logger.error("'{}' is not a valid media file name.".format(file_loc))
-            raise Exception("Error")
-
-        if ext not in ('wav'):
-            logger.error("media file container should be wav. Using a different container is not supported.")
-            raise NotImplementedError()
-
-        self.should_close = Event()
-
-        self.start(file_loc,audio_src)
-
-    def start(self, file_loc, audio_src):
-        self.should_close.clear()
-        if platform.system() == "Darwin":
-            in_container = av.open('none:{}'.format(audio_src), format="avfoundation")
-        else:
-            in_container = None
-        self.thread = Thread(target=rec_thread, args=(file_loc, in_container, audio_src, self.should_close))
-        self.thread.start()
-
-    def stop(self):
-        self.should_close.set()
-        self.thread.join(timeout=1)
-        self.thread = None
-
-    def close(self):
-        self.stop()
-
-    def __del__(self):
-        if self.thread:
-            self.stop()
-
-
-def mac_pyav_hack():
-    if platform.system() == "Darwin":
-        try:
-            av.open(':0', format="avfoundation")
-        except:
-            pass
-
-
-# def test():
-
-#     import os
-#     import cv2
-#     from video_capture import autoCreateCapture
-#     logging.basicConfig(level=logging.DEBUG)
-
-#     writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
-#     # writer = cv2.VideoWriter(os.path.expanduser("~/Desktop/av_writer_out.avi"),cv2.cv.CV_FOURCC(*"DIVX"),30,(1280,720))
-#     cap = autoCreateCapture(0,(1280,720))
-#     frame = cap.get_frame()
-#     # print writer.video_stream.time_base
-#     # print writer.
-
-#     for x in range(300):
-#         frame = cap.get_frame()
-#         writer.write_video_frame(frame)
-#         # writer.write(frame.img)
-#         # print writer.video_stream
-
-#     cap.close()
-#     writer.close()
-
-
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
+    from audio_capture import Audio_Capture
     cap = Audio_Capture('test.wav','default')
 
     import time

@@ -73,7 +73,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # display
     import glfw
     from pyglui import ui, graph, cygl, __version__ as pyglui_version
-    assert pyglui_version >= '1.3'
+    assert pyglui_version >= '1.6'
     from pyglui.cygl.utils import Named_Texture
     import gl_utils
 
@@ -193,20 +193,14 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     def on_iconify(window, iconified):
         g_pool.iconified = iconified
 
-    def on_key(window, key, scancode, action, mods):
+    def on_window_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key, scancode, action, mods)
 
-    def on_char(window, char):
+    def on_window_char(window, char):
         g_pool.gui.update_char(char)
 
-    def on_button(window, button, action, mods):
+    def on_window_mouse_button(window, button, action, mods):
         g_pool.gui.update_button(button, action, mods)
-        pos = glfw.glfwGetCursorPos(window)
-        pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
-        # Position in img pixels
-        pos = denormalize(pos, g_pool.capture.frame_size)
-        for p in g_pool.plugins:
-            p.on_click(pos, button, action)
 
     def on_pos(window, x, y):
         hdpi_factor = float(glfw.glfwGetFramebufferSize(
@@ -247,7 +241,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         ipc_pub.notify(n)
 
     def stop_eye_process(eye_id):
-        n = {'subject': 'eye_process.should_stop', 'eye_id': eye_id}
+        n = {'subject': 'eye_process.should_stop.{}'.format(eye_id), 'eye_id': eye_id,'delay':0.2}
         ipc_pub.notify(n)
 
     def start_stop_eye(eye_id, make_alive):
@@ -270,8 +264,12 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                     g_pool.plugins.add(plugin_by_name['Dummy_Gaze_Mapper'])
             g_pool.detection_mapping_mode = n['mode']
         elif subject == 'start_plugin':
-            g_pool.plugins.add(
-                plugin_by_name[n['name']], args=n.get('args', {}))
+            g_pool.plugins.add(plugin_by_name[n['name']], args=n.get('args', {}))
+        elif subject == 'stop_plugin':
+            for p in g_pool.plugins:
+                if p.class_name == n['name']:
+                    p.alive = False
+                    g_pool.plugins.clean()
         elif subject == 'eye_process.started':
             n = {'subject': 'set_detection_mapping_mode',
                  'mode': g_pool.detection_mapping_mode}
@@ -301,14 +299,20 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         g_pool.gui_user_scale = new_scale
         on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
+    def reset_restart():
+        logger.warning("Resetting all settings and restarting Capture.")
+        glfw.glfwSetWindowShouldClose(main_window, True)
+        ipc_pub.notify({'subject': 'reset_restart_process.should_start'})
+
     # setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
     g_pool.sidebar = ui.Scrolling_Menu("Settings", pos=(-350, 0), size=(0, 0), header_pos='left')
     general_settings = ui.Growing_Menu('General')
+    general_settings.append(ui.Button('Reset to default settings',reset_restart))
     general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface size'))
-    general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0],g_pool.capture.frame_size[1])) )
-    general_settings.append(ui.Selector('audio_mode',audio,selection=audio.audio_modes))
+    general_settings.append(ui.Button('Reset window size', lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0],g_pool.capture.frame_size[1])) )
+    general_settings.append(ui.Selector('audio_mode', audio, selection=audio.audio_modes))
     general_settings.append(ui.Selector('detection_mapping_mode',
                                         g_pool,
                                         label='detection & mapping mode',
@@ -379,9 +383,9 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
     glfw.glfwSetWindowIconifyCallback(main_window, on_iconify)
-    glfw.glfwSetKeyCallback(main_window, on_key)
-    glfw.glfwSetCharCallback(main_window, on_char)
-    glfw.glfwSetMouseButtonCallback(main_window, on_button)
+    glfw.glfwSetKeyCallback(main_window, on_window_key)
+    glfw.glfwSetCharCallback(main_window, on_window_char)
+    glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
     glfw.glfwSetCursorPosCallback(main_window, on_pos)
     glfw.glfwSetScrollCallback(main_window, on_scroll)
 
@@ -491,14 +495,29 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         glfw.glfwMakeContextCurrent(main_window)
         # render visual feedback from loaded plugins
         if window_should_update() and gl_utils.is_window_visible(main_window):
-            g_pool.capture.gl_display()
             for p in g_pool.plugins:
                 p.gl_display()
 
             for g in g_pool.graphs:
                 g.draw()
 
-            g_pool.gui.update()
+            unused_elements = g_pool.gui.update()
+            for button, action, mods in unused_elements.buttons:
+                pos = glfw.glfwGetCursorPos(main_window)
+                pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
+                # Position in img pixels
+                pos = denormalize(pos, g_pool.capture.frame_size)
+                for p in g_pool.plugins:
+                    p.on_click(pos, button, action)
+
+            for key, scancode, action, mods in unused_elements.keys:
+                for p in g_pool.plugins:
+                    p.on_key(key, scancode, action, mods)
+
+            for char_ in unused_elements.chars:
+                for p in g_pool.plugins:
+                    p.on_char(char_)
+
             glfw.glfwSwapBuffers(main_window)
         glfw.glfwPollEvents()
 
@@ -519,11 +538,11 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     for p in g_pool.plugins:
         p.alive = False
     g_pool.plugins.clean()
+
     g_pool.gui.terminate()
     glfw.glfwDestroyWindow(main_window)
     glfw.glfwTerminate()
 
-    g_pool.capture.deinit_gui()
 
     # shut down eye processes:
     stop_eye_process(0)
@@ -532,10 +551,26 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     logger.info("Process shutting down.")
     ipc_pub.notify({'subject': 'world_process.stopped'})
 
-    # shut down launcher
-    n = {'subject': 'launcher_process.should_stop'}
-    ipc_pub.notify(n)
-    zmq_ctx.destroy()
+
+
+def reset_restart(ipc_push_url,user_dir):
+    import glob, os, time
+
+    # networking
+    import zmq
+    import zmq_tools
+    # zmq ipc setup
+    zmq_ctx = zmq.Context()
+    ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
+
+    time.sleep(1)
+
+    for f in glob.glob(os.path.join(user_dir,'user_settings_*')):
+        print(f)
+        os.remove(f)
+
+    ipc_pub.notify({'subject': 'world_process.should_start'})
+    time.sleep(1)
 
 
 def world_profiled(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
@@ -543,7 +578,7 @@ def world_profiled(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     import cProfile
     import subprocess
     import os
-    from world import world
+    from .world import world
     cProfile.runctx("world(timebase, eyes_are_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
                     {'timebase': timebase, 'eyes_are_alive': eyes_are_alive, 'ipc_pub_url': ipc_pub_url,
                      'ipc_sub_url': ipc_sub_url, 'ipc_push_url': ipc_push_url, 'user_dir': user_dir,

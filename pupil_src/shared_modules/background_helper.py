@@ -9,9 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import multiprocessing as mp
 from ctypes import c_bool
-
+import multiprocessing as mp
+# mp = mp.get_context('fork')
 import logging
 logger = logging.getLogger(__name__)
 
@@ -22,14 +22,8 @@ class EarlyCancellationError(Exception):
 
 class Task_Proxy(object):
     '''Future like object that runs a given generator in the background and returns is able to return the results incrementally'''
-    def __init__(self, name, generator,force_spawn=False, args=(), kwargs={}):
-        super(Task_Proxy, self).__init__()
-
-        if force_spawn:
-            import multiprocessing as mp
-            mp = mp.get_context('spawn')
-        else:
-            import multiprocessing as mp
+    def __init__(self, name, generator, args=(), kwargs={}):
+        super().__init__()
 
         self._should_terminate_flag = mp.Value(c_bool, 0)
         self._completed = False
@@ -80,7 +74,7 @@ class Task_Proxy(object):
     def cancel(self, timeout=1):
         self._should_terminate_flag.value = True
         for x in self.fetch():
-            #fetch to flush pipe to allow process to react to cancel comand.
+            # fetch to flush pipe to allow process to react to cancel comand.
             pass
         self.process.join(timeout)
 
@@ -106,7 +100,7 @@ if __name__ == '__main__':
             sleep(np.random.rand() * .1)
 
     # initialize task proxy
-    task = Task_Proxy('Background', example_generator, args=(5., 3.), kwargs={'steps': 50})
+    task = Task_Proxy('Background', example_generator, args=(5., 3.), kwargs={'steps': 100})
 
     from time import time, sleep
     start = time()

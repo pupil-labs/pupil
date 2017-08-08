@@ -46,12 +46,16 @@ class Seek_Bar(Plugin):
         self.h_pad = self.padding * self.frame_count/float(w)
         self.v_pad = self.padding * 1./h
 
-    def update(self,frame,events):
+    def recent_events(self,events):
+        frame = events.get('frame')
+        if not frame:
+            return
+
         self.current_frame_index = frame.index
 
         if self.drag_mode:
-            x,y = glfwGetCursorPos(glfwGetCurrentContext())
-            x,_ = self.screen_to_seek_bar((x,y))
+            x, y = glfwGetCursorPos(glfwGetCurrentContext())
+            x, _ = self.screen_to_seek_bar((x,y))
             seek_pos = min(self.frame_count,max(0,x))
             seek_pos = int(min(seek_pos,self.frame_count-5)) #the last frames can be problematic to seek to
             if self.current_frame_index-1 != seek_pos:

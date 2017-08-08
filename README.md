@@ -35,4 +35,4 @@ For an intro to the Pupil mobile eye tracking platform have a look at the [Pupil
 
 
 ## License
-All source code written by Pupil Labs is open for use in compliance with the [GNU Lesser General Public License (LGPL v3.0)](http://www.gnu.org/licenses/lgpl-3.0.en.html). We want you to change and improve the code -- make a fork! Make sure to share your work with the community! See the docs for more info on the [license](http://docs.pupil-labs.com/#license "License"). For support and custom licencing [contact us!](https://github.com/pupil-labs/pupil/wiki/Community#email "email us")
+All source code written by Pupil Labs is open for use in compliance with the [GNU Lesser General Public License (LGPL v3.0)](http://www.gnu.org/licenses/lgpl-3.0.en.html). We want you to change and improve the code -- make a fork! Make sure to share your work with the community! See the docs for more info on the [license](http://docs.pupil-labs.com/#license "License"). For support and custom licencing [contact us!](https://docs.pupil-labs.com/#email "email us")

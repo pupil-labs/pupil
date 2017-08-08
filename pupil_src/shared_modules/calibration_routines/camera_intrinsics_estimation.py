@@ -64,11 +64,11 @@ def idealized_camera_calibration(resolution,f=1000.):
 
 
 def load_camera_calibration(g_pool):
-    if g_pool.app == 'capture':
+    if g_pool.app != 'player':
         try:
             camera_calibration = load_object(os.path.join(g_pool.user_dir,'{}.intrisics'.format(g_pool.capture.name)))
             camera_calibration['camera_name']
-        except KeyError:
+        except (KeyError,ValueError):
             camera_calibration = None
             logger.warning('Invalid or Deprecated camera calibration found. Please recalibrate camera.')
         except:
@@ -229,9 +229,9 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
             #Register callbacks
             glfwSetFramebufferSizeCallback(self._window,on_resize)
-            glfwSetKeyCallback(self._window,self.on_key)
+            glfwSetKeyCallback(self._window,self.on_window_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
-            glfwSetMouseButtonCallback(self._window,self.on_button)
+            glfwSetMouseButtonCallback(self._window,self.on_window_mouse_button)
 
             on_resize(self._window,*glfwGetFramebufferSize(self._window))
 
@@ -244,12 +244,14 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
             self.clicks_to_close = 5
 
-    def on_key(self,window, key, scancode, action, mods):
+
+    def on_window_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
             if key == GLFW_KEY_ESCAPE:
                 self.on_close()
 
-    def on_button(self,window,button, action, mods):
+
+    def on_window_mouse_button(self,window,button, action, mods):
         if action ==GLFW_PRESS:
             self.clicks_to_close -=1
         if self.clicks_to_close ==0:
@@ -312,7 +314,10 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         # self.camera_intrinsics = camera_matrix.tolist(),dist_coefs.tolist(),self.g_pool.capture.frame_size TODO delete this, used anywhere?
         self.show_undistortion_switch.read_only=False
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         if self.collect_new:
             img = frame.img
             status, grid_points = cv2.findCirclesGrid(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)

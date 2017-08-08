@@ -39,7 +39,10 @@ class Vis_Scan_Path(Visualizer_Plugin_Base):
         self.prev_gray = None
 
 
-    def update(self,frame,events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         img = frame.img
         img_shape = img.shape[:-1][::-1] # width,height
 

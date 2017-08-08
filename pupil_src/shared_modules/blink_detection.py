@@ -56,9 +56,6 @@ class Blink_Detection(Plugin):
     def cleanup(self):
         self.deinit_gui()
 
-    def update(self, frame=None, events={}):
-        # backwards compatibility
-        self.recent_events(events)
 
     def recent_events(self, events={}):
 

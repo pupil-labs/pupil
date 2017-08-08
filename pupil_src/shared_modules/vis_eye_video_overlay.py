@@ -86,8 +86,8 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
     frame_idx = 0
     try:
         current_e_ts = e_ts.pop(0)
-    except:
-        logger.warning("No eye timestamps found.")
+    except IndexError:
+        # logger.warning("No eye timestamps at all in the section.")
         return eye_timestamps_by_world_index
 
     while e_ts:
@@ -158,20 +158,16 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
 
         #try to load eye video and ts for each eye.
         for video,ts in zip(eye_video_path,eye_timestamps_path):
+            class empty(object):
+                pass
             try:
-                class empty(object):
-                    pass
-                self.eye_cap.append(File_Source(empty(),source_path=glob(video)[0],timestamps=np.load(ts)))
-            except(IndexError,FileCaptureError):
+                eye_timestamps = np.load(ts)
+                self.eye_cap.append(File_Source(empty(),source_path=glob(video)[0],timestamps=eye_timestamps))
+            except (FileNotFoundError,IndexError,FileCaptureError) as e:
                 pass
             else:
                 self.eye_frames.append(self.eye_cap[-1].get_frame())
-            try:
-                eye_timestamps = list(np.load(ts))
-            except:
-                pass
-            else:
-                self.eye_world_frame_map.append(correlate_eye_world(eye_timestamps,g_pool.timestamps))
+                self.eye_world_frame_map.append(correlate_eye_world(eye_timestamps.tolist(),g_pool.timestamps))
 
         if len(self.eye_cap) == 2:
             logger.debug("Loaded binocular eye video data.")
@@ -220,7 +216,10 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
             self.g_pool.gui.remove(self.menu)
             self.menu = None
 
-    def update(self, frame, events):
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if not frame:
+            return
         for eye_index in self.showeyes:
             requested_eye_frame_idx = self.eye_world_frame_map[eye_index][frame.index]
 
@@ -237,7 +236,7 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
                 try:
                     self.eye_frames[eye_index] = self.eye_cap[eye_index].get_frame()
                 except EndofVideoFileError:
-                    logger.warning("Reached the end of the eye video for eye video {}.".format(eye_index))
+                    logger.info("Reached the end of the eye video for eye video {}.".format(eye_index))
             else:
                 #our old frame is still valid because we are doing upsampling
                 pass
@@ -269,24 +268,22 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
             if self.show_ellipses and events['pupil_positions']:
                 for pd in events['pupil_positions']:
                     if pd['id'] == eye_index and pd['timestamp'] == self.eye_frames[eye_index].timestamp:
-                        break
+                        el = pd['ellipse']
+                        conf = int(pd.get('model_confidence', pd.get('confidence', 0.1)) * 255)
+                        center = list(map(lambda val: int(self.eye_scale_factor*val), el['center']))
+                        el['axes'] = tuple(map(lambda val: int(self.eye_scale_factor*val/2), el['axes']))
+                        el['angle'] = int(el['angle'])
+                        el_points = cv2.ellipse2Poly(tuple(center), el['axes'], el['angle'], 0, 360, 1)
 
-                el = pd['ellipse']
-                conf = int(pd.get('model_confidence', pd.get('confidence', 0.1)) * 255)
-                center = list(map(lambda val: int(self.eye_scale_factor*val), el['center']))
-                el['axes'] = tuple(map(lambda val: int(self.eye_scale_factor*val/2), el['axes']))
-                el['angle'] = int(el['angle'])
-                el_points = cv2.ellipse2Poly(tuple(center), el['axes'], el['angle'], 0, 360, 1)
+                        if self.mirror[str(eye_index)]:
+                            el_points = [(self.video_size[0] - x, y) for x, y in el_points]
+                            center[0] = self.video_size[0] - center[0]
+                        if self.flip[str(eye_index)]:
+                            el_points = [(x, self.video_size[1] - y) for x, y in el_points]
+                            center[1] = self.video_size[1] - center[1]
 
-                if self.mirror[str(eye_index)]:
-                    el_points = [(self.video_size[0] - x, y) for x, y in el_points]
-                    center[0] = self.video_size[0] - center[0]
-                if self.flip[str(eye_index)]:
-                    el_points = [(x, self.video_size[1] - y) for x, y in el_points]
-                    center[1] = self.video_size[1] - center[1]
-
-                cv2.polylines(eyeimage, [np.asarray(el_points)], True, (0, 0, 255, conf), thickness=math.ceil(2*self.eye_scale_factor))
-                cv2.circle(eyeimage, tuple(center), int(5*self.eye_scale_factor), (0, 0, 255, conf), thickness=-1)
+                        cv2.polylines(eyeimage, [np.asarray(el_points)], True, (0, 0, 255, conf), thickness=math.ceil(2*self.eye_scale_factor))
+                        cv2.circle(eyeimage, tuple(center), int(5*self.eye_scale_factor), (0, 0, 255, conf), thickness=-1)
 
             # 5. finally overlay the image
             x, y = int(self.pos[eye_index][0]), int(self.pos[eye_index][1])

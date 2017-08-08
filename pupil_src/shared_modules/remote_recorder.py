@@ -63,9 +63,11 @@ class Remote_Recorder(Plugin):
             self.stop()
 
     def init_gui(self):
+        def close():
+            self.alive = False
         self.menu = ui.Growing_Menu('Remote Recorder')
         self.g_pool.sidebar.append(self.menu)
-        self.menu.append(ui.Button('Close', self.close))
+        self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text('Starts a recording session on each connected Pupil Mobile source.'))
         self.menu.append(ui.Text_Input('session_name', self))
         self.menu_toggle = ui.Button('Start Recording', self.toggle_recording)
@@ -86,8 +88,6 @@ class Remote_Recorder(Plugin):
             self.menu_toggle = None
             self.quickbar_toggle = None
 
-    def close(self):
-        self.alive = False
 
     def cleanup(self):
         self.stop()

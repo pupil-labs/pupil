@@ -65,9 +65,9 @@ class VisualizeSphere(Visualizer):
         glfwPollEvents()
         return True
 
-    def on_key(self,window, key, scancode, action, mods):
+    def on_window_key(self,window, key, scancode, action, mods):
         # self.gui.update_button(button,action,mods)
-        super().on_key(window, key, scancode, action, mods)
+        super().on_window_key(window, key, scancode, action, mods)
         if key == GLFW_KEY_ESCAPE:
           self.running = False
           self.close_window()

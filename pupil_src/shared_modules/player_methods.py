@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import os, cv2, csv_utils
 import numpy as np
+from scipy.interpolate import interp1d
 import collections
 import glob
 import av
@@ -50,7 +51,7 @@ def correlate_data(data, timestamps):
         try:
             datum = data[data_index]
             # we can take the midpoint between two frames in time: More appropriate for SW timestamps
-            ts = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
+            ts = (timestamps[frame_idx]+timestamps[frame_idx+1]) / 2.
             # or the time of the next frame: More appropriate for Sart Of Exposure Timestamps (HW timestamps).
             # ts = timestamps[frame_idx+1]
         except IndexError:
@@ -114,6 +115,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v091_to_v093(rec_dir)
     if rec_version < VersionFormat('0.9.4'):
         update_recording_v093_to_v094(rec_dir)
+    if rec_version < VersionFormat('0.9.13'):
+        update_recording_v094_to_v0913(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -142,7 +145,7 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         time_file_name = os.path.split(time_loc)[1]
         time_name, time_ext = os.path.splitext(time_file_name)
 
-        potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.mp4')]
+        potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.mp4','.m4a')]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
         if not existing_locs:
             continue
@@ -169,16 +172,22 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
                 save_object(camera_calibration, cam_calib_loc)
 
             time_name = 'world'  # assume world file
+        elif time_name.startswith('audio_'):
+            time_name = 'audio'
 
         timestamps = np.fromfile(time_loc, dtype='>f8')
         timestamp_loc = os.path.join(rec_dir, '{}_timestamps.npy'.format(time_name))
         logger.info('Creating "{}"'.format(os.path.split(timestamp_loc)[1]))
         np.save(timestamp_loc, timestamps)
 
-        video_dst = os.path.join(rec_dir, time_name) + os.path.splitext(video_loc)[1]
-
-        logger.info('Renaming "{}" to "{}"'.format(os.path.split(video_loc)[1], os.path.split(video_dst)[1]))
-        os.rename(video_loc, video_dst)
+        if time_name == 'audio':
+            video_dst = os.path.join(rec_dir, time_name) + '.mp4'
+            logger.info('Renaming "{}" to "{}"'.format(os.path.split(video_loc)[1], os.path.split(video_dst)[1]))
+            os.rename(video_loc, video_dst)
+        else:
+            video_dst = os.path.join(rec_dir, time_name) + os.path.splitext(video_loc)[1]
+            logger.info('Renaming "{}" to "{}"'.format(os.path.split(video_loc)[1], os.path.split(video_dst)[1]))
+            os.rename(video_loc, video_dst)
 
     pupil_data_loc = os.path.join(rec_dir, 'pupil_data')
     if not os.path.exists(pupil_data_loc):
@@ -310,6 +319,79 @@ def update_recording_v093_to_v094(rec_dir):
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Data Format Version'] = 'v0.9.4'
     update_meta_info(rec_dir, meta_info)
+
+
+def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
+    try:
+        logger.info("Updating recording from v0.9.4 to v0.9.13")
+        meta_info_path = os.path.join(rec_dir, "info.csv")
+
+        wav_file_loc = os.path.join(rec_dir, 'audio.wav')
+        aac_file_loc = os.path.join(rec_dir, 'audio.mp4')
+        audio_ts_loc = os.path.join(rec_dir, 'audio_timestamps.npy')
+        backup_ts_loc = os.path.join(rec_dir, 'audio_timestamps_old.npy')
+        if os.path.exists(wav_file_loc) and os.path.exists(audio_ts_loc):
+            in_container = av.open(wav_file_loc)
+            in_stream = in_container.streams.audio[0]
+            in_frame_size = 0
+            in_frame_num = 0
+
+            out_container = av.open(aac_file_loc, 'w')
+            out_stream = out_container.add_stream('aac')
+
+            for in_packet in in_container.demux():
+                for audio_frame in in_packet.decode():
+                    if not in_frame_size:
+                        in_frame_size = audio_frame.samples
+                    in_frame_num += 1
+                    out_packet = out_stream.encode(audio_frame)
+                    if out_packet is not None:
+                        out_container.mux(out_packet)
+
+            # flush encoder
+            out_packet = out_stream.encode(None)
+            while out_packet is not None:
+                out_container.mux(out_packet)
+                out_packet = out_stream.encode(None)
+
+            out_frame_size = out_stream.frame_size
+            out_frame_num = out_stream.frames
+            out_frame_rate = out_stream.rate
+            in_frame_rate = in_stream.rate
+
+            out_container.close()
+
+            old_ts = np.load(audio_ts_loc)
+            np.save(backup_ts_loc, old_ts)
+
+            if len(old_ts) != in_frame_num:
+                in_frame_size /= len(old_ts) / in_frame_num
+                logger.debug('Provided audio frame size is inconsistent with amount of timestamps. Correcting frame size to {}'.format(in_frame_size))
+
+            old_ts_idx = np.arange(0, len(old_ts) * in_frame_size, in_frame_size) * out_frame_rate / in_frame_rate
+            new_ts_idx = np.arange(0, out_frame_num * out_frame_size, out_frame_size)
+            interpolate = interp1d(old_ts_idx, old_ts, bounds_error=False, fill_value='extrapolate')
+            new_ts = interpolate(new_ts_idx)
+
+            # raise RuntimeError
+            np.save(audio_ts_loc, new_ts)
+
+        with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+            meta_info = csv_utils.read_key_value_file(csvfile)
+            meta_info['Data Format Version'] = 'v0.9.13'
+        update_meta_info(rec_dir, meta_info)
+    except av.AVError as averr:
+        # Try to catch `libav.aac : Input contains (near) NaN/+-Inf` errors
+        # Unfortunately, the above error is only logged not raised. Instead
+        # `averr`, an `Invalid Argument` error with error number 22, is raised.
+        if retry_on_averror and averr.errno == 22:
+            # unfortunately
+            logger.error('Encountered AVError. Retrying to update recording.')
+            out_container.close()
+            # Only retry once:
+            update_recording_v094_to_v0913(rec_dir, retry_on_averror=False)
+        else:
+            raise  # re-raise exception
 
 
 def update_recording_bytes_to_unicode(rec_dir):
