@@ -27,8 +27,6 @@ from pyglui.ui import get_opensans_font_path
 #ctypes import for atb_vars:
 from time import time
 
-from calibration_routines import Camera_Intrinsics_Estimation
-
 import logging
 logger = logging.getLogger(__name__)
 
@@ -69,7 +67,8 @@ class Reference_Surface(object):
     The more markers we find the more accurate the homography.
 
     """
-    def __init__(self,name="unnamed",saved_definition=None):
+    def __init__(self,g_pool, name="unnamed",saved_definition=None):
+        self.g_pool = g_pool
         self.name = name
         self.markers = {}
         self.detected_markers = 0
@@ -138,7 +137,7 @@ class Reference_Surface(object):
         self.defined = True
         self.build_up_status = self.required_build_up
 
-    def build_correspondance(self, visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
+    def build_correspondance(self, visible_markers,min_marker_perimeter,min_id_confidence):
         """
         - use all visible markers
         - fit a convex quadrangle around it
@@ -153,12 +152,8 @@ class Reference_Surface(object):
         all_verts = np.array(all_verts,dtype=np.float32)
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
         # all_verts_undistorted_normalized centered in img center flipped in y and range [-1,1]
-        # all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
-        if self.use_distortion:
-            all_verts_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(all_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs']))
-        else:
-            all_verts_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(all_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray([[ 1./3.,2./15.,17./315.,62./2835.]]))
-        hull = cv2.convexHull(all_verts_undistorted_normalized,clockwise=False)
+        all_verts_undistorted_normalized = self.g_pool.capture.intrinsics.undistortPoints(all_verts, use_distortion=self.use_distortion)
+        hull = cv2.convexHull(all_verts_undistorted_normalized.astype(np.float32),clockwise=False)
 
         #simplify until we have excatly 4 verts
         if hull.shape[0]>4:
@@ -186,7 +181,7 @@ class Reference_Surface(object):
         m_from_undistored_norm_space = m_verts_from_screen(hull)
         self.detected = True
         # map the markers vertices into the surface space (one can think of these as texture coordinates u,v)
-        marker_uv_coords =  cv2.perspectiveTransform(all_verts_undistorted_normalized,m_from_undistored_norm_space)
+        marker_uv_coords =  cv2.perspectiveTransform(all_verts_undistorted_normalized, m_from_undistored_norm_space)
         marker_uv_coords.shape = (-1,4,1,2) #[marker,marker...] marker = [ [[r,c]],[[r,c]] ]
 
         # build up a dict of discovered markers. Each with a history of uv coordinates
@@ -223,23 +218,23 @@ class Reference_Surface(object):
             del self.on_finish_define
 
 
-    def locate(self, visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence, locate_3d=False,):
+    def locate(self, visible_markers,min_marker_perimeter,min_id_confidence, locate_3d=False,):
         """
         - find overlapping set of surface markers and visible_markers
         - compute homography (and inverse) based on this subset
         """
 
         if not self.defined:
-            self.build_correspondance(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
+            self.build_correspondance(visible_markers,min_marker_perimeter,min_id_confidence)
 
-        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence,locate_3d)
+        res = self._get_location(visible_markers,min_marker_perimeter,min_id_confidence,locate_3d)
         self.detected = res['detected']
         self.detected_markers = res['detected_markers']
         self.m_to_screen = res['m_to_screen']
         self.m_from_screen = res['m_from_screen']
         self.camera_pose_3d = res['camera_pose_3d']
 
-    def _get_location(self,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence, locate_3d=False):
+    def _get_location(self,visible_markers,min_marker_perimeter,min_id_confidence, locate_3d=False):
 
         filtered_markers = [m for m in visible_markers if m['perimeter']>=min_marker_perimeter and m['id_confidence']>min_id_confidence]
         marker_by_id ={}
@@ -263,11 +258,7 @@ class Reference_Surface(object):
             # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
             # compute the homography transform from marker into the undistored normalized image space
             # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
-            # xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
-            if self.use_distortion:
-                xy_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(xy.reshape(-1,2), np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs']))
-            else:
-                xy_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(xy.reshape(-1,2), np.asarray(camera_calibration['camera_matrix']),np.asarray([[ 1./3.,2./15.,17./315.,62./2835.]]))
+            xy_undistorted_normalized = self.g_pool.capture.intrinsics.undistortPoints(xy.reshape(-1,2), use_distortion=self.use_distortion)
 
             m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized, method=cv2.RANSAC,ransacReprojThreshold=100)
             if not mask.all():
@@ -276,22 +267,17 @@ class Reference_Surface(object):
             # project the corners of the surface to undistored space
             corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
             # project and distort these points  and normalize them
-            # corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), np.asarray(camera_calibration['camera_matrix']), np.asarray(camera_calibration['dist_coefs'])*self.use_distortion)
-            if self.use_distortion:
-                corners_redistorted = Camera_Intrinsics_Estimation_Fisheye.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.asarray(camera_calibration['camera_matrix']), np.asarray(camera_calibration['dist_coefs']))
-            else:
-                corners_redistorted = Camera_Intrinsics_Estimation_Fisheye.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.asarray(camera_calibration['camera_matrix']), np.asarray([[ 1./3.,2./15.,17./315.,62./2835.]]))
-            # corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), np.asarray(camera_calibration['camera_matrix']), np.asarray(camera_calibration['dist_coefs'])*0)
-            corners_nulldistorted = Camera_Intrinsics_Estimation_Fisheye.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space),np.asarray(camera_calibration['camera_matrix']),np.asarray([[1. / 3., 2. / 15., 17. / 315., 62. / 2835.]]))
+            corners_redistorted = self.g_pool.capture.intrinsics.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), use_distortion=self.use_distortion)
+            corners_nulldistorted = self.g_pool.capture.intrinsics.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), use_distortion=self.use_distortion)
 
             #normalize to pupil norm space
             corners_redistorted.shape = -1,2
-            corners_redistorted /= camera_calibration['resolution']
+            corners_redistorted /= self.g_pool.capture.intrinsics.resolution
             corners_redistorted[:,-1] = 1-corners_redistorted[:,-1]
 
             #normalize to pupil norm space
             corners_nulldistorted.shape = -1,2
-            corners_nulldistorted /= camera_calibration['resolution']
+            corners_nulldistorted /= self.g_pool.capture.intrinsics.resolution
             corners_nulldistorted[:,-1] = 1-corners_nulldistorted[:,-1]
 
 
@@ -332,10 +318,6 @@ class Reference_Surface(object):
 
             camera_pose_3d = None
             if locate_3d:
-                dist_coef = np.asarray(camera_calibration['dist_coefs'])
-                img_size = camera_calibration['resolution']
-                K = np.asarray(camera_calibration['camera_matrix'])
-
                 # 3d marker support pose estimation:
                 # scale normalized object points to world space units (think m,cm,mm)
                 uv.shape = -1,2
@@ -345,7 +327,7 @@ class Reference_Surface(object):
                 uv3d[:,:-1] = uv
                 xy.shape = -1,1,2
                 # compute pose of object relative to camera center
-                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = Camera_Intrinsics_Estimation_Fisheye.solvePnP(uv3d, xy, K, dist_coef)
+                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = self.g_pool.capture.intrinsics.solvePnP(uv3d, xy)
                 print("{} \t {} \t {}".format(translate3d_cam_to_object[0], translate3d_cam_to_object[1], translate3d_cam_to_object[2]))
 
                 if is3dPoseAvailable:
@@ -458,19 +440,19 @@ class Reference_Surface(object):
             m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
 
 
-    def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
+    def add_marker(self,marker,visible_markers,min_marker_perimeter,min_id_confidence):
         '''
         add marker to surface.
         '''
-        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence,locate_3d=False)
+        res = self._get_location(visible_markers,min_marker_perimeter,min_id_confidence,locate_3d=False)
         if res['detected']:
             support_marker = Support_Marker(marker['id'])
             marker_verts = np.array(marker['verts'])
             marker_verts.shape = (-1,1,2)
             if self.use_distortion:
-                marker_verts_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(marker_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs']))
+                marker_verts_undistorted_normalized = self.g_pool.capture.intrinsics.undistortPoints(marker_verts)
             else:
-                marker_verts_undistorted_normalized = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(marker_verts, np.asarray(camera_calibration['camera_matrix']),np.asarray(camera_calibration['dist_coefs']))
+                marker_verts_undistorted_normalized = self.g_pool.capture.intrinsics.undistortPoints(marker_verts)
             marker_uv_coords =  cv2.perspectiveTransform(marker_verts_undistorted_normalized,res['m_from_undistored_norm_space'])
             support_marker.load_uv_coords(marker_uv_coords)
             self.markers[marker['id']] = support_marker
@@ -518,8 +500,8 @@ class Reference_Surface(object):
             alpha = min(1,self.build_up_status/self.required_build_up)
             if highlight:
                 draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*.1),line_type=GL_POLYGON)
-            # draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*alpha))
-            # draw_polyline_norm(hat.reshape((4,2)),1,RGBA(r,g,b,a*alpha))
+            draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*alpha))
+            draw_polyline_norm(hat.reshape((4,2)),1,RGBA(r,g,b,a*alpha))
             text_anchor = frame.reshape((5,-1))[2]
             text_anchor[1] = 1-text_anchor[1]
             text_anchor *=img_size[1],img_size[0]
@@ -608,11 +590,11 @@ class Reference_Surface(object):
             glfwMakeContextCurrent(active_window)
 
     #### fns to draw surface in separate window
-    def gl_display_in_window_3d(self,world_tex,camera_intrinsics):
+    def gl_display_in_window_3d(self,world_tex):
         """
         here we map a selected surface onto a seperate window.
         """
-        K,dist_coef,img_size = camera_intrinsics['camera_matrix'],camera_intrinsics['dist_coefs'],camera_intrinsics['resolution']
+        K, img_size = self.g_pool.capture.intrinsics.K, self.g_pool.capture.intrinsics.resolution
 
         if self._window and self.camera_pose_3d is not None:
             active_window = glfwGetCurrentContext()
@@ -800,7 +782,6 @@ class Support_Marker(object):
 
 def draw_frustum(img_size, K, scale=1):
     # average focal length
-    K = np.asarray(K)
     f = (K[0, 0] + K[1, 1]) / 2
     # compute distances for setting up the camera pyramid
     W = 0.5*(img_size[0])

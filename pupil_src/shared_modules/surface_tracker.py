@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 from square_marker_detect import detect_markers,detect_markers_robust, draw_markers,m_marker_to_screen
 from reference_surface import Reference_Surface
-from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 
 from math import sqrt
 
@@ -39,7 +38,6 @@ class Surface_Tracker(Plugin):
         # all markers that are detected in the most recent frame
         self.markers = []
 
-        self.camera_calibration = load_camera_calibration(self.g_pool)
         self.load_surface_definitions_from_file()
 
         # edit surfaces
@@ -67,7 +65,7 @@ class Surface_Tracker(Plugin):
     def load_surface_definitions_from_file(self):
         # all registered surfaces
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.user_dir,'surface_definitions'))
-        self.surfaces = [Reference_Surface(saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[])]
+        self.surfaces = [Reference_Surface(self.g_pool, saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[])]
 
     def save_surface_definitions_to_file(self):
         self.surface_definitions["realtime_square_marker_surfaces"] = [rs.save_to_dict() for rs in self.surfaces if rs.defined]
@@ -119,11 +117,11 @@ class Surface_Tracker(Plugin):
                                     self.marker_edit_surface.remove_marker(m)
                                     self.notify_all({'subject':'surfaces_changed','delay':1})
                                 else:
-                                    self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
+                                    self.marker_edit_surface.add_marker(m,self.markers,self.min_marker_perimeter,self.min_id_confidence)
                                     self.notify_all({'subject':'surfaces_changed','delay':1})
 
     def add_surface(self, _):
-        surf = Reference_Surface()
+        surf = Reference_Surface(self.g_pool)
         surf.on_finish_define = self.save_surface_definitions_to_file
         self.surfaces.append(surf)
         self.update_gui_markers()
@@ -219,7 +217,7 @@ class Surface_Tracker(Plugin):
 
         # locate surfaces, map gaze
         for s in self.surfaces:
-            s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence, self.locate_3d)
+            s.locate(self.markers,self.min_marker_perimeter,self.min_id_confidence, self.locate_3d)
             if s.detected:
                 s.gaze_on_srf = s.map_data_to_surface(events.get('gaze_positions',[]),s.m_from_screen)
             else:
@@ -294,7 +292,7 @@ class Surface_Tracker(Plugin):
 
         for s in self.surfaces:
             if self.locate_3d:
-                s.gl_display_in_window_3d(self.g_pool.image_tex,self.camera_calibration)
+                s.gl_display_in_window_3d(self.g_pool.image_tex)
             else:
                 s.gl_display_in_window(self.g_pool.image_tex)
 

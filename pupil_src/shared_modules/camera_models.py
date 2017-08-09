@@ -50,9 +50,9 @@ def load_intrinsics(g_pool, cam_name, resolution):
     except Exception as e:
         logger.info("No calibration found for camera {} at resolution {}".format(cam_name, resolution))
 
-        if cam_name in pre_recorded_calibrations and resolution in pre_recorded_calibrations[cam_name]:
+        if cam_name in pre_recorded_calibrations and str(resolution) in pre_recorded_calibrations[cam_name]:
             logger.info("Loading pre-recorded calibration")
-            intrinsics = pre_recorded_calibrations[cam_name][resolution]
+            intrinsics = pre_recorded_calibrations[cam_name][str(resolution)]
         else:
             logger.info("No pre-recorded calibration available")
             logger.info("Loading dummy calibration")
@@ -130,7 +130,7 @@ class Fisheye_Dist_Camera(object):
 
         return undistorted_img
 
-    def undistortPoints(self, dist_pts):
+    def undistortPoints(self, dist_pts, use_distortion=True):
         """
         Undistorts points according to the camera model.
         cv2.fisheye.undistortPoints does *NOT* perform the same unprojection step the original cv2.undistortPoints does.
@@ -138,15 +138,19 @@ class Fisheye_Dist_Camera(object):
         :param dist_pts: Distorted points. Can be a list of points or a single point.
         :return: Array of undistorted points with the same shape as the input
         """
+        input_shape = dist_pts.shape
 
-        dist_pts.shape = (-1, 2)
-        eps = np.finfo(np.float).eps
+        dist_pts = dist_pts.reshape((-1, 2))
+        eps = np.finfo(np.float32).eps
 
         f = np.array((self.K[0, 0], self.K[1, 1])).reshape(1, 2)
         c = np.array((self.K[0, 2], self.K[1, 2])).reshape(1, 2)
-        k = self.D.ravel().astype(np.float64)
+        if use_distortion:
+            k = self.D.ravel().astype(np.float32)
+        else:
+            k = np.asarray([1. / 3., 2. / 15., 17. / 315., 62. / 2835.], dtype=np.float32)
 
-        pi = dist_pts.astype(np.float)
+        pi = dist_pts.astype(np.float32)
         pw = (pi - c) / f
 
         theta_d = np.linalg.norm(pw, ord=2, axis=1)
@@ -162,9 +166,10 @@ class Fisheye_Dist_Camera(object):
 
         pu = pw * scale.reshape(-1, 1)
 
+        pu.shape = input_shape
         return pu
 
-    def projectPoints(self, object_points, rvec=None, tvec=None):
+    def projectPoints(self, object_points, rvec=None, tvec=None, use_distortion=True):
         """
         Projects a set of points onto the camera plane as defined by the camera model.
         :param object_points: Set of 3D world points
@@ -176,7 +181,7 @@ class Fisheye_Dist_Camera(object):
 
         input_dim = object_points.ndim
 
-        object_points.shape = (1, -1, 3)
+        object_points = object_points.reshape((1, -1, 3))
 
         if rvec is None:
             rvec = np.zeros(3).reshape(1, 1, 3)
@@ -188,12 +193,17 @@ class Fisheye_Dist_Camera(object):
         else:
             tvec = np.array(tvec).reshape(1, 1, 3)
 
+        if use_distortion:
+            _D = self.D
+        else:
+            _D = np.asarray([[1. / 3., 2. / 15., 17. / 315., 62. / 2835.]])
+
         image_points, jacobian = cv2.fisheye.projectPoints(
             object_points,
             rvec,
             tvec,
             self.K,
-            self.D,
+            _D,
             alpha=skew
         )
 
@@ -202,6 +212,27 @@ class Fisheye_Dist_Camera(object):
         elif input_dim == 3:
             image_points.shape = (-1, 1, 2)
         return image_points
+
+    def solvePnP(self, uv3d, xy):
+        # xy_undist = self.undistortPoints(xy)
+        # f = np.array((self.K[0, 0], self.K[1, 1])).reshape(1, 2)
+        # c = np.array((self.K[0, 2], self.K[1, 2])).reshape(1, 2)
+        # xy_undist = xy_undist * f + c
+        # xy_undist = cv2.fisheye.undistortPoints(xy, self.K, self.D, P=self.K)
+        if xy.ndim == 2:
+            xy= np.expand_dims(xy, 0)
+
+        xy_undist = cv2.fisheye.undistortPoints(
+            xy.astype(np.float32),
+            self.K,
+            self.D,
+            R=np.eye(3),
+            P=self.K
+        )
+
+        xy_undist = np.squeeze(xy_undist)
+        res = cv2.solvePnP(uv3d, xy_undist, self.K, np.array([[0, 0, 0, 0, 0]]), flags=cv2.SOLVEPNP_ITERATIVE)
+        return res
 
     def save(self, g_pool):
         """
@@ -234,7 +265,7 @@ class Radial_Dist_Camera(object):
         undist_img = cv2.undistort(img, self.K, self.D)
         return undist_img
 
-    def undistortPoints(self, dist_pts):
+    def undistortPoints(self, dist_pts, use_distortion=True):
         """
         Undistorts points according to the camera model.
         :param dist_pts: Distorted points. Can be a list of points or a single point.
@@ -245,20 +276,25 @@ class Radial_Dist_Camera(object):
 
         # If given a single point expand to a 1-point list
         if len(dist_pts.shape) == 1:
-            dist_pts.shape = (1, 2)
+            dist_pts = dist_pts.reshape((1, 2))
 
         # Delete any posibly wrong 3rd dimension
         if dist_pts.ndim == 3:
-            dist_pts.shape = (-1, 2)
+            dist_pts = dist_pts.reshape((-1, 2))
 
         # Add third dimension the way cv2 wants it
         if dist_pts.ndim == 2:
-            dist_pts.shape = (-1, 1, 2)
+            dist_pts = dist_pts.reshape((-1, 1, 2))
+
+        if use_distortion:
+            _D = self.D
+        else:
+            _D = np.asarray([[0.,0.,0.,0.,0.]])
 
         undist_pts = cv2.undistortPoints(
             dist_pts.astype(np.float32),
             self.K,
-            self.D,
+            _D,
         )
 
         # Restore whatever shape we had in the beginning
@@ -266,7 +302,7 @@ class Radial_Dist_Camera(object):
 
         return undist_pts
 
-    def projectPoints(self, object_points, rvec=None, tvec=None):
+    def projectPoints(self, object_points, rvec=None, tvec=None, use_distortion=True):
         """
         Projects a set of points onto the camera plane as defined by the camera model.
         :param object_points: Set of 3D world points
@@ -276,7 +312,7 @@ class Radial_Dist_Camera(object):
         """
         input_dim = object_points.ndim
 
-        object_points.shape = (1, -1, 3)
+        object_points = object_points.reshape((1, -1, 3))
 
         if rvec is None:
             rvec = np.zeros(3).reshape(1, 1, 3)
@@ -288,12 +324,17 @@ class Radial_Dist_Camera(object):
         else:
             tvec = np.array(tvec).reshape(1, 1, 3)
 
+        if use_distortion:
+            _D = self.D
+        else:
+            _D = np.asarray([[0.,0.,0.,0.,0.]])
+
         image_points, jacobian = cv2.projectPoints(
             object_points,
             rvec,
             tvec,
             self.K,
-            self.D
+            _D
         )
 
         if input_dim == 2:
@@ -301,6 +342,10 @@ class Radial_Dist_Camera(object):
         elif input_dim == 3:
             image_points.shape = (-1, 1, 2)
         return image_points
+
+    def solvePnP(self, uv3d, xy):
+        res = cv2.solvePnP(uv3d, xy, self.K, self.D, flags=cv2.SOLVEPNP_ITERATIVE)
+        return res
 
     def save(self, g_pool):
         """

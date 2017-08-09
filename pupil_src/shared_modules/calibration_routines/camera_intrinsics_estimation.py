@@ -343,12 +343,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             self.undist_img = self.capture.intrinsics.undistort(frame.img)
 
 
-    @staticmethod
-    def solvePnP(uv3d, xy, K, D):
-        xy_undist = Camera_Intrinsics_Estimation_Fisheye.undistortPoints(xy, K, D)
-        res = cv2.solvePnP(uv3d, xy_undist, K, np.array([[0,0,0,0,0]]), flags=cv2.SOLVEPNP_ITERATIVE)
-        return res
-
     def gl_display(self):
 
         for grid_points in self.img_points:
