@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# A set of pre-recorded calibrations to fall back to
+#these are calibration we recorded. They are estimates and generalize our setup. Its always better to calibrate each camera.
 pre_recorded_calibrations = {
     'Pupil Cam1 ID2':{
         "(1280, 720)":{
