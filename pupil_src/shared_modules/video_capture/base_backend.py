@@ -9,9 +9,8 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Plugin
+from plugin import Menu_Plugin
 
-# imports need to
 import gl_utils
 from pyglui import cygl
 import numpy as np
@@ -31,7 +30,7 @@ class StreamError(Exception):
     pass
 
 
-class Base_Source(Plugin):
+class Base_Source(Menu_Plugin):
     """Abstract source class
 
     All source objects are based on `Base_Source`.
@@ -56,33 +55,13 @@ class Base_Source(Plugin):
     order = .0
 
     def __init__(self, g_pool):
-        assert(not isinstance(g_pool, dict))
         super().__init__(g_pool)
         self.g_pool.capture = self
         self._recent_frame = None
 
-    def cleanup(self):
-        self.deinit_gui()
-
-    def init_gui(self):
-        """Place to add UI to system-provided menu
-
-        System creates `self.g_pool.capture_source_menu`. UI elements
-        should go in there. Only called once and if UI is supported.
-
-        e.g. self.g_pool.capture_source_menu.extend([])
-        """
-        pass
-
-    def deinit_gui(self):
-        """By default, removes all UI elements from system-provided menu
-
-        Only called once and if UI is supported.
-        """
-        try:
-            del self.g_pool.capture_source_menu[:]
-        except AttributeError:
-            pass
+    def init_menu(self):
+        super().init_menu()
+        self.menu_icon.order = 0.2
 
     def recent_events(self, events):
         """Returns None
@@ -95,7 +74,7 @@ class Base_Source(Plugin):
 
     def gl_display(self):
         if self._recent_frame is not None:
-            self.g_pool.image_tex.update_from_frame(self._recent_frame)
+            self.g_pool.image_tex.update_from_ndarray(self._recent_frame.img)
             gl_utils.glFlush()
         gl_utils.make_coord_system_norm_based()
         self.g_pool.image_tex.draw()
@@ -151,7 +130,7 @@ class Base_Source(Plugin):
         return True
 
 
-class Base_Manager(Plugin):
+class Base_Manager(Menu_Plugin):
     """Abstract base class for source managers.
 
     Managers are plugins that enumerate and load accessible sources from
@@ -166,21 +145,25 @@ class Base_Manager(Plugin):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        g_pool.capture_manager = self
 
-    def get_init_dict(self):
-        return {}
+    def init_ui(self):
+        from . import manager_classes
+        from pyglui import ui
 
-    def init_gui(self):
-        """GUI initialisation, see `Plugin.init_gui`
+        self.menu_icon.label = 'M'
+        self.menu_icon.order = 0.1
+        def open_plugin(p):
+            self.notify_all({'subject':'start_plugin', 'name':p.__name__})
 
-        UI elements should be placed in `self.g_pool.capture_selector_menu`
-        """
-        pass
+        #We add the capture selection menu
+        self.menu.append(ui.Selector(
+                            'capture_manager',
+                            setter    = open_plugin,
+                            getter    = lambda: self.__class__,
+                            selection = manager_classes,
+                            labels    = [b.gui_name for b in manager_classes],
+                            label     = 'Manager'
+                        ))
 
-    def deinit_gui(self):
-        """Removes GUI elements but backend selector"""
-        del self.g_pool.capture_selector_menu[1:]
-
-    def cleanup(self):
-        self.deinit_gui()
+        # here is where you add all your menu entries.
+        self.menu.label = "Backend Manager"

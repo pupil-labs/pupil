@@ -124,10 +124,9 @@ class Pupil_Remote(Plugin):
         while self.thread_pipe:
             sleep(.1)
 
-    def init_gui(self):
-        self.menu = ui.Growing_Menu('Pupil Remote')
-        self.menu.collapsed = True
-        self.g_pool.sidebar.append(self.menu)
+    def init_ui(self):
+        self.menu.label = 'Pupil Remote'
+        self.menu_icon.label = "a"
         self.update_menu()
 
     def update_menu(self):
@@ -173,10 +172,6 @@ class Pupil_Remote(Plugin):
                                            getter=lambda: '{}:{}'.format(self.host, self.port)))
             self.menu.append(ui.Info_Text('Bound to: "tcp://{}:{}"'.format(self.host, self.port)))
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu = None
 
     def thread_loop(self, context, pipe):
         poller = zmq.Poller()
@@ -277,4 +272,3 @@ class Pupil_Remote(Plugin):
            This happens either voluntarily or forced.
         """
         self.stop_server()
-        self.deinit_gui()

@@ -145,17 +145,17 @@ class UVC_Source(Base_Source):
         current_size = self.uvc_capture.frame_size
         current_fps = self.uvc_capture.frame_rate
         current_uvc_controls = self._get_uvc_controls()
-        self.deinit_gui()
+        self.deinit_ui()
         self.uvc_capture.close()
         self.uvc_capture = uvc.Capture(uid)
         self.configure_capture(current_size, current_fps, current_uvc_controls)
-        self.init_gui()
+        self.init_ui()
 
     def _init_capture(self, uid):
-        self.deinit_gui()
+        self.deinit_ui()
         self.uvc_capture = uvc.Capture(uid)
         self.configure_capture(self.frame_size_backup, self.frame_rate_backup, self._get_uvc_controls())
-        self.init_gui()
+        self.init_ui()
 
     def _re_init_capture_by_names(self, names):
         # burn-in test specific. Do not change text!
@@ -181,8 +181,8 @@ class UVC_Source(Base_Source):
                 self._re_init_capture_by_names(self.name_backup)
             except (InitialisationError, uvc.InitError):
                 time.sleep(0.02)
-                self.deinit_gui()
-                self.init_gui()
+                self.deinit_ui()
+                self.init_ui()
             self._restart_in = int(5/0.02)
         else:
             self._restart_in -= 1
@@ -273,7 +273,13 @@ class UVC_Source(Base_Source):
     def online(self):
         return bool(self.uvc_capture)
 
-    def init_gui(self):
+    def deinit_ui(self):
+        self.menu.elements[:] = []
+
+
+    def init_ui(self):
+        self.menu.label = "Local USB Video Source"
+        self.menu_icon.label = "U"
         from pyglui import ui
         ui_elements = []
 
@@ -294,7 +300,7 @@ class UVC_Source(Base_Source):
 
         if self.uvc_capture is None:
             ui_elements.append(ui.Info_Text('Capture initialization failed.'))
-            self.g_pool.capture_source_menu.extend(ui_elements)
+            self.menu.extend(ui_elements)
             return
 
         ui_elements.append(ui.Info_Text('{} Controls'.format(self.name)))
@@ -347,7 +353,7 @@ class UVC_Source(Base_Source):
             ui_elements.append(image_processing)
         ui_elements.append(ui.Button("refresh",gui_update_from_device))
         ui_elements.append(ui.Button("load defaults",gui_load_defaults))
-        self.g_pool.capture_source_menu.extend(ui_elements)
+        self.menu.extend(ui_elements)
 
     def cleanup(self):
         self.devices.cleanup()
@@ -373,7 +379,9 @@ class UVC_Manager(Base_Manager):
     def get_init_dict(self):
         return {}
 
-    def init_gui(self):
+    def init_ui(self):
+        super().init_ui()
+
         from pyglui import ui
         ui_elements = []
         ui_elements.append(ui.Info_Text('Local UVC sources'))
@@ -407,10 +415,9 @@ class UVC_Manager(Base_Manager):
             setter=activate,
             label='Activate source'
         ))
-        self.g_pool.capture_selector_menu.extend(ui_elements)
+        self.menu.extend(ui_elements)
 
     def cleanup(self):
-        self.deinit_gui()
         self.devices.cleanup()
         self.devices = None
 

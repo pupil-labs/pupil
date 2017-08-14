@@ -8,11 +8,11 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
-from plugin import Plugin
+from plugin import Menu_Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-class Calibration_Plugin(Plugin):
+class Calibration_Plugin(Menu_Plugin):
     '''base class for all calibration routines'''
     uniqueness = 'by_base_class'
     def __init__(self,g_pool):
@@ -20,6 +20,30 @@ class Calibration_Plugin(Plugin):
         self.g_pool.active_calibration_plugin = self
         self.pupil_confidence_threshold = 0.6
         self.active = False
+
+
+    def init_menu(self):
+        super().init_menu()
+
+        calibration_plugins = [p for p in self.g_pool.plugin_by_name.values if issubclass(p, Calibration_Plugin)]
+        from pyglui import ui
+
+        self.menu_icon.label = 'C'
+        self.menu_icon_order = 0.15
+
+        def open_plugin(p):
+            self.notify_all({'subject':'start_plugin', 'name':p.__name__})
+
+        #We add the capture selection menu
+        self.menu.append(ui.Selector(
+                                'capture_manager',
+                                setter    = open_plugin,
+                                getter    = lambda: self.__class__,
+                                selection = calibration_plugins,
+                                labels    = [b.gui_name for b in calibration_plugins],
+                                label     = 'Manager'
+                            ))
+
 
     def on_notify(self,notification):
         '''Handles calibration notifications
@@ -64,4 +88,3 @@ class Calibration_Plugin(Plugin):
     def stop(self):
         raise  NotImplementedError()
         self.notify_all({'subject':'calibration.stopped'})
-

@@ -12,12 +12,11 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import cv2
 import numpy as np
-from methods import normalize,denormalize
+from methods import normalize
 from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
 from OpenGL.GL import GL_POLYGON
 from circle_detector import find_concetric_circles
 from . finish_calibration import finish_calibration
-from file_methods import load_object
 
 import audio
 
@@ -59,23 +58,14 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.button = None
 
 
-    def init_gui(self):
-
-        self.info = ui.Info_Text("Calibrate gaze parameters using a handheld marker.")
-        self.g_pool.calibration_menu.append(self.info)
-
-        self.menu = ui.Growing_Menu('Controls')
-        self.g_pool.calibration_menu.append(self.menu)
-
+    def init_ui(self):
+        self.menu.label = "Manual Calibration"
+        self.menu.append(ui.Info_Text("Calibrate gaze parameters using a handheld marker."))
         self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.calibration_menu.remove(self.menu)
-            self.g_pool.calibration_menu.remove(self.info)
-            self.menu = None
+    def deinit_ui(self):
         if self.button:
             self.g_pool.quickbar.remove(self.button)
             self.button = None
@@ -245,9 +235,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             pass
 
 
-    def get_init_dict(self):
-        return {}
-
     def gl_display(self):
         """
         use gl calls to render
@@ -297,4 +284,3 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         """
         if self.active:
             self.stop()
-        self.deinit_gui()

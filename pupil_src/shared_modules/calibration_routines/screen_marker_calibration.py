@@ -80,7 +80,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.lead_in = 25 #frames of marker shown before starting to sample
         self.lead_out = 5 #frames of markers shown after sampling is donw
 
-
         self.active_site = None
         self.sites = []
         self.display_pos = None
@@ -114,35 +113,31 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.window_position_default = (0, 0)
 
 
-    def init_gui(self):
+    def init_ui(self):
+        self.menu.label = "Screen Marker Calibration"
         self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
-
         #primary_monitor = glfwGetPrimaryMonitor()
-        self.info = ui.Info_Text("Calibrate gaze parameters using a screen based animation.")
-        self.g_pool.calibration_menu.append(self.info)
 
-        self.menu = ui.Growing_Menu('Controls')
-        self.g_pool.calibration_menu.append(self.menu)
-        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
-        self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
-        self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
-        self.menu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
+        self.menu.append(ui.Info_Text("Calibrate gaze parameters using a screen based animation."))
+
+        controls = ui.Growing_Menu("Controls",pos=(0,0),size=(0,0))
+        controls.collapsed = True
+        self.menu.appen(controls)
+        controls.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
+        controls.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
+        controls.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
+        controls.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
 
         self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.calibration_menu.remove(self.menu)
-            self.g_pool.calibration_menu.remove(self.info)
-            self.menu = None
+    def deinit_ui(self):
         if self.button:
             self.g_pool.quickbar.remove(self.button)
             self.button = None
-
 
     def start(self):
         if not self.g_pool.capture.online:
@@ -374,4 +369,3 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.stop()
         if self._window:
             self.close_window()
-        self.deinit_gui()

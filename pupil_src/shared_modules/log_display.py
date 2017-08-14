@@ -42,7 +42,7 @@ class Log_Display(Plugin):
         self.alpha = 0.0
         self.should_redraw = True
 
-    def init_gui(self):
+    def gl_init(self):
 
         self.glfont = fontstash.Context()
         self.glfont.add_font('opensans',get_opensans_font_path())
@@ -99,7 +99,3 @@ class Log_Display(Plugin):
 
         if self.alpha > 0:
             self.tex.draw(min(1.0,self.alpha))
-
-
-    def get_init_dict(self):
-        return {}

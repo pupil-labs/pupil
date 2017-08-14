@@ -215,7 +215,7 @@ class NDSI_Source(Base_Source):
             settings['host_name'] = self._host_name
         return settings
 
-    def init_gui(self):
+    def init_ui(self):
         from pyglui import ui
         self.has_ui = True
         self.uvc_menu = ui.Growing_Menu("UVC Controls")
@@ -340,10 +340,10 @@ class NDSI_Manager(Base_Manager):
         logger.warning("Make sure the `time_sync` plugin is loaded!")
 
     def cleanup(self):
-        self.deinit_gui()
         self.network.stop()
 
-    def init_gui(self):
+    def init_ui(self):
+        super().init_ui()
         from pyglui import ui
         ui_elements = []
         ui_elements.append(ui.Info_Text('Remote Pupil Mobile sources'))
@@ -370,7 +370,7 @@ class NDSI_Manager(Base_Manager):
                                        setter=view_host,
                                        label='Remote host'))
 
-        self.g_pool.capture_selector_menu.extend(ui_elements)
+        self.menu.extend(ui_elements)
         if not self.selected_host:
             return
         ui_elements = []
@@ -409,11 +409,11 @@ class NDSI_Manager(Base_Manager):
             label='Source'
         ))
 
-        self.g_pool.capture_selector_menu.extend(ui_elements)
+        self.menu.extend(ui_elements)
 
     def re_build_ndsi_menu(self):
-        self.deinit_gui()
-        self.init_gui()
+        self.deinit_ui()
+        self.init_ui()
 
     def poll_events(self):
         while self.network.has_events:

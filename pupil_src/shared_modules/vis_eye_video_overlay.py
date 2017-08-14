@@ -184,9 +184,8 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Scrolling_Menu('Eye Video Overlay')
+        self.menu.label 'Eye Video Overlay'
         self.update_gui()
-        self.g_pool.gui.append(self.menu)
 
     def update_gui(self):
         self.menu.elements[:] = []
@@ -211,10 +210,6 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
         self.showeyes = new_mode
         self.update_gui()
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
 
     def recent_events(self, events):
         frame = events.get('frame')
@@ -301,9 +296,3 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
     def get_init_dict(self):
         return {'alpha':self.alpha,'eye_scale_factor':self.eye_scale_factor,'move_around':self.move_around,'mirror':self.mirror,'flip':self.flip,'pos':self.pos,'move_around':self.move_around, 'show_ellipses': self.show_ellipses}
 
-    def cleanup(self):
-        """ called when the plugin gets terminated.
-        This happens either voluntarily or forced.
-        if you have a GUI or glfw window destroy it here.
-        """
-        self.deinit_gui()
