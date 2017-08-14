@@ -67,7 +67,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
 
     update_recording_to_recent(rec_dir)
 
-    video_path = [f for f in glob(os.path.join(rec_dir, "world.*")) if f[-3:] in ('mp4', 'mkv', 'avi')][0]
+    video_path = [f for f in glob(os.path.join(rec_dir, "world.*")) if f[-3:] in ('mp4', 'mkv', 'avi','mjpeg')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
     audio_path = os.path.join(rec_dir, "audio.mp4")

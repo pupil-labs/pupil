@@ -26,7 +26,7 @@ class Frame_Publisher(Plugin):
         self.menu.append(ui.Selector('format',self,selection=["jpeg","yuv","bgr","gray"], labels=["JPEG", "YUV", "BGR", "Gray Image"],label='Format'))
         self.g_pool.sidebar.append(self.menu)
 
-    def update(self,events):
+    def recent_events(self,events):
         frame  = events.get("frame")
         if frame and frame.jpeg_buffer:
             if   self.format == "jpeg":

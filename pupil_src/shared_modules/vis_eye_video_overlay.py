@@ -86,8 +86,8 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
     frame_idx = 0
     try:
         current_e_ts = e_ts.pop(0)
-    except:
-        logger.warning("No eye timestamps found.")
+    except IndexError:
+        # logger.warning("No eye timestamps at all in the section.")
         return eye_timestamps_by_world_index
 
     while e_ts:
@@ -158,20 +158,16 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
 
         #try to load eye video and ts for each eye.
         for video,ts in zip(eye_video_path,eye_timestamps_path):
+            class empty(object):
+                pass
             try:
-                class empty(object):
-                    pass
-                self.eye_cap.append(File_Source(empty(),source_path=glob(video)[0],timestamps=np.load(ts)))
-            except(IndexError,FileCaptureError):
+                eye_timestamps = np.load(ts)
+                self.eye_cap.append(File_Source(empty(),source_path=glob(video)[0],timestamps=eye_timestamps))
+            except (FileNotFoundError,IndexError,FileCaptureError) as e:
                 pass
             else:
                 self.eye_frames.append(self.eye_cap[-1].get_frame())
-            try:
-                eye_timestamps = list(np.load(ts))
-            except:
-                pass
-            else:
-                self.eye_world_frame_map.append(correlate_eye_world(eye_timestamps,g_pool.timestamps))
+                self.eye_world_frame_map.append(correlate_eye_world(eye_timestamps.tolist(),g_pool.timestamps))
 
         if len(self.eye_cap) == 2:
             logger.debug("Loaded binocular eye video data.")
@@ -240,7 +236,7 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
                 try:
                     self.eye_frames[eye_index] = self.eye_cap[eye_index].get_frame()
                 except EndofVideoFileError:
-                    logger.warning("Reached the end of the eye video for eye video {}.".format(eye_index))
+                    logger.info("Reached the end of the eye video for eye video {}.".format(eye_index))
             else:
                 #our old frame is still valid because we are doing upsampling
                 pass

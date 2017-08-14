@@ -95,10 +95,12 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
         if not existing_locs:
             logger.error("no eye video for eye '{}' found.".format(eye_id))
-            self.detection_status[eye_id] = "No eye video found!"
+            self.detection_status[eye_id] = "No eye video found."
             return
         if not os.path.exists(timestamps_path):
             logger.error("no timestamps for eye video for eye '{}' found.".format(eye_id))
+            self.detection_status[eye_id] = "No eye video found."
+
             return
 
         video_loc = existing_locs[0]
