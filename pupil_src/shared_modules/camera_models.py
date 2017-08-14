@@ -66,7 +66,7 @@ def load_intrinsics(g_pool, cam_name, resolution):
         return Radial_Dist_Camera(intrinsics['camera_matrix'], intrinsics['dist_coefs'], resolution, cam_name)
 
 
-def save_intrinsics(g_pool, cam_name, resolution, intrinsics):
+def save_intrinsics(g_pool, cam_name, resolution, intrinsics, custom_save_path=None):
     """
     Saves camera intrinsics calibration to a file. For each unique camera name we maintain a single file containing all calibrations associated with this camera name.
     :param g_pool: The current g_pool object
@@ -85,10 +85,16 @@ def save_intrinsics(g_pool, cam_name, resolution, intrinsics):
             'cam_name': cam_name,
         }
 
+    if custom_save_path:
+        save_path = custom_save_path
+    else:
+        save_path = file_path
+
     calib_dict[str(resolution)] = intrinsics
 
-    save_object(calib_dict, file_path)
+    save_object(calib_dict, save_path)
     logger.info("Calibration for camera {} at resolution {} saved to user folder".format(cam_name, resolution))
+
 
 
 class Fisheye_Dist_Camera(object):
@@ -234,7 +240,7 @@ class Fisheye_Dist_Camera(object):
         res = cv2.solvePnP(uv3d, xy_undist, self.K, np.array([[0, 0, 0, 0, 0]]), flags=cv2.SOLVEPNP_ITERATIVE)
         return res
 
-    def save(self, g_pool):
+    def save(self, g_pool, custom_save_path=None):
         """
         Saves the current calibration to corresponding camera's calibrations file
         :param g_pool: current g_pool object
@@ -242,7 +248,7 @@ class Fisheye_Dist_Camera(object):
         """
         intrinsics = {'camera_matrix': self.K.tolist(), 'dist_coefs': self.D.tolist(),
                       'resolution': self.resolution, 'cam_type': 'fisheye'}
-        save_intrinsics(g_pool, self.name, self.resolution, intrinsics)
+        save_intrinsics(g_pool, self.name, self.resolution, intrinsics, custom_save_path=custom_save_path)
 
 
 class Radial_Dist_Camera(object):
@@ -347,7 +353,7 @@ class Radial_Dist_Camera(object):
         res = cv2.solvePnP(uv3d, xy, self.K, self.D, flags=cv2.SOLVEPNP_ITERATIVE)
         return res
 
-    def save(self, g_pool):
+    def save(self, g_pool, custom_save_path=None):
         """
         Saves the current calibration to corresponding camera's calibrations file
         :param g_pool: current g_pool object
@@ -355,7 +361,7 @@ class Radial_Dist_Camera(object):
         """
         intrinsics = {'camera_matrix': self.K.tolist(), 'dist_coefs': self.D.tolist(),
                       'resolution': self.resolution, 'cam_type': 'dist_pinhole'}
-        save_intrinsics(g_pool, self.name, self.resolution, intrinsics)
+        save_intrinsics(g_pool, self.name, self.resolution, intrinsics, custom_save_path=custom_save_path)
 
 
 class Dummy_Camera(Radial_Dist_Camera):
@@ -370,10 +376,12 @@ class Dummy_Camera(Radial_Dist_Camera):
         dist_coefs = [[0., 0., 0., 0., 0.]]
         super().__init__(camera_matrix, dist_coefs, resolution, name)
 
-    def save(self, g_pool):
+    def save(self, g_pool, custom_save_path=None):
         """
         Saves the current calibration to corresponding camera's calibrations file
         :param g_pool: current g_pool object
         :return:
         """
-        pass  # Do not save dummy calibrations
+        intrinsics = {'camera_matrix': self.K.tolist(), 'dist_coefs': self.D.tolist(),
+                      'resolution': self.resolution, 'cam_type': 'dummy'}
+        save_intrinsics(g_pool, self.name, self.resolution, intrinsics, custom_save_path=custom_save_path)

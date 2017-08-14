@@ -22,7 +22,7 @@ from file_methods import save_object, load_object
 from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer
 from ndsi import H264Writer
-from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
+from camera_models import save_intrinsics
 # logging
 import logging
 logger = logging.getLogger(__name__)
@@ -324,11 +324,8 @@ class Recorder(Plugin):
         except:
             logger.info("No surface_definitions data found. You may want this if you do marker tracking.")
 
-        camera_calibration = load_camera_calibration(self.g_pool)
-        if camera_calibration is not None:
-            save_object(camera_calibration, os.path.join(self.rec_path, "camera_calibration"))
-        else:
-            logger.info("No camera calibration found.")
+
+        self.g_pool.capture.intrinsics.save(self.g_pool, custom_save_path=os.path.join(self.rec_path, "world.intrinsics"))
 
         try:
             with open(self.meta_info_path, 'a', newline='') as csvfile:

@@ -198,37 +198,44 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         img_shape = self.g_pool.capture.frame_size
 
         # Compute calibration
-        if self.dist_mode == "Fisheye":
-            calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_CHECK_COND + cv2.fisheye.CALIB_FIX_SKEW
-            max_iter=30
-            eps=1e-6
-            camera_matrix = np.zeros((3, 3))
-            dist_coefs = np.zeros((4, 1))
-            rvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(self.count)]
-            tvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(self.count)]
-            objPoints = [x.reshape(1,-1,3) for x in self.obj_points]
-            imgPoints = self.img_points
-            rms, _, _, _, _ = \
-                cv2.fisheye.calibrate(
-                    objPoints,
-                    imgPoints,
-                    img_shape,
-                    camera_matrix,
-                    dist_coefs,
-                    rvecs,
-                    tvecs,
-                    calibration_flags,
-                    (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, max_iter, eps)
-                )
-            camera_model = Fisheye_Dist_Camera(camera_matrix, dist_coefs, img_shape, self.g_pool.capture.name)
-        elif self.dist_mode == "Radial":
-            rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(np.array(self.obj_points),
-                                                                               np.array(self.img_points),
-                                                                               self.g_pool.capture.frame_size, None,
-                                                                               None)
-            camera_model = Radial_Dist_Camera(camera_matrix, dist_coefs, img_shape, self.g_pool.capture.name)
-        else:
-            raise ValueError("Unkown distortion model: {}".format(self.dist_mode))
+        try:
+            if self.dist_mode == "Fisheye":
+                calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_CHECK_COND + cv2.fisheye.CALIB_FIX_SKEW
+                max_iter=30
+                eps=1e-6
+                camera_matrix = np.zeros((3, 3))
+                dist_coefs = np.zeros((4, 1))
+                rvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(self.count)]
+                tvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(self.count)]
+                objPoints = [x.reshape(1,-1,3) for x in self.obj_points]
+                imgPoints = self.img_points
+                rms, _, _, _, _ = \
+                    cv2.fisheye.calibrate(
+                        objPoints,
+                        imgPoints,
+                        img_shape,
+                        camera_matrix,
+                        dist_coefs,
+                        rvecs,
+                        tvecs,
+                        calibration_flags,
+                        (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, max_iter, eps)
+                    )
+                camera_model = Fisheye_Dist_Camera(camera_matrix, dist_coefs, img_shape, self.g_pool.capture.name)
+            elif self.dist_mode == "Radial":
+                rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(np.array(self.obj_points),
+                                                                                   np.array(self.img_points),
+                                                                                   self.g_pool.capture.frame_size, None,
+                                                                                   None)
+                camera_model = Radial_Dist_Camera(camera_matrix, dist_coefs, img_shape, self.g_pool.capture.name)
+            else:
+                raise ValueError("Unkown distortion model: {}".format(self.dist_mode))
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            logger.warning("Camera calibration failed to converge!")
+            logger.warning("Please try again with a better coverage of the cameras FOV!")
+            return
 
         logger.info("Calibrated Camera, RMS:{}".format(rms))
 
