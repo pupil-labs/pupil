@@ -294,14 +294,14 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         glfw.glfwSetWindowShouldClose(main_window, True)
         ipc_pub.notify({'subject': 'reset_restart_process.should_start'})
 
-    def toggle_menu(menu, collapsed):
+    def toggle_general_settings(collapsed):
         #this is the menu toggle logic.
         # Only one menu can be open.
         # If no menu is open the menu_bar should collapse.
         g_pool.menubar.collapsed = collapsed
         for m in g_pool.menubar.elements:
             m.collapsed = True
-        menu.collapsed = collapsed
+        general_settings.collapsed = collapsed
 
     # setup GUI
     g_pool.gui = ui.UI()
@@ -353,7 +353,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     general_settings.append(ui.Info_Text('Capture Version: {}'.format(g_pool.version)))
 
     g_pool.menubar.append(general_settings)
-    g_pool.iconbar.append(ui.Thumb('collapsed', general_settings, label='G', on_val=False, off_val=True, setter=lambda x: toggle_menu(general_settings,x)))
+    g_pool.iconbar.append(ui.Thumb('collapsed', general_settings, label='G', on_val=False, off_val=True, setter=toggle_general_settings))
 
 
     # plugins that are loaded based on user settings from previous session
@@ -372,6 +372,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # gl_state settings
     gl_utils.basic_gl_setup()
     g_pool.image_tex = Named_Texture()
+
+    toggle_general_settings(False)
 
     # now the we have  aproper window we can load the last gui configuration
     g_pool.gui.configuration = session_settings.get('ui_config', {})
