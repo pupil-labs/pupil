@@ -40,14 +40,14 @@ class Plugin(object):
     # >.5 are things that depend on other plugins work like display , saving and streaming
     # you can change this in __init__ for your instance or in the class definition
     order = .5
+    alive = True
 
     def __init__(self, g_pool):
-        self._alive = True
         self.g_pool = g_pool
 
-    def init_gui(self):
+    def gl_init(self):
         '''
-        if the app allows a gui, you may initalize your part of it here.
+        Called when the context will have a gl window. You can do your init for that here.
         '''
         pass
 
@@ -110,11 +110,18 @@ class Plugin(object):
 
     # if you want a session persistent plugin implement this function:
     def get_init_dict(self):
-        raise NotImplementedError()
-        # d = {}
-        # # add all aguments of your plugin init fn with paramter names as name field
-        # # do not include g_pool here.
-        # return d
+        # aise NotImplementedError() if you dont want you plugin to be persistent.
+
+        d = {}
+        # add all aguments of your plugin init fn with paramter names as name field
+        # do not include g_pool here.
+        return d
+
+    def gl_deinit(self):
+        '''
+        Called when the context will have a gl window. You can do your deinit for that here.
+        '''
+        pass
 
     def cleanup(self):
         """
@@ -165,21 +172,7 @@ class Plugin(object):
         else:
             self.g_pool.ipc_pub.notify(notification)
 
-    @property
-    def alive(self):
-        """
-        This field indicates of the instance should be detroyed
-        Writing False to this will schedule the instance for deletion
-        """
-        if not self._alive:
-            if hasattr(self, "cleanup"):
-                self.cleanup()
-        return self._alive
 
-    @alive.setter
-    def alive(self, value):
-        if isinstance(value, bool):
-            self._alive = value
 
     @property
     def this_class(self):
@@ -215,15 +208,89 @@ class Plugin(object):
         return self.class_name.replace('_', ' ')
 
 
+class Menu_Plugin(Plugin):
+    """docstring for Menu_Plugin"""
+
+    def init_ui(self):
+        '''
+        An example implementation you want to change it.
+        But make sure to include the thumb with toggle logic!
+        '''
+
+        from pyglui import ui
+
+        # This is the menu_icon. You should only replace the label and set the order!
+        self.menu_icon.label = 'M'
+        self.menu_icon_order = 0.1
+
+        def close():
+            self.alive = False
+        # here is where you add all your menu entries.
+        self.menu.label = "My Example Plugin Menu"
+        self.menu.append(ui.Button('deactivate Plugin', close))
+        self.menu.append(ui.Info_Text("This is an example menu. It should contain settings and text explaining the plugin's operation,purpose and settings."))
+
+
+    def deinit_ui(self):
+        '''
+        this is where you should clean up your ui. We will remove self.menu and self.menu_icon for you.
+        '''
+        pass
+
+
+    ### Do not change below!
+    menu_icon = None
+    menu = None
+
+    def init_menu(self):
+        '''
+        This fn is called when the plugin ui is initialized. Do not change!
+        '''
+        from pyglui import ui
+
+        def toggle_menu(collapsed):
+            #this is the menu toggle logic.
+            # Only one menu can be open.
+            # If no menu is open the menu_bar should collapse.
+            self.g_pool.menubar.collapsed = collapsed
+            for m in self.g_pool.menubar.elements:
+                m.collapsed = True
+            self.menu.collapsed = collapsed
+
+        # Here we make a menu and icon
+        self.menu = ui.Growing_Menu('Unnamed Menu',header_pos='hidden')
+        self.menu_icon = ui.Thumb('collapsed', self.menu, label='?', on_val=False, off_val=True, setter=toggle_menu)
+        self.menu_icon.order = 0.5
+
+        self.init_ui()
+
+        self.g_pool.menubar.append(self.menu)
+        self.g_pool.iconbar.append(self.menu_icon)
+        self.g_pool.iconbar.sort(lambda x: x.order)
+
+    def deinit_menu(self):
+        '''
+        This fn is called when the plugin ui is de-initialized. Do not change!
+        '''
+        self.deinit_ui()
+        self.g_pool.menubar.remove(self.menu)
+        self.g_pool.iconbar.remove(self.menu_icon)
+        self.menu = None
+        self.menu_icon = None
+
+
+
+
 # Plugin manager classes and fns
 class Plugin_List(object):
     """This is the Plugin Manager
         It is a self sorting list with a few functions to manage adding and
         removing Plugins and lacking most other list methods.
     """
-    def __init__(self, g_pool, plugin_by_name, plugin_initializers):
+    def __init__(self, g_pool, plugin_initializers):
         self._plugins = []
         self.g_pool = g_pool
+        plugin_by_name = g_pool.plugin_by_name
 
         # add self as g_pool.plguins object to allow plugins to call the plugins list during init.
         # this will be done again when the init returns but is kept there for readablitly.
@@ -266,20 +333,31 @@ class Plugin_List(object):
                     return
 
         plugin_instance = new_plugin(self.g_pool, **args)
+        if not plugin_instance.alive:
+            logger.warning("plugin failed to initialize")
+            return
+
         self._plugins.append(plugin_instance)
         self._plugins.sort(key=lambda p: p.order)
-        # make sure the plugin does not want to be gone already
-        if self.g_pool.app in ("capture", "player") and plugin_instance.alive:
-            plugin_instance.init_gui()
-            logger.info("Loaded: {}".format(new_plugin.__name__))
-        self.clean()
+
+        if self.g_pool.app in ("capture", "player"):
+            plugin_instance.gl_init()
+            if isinstance(plugin_instance,Menu_Plugin):
+                plugin_instance.init_menu()
+
 
     def clean(self):
         '''
         plugins may flag themselves as dead or are flagged as dead. We need to remove them.
         '''
         for p in self._plugins[:]:
-            if not p.alive:  # reading p.alive will trigger the plug-in cleanup fn.
+            if not p.alive:
+                if self.g_pool.app in ("capture", "player"):
+                    p.gl_deinit()
+                    if isinstance(p,Menu_Plugin):
+                        p.deinit_menu()
+                        logger.debug("Unloaded Plugin Menu: {}".format(p))
+                p.cleanup()
                 logger.debug("Unloaded Plugin: {}".format(p))
                 self._plugins.remove(p)
 
