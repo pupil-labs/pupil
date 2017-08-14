@@ -59,6 +59,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
 
     def init_ui(self):
+        super().init_ui()
         self.menu.label = "Manual Calibration"
         self.menu.append(ui.Info_Text("Calibrate gaze parameters using a handheld marker."))
         self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')

@@ -12,12 +12,11 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import cv2
 import numpy as np
-from methods import normalize,denormalize
+from methods import normalize
 from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
 from circle_detector import find_concetric_circles
-from file_methods import load_object,save_object
 from platform import system
 
 import audio
@@ -114,6 +113,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
     def init_ui(self):
+        super().init_ui()
         self.menu.label = "Screen Marker Calibration"
         self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
@@ -123,7 +123,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         controls = ui.Growing_Menu("Controls",pos=(0,0),size=(0,0))
         controls.collapsed = True
-        self.menu.appen(controls)
+        self.menu.append(controls)
         controls.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         controls.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
         controls.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))

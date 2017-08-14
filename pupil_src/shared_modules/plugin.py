@@ -220,14 +220,12 @@ class Menu_Plugin(Plugin):
         from pyglui import ui
 
         # This is the menu_icon. You should only replace the label and set the order!
-        self.menu_icon.label = 'M'
-        self.menu_icon_order = 0.1
+        self.menu_icon.label = self.class_name[0]
+        self.menu_icon_order = 0.9
 
-        def close():
-            self.alive = False
         # here is where you add all your menu entries.
         self.menu.label = "My Example Plugin Menu"
-        self.menu.append(ui.Button('deactivate Plugin', close))
+        self.menu.append(ui.Info_Text(self.class_name))
         self.menu.append(ui.Info_Text("This is an example menu. It should contain settings and text explaining the plugin's operation,purpose and settings."))
 
 

@@ -22,14 +22,12 @@ class Calibration_Plugin(Menu_Plugin):
         self.active = False
 
 
-    def init_menu(self):
-        super().init_menu()
-
-        calibration_plugins = [p for p in self.g_pool.plugin_by_name.values if issubclass(p, Calibration_Plugin)]
+    def init_ui(self):
+        calibration_plugins = [p for p in self.g_pool.plugin_by_name.values() if issubclass(p, Calibration_Plugin)]
         from pyglui import ui
 
         self.menu_icon.label = 'C'
-        self.menu_icon_order = 0.15
+        self.menu_icon.order = 0.3
 
         def open_plugin(p):
             self.notify_all({'subject':'start_plugin', 'name':p.__name__})
@@ -40,7 +38,7 @@ class Calibration_Plugin(Menu_Plugin):
                                 setter    = open_plugin,
                                 getter    = lambda: self.__class__,
                                 selection = calibration_plugins,
-                                labels    = [b.gui_name for b in calibration_plugins],
+                                labels    = [p.__name__.replace('_',' ') for p in calibration_plugins],
                                 label     = 'Manager'
                             ))
 

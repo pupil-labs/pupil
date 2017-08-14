@@ -150,7 +150,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                     Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection,
                     Remote_Recorder]
     system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay] + manager_classes + source_classes
-    plugins = system_plugins + user_plugins + runtime_plugins
+    plugins = system_plugins + user_plugins + runtime_plugins + calibration_plugins + gaze_mapping_plugins
     user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source, Calibration_Plugin, Gaze_Mapping_Plugin))]
     g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
