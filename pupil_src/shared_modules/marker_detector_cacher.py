@@ -55,6 +55,7 @@ def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker
     def handle_frame(next_frame):
         if next_frame != cap.get_frame_index():
             #we need to seek:
+        if next_frame != cap.get_frame_index() + 1:
             logger.debug("Seeking to Frame {}".format(next_frame))
             try:
                 cap.seek_to_frame(next_frame)
