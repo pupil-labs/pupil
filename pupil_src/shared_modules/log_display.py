@@ -42,7 +42,7 @@ class Log_Display(Plugin):
         self.alpha = 0.0
         self.should_redraw = True
 
-    def gl_init(self):
+    def init_ui(self):
 
         self.glfont = fontstash.Context()
         self.glfont.add_font('opensans',get_opensans_font_path())

@@ -65,7 +65,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     logging.getLogger("OpenGL").setLevel(logging.ERROR)
     logger = logging.getLogger()
     logger.handlers = []
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url))
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
@@ -306,14 +306,14 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
-    g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-90, 0), header_pos='left')
+    g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-82, 0), header_pos='left')
     g_pool.iconbar = ui.Scrolling_Menu("Icons",pos=(-80,0),size=(0,0),header_pos='hidden')
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))
     g_pool.gui.append(g_pool.menubar)
     g_pool.gui.append(g_pool.iconbar)
     g_pool.gui.append(g_pool.quickbar)
 
-    general_settings = ui.Growing_Menu('General',header_pos='hidden')
+    general_settings = ui.Growing_Menu('General',header_pos='headline')
     general_settings.append(ui.Button('Reset to default settings',reset_restart))
     general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface size'))
     general_settings.append(ui.Button('Reset window size', lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0],g_pool.capture.frame_size[1])) )

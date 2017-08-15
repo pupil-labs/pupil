@@ -45,9 +45,9 @@ class Plugin(object):
     def __init__(self, g_pool):
         self.g_pool = g_pool
 
-    def gl_init(self):
+    def init_ui(self):
         '''
-        Called when the context will have a gl window. You can do your init for that here.
+        Called when the context will have a gl window with us. You can do your init for that here.
         '''
         pass
 
@@ -117,9 +117,9 @@ class Plugin(object):
         # do not include g_pool here.
         return d
 
-    def gl_deinit(self):
+    def deinit_ui(self):
         '''
-        Called when the context will have a gl window. You can do your deinit for that here.
+        Called when the context will have a ui with window. You can do your deinit for that here.
         '''
         pass
 
@@ -208,39 +208,7 @@ class Plugin(object):
         return self.class_name.replace('_', ' ')
 
 
-class Menu_Plugin(Plugin):
-    """docstring for Menu_Plugin"""
-
-    def init_ui(self):
-        '''
-        An example implementation you want to change it.
-        But make sure to include the thumb with toggle logic!
-        '''
-
-        from pyglui import ui
-
-        # This is the menu_icon. You should only replace the label and set the order!
-        self.menu_icon.label = self.class_name[0]
-        self.menu_icon_order = 0.9
-
-        # here is where you add all your menu entries.
-        self.menu.label = "My Example Plugin Menu"
-        self.menu.append(ui.Info_Text(self.class_name))
-        self.menu.append(ui.Info_Text("This is an example menu. It should contain settings and text explaining the plugin's operation,purpose and settings."))
-
-
-    def deinit_ui(self):
-        '''
-        this is where you should clean up your ui. We will remove self.menu and self.menu_icon for you.
-        '''
-        pass
-
-
-    ### Do not change below!
-    menu_icon = None
-    menu = None
-
-    def init_menu(self):
+    def add_menu(self):
         '''
         This fn is called when the plugin ui is initialized. Do not change!
         '''
@@ -256,21 +224,15 @@ class Menu_Plugin(Plugin):
             self.menu.collapsed = collapsed
 
         # Here we make a menu and icon
-        self.menu = ui.Growing_Menu('Unnamed Menu',header_pos='hidden')
+        self.menu = ui.Growing_Menu('Unnamed Menu',header_pos='headline')
         self.menu_icon = ui.Thumb('collapsed', self.menu, label='?', on_val=False, off_val=True, setter=toggle_menu)
         self.menu_icon.order = 0.5
-
-        self.init_ui()
-
         self.g_pool.menubar.append(self.menu)
         self.g_pool.iconbar.append(self.menu_icon)
-        self.g_pool.iconbar.sort(lambda x: x.order)
+        toggle_menu(False)
 
-    def deinit_menu(self):
-        '''
-        This fn is called when the plugin ui is de-initialized. Do not change!
-        '''
-        self.deinit_ui()
+
+    def remove_menu(self):
         self.g_pool.menubar.remove(self.menu)
         self.g_pool.iconbar.remove(self.menu_icon)
         self.menu = None
@@ -339,10 +301,7 @@ class Plugin_List(object):
         self._plugins.sort(key=lambda p: p.order)
 
         if self.g_pool.app in ("capture", "player"):
-            plugin_instance.gl_init()
-            if isinstance(plugin_instance,Menu_Plugin):
-                plugin_instance.init_menu()
-
+            plugin_instance.init_ui()
 
     def clean(self):
         '''
@@ -351,10 +310,7 @@ class Plugin_List(object):
         for p in self._plugins[:]:
             if not p.alive:
                 if self.g_pool.app in ("capture", "player"):
-                    p.gl_deinit()
-                    if isinstance(p,Menu_Plugin):
-                        p.deinit_menu()
-                        logger.debug("Unloaded Plugin Menu: {}".format(p))
+                    p.deinit_ui()
                 p.cleanup()
                 logger.debug("Unloaded Plugin: {}".format(p))
                 self._plugins.remove(p)

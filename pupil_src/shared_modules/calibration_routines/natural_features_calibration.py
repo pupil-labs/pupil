@@ -49,20 +49,18 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
 
     def init_gui(self):
-        self.info = ui.Info_Text("Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window.")
-        self.g_pool.calibration_menu.append(self.info)
+        self.add_menu()
+        self.menu.label = "Manual Calibration"
+        self.menu.append(ui.Info_Text("Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window."))
         self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 
 
     def deinit_gui(self):
-        if self.info:
-            self.g_pool.calibration_menu.remove(self.info)
-            self.info = None
-        if self.button:
-            self.g_pool.quickbar.remove(self.button)
-            self.button = None
+        self.remove_menu()
+        self.g_pool.quickbar.remove(self.button)
+        self.button = None
 
 
     def toggle(self,_=None):

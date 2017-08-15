@@ -15,7 +15,7 @@ import csv_utils
 from pyglui import ui
 import numpy as np
 # from scipy.interpolate import UnivariateSpline
-from plugin import Menu_Plugin
+from plugin import Plugin
 from time import strftime, localtime, time, gmtime
 from shutil import copy2
 from file_methods import save_object, load_object
@@ -79,7 +79,7 @@ def get_auto_name():
 #         ts = s(frames)
 
 
-class Recorder(Menu_Plugin):
+class Recorder(Plugin):
     """Capture Recorder"""
     def __init__(self, g_pool, session_name=get_auto_name(), rec_dir=None,
                  user_info={'name': '', 'additional_field': 'change_me'},
@@ -131,6 +131,7 @@ class Recorder(Menu_Plugin):
         return d
 
     def init_ui(self):
+        self.add_menu()
         self.menu_icon.order = 0.3
         self.menu_icon.label = "R"
         self.menu.append(ui.Info_Text('Pupil recordings are saved like this: "path_to_recordings/recording_session_name/nnn" where "nnn" is an increasing number to avoid overwrites. You can use "/" in your session name to create subdirectories.'))
@@ -141,16 +142,14 @@ class Recorder(Menu_Plugin):
         self.menu.append(ui.Selector('raw_jpeg', self, selection=[True, False], labels=["bigger file, less CPU", "smaller file, more CPU"], label='Compression'))
         self.menu.append(ui.Info_Text('Recording the raw eye video is optional. We use it for debugging.'))
         self.menu.append(ui.Switch('record_eye', self, on_val=True, off_val=False, label='Record eye'))
-
-
         self.button = ui.Thumb('running', self, setter=self.toggle, label='R', hotkey='r')
         self.button.on_color[:] = (1, .0, .0, .8)
         self.g_pool.quickbar.insert(1, self.button)
 
     def deinit_ui(self):
-        if self.button:
-            self.g_pool.quickbar.remove(self.button)
-            self.button = None
+        self.g_pool.quickbar.remove(self.button)
+        self.button = None
+        self.remove_menu()
 
     def toggle(self, _=None):
         if self.running:

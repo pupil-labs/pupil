@@ -59,7 +59,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
 
     def init_ui(self):
-        super().init_ui()
+        self.add_menu()
         self.menu.label = "Manual Calibration"
         self.menu.append(ui.Info_Text("Calibrate gaze parameters using a handheld marker."))
         self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
@@ -67,9 +67,9 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.g_pool.quickbar.insert(0,self.button)
 
     def deinit_ui(self):
-        if self.button:
-            self.g_pool.quickbar.remove(self.button)
-            self.button = None
+        self.g_pool.quickbar.remove(self.button)
+        self.button = None
+        self.remove_menu()
 
 
     def toggle(self,_=None):

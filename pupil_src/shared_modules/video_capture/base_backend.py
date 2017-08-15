@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Menu_Plugin
+from plugin import Plugin
 
 import gl_utils
 from pyglui import cygl
@@ -30,7 +30,7 @@ class StreamError(Exception):
     pass
 
 
-class Base_Source(Menu_Plugin):
+class Base_Source(Plugin):
     """Abstract source class
 
     All source objects are based on `Base_Source`.
@@ -59,8 +59,8 @@ class Base_Source(Menu_Plugin):
         self.g_pool.capture = self
         self._recent_frame = None
 
-    def init_menu(self):
-        super().init_menu()
+    def add_menu(self):
+        super().add_menu()
         self.menu_icon.order = 0.2
 
     def recent_events(self, events):
@@ -130,7 +130,7 @@ class Base_Source(Menu_Plugin):
         return True
 
 
-class Base_Manager(Menu_Plugin):
+class Base_Manager(Plugin):
     """Abstract base class for source managers.
 
     Managers are plugins that enumerate and load accessible sources from
@@ -146,7 +146,8 @@ class Base_Manager(Menu_Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
-    def init_ui(self):
+    def add_menu(self):
+        super().add_menu()
         from . import manager_classes
         from pyglui import ui
 

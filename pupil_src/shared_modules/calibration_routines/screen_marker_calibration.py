@@ -113,7 +113,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
     def init_ui(self):
-        super().init_ui()
+        self.add_menu()
         self.menu.label = "Screen Marker Calibration"
         self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
@@ -135,9 +135,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
     def deinit_ui(self):
-        if self.button:
-            self.g_pool.quickbar.remove(self.button)
-            self.button = None
+        self.g_pool.quickbar.remove(self.button)
+        self.button = None
+        self.remove_menu()
 
     def start(self):
         if not self.g_pool.capture.online:

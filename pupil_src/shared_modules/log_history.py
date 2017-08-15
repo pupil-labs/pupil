@@ -35,14 +35,14 @@ class Log_History(Plugin):
         self.formatter = logging.Formatter('%(processName)s - [%(levelname)s] %(name)s: %(message)s')
         self.logfile = os.path.join(self.g_pool.user_dir,self.g_pool.app+'.log')
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Log'
 
         def close():
             self.alive = False
 
         help_str = 'A View of the {} most recent log messages. Complete logs are here: "{}"'.format(self.num_messages,self.g_pool.user_dir)
-        self.menu = ui.Scrolling_Menu('Log')
-        self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
 
@@ -72,13 +72,10 @@ class Log_History(Plugin):
         self.menu.insert(2,ui.Info_Text(str(self.formatter.format(record))))
 
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu= None
+    def deinit_ui(self):
+        self.remove_menu()
 
     def cleanup(self):
-        self.deinit_gui()
         if self.log_handler:
             logger = logging.getLogger()
             logger.removeHandler(self.log_handler)

@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Menu_Plugin
+from plugin import Plugin
 import cv2
 from . import calibrate
 from methods import project_distort_pts , normalize, spherical_to_cart
@@ -30,7 +30,7 @@ def _clamp_norm_point(pos):
     '''
     return min(100.,max(-100.,pos[0])),min(100.,max(-100.,pos[1]))
 
-class Gaze_Mapping_Plugin(Menu_Plugin):
+class Gaze_Mapping_Plugin(Plugin):
     '''base class for all gaze mapping routines'''
     uniqueness = 'by_base_class'
     order = .1
@@ -112,6 +112,10 @@ class Dummy_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     def _map_monocular(self,p):
         return {'topic':'gaze','norm_pos':p['norm_pos'],'confidence':p['confidence'],'timestamp':p['timestamp'],'base_data':[p]}
 
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = "Dummy gaze mapper"
+        self.menu.append(ui.Info_Text("Please calibrate."))
 
 class Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     """docstring for Monocular_Gaze_Mapper"""
@@ -159,9 +163,12 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
 
 
     def init_ui(self):
+        self.add_menu()
         self.menu.label = 'Binocular Gaze Mapper'
         self.menu.append(ui.Switch('multivariate',self,label='Multivariate Mode'))
 
+    def deinit_ui(self):
+        self.remove_menu()
 
     def _map_binocular(self, p0, p1):
         if self.multivariate:
@@ -178,8 +185,6 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
         gaze_point = self.map_fn_fallback[p['id']](p['norm_pos'])
         return {'topic':'gaze','norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base_data':[p]}
 
-    def cleanup(self):
-        super().cleanup()
 
     def get_init_dict(self):
         return {'params':self.params, 'params_eye0':self.params_eye0, 'params_eye1':self.params_eye1}
@@ -213,6 +218,7 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
         return np.dot(self.eye_camera_to_world_matrix , point)[:3]
 
     def init_ui(self):
+        self.add_menu()
         self.visualizer = Calibration_Visualizer(self.g_pool, self.camera_intrinsics ,
                                                  self.cal_points_3d, self.cal_ref_points_3d,
                                                  self.eye_camera_to_world_matrix,
@@ -267,10 +273,9 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     def get_init_dict(self):
        return {'eye_camera_to_world_matrix':self.eye_camera_to_world_matrix.tolist() ,'cal_points_3d':self.cal_points_3d,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points_3d':self.cal_gaze_points_3d,  "camera_intrinsics":self.camera_intrinsics, 'gaze_distance':self.gaze_distance}
 
-    def cleanup(self):
-        super().cleanup()
-        if hasattr(self, 'visualizer'):
-            self.visualizer.close_window()
+    def deinit_ui(self):
+        self.remove_menu()
+        self.visualizer.close_window()
 
 
 class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
@@ -315,6 +320,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
 
 
     def init_ui(self):
+        self.add_menu()
         self.visualizer = Calibration_Visualizer(self.g_pool,
                                                  world_camera_intrinsics=self.camera_intrinsics ,
                                                  cal_ref_points_3d=self.cal_points_3d,
@@ -333,6 +339,10 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
         self.menu.label = 'Binocular 3D gaze mapper'
         # self.menu.append(ui.Text_Input('last_gaze_distance',self))
         self.menu.append(ui.Switch('debug window',setter=open_close_window, getter=lambda: bool(self.visualizer.window) ))
+
+    def deinit_ui(self):
+        self.remove_menu()
+        self.visualizer.close_window()
 
     def _map_monocular(self,p):
         if '3d' not in p['method']:

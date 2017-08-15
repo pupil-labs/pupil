@@ -14,7 +14,7 @@ import av
 import queue
 import numpy as np
 
-from plugin import Menu_Plugin
+from plugin import Plugin
 from pyglui import ui
 from audio import Audio_Input_Dict
 from threading import Thread, Event
@@ -33,7 +33,7 @@ NOT_REC_STR = 'Start a new recording to save audio.'
 REC_STR = 'Saving audio to "audio.mp4".'
 
 
-class Audio_Capture(Menu_Plugin):
+class Audio_Capture(Plugin):
     """docstring for Audio_Capture"""
     def __init__(self, g_pool, audio_src='No Audio'):
         super().__init__(g_pool)
@@ -53,6 +53,7 @@ class Audio_Capture(Menu_Plugin):
         self.start_capture(self.audio_src)
 
     def init_ui(self):
+        self.add_menu()
         self.menu.label = 'Audio Capture'
 
         def close():
@@ -73,6 +74,10 @@ class Audio_Capture(Menu_Plugin):
                                      setter=self.start_capture))
 
         self.menu.append(ui.Info_Text(NOT_REC_STR))
+
+
+    def deinit_ui(self):
+        self.remove_menu()
 
     def get_init_dict(self):
         return {'audio_src': self.audio_src}

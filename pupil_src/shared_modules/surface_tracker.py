@@ -140,9 +140,9 @@ class Surface_Tracker(Plugin):
         self.update_gui_markers()
         self.notify_all({'subject': 'surfaces_changed'})
 
-    def init_gui(self):
-        self.menu = ui.Growing_Menu('Surface Tracker')
-        self.g_pool.sidebar.append(self.menu)
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label ='Surface Tracker'
 
         self.button = ui.Thumb('running',self,label='T',hotkey='t')
         self.button.on_color[:] = (.1,.2,1.,.8)
@@ -151,16 +151,12 @@ class Surface_Tracker(Plugin):
         self.g_pool.quickbar.append(self.add_button)
         self.update_gui_markers()
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu= None
-        if self.button:
-            self.g_pool.quickbar.remove(self.button)
-            self.button = None
-        if self.add_button:
-            self.g_pool.quickbar.remove(self.add_button)
-            self.add_button = None
+    def deinit_ui(self):
+        self.g_pool.quickbar.remove(self.button)
+        self.button = None
+        self.g_pool.quickbar.remove(self.add_button)
+        self.add_button = None
+        self.remove_menu()
 
     def update_gui_markers(self):
 
@@ -308,4 +304,4 @@ class Surface_Tracker(Plugin):
 
         for s in self.surfaces:
             s.cleanup()
-        self.deinit_gui()
+

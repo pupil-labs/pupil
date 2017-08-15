@@ -8,11 +8,11 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
-from plugin import Menu_Plugin
+from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-class Calibration_Plugin(Menu_Plugin):
+class Calibration_Plugin(Plugin):
     '''base class for all calibration routines'''
     uniqueness = 'by_base_class'
     def __init__(self,g_pool):
@@ -22,7 +22,9 @@ class Calibration_Plugin(Menu_Plugin):
         self.active = False
 
 
-    def init_ui(self):
+    def add_menu(self):
+        super().add_menu()
+
         calibration_plugins = [p for p in self.g_pool.plugin_by_name.values() if issubclass(p, Calibration_Plugin)]
         from pyglui import ui
 
