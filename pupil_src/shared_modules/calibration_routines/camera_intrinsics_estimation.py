@@ -65,21 +65,17 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.monitor_idx = 0
         self.dist_mode = "Fisheye"
 
-
         self.glfont = fontstash.Context()
         self.glfont.add_font('opensans',get_opensans_font_path())
         self.glfont.set_size(32)
         self.glfont.set_color_float((0.2,0.5,0.9,1.0))
         self.glfont.set_align_string(v_align='center')
 
-
-
         self.undist_img = None
         self.show_undistortion = False
         self.show_undistortion_switch = None
 
         self.capture = g_pool.capture
-
 
         if hasattr(self.capture, 'intrinsics') and self.capture.intrinsics:
             logger.info('Click show undistortion to verify camera intrinsics calibration.')

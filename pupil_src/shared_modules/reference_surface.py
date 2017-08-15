@@ -67,7 +67,7 @@ class Reference_Surface(object):
     The more markers we find the more accurate the homography.
 
     """
-    def __init__(self,g_pool, name="unnamed",saved_definition=None):
+    def __init__(self, g_pool, name="unnamed",saved_definition=None):
         self.g_pool = g_pool
         self.name = name
         self.markers = {}
@@ -79,7 +79,7 @@ class Reference_Surface(object):
         self.m_to_screen = None
         self.m_from_screen = None
         self.camera_pose_3d = None
-        self.use_distortion = 0
+        self.use_distortion = True
 
         self.uid = str(time())
         self.real_world_size = {'x':1.,'y':1.}

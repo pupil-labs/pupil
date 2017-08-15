@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 from file_methods import save_object, load_object, UnpicklingError
 from version_utils import VersionFormat
 from version_utils import read_rec_version
-from calibration_routines.camera_intrinsics_estimation import pre_recorded_calibrations, idealized_camera_calibration
+from camera_models import load_intrinsics, save_intrinsics
 
 
 def correlate_data(data, timestamps):
@@ -155,21 +155,11 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         if time_name in ('Pupil Cam1 ID0', 'Pupil Cam1 ID1'):
             time_name = 'eye'+time_name[-1]  # rename eye files
         elif time_name in ('Pupil Cam1 ID2', 'Logitech Webcam C930e'):
-            cam_calib_loc = os.path.join(rec_dir, 'camera_calibration')
-            try:
-                camera_calibration = load_object(cam_calib_loc)
-            except:
-                # no camera calibration found
-                video = av.open(video_loc, 'r')
-                frame_size = video.streams.video[0].format.width, video.streams.video[0].format.height
-                del video
-                try:
-                    camera_calibration = pre_recorded_calibrations[time_name][frame_size]
-                except KeyError:
-
-                    camera_calibration = idealized_camera_calibration(frame_size)
-                    logger.warning('Camera calibration not found. Will assume idealized camera.')
-                save_object(camera_calibration, cam_calib_loc)
+            video = av.open(video_loc, 'r')
+            frame_size = video.streams.video[0].format.width, video.streams.video[0].format.height
+            del video
+            intrinsics = load_intrinsics(rec_dir, time_name, frame_size)
+            save_intrinsics(rec_dir, 'world', frame_size, intrinsics)
 
             time_name = 'world'  # assume world file
         elif time_name.startswith('audio_'):
