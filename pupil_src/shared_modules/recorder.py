@@ -324,8 +324,7 @@ class Recorder(Plugin):
         except:
             logger.info("No surface_definitions data found. You may want this if you do marker tracking.")
 
-
-        self.g_pool.capture.intrinsics.save(self.g_pool, custom_save_path=os.path.join(self.rec_path, "world.intrinsics"))
+        self.g_pool.capture.intrinsics.save(self.rec_path, custom_name='world')
 
         try:
             with open(self.meta_info_path, 'a', newline='') as csvfile:

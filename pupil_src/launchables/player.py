@@ -76,6 +76,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     from version_utils import VersionFormat
     from methods import normalize, denormalize, delta_t, get_system_info
     from player_methods import correlate_data, is_pupil_rec_dir, load_meta_info
+    from camera_models import load_intrinsics
 
     # monitoring
     import psutil
@@ -189,6 +190,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     # Initialize capture
     cap = File_Source(g_pool, video_path, timestamps=timestamps)
+    cap.intrinsics = load_intrinsics(rec_dir, 'world', cap.frame_size)
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))

@@ -19,14 +19,15 @@ from OpenGL.GL import GL_POLYGON
 from methods import normalize,denormalize
 from glfw import *
 from plugin import Plugin
-#logging
-import logging
-logger = logging.getLogger(__name__)
 
 from square_marker_detect import detect_markers,detect_markers_robust, draw_markers,m_marker_to_screen
 from reference_surface import Reference_Surface
 
 from math import sqrt
+
+# logging
+import logging
+logger = logging.getLogger(__name__)
 
 class Surface_Tracker(Plugin):
     """docstring
@@ -44,10 +45,9 @@ class Surface_Tracker(Plugin):
         self.edit_surfaces = []
         self.edit_surf_verts = []
         self.marker_edit_surface = None
-        #plugin state
+        # plugin state
         self.mode = mode
         self.running = True
-
 
         self.robust_detection = robust_detection
         self.aperture = 11

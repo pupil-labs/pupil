@@ -48,15 +48,15 @@ pre_recorded_calibrations = {
 }
 
 
-def load_intrinsics(g_pool, cam_name, resolution):
+def load_intrinsics(directory, cam_name, resolution):
     """
     Loads a pre-recorded intrinsics calibration for the given camera and resolution. If no pre-recorded calibration is available we fall back on default values.
-    :param g_pool: The current g_pool object
+    :param directory: The directory in which to look for the intrinsincs file
     :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'
     :param resolution: Camera resolution given as a tuple.
     :return: Camera Model Object
     """
-    file_path = os.path.join(g_pool.user_dir, '{}.intrinsics'.format(cam_name.replace(" ", "_")))
+    file_path = os.path.join(directory, '{}.intrinsics'.format(cam_name.replace(" ", "_")))
     try:
         calib_dict = load_object(file_path, allow_legacy=False)
         intrinsics = calib_dict[str(resolution)]
@@ -80,35 +80,27 @@ def load_intrinsics(g_pool, cam_name, resolution):
         return Radial_Dist_Camera(intrinsics['camera_matrix'], intrinsics['dist_coefs'], resolution, cam_name)
 
 
-def save_intrinsics(g_pool, cam_name, resolution, intrinsics, custom_save_path=None):
+def save_intrinsics(directory, cam_name, resolution, intrinsics):
     """
     Saves camera intrinsics calibration to a file. For each unique camera name we maintain a single file containing all calibrations associated with this camera name.
-    :param g_pool: The current g_pool object
+    :param directory: Directory to which the intrinsics file will be written
     :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'
     :param resolution: Camera resolution given as a tuple. This needs to match the resolution the calibration has been computed with.
     :param intrinsics: The camera intrinsics dictionary.
     :return:
     """
     # Try to load previous camera calibrations
-    file_path = os.path.join(g_pool.user_dir, '{}.intrinsics'.format(cam_name.replace(" ", "_")))
+    save_path = os.path.join(directory, '{}.intrinsics'.format(cam_name.replace(" ", "_")))
     try:
-        calib_dict = load_object(file_path, allow_legacy=False)
+        calib_dict = load_object(save_path, allow_legacy=False)
     except:
-        calib_dict = {
-            'version': str(g_pool.version),
-            'cam_name': cam_name,
-        }
+        calib_dict = {}
 
-    if custom_save_path:
-        save_path = custom_save_path
-    else:
-        save_path = file_path
-
+    calib_dict['version'] = 1
     calib_dict[str(resolution)] = intrinsics
 
     save_object(calib_dict, save_path)
-    logger.info("Calibration for camera {} at resolution {} saved to user folder".format(cam_name, resolution))
-
+    logger.info("Calibration for camera {} at resolution {} saved to {}".format(cam_name, resolution, save_path))
 
 
 class Fisheye_Dist_Camera(object):
@@ -254,15 +246,15 @@ class Fisheye_Dist_Camera(object):
         res = cv2.solvePnP(uv3d, xy_undist, self.K, np.array([[0, 0, 0, 0, 0]]), flags=cv2.SOLVEPNP_ITERATIVE)
         return res
 
-    def save(self, g_pool, custom_save_path=None):
+    def save(self, directory, custom_name=None):
         """
         Saves the current calibration to corresponding camera's calibrations file
-        :param g_pool: current g_pool object
+        :param directory: save directory
         :return:
         """
         intrinsics = {'camera_matrix': self.K.tolist(), 'dist_coefs': self.D.tolist(),
                       'resolution': self.resolution, 'cam_type': 'fisheye'}
-        save_intrinsics(g_pool, self.name, self.resolution, intrinsics, custom_save_path=custom_save_path)
+        save_intrinsics(directory, custom_name or self.name, self.resolution, intrinsics)
 
 
 class Radial_Dist_Camera(object):
@@ -367,15 +359,15 @@ class Radial_Dist_Camera(object):
         res = cv2.solvePnP(uv3d, xy, self.K, self.D, flags=cv2.SOLVEPNP_ITERATIVE)
         return res
 
-    def save(self, g_pool, custom_save_path=None):
+    def save(self, directory, custom_name=None):
         """
         Saves the current calibration to corresponding camera's calibrations file
-        :param g_pool: current g_pool object
+        :param directory: save location
         :return:
         """
         intrinsics = {'camera_matrix': self.K.tolist(), 'dist_coefs': self.D.tolist(),
                       'resolution': self.resolution, 'cam_type': 'dist_pinhole'}
-        save_intrinsics(g_pool, self.name, self.resolution, intrinsics, custom_save_path=custom_save_path)
+        save_intrinsics(directory, custom_name or self.name, self.resolution, intrinsics)
 
 
 class Dummy_Camera(Radial_Dist_Camera):
@@ -390,12 +382,12 @@ class Dummy_Camera(Radial_Dist_Camera):
         dist_coefs = [[0., 0., 0., 0., 0.]]
         super().__init__(camera_matrix, dist_coefs, resolution, name)
 
-    def save(self, g_pool, custom_save_path=None):
+    def save(self, directory, custom_name=None):
         """
         Saves the current calibration to corresponding camera's calibrations file
-        :param g_pool: current g_pool object
+        :param directory: save location
         :return:
         """
         intrinsics = {'camera_matrix': self.K.tolist(), 'dist_coefs': self.D.tolist(),
                       'resolution': self.resolution, 'cam_type': 'dummy'}
-        save_intrinsics(g_pool, self.name, self.resolution, intrinsics, custom_save_path=custom_save_path)
+        save_intrinsics(directory, custom_name or self.name, self.resolution, intrinsics)
