@@ -28,15 +28,13 @@ class Blink_Detection(Plugin):
 
     def __init__(self, g_pool):
         super(Blink_Detection, self).__init__(g_pool)
-        self.history_length_per_fps = 0.2
+        self.history_length = 0.2  # unit: seconds
 
-        # The maximum length of the history needs to be set a priori. If we are assuming a maximum frame rate of 120 FPS
-        # and a generous maximum onset duration of a blink of 0.5 seconds, 60 frames of history should always be enough
-        self.confidence_histories = (deque(maxlen=60), deque(maxlen=60))
-        self.timestamp_histories = (deque(maxlen=60), deque(maxlen=60))
-        self.eyes_are_alive = g_pool.eyes_are_alive
+        # self.minimum_change = 0.7  # minimum difference between min and max confidence value in history
+        self.minimum_onset_response = 0.3
+        self.minimum_offset_response = 0.3
 
-        self.is_blink = False
+        self.history = deque()
         self.menu = None
 
     def init_gui(self):
@@ -56,84 +54,52 @@ class Blink_Detection(Plugin):
     def cleanup(self):
         self.deinit_gui()
 
-
     def recent_events(self, events={}):
+        events['blinks'] = []
+        self.history.extend(events.get('pupil_positions', []))
 
-        # Process all pupil_positions events
-        for pt in events.get('pupil_positions', []):
-            # Update history
-            self.confidence_histories[pt['id']].appendleft(pt['confidence'])
-            self.timestamp_histories[pt['id']].appendleft(pt['timestamp'])
+        try:  # use newest gaze point to determine age threshold
+            age_threshold = self.history[-1]['timestamp'] - self.history_length
+            while self.history[1]['timestamp'] < age_threshold:
+                self.history.popleft()  # remove outdated gaze points
+        except IndexError:
+            pass
 
-            # Wait for at least 5 frames of history to compute the current frame rate with
-            if len(self.timestamp_histories[pt['id']]) < 60:
-                continue
-            else:
-                fps = 60.0 / (self.timestamp_histories[pt['id']][0] - self.timestamp_histories[pt['id']][59])
-                # fps = 120
-                self.history_length = int(self.history_length_per_fps * fps)
+        filter_size = len(self.history)
+        if filter_size < 2 or self.history[-1]['timestamp'] - self.history[0]['timestamp'] < self.history_length:
+            return
 
-            # Build filter_ based on current history length
-            filter_ = np.ones(self.history_length)
-            filter_[self.history_length // 2:] = -1
+        activity = np.fromiter((pp['confidence'] for pp in self.history), dtype=float)
+        # if activity.max() - activity.min() < self.minimum_change:
+        #     return
 
-            # Compute activations if history is sufficient
-            if self.eyes_are_alive[0].value:
-                if len(self.confidence_histories[0]) >= self.history_length:
-                    slice = np.asarray(deque(islice(self.confidence_histories[0], 0, self.history_length)))
-                    # Normalize deviations in the overall magnitude and length of the used filter_
-                    if slice.max() > slice.min():
-                        slice = (slice - slice.min()) / (slice.max() - slice.min())
-                        act0 = np.dot(slice, filter_) / self.history_length
-                    else:
-                        act0 = 0.0
-                else:
-                    continue
+        # Build blink_filter based on current history length
+        blink_filter = np.ones(filter_size) / filter_size
+        blink_filter[filter_size // 2:] *= -1
 
-            if self.eyes_are_alive[1].value:
-                if len(self.confidence_histories[1]) >= self.history_length:
-                    slice = np.asarray(deque(islice(self.confidence_histories[1], 0, self.history_length)))
-                    # Normalize deviations in the overall magnitude and length of the used filter_
-                    if slice.max() > slice.min():
-                        slice = (slice - slice.min()) / (slice.max() - slice.min())
-                        act1 = np.dot(slice, filter_) / self.history_length
-                    else:
-                        act1 = 0.0
-                else:
-                    continue
+        # # normalize activity
+        # activity -= activity.min()
+        # activity /= activity.max()
 
-            # Combine activations if we are binocular
-            if self.eyes_are_alive[0].value and self.eyes_are_alive[1].value:
-                act = np.maximum(act0, act1)
-            elif self.eyes_are_alive[0].value:
-                act = act0
-            elif self.eyes_are_alive[1].value:
-                act = act1
-            else:
-                return
+        filter_response = activity @ blink_filter
 
-            # Judge if activation is sufficient for the on-set of a blink
-            if not self.is_blink and act > 0.4:
-                logger.error("Blink")
-                self.is_blink = True
+        if -self.minimum_offset_response <= filter_response <= self.minimum_onset_response:
+            return  # response cannot be classified as blink onset or offset
 
-            # If we also want to measure the off-set of a blink we could do it like this
-            if self.is_blink and act < -0.1:
-                self.is_blink = False
+        if filter_response > self.minimum_onset_response:
+            logger.warning('onset  {:0.3f}'.format(filter_response))
+        else:
+            logger.warning('offset {:0.3f}'.format(filter_response))
 
-            logger.debug('{} {}'.format(self.is_blink, act))
-
-            # Add info to events
-            blink_entry = {
-                'topic': 'blink',
-                'activation': act,
-                'timestamp': self.timestamp_histories[pt['id']][int(math.ceil(self.history_length / 2.0))],
-                'is_blink': self.is_blink
-            }
-
-            if 'blinks' not in events:
-                events['blinks'] = []
-            events['blinks'].append(blink_entry)
+        # Add info to events
+        blink_entry = {
+            'topic': 'blink',
+            'filter_response': filter_response,
+            'base_data': list(self.history),
+            'timestamp': self.history[len(self.history)//2]['timestamp'],
+            'is_blink': bool(filter_response > self.minimum_onset_response)
+        }
+        events['blinks'].append(blink_entry)
 
     def get_init_dict(self):
         return {}
