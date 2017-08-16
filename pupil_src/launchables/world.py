@@ -125,6 +125,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         scroll_factor = 1.0
         window_position_default = (0, 0)
 
+    icon_bar_width = 80
+    window_size = None
+    camera_render_size = None
+
     # g_pool holds variables for this process they are accesible to all plugins
     g_pool = Global_Container()
     g_pool.app = 'capture'
@@ -173,17 +177,24 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # Callback functions
     def on_resize(window, w, h):
+        nonlocal window_size
+        nonlocal camera_render_size
+
         if gl_utils.is_window_visible(window):
             hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
-            g_pool.gui.update_window(w, h)
+            window_size = w,h
+            camera_render_size = int(w-icon_bar_width*g_pool.gui.scale),h
+
+            g_pool.gui.update_window(*window_size)
             g_pool.gui.collect_menus()
             for g in g_pool.graphs:
                 g.scale = hdpi_factor
-                g.adjust_window_size(w, h)
-            gl_utils.adjust_gl_view(w, h)
+                g.adjust_window_size(*window_size)
+
+
             for p in g_pool.plugins:
-                p.on_window_resize(window, w, h)
+                p.on_window_resize(window, *camera_render_size)
 
     def on_iconify(window, iconified):
         g_pool.iconified = iconified
@@ -202,6 +213,12 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             window)[0] / glfw.glfwGetWindowSize(window)[0])
         x, y = x * hdpi_factor, y * hdpi_factor
         g_pool.gui.update_mouse(x, y)
+        pos = x, y
+        pos = normalize(pos, camera_render_size)
+        # Position in img pixels
+        pos = denormalize(pos, g_pool.capture.frame_size)
+        for p in g_pool.plugins:
+            p.on_pos(pos)
 
     def on_scroll(window, x, y):
         g_pool.gui.update_scroll(x, y * scroll_factor)
@@ -277,7 +294,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # window and gl setup
     glfw.glfwInit()
-    width, height = session_settings.get('window_size', (1280, 720))
+    width, height = session_settings.get('window_size', (1280+80, 720))
     main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
     window_pos = session_settings.get('window_position', window_position_default)
     glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
@@ -306,7 +323,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
-    g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-82, 0), header_pos='left')
+    g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-80, 0), header_pos='left')
     g_pool.iconbar = ui.Scrolling_Menu("Icons",pos=(-80,0),size=(0,0),header_pos='hidden')
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))
     g_pool.gui.append(g_pool.menubar)
@@ -353,7 +370,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     general_settings.append(ui.Info_Text('Capture Version: {}'.format(g_pool.version)))
 
     g_pool.menubar.append(general_settings)
-    g_pool.iconbar.append(ui.Thumb('collapsed', general_settings, label='G', on_val=False, off_val=True, setter=toggle_general_settings))
+    g_pool.iconbar.append(ui.Thumb('collapsed', general_settings, label=chr(0xe8b8), on_val=False, off_val=True, setter=toggle_general_settings,label_font = 'pupil_icons'))
 
 
     # plugins that are loaded based on user settings from previous session
@@ -477,16 +494,18 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         glfw.glfwMakeContextCurrent(main_window)
         # render visual feedback from loaded plugins
         if window_should_update() and gl_utils.is_window_visible(main_window):
+
+            gl_utils.glViewport(0,0,*camera_render_size)
             for p in g_pool.plugins:
                 p.gl_display()
-
+            gl_utils.glViewport(0,0,*window_size)
             for g in g_pool.graphs:
                 g.draw()
 
             unused_elements = g_pool.gui.update()
             for button, action, mods in unused_elements.buttons:
                 pos = glfw.glfwGetCursorPos(main_window)
-                pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
+                pos = normalize(pos, camera_render_size)
                 # Position in img pixels
                 pos = denormalize(pos, g_pool.capture.frame_size)
                 for p in g_pool.plugins:

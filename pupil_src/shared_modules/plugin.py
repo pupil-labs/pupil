@@ -73,6 +73,12 @@ class Plugin(object):
         """
         pass
 
+    def on_pos(self, pos):
+        """
+        Gets called when the user moves the mouse in the window screen.
+        """
+        pass
+
     def on_key(self, key, scancode, action, mods):
         """
         Gets called on key events that were not consumed by the GUI.
@@ -225,7 +231,7 @@ class Plugin(object):
 
         # Here we make a menu and icon
         self.menu = ui.Growing_Menu('Unnamed Menu',header_pos='headline')
-        self.menu_icon = ui.Thumb('collapsed', self.menu, label='?', on_val=False, off_val=True, setter=toggle_menu)
+        self.menu_icon = ui.Thumb('collapsed', self.menu, label='?', on_val=False, off_val=True, setter=toggle_menu,)
         self.menu_icon.order = 0.5
         self.g_pool.menubar.append(self.menu)
         self.g_pool.iconbar.append(self.menu_icon)

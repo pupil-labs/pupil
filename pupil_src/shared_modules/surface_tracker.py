@@ -59,6 +59,7 @@ class Surface_Tracker(Plugin):
         self.invert_image = invert_image
 
         self.img_shape = None
+        self._last_mouse_pos = 0,0
 
         self.menu = None
         self.button =  None
@@ -77,6 +78,10 @@ class Surface_Tracker(Plugin):
         if notification['subject'] == 'surfaces_changed':
             logger.info('Surfaces changed. Saving to file.')
             self.save_surface_definitions_to_file()
+
+    def on_pos(self,pos):
+        self._last_mouse_pos = normalize(pos,self.g_pool.capture.frame_size,flip_y=True)
+
     def on_click(self,pos,button,action):
         if self.mode == 'Show Markers and Surfaces':
             if action == GLFW_PRESS:
@@ -235,9 +240,7 @@ class Surface_Tracker(Plugin):
         if self.mode == 'Show Markers and Surfaces':
             # edit surfaces by user
             if self.edit_surf_verts:
-                window = glfwGetCurrentContext()
-                pos = glfwGetCursorPos(window)
-                pos = normalize(pos,glfwGetWindowSize(window),flip_y=True)
+                pos = self._last_mouse_pos
                 for s,v_idx in self.edit_surf_verts:
                     if s.detected:
                         new_pos = s.img_to_ref_surface(np.array(pos))
