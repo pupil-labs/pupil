@@ -133,7 +133,9 @@ class Recorder(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu_icon.order = 0.3
-        self.menu_icon.label = "R"
+        self.menu_icon.label_font = 'pupil_icons'
+        self.menu_icon.label = chr(0xe04b)
+
         self.menu.append(ui.Info_Text('Pupil recordings are saved like this: "path_to_recordings/recording_session_name/nnn" where "nnn" is an increasing number to avoid overwrites. You can use "/" in your session name to create subdirectories.'))
         self.menu.append(ui.Info_Text('Recordings are saved to "~/pupil_recordings". You can change the path here but note that invalid input will be ignored.'))
         self.menu.append(ui.Text_Input('rec_dir', self, setter=self.set_rec_dir, label='Path to recordings'))

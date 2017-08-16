@@ -127,7 +127,8 @@ class Pupil_Remote(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Pupil Remote'
-        self.menu_icon.label = "r"
+        self.menu_icon.label_font = 'pupil_icons'
+        self.menu_icon.label = chr(0xe307)
         self.update_menu()
 
     def deinit_ui(self):
