@@ -156,9 +156,12 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
         #lets make a menu entry in the sidebar
         self.menu = ui.Scrolling_Menu('view add edit annotations')
         self.g_pool.gui.append(self.menu)
-
         #add a button to close the plugin
         self.menu.append(ui.Button('close',self.close))
+
+        self.menu.append(ui.Info_Text("Annotations recorded with capture are displayed when this plugin is loaded. New annotations can be added with the interface below."))
+        self.menu.append(ui.Info_Text("If you want to revert annotations to the recorded state, stop player, delete the annotations file in the recording and reopen player."))
+
         self.menu.append(ui.Text_Input('new_annotation_name',self))
         self.menu.append(ui.Text_Input('new_annotation_hotkey',self))
         self.menu.append(ui.Button('add annotation type',self.add_annotation))

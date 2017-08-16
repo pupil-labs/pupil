@@ -388,7 +388,15 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
 
 def update_recording_v0913_to_v0914(rec_dir):
     logger.info("Updating recording from v0.9.13 to v0.9.14")
-    try:
+
+    # add notifications entry to pupil_data if missing
+    pupil_data_loc = os.path.join(rec_dir, 'pupil_data')
+    pupil_data = load_object(pupil_data_loc)
+    if 'notifications' not in pupil_data:
+        pupil_data['notifications'] = []
+        save_object(pupil_data, pupil_data_loc)
+
+    try:  # upgrade camera intrinsics
         old_calib_loc = os.path.join(rec_dir, 'camera_calibration')
         old_calib = load_object(old_calib_loc)
         res = tuple(old_calib['resolution'])

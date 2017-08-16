@@ -70,6 +70,7 @@ def fill_cache(visited_list, video_file_path, timestamps, q, seek_idx, run,min_m
             frame = cap.get_frame()
         except EndofVideoFileError:
             logger.debug("Video File's last frame(s) not accesible")
+
             # could not read frame
             logger.warning("Could not evaluate frame: {}.".format(next_frame))
             visited_list[next_frame] = True  # this frame is now visited.
