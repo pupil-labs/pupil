@@ -7,7 +7,7 @@ from file_methods import save_object, load_object
 import logging
 
 logger = logging.getLogger(__name__)
-
+__version__ = 1
 
 #these are calibration we recorded. They are estimates and generalize our setup. Its always better to calibrate each camera.
 pre_recorded_calibrations = {
@@ -45,6 +45,12 @@ def load_intrinsics(directory, cam_name, resolution):
     file_path = os.path.join(directory, '{}.intrinsics'.format(cam_name.replace(" ", "_")))
     try:
         calib_dict = load_object(file_path, allow_legacy=False)
+
+        if calib_dict['version'] < __version__:
+            logger.warning('Deprecated camera calibration found.')
+            logger.info('Please recalibrate using the Camera Intrinsics Estimation calibration.')
+            os.rename(file_path, '{}.deprecated.v{}'.format(file_path, calib_dict['version']))
+
         intrinsics = calib_dict[str(resolution)]
         logger.info("Previously recorded calibration found and loaded!")
     except Exception as e:
@@ -82,7 +88,7 @@ def save_intrinsics(directory, cam_name, resolution, intrinsics):
     except:
         calib_dict = {}
 
-    calib_dict['version'] = 1
+    calib_dict['version'] = __version__
     calib_dict[str(resolution)] = intrinsics
 
     save_object(calib_dict, save_path)
