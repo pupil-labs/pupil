@@ -276,7 +276,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
             logger.warning('No fixations in this recording nothing to export')
             return
 
-        fixations_in_section = chain(*self.g_pool.fixations_by_frame[slice(export_range)])
+        fixations_in_section = chain(*self.g_pool.fixations_by_frame[slice(*export_range)])
         fixations_in_section = list(dict([(f['id'],f) for f in fixations_in_section]).values()) #remove duplicates
         fixations_in_section.sort(key=lambda f:f['id'])
 
