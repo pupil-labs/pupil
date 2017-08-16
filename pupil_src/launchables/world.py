@@ -184,8 +184,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w,h
-            camera_render_size = int(w-icon_bar_width*g_pool.gui.scale),h
-
+            camera_render_size = w-int(icon_bar_width*g_pool.gui.scale),h
             g_pool.gui.update_window(*window_size)
             g_pool.gui.collect_menus()
             for g in g_pool.graphs:
@@ -303,8 +302,12 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.main_window = main_window
 
     def set_scale(new_scale):
+        hdpi_factor = float(glfw.glfwGetFramebufferSize(
+            main_window)[0]) / glfw.glfwGetWindowSize(main_window)[0]
         g_pool.gui_user_scale = new_scale
-        on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
+        window_size = camera_render_size[0]+int(icon_bar_width*g_pool.gui_user_scale*hdpi_factor),glfw.glfwGetFramebufferSize(main_window)[1]
+        logger.warning(icon_bar_width*g_pool.gui_user_scale*hdpi_factor)
+        glfw.glfwSetWindowSize(main_window,*window_size)
 
     def reset_restart():
         logger.warning("Resetting all settings and restarting Capture.")
@@ -314,7 +317,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     def toggle_general_settings(collapsed):
         #this is the menu toggle logic.
         # Only one menu can be open.
-        # If no menu is open the menu_bar should collapse.
+        # If no menu is open the menubar should collapse.
         g_pool.menubar.collapsed = collapsed
         for m in g_pool.menubar.elements:
             m.collapsed = True
@@ -324,7 +327,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
     g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-80, 0), header_pos='left')
-    g_pool.iconbar = ui.Scrolling_Menu("Icons",pos=(-80,0),size=(0,0),header_pos='hidden')
+    g_pool.iconbar = ui.Scrolling_Menu("Icons",pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))
     g_pool.gui.append(g_pool.menubar)
     g_pool.gui.append(g_pool.iconbar)
@@ -332,8 +335,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     general_settings = ui.Growing_Menu('General',header_pos='headline')
     general_settings.append(ui.Button('Reset to default settings',reset_restart))
-    general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface size'))
-    general_settings.append(ui.Button('Reset window size', lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0],g_pool.capture.frame_size[1])) )
+    general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.6, .8, 1., 1.2, 1.4], label='Interface size'))
+    general_settings.append(ui.Button('Reset window size', lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0]+int(icon_bar_width*g_pool.gui.scale),g_pool.capture.frame_size[1])) )
     general_settings.append(ui.Selector('audio_mode', audio, selection=audio.audio_modes))
     general_settings.append(ui.Selector('detection_mapping_mode',
                                         g_pool,
