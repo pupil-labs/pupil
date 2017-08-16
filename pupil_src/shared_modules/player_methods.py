@@ -117,6 +117,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v093_to_v094(rec_dir)
     if rec_version < VersionFormat('0.9.13'):
         update_recording_v094_to_v0913(rec_dir)
+    if rec_version < VersionFormat('0.9.14'):
+        update_recording_v0913_to_v0914(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -382,6 +384,30 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
             update_recording_v094_to_v0913(rec_dir, retry_on_averror=False)
         else:
             raise  # re-raise exception
+
+
+def update_recording_v0913_to_v0914(rec_dir):
+    logger.info("Updating recording from v0.9.13 to v0.9.14")
+    try:
+        old_calib_loc = os.path.join(rec_dir, 'camera_calibration')
+        old_calib = load_object(old_calib_loc)
+        res = tuple(old_calib['resolution'])
+        del old_calib['resolution']
+        del old_calib['camera_name']
+        old_calib['cam_type'] = 'dist_pinhole'
+        new_calib = {str(res): old_calib, 'version': 1}
+        save_object(new_calib, os.path.join(rec_dir, 'world.intrinsics'))
+        logger.info('Replaced `camera_calibration` with `world.intrinsics`.')
+
+        os.rename(old_calib_loc, old_calib_loc+'.deprecated')
+    except IOError:
+        pass
+
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v0.9.14'
+    update_meta_info(rec_dir, meta_info)
 
 
 def update_recording_bytes_to_unicode(rec_dir):
