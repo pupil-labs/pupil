@@ -53,8 +53,8 @@ def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker
         return next_unvisited
 
     def handle_frame(next_frame):
-        if next_frame != cap.get_frame_index():
-            #we need to seek:
+        if next_frame != cap.get_frame_index() + 1:
+            # we need to seek:
             logger.debug("Seeking to Frame {}".format(next_frame))
             try:
                 cap.seek_to_frame(next_frame)
@@ -64,14 +64,14 @@ def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker
                 visited_list[next_frame] = True # this frame is now visited.
                 q.put((next_frame,[])) # we cannot look at the frame, report no detection
                 return
-            #seeking invalidates prev markers for the detector
+            # seeking invalidates prev markers for the detector
             markers[:] = []
 
         try:
             frame = cap.get_frame()
         except EndofVideoFileError:
             logger.debug("Video File's last frame(s) not accesible")
-             #could not read frame
+             # could not read frame
             logger.warning("Could not evaluate frame: {}.".format(next_frame))
             visited_list[next_frame] = True # this frame is now visited.
             q.put((next_frame,[])) # we cannot look at the frame, report no detection
@@ -87,7 +87,7 @@ def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker
                                         invert_image= invert_image)
 
         visited_list[frame.index] = True
-        q.put((frame.index,markers[:])) #object passed will only be pickeled when collected from other process! need to make a copy ot avoid overwrite!!!
+        q.put((frame.index, markers[:]))# object passed will only be pickeled when collected from other process! need to make a copy ot avoid overwrite!!!
 
     while run.value:
         next_frame = cap.get_frame_index()
