@@ -12,9 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 from plugin import Plugin
 from pyglui import ui
 from collections import deque
-from itertools import islice
 import numpy as np
-import math
 import logging
 logger = logging.getLogger(__name__)
 
@@ -26,13 +24,11 @@ class Blink_Detection(Plugin):
     """
     order = .8
 
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, history_length=0.2, onset_confidence_threshold=0.5, offset_confidence_threshold=0.5):
         super(Blink_Detection, self).__init__(g_pool)
-        self.history_length = 0.2  # unit: seconds
-
-        # self.minimum_change = 0.7  # minimum difference between min and max confidence value in history
-        self.minimum_onset_response = 0.3
-        self.minimum_offset_response = 0.3
+        self.history_length = history_length  # unit: seconds
+        self.onset_confidence_threshold = onset_confidence_threshold
+        self.offset_confidence_threshold = offset_confidence_threshold
 
         self.history = deque()
         self.menu = None
@@ -40,8 +36,17 @@ class Blink_Detection(Plugin):
     def init_gui(self):
         self.menu = ui.Growing_Menu('Blink Detector')
         self.g_pool.sidebar.append(self.menu)
-        self.menu.append(ui.Info_Text('This plugin detects blinks based on binocular confidence drops.'))
         self.menu.append(ui.Button('Close', self.close))
+        self.menu.append(ui.Info_Text('This plugin detects blink on- and offsets based on confidence drops.'))
+        self.menu.append(ui.Slider('history_length', self,
+                                   label='Filter length [seconds]',
+                                   min=0.1, max=.5, step=.05))
+        self.menu.append(ui.Slider('onset_confidence_threshold', self,
+                                   label='Onset confidence threshold',
+                                   min=0., max=1., step=.05))
+        self.menu.append(ui.Slider('offset_confidence_threshold', self,
+                                   label='Offset confidence threshold',
+                                   min=0., max=1., step=.05))
 
     def deinit_gui(self):
         if self.menu:
@@ -70,36 +75,34 @@ class Blink_Detection(Plugin):
             return
 
         activity = np.fromiter((pp['confidence'] for pp in self.history), dtype=float)
-        # if activity.max() - activity.min() < self.minimum_change:
-        #     return
-
-        # Build blink_filter based on current history length
         blink_filter = np.ones(filter_size) / filter_size
         blink_filter[filter_size // 2:] *= -1
 
-        # # normalize activity
-        # activity -= activity.min()
-        # activity /= activity.max()
+        # The theoretical response maximum is +-0.5
+        # Response of +-0.45 seems sufficient for a confidence of 1.
+        filter_response = activity @ blink_filter / 0.45
 
-        filter_response = activity @ blink_filter
-
-        if -self.minimum_offset_response <= filter_response <= self.minimum_onset_response:
+        if -self.offset_confidence_threshold <= filter_response <= self.onset_confidence_threshold:
             return  # response cannot be classified as blink onset or offset
 
-        if filter_response > self.minimum_onset_response:
-            logger.warning('onset  {:0.3f}'.format(filter_response))
+        if filter_response > self.onset_confidence_threshold:
+            blink_type = 'onset'
         else:
-            logger.warning('offset {:0.3f}'.format(filter_response))
+            blink_type = 'offset'
 
+        confidence = min(abs(filter_response), 1.)  # clamp conf. value at 1.
+        logger.debug('Blink {} detected with confidence {:0.3f}'.format(blink_type, confidence))
         # Add info to events
         blink_entry = {
             'topic': 'blink',
-            'filter_response': filter_response,
+            'type': blink_type,
+            'confidence': confidence,
             'base_data': list(self.history),
             'timestamp': self.history[len(self.history)//2]['timestamp'],
-            'is_blink': bool(filter_response > self.minimum_onset_response)
         }
         events['blinks'].append(blink_entry)
 
     def get_init_dict(self):
-        return {}
+        return {'history_length': self.history_length,
+                'onset_confidence_threshold': self.onset_confidence_threshold,
+                'offset_confidence_threshold': self.offset_confidence_threshold}
