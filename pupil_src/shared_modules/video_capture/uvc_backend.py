@@ -381,7 +381,7 @@ class UVC_Manager(Base_Manager):
         def dev_selection_list():
             default = (None, 'Select to activate')
             self.devices.update()
-            dev_pairs = [default] + [(d['uid'], d['name']) for d in self.devices]
+            dev_pairs = [default] + [(d['uid'], d['name']) for d in self.devices if 'RealSense' not in d['name']]
             return zip(*dev_pairs)
 
         def activate(source_uid):
