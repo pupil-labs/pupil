@@ -22,13 +22,24 @@ These backends are available:
 - File: Loads video from file
 '''
 
+import logging
+logger = logging.getLogger(__name__)
+
 from .base_backend import InitialisationError, StreamError
 from .base_backend import Base_Source, Base_Manager
 from .fake_backend import Fake_Source, Fake_Manager
 from .file_backend import FileCaptureError, EndofVideoFileError, FileSeekError
 from .file_backend import File_Source, File_Manager
 from .ndsi_backend import NDSI_Source, NDSI_Manager
-from .uvc_backend  import UVC_Source,  UVC_Manager
+from .uvc_backend import UVC_Source,  UVC_Manager
 
 source_classes = [File_Source,  NDSI_Source,  UVC_Source, Fake_Source]
 manager_classes = [File_Manager, NDSI_Manager, UVC_Manager, Fake_Manager]
+
+try:
+    from .realsense_backend import Realsense_Source, Realsense_Manager
+except ImportError:
+    logger.info('Install pyrealsense to use the Intel RealSense backend')
+else:
+    source_classes.append(Realsense_Source)
+    manager_classes.append(Realsense_Manager)
