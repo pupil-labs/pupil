@@ -76,7 +76,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.detected = False
         self.screen_marker_state = 0.
         self.sample_duration =  sample_duration # number of frames to sample per site
-        self.fixation_boost = sample_duration/2.
         self.lead_in = 25 #frames of marker shown before starting to sample
         self.lead_out = 5 #frames of markers shown after sampling is donw
 
@@ -272,9 +271,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.pupil_list.append(p_pt)
 
             if on_position and self.detected and events.get('fixations', []):
+                fixation_boost = 5
                 self.screen_marker_state = min(
                     self.sample_duration+self.lead_in,
-                    self.screen_marker_state+self.fixation_boost)
+                    self.screen_marker_state+fixation_boost)
 
             # Animate the screen marker
             if self.screen_marker_state < self.sample_duration+self.lead_in+self.lead_out:
