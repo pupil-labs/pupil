@@ -560,7 +560,7 @@ class Realsense_Source(Base_Source):
 
     @property
     def online(self):
-        return self.device.is_streaming()
+        return self.device and self.device.is_streaming()
 
     @property
     def name(self):
