@@ -169,7 +169,8 @@ class Realsense_Controls(dict):
                 logger.debug('Reason: {}'.format(err))
         controls = {}
         for opt_range, value in device.get_available_options():
-            controls[opt_range.option] = Control(device, opt_range, value)
+            if opt_range.min < opt_range.max:
+                controls[opt_range.option] = Control(device, opt_range, value)
         super().__init__(controls)
 
     def export_presets(self):
