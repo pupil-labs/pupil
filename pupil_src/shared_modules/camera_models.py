@@ -82,7 +82,7 @@ def load_intrinsics(directory, cam_name, resolution):
         return Dummy_Camera(resolution, cam_name)
     elif intrinsics['cam_type'] == 'fisheye':
         return Fisheye_Dist_Camera(intrinsics['camera_matrix'], intrinsics['dist_coefs'], resolution, cam_name)
-    elif intrinsics['cam_type'] == 'dist_pinhole':
+    elif intrinsics['cam_type'] == 'radial':
         return Radial_Dist_Camera(intrinsics['camera_matrix'], intrinsics['dist_coefs'], resolution, cam_name)
 
 
@@ -372,7 +372,7 @@ class Radial_Dist_Camera(object):
         :return:
         """
         intrinsics = {'camera_matrix': self.K.tolist(), 'dist_coefs': self.D.tolist(),
-                      'resolution': self.resolution, 'cam_type': 'dist_pinhole'}
+                      'resolution': self.resolution, 'cam_type': 'radial'}
         save_intrinsics(directory, custom_name or self.name, self.resolution, intrinsics)
 
 

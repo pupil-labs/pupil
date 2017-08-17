@@ -402,7 +402,7 @@ def update_recording_v0913_to_v0914(rec_dir):
         res = tuple(old_calib['resolution'])
         del old_calib['resolution']
         del old_calib['camera_name']
-        old_calib['cam_type'] = 'dist_pinhole'
+        old_calib['cam_type'] = 'radial'
         new_calib = {str(res): old_calib, 'version': 1}
         save_object(new_calib, os.path.join(rec_dir, 'world.intrinsics'))
         logger.info('Replaced `camera_calibration` with `world.intrinsics`.')

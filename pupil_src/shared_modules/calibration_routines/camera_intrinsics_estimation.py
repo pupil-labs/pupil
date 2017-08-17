@@ -235,7 +235,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
         logger.info("Calibrated Camera, RMS:{}".format(rms))
 
-        camera_model.save(self.g_pool)
+        camera_model.save(self.g_pool.user_dir)
         self.capture.intrinsics = camera_model
 
 
