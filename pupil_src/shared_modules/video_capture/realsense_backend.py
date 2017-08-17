@@ -207,6 +207,12 @@ class Realsense_Source(Base_Source):
         devices = tuple(self.service.get_devices())
         color_frame_size = tuple(color_frame_size)
         depth_frame_size = tuple(depth_frame_size)
+
+        self.last_color_frame_ts = None
+        self.last_depth_frame_ts = None
+        self._recent_frame = None
+        self._recent_depth_frame = None
+
         if not devices:
             logger.error("Camera failed to initialize. No cameras connected.")
             self.device = None
@@ -250,9 +256,6 @@ class Realsense_Source(Base_Source):
                                   fps=color_fps, color_format='yuv')
         depthstream = DepthStream(width=depth_frame_size[0],
                                   height=depth_frame_size[1], fps=depth_fps)
-
-        self.last_color_frame_ts = None
-        self.last_depth_frame_ts = None
 
         self.streams = [colorstream, depthstream]
         if self.align_streams:
