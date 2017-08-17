@@ -250,6 +250,9 @@ class Realsense_Source(Base_Source):
         depthstream = DepthStream(width=depth_frame_size[0],
                                   height=depth_frame_size[1], fps=depth_fps)
 
+        self.last_color_frame_ts = None
+        self.last_depth_frame_ts = None
+
         self.streams = [colorstream, depthstream]
         if self.align_streams:
             dacstream = DACStream(width=depth_frame_size[0],
@@ -319,12 +322,25 @@ class Realsense_Source(Base_Source):
                 'device_options': self.controls.export_presets()}
 
     def get_frames(self):
-        if self.device and self.device.poll_for_frame() != 0:
-            return ColorFrame(self.device), DepthFrame(self.device)
-        else:
-            max_fps = max([s.fps for s in self.streams])
-            time.sleep(0.5/max_fps)
-            return None, None
+        if self.device:
+            self.device.wait_for_frames()
+
+            last_color_frame_ts = self.device.get_frame_timestamp(self.streams[0].stream)
+            if self.last_color_frame_ts != last_color_frame_ts:
+                self.last_color_frame_ts = last_color_frame_ts
+                color = ColorFrame(self.device)
+            else:
+                color = None
+
+            last_depth_frame_ts = self.device.get_frame_timestamp(self.streams[1].stream)
+            if self.last_depth_frame_ts != last_depth_frame_ts:
+                self.last_depth_frame_ts = last_depth_frame_ts
+                depth = DepthFrame(self.device)
+            else:
+                depth = None
+
+            return color, depth
+        return None, None
 
     def recent_events(self, events):
         try:
@@ -336,17 +352,17 @@ class Realsense_Source(Base_Source):
         except pyrs.RealsenseError as err:
             self._recent_frame = None
             self._recent_depth_frame = None
-            # act according to err.function
-            # self._restart_logic()
         else:
+            current_time = self.g_pool.get_timestamp()
             if color_frame and depth_frame:
-                color_frame.timestamp = self.g_pool.get_timestamp()
-                depth_frame.timestamp = color_frame.timestamp
+                color_frame.timestamp = current_time
                 self._recent_frame = color_frame
-                self._recent_depth_frame = depth_frame
                 events['frame'] = color_frame
+
+            if depth_frame:
+                depth_frame.timestamp = current_time
+                self._recent_depth_frame = depth_frame
                 events['depth_frame'] = depth_frame
-                self._restart_in = 3
 
                 if self.depth_video_writer is not None:
                     self.depth_video_writer.write_video_frame(depth_frame)
