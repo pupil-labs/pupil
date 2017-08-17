@@ -295,7 +295,7 @@ class Recorder(Plugin):
     def recent_events(self,events):
         if self.running:
             for key, data in events.items():
-                if key not in ('dt', 'frame'):
+                if key not in ('dt', 'frame', 'depth_frame'):
                     try:
                         self.data[key] += data
                     except KeyError:

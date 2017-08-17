@@ -73,7 +73,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # display
     import glfw
     from pyglui import ui, graph, cygl, __version__ as pyglui_version
-    assert pyglui_version >= '1.6'
+    assert pyglui_version >= '1.7'
     from pyglui.cygl.utils import Named_Texture
     import gl_utils
 
@@ -109,7 +109,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from log_history import Log_History
     from frame_publisher import Frame_Publisher
     from blink_detection import Blink_Detection
-    from video_capture import source_classes, manager_classes,Base_Manager
+    from video_capture import source_classes, manager_classes, Base_Manager
     from pupil_data_relay import Pupil_Data_Relay
     from remote_recorder import Remote_Recorder
     from audio_capture import Audio_Capture
@@ -484,6 +484,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         del events['gaze_positions']  # sent earlier
         if 'frame' in events:
             del events['frame']  # send explicity with frame publisher
+        if 'depth_frame' in events:
+            del events['depth_frame']
         if 'audio_packets' in events:
             del events['audio_packets']
         del events['dt']  # no need to send this
