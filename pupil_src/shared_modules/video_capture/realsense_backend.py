@@ -28,7 +28,7 @@ import cython_methods
 import numpy as np
 
 # check versions for our own depedencies as they are fast-changing
-assert VersionFormat(pyrs.__version__) >= VersionFormat('2.1')
+assert VersionFormat(pyrs.__version__) >= VersionFormat('2.2')
 
 # logging
 logging.getLogger('pyrealsense').setLevel(logging.ERROR + 1)
@@ -328,11 +328,13 @@ class Realsense_Source(Base_Source):
     def get_frames(self):
         if self.device:
             self.device.wait_for_frames()
+            current_time = self.g_pool.get_timestamp()
 
             last_color_frame_ts = self.device.get_frame_timestamp(self.streams[0].stream)
             if self.last_color_frame_ts != last_color_frame_ts:
                 self.last_color_frame_ts = last_color_frame_ts
                 color = ColorFrame(self.device)
+                color.timestamp = current_time
             else:
                 color = None
 
@@ -340,6 +342,7 @@ class Realsense_Source(Base_Source):
             if self.last_depth_frame_ts != last_depth_frame_ts:
                 self.last_depth_frame_ts = last_depth_frame_ts
                 depth = DepthFrame(self.device)
+                depth.timestamp = current_time
             else:
                 depth = None
 
@@ -357,14 +360,11 @@ class Realsense_Source(Base_Source):
             self._recent_frame = None
             self._recent_depth_frame = None
         else:
-            current_time = self.g_pool.get_timestamp()
             if color_frame and depth_frame:
-                color_frame.timestamp = current_time
                 self._recent_frame = color_frame
                 events['frame'] = color_frame
 
             if depth_frame:
-                depth_frame.timestamp = current_time
                 self._recent_depth_frame = depth_frame
                 events['depth_frame'] = depth_frame
 
