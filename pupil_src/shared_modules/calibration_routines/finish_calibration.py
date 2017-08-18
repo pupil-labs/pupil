@@ -164,7 +164,7 @@ def calibrate_3d_monocular(g_pool, matched_monocular_data):
     world = {"observations": ref_dir,
              "translation": np.dot(initial_R, -hardcoded_translation),
              "rotation": initial_rotation,
-             'fix': ['translation']}
+             'fix': []}
 
     initial_observers = [eye, world]
     initial_points = np.array(gaze_dir)*500
