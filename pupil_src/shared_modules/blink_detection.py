@@ -10,8 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from plugin import Plugin
-from pyglui import ui
-from pyglui.cygl.utils import draw_points_norm, RGBA
+from pyglui import ui, cygl
 from collections import deque
 import numpy as np
 import logging
@@ -110,8 +109,10 @@ class Blink_Detection(Plugin):
 
     def gl_display(self):
         if self._recent_blink and self.visualize:
-            color = RGBA(1., 0., 0., 1.) if self._recent_blink['type'] == 'onset' else RGBA(0., 1., 0., 1.)
-            draw_points_norm([(0.1, 0.1)], size=50*self._recent_blink['confidence'], color=color)
+            if self._recent_blink['type'] == 'onset':
+                cygl.utils.push_ortho(1,1)
+                cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8), alpha=self._recent_blink['confidence']*0.5)
+                cygl.utils.pop_ortho()
 
     def get_init_dict(self):
         return {'history_length': self.history_length, 'visualize': self.visualize,
