@@ -19,7 +19,7 @@ import math
 
 
 class Calibration_Visualizer(Visualizer):
-	def __init__(self, g_pool, world_camera_intrinsics , cal_ref_points_3d, cal_observed_points_3d, eye_camera_to_world_matrix0 , cal_gaze_points0_3d, eye_camera_to_world_matrix1 = np.eye(4) , cal_gaze_points1_3d = [],  run_independently = False , name = "Calibration Visualizer" ):
+	def __init__(self, g_pool, cal_ref_points_3d, cal_observed_points_3d, eye_camera_to_world_matrix0 , cal_gaze_points0_3d, eye_camera_to_world_matrix1 = np.eye(4) , cal_gaze_points1_3d = [],  run_independently = False , name = "Calibration Visualizer" ):
 		super().__init__( g_pool,name,  run_independently)
 
 		self.image_width = 640 # right values are assigned in update
@@ -34,10 +34,10 @@ class Calibration_Visualizer(Visualizer):
 		self.cal_gaze_points0_3d = cal_gaze_points0_3d
 		self.cal_gaze_points1_3d = cal_gaze_points1_3d
 
-		if world_camera_intrinsics:
-			self.world_camera_width = world_camera_intrinsics['resolution'][0]
-			self.world_camera_height = world_camera_intrinsics['resolution'][1]
-			self.world_camera_focal = (world_camera_intrinsics['camera_matrix'][0][0] +  world_camera_intrinsics['camera_matrix'][1][1] ) / 2.0
+		if g_pool.capture.intrinsics:
+			self.world_camera_width = g_pool.capture.intrinsics.resolution[0]
+			self.world_camera_height = g_pool.capture.intrinsics.resolution[1]
+			self.world_camera_focal = (g_pool.capture.intrinsics.K[0][0] +  g_pool.capture.intrinsics.K[1][1] ) / 2.0
 		else:
 			self.world_camera_width = 0
 			self.world_camera_height = 0

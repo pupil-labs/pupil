@@ -14,6 +14,7 @@ import logging
 import uvc
 from version_utils import VersionFormat
 from .base_backend import InitialisationError, Base_Source, Base_Manager
+from camera_models import load_intrinsics
 
 # check versions for our own depedencies as they are fast-changing
 assert VersionFormat(uvc.__version__) >= VersionFormat('0.11')
@@ -245,6 +246,8 @@ class UVC_Source(Base_Source):
             logger.warning("%s resolution capture mode not available. Selected {}.".format(new_size, size))
         self.uvc_capture.frame_size = size
         self.frame_size_backup = size
+
+        self.intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
     @property
     def frame_rate(self):

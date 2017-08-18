@@ -32,8 +32,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from surface_tracker import Surface_Tracker
-from square_marker_detect import draw_markers,m_marker_to_screen
-from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
+from square_marker_detect import draw_markers, m_marker_to_screen
 from offline_reference_surface import Offline_Reference_Surface
 
 import multiprocessing
@@ -59,15 +58,12 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         self.order = .2
         self.marker_cache_version = 2
         self.min_marker_perimeter_cacher = 20  #find even super small markers. The surface locater will filter using min_marker_perimeter
-        if g_pool.app == 'capture':
-           raise Exception('For Player only.')
 
         self.load_marker_cache()
         self.init_marker_cacher()
         for s in self.surfaces:
-            s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
+            s.init_cache(self.cache,self.min_marker_perimeter,self.min_id_confidence)
         self.recalculate()
-
 
     def load_marker_cache(self):
         #check if marker cache is available from last session
@@ -97,10 +93,10 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
         if self.surface_definitions.get('offline_square_marker_surfaces',[]) != []:
             logger.debug("Found ref surfaces defined or copied in previous session.")
-            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('offline_square_marker_surfaces',[])]
+            self.surfaces = [Offline_Reference_Surface(self.g_pool, saved_definition=d) for d in self.surface_definitions.get('offline_square_marker_surfaces',[])]
         elif self.surface_definitions.get('realtime_square_marker_surfaces',[]) != []:
             logger.debug("Did not find ref surfaces def created or used by the user in player from earlier session. Loading surfaces defined during capture.")
-            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[])]
+            self.surfaces = [Offline_Reference_Surface(self.g_pool, saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[])]
         else:
             logger.debug("No surface defs found. Please define using GUI.")
             self.surfaces = []
@@ -236,7 +232,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         self.update_marker_cache()
         # self.markers = [m for m in self.cache[frame.index] if m['perimeter'>=self.min_marker_perimeter]
         self.markers = self.cache[frame.index]
-        if self.markers == False:
+        if self.markers is False:
             self.markers = []
             self.seek_marker_cacher(frame.index) # tell precacher that it better have every thing from here on analyzed
 
@@ -245,7 +241,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         # locate surfaces
         for s in self.surfaces:
             if not s.locate_from_cache(frame.index):
-                s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
+                s.locate(self.markers,self.min_marker_perimeter,self.min_id_confidence)
             if s.detected:
                 events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
 
@@ -266,7 +262,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                 # update srf with no or invald cache:
                 for s in self.surfaces:
                     if s.cache == None:
-                        s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
+                        s.init_cache(self.cache,self.min_marker_perimeter,self.min_id_confidence)
                         self.notify_all({'subject':'surfaces_changed','delay':1})
 
 
@@ -285,7 +281,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
     def init_marker_cacher(self):
         from marker_detector_cacher import fill_cache
-        visited_list = [False if x == False else True for x in self.cache]
+        visited_list = [False if x is False else True for x in self.cache]
         video_file_path =  self.g_pool.capture.source_path
         timestamps = self.g_pool.capture.timestamps
         self.cache_queue = mp.Queue()
@@ -299,8 +295,9 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             idx,c_m = self.cache_queue.get()
             self.cache.update(idx,c_m)
             for s in self.surfaces:
-                s.update_cache(self.cache,camera_calibration=self.camera_calibration,min_marker_perimeter=self.min_marker_perimeter,min_id_confidence=self.min_id_confidence,idx=idx)
-            if self.cacher_run.value == False:
+                s.update_cache(self.cache, min_marker_perimeter=self.min_marker_perimeter,
+                               min_id_confidence=self.min_id_confidence, idx=idx)
+            if self.cacher_run.value is False:
                 self.recalculate()
 
     def seek_marker_cacher(self,idx):
