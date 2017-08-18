@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from plugin import Plugin
-from pyglui import ui
+from pyglui import ui, cygl
 from collections import deque
 import numpy as np
 import logging
@@ -24,20 +24,23 @@ class Blink_Detection(Plugin):
     """
     order = .8
 
-    def __init__(self, g_pool, history_length=0.2, onset_confidence_threshold=0.5, offset_confidence_threshold=0.5):
+    def __init__(self, g_pool, history_length=0.2, onset_confidence_threshold=0.5, offset_confidence_threshold=0.5, visualize=True):
         super(Blink_Detection, self).__init__(g_pool)
+        self.visualize = visualize
         self.history_length = history_length  # unit: seconds
         self.onset_confidence_threshold = onset_confidence_threshold
         self.offset_confidence_threshold = offset_confidence_threshold
 
         self.history = deque()
         self.menu = None
+        self._recent_blink = None
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Blink Detector')
         self.g_pool.sidebar.append(self.menu)
         self.menu.append(ui.Button('Close', self.close))
         self.menu.append(ui.Info_Text('This plugin detects blink on- and offsets based on confidence drops.'))
+        self.menu.append(ui.Switch('visualize', self, label='Visualize'))
         self.menu.append(ui.Slider('history_length', self,
                                    label='Filter length [seconds]',
                                    min=0.1, max=.5, step=.05))
@@ -61,6 +64,7 @@ class Blink_Detection(Plugin):
 
     def recent_events(self, events={}):
         events['blinks'] = []
+        self._recent_blink = None
         self.history.extend(events.get('pupil_positions', []))
 
         try:  # use newest gaze point to determine age threshold
@@ -101,8 +105,16 @@ class Blink_Detection(Plugin):
             'timestamp': self.history[len(self.history)//2]['timestamp'],
         }
         events['blinks'].append(blink_entry)
+        self._recent_blink = blink_entry
+
+    def gl_display(self):
+        if self._recent_blink and self.visualize:
+            if self._recent_blink['type'] == 'onset':
+                cygl.utils.push_ortho(1,1)
+                cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8), alpha=self._recent_blink['confidence']*0.5)
+                cygl.utils.pop_ortho()
 
     def get_init_dict(self):
-        return {'history_length': self.history_length,
+        return {'history_length': self.history_length, 'visualize': self.visualize,
                 'onset_confidence_threshold': self.onset_confidence_threshold,
                 'offset_confidence_threshold': self.offset_confidence_threshold}
