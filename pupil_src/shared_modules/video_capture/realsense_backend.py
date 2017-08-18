@@ -28,7 +28,7 @@ import cython_methods
 import numpy as np
 
 # check versions for our own depedencies as they are fast-changing
-assert VersionFormat(pyrs.__version__) >= VersionFormat('2.1')
+assert VersionFormat(pyrs.__version__) >= VersionFormat('2.2')
 
 # logging
 logging.getLogger('pyrealsense').setLevel(logging.ERROR + 1)
