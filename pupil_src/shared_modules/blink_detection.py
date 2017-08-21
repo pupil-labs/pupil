@@ -103,6 +103,7 @@ class Blink_Detection(Plugin):
             'confidence': confidence,
             'base_data': list(self.history),
             'timestamp': self.history[len(self.history)//2]['timestamp'],
+            'record': True
         }
         events['blinks'].append(blink_entry)
         self._recent_blink = blink_entry
