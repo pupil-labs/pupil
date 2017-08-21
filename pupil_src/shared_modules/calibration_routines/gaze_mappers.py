@@ -35,12 +35,19 @@ class Gaze_Mapping_Plugin(Plugin):
     '''base class for all gaze mapping routines'''
     uniqueness = 'by_base_class'
     order = .1
-    def __init__(self,g_pool):
+
+    def __init__(self, g_pool):
         super().__init__(g_pool)
         self.g_pool.active_gaze_mapping_plugin = self
 
     def on_pupil_datum(self, p):
         raise NotImplementedError()
+
+    def map_batch(self, pupil_list):
+        results = []
+        for p in pupil_list:
+            results.extend(self.on_pupil_datum(p))
+        return results
 
 
 class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
@@ -70,8 +77,22 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
         self.temportal_cutoff = 0.3
         self.sample_cutoff = 10
 
+    def map_batch(self, pupil_list):
+        current_caches = self._caches
+        self._caches = (deque(), deque())
+        results = []
+        for p in pupil_list:
+            results.extend(self.on_pupil_datum(p))
+
+        # clear cache
+        while self._caches[0] or self._caches[1]:
+            results.extend(self.on_pupil_datum(None))
+
+        self._caches = current_caches
+        return results
+
     def on_pupil_datum(self, p):
-        if p['confidence'] >= self.min_pupil_confidence:
+        if p and p['confidence'] >= self.min_pupil_confidence:
             self._caches[p['id']].append(p)
 
         if self._caches[0] and self._caches[1]:
