@@ -20,7 +20,7 @@ def build_cpp_extension():
     install_loc = os.path.split(os.path.split(src_loc)[0])[0]
     cwd = os.getcwd()
     os.chdir(src_loc)
-    logger.info('Building extention modules...')
+    logger.info('Building extension modules...')
     build_cmd = [sys.executable, 'setup.py', 'install', '--install-lib={}'.format(install_loc)]
     ret = sp.check_output(build_cmd).decode(sys.stdout.encoding)
     logger.debug('Build log:\n{}'.format(ret))
