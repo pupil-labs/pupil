@@ -208,6 +208,7 @@ class Realsense_Source(Base_Source):
         color_frame_size = tuple(color_frame_size)
         depth_frame_size = tuple(depth_frame_size)
 
+        self.streams = [ColorStream(), DepthStream()]
         self.last_color_frame_ts = None
         self.last_depth_frame_ts = None
         self._recent_frame = None
@@ -226,7 +227,6 @@ class Realsense_Source(Base_Source):
             device_id = 0
 
         # use default streams to filter modes by rs_stream and rs_format
-        self.streams = [ColorStream(), DepthStream()]
         self._available_modes = self._enumerate_formats(device_id)
 
         # make sure that given frame sizes and rates are available
