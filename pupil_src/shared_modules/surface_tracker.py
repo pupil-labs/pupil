@@ -172,7 +172,7 @@ class Surface_Tracker(Plugin):
         self.menu.append(ui.Switch('invert_image',self,label='Use inverted markers'))
         self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=10,max=100))
         self.menu.append(ui.Switch('locate_3d',self,label='3D localization'))
-        self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show Markers and Surfaces','Show marker IDs'] ))
+        self.menu.append(ui.Selector('mode', self, label="Mode", selection=['Show Markers and Surfaces', 'Show marker IDs', 'Show Heatmaps']))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
 
         for s in self.surfaces:
@@ -182,6 +182,7 @@ class Surface_Tracker(Plugin):
             s_menu.append(ui.Text_Input('name',s))
             s_menu.append(ui.Text_Input('x', s.real_world_size, label='X size'))
             s_menu.append(ui.Text_Input('y', s.real_world_size, label='Y size'))
+            s_menu.append(ui.Text_Input('gaze_history_length', s, label='Gaze History Length [seconds]'))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
@@ -220,6 +221,7 @@ class Surface_Tracker(Plugin):
             s.locate(self.markers,self.min_marker_perimeter,self.min_id_confidence, self.locate_3d)
             if s.detected:
                 s.gaze_on_srf = s.map_data_to_surface(events.get('gaze_positions',[]),s.m_from_screen)
+                s.update_gaze_history()
             else:
                 s.gaze_on_srf =[]
 
@@ -245,15 +247,8 @@ class Surface_Tracker(Plugin):
                         new_pos = s.img_to_ref_surface(np.array(pos))
                         s.move_vertex(v_idx,new_pos)
 
-
-
-
-
-
-
     def get_init_dict(self):
         return {'mode':self.mode,'min_marker_perimeter':self.min_marker_perimeter,'invert_image':self.invert_image,'robust_detection':self.robust_detection}
-
 
     def gl_display(self):
         """
@@ -290,12 +285,17 @@ class Surface_Tracker(Plugin):
                 draw_points(inc,size=20,color=RGBA(0.5,1.,0.5,.8))
                 self.marker_edit_surface.gl_draw_frame(self.img_shape,color=(0.0,0.9,0.6,1.0),highlight=True,marker_mode=True)
 
+        elif self.mode == 'Show Heatmaps':
+            for s in self.surfaces:
+                if self.g_pool.app != 'player':
+                       s.generate_heatmap()
+                s.gl_display_heatmap()
+
         for s in self.surfaces:
             if self.locate_3d:
                 s.gl_display_in_window_3d(self.g_pool.image_tex)
             else:
                 s.gl_display_in_window(self.g_pool.image_tex)
-
 
     def cleanup(self):
         """ called when the plugin gets terminated.
