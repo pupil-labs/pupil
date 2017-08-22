@@ -65,7 +65,6 @@ class Single_Marker_Calibration(Calibration_Plugin):
         self._window = None
 
         self.menu = None
-        self.button = None
 
         self.fullscreen = fullscreen
         self.clicks_to_close = 5
@@ -99,9 +98,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
         self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
 
-        self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
-        self.button.on_color[:] = (.3,.2,1.,.9)
-        self.g_pool.quickbar.insert(0,self.button)
+        super().init_gui()
 
 
     def deinit_gui(self):
@@ -109,23 +106,22 @@ class Single_Marker_Calibration(Calibration_Plugin):
             self.g_pool.calibration_menu.remove(self.menu)
             self.g_pool.calibration_menu.remove(self.info)
             self.menu = None
-        if self.button:
-            self.g_pool.quickbar.remove(self.button)
-            self.button = None
+        super().deinit_gui()
 
 
     def start(self):
         if not self.g_pool.capture.online:
             logger.error("Calibration required world capture video input.")
             return
-        audio.say("Starting Calibration")
-        logger.info("Starting Calibration")
+        super().start()
+        audio.say("Starting {}".format(self.mode_pretty))
+        logger.info("Starting {}".format(self.mode_pretty))
 
         self.active = True
         self.ref_list = []
         self.pupil_list = []
         self.clicks_to_close = 5
-        self.open_window("Calibration")
+        self.open_window(self.mode_pretty)
 
     def open_window(self, title='new_window'):
         if not self._window:
@@ -171,14 +167,18 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def stop(self):
         # TODO: redundancy between all gaze mappers -> might be moved to parent class
-        audio.say("Stopping Calibration")
-        logger.info("Stopping Calibration")
+        audio.say("Stopping  {}".format(self.mode_pretty))
+        logger.info('Stopping  {}'.format(self.mode_pretty))
         self.smooth_pos = 0,0
         self.counter = 0
         self.close_window()
         self.active = False
         self.button.status_text = ''
-        finish_calibration(self.g_pool,self.pupil_list,self.ref_list)
+        if self.mode == 'calibration':
+            finish_calibration(self.g_pool, self.pupil_list, self.ref_list)
+        elif self.mode == 'accuracy_test':
+            self.finish_accuracy_test(self.pupil_list, self.ref_list)
+        super().stop()
 
 
     def close_window(self):

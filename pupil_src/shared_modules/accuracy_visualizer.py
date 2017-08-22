@@ -38,6 +38,8 @@ class Accuracy_Visualizer(Plugin):
         self.accuracy = None
         self.precision = None
         self.error_lines = None
+        # .5 degrees, used to remove outliers from precision calculation
+        self.succession_threshold = np.cos(np.deg2rad(.5))
         self._outlier_threshold = outlier_threshold  # in degrees
 
     def init_gui(self):
@@ -94,7 +96,7 @@ class Accuracy_Visualizer(Plugin):
                          'delay': .5})
 
     def on_notify(self, notification):
-        if notification['subject'] == 'calibration.calibration_data':
+        if notification['subject'] in ('calibration.calibration_data', 'accuracy_test.data'):
             self.recent_input = notification['pupil_list']
             self.recent_labels = notification['ref_list']
             self.recalculate()
@@ -149,14 +151,18 @@ class Accuracy_Visualizer(Plugin):
         # of the angular distance (in degrees of visual angle)
         # between successive samples during a fixation
         undistorted_3d.shape = -1, 6  # shape: n x 6
-        succesive_distances_gaze = sp.distance.pdist(undistorted_3d[:-1, :3] - undistorted_3d[1:, :3])
-        succesive_distances_ref = sp.distance.pdist(undistorted_3d[:-1, 3:] - undistorted_3d[1:, 3:])
+        succesive_distances_gaze = np.einsum('ij,ij->i', undistorted_3d[:-1, :3], undistorted_3d[1:, :3])
+        succesive_distances_ref = np.einsum('ij,ij->i', undistorted_3d[:-1, 3:], undistorted_3d[1:, 3:])
+
         # if the ref distance is to big we must have moved to a new fixation or there is headmovement,
         # if the gaze dis is to big we can assume human error
         # both times gaze data is not valid for this mesurement
-        succesive_distances = succesive_distances_gaze[np.logical_and(succesive_distances_gaze < 1., succesive_distances_ref < .1)]
-        self.precision = np.sqrt(np.mean(succesive_distances ** 2))
-        logger.info("Angular precision: {}".format(self.precision))
+        selected_indices = np.logical_and(succesive_distances_gaze > self.succession_threshold,
+                                          succesive_distances_ref > self.succession_threshold)
+        succesive_distances = succesive_distances_gaze[selected_indices]
+        num_used, num_total = succesive_distances.shape[0], succesive_distances_gaze.shape[0]
+        self.precision = np.sqrt(np.mean(np.arccos(succesive_distances) ** 2))
+        logger.info("Angular precision: {}. Used {} of {} samples.".format(self.precision, num_used, num_total))
 
     def gl_display(self):
         if self.error_lines is not None:

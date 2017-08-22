@@ -84,26 +84,22 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
         for p in pupil_list:
             results.extend(self.on_pupil_datum(p))
 
-        # clear cache
-        while self._caches[0] or self._caches[1]:
-            results.extend(self.on_pupil_datum(None))
-
         self._caches = current_caches
         return results
 
     def on_pupil_datum(self, p):
-        if p and p['confidence'] >= self.min_pupil_confidence:
+        if p['confidence'] >= self.min_pupil_confidence:
             self._caches[p['id']].append(p)
 
         if self._caches[0] and self._caches[1]:
             # we have binocular data
             if self._caches[0][0]['timestamp'] < self._caches[1][0]['timestamp']:
-                p0 = self._caches[0].popLeft(0)
+                p0 = self._caches[0].popleft()
                 p1 = self._caches[1][0]
                 older_pt = p0
             else:
                 p0 = self._caches[0][0]
-                p1 = self._caches[1].popLeft(0)
+                p1 = self._caches[1].popleft()
                 older_pt = p1
 
             if abs(p0['timestamp'] - p1['timestamp']) < self.temportal_cutoff:
@@ -112,10 +108,10 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
                 gaze_datum = self._map_monocular(older_pt)
 
         elif len(self._caches[0]) > self.sample_cutoff:
-            p = self._caches[0].popLeft(0)
+            p = self._caches[0].popleft()
             gaze_datum = self._map_monocular(p)
         elif len(self._caches[1]) > self.sample_cutoff:
-            p = self._caches[1].popLeft(0)
+            p = self._caches[1].popleft()
             gaze_datum = self._map_monocular(p)
         else:
             gaze_datum = None
