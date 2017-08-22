@@ -484,23 +484,29 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                 f_width, f_height = g_pool.capture.frame_size
                 if (g_pool.u_r.array_shape[0], g_pool.u_r.array_shape[1]) != (f_height, f_width):
                     g_pool.u_r = UIRoi((f_height, f_width))
-                if should_publish_frames and frame.jpeg_buffer:
-                    if   frame_publish_format == "jpeg":
-                        data = frame.jpeg_buffer
-                    elif frame_publish_format == "yuv":
-                        data = frame.yuv_buffer
-                    elif frame_publish_format == "bgr":
-                        data = frame.bgr
-                    elif frame_publish_format == "gray":
-                        data = frame.gray
-                    pupil_socket.send('frame.eye.%s'%eye_id,{
-                        'width': frame.width,
-                        'height': frame.width,
-                        'index': frame.index,
-                        'timestamp': frame.timestamp,
-                        'format': frame_publish_format,
-                        '__raw_data__': [data]
-                    })
+                if should_publish_frames:
+                    try:
+                        if frame_publish_format == "jpeg":
+                            data = frame.jpeg_buffer
+                        elif frame_publish_format == "yuv":
+                            data = frame.yuv_buffer
+                        elif frame_publish_format == "bgr":
+                            data = frame.bgr
+                        elif frame_publish_format == "gray":
+                            data = frame.gray
+                        else:
+                            raise AttributeError()
+                    except AttributeError:
+                        pass
+                    else:
+                        pupil_socket.send('frame.eye.%s'%eye_id,{
+                            'width': frame.width,
+                            'height': frame.height,
+                            'index': frame.index,
+                            'timestamp': frame.timestamp,
+                            'format': frame_publish_format,
+                            '__raw_data__': [data]
+                        })
 
                 t = frame.timestamp
                 dt, ts = t - ts, t

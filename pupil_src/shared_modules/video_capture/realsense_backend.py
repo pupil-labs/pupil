@@ -191,6 +191,8 @@ class Realsense_Source(Base_Source):
                  align_streams=False, preview_depth=False,
                  device_options=(), record_depth=True):
         super().__init__(g_pool)
+        self.color_frame_index = 0
+        self.depth_frame_index = 0
         self.device = None
         self.service = pyrs.Service()
         self.align_streams = align_streams
@@ -335,6 +337,8 @@ class Realsense_Source(Base_Source):
                 self.last_color_frame_ts = last_color_frame_ts
                 color = ColorFrame(self.device)
                 color.timestamp = current_time
+                color.index = self.color_frame_index
+                self.color_frame_index += 1
             else:
                 color = None
 
@@ -343,6 +347,8 @@ class Realsense_Source(Base_Source):
                 self.last_depth_frame_ts = last_depth_frame_ts
                 depth = DepthFrame(self.device)
                 depth.timestamp = current_time
+                depth.index = self.depth_frame_index
+                self.depth_frame_index += 1
             else:
                 depth = None
 
