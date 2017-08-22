@@ -9,36 +9,39 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+from platform import system
+from time import time
+from collections import deque
+
 import numpy as np
 import cv2
-from platform import system
-from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup,cvmat_to_glmat,make_coord_system_norm_based
-from gl_utils.trackball import Trackball
+
 from glfw import *
 from OpenGL.GL import *
-
-from pyglui.cygl.utils import RGBA
-from pyglui.cygl.utils import draw_polyline_norm,draw_polyline,draw_points_norm,draw_points
 from OpenGL.GL import GL_LINES
-from methods import GetAnglesPolyline,normalize,denormalize
 
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-#ctypes import for atb_vars:
-from time import time
+from pyglui.cygl.utils import RGBA, draw_polyline_norm, draw_polyline, draw_points_norm, draw_points, Named_Texture
+
+from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup, cvmat_to_glmat, make_coord_system_norm_based
+from gl_utils.trackball import Trackball
+
+from methods import GetAnglesPolyline, normalize, denormalize
 
 import logging
 logger = logging.getLogger(__name__)
-
 marker_corners_norm = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
+
+
 def m_verts_to_screen(verts):
-    #verts need to be sorted counter-clockwise stating at bottom left
-    return cv2.getPerspectiveTransform(marker_corners_norm,verts)
+    # verts need to be sorted counter-clockwise stating at bottom left
+    return cv2.getPerspectiveTransform(marker_corners_norm, verts)
+
 
 def m_verts_from_screen(verts):
-    #verts need to be sorted counter-clockwise stating at bottom left
-    return cv2.getPerspectiveTransform(verts,marker_corners_norm)
-
+    # verts need to be sorted counter-clockwise stating at bottom left
+    return cv2.getPerspectiveTransform(verts, marker_corners_norm)
 
 
 class Reference_Surface(object):
@@ -67,7 +70,7 @@ class Reference_Surface(object):
     The more markers we find the more accurate the homography.
 
     """
-    def __init__(self, g_pool, name="unnamed",saved_definition=None):
+    def __init__(self, g_pool, name="unnamed", saved_definition=None):
         self.g_pool = g_pool
         self.name = name
         self.markers = {}
@@ -82,21 +85,26 @@ class Reference_Surface(object):
         self.use_distortion = True
 
         self.uid = str(time())
-        self.real_world_size = {'x':1.,'y':1.}
+        self.real_world_size = {'x': 1., 'y': 1.}
 
-        ###window and gui vars
+        self.heatmap = np.ones(0)
+        self.heatmap_detail = .2
+        self.heatmap_texture = Named_Texture()
+        self.gaze_history = deque()
+        self.gaze_history_length = 1.0  # unit: seconds
+
+        # window and gui vars
         self._window = None
         self.fullscreen = False
         self.window_should_open = False
         self.window_should_close = False
 
-        self.gaze_on_srf = [] # points on surface for realtime feedback display
+        self.gaze_on_srf = []  # points on surface for realtime feedback display
 
         self.glfont = fontstash.Context()
-        self.glfont.add_font('opensans',get_opensans_font_path())
+        self.glfont.add_font('opensans', get_opensans_font_path())
         self.glfont.set_size(22)
-        self.glfont.set_color_float((0.2,0.5,0.9,1.0))
-
+        self.glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
 
         self.old_corners_robust = None
         if saved_definition is not None:
@@ -110,34 +118,33 @@ class Reference_Surface(object):
         else:
             self.window_position_default = (0, 0)
 
-
-
     def save_to_dict(self):
         """
         save all markers and name of this surface to a dict.
         """
-        markers = dict([(m_id,m.uv_coords.tolist()) for m_id,m in self.markers.items()])
-        return {'name':self.name,'uid':self.uid,'markers':markers,'real_world_size':self.real_world_size}
+        markers = dict([(m_id, m.uv_coords.tolist()) for m_id, m in self.markers.items()])
+        return {'name': self.name, 'uid': self.uid, 'markers': markers,
+                'real_world_size': self.real_world_size, 'gaze_history_length': self.gaze_history_length}
 
-
-    def load_from_dict(self,d):
+    def load_from_dict(self, d):
         """
         load all markers of this surface to a dict.
         """
         self.name = d['name']
         self.uid = d['uid']
-        self.real_world_size = d.get('real_world_size',{'x':1.,'y':1.})
+        self.gaze_history_length = d.get('gaze_history_length', self.gaze_history_length)
+        self.real_world_size = d.get('real_world_size', {'x': 1., 'y': 1.})
 
         marker_dict = d['markers']
-        for m_id,uv_coords in marker_dict.items():
+        for m_id, uv_coords in marker_dict.items():
             self.markers[m_id] = Support_Marker(m_id)
             self.markers[m_id].load_uv_coords(np.asarray(uv_coords))
 
-        #flag this surface as fully defined
+        # flag this surface as fully defined
         self.defined = True
         self.build_up_status = self.required_build_up
 
-    def build_correspondance(self, visible_markers,min_marker_perimeter,min_id_confidence):
+    def build_correspondance(self, visible_markers, min_marker_perimeter, min_id_confidence):
         """
         - use all visible markers
         - fit a convex quadrangle around it
@@ -145,7 +152,7 @@ class Reference_Surface(object):
         - map all markers into surface space
         - build up list of found markers and their uv coords
         """
-        usable_markers = [m for m in visible_markers if m['perimeter']>=min_marker_perimeter]
+        usable_markers = [m for m in visible_markers if m['perimeter'] >= min_marker_perimeter]
         all_verts = [m['verts'] for m in usable_markers]
         if not all_verts:
             return
@@ -217,6 +224,63 @@ class Reference_Surface(object):
             self.on_finish_define()
             del self.on_finish_define
 
+    def update_gaze_history(self):
+        self.gaze_history.extend(self.gaze_on_srf)
+        try:  # use newest gaze point to determine age threshold
+            age_threshold = self.gaze_history[-1]['timestamp'] - self.gaze_history_length
+            while self.gaze_history[1]['timestamp'] < age_threshold:
+                self.gaze_history.popleft()  # remove outdated gaze points
+        except IndexError:
+            pass
+
+    def generate_heatmap(self):
+        data = [gp['norm_pos'] for gp in self.gaze_history if gp['confidence'] > 0.6]
+        self._generate_heatmap(data)
+
+    def _generate_heatmap(self, data):
+        if not data:
+            return
+
+        grid = int(self.real_world_size['x']), int(self.real_world_size['y'])
+
+        xvals, yvals = zip(*((x, 1.-y) for x, y in data))
+        hist, *edges = np.histogram2d(yvals, xvals, bins=grid,
+                                      range=[[0, 1.], [0, 1.]], normed=False)
+        filter_w = int(self.heatmap_detail * grid[0]) // 2 * 2 + 1
+        filter_h = int(self.heatmap_detail * grid[1]) // 2 * 2 + 1
+        hist = cv2.GaussianBlur(hist, (filter_w, filter_h), 0)
+
+        hist_max = hist.max()
+        hist *= (255. / hist_max) if hist_max else 0.
+        hist = hist.astype(np.uint8)
+        c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
+        # reuse allocated memory if possible
+        if self.heatmap.shape != (*grid, 4):
+            self.heatmap = np.ones((*grid, 4), dtype=np.uint8)
+            self.heatmap[:, :, 3] = 125
+        self.heatmap[:, :, :3] = c_map
+        self.heatmap_texture.update_from_ndarray(self.heatmap)
+
+    def gl_display_heatmap(self):
+        if self.detected:
+            m = cvmat_to_glmat(self.m_to_screen)
+
+            glMatrixMode(GL_PROJECTION)
+            glPushMatrix()
+            glLoadIdentity()
+            glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
+
+            glMatrixMode(GL_MODELVIEW)
+            glPushMatrix()
+            # apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
+            glLoadMatrixf(m)
+
+            self.heatmap_texture.draw()
+
+            glMatrixMode(GL_PROJECTION)
+            glPopMatrix()
+            glMatrixMode(GL_MODELVIEW)
+            glPopMatrix()
 
     def locate(self, visible_markers,min_marker_perimeter,min_id_confidence, locate_3d=False,):
         """
@@ -394,7 +458,6 @@ class Reference_Surface(object):
 
         return {'detected':detected,'detected_markers':len(overlap),'m_from_undistored_norm_space':m_from_undistored_norm_space,'m_to_undistored_norm_space':m_to_undistored_norm_space,'m_from_screen':m_from_screen,'m_to_screen':m_to_screen,'camera_pose_3d':camera_pose_3d}
 
-
     def img_to_ref_surface(self,pos):
         #convenience lines to allow 'simple' vectors (x,y) to be used
         shape = pos.shape
@@ -402,7 +465,6 @@ class Reference_Surface(object):
         new_pos = cv2.perspectiveTransform(pos,self.m_from_screen )
         new_pos.shape = shape
         return new_pos
-
 
     def ref_surface_to_img(self,pos):
         #convenience lines to allow 'simple' vectors (x,y) to be used
@@ -412,17 +474,17 @@ class Reference_Surface(object):
         new_pos.shape = shape
         return new_pos
 
-
     @staticmethod
-    def map_datum_to_surface(d,m_from_screen):
-        pos = np.array([d['norm_pos']]).reshape(1,1,2)
-        mapped_pos = cv2.perspectiveTransform(pos , m_from_screen )
+    def map_datum_to_surface(d, m_from_screen):
+        pos = np.array([d['norm_pos']]).reshape(1, 1, 2)
+        mapped_pos = cv2.perspectiveTransform(pos, m_from_screen)
         mapped_pos.shape = (2)
         on_srf = bool((0 <= mapped_pos[0] <= 1) and (0 <= mapped_pos[1] <= 1))
-        return {'topic':d['topic']+"_on_surface",'norm_pos':(mapped_pos[0],mapped_pos[1]),'confidence':d['confidence'],'on_srf':on_srf,'base_data':d }
+        return {'topic': d['topic']+"_on_surface", 'norm_pos': (mapped_pos[0], mapped_pos[1]),
+                'confidence': d['confidence'], 'on_srf': on_srf, 'base_data': d, 'timestamp': d['timestamp']}
 
-    def map_data_to_surface(self,data,m_from_screen):
-        return [self.map_datum_to_surface(d,m_from_screen) for d in data]
+    def map_data_to_surface(self, data, m_from_screen):
+        return [self.map_datum_to_surface(d, m_from_screen) for d in data]
 
     def move_vertex(self,vert_idx,new_pos):
         """

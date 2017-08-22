@@ -318,10 +318,6 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         self.gl_display_cache_bars()
 
         super().gl_display()
-
-        if self.mode == "Show Heatmaps":
-            for s in  self.surfaces:
-                s.gl_display_heatmap()
         if self.mode == "Show Metrics":
             #todo: draw a backdrop to represent the gaze that is not on any surface
             for s in self.surfaces:
