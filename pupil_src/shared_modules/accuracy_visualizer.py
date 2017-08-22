@@ -33,11 +33,12 @@ class Accuracy_Visualizer(Plugin):
     """
     order = .8
 
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, outlier_threshold=5.):
         super().__init__(g_pool)
         self.accuracy = None
         self.precision = None
         self.error_lines = None
+        self._outlier_threshold = outlier_threshold  # in degrees
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Accuracy Test')
@@ -47,11 +48,13 @@ class Accuracy_Visualizer(Plugin):
             self.alive = False
         self.menu.append(ui.Button('Close', close))
 
-        general_help = '''Measure gaze mapping accuracy and precision using a screen
-                          based animation: After having calibrated on the screen run
-                          this test. To compute results set your world cam FOV and
-                          click 'calculate results'.'''.replace("\n", " ").replace("  ", '')
+        general_help = '''Measure gaze mapping accuracy and precision using samples
+                          that were collected during calibration. The outlier threshold
+                          discards samples with high angular errors.'''.replace("\n", " ").replace("  ", '')
         self.menu.append(ui.Info_Text(general_help))
+
+        # self.menu.append(ui.Info_Text(''))
+        self.menu.append(ui.Text_Input('outlier_threshold', self, label='Outlier Threshold [degrees]'))
 
         accuracy_help = '''Accuracy is calculated as the average angular
                         offset (distance) (in degrees of visual angle)
@@ -80,57 +83,80 @@ class Accuracy_Visualizer(Plugin):
     def cleanup(self):
         self.deinit_gui()
 
+    @property
+    def outlier_threshold(self):
+        return self._outlier_threshold
+
+    @outlier_threshold.setter
+    def outlier_threshold(self, value):
+        self._outlier_threshold = value
+        self.notify_all({'subject': 'accuracy_visualizer.outlier_threshold_changed',
+                         'delay': .5})
+
     def on_notify(self, notification):
         if notification['subject'] == 'calibration.calibration_data':
-            input_ = notification['pupil_list']
-            labels = notification['ref_list']
+            self.recent_input = notification['pupil_list']
+            self.recent_labels = notification['ref_list']
+            self.recalculate()
+        elif notification['subject'] == 'accuracy_visualizer.outlier_threshold_changed':
+            self.recalculate()
 
-            width, height = self.g_pool.capture.frame_size
-            prediction = self.g_pool.active_gaze_mapping_plugin.map_batch(input_)
+    def recalculate(self):
+        width, height = self.g_pool.capture.frame_size
+        prediction = self.g_pool.active_gaze_mapping_plugin.map_batch(self.recent_input)
 
-            # reuse closest_matches_monocular to correlate one label to each prediction
-            # correlated['ref']: prediction, correlated['pupil']: label location
-            correlated = closest_matches_monocular(prediction, labels)
-            # [[pred.x, pred.y, label.x, label.y], ...], shape: n x 4
-            locations = np.array([(*e['ref']['norm_pos'], *e['pupil']['norm_pos']) for e in correlated])
-            self.error_lines = locations.reshape(-1, 2).copy()  # 2n x 2
-            locations[:, ::2] *= width
-            locations[:, 1::2] = (1. - locations[:, 1::2]) * height
+        # reuse closest_matches_monocular to correlate one label to each prediction
+        # correlated['ref']: prediction, correlated['pupil']: label location
+        correlated = closest_matches_monocular(prediction, self.recent_labels)
+        # [[pred.x, pred.y, label.x, label.y], ...], shape: n x 4
+        locations = np.array([(*e['ref']['norm_pos'], *e['pupil']['norm_pos']) for e in correlated])
+        self.error_lines = locations.copy()  # n x 4
+        locations[:, ::2] *= width
+        locations[:, 1::2] = (1. - locations[:, 1::2]) * height
 
-            # Accuracy is calculated as the average angular
-            # offset (distance) (in degrees of visual angle)
-            # between fixations locations and the corresponding
-            # locations of the fixation targets.
-            undistorted = self.g_pool.capture.intrinsics.undistortPoints(locations)
-            undistorted.shape = -1, 2
-            # append column with z=1
-            # using idea from https://stackoverflow.com/questions/8486294/how-to-add-an-extra-column-to-an-numpy-array
-            undistorted_3d = np.ones((undistorted.shape[0], 3))  # shape: 2n x 3
-            undistorted_3d[:, :-1] = undistorted
-            # normalize vectors:
-            undistorted_3d /= np.linalg.norm(undistorted_3d, axis=1)[:, np.newaxis]
+        # Accuracy is calculated as the average angular
+        # offset (distance) (in degrees of visual angle)
+        # between fixations locations and the corresponding
+        # locations of the fixation targets.
+        undistorted = self.g_pool.capture.intrinsics.undistortPoints(locations)
+        undistorted.shape = -1, 2
+        # append column with z=1
+        # using idea from https://stackoverflow.com/questions/8486294/how-to-add-an-extra-column-to-an-numpy-array
+        undistorted_3d = np.ones((undistorted.shape[0], 3))  # shape: 2n x 3
+        undistorted_3d[:, :-1] = undistorted
+        # normalize vectors:
+        undistorted_3d /= np.linalg.norm(undistorted_3d, axis=1)[:, np.newaxis]
 
-            # vectors already normalized, therefore this is equivalent to the cosinus of the dot product
-            # np.einsum('ij,ij->i', X, X) equivalent to np.diagonal(X @ X.T) but faster
-            angular_err = np.einsum('ij,ij->i', undistorted_3d[::2, :], undistorted_3d[1::2, :])
-            self.accuracy = np.rad2deg(np.arccos(angular_err.mean()))
-            logger.info('Angular accuracy: {}'.format(self.accuracy))
+        # Cosine distance of A and B: (A @ B) / (||A|| * ||B||)
+        # No need to calculate norms, since A and B are normalized in our case.
+        # np.einsum('ij,ij->i', A, B) equivalent to np.diagonal(A @ B.T) but faster.
+        angular_err = np.einsum('ij,ij->i', undistorted_3d[::2, :], undistorted_3d[1::2, :])
 
-            # lets calculate precision:  (RMS of distance of succesive samples.)
-            # This is a little rough as we do not compensate headmovements in this test.
+        # Good values are close to 1. since cos(0) == 1.
+        # Therefore we look for values greater than cos(outlier_threshold)
+        selected_indices = angular_err > np.cos(np.deg2rad(self.outlier_threshold))
+        selected_samples = angular_err[selected_indices]
+        num_used, num_total = selected_samples.shape[0], angular_err.shape[0]
 
-            # Precision is calculated as the Root Mean Square (RMS)
-            # of the angular distance (in degrees of visual angle)
-            # between successive samples during a fixation
-            undistorted_3d.shape = -1, 6  # shape: n x 6
-            succesive_distances_gaze = sp.distance.pdist(undistorted_3d[:-1, :3] - undistorted_3d[1:, :3])
-            succesive_distances_ref = sp.distance.pdist(undistorted_3d[:-1, 3:] - undistorted_3d[1:, 3:])
-            # if the ref distance is to big we must have moved to a new fixation or there is headmovement,
-            # if the gaze dis is to big we can assume human error
-            # both times gaze data is not valid for this mesurement
-            succesive_distances = succesive_distances_gaze[np.logical_and(succesive_distances_gaze < 1., succesive_distances_ref < .1)]
-            self.precision = np.sqrt(np.mean(succesive_distances ** 2))
-            logger.info("Angular precision: {}".format(self.precision))
+        self.error_lines = self.error_lines[selected_indices].reshape(-1, 2)  # shape: num_used x 2
+        self.accuracy = np.rad2deg(np.arccos(selected_samples.mean()))
+        logger.info('Angular accuracy: {}. Used {} of {} samples.'.format(self.accuracy, num_used, num_total))
+
+        # lets calculate precision:  (RMS of distance of succesive samples.)
+        # This is a little rough as we do not compensate headmovements in this test.
+
+        # Precision is calculated as the Root Mean Square (RMS)
+        # of the angular distance (in degrees of visual angle)
+        # between successive samples during a fixation
+        undistorted_3d.shape = -1, 6  # shape: n x 6
+        succesive_distances_gaze = sp.distance.pdist(undistorted_3d[:-1, :3] - undistorted_3d[1:, :3])
+        succesive_distances_ref = sp.distance.pdist(undistorted_3d[:-1, 3:] - undistorted_3d[1:, 3:])
+        # if the ref distance is to big we must have moved to a new fixation or there is headmovement,
+        # if the gaze dis is to big we can assume human error
+        # both times gaze data is not valid for this mesurement
+        succesive_distances = succesive_distances_gaze[np.logical_and(succesive_distances_gaze < 1., succesive_distances_ref < .1)]
+        self.precision = np.sqrt(np.mean(succesive_distances ** 2))
+        logger.info("Angular precision: {}".format(self.precision))
 
     def gl_display(self):
         if self.error_lines is not None:
@@ -139,4 +165,4 @@ class Accuracy_Visualizer(Plugin):
             draw_points_norm(self.error_lines[0::2], color=RGBA(.5, 0.0, 0.0, .5), size=3)
 
     def get_init_dict(self):
-        return {}
+        return {'outlier_threshold': self.outlier_threshold}
