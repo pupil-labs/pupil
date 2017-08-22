@@ -144,7 +144,7 @@ class Recorder(Plugin):
         self.menu.append(ui.Switch('record_eye', self, on_val=True, off_val=False, label='Record eye'))
         self.button = ui.Thumb('running', self, setter=self.toggle, label='R', hotkey='r')
         self.button.on_color[:] = (1, .0, .0, .8)
-        self.g_pool.quickbar.insert(1, self.button)
+        self.g_pool.quickbar.insert(2, self.button)
 
     def deinit_gui(self):
         if self.menu:

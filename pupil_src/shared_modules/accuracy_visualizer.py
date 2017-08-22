@@ -94,7 +94,7 @@ class Accuracy_Visualizer(Plugin):
                          'delay': .5})
 
     def on_notify(self, notification):
-        if notification['subject'] == 'calibration.calibration_data':
+        if notification['subject'] in ('calibration.calibration_data', 'accuracy_test.data'):
             self.recent_input = notification['pupil_list']
             self.recent_labels = notification['ref_list']
             self.recalculate()
