@@ -9,19 +9,19 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Plugin
+from collections import deque
+
 import cv2
-from . import calibrate
-from methods import project_distort_pts , normalize, spherical_to_cart
-from copy import deepcopy
 import numpy as np
 from pyglui import ui
-import math_helper
-import zmq_tools
-import threading
-from multiprocessing import Process as Thread
 
+import math_helper
+from plugin import Plugin
+from methods import normalize
+
+from . import calibrate
 from . visualizer_calibration import Calibration_Visualizer
+
 
 def _clamp_norm_point(pos):
     '''realistic numbers for norm pos should be in this range.
@@ -30,16 +30,24 @@ def _clamp_norm_point(pos):
     '''
     return min(100.,max(-100.,pos[0])),min(100.,max(-100.,pos[1]))
 
+
 class Gaze_Mapping_Plugin(Plugin):
     '''base class for all gaze mapping routines'''
     uniqueness = 'by_base_class'
     order = .1
-    def __init__(self,g_pool):
+
+    def __init__(self, g_pool):
         super().__init__(g_pool)
         self.g_pool.active_gaze_mapping_plugin = self
 
     def on_pupil_datum(self, p):
         raise NotImplementedError()
+
+    def map_batch(self, pupil_list):
+        results = []
+        for p in pupil_list:
+            results.extend(self.on_pupil_datum(p))
+        return results
 
 
 class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
@@ -58,30 +66,44 @@ class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
         else:
             return []
 
+
 class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
     """Base class to implement the map callback"""
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
         self.min_pupil_confidence = 0.6
-        self._caches = ([],[])
+        self._caches = (deque(), deque())
         self.temportal_cutoff = 0.3
         self.sample_cutoff = 10
 
+    def map_batch(self, pupil_list):
+        current_caches = self._caches
+        self._caches = (deque(), deque())
+        results = []
+        for p in pupil_list:
+            results.extend(self.on_pupil_datum(p))
+
+        # clear cache
+        while self._caches[0] or self._caches[1]:
+            results.extend(self.on_pupil_datum(None))
+
+        self._caches = current_caches
+        return results
+
     def on_pupil_datum(self, p):
-        if p['confidence'] >= self.min_pupil_confidence:
+        if p and p['confidence'] >= self.min_pupil_confidence:
             self._caches[p['id']].append(p)
 
         if self._caches[0] and self._caches[1]:
-            #we have binocular data
-
+            # we have binocular data
             if self._caches[0][0]['timestamp'] < self._caches[1][0]['timestamp']:
-                p0 = self._caches[0].pop(0)
+                p0 = self._caches[0].popLeft(0)
                 p1 = self._caches[1][0]
                 older_pt = p0
             else:
                 p0 = self._caches[0][0]
-                p1 = self._caches[1].pop(0)
+                p1 = self._caches[1].popLeft(0)
                 older_pt = p1
 
             if abs(p0['timestamp'] - p1['timestamp']) < self.temportal_cutoff:
@@ -89,11 +111,11 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
             else:
                 gaze_datum = self._map_monocular(older_pt)
 
-        elif len(self._caches[0])>self.sample_cutoff:
-            p = self._caches[0].pop(0)
+        elif len(self._caches[0]) > self.sample_cutoff:
+            p = self._caches[0].popLeft(0)
             gaze_datum = self._map_monocular(p)
-        elif len(self._caches[1])>self.sample_cutoff:
-            p = self._caches[1].pop(0)
+        elif len(self._caches[1]) > self.sample_cutoff:
+            p = self._caches[1].popLeft(0)
             gaze_datum = self._map_monocular(p)
         else:
             gaze_datum = None
