@@ -21,6 +21,7 @@ from pyrealsense.constants import rs_stream, rs_option
 from version_utils import VersionFormat
 from .base_backend import Base_Source, Base_Manager
 from av_writer import AV_Writer
+from camera_models import Dummy_Camera
 
 import gl_utils
 from pyglui import cygl
@@ -272,6 +273,7 @@ class Realsense_Source(Base_Source):
         self.device = self.service.Device(device_id, streams=self.streams)
 
         self.controls = Realsense_Controls(self.device, device_options)
+        self.intrinsics = Dummy_Camera(color_frame_size, self.name)
 
         self.deinit_gui()
         self.init_gui()

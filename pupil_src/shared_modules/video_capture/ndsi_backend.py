@@ -15,6 +15,7 @@ import logging
 import ndsi
 
 from .base_backend import Base_Source, Base_Manager
+from camera_models import Dummy_Camera
 
 try:
     from ndsi import __version__
@@ -181,6 +182,14 @@ class NDSI_Source(Base_Source):
                 self.sensor.set_control_value('local_capture', True)
             elif 'should_stop' in subject:
                 self.sensor.set_control_value('local_capture', False)
+
+    @property
+    def intrinsics(self):
+        return Dummy_Camera(self.frame_size, self.name)
+
+    @intrinsics.setter
+    def intrinsics(self, value):
+        pass
 
     @property
     def frame_size(self):

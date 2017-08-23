@@ -15,6 +15,7 @@ assert av.__version__ >= '0.2.5'
 
 
 from .base_backend import Base_Source, Base_Manager
+from camera_models import Dummy_Camera
 
 import numpy as np
 from time import time,sleep
@@ -175,6 +176,14 @@ class File_Source(Base_Source):
                     logger.debug('Initialisation required.')
             return run_func
         return decorator
+
+    @property
+    def intrinsics(self):
+        return Dummy_Camera(self.frame_size, self.name)
+
+    @intrinsics.setter
+    def intrinsics(self, value):
+        pass  # TODO: load from file
 
     @property
     def initialised(self):
