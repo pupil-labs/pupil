@@ -186,7 +186,7 @@ class File_Source(Base_Source):
 
     @property
     def intrinsics(self):
-        return self._initialised
+        return self._intrinsics
 
     @property
     def frame_size(self):
