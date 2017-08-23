@@ -21,6 +21,7 @@ from pyrealsense.constants import rs_stream, rs_option
 from version_utils import VersionFormat
 from .base_backend import Base_Source, Base_Manager
 from av_writer import AV_Writer
+from camera_models import load_intrinsics
 
 import gl_utils
 from pyglui import cygl
@@ -272,6 +273,7 @@ class Realsense_Source(Base_Source):
         self.device = self.service.Device(device_id, streams=self.streams)
 
         self.controls = Realsense_Controls(self.device, device_options)
+        self.intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
         self.deinit_gui()
         self.init_gui()
@@ -439,7 +441,7 @@ class Realsense_Source(Base_Source):
                 try:
                     self.device.reset_device_options_to_default(self.controls.keys())
                 except pyrs.RealsenseError as err:
-                    logger.error('Resetting device options failed')
+                    logger.info('Resetting some device options failed')
                     logger.debug('Reason: {}'.format(err))
                 finally:
                     self.controls.refresh()

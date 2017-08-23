@@ -15,6 +15,7 @@ assert av.__version__ >= '0.2.5'
 
 
 from .base_backend import Base_Source, Base_Manager
+from camera_models import load_intrinsics
 
 import numpy as np
 from time import time,sleep
@@ -160,6 +161,9 @@ class File_Source(Base_Source):
         self.pts_rate = f1.pts
         self.seek_to_frame(0)
         self.average_rate = (self.timestamps[-1]-self.timestamps[0])/len(self.timestamps)
+
+        loc, name = os.path.split(os.path.splitext(source_path)[0])
+        self.intrinsics = load_intrinsics(loc, name, self.frame_size)
 
     def ensure_initialisation(fallback_func=None):
         from functools import wraps
