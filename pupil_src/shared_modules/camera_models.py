@@ -86,8 +86,9 @@ def load_intrinsics(directory, cam_name, resolution):
             intrinsics = pre_recorded_calibrations[cam_name][str(resolution)]
         else:
             logger.info("No pre-recorded calibration available")
-            logger.info("Loading dummy calibration")
+            logger.warning("Loading dummy calibration")
             intrinsics = {'cam_type': 'dummy'}
+
 
     if intrinsics['cam_type'] == 'dummy':
         return Dummy_Camera(resolution, cam_name)

@@ -60,7 +60,6 @@ class Base_Source(Plugin):
         super().__init__(g_pool)
         self.g_pool.capture = self
         self._recent_frame = None
-        self.intrinsics = None
 
     def cleanup(self):
         self.deinit_gui()
@@ -155,6 +154,9 @@ class Base_Source(Plugin):
         """
         return True
 
+    @property
+    def intrinsics(self):
+        raise NotImplementedError()
 
 class Base_Manager(Plugin):
     """Abstract base class for source managers.
