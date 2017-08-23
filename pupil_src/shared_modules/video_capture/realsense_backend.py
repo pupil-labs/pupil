@@ -273,7 +273,7 @@ class Realsense_Source(Base_Source):
         self.device = self.service.Device(device_id, streams=self.streams)
 
         self.controls = Realsense_Controls(self.device, device_options)
-        self.intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
+        self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
         self.deinit_gui()
         self.init_gui()
@@ -526,6 +526,10 @@ class Realsense_Source(Base_Source):
 
         self.depth_video_writer.close()
         self.depth_video_writer = None
+
+    @property
+    def intrinsics(self):
+        return self._intrinsics
 
     @property
     def frame_size(self):
