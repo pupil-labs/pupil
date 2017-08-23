@@ -206,11 +206,13 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                 pos = denormalize(pos,g_pool.capture.frame_size )
                 g_pool.u_r.move_vertex(g_pool.u_r.active_pt_idx,pos)
 
-
         def on_scroll(window, x, y):
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
-
+        def on_drop(window, count, paths):
+            paths = [paths[x].decode('utf-8') for x in range(count)]
+            g_pool.capture_manager.on_drop(paths)
+            g_pool.capture.on_drop(paths)
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(g_pool.user_dir, 'user_settings_eye{}'.format(eye_id)))
@@ -383,6 +385,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
         glfw.glfwSetCursorPosCallback(main_window, on_pos)
         glfw.glfwSetScrollCallback(main_window, on_scroll)
+        glfw.glfwSetDropCallback(main_window, on_drop)
 
         # load last gui configuration
         g_pool.gui.configuration = session_settings.get('ui_config', {})
