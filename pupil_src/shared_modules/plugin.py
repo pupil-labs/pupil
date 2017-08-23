@@ -91,6 +91,15 @@ class Plugin(object):
         """
         pass
 
+    def on_drop(self, paths):
+        """
+        Gets called on dropped paths of files and/or directories on the window.
+
+        See http://www.glfw.org/docs/latest/input_guide.html#path_drop for
+        more information.
+        """
+        pass
+
     def on_window_resize(self, window, w, h):
         '''
         gets called when user resizes window.

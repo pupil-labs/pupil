@@ -212,6 +212,11 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     def on_scroll(window, x, y):
         g_pool.gui.update_scroll(x, y * scroll_factor)
 
+    def on_drop(window, count, paths):
+        paths = [paths[x].decode('utf-8') for x in range(count)]
+        for p in g_pool.plugins:
+            p.on_drop(paths)
+
     tick = delta_t()
 
     def get_dt():
@@ -389,6 +394,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
     glfw.glfwSetCursorPosCallback(main_window, on_pos)
     glfw.glfwSetScrollCallback(main_window, on_scroll)
+    glfw.glfwSetDropCallback(main_window, on_drop)
 
     # gl_state settings
     gl_utils.basic_gl_setup()
