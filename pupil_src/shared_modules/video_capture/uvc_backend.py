@@ -14,6 +14,7 @@ import logging
 import uvc
 from version_utils import VersionFormat
 from .base_backend import InitialisationError, Base_Source, Base_Manager
+from camera_models import load_intrinsics
 
 # check versions for our own depedencies as they are fast-changing
 assert VersionFormat(uvc.__version__) >= VersionFormat('0.11')
@@ -243,6 +244,8 @@ class UVC_Source(Base_Source):
         self.uvc_capture.frame_size = size
         self.frame_size_backup = size
 
+        self.intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
+
     @property
     def frame_rate(self):
         if self.uvc_capture:
@@ -390,7 +393,7 @@ class UVC_Manager(Base_Manager):
         def dev_selection_list():
             default = (None, 'Select to activate')
             self.devices.update()
-            dev_pairs = [default] + [(d['uid'], d['name']) for d in self.devices]
+            dev_pairs = [default] + [(d['uid'], d['name']) for d in self.devices if 'RealSense' not in d['name']]
             return zip(*dev_pairs)
 
         def activate(source_uid):

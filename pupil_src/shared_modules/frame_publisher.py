@@ -12,6 +12,10 @@ from plugin import Plugin
 from pyglui import ui
 import numpy as np
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 class Frame_Publisher(Plugin):
 
     def __init__(self,g_pool,format='jpeg'):
@@ -31,16 +35,22 @@ class Frame_Publisher(Plugin):
         self.remove_menu()
 
     def recent_events(self,events):
-        frame  = events.get("frame")
-        if frame and frame.jpeg_buffer:
-            if   self.format == "jpeg":
-                data = frame.jpeg_buffer
-            elif self.format == "yuv":
-                data = frame.yuv_buffer
-            elif self.format == "bgr":
-                data = frame.bgr
-            elif self.format == "gray":
-                data = frame.gray
+        frame = events.get("frame")
+        if frame:
+            try:
+                if self.format == "jpeg":
+                    data = frame.jpeg_buffer
+                elif self.format == "yuv" and hasattr(frame, 'yuv_buffer'):
+                    data = frame.yuv_buffer
+                elif self.format == "bgr" and hasattr(frame, 'bgr'):
+                    data = frame.bgr
+                elif self.format == "gray" and hasattr(frame, 'gray'):
+                    data = frame.gray
+                else:
+                    raise AttributeError()
+            except AttributeError:
+                logger.warning('{}s are not compatible with format "{}"'.format(type(frame), self.format))
+                return
 
             # Create serializable object.
             # Not necessary if __raw_data__ key is used.
@@ -48,7 +58,7 @@ class Frame_Publisher(Plugin):
             blob = data
 
             events['frame.world'] = [{
-                'topic':'frame',
+                'topic': 'frame',
                 'width': frame.width,
                 'height': frame.height,
                 'index': frame.index,

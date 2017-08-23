@@ -15,6 +15,7 @@ import logging
 import ndsi
 
 from .base_backend import Base_Source, Base_Manager
+from camera_models import load_intrinsics
 
 try:
     from ndsi import __version__
@@ -47,6 +48,7 @@ class NDSI_Source(Base_Source):
         self.ghost_mode_timeout = 10  # sec
         self._initial_refresh = True
         self.last_update = self.g_pool.get_timestamp()
+        self._intrinsics = None
 
         if not network:
             logger.debug('No network reference provided. Capture is started '
@@ -181,6 +183,12 @@ class NDSI_Source(Base_Source):
                 self.sensor.set_control_value('local_capture', True)
             elif 'should_stop' in subject:
                 self.sensor.set_control_value('local_capture', False)
+
+    @property
+    def intrinsics(self):
+        if self._intrinsics is None or self._intrinsics.resolution != self.frame_size:
+            self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
+        return self._intrinsics
 
     @property
     def frame_size(self):

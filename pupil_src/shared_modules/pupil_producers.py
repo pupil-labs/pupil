@@ -89,9 +89,9 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             self.correlate_publish()
 
     def start_eye_process(self, eye_id):
-        potential_locs = [os.path.join(self.g_pool.rec_dir, 'eye{}{}'.format(eye_id, ext)) for ext in ('.mjpeg', '.mp4')]
+        potential_locs = [os.path.join(self.g_pool.rec_dir, 'eye{}{}'.format(eye_id, ext)) for ext in ('.mjpeg', '.mp4', '.mkv')]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
-        timestamps_path = os.path.join(self.g_pool.rec_dir,'eye{}_timestamps.npy'.format(eye_id))
+        timestamps_path = os.path.join(self.g_pool.rec_dir, 'eye{}_timestamps.npy'.format(eye_id))
 
         if not existing_locs:
             logger.error("no eye video for eye '{}' found.".format(eye_id))

@@ -73,7 +73,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # display
     import glfw
     from pyglui import ui, graph, cygl, __version__ as pyglui_version
-    assert pyglui_version >= '1.6'
+    assert pyglui_version >= '1.7'
     from pyglui.cygl.utils import Named_Texture
     import gl_utils
 
@@ -97,7 +97,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # Plug-ins
     from plugin import Plugin, Plugin_List, import_runtime_plugins
     from calibration_routines import calibration_plugins, gaze_mapping_plugins, Calibration_Plugin, Gaze_Mapping_Plugin
-    from fixation_detector import Fixation_Detector_3D
+    from fixation_detector import Fixation_Detector
     from recorder import Recorder
     from display_recent_gaze import Display_Recent_Gaze
     from time_sync import Time_Sync
@@ -113,6 +113,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from pupil_data_relay import Pupil_Data_Relay
     from remote_recorder import Remote_Recorder
     from audio_capture import Audio_Capture
+    from accuracy_visualizer import Accuracy_Visualizer
 
     # UI Platform tweaks
     if platform.system() == 'Linux':
@@ -151,8 +152,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
     user_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
-                    Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection,
-                    Remote_Recorder]
+                    Annotation_Capture, Log_History, Fixation_Detector, Blink_Detection,
+                    Remote_Recorder,Accuracy_Visualizer]
     system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay] + manager_classes + source_classes
     plugins = system_plugins + user_plugins + runtime_plugins + calibration_plugins + gaze_mapping_plugins
     user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source, Calibration_Plugin, Gaze_Mapping_Plugin))]
@@ -486,6 +487,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         del events['gaze_positions']  # sent earlier
         if 'frame' in events:
             del events['frame']  # send explicity with frame publisher
+        if 'depth_frame' in events:
+            del events['depth_frame']
         if 'audio_packets' in events:
             del events['audio_packets']
         del events['dt']  # no need to send this

@@ -103,26 +103,6 @@ class Roi(object):
         return self.lX,self.lY,self.uX,self.uY,self.array_shape
 
 
-
-def undistort_unproject_pts(pts_uv, camera_matrix, dist_coefs):
-    """
-    This function converts a set of 2D image coordinates to vectors in pinhole camera space.
-    Hereby the intrinsics of the camera are taken into account.
-    UV is converted to normalized image space (think frustum with image plane at z=1) then undistored
-    adding a z_coordinate of 1 yield vectors pointing from 0,0,0 to the undistored image pixel.
-    @return: ndarray with shape=(n, 3)
-
-    """
-    pts_uv = np.array(pts_uv)
-    num_pts = pts_uv.size / 2
-
-    pts_uv.shape = (int(num_pts), 1, 2)
-    pts_uv = cv2.undistortPoints(pts_uv, camera_matrix, dist_coefs)
-    pts_3d = cv2.convertPointsToHomogeneous(np.float32(pts_uv))
-    pts_3d.shape = (int(num_pts),3)
-    return pts_3d
-
-
 def project_distort_pts(pts_xyz,camera_matrix, dist_coefs,  rvec = np.array([0,0,0], dtype=np.float32), tvec = np.array([0,0,0], dtype=np.float32) ):
 
     # projectPoints is the inverse of function implemented above --> should map the intermediate result to the original input

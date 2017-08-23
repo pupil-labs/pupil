@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 from file_methods import save_object, load_object, UnpicklingError
 from version_utils import VersionFormat
 from version_utils import read_rec_version
-from calibration_routines.camera_intrinsics_estimation import pre_recorded_calibrations, idealized_camera_calibration
+from camera_models import load_intrinsics, save_intrinsics
 
 
 def correlate_data(data, timestamps):
@@ -117,6 +117,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v093_to_v094(rec_dir)
     if rec_version < VersionFormat('0.9.13'):
         update_recording_v094_to_v0913(rec_dir)
+    if rec_version < VersionFormat('0.9.14'):
+        update_recording_v0913_to_v0914(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -155,21 +157,11 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         if time_name in ('Pupil Cam1 ID0', 'Pupil Cam1 ID1'):
             time_name = 'eye'+time_name[-1]  # rename eye files
         elif time_name in ('Pupil Cam1 ID2', 'Logitech Webcam C930e'):
-            cam_calib_loc = os.path.join(rec_dir, 'camera_calibration')
-            try:
-                camera_calibration = load_object(cam_calib_loc)
-            except:
-                # no camera calibration found
-                video = av.open(video_loc, 'r')
-                frame_size = video.streams.video[0].format.width, video.streams.video[0].format.height
-                del video
-                try:
-                    camera_calibration = pre_recorded_calibrations[time_name][frame_size]
-                except KeyError:
-
-                    camera_calibration = idealized_camera_calibration(frame_size)
-                    logger.warning('Camera calibration not found. Will assume idealized camera.')
-                save_object(camera_calibration, cam_calib_loc)
+            video = av.open(video_loc, 'r')
+            frame_size = video.streams.video[0].format.width, video.streams.video[0].format.height
+            del video
+            intrinsics = load_intrinsics(rec_dir, time_name, frame_size)
+            save_intrinsics(rec_dir, 'world', frame_size, intrinsics)
 
             time_name = 'world'  # assume world file
         elif time_name.startswith('audio_'):
@@ -392,6 +384,38 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
             update_recording_v094_to_v0913(rec_dir, retry_on_averror=False)
         else:
             raise  # re-raise exception
+
+
+def update_recording_v0913_to_v0914(rec_dir):
+    logger.info("Updating recording from v0.9.13 to v0.9.14")
+
+    # add notifications entry to pupil_data if missing
+    pupil_data_loc = os.path.join(rec_dir, 'pupil_data')
+    pupil_data = load_object(pupil_data_loc)
+    if 'notifications' not in pupil_data:
+        pupil_data['notifications'] = []
+        save_object(pupil_data, pupil_data_loc)
+
+    try:  # upgrade camera intrinsics
+        old_calib_loc = os.path.join(rec_dir, 'camera_calibration')
+        old_calib = load_object(old_calib_loc)
+        res = tuple(old_calib['resolution'])
+        del old_calib['resolution']
+        del old_calib['camera_name']
+        old_calib['cam_type'] = 'radial'
+        new_calib = {str(res): old_calib, 'version': 1}
+        save_object(new_calib, os.path.join(rec_dir, 'world.intrinsics'))
+        logger.info('Replaced `camera_calibration` with `world.intrinsics`.')
+
+        os.rename(old_calib_loc, old_calib_loc+'.deprecated')
+    except IOError:
+        pass
+
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v0.9.14'
+    update_meta_info(rec_dir, meta_info)
 
 
 def update_recording_bytes_to_unicode(rec_dir):

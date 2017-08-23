@@ -22,7 +22,7 @@ from file_methods import save_object, load_object
 from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer
 from ndsi import H264Writer
-from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
+from camera_models import save_intrinsics
 # logging
 import logging
 logger = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ class Recorder(Plugin):
         self.menu.append(ui.Switch('record_eye', self, on_val=True, off_val=False, label='Record eye'))
         self.button = ui.Thumb('running', self, setter=self.toggle, label='R', hotkey='r')
         self.button.on_color[:] = (1, .0, .0, .8)
-        self.g_pool.quickbar.insert(1, self.button)
+        self.g_pool.quickbar.insert(2, self.button)
 
     def deinit_ui(self):
         self.g_pool.quickbar.remove(self.button)
@@ -294,7 +294,7 @@ class Recorder(Plugin):
     def recent_events(self,events):
         if self.running:
             for key, data in events.items():
-                if key not in ('dt', 'frame'):
+                if key not in ('dt', 'frame', 'depth_frame'):
                     try:
                         self.data[key] += data
                     except KeyError:
@@ -323,11 +323,7 @@ class Recorder(Plugin):
         except:
             logger.info("No surface_definitions data found. You may want this if you do marker tracking.")
 
-        camera_calibration = load_camera_calibration(self.g_pool)
-        if camera_calibration is not None:
-            save_object(camera_calibration, os.path.join(self.rec_path, "camera_calibration"))
-        else:
-            logger.info("No camera calibration found.")
+        self.g_pool.capture.intrinsics.save(self.rec_path, custom_name='world')
 
         try:
             with open(self.meta_info_path, 'a', newline='') as csvfile:

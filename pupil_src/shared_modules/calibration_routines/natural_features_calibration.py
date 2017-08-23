@@ -40,15 +40,11 @@ class Natural_Features_Calibration(Calibration_Plugin):
         self.r = 40.0 # radius of circle displayed
         self.ref_list = []
         self.pupil_list = []
-
-
         self.menu = None
-        self.button = None
-
         self.order = .5
 
-
     def init_gui(self):
+<<<<<<< HEAD
         self.add_menu()
         self.menu.label = "Manual Calibration"
         self.menu.append(ui.Info_Text("Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window."))
@@ -69,21 +65,36 @@ class Natural_Features_Calibration(Calibration_Plugin):
         else:
             self.notify_all({'subject':'calibration.should_start'})
 
+=======
+        super().init_gui()
+        self.info = ui.Info_Text("Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window.")
+        self.g_pool.calibration_menu.append(self.info)
+
+    def deinit_gui(self):
+        if self.info:
+            self.g_pool.calibration_menu.remove(self.info)
+            self.info = None
+        super().deinit_gui()
+>>>>>>> master
 
     def start(self):
-        audio.say("Starting Calibration")
-        logger.info("Starting Calibration")
+        super().start()
+        audio.say("Starting {}".format(self.mode_pretty))
+        logger.info("Starting {}".format(self.mode_pretty))
         self.active = True
         self.ref_list = []
         self.pupil_list = []
 
     def stop(self):
-        audio.say("Stopping Calibration")
-        logger.info("Stopping Calibration")
+        audio.say("Stopping  {}".format(self.mode_pretty))
+        logger.info('Stopping  {}'.format(self.mode_pretty))
         self.active = False
         self.button.status_text = ''
-        finish_calibration(self.g_pool,self.pupil_list,self.ref_list)
-
+        if self.mode == 'calibration':
+            finish_calibration(self.g_pool, self.pupil_list, self.ref_list)
+        elif self.mode == 'accuracy_test':
+            self.finish_accuracy_test(self.pupil_list, self.ref_list)
+        super().stop()
 
     def recent_events(self, events):
         frame = events.get('frame')

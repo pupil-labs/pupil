@@ -75,7 +75,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.detected = False
         self.screen_marker_state = 0.
         self.sample_duration =  sample_duration # number of frames to sample per site
-        self.fixation_boost = sample_duration/2.
         self.lead_in = 25 #frames of marker shown before starting to sample
         self.lead_out = 5 #frames of markers shown after sampling is donw
 
@@ -92,7 +91,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self._window = None
 
         self.menu = None
-        self.button = None
 
         self.fullscreen = fullscreen
         self.clicks_to_close = 5
@@ -112,9 +110,14 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.window_position_default = (0, 0)
 
 
+<<<<<<< HEAD
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Screen Marker Calibration"
+=======
+    def init_gui(self):
+        super().init_gui()
+>>>>>>> master
         self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
         #primary_monitor = glfwGetPrimaryMonitor()
@@ -129,6 +132,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         controls.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
         controls.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
 
+<<<<<<< HEAD
         self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
@@ -138,32 +142,36 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.g_pool.quickbar.remove(self.button)
         self.button = None
         self.remove_menu()
+=======
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.calibration_menu.remove(self.menu)
+            self.g_pool.calibration_menu.remove(self.info)
+            self.menu = None
+        super().deinit_gui()
+>>>>>>> master
 
     def start(self):
         if not self.g_pool.capture.online:
-            logger.error("Calibration required world capture video input.")
+            logger.error("{} requireds world capture video input.".format(self.mode_pretty))
             return
-        audio.say("Starting Calibration")
-        logger.info("Starting Calibration")
+        super().start()
+        audio.say("Starting {}".format(self.mode_pretty))
+        logger.info("Starting {}".format(self.mode_pretty))
+
         if self.g_pool.detection_mapping_mode == '3d':
-            self.sites = [  (.5, .5),
-                            (0.,1.),(1.,1.),
-                            (1., 0.),(0.,0.)]
+            self.sites = [(.5, .5), (0., 1.), (1., 1.), (1., 0.), (0., 0.)]
 
         else:
-            self.sites = [  (.25, .5), (0,.5),
-                        (0.,1.),(.5,1.),(1.,1.),
-                        (1.,.5),
-                        (1., 0.),(.5, 0.),(0.,0.),
-                        (.75,.5)]
-
+            self.sites = [(.25, .5), (0, .5), (0., 1.), (.5, 1.), (1., 1.),
+                          (1., .5), (1., 0.), (.5, 0.), (0., 0.), (.75, .5)]
 
         self.active_site = self.sites.pop(0)
         self.active = True
         self.ref_list = []
         self.pupil_list = []
         self.clicks_to_close = 5
-        self.open_window("Calibration")
+        self.open_window(self.mode_pretty)
 
     def open_window(self, title='new_window'):
         if not self._window:
@@ -207,18 +215,20 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if action ==GLFW_PRESS:
             self.clicks_to_close -=1
 
-
     def stop(self):
         # TODO: redundancy between all gaze mappers -> might be moved to parent class
-        audio.say("Stopping Calibration")
-        logger.info("Stopping Calibration")
-        self.smooth_pos = 0,0
+        audio.say("Stopping {}".format(self.mode_pretty))
+        logger.info("Stopping {}".format(self.mode_pretty))
+        self.smooth_pos = 0, 0
         self.counter = 0
         self.close_window()
         self.active = False
         self.button.status_text = ''
-        finish_calibration(self.g_pool,self.pupil_list,self.ref_list)
-
+        if self.mode == 'calibration':
+            finish_calibration(self.g_pool, self.pupil_list, self.ref_list)
+        elif self.mode == 'accuracy_test':
+            self.finish_accuracy_test(self.pupil_list, self.ref_list)
+        super().stop()
 
     def close_window(self):
         if self._window:
@@ -251,7 +261,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 self.detected = False
                 self.pos = None  # indicate that no reference is detected
 
-            # only save a valid ref position if within sample window of calibraiton routine
+            # only save a valid ref position if within sample window of calibration routine
             on_position = self.lead_in < self.screen_marker_state < (self.lead_in+self.sample_duration)
 
             if on_position and self.detected:
@@ -267,9 +277,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.pupil_list.append(p_pt)
 
             if on_position and self.detected and events.get('fixations', []):
+                fixation_boost = 5
                 self.screen_marker_state = min(
                     self.sample_duration+self.lead_in,
-                    self.screen_marker_state+self.fixation_boost)
+                    self.screen_marker_state+fixation_boost)
 
             # Animate the screen marker
             if self.screen_marker_state < self.sample_duration+self.lead_in+self.lead_out:
@@ -350,7 +361,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))
-            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch {} more times to cancel calibration.'.format(self.clicks_to_close))
+            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch {} more times to cancel {}.'.format(self.clicks_to_close, self.mode_pretty))
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)

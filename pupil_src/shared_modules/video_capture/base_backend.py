@@ -74,7 +74,11 @@ class Base_Source(Plugin):
 
     def gl_display(self):
         if self._recent_frame is not None:
-            self.g_pool.image_tex.update_from_ndarray(self._recent_frame.img)
+            frame = self._recent_frame
+            if frame.yuv_buffer is not None:
+                self.g_pool.image_tex.update_from_yuv_buffer(frame.yuv_buffer,frame.width,frame.height)
+            else:
+                self.g_pool.image_tex.update_from_ndarray(frame.bgr)
             gl_utils.glFlush()
         gl_utils.make_coord_system_norm_based()
         self.g_pool.image_tex.draw()
@@ -129,6 +133,9 @@ class Base_Source(Plugin):
         """
         return True
 
+    @property
+    def intrinsics(self):
+        raise NotImplementedError()
 
 class Base_Manager(Plugin):
     """Abstract base class for source managers.
