@@ -15,7 +15,7 @@ import logging
 import ndsi
 
 from .base_backend import Base_Source, Base_Manager
-from camera_models import Dummy_Camera
+from camera_models import load_intrinsics
 
 try:
     from ndsi import __version__
@@ -185,7 +185,9 @@ class NDSI_Source(Base_Source):
 
     @property
     def intrinsics(self):
-        return Dummy_Camera(self.frame_size, self.name)
+        if self.intrinsics is None or self.intrinsics.resolution != self.frame_size:
+            self.intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
+        return self.intrinsics
 
     @intrinsics.setter
     def intrinsics(self, value):
