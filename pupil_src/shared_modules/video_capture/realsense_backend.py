@@ -273,10 +273,12 @@ class Realsense_Source(Base_Source):
         self.device = self.service.Device(device_id, streams=self.streams)
 
         self.controls = Realsense_Controls(self.device, device_options)
-        self.intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
+        self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
-        self.deinit_gui()
-        self.init_gui()
+        try:
+            self.update_menu()
+        except AttributeError:
+            pass  # init_ui was not called yet
 
     def _enumerate_formats(self, device_id):
         '''Enumerate formats into hierachical structure:
@@ -379,29 +381,34 @@ class Realsense_Source(Base_Source):
                 if self.depth_video_writer is not None:
                     self.depth_video_writer.write_video_frame(depth_frame)
 
-    def init_gui(self):
-        from pyglui import ui
-        ui_elements = []
+    def deinit_ui(self):
+        self.remove_menu()
 
-        # avoid duplicated elements since _initialize_device() calls init_gui as well
-        self.deinit_gui()
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = "Local USB Video Source"
+        self.menu_icon.label = "U"
+        self.update_menu()
+
+    def update_menu(self):
+        del self.menu[:]
+        from pyglui import ui
 
         if self.device is None:
-            ui_elements.append(ui.Info_Text('Capture initialization failed.'))
-            self.g_pool.capture_source_menu.extend(ui_elements)
+            self.menu.append(ui.Info_Text('Capture initialization failed.'))
             return
 
         def align_and_restart(val):
             self.align_streams = val
             self.restart_device()
 
-        ui_elements.append(ui.Switch('record_depth', self, label='Record Depth Stream'))
-        ui_elements.append(ui.Switch('preview_depth', self, label='Preview Depth'))
-        ui_elements.append(ui.Switch('align_streams', self, label='Align Streams',
-                                     setter=align_and_restart))
+        self.menu.append(ui.Switch('record_depth', self, label='Record Depth Stream'))
+        self.menu.append(ui.Switch('preview_depth', self, label='Preview Depth'))
+        self.menu.append(ui.Switch('align_streams', self, label='Align Streams',
+                                   setter=align_and_restart))
 
         color_sizes = sorted(self._available_modes[rs_stream.RS_STREAM_COLOR], reverse=True)
-        ui_elements.append(ui.Selector(
+        self.menu.append(ui.Selector(
             'frame_size', self,
             # setter=,
             selection=color_sizes,
@@ -411,7 +418,7 @@ class Realsense_Source(Base_Source):
         def color_fps_getter():
             avail_fps = self._available_modes[rs_stream.RS_STREAM_COLOR][self.frame_size]
             return avail_fps, [str(fps) for fps in avail_fps]
-        ui_elements.append(ui.Selector(
+        self.menu.append(ui.Selector(
             'frame_rate', self,
             # setter=,
             selection_getter=color_fps_getter,
@@ -420,7 +427,7 @@ class Realsense_Source(Base_Source):
 
         if not self.align_streams:
             depth_sizes = sorted(self._available_modes[rs_stream.RS_STREAM_DEPTH], reverse=True)
-            ui_elements.append(ui.Selector(
+            self.menu.append(ui.Selector(
                 'depth_frame_size', self,
                 # setter=,
                 selection=depth_sizes,
@@ -430,7 +437,7 @@ class Realsense_Source(Base_Source):
         def depth_fps_getter():
             avail_fps = self._available_modes[rs_stream.RS_STREAM_DEPTH][self.depth_frame_size]
             return avail_fps, [str(fps) for fps in avail_fps]
-        ui_elements.append(ui.Selector(
+        self.menu.append(ui.Selector(
             'depth_frame_rate', self,
             selection_getter=depth_fps_getter,
             label='Depth Frame Rate'
@@ -459,8 +466,7 @@ class Realsense_Source(Base_Source):
                                                 min=ctrl.range.min,
                                                 max=ctrl.range.max,
                                                 step=ctrl.range.step))
-        ui_elements.append(sensor_control)
-        self.g_pool.capture_source_menu.extend(ui_elements)
+        self.menu.append(sensor_control)
 
     def gl_display(self):
         if self.preview_depth and self._recent_depth_frame is not None:
@@ -528,6 +534,10 @@ class Realsense_Source(Base_Source):
         self.depth_video_writer = None
 
     @property
+    def intrinsics(self):
+        return self._intrinsics
+
+    @property
     def frame_size(self):
         stream = self.streams[0]
         return stream.width, stream.height
@@ -593,10 +603,10 @@ class Realsense_Manager(Base_Manager):
     def get_init_dict(self):
         return {}
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
         from pyglui import ui
-        ui_elements = []
-        ui_elements.append(ui.Info_Text('Intel RealSense 3D sources'))
+        self.menu.append(ui.Info_Text('Intel RealSense 3D sources'))
 
         def pair(d):
             fmt = '- ' if d['is_streaming'] else ''
@@ -636,14 +646,13 @@ class Realsense_Manager(Base_Manager):
                                  'name': 'Realsense_Source',
                                  'args': settings})
 
-        ui_elements.append(ui.Selector(
+        self.menu.append(ui.Selector(
             'selected_source',
             selection_getter=dev_selection_list,
             getter=lambda: None,
             setter=activate,
             label='Activate source'
         ))
-        self.g_pool.capture_selector_menu.extend(ui_elements)
 
-    def cleanup(self):
-        self.deinit_gui()
+    def deinit_ui(self):
+        self.remove_menu()

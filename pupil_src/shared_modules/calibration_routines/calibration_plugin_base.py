@@ -31,6 +31,7 @@ class Calibration_Plugin(Plugin):
         super().add_menu()
 
         calibration_plugins = [p for p in self.g_pool.plugin_by_name.values() if issubclass(p, Calibration_Plugin)]
+        calibration_plugins.sort(key=lambda p: p.__name__)
         from pyglui import ui
 
         self.menu_icon.label = 'C'
