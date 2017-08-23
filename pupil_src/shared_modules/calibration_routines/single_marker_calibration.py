@@ -83,31 +83,16 @@ class Single_Marker_Calibration(Calibration_Plugin):
         else:
             self.window_position_default = (0, 0)
 
-
-    def init_gui(self):
+    def init_ui(self):
+        super().init_ui()
         self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
         #primary_monitor = glfwGetPrimaryMonitor()
-        self.info = ui.Info_Text("Calibrate gaze parameters using a single gae targets and active head movements.")
-        self.g_pool.calibration_menu.append(self.info)
-
-        self.menu = ui.Growing_Menu('Controls')
-        self.g_pool.calibration_menu.append(self.menu)
+        self.menu.append(ui.Info_Text("Calibrate gaze parameters using a single gae targets and active head movements."))
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
         self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
-
-        super().init_gui()
-
-
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.calibration_menu.remove(self.menu)
-            self.g_pool.calibration_menu.remove(self.info)
-            self.menu = None
-        super().deinit_gui()
-
 
     def start(self):
         if not self.g_pool.capture.online:
@@ -319,4 +304,3 @@ class Single_Marker_Calibration(Calibration_Plugin):
             self.stop()
         if self._window:
             self.close_window()
-        self.deinit_gui()

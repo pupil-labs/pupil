@@ -37,17 +37,22 @@ class HMD_Calibration(Calibration_Plugin):
         self.menu = None
         self.button = None
 
-    def init_gui(self):
+    def init_ui(self):
+        super().init_ui()
 
         def dummy(_):
             logger.error("HMD calibration must be initiated from the HMD client.")
 
-        self.info = ui.Info_Text("Calibrate gaze parameters to map onto an HMD.")
-        self.g_pool.calibration_menu.append(self.info)
+        self.menu.append(ui.Info_Text("Calibrate gaze parameters to map onto an HMD."))
         self.button = ui.Thumb('active',self,setter=dummy,label='C',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
-        self.g_pool.quickbar.insert(0,self.button)
+        self.g_pool.quickbar.insert(0, self.button)
 
+    def deinit_ui(self):
+        if self.button:
+            self.g_pool.quickbar.remove(self.button)
+            self.button = None
+        super().deinit_ui()
 
     def on_notify(self,notification):
         '''Calibrates user gaze for HMDs
@@ -84,16 +89,6 @@ class HMD_Calibration(Calibration_Plugin):
                     logger.error("Ref data can only be added when calibratio is runnings.")
         except KeyError as e:
             logger.error('Notification: {} not conform. Raised error {}'.format(notification,e))
-
-
-    def deinit_gui(self):
-        if self.info:
-            self.g_pool.calibration_menu.remove(self.info)
-            self.info = None
-        if self.button:
-            self.g_pool.quickbar.remove(self.button)
-            self.button = None
-
 
     def start(self,hmd_video_frame_size,outlier_threshold):
         self.active = True
@@ -189,7 +184,6 @@ class HMD_Calibration(Calibration_Plugin):
         """
         if self.active:
             self.stop()
-        self.deinit_gui()
 
 
 class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):

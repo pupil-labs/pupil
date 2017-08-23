@@ -137,6 +137,7 @@ class Base_Source(Plugin):
     def intrinsics(self):
         raise NotImplementedError()
 
+
 class Base_Manager(Plugin):
     """Abstract base class for source managers.
 

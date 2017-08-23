@@ -27,7 +27,6 @@ class Calibration_Plugin(Plugin):
         self.active = False
         self.mode = 'calibration'
 
-
     def add_menu(self):
         super().add_menu()
 
@@ -38,16 +37,16 @@ class Calibration_Plugin(Plugin):
         self.menu_icon.order = 0.3
 
         def open_plugin(p):
-            self.notify_all({'subject':'start_plugin', 'name':p.__name__})
+            self.notify_all({'subject': 'start_plugin', 'name': p.__name__})
 
-        #We add the capture selection menu
+        # We add the capture selection menu
         self.menu.append(ui.Selector(
                                 'capture_manager',
-                                setter    = open_plugin,
-                                getter    = lambda: self.__class__,
-                                selection = calibration_plugins,
-                                labels    = [p.__name__.replace('_',' ') for p in calibration_plugins],
-                                label     = 'Manager'
+                                setter=open_plugin,
+                                getter=lambda: self.__class__,
+                                selection=calibration_plugins,
+                                labels=[p.__name__.replace('_', ' ') for p in calibration_plugins],
+                                label='Manager'
                             ))
 
 
@@ -92,7 +91,8 @@ class Calibration_Plugin(Plugin):
             else:
                 logger.warning('{} already stopped.'.format(self.mode_pretty))
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
         self.button = None
         self.calib_button = ui.Thumb('active', self, label='C', setter=self.toggle_calibration, hotkey='c')
         self.test_button = ui.Thumb('active', self, label='T', setter=self.toggle_accuracy_test, hotkey='t')
@@ -104,11 +104,12 @@ class Calibration_Plugin(Plugin):
         self.g_pool.quickbar.insert(0, self.calib_button)
         self.g_pool.quickbar.insert(1, self.test_button)
 
-    def deinit_gui(self):
+    def deinit_ui(self):
         self.g_pool.quickbar.remove(self.calib_button)
         self.g_pool.quickbar.remove(self.test_button)
         self.calib_button = None
         self.test_button = None
+        self.remove_menu()
 
     def toggle_calibration(self, _=None):
         if self.active:
@@ -145,4 +146,3 @@ class Calibration_Plugin(Plugin):
         self.notify_all({'subject': 'start_plugin', 'name': 'Accuracy_Visualizer'})
         self.notify_all({'subject': 'accuracy_test.data', 'timestamp': ts,
                          'pupil_list': pupil_list, 'ref_list': ref_list, 'record': True})
-

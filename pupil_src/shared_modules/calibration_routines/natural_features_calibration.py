@@ -22,9 +22,10 @@ import audio
 from pyglui import ui
 from . calibration_plugin_base import Calibration_Plugin
 
-#logging
+# logging
 import logging
 logger = logging.getLogger(__name__)
+
 
 class Natural_Features_Calibration(Calibration_Plugin):
     """Calibrate using natural features in a scene.
@@ -37,45 +38,16 @@ class Natural_Features_Calibration(Calibration_Plugin):
         self.count = 0
         self.detected = False
         self.pos = None
-        self.r = 40.0 # radius of circle displayed
+        self.r = 40.0  # radius of circle displayed
         self.ref_list = []
         self.pupil_list = []
         self.menu = None
         self.order = .5
 
-    def init_gui(self):
-<<<<<<< HEAD
-        self.add_menu()
+    def init_ui(self):
+        super().init_ui()
         self.menu.label = "Manual Calibration"
         self.menu.append(ui.Info_Text("Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window."))
-        self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
-        self.button.on_color[:] = (.3,.2,1.,.9)
-        self.g_pool.quickbar.insert(0,self.button)
-
-
-    def deinit_gui(self):
-        self.remove_menu()
-        self.g_pool.quickbar.remove(self.button)
-        self.button = None
-
-
-    def toggle(self,_=None):
-        if self.active:
-            self.notify_all({'subject':'calibration.should_stop'})
-        else:
-            self.notify_all({'subject':'calibration.should_start'})
-
-=======
-        super().init_gui()
-        self.info = ui.Info_Text("Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window.")
-        self.g_pool.calibration_menu.append(self.info)
-
-    def deinit_gui(self):
-        if self.info:
-            self.g_pool.calibration_menu.remove(self.info)
-            self.info = None
-        super().deinit_gui()
->>>>>>> master
 
     def start(self):
         super().start()
@@ -163,4 +135,3 @@ class Natural_Features_Calibration(Calibration_Plugin):
         """
         if self.active:
             self.stop()
-        self.deinit_gui()

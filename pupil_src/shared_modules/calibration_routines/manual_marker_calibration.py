@@ -9,11 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os
 import cv2
 import numpy as np
 from methods import normalize
-from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
+from pyglui.cygl.utils import draw_points_norm, draw_polyline, RGBA
 from OpenGL.GL import GL_POLYGON
 from circle_detector import find_concetric_circles
 from . finish_calibration import finish_calibration
@@ -22,9 +21,10 @@ import audio
 
 from pyglui import ui
 from . calibration_plugin_base import Calibration_Plugin
-#logging
+# logging
 import logging
 logger = logging.getLogger(__name__)
+
 
 class Manual_Marker_Calibration(Calibration_Plugin):
     """Detector looks for a white ring on a black background.
@@ -55,43 +55,10 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
         self.menu = None
 
-<<<<<<< HEAD
     def init_ui(self):
-        self.add_menu()
+        super().init_ui()
         self.menu.label = "Manual Calibration"
         self.menu.append(ui.Info_Text("Calibrate gaze parameters using a handheld marker."))
-        self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
-        self.button.on_color[:] = (.3,.2,1.,.9)
-        self.g_pool.quickbar.insert(0,self.button)
-
-    def deinit_ui(self):
-        self.g_pool.quickbar.remove(self.button)
-        self.button = None
-        self.remove_menu()
-
-
-    def toggle(self,_=None):
-        if self.active:
-            self.notify_all({'subject':'calibration.should_stop'})
-        else:
-            self.notify_all({'subject':'calibration.should_start'})
-
-=======
-    def init_gui(self):
-        super().init_gui()
-        self.info = ui.Info_Text("Calibrate gaze parameters using a handheld marker.")
-        self.g_pool.calibration_menu.append(self.info)
-
-        self.menu = ui.Growing_Menu('Controls')
-        self.g_pool.calibration_menu.append(self.menu)
-
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.calibration_menu.remove(self.menu)
-            self.g_pool.calibration_menu.remove(self.info)
-            self.menu = None
-        super().deinit_gui()
->>>>>>> master
 
     def start(self):
         super().start()
