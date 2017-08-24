@@ -485,6 +485,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             if frame:
                 f_width, f_height = g_pool.capture.frame_size
                 if (g_pool.u_r.array_shape[0], g_pool.u_r.array_shape[1]) != (f_height, f_width):
+                    g_pool.pupil_detector.on_resolution_change((g_pool.u_r.array_shape[1], g_pool.u_r.array_shape[0]), g_pool.capture.frame_size)
                     g_pool.u_r = UIRoi((f_height, f_width))
                 if should_publish_frames:
                     try:
