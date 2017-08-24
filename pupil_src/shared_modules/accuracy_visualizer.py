@@ -104,6 +104,9 @@ class Accuracy_Visualizer(Plugin):
             self.recalculate()
 
     def recalculate(self):
+        if not self.recent_input or self.recent_labels:
+            logger.error('Did not collect enough data during calibration.')
+            return
         width, height = self.g_pool.capture.frame_size
         prediction = self.g_pool.active_gaze_mapping_plugin.map_batch(self.recent_input)
 
