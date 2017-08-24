@@ -260,7 +260,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         g_pool.u_r = UIRoi((g_pool.capture.frame_size[1],g_pool.capture.frame_size[0]))
         roi_user_settings = session_settings.get('roi')
-        if roi_user_settings and roi_user_settings[-1] == g_pool.u_r.get()[-1]:
+        if roi_user_settings and tuple(roi_user_settings[-1]) == g_pool.u_r.get()[-1]:
             g_pool.u_r.set(roi_user_settings)
 
         pupil_detector_settings = session_settings.get(
