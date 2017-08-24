@@ -142,7 +142,7 @@ class Surface_Tracker(Plugin):
         self.menu = ui.Growing_Menu('Surface Tracker')
         self.g_pool.sidebar.append(self.menu)
 
-        self.button = ui.Thumb('running',self,label='T',hotkey='t')
+        self.button = ui.Thumb('running',self,label='S',hotkey='s')
         self.button.on_color[:] = (.1,.2,1.,.8)
         self.g_pool.quickbar.append(self.button)
         self.add_button = ui.Thumb('add_surface',setter=self.add_surface,getter=lambda:False,label='A',hotkey='a')
