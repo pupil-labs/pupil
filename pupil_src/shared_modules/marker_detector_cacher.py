@@ -14,7 +14,7 @@ class Global_Container(object):
     pass
 
 
-def fill_cache(visited_list, video_file_path, timestamps, q, seek_idx, run,min_marker_perimeter, invert_image):
+def fill_cache(visited_list, video_file_path, q, seek_idx, run,min_marker_perimeter, invert_image):
     '''
     this function is part of marker_detector it is run as a seperate process.
     it must be kept in a seperate file for namespace sanatisation
@@ -27,7 +27,7 @@ def fill_cache(visited_list, video_file_path, timestamps, q, seek_idx, run,min_m
     from square_marker_detect import detect_markers_robust
     aperture = 9
     markers = []
-    cap = File_Source(Global_Container(), video_file_path, timestamps=timestamps)
+    cap = File_Source(Global_Container(), video_file_path)
 
     def next_unvisited_idx(frame_idx):
         try:

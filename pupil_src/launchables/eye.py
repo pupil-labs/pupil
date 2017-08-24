@@ -263,7 +263,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         if roi_user_settings and roi_user_settings[-1] == g_pool.u_r.get()[-1]:
             g_pool.u_r.set(roi_user_settings)
 
-
         pupil_detector_settings = session_settings.get(
             'pupil_detector_settings', None)
         last_pupil_detector = pupil_detectors[session_settings.get(

@@ -15,7 +15,7 @@ class Empty(object):
 
 
 def circle_detector(ipc_push_url, pair_url,
-                    source_path, timestamps_path, batch_size=20):
+                    source_path, batch_size=20):
 
     # ipc setup
     import zmq
@@ -35,14 +35,13 @@ def circle_detector(ipc_push_url, pair_url,
 
     # imports
     import cv2
-    import numpy as np
     from time import sleep
     from circle_detector import find_concetric_circles
     from video_capture import File_Source, EndofVideoFileError
     from methods import normalize
 
     try:
-        src = File_Source(Empty(), source_path, np.load(timestamps_path).tolist(), timed_playback=False)
+        src = File_Source(Empty(), source_path, timed_playback=False)
         frame = src.get_frame()
         logger.info('Starting calibration marker detection...')
         frame_count = src.get_frame_count()
