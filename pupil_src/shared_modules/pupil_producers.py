@@ -108,7 +108,6 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.detection_progress[eye_id] = 0.
         capure_settings = 'File_Source', {
             'source_path': video_loc,
-            'timestamps': ts.tolist(),
             'timed_playback': False
         }
         self.notify_all({'subject': 'eye_process.should_start', 'eye_id': eye_id,

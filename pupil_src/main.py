@@ -292,12 +292,8 @@ def launcher():
                             app_version,
                             )).start()
                 elif "notify.circle_detector_process.should_start" in topic:
-                    Process(target=circle_detector, name='circle_detector', args=(
-                            ipc_push_url,
-                            n['pair_url'],
-                            n['source_path'],
-                            n['timestamps_path']
-                            )).start()
+                    Process(target=circle_detector, name='circle_detector',
+                            args=(ipc_push_url, n['pair_url'], n['source_path'])).start()
                 elif "notify.meta.should_doc" in topic:
                     cmd_push.notify({
                         'subject':'meta.doc',
