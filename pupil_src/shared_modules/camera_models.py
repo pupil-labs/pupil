@@ -79,7 +79,7 @@ def load_intrinsics(directory, cam_name, resolution):
         intrinsics = calib_dict[str(resolution)]
         logger.info("Previously recorded calibration found and loaded!")
     except Exception as e:
-        logger.info("No calibration found for camera {} at resolution {}".format(cam_name, resolution))
+        logger.info("No user calibration found for camera {} at resolution {}".format(cam_name, resolution))
 
         if cam_name in pre_recorded_calibrations and str(resolution) in pre_recorded_calibrations[cam_name]:
             logger.info("Loading pre-recorded calibration")
