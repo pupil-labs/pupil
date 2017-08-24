@@ -117,8 +117,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v093_to_v094(rec_dir)
     if rec_version < VersionFormat('0.9.13'):
         update_recording_v094_to_v0913(rec_dir)
-    if rec_version < VersionFormat('0.9.14'):
-        update_recording_v0913_to_v0914(rec_dir)
+    if rec_version < VersionFormat('0.9.15'):
+        update_recording_v0913_to_v0915(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -386,8 +386,8 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
             raise  # re-raise exception
 
 
-def update_recording_v0913_to_v0914(rec_dir):
-    logger.info("Updating recording from v0.9.13 to v0.9.14")
+def update_recording_v0913_to_v0915(rec_dir):
+    logger.info("Updating recording from v0.9.13 to v0.9.15")
 
     # add notifications entry to pupil_data if missing
     pupil_data_loc = os.path.join(rec_dir, 'pupil_data')
@@ -414,7 +414,7 @@ def update_recording_v0913_to_v0914(rec_dir):
     meta_info_path = os.path.join(rec_dir, "info.csv")
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Data Format Version'] = 'v0.9.14'
+        meta_info['Data Format Version'] = 'v0.9.15'
     update_meta_info(rec_dir, meta_info)
 
 
