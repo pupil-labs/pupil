@@ -144,11 +144,16 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         logger.info("Starting {}".format(self.mode_pretty))
 
         if self.g_pool.detection_mapping_mode == '3d':
-            self.sites = [(.5, .5), (0., 1.), (1., 1.), (1., 0.), (0., 0.)]
-
+            if self.mode == 'calibration':
+                self.sites = [(.5, .5), (0., 1.), (1., 1.), (1., 0.), (0., 0.)]
+            else:
+                self.sites = [(.25, .5), (.5, .25), (.75, .5), (.5, .75)]
         else:
-            self.sites = [(.25, .5), (0, .5), (0., 1.), (.5, 1.), (1., 1.),
-                          (1., .5), (1., 0.), (.5, 0.), (0., 0.), (.75, .5)]
+            if self.mode == 'calibration':
+                self.sites = [(.25, .5), (0, .5), (0., 1.), (.5, 1.), (1., 1.),
+                              (1., .5), (1., 0.), (.5, 0.), (0., 0.), (.75, .5)]
+            else:
+                self.sites = [(.5, .5), (.25, .25), (.25, .75), (.75, .75), (.75, .25)]
 
         self.active_site = self.sites.pop(0)
         self.active = True
