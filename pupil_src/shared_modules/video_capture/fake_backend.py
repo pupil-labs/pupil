@@ -87,7 +87,7 @@ class Fake_Source(Base_Source):
         # coarse[:,:,1] /=30
         # self._img = np.ones((size[1],size[0],3),dtype=np.uint8)
         self._img = cv2.resize(coarse,size,interpolation=cv2.INTER_LANCZOS4)
-        self.intrinsics = Dummy_Camera(size, self.name)
+        self._intrinsics = Dummy_Camera(size, self.name)
 
     def recent_events(self,events):
         now = time()
@@ -105,6 +105,10 @@ class Fake_Source(Base_Source):
     @property
     def name(self):
         return self._name
+
+    @property
+    def intrinsics(self):
+        return self._intrinsics
 
     @property
     def settings(self):

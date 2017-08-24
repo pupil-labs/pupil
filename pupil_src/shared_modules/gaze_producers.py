@@ -41,9 +41,10 @@ class Empty(object):
         pass
 
 
-def setup_fake_pool(frame_size, detection_mode,rec_dir):
+def setup_fake_pool(frame_size, intrinsics, detection_mode, rec_dir):
     cap = Empty()
     cap.frame_size = frame_size
+    cap.intrinsics = intrinsics
     pool = Empty()
     pool.capture = cap
     pool.get_timestamp = time
@@ -85,7 +86,7 @@ def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
         logger.info('Offline calibration successful. Starting mapping using {}.'.format(method))
         name, args = result['name'], result['args']
         gaze_mapper_cls = gaze_mapping_plugins_by_name[name]
-        gaze_mapper = gaze_mapper_cls(Empty(), **args)
+        gaze_mapper = gaze_mapper_cls(g_pool, **args)
 
         for idx, datum in enumerate(map_list):
             mapped_gaze = gaze_mapper.on_pupil_datum(datum)
@@ -158,9 +159,8 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.process_pipe = zmq_tools.Msg_Pair_Server(self.g_pool.zmq_ctx)
         self.circle_marker_positions = []
         source_path = self.g_pool.capture.source_path
-        timestamps_path = os.path.join(self.g_pool.rec_dir, "world_timestamps.npy")
         self.notify_all({'subject': 'circle_detector_process.should_start',
-                         'source_path': source_path, 'timestamps_path': timestamps_path,"pair_url":self.process_pipe.url})
+                         'source_path': source_path, "pair_url": self.process_pipe.url})
 
     def init_gui(self):
         def clear_natural_features():
@@ -325,7 +325,8 @@ class Offline_Calibration(Gaze_Producer_Base):
             logger.warning("Pupil data is 2d, calibration and mapping mode forced to 2d.")
             sec["mapping_method"] = '2d'
 
-        fake = setup_fake_pool(self.g_pool.capture.frame_size, detection_mode=sec["mapping_method"],rec_dir=self.g_pool.rec_dir)
+        fake = setup_fake_pool(self.g_pool.capture.frame_size, self.g_pool.capture.intrinsics,
+                               detection_mode=sec["mapping_method"], rec_dir=self.g_pool.rec_dir)
         generator_args = (fake, ref_list, calib_list, map_list)
 
         logger.info('Calibrating "{}" in {} mode...'.format(self.sections.index(sec) + 1,sec["mapping_method"]))

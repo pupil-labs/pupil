@@ -68,7 +68,6 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     update_recording_to_recent(rec_dir)
 
     video_path = [f for f in glob(os.path.join(rec_dir, "world.*")) if f[-3:] in ('mp4', 'mkv', 'avi','mjpeg')][0]
-    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
     audio_path = os.path.join(rec_dir, "audio.mp4")
 
@@ -77,8 +76,8 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     g_pool = Global_Container()
     g_pool.app = 'exporter'
     g_pool.min_data_confidence = min_data_confidence
-    timestamps = np.load(timestamps_path)
-    cap = File_Source(g_pool, video_path, timestamps=timestamps)
+    cap = File_Source(g_pool, video_path)
+    timestamps = cap.timestamps
 
     # Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
     if out_file_path is None:

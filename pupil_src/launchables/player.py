@@ -59,7 +59,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     # imports
     from file_methods import Persistent_Dict, load_object
-    import numpy as np
 
     # display
     import glfw
@@ -76,7 +75,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     from version_utils import VersionFormat
     from methods import normalize, denormalize, delta_t, get_system_info
     from player_methods import correlate_data, is_pupil_rec_dir, load_meta_info
-    from camera_models import load_intrinsics
 
     # monitoring
     import psutil
@@ -168,7 +166,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
                   if os.path.splitext(f)[1] in ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')][0]
-    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
     meta_info = load_meta_info(rec_dir)
@@ -176,8 +173,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     # log info about Pupil Platform and Platform in player.log
     logger.info('Application Version: {}'.format(app_version))
     logger.info('System Info: {}'.format(get_system_info()))
-
-    timestamps = np.load(timestamps_path)
 
     # create container for globally scoped vars
     g_pool = Global_Container()
@@ -189,8 +184,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     g_pool.ipc_push_url = ipc_push_url
 
     # Initialize capture
-    cap = File_Source(g_pool, video_path, timestamps=timestamps)
-    cap.intrinsics = load_intrinsics(rec_dir, 'world', cap.frame_size)
+    cap = File_Source(g_pool, video_path)
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))
@@ -216,7 +210,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     g_pool.binocular = meta_info.get('Eye Mode', 'monocular') == 'binocular'
     g_pool.version = app_version
     g_pool.capture = cap
-    g_pool.timestamps = timestamps
+    g_pool.timestamps = g_pool.capture.timestamps
     g_pool.get_timestamp = lambda: 0.
     g_pool.play = False
     g_pool.new_seek = True
