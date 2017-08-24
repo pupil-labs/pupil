@@ -91,6 +91,10 @@ cdef class Detector_3D:
     def get_settings(self):
         return {'2D_Settings': self.detectProperties2D , '3D_Settings' : self.detectProperties3D }
 
+    def on_resolution_change(self, old_size, new_size):
+        self.detectProperties2D["pupil_size_max"] *= new_size[0] / old_size[0]
+        self.detectProperties2D["pupil_size_min"] *= new_size[0] / old_size[0]
+
     def __dealloc__(self):
       del self.detector2DPtr
       del self.detector3DPtr
