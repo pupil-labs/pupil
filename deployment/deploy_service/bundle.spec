@@ -155,6 +155,7 @@ elif platform.system() == 'Windows':
                        a.binaries,
                        a.zipfiles,
                        a.datas,
+                       [('PupilDrvInst.exe','../../pupil_external/PupilDrvInst.exe','BINARY')],
                        [('glfw3.dll','../../pupil_external/glfw3.dll','BINARY')],
                        [('OpenSans-Regular.ttf', os.path.join(package_path, 'pyglui/OpenSans-Regular.ttf'),'DATA')],
                  [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
