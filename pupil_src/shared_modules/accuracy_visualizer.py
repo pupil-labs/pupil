@@ -74,7 +74,7 @@ class Accuracy_Visualizer(Plugin):
         self.menu.append(ui.Text_Input('accuracy', self, 'Angular Accuracy', setter=ignore,
                          getter=lambda: self.accuracy if self.accuracy is not None else 'Not available'))
         self.menu.append(ui.Info_Text(precision_help))
-        self.menu.append(ui.Text_Input('precision', self, 'Angluar Precision', setter=ignore,
+        self.menu.append(ui.Text_Input('precision', self, 'Angular Precision', setter=ignore,
                          getter=lambda: self.precision if self.precision is not None else 'Not available'))
 
     def deinit_gui(self):
