@@ -48,7 +48,7 @@ class Vis_Scan_Path(Visualizer_Plugin_Base):
 
         succeeding_frame = frame.index-self.prev_frame_idx == 1
         same_frame = frame.index == self.prev_frame_idx
-        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        gray_img = frame.gray
 
         #vars for calcOpticalFlowPyrLK
         lk_params = dict( winSize  = (90, 90),
