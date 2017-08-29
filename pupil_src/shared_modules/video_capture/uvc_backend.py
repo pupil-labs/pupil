@@ -77,7 +77,7 @@ class UVC_Source(Base_Source):
             self.name_backup = preferred_names
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
-
+            self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
         else:
             self.configure_capture(frame_size, frame_rate, uvc_controls)
             self.name_backup = (self.name,)

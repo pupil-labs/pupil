@@ -104,7 +104,7 @@ class Accuracy_Visualizer(Plugin):
             self.recalculate()
 
     def recalculate(self):
-        if not (self.recent_input or self.recent_labels):
+        if not (self.recent_input and self.recent_labels):
             logger.error('Did not collect enough data to estimate gaze mapping accuracy.')
             return
         width, height = self.g_pool.capture.frame_size
