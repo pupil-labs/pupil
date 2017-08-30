@@ -37,12 +37,12 @@ class Dialation_History(Plugin):
 
     def init_gui(self):
         eye0_graph = graph.Bar_Graph(min_val=.0, max_val=5.)
-        eye0_graph.pos = (140, 230)
+        eye0_graph.pos = (260, 230)
         eye0_graph.update_rate = 5
         eye0_graph.label = "id0 dia: %0.2f"
 
         eye1_graph = graph.Bar_Graph(min_val=.0, max_val=5.)
-        eye1_graph.pos = (260, 230)
+        eye1_graph.pos = (380, 230)
         eye1_graph.update_rate = 5
         eye1_graph.label = "id0 dia: %0.2f"
 
