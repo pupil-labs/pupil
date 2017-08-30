@@ -107,7 +107,7 @@ class UVC_Source(Base_Source):
                 ids_to_install.append(id)
         cmd_str_inst = "Start-Process PupilDrvInst.exe -Wait -WorkingDirectory \\\\\\\"{}\\\\\\\"  -argument ''--vid {} --pid {} --desc \\\\\\\"{}\\\\\\\" --vendor \\\\\\\"Pupil Labs\\\\\\\" --inst'' ;"
         work_dir = os.getcwd()
-        print('work_dir = ', work_dir)
+        # print('work_dir = ', work_dir)
         if ids_present > 0:
             cmd_str = 'Remove-Item {}\\win_drv -recurse;'.format(work_dir)
             for id in ids_to_install:
@@ -115,10 +115,11 @@ class UVC_Source(Base_Source):
             logger.warning('Updating drivers, please wait...');
             full_str = "'" + cmd_str + "'"
             elevation_cmd = 'powershell.exe  Start-Process powershell.exe -WorkingDirectory \\\"{}\\\" -WindowStyle hidden -Wait  -argument {} -Verb runAs'.format(work_dir, full_str)
-            print(elevation_cmd)
+            #print(elevation_cmd)
             proc = subprocess.Popen(elevation_cmd)
             proc.wait()
             logger.warning('Done updating drivers!')
+            
     def configure_capture(self, frame_size, frame_rate, uvc_controls):
         # Set camera defaults. Override with previous settings afterwards
         if 'C930e' in self.uvc_capture.name:
