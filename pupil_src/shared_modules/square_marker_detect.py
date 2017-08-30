@@ -314,8 +314,7 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
         new_markers = []
     tick -=1
 
-
-    if prev_img is not None and prev_markers:
+    if prev_img is not None and prev_img.shape == gray_img.shape and prev_markers:
 
         new_ids = [m['id'] for m in new_markers]
 

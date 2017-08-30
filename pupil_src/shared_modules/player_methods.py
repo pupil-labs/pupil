@@ -135,7 +135,7 @@ def load_meta_info(rec_dir):
 def update_meta_info(rec_dir, meta_info):
     logger.info('Updating meta info')
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path,'w',newline='') as csvfile:
+    with open(meta_info_path,'w',newline='',encoding='utf-8') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 

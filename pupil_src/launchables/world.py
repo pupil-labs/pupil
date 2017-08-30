@@ -336,6 +336,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                                         getter=lambda: eyes_are_alive[1].value
                                     ))
     selector_label = "Select to load"
+    user_launchable_plugins.sort(key=lambda p: p.__name__)
     labels = [p.__name__.replace('_', ' ') for p in user_launchable_plugins]
     user_launchable_plugins.insert(0, selector_label)
     labels.insert(0, selector_label)
