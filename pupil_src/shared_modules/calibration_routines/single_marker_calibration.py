@@ -9,11 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-'''
-Reference:
-Santini, Thiago, Wolfgang Fuhl, and Enkelejda Kasneci. "CalibMe: Fast and Unsupervised Eye Tracker Calibration for Gaze-Based Pervasive Human-Computer Interaction." Proceedings of the 2017 CHI Conference on Human Factors in Computing Systems. ACM, 2017.
-'''
-
 import os
 import cv2
 import numpy as np
