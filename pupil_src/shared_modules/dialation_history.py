@@ -23,7 +23,11 @@ logger.setLevel(logging.DEBUG)
 
 
 class Dialation_History(Plugin):
-    """docstring for Dialation_History"""
+    """Pupil dialation visualization
+
+    This plugin uses the 3d model's pupil diameter
+    and displays it in a graph for each eye.
+    """
     order = .9
 
     def __init__(self, g_pool):
