@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class Dialation_History(Plugin):
-    """Pupil dialation visualization
+class Dilation_History(Plugin):
+    """Pupil dilation visualization
 
     This plugin uses the 3d model's pupil diameter
     and displays it in a graph for each eye.
@@ -52,10 +52,10 @@ class Dialation_History(Plugin):
         def close():
             self.alive = False
 
-        self.menu = ui.Growing_Menu('Dialation History')
+        self.menu = ui.Growing_Menu('Dilation History')
         self.menu.collapsed = True
         self.menu.append(ui.Button('Close', close))
-        self.menu.append(ui.Info_Text('Displays the recent pupil dialation in millimeters for each eye.'))
+        self.menu.append(ui.Info_Text('Displays the recent pupil dilation in millimeters for each eye.'))
         self.g_pool.sidebar.append(self.menu)
 
     def recent_events(self, events):
