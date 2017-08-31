@@ -200,6 +200,7 @@ class Realsense_Source(Base_Source):
         self.preview_depth = preview_depth
         self.record_depth = record_depth
         self.depth_video_writer = None
+        self.controls = None
         self._initialize_device(device_id, frame_size, frame_rate,
                                 depth_frame_size, depth_frame_rate, device_options)
 
@@ -211,15 +212,17 @@ class Realsense_Source(Base_Source):
         color_frame_size = tuple(color_frame_size)
         depth_frame_size = tuple(depth_frame_size)
 
-        self.streams = [ColorStream(), DepthStream()]
+        self.streams = [ColorStream(width=1920, height=1080), DepthStream()]
         self.last_color_frame_ts = None
         self.last_depth_frame_ts = None
         self._recent_frame = None
         self._recent_depth_frame = None
+        self.deinit_gui()
 
         if not devices:
             logger.error("Camera failed to initialize. No cameras connected.")
             self.device = None
+            self.init_gui()
             return
 
         if self.device is not None:
@@ -275,7 +278,6 @@ class Realsense_Source(Base_Source):
         self.controls = Realsense_Controls(self.device, device_options)
         self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
-        self.deinit_gui()
         self.init_gui()
 
     def _enumerate_formats(self, device_id):
@@ -315,11 +317,13 @@ class Realsense_Source(Base_Source):
     def cleanup(self):
         if self.depth_video_writer is not None:
             self.stop_depth_recording()
+        if self.device is not None:
+            self.device.stop()
         self.service.stop()
         super().cleanup()
 
     def get_init_dict(self):
-        return {'device_id': self.device.device_id,
+        return {'device_id': self.device.device_id if self.device is not None else 0,
                 'frame_size': self.frame_size,
                 'frame_rate': self.frame_rate,
                 'depth_frame_size': self.depth_frame_size,
@@ -327,7 +331,7 @@ class Realsense_Source(Base_Source):
                 'preview_depth': self.preview_depth,
                 'record_depth': self.record_depth,
                 'align_streams': self.align_streams,
-                'device_options': self.controls.export_presets()}
+                'device_options': self.controls.export_presets() if self.controls is not None else ()}
 
     def get_frames(self):
         if self.device:
@@ -358,15 +362,16 @@ class Realsense_Source(Base_Source):
         return None, None
 
     def recent_events(self, events):
+        if not self.online:
+            time.sleep(.05)
+            return
+
         try:
             color_frame, depth_frame = self.get_frames()
-        except TimeoutError:
+        except (pyrs.RealsenseError, TimeoutError) as err:
             self._recent_frame = None
             self._recent_depth_frame = None
-            # react to timeout
-        except pyrs.RealsenseError as err:
-            self._recent_frame = None
-            self._recent_depth_frame = None
+            self.restart_device()
         else:
             if color_frame and depth_frame:
                 self._recent_frame = color_frame
@@ -490,6 +495,8 @@ class Realsense_Source(Base_Source):
             depth_fps = self.depth_frame_rate
         if device_options is None:
             device_options = self.controls.export_presets()
+        self.service.stop()
+        self.service.start()
         self.notify_all({'subject': 'realsense_source.restart',
                          'device_id': device_id,
                          'color_frame_size': color_frame_size,
