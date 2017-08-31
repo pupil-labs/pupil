@@ -44,9 +44,8 @@ class Accuracy_Visualizer(Plugin):
         self.succession_threshold = np.cos(np.deg2rad(.5))
         self._outlier_threshold = outlier_threshold  # in degrees
 
-
     def init_gui(self):
-        self.menu = ui.Growing_Menu('Accuracy Test')
+        self.menu = ui.Growing_Menu('Accuracy Visualizer')
         self.g_pool.sidebar.append(self.menu)
 
         def close():
