@@ -156,7 +156,11 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def on_window_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
-            if key == GLFW_KEY_ESCAPE or key == GLFW_KEY_C:
+            if self.mode == 'calibration':
+                target_key = GLFW_KEY_C
+            else:
+                target_key = GLFW_KEY_T
+            if key == GLFW_KEY_ESCAPE or key == target_key:
                 self.clicks_to_close = 0
 
 
