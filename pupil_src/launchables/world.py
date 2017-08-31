@@ -114,7 +114,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from remote_recorder import Remote_Recorder
     from audio_capture import Audio_Capture
     from accuracy_visualizer import Accuracy_Visualizer
-    from dialation_history import Dialation_History
+    from dilation_history import Dilation_History
 
     # UI Platform tweaks
     if platform.system() == 'Linux':
@@ -153,7 +153,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     manager_classes += [p for p in runtime_plugins if issubclass(p, Base_Manager)]
     runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Base_Manager)]
     user_launchable_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
-                               Annotation_Capture, Log_History, Fixation_Detector, Dialation_History,
+                               Annotation_Capture, Log_History, Fixation_Detector, Dilation_History,
                                Blink_Detection, Remote_Recorder, Accuracy_Visualizer] + runtime_plugins
     system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay]
     plugin_by_index = (system_plugins + user_launchable_plugins + calibration_plugins
