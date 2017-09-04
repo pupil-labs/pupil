@@ -90,7 +90,7 @@ class File_Source(Base_Source):
         timestamps (str): Path to timestamps file
     """
 
-    def __init__(self,g_pool,source_path=None,timestamps=None,timed_playback=False):
+    def __init__(self, g_pool, source_path=None, timed_playback=False, loop=False):
         super().__init__(g_pool)
 
         # minimal attribute set
@@ -99,6 +99,7 @@ class File_Source(Base_Source):
         self.source_path  = source_path
         self.timestamps   = None
         self.timed_playback = timed_playback
+        self.loop = loop
 
         if not source_path or not os.path.isfile(source_path):
             logger.error('Init failed. Source file could not be found at `%s`'%source_path)
@@ -131,29 +132,26 @@ class File_Source(Base_Source):
         self.target_frame_idx = 0
         self.current_frame_idx = 0
 
-        #we will use below for av playback
+        # we will use below for av playback
         # self.selected_streams = [s for s in (self.video_stream,self.audio_stream) if s]
         # self.av_packet_iterator = self.container.demux(self.selected_streams)
 
         if float(self.video_stream.average_rate)%1 != 0.0:
             logger.error('Videofile pts are not evenly spaced, pts to index conversion may fail and be inconsitent.')
 
-        #load/generate timestamps.
-        if timestamps is None:
-            timestamps_path,ext =  os.path.splitext(source_path)
-            timestamps = timestamps_path+'_timestamps.npy'
-            try:
-                self.timestamps = np.load(timestamps)
-            except IOError:
-                logger.warning("did not find timestamps file, making timetamps up based on fps and frame count. Frame count and timestamps are not accurate!")
-                frame_rate = float(self.video_stream.average_rate)
-                self.timestamps = [i/frame_rate for i in range(int(self.container.duration/av.time_base*frame_rate)+100)] # we are adding some slack.
-            else:
-                logger.debug("Auto loaded %s timestamps from %s"%(len(self.timestamps),timestamps))
+        # load/generate timestamps.
+        timestamps_path, ext = os.path.splitext(source_path)
+        timestamps_path += '_timestamps.npy'
+        try:
+            self.timestamps = np.load(timestamps_path)
+        except IOError:
+            logger.warning("did not find timestamps file, making timetamps up based on fps and frame count. Frame count and timestamps are not accurate!")
+            frame_rate = float(self.video_stream.average_rate)
+            self.timestamps = [i/frame_rate for i in range(int(self.container.duration/av.time_base*frame_rate)+100)]  # we are adding some slack.
         else:
-            assert isinstance(timestamps[0],float), 'Timestamps need to be Python instances of python float'
-            logger.debug('using timestamps from list')
-            self.timestamps = timestamps
+            logger.debug("Auto loaded %s timestamps from %s" % (len(self.timestamps), timestamps_path))
+        assert isinstance(self.timestamps[0], float), 'Timestamps need to be instances of python float, got {}'.format(type(self.timestamps[0]))
+        self.timestamps = self.timestamps
 
         # set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
         self.next_frame = self._next_frame()
@@ -163,17 +161,20 @@ class File_Source(Base_Source):
         self.average_rate = (self.timestamps[-1]-self.timestamps[0])/len(self.timestamps)
 
         loc, name = os.path.split(os.path.splitext(source_path)[0])
-        self.intrinsics = load_intrinsics(loc, name, self.frame_size)
+        self._intrinsics = load_intrinsics(loc, name, self.frame_size)
+        self.play = True
 
-    def ensure_initialisation(fallback_func=None):
+    def ensure_initialisation(fallback_func=None, requires_playback=False):
         from functools import wraps
 
         def decorator(func):
             @wraps(func)
             def run_func(self, *args, **kwargs):
                 if self._initialised and self.video_stream:
-                    return func(self, *args, **kwargs)
-                elif fallback_func:
+                    # test self.play only if requires_playback is True
+                    if not requires_playback or self.play:
+                        return func(self, *args, **kwargs)
+                if fallback_func:
                     return fallback_func(*args, **kwargs)
                 else:
                     logger.debug('Initialisation required.')
@@ -185,6 +186,11 @@ class File_Source(Base_Source):
         return self._initialised
 
     @property
+    def intrinsics(self):
+        return self._intrinsics
+
+    @property
+    @ensure_initialisation(fallback_func=lambda: (640, 480))
     def frame_size(self):
         return int(self.video_stream.format.width), int(self.video_stream.format.height)
 
@@ -196,8 +202,8 @@ class File_Source(Base_Source):
     def get_init_dict(self):
         settings = super().get_init_dict()
         settings['source_path'] = self.source_path
-        settings['timestamps'] = self.timestamps
         settings['timed_playback'] = self.timed_playback
+        settings['loop'] = self.loop
         return settings
 
     @property
@@ -246,9 +252,14 @@ class File_Source(Base_Source):
                 logger.debug('Frame index not consistent.')
                 break
         if not frame:
-            logger.info("End of videofile %s %s"%(self.current_frame_idx,len(self.timestamps)))
-            raise EndofVideoFileError('Reached end of videofile')
-
+            if self.loop:
+                logger.info('Looping enabled. Seeking to beginning.')
+                self.seek_to_frame(0)
+                self.target_frame_idx = 0
+                return self.get_frame()
+            else:
+                logger.info("End of videofile %s %s"%(self.current_frame_idx,len(self.timestamps)))
+                raise EndofVideoFileError('Reached end of videofile')
         try:
             timestamp = self.timestamps[index]
         except IndexError:
@@ -268,14 +279,14 @@ class File_Source(Base_Source):
         self.display_time = frame.timestamp - time()
         sleep(self.slowdown)
 
-    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
-    def recent_events(self,events):
+    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05), requires_playback=True)
+    def recent_events(self, events):
         try:
             frame = self.get_frame()
         except EndofVideoFileError:
             logger.info('Video has ended.')
-            self.notify_all({"subject":'file_source.video_finished', 'source_path':self.source_path})
-            self._initialised = False
+            self.notify_all({"subject":'file_source.video_finished', 'source_path': self.source_path})
+            self.play = False
         else:
             self._recent_frame = frame
             events['frame'] = frame
@@ -314,12 +325,19 @@ class File_Source(Base_Source):
         from pyglui import ui
         ui_elements = []
         ui_elements.append(ui.Info_Text("Running Capture with '%s' as src"%self.source_path))
-        ui_elements.append(ui.Slider('slowdown',self,min=0,max=1.0))
+        ui_elements.append(ui.Slider('slowdown', self, min=0, max=1.0))
+
+        def toggle_looping(val):
+            self.loop = val
+            if val:
+                self.play = True
+        ui_elements.append(ui.Switch('loop', self, setter=toggle_looping))
         self.g_pool.capture_source_menu.extend(ui_elements)
 
     @property
     def jpeg_support(self):
         return False
+
 
 class File_Manager(Base_Manager):
     """Summary
@@ -354,24 +372,30 @@ class File_Manager(Base_Manager):
             eligible_files.insert(0, (None, 'Select to activate'))
             return zip(*eligible_files)
 
-        def activate(full_path):
-            if not full_path:
-                return
-            settings = {
-                'source_path': full_path,
-                'timed_playback': True
-            }
-            self.activate_source(settings)
-
         ui_elements.append(ui.Selector(
             'selected_file',
             selection_getter=split_enumeration,
             getter=lambda: None,
-            setter=activate,
+            setter=self.activate,
             label='Video File'
         ))
 
         self.g_pool.capture_selector_menu.extend(ui_elements)
+
+    def activate(self, full_path):
+        if not full_path:
+            return
+        settings = {
+            'source_path': full_path,
+            'timed_playback': True
+        }
+        self.activate_source(settings)
+
+    def on_drop(self, paths):
+        for p in paths:
+            if os.path.splitext(p)[-1] in self.file_exts:
+                self.activate(p)
+                return
 
     def enumerate_folder(self,path):
         eligible_files  = []

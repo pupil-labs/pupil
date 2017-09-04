@@ -136,15 +136,13 @@ class Eye_Wrapper(object):
 
     def initliaze_video(self, rec_dir, world_timestamps):
         eye_loc = os.path.join(rec_dir, 'eye{}.*'.format(self.eyeid))
-        ts_loc = os.path.join(rec_dir, 'eye{}_timestamps.npy'.format(self.eyeid))
         try:
-            eye_timestamps = np.load(ts_loc)
-            self.source = File_Source(Empty(), source_path=glob(eye_loc)[0], timestamps=eye_timestamps)
+            self.source = File_Source(Empty(), source_path=glob(eye_loc)[0])
             self.current_eye_frame = self.source.get_frame()
         except (FileNotFoundError, IndexError, FileCaptureError):
             logger.warning('Video for eye{} was not found or could not be opened.'.format(self.eyeid))
         else:
-            self.eye_world_frame_map = correlate_eye_world(eye_timestamps.tolist(), world_timestamps)
+            self.eye_world_frame_map = correlate_eye_world(list(self.source.timestamps), world_timestamps)
             if self.menu is not None:
                 self.menu.read_only = False
 

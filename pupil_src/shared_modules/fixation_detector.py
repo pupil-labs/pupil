@@ -694,7 +694,7 @@ class Fixation_Detector(Plugin):
         def close():
             self.alive = False
 
-        self.menu = ui.Growing_Menu('Online Fixation Detector')
+        self.menu = ui.Growing_Menu('Fixation Detector')
         self.menu.collapsed = True
         self.menu.append(ui.Button('Close', close))
 

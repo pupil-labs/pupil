@@ -33,8 +33,13 @@ class ZMQ_handler(logging.Handler):
         self.socket = Msg_Dispatcher(ctx, ipc_pub_url)
 
     def emit(self, record):
-        self.socket.send('logging.{0}'.format(record.levelname.lower()),
-                         record.__dict__)
+        try:
+            self.socket.send('logging.{0}'.format(record.levelname.lower()), record.__dict__)
+        except TypeError:
+            record_dict = record.__dict__
+            # stringify `exc_info` since it includes unserializable objects
+            record_dict['exc_info'] = str(record_dict['exc_info'])
+            self.socket.send('logging.{0}'.format(record.levelname.lower()), record_dict)
 
 
 class ZMQ_Socket(object):

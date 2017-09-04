@@ -114,6 +114,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from remote_recorder import Remote_Recorder
     from audio_capture import Audio_Capture
     from accuracy_visualizer import Accuracy_Visualizer
+    from diameter_history import Diameter_History
 
     # UI Platform tweaks
     if platform.system() == 'Linux':
@@ -151,13 +152,18 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
-    user_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
-                    Annotation_Capture, Log_History, Fixation_Detector, Blink_Detection,
-                    Remote_Recorder,Accuracy_Visualizer]
-    system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay] + manager_classes + source_classes
-    plugins = system_plugins + user_plugins + runtime_plugins + calibration_plugins + gaze_mapping_plugins
-    user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source, Calibration_Plugin, Gaze_Mapping_Plugin))]
-    g_pool.plugin_by_name = {p.__name__: p for p in plugins}
+    calibration_plugins += [p for p in runtime_plugins if issubclass(p, Calibration_Plugin)]
+    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Calibration_Plugin)]
+    manager_classes += [p for p in runtime_plugins if issubclass(p, Base_Manager)]
+    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Base_Manager)]
+    user_launchable_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
+                               Annotation_Capture, Log_History, Fixation_Detector, Diameter_History,
+                               Blink_Detection, Remote_Recorder, Accuracy_Visualizer] + runtime_plugins
+    system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay]
+    plugin_by_index = (system_plugins + user_launchable_plugins + calibration_plugins
+                       + gaze_mapping_plugins + manager_classes + source_classes)
+    name_by_index = [p.__name__ for p in plugin_by_index]
+    plugin_by_name = dict(zip(name_by_index, plugin_by_index))
 
     default_capture_settings = {
         'preferred_names': ["Pupil Cam1 ID2", "Logitech Camera", "(046d:081d)",
@@ -222,6 +228,11 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     def on_scroll(window, x, y):
         g_pool.gui.update_scroll(x, y * scroll_factor)
+
+    def on_drop(window, count, paths):
+        paths = [paths[x].decode('utf-8') for x in range(count)]
+        for p in g_pool.plugins:
+            p.on_drop(paths)
 
     tick = delta_t()
 
@@ -356,17 +367,18 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                                         getter=lambda: eyes_are_alive[1].value
                                     ))
 
-
+    selector_label = "Select to load"
 
     def open_plugin(plugin):
-        if plugin is not "Select to load":
-            g_pool.ipc_pub.notify({'subject':'start_plugin','name':plugin.__name__})
-    selector_label = "Select to load"
-    labels = [p.__name__.replace('_', ' ') for p in user_plugins]
-    user_plugins.insert(0, selector_label)
+        if plugin != selector_label:
+            g_pool.ipc_pub.notify({'subject': 'start_plugin', 'name': plugin.__name__})
+
+    user_launchable_plugins.sort(key=lambda p: p.__name__)
+    labels = [p.__name__.replace('_', ' ') for p in user_launchable_plugins]
+    user_launchable_plugins.insert(0, selector_label)
     labels.insert(0, selector_label)
     general_settings.append(ui.Selector('Open plugin',
-                                        selection=user_plugins,
+                                        selection=user_launchable_plugins,
                                         labels=labels,
                                         setter=open_plugin,
                                         getter=lambda: selector_label))
@@ -389,6 +401,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
     glfw.glfwSetCursorPosCallback(main_window, on_pos)
     glfw.glfwSetScrollCallback(main_window, on_scroll)
+    glfw.glfwSetDropCallback(main_window, on_drop)
 
     # gl_state settings
     gl_utils.basic_gl_setup()
