@@ -152,18 +152,14 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
-    calibration_plugins += [p for p in runtime_plugins if issubclass(p, Calibration_Plugin)]
-    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Calibration_Plugin)]
-    manager_classes += [p for p in runtime_plugins if issubclass(p, Base_Manager)]
-    runtime_plugins = [p for p in runtime_plugins if not issubclass(p, Base_Manager)]
-    user_launchable_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
-                               Annotation_Capture, Log_History, Fixation_Detector, Diameter_History,
-                               Blink_Detection, Remote_Recorder, Accuracy_Visualizer] + runtime_plugins
-    system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay]
-    plugin_by_index = (system_plugins + user_launchable_plugins + calibration_plugins
-                       + gaze_mapping_plugins + manager_classes + source_classes)
-    name_by_index = [p.__name__ for p in plugin_by_index]
-    plugin_by_name = dict(zip(name_by_index, plugin_by_index))
+    user_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
+                    Annotation_Capture, Log_History, Fixation_Detector, Blink_Detection, Diameter_History,
+                    Remote_Recorder, Accuracy_Visualizer]
+    system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay] + manager_classes + source_classes
+    plugins = system_plugins + user_plugins + runtime_plugins + calibration_plugins + gaze_mapping_plugins
+    user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source,
+                                                                      Calibration_Plugin, Gaze_Mapping_Plugin))]
+    g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
     default_capture_settings = {
         'preferred_names': ["Pupil Cam1 ID2", "Logitech Camera", "(046d:081d)",
@@ -197,7 +193,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             for g in g_pool.graphs:
                 g.scale = hdpi_factor
                 g.adjust_window_size(*window_size)
-
 
             for p in g_pool.plugins:
                 p.on_window_resize(window, *camera_render_size)
@@ -373,12 +368,12 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         if plugin != selector_label:
             g_pool.ipc_pub.notify({'subject': 'start_plugin', 'name': plugin.__name__})
 
-    user_launchable_plugins.sort(key=lambda p: p.__name__)
-    labels = [p.__name__.replace('_', ' ') for p in user_launchable_plugins]
-    user_launchable_plugins.insert(0, selector_label)
+    user_plugins.sort(key=lambda p: p.__name__)
+    labels = [p.__name__.replace('_', ' ') for p in user_plugins]
+    user_plugins.insert(0, selector_label)
     labels.insert(0, selector_label)
     general_settings.append(ui.Selector('Open plugin',
-                                        selection=user_launchable_plugins,
+                                        selection=user_plugins,
                                         labels=labels,
                                         setter=open_plugin,
                                         getter=lambda: selector_label))
