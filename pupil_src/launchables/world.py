@@ -333,7 +333,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
-    g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-80, 0), header_pos='left')
+    g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos='left')
     g_pool.iconbar = ui.Scrolling_Menu("Icons",pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))
     g_pool.gui.append(g_pool.menubar)
@@ -343,7 +343,12 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     general_settings = ui.Growing_Menu('General',header_pos='headline')
     general_settings.append(ui.Button('Reset to default settings',reset_restart))
     general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.6, .8, 1., 1.2, 1.4], label='Interface size'))
-    general_settings.append(ui.Button('Reset window size', lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0]+int(icon_bar_width*g_pool.gui.scale),g_pool.capture.frame_size[1])) )
+
+    def set_window_size():
+        f_width, f_height = g_pool.capture.frame_size
+        f_width += int(icon_bar_width*g_pool.gui.scale)
+        glfw.glfwSetWindowSize(main_window, f_width, f_height)
+    general_settings.append(ui.Button('Reset window size', set_window_size))
     general_settings.append(ui.Selector('audio_mode', audio, selection=audio.audio_modes))
     general_settings.append(ui.Selector('detection_mapping_mode',
                                         g_pool,
