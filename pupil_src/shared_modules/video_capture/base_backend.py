@@ -159,8 +159,10 @@ class Base_Manager(Plugin):
         from . import manager_classes
         from pyglui import ui
 
+        self.menu.label = self.gui_name
         self.menu_icon.label = 'M'
         self.menu_icon.order = 0.1
+
         def open_plugin(p):
             self.notify_all({'subject':'start_plugin', 'name':p.__name__})
 
