@@ -288,6 +288,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.on_position = on_position
             self.button.status_text = '{} / {}'.format(self.active_site, 9)
 
+        if self._window:
+            self.gl_display_in_window()
+
     def gl_display(self):
         """
         use gl calls to render
@@ -305,12 +308,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                                        (int(e[1][0]/2), int(e[1][1]/2)),
                                        int(e[-1]), 0, 360, 15)
                 draw_polyline(pts, 1, RGBA(0.,1.,0.,1.))
-
-        else:
-            pass
-        if self._window:
-            self.gl_display_in_window()
-
 
     def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()
