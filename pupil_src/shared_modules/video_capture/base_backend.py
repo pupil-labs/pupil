@@ -158,6 +158,10 @@ class Base_Source(Plugin):
     def intrinsics(self):
         raise NotImplementedError()
 
+    @intrinsics.setter
+    def intrinsics(self, new_intrinsics):
+        pass
+
 class Base_Manager(Plugin):
     """Abstract base class for source managers.
 

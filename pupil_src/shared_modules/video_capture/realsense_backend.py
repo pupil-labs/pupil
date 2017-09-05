@@ -538,6 +538,10 @@ class Realsense_Source(Base_Source):
     def intrinsics(self):
         return self._intrinsics
 
+    @intrinsics.setter
+    def intrinsics(self, new_intrinsics):
+        self._intrinsics = new_intrinsics
+
     @property
     def frame_size(self):
         stream = self.streams[0]
