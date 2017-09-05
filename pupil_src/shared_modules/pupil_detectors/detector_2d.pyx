@@ -173,7 +173,9 @@ cdef class Detector_2D:
 
         return py_result
 
-
+    @classmethod
+    def icon_info(self):
+        return 'roboto', '2D'
 
     def init_ui(self):
         Plugin.add_menu(self)

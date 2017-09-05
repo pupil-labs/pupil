@@ -189,6 +189,10 @@ cdef class Detector_3D:
     def cleanup(self):
         self.debugVisualizer3D.close_window() # if we change detectors, be sure debug window is also closed
 
+    @classmethod
+    def icon_info(self):
+        return 'roboto', '3D'
+
     def init_ui(self):
         Plugin.add_menu(self)
         self.menu.label = 'Pupil Detector 3D'

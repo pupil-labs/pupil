@@ -222,6 +222,10 @@ class Plugin(object):
     def pretty_class_name(self):
         return self.class_name.replace('_', ' ')
 
+    @classmethod
+    def icon_info(self):
+        return 'roboto', '?'
+
     def add_menu(self):
         '''
         This fn is called when the plugin ui is initialized. Do not change!
@@ -238,8 +242,11 @@ class Plugin(object):
             self.menu.collapsed = collapsed
 
         # Here we make a menu and icon
-        self.menu = ui.Growing_Menu('Unnamed Menu',header_pos='headline')
-        self.menu_icon = ui.Thumb('collapsed', self.menu, label='?', on_val=False, off_val=True, setter=toggle_menu,)
+        font, symbol = self.icon_info()
+        self.menu = ui.Growing_Menu('Unnamed Menu', header_pos='headline')
+        self.menu_icon = ui.Thumb('collapsed', self.menu, label=symbol,
+                                  label_font=font, on_val=False, off_val=True,
+                                  setter=toggle_menu,)
         self.menu_icon.order = 0.5
         self.g_pool.menubar.append(self.menu)
         self.g_pool.iconbar.append(self.menu_icon)

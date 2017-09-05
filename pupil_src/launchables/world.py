@@ -96,6 +96,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # Plug-ins
     from plugin import Plugin, Plugin_List, import_runtime_plugins
+    from plugin_manager import Plugin_Manager
     from calibration_routines import calibration_plugins, gaze_mapping_plugins, Calibration_Plugin, Gaze_Mapping_Plugin
     from fixation_detector import Fixation_Detector
     from recorder import Recorder
@@ -155,7 +156,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     user_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
                     Annotation_Capture, Log_History, Fixation_Detector, Blink_Detection, Diameter_History,
                     Remote_Recorder, Accuracy_Visualizer]
-    system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay] + manager_classes + source_classes
+    system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay, Plugin_Manager] + manager_classes + source_classes
     plugins = system_plugins + user_plugins + runtime_plugins + calibration_plugins + gaze_mapping_plugins
     user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source,
                                                                       Calibration_Plugin, Gaze_Mapping_Plugin))]
@@ -341,7 +342,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.gui.append(g_pool.quickbar)
 
     general_settings = ui.Growing_Menu('General',header_pos='headline')
-    general_settings.append(ui.Button('Reset to default settings',reset_restart))
     general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.6, .8, 1., 1.2, 1.4], label='Interface size'))
 
     def set_window_size():
@@ -384,14 +384,14 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                                         getter=lambda: selector_label))
 
     general_settings.append(ui.Info_Text('Capture Version: {}'.format(g_pool.version)))
+    general_settings.append(ui.Button('Restart with default settings', reset_restart))
 
     g_pool.menubar.append(general_settings)
-    g_pool.iconbar.append(ui.Thumb('collapsed', general_settings, label=chr(0xe8b8), on_val=False, off_val=True, setter=toggle_general_settings,label_font = 'pupil_icons'))
-
+    g_pool.iconbar.append(ui.Thumb('collapsed', general_settings, label=chr(0xe8b8), on_val=False, off_val=True, setter=toggle_general_settings, label_font='pupil_icons'))
 
     # plugins that are loaded based on user settings from previous session
     g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
-
+    g_pool.plugins.add(Plugin_Manager, {'user_plugins': user_plugins}),
 
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
