@@ -59,6 +59,10 @@ class Base_Source(Plugin):
         self.g_pool.capture = self
         self._recent_frame = None
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe412)
+
     def add_menu(self):
         super().add_menu()
         self.menu_icon.order = 0.2
@@ -154,12 +158,15 @@ class Base_Manager(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xec01)
+
     def add_menu(self):
         super().add_menu()
         from . import manager_classes
         from pyglui import ui
 
-        self.menu_icon.label = 'M'
         self.menu_icon.order = 0.1
 
         def replace_backend_manager(manager_class):

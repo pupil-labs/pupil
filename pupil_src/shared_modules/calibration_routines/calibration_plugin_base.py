@@ -27,6 +27,10 @@ class Calibration_Plugin(Plugin):
         self.active = False
         self.mode = 'calibration'
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe39e)
+
     def add_menu(self):
         super().add_menu()
 
@@ -34,7 +38,6 @@ class Calibration_Plugin(Plugin):
         calibration_plugins.sort(key=lambda p: p.__name__)
         from pyglui import ui
 
-        self.menu_icon.label = 'C'
         self.menu_icon.order = 0.3
 
         def open_plugin(p):

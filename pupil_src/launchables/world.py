@@ -95,7 +95,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     del pupil_detectors
 
     # Plug-ins
-    from plugin import Plugin, Plugin_List, import_runtime_plugins
+    from plugin import Plugin, System_Plugin_Base, Plugin_List, import_runtime_plugins
     from plugin_manager import Plugin_Manager
     from calibration_routines import calibration_plugins, gaze_mapping_plugins, Calibration_Plugin, Gaze_Mapping_Plugin
     from fixation_detector import Fixation_Detector
@@ -158,8 +158,9 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                     Remote_Recorder, Accuracy_Visualizer]
     system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay, Plugin_Manager] + manager_classes + source_classes
     plugins = system_plugins + user_plugins + runtime_plugins + calibration_plugins + gaze_mapping_plugins
-    user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source,
+    user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source, System_Plugin_Base,
                                                                       Calibration_Plugin, Gaze_Mapping_Plugin))]
+    user_plugins.sort(key=lambda p: p.__name__)
     g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
     default_capture_settings = {
@@ -177,7 +178,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                        ('Display_Recent_Gaze', {}),
                        ('Screen_Marker_Calibration', {}),
                        ('Recorder', {}),
-                       ('Pupil_Remote', {})]
+                       ('Pupil_Remote', {}),
+                       ('Plugin_Manager', {})]
 
     # Callback functions
     def on_resize(window, w, h):
@@ -367,22 +369,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                                         getter=lambda: eyes_are_alive[1].value
                                     ))
 
-    selector_label = "Select to load"
-
-    def open_plugin(plugin):
-        if plugin != selector_label:
-            g_pool.ipc_pub.notify({'subject': 'start_plugin', 'name': plugin.__name__})
-
-    user_plugins.sort(key=lambda p: p.__name__)
-    labels = [p.__name__.replace('_', ' ') for p in user_plugins]
-    user_plugins.insert(0, selector_label)
-    labels.insert(0, selector_label)
-    general_settings.append(ui.Selector('Open plugin',
-                                        selection=user_plugins,
-                                        labels=labels,
-                                        setter=open_plugin,
-                                        getter=lambda: selector_label))
-
     general_settings.append(ui.Info_Text('Capture Version: {}'.format(g_pool.version)))
     general_settings.append(ui.Button('Restart with default settings', reset_restart))
 
@@ -391,7 +377,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # plugins that are loaded based on user settings from previous session
     g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
-    g_pool.plugins.add(Plugin_Manager, {'user_plugins': user_plugins}),
 
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)

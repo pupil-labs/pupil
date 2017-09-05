@@ -9,22 +9,28 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Plugin
+from plugin import System_Plugin_Base
 from pyglui import ui
+from calibration_routines import Calibration_Plugin, Gaze_Mapping_Plugin
+from video_capture import Base_Manager, Base_Source
 
 
-class Plugin_Manager(Plugin):
-    def __init__(self, g_pool, user_plugins):
+class Plugin_Manager(System_Plugin_Base):
+    def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.user_plugins = user_plugins.copy()
-        self.user_plugins.remove('Select to load')
+        self.user_plugins = [p for p in g_pool.plugin_by_name.values()
+                             if not issubclass(p, (System_Plugin_Base,
+                                                   Base_Manager, Base_Source,
+                                                   Calibration_Plugin,
+                                                   Gaze_Mapping_Plugin))]
+        # self.user_plugins.remove('Select to load')
 
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Plugin Manager'
         self.menu_icon.label_font = 'pupil_icons'
         self.menu_icon.label = chr(0xe8c0)
-        self.menu_icon.order = .3
+        self.menu_icon.order = .0
 
         def plugin_menu_entry(p):
             def setter(turn_on):
@@ -50,6 +56,3 @@ class Plugin_Manager(Plugin):
 
     def deinit_ui(self):
         self.remove_menu()
-
-    def get_init_dict(self):
-        raise NotImplementedError()

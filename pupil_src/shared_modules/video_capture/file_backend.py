@@ -324,8 +324,6 @@ class File_Source(Base_Source):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'File Source: {}'.format(os.path.split(self.source_path)[-1])
-        self.menu_icon.label_font = 'pupil_icons'
-        self.menu_icon.label = chr(0xec01)
         from pyglui import ui
         self.menu.append(ui.Info_Text("Running Capture with '%s' as src"%self.source_path))
         self.menu.append(ui.Slider('slowdown', self, min=0, max=1.0))

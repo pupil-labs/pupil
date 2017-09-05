@@ -72,8 +72,6 @@ class Fake_Source(Base_Source):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Static Image Source"
-        self.menu_icon.label_font = 'pupil_icons'
-        self.menu_icon.label = chr(0xec01)
 
         from pyglui import ui
         text = ui.Info_Text("Fake capture source streaming test images.")

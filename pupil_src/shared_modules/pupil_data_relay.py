@@ -8,10 +8,11 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Plugin
+from plugin import System_Plugin_Base
 import zmq_tools
 
-class Pupil_Data_Relay(Plugin):
+
+class Pupil_Data_Relay(System_Plugin_Base):
     """
     """
 
@@ -21,22 +22,17 @@ class Pupil_Data_Relay(Plugin):
         self.gaze_pub = zmq_tools.Msg_Streamer(self.g_pool.zmq_ctx,self.g_pool.ipc_pub_url)
         self.pupil_sub = zmq_tools.Msg_Receiver(self.g_pool.zmq_ctx,self.g_pool.ipc_sub_url,topics=('pupil',))
 
-
-    def recent_events(self,events):
+    def recent_events(self, events):
         recent_pupil_data = []
         recent_gaze_data = []
 
         while self.pupil_sub.new_data:
-            t,p = self.pupil_sub.recv()
+            t, p = self.pupil_sub.recv()
             recent_pupil_data.append(p)
             new_gaze_data = self.g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
             for g in new_gaze_data:
-                self.gaze_pub.send('gaze',g)
+                self.gaze_pub.send('gaze', g)
             recent_gaze_data += new_gaze_data
 
         events['pupil_positions'] = recent_pupil_data
         events['gaze_positions'] = recent_gaze_data
-
-
-    def get_init_dict(self):
-        return {}

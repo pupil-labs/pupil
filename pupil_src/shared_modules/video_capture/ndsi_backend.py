@@ -226,8 +226,6 @@ class NDSI_Source(Base_Source):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'NDSI Source: {} @ {}'.format(self._sensor_name, self._host_name)
-        self.menu_icon.label_font = 'pupil_icons'
-        self.menu_icon.label = chr(0xec01)
 
         from pyglui import ui
         self.has_ui = True

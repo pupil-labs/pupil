@@ -393,3 +393,7 @@ class Analysis_Plugin_Base(Plugin):
 
 class Producer_Plugin_Base(Plugin):
     pass
+
+
+class System_Plugin_Base(Plugin):
+    pass

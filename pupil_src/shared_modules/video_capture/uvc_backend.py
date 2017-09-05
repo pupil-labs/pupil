@@ -319,8 +319,6 @@ class UVC_Source(Base_Source):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Local USB Source: {}".format(self.name)
-        self.menu_icon.label_font = 'pupil_icons'
-        self.menu_icon.label = chr(0xec01)
         self.update_menu()
 
     def update_menu(self):
