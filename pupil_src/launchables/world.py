@@ -95,7 +95,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     del pupil_detectors
 
     # Plug-ins
-    from plugin import Plugin, Plugin_List, import_runtime_plugins
+    from plugin import Plugin, System_Plugin_Base, Plugin_List, import_runtime_plugins
+    from plugin_manager import Plugin_Manager
     from calibration_routines import calibration_plugins, gaze_mapping_plugins, Calibration_Plugin, Gaze_Mapping_Plugin
     from fixation_detector import Fixation_Detector
     from recorder import Recorder
@@ -114,6 +115,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from remote_recorder import Remote_Recorder
     from audio_capture import Audio_Capture
     from accuracy_visualizer import Accuracy_Visualizer
+    from diameter_history import Diameter_History
 
     # UI Platform tweaks
     if platform.system() == 'Linux':
@@ -152,11 +154,13 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
     user_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
-                    Annotation_Capture, Log_History, Fixation_Detector, Blink_Detection,
-                    Remote_Recorder,Accuracy_Visualizer]
-    system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay] + manager_classes + source_classes
+                    Annotation_Capture, Log_History, Fixation_Detector, Blink_Detection, Diameter_History,
+                    Remote_Recorder, Accuracy_Visualizer]
+    system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay, Plugin_Manager] + manager_classes + source_classes
     plugins = system_plugins + user_plugins + runtime_plugins + calibration_plugins + gaze_mapping_plugins
-    user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source, Calibration_Plugin, Gaze_Mapping_Plugin))]
+    user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source, System_Plugin_Base,
+                                                                      Calibration_Plugin, Gaze_Mapping_Plugin))]
+    user_plugins.sort(key=lambda p: p.__name__)
     g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
     default_capture_settings = {
@@ -174,7 +178,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                        ('Display_Recent_Gaze', {}),
                        ('Screen_Marker_Calibration', {}),
                        ('Recorder', {}),
-                       ('Pupil_Remote', {})]
+                       ('Pupil_Remote', {}),
+                       ('Plugin_Manager', {})]
 
     # Callback functions
     def on_resize(window, w, h):
@@ -191,7 +196,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             for g in g_pool.graphs:
                 g.scale = hdpi_factor
                 g.adjust_window_size(*window_size)
-
 
             for p in g_pool.plugins:
                 p.on_window_resize(window, *camera_render_size)
@@ -222,6 +226,11 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     def on_scroll(window, x, y):
         g_pool.gui.update_scroll(x, y * scroll_factor)
+
+    def on_drop(window, count, paths):
+        paths = [paths[x].decode('utf-8') for x in range(count)]
+        for p in g_pool.plugins:
+            p.on_drop(paths)
 
     tick = delta_t()
 
@@ -327,7 +336,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
-    g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-80, 0), header_pos='left')
+    g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos='left')
     g_pool.iconbar = ui.Scrolling_Menu("Icons",pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))
     g_pool.gui.append(g_pool.menubar)
@@ -335,9 +344,13 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.gui.append(g_pool.quickbar)
 
     general_settings = ui.Growing_Menu('General',header_pos='headline')
-    general_settings.append(ui.Button('Reset to default settings',reset_restart))
     general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.6, .8, 1., 1.2, 1.4], label='Interface size'))
-    general_settings.append(ui.Button('Reset window size', lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0]+int(icon_bar_width*g_pool.gui.scale),g_pool.capture.frame_size[1])) )
+
+    def set_window_size():
+        f_width, f_height = g_pool.capture.frame_size
+        f_width += int(icon_bar_width*g_pool.gui.scale)
+        glfw.glfwSetWindowSize(main_window, f_width, f_height)
+    general_settings.append(ui.Button('Reset window size', set_window_size))
     general_settings.append(ui.Selector('audio_mode', audio, selection=audio.audio_modes))
     general_settings.append(ui.Selector('detection_mapping_mode',
                                         g_pool,
@@ -356,30 +369,14 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                                         getter=lambda: eyes_are_alive[1].value
                                     ))
 
-
-
-    def open_plugin(plugin):
-        if plugin is not "Select to load":
-            g_pool.ipc_pub.notify({'subject':'start_plugin','name':plugin.__name__})
-    selector_label = "Select to load"
-    labels = [p.__name__.replace('_', ' ') for p in user_plugins]
-    user_plugins.insert(0, selector_label)
-    labels.insert(0, selector_label)
-    general_settings.append(ui.Selector('Open plugin',
-                                        selection=user_plugins,
-                                        labels=labels,
-                                        setter=open_plugin,
-                                        getter=lambda: selector_label))
-
     general_settings.append(ui.Info_Text('Capture Version: {}'.format(g_pool.version)))
+    general_settings.append(ui.Button('Restart with default settings', reset_restart))
 
     g_pool.menubar.append(general_settings)
-    g_pool.iconbar.append(ui.Thumb('collapsed', general_settings, label=chr(0xe8b8), on_val=False, off_val=True, setter=toggle_general_settings,label_font = 'pupil_icons'))
-
+    g_pool.iconbar.append(ui.Icon('collapsed', general_settings, label=chr(0xe8b8), on_val=False, off_val=True, setter=toggle_general_settings, label_font='pupil_icons'))
 
     # plugins that are loaded based on user settings from previous session
     g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
-
 
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -389,6 +386,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
     glfw.glfwSetCursorPosCallback(main_window, on_pos)
     glfw.glfwSetScrollCallback(main_window, on_scroll)
+    glfw.glfwSetDropCallback(main_window, on_drop)
 
     # gl_state settings
     gl_utils.basic_gl_setup()

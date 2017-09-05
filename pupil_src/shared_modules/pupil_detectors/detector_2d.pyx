@@ -13,6 +13,7 @@ See COPYING and COPYING.LESSER for license details.
 import cv2
 import numpy as np
 from methods import Roi, normalize
+from plugin import Plugin
 from pyglui import ui
 import glfw
 from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
@@ -35,8 +36,9 @@ cdef class Detector_2D:
     cdef dict detectProperties
     cdef bint windowShouldOpen, windowShouldClose
     cdef object _window
-    cdef object menu
-    cdef object gPool
+    cdef readonly object g_pool
+    cdef public object menu
+    cdef public object menu_icon
 
     cdef int coarseDetectionPreviousWidth
     cdef object coarseDetectionPreviousPosition
@@ -48,7 +50,7 @@ cdef class Detector_2D:
         self._window = None
         self.windowShouldOpen = False
         self.windowShouldClose = False
-        self.gPool = g_pool
+        self.g_pool = g_pool
         self.detectProperties = settings or {}
         self.coarseDetectionPreviousWidth = -1
         self.coarseDetectionPreviousPosition =  (0,0)
@@ -76,6 +78,11 @@ cdef class Detector_2D:
 
     def get_settings(self):
         return self.detectProperties
+
+    def on_resolution_change(self, old_size, new_size):
+        self.detectProperties["pupil_size_max"] *= new_size[0] / old_size[0]
+        self.detectProperties["pupil_size_min"] *= new_size[0] / old_size[0]
+
 
     def __dealloc__(self):
       del self.thisptr
@@ -166,11 +173,14 @@ cdef class Detector_2D:
 
         return py_result
 
+    @classmethod
+    def icon_info(self):
+        return 'roboto', '2D'
 
-
-    def init_gui(self,sidebar):
-        self.menu = ui.Growing_Menu('Pupil Detector')
-        self.menu.collapsed = True
+    def init_ui(self):
+        Plugin.add_menu(self)
+        self.menu.label = 'Pupil Detector 2D'
+        self.menu_icon.label = '2D'
         info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
@@ -184,11 +194,9 @@ cdef class Detector_2D:
         #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detectProperties,label='Contour min length',min=1,max=200,step=1))
         #advanced_controls_menu.append(ui.Slider('ellipse_true_support_min_dist',self.detectProperties,label='ellipse_true_support_min_dist',min=0.1,max=7,step=0.1))
         #self.menu.append(advanced_controls_menu)
-        sidebar.append(self.menu)
 
-    def deinit_gui(self):
-        self.gPool.sidebar.remove(self.menu)
-        self.menu = None
+    def deinit_ui(self):
+        Plugin.remove_menu(self)
 
     def toggle_window(self):
         if self._window:
@@ -259,7 +267,6 @@ cdef class Detector_2D:
 
     def cleanup(self):
         self.close_window() # if we change detectors, be sure debug window is also closed
-        self.deinit_gui()
 
     def visualize(self):
         #display the debug image in the window

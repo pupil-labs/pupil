@@ -59,6 +59,10 @@ class Base_Source(Plugin):
         self.g_pool.capture = self
         self._recent_frame = None
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe412)
+
     def add_menu(self):
         super().add_menu()
         self.menu_icon.order = 0.2
@@ -154,20 +158,30 @@ class Base_Manager(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xec01)
+
     def add_menu(self):
         super().add_menu()
         from . import manager_classes
         from pyglui import ui
 
-        self.menu_icon.label = 'M'
         self.menu_icon.order = 0.1
-        def open_plugin(p):
-            self.notify_all({'subject':'start_plugin', 'name':p.__name__})
 
-        #We add the capture selection menu
+        def replace_backend_manager(manager_class):
+            if self.g_pool.process.startswith('eye'):
+                self.g_pool.capture_manager.deinit_ui()
+                self.g_pool.capture_manager.cleanup()
+                self.g_pool.capture_manager = manager_class(self.g_pool)
+                self.g_pool.capture_manager.init_ui()
+            else:
+                self.notify_all({'subject': 'start_plugin', 'name': manager_class.__name__})
+
+        # We add the capture selection menu
         self.menu.append(ui.Selector(
                             'capture_manager',
-                            setter    = open_plugin,
+                            setter    = replace_backend_manager,
                             getter    = lambda: self.__class__,
                             selection = manager_classes,
                             labels    = [b.gui_name for b in manager_classes],

@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
-from plugin import Plugin
+from plugin import System_Plugin_Base
 from pyglui.cygl.utils import Render_Target,push_ortho,pop_ortho
 import logging
 from glfw import glfwGetFramebufferSize,glfwGetCurrentContext
@@ -33,7 +33,7 @@ def duration_from_level(lvl):
     return {"CRITICAL":3,"ERROR":2,"WARNING":1.5,"INFO":1,"DEBUG":1,"NOTSET":1}[lvl]
 
 
-class Log_Display(Plugin):
+class Log_Display(System_Plugin_Base):
     """docstring for Log_Display"""
     def __init__(self, g_pool):
         super().__init__(g_pool)

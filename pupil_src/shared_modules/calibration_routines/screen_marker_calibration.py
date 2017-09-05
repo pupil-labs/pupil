@@ -80,7 +80,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         self.active_site = None
         self.sites = []
-        self.display_pos = None
+        self.display_pos = -1., -1.
         self.on_position = False
 
         self.markers = []
@@ -132,11 +132,16 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         logger.info("Starting {}".format(self.mode_pretty))
 
         if self.g_pool.detection_mapping_mode == '3d':
-            self.sites = [(.5, .5), (0., 1.), (1., 1.), (1., 0.), (0., 0.)]
-
+            if self.mode == 'calibration':
+                self.sites = [(.5, .5), (0., 1.), (1., 1.), (1., 0.), (0., 0.)]
+            else:
+                self.sites = [(.25, .5), (.5, .25), (.75, .5), (.5, .75)]
         else:
-            self.sites = [(.25, .5), (0, .5), (0., 1.), (.5, 1.), (1., 1.),
-                          (1., .5), (1., 0.), (.5, 0.), (0., 0.), (.75, .5)]
+            if self.mode == 'calibration':
+                self.sites = [(.25, .5), (0, .5), (0., 1.), (.5, 1.), (1., 1.),
+                              (1., .5), (1., 0.), (.5, 0.), (0., 0.), (.75, .5)]
+            else:
+                self.sites = [(.5, .5), (.25, .25), (.25, .75), (.75, .75), (.75, .25)]
 
         self.active_site = self.sites.pop(0)
         self.active = True
@@ -268,6 +273,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.on_position = on_position
             self.button.status_text = '{} / {}'.format(self.active_site, 9)
 
+        if self._window:
+            self.gl_display_in_window()
+
     def gl_display(self):
         """
         use gl calls to render
@@ -285,12 +293,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                                        (int(e[1][0]/2), int(e[1][1]/2)),
                                        int(e[-1]), 0, 360, 15)
                 draw_polyline(pts, 1, RGBA(0.,1.,0.,1.))
-
-        else:
-            pass
-        if self._window:
-            self.gl_display_in_window()
-
 
     def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()

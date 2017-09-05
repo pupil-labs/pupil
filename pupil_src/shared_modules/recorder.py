@@ -15,7 +15,7 @@ import csv_utils
 from pyglui import ui
 import numpy as np
 # from scipy.interpolate import UnivariateSpline
-from plugin import Plugin
+from plugin import System_Plugin_Base
 from time import strftime, localtime, time, gmtime
 from shutil import copy2
 from file_methods import save_object, load_object
@@ -79,7 +79,7 @@ def get_auto_name():
 #         ts = s(frames)
 
 
-class Recorder(Plugin):
+class Recorder(System_Plugin_Base):
     """Capture Recorder"""
     def __init__(self, g_pool, session_name=get_auto_name(), rec_dir=None,
                  user_info={'name': '', 'additional_field': 'change_me'},

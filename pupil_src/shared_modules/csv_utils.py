@@ -45,38 +45,39 @@ def write_key_value_file(csvfile,dictionary,append=False):
     """
     writer = csv.writer(csvfile, delimiter=',')
     if not append:
-        writer.writerow(['key','value'])
-    for key,val in dictionary.items():
-        writer.writerow([key,val])
+        writer.writerow(['key', 'value'])
+    for key, val in dictionary.items():
+        writer.writerow([key, val])
+
 
 if __name__ == '__main__':
-    test = {'foo':'bar','oh':'rl","y','it was':'not me'}
-    test_append = {'jo':'ho'}
+    test = {'foo': 'bar', 'oh': 'rl"abc"y', 'it was': 'not 🚨'}
+    test_append = {'jo': 'ho'}
     test_updated = test.copy()
     test_updated.update(test_append)
 
     testfile = '.test.csv'
 
     # Test write+read
-    with open(testfile, 'w') as csvfile:
-        write_key_value_file(csvfile,test)
-    with open(testfile, 'r') as csvfile:
+    with open(testfile, 'w', encoding='utf-8') as csvfile:
+        write_key_value_file(csvfile, test)
+    with open(testfile, 'r', encoding='utf-8') as csvfile:
         result = read_key_value_file(csvfile)
-    assert test == result
+    assert test == result, (test, result)
 
     # Test write+append (same keys)+read
-    with open(testfile, 'w') as csvfile:
-        write_key_value_file(csvfile,test)
-        write_key_value_file(csvfile,test,append=True)
-    with open(testfile, 'r') as csvfile:
+    with open(testfile, 'w', encoding='utf-8') as csvfile:
+        write_key_value_file(csvfile, test)
+        write_key_value_file(csvfile, test, append=True)
+    with open(testfile, 'r', encoding='utf-8') as csvfile:
         result = read_key_value_file(csvfile)
     assert test == result
 
     # Test write+append (different keys)+read
-    with open(testfile, 'w') as csvfile:
-        write_key_value_file(csvfile,test)
-        write_key_value_file(csvfile,test_append,append=True)
-    with open(testfile, 'r') as csvfile:
+    with open(testfile, 'w', encoding='utf-8') as csvfile:
+        write_key_value_file(csvfile, test)
+        write_key_value_file(csvfile, test_append, append=True)
+    with open(testfile, 'r', encoding='utf-8') as csvfile:
         result = read_key_value_file(csvfile)
     assert test_updated == result
 

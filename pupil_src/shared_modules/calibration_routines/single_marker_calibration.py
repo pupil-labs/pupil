@@ -141,7 +141,11 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def on_window_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
-            if key == GLFW_KEY_ESCAPE or key == GLFW_KEY_C:
+            if self.mode == 'calibration':
+                target_key = GLFW_KEY_C
+            else:
+                target_key = GLFW_KEY_T
+            if key == GLFW_KEY_ESCAPE or key == target_key:
                 self.clicks_to_close = 0
 
 
@@ -174,7 +178,6 @@ class Single_Marker_Calibration(Calibration_Plugin):
             glfwDestroyWindow(self._window)
             self._window = None
             glfwMakeContextCurrent(active_window)
-
 
     def recent_events(self, events):
         frame = events.get('frame')
@@ -221,7 +224,8 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
             # use np.arrays for per element wise math
             self.on_position = on_position
-
+        if self._window:
+            self.gl_display_in_window()
 
     def gl_display(self):
         """
@@ -240,12 +244,6 @@ class Single_Marker_Calibration(Calibration_Plugin):
                                        (int(e[1][0]/2), int(e[1][1]/2)),
                                        int(e[-1]), 0, 360, 15)
                 draw_polyline(pts, 1, RGBA(0.,1.,0.,1.))
-
-        else:
-            pass
-        if self._window:
-            self.gl_display_in_window()
-
 
     def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()

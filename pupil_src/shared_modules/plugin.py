@@ -97,6 +97,15 @@ class Plugin(object):
         """
         pass
 
+    def on_drop(self, paths):
+        """
+        Gets called on dropped paths of files and/or directories on the window.
+
+        See http://www.glfw.org/docs/latest/input_guide.html#path_drop for
+        more information.
+        """
+        pass
+
     def on_window_resize(self, window, w, h):
         '''
         gets called when user resizes window.
@@ -213,6 +222,9 @@ class Plugin(object):
     def pretty_class_name(self):
         return self.class_name.replace('_', ' ')
 
+    @classmethod
+    def icon_info(self):
+        return 'roboto', '?'
 
     def add_menu(self):
         '''
@@ -230,21 +242,21 @@ class Plugin(object):
             self.menu.collapsed = collapsed
 
         # Here we make a menu and icon
-        self.menu = ui.Growing_Menu('Unnamed Menu',header_pos='headline')
-        self.menu_icon = ui.Thumb('collapsed', self.menu, label='?', on_val=False, off_val=True, setter=toggle_menu,)
+        font, symbol = self.icon_info()
+        self.menu = ui.Growing_Menu('Unnamed Menu', header_pos='headline')
+        self.menu_icon = ui.Icon('collapsed', self.menu, label=symbol,
+                                 label_font=font, on_val=False, off_val=True,
+                                 setter=toggle_menu,)
         self.menu_icon.order = 0.5
         self.g_pool.menubar.append(self.menu)
         self.g_pool.iconbar.append(self.menu_icon)
         toggle_menu(False)
-
 
     def remove_menu(self):
         self.g_pool.menubar.remove(self.menu)
         self.g_pool.iconbar.remove(self.menu_icon)
         self.menu = None
         self.menu_icon = None
-
-
 
 
 # Plugin manager classes and fns
@@ -380,4 +392,8 @@ class Analysis_Plugin_Base(Plugin):
 
 
 class Producer_Plugin_Base(Plugin):
+    pass
+
+
+class System_Plugin_Base(Plugin):
     pass
