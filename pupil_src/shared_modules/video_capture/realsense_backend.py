@@ -187,7 +187,7 @@ class Realsense_Source(Base_Source):
     Camera Capture is a class that encapsualtes pyrs.Device:
     """
     def __init__(self, g_pool, device_id=0,
-                 frame_size=(640, 480), frame_rate=30,
+                 frame_size=(1920, 1080), frame_rate=30,
                  depth_frame_size=(640, 480), depth_frame_rate=30,
                  align_streams=False, preview_depth=False,
                  device_options=(), record_depth=True):
@@ -212,21 +212,20 @@ class Realsense_Source(Base_Source):
         color_frame_size = tuple(color_frame_size)
         depth_frame_size = tuple(depth_frame_size)
 
-        self.streams = [ColorStream(width=1920, height=1080), DepthStream()]
+        self.streams = [ColorStream(), DepthStream()]
         self.last_color_frame_ts = None
         self.last_depth_frame_ts = None
         self._recent_frame = None
         self._recent_depth_frame = None
-        self.deinit_gui()
 
         if not devices:
             logger.error("Camera failed to initialize. No cameras connected.")
             self.device = None
-            self.init_gui()
+            self.update_menu()
             return
 
         if self.device is not None:
-            self.device.stop()
+            self.device.stop()  # only call Device.stop() if its context
 
         if device_id >= len(devices):
             logger.error("Camera with id {} not found. Initializing default camera.".format(device_id))
@@ -278,10 +277,7 @@ class Realsense_Source(Base_Source):
         self.controls = Realsense_Controls(self.device, device_options)
         self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
-        try:
-            self.update_menu()
-        except AttributeError:
-            pass  # init_ui was not called yet
+        self.update_menu()
 
     def _enumerate_formats(self, device_id):
         '''Enumerate formats into hierachical structure:
@@ -323,7 +319,6 @@ class Realsense_Source(Base_Source):
         if self.device is not None:
             self.device.stop()
         self.service.stop()
-        super().cleanup()
 
     def get_init_dict(self):
         return {'device_id': self.device.device_id if self.device is not None else 0,
@@ -393,11 +388,16 @@ class Realsense_Source(Base_Source):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Local USB Video Source"
-        self.menu_icon.label = "U"
+        self.menu_icon.label_font = 'pupil_icons'
+        self.menu_icon.label = chr(0xec01)
         self.update_menu()
 
     def update_menu(self):
-        del self.menu[:]
+        try:
+            del self.menu[:]
+        except AttributeError:
+            return
+
         from pyglui import ui
 
         if self.device is None:
@@ -502,6 +502,10 @@ class Realsense_Source(Base_Source):
             depth_fps = self.depth_frame_rate
         if device_options is None:
             device_options = self.controls.export_presets()
+
+        if self.device is not None:
+            self.device.stop()
+            self.device = None
         self.service.stop()
         self.service.start()
         self.notify_all({'subject': 'realsense_source.restart',

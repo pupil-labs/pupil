@@ -230,7 +230,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             logger.info("Session setting are from a different version of this app. I will not use those.")
             session_settings.clear()
 
-
         g_pool.iconified = False
         g_pool.capture = None
         g_pool.capture_manager = None
@@ -248,7 +247,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         manager_class_name, manager_settings = capture_manager_settings
         manager_class_by_name = {c.__name__:c for c in manager_classes}
         g_pool.capture_manager = manager_class_by_name[manager_class_name](g_pool,**manager_settings)
-
 
         if eye_id == 0:
             cap_src = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]

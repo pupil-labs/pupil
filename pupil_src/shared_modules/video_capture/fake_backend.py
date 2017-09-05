@@ -72,7 +72,9 @@ class Fake_Source(Base_Source):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Static Image Source"
-        self.menu_icon.label = "F"
+        self.menu_icon.label_font = 'pupil_icons'
+        self.menu_icon.label = chr(0xec01)
+
         from pyglui import ui
         text = ui.Info_Text("Fake capture source streaming test images.")
         self.menu.append(text)
@@ -93,10 +95,10 @@ class Fake_Source(Base_Source):
     def recent_events(self,events):
         now = time()
         spent = now - self.presentation_time
-        wait = max(0,1./self.fps - spent)
+        wait = max(0, 1./self.fps - spent)
         sleep(wait)
         self.presentation_time = time()
-        self.frame_count +=1
+        self.frame_count += 1
         timestamp = self.g_pool.get_timestamp()
         frame = Frame(timestamp,self._img.copy(),self.frame_count)
         cv2.putText(frame.img, "Fake Source Frame %s"%self.frame_count,(20,20), cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,100,100))

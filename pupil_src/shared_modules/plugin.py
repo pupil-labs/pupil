@@ -222,7 +222,6 @@ class Plugin(object):
     def pretty_class_name(self):
         return self.class_name.replace('_', ' ')
 
-
     def add_menu(self):
         '''
         This fn is called when the plugin ui is initialized. Do not change!
@@ -246,14 +245,11 @@ class Plugin(object):
         self.g_pool.iconbar.append(self.menu_icon)
         toggle_menu(False)
 
-
     def remove_menu(self):
         self.g_pool.menubar.remove(self.menu)
         self.g_pool.iconbar.remove(self.menu_icon)
         self.menu = None
         self.menu_icon = None
-
-
 
 
 # Plugin manager classes and fns
