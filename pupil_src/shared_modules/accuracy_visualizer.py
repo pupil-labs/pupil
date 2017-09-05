@@ -38,12 +38,14 @@ class Accuracy_Visualizer(Plugin):
         self.accuracy = None
         self.precision = None
         self.error_lines = None
+        self.recent_input = None
+        self.recent_labels = None
         # .5 degrees, used to remove outliers from precision calculation
         self.succession_threshold = np.cos(np.deg2rad(.5))
         self._outlier_threshold = outlier_threshold  # in degrees
 
     def init_gui(self):
-        self.menu = ui.Growing_Menu('Accuracy Test')
+        self.menu = ui.Growing_Menu('Accuracy Visualizer')
         self.g_pool.sidebar.append(self.menu)
 
         def close():
@@ -74,7 +76,7 @@ class Accuracy_Visualizer(Plugin):
         self.menu.append(ui.Text_Input('accuracy', self, 'Angular Accuracy', setter=ignore,
                          getter=lambda: self.accuracy if self.accuracy is not None else 'Not available'))
         self.menu.append(ui.Info_Text(precision_help))
-        self.menu.append(ui.Text_Input('precision', self, 'Angluar Precision', setter=ignore,
+        self.menu.append(ui.Text_Input('precision', self, 'Angular Precision', setter=ignore,
                          getter=lambda: self.precision if self.precision is not None else 'Not available'))
 
     def deinit_gui(self):
@@ -99,14 +101,19 @@ class Accuracy_Visualizer(Plugin):
         if notification['subject'] in ('calibration.calibration_data', 'accuracy_test.data'):
             self.recent_input = notification['pupil_list']
             self.recent_labels = notification['ref_list']
-            self.recalculate()
+            if self.recent_input and self.recent_labels:
+                self.recalculate()
+            else:
+                logger.error('Did not collect enough data to estimate gaze mapping accuracy.')
         elif notification['subject'] == 'accuracy_visualizer.outlier_threshold_changed':
-            self.recalculate()
+            if self.recent_input and self.recent_labels:
+                self.recalculate()
+            else:
+                pass
 
     def recalculate(self):
-        if not self.recent_input or self.recent_labels:
-            logger.error('Did not collect enough data during calibration.')
-            return
+        assert self.recent_input and self.recent_labels
+
         width, height = self.g_pool.capture.frame_size
         prediction = self.g_pool.active_gaze_mapping_plugin.map_batch(self.recent_input)
 

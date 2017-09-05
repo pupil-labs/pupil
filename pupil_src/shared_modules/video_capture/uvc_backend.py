@@ -29,10 +29,15 @@ class UVC_Source(Base_Source):
     Camera Capture is a class that encapsualtes uvc.Capture:
     """
     def __init__(self, g_pool, frame_size, frame_rate, name=None, preferred_names=(), uid=None, uvc_controls={}):
+        import platform
+
         super().__init__(g_pool)
         self.uvc_capture = None
         self._restart_in = 3
         assert name or preferred_names or uid
+
+        if platform.system() == 'Windows':
+            self.verify_drivers()
 
         self.devices = uvc.Device_List()
 
@@ -77,12 +82,43 @@ class UVC_Source(Base_Source):
             self.name_backup = preferred_names
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
-
+            self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
         else:
             self.configure_capture(frame_size, frame_rate, uvc_controls)
             self.name_backup = (self.name,)
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
+
+    def verify_drivers(self):
+        import time
+        import os
+        import subprocess
+
+        DEV_HW_IDS = [(0x05A3, 0x9230, "Pupil Cam1 ID0"),  (0x05A3, 0x9231, "Pupil Cam1 ID1"), (0x05A3, 0x9232, "Pupil Cam1 ID2"), (0x046D, 0x0843, "Logitech Webcam C930e"), (0x17EF,0x480F, "Lenovo Integrated Camera")]
+        ids_present = 0;
+        ids_to_install = [];
+        for id in DEV_HW_IDS:
+            cmd_str_query = 'PupilDrvInst.exe --vid {} --pid {}'.format(id[0], id[1])
+            print('Running ', cmd_str_query)
+            proc = subprocess.Popen(cmd_str_query)
+            proc.wait()
+            if proc.returncode == 2:
+                ids_present += 1
+                ids_to_install.append(id)
+        cmd_str_inst = "Start-Process PupilDrvInst.exe -Wait -WorkingDirectory \\\\\\\"{}\\\\\\\"  -argument ''--vid {} --pid {} --desc \\\\\\\"{}\\\\\\\" --vendor \\\\\\\"Pupil Labs\\\\\\\" --inst'' ;"
+        work_dir = os.getcwd()
+        # print('work_dir = ', work_dir)
+        if ids_present > 0:
+            cmd_str = 'Remove-Item {}\\win_drv -recurse;'.format(work_dir)
+            for id in ids_to_install:
+                cmd_str += cmd_str_inst.format(work_dir, id[0],id[1], id[2])
+            logger.warning('Updating drivers, please wait...');
+            full_str = "'" + cmd_str + "'"
+            elevation_cmd = 'powershell.exe  Start-Process powershell.exe -WorkingDirectory \\\"{}\\\" -WindowStyle hidden -Wait  -argument {} -Verb runAs'.format(work_dir, full_str)
+            #print(elevation_cmd)
+            proc = subprocess.Popen(elevation_cmd)
+            proc.wait()
+            logger.warning('Done updating drivers!')
 
     def configure_capture(self, frame_size, frame_rate, uvc_controls):
         # Set camera defaults. Override with previous settings afterwards
@@ -191,7 +227,7 @@ class UVC_Source(Base_Source):
     def recent_events(self, events):
         try:
             frame = self.uvc_capture.get_frame(0.05)
-            frame.timestamp = self.g_pool.get_timestamp()+self.ts_offset
+            frame.timestamp = self.g_pool.get_timestamp() + self.ts_offset
         except uvc.StreamError:
             self._recent_frame = None
             self._restart_logic()

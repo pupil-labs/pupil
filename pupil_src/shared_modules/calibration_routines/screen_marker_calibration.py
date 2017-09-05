@@ -82,7 +82,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         self.active_site = None
         self.sites = []
-        self.display_pos = None
+        self.display_pos = -1., -1.
         self.on_position = False
 
         self.markers = []
