@@ -18,11 +18,9 @@ from video_capture import Base_Manager, Base_Source
 class Plugin_Manager(System_Plugin_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.user_plugins = [p for p in g_pool.plugin_by_name.values()
-                             if not issubclass(p, (System_Plugin_Base,
-                                                   Base_Manager, Base_Source,
-                                                   Calibration_Plugin,
-                                                   Gaze_Mapping_Plugin))]
+        self.user_plugins = [p for p in sorted(g_pool.plugin_by_name.values(), key=lambda p: p.__name__)
+                             if not issubclass(p, (System_Plugin_Base, Base_Manager, Base_Source,
+                                                   Calibration_Plugin, Gaze_Mapping_Plugin))]
         # self.user_plugins.remove('Select to load')
 
     def init_ui(self):

@@ -243,10 +243,11 @@ class Plugin(object):
 
         # Here we make a menu and icon
         font, symbol = self.icon_info()
+        y_offset = 1 if font == 'pupil_icons' else 0
         self.menu = ui.Growing_Menu('Unnamed Menu', header_pos='headline')
         self.menu_icon = ui.Icon('collapsed', self.menu, label=symbol,
                                  label_font=font, on_val=False, off_val=True,
-                                 setter=toggle_menu,)
+                                 setter=toggle_menu, label_offset_y=y_offset)
         self.menu_icon.order = 0.5
         self.g_pool.menubar.append(self.menu)
         self.g_pool.iconbar.append(self.menu_icon)

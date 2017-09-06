@@ -160,7 +160,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     plugins = system_plugins + user_plugins + runtime_plugins + calibration_plugins + gaze_mapping_plugins
     user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source, System_Plugin_Base,
                                                                       Calibration_Plugin, Gaze_Mapping_Plugin))]
-    user_plugins.sort(key=lambda p: p.__name__)
     g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
     default_capture_settings = {
@@ -374,6 +373,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     g_pool.menubar.append(general_settings)
     g_pool.iconbar.append(ui.Icon('collapsed', general_settings, label=chr(0xe8b8), on_val=False, off_val=True, setter=toggle_general_settings, label_font='pupil_icons'))
+
+    user_plugin_separator = ui.Separator()
+    user_plugin_separator.order = 0.35
+    g_pool.iconbar.append(user_plugin_separator)
 
     # plugins that are loaded based on user settings from previous session
     g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))

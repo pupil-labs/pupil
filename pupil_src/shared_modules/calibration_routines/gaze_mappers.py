@@ -49,6 +49,14 @@ class Gaze_Mapping_Plugin(Plugin):
             results.extend(self.on_pupil_datum(p))
         return results
 
+    def add_menu(self):
+        super().add_menu()
+        self.menu_icon.order = 0.31
+
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe3a5)
+
 
 class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
     """Base class to implement the map callback"""
