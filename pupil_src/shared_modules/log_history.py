@@ -12,9 +12,11 @@ import os
 from pyglui import ui
 from plugin import Plugin
 import zmq_tools
-#logging
+
+# logging
 import logging
 logger = logging.getLogger(__name__)
+
 
 class Log_to_Callback(logging.Handler):
     def __init__(self,cb):
@@ -24,6 +26,7 @@ class Log_to_Callback(logging.Handler):
     def emit(self,record):
         self.cb(record)
 
+
 class Log_History(Plugin):
     """Simple logging GUI that displays the last N messages from the logger"""
     def __init__(self, g_pool):
@@ -31,9 +34,12 @@ class Log_History(Plugin):
         self.menu = None
         self.num_messages = 50
 
-
         self.formatter = logging.Formatter('%(processName)s - [%(levelname)s] %(name)s: %(message)s')
         self.logfile = os.path.join(self.g_pool.user_dir,self.g_pool.app+'.log')
+
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xec10)
 
     def init_ui(self):
         self.add_menu()
@@ -70,7 +76,6 @@ class Log_History(Plugin):
     def on_log(self,record):
         self.menu.elements[self.num_messages+2:] = []
         self.menu.insert(2,ui.Info_Text(str(self.formatter.format(record))))
-
 
     def deinit_ui(self):
         self.remove_menu()

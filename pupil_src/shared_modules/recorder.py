@@ -132,6 +132,7 @@ class Recorder(System_Plugin_Base):
 
     def init_ui(self):
         self.add_menu()
+        self.menu.label = 'Recorder'
         self.menu_icon.order = 0.29
         self.menu_icon.label_font = 'pupil_icons'
         self.menu_icon.label = chr(0xe04b)

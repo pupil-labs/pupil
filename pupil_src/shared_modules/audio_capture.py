@@ -75,13 +75,11 @@ class Audio_Capture(Plugin):
 
         self.menu.append(ui.Info_Text(NOT_REC_STR))
 
-
     def deinit_ui(self):
         self.remove_menu()
 
     def get_init_dict(self):
         return {'audio_src': self.audio_src}
-
 
     def cleanup(self):
         if self.audio_container is not None:

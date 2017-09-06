@@ -143,6 +143,10 @@ class Surface_Tracker(Plugin):
         self.update_gui_markers()
         self.notify_all({'subject': 'surfaces_changed'})
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xec07)
+
     def init_ui(self):
         self.add_menu()
         self.menu.label ='Surface Tracker'

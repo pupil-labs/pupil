@@ -60,7 +60,6 @@ class Time_Sync(Plugin):
 
     def __init__(self, g_pool, node_name=None, sync_group_prefix='default', base_bias=1.):
         super().__init__(g_pool)
-        self.menu = None
         self.sync_group_prefix = sync_group_prefix
         self.discovery = None
 
@@ -83,13 +82,18 @@ class Time_Sync(Plugin):
     def sync_group(self, full_name):
         self.sync_group_prefix = full_name.rsplit('-time_sync-' + __protocol_version__, maxsplit=1)[0]
 
-    def init_gui(self):
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe422)
+
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Network Time Sync'
+
         def close():
             self.alive = False
 
         help_str = "Synchonize time of Pupil Captures across the local network."
-        self.menu = ui.Growing_Menu('Network Time Sync')
-        self.menu.collapsed = True
         self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text('Protocol version: ' + __protocol_version__))
 
@@ -117,7 +121,6 @@ class Time_Sync(Plugin):
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('base_bias', self, label='Master Bias', setter=set_bias))
         self.menu.append(ui.Text_Input('leaderboard', self, label='Master Nodes in Group'))
-        self.g_pool.sidebar.append(self.menu)
 
     def recent_events(self, events):
         should_announce = False
@@ -257,10 +260,8 @@ class Time_Sync(Plugin):
             self.discovery.join(self.sync_group)
             self.announce_clock_master_info()
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu = None
+    def deinit_ui(self):
+        self.remove_menu()
 
     def get_init_dict(self):
         return {'node_name': self.node_name,
@@ -268,7 +269,6 @@ class Time_Sync(Plugin):
                 'base_bias': self.base_bias}
 
     def cleanup(self):
-        self.deinit_gui()
         self.discovery.leave(self.sync_group)
         self.discovery.stop()
         self.master_service.stop()
@@ -277,4 +277,3 @@ class Time_Sync(Plugin):
         self.master_service = None
         self.follower_service = None
         self.discovery = None
-

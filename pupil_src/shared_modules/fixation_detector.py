@@ -690,12 +690,16 @@ class Fixation_Detector(Plugin):
             pt = denormalize(self.recent_fixation['norm_pos'], fs, flip_y=True)
             draw_circle(pt, radius=48., stroke_width=10., color=RGBA(1., 1., 0., 1.))
 
-    def init_gui(self):
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe3b4)
+
+    def init_ui(self):
         def close():
             self.alive = False
 
-        self.menu = ui.Growing_Menu('Fixation Detector')
-        self.menu.collapsed = True
+        self.add_menu()
+        self.menu.label = 'Fixation Detector'
         self.menu.append(ui.Button('Close', close))
 
         help_str = "Dispersion-duration-based fixation detector."
@@ -712,16 +716,10 @@ class Fixation_Detector(Plugin):
                                        label='2d dispersion [px]'))
 
         self.menu.append(ui.Slider('confidence_threshold', self, min=0.0, max=1.0, label='Confidence Threshold'))
-        self.g_pool.sidebar.append(self.menu)
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu = None
+    def deinit_ui(self):
+        self.remove_menu()
 
     def get_init_dict(self):
         return {'dispersion_2d': self.dispersion_2d, 'dispersion_3d': self.dispersion_3d,
                 'confidence_threshold': self.confidence_threshold, 'duration': self.duration}
-
-    def cleanup(self):
-        self.deinit_gui()

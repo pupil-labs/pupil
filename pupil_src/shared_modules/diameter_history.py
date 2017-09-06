@@ -33,9 +33,17 @@ class Diameter_History(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.graphs = ()
-        self.menu = None
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Pupil Diameter History'
+
+        def close():
+            self.alive = False
+
+        self.menu.append(ui.Button('Close', close))
+        self.menu.append(ui.Info_Text('Displays the recent pupil diameter in millimeters for each eye.'))
+
         eye0_graph = graph.Bar_Graph(min_val=.0, max_val=5.)
         eye0_graph.pos = (260, 230)
         eye0_graph.update_rate = 5
@@ -48,15 +56,6 @@ class Diameter_History(Plugin):
 
         self.graphs = eye0_graph, eye1_graph
         self.on_window_resize(self.g_pool.main_window, *glfw.glfwGetFramebufferSize(self.g_pool.main_window))
-
-        def close():
-            self.alive = False
-
-        self.menu = ui.Growing_Menu('Pupil Diameter History')
-        self.menu.collapsed = True
-        self.menu.append(ui.Button('Close', close))
-        self.menu.append(ui.Info_Text('Displays the recent pupil diameter in millimeters for each eye.'))
-        self.g_pool.sidebar.append(self.menu)
 
     def recent_events(self, events):
         for p in events['pupil_positions']:
@@ -80,9 +79,4 @@ class Diameter_History(Plugin):
 
     def deinit_ui(self):
         self.graphs = ()
-        self.g_pool.sidebar.remove(self.menu)
-        self.menu = None
-
-    def cleanup(self):
-        if self.menu:
-            self.deinit_ui()
+        self.remove_menu()
