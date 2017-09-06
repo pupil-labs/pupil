@@ -554,7 +554,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                     g_pool.image_tex.draw()
 
                     f_width, f_height = g_pool.capture.frame_size
-                    make_coord_system_pixel_based((*camera_render_size[::-1], 3), g_pool.flip)
+                    make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     if frame:
                         if result['method'] == '3d c++':
                             eye_ball = result['projected_sphere']

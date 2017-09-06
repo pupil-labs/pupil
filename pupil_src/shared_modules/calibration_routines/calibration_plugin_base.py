@@ -33,6 +33,7 @@ class Calibration_Plugin(Plugin):
 
     def add_menu(self):
         super().add_menu()
+        self.menu.label = 'Calibration'
 
         calibration_plugins = [p for p in self.g_pool.plugin_by_name.values() if issubclass(p, Calibration_Plugin)]
         calibration_plugins.sort(key=lambda p: p.__name__)
@@ -45,15 +46,14 @@ class Calibration_Plugin(Plugin):
 
         # We add the capture selection menu
         self.menu.append(ui.Selector(
-                                'capture_manager',
+                                'calibration_method',
                                 setter=open_plugin,
                                 getter=lambda: self.__class__,
                                 selection=calibration_plugins,
                                 labels=[p.__name__.replace('_', ' ') for p in calibration_plugins],
-                                label='Manager'
+                                label='Calibration Method'
                             ))
-
-
+        self.menu.append(ui.Separator())
 
     @property
     def mode_pretty(self):
