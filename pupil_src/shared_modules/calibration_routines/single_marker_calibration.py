@@ -194,7 +194,6 @@ class Single_Marker_Calibration(Calibration_Plugin):
             self._window = None
             glfwMakeContextCurrent(active_window)
 
-
     def recent_events(self, events):
         frame = events.get('frame')
         if self.active and frame:
@@ -240,7 +239,8 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
             # use np.arrays for per element wise math
             self.on_position = on_position
-
+        if self._window:
+            self.gl_display_in_window()
 
     def gl_display(self):
         """
@@ -259,12 +259,6 @@ class Single_Marker_Calibration(Calibration_Plugin):
                                        (int(e[1][0]/2), int(e[1][1]/2)),
                                        int(e[-1]), 0, 360, 15)
                 draw_polyline(pts, 1, RGBA(0.,1.,0.,1.))
-
-        else:
-            pass
-        if self._window:
-            self.gl_display_in_window()
-
 
     def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()
