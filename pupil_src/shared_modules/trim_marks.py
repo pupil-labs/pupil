@@ -12,12 +12,13 @@ See COPYING and COPYING.LESSER for license details.
 from OpenGL.GL import *
 from pyglui.cygl.utils import RGBA,draw_points,draw_polyline
 from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS,glfwGetFramebufferSize
-from plugin import Plugin
+from plugin import System_Plugin_Base
 
 import logging
 logger = logging.getLogger(__name__)
 
-class Trim_Marks(Plugin):
+
+class Trim_Marks(System_Plugin_Base):
     """docstring for Trim_Mark
     """
     def __init__(self, g_pool):

@@ -15,13 +15,13 @@ from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 
 from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS,glfwGetFramebufferSize
-from plugin import Plugin
+from plugin import System_Plugin_Base
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-class Seek_Bar(Plugin):
+class Seek_Bar(System_Plugin_Base):
     """docstring for Seek_Bar
     seek bar displays a bar at the bottom of the screen when you hover close to it.
     it will show the current positon and allow you to drag to any postion in the video file.
