@@ -101,20 +101,15 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             logger.debug("No surface defs found. Please define using GUI.")
             self.surfaces = []
 
-
-    def init_gui(self):
-        self.menu = ui.Scrolling_Menu('Offline Surface Tracker')
-        self.g_pool.gui.append(self.menu)
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Offline Surface Tracker'
         self.add_button = ui.Thumb('add_surface',setter=lambda x: self.add_surface(),getter=lambda:False,label='A',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
         self.update_gui_markers()
 
-        self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
-
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu= None
+    def deinit_ui(self):
+        self.remove_menu()
         if self.add_button:
             self.g_pool.quickbar.remove(self.add_button)
             self.add_button = None
@@ -173,11 +168,6 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             self.invalidate_surface_caches()
         elif notification['subject'] == "should_export":
             self.save_surface_statsics_to_file(notification['range'],notification['export_dir'])
-
-
-    def on_window_resize(self,window,w,h):
-        self.win_size = w,h
-
 
     def add_surface(self):
         self.surfaces.append(Offline_Reference_Surface(self.g_pool))
@@ -345,7 +335,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
-        width,height = self.win_size
+        width,height = self.g_pool.camera_render_size
         h_pad = padding * (self.cache.length-2)/float(width)
         v_pad = padding* 1./(height-2)
         glOrtho(-h_pad,  (self.cache.length-1)+h_pad, -v_pad, 1+v_pad,-1,1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
@@ -556,4 +546,3 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
         for s in self.surfaces:
             s.close_window()
-        self.deinit_gui()

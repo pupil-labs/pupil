@@ -55,8 +55,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
-
-
     # imports
     from file_methods import Persistent_Dict, load_object
 
@@ -81,6 +79,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     # Plug-ins
     from plugin import Plugin, Plugin_List, import_runtime_plugins, Visualizer_Plugin_Base, Analysis_Plugin_Base, Producer_Plugin_Base
+    from plugin_manager import Plugin_Manager
     from vis_circle import Vis_Circle
     from vis_cross import Vis_Cross
     from vis_polyline import Vis_Polyline
@@ -107,31 +106,34 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     assert pyglui_version >= '1.7'
 
     runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
-    system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
-    user_launchable_plugins = [Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross, Vis_Watermark,
-                               Vis_Eye_Video_Overlay, Vis_Scan_Path, Gaze_Position_2D_Fixation_Detector,
-                               Pupil_Angle_3D_Fixation_Detector, Video_Export_Launcher,
-                               Offline_Surface_Tracker, Raw_Data_Exporter, Batch_Exporter, Annotation_Player,
-                               Log_History, Marker_Auto_Trim_Marks, Pupil_From_Recording, Offline_Pupil_Detection,
-                               Gaze_From_Recording, Offline_Calibration] + runtime_plugins
+    system_plugins = [Log_Display, Seek_Bar, Trim_Marks, Plugin_Manager]
+    user_plugins = [Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points,
+                    Vis_Cross, Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path,
+                    Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector,
+                    Video_Export_Launcher, Offline_Surface_Tracker, Raw_Data_Exporter,
+                    Batch_Exporter, Annotation_Player, Log_History, Marker_Auto_Trim_Marks,
+                    Pupil_From_Recording, Offline_Pupil_Detection, Gaze_From_Recording,
+                    Offline_Calibration] + runtime_plugins
 
-    available_plugins = system_plugins + user_launchable_plugins
-    name_by_index = [p.__name__ for p in available_plugins]
-    plugin_by_name = dict(zip(name_by_index, available_plugins))
+    plugins = system_plugins + user_plugins
 
     # Callback functions
     def on_resize(window, w, h):
+        nonlocal window_size
+
         if gl_utils.is_window_visible(window):
             hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
-            g_pool.gui.update_window(w, h)
+            window_size = w, h
+            g_pool.camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
+            g_pool.gui.update_window(*window_size)
             g_pool.gui.collect_menus()
             for g in g_pool.graphs:
                 g.scale = hdpi_factor
-                g.adjust_window_size(w, h)
-            gl_utils.adjust_gl_view(w, h)
+                g.adjust_window_size(*window_size)
+            # gl_utils.adjust_gl_view(w, h)
             for p in g_pool.plugins:
-                p.on_window_resize(window, w, h)
+                p.on_window_resize(window, *g_pool.camera_render_size)
 
     def on_window_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key, scancode, action, mods)
@@ -144,7 +146,14 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     def on_pos(window, x, y):
         hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0]/glfw.glfwGetWindowSize(window)[0])
-        g_pool.gui.update_mouse(x*hdpi_factor, y*hdpi_factor)
+        x, y = x * hdpi_factor, y * hdpi_factor
+        g_pool.gui.update_mouse(x, y)
+        pos = x, y
+        pos = normalize(pos, g_pool.camera_render_size)
+        # Position in img pixels
+        pos = denormalize(pos, g_pool.capture.frame_size)
+        for p in g_pool.plugins:
+            p.on_pos(pos)
 
     def on_scroll(window, x, y):
         g_pool.gui.update_scroll(x, y*scroll_factor)
@@ -174,6 +183,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     logger.info('Application Version: {}'.format(app_version))
     logger.info('System Info: {}'.format(get_system_info()))
 
+    icon_bar_width = 80
+    window_size = None
+
     # create container for globally scoped vars
     g_pool = Global_Container()
     g_pool.app = 'player'
@@ -182,9 +194,11 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     g_pool.ipc_pub_url = ipc_pub_url
     g_pool.ipc_sub_url = ipc_sub_url
     g_pool.ipc_push_url = ipc_push_url
+    g_pool.plugin_by_name = {p.__name__: p for p in plugins}
+    g_pool.camera_render_size = None
 
-    # Initialize capture
-    cap = File_Source(g_pool, video_path)
+    # sets itself to g_pool.capture
+    File_Source(g_pool, video_path)
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))
@@ -192,7 +206,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         logger.info("Session setting are a different version of this app. I will not use those.")
         session_settings.clear()
 
-    width, height = session_settings.get('window_size', cap.frame_size)
+    width, height = session_settings.get('window_size', g_pool.capture.frame_size)
     window_pos = session_settings.get('window_position', window_position_default)
     glfw.glfwInit()
     main_window = glfw.glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "
@@ -202,17 +216,20 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     cygl.utils.init()
 
     def set_scale(new_scale):
+        hdpi_factor = float(glfw.glfwGetFramebufferSize(
+            main_window)[0]) / glfw.glfwGetWindowSize(main_window)[0]
         g_pool.gui_user_scale = new_scale
-        on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
+        window_size = (g_pool.camera_render_size[0] + int(icon_bar_width*g_pool.gui_user_scale*hdpi_factor),
+                       glfw.glfwGetFramebufferSize(main_window)[1])
+        logger.warning(icon_bar_width*g_pool.gui_user_scale*hdpi_factor)
+        glfw.glfwSetWindowSize(main_window, *window_size)
 
     # load pupil_positions, gaze_positions
     g_pool.pupil_data = load_object(pupil_data_path)
     g_pool.binocular = meta_info.get('Eye Mode', 'monocular') == 'binocular'
     g_pool.version = app_version
-    g_pool.capture = cap
     g_pool.timestamps = g_pool.capture.timestamps
     g_pool.get_timestamp = lambda: 0.
-    g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
@@ -224,13 +241,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     g_pool.fixations = []
 
     g_pool.notifications_by_frame = correlate_data(g_pool.pupil_data['notifications'], g_pool.timestamps)
-    g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps] # populated by producer`
-    g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps] # populated by producer
+    g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer`
+    g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
 
     def next_frame(_):
         try:
-            cap.seek_to_frame(cap.get_frame_index() + 1)
+            g_pool.capture.seek_to_frame(g_pool.capture.get_frame_index() + 1)
         except(FileSeekError):
             logger.warning("Could not seek to next frame.")
         else:
@@ -238,17 +255,17 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     def prev_frame(_):
         try:
-            cap.seek_to_frame(cap.get_frame_index() - 1)
+            g_pool.capture.seek_to_frame(g_pool.capture.get_frame_index() - 1)
         except(FileSeekError):
             logger.warning("Could not seek to previous frame.")
         else:
             g_pool.new_seek = True
 
     def toggle_play(new_state):
-        if cap.get_frame_index() >= cap.get_frame_count()-5:
-            cap.seek_to_frame(1)  # avoid pause set by hitting trimmark pause.
+        if g_pool.capture.get_frame_index() >= g_pool.capture.get_frame_count()-5:
+            g_pool.capture.seek_to_frame(1)  # avoid pause set by hitting trimmark pause.
             logger.warning("End of video - restart at beginning.")
-        g_pool.play = new_state
+        g_pool.capture.play = new_state
 
     def set_data_confidence(new_confidence):
         g_pool.min_data_confidence = new_confidence
@@ -263,7 +280,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     def purge_plugins():
         for p in g_pool.plugins:
-            if p.__class__ in user_launchable_plugins:
+            if p.__class__ in user_plugins:
                 p.alive = False
         g_pool.plugins.clean()
 
@@ -285,26 +302,38 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         notification = {'subject': 'should_export', 'range': export_range, 'export_dir': export_dir}
         g_pool.ipc_pub.notify(notification)
 
+    def toggle_general_settings(collapsed):
+        #this is the menu toggle logic.
+        # Only one menu can be open.
+        # If no menu is open the menubar should collapse.
+        g_pool.menubar.collapsed = collapsed
+        for m in g_pool.menubar.elements:
+            m.collapsed = True
+        general_settings.collapsed = collapsed
+
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
-    g_pool.main_menu = ui.Scrolling_Menu("Settings", pos=(-350, 20), size=(300, 560))
-    g_pool.main_menu.append(ui.Button('Reset window size',
-                                      lambda: glfw.glfwSetWindowSize(main_window, cap.frame_size[0], cap.frame_size[1])))
-    g_pool.main_menu.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface Size'))
-    g_pool.main_menu.append(ui.Info_Text('Player Version: {}'.format(g_pool.version)))
-    g_pool.main_menu.append(ui.Info_Text('Capture Version: {}'.format(meta_info['Capture Software Version'])))
-    g_pool.main_menu.append(ui.Info_Text('Data Format Version: {}'.format(meta_info['Data Format Version'])))
-    g_pool.main_menu.append(ui.Slider('min_data_confidence', g_pool, setter=set_data_confidence,
+    g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos='left')
+    g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
+
+    general_settings = ui.Growing_Menu('General', header_pos='headline')
+    general_settings.append(ui.Button('Reset window size',
+                                      lambda: glfw.glfwSetWindowSize(main_window, g_pool.capture.frame_size[0], g_pool.capture.frame_size[1])))
+    general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface Size'))
+    general_settings.append(ui.Info_Text('Player Version: {}'.format(g_pool.version)))
+    general_settings.append(ui.Info_Text('Capture Version: {}'.format(meta_info['Capture Software Version'])))
+    general_settings.append(ui.Info_Text('Data Format Version: {}'.format(meta_info['Data Format Version'])))
+    general_settings.append(ui.Slider('min_data_confidence', g_pool, setter=set_data_confidence,
                                       step=.05, min=0.0, max=1.0, label='Confidence threshold'))
 
-    g_pool.main_menu.append(ui.Info_Text('Open plugins'))
+    general_settings.append(ui.Info_Text('Open plugins'))
 
     selector_label = "Select to load"
 
     def append_selector(label, plugins):
         plugins.sort(key=lambda p: p.__name__)
         plugin_labels = [p.__name__.replace('_', ' ') for p in plugins]
-        g_pool.main_menu.append(ui.Selector(label,
+        general_settings.append(ui.Selector(label,
                                             selection=[selector_label] + plugins,
                                             labels=[selector_label] + plugin_labels,
                                             setter=open_plugin,
@@ -312,10 +341,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     base_plugins = [Visualizer_Plugin_Base, Analysis_Plugin_Base, Producer_Plugin_Base]
     base_labels = ['Visualizer:', 'Analyser:', 'Data Source:']
-    launchable = user_launchable_plugins.copy()
+    launchable = user_plugins.copy()
     for base_class, label in zip(base_plugins, base_labels):
         member_plugins = []
-        for p in user_launchable_plugins:
+        for p in user_plugins:
             if issubclass(p, base_class):
                 member_plugins.append(p)
                 launchable.remove(p)
@@ -324,10 +353,20 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     # launchable only contains plugins that could not be assigned to any of the above categories
     append_selector('Other', launchable)
 
-    g_pool.main_menu.append(ui.Button('Close all plugins', purge_plugins))
+    general_settings.append(ui.Button('Close all plugins', purge_plugins))
+
+    g_pool.menubar.append(general_settings)
+    g_pool.iconbar.append(ui.Icon('collapsed', general_settings, label=chr(0xe8b8),
+                                  on_val=False, off_val=True, setter=toggle_general_settings,
+                                  label_font='pupil_icons'))
+
+    user_plugin_separator = ui.Separator()
+    user_plugin_separator.order = 0.35
+    g_pool.iconbar.append(user_plugin_separator)
+
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))
-    g_pool.play_button = ui.Thumb('play',
-                                  g_pool,
+    g_pool.capture.play_button = ui.Thumb('play',
+                                  g_pool.capture,
                                   label=chr(0xf04b),
                                   setter=toggle_play,
                                   hotkey=glfw.GLFW_KEY_SPACE,
@@ -335,7 +374,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                                   label_offset_x=5,
                                   label_offset_y=0,
                                   label_offset_size=-24)
-    g_pool.play_button.on_color[:] = (0, 1., .0, .8)
+    g_pool.capture.play_button.on_color[:] = (0, 1., .0, .8)
     g_pool.forward_button = ui.Thumb('forward',
                                      label=chr(0xf04e),
                                      getter=lambda: False,
@@ -363,18 +402,16 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                                     label_offset_x=0,
                                     label_offset_y=2,
                                     label_offset_size=-24)
-    g_pool.quickbar.extend([g_pool.play_button, g_pool.forward_button, g_pool.backward_button, g_pool.export_button])
+    g_pool.quickbar.extend([g_pool.capture.play_button, g_pool.forward_button, g_pool.backward_button, g_pool.export_button])
+    g_pool.gui.append(g_pool.menubar)
+    g_pool.gui.append(g_pool.iconbar)
     g_pool.gui.append(g_pool.quickbar)
-    g_pool.gui.append(g_pool.main_menu)
 
     # we always load these plugins
-    system_plugins = [('Trim_Marks', {}), ('Seek_Bar', {})]
-    default_plugins = [('Log_Display', {}), ('Vis_Scan_Path', {}), ('Vis_Polyline', {}),
-                       ('Vis_Circle', {}), ('Video_Export_Launcher', {}),
-                       ('Pupil_From_Recording', {}), ('Gaze_From_Recording', {})]
-    previous_plugins = session_settings.get('loaded_plugins', default_plugins)
-    g_pool.plugins = Plugin_List(g_pool, plugin_by_name, system_plugins+previous_plugins)
-
+    default_plugins = [('Plugin_Manager', {}), ('Trim_Marks', {}), ('Seek_Bar', {}), ('Log_Display', {}),
+                       ('Vis_Scan_Path', {}), ('Vis_Polyline', {}), ('Vis_Circle', {}),
+                       ('Video_Export_Launcher', {}), ('Pupil_From_Recording', {}), ('Gaze_From_Recording', {})]
+    g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
 
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -420,7 +457,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         subject = n['subject']
         if subject == 'start_plugin':
             g_pool.plugins.add(
-                plugin_by_name[n['name']], args=n.get('args', {}))
+                g_pool.plugin_by_name[n['name']], args=n.get('args', {}))
         elif subject.startswith('meta.should_doc'):
             ipc_pub.notify({'subject': 'meta.doc',
                             'actor': g_pool.app,
@@ -447,13 +484,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                 p.on_notify(n)
 
         # grab new frame
-        if g_pool.play or g_pool.new_seek:
+        if g_pool.capture.play or g_pool.new_seek:
             g_pool.new_seek = False
             try:
-                new_frame = cap.get_frame()
+                new_frame = g_pool.capture.get_frame()
             except EndofVideoFileError:
                 # end of video logic: pause at last frame.
-                g_pool.play = False
+                g_pool.capture.play = False
                 logger.warning("end of video")
             update_graph = True
         else:
@@ -480,7 +517,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             else:
                 ts = new_frame.timestamp
 
-            g_pool.play_button.status_text = str(frame.index)
+            g_pool.capture.play_button.status_text = str(frame.index)
         # always update the CPU graph
         cpu_graph.update()
 
@@ -491,40 +528,42 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         # check if a plugin need to be destroyed
         g_pool.plugins.clean()
 
-        # render camera image
         glfw.glfwMakeContextCurrent(main_window)
-        gl_utils.make_coord_system_norm_based()
-        g_pool.image_tex.update_from_ndarray(frame.bgr)
-        g_pool.image_tex.draw()
-        gl_utils.make_coord_system_pixel_based(frame.img.shape)
         # render visual feedback from loaded plugins
-        for p in g_pool.plugins:
-            p.gl_display()
+        if gl_utils.is_window_visible(main_window):
 
-        fps_graph.draw()
-        cpu_graph.draw()
-        pupil_graph.draw()
-        unused_elements = g_pool.gui.update()
-        for b in unused_elements.buttons:
-            button, action, mods = b
-            pos = glfw.glfwGetCursorPos(main_window)
-            pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
-            pos = denormalize(pos, (frame.img.shape[1], frame.img.shape[0]))  # Position in img pixels
+            gl_utils.glViewport(0, 0, *g_pool.camera_render_size)
+            g_pool.capture._recent_frame = frame
+            g_pool.capture.gl_display()
             for p in g_pool.plugins:
-                p.on_click(pos, button, action)
+                p.gl_display()
 
-        for key, scancode, action, mods in unused_elements.keys:
-            for p in g_pool.plugins:
-                p.on_key(key, scancode, action, mods)
+            gl_utils.glViewport(0, 0, *window_size)
 
-        for char_ in unused_elements.chars:
-            for p in g_pool.plugins:
-                p.on_char(char_)
+            fps_graph.draw()
+            cpu_graph.draw()
+            pupil_graph.draw()
+            unused_elements = g_pool.gui.update()
+            for b in unused_elements.buttons:
+                button, action, mods = b
+                pos = glfw.glfwGetCursorPos(main_window)
+                pos = normalize(pos, g_pool.camera_render_size)
+                pos = denormalize(pos, g_pool.capture.frame_size)
+                for p in g_pool.plugins:
+                    p.on_click(pos, button, action)
+
+            for key, scancode, action, mods in unused_elements.keys:
+                for p in g_pool.plugins:
+                    p.on_key(key, scancode, action, mods)
+
+            for char_ in unused_elements.chars:
+                for p in g_pool.plugins:
+                    p.on_char(char_)
+
+            glfw.glfwSwapBuffers(main_window)
 
         # present frames at appropriate speed
-        cap.wait(frame)
-
-        glfw.glfwSwapBuffers(main_window)
+        g_pool.capture.wait(frame)
         glfw.glfwPollEvents()
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
@@ -541,7 +580,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         p.alive = False
     g_pool.plugins.clean()
 
-    cap.cleanup()
+    g_pool.capture.cleanup()
     g_pool.gui.terminate()
     glfw.glfwDestroyWindow(main_window)
 

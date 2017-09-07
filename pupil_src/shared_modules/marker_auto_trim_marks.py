@@ -58,23 +58,19 @@ class Marker_Auto_Trim_Marks(Plugin):
         self.surface_export_queue = []
         self.current_frame_idx = 0
 
-    def init_gui(self):
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe41f)
+
+    def init_ui(self):
         # initialize the menu
-        self.menu = ui.Scrolling_Menu('Marker Auto Trim Marks')
-        self.g_pool.gui.append(self.menu)
+        self.add_menu()
+        self.menu.label = 'Marker Auto Trim Marks'
         self.menu.append(ui.Info_Text("Marker Auto uses the marker detector to get markers"))
         self.menu.append(ui.Button('remove',self.unset_alive))
 
-        #set up bar display padding
-        self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
-
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
-    def on_window_resize(self,window,w,h):
-        self.win_size = w,h
+    def deinit_ui(self):
+        self.remove_menu()
 
     def unset_alive(self):
         self.alive = False
@@ -251,7 +247,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
-        width,height = self.win_size
+        width,height = self.g_pool.camera_render_size
         h_pad = padding * (frame_max-2)/float(width)
         v_pad = padding* 1./(height-2)
         gluOrtho(-h_pad,  (frame_max-1)+h_pad, -v_pad, 1+v_pad,-1, 1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
@@ -267,6 +263,3 @@ class Marker_Auto_Trim_Marks(Plugin):
         glPopMatrix()
         glMatrixMode(GL_MODELVIEW)
         glPopMatrix()
-
-    def cleanup(self):
-        self.deinit_gui()

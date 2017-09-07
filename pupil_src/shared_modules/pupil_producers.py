@@ -159,13 +159,11 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         max_ts = self.eye_processes[eye_id].max_ts
         self.detection_progress[eye_id] = 100 * (cur_ts - min_ts) / (max_ts - min_ts)
 
-
     def cleanup(self):
         self.stop_eye_process(0)
         self.stop_eye_process(1)
         # close sockets before context is terminated
         self.data_sub = None
-        self.deinit_gui()
 
         session_data = {}
         session_data["detection_method"]= self.detection_method
@@ -194,9 +192,13 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.redetect()
         self.detection_method = new_mode
 
-    def init_gui(self):
-        self.menu = ui.Scrolling_Menu("Offline Pupil Detector", size=(220, 300))
-        self.g_pool.gui.append(self.menu)
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xec11)
+
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = "Offline Pupil Detector"
         self.menu.append(ui.Selector('detection_method', self, label='Detection Method',
                                      selection=['2d', '3d'], setter=self.set_detection_mapping_mode))
         self.menu.append(ui.Button('Redetect', self.redetect))
@@ -217,11 +219,5 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         progress_slider.display_format = '%3.0f%%'
         self.menu.append(progress_slider)
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
-    def get_init_dict(self):
-        return {}
-
+    def deinit_ui(self):
+        self.remove_menu()

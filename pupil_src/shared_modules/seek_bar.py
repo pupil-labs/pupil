@@ -20,6 +20,7 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
+
 class Seek_Bar(Plugin):
     """docstring for Seek_Bar
     seek bar displays a bar at the bottom of the screen when you hover close to it.
@@ -27,22 +28,18 @@ class Seek_Bar(Plugin):
     """
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.cap = g_pool.capture
-        self.current_frame_index = self.cap.get_frame_index()
-        self.frame_count = self.cap.get_frame_count()
+        self.current_frame_index = self.g_pool.capture.get_frame_index()
+        self.frame_count = self.g_pool.capture.get_frame_count()
 
         self.drag_mode = False
         self.was_playing = True
         #display layout
         self.padding = 30. #in sceen pixel
-        self.window_size = 0,0
 
-
-    def init_gui(self):
+    def init_ui(self):
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 
     def on_window_resize(self,window,w,h):
-        self.window_size = w,h
         self.h_pad = self.padding * self.frame_count/float(w)
         self.v_pad = self.padding * 1./h
 
@@ -61,13 +58,13 @@ class Seek_Bar(Plugin):
             if self.current_frame_index-1 != seek_pos:
                 try:
                     # logger.info('seeking to {} form {}'.format(seek_pos,self.current_frame_index))
-                    self.cap.seek_to_frame(seek_pos)
-                    self.current_frame_index = self.cap.get_frame_index() + 1
+                    self.g_pool.capture.seek_to_frame(seek_pos)
+                    self.current_frame_index = self.g_pool.capture.get_frame_index() + 1
                 except:
                     pass
             self.g_pool.new_seek = True
 
-    def on_click(self,img_pos,button,action):
+    def on_click(self, img_pos, button, action):
         """
         gets called when the user clicks in the window screen
         """
@@ -80,23 +77,23 @@ class Seek_Bar(Plugin):
             dist = abs(pos[0]-screen_seek_pos[0])+abs(pos[1]-screen_seek_pos[1])
             if dist < 20:
                 self.drag_mode=True
-                self.was_playing = self.g_pool.play
-                self.g_pool.play = False
+                self.was_playing = self.g_pool.capture.play
+                self.g_pool.capture.play = False
 
         elif action == GLFW_RELEASE:
             if self.drag_mode:
                 x, _ = self.screen_to_seek_bar(pos)
                 x = int(min(self.frame_count-5,max(0,x)))
                 try:
-                    self.cap.seek_to_frame(x)
+                    self.g_pool.capture.seek_to_frame(x)
                 except:
                     pass
                 self.g_pool.new_seek = True
                 self.drag_mode=False
-                self.g_pool.play = self.was_playing
+                self.g_pool.capture.play = self.was_playing
 
     def seek_bar_to_screen(self,pos):
-        width,height = self.window_size
+        width, height = self.g_pool.camera_render_size
         x,y=pos
         y = 1-y
         x = (x/float(self.frame_count))*(width-self.padding*2) +self.padding
@@ -104,7 +101,7 @@ class Seek_Bar(Plugin):
         return x,y
 
     def screen_to_seek_bar(self,pos):
-        width,height = glfwGetWindowSize(glfwGetCurrentContext())
+        width, height = self.g_pool.camera_render_size
         x,y=pos
         x  = (x-self.padding)/(width-2*self.padding)*self.frame_count
         y  = (y-self.padding)/(height-2*self.padding)

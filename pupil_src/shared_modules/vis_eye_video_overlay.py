@@ -192,11 +192,14 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
         self.eye0.initliaze_video(g_pool.rec_dir, g_pool.timestamps)
         self.eye1.initliaze_video(g_pool.rec_dir, g_pool.timestamps)
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xec02)
+
     def init_ui(self):
         self.add_menu()
         # initialize the menu
-        self.menu.label 'Eye Video Overlay'
-        self.update_gui()
+        self.menu.label = 'Eye Video Overlay'
 
         def close():
             self.alive = False

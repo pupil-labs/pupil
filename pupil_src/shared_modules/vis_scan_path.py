@@ -38,7 +38,6 @@ class Vis_Scan_Path(Visualizer_Plugin_Base):
         self.past_gaze_positions = []
         self.prev_gray = None
 
-
     def recent_events(self, events):
         frame = events.get('frame')
         if not frame:
@@ -97,27 +96,21 @@ class Vis_Scan_Path(Visualizer_Plugin_Base):
         self.prev_frame_idx = frame.index
         self.past_gaze_positions = events['gaze_positions']
 
-    def init_gui(self):
-        # initialize the menu
-        self.menu = ui.Scrolling_Menu('Scan Path')
-        self.g_pool.gui.append(self.menu)
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe422)
+
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Scan Path'
         self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Slider('timeframe',self,min=0,step=0.1,max=5,label="duration in sec"))
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
+    def deinit_ui(self):
+        self.remove_menu()
 
     def unset_alive(self):
         self.alive = False
 
     def get_init_dict(self):
-        return {'timeframe':self.timeframe}
-
-    def cleanup(self):
-        """ called when the plugin gets terminated.
-        This happens either voluntarily or forced.
-        if you have a GUI or glfw window destroy it here.
-        """
-        self.deinit_gui()
+        return {'timeframe': self.timeframe}

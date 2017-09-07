@@ -189,7 +189,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w,h
-            camera_render_size = w-int(icon_bar_width*g_pool.gui.scale),h
+            camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
             g_pool.gui.update_window(*window_size)
             g_pool.gui.collect_menus()
             for g in g_pool.graphs:
@@ -302,7 +302,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # window and gl setup
     glfw.glfwInit()
-    width, height = session_settings.get('window_size', (1280+80, 720))
+    width, height = session_settings.get('window_size', (1280+icon_bar_width, 720))
     main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
     window_pos = session_settings.get('window_position', window_position_default)
     glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
@@ -502,10 +502,11 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         # render visual feedback from loaded plugins
         if window_should_update() and gl_utils.is_window_visible(main_window):
 
-            gl_utils.glViewport(0,0,*camera_render_size)
+            gl_utils.glViewport(0, 0, *camera_render_size)
             for p in g_pool.plugins:
                 p.gl_display()
-            gl_utils.glViewport(0,0,*window_size)
+
+            gl_utils.glViewport(0, 0, *window_size)
             for g in g_pool.graphs:
                 g.draw()
 

@@ -24,15 +24,13 @@ class Trim_Marks(Plugin):
         super().__init__(g_pool)
         g_pool.trim_marks = self #attach self for ease of access by others.
         self.order = .4
-        self.capture = g_pool.capture
-        self.frame_count = self.capture.get_frame_count()
+        self.frame_count = self.g_pool.capture.get_frame_count()
         self._in_mark = 0
         self._out_mark = self.frame_count
         self.drag_in = False
         self.drag_out = False
         #display layout
         self.padding = 30. #in sceen pixel
-        self.window_size = 0,0
 
     @property
     def in_mark(self):
@@ -66,11 +64,7 @@ class Trim_Marks(Plugin):
         except:
             logger.warning("Setting Trimmarks via string failed.")
 
-    def init_gui(self):
-        self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
-
-    def on_window_resize(self,window,w,h):
-        self.window_size = w,h
+    def on_window_resize(self, window, w, h):
         self.h_pad = self.padding * self.frame_count/float(w)
         self.v_pad = self.padding * 1./h
 
@@ -80,7 +74,7 @@ class Trim_Marks(Plugin):
             return
 
         if frame.index == self.out_mark or frame.index == self.in_mark:
-            self.g_pool.play = False
+            self.g_pool.capture.play = False
 
         if self.drag_in:
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
@@ -91,8 +85,6 @@ class Trim_Marks(Plugin):
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
             x,_ = self.screen_to_bar_space((x,y))
             self.out_mark = x
-
-
 
     def on_click(self,img_pos,button,action):
         """
@@ -110,13 +102,13 @@ class Trim_Marks(Plugin):
             #in mark
             dist = abs(pos[0]-screen_in_mark_pos[0])+abs(pos[1]-screen_in_mark_pos[1])
             if dist < 10:
-                if self.distance_in_pix(self.in_mark,self.capture.get_frame_index()) > 20:
+                if self.distance_in_pix(self.in_mark,self.g_pool.capture.get_frame_index()) > 20:
                     self.drag_in=True
                     return
             #out mark
             dist = abs(pos[0]-screen_out_mark_pos[0])+abs(pos[1]-screen_out_mark_pos[1])
             if dist < 10:
-                if self.distance_in_pix(self.out_mark,self.capture.get_frame_index()) > 20:
+                if self.distance_in_pix(self.out_mark,self.g_pool.capture.get_frame_index()) > 20:
                     self.drag_out=True
 
         elif action == GLFW_RELEASE:
@@ -134,7 +126,7 @@ class Trim_Marks(Plugin):
 
 
     def bar_space_to_screen(self,pos):
-        width,height = self.window_size
+        width,height = self.g_pool.camera_render_size
         x,y=pos
         y = 1-y
         x = (x/float(self.frame_count))*(width-self.padding*2) +self.padding
@@ -143,7 +135,7 @@ class Trim_Marks(Plugin):
 
 
     def screen_to_bar_space(self,pos):
-        width,height = glfwGetWindowSize(glfwGetCurrentContext())
+        width,height = self.g_pool.camera_render_size
         x,y=pos
         x  = (x-self.padding)/(width-2*self.padding)*self.frame_count
         y  = (y-self.padding)/(height-2*self.padding)
