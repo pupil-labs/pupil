@@ -53,7 +53,6 @@ class Calibration_Plugin(Plugin):
                                 labels=[p.__name__.replace('_', ' ') for p in calibration_plugins],
                                 label='Calibration Method'
                             ))
-        self.menu.append(ui.Separator())
 
     @property
     def mode_pretty(self):
