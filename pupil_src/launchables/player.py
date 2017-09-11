@@ -201,7 +201,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     File_Source(g_pool, video_path)
 
     # load session persistent settings
-    session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))
+    session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
     if VersionFormat(session_settings.get("version", '0.0')) != app_version:
         logger.info("Session setting are a different version of this app. I will not use those.")
         session_settings.clear()
@@ -302,6 +302,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         notification = {'subject': 'should_export', 'range': export_range, 'export_dir': export_dir}
         g_pool.ipc_pub.notify(notification)
 
+    def reset_restart():
+        logger.warning("Resetting all settings and restarting Player.")
+        glfw.glfwSetWindowShouldClose(main_window, True)
+        ipc_pub.notify({'subject': 'clear_settings_process.should_start'})
+        ipc_pub.notify({'subject': 'player_process.should_start', 'rec_dir': rec_dir, 'delay': 2.})
+
     def toggle_general_settings(collapsed):
         #this is the menu toggle logic.
         # Only one menu can be open.
@@ -325,35 +331,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     general_settings.append(ui.Info_Text('Data Format Version: {}'.format(meta_info['Data Format Version'])))
     general_settings.append(ui.Slider('min_data_confidence', g_pool, setter=set_data_confidence,
                                       step=.05, min=0.0, max=1.0, label='Confidence threshold'))
-
-    general_settings.append(ui.Info_Text('Open plugins'))
-
-    selector_label = "Select to load"
-
-    def append_selector(label, plugins):
-        plugins.sort(key=lambda p: p.__name__)
-        plugin_labels = [p.__name__.replace('_', ' ') for p in plugins]
-        general_settings.append(ui.Selector(label,
-                                            selection=[selector_label] + plugins,
-                                            labels=[selector_label] + plugin_labels,
-                                            setter=open_plugin,
-                                            getter=lambda: selector_label))
-
-    base_plugins = [Visualizer_Plugin_Base, Analysis_Plugin_Base, Producer_Plugin_Base]
-    base_labels = ['Visualizer:', 'Analyser:', 'Data Source:']
-    launchable = user_plugins.copy()
-    for base_class, label in zip(base_plugins, base_labels):
-        member_plugins = []
-        for p in user_plugins:
-            if issubclass(p, base_class):
-                member_plugins.append(p)
-                launchable.remove(p)
-        append_selector(label, member_plugins)
-
-    # launchable only contains plugins that could not be assigned to any of the above categories
-    append_selector('Other', launchable)
-
-    general_settings.append(ui.Button('Close all plugins', purge_plugins))
+    general_settings.append(ui.Button('Restart with default settings', reset_restart))
 
     g_pool.menubar.append(general_settings)
     g_pool.iconbar.append(ui.Icon('collapsed', general_settings, label=chr(0xe8b8),
@@ -628,7 +606,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
         if not is_pupil_rec_dir(rec_dir):
             rec_dir = None
     # load session persistent settings
-    session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings"))
+    session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
     if VersionFormat(session_settings.get("version", '0.0')) != app_version:
         logger.info("Session setting are from a  different version of this app. I will not use those.")
         session_settings.clear()

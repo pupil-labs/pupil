@@ -321,10 +321,11 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     def reset_restart():
         logger.warning("Resetting all settings and restarting Capture.")
         glfw.glfwSetWindowShouldClose(main_window, True)
-        ipc_pub.notify({'subject': 'reset_restart_process.should_start'})
+        ipc_pub.notify({'subject': 'clear_settings_process.should_start'})
+        ipc_pub.notify({'subject': 'world_process.should_start', 'delay': 2.})
 
     def toggle_general_settings(collapsed):
-        #this is the menu toggle logic.
+        # this is the menu toggle logic.
         # Only one menu can be open.
         # If no menu is open the menubar should collapse.
         g_pool.menubar.collapsed = collapsed
@@ -559,27 +560,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     logger.info("Process shutting down.")
     ipc_pub.notify({'subject': 'world_process.stopped'})
-
-
-
-def reset_restart(ipc_push_url,user_dir):
-    import glob, os, time
-
-    # networking
-    import zmq
-    import zmq_tools
-    # zmq ipc setup
-    zmq_ctx = zmq.Context()
-    ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
-
-    time.sleep(1)
-
-    for f in glob.glob(os.path.join(user_dir,'user_settings_*')):
-        print(f)
-        os.remove(f)
-
-    ipc_pub.notify({'subject': 'world_process.should_start'})
-    time.sleep(1)
 
 
 def world_profiled(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
