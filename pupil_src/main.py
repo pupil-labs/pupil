@@ -69,12 +69,13 @@ if 'profiled' in sys.argv:
     from launchables.world import world_profiled as world
     from launchables.service import service_profiled as service
     from launchables.eye import eye_profiled as eye
-
+    from launchables.player import player_profiled as player
 else:
     from launchables.world import world
     from launchables.service import service
     from launchables.eye import eye
-from launchables.player import player, player_drop
+    from launchables.player import player
+from launchables.player import player_drop
 from launchables.marker_detectors import circle_detector
 from launchables.world import reset_restart
 
