@@ -233,7 +233,7 @@ class Plugin(object):
         from pyglui import ui
 
         def toggle_menu(collapsed):
-            #this is the menu toggle logic.
+            # This is the menu toggle logic.
             # Only one menu can be open.
             # If no menu is open the menu_bar should collapse.
             self.g_pool.menubar.collapsed = collapsed
@@ -241,10 +241,16 @@ class Plugin(object):
                 m.collapsed = True
             self.menu.collapsed = collapsed
 
+        def close():
+            toggle_menu(True)
+            self.alive = False
+
         # Here we make a menu and icon
         font, symbol = self.icon_info()
         y_offset = 1 if font == 'pupil_icons' else 0
         self.menu = ui.Growing_Menu('Unnamed Menu', header_pos='headline')
+        if self.uniqueness == 'not_unique':
+            self.menu.append(ui.Button('Close', close))
         self.menu_icon = ui.Icon('collapsed', self.menu, label=symbol,
                                  label_font=font, on_val=False, off_val=True,
                                  setter=toggle_menu, label_offset_y=y_offset)

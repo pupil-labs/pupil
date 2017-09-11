@@ -68,14 +68,10 @@ class Vis_Light_Points(Visualizer_Plugin_Base):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Light Points'
-        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Slider('falloff',self,min=1,step=1,max=1000))
 
     def deinit_ui(self):
         self.remove_menu()
-
-    def unset_alive(self):
-        self.alive = False
 
     def get_init_dict(self):
         return {'falloff': self.falloff}

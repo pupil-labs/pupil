@@ -49,7 +49,6 @@ class Vis_Polyline(Visualizer_Plugin_Base):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Gaze Polyline'
-        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15,label='Line thickness'))
 
         color_menu = ui.Growing_Menu('Color')
@@ -62,9 +61,6 @@ class Vis_Polyline(Visualizer_Plugin_Base):
 
     def deinit_ui(self):
         self.remove_menu()
-
-    def unset_alive(self):
-        self.alive = False
 
     def get_init_dict(self):
         return {'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness}

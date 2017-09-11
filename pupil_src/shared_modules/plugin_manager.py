@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import System_Plugin_Base, Visualizer_Plugin_Base, Analysis_Plugin_Base, Producer_Plugin_Base
+from plugin import System_Plugin_Base, Producer_Plugin_Base
 from pyglui import ui
 from calibration_routines import Calibration_Plugin, Gaze_Mapping_Plugin
 from video_capture import Base_Manager, Base_Source
@@ -32,7 +32,7 @@ class Plugin_Manager(System_Plugin_Base):
         self.menu.label = 'Plugin Manager'
         self.menu_icon.order = .0
 
-        def plugin_menu_entry(p):
+        def plugin_toggle_entry(p):
             def setter(turn_on):
                 if turn_on:
                     self.notify_all({'subject': 'start_plugin', 'name': p.__name__})
@@ -51,17 +51,24 @@ class Plugin_Manager(System_Plugin_Base):
             return ui.Switch(p.__name__, label=p.__name__.replace('_', ' '),
                              setter=setter, getter=getter)
 
+        def plugin_add_entry(p):
+            def action():
+                self.notify_all({'subject': 'start_plugin', 'name': p.__name__})
+
+            label = 'Add {}'.format(p.__name__.replace('_', ' '))
+            return ui.Button(label, action)
+
         if self.g_pool.app == 'player':
             for p in self.user_plugins:
-                if issubclass(p, Analysis_Plugin_Base):
-                    self.menu.append(plugin_menu_entry(p))
+                if p.uniqueness != 'not_unique':
+                    self.menu.append(plugin_toggle_entry(p))
             self.menu.append(ui.Separator())
             for p in self.user_plugins:
-                if issubclass(p, Visualizer_Plugin_Base):
-                    self.menu.append(plugin_menu_entry(p))
+                if p.uniqueness == 'not_unique':
+                    self.menu.append(plugin_add_entry(p))
         else:
             for p in self.user_plugins:
-                self.menu.append(plugin_menu_entry(p))
+                self.menu.append(plugin_toggle_entry(p))
 
     def deinit_ui(self):
         self.remove_menu()

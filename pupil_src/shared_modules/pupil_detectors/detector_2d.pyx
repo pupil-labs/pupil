@@ -37,6 +37,7 @@ cdef class Detector_2D:
     cdef bint windowShouldOpen, windowShouldClose
     cdef object _window
     cdef readonly object g_pool
+    cdef readonly basestring uniqueness
     cdef public object menu
     cdef public object menu_icon
 
@@ -51,6 +52,7 @@ cdef class Detector_2D:
         self.windowShouldOpen = False
         self.windowShouldClose = False
         self.g_pool = g_pool
+        self.uniqueness = 'unique'
         self.detectProperties = settings or {}
         self.coarseDetectionPreviousWidth = -1
         self.coarseDetectionPreviousPosition =  (0,0)

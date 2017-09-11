@@ -697,3 +697,20 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
     if rec_dir:
         ipc_pub.notify({"subject": "player_process.should_start", "rec_dir": rec_dir})
     sleep(1.0)
+
+
+def player_profiled(rec_dir, ipc_pub_url, ipc_sub_url,
+                    ipc_push_url, user_dir, app_version):
+    import cProfile
+    import subprocess
+    import os
+    from .player import player
+    cProfile.runctx("player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version)",
+                    {'rec_dir': rec_dir, 'ipc_pub_url': ipc_pub_url, 'ipc_sub_url': ipc_sub_url,
+                     'ipc_push_url': ipc_push_url, 'user_dir': user_dir,
+                     'app_version': app_version}, locals(), "player.pstats")
+    loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
+    gprof2dot_loc = os.path.join(
+        loc[0], 'pupil_src', 'shared_modules', 'gprof2dot.py')
+    subprocess.call("python " + gprof2dot_loc + " -f pstats player.pstats | dot -Tpng -o player_cpu_time.png", shell=True)
+    print("created cpu time graph for world process. Please check out the png next to the player.py file")

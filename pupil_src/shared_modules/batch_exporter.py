@@ -70,9 +70,6 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.workers = [None for x in range(mp.cpu_count())]
         logger.info("Using a maximum of {} CPUs to process visualizations in parallel...".format(mp.cpu_count()))
 
-    def unset_alive(self):
-        self.alive = False
-
     @classmethod
     def icon_info(self):
         return 'pupil_icons', chr(0xec05)
@@ -87,7 +84,6 @@ class Batch_Exporter(Analysis_Plugin_Base):
 
     def _update_ui(self):
         self.menu.elements[:] = []
-        self.menu.append(ui.Button('Close', self.unset_alive))
         self.menu.append(ui.Text_Input('source_dir', self, label='Recording Source Directory', setter=self.set_src_dir))
         self.menu.append(ui.Text_Input('destination_dir', self, label='Recording Destination Directory', setter=self.set_dest_dir))
         self.menu.append(ui.Button('start export', self.start))

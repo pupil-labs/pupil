@@ -56,10 +56,7 @@ class Audio_Capture(Plugin):
         self.add_menu()
         self.menu.label = 'Audio Capture'
 
-        def close():
-            self.alive = False
         help_str = 'Creates events for audio input.'
-        self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text(help_str))
 
         def audio_dev_getter():

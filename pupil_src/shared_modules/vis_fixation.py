@@ -61,7 +61,6 @@ class Vis_Fixation(Visualizer_Plugin_Base):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Fixation Circle'
-        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Slider('radius',self,min=1,step=1,max=100,label='Radius'))
         self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15,label='Stroke width'))
         self.menu.append(ui.Switch('fill',self,label='Fill'))
@@ -77,9 +76,6 @@ class Vis_Fixation(Visualizer_Plugin_Base):
 
     def deinit_ui(self):
         self.remove_menu()
-
-    def unset_alive(self):
-        self.alive = False
 
     def get_init_dict(self):
         return {'radius':self.radius,'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness,'fill':self.fill}

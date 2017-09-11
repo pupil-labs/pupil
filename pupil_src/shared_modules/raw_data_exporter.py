@@ -106,11 +106,6 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Raw Data Exporter'
-
-        def close():
-            self.alive = False
-
-        self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text('Export Raw Pupil Capture data into .csv files.'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))

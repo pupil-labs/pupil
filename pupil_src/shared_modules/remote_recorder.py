@@ -67,11 +67,8 @@ class Remote_Recorder(Plugin):
         return 'pupil_icons', chr(0xe04b)
 
     def init_ui(self):
-        def close():
-            self.alive = False
         self.add_menu()
         self.menu.label = 'Remote Recorder'
-        self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text('Starts a recording session on each connected Pupil Mobile source.'))
         self.menu.append(ui.Text_Input('session_name', self))
         self.menu_toggle = ui.Button('Start Recording', self.toggle_recording)

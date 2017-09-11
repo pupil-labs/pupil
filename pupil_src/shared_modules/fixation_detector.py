@@ -299,7 +299,6 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
             csv_writer.writerow(('fixation_count',len(fixations_in_section)))
             logger.info("Created 'fixation_report.csv' file.")
 
-
     def recent_events(self, events):
         frame = events.get('frame')
         if not frame:
@@ -320,15 +319,12 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
                     0.8,(255,150,100))
                 # cv2.putText(frame.img,'%i - %i'%(f['start_frame_index'],f['end_frame_index']),(x,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,150,100))
 
-    def close(self):
-        self.alive = False
-
-
     def get_init_dict(self):
         return {'max_dispersion': self.max_dispersion, 'min_duration':self.min_duration, 'h_fov':self.h_fov, 'v_fov': self.v_fov,'show_fixations':self.show_fixations}
 
     def cleanup(self):
         self.deinit_gui()
+
 
 class Sliding_Window(object):
     """docstring for Sliding_Window"""
@@ -695,12 +691,8 @@ class Fixation_Detector(Plugin):
         return 'pupil_icons', chr(0xe3b4)
 
     def init_ui(self):
-        def close():
-            self.alive = False
-
         self.add_menu()
         self.menu.label = 'Fixation Detector'
-        self.menu.append(ui.Button('Close', close))
 
         help_str = "Dispersion-duration-based fixation detector."
         self.menu.append(ui.Info_Text(help_str))

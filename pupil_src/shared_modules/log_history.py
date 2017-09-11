@@ -45,11 +45,7 @@ class Log_History(Plugin):
         self.add_menu()
         self.menu.label = 'Log'
 
-        def close():
-            self.alive = False
-
         help_str = 'A View of the {} most recent log messages. Complete logs are here: "{}"'.format(self.num_messages,self.g_pool.user_dir)
-        self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
 
         with open(self.logfile,'r') as fh:

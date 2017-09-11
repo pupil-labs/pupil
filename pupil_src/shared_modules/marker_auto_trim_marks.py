@@ -67,13 +67,9 @@ class Marker_Auto_Trim_Marks(Plugin):
         self.add_menu()
         self.menu.label = 'Marker Auto Trim Marks'
         self.menu.append(ui.Info_Text("Marker Auto uses the marker detector to get markers"))
-        self.menu.append(ui.Button('remove',self.unset_alive))
 
     def deinit_ui(self):
         self.remove_menu()
-
-    def unset_alive(self):
-        self.alive = False
 
     def add_manual_in_mark(self):
         self.man_in_marks.append(self.current_frame_idx)
@@ -217,9 +213,7 @@ class Marker_Auto_Trim_Marks(Plugin):
 
                 if self.sections:
                     self.activate_section=self.sections[0]
-                self.menu.elements[:] = []
-                self.menu.append(ui.Button('remove',self.unset_alive))
-                self.menu.label
+                del self.menu.elements[:]
                 self.menu.append(ui.Slider('in_marker_id',self,min=0,step=1,max=63,label='IN marker id'))
                 self.menu.append(ui.Slider('out_marker_id',self,min=0,step=1,max=63,label='OUT marker id'))
                 self.menu.append(ui.Selector('active_section',self,selection=self.sections,setter=self.activate_section,label='set section'))

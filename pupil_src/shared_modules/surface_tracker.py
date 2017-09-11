@@ -166,12 +166,7 @@ class Surface_Tracker(Plugin):
         self.remove_menu()
 
     def update_gui_markers(self):
-
-        def close():
-            self.alive = False
-
         self.menu.elements[:] = []
-        self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text('This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*.'))
         self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
         self.menu.append(ui.Switch('invert_image',self,label='Use inverted markers'))

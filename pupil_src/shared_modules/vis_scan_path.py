@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import cv2
-from plugin import Visualizer_Plugin_Base
+from plugin import Analysis_Plugin_Base
 import numpy as np
 from pyglui import ui
 from methods import denormalize,normalize
@@ -18,7 +18,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Vis_Scan_Path(Visualizer_Plugin_Base):
+class Vis_Scan_Path(Analysis_Plugin_Base):
     """docstring
     using this plugin will extend the recent_gaze_positions by x extra dots from previous frames.
     lock recent gaze points onto pixels.
@@ -103,14 +103,10 @@ class Vis_Scan_Path(Visualizer_Plugin_Base):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Scan Path'
-        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Slider('timeframe',self,min=0,step=0.1,max=5,label="duration in sec"))
 
     def deinit_ui(self):
         self.remove_menu()
-
-    def unset_alive(self):
-        self.alive = False
 
     def get_init_dict(self):
         return {'timeframe': self.timeframe}

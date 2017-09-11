@@ -50,9 +50,6 @@ class Annotation_Capture(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Annotations'
-
-        # add a button to close the plugin
-        self.menu.append(ui.Button('close', self.close))
         self.menu.append(ui.Text_Input('new_annotation_name',self))
         self.menu.append(ui.Text_Input('new_annotation_hotkey',self))
         self.menu.append(ui.Button('add annotation type',self.add_annotation))
@@ -99,9 +96,6 @@ class Annotation_Capture(Plugin):
             print(annotation, self.annotations)
         self.update_buttons()
 
-    def close(self):
-        self.alive = False
-
     def fire_annotation(self,annotation_label):
         t = self.g_pool.get_timestamp()
         logger.info('"{}"@{}'.format(annotation_label, t))
@@ -147,9 +141,6 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
         self.add_menu()
         # lets make a menu entry in the sidebar
         self.menu.label = 'View and edit annotations'
-        # add a button to close the plugin
-        self.menu.append(ui.Button('close', self.close))
-
         self.menu.append(ui.Info_Text("Annotations recorded with capture are displayed when this plugin is loaded. New annotations can be added with the interface below."))
         self.menu.append(ui.Info_Text("If you want to revert annotations to the recorded state, stop player, delete the annotations file in the recording and reopen player."))
 
@@ -222,9 +213,6 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
     def on_notify(self,notification):
         if notification['subject'] == "should_export":
             self.export_annotations(notification['range'],notification['export_dir'])
-
-    def unset_alive(self):
-        self.alive = False
 
     def cleanup(self):
         """called when the plugin gets terminated.

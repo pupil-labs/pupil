@@ -38,7 +38,6 @@ class Blink_Detection(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Blink Detector'
-        self.menu.append(ui.Button('Close', self.close))
         self.menu.append(ui.Info_Text('This plugin detects blink on- and offsets based on confidence drops.'))
         self.menu.append(ui.Switch('visualize', self, label='Visualize'))
         self.menu.append(ui.Slider('history_length', self,
@@ -53,9 +52,6 @@ class Blink_Detection(Plugin):
 
     def deinit_ui(self):
         self.remove_menu()
-
-    def close(self):
-        self.alive = False
 
     def recent_events(self, events={}):
         events['blinks'] = []

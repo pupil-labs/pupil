@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import glfw
-from collections import deque
 from plugin import Plugin
 from pyglui import ui, graph
 
@@ -38,10 +37,6 @@ class Diameter_History(Plugin):
         self.add_menu()
         self.menu.label = 'Pupil Diameter History'
 
-        def close():
-            self.alive = False
-
-        self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text('Displays the recent pupil diameter in millimeters for each eye.'))
 
         eye0_graph = graph.Bar_Graph(min_val=.0, max_val=5.)

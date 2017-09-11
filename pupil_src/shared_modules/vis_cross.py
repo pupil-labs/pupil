@@ -51,7 +51,6 @@ class Vis_Cross(Visualizer_Plugin_Base):
         # initialize the menu
         self.add_menu()
         self.menu.label = 'Gaze Cross'
-        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Slider('inner',self,min=0,step=10,max=200,label='Inner Offset Length'))
         self.menu.append(ui.Slider('outer',self,min=0,step=10,max=2000,label='Outer Length'))
         self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15,label='Stroke width'))
@@ -66,9 +65,6 @@ class Vis_Cross(Visualizer_Plugin_Base):
 
     def deinit_ui(self):
         self.remove_menu()
-
-    def unset_alive(self):
-        self.alive = False
 
     def get_init_dict(self):
         return {'inner':self.inner,'outer':self.outer,'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness}

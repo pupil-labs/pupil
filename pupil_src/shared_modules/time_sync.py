@@ -89,12 +89,7 @@ class Time_Sync(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Network Time Sync'
-
-        def close():
-            self.alive = False
-
         help_str = "Synchonize time of Pupil Captures across the local network."
-        self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text('Protocol version: ' + __protocol_version__))
 
         self.menu.append(ui.Info_Text(help_str))

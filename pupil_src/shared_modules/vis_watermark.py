@@ -95,7 +95,6 @@ class Vis_Watermark(Visualizer_Plugin_Base):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Watermark'
-        self.menu.append(ui.Button('Close',self.unset_alive))
         if self.watermark is None:
             self.menu.append(ui.Info_Text("Please save a .png file in the users settings dir: '{}' in RGBA format. Once this plugin is closed and re-loaded the png will be used as a watermark.".format(self.g_pool.user_dir)))
         else:
@@ -105,9 +104,6 @@ class Vis_Watermark(Visualizer_Plugin_Base):
 
     def deinit_ui(self):
         self.remove_menu()
-
-    def unset_alive(self):
-        self.alive = False
 
     def gl_display(self):
         if self.move_watermark:

@@ -40,6 +40,7 @@ cdef class Detector_3D:
     cdef object debugVisualizer3D
     cdef object pyResult3D
     cdef readonly object g_pool
+    cdef readonly basestring uniqueness
     cdef public object menu
     cdef public object menu_icon
 
@@ -61,6 +62,7 @@ cdef class Detector_3D:
         #debug window
         self.debugVisualizer3D = Eye_Visualizer(g_pool ,self.detector3DPtr.getFocalLength() )
         self.g_pool = g_pool
+        self.uniqueness = 'unique'
         self.detectProperties2D = settings['2D_Settings'] if settings else {}
         self.detectProperties3D = settings['3D_Settings'] if settings else {}
 

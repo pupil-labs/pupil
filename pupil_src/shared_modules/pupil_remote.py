@@ -138,9 +138,6 @@ class Pupil_Remote(Plugin):
 
         del self.menu.elements[:]
 
-        def close():
-            self.alive = False
-
         def set_iface(use_primary_interface):
             self.use_primary_interface = use_primary_interface
             self.update_menu()
@@ -165,7 +162,6 @@ class Pupil_Remote(Plugin):
                 self.update_menu()
 
         help_str = 'Pupil Remote using ZeroMQ REQ REP scheme.'
-        self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Switch('use_primary_interface', self, setter=set_iface, label="Use primary network interface"))
         if self.use_primary_interface:

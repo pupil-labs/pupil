@@ -91,12 +91,8 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         # add menu to the window
         self._update_ui()
 
-    def unset_alive(self):
-        self.alive = False
-
     def _update_ui(self):
-        self.menu.elements[:] = []
-        self.menu.append(ui.Button('Close',self.unset_alive))
+        del self.menu.elements[:]
         self.menu.append(ui.Info_Text('Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.'))
         self.menu.append(ui.Text_Input('rec_name',self,label='export name'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))

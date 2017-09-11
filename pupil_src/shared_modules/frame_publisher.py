@@ -27,7 +27,6 @@ class Frame_Publisher(Plugin):
         help_str = "Publishes frame data in different formats under the topic \"frame.world\"."
         self.menu_icon.label = "f"
         self.menu.label = 'Frame Publisher'
-        self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Selector('format',self,selection=["jpeg","yuv","bgr","gray"], labels=["JPEG", "YUV", "BGR", "Gray Image"],label='Format'))
 
@@ -83,9 +82,6 @@ class Frame_Publisher(Plugin):
 
     def get_init_dict(self):
         return {'format':self.format}
-
-    def close(self):
-            self.alive = False
 
     def cleanup(self):
         self.notify_all({'subject':'frame_publishing.stopped'})

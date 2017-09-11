@@ -115,8 +115,6 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             self.add_button = None
 
     def update_gui_markers(self):
-        def close():
-            self.alive=False
 
         def set_min_marker_perimeter(val):
             self.min_marker_perimeter = val
@@ -128,7 +126,6 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             self.invalidate_surface_caches()
 
         self.menu.elements[:] = []
-        self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Switch('invert_image',self,setter=set_invert_image,label='Use inverted markers'))
         self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=500,step=1,setter=set_min_marker_perimeter))
         self.menu.append(ui.Info_Text('The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))

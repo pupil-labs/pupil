@@ -52,10 +52,6 @@ class Accuracy_Visualizer(Plugin):
         self.add_menu()
         self.menu.label = 'Accuracy Visualizer'
 
-        def close():
-            self.alive = False
-        self.menu.append(ui.Button('Close', close))
-
         general_help = '''Measure gaze mapping accuracy and precision using samples
                           that were collected during calibration. The outlier threshold
                           discards samples with high angular errors.'''.replace("\n", " ").replace("  ", '')
