@@ -609,8 +609,6 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
 
 
 class Fixation_Detector(Plugin):
-    """docstring for Fixation_Detector_Pupil_Angle_Dispersion_Duration
-    """
     def __init__(self, g_pool, dispersion_2d=5, dispersion_3d=3.0, duration=300, confidence_threshold=0.75):
         super().__init__(g_pool)
         self.queue = deque()
