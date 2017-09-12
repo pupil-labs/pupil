@@ -71,7 +71,7 @@ class Log_History(Plugin):
 
     def on_log(self,record):
         self.menu.elements[self.num_messages+2:] = []
-        self.menu.insert(2,ui.Info_Text(str(self.formatter.format(record))))
+        self.menu.insert(1,ui.Info_Text(str(self.formatter.format(record))))
 
     def deinit_ui(self):
         self.remove_menu()
