@@ -337,7 +337,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
-    g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-400, 0), size=(-icon_bar_width, 0), header_pos='left',min_size=(50,0))
+    g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-400, 0), size=(-icon_bar_width, 0), header_pos='left')
     g_pool.iconbar = ui.Scrolling_Menu("Icons",pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))
     g_pool.gui.append(g_pool.menubar)
