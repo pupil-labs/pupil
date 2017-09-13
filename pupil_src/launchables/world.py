@@ -200,8 +200,9 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             for p in g_pool.plugins:
                 p.on_window_resize(window, *camera_render_size)
 
-    def on_iconify(window, iconified):
-        g_pool.iconified = iconified
+    def on_refresh(window):
+        print('refresh', g_pool.get_timestamp())
+        g_pool.should_refresh_main_window = True
 
     def on_window_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key, scancode, action, mods)
@@ -243,7 +244,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         logger.info("Session setting are from a different version of this app. I will not use those.")
         session_settings.clear()
 
-    g_pool.iconified = False
+    g_pool.should_refresh_main_window = False
     g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode', '3d')
     g_pool.active_calibration_plugin = None
     g_pool.active_gaze_mapping_plugin = None
@@ -384,8 +385,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
 
     # Register callbacks main_window
+    glfw.glfwSetWindowRefreshCallback(main_window, on_refresh)
     glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
-    glfw.glfwSetWindowIconifyCallback(main_window, on_iconify)
     glfw.glfwSetKeyCallback(main_window, on_window_key)
     glfw.glfwSetCharCallback(main_window, on_window_char)
     glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
