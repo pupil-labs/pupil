@@ -195,6 +195,10 @@ cdef class Detector_3D:
     def icon_info(self):
         return 'roboto', '3D'
 
+    @property
+    def pretty_class_name(self):
+        return self.menu.label
+
     def init_ui(self):
         Plugin.add_menu(self)
         self.menu.label = 'Pupil Detector 3D'

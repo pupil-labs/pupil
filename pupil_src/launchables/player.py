@@ -334,9 +334,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     general_settings.append(ui.Button('Restart with default settings', reset_restart))
 
     g_pool.menubar.append(general_settings)
-    g_pool.iconbar.append(ui.Icon('collapsed', general_settings, label=chr(0xe8b8),
-                                  on_val=False, off_val=True, setter=toggle_general_settings,
-                                  label_font='pupil_icons'))
+    icon = ui.Icon('collapsed', general_settings, label=chr(0xe8b8), on_val=False, off_val=True, setter=toggle_general_settings, label_font='pupil_icons')
+    icon.tooltip = 'General Settings'
+    g_pool.iconbar.append(icon)
 
     user_plugin_separator = ui.Separator()
     user_plugin_separator.order = 0.35

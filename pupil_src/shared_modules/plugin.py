@@ -255,6 +255,7 @@ class Plugin(object):
                                  label_font=font, on_val=False, off_val=True,
                                  setter=toggle_menu, label_offset_y=y_offset)
         self.menu_icon.order = 0.5
+        self.menu_icon.tooltip = self.pretty_class_name
         self.g_pool.menubar.append(self.menu)
         self.g_pool.iconbar.append(self.menu_icon)
         toggle_menu(False)
