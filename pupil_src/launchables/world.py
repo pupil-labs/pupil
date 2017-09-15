@@ -132,6 +132,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     icon_bar_width = 80
     window_size = None
     camera_render_size = None
+    hdpi_factor = 1.0
 
     # g_pool holds variables for this process they are accesible to all plugins
     g_pool = Global_Container()
@@ -185,42 +186,31 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     def on_resize(window, w, h):
         nonlocal window_size
         nonlocal camera_render_size
-        g_pool.hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
-        g_pool.gui.scale = g_pool.gui_user_scale * g_pool.hdpi_factor
+        nonlocal hdpi_factor
+        hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+        g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
         window_size = w,h
         camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
         g_pool.gui.update_window(*window_size)
         g_pool.gui.collect_menus()
         for g in g_pool.graphs:
-            g.scale = g_pool.hdpi_factor
+            g.scale = hdpi_factor
             g.adjust_window_size(*window_size)
 
         for p in g_pool.plugins:
             p.on_window_resize(window, *camera_render_size)
-        g_pool.should_refresh_main_window = True
-
-    def on_refresh(window):
-        g_pool.should_refresh_main_window = True
-
-    def on_iconify(window, iconify):
-        g_pool.iconified = iconify
-        if iconify:
-            g_pool.should_refresh_main_window = True
 
     def on_window_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key, scancode, action, mods)
-        g_pool.should_refresh_main_window = True
 
     def on_window_char(window, char):
         g_pool.gui.update_char(char)
-        g_pool.should_refresh_main_window = True
 
     def on_window_mouse_button(window, button, action, mods):
         g_pool.gui.update_button(button, action, mods)
-        g_pool.should_refresh_main_window = True
 
     def on_pos(window, x, y):
-        x, y = x * g_pool.hdpi_factor, y * g_pool.hdpi_factor
+        x, y = x * hdpi_factor, y * hdpi_factor
         g_pool.gui.update_mouse(x, y)
         pos = x, y
         pos = normalize(pos, camera_render_size)
@@ -228,17 +218,14 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         pos = denormalize(pos, g_pool.capture.frame_size)
         for p in g_pool.plugins:
             p.on_pos(pos)
-        g_pool.should_refresh_main_window = True
 
     def on_scroll(window, x, y):
         g_pool.gui.update_scroll(x, y * scroll_factor)
-        g_pool.should_refresh_main_window = True
 
     def on_drop(window, count, paths):
         paths = [paths[x].decode('utf-8') for x in range(count)]
         for p in g_pool.plugins:
             p.on_drop(paths)
-        g_pool.should_refresh_main_window = True
 
     tick = delta_t()
 
@@ -251,8 +238,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         logger.info("Session setting are from a different version of this app. I will not use those.")
         session_settings.clear()
 
-    g_pool.iconified = False
-    g_pool.should_refresh_main_window = True
     g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode', '3d')
     g_pool.active_calibration_plugin = None
     g_pool.active_gaze_mapping_plugin = None
@@ -323,9 +308,9 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     def set_scale(new_scale):
         g_pool.gui_user_scale = new_scale
         window_size = camera_render_size[0] + \
-            int(icon_bar_width * g_pool.gui_user_scale * g_pool.hdpi_factor), \
+            int(icon_bar_width * g_pool.gui_user_scale * hdpi_factor), \
             glfw.glfwGetFramebufferSize(main_window)[1]
-        logger.warning(icon_bar_width*g_pool.gui_user_scale*g_pool.hdpi_factor)
+        logger.warning(icon_bar_width*g_pool.gui_user_scale*hdpi_factor)
         glfw.glfwSetWindowSize(main_window, *window_size)
 
     def reset_restart():
@@ -393,8 +378,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
 
     # Register callbacks main_window
-    glfw.glfwSetWindowRefreshCallback(main_window, on_refresh)
-    glfw.glfwSetWindowIconifyCallback(main_window, on_iconify)
     glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
     glfw.glfwSetKeyCallback(main_window, on_window_key)
     glfw.glfwSetCharCallback(main_window, on_window_char)
@@ -499,10 +482,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         del events['pupil_positions']  # already on the wire
         del events['gaze_positions']  # sent earlier
         if 'frame' in events:
-            g_pool.should_refresh_main_window = True
             del events['frame']  # send explicity with frame publisher
         if 'depth_frame' in events:
-            g_pool.should_refresh_main_window = True
             del events['depth_frame']
         if 'audio_packets' in events:
             del events['audio_packets']
@@ -514,8 +495,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
         glfw.glfwMakeContextCurrent(main_window)
         # render visual feedback from loaded plugins
-        if not g_pool.iconified and (g_pool.should_refresh_main_window or window_should_update()):
-            g_pool.should_refresh_main_window = False
+        if window_should_update() and gl_utils.is_window_visible(main_window):
 
             gl_utils.glViewport(0, 0, *camera_render_size)
             for p in g_pool.plugins:
