@@ -12,7 +12,9 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import psutil
 import glfw
+import numpy as np
 from pyglui import ui, graph
+from pyglui.cygl.utils import RGBA
 from plugin import System_Plugin_Base
 
 
@@ -23,6 +25,8 @@ class System_Graphs(System_Plugin_Base):
         self.show_fps = show_fps
         self.show_conf0 = show_conf0
         self.show_conf1 = show_conf1
+        self.conf_grad_limits = .0, 1.
+        self.conf_grad = RGBA(1., .0, .0, .5), RGBA(.1, .1, .7, .5)
         self.ts = None
 
     @classmethod
@@ -79,11 +83,22 @@ class System_Graphs(System_Plugin_Base):
         self.conf1_graph.adjust_window_size(*fb_size)
 
     def gl_display(self):
-        graphs = (self.cpu_graph, self.fps_graph, self.conf0_graph, self.conf1_graph)
-        should_show = (self.show_cpu, self.show_fps, self.show_conf0, self.show_conf1)
-        for show, g in zip(should_show, graphs):
-            if show:
-                g.draw()
+        if self.show_cpu:
+            self.cpu_graph.draw()
+        if self.show_fps:
+            self.fps_graph.draw()
+        if self.show_conf0:
+            self.conf0_graph.color = self.conf_grad[0].mix_smooth(self.conf_grad[1],
+                                                                  self.conf0_graph.avg,
+                                                                  self.conf_grad_limits[0],
+                                                                  self.conf_grad_limits[1])
+            self.conf0_graph.draw()
+        if self.show_conf1:
+            self.conf0_graph.color = self.conf_grad[0].mix_smooth(self.conf_grad[1],
+                                                                  self.conf1_graph.avg,
+                                                                  self.conf_grad_limits[0],
+                                                                  self.conf_grad_limits[1])
+            self.conf1_graph.draw()
 
     def recent_events(self, events):
         self.cpu_graph.update()
