@@ -63,7 +63,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     # check versions for our own depedencies as they are fast-changing
     from pyglui import __version__ as pyglui_version
 
-    from pyglui import ui, graph, cygl
+    from pyglui import ui, cygl
     from pyglui.cygl.utils import Named_Texture
     import gl_utils
     # capture
@@ -73,9 +73,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     from version_utils import VersionFormat
     from methods import normalize, denormalize, delta_t, get_system_info
     from player_methods import correlate_data, is_pupil_rec_dir, load_meta_info
-
-    # monitoring
-    import psutil
 
     # Plug-ins
     from plugin import Plugin, Plugin_List, import_runtime_plugins, Visualizer_Plugin_Base, Analysis_Plugin_Base, Producer_Plugin_Base
@@ -102,11 +99,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     from log_history import Log_History
     from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
     from gaze_producers import Gaze_From_Recording, Offline_Calibration
+    from system_graphs import System_Graphs
 
     assert pyglui_version >= '1.7'
 
     runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
-    system_plugins = [Log_Display, Seek_Bar, Trim_Marks, Plugin_Manager]
+    system_plugins = [Log_Display, Seek_Bar, Trim_Marks, Plugin_Manager, System_Graphs]
     user_plugins = [Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points,
                     Vis_Cross, Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path,
                     Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector,
@@ -128,10 +126,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             g_pool.camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
             g_pool.gui.update_window(*window_size)
             g_pool.gui.collect_menus()
-            for g in g_pool.graphs:
-                g.scale = hdpi_factor
-                g.adjust_window_size(*window_size)
-            # gl_utils.adjust_gl_view(w, h)
             for p in g_pool.plugins:
                 p.on_window_resize(window, *g_pool.camera_render_size)
 
@@ -214,6 +208,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
     glfw.glfwMakeContextCurrent(main_window)
     cygl.utils.init()
+    g_pool.main_window = main_window
 
     def set_scale(new_scale):
         hdpi_factor = float(glfw.glfwGetFramebufferSize(
@@ -387,7 +382,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
     # we always load these plugins
     default_plugins = [('Plugin_Manager', {}), ('Trim_Marks', {}), ('Seek_Bar', {}), ('Log_Display', {}),
-                       ('Vis_Scan_Path', {}), ('Vis_Polyline', {}), ('Vis_Circle', {}),
+                       ('Vis_Scan_Path', {}), ('Vis_Polyline', {}), ('Vis_Circle', {}), ('System_Graphs', {}),
                        ('Video_Export_Launcher', {}), ('Pupil_From_Recording', {}), ('Gaze_From_Recording', {})]
     g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
 
@@ -405,28 +400,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     # gl_state settings
     gl_utils.basic_gl_setup()
     g_pool.image_tex = Named_Texture()
-
-    # set up performace graphs:
-    pid = os.getpid()
-    ps = psutil.Process(pid)
-    ts = None
-
-    cpu_graph = graph.Bar_Graph()
-    cpu_graph.pos = (20, 110)
-    cpu_graph.update_fn = ps.cpu_percent
-    cpu_graph.update_rate = 5
-    cpu_graph.label = 'CPU %0.1f'
-
-    fps_graph = graph.Bar_Graph()
-    fps_graph.pos = (140, 110)
-    fps_graph.update_rate = 5
-    fps_graph.label = "%0.0f REC FPS"
-
-    pupil_graph = graph.Bar_Graph(max_val=1.0)
-    pupil_graph.pos = (260, 110)
-    pupil_graph.update_rate = 5
-    pupil_graph.label = "Confidence: %0.2f"
-    g_pool.graphs = [cpu_graph, fps_graph, pupil_graph]
 
     # trigger on_resize
     on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
@@ -470,9 +443,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                 # end of video logic: pause at last frame.
                 g_pool.capture.play = False
                 logger.warning("end of video")
-            update_graph = True
-        else:
-            update_graph = False
 
         frame = new_frame.copy()
         events = {}
@@ -482,22 +452,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         # new positons we make a deepcopy just like the image is a copy.
         events['gaze_positions'] = deepcopy(g_pool.gaze_positions_by_frame[frame.index])
         events['pupil_positions'] = deepcopy(g_pool.pupil_positions_by_frame[frame.index])
-
-        if update_graph:
-            # update performace graphs
-            for p in events['pupil_positions']:
-                pupil_graph.add(p['confidence'])
-
-            t = new_frame.timestamp
-            if ts and ts != t:
-                dt, ts = t-ts, t
-                fps_graph.add(1./dt)
-            else:
-                ts = new_frame.timestamp
-
-            g_pool.capture.play_button.status_text = str(frame.index)
-        # always update the CPU graph
-        cpu_graph.update()
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
@@ -518,9 +472,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
             gl_utils.glViewport(0, 0, *window_size)
 
-            fps_graph.draw()
-            cpu_graph.draw()
-            pupil_graph.draw()
             unused_elements = g_pool.gui.update()
             for b in unused_elements.buttons:
                 button, action, mods = b
