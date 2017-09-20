@@ -12,9 +12,8 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import psutil
 import glfw
-import numpy as np
 from pyglui import ui, graph
-from pyglui.cygl.utils import RGBA
+from pyglui.cygl.utils import RGBA, mix_smooth
 from plugin import System_Plugin_Base
 
 
@@ -88,16 +87,14 @@ class System_Graphs(System_Plugin_Base):
         if self.show_fps:
             self.fps_graph.draw()
         if self.show_conf0:
-            self.conf0_graph.color = self.conf_grad[0].mix_smooth(self.conf_grad[1],
-                                                                  self.conf0_graph.avg,
-                                                                  self.conf_grad_limits[0],
-                                                                  self.conf_grad_limits[1])
+            self.conf0_graph.color = mix_smooth(self.conf_grad[0], self.conf_grad[1],
+                                                self.conf0_graph.avg, self.conf_grad_limits[0],
+                                                self.conf_grad_limits[1])
             self.conf0_graph.draw()
         if self.show_conf1:
-            self.conf0_graph.color = self.conf_grad[0].mix_smooth(self.conf_grad[1],
-                                                                  self.conf1_graph.avg,
-                                                                  self.conf_grad_limits[0],
-                                                                  self.conf_grad_limits[1])
+            self.conf1_graph.color = mix_smooth(self.conf_grad[0], self.conf_grad[1],
+                                                self.conf1_graph.avg, self.conf_grad_limits[0],
+                                                self.conf_grad_limits[1])
             self.conf1_graph.draw()
 
     def recent_events(self, events):
