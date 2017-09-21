@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+from pyglui import ui
 from pyglui.cygl.utils import draw_polyline,draw_points,RGBA
 
 from OpenGL.GL import *
@@ -37,7 +38,8 @@ class Seek_Bar(System_Plugin_Base):
         self.padding = 30. #in sceen pixel
 
     def init_ui(self):
-        self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
+        self.g_pool.timelines.append(ui.Seek_Bar(self, self.frame_count))
+        self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
 
     def on_window_resize(self,window,w,h):
         self.h_pad = self.padding * self.frame_count/float(w)
@@ -107,32 +109,56 @@ class Seek_Bar(System_Plugin_Base):
         y  = (y-self.padding)/(height-2*self.padding)
         return x,1-y
 
-    def gl_display(self):
-        glMatrixMode(GL_PROJECTION)
-        glPushMatrix()
-        glLoadIdentity()
-        gluOrtho2D(-self.h_pad,  (self.frame_count)+self.h_pad, -self.v_pad, 1+self.v_pad) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        glLoadIdentity()
+    # def gl_display(self):
+    #     glMatrixMode(GL_PROJECTION)
+    #     glPushMatrix()
+    #     glLoadIdentity()
+    #     gluOrtho2D(-self.h_pad,  (self.frame_count)+self.h_pad, -self.v_pad, 1+self.v_pad) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
+    #     glMatrixMode(GL_MODELVIEW)
+    #     glPushMatrix()
+    #     glLoadIdentity()
 
         # if self.drag_mode:
         #     color1 = (0.,.8,.5,.5)
         #     color2 = (0.,.8,.5,1.)
         # else:
-        color1 = (1,1,1,0.4)#(.25,.8,.8,.5)
-        color2 = (1,1,1,1.)#(.25,.8,.8,1.)
+        # color1 = (1,1,1,0.4)#(.25,.8,.8,.5)
+        # color2 = (1,1,1,1.)#(.25,.8,.8,1.)
 
-        thickness = 10.
-        draw_polyline(verts=[(0,0),(self.current_frame_index,0)],
-            thickness=thickness,color=RGBA(*color1))
-        draw_polyline(verts=[(self.current_frame_index,0),(self.frame_count,0)],
-            thickness=thickness,color=RGBA(*color1))
-        if not self.drag_mode:
-            draw_points([(self.current_frame_index,0)],color=RGBA(*color1),size=30)
-        draw_points([(self.current_frame_index,0)],color=RGBA(*color2),size=20)
+        # thickness = 10.
+        # draw_polyline(verts=[(0,0),(self.current_frame_index,0)],
+        #     thickness=thickness,color=RGBA(*color1))
+        # draw_polyline(verts=[(self.current_frame_index,0),(self.frame_count,0)],
+        #     thickness=thickness,color=RGBA(*color1))
+        # if not self.drag_mode:
+        #     draw_points([(self.current_frame_index,0)],color=RGBA(*color1),size=30)
+        # draw_points([(self.current_frame_index,0)],color=RGBA(*color2),size=20)
 
-        glMatrixMode(GL_PROJECTION)
-        glPopMatrix()
-        glMatrixMode(GL_MODELVIEW)
-        glPopMatrix()
+        # glMatrixMode(GL_PROJECTION)
+        # glPopMatrix()
+        # glMatrixMode(GL_MODELVIEW)
+        # glPopMatrix()
+
+    @property
+    def trim_left(self):
+        return 0
+
+    @trim_left.setter
+    def trim_left(self, val):
+        pass
+
+    @property
+    def trim_right(self):
+        return self.frame_count
+
+    @trim_right.setter
+    def trim_right(self, val):
+        pass
+
+    @property
+    def current_index(self):
+        return self.current_frame_index
+
+    @current_index.setter
+    def current_index(self, val):
+        pass

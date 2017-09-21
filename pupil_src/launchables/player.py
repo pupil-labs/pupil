@@ -41,6 +41,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     import zmq
     import zmq_tools
 
+    import numpy as np
+
     # zmq ipc setup
     zmq_ctx = zmq.Context()
     ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
@@ -316,11 +318,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
     g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos='left')
     g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
+    g_pool.timelines = ui.Container((0, 0), (-icon_bar_width, 0), (20, 10))
 
     general_settings = ui.Growing_Menu('General', header_pos='headline')
     general_settings.append(ui.Button('Reset window size',
                                       lambda: glfw.glfwSetWindowSize(main_window, g_pool.capture.frame_size[0], g_pool.capture.frame_size[1])))
-    general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2], label='Interface Size'))
+    general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2]+list(np.arange(1.5, 5.1, .5)), label='Interface Size'))
     general_settings.append(ui.Info_Text('Player Version: {}'.format(g_pool.version)))
     general_settings.append(ui.Info_Text('Capture Version: {}'.format(meta_info['Capture Software Version'])))
     general_settings.append(ui.Info_Text('Data Format Version: {}'.format(meta_info['Data Format Version'])))
@@ -376,6 +379,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                                     label_offset_y=2,
                                     label_offset_size=-24)
     g_pool.quickbar.extend([g_pool.capture.play_button, g_pool.forward_button, g_pool.backward_button, g_pool.export_button])
+    g_pool.gui.append(g_pool.timelines)
     g_pool.gui.append(g_pool.menubar)
     g_pool.gui.append(g_pool.iconbar)
     g_pool.gui.append(g_pool.quickbar)
