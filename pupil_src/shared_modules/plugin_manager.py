@@ -54,9 +54,7 @@ class Plugin_Manager(System_Plugin_Base):
         def plugin_add_entry(p):
             def action():
                 self.notify_all({'subject': 'start_plugin', 'name': p.__name__})
-
-            label = 'Add {}'.format(p.__name__.replace('_', ' '))
-            return ui.Button(label, action)
+            return ui.Button('Add', action, p.__name__.replace('_', ' '))
 
         if self.g_pool.app == 'player':
             for p in self.user_plugins:
