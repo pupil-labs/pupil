@@ -285,8 +285,9 @@ class Fisheye_Dist_Camera(object):
             P=self.K
         )
 
-        xy_undist = np.squeeze(xy_undist)
+        # xy_undist = np.squeeze(xy_undist)
         res = cv2.solvePnP(uv3d, xy_undist, self.K, np.array([[0, 0, 0, 0, 0]]), flags=cv2.SOLVEPNP_ITERATIVE)
+        # succ, rvec, tvec, inliers = cv2.solvePnPRansac(uv3d, xy_undist, cameraMatrix=self.K, distCoeffs=np.array([[0, 0, 0, 0, 0]]))
         return res
 
     def save(self, directory, custom_name=None):
