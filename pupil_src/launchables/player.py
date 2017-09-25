@@ -87,8 +87,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     from vis_fixation import Vis_Fixation
     from vis_scan_path import Vis_Scan_Path
     from vis_eye_video_overlay import Vis_Eye_Video_Overlay
-    from seek_bar import Seek_Bar
-    from trim_marks import Trim_Marks
+    from seek_control import Seek_Control
     from video_export_launcher import Video_Export_Launcher
     from offline_surface_tracker import Offline_Surface_Tracker
     from marker_auto_trim_marks import Marker_Auto_Trim_Marks
@@ -106,7 +105,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     assert pyglui_version >= '1.7'
 
     runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
-    system_plugins = [Log_Display, Seek_Bar, Trim_Marks, Plugin_Manager, System_Graphs]
+    system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs]
     user_plugins = [Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points,
                     Vis_Cross, Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path,
                     Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector,
@@ -282,7 +281,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.plugins.clean()
 
     def do_export(_):
-        export_range = g_pool.trim_marks.in_mark, g_pool.trim_marks.out_mark
+        export_range = g_pool.seek_control.trim_left, g_pool.seek_control.trim_right
         export_dir = os.path.join(g_pool.rec_dir, 'exports', '{}-{}'.format(*export_range))
         try:
             os.makedirs(export_dir)
@@ -318,7 +317,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
     g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos='left')
     g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
-    g_pool.timelines = ui.Container((0, 0), (-icon_bar_width, 0), (20, 10))
+    g_pool.timelines = ui.Container((0, 0), (0, 0), (0, 0))
+    g_pool.timelines.horizontal_constraint = g_pool.menubar
 
     general_settings = ui.Growing_Menu('General', header_pos='headline')
     general_settings.append(ui.Button('Reset window size',
@@ -379,13 +379,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                                     label_offset_y=2,
                                     label_offset_size=-24)
     g_pool.quickbar.extend([g_pool.capture.play_button, g_pool.forward_button, g_pool.backward_button, g_pool.export_button])
-    g_pool.gui.append(g_pool.timelines)
     g_pool.gui.append(g_pool.menubar)
+    g_pool.gui.append(g_pool.timelines)
     g_pool.gui.append(g_pool.iconbar)
     g_pool.gui.append(g_pool.quickbar)
 
     # we always load these plugins
-    default_plugins = [('Plugin_Manager', {}), ('Trim_Marks', {}), ('Seek_Bar', {}), ('Log_Display', {}),
+    default_plugins = [('Plugin_Manager', {}), ('Seek_Control', {}), ('Log_Display', {}),
                        ('Vis_Scan_Path', {}), ('Vis_Polyline', {}), ('Vis_Circle', {}), ('System_Graphs', {}),
                        ('Video_Export_Launcher', {}), ('Pupil_From_Recording', {}), ('Gaze_From_Recording', {})]
     g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))

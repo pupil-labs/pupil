@@ -102,7 +102,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         if plugins:
             launcher = plugins[0]
             logger.info("exporting {!s}".format(section))
-            self.g_pool.trim_marks.set(section)
+            self.g_pool.seek_control.set_trim_range(section)
             launcher.rec_name.value = "world_viz_section_{}-{}".format(*section)
             launcher.add_export()
 
@@ -111,14 +111,14 @@ class Marker_Auto_Trim_Marks(Plugin):
         if plugins:
             tracker = plugins[0]
             logger.info("exporting {!s}".format(section))
-            self.g_pool.trim_marks.set(section)
+            self.g_pool.seek_control.set_trim_range(section)
             tracker.recalculate()
             tracker.save_surface_statsics_to_file()
         else:
             logger.warning("Please start Offline_Surface_Tracker Plugin for surface export.")
 
     def activate_section(self,section):
-        self.g_pool.trim_marks.set(section)
+        self.g_pool.seek_control.set_trim_range(section)
         self.active_section = section
 
     def get_init_dict(self):

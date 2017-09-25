@@ -172,8 +172,8 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
     def recalculate(self):
 
-        in_mark = self.g_pool.trim_marks.in_mark
-        out_mark = self.g_pool.trim_marks.out_mark
+        in_mark = self.g_pool.seek_control.trim_left
+        out_mark = self.g_pool.seek_control.trim_right
         section = slice(in_mark,out_mark)
 
         # calc heatmaps
