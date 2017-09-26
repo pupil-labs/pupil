@@ -39,7 +39,7 @@ class Pupil_Groups(Plugin):
         return 'pupil_icons', chr(0xe886)
 
     def init_ui(self):
-        help_str = "Pupil Groups utilizes the ZeroMQ Realtime Exchange Protocol to discover other local group members. We use it to relay notifications to other group members. Example: Sychronise time."
+        help_str = "Pupil Groups utilizes the ZeroMQ Realtime Exchange Protocol to discover other local group members. We use it to relay notifications to other group members. Example: Start recordings synchronosly."
         self.add_menu()
         self.menu.label = 'Pupil Groups'
         self.menu.append(ui.Info_Text(help_str))
