@@ -15,18 +15,23 @@ import cv2
 import os
 
 import pyrealsense as pyrs
-from pyrealsense.stream import ColorStream, DepthStream, DACStream
+from pyrealsense.stream import ColorStream, DepthStream, DACStream, PointStream
 from pyrealsense.constants import rs_stream, rs_option
+from pyrealsense.extlib import rsutilwrapper
 
 from version_utils import VersionFormat
 from .base_backend import Base_Source, Base_Manager
 from av_writer import AV_Writer
 from camera_models import load_intrinsics
 
+import glfw
 import gl_utils
+from OpenGL.GL import *
+from OpenGL.GLU import *
 from pyglui import cygl
 import cython_methods
 import numpy as np
+from ctypes import *
 
 # check versions for our own depedencies as they are fast-changing
 assert VersionFormat(pyrs.__version__) >= VersionFormat('2.2')
@@ -201,8 +206,13 @@ class Realsense_Source(Base_Source):
         self.record_depth = record_depth
         self.depth_video_writer = None
         self.controls = None
+        self.pitch = 0
+        self.yaw = 0
+        self.mouse_drag = False
+        self.last_pos = (0,0)
         self._initialize_device(device_id, frame_size, frame_rate,
                                 depth_frame_size, depth_frame_rate, device_options)
+        
 
     def _initialize_device(self, device_id,
                            color_frame_size, color_fps,
@@ -212,7 +222,7 @@ class Realsense_Source(Base_Source):
         color_frame_size = tuple(color_frame_size)
         depth_frame_size = tuple(depth_frame_size)
 
-        self.streams = [ColorStream(width=1920, height=1080), DepthStream()]
+        self.streams = [ColorStream(width=1920, height=1080), DepthStream(), PointStream()]
         self.last_color_frame_ts = None
         self.last_depth_frame_ts = None
         self._recent_frame = None
@@ -262,8 +272,11 @@ class Realsense_Source(Base_Source):
                                   fps=color_fps, color_format='yuv')
         depthstream = DepthStream(width=depth_frame_size[0],
                                   height=depth_frame_size[1], fps=depth_fps)
+        pointstream = PointStream(width=depth_frame_size[0],
+                                  height=depth_frame_size[1], fps=depth_fps)
 
-        self.streams = [colorstream, depthstream]
+
+        self.streams = [colorstream, depthstream, pointstream]
         if self.align_streams:
             dacstream = DACStream(width=depth_frame_size[0],
                                   height=depth_frame_size[1], fps=depth_fps)
@@ -359,7 +372,7 @@ class Realsense_Source(Base_Source):
                 depth = None
 
             return color, depth
-        return None, None
+        return None, None, None
 
     def recent_events(self, events):
         if not self.online:
@@ -383,9 +396,11 @@ class Realsense_Source(Base_Source):
 
                 if self.depth_video_writer is not None:
                     self.depth_video_writer.write_video_frame(depth_frame)
-
     def init_gui(self):
         from pyglui import ui
+
+
+
         ui_elements = []
 
         # avoid duplicated elements since _initialize_device() calls init_gui as well
@@ -468,18 +483,59 @@ class Realsense_Source(Base_Source):
         self.g_pool.capture_source_menu.extend(ui_elements)
 
     def gl_display(self):
+        from math import floor
+        
+
         if self.preview_depth and self._recent_depth_frame is not None:
-            self.g_pool.image_tex.update_from_ndarray(self._recent_depth_frame.bgr)
+            win_size = glfw.glfwGetWindowSize(self.g_pool.main_window)
+            pos = glfw.glfwGetCursorPos(self.g_pool.main_window)
+            if self.mouse_drag:
+                self.pitch = np.clip(self.pitch + (pos[1] - self.last_pos[1]), -80, 80)
+                self.yaw = np.clip(self.yaw - (pos[0] - self.last_pos[0]), -120, 120)
+            self.last_pos = pos
+
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            glMatrixMode(GL_PROJECTION)
+            glLoadIdentity()
+            gluPerspective(60, win_size[0]/win_size[1] , 0.01, 20.0)
+            glMatrixMode(GL_MODELVIEW)
+            glLoadIdentity()
+            gluLookAt(0,0,0, 0,0,1, 0,-1,0)
+            glTranslatef(0,0,0.5)
+            glRotated(self.pitch, 1, 0, 0)
+            glRotated(self.yaw, 0, 1, 0)
+            glTranslatef(0,0,-0.5)
+
+            glPointSize(2)
+            glEnable(GL_DEPTH_TEST);
+            
+            extrinsics = self.device.get_device_extrinsics(rs_stream.RS_STREAM_DEPTH, rs_stream.RS_STREAM_COLOR)
+            depth_frame = self._recent_depth_frame
+            color_frame = self._recent_frame
+            depth_scale = self.device.depth_scale
+
+            glEnableClientState( GL_VERTEX_ARRAY )
+
+            pointcloud = self.device.points
+            glVertexPointer(3,GL_FLOAT,0,pointcloud)
+            glEnableClientState(GL_COLOR_ARRAY);
+            depth_to_color = np.zeros(depth_frame.height * depth_frame.width * 3, np.uint8)
+            rsutilwrapper.project_pointcloud_to_pixel(depth_to_color, self.device.depth_intrinsics, self.device.color_intrinsics, extrinsics, pointcloud, self._recent_frame.bgr)
+            glColorPointer(3, GL_UNSIGNED_BYTE,0, depth_to_color)
+
+            glDrawArrays (GL_POINTS, 0, depth_frame.width * depth_frame.height)
             gl_utils.glFlush()
+            glDisable(GL_DEPTH_TEST)
+            #gl_utils.make_coord_system_norm_based()
         elif not self.preview_depth and self._recent_frame is not None:
             self.g_pool.image_tex.update_from_yuv_buffer(self._recent_frame.yuv_buffer,self._recent_frame.width,self._recent_frame.height)
             gl_utils.glFlush()
 
-        gl_utils.make_coord_system_norm_based()
-        self.g_pool.image_tex.draw()
+            gl_utils.make_coord_system_norm_based()
+            self.g_pool.image_tex.draw()
         if not self.online:
             cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8), alpha=0.4)
-        gl_utils.make_coord_system_pixel_based((self.frame_size[1], self.frame_size[0], 3))
+            gl_utils.make_coord_system_pixel_based((self.frame_size[1], self.frame_size[0], 3))
 
     def restart_device(self, device_id=None, color_frame_size=None, color_fps=None,
                        depth_frame_size=None, depth_fps=None, device_options=None):
@@ -507,6 +563,11 @@ class Realsense_Source(Base_Source):
                          'depth_frame_size': depth_frame_size,
                          'depth_fps': depth_fps,
                          'device_options': device_options})
+    def on_click(self, pos, button, action):
+         if button == glfw.GLFW_MOUSE_BUTTON_LEFT and action == glfw.GLFW_PRESS:
+            self.mouse_drag = True
+         if button == glfw.GLFW_MOUSE_BUTTON_LEFT and action == glfw.GLFW_RELEASE:
+            self.mouse_drag = False
 
     def on_notify(self, notification):
         if notification['subject'] == 'realsense_source.restart':
