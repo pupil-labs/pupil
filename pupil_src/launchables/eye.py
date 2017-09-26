@@ -35,12 +35,24 @@ class Is_Alive_Manager(object):
         self.ipc_socket.notify({'subject': 'eye_process.started',
                                 'eye_id': self.eye_id})
 
-    def __exit__(self, type, value, traceback):
-        if type is not None:
-            pass  # Exception occurred
+    def __exit__(self, etype, value, traceback):
+        if etype is not None:
+            import logging
+            import zmq_tools
+            import traceback as tb
+            logger = logging.getLogger()
+            logger.handlers = []
+            logger.setLevel(logging.INFO)
+            logger.addHandler(zmq_tools.ZMQ_handler(socket=self.ipc_socket))
+            logger.error('Process Eye{} crashed with trace:\n'.format(self.eye_id) +
+                         ''.join(tb.format_exception(etype, value, traceback)))
+            self.ipc_socket.notify({'subject': 'eye_process.stopped',
+                                    'eye_id': self.eye_id})
+
         self.is_alive.value = False
         self.ipc_socket.notify({'subject': 'eye_process.stopped',
                                 'eye_id': self.eye_id})
+        return True  # do not propergate exception
 
 
 def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
@@ -78,6 +90,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url, topics=("notify",))
 
     with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id):
+
+        raise Exception('FORCE EYE CRASH')
 
         # logging setup
         import logging
