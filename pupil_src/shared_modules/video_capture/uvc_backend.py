@@ -227,7 +227,7 @@ class UVC_Source(Base_Source):
     def recent_events(self, events):
         try:
             frame = self.uvc_capture.get_frame(0.05)
-            frame.timestamp = self.g_pool.get_timestamp() + self.ts_offset
+            frame.timestamp += self.ts_offset
         except uvc.StreamError:
             self._recent_frame = None
             self._restart_logic()
