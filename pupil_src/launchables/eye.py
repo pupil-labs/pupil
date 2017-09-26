@@ -84,18 +84,17 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
     pupil_socket = zmq_tools.Msg_Streamer(zmq_ctx, ipc_pub_url)
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url, topics=("notify",))
 
-    with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id):
+    # logging setup
+    import logging
+    logging.getLogger("OpenGL").setLevel(logging.ERROR)
+    logger = logging.getLogger()
+    logger.handlers = []
+    logger.setLevel(logging.INFO)
+    logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url))
+    # create logger for the context of this function
+    logger = logging.getLogger(__name__)
 
-        # logging setup
-        import logging
-        logging.getLogger("OpenGL").setLevel(logging.ERROR)
-        logger = logging.getLogger()
-        logger.handlers = []
-        logger.setLevel(logging.INFO)
-        logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url))
-        # create logger for the context of this function
-        logger = logging.getLogger(__name__)
-
+    with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id, logger):
         # general imports
         import numpy as np
         import cv2
