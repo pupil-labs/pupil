@@ -23,10 +23,11 @@ class Is_Alive_Manager(object):
     Is alive will stay true as long is the eye process is running.
     '''
 
-    def __init__(self, is_alive, ipc_socket, eye_id):
+    def __init__(self, is_alive, ipc_socket, eye_id, logger):
         self.is_alive = is_alive
         self.ipc_socket = ipc_socket
         self.eye_id = eye_id
+        self.logger = logger
 
     def __enter__(self):
         if self.is_alive.value:
@@ -37,15 +38,9 @@ class Is_Alive_Manager(object):
 
     def __exit__(self, etype, value, traceback):
         if etype is not None:
-            import logging
-            import zmq_tools
             import traceback as tb
-            logger = logging.getLogger()
-            logger.handlers = []
-            logger.setLevel(logging.INFO)
-            logger.addHandler(zmq_tools.ZMQ_handler(socket=self.ipc_socket))
-            logger.error('Process Eye{} crashed with trace:\n'.format(self.eye_id) +
-                         ''.join(tb.format_exception(etype, value, traceback)))
+            self.logger.error('Process Eye{} crashed with trace:\n'.format(self.eye_id) +
+                              ''.join(tb.format_exception(etype, value, traceback)))
             self.ipc_socket.notify({'subject': 'eye_process.stopped',
                                     'eye_id': self.eye_id})
 

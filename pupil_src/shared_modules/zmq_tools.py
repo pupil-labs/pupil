@@ -28,14 +28,9 @@ class ZMQ_handler(logging.Handler):
     '''
     A handler that sends log records as serialized strings via zmq
     '''
-    def __init__(self, ctx=None, ipc_pub_url=None, socket=None):
+    def __init__(self, ctx, ipc_pub_url):
         super().__init__()
-        if ctx is not None and ipc_pub_url is not None:
-            self.socket = Msg_Dispatcher(ctx, ipc_pub_url)
-        elif socket is not None:
-            self.socket = socket
-        else:
-            raise ValueError('ZMQ_handler requires either ctx/ipc_pub_url or connected socket')
+        self.socket = Msg_Dispatcher(ctx, ipc_pub_url)
 
     def emit(self, record):
         try:
