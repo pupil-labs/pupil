@@ -50,6 +50,8 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.markers = []
         self.world_size = None
 
+        self.good_marker = -1
+
         self.stop_marker_found = False
         self.auto_stop = 0
         self.auto_stop_max = 30
@@ -125,24 +127,39 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             self.markers = find_concetric_circles(gray_img,min_ring_count=3)
 
-            if len(self.markers) > 0:
-                self.detected = True
-                marker_pos = self.markers[0][0][0] #first marker innermost ellipse, pos
-                self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
+            self.detected = False
+            self.pos = None  # indicate that no reference is detected
 
-            else:
-                self.detected = False
-                self.pos = None  # indicate that no reference is detected
+            for i in range(len(self.markers)):
+                if len(self.markers[i]) >= 5:
+                    ring_ratio = self.markers[i][4][1][0] / self.markers[i][2][1][0]
+                else:
+                    ring_ratio = self.markers[i][-1][1][0] / self.markers[i][1][1][0]
+
+                if ring_ratio > 1.35:
+                    self.good_marker = i
+                    marker_pos = self.markers[self.good_marker][0][0] #first marker innermost ellipse, pos
+                    self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
+                    self.detected = True
+                    break
 
             # center dark or white?
             if self.detected:
-                second_ellipse = self.markers[0][1]
+                second_ellipse = self.markers[self.good_marker][-1]
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
                 marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
+
+                # To avoid index out of bounds with size 0
+                if not len(marker_gray):
+                    return
+
                 avg = cv2.mean(marker_gray)[0]
                 center = marker_gray[int(second_ellipse[1][1])//2, int(second_ellipse[1][0])//2]
                 rel_shade = center-avg
+
+                if marker_gray[0,0] < avg or marker_gray[-1,-1] < avg:
+                    self.detected = False
 
                 # auto_stop logic
                 if rel_shade > 30:
@@ -246,16 +263,14 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             draw_points_norm([self.smooth_pos],size=15,color=RGBA(1.,1.,0.,.5))
 
         if self.active and self.detected:
-            for marker in self.markers:
-                e = marker[-1]
-                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
-                                    (int(e[1][0]/2),int(e[1][1]/2)),
-                                    int(e[-1]),0,360,15)
-                draw_polyline(pts,color=RGBA(0.,1.,0,1.))
+            e = self.markers[self.good_marker][-1]
+            pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                (int(e[1][0]/2),int(e[1][1]/2)),
+                                int(e[-1]),0,360,15)
+            draw_polyline(pts,color=RGBA(0.,1.,0,1.))
 
             if self.counter:
                 # lets draw an indicator on the count
-                e = self.markers[0][-1]
                 # cv2 requires integer arguments
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
@@ -265,7 +280,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             if self.auto_stop:
                 # lets draw an indicator on the autostop count
-                e = self.markers[0][-1]
                 # cv2 requires integer arguments
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
