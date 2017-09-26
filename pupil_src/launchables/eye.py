@@ -91,8 +91,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
     with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id):
 
-        raise Exception('FORCE EYE CRASH')
-
         # logging setup
         import logging
         logging.getLogger("OpenGL").setLevel(logging.ERROR)
