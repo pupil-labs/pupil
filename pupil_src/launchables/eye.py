@@ -23,10 +23,11 @@ class Is_Alive_Manager(object):
     Is alive will stay true as long is the eye process is running.
     '''
 
-    def __init__(self, is_alive, ipc_socket, eye_id):
+    def __init__(self, is_alive, ipc_socket, eye_id, logger):
         self.is_alive = is_alive
         self.ipc_socket = ipc_socket
         self.eye_id = eye_id
+        self.logger = logger
 
     def __enter__(self):
         if self.is_alive.value:
@@ -35,12 +36,18 @@ class Is_Alive_Manager(object):
         self.ipc_socket.notify({'subject': 'eye_process.started',
                                 'eye_id': self.eye_id})
 
-    def __exit__(self, type, value, traceback):
-        if type is not None:
-            pass  # Exception occurred
+    def __exit__(self, etype, value, traceback):
+        if etype is not None:
+            import traceback as tb
+            self.logger.error('Process Eye{} crashed with trace:\n'.format(self.eye_id) +
+                              ''.join(tb.format_exception(etype, value, traceback)))
+            self.ipc_socket.notify({'subject': 'eye_process.stopped',
+                                    'eye_id': self.eye_id})
+
         self.is_alive.value = False
         self.ipc_socket.notify({'subject': 'eye_process.stopped',
                                 'eye_id': self.eye_id})
+        return True  # do not propergate exception
 
 
 def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
@@ -77,18 +84,17 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
     pupil_socket = zmq_tools.Msg_Streamer(zmq_ctx, ipc_pub_url)
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url, topics=("notify",))
 
-    with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id):
+    # logging setup
+    import logging
+    logging.getLogger("OpenGL").setLevel(logging.ERROR)
+    logger = logging.getLogger()
+    logger.handlers = []
+    logger.setLevel(logging.INFO)
+    logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url))
+    # create logger for the context of this function
+    logger = logging.getLogger(__name__)
 
-        # logging setup
-        import logging
-        logging.getLogger("OpenGL").setLevel(logging.ERROR)
-        logger = logging.getLogger()
-        logger.handlers = []
-        logger.setLevel(logging.INFO)
-        logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url))
-        # create logger for the context of this function
-        logger = logging.getLogger(__name__)
-
+    with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id, logger):
         # general imports
         import numpy as np
         import cv2
