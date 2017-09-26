@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 from file_methods import save_object, load_object, UnpicklingError
 from version_utils import VersionFormat
 from version_utils import read_rec_version
-from camera_models import load_intrinsics, save_intrinsics
+from camera_models import load_intrinsics
 
 
 def correlate_data(data, timestamps):

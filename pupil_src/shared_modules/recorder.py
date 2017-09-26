@@ -22,7 +22,6 @@ from file_methods import save_object, load_object
 from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer
 from ndsi import H264Writer
-from camera_models import save_intrinsics
 # logging
 import logging
 logger = logging.getLogger(__name__)
