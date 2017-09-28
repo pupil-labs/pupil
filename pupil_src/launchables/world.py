@@ -122,7 +122,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         # UI Platform tweaks
         if platform.system() == 'Linux':
             scroll_factor = 10.0
-            window_position_default = (0, 0)
+            window_position_default = (30, 30)
         elif platform.system() == 'Windows':
             scroll_factor = 10.0
             window_position_default = (8, 31)

@@ -130,10 +130,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         # UI Platform tweaks
         if platform.system() == 'Linux':
             scroll_factor = 10.0
-            window_position_default = (600, 300 * eye_id)
+            window_position_default = (600, 300 * eye_id + 30)
         elif platform.system() == 'Windows':
             scroll_factor = 10.0
-            window_position_default = (600,31+ 300 * eye_id)
+            window_position_default = (600, 31 + 300 * eye_id)
         else:
             scroll_factor = 1.0
             window_position_default = (600, 300 * eye_id)

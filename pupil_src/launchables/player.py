@@ -20,7 +20,7 @@ class Global_Container(object):
 # UI Platform tweaks
 if platform.system() == 'Linux':
     scroll_factor = 10.0
-    window_position_default = (0, 0)
+    window_position_default = (30, 30)
 elif platform.system() == 'Windows':
     scroll_factor = 10.0
     window_position_default = (8, 31)
