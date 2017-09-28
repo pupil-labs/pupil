@@ -28,6 +28,7 @@ from collections import deque
 from itertools import chain
 from pyglui import ui
 from pyglui.cygl.utils import draw_circle, RGBA
+from pyglui.pyfontstash import fontstash
 
 from methods import denormalize, timeit
 from player_methods import transparent_circle
@@ -37,8 +38,6 @@ import background_helper as bh
 
 # logging
 import logging
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -81,7 +80,7 @@ def fixation_from_data(dispersion, origin, base_data, timestamps=None):
         'norm_pos': norm_pos,
         'dispersion': dispersion,
         'origin': origin,
-        'base_data': base_data,
+        'base_data': list(base_data),
         'timestamp': base_data[0]['timestamp'],
         'duration': (base_data[-1]['timestamp'] - base_data[0]['timestamp']) * 1000,
         'confidence': float(np.mean([gp['confidence'] for gp in base_data]))
@@ -201,6 +200,22 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
 
 
 class Offline_Fixation_Detector(Fixation_Detector_Base):
+    '''Dispersion-duration-based fixation detector.
+
+    This plugin detects fixations based on a dispersion threshold in terms of
+    degrees of visual angle within a given duration window. It tries to maximize
+    the length of classified fixations within the duration window, e.g. instead
+    of creating two consecutive fixations of length 300 ms it creates a single
+    fixation with length 600 ms. Fixations do not overlap. Binary search is used
+    to find the correct fixation length within the duration window.
+
+    If 3d pupil data is available the fixation dispersion will be calculated
+    based on the positional angle of the eye. These fixations have their origin
+    set to "eye0" or "eye1". If no 3d pupil data is available the plugin will
+    assume that the gaze data is calibrated and calculate the dispersion in
+    visual angle with in the coordinate system of the world camera. These
+    fixations will have their origin marked as "world".
+    '''
     def __init__(self, g_pool, max_dispersion=1.0, min_duration=300, max_duration=1000, show_fixations=True):
         super().__init__(g_pool)
         # g_pool.min_data_confidence
@@ -215,8 +230,6 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Fixation Detector'
-        help_str = "Dispersion-duration-based fixation detector."
-        self.menu.append(ui.Info_Text(help_str))
 
         def set_max_dispersion(new_value):
             self.max_dispersion = new_value
@@ -239,8 +252,11 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                     return
             logger.error('No further fixation available')
 
-        self.menu.append(ui.Info_Text('This plugin detects fixations based on a dispersion threshold in terms of degrees of visual angle. It also uses a min duration threshold.'))
+        for help_block in self.__doc__.split('\n\n'):
+            help_str = help_block.replace('\n', ' ').replace('  ', '').strip()
+            self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
+
         self.menu.append(ui.Slider('max_dispersion', self, min=0.01, step=0.1, max=5.,
                                    label='Maximum Dispersion [degrees]', setter=set_max_dispersion))
         self.menu.append(ui.Slider('min_duration', self, min=10, step=10, max=1500,
@@ -369,7 +385,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
 
     @classmethod
     def csv_representation_keys(self):
-        return ('id', 'start_timestamp', 'duration', 'start_index', 'end_frame', 'norm_pos_x', 'norm_pos_y', 'dispersion', 'avg_pupil_size', 'confidence')
+        return ('id', 'start_timestamp', 'duration', 'start_index', 'end_frame', 'norm_pos_x', 'norm_pos_y', 'dispersion', 'confidence')
 
     @classmethod
     def csv_representation_for_fixation(self, fixation):
@@ -423,15 +439,32 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
 
 
 class Fixation_Detector(Fixation_Detector_Base):
+    '''Dispersion-duration-based fixation detector.
+
+    This plugin detects fixations based on a dispersion threshold in terms of
+    degrees of visual angle with a minimal duration. It publishes the fixation
+    as soon as it complies with the constraints (dispersion and duration). This
+    might result in a series of overlapping fixations. These will have their id
+    field set to the same value which can be used to merge overlapping fixations.
+
+    If 3d pupil data is available the fixation dispersion will be calculated
+    based on the positional angle of the eye. These fixations have their origin
+    set to "eye0" or "eye1". If no 3d pupil data is available the plugin will
+    assume that the gaze data is calibrated and calculate the dispersion in
+    visual angle with in the coordinate system of the world camera. These
+    fixations will have their origin marked as "world".
+
+    The Offline Fixation Detector yields fixations that do not overlap.
+    '''
     def __init__(self, g_pool, max_dispersion=3.0, min_duration=300, confidence_threshold=0.75):
         super().__init__(g_pool)
         self.queue = deque()
         self.min_duration = min_duration
         self.max_dispersion = max_dispersion
         self.confidence_threshold = confidence_threshold
+        self.id_counter = 0
 
     def recent_events(self, events):
-        self.recent_fixation = None
         events['fixations'] = []
         gaze = events['gaze_positions']
 
@@ -457,6 +490,12 @@ class Fixation_Detector(Fixation_Detector_Base):
 
         if dispersion < np.deg2rad(self.max_dispersion):
             new_fixation = fixation_from_data(dispersion, origin, base_data)
+            if self.recent_fixation:
+                new_fixation['id'] = self.recent_fixation['id']
+            else:
+                new_fixation['id'] = self.id_counter
+                self.id_counter += 1
+
             events['fixations'].append(new_fixation)
             self.recent_fixation = new_fixation
         else:
@@ -467,17 +506,15 @@ class Fixation_Detector(Fixation_Detector_Base):
             fs = self.g_pool.capture.frame_size  # frame height
             pt = denormalize(self.recent_fixation['norm_pos'], fs, flip_y=True)
             draw_circle(pt, radius=48., stroke_width=10., color=RGBA(1., 1., 0., 1.))
+            self.glfont.draw_text(pt[0] + 48., pt[1], str(self.recent_fixation['id']))
 
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Fixation Detector'
 
-        help_str = "Dispersion-duration-based fixation detector."
-        self.menu.append(ui.Info_Text(help_str))
-
-        help_str = "Uses 3d pupil angles as dispersion measure. Falls back to 2d pixel gaze positions if no 3d data is available."
-
-        self.menu.append(ui.Info_Text(help_str))
+        for help_block in self.__doc__.split('\n\n'):
+            help_str = help_block.replace('\n', ' ').replace('  ', '').strip()
+            self.menu.append(ui.Info_Text(help_str))
 
         self.menu.append(ui.Slider('max_dispersion', self, min=0.01, step=0.1, max=5.,
                                    label='Maximum Dispersion [degrees]'))
@@ -486,9 +523,15 @@ class Fixation_Detector(Fixation_Detector_Base):
 
         self.menu.append(ui.Slider('confidence_threshold', self, min=0.0, max=1.0, label='Confidence Threshold'))
 
+        self.glfont = fontstash.Context()
+        self.glfont.add_font('opensans', ui.get_opensans_font_path())
+        self.glfont.set_size(22)
+        self.glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
+
     def deinit_ui(self):
         self.remove_menu()
+        self.glfont = None
 
     def get_init_dict(self):
         return {'max_dispersion': self.max_dispersion, 'min_duration': self.min_duration,
-                'max_duration': self.max_duration, 'confidence_threshold': self.confidence_threshold}
+                'confidence_threshold': self.confidence_threshold}
