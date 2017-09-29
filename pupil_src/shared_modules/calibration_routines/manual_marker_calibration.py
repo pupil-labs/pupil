@@ -15,7 +15,7 @@ import numpy as np
 from methods import normalize,denormalize
 from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
 from OpenGL.GL import GL_POLYGON
-from circle_detector import find_concetric_circles
+from circle_detector import find_concetric_circles,find_pupil_circle_marker
 from . finish_calibration import finish_calibration
 from file_methods import load_object
 
@@ -47,7 +47,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.sample_site = (-2,-2)
         self.counter = 0
         self.counter_max = 30
-        self.markers = []
         self.world_size = None
 
         self.stop_marker_found = False
@@ -55,6 +54,8 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.auto_stop_max = 30
 
         self.menu = None
+
+        self.markers = None
 
     def init_gui(self):
         super().init_gui()
@@ -118,28 +119,30 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         if self.active and frame:
             recent_pupil_positions = events['pupil_positions']
 
-            gray_img  = frame.gray
+            gray_img = frame.gray
 
             if self.world_size is None:
                 self.world_size = frame.width,frame.height
 
-            self.markers = find_concetric_circles(gray_img,min_ring_count=3)
+            self.markers = find_pupil_circle_marker(gray_img, find_v2_marker=True, find_v3_marker=True)
+            self.detected = False
+            self.pos = None  # indicate that no reference is detected
 
-            if len(self.markers) > 0:
+            if self.markers:
                 self.detected = True
-                marker_pos = self.markers[0][0][0] #first marker innermost ellipse, pos
-                self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
+                marker_pos = self.markers['img_pos']  # first marker innermost ellipse, pos
+                self.pos = self.markers['norm_pos']
 
-            else:
-                self.detected = False
-                self.pos = None  # indicate that no reference is detected
-
-            # center dark or white?
-            if self.detected:
-                second_ellipse = self.markers[0][1]
+                # center dark or white?
+                second_ellipse = self.markers['ellipses'][1]
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
                 marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
+
+                # To avoid index out of bounds with size 0
+                if not min(marker_gray.shape):
+                    return
+
                 avg = cv2.mean(marker_gray)[0]
                 center = marker_gray[int(second_ellipse[1][1])//2, int(second_ellipse[1][0])//2]
                 rel_shade = center-avg
@@ -149,11 +152,9 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                     # bright marker center found
                     self.auto_stop +=1
                     self.stop_marker_found = True
-
                 else:
                     self.auto_stop = 0
                     self.stop_marker_found = False
-
 
             #tracking logic
             if self.detected and not self.stop_marker_found:
@@ -246,16 +247,14 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             draw_points_norm([self.smooth_pos],size=15,color=RGBA(1.,1.,0.,.5))
 
         if self.active and self.detected:
-            for marker in self.markers:
-                e = marker[-1]
-                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
-                                    (int(e[1][0]/2),int(e[1][1]/2)),
-                                    int(e[-1]),0,360,15)
-                draw_polyline(pts,color=RGBA(0.,1.,0,1.))
+            e = self.markers['ellipses'][-1]
+            pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                (int(e[1][0]/2),int(e[1][1]/2)),
+                                int(e[-1]),0,360,15)
+            draw_polyline(pts,color=RGBA(0.,1.,0,1.))
 
             if self.counter:
                 # lets draw an indicator on the count
-                e = self.markers[0][-1]
                 # cv2 requires integer arguments
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
@@ -265,7 +264,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             if self.auto_stop:
                 # lets draw an indicator on the autostop count
-                e = self.markers[0][-1]
                 # cv2 requires integer arguments
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
