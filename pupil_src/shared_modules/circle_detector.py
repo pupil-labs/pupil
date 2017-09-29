@@ -11,12 +11,12 @@ See COPYING and COPYING.LESSER for license details.
 
 import numpy as np
 import cv2
-from methods import dist_pts_ellipse
+from methods import dist_pts_ellipse, normalize
 
 
 def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
     # get threshold image used to get crisp-clean edges using blur to remove small features
-    edges = cv2.adaptiveThreshold(cv2.blur(gray_img,(3,3)), 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 5, 11)
+    edges = cv2.adaptiveThreshold(cv2.blur(gray_img,(3,3)), 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 13, 7)
     _, contours, hierarchy = cv2.findContours(edges,
                                     mode=cv2.RETR_TREE,
                                     method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
@@ -61,6 +61,52 @@ def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
     #return clusters sorted by size of outmost cirlce biggest first.
     return sorted(concentric_cirlce_clusters,key=lambda e:-max(e[-1][1]))
 
+def find_pupil_circle_marker(gray_img, find_v2_marker=True,find_v3_marker=True):
+    cirlce_clusters = find_concetric_circles(gray_img, min_ring_count=3)
+    img_size = gray_img.shape[::-1]
+
+    for i in range(len(cirlce_clusters)):
+        detected = False
+        Largest_ellipse = cirlce_clusters[i][-1]
+        col_slice = int(Largest_ellipse[0][0] - Largest_ellipse[1][0]/2), int(Largest_ellipse[0][0] + Largest_ellipse[1][0]/2)
+        row_slice = int(Largest_ellipse[0][1] - Largest_ellipse[1][1]/2), int(Largest_ellipse[0][1] + Largest_ellipse[1][1]/2)
+        marker_gray = gray_img[slice(*row_slice), slice(*col_slice)]
+
+        # To avoid index out of bounds with size 0
+        if not min(marker_gray.shape):
+            continue
+
+        avg = cv2.mean(marker_gray)[0]
+        if min(marker_gray[0, 0], marker_gray[-1, -1]) < avg:
+            continue
+
+        if find_v2_marker:
+            if len(cirlce_clusters[i]) >= 7:
+                ring_ratio = cirlce_clusters[i][-1][1][0] / cirlce_clusters[i][-3][1][0]
+                if ring_ratio > 1.1:
+                    detected = True
+            elif len(cirlce_clusters[i]) >= 4:
+                ring_ratio = cirlce_clusters[i][-1][1][0] / cirlce_clusters[i][-2][1][0]
+                if ring_ratio > 1.25:
+                    detected = True
+            if detected:
+                img_pos = cirlce_clusters[i][0][0]
+                norm_pos = normalize(img_pos, img_size, flip_y=True)
+                return {'ellipses': cirlce_clusters[i], 'version': 2, 'img_pos': img_pos, 'norm_pos':norm_pos}
+
+        if find_v3_marker:
+            if len(cirlce_clusters[i]) >= 5:
+                ring_ratio = cirlce_clusters[i][4][1][0] / cirlce_clusters[i][2][1][0]
+                if abs(1.5 - ring_ratio) < 0.2:
+                    detected = True
+            else:
+                ring_ratio = cirlce_clusters[i][-1][1][0] / cirlce_clusters[i][1][1][0]
+                if ring_ratio > 1.55:
+                    detected = True
+            if detected:
+                img_pos = cirlce_clusters[i][0][0]
+                norm_pos = normalize(img_pos, img_size, flip_y=True)
+                return {'ellipses': cirlce_clusters[i], 'version': 3, 'img_pos': img_pos, 'norm_pos':norm_pos}
 
 
 def add_parents(child,graph,family):
