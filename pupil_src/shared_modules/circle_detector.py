@@ -76,25 +76,27 @@ def find_pupil_circle_marker(gray_img, find_v2_marker=True,find_v3_marker=True):
         if not min(marker_gray.shape):
             continue
 
+        # To discard white ring on a dark background
         avg = cv2.mean(marker_gray)[0]
         if min(marker_gray[0, 0], marker_gray[-1, -1]) < avg:
             continue
 
-        if find_v2_marker:
-            if len(cirlce_clusters[i]) >= 7:
-                ring_ratio = cirlce_clusters[i][-1][1][0] / cirlce_clusters[i][-3][1][0]
-                if ring_ratio > 1.1:
-                    detected = True
-            elif len(cirlce_clusters[i]) >= 4:
-                ring_ratio = cirlce_clusters[i][-1][1][0] / cirlce_clusters[i][-2][1][0]
-                if ring_ratio > 1.25:
-                    detected = True
-            if detected:
-                img_pos = cirlce_clusters[i][0][0]
-                norm_pos = normalize(img_pos, img_size, flip_y=True)
-                return {'ellipses': cirlce_clusters[i], 'version': 2, 'img_pos': img_pos, 'norm_pos':norm_pos}
+        # To find v2 marker
+        if len(cirlce_clusters[i]) >= 7:
+            ring_ratio = cirlce_clusters[i][-1][1][0] / cirlce_clusters[i][-3][1][0]
+            if ring_ratio > 1.1:
+                detected = True
+        elif len(cirlce_clusters[i]) >= 4:
+            ring_ratio = cirlce_clusters[i][-1][1][0] / cirlce_clusters[i][-2][1][0]
+            if ring_ratio > 1.25:
+                detected = True
+        if find_v2_marker and detected:
+            img_pos = cirlce_clusters[i][0][0]
+            norm_pos = normalize(img_pos, img_size, flip_y=True)
+            return {'ellipses': cirlce_clusters[i], 'version': 2, 'img_pos': img_pos, 'norm_pos':norm_pos}
 
-        if find_v3_marker:
+        # To find v3 marker
+        if not detected and find_v3_marker:
             if len(cirlce_clusters[i]) >= 5:
                 ring_ratio = cirlce_clusters[i][4][1][0] / cirlce_clusters[i][2][1][0]
                 if abs(1.5 - ring_ratio) < 0.2:
