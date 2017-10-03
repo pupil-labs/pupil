@@ -30,7 +30,7 @@ from pyglui import ui
 from pyglui.cygl.utils import draw_circle, RGBA
 from pyglui.pyfontstash import fontstash
 
-from methods import denormalize, timeit
+from methods import denormalize
 from player_methods import transparent_circle
 from plugin import Analysis_Plugin_Base
 
@@ -71,7 +71,7 @@ def cart2spherical(xyz):
     return ptsnew
 
 
-def fixation_from_data(dispersion, origin, base_data, timestamps=None):
+def fixation_from_data(dispersion, method, base_data, timestamps=None):
     norm_pos = np.mean([gp['norm_pos'] for gp in base_data], axis=0).tolist()
     dispersion = np.rad2deg(dispersion)  # in degrees
 
@@ -79,12 +79,15 @@ def fixation_from_data(dispersion, origin, base_data, timestamps=None):
         'topic': 'fixation',
         'norm_pos': norm_pos,
         'dispersion': dispersion,
-        'origin': origin,
+        'method': method,
         'base_data': list(base_data),
         'timestamp': base_data[0]['timestamp'],
         'duration': (base_data[-1]['timestamp'] - base_data[0]['timestamp']) * 1000,
         'confidence': float(np.mean([gp['confidence'] for gp in base_data]))
     }
+    if method == 'pupil':
+        fix['gaze_point_3d'] = np.mean([gp['gaze_point_3d'] for gp in base_data
+                                       if 'gaze_point_3d' in gp], axis=0).tolist()
     if timestamps is not None:
         start, end = base_data[0]['timestamp'], base_data[-1]['timestamp']
         start, end = np.searchsorted(timestamps, [start, end])
@@ -100,8 +103,8 @@ def spherical_dispersion(polar_coord):
     return dispersion
 
 
-def gaze_dispersion(capture, gaze_subset, use_3d=True):
-    if use_3d:
+def gaze_dispersion(capture, gaze_subset, use_pupil=True):
+    if use_pupil:
         data = [[], []]
         # for each eye collect gaze positions that contain pp for the given eye
         data[0] = [gp for gp in gaze_subset if any(('3d' in pp['method'] and pp['id'] == 0)
@@ -109,16 +112,16 @@ def gaze_dispersion(capture, gaze_subset, use_3d=True):
         data[1] = [gp for gp in gaze_subset if any(('3d' in pp['method'] and pp['id'] == 1)
                                                    for pp in gp['base_data'])]
 
+        method = 'pupil'
         # choose eye with more data points. alternatively data that spans longest time range
         eye_id = 1 if len(data[1]) > len(data[0]) else 0
-        origin = 'eye{}'.format(eye_id)
         base_data = data[eye_id]
 
         all_pp = chain(*(gp['base_data'] for gp in base_data))
         pp_with_eye_id = (pp for pp in all_pp if pp['id'] == eye_id)
         sphericals = np.array([(pp['theta'], pp['phi']) for pp in pp_with_eye_id], dtype=np.float32)
     else:
-        origin = 'world'
+        method = 'gaze'
         base_data = gaze_subset
         locations = np.array([gp['norm_pos'] for gp in gaze_subset])
 
@@ -134,14 +137,13 @@ def gaze_dispersion(capture, gaze_subset, use_3d=True):
 
         sphericals = cart2spherical(undistorted_3d)[:, 1:]  # only use theta/phi, exclude radius
 
-    return spherical_dispersion(sphericals), origin, base_data
+    return spherical_dispersion(sphericals), method, base_data
 
 
-@timeit
 def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_duration):
     yield "Detecting fixations...", []
-    use_3d = 'gaze_normal_3d' in gaze_data[0]
-    logger.info('Starting fixation detection using {} data...'.format('3d' if use_3d else '2d'))
+    use_pupil = 'gaze_normal_3d' in gaze_data[0]
+    logger.info('Starting fixation detection using {} data...'.format('3d' if use_pupil else '2d'))
 
     Q = deque()
     enum = deque(gaze_data)
@@ -154,7 +156,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             continue
 
         # min duration reached, check for fixation
-        dispersion, origin, base_data = gaze_dispersion(capture, Q, use_3d=use_3d)
+        dispersion, origin, base_data = gaze_dispersion(capture, Q, use_pupil=use_pupil)
         if dispersion > max_dispersion:
             # not a fixation, move forward
             Q.popleft()
@@ -171,7 +173,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             Q.append(enum.popleft())
 
         # check for fixation with maximum duration
-        dispersion, origin, base_data = gaze_dispersion(capture, Q, use_3d=use_3d)
+        dispersion, origin, base_data = gaze_dispersion(capture, Q, use_pupil=use_pupil)
         if dispersion <= max_dispersion:
             yield 'Detecting fixations...', [fixation_from_data(dispersion, origin, base_data, capture.timestamps)]
             Q = deque()  # discard old Q
@@ -183,7 +185,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
         # binary search
         while left_idx + 1 < right_idx:
             middle_idx = (left_idx + right_idx) // 2 + 1
-            dispersion, origin, base_data = gaze_dispersion(capture, slicable[:middle_idx], use_3d=use_3d)
+            dispersion, origin, base_data = gaze_dispersion(capture, slicable[:middle_idx], use_pupil=use_pupil)
 
             if dispersion <= max_dispersion:
                 left_idx = middle_idx - 1
@@ -191,7 +193,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
                 right_idx = middle_idx - 1
 
         if dispersion > max_dispersion:
-            dispersion, origin, base_data = gaze_dispersion(capture, slicable[:right_idx], use_3d=use_3d)
+            dispersion, origin, base_data = gaze_dispersion(capture, slicable[:right_idx], use_pupil=use_pupil)
 
         yield 'Detecting fixations...', [fixation_from_data(dispersion, origin, base_data, capture.timestamps)]
         Q = deque(slicable[right_idx:])
@@ -210,11 +212,11 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
     to find the correct fixation length within the duration window.
 
     If 3d pupil data is available the fixation dispersion will be calculated
-    based on the positional angle of the eye. These fixations have their origin
-    set to "eye0" or "eye1". If no 3d pupil data is available the plugin will
+    based on the positional angle of the eye. These fixations have their method
+    field set to "pupil". If no 3d pupil data is available the plugin will
     assume that the gaze data is calibrated and calculate the dispersion in
     visual angle with in the coordinate system of the world camera. These
-    fixations will have their origin marked as "world".
+    fixations will have their method field set to "gaze".
     '''
     def __init__(self, g_pool, max_dispersion=1.0, min_duration=300, max_duration=1000, show_fixations=True):
         super().__init__(g_pool)
@@ -385,24 +387,26 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
 
     @classmethod
     def csv_representation_keys(self):
-        return ('id', 'start_timestamp', 'duration', 'start_index', 'end_frame', 'norm_pos_x', 'norm_pos_y', 'dispersion', 'confidence')
+        return ('id', 'start_timestamp', 'duration', 'start_frame_index', 'end_frame_index',
+                'norm_pos_x', 'norm_pos_y', 'dispersion', 'confidence', 'method',
+                'gaze_point_3d_x', 'gaze_point_3d_y', 'gaze_point_3d_z', 'base_data')
 
     @classmethod
     def csv_representation_for_fixation(self, fixation):
-        return (
-            fixation['id'],
-            fixation['timestamp'],
-            fixation['duration'],
-            fixation['start_frame_index'],
-            fixation['end_frame_index'],
-            fixation['norm_pos'][0],
-            fixation['norm_pos'][1],
-            fixation['dispersion'],
-            fixation['confidence']
-        )
+        return (fixation['id'],
+                fixation['timestamp'],
+                fixation['duration'],
+                fixation['start_frame_index'],
+                fixation['end_frame_index'],
+                fixation['norm_pos'][0],
+                fixation['norm_pos'][1],
+                fixation['dispersion'],
+                fixation['confidence'],
+                fixation['method'],
+                *fixation.get('gaze_point_3d', [None] * 3),  # expanded, hence * at beginning
+                " ".join(['{}'.format([gp['timestamp'] for gp in fixation['base_data']])]))
 
     def export_fixations(self, export_range, export_dir):
-        #t
         """
         between in and out mark
 
@@ -411,7 +415,9 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                 - fixation count
 
             fixation list:
-                id | start_timestamp | duration | start_frame_index | end_frame_index | dispersion | avg_pupil_size | confidence
+                id | start_timestamp | duration | start_frame_index | end_frame_index |
+                norm_pos_x | norm_pos_y | dispersion | confidence | method |
+                gaze_point_3d_x | gaze_point_3d_y | gaze_point_3d_z | base_data
         """
         if not self.fixations:
             logger.warning('No fixations in this recording nothing to export')
@@ -448,11 +454,11 @@ class Fixation_Detector(Fixation_Detector_Base):
     field set to the same value which can be used to merge overlapping fixations.
 
     If 3d pupil data is available the fixation dispersion will be calculated
-    based on the positional angle of the eye. These fixations have their origin
-    set to "eye0" or "eye1". If no 3d pupil data is available the plugin will
+    based on the positional angle of the eye. These fixations have their method
+    field set to "pupil". If no 3d pupil data is available the plugin will
     assume that the gaze data is calibrated and calculate the dispersion in
     visual angle with in the coordinate system of the world camera. These
-    fixations will have their origin marked as "world".
+    fixations will have their method field set to "gaze".
 
     The Offline Fixation Detector yields fixations that do not overlap.
     '''
@@ -478,15 +484,15 @@ class Fixation_Detector(Fixation_Detector_Base):
             pass
 
         gaze_3d = [gp for gp in self.queue if '3d' in gp['base_data'][0]['method']]
-        use_3d = len(gaze_3d) > 0.8 * len(self.queue)
+        use_pupil = len(gaze_3d) > 0.8 * len(self.queue)
 
-        base_data = gaze_3d if use_3d else self.queue
+        base_data = gaze_3d if use_pupil else self.queue
 
         if len(base_data) <= 2 or base_data[-1]['timestamp'] - base_data[0]['timestamp'] < self.min_duration / 1000.:
             self.recent_fixation = None
             return
 
-        dispersion, origin, base_data = gaze_dispersion(self.g_pool.capture, base_data, use_3d)
+        dispersion, origin, base_data = gaze_dispersion(self.g_pool.capture, base_data, use_pupil)
 
         if dispersion < np.deg2rad(self.max_dispersion):
             new_fixation = fixation_from_data(dispersion, origin, base_data)
