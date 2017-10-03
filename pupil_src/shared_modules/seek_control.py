@@ -21,6 +21,8 @@ class Seek_Control(System_Plugin_Base):
     seek bar displays a bar at the bottom of the screen when you hover close to it.
     it will show the current positon and allow you to drag to any postion in the video file.
     """
+    order = 0.01
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         g_pool.seek_control = self
