@@ -130,11 +130,11 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             if self.markers:
                 self.detected = True
-                marker_pos = self.markers['img_pos']  # first marker innermost ellipse, pos
-                self.pos = self.markers['norm_pos']
+                marker_pos = self.markers[0]['img_pos']  # first marker innermost ellipse, pos
+                self.pos = self.markers[0]['norm_pos']
 
                 # center dark or white?
-                second_ellipse = self.markers['ellipses'][1]
+                second_ellipse = self.markers[0]['ellipses'][1]
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
                 marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
@@ -247,7 +247,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             draw_points_norm([self.smooth_pos],size=15,color=RGBA(1.,1.,0.,.5))
 
         if self.active and self.detected:
-            e = self.markers['ellipses'][-1]
+            e = self.markers[0]['ellipses'][-1]
             pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                 (int(e[1][0]/2),int(e[1][1]/2)),
                                 int(e[-1]),0,360,15)
