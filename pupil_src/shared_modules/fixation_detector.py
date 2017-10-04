@@ -225,6 +225,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.min_duration = min_duration
         self.max_duration = max_duration
         self.show_fixations = show_fixations
+        self.prev_index = -1
         self.bg_task = None
         self.status = ''
         self.notify_all({'subject': 'fixation_detector.should_recalculate', 'delay': .5})
@@ -356,20 +357,35 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                 cv2.putText(frame.img, '{}'.format(f['id']), (x + 30, y),
                             cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 150, 100))
 
-        info = ''
-        for f in self.g_pool.fixations_by_frame[frame.index]:
-            purge = ['base_data', 'id', 'topic']
-            sorted_items = sorted((o for o in f.items() if o[0] not in purge), key=lambda o: len(o[0]))
+        if self.prev_index != frame.index:
+            info = ''
+            for f in self.g_pool.fixations_by_frame[frame.index]:
+                info += 'Current fixation, {} of {}\n'.format(f['id'], len(self.g_pool.fixations))
+                info += '    Confidence: {:.2f}\n'.format(f['confidence'])
+                info += '    Duration: {:.2f} milliseconds\n'.format(f['duration'])
+                info += '    Dispersion: {:.3f} degrees\n'.format(f['dispersion'])
+                info += '    Frame range: {}-{}\n'.format(f['start_frame_index'] + 1, f['end_frame_index'] + 1)
+                info += '    2d gaze pos: x={:.3f}, y={:.3f}\n'.format(*f['norm_pos'])
+                if 'gaze_point_3d' in f:
+                    info += '    3d gaze pos: x={:.3f}, y={:.3f}, z={:.3f}\n'.format(*f['gaze_point_3d'])
+                else:
+                    info += '    3d gaze pos: N/A\n'
+                if f['id'] > 1:
+                    prev_f = self.g_pool.fixations[f['id'] - 2]
+                    time_lapsed = f['timestamp'] - prev_f['timestamp'] + prev_f['duration'] / 1000
+                    info += '    Time since prev. fixation: {:.2f} seconds\n'.format(time_lapsed)
+                else:
+                    info += '    Time since prev. fixation: N/A\n'
 
-            def format_(v):
-                if isinstance(v, float):
-                    return '{:.4f}'.format(v)
-                elif isinstance(v, list):
-                    return 'x={:.4f}, y={:.4f}'.format(v[0], v[1])
-                return v
-            info += 'Current fixation, {} of {}\n'.format(f['id'], len(self.g_pool.fixations))
-            info += '\n'.join(('    {}: {}'.format(k.replace('_', ' '), format_(v)) for k, v in sorted_items))
-        self.current_fixation_details.text = info
+                if f['id'] < len(self.g_pool.fixations):
+                    next_f = self.g_pool.fixations[f['id']]
+                    time_lapsed = next_f['timestamp'] - f['timestamp'] + f['duration'] / 1000
+                    info += '    Time to next fixation: {:.2f} seconds\n'.format(time_lapsed)
+                else:
+                    info += '    Time to next fixation: N/A\n'
+
+            self.current_fixation_details.text = info
+            self.prev_index = frame.index
 
     def correlate_and_publish(self):
         fixations = sorted(self.fixations, key=lambda f: f['timestamp'])
@@ -404,7 +420,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                 fixation['confidence'],
                 fixation['method'],
                 *fixation.get('gaze_point_3d', [None] * 3),  # expanded, hence * at beginning
-                " ".join(['{}'.format([gp['timestamp'] for gp in fixation['base_data']])]))
+                " ".join(['{}'.format(gp['timestamp']) for gp in fixation['base_data']]))
 
     def export_fixations(self, export_range, export_dir):
         """
