@@ -64,6 +64,7 @@ def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
 def find_pupil_circle_marker(gray_img, find_v2_marker=True,find_v3_marker=True):
     cirlce_clusters = find_concetric_circles(gray_img, min_ring_count=3)
     img_size = gray_img.shape[::-1]
+    marker_list = []
 
     for i in range(len(cirlce_clusters)):
         detected = False
@@ -93,7 +94,7 @@ def find_pupil_circle_marker(gray_img, find_v2_marker=True,find_v3_marker=True):
         if find_v2_marker and detected:
             img_pos = cirlce_clusters[i][0][0]
             norm_pos = normalize(img_pos, img_size, flip_y=True)
-            return {'ellipses': cirlce_clusters[i], 'version': 2, 'img_pos': img_pos, 'norm_pos':norm_pos}
+            marker_list.append({'ellipses': cirlce_clusters[i], 'version': 2, 'img_pos': img_pos, 'norm_pos':norm_pos})
 
         # To find v3 marker
         if not detected and find_v3_marker:
@@ -108,8 +109,9 @@ def find_pupil_circle_marker(gray_img, find_v2_marker=True,find_v3_marker=True):
             if detected:
                 img_pos = cirlce_clusters[i][0][0]
                 norm_pos = normalize(img_pos, img_size, flip_y=True)
-                return {'ellipses': cirlce_clusters[i], 'version': 3, 'img_pos': img_pos, 'norm_pos':norm_pos}
+                marker_list.append({'ellipses': cirlce_clusters[i], 'version': 3, 'img_pos': img_pos, 'norm_pos': norm_pos})
 
+    return marker_list
 
 def add_parents(child,graph,family):
     family.append(child)
