@@ -180,7 +180,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         logger.info('Application Version: {}'.format(app_version))
         logger.info('System Info: {}'.format(get_system_info()))
 
-        icon_bar_width = 80
+        icon_bar_width = 50
         window_size = None
 
         # create container for globally scoped vars

@@ -129,7 +129,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             scroll_factor = 1.0
             window_position_default = (0, 0)
 
-        icon_bar_width = 80
+        icon_bar_width = 50
         window_size = None
         camera_render_size = None
         hdpi_factor = 1.0

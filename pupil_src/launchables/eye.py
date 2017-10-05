@@ -138,7 +138,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             scroll_factor = 1.0
             window_position_default = (600, 300 * eye_id)
 
-        icon_bar_width = 80
+        icon_bar_width = 50
         window_size = None
         camera_render_size = None
 
