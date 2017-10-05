@@ -31,7 +31,6 @@ class System_Graphs(System_Plugin_Base):
         self.dia_min = dia_min
         self.dia_max = dia_max
         self.conf_grad_limits = .0, 1.
-        self.conf_grad = RGBA(1., .0, .0, .5), RGBA(.1, .1, .7, .5)
         self.ts = None
 
     @classmethod
@@ -54,34 +53,36 @@ class System_Graphs(System_Plugin_Base):
         ps = psutil.Process(pid)
 
         self.cpu_graph = graph.Bar_Graph()
-        self.cpu_graph.pos = (20, 130)
+        self.cpu_graph.pos = (20, 50)
         self.cpu_graph.update_fn = ps.cpu_percent
         self.cpu_graph.update_rate = 5
         self.cpu_graph.label = 'CPU %0.1f'
 
         self.fps_graph = graph.Bar_Graph()
-        self.fps_graph.pos = (140, 130)
+        self.fps_graph.pos = (140, 50)
         self.fps_graph.update_rate = 5
         self.fps_graph.label = "%0.0f FPS"
 
         self.conf0_graph = graph.Bar_Graph(max_val=1.0)
-        self.conf0_graph.pos = (260, 130)
+        self.conf0_graph.pos = (260, 50)
         self.conf0_graph.update_rate = 5
         self.conf0_graph.label = "id0 conf: %0.2f"
         self.conf1_graph = graph.Bar_Graph(max_val=1.0)
-        self.conf1_graph.pos = (380, 130)
+        self.conf1_graph.pos = (380, 50)
         self.conf1_graph.update_rate = 5
         self.conf1_graph.label = "id1 conf: %0.2f"
 
         self.dia0_graph = graph.Bar_Graph(min_val=self.dia_min, max_val=self.dia_max)
-        self.dia0_graph.pos = (260, 230)
+        self.dia0_graph.pos = (260, 100)
         self.dia0_graph.update_rate = 5
         self.dia0_graph.label = "id0 dia: %0.2f"
 
         self.dia1_graph = graph.Bar_Graph(min_val=self.dia_min, max_val=self.dia_max)
-        self.dia1_graph.pos = (380, 230)
+        self.dia1_graph.pos = (380, 100)
         self.dia1_graph.update_rate = 5
         self.dia1_graph.label = "id0 dia: %0.2f"
+
+        self.conf_grad = RGBA(1., .0, .0, self.conf0_graph.color[3]), self.conf0_graph.color
 
         def set_dia_min(val):
             self.dia0_graph.min_val = val
