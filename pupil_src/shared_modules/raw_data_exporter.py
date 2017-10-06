@@ -110,8 +110,8 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
         self.menu.append(ui.Text_Input('in_mark',
-                                       getter=self.g_pool.trim_marks.get_string,
-                                       setter=self.g_pool.trim_marks.set_string,
+                                       getter=self.g_pool.seek_control.get_trim_range_string,
+                                       setter=self.g_pool.seek_control.set_trim_range_string,
                                        label='frame range to export'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
 

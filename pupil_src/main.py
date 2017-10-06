@@ -70,7 +70,6 @@ if 'profiled' in sys.argv:
     from launchables.service import service_profiled as service
     from launchables.eye import eye_profiled as eye
     from launchables.player import player_profiled as player
-
 else:
     from launchables.world import world
     from launchables.service import service

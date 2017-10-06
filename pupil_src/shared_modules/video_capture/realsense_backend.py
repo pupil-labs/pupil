@@ -78,7 +78,7 @@ class ColorFrame(object):
     @property
     def bgr(self):
         if self._bgr is None:
-            self._bgr = cv2.cvtColor(self._yuv422, cv2.COLOR_YUV2BGR_YUVY)
+            self._bgr = cv2.cvtColor(self._yuv422, cv2.COLOR_YUV2BGR_YUYV)
         return self._bgr
 
     @property
@@ -500,7 +500,6 @@ class Realsense_Source(Base_Source):
             depth_fps = self.depth_frame_rate
         if device_options is None:
             device_options = self.controls.export_presets()
-
         if self.device is not None:
             self.device.stop()
             self.device = None

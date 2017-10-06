@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 from file_methods import save_object, load_object, UnpicklingError
 from version_utils import VersionFormat
 from version_utils import read_rec_version
-from camera_models import load_intrinsics, save_intrinsics
+from camera_models import load_intrinsics
 
 
 def correlate_data(data, timestamps):
@@ -161,7 +161,7 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
             frame_size = video.streams.video[0].format.width, video.streams.video[0].format.height
             del video
             intrinsics = load_intrinsics(rec_dir, time_name, frame_size)
-            save_intrinsics(rec_dir, 'world', frame_size, intrinsics)
+            intrinsics.save(rec_dir, 'world')
 
             time_name = 'world'  # assume world file
         elif time_name.startswith('audio_'):

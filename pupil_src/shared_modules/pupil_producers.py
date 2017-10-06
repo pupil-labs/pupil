@@ -105,8 +105,6 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.detection_progress = session_data['detection_progress']
         self.detection_status = session_data['detection_status']
 
-        self.menu = None
-
         # start processes
         if self.detection_progress[0] < 100:
             self.start_eye_process(0)
@@ -187,6 +185,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         min_ts = self.eye_processes[eye_id].min_ts
         max_ts = self.eye_processes[eye_id].max_ts
         self.detection_progress[eye_id] = 100 * (cur_ts - min_ts) / (max_ts - min_ts)
+        self.menu_icon.indicator_stop = sum(self.detection_progress) / 200.
 
     def cleanup(self):
         self.stop_eye_process(0)

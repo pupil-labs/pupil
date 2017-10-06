@@ -17,7 +17,7 @@ from .base_backend import InitialisationError, Base_Source, Base_Manager
 from camera_models import load_intrinsics
 
 # check versions for our own depedencies as they are fast-changing
-assert VersionFormat(uvc.__version__) >= VersionFormat('0.11')
+assert VersionFormat(uvc.__version__) >= VersionFormat('0.12')
 
 # logging
 logger = logging.getLogger(__name__)
@@ -174,7 +174,7 @@ class UVC_Source(Base_Source):
                 try: controls_dict['Auto Exposure Priority'].value = 1
                 except KeyError: pass
         else:
-            self.uvc_capture.bandwidth_factor = 3.0
+            self.uvc_capture.bandwidth_factor = 2.0
             try: controls_dict['Auto Focus'].value = 0
             except KeyError: pass
 
@@ -224,7 +224,6 @@ class UVC_Source(Base_Source):
     def recent_events(self, events):
         try:
             frame = self.uvc_capture.get_frame(0.05)
-            frame.timestamp = self.g_pool.get_timestamp() + self.ts_offset
         except uvc.StreamError:
             self._recent_frame = None
             self._restart_logic()
@@ -233,6 +232,9 @@ class UVC_Source(Base_Source):
             time.sleep(0.02)
             self._restart_logic()
         else:
+            if self.ts_offset: #c930 timestamps need to be set here. The camera does not provide valid pts from device
+                frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
+            frame.timestamp -= self.g_pool.timebase.value
             self._recent_frame = frame
             events['frame'] = frame
             self._restart_in = 3

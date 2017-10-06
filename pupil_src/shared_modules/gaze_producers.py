@@ -302,10 +302,11 @@ class Offline_Calibration(Gaze_Producer_Base):
                 self.detection_progress = 0.
                 logger.info('Marker detection was interrupted')
                 logger.debug('Reason: {}'.format(msg.get('reason', 'n/a')))
+            self.menu_icon.indicator_stop = self.detection_progress / 100.
 
         for sec in self.sections:
             if sec["bg_task"]:
-                recent  = [d for d in sec["bg_task"].fetch()]
+                recent = [d for d in sec["bg_task"].fetch()]
                 if recent:
                     progress, data = zip(*recent)
                     sec['gaze_positions'].extend(chain(*data))
