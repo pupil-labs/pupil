@@ -67,6 +67,14 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
+    def launch_eye_process(eye_id, delay=0):
+        n = {'subject': 'eye_process.should_start', 'eye_id': eye_id, 'delay': delay}
+        ipc_pub.notify(n)
+
+    def stop_eye_process(eye_id):
+        n = {'subject': 'eye_process.should_stop', 'eye_id': eye_id}
+        ipc_pub.notify(n)
+
     try:
 
         # helpers/utils
@@ -134,14 +142,6 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
 
         # plugins that are loaded based on user settings from previous session
         g_pool.plugins = Plugin_List(g_pool, plugin_by_name, session_settings.get('loaded_plugins', default_plugins))
-
-        def launch_eye_process(eye_id, delay=0):
-            n = {'subject': 'eye_process.should_start', 'eye_id': eye_id, 'delay': delay}
-            ipc_pub.notify(n)
-
-        def stop_eye_process(eye_id):
-            n = {'subject': 'eye_process.should_stop', 'eye_id': eye_id}
-            ipc_pub.notify(n)
 
         def handle_notifications(n):
             subject = n['subject']
