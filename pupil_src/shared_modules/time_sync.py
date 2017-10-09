@@ -84,7 +84,7 @@ class Time_Sync(Plugin):
 
     @classmethod
     def icon_info(self):
-        return 'pupil_icons', chr(0xe422)
+        return 'pupil_icons', chr(0xec15)
 
     def init_ui(self):
         self.add_menu()

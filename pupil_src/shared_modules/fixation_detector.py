@@ -48,7 +48,7 @@ class Empty(object):
 class Fixation_Detector_Base(Analysis_Plugin_Base):
     @classmethod
     def icon_info(self):
-        return 'pupil_icons', chr(0xe3b4)
+        return 'pupil_icons', chr(0xec02)
 
 
 def cart2spherical(xyz):
@@ -272,15 +272,16 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.menu.append(self.current_fixation_details)
 
         self.add_button = ui.Thumb('jump_next_fixation', setter=jump_next_fixation,
-                                   getter=lambda: False, label=chr(0xf051), hotkey='f',
-                                   label_font='pupil_icons', label_offset_x=0,
-                                   label_offset_y=2, label_offset_size=-24)
+                                   getter=lambda: False, label=chr(0xe044), hotkey='f',
+                                   label_font='pupil_icons')
         self.add_button.status_text = 'Next Fixation'
         self.g_pool.quickbar.append(self.add_button)
 
     def deinit_ui(self):
         self.remove_menu()
         self.current_fixation_details = None
+        self.g_pool.quickbar.remove(self.add_button)
+        self.add_button = None
 
     def cleanup(self):
         if self.bg_task:

@@ -55,7 +55,7 @@ class Gaze_Mapping_Plugin(Plugin):
 
     @classmethod
     def icon_info(self):
-        return 'pupil_icons', chr(0xe3a5)
+        return 'pupil_icons', chr(0xec03)
 
 
 class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):

@@ -52,6 +52,10 @@ class Audio_Capture(Plugin):
         self.queue = queue.Queue()
         self.start_capture(self.audio_src)
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe029)
+
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Audio Capture'
