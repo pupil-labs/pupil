@@ -249,7 +249,6 @@ class Offline_Calibration(Gaze_Producer_Base):
                                         selection=['circle_marker', 'natural_features']))
         section_menu.append(ui.Selector('mapping_method', sec, label='Calibration Mode',selection=['2d','3d']))
         section_menu.append(ui.Text_Input('status', sec, label='Calbiration Status', setter=lambda _: _))
-        section_menu[-1].read_only = True
         section_menu.append(ui.Text_Input('calibration_range', sec, label='Calibration range',
                                           setter=make_validate_fn(sec, 'calibration_range')))
         section_menu.append(ui.Text_Input('mapping_range', sec, label='Mapping range',
