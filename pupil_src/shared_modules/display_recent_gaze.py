@@ -9,12 +9,12 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Plugin
+from plugin import System_Plugin_Base
 from pyglui.cygl.utils import draw_points_norm,RGBA
 from pyglui import ui
 
 
-class Display_Recent_Gaze(Plugin):
+class Display_Recent_Gaze(System_Plugin_Base):
     """
     DisplayGaze shows the three most
     recent gaze position on the screen

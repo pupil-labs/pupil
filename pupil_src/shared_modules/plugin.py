@@ -40,14 +40,14 @@ class Plugin(object):
     # >.5 are things that depend on other plugins work like display , saving and streaming
     # you can change this in __init__ for your instance or in the class definition
     order = .5
+    alive = True
 
     def __init__(self, g_pool):
-        self._alive = True
         self.g_pool = g_pool
 
-    def init_gui(self):
+    def init_ui(self):
         '''
-        if the app allows a gui, you may initalize your part of it here.
+        Called when the context will have a gl window with us. You can do your init for that here.
         '''
         pass
 
@@ -70,6 +70,12 @@ class Plugin(object):
         """
         Gets called when the user clicks in the window screen and the event has
         not been consumed by the GUI.
+        """
+        pass
+
+    def on_pos(self, pos):
+        """
+        Gets called when the user moves the mouse in the window screen.
         """
         pass
 
@@ -119,11 +125,18 @@ class Plugin(object):
 
     # if you want a session persistent plugin implement this function:
     def get_init_dict(self):
-        raise NotImplementedError()
-        # d = {}
-        # # add all aguments of your plugin init fn with paramter names as name field
-        # # do not include g_pool here.
-        # return d
+        # aise NotImplementedError() if you dont want you plugin to be persistent.
+
+        d = {}
+        # add all aguments of your plugin init fn with paramter names as name field
+        # do not include g_pool here.
+        return d
+
+    def deinit_ui(self):
+        '''
+        Called when the context will have a ui with window. You can do your deinit for that here.
+        '''
+        pass
 
     def cleanup(self):
         """
@@ -174,21 +187,7 @@ class Plugin(object):
         else:
             self.g_pool.ipc_pub.notify(notification)
 
-    @property
-    def alive(self):
-        """
-        This field indicates of the instance should be detroyed
-        Writing False to this will schedule the instance for deletion
-        """
-        if not self._alive:
-            if hasattr(self, "cleanup"):
-                self.cleanup()
-        return self._alive
 
-    @alive.setter
-    def alive(self, value):
-        if isinstance(value, bool):
-            self._alive = value
 
     @property
     def this_class(self):
@@ -223,6 +222,50 @@ class Plugin(object):
     def pretty_class_name(self):
         return self.class_name.replace('_', ' ')
 
+    @classmethod
+    def icon_info(self):
+        return 'roboto', '?'
+
+    def add_menu(self):
+        '''
+        This fn is called when the plugin ui is initialized. Do not change!
+        '''
+        from pyglui import ui
+
+        def toggle_menu(collapsed):
+            # This is the menu toggle logic.
+            # Only one menu can be open.
+            # If no menu is open the menu_bar should collapse.
+            self.g_pool.menubar.collapsed = collapsed
+            for m in self.g_pool.menubar.elements:
+                m.collapsed = True
+            self.menu.collapsed = collapsed
+
+        def close():
+            toggle_menu(True)
+            self.alive = False
+
+        # Here we make a menu and icon
+        font, symbol = self.icon_info()
+        y_offset = 1 if font == 'pupil_icons' else 0
+        self.menu = ui.Growing_Menu('Unnamed Menu', header_pos='headline')
+        if self.uniqueness == 'not_unique':
+            self.menu.append(ui.Button('Close', close))
+        self.menu_icon = ui.Icon('collapsed', self.menu, label=symbol,
+                                 label_font=font, on_val=False, off_val=True,
+                                 setter=toggle_menu, label_offset_y=y_offset)
+        self.menu_icon.order = 0.5
+        self.menu_icon.tooltip = self.pretty_class_name
+        self.g_pool.menubar.append(self.menu)
+        self.g_pool.iconbar.append(self.menu_icon)
+        toggle_menu(False)
+
+    def remove_menu(self):
+        self.g_pool.menubar.remove(self.menu)
+        self.g_pool.iconbar.remove(self.menu_icon)
+        self.menu = None
+        self.menu_icon = None
+
 
 # Plugin manager classes and fns
 class Plugin_List(object):
@@ -230,9 +273,10 @@ class Plugin_List(object):
         It is a self sorting list with a few functions to manage adding and
         removing Plugins and lacking most other list methods.
     """
-    def __init__(self, g_pool, plugin_by_name, plugin_initializers):
+    def __init__(self, g_pool, plugin_initializers):
         self._plugins = []
         self.g_pool = g_pool
+        plugin_by_name = g_pool.plugin_by_name
 
         # add self as g_pool.plguins object to allow plugins to call the plugins list during init.
         # this will be done again when the init returns but is kept there for readablitly.
@@ -275,20 +319,25 @@ class Plugin_List(object):
                     return
 
         plugin_instance = new_plugin(self.g_pool, **args)
+        if not plugin_instance.alive:
+            logger.warning("plugin failed to initialize")
+            return
+
         self._plugins.append(plugin_instance)
         self._plugins.sort(key=lambda p: p.order)
-        # make sure the plugin does not want to be gone already
-        if self.g_pool.app in ("capture", "player") and plugin_instance.alive:
-            plugin_instance.init_gui()
-            logger.info("Loaded: {}".format(new_plugin.__name__))
-        self.clean()
+
+        if self.g_pool.app in ("capture", "player"):
+            plugin_instance.init_ui()
 
     def clean(self):
         '''
         plugins may flag themselves as dead or are flagged as dead. We need to remove them.
         '''
         for p in self._plugins[:]:
-            if not p.alive:  # reading p.alive will trigger the plug-in cleanup fn.
+            if not p.alive:
+                if self.g_pool.app in ("capture", "player"):
+                    p.deinit_ui()
+                p.cleanup()
                 logger.debug("Unloaded Plugin: {}".format(p))
                 self._plugins.remove(p)
 
@@ -351,4 +400,8 @@ class Analysis_Plugin_Base(Plugin):
 
 
 class Producer_Plugin_Base(Plugin):
+    pass
+
+
+class System_Plugin_Base(Plugin):
     pass

@@ -66,6 +66,34 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
     uniqueness = 'by_base_class'
     order = .02
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xec14)
+
+    def init_ui(self):
+        self.add_menu()
+
+        gaze_producer_plugins = [p for p in self.g_pool.plugin_by_name.values() if issubclass(p, Gaze_Producer_Base)]
+        gaze_producer_plugins.sort(key=lambda p: p.__name__)
+
+        self.menu_icon.order = 0.3
+
+        def open_plugin(p):
+            self.notify_all({'subject': 'start_plugin', 'name': p.__name__})
+
+        # We add the capture selection menu
+        self.menu.append(ui.Selector(
+                                'gaze_producer',
+                                setter=open_plugin,
+                                getter=lambda: self.__class__,
+                                selection=gaze_producer_plugins,
+                                labels=[p.__name__.replace('_', ' ') for p in gaze_producer_plugins],
+                                label='Gaze Producers'
+                            ))
+
+    def deinit_ui(self):
+        self.remove_menu()
+
 
 class Gaze_From_Recording(Gaze_Producer_Base):
     def __init__(self, g_pool):
@@ -75,8 +103,10 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.notify_all({'subject': 'gaze_positions_changed'})
         logger.debug('gaze positions changed')
 
-    def get_init_dict(self):
-        return {}
+    def init_ui(self):
+        super().init_ui()
+        self.menu.label = "Gaze Data  From Recording"
+        self.menu.append(ui.Info_Text('Currently, gaze positions are loaded from the recording.'))
 
 
 def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
@@ -153,7 +183,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         sec = make_section_dict(calib_range,map_range)
         self.sections.append(sec)
         if self.menu is not None:
-            self.append_section_menu(sec, collapsed=False)
+            self.append_section_menu(sec)
 
     def start_detection_task(self):
         self.process_pipe = zmq_tools.Msg_Pair_Server(self.g_pool.zmq_ctx)
@@ -162,11 +192,12 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.notify_all({'subject': 'circle_detector_process.should_start',
                          'source_path': source_path, "pair_url": self.process_pipe.url})
 
-    def init_gui(self):
+    def init_ui(self):
+        super().init_ui()
+        self.menu.label = "Offline Calibration"
+
         def clear_natural_features():
             self.manual_ref_positions = []
-        self.menu = ui.Scrolling_Menu("Offline Calibration", pos=(-660, 20), size=(300, 500))
-        self.g_pool.gui.append(self.menu)
 
         self.menu.append(ui.Info_Text('"Detection" searches for calibration markers in the world video.'))
         # self.menu.append(ui.Button('Redetect', self.start_detection_task))
@@ -181,9 +212,8 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.append_section_menu(sec)
         self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
 
-    def append_section_menu(self, sec, collapsed=True):
+    def append_section_menu(self, sec):
         section_menu = ui.Growing_Menu('Gaze Section')
-        section_menu.collapsed = collapsed
         section_menu.color = RGBA(*sec['color'])
 
         def make_validate_fn(sec, key):
@@ -228,13 +258,8 @@ class Offline_Calibration(Gaze_Producer_Base):
         section_menu.append(ui.Button('Remove section', make_remove_fn(sec)))
         self.menu.append(section_menu)
 
-    def deinit_gui(self):
-        if hasattr(self, 'menu'):
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
     def get_init_dict(self):
-        return {'manual_ref_edit_mode':self.manual_ref_edit_mode}
+        return {'manual_ref_edit_mode': self.manual_ref_edit_mode}
 
     def on_notify(self, notification):
         subject = notification['subject']
@@ -277,11 +302,11 @@ class Offline_Calibration(Gaze_Producer_Base):
                 self.detection_progress = 0.
                 logger.info('Marker detection was interrupted')
                 logger.debug('Reason: {}'.format(msg.get('reason', 'n/a')))
-
+            self.menu_icon.indicator_stop = self.detection_progress / 100.
 
         for sec in self.sections:
             if sec["bg_task"]:
-                recent  = [d for d in sec["bg_task"].fetch()]
+                recent = [d for d in sec["bg_task"].fetch()]
                 if recent:
                     progress, data = zip(*recent)
                     sec['gaze_positions'].extend(chain(*data))
@@ -347,7 +372,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glPushMatrix()
         gl.glLoadIdentity()
-        width, height = self.win_size
+        width, height = self.g_pool.camera_render_size
         h_pad = padding * (max_ts-2)/float(width)
         v_pad = padding * 1./(height-2)
         # ranging from 0 to len(timestamps)-1 (horizontal) and 0 to 1 (vertical)
@@ -380,9 +405,6 @@ class Offline_Calibration(Gaze_Producer_Base):
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glPopMatrix()
 
-    def on_window_resize(self, window, w, h):
-        self.win_size = w, h
-
     def cleanup(self):
         if self.process_pipe:
             self.process_pipe.send(topic='terminate',payload={})
@@ -403,4 +425,3 @@ class Offline_Calibration(Gaze_Producer_Base):
         else:
             session_data['circle_marker_positions'] = []
         save_object(session_data, os.path.join(self.result_dir, 'offline_calibration_gaze'))
-        self.deinit_gui()

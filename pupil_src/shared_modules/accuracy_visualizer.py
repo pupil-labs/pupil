@@ -44,13 +44,13 @@ class Accuracy_Visualizer(Plugin):
         self.succession_threshold = np.cos(np.deg2rad(.5))
         self._outlier_threshold = outlier_threshold  # in degrees
 
-    def init_gui(self):
-        self.menu = ui.Growing_Menu('Accuracy Visualizer')
-        self.g_pool.sidebar.append(self.menu)
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xec11)
 
-        def close():
-            self.alive = False
-        self.menu.append(ui.Button('Close', close))
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Accuracy Visualizer'
 
         general_help = '''Measure gaze mapping accuracy and precision using samples
                           that were collected during calibration. The outlier threshold
@@ -79,13 +79,8 @@ class Accuracy_Visualizer(Plugin):
         self.menu.append(ui.Text_Input('precision', self, 'Angular Precision', setter=ignore,
                          getter=lambda: self.precision if self.precision is not None else 'Not available'))
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu = None
-
-    def cleanup(self):
-        self.deinit_gui()
+    def deinit_ui(self):
+        self.remove_menu()
 
     @property
     def outlier_threshold(self):

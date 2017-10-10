@@ -107,7 +107,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         from gl_utils import basic_gl_setup, adjust_gl_view, clear_gl_screen
         from gl_utils import make_coord_system_pixel_based
         from gl_utils import make_coord_system_norm_based
-        from gl_utils import is_window_visible
+        from gl_utils import is_window_visible, glViewport
         from ui_roi import UIRoi
         # monitoring
         import psutil
@@ -130,13 +130,17 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         # UI Platform tweaks
         if platform.system() == 'Linux':
             scroll_factor = 10.0
-            window_position_default = (600, 300 * eye_id)
+            window_position_default = (600, 300 * eye_id + 30)
         elif platform.system() == 'Windows':
             scroll_factor = 10.0
-            window_position_default = (600,31+ 300 * eye_id)
+            window_position_default = (600, 31 + 300 * eye_id)
         else:
             scroll_factor = 1.0
             window_position_default = (600, 300 * eye_id)
+
+        icon_bar_width = 50
+        window_size = None
+        camera_render_size = None
 
         # g_pool holds variables for this process
         g_pool = Global_Container()
@@ -157,11 +161,16 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         # Callback functions
         def on_resize(window, w, h):
+            nonlocal window_size
+            nonlocal camera_render_size
+
             if is_window_visible(window):
                 active_window = glfw.glfwGetCurrentContext()
                 glfw.glfwMakeContextCurrent(window)
                 hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
                 g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
+                window_size = w, h
+                camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
                 g_pool.gui.update_window(w, h)
                 g_pool.gui.collect_menus()
                 for g in g_pool.graphs:
@@ -188,7 +197,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                     return
                 elif action == glfw.GLFW_PRESS:
                     pos = glfw.glfwGetCursorPos(window)
-                    pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
+                    # pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
+                    pos = normalize(pos, camera_render_size)
                     if g_pool.flip:
                         pos = 1 - pos[0], 1 - pos[1]
                     # Position in img pixels
@@ -206,7 +216,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             g_pool.gui.update_mouse(x * hdpi_factor, y * hdpi_factor)
 
             if g_pool.u_r.active_edit_pt:
-                pos = normalize((x, y), glfw.glfwGetWindowSize(main_window))
+                pos = normalize((x, y), camera_render_size)
                 if g_pool.flip:
                     pos = 1-pos[0],1-pos[1]
                 pos = denormalize(pos,g_pool.capture.frame_size )
@@ -226,7 +236,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             logger.info("Session setting are from a different version of this app. I will not use those.")
             session_settings.clear()
 
-
         g_pool.iconified = False
         g_pool.capture = None
         g_pool.capture_manager = None
@@ -244,7 +253,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         manager_class_name, manager_settings = capture_manager_settings
         manager_class_by_name = {c.__name__:c for c in manager_classes}
         g_pool.capture_manager = manager_class_by_name[manager_class_name](g_pool,**manager_settings)
-
 
         if eye_id == 0:
             cap_src = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]
@@ -281,9 +289,19 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
         def set_detector(new_detector):
+            g_pool.pupil_detector.deinit_ui()
             g_pool.pupil_detector.cleanup()
             g_pool.pupil_detector = new_detector(g_pool)
-            g_pool.pupil_detector.init_gui(g_pool.sidebar)
+            g_pool.pupil_detector.init_ui()
+
+        def toggle_general_settings(collapsed):
+            #this is the menu toggle logic.
+            # Only one menu can be open.
+            # If no menu is open the menubar should collapse.
+            g_pool.menubar.collapsed = collapsed
+            for m in g_pool.menubar.elements:
+                m.collapsed = True
+            general_settings.collapsed = collapsed
 
         # Initialize glfw
         glfw.glfwInit()
@@ -310,16 +328,22 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         # setup GUI
         g_pool.gui = ui.UI()
         g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
-        g_pool.sidebar = ui.Scrolling_Menu("Settings",
-                                           pos=(-300, 0),
-                                           size=(0, 0),
-                                           header_pos='left')
-        general_settings = ui.Growing_Menu('General')
+        g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos='left')
+        g_pool.iconbar = ui.Scrolling_Menu("Icons",pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
+        g_pool.gui.append(g_pool.menubar)
+        g_pool.gui.append(g_pool.iconbar)
+
+        general_settings = ui.Growing_Menu('General',header_pos='headline')
         general_settings.append(ui.Selector('gui_user_scale', g_pool,
                                           setter=set_scale,
                                           selection=[.8, .9, 1., 1.1, 1.2],
                                           label='Interface Size'))
-        general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,*g_pool.capture.frame_size)) )
+
+        def set_window_size():
+            f_width, f_height = g_pool.capture.frame_size
+            f_width += int(icon_bar_width*g_pool.gui.scale)
+            glfw.glfwSetWindowSize(main_window, f_width, f_height)
+        general_settings.append(ui.Button('Reset window size', set_window_size))
         general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
         general_settings.append(ui.Selector('display_mode',
                                             g_pool,
@@ -331,7 +355,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
 
         general_settings.append(g_pool.display_mode_info)
-        g_pool.gui.append(g_pool.sidebar)
+
         detector_selector = ui.Selector('pupil_detector',
                                         getter=lambda: g_pool.pupil_detector.__class__,
                                         setter=set_detector, selection=[
@@ -341,45 +365,28 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                                         label="Detection method")
         general_settings.append(detector_selector)
 
-        g_pool.capture_selector_menu = ui.Growing_Menu('Capture Selection')
-        g_pool.capture_source_menu = ui.Growing_Menu('Capture Source')
-        g_pool.capture_source_menu.collapsed = True
-        g_pool.capture.init_gui()
+        g_pool.menubar.append(general_settings)
+        icon = ui.Icon('collapsed', general_settings, label=chr(0xe8b8), on_val=False, off_val=True, setter=toggle_general_settings, label_font='pupil_icons')
+        icon.tooltip = 'General Settings'
+        g_pool.iconbar.append(icon)
+        toggle_general_settings(False)
 
-        g_pool.sidebar.append(general_settings)
-        g_pool.sidebar.append(g_pool.capture_selector_menu)
-        g_pool.sidebar.append(g_pool.capture_source_menu)
-
-        g_pool.pupil_detector.init_gui(g_pool.sidebar)
-
-        g_pool.capture_manager.init_gui()
+        g_pool.pupil_detector.init_ui()
+        g_pool.capture.init_ui()
+        g_pool.capture_manager.init_ui()
         g_pool.writer = None
 
-        def replace_source(source_class_name,source_settings):
+        def replace_source(source_class_name, source_settings):
+            g_pool.capture.deinit_ui()
             g_pool.capture.cleanup()
             g_pool.capture = source_class_by_name[source_class_name](g_pool,**source_settings)
-            g_pool.capture.init_gui()
+            g_pool.capture.init_ui()
             if g_pool.writer:
                 logger.info("Done recording.")
                 g_pool.writer.release()
                 g_pool.writer = None
 
         g_pool.replace_source = replace_source # for ndsi capture
-
-        def replace_manager(manager_class):
-            g_pool.capture_manager.cleanup()
-            g_pool.capture_manager = manager_class(g_pool)
-            g_pool.capture_manager.init_gui()
-
-        #We add the capture selection menu, after a manager has been added:
-        g_pool.capture_selector_menu.insert(0,ui.Selector(
-                                                'capture_manager',g_pool,
-                                                setter    = replace_manager,
-                                                getter    = lambda: g_pool.capture_manager.__class__,
-                                                selection = manager_classes,
-                                                labels    = [b.gui_name for b in manager_classes],
-                                                label     = 'Manager'
-                                            ))
 
 
         # Register callbacks main_window
@@ -550,8 +557,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                             g_pool.image_tex.update_from_ndarray(frame.gray)
                         else:
                             pass
+                    glViewport(0, 0, *camera_render_size)
                     make_coord_system_norm_based(g_pool.flip)
                     g_pool.image_tex.draw()
+
                     f_width, f_height = g_pool.capture.frame_size
                     make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     if frame:
@@ -583,6 +592,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                                             color=RGBA(1., 0., 0., confidence),
                                             sharpness=1.)
 
+                    glViewport(0, 0, *window_size)
+                    make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
                     # render graphs
                     fps_graph.draw()
                     cpu_graph.draw()
@@ -590,10 +601,16 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                     # render GUI
                     g_pool.gui.update()
 
+                    glViewport(0, 0, *camera_render_size)
+                    make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     # render the ROI
                     g_pool.u_r.draw(g_pool.gui.scale)
                     if g_pool.display_mode == 'roi':
                         g_pool.u_r.draw_points(g_pool.gui.scale)
+
+                    glViewport(0, 0, *window_size)
+
+                    make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
 
                     # update screen
                     glfw.glfwSwapBuffers(main_window)
@@ -623,13 +640,17 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         session_settings['pupil_detector_settings'] = g_pool.pupil_detector.get_settings()
         session_settings.close()
 
-        g_pool.capture.deinit_gui()
+        g_pool.capture.deinit_ui()
+        g_pool.capture_manager.deinit_ui()
+        g_pool.pupil_detector.deinit_ui()
+
         g_pool.pupil_detector.cleanup()
-        g_pool.gui.terminate()
-        glfw.glfwDestroyWindow(main_window)
-        glfw.glfwTerminate()
         g_pool.capture_manager.cleanup()
         g_pool.capture.cleanup()
+
+        glfw.glfwDestroyWindow(main_window)
+        g_pool.gui.terminate()
+        glfw.glfwTerminate()
         logger.info("Process shutting down.")
 
 

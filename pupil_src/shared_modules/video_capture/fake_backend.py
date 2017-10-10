@@ -69,15 +69,16 @@ class Fake_Source(Base_Source):
         self.make_img(tuple(frame_size))
         self.frame_count = 0
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = "Static Image Source"
+
         from pyglui import ui
         text = ui.Info_Text("Fake capture source streaming test images.")
-        self.g_pool.capture_source_menu.append(text)
+        self.menu.append(text)
 
-    def cleanup(self):
-        self.info_text = None
-        self.preferred_source = None
-        super().cleanup()
+    def deinit_ui(self):
+        self.remove_menu()
 
     def make_img(self,size):
         c_w ,c_h = max(1,size[0]/30),max(1,size[1]/30)
@@ -92,10 +93,10 @@ class Fake_Source(Base_Source):
     def recent_events(self,events):
         now = time()
         spent = now - self.presentation_time
-        wait = max(0,1./self.fps - spent)
+        wait = max(0, 1./self.fps - spent)
         sleep(wait)
         self.presentation_time = time()
-        self.frame_count +=1
+        self.frame_count += 1
         timestamp = self.g_pool.get_timestamp()
         frame = Frame(timestamp,self._img.copy(),self.frame_count)
         cv2.putText(frame.img, "Fake Source Frame %s"%self.frame_count,(20,20), cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,100,100))
@@ -112,20 +113,21 @@ class Fake_Source(Base_Source):
 
     @property
     def settings(self):
-        return self.preferred_source
+        return {'frame_size': self.frame_size, 'frame_rate': self.frame_rate}
 
     @settings.setter
-    def settings(self,settings):
+    def settings(self, settings):
         self.frame_size = settings.get('frame_size', self.frame_size)
-        self.frame_rate = settings.get('frame_rate', self.frame_rate )
+        self.frame_rate = settings.get('frame_rate', self.frame_rate)
 
     @property
     def frame_size(self):
-        return self._img.shape[1],self._img.shape[0]
+        return self._img.shape[1], self._img.shape[0]
+
     @frame_size.setter
-    def frame_size(self,new_size):
-        #closest match for size
-        sizes = [ abs(r[0]-new_size[0]) for r in self.frame_sizes ]
+    def frame_size(self, new_size):
+        # closest match for size
+        sizes = [abs(r[0]-new_size[0]) for r in self.frame_sizesp]
         best_size_idx = sizes.index(min(sizes))
         size = self.frame_sizes[best_size_idx]
         if size != new_size:
@@ -176,7 +178,8 @@ class Fake_Manager(Base_Manager):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
         from pyglui import ui
         text = ui.Info_Text('Convenience manager to select a fake source explicitly.')
 
@@ -194,8 +197,10 @@ class Fake_Manager(Base_Manager):
                 self.notify_all({'subject':'start_eye_capture','target':self.g_pool.process, "name":"Fake_Source",'args':settings})
 
         activation_button = ui.Button('Activate Fake Capture', activate)
-        self.g_pool.capture_selector_menu.extend([text, activation_button])
+        self.menu.extend([text, activation_button])
 
+    def deinit_ui(self):
+        self.remove_menu()
 
     def recent_events(self,events):
         pass

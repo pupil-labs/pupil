@@ -101,27 +101,20 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             logger.debug("No surface defs found. Please define using GUI.")
             self.surfaces = []
 
-
-    def init_gui(self):
-        self.menu = ui.Scrolling_Menu('Offline Surface Tracker')
-        self.g_pool.gui.append(self.menu)
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Offline Surface Tracker'
         self.add_button = ui.Thumb('add_surface',setter=lambda x: self.add_surface(),getter=lambda:False,label='A',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
         self.update_gui_markers()
 
-        self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
-
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu= None
+    def deinit_ui(self):
+        self.remove_menu()
         if self.add_button:
             self.g_pool.quickbar.remove(self.add_button)
             self.add_button = None
 
     def update_gui_markers(self):
-        def close():
-            self.alive=False
 
         def set_min_marker_perimeter(val):
             self.min_marker_perimeter = val
@@ -133,7 +126,6 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             self.invalidate_surface_caches()
 
         self.menu.elements[:] = []
-        self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Switch('invert_image',self,setter=set_invert_image,label='Use inverted markers'))
         self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=500,step=1,setter=set_min_marker_perimeter))
         self.menu.append(ui.Info_Text('The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
@@ -174,19 +166,14 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         elif notification['subject'] == "should_export":
             self.save_surface_statsics_to_file(notification['range'],notification['export_dir'])
 
-
-    def on_window_resize(self,window,w,h):
-        self.win_size = w,h
-
-
     def add_surface(self):
         self.surfaces.append(Offline_Reference_Surface(self.g_pool))
         self.update_gui_markers()
 
     def recalculate(self):
 
-        in_mark = self.g_pool.trim_marks.in_mark
-        out_mark = self.g_pool.trim_marks.out_mark
+        in_mark = self.g_pool.seek_control.trim_left
+        out_mark = self.g_pool.seek_control.trim_right
         section = slice(in_mark,out_mark)
 
         # calc heatmaps
@@ -345,7 +332,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
-        width,height = self.win_size
+        width,height = self.g_pool.camera_render_size
         h_pad = padding * (self.cache.length-2)/float(width)
         v_pad = padding* 1./(height-2)
         glOrtho(-h_pad,  (self.cache.length-1)+h_pad, -v_pad, 1+v_pad,-1,1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
@@ -556,4 +543,3 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
         for s in self.surfaces:
             s.close_window()
-        self.deinit_gui()

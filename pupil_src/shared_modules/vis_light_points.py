@@ -61,28 +61,17 @@ class Vis_Light_Points(Visualizer_Plugin_Base):
 
         img[:] = np.multiply(img, cv2.cvtColor(overlay,cv2.COLOR_GRAY2RGB), casting="unsafe")
 
-    def init_gui(self):
-        # initialize the menu
-        self.menu = ui.Scrolling_Menu('Light Points')
-        # add menu to the window
-        self.g_pool.gui.append(self.menu)
-        self.menu.append(ui.Button('Close',self.unset_alive))
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe3a5)
+
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Light Points'
         self.menu.append(ui.Slider('falloff',self,min=1,step=1,max=1000))
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
-    def unset_alive(self):
-        self.alive = False
+    def deinit_ui(self):
+        self.remove_menu()
 
     def get_init_dict(self):
         return {'falloff': self.falloff}
-
-    def cleanup(self):
-        """ called when the plugin gets terminated.
-        This happens either voluntarily or forced.
-        if you have a GUI or glfw window destroy it here.
-        """
-        self.deinit_gui()

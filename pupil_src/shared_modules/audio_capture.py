@@ -52,15 +52,15 @@ class Audio_Capture(Plugin):
         self.queue = queue.Queue()
         self.start_capture(self.audio_src)
 
-    def init_gui(self):
-        self.menu = ui.Growing_Menu('Audio Capture')
-        self.menu.collapsed = True
-        self.g_pool.sidebar.append(self.menu)
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe029)
 
-        def close():
-            self.alive = False
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Audio Capture'
+
         help_str = 'Creates events for audio input.'
-        self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text(help_str))
 
         def audio_dev_getter():
@@ -76,19 +76,16 @@ class Audio_Capture(Plugin):
 
         self.menu.append(ui.Info_Text(NOT_REC_STR))
 
+    def deinit_ui(self):
+        self.remove_menu()
+
     def get_init_dict(self):
         return {'audio_src': self.audio_src}
-
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu = None
 
     def cleanup(self):
         if self.audio_container is not None:
             self.close_audio_recording()
         self.running.clear()
-        self.deinit_gui()
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=1)
 

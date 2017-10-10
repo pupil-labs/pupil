@@ -9,23 +9,22 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os
 import cv2
 import numpy as np
-from methods import normalize,denormalize
-from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
+from methods import normalize
+from pyglui.cygl.utils import draw_points_norm, draw_polyline, RGBA
 from OpenGL.GL import GL_POLYGON
 from circle_detector import find_concetric_circles
 from . finish_calibration import finish_calibration
-from file_methods import load_object
 
 import audio
 
 from pyglui import ui
 from . calibration_plugin_base import Calibration_Plugin
-#logging
+# logging
 import logging
 logger = logging.getLogger(__name__)
+
 
 class Manual_Marker_Calibration(Calibration_Plugin):
     """Detector looks for a white ring on a black background.
@@ -56,20 +55,10 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
         self.menu = None
 
-    def init_gui(self):
-        super().init_gui()
-        self.info = ui.Info_Text("Calibrate gaze parameters using a handheld marker.")
-        self.g_pool.calibration_menu.append(self.info)
-
-        self.menu = ui.Growing_Menu('Controls')
-        self.g_pool.calibration_menu.append(self.menu)
-
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.calibration_menu.remove(self.menu)
-            self.g_pool.calibration_menu.remove(self.info)
-            self.menu = None
-        super().deinit_gui()
+    def init_ui(self):
+        super().init_ui()
+        self.menu.label = "Manual Calibration"
+        self.menu.append(ui.Info_Text("Calibrate gaze parameters using a handheld marker."))
 
     def start(self):
         super().start()
@@ -230,9 +219,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             pass
 
 
-    def get_init_dict(self):
-        return {}
-
     def gl_display(self):
         """
         use gl calls to render
@@ -282,4 +268,3 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         """
         if self.active:
             self.stop()
-        self.deinit_gui()

@@ -223,11 +223,19 @@ class NDSI_Source(Base_Source):
             settings['host_name'] = self._host_name
         return settings
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'NDSI Source: {} @ {}'.format(self._sensor_name, self._host_name)
+
         from pyglui import ui
         self.has_ui = True
         self.uvc_menu = ui.Growing_Menu("UVC Controls")
         self.update_control_menu()
+
+    def deinit_ui(self):
+        self.uvc_menu = None
+        self.remove_menu()
+        self.has_ui = False
 
     def add_controls_to_menu(self, menu, controls):
         from pyglui import ui
@@ -293,12 +301,14 @@ class NDSI_Source(Base_Source):
         return menu
 
     def update_control_menu(self):
+        if not self.has_ui:
+            return
         from pyglui import ui
-        del self.g_pool.capture_source_menu.elements[:]
+        del self.menu[:]
         del self.uvc_menu[:]
         self.control_id_ui_mapping = {}
         if not self.sensor:
-            self.g_pool.capture_source_menu.append(
+            self.menu.append(
                 ui.Info_Text(('Sensor %s @ %s not available. '
                               + 'Running in ghost mode.') % (self._sensor_name,
                                                              self._host_name)))
@@ -312,20 +322,17 @@ class NDSI_Source(Base_Source):
             else:
                 other_controls.append(entry)
 
-        self.add_controls_to_menu(self.g_pool.capture_source_menu,
-                                  other_controls)
+        self.add_controls_to_menu(self.menu, other_controls)
         self.add_controls_to_menu(self.uvc_menu, uvc_controls)
-        self.g_pool.capture_source_menu.append(self.uvc_menu)
+        self.menu.append(self.uvc_menu)
 
-        self.g_pool.capture_source_menu.append(ui.Button("Reset to default values",
-                                                         self.sensor.reset_all_control_values))
+        self.menu.append(ui.Button("Reset to default values",
+                                   self.sensor.reset_all_control_values))
 
     def cleanup(self):
         if self.online:
             self.sensor.unlink()
         self.sensor = None
-        self.uvc_menu = None
-        super().cleanup()
 
 
 class NDSI_Manager(Base_Manager):
@@ -348,10 +355,17 @@ class NDSI_Manager(Base_Manager):
         logger.warning("Make sure the `time_sync` plugin is loaded!")
 
     def cleanup(self):
-        self.deinit_gui()
         self.network.stop()
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
+        self.re_build_ndsi_menu()
+
+    def deinit_ui(self):
+        self.remove_menu()
+
+    def re_build_ndsi_menu(self):
+        del self.menu[1:]
         from pyglui import ui
         ui_elements = []
         ui_elements.append(ui.Info_Text('Remote Pupil Mobile sources'))
@@ -378,7 +392,7 @@ class NDSI_Manager(Base_Manager):
                                        setter=view_host,
                                        label='Remote host'))
 
-        self.g_pool.capture_selector_menu.extend(ui_elements)
+        self.menu.extend(ui_elements)
         if not self.selected_host:
             return
         ui_elements = []
@@ -417,11 +431,7 @@ class NDSI_Manager(Base_Manager):
             label='Source'
         ))
 
-        self.g_pool.capture_selector_menu.extend(ui_elements)
-
-    def re_build_ndsi_menu(self):
-        self.deinit_gui()
-        self.init_gui()
+        self.menu.extend(ui_elements)
 
     def poll_events(self):
         while self.network.has_events:

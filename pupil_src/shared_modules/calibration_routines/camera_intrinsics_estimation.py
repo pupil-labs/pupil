@@ -83,14 +83,13 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         else:
             logger.info('No camera intrinsics calibration is currently set for this camera!')
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
 
         monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
-        #primary_monitor = glfwGetPrimaryMonitor()
-        self.info = ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern.")
-        self.g_pool.calibration_menu.append(self.info)
+        # primary_monitor = glfwGetPrimaryMonitor()
+        self.menu.append(ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern."))
 
-        self.menu = ui.Growing_Menu('Controls')
         self.menu.append(ui.Button('show Pattern',self.open_window))
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(monitor_names)),labels=monitor_names,label='Monitor'))
         dist_modes = ["Fisheye", "Radial"]
@@ -99,18 +98,13 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.show_undistortion_switch = ui.Switch('show_undistortion',self,label='show undistorted image')
         self.menu.append(self.show_undistortion_switch)
         self.show_undistortion_switch.read_only = not (hasattr(self.capture, 'intrinsics') and self.capture.intrinsics)
-        self.g_pool.calibration_menu.append(self.menu)
 
         self.button = ui.Thumb('collect_new',self,setter=self.advance,label='C',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.calibration_menu.remove(self.menu)
-            self.g_pool.calibration_menu.remove(self.info)
-
-            self.menu = None
+    def deinit_ui(self):
+        self.remove_menu()
         if self.button:
             self.g_pool.quickbar.remove(self.button)
             self.button = None
@@ -129,7 +123,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             self.calculated = False
             self.img_points = []
             self.obj_points = []
-
 
         self.collect_new = True
 
@@ -327,7 +320,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         """
         if self._window:
             self.close_window()
-        self.deinit_gui()
 
 def _gen_pattern_grid(size=(4,11)):
     pattern_grid = []
