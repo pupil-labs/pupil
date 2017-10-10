@@ -63,6 +63,10 @@ class Saccade_Detector(Plugin):
         elif not use_3d:
             print(use_3d, dist)
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe8f5)
+
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Saccade Detector'

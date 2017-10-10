@@ -64,7 +64,7 @@ class Remote_Recorder(Plugin):
 
     @classmethod
     def icon_info(self):
-        return 'pupil_icons', chr(0xe04b)
+        return 'pupil_icons', chr(0xec16)
 
     def init_ui(self):
         self.add_menu()

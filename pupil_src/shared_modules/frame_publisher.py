@@ -22,10 +22,13 @@ class Frame_Publisher(Plugin):
         super().__init__(g_pool)
         self._format = format
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xec17)
+
     def init_ui(self):
         self.add_menu()
         help_str = "Publishes frame data in different formats under the topic \"frame.world\"."
-        self.menu_icon.label = "f"
         self.menu.label = 'Frame Publisher'
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Selector('format',self,selection=["jpeg","yuv","bgr","gray"], labels=["JPEG", "YUV", "BGR", "Gray Image"],label='Format'))

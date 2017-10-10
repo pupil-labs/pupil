@@ -35,7 +35,7 @@ class System_Graphs(System_Plugin_Base):
 
     @classmethod
     def icon_info(self):
-        return 'pupil_icons', chr(0xe922)
+        return 'pupil_icons', chr(0xe01d)
 
     def init_ui(self):
         self.add_menu()

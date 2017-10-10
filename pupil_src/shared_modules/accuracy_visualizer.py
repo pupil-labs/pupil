@@ -46,7 +46,7 @@ class Accuracy_Visualizer(Plugin):
 
     @classmethod
     def icon_info(self):
-        return 'pupil_icons', chr(0xe1b7)
+        return 'pupil_icons', chr(0xec11)
 
     def init_ui(self):
         self.add_menu()

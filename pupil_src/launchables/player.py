@@ -104,7 +104,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from gaze_producers import Gaze_From_Recording, Offline_Calibration
         from system_graphs import System_Graphs
 
-        assert pyglui_version >= '1.7'
+        assert pyglui_version >= '1.8', 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
         system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs]
@@ -345,41 +345,29 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))
         g_pool.capture.play_button = ui.Thumb('play',
                                       g_pool.capture,
-                                      label=chr(0xf04b),
+                                      label=chr(0xE037),
                                       setter=toggle_play,
                                       hotkey=glfw.GLFW_KEY_SPACE,
-                                      label_font='pupil_icons',
-                                      label_offset_x=5,
-                                      label_offset_y=0,
-                                      label_offset_size=-24)
-        g_pool.capture.play_button.on_color[:] = (0, 1., .0, .8)
+                                      label_font='pupil_icons')
+        g_pool.capture.play_button.on_color[:] = (0.5, 0.8, 0.75,.9)
         g_pool.forward_button = ui.Thumb('forward',
-                                         label=chr(0xf04e),
+                                         label=chr(0xE01F),
                                          getter=lambda: False,
                                          setter=next_frame,
                                          hotkey=glfw.GLFW_KEY_RIGHT,
-                                         label_font='pupil_icons',
-                                         label_offset_x=5,
-                                         label_offset_y=0,
-                                         label_offset_size=-24)
+                                         label_font='pupil_icons')
         g_pool.backward_button = ui.Thumb('backward',
-                                          label=chr(0xf04a),
+                                          label=chr(0xE020),
                                           getter=lambda: False,
                                           setter=prev_frame,
                                           hotkey=glfw.GLFW_KEY_LEFT,
-                                          label_font='pupil_icons',
-                                          label_offset_x=-5,
-                                          label_offset_y=0,
-                                          label_offset_size=-24)
+                                          label_font='pupil_icons')
         g_pool.export_button = ui.Thumb('export',
-                                        label=chr(0xf063),
+                                        label=chr(0xe2c4),
                                         getter=lambda: False,
                                         setter=do_export,
                                         hotkey='e',
-                                        label_font='pupil_icons',
-                                        label_offset_x=0,
-                                        label_offset_y=2,
-                                        label_offset_size=-24)
+                                        label_font='pupil_icons')
         g_pool.quickbar.extend([g_pool.capture.play_button, g_pool.forward_button, g_pool.backward_button, g_pool.export_button])
         g_pool.gui.append(g_pool.menubar)
         g_pool.gui.append(g_pool.timelines)

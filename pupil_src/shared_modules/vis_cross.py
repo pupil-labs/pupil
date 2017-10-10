@@ -45,7 +45,7 @@ class Vis_Cross(Visualizer_Plugin_Base):
 
     @classmethod
     def icon_info(self):
-        return 'pupil_icons', chr(0xe1b7)
+        return 'pupil_icons', chr(0xec13)
 
     def init_ui(self):
         # initialize the menu

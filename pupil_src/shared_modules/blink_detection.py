@@ -35,6 +35,10 @@ class Blink_Detection(Plugin):
         self.menu = None
         self._recent_blink = None
 
+    @classmethod
+    def icon_info(self):
+        return 'pupil_icons', chr(0xe81a)
+
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Blink Detector'

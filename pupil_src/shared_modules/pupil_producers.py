@@ -38,7 +38,7 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 
     @classmethod
     def icon_info(self):
-        return 'pupil_icons', chr(0xec11)
+        return 'pupil_icons', chr(0xec12)
 
     def init_ui(self):
         self.add_menu()

@@ -29,7 +29,7 @@ class Calibration_Plugin(Plugin):
 
     @classmethod
     def icon_info(self):
-        return 'pupil_icons', chr(0xe39e)
+        return 'pupil_icons', chr(0xec14)
 
     def add_menu(self):
         super().add_menu()
