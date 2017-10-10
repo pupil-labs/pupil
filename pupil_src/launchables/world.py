@@ -71,6 +71,25 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
+    def launch_eye_process(eye_id, delay=0):
+        n = {'subject': 'eye_process.should_start.{}'.format(eye_id),
+             'eye_id': eye_id, 'delay': delay}
+        ipc_pub.notify(n)
+
+    def stop_eye_process(eye_id):
+        n = {'subject': 'eye_process.should_stop.{}'.format(eye_id), 'eye_id': eye_id,'delay':0.2}
+        ipc_pub.notify(n)
+
+    def start_stop_eye(eye_id, make_alive):
+        if make_alive:
+            launch_eye_process(eye_id)
+        else:
+            stop_eye_process(eye_id)
+
+    def set_detection_mapping_mode(new_mode):
+        n = {'subject': 'set_detection_mapping_mode', 'mode': new_mode}
+        ipc_pub.notify(n)
+
     try:
 
         # display
@@ -241,25 +260,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         g_pool.capture = None
 
         audio.audio_mode = session_settings.get('audio_mode', audio.default_audio_mode)
-
-        def launch_eye_process(eye_id, delay=0):
-            n = {'subject': 'eye_process.should_start.{}'.format(eye_id),
-                 'eye_id': eye_id, 'delay': delay}
-            ipc_pub.notify(n)
-
-        def stop_eye_process(eye_id):
-            n = {'subject': 'eye_process.should_stop.{}'.format(eye_id), 'eye_id': eye_id,'delay':0.2}
-            ipc_pub.notify(n)
-
-        def start_stop_eye(eye_id, make_alive):
-            if make_alive:
-                launch_eye_process(eye_id)
-            else:
-                stop_eye_process(eye_id)
-
-        def set_detection_mapping_mode(new_mode):
-            n = {'subject': 'set_detection_mapping_mode', 'mode': new_mode}
-            ipc_pub.notify(n)
 
         def handle_notifications(n):
             subject = n['subject']

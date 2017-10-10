@@ -241,14 +241,14 @@ class Reference_Surface(object):
         if not data:
             return
 
-        grid = int(self.real_world_size['x']), int(self.real_world_size['y'])
+        grid = int(self.real_world_size['y']), int(self.real_world_size['x'])
 
         xvals, yvals = zip(*((x, 1.-y) for x, y in data))
         hist, *edges = np.histogram2d(yvals, xvals, bins=grid,
                                       range=[[0, 1.], [0, 1.]], normed=False)
-        filter_w = int(self.heatmap_detail * grid[0]) // 2 * 2 + 1
-        filter_h = int(self.heatmap_detail * grid[1]) // 2 * 2 + 1
-        hist = cv2.GaussianBlur(hist, (filter_w, filter_h), 0)
+        filter_h = int(self.heatmap_detail * grid[0]) // 2 * 2 + 1
+        filter_w = int(self.heatmap_detail * grid[1]) // 2 * 2 + 1
+        hist = cv2.GaussianBlur(hist, (filter_h, filter_w), 0)
 
         hist_max = hist.max()
         hist *= (255. / hist_max) if hist_max else 0.
