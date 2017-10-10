@@ -22,7 +22,6 @@ from file_methods import save_object, load_object
 from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer
 from ndsi import H264Writer
-from camera_models import save_intrinsics
 # logging
 import logging
 logger = logging.getLogger(__name__)
@@ -206,19 +205,19 @@ class Recorder(Plugin):
         return strftime("%H:%M:%S", rec_time)
 
     def start(self):
+        session = os.path.join(self.rec_dir, self.session_name)
+        try:
+            os.makedirs(session, exist_ok=True)
+            logger.debug("Created new recordings session dir {}".format(session))
+        except OSError:
+            logger.error("Could not start recording. Session dir {} not writable.".format(session))
+            return
+
         self.data = {'pupil_positions': [], 'gaze_positions': [], 'notifications': []}
         self.frame_count = 0
         self.running = True
         self.menu.read_only = True
         self.start_time = time()
-
-        session = os.path.join(self.rec_dir, self.session_name)
-        try:
-            os.makedirs(session)
-            logger.debug("Created new recordings session dir {}".format(session))
-
-        except:
-            logger.debug("Recordings session dir {} already exists, using it.".format(session))
 
         # set up self incrementing folder within session folder
         counter = 0
