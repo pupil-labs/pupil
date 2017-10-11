@@ -23,6 +23,8 @@ class Blink_Detection(Plugin):
     pupil detection confidence.
     """
     order = .8
+    icon_chr = chr(0xe81a)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool, history_length=0.2, onset_confidence_threshold=0.5, offset_confidence_threshold=0.5, visualize=True):
         super(Blink_Detection, self).__init__(g_pool)
@@ -34,10 +36,6 @@ class Blink_Detection(Plugin):
         self.history = deque()
         self.menu = None
         self._recent_blink = None
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe81a)
 
     def init_ui(self):
         self.add_menu()

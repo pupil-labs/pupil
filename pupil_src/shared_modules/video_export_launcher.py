@@ -71,6 +71,9 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
     """docstring for Video_Export_Launcher
     this plugin can export the video in a seperate process using exporter
     """
+    icon_chr = chr(0xec09)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         # initialize empty menu
@@ -80,10 +83,6 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         # default_path = verify_out_file_path("world_viz.mp4",rec_dir)
         default_path = "world_viz.mp4"
         self.rec_name = default_path
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec09)
 
     def init_ui(self):
         self.add_menu()

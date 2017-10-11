@@ -43,6 +43,8 @@ cdef class Detector_3D:
     cdef readonly basestring uniqueness
     cdef public object menu
     cdef public object menu_icon
+    cdef readonly basestring icon_chr
+    cdef readonly basestring icon_font
 
     def __cinit__(self, g_pool = None, settings = None):
         self.detector2DPtr = new Detector2D()
@@ -63,6 +65,8 @@ cdef class Detector_3D:
         self.debugVisualizer3D = Eye_Visualizer(g_pool ,self.detector3DPtr.getFocalLength() )
         self.g_pool = g_pool
         self.uniqueness = 'unique'
+        self.icon_font = 'pupil_icons'
+        self.icon_chr = chr(0xec20)
         self.detectProperties2D = settings['2D_Settings'] if settings else {}
         self.detectProperties3D = settings['3D_Settings'] if settings else {}
 
@@ -190,10 +194,6 @@ cdef class Detector_3D:
 
     def cleanup(self):
         self.debugVisualizer3D.close_window() # if we change detectors, be sure debug window is also closed
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec20)
 
     @property
     def pretty_class_name(self):

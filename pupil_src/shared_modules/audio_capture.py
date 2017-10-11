@@ -35,6 +35,9 @@ REC_STR = 'Saving audio to "audio.mp4".'
 
 class Audio_Capture(Plugin):
     """docstring for Audio_Capture"""
+    icon_chr = chr(0xe029)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool, audio_src='No Audio'):
         super().__init__(g_pool)
         self.audio_devices_dict = Audio_Input_Dict()
@@ -51,10 +54,6 @@ class Audio_Capture(Plugin):
         self.audio_out_stream = None
         self.queue = queue.Queue()
         self.start_capture(self.audio_src)
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe029)
 
     def init_ui(self):
         self.add_menu()

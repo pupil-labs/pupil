@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 class Vis_Watermark(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
+    icon_chr = chr(0xec04)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,selected_watermark_path = None,pos = (20,20)):
         super().__init__(g_pool)
@@ -87,10 +89,6 @@ class Vis_Watermark(Visualizer_Plugin_Base):
                 self.drag_offset = self.pos[0]-pos[0],self.pos[1]-pos[1]
         else:
             self.drag_offset = None
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec04)
 
     def init_ui(self):
         self.add_menu()

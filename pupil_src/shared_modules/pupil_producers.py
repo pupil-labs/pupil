@@ -35,10 +35,8 @@ class Empty(object):
 class Pupil_Producer_Base(Producer_Plugin_Base):
     uniqueness = 'by_base_class'
     order = 0.01
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec12)
+    icon_chr = chr(0xec12)
+    icon_font = 'pupil_icons'
 
     def init_ui(self):
         self.add_menu()

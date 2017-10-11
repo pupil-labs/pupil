@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class Saccade_Detector(Plugin):
+    icon_chr = chr(0xe8f5)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool, dispersion_2d=5, dispersion_3d=3.0, max_time_delta=0.1, confidence_threshold=0.75):
         super().__init__(g_pool)
         self.history = deque(maxlen=2), deque(maxlen=2)
@@ -62,10 +65,6 @@ class Saccade_Detector(Plugin):
             print(use_3d, dist)
         elif not use_3d:
             print(use_3d, dist)
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe8f5)
 
     def init_ui(self):
         self.add_menu()

@@ -176,6 +176,9 @@ class Eye_Wrapper(object):
 
 
 class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
+    icon_chr = chr(0xec02)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool, alpha=0.6, eye_scale_factor=.5, show_ellipses=True,
                  eye0_config={'pos': (640, 10)}, eye1_config={'pos': (10, 10)}):
         super().__init__(g_pool)
@@ -191,10 +194,6 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
 
         self.eye0.initliaze_video(g_pool.rec_dir, g_pool.timestamps)
         self.eye1.initliaze_video(g_pool.rec_dir, g_pool.timestamps)
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec02)
 
     def init_ui(self):
         self.add_menu()

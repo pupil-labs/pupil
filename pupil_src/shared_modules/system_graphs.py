@@ -18,6 +18,9 @@ from plugin import System_Plugin_Base
 
 
 class System_Graphs(System_Plugin_Base):
+    icon_chr = chr(0xe01d)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool, show_cpu=True, show_fps=True, show_conf0=True,
                  show_conf1=True, show_dia0=False, show_dia1=False,
                  dia_min=0., dia_max=8.):
@@ -32,10 +35,6 @@ class System_Graphs(System_Plugin_Base):
         self.dia_max = dia_max
         self.conf_grad_limits = .0, 1.
         self.ts = None
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe01d)
 
     def init_ui(self):
         self.add_menu()

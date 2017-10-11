@@ -25,6 +25,8 @@ class Vis_Light_Points(Visualizer_Plugin_Base):
 
     """
     uniqueness = "not_unique"
+    icon_chr = chr(0xe3a5)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,falloff = 20):
         super().__init__(g_pool)
@@ -60,10 +62,6 @@ class Vis_Light_Points(Visualizer_Plugin_Base):
         overlay =  1/(out/falloff+1)
 
         img[:] = np.multiply(img, cv2.cvtColor(overlay,cv2.COLOR_GRAY2RGB), casting="unsafe")
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe3a5)
 
     def init_ui(self):
         self.add_menu()

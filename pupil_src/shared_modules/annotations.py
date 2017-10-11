@@ -30,6 +30,9 @@ logger = logging.getLogger(__name__)
 class Annotation_Capture(Plugin):
     """Describe your plugin here
     """
+    icon_chr = chr(0xe866)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool, annotations=(('My annotation', 'E'),)):
         super().__init__(g_pool)
         self.menu = None
@@ -42,10 +45,6 @@ class Annotation_Capture(Plugin):
         self.new_annotation_hotkey = 'e'
 
         self.current_frame = -1
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe866)
 
     def init_ui(self):
         self.add_menu()
