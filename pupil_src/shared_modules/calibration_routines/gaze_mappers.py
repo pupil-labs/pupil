@@ -141,6 +141,9 @@ class Dummy_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
         self.menu.label = "Dummy gaze mapper"
         self.menu.append(ui.Info_Text("Please calibrate."))
 
+    def deinit_ui(self):
+        self.remove_menu()
+
 class Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     """docstring for Monocular_Gaze_Mapper"""
     def __init__(self, g_pool,params):
