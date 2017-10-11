@@ -52,6 +52,9 @@ class Batch_Exporter(Analysis_Plugin_Base):
     """docstring for Batch_Exporter
     this plugin can export videos in a seperate process using exporter
     """
+    icon_chr = chr(0xec05)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
@@ -69,10 +72,6 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.run = False
         self.workers = [None for x in range(mp.cpu_count())]
         logger.info("Using a maximum of {} CPUs to process visualizations in parallel...".format(mp.cpu_count()))
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec05)
 
     def init_ui(self):
         self.add_menu()

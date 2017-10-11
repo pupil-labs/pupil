@@ -29,6 +29,9 @@ class Log_to_Callback(logging.Handler):
 
 class Log_History(Plugin):
     """Simple logging GUI that displays the last N messages from the logger"""
+    icon_chr = chr(0xec10)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.menu = None
@@ -36,10 +39,6 @@ class Log_History(Plugin):
 
         self.formatter = logging.Formatter('%(processName)s - [%(levelname)s] %(name)s: %(message)s')
         self.logfile = os.path.join(self.g_pool.user_dir,self.g_pool.app+'.log')
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec10)
 
     def init_ui(self):
         self.add_menu()

@@ -40,6 +40,8 @@ cdef class Detector_2D:
     cdef readonly basestring uniqueness
     cdef public object menu
     cdef public object menu_icon
+    cdef readonly basestring icon_chr
+    cdef readonly basestring icon_font
 
     cdef int coarseDetectionPreviousWidth
     cdef object coarseDetectionPreviousPosition
@@ -53,6 +55,8 @@ cdef class Detector_2D:
         self.windowShouldClose = False
         self.g_pool = g_pool
         self.uniqueness = 'unique'
+        self.icon_font = 'pupil_icons'
+        self.icon_chr = chr(0xec19)
         self.detectProperties = settings or {}
         self.coarseDetectionPreviousWidth = -1
         self.coarseDetectionPreviousPosition =  (0,0)
@@ -174,10 +178,6 @@ cdef class Detector_2D:
         py_result = convertTo2DPythonResult( deref(cppResultPtr), frame_ , roi )
 
         return py_result
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec19)
 
     @property
     def pretty_class_name(self):

@@ -20,6 +20,8 @@ from methods import denormalize
 
 class Vis_Polyline(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
+    icon_chr = chr(0xe922)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,color=(1.0,0.0,0.4,1.0),thickness=2):
         super().__init__(g_pool)
@@ -41,10 +43,6 @@ class Vis_Polyline(Visualizer_Plugin_Base):
         if pts:
             pts = np.array([pts],dtype=np.int32)
             cv2.polylines(frame.img, pts, isClosed=False, color=bgra, thickness=self.thickness, lineType=cv2.LINE_AA)
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe922)
 
     def init_ui(self):
         self.add_menu()

@@ -57,6 +57,8 @@ class Time_Sync(Plugin):
     Acts as clock service and as follower if required.
     See `time_sync_spec.md` for details.
     """
+    icon_chr = chr(0xec15)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool, node_name=None, sync_group_prefix='default', base_bias=1.):
         super().__init__(g_pool)
@@ -81,10 +83,6 @@ class Time_Sync(Plugin):
     @sync_group.setter
     def sync_group(self, full_name):
         self.sync_group_prefix = full_name.rsplit('-time_sync-' + __protocol_version__, maxsplit=1)[0]
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec15)
 
     def init_ui(self):
         self.add_menu()

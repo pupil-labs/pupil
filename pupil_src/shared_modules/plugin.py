@@ -42,6 +42,11 @@ class Plugin(object):
     order = .5
     alive = True
 
+    # menu icon font, possible values `roboto`, `opensans`, `pupil_icons`,
+    # or custom loaded font name
+    icon_font = 'roboto'
+    icon_chr = '?'  # character shown in menu icon
+
     def __init__(self, g_pool):
         self.g_pool = g_pool
 
@@ -178,7 +183,7 @@ class Plugin(object):
         All notifications must be serializable by msgpack.
 
         """
-        if self.g_pool.app ==  'exporter':
+        if self.g_pool.app == 'exporter':
             if notification.get('delay', 0):
                 notification['_notify_time_'] = time()+notification['delay']
                 self.g_pool.delayed_notifications[notification['subject']] = notification
@@ -186,8 +191,6 @@ class Plugin(object):
                 self.g_pool.notifications.append(notification)
         else:
             self.g_pool.ipc_pub.notify(notification)
-
-
 
     @property
     def this_class(self):
@@ -222,10 +225,6 @@ class Plugin(object):
     def pretty_class_name(self):
         return self.class_name.replace('_', ' ')
 
-    @classmethod
-    def icon_info(self):
-        return 'roboto', '?'
-
     def add_menu(self):
         '''
         This fn is called when the plugin ui is initialized. Do not change!
@@ -246,14 +245,12 @@ class Plugin(object):
             self.alive = False
 
         # Here we make a menu and icon
-        font, symbol = self.icon_info()
-        y_offset = 1 if font == 'pupil_icons' else 0
         self.menu = ui.Growing_Menu('Unnamed Menu', header_pos='headline')
         if self.uniqueness == 'not_unique':
             self.menu.append(ui.Button('Close', close))
-        self.menu_icon = ui.Icon('collapsed', self.menu, label=symbol,
-                                 label_font=font, on_val=False, off_val=True,
-                                 setter=toggle_menu, label_offset_y=y_offset)
+        self.menu_icon = ui.Icon('collapsed', self.menu, label=self.icon_chr,
+                                 label_font=self.icon_font, on_val=False, off_val=True,
+                                 setter=toggle_menu)
         self.menu_icon.order = 0.5
         self.menu_icon.tooltip = self.pretty_class_name
         self.g_pool.menubar.append(self.menu)

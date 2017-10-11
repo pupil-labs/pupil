@@ -19,6 +19,8 @@ from pyglui import ui
 
 class Vis_Fixation(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
+    icon_chr = chr(0xec03)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,radius=20,color=(0.0,0.7,0.25,0.2),thickness=2,fill=True):
         super().__init__(g_pool)
@@ -53,10 +55,6 @@ class Vis_Fixation(Visualizer_Plugin_Base):
         else:
             for pt in not_fixation_pts:
                 transparent_circle(frame.img, pt, radius=7.0, color=(0.2, 0.0, 0.7, 0.5), thickness=thickness)
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec03)
 
     def init_ui(self):
         self.add_menu()

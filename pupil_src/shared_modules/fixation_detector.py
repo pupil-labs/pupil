@@ -46,9 +46,8 @@ class Empty(object):
 
 
 class Fixation_Detector_Base(Analysis_Plugin_Base):
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec02)
+    icon_chr = chr(0xec02)
+    icon_font = 'pupil_icons'
 
 
 def cart2spherical(xyz):

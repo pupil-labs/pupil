@@ -17,14 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 class Frame_Publisher(Plugin):
+    icon_chr = chr(0xec17)
+    icon_font = 'pupil_icons'
 
     def __init__(self,g_pool,format='jpeg'):
         super().__init__(g_pool)
         self._format = format
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec17)
 
     def init_ui(self):
         self.add_menu()

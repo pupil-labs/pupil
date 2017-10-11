@@ -23,6 +23,8 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
     using this plugin will extend the recent_gaze_positions by x extra dots from previous frames.
     lock recent gaze points onto pixels.
     """
+    icon_chr = chr(0xe422)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,timeframe=.5):
         super().__init__(g_pool)
@@ -95,10 +97,6 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
         self.prev_gray = gray_img
         self.prev_frame_idx = frame.index
         self.past_gaze_positions = events['gaze_positions']
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe422)
 
     def init_ui(self):
         self.add_menu()

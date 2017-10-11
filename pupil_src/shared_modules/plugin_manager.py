@@ -16,16 +16,15 @@ from video_capture import Base_Manager, Base_Source
 
 
 class Plugin_Manager(System_Plugin_Base):
+    icon_chr = chr(0xe8c0)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         non_user_plugins = (System_Plugin_Base, Base_Manager, Base_Source,
                             Calibration_Plugin, Gaze_Mapping_Plugin, Producer_Plugin_Base)
         self.user_plugins = [p for p in sorted(g_pool.plugin_by_name.values(), key=lambda p: p.__name__)
                              if not issubclass(p, non_user_plugins)]
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe8c0)
 
     def init_ui(self):
         self.add_menu()

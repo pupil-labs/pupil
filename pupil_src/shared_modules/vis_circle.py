@@ -18,6 +18,8 @@ from methods import denormalize
 
 class Vis_Circle(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
+    icon_chr = chr(0xe061)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,radius=20,color=(0.0,0.7,0.25,0.2),thickness=2,fill=True):
         super().__init__(g_pool)
@@ -46,10 +48,6 @@ class Vis_Circle(Visualizer_Plugin_Base):
         pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[]) if pt['confidence']>=self.g_pool.min_data_confidence]
         for pt in pts:
             transparent_circle(frame.img, pt, radius=self.radius, color=(self.b, self.g, self.r, self.a), thickness=thickness)
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe061)
 
     def init_ui(self):
         self.add_menu()
