@@ -19,6 +19,8 @@ from methods import denormalize
 
 class Vis_Cross(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
+    icon_chr = chr(0xec13)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,inner=20,outer=100,color=(1.,0.0,0.0,1.0),thickness=1):
         super().__init__(g_pool)
@@ -42,10 +44,6 @@ class Vis_Cross(Visualizer_Plugin_Base):
         for pt in pts:
             lines =  np.array( [((pt[0]-self.inner,pt[1]),(pt[0]-self.outer,pt[1])),((pt[0]+self.inner,pt[1]),(pt[0]+self.outer,pt[1])) , ((pt[0],pt[1]-self.inner),(pt[0],pt[1]-self.outer)) , ((pt[0],pt[1]+self.inner),(pt[0],pt[1]+self.outer))],dtype=np.int32 )
             cv2.polylines(frame.img, lines, isClosed=False, color=bgra, thickness=self.thickness, lineType=cv2.LINE_AA)
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec13)
 
     def init_ui(self):
         # initialize the menu

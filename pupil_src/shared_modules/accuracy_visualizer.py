@@ -32,6 +32,8 @@ class Accuracy_Visualizer(Plugin):
     Points are collected at sites not between
     """
     order = .8
+    icon_chr = chr(0xec11)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool, outlier_threshold=5.):
         super().__init__(g_pool)
@@ -43,10 +45,6 @@ class Accuracy_Visualizer(Plugin):
         # .5 degrees, used to remove outliers from precision calculation
         self.succession_threshold = np.cos(np.deg2rad(.5))
         self._outlier_threshold = outlier_threshold  # in degrees
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec11)
 
     def init_ui(self):
         self.add_menu()

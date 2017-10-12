@@ -53,15 +53,13 @@ class Base_Source(Plugin):
 
     uniqueness = 'by_base_class'
     order = .0
+    icon_chr = chr(0xe412)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.g_pool.capture = self
         self._recent_frame = None
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe412)
 
     def add_menu(self):
         super().add_menu()
@@ -154,13 +152,11 @@ class Base_Manager(Plugin):
 
     uniqueness = 'by_base_class'
     gui_name = 'Base Manager'
+    icon_chr = chr(0xec01)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec01)
 
     def add_menu(self):
         super().add_menu()

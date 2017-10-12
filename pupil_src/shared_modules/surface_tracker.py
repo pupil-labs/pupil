@@ -29,9 +29,11 @@ from math import sqrt
 import logging
 logger = logging.getLogger(__name__)
 
+
 class Surface_Tracker(Plugin):
-    """docstring
-    """
+    icon_chr = chr(0xec07)
+    icon_font = 'pupil_icons'
+
     def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
         super().__init__(g_pool)
         self.order = .2
@@ -142,10 +144,6 @@ class Surface_Tracker(Plugin):
         del self.surfaces[i]
         self.update_gui_markers()
         self.notify_all({'subject': 'surfaces_changed'})
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec07)
 
     def init_ui(self):
         self.add_menu()

@@ -192,6 +192,7 @@ class Realsense_Source(Base_Source):
                  align_streams=False, preview_depth=False,
                  device_options=(), record_depth=True):
         super().__init__(g_pool)
+        self._intrinsics = None
         self.color_frame_index = 0
         self.depth_frame_index = 0
         self.device = None

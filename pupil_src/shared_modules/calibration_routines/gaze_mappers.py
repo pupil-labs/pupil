@@ -35,6 +35,8 @@ class Gaze_Mapping_Plugin(Plugin):
     '''base class for all gaze mapping routines'''
     uniqueness = 'by_base_class'
     order = .1
+    icon_chr = chr(0xec03)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -52,10 +54,6 @@ class Gaze_Mapping_Plugin(Plugin):
     def add_menu(self):
         super().add_menu()
         self.menu_icon.order = 0.31
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec18)
 
 
 class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
@@ -142,6 +140,9 @@ class Dummy_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
         self.add_menu()
         self.menu.label = "Dummy gaze mapper"
         self.menu.append(ui.Info_Text("Please calibrate."))
+
+    def deinit_ui(self):
+        self.remove_menu()
 
 class Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     """docstring for Monocular_Gaze_Mapper"""

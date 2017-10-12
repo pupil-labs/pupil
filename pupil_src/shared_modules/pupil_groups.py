@@ -25,6 +25,9 @@ class Pupil_Groups(Plugin):
 
     Uses Pyre for local group member discovery.
     """
+    icon_chr = chr(0xe886)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool, name="Unnamed Group Member", active_group="pupil-groups"):
         super().__init__(g_pool)
         self.menu = None
@@ -33,10 +36,6 @@ class Pupil_Groups(Plugin):
         self.group_members = {}
         self.thread_pipe = None
         self.start_group_communication()
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe886)
 
     def init_ui(self):
         help_str = "Pupil Groups utilizes the ZeroMQ Realtime Exchange Protocol to discover other local group members. We use it to relay notifications to other group members. Example: Start recordings synchronosly."

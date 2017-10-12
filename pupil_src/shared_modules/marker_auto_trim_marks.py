@@ -40,6 +40,8 @@ class Marker_Auto_Trim_Marks(Plugin):
     This plugin depends on the offline marker tracker plugin to be loaded.
 
     """
+    icon_chr = chr(0xe41f)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,man_in_marks=[],man_out_marks=[]):
         super().__init__(g_pool)
@@ -57,10 +59,6 @@ class Marker_Auto_Trim_Marks(Plugin):
         self.video_export_queue = []
         self.surface_export_queue = []
         self.current_frame_idx = 0
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe41f)
 
     def init_ui(self):
         # initialize the menu

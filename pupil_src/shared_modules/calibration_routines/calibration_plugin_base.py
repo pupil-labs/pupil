@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 class Calibration_Plugin(Plugin):
     '''base class for all calibration routines'''
     uniqueness = 'by_base_class'
+    icon_chr = chr(0xec14)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -26,10 +28,6 @@ class Calibration_Plugin(Plugin):
         self.pupil_confidence_threshold = 0.6
         self.active = False
         self.mode = 'calibration'
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec14)
 
     def add_menu(self):
         super().add_menu()

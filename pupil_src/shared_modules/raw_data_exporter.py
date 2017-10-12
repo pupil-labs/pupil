@@ -98,10 +98,8 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
         gaze_normal1_y - y normal of the visual axis for eye 1
         gaze_normal1_z - z normal of the visual axis for eye 1
         '''
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe873)
+    icon_chr = chr(0xe873)
+    icon_font = 'pupil_icons'
 
     def init_ui(self):
         self.add_menu()

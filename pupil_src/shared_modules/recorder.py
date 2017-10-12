@@ -80,6 +80,9 @@ def get_auto_name():
 
 class Recorder(System_Plugin_Base):
     """Capture Recorder"""
+    icon_chr = chr(0xe04b)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool, session_name=get_auto_name(), rec_dir=None,
                  user_info={'name': '', 'additional_field': 'change_me'},
                  info_menu_conf={}, show_info_menu=False, record_eye=False,
@@ -128,10 +131,6 @@ class Recorder(System_Plugin_Base):
         d['rec_dir'] = self.rec_dir
         d['raw_jpeg'] = self.raw_jpeg
         return d
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xe04b)
 
     def init_ui(self):
         self.add_menu()

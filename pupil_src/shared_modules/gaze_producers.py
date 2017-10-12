@@ -63,10 +63,8 @@ colors = cycle(((0.66015625, 0.859375, 0.4609375, 0.8),
 class Gaze_Producer_Base(Producer_Plugin_Base):
     uniqueness = 'by_base_class'
     order = .02
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec14)
+    icon_chr = chr(0xec14)
+    icon_font = 'pupil_icons'
 
     def init_ui(self):
         self.add_menu()

@@ -21,6 +21,8 @@ class Remote_Recorder(Plugin):
 
     order = .3
     uniqueness = 'by_class'
+    icon_chr = chr(0xec16)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool, session_name='Unnamed session'):
         super().__init__(g_pool)
@@ -61,10 +63,6 @@ class Remote_Recorder(Plugin):
             source = notification['source']
             logger.warning('Recording on {} was stopped remotely. Stopping whole recording.'.format(source))
             self.stop()
-
-    @classmethod
-    def icon_info(self):
-        return 'pupil_icons', chr(0xec16)
 
     def init_ui(self):
         self.add_menu()
