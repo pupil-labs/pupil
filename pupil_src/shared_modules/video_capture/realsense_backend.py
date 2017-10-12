@@ -55,6 +55,7 @@ class ColorFrame(object):
         self._yuv[y_plane+u_plane:] = self._yuv422[:, 1::2, 1].flatten()
         self._bgr = None
         self._gray = None
+        self._needs_restart = False
 
     @property
     def height(self):
@@ -229,7 +230,8 @@ class Realsense_Source(Base_Source):
         self._recent_depth_frame = None
 
         if not devices:
-            logger.error("Camera failed to initialize. No cameras connected.")
+            if not self._needs_restart:
+                logger.error("Camera failed to initialize. No cameras connected.")
             self.device = None
             self.update_menu()
             return
@@ -291,7 +293,7 @@ class Realsense_Source(Base_Source):
         self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
         self.update_menu()
-
+        self._needs_restart = False
     def _enumerate_formats(self, device_id):
         '''Enumerate formats into hierachical structure:
 
@@ -370,19 +372,23 @@ class Realsense_Source(Base_Source):
                 depth = None
 
             return color, depth
-        return None, None, None
+        return None, None
 
     def recent_events(self, events):
-        if not self.online:
+        if self._needs_restart:
+            self.restart_device()
+            time.sleep(0.05)
+        elif not self.online:
             time.sleep(.05)
             return
 
         try:
             color_frame, depth_frame = self.get_frames()
         except (pyrs.RealsenseError, TimeoutError) as err:
+            logger.warning("Realsense failed to provide frames. Attempting to reinit.")
             self._recent_frame = None
             self._recent_depth_frame = None
-            self.restart_device()
+            self._needs_restart = True
         else:
             if color_frame and depth_frame:
                 self._recent_frame = color_frame
@@ -585,7 +591,10 @@ class Realsense_Source(Base_Source):
     def restart_device(self, device_id=None, color_frame_size=None, color_fps=None,
                        depth_frame_size=None, depth_fps=None, device_options=None):
         if device_id is None:
-            device_id = self.device.device_id
+            if self.device is not None:
+                device_id = self.device.device_id
+            else:
+               device_id = 0
         if color_frame_size is None:
             color_frame_size = self.frame_size
         if color_fps is None:
