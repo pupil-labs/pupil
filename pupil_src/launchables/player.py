@@ -8,7 +8,6 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
-import sys
 import os
 import platform
 
@@ -72,7 +71,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from pyglui.cygl.utils import Named_Texture, RGBA
         import gl_utils
         # capture
-        from video_capture import File_Source, EndofVideoFileError, FileSeekError
+        from video_capture import File_Source, EndofVideoFileError
 
         # helpers/utils
         from version_utils import VersionFormat
@@ -104,7 +103,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from gaze_producers import Gaze_From_Recording, Offline_Calibration
         from system_graphs import System_Graphs
 
-        assert pyglui_version >= '1.8', 'pyglui out of date, please upgrade to newest version'
+        assert pyglui_version >= '1.8.1', 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
         system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs]
@@ -321,10 +320,14 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
         g_pool.timelines = ui.Container((0, 0), (0, 0), (0, 0))
         g_pool.timelines.horizontal_constraint = g_pool.menubar
-        g_pool.user_timelines = ui.Timeline_Menu('User Timelines', pos=(130., -200.),
-                                                 size=(-30., -50.), header_pos='headline')
+        g_pool.user_timelines = ui.Timeline_Menu('User Timelines', pos=(0., -150.),
+                                                 size=(0., 0.), header_pos='headline')
         g_pool.user_timelines.color = RGBA(a=0.)
-        g_pool.timelines.append(g_pool.user_timelines)
+        g_pool.user_timelines.collapsed = True
+        # add container that constaints itself to the seekbar height
+        vert_constr = ui.Container((0, 0), (0, -50.), (0, 0))
+        vert_constr.append(g_pool.user_timelines)
+        g_pool.timelines.append(vert_constr)
 
         general_settings = ui.Growing_Menu('General', header_pos='headline')
         general_settings.append(ui.Button('Reset window size',

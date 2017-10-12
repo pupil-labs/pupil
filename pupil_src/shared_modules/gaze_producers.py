@@ -9,27 +9,25 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os,platform
-import cv2
+import os
 import numpy as np
 from pyglui import ui
 from plugin import Producer_Plugin_Base
 from player_methods import correlate_data
 from methods import normalize
-from video_capture import File_Source, EndofVideoFileError
-from circle_detector import find_concetric_circles
 import OpenGL.GL as gl
 from pyglui.cygl.utils import *
+from pyglui.pyfontstash import fontstash
 from glfw import *
 from time import time
 from calibration_routines import gaze_mapping_plugins
 from calibration_routines.finish_calibration import select_calibration_method
 from file_methods import load_object, save_object
 
+import gl_utils
 import background_helper as bh
 import zmq_tools
-from itertools import chain
-import random
+from itertools import chain, cycle
 
 import logging
 logger = logging.getLogger(__name__)
@@ -54,12 +52,12 @@ def setup_fake_pool(frame_size, intrinsics, detection_mode, rec_dir):
     return pool
 
 
-random_colors = ((0.66015625, 0.859375, 0.4609375, 0.8),
-                 (0.99609375, 0.84375, 0.3984375, 0.8),
-                 (0.46875, 0.859375, 0.90625, 0.8),
-                 (0.984375, 0.59375, 0.40234375, 0.8),
-                 (0.66796875, 0.61328125, 0.9453125, 0.8),
-                 (0.99609375, 0.37890625, 0.53125, 0.8))
+colors = cycle(((0.66015625, 0.859375, 0.4609375, 0.8),
+                (0.99609375, 0.84375, 0.3984375, 0.8),
+                (0.46875, 0.859375, 0.90625, 0.8),
+                (0.984375, 0.59375, 0.40234375, 0.8),
+                (0.66796875, 0.61328125, 0.9453125, 0.8),
+                (0.99609375, 0.37890625, 0.53125, 0.8)))
 
 
 class Gaze_Producer_Base(Producer_Plugin_Base):
@@ -91,9 +89,6 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
                                 label='Gaze Producers'
                             ))
 
-    def deinit_ui(self):
-        self.remove_menu()
-
 
 class Gaze_From_Recording(Gaze_Producer_Base):
     def __init__(self, g_pool):
@@ -107,6 +102,9 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         super().init_ui()
         self.menu.label = "Gaze Data  From Recording"
         self.menu.append(ui.Info_Text('Currently, gaze positions are loaded from the recording.'))
+
+    def deinit_ui(self):
+        self.remove_menu()
 
 
 def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
@@ -135,18 +133,19 @@ def make_section_dict(calib_range, map_range):
         return {'calibration_range': calib_range,
                 'mapping_range': map_range,
                 'mapping_method': '3d',
-                'calibration_method':"circle_marker",
+                'calibration_method': "circle_marker",
                 'status': 'unmapped',
-                'color': random.choice(random_colors),
-                'gaze_positions':[],
-                'bg_task':None}
+                'color': next(colors),
+                'gaze_positions': [],
+                'bg_task': None}
 
 
 class Offline_Calibration(Gaze_Producer_Base):
     session_data_version = 3
 
-    def __init__(self, g_pool,manual_ref_edit_mode=False):
+    def __init__(self, g_pool, manual_ref_edit_mode=False):
         super().__init__(g_pool)
+        self.timeline_line_height = 16
         self.manual_ref_edit_mode = manual_ref_edit_mode
         self.menu = None
         self.process_pipe = None
@@ -196,6 +195,11 @@ class Offline_Calibration(Gaze_Producer_Base):
         super().init_ui()
         self.menu.label = "Offline Calibration"
 
+        self.glfont = fontstash.Context()
+        self.glfont.add_font('opensans', ui.get_opensans_font_path())
+        self.glfont.set_color_float((1., 1., 1., .8))
+        self.glfont.set_align_string(v_align='right', h_align='top')
+
         def clear_natural_features():
             self.manual_ref_positions = []
 
@@ -208,9 +212,19 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.menu.append(ui.Button('Clear natural features',clear_natural_features))
         self.menu.append(ui.Button('Add section', self.append_section))
 
+        # set to minimum height
+        self.timeline = ui.Timeline('Calibration Sections', self.draw_sections, self.draw_labels, 1)
+        self.g_pool.user_timelines.append(self.timeline)
+
         for sec in self.sections:
             self.append_section_menu(sec)
         self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
+
+    def deinit_ui(self):
+        self.remove_menu()
+        self.g_pool.user_timelines.remove(self.timeline)
+        self.timeline = None
+        self.glfont = None
 
     def append_section_menu(self, sec):
         section_menu = ui.Growing_Menu('Gaze Section')
@@ -219,7 +233,6 @@ class Offline_Calibration(Gaze_Producer_Base):
         def make_validate_fn(sec, key):
             def validate(input_obj):
                 try:
-
                     assert type(input_obj) in (tuple,list)
                     assert type(input_obj[0]) is int
                     assert type(input_obj[1]) is int
@@ -237,6 +250,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         def make_remove_fn(sec):
             def remove():
+                self.timeline.height -= self.timeline_line_height
                 del self.menu[self.sections.index(sec)-len(self.sections)]
                 del self.sections[self.sections.index(sec)]
                 self.correlate_and_publish()
@@ -256,6 +270,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         section_menu.append(ui.Button('Recalibrate', make_calibrate_fn(sec)))
         section_menu.append(ui.Button('Remove section', make_remove_fn(sec)))
         self.menu.append(section_menu)
+        self.timeline.height += self.timeline_line_height
 
     def get_init_dict(self):
         return {'manual_ref_edit_mode': self.manual_ref_edit_mode}
@@ -357,56 +372,46 @@ class Offline_Calibration(Gaze_Producer_Base):
         sec['bg_task'] = bh.Task_Proxy('{}'.format(self.sections.index(sec) + 1), calibrate_and_map, args=generator_args)
 
     def gl_display(self):
-        ref_point_norm = [r['norm_pos'] for r in self.circle_marker_positions if  self.g_pool.capture.get_frame_index() == r['index']]
-        draw_points_norm(ref_point_norm,size=35, color=RGBA(0, .5, 0.5, .7))
-        draw_points_norm(ref_point_norm,size=5, color=RGBA(.0, .9, 0.0, 1.0))
+        ref_point_norm = [r['norm_pos'] for r in self.circle_marker_positions
+                          if self.g_pool.capture.get_frame_index() == r['index']]
+        draw_points_norm(ref_point_norm, size=35, color=RGBA(0, .5, 0.5, .7))
+        draw_points_norm(ref_point_norm, size=5, color=RGBA(.0, .9, 0.0, 1.0))
 
-        manual_refs_in_frame = [r['norm_pos'] for r in self.manual_ref_positions if  self.g_pool.capture.get_frame_index() in r['index_range']]
-        draw_points_norm(manual_refs_in_frame,size=35, color=RGBA(.0, .0, 0.9, .8))
-        draw_points_norm(manual_refs_in_frame,size=5, color=RGBA(.0, .9, 0.0, 1.0))
+        manual_refs_in_frame = [r['norm_pos'] for r in self.manual_ref_positions
+                                if self.g_pool.capture.get_frame_index() in r['index_range']]
+        draw_points_norm(manual_refs_in_frame, size=35, color=RGBA(.0, .0, 0.9, .8))
+        draw_points_norm(manual_refs_in_frame, size=5, color=RGBA(.0, .9, 0.0, 1.0))
 
-        padding = 30.
+    def draw_sections(self, width, height):
         max_ts = len(self.g_pool.timestamps)
+        height = len(self.sections) * self.timeline_line_height + 1
+        with gl_utils.Coord_System(0, max_ts, 0, height):
+            gl.glTranslatef(0, 1 + self.timeline_line_height / 2, 0)
+            for s in self.sections:
+                color = RGBA(1., 1., 1., .5)
+                if s['calibration_method'] == "natural_features":
+                    draw_x([(m['index'], 0) for m in self.manual_ref_positions],
+                              size=12, color=color)
+                else:
+                    draw_bars([(m['index'], 0) for m in self.circle_marker_positions],
+                              height=12, color=color)
+                cal_slc = slice(*s['calibration_range'])
+                map_slc = slice(*s['mapping_range'])
+                color = RGBA(*s['color'])
+                draw_polyline([(cal_slc.start, 0), (cal_slc.stop, 0)], color=color, line_type=gl.GL_LINES, thickness=8)
+                draw_polyline([(map_slc.start, 0), (map_slc.stop, 0)], color=color, line_type=gl.GL_LINES, thickness=2)
+                gl.glTranslatef(0, self.timeline_line_height, 0)
 
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-        width, height = self.g_pool.camera_render_size
-        h_pad = padding * (max_ts-2)/float(width)
-        v_pad = padding * 1./(height-2)
-        # ranging from 0 to len(timestamps)-1 (horizontal) and 0 to 1 (vertical)
-        gl.glOrtho(-h_pad,  (max_ts-1)+h_pad, -v_pad, 1+v_pad, -1, 1)
-
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-
-        gl.glTranslatef(0, .04, 0)
-
-
-
-        for s in self.sections:
-            if s['calibration_method'] == "natural_features":
-                draw_points([(m['index'],0) for m in self.manual_ref_positions],size=12,color=RGBA(.0, .0, 0.9, .8))
-            else:
-                draw_points([(m['index'],0) for m in self.circle_marker_positions],size=12,color=RGBA(0, .5, 0.5, .7))
-            cal_slc = slice(*s['calibration_range'])
-            map_slc = slice(*s['mapping_range'])
-            color = RGBA(*s['color'])
-            draw_polyline([(cal_slc.start, 0), (cal_slc.stop, 0)], color=color, line_type=gl.GL_LINES, thickness=8)
-            draw_polyline([(map_slc.start, 0), (map_slc.stop, 0)], color=color, line_type=gl.GL_LINES, thickness=2)
-            gl.glTranslatef(0, .04, 0)
-
-
-
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPopMatrix()
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPopMatrix()
+    def draw_labels(self, width, height):
+        self.glfont.set_size(self.timeline_line_height * .8)
+        for idx, s in enumerate(self.sections):
+            label = 'Calibration Section {}'.format(idx + 1)
+            self.glfont.draw_text(width, 0, label)
+            gl.glTranslatef(0, self.timeline_line_height, 0)
 
     def cleanup(self):
         if self.process_pipe:
-            self.process_pipe.send(topic='terminate',payload={})
+            self.process_pipe.send(topic='terminate', payload={})
             self.process_pipe.socket.close()
             self.process_pipe = None
         for sec in self.sections:

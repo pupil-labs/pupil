@@ -26,7 +26,8 @@ __all__ =  ['make_coord_system_norm_based',
             'clear_gl_screen',
             'basic_gl_setup',
             'cvmat_to_glmat',
-            'is_window_visible'
+            'is_window_visible',
+            'Coord_System'
 ]
 
 def is_window_visible(window):
@@ -115,3 +116,25 @@ def make_coord_system_norm_based(flip=False):
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
+
+class Coord_System(object):
+    """docstring for Coord_System"""
+    def __init__(self, left, right, bottom, top):
+        super(Coord_System, self).__init__()
+        self.bounds = left, right, bottom, top
+
+    def __enter__(self):
+        glMatrixMode(GL_PROJECTION)
+        glPushMatrix()
+        glLoadIdentity()
+        glOrtho(*self.bounds, -1, 1)  # gl coord convention
+
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glLoadIdentity()
+
+    def __exit__(self, *exc):
+        glMatrixMode(GL_PROJECTION)
+        glPopMatrix()
+        glMatrixMode(GL_MODELVIEW)
+        glPopMatrix()
