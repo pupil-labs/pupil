@@ -296,11 +296,14 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         while not self.cache_queue.empty():
             idx,c_m = self.cache_queue.get()
             self.cache.update(idx,c_m)
+
             for s in self.surfaces:
                 s.update_cache(self.cache, min_marker_perimeter=self.min_marker_perimeter,
                                min_id_confidence=self.min_id_confidence, idx=idx)
             if self.cacher_run.value is False:
                 self.recalculate()
+            if self.timeline:
+                self.timeline.refresh()
 
     def seek_marker_cacher(self,idx):
         self.cacher_seek_idx.value = idx
