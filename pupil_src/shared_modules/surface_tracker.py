@@ -133,7 +133,7 @@ class Surface_Tracker(Plugin):
         self.surfaces.append(surf)
         self.update_gui_markers()
 
-    def remove_surface(self,i):
+    def remove_surface(self, i):
         remove_surface = self.surfaces[i]
         if remove_surface == self.marker_edit_surface:
             self.marker_edit_surface = None

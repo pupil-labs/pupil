@@ -16,7 +16,7 @@ import csv
 
 from ctypes import c_bool
 
-
+import gl_utils
 from itertools import chain
 from OpenGL.GL import *
 from methods import normalize
@@ -25,6 +25,7 @@ from cache_list import Cache_List
 from glfw import *
 from pyglui import ui
 from pyglui.cygl.utils import *
+from pyglui.pyfontstash import fontstash
 
 from plugin import Analysis_Plugin_Base
 #logging
@@ -58,6 +59,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         self.order = .2
         self.marker_cache_version = 2
         self.min_marker_perimeter_cacher = 20  #find even super small markers. The surface locater will filter using min_marker_perimeter
+        self.timeline_line_height = 16
 
         self.load_marker_cache()
         self.init_marker_cacher()
@@ -106,9 +108,22 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         self.menu.label = 'Offline Surface Tracker'
         self.add_button = ui.Thumb('add_surface',setter=lambda x: self.add_surface(),getter=lambda:False,label='A',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
+
+        self.glfont = fontstash.Context()
+        self.glfont.add_font('opensans', ui.get_opensans_font_path())
+        self.glfont.set_color_float((1., 1., 1., .8))
+        self.glfont.set_align_string(v_align='right', h_align='top')
+
+        self.timeline = ui.Timeline('Surface Tracker', self.gl_display_cache_bars, self.draw_labels,
+                                    self.timeline_line_height * (len(self.surfaces) + 1))
+        self.g_pool.user_timelines.append(self.timeline)
+
         self.update_gui_markers()
 
     def deinit_ui(self):
+        self.g_pool.user_timelines.remove(self.timeline)
+        self.timeline = None
+        self.glfont = None
         self.remove_menu()
         if self.add_button:
             self.g_pool.quickbar.remove(self.add_button)
@@ -149,8 +164,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             s_menu.append(ui.Button('remove',remove_s))
             self.menu.append(s_menu)
 
-
-    def on_notify(self,notification):
+    def on_notify(self, notification):
         if notification['subject'] == 'gaze_positions_changed':
             logger.info('Gaze postions changed. Recalculating.')
             self.recalculate()
@@ -168,7 +182,12 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
     def add_surface(self):
         self.surfaces.append(Offline_Reference_Surface(self.g_pool))
+        self.timeline.height += self.timeline_line_height
         self.update_gui_markers()
+
+    def remove_surface(self, i):
+        super().remove_surface(i)
+        self.timeline.height -= self.timeline_line_height
 
     def recalculate(self):
 
@@ -206,7 +225,6 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             s.metrics_texture = Named_Texture()
             s.metrics_texture.update_from_ndarray(heatmap)
 
-
     def invalidate_surface_caches(self):
         for s in self.surfaces:
             s.cache = None
@@ -221,8 +239,8 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         self.markers = self.cache[frame.index]
         if self.markers is False:
             self.markers = []
-            self.seek_marker_cacher(frame.index) # tell precacher that it better have every thing from here on analyzed
-
+            # tell precacher that it better have every thing from here on analyzed
+            self.seek_marker_cacher(frame.index)
 
         events['surfaces'] = []
         # locate surfaces
@@ -252,9 +270,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                         s.init_cache(self.cache,self.min_marker_perimeter,self.min_id_confidence)
                         self.notify_all({'subject':'surfaces_changed','delay':1})
 
-
-
-        #allow surfaces to open/close windows
+        # allow surfaces to open/close windows
         for s in self.surfaces:
             if s.window_should_close:
                 s.close_window()
@@ -301,8 +317,6 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         """
         Display marker and surface info inside world screen
         """
-        self.gl_display_cache_bars()
-
         super().gl_display()
         if self.mode == "Show Metrics":
             #todo: draw a backdrop to represent the gaze that is not on any surface
@@ -310,54 +324,42 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                 #draw a quad on surface with false color of value.
                 s.gl_display_metrics()
 
-    def gl_display_cache_bars(self):
+    def gl_display_cache_bars(self, width, height):
         """
         """
-        padding = 30.
+        with gl_utils.Coord_System(0, self.cache.length - 1, height, 0):
+            # Lines for areas that have been cached
+            cached_ranges = []
+            for r in self.cache.visited_ranges:  # [[0,1],[3,4]]
+                cached_ranges += (r[0], 0), (r[1], 0)  # [(0,0),(1,0),(3,0),(4,0)]
 
-       # Lines for areas that have been cached
-        cached_ranges = []
-        for r in self.cache.visited_ranges: # [[0,1],[3,4]]
-            cached_ranges += (r[0],0),(r[1],0) #[(0,0),(1,0),(3,0),(4,0)]
+            glTranslatef(0, self.timeline_line_height / 2, 0)
+            color = RGBA(.8, .6, .2, .8)
+            draw_polyline(cached_ranges, color=color, line_type=GL_LINES, thickness=4)
 
-        # Lines where surfaces have been found in video
-        cached_surfaces = []
-        for s in self.surfaces:
-            found_at = []
-            if s.cache is not None:
-                for r in s.cache.positive_ranges: # [[0,1],[3,4]]
-                    found_at += (r[0],0),(r[1],0) #[(0,0),(1,0),(3,0),(4,0)]
-                cached_surfaces.append(found_at)
+            # Lines where surfaces have been found in video
+            cached_surfaces = []
+            for s in self.surfaces:
+                found_at = []
+                if s.cache is not None:
+                    for r in s.cache.positive_ranges:  # [[0,1],[3,4]]
+                        found_at += (r[0], 0), (r[1], 0)  # [(0,0),(1,0),(3,0),(4,0)]
+                    cached_surfaces.append(found_at)
 
-        glMatrixMode(GL_PROJECTION)
-        glPushMatrix()
-        glLoadIdentity()
-        width,height = self.g_pool.camera_render_size
-        h_pad = padding * (self.cache.length-2)/float(width)
-        v_pad = padding* 1./(height-2)
-        glOrtho(-h_pad,  (self.cache.length-1)+h_pad, -v_pad, 1+v_pad,-1,1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
+            color = RGBA(0, .7, .3, .8)
 
+            for s in cached_surfaces:
+                glTranslatef(0, self.timeline_line_height, 0)
+                draw_polyline(s, color=color, line_type=GL_LINES, thickness=2)
 
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        glLoadIdentity()
+    def draw_labels(self, width, height):
+        self.glfont.set_size(self.timeline_line_height * .8)
+        self.glfont.draw_text(width, 0, 'Marker Cache')
+        for idx, s in enumerate(self.surfaces):
+            glTranslatef(0, self.timeline_line_height, 0)
+            self.glfont.draw_text(width, 0, s.name)
 
-        color = RGBA(.8,.6,.2,.8)
-        draw_polyline(cached_ranges,color=color,line_type=GL_LINES,thickness=4)
-
-        color = RGBA(0,.7,.3,.8)
-
-        for s in cached_surfaces:
-            glTranslatef(0,.02,0)
-            draw_polyline(s,color=color,line_type=GL_LINES,thickness=2)
-
-        glMatrixMode(GL_PROJECTION)
-        glPopMatrix()
-        glMatrixMode(GL_MODELVIEW)
-        glPopMatrix()
-
-
-    def save_surface_statsics_to_file(self,export_range,export_dir):
+    def save_surface_statsics_to_file(self, export_range, export_dir):
         """
         between in and out mark
 

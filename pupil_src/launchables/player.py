@@ -8,7 +8,6 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
-import sys
 import os
 import platform
 
@@ -69,10 +68,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from pyglui import __version__ as pyglui_version
 
         from pyglui import ui, cygl
-        from pyglui.cygl.utils import Named_Texture
+        from pyglui.cygl.utils import Named_Texture, RGBA
         import gl_utils
         # capture
-        from video_capture import File_Source, EndofVideoFileError, FileSeekError
+        from video_capture import File_Source, EndofVideoFileError
 
         # helpers/utils
         from version_utils import VersionFormat
@@ -104,7 +103,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from gaze_producers import Gaze_From_Recording, Offline_Calibration
         from system_graphs import System_Graphs
 
-        assert pyglui_version >= '1.8', 'pyglui out of date, please upgrade to newest version'
+        assert pyglui_version >= '1.8.1', 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
         system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs]
@@ -243,27 +242,27 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer
         g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
 
-        def next_frame(_):
-            try:
-                g_pool.capture.seek_to_frame(g_pool.capture.get_frame_index() + 1)
-            except(FileSeekError):
-                logger.warning("Could not seek to next frame.")
-            else:
-                g_pool.new_seek = True
+        # def next_frame(_):
+        #     try:
+        #         g_pool.capture.seek_to_frame(g_pool.capture.get_frame_index() + 1)
+        #     except(FileSeekError):
+        #         logger.warning("Could not seek to next frame.")
+        #     else:
+        #         g_pool.new_seek = True
 
-        def prev_frame(_):
-            try:
-                g_pool.capture.seek_to_frame(g_pool.capture.get_frame_index() - 1)
-            except(FileSeekError):
-                logger.warning("Could not seek to previous frame.")
-            else:
-                g_pool.new_seek = True
+        # def prev_frame(_):
+        #     try:
+        #         g_pool.capture.seek_to_frame(g_pool.capture.get_frame_index() - 1)
+        #     except(FileSeekError):
+        #         logger.warning("Could not seek to previous frame.")
+        #     else:
+        #         g_pool.new_seek = True
 
-        def toggle_play(new_state):
-            if g_pool.capture.get_frame_index() >= g_pool.capture.get_frame_count()-5:
-                g_pool.capture.seek_to_frame(1)  # avoid pause set by hitting trimmark pause.
-                logger.warning("End of video - restart at beginning.")
-            g_pool.capture.play = new_state
+        # def toggle_play(new_state):
+        #     if g_pool.capture.get_frame_index() >= g_pool.capture.get_frame_count()-5:
+        #         g_pool.capture.seek_to_frame(1)  # avoid pause set by hitting trimmark pause.
+        #         logger.warning("End of video - restart at beginning.")
+        #     g_pool.capture.play = new_state
 
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence
@@ -307,7 +306,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             ipc_pub.notify({'subject': 'player_process.should_start', 'rec_dir': rec_dir, 'delay': 2.})
 
         def toggle_general_settings(collapsed):
-            #this is the menu toggle logic.
+            # this is the menu toggle logic.
             # Only one menu can be open.
             # If no menu is open the menubar should collapse.
             g_pool.menubar.collapsed = collapsed
@@ -321,6 +320,14 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
         g_pool.timelines = ui.Container((0, 0), (0, 0), (0, 0))
         g_pool.timelines.horizontal_constraint = g_pool.menubar
+        g_pool.user_timelines = ui.Timeline_Menu('User Timelines', pos=(0., -150.),
+                                                 size=(0., 0.), header_pos='headline')
+        g_pool.user_timelines.color = RGBA(a=0.)
+        g_pool.user_timelines.collapsed = True
+        # add container that constaints itself to the seekbar height
+        vert_constr = ui.Container((0, 0), (0, -50.), (0, 0))
+        vert_constr.append(g_pool.user_timelines)
+        g_pool.timelines.append(vert_constr)
 
         general_settings = ui.Growing_Menu('General', header_pos='headline')
         general_settings.append(ui.Button('Reset window size',
@@ -342,33 +349,14 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         user_plugin_separator.order = 0.35
         g_pool.iconbar.append(user_plugin_separator)
 
-        g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))
-        g_pool.capture.play_button = ui.Thumb('play',
-                                      g_pool.capture,
-                                      label=chr(0xE037),
-                                      setter=toggle_play,
-                                      hotkey=glfw.GLFW_KEY_SPACE,
-                                      label_font='pupil_icons')
-        g_pool.capture.play_button.on_color[:] = (0.5, 0.8, 0.75,.9)
-        g_pool.forward_button = ui.Thumb('forward',
-                                         label=chr(0xE01F),
-                                         getter=lambda: False,
-                                         setter=next_frame,
-                                         hotkey=glfw.GLFW_KEY_RIGHT,
-                                         label_font='pupil_icons')
-        g_pool.backward_button = ui.Thumb('backward',
-                                          label=chr(0xE020),
-                                          getter=lambda: False,
-                                          setter=prev_frame,
-                                          hotkey=glfw.GLFW_KEY_LEFT,
-                                          label_font='pupil_icons')
+        g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (100, -100))
         g_pool.export_button = ui.Thumb('export',
                                         label=chr(0xe2c4),
                                         getter=lambda: False,
                                         setter=do_export,
                                         hotkey='e',
                                         label_font='pupil_icons')
-        g_pool.quickbar.extend([g_pool.capture.play_button, g_pool.forward_button, g_pool.backward_button, g_pool.export_button])
+        g_pool.quickbar.extend([g_pool.export_button])
         g_pool.gui.append(g_pool.menubar)
         g_pool.gui.append(g_pool.timelines)
         g_pool.gui.append(g_pool.iconbar)

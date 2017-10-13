@@ -35,7 +35,7 @@ class Seek_Control(System_Plugin_Base):
         self.was_playing = True
 
     def init_ui(self):
-        self.seek_bar = ui.Seek_Bar(self, self.frame_count - 1, self.on_seek)
+        self.seek_bar = ui.Seek_Bar(self, self.frame_count - 1, self.on_seek, self.g_pool.user_timelines)
         self.g_pool.timelines.append(self.seek_bar)
 
     def deinit_ui(self):
@@ -66,6 +66,17 @@ class Seek_Control(System_Plugin_Base):
             self.g_pool.capture.play = self.was_playing
 
     @property
+    def play(self):
+        return self.g_pool.capture.play
+
+    @play.setter
+    def play(self, new_state):
+        if self.current_index >= self.frame_count - 1:
+            self.g_pool.capture.seek_to_frame(0)  # avoid pause set by hitting trimmark pause.
+            logger.warning("End of video - restart at beginning.")
+        self.g_pool.capture.play = new_state
+
+    @property
     def trim_left(self):
         return self._trim_left
 
@@ -91,7 +102,7 @@ class Seek_Control(System_Plugin_Base):
 
     @current_index.setter
     def current_index(self, val):
-        if self.seek_bar.seeking and self.current_index != val:
+        if self.current_index != val:
             try:
                 # logger.info('seeking to {} form {}'.format(seek_pos,self.current_frame_index))
                 self.g_pool.capture.seek_to_frame(val)
