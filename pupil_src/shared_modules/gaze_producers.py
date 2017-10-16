@@ -88,6 +88,11 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
                                 label='Gaze Producers'
                             ))
 
+    def recent_events(self, events):
+        if 'frame' in events:
+            frm_idx = events['frame'].index
+            events['gaze_positions'] = self.g_pool.gaze_positions_by_frame[frm_idx]
+
 
 class Gaze_From_Recording(Gaze_Producer_Base):
     def __init__(self, g_pool):
@@ -356,6 +361,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.manual_ref_positions.append(new_ref)
 
     def recent_events(self, events):
+        super().recent_events(events)
 
         if self.process_pipe and self.process_pipe.new_data:
             topic, msg = self.process_pipe.recv()

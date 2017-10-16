@@ -63,6 +63,11 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
     def deinit_ui(self):
         self.remove_menu()
 
+    def recent_events(self, events):
+        if 'frame' in events:
+            frm_idx = events['frame'].index
+            events['pupil_positions'] = self.g_pool.pupil_positions_by_frame[frm_idx]
+
 
 class Pupil_From_Recording(Pupil_Producer_Base):
     def __init__(self, g_pool):
