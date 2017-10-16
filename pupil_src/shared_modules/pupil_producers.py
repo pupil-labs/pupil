@@ -255,6 +255,5 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self._detection_paused = should_pause
         for eye_id in range(2):
             if self.eye_processes[eye_id] is not None:
-                self.notify_all({'subject': 'file_source.toggle_play',
-                                 'should_play': not should_pause,
-                                 'source_path': self.eye_processes[eye_id].video_path})
+                subject = 'file_source.' + ('should_pause' if should_pause else 'should_play')
+                self.notify_all({'subject': subject, 'source_path': self.eye_processes[eye_id].video_path})

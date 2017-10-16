@@ -320,8 +320,10 @@ class File_Source(Base_Source):
     def on_notify(self, notification):
         if notification['subject'] == 'file_source.seek' and notification.get('source_path') == self.source_path:
             self.seek_to_frame(notification['frame_index'])
-        elif notification['subject'] == 'file_source.toggle_play' and notification.get('source_path') == self.source_path:
-            self.play = notification['should_play']
+        elif notification['subject'] == 'file_source.should_play' and notification.get('source_path') == self.source_path:
+            self.play = True
+        elif notification['subject'] == 'file_source.should_pause' and notification.get('source_path') == self.source_path:
+            self.play = False
 
     def init_ui(self):
         self.add_menu()
