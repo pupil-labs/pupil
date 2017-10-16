@@ -15,7 +15,7 @@ import os, sys, platform
 # sys.argv.append('debug')
 # sys.argv.append('service')
 
-app = 'player'
+app = 'capture'
 
 if getattr(sys, 'frozen', False):
     if 'pupil_service' in sys.executable:
