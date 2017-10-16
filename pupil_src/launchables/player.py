@@ -432,8 +432,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             # report time between now and the last loop interation
             events['dt'] = get_dt()
             # new positons we make a deepcopy just like the image is a copy.
-            events['gaze_positions'] = deepcopy(g_pool.gaze_positions_by_frame[frame.index])
             events['pupil_positions'] = deepcopy(g_pool.pupil_positions_by_frame[frame.index])
+            events['gaze_positions'] = deepcopy(g_pool.gaze_positions_by_frame[frame.index])
 
             # allow each Plugin to do its work.
             for p in g_pool.plugins:

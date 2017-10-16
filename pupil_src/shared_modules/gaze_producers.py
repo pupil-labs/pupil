@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import os
 import numpy as np
+from copy import deepcopy
 from pyglui import ui
 from plugin import Producer_Plugin_Base
 from player_methods import correlate_data
@@ -91,21 +92,60 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
 class Gaze_From_Recording(Gaze_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        g_pool.gaze_positions = g_pool.pupil_data['gaze_positions']
-        g_pool.gaze_positions_by_frame = correlate_data(g_pool.gaze_positions, g_pool.timestamps)
+        self.result_dir = os.path.join(g_pool.rec_dir, 'offline_data')
+        os.makedirs(self.result_dir, exist_ok=True)
+        try:
+            session_data = load_object(os.path.join(self.result_dir, 'manual_gaze_correction'))
+        except OSError:
+            session_data = {}
+        self.x_offset = session_data.get('dx', 0.)
+        self.y_offset = session_data.get('dy', 0.)
+        self.load_data_with_offset()
+
+    def load_data_with_offset(self):
+        self.g_pool.gaze_positions = deepcopy(self.g_pool.pupil_data['gaze_positions'])
+        for gp in self.g_pool.gaze_positions:
+            gp['norm_pos'][0] += self.x_offset
+            gp['norm_pos'][1] += self.y_offset
+        self.g_pool.gaze_positions_by_frame = correlate_data(self.g_pool.gaze_positions, self.g_pool.timestamps)
         self.notify_all({'subject': 'gaze_positions_changed'})
         logger.debug('gaze positions changed')
+
+    def _set_offset_x(self, offset_x):
+        self.x_offset = offset_x
+        self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': .5})
+
+    def _set_offset_y(self, offset_y):
+        self.y_offset = offset_y
+        self.load_data_with_offset()
+
+    def on_notify(self, notification):
+        if notification['subject'] == 'manual_gaze_correction.offset_changed':
+            self.load_data_with_offset()
 
     def init_ui(self):
         super().init_ui()
         self.menu.label = "Gaze Data  From Recording"
         self.menu.append(ui.Info_Text('Currently, gaze positions are loaded from the recording.'))
+        offset_menu = ui.Growing_Menu('Manual Correction')
+        offset_menu.append(ui.Info_Text('The manual correction feature allows you to apply' +
+                                        ' a fixed offset to your gaze data.'))
+        offset_menu.append(ui.Slider('x_offset', self, min=-.5, step=0.01,
+                                     max=.5, setter=self._set_offset_x))
+        offset_menu.append(ui.Slider('y_offset', self, min=-.5, step=0.01,
+                                     max=.5, setter=self._set_offset_y))
+        offset_menu.collapsed = True
+        self.menu.append(offset_menu)
 
     def deinit_ui(self):
         self.remove_menu()
 
+    def cleanup(self):
+        session_data = {'dx': self.x_offset, 'dy': self.y_offset}
+        save_object(session_data, os.path.join(self.result_dir, 'manual_gaze_correction'))
 
-def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
+
+def calibrate_and_map(g_pool, ref_list, calib_list, map_list, x_offset, y_offset):
     yield "calibrating", []
     method, result = select_calibration_method(g_pool, calib_list, ref_list)
     if result['subject'] != 'calibration.failed':
@@ -116,6 +156,15 @@ def calibrate_and_map(g_pool, ref_list, calib_list, map_list):
 
         for idx, datum in enumerate(map_list):
             mapped_gaze = gaze_mapper.on_pupil_datum(datum)
+
+            # apply manual correction
+            for gp in mapped_gaze:
+                # gp['norm_pos'] is a tuple by default
+                gp_norm_pos = list(gp['norm_pos'])
+                gp_norm_pos[1] += y_offset
+                gp_norm_pos[0] += x_offset
+                gp['norm_pos'] = gp_norm_pos
+
             if mapped_gaze:
                 progress = (100 * (idx+1)/len(map_list))
                 if progress == 100:
@@ -135,11 +184,13 @@ def make_section_dict(calib_range, map_range):
                 'status': 'unmapped',
                 'color': next(colors),
                 'gaze_positions': [],
-                'bg_task': None}
+                'bg_task': None,
+                'x_offset': 0.,
+                'y_offset': 0.}
 
 
 class Offline_Calibration(Gaze_Producer_Base):
-    session_data_version = 3
+    session_data_version = 4
 
     def __init__(self, g_pool, manual_ref_edit_mode=False):
         super().__init__(g_pool)
@@ -267,6 +318,16 @@ class Offline_Calibration(Gaze_Producer_Base):
                                           setter=make_validate_fn(sec, 'mapping_range')))
         section_menu.append(ui.Button('Recalibrate', make_calibrate_fn(sec)))
         section_menu.append(ui.Button('Remove section', make_remove_fn(sec)))
+
+        # manual gaze correction menu
+        offset_menu = ui.Growing_Menu('Manual Correction')
+        offset_menu.append(ui.Info_Text('The manual correction feature allows you to apply' +
+                                        ' a fixed offset to your gaze data.'))
+        offset_menu.append(ui.Slider('x_offset', sec, min=-.5, step=0.01, max=.5))
+        offset_menu.append(ui.Slider('y_offset', sec, min=-.5, step=0.01, max=.5))
+        offset_menu.collapsed = True
+        section_menu.append(offset_menu)
+
         self.menu.append(section_menu)
         self.timeline.height += self.timeline_line_height
 
@@ -364,9 +425,9 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         fake = setup_fake_pool(self.g_pool.capture.frame_size, self.g_pool.capture.intrinsics,
                                detection_mode=sec["mapping_method"], rec_dir=self.g_pool.rec_dir)
-        generator_args = (fake, ref_list, calib_list, map_list)
+        generator_args = (fake, ref_list, calib_list, map_list, sec['x_offset'], sec['y_offset'])
 
-        logger.info('Calibrating "{}" in {} mode...'.format(self.sections.index(sec) + 1,sec["mapping_method"]))
+        logger.info('Calibrating "{}" in {} mode...'.format(self.sections.index(sec) + 1, sec["mapping_method"]))
         sec['bg_task'] = bh.Task_Proxy('{}'.format(self.sections.index(sec) + 1), calibrate_and_map, args=generator_args)
 
     def gl_display(self):

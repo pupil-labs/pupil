@@ -16,6 +16,7 @@ import glob
 import zmq
 import zmq_tools
 import numpy as np
+from copy import deepcopy
 from plugin import Producer_Plugin_Base
 from pyglui import ui
 from time import sleep
