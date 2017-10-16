@@ -103,6 +103,9 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.detection_progress = session_data['detection_progress']
         self.detection_status = session_data['detection_status']
 
+        self.pause_switch = None
+        self.detection_paused = False
+
         # start processes
         if self.detection_progress[0] < 100:
             self.start_eye_process(0)
@@ -196,7 +199,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         session_data['pupil_positions'] = self.pupil_positions
         session_data['detection_progress'] = self.detection_progress
         session_data['detection_status'] = self.detection_status
-        save_object(session_data,os.path.join(self.data_dir,'offline_pupil_data'))
+        save_object(session_data, os.path.join(self.data_dir,'offline_pupil_data'))
 
     def redetect(self):
         del self.pupil_positions[:]  # delete previously detected pupil positions
@@ -204,13 +207,13 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.detection_finished_flag = False
         self.detection_progress[0] = 0.
         self.detection_progress[1] = 0.
+        self.detection_paused = False
         for eye_id in range(2):
             if self.eye_processes[eye_id] is None:
                 self.start_eye_process(eye_id)
             else:
-                self.notify_all({'subject': 'file_source.seek',
-                                        'frame_index': 0,
-                                         'source_path': self.eye_processes[eye_id].video_path})
+                self.notify_all({'subject': 'file_source.seek', 'frame_index': 0,
+                                 'source_path': self.eye_processes[eye_id].video_path})
 
     def set_detection_mapping_mode(self, new_mode):
         n = {'subject': 'set_detection_mapping_mode', 'mode': new_mode}
@@ -224,6 +227,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.menu.append(ui.Info_Text('Detects pupil positions from the recording\'s eye videos.'))
         self.menu.append(ui.Selector('detection_method', self, label='Detection Method',
                                      selection=['2d', '3d'], setter=self.set_detection_mapping_mode))
+        self.menu.append(ui.Switch('detection_paused', self, label='Pause detection'))
         self.menu.append(ui.Button('Redetect', self.redetect))
         self.menu.append(ui.Text_Input("0",label='eye0:',getter=lambda :self.detection_status[0],
                                     setter=lambda _: _))
@@ -241,3 +245,16 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                                     setter=lambda _: _)
         progress_slider.display_format = '%3.0f%%'
         self.menu.append(progress_slider)
+
+    @property
+    def detection_paused(self):
+        return self._detection_paused
+
+    @detection_paused.setter
+    def detection_paused(self, should_pause):
+        self._detection_paused = should_pause
+        for eye_id in range(2):
+            if self.eye_processes[eye_id] is not None:
+                self.notify_all({'subject': 'file_source.toggle_play',
+                                 'should_play': not should_pause,
+                                 'source_path': self.eye_processes[eye_id].video_path})

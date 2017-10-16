@@ -307,7 +307,7 @@ class File_Source(Base_Source):
 
     @ensure_initialisation()
     def seek_to_frame_fast(self, seek_pos):
-        ###frame accurate seeking
+        # frame accurate seeking
         try:
             self.video_stream.seek(self.idx_to_pts(seek_pos), mode='time', any_frame=True)
         except av.AVError as e:
@@ -320,6 +320,8 @@ class File_Source(Base_Source):
     def on_notify(self, notification):
         if notification['subject'] == 'file_source.seek' and notification.get('source_path') == self.source_path:
             self.seek_to_frame(notification['frame_index'])
+        elif notification['subject'] == 'file_source.toggle_play' and notification.get('source_path') == self.source_path:
+            self.play = notification['should_play']
 
     def init_ui(self):
         self.add_menu()
