@@ -257,6 +257,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.glfont.set_align_string(v_align='right', h_align='top')
 
         def jump_next_natural_feature():
+            self.manual_ref_positions.sort(key=lambda mr: mr['index'])
             current = self.g_pool.capture.get_frame_index()
             for nf in self.manual_ref_positions:
                 if nf['index'] > current:
@@ -448,15 +449,30 @@ class Offline_Calibration(Gaze_Producer_Base):
         sec['bg_task'] = bh.Task_Proxy('{}'.format(self.sections.index(sec) + 1), calibrate_and_map, args=generator_args)
 
     def gl_display(self):
-        ref_point_norm = [r['norm_pos'] for r in self.circle_marker_positions
-                          if self.g_pool.capture.get_frame_index() == r['index']]
-        draw_points_norm(ref_point_norm, size=35, color=RGBA(0, .5, 0.5, .7))
-        draw_points_norm(ref_point_norm, size=5, color=RGBA(.0, .9, 0.0, 1.0))
+        # normalize coordinate system, no need this step in utility functions
+        with gl_utils.Coord_System(0, 1, 0, 1):
+            ref_point_norm = [r['norm_pos'] for r in self.circle_marker_positions
+                              if self.g_pool.capture.get_frame_index() == r['index']]
+            draw_points(ref_point_norm, size=35, color=RGBA(0, .5, 0.5, .7))
+            draw_points(ref_point_norm, size=5, color=RGBA(.0, .9, 0.0, 1.0))
 
-        manual_refs_in_frame = [r['norm_pos'] for r in self.manual_ref_positions
-                                if self.g_pool.capture.get_frame_index() in r['index_range']]
-        draw_points_norm(manual_refs_in_frame, size=35, color=RGBA(.0, .0, 0.9, .8))
-        draw_points_norm(manual_refs_in_frame, size=5, color=RGBA(.0, .9, 0.0, 1.0))
+            manual_refs_in_frame = [r for r in self.manual_ref_positions
+                                    if self.g_pool.capture.get_frame_index() in r['index_range']]
+            current = self.g_pool.capture.get_frame_index()
+            for mr in manual_refs_in_frame:
+                if mr['index'] == current:
+                    draw_points([mr['norm_pos']], size=35, color=RGBA(.0, .0, 0.9, .8))
+                    draw_points([mr['norm_pos']], size=5, color=RGBA(.0, .9, 0.0, 1.0))
+                else:
+                    distance = abs(current - mr['index'])
+                    range_radius = (mr['index_range'][-1] - mr['index_range'][0]) // 2
+                    # scale alpha [.1, .9] depending on distance to current frame
+                    alpha = distance / range_radius
+                    alpha = 0.1 * alpha + 0.9 * (1. - alpha)
+                    # Use draw_progress instead of draw_circle. draw_circle breaks
+                    # because of the normalized coord-system.
+                    draw_progress(mr['norm_pos'], 0., 0.999, inner_radius=20., outer_radius=35., color=RGBA(.0, .0, 0.9, alpha))
+                    draw_points([mr['norm_pos']], size=5, color=RGBA(.0, .9, 0.0, alpha))
 
         # calculate correct timeline height. Triggers timeline redraw only if changed
         self.timeline.height = max(1, self.timeline_line_height * sum((1 for s in self.sections if not s['hide_from_timeline'])))
