@@ -357,7 +357,8 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def on_click(self, pos, button, action):
         if action == GLFW_PRESS and self.manual_ref_edit_mode:
-            manual_refs_in_frame = [r for r in self.manual_ref_positions if self.g_pool.capture.get_frame_index() in r['index_range'] ]
+            manual_refs_in_frame = [r for r in self.manual_ref_positions
+                                    if self.g_pool.capture.get_frame_index() == r['index']]
             for ref in manual_refs_in_frame:
                 if np.sqrt((pos[0]-ref['screen_pos'][0])**2 + (pos[1]-ref['screen_pos'][1])**2) < 15:  # img pixels
                     del self.manual_ref_positions[self.manual_ref_positions.index(ref)]
