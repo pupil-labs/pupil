@@ -277,7 +277,6 @@ class Realsense_Source(Base_Source):
         pointstream = PointStream(width=depth_frame_size[0],
                                   height=depth_frame_size[1], fps=depth_fps)
 
-
         self.streams = [colorstream, depthstream, pointstream]
         if self.align_streams:
             dacstream = DACStream(width=depth_frame_size[0],
@@ -572,23 +571,27 @@ class Realsense_Source(Base_Source):
             glDrawArrays (GL_POINTS, 0, depth_frame.width * depth_frame.height)
             gl_utils.glFlush()
             glDisable(GL_DEPTH_TEST)
-            #gl_utils.make_coord_system_norm_based()
+            # gl_utils.make_coord_system_norm_based()
             glfw.glfwSwapBuffers(self.depth_window)
             glfw.glfwMakeContextCurrent(active_window)
+
         if self.preview_depth and self._recent_depth_frame is not None:
             self.g_pool.image_tex.update_from_ndarray(self._recent_depth_frame.bgr)
             gl_utils.glFlush()
             gl_utils.make_coord_system_norm_based()
             self.g_pool.image_tex.draw()
-
         elif self._recent_frame is not None:
-            self.g_pool.image_tex.update_from_yuv_buffer(self._recent_frame.yuv_buffer,self._recent_frame.width,self._recent_frame.height)
+            self.g_pool.image_tex.update_from_yuv_buffer(self._recent_frame.yuv_buffer,
+                                                         self._recent_frame.width,
+                                                         self._recent_frame.height)
             gl_utils.glFlush()
             gl_utils.make_coord_system_norm_based()
             self.g_pool.image_tex.draw()
+
         if not self.online:
-            cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8), alpha=0.4)
-            gl_utils.make_coord_system_pixel_based((self.frame_size[1], self.frame_size[0], 3))
+            super().gl_display()
+
+        gl_utils.make_coord_system_pixel_based((self.frame_size[1], self.frame_size[0], 3))
 
     def restart_device(self, device_id=None, color_frame_size=None, color_fps=None,
                        depth_frame_size=None, depth_fps=None, device_options=None):
@@ -619,10 +622,11 @@ class Realsense_Source(Base_Source):
                          'depth_frame_size': depth_frame_size,
                          'depth_fps': depth_fps,
                          'device_options': device_options})
+
     def on_click(self, pos, button, action):
-         if button == glfw.GLFW_MOUSE_BUTTON_LEFT and action == glfw.GLFW_PRESS:
+        if button == glfw.GLFW_MOUSE_BUTTON_LEFT and action == glfw.GLFW_PRESS:
             self.mouse_drag = True
-         if button == glfw.GLFW_MOUSE_BUTTON_LEFT and action == glfw.GLFW_RELEASE:
+        if button == glfw.GLFW_MOUSE_BUTTON_LEFT and action == glfw.GLFW_RELEASE:
             self.mouse_drag = False
 
     def on_notify(self, notification):
@@ -657,10 +661,6 @@ class Realsense_Source(Base_Source):
     @property
     def intrinsics(self):
         return self._intrinsics
-
-    @intrinsics.setter
-    def intrinsics(self, new_intrinsics):
-        self._intrinsics = new_intrinsics
 
     @property
     def frame_size(self):

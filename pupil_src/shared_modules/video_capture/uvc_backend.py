@@ -288,10 +288,6 @@ class UVC_Source(Base_Source):
     def intrinsics(self):
         return self._intrinsics
 
-    @intrinsics.setter
-    def intrinsics(self, new_intrinsics):
-        self._intrinsics = new_intrinsics
-
     @property
     def frame_rate(self):
         if self.uvc_capture:
