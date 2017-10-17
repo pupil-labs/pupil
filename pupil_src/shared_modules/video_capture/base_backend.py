@@ -60,6 +60,7 @@ class Base_Source(Plugin):
         super().__init__(g_pool)
         self.g_pool.capture = self
         self._recent_frame = None
+        self._intrinsics = None
 
     def add_menu(self):
         super().add_menu()
@@ -138,6 +139,10 @@ class Base_Source(Plugin):
     @property
     def intrinsics(self):
         raise NotImplementedError()
+
+    @intrinsics.setter
+    def intrinsics(self, model):
+        self._intrinsics = model
 
 
 class Base_Manager(Plugin):

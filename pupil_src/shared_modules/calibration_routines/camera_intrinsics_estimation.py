@@ -75,9 +75,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.show_undistortion = False
         self.show_undistortion_switch = None
 
-        self.capture = g_pool.capture
-
-        if hasattr(self.capture, 'intrinsics') and self.capture.intrinsics:
+        if hasattr(self.g_pool.capture, 'intrinsics') and self.g_pool.capture.intrinsics:
             logger.info('Click show undistortion to verify camera intrinsics calibration.')
             logger.info('Hint: Straight lines in the real world should be straigt in the image.')
         else:
@@ -97,7 +95,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
         self.show_undistortion_switch = ui.Switch('show_undistortion',self,label='show undistorted image')
         self.menu.append(self.show_undistortion_switch)
-        self.show_undistortion_switch.read_only = not (hasattr(self.capture, 'intrinsics') and self.capture.intrinsics)
+        self.show_undistortion_switch.read_only = not (hasattr(self.g_pool.capture, 'intrinsics') and self.g_pool.capture.intrinsics)
 
         self.button = ui.Thumb('collect_new',self,setter=self.advance,label='C',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
@@ -229,7 +227,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         logger.info("Calibrated Camera, RMS:{}".format(rms))
 
         camera_model.save(self.g_pool.user_dir)
-        self.capture.intrinsics = camera_model
+        self.g_pool.capture.intrinsics = camera_model
 
 
 
@@ -259,10 +257,10 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             self.close_window()
 
         if self.show_undistortion:
-            assert self.capture.intrinsics
+            assert self.g_pool.capture.intrinsics
             # This function is not yet compatible with the fisheye camera model and would have to be manually implemented.
             # adjusted_k,roi = cv2.getOptimalNewCameraMatrix(cameraMatrix= np.array(self.camera_intrinsics[0]), distCoeffs=np.array(self.camera_intrinsics[1]), imageSize=self.camera_intrinsics[2], alpha=0.5,newImgSize=self.camera_intrinsics[2],centerPrincipalPoint=1)
-            self.undist_img = self.capture.intrinsics.undistort(frame.img)
+            self.undist_img = self.g_pool.capture.intrinsics.undistort(frame.img)
 
 
     def gl_display(self):
