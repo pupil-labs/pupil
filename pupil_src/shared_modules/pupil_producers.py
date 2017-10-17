@@ -35,6 +35,32 @@ class Empty(object):
 class Pupil_Producer_Base(Producer_Plugin_Base):
     uniqueness = 'by_base_class'
     order = 0.01
+    icon_chr = chr(0xec12)
+    icon_font = 'pupil_icons'
+
+    def init_ui(self):
+        self.add_menu()
+
+        pupil_producer_plugins = [p for p in self.g_pool.plugin_by_name.values() if issubclass(p, Pupil_Producer_Base)]
+        pupil_producer_plugins.sort(key=lambda p: p.__name__)
+
+        self.menu_icon.order = 0.29
+
+        def open_plugin(p):
+            self.notify_all({'subject': 'start_plugin', 'name': p.__name__})
+
+        # We add the capture selection menu
+        self.menu.append(ui.Selector(
+                                'pupil_producer',
+                                setter=open_plugin,
+                                getter=lambda: self.__class__,
+                                selection=pupil_producer_plugins,
+                                labels=[p.__name__.replace('_', ' ') for p in pupil_producer_plugins],
+                                label='Pupil Producers'
+                            ))
+
+    def deinit_ui(self):
+        self.remove_menu()
 
 
 class Pupil_From_Recording(Pupil_Producer_Base):
@@ -45,8 +71,10 @@ class Pupil_From_Recording(Pupil_Producer_Base):
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
 
-    def get_init_dict(self):
-        return {}
+    def init_ui(self):
+        super().init_ui()
+        self.menu.label = "Pupil Data From Recording"
+        self.menu.append(ui.Info_Text('Currently, pupil positions are loaded from the recording.'))
 
 
 class Offline_Pupil_Detection(Pupil_Producer_Base):
@@ -74,8 +102,6 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.eye_processes = [None, None]
         self.detection_progress = session_data['detection_progress']
         self.detection_status = session_data['detection_status']
-
-        self.menu = None
 
         # start processes
         if self.detection_progress[0] < 100:
@@ -141,7 +167,6 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 if self.eye_processes == [None, None]:
                     self.correlate_publish()
 
-
     def correlate_publish(self):
         self.g_pool.pupil_positions = self.pupil_positions
         self.g_pool.pupil_positions_by_frame = correlate_data(self.pupil_positions, self.g_pool.timestamps)
@@ -158,14 +183,13 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         min_ts = self.eye_processes[eye_id].min_ts
         max_ts = self.eye_processes[eye_id].max_ts
         self.detection_progress[eye_id] = 100 * (cur_ts - min_ts) / (max_ts - min_ts)
-
+        self.menu_icon.indicator_stop = sum(self.detection_progress) / 200.
 
     def cleanup(self):
         self.stop_eye_process(0)
         self.stop_eye_process(1)
         # close sockets before context is terminated
         self.data_sub = None
-        self.deinit_gui()
 
         session_data = {}
         session_data["detection_method"]= self.detection_method
@@ -194,9 +218,10 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.redetect()
         self.detection_method = new_mode
 
-    def init_gui(self):
-        self.menu = ui.Scrolling_Menu("Offline Pupil Detector", size=(220, 300))
-        self.g_pool.gui.append(self.menu)
+    def init_ui(self):
+        super().init_ui()
+        self.menu.label = "Offline Pupil Detector"
+        self.menu.append(ui.Info_Text('Detects pupil positions from the recording\'s eye videos.'))
         self.menu.append(ui.Selector('detection_method', self, label='Detection Method',
                                      selection=['2d', '3d'], setter=self.set_detection_mapping_mode))
         self.menu.append(ui.Button('Redetect', self.redetect))
@@ -216,12 +241,3 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                                     setter=lambda _: _)
         progress_slider.display_format = '%3.0f%%'
         self.menu.append(progress_slider)
-
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
-    def get_init_dict(self):
-        return {}
-

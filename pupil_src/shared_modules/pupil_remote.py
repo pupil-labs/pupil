@@ -70,6 +70,9 @@ class Pupil_Remote(Plugin):
         order (float): See plugin.py
         thread_pipe (zmq.Socket): Pipe for background communication
     """
+    icon_chr = chr(0xe307)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool, port="50020", host="*", use_primary_interface=True):
         super().__init__(g_pool)
         self.order = .01  # excecute first
@@ -124,18 +127,17 @@ class Pupil_Remote(Plugin):
         while self.thread_pipe:
             sleep(.1)
 
-    def init_gui(self):
-        self.menu = ui.Growing_Menu('Pupil Remote')
-        self.menu.collapsed = True
-        self.g_pool.sidebar.append(self.menu)
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Pupil Remote'
         self.update_menu()
+
+    def deinit_ui(self):
+        self.remove_menu()
 
     def update_menu(self):
 
         del self.menu.elements[:]
-
-        def close():
-            self.alive = False
 
         def set_iface(use_primary_interface):
             self.use_primary_interface = use_primary_interface
@@ -161,7 +163,6 @@ class Pupil_Remote(Plugin):
                 self.update_menu()
 
         help_str = 'Pupil Remote using ZeroMQ REQ REP scheme.'
-        self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Switch('use_primary_interface', self, setter=set_iface, label="Use primary network interface"))
         if self.use_primary_interface:
@@ -173,10 +174,6 @@ class Pupil_Remote(Plugin):
                                            getter=lambda: '{}:{}'.format(self.host, self.port)))
             self.menu.append(ui.Info_Text('Bound to: "tcp://{}:{}"'.format(self.host, self.port)))
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu = None
 
     def thread_loop(self, context, pipe):
         poller = zmq.Poller()
@@ -277,4 +274,3 @@ class Pupil_Remote(Plugin):
            This happens either voluntarily or forced.
         """
         self.stop_server()
-        self.deinit_gui()

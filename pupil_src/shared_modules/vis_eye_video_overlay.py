@@ -176,6 +176,9 @@ class Eye_Wrapper(object):
 
 
 class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
+    icon_chr = chr(0xec02)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool, alpha=0.6, eye_scale_factor=.5, show_ellipses=True,
                  eye0_config={'pos': (640, 10)}, eye1_config={'pos': (10, 10)}):
         super().__init__(g_pool)
@@ -192,15 +195,10 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
         self.eye0.initliaze_video(g_pool.rec_dir, g_pool.timestamps)
         self.eye1.initliaze_video(g_pool.rec_dir, g_pool.timestamps)
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
         # initialize the menu
-        self.menu = ui.Scrolling_Menu('Eye Video Overlay')
-        self.g_pool.gui.append(self.menu)
-
-        def close():
-            self.alive = False
-
-        self.menu.append(ui.Button('Close', close))
+        self.menu.label = 'Eye Video Overlay'
         self.menu.append(ui.Info_Text('Show the eye video overlaid on top of the world video. Eye 0 is usually the right eye.'))
         self.menu.append(ui.Slider('alpha', self, min=0.0, step=0.05, max=1.0, label='Opacity'))
         self.menu.append(ui.Slider('eye_scale_factor', self, min=0.2, step=0.1, max=1.0, label='Video Scale'))
@@ -243,20 +241,9 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
         self.eye1.visualize(frame, self.alpha, self.eye_scale_factor,
                             self.show_ellipses, events['pupil_positions'])
 
-    def deinit_gui(self):
-        if self.menu is not None:
-            self.eye0.remove_eye_menu(self.menu)
-            self.eye1.remove_eye_menu(self.menu)
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
+    def deinit_ui(self):
+        self.remove_menu()
 
     def get_init_dict(self):
         return {'alpha': self.alpha, 'eye_scale_factor': self.eye_scale_factor, 'show_ellipses': self.show_ellipses,
                 'eye0_config': self.eye0.config, 'eye1_config': self.eye1.config}
-
-    def cleanup(self):
-        """ called when the plugin gets terminated.
-        This happens either voluntarily or forced.
-        if you have a GUI or glfw window destroy it here.
-        """
-        self.deinit_gui()

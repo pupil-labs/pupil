@@ -21,6 +21,8 @@ class Remote_Recorder(Plugin):
 
     order = .3
     uniqueness = 'by_class'
+    icon_chr = chr(0xec16)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool, session_name='Unnamed session'):
         super().__init__(g_pool)
@@ -62,36 +64,29 @@ class Remote_Recorder(Plugin):
             logger.warning('Recording on {} was stopped remotely. Stopping whole recording.'.format(source))
             self.stop()
 
-    def init_gui(self):
-        def close():
-            self.alive = False
-        self.menu = ui.Growing_Menu('Remote Recorder')
-        self.g_pool.sidebar.append(self.menu)
-        self.menu.append(ui.Button('Close', close))
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Remote Recorder'
         self.menu.append(ui.Info_Text('Starts a recording session on each connected Pupil Mobile source.'))
         self.menu.append(ui.Text_Input('session_name', self))
         self.menu_toggle = ui.Button('Start Recording', self.toggle_recording)
         # ↴: Unicode: U+21B4, UTF-8: E2 86 B4
         self.quickbar_toggle = ui.Thumb('running', self, setter=self.toggle_recording,
-                                        label=chr(0xf03d), label_font='fontawesome',
+                                        label=chr(0xe04b), label_font='pupil_icons',
                                         label_offset_size=-30, hotkey='e')
         self.quickbar_toggle.on_color[:] = (1, .0, .0, .8)
 
         self.menu.append(self.menu_toggle)
         self.g_pool.quickbar.append(self.quickbar_toggle)
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.g_pool.quickbar.remove(self.quickbar_toggle)
-            self.menu = None
-            self.menu_toggle = None
-            self.quickbar_toggle = None
-
+    def deinit_ui(self):
+        self.g_pool.quickbar.remove(self.quickbar_toggle)
+        self.menu_toggle = None
+        self.quickbar_toggle = None
+        self.remove_menu()
 
     def cleanup(self):
         self.stop()
-        self.deinit_gui()
 
     def get_init_dict(self):
         return {'session_name': self.session_name}

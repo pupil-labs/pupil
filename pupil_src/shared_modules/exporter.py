@@ -43,7 +43,7 @@ from vis_eye_video_overlay import Vis_Eye_Video_Overlay
 
 # we are not importing manual gaze corrction. In Player corrections have already been applied.
 # in batch exporter this plugin makes little sense.
-from fixation_detector import Pupil_Angle_3D_Fixation_Detector,Gaze_Position_2D_Fixation_Detector
+from fixation_detector import Offline_Fixation_Detector
 
 
 class Global_Container(object):
@@ -51,17 +51,16 @@ class Global_Container(object):
 
 
 def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir, min_data_confidence,
-           start_frame=None, end_frame=None, plugin_initializers=(), out_file_path=None,pre_computed={}):
-
+           start_frame=None, end_frame=None, plugin_initializers=(), out_file_path=None, pre_computed={}):
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()))
 
     try:
 
-        vis_plugins = sorted([Vis_Circle,Vis_Cross,Vis_Polyline,Vis_Light_Points,
-            Vis_Watermark,Vis_Scan_Path,Vis_Eye_Video_Overlay], key=lambda x: x.__name__)
-        analysis_plugins = sorted([ Pupil_Angle_3D_Fixation_Detector,
-                                   Gaze_Position_2D_Fixation_Detector], key=lambda x: x.__name__)
+        vis_plugins = sorted([Vis_Circle, Vis_Cross, Vis_Polyline, Vis_Light_Points,
+                              Vis_Watermark, Vis_Scan_Path, Vis_Eye_Video_Overlay],
+                             key=lambda x: x.__name__)
+        analysis_plugins = [Offline_Fixation_Detector]
         user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
 
         available_plugins = vis_plugins + analysis_plugins + user_plugins

@@ -12,9 +12,11 @@ import os
 from pyglui import ui
 from plugin import Plugin
 import zmq_tools
-#logging
+
+# logging
 import logging
 logger = logging.getLogger(__name__)
+
 
 class Log_to_Callback(logging.Handler):
     def __init__(self,cb):
@@ -24,26 +26,25 @@ class Log_to_Callback(logging.Handler):
     def emit(self,record):
         self.cb(record)
 
+
 class Log_History(Plugin):
     """Simple logging GUI that displays the last N messages from the logger"""
+    icon_chr = chr(0xec10)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.menu = None
         self.num_messages = 50
 
-
         self.formatter = logging.Formatter('%(processName)s - [%(levelname)s] %(name)s: %(message)s')
         self.logfile = os.path.join(self.g_pool.user_dir,self.g_pool.app+'.log')
 
-    def init_gui(self):
-
-        def close():
-            self.alive = False
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Log'
 
         help_str = 'A View of the {} most recent log messages. Complete logs are here: "{}"'.format(self.num_messages,self.g_pool.user_dir)
-        self.menu = ui.Scrolling_Menu('Log')
-        self.g_pool.gui.append(self.menu)
-        self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
 
         with open(self.logfile,'r') as fh:
@@ -69,16 +70,12 @@ class Log_History(Plugin):
 
     def on_log(self,record):
         self.menu.elements[self.num_messages+2:] = []
-        self.menu.insert(2,ui.Info_Text(str(self.formatter.format(record))))
+        self.menu.insert(1,ui.Info_Text(str(self.formatter.format(record))))
 
-
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu= None
+    def deinit_ui(self):
+        self.remove_menu()
 
     def cleanup(self):
-        self.deinit_gui()
         if self.log_handler:
             logger = logging.getLogger()
             logger.removeHandler(self.log_handler)

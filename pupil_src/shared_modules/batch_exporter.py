@@ -52,6 +52,9 @@ class Batch_Exporter(Analysis_Plugin_Base):
     """docstring for Batch_Exporter
     this plugin can export videos in a seperate process using exporter
     """
+    icon_chr = chr(0xec05)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
@@ -70,20 +73,16 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.workers = [None for x in range(mp.cpu_count())]
         logger.info("Using a maximum of {} CPUs to process visualizations in parallel...".format(mp.cpu_count()))
 
-    def unset_alive(self):
-        self.alive = False
-
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
         # initialize the menu
-        self.menu = ui.Scrolling_Menu('Batch Export Recordings')
+        self.menu.label = 'Batch Export Recordings'
         # load the configuration of last session
         # add menu to the window
-        self.g_pool.gui.append(self.menu)
-        self._update_gui()
+        self._update_ui()
 
-    def _update_gui(self):
+    def _update_ui(self):
         self.menu.elements[:] = []
-        self.menu.append(ui.Button('Close', self.unset_alive))
         self.menu.append(ui.Text_Input('source_dir', self, label='Recording Source Directory', setter=self.set_src_dir))
         self.menu.append(ui.Text_Input('destination_dir', self, label='Recording Destination Directory', setter=self.set_dest_dir))
         self.menu.append(ui.Button('start export', self.start))
@@ -98,13 +97,8 @@ class Batch_Exporter(Analysis_Plugin_Base):
         if not self.exports:
             self.menu.append(ui.Info_Text('Please select a Recording Source directory from with to pull all recordings for export.'))
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
-    def get_init_dict(self):
-        return {}
+    def deinit_ui(self):
+        self.remove_menu()
 
     def set_src_dir(self, new_dir):
         new_dir = new_dir
@@ -122,7 +116,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
             return
 
         self.add_exports()
-        self._update_gui()
+        self._update_ui()
 
     def set_dest_dir(self, new_dir):
         new_dir = new_dir
@@ -136,7 +130,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
 
         self.exports = []
         self.add_exports()
-        self._update_gui()
+        self._update_ui()
 
     def add_exports(self):
         outfiles = set()
@@ -194,17 +188,6 @@ class Batch_Exporter(Analysis_Plugin_Base):
                         self.workers[i].start()
                     else:
                         self.run = False
-
-    def gl_display(self):
-        pass
-
-    def cleanup(self):
-        """ called when the plugin gets terminated.
-        This happends either voluntary or forced.
-        if you have an atb bar or glfw window destroy it here.
-        """
-        self.deinit_gui()
-
 
 def main():
 

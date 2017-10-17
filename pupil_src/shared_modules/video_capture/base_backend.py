@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 from plugin import Plugin
 
-# imports need to
 import gl_utils
 from pyglui import cygl
 import numpy as np
@@ -54,35 +53,17 @@ class Base_Source(Plugin):
 
     uniqueness = 'by_base_class'
     order = .0
+    icon_chr = chr(0xe412)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool):
-        assert(not isinstance(g_pool, dict))
         super().__init__(g_pool)
         self.g_pool.capture = self
         self._recent_frame = None
 
-    def cleanup(self):
-        self.deinit_gui()
-
-    def init_gui(self):
-        """Place to add UI to system-provided menu
-
-        System creates `self.g_pool.capture_source_menu`. UI elements
-        should go in there. Only called once and if UI is supported.
-
-        e.g. self.g_pool.capture_source_menu.extend([])
-        """
-        pass
-
-    def deinit_gui(self):
-        """By default, removes all UI elements from system-provided menu
-
-        Only called once and if UI is supported.
-        """
-        try:
-            del self.g_pool.capture_source_menu[:]
-        except AttributeError:
-            pass
+    def add_menu(self):
+        super().add_menu()
+        self.menu_icon.order = 0.2
 
     def recent_events(self, events):
         """Returns None
@@ -158,9 +139,6 @@ class Base_Source(Plugin):
     def intrinsics(self):
         raise NotImplementedError()
 
-    @intrinsics.setter
-    def intrinsics(self, new_intrinsics):
-        pass
 
 class Base_Manager(Plugin):
     """Abstract base class for source managers.
@@ -174,24 +152,37 @@ class Base_Manager(Plugin):
 
     uniqueness = 'by_base_class'
     gui_name = 'Base Manager'
+    icon_chr = chr(0xec01)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        g_pool.capture_manager = self
 
-    def get_init_dict(self):
-        return {}
+    def add_menu(self):
+        super().add_menu()
+        from . import manager_classes
+        from pyglui import ui
 
-    def init_gui(self):
-        """GUI initialisation, see `Plugin.init_gui`
+        self.menu_icon.order = 0.1
 
-        UI elements should be placed in `self.g_pool.capture_selector_menu`
-        """
-        pass
+        def replace_backend_manager(manager_class):
+            if self.g_pool.process.startswith('eye'):
+                self.g_pool.capture_manager.deinit_ui()
+                self.g_pool.capture_manager.cleanup()
+                self.g_pool.capture_manager = manager_class(self.g_pool)
+                self.g_pool.capture_manager.init_ui()
+            else:
+                self.notify_all({'subject': 'start_plugin', 'name': manager_class.__name__})
 
-    def deinit_gui(self):
-        """Removes GUI elements but backend selector"""
-        del self.g_pool.capture_selector_menu[1:]
+        # We add the capture selection menu
+        self.menu.append(ui.Selector(
+                            'capture_manager',
+                            setter    = replace_backend_manager,
+                            getter    = lambda: self.__class__,
+                            selection = manager_classes,
+                            labels    = [b.gui_name for b in manager_classes],
+                            label     = 'Manager'
+                        ))
 
-    def cleanup(self):
-        self.deinit_gui()
+        # here is where you add all your menu entries.
+        self.menu.label = "Backend Manager"

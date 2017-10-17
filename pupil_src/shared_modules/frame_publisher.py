@@ -17,18 +17,22 @@ logger = logging.getLogger(__name__)
 
 
 class Frame_Publisher(Plugin):
+    icon_chr = chr(0xec17)
+    icon_font = 'pupil_icons'
 
     def __init__(self,g_pool,format='jpeg'):
         super().__init__(g_pool)
         self._format = format
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
         help_str = "Publishes frame data in different formats under the topic \"frame.world\"."
-        self.menu = ui.Growing_Menu('Frame Publisher')
-        self.menu.append(ui.Button('Close',self.close))
+        self.menu.label = 'Frame Publisher'
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Selector('format',self,selection=["jpeg","yuv","bgr","gray"], labels=["JPEG", "YUV", "BGR", "Gray Image"],label='Format'))
-        self.g_pool.sidebar.append(self.menu)
+
+    def deinit_ui(self):
+        self.remove_menu()
 
     def recent_events(self,events):
         frame = events.get("frame")
@@ -80,14 +84,8 @@ class Frame_Publisher(Plugin):
     def get_init_dict(self):
         return {'format':self.format}
 
-    def close(self):
-            self.alive = False
-
     def cleanup(self):
         self.notify_all({'subject':'frame_publishing.stopped'})
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu = None
 
     @property
     def format(self):

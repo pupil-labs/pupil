@@ -363,10 +363,10 @@ def find_slope_disc(curvature,angle = 15):
         new_slope = anchor2 - candidate
         dif = abs(base_slope-new_slope)
         if dif>=angle:
-            split_idx.add(i)
+            split_idx.append(i)
         i +=1
 
-    return split_list
+    return split_idx
 
 def find_slope_disc_test(curvature,angle = 15):
     # this only makes sense when your polyline is longish
@@ -730,7 +730,30 @@ if __name__ == '__main__':
     # print evals
 
 
+def trace(aFunc):
+    """Trace entry, exit and exceptions."""
+    def loggedFunc(*args, **kw):
+        print("ENTER", aFunc.__name__)
+        try:
+            result = aFunc(*args, **kw)
+        except Exception as e:
+            print("EXCEPT", aFunc.__name__, e)
+            raise
+        print("EXIT", aFunc.__name__)
+        return result
+    loggedFunc.__name__ = aFunc.__name__
+    loggedFunc.__doc__ = aFunc.__doc__
+    return loggedFunc
 
 
+def timeit(method):
+    import time
 
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        print('TIMEIT %r %f sec' % (method.__name__, te-ts))
+        return result
 
+    return timed

@@ -18,6 +18,8 @@ from methods import denormalize
 
 class Vis_Circle(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
+    icon_chr = chr(0xe061)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,radius=20,color=(0.0,0.7,0.25,0.2),thickness=2,fill=True):
         super().__init__(g_pool)
@@ -47,12 +49,9 @@ class Vis_Circle(Visualizer_Plugin_Base):
         for pt in pts:
             transparent_circle(frame.img, pt, radius=self.radius, color=(self.b, self.g, self.r, self.a), thickness=thickness)
 
-    def init_gui(self):
-        # initialize the menu
-        self.menu = ui.Scrolling_Menu('Gaze Circle')
-        # add menu to the window
-        self.g_pool.gui.append(self.menu)
-        self.menu.append(ui.Button('Close',self.unset_alive))
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Gaze Circle'
         self.menu.append(ui.Slider('radius',self,min=1,step=1,max=100,label='Radius'))
         self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15,label='Stroke width'))
         self.menu.append(ui.Switch('fill',self,label='Fill'))
@@ -66,23 +65,9 @@ class Vis_Circle(Visualizer_Plugin_Base):
         color_menu.append(ui.Slider('a',self,min=0.0,step=0.05,max=1.0,label='Alpha'))
         self.menu.append(color_menu)
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
-    def unset_alive(self):
-        self.alive = False
-
-    def gl_display(self):
-        pass
+    def deinit_ui(self):
+        self.remove_menu()
 
     def get_init_dict(self):
         return {'radius':self.radius,'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness,'fill':self.fill}
 
-    def cleanup(self):
-        """ called when the plugin gets terminated.
-        This happens either voluntarily or forced.
-        if you have a GUI or glfw window destroy it here.
-        """
-        self.deinit_gui()

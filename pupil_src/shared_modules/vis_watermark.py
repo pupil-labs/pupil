@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 class Vis_Watermark(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
+    icon_chr = chr(0xec04)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,selected_watermark_path = None,pos = (20,20)):
         super().__init__(g_pool)
@@ -88,11 +90,9 @@ class Vis_Watermark(Visualizer_Plugin_Base):
         else:
             self.drag_offset = None
 
-    def init_gui(self):
-        # initialize the menu
-        self.menu = ui.Scrolling_Menu('Watermark')
-        self.g_pool.gui.append(self.menu)
-        self.menu.append(ui.Button('Close',self.unset_alive))
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Watermark'
         if self.watermark is None:
             self.menu.append(ui.Info_Text("Please save a .png file in the users settings dir: '{}' in RGBA format. Once this plugin is closed and re-loaded the png will be used as a watermark.".format(self.g_pool.user_dir)))
         else:
@@ -100,13 +100,8 @@ class Vis_Watermark(Visualizer_Plugin_Base):
                 self.menu.append(ui.Selector("watermark_path",self,label='file',selection= self.available_files,labels= [os.path.basename(p) for p in self.available_files], setter=self.load_watermark))
             self.menu.append(ui.Switch('move_watermark',self))
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
-    def unset_alive(self):
-        self.alive = False
+    def deinit_ui(self):
+        self.remove_menu()
 
     def gl_display(self):
         if self.move_watermark:
@@ -114,10 +109,3 @@ class Vis_Watermark(Visualizer_Plugin_Base):
 
     def get_init_dict(self):
         return {'selected_watermark_path':self.watermark_path,'pos':tuple(self.pos)}
-
-    def cleanup(self):
-        """called when the plugin gets terminated.
-        This happens either voluntarily or forced.
-        if you have a GUI or glfw window destroy it here.
-        """
-        self.deinit_gui()
