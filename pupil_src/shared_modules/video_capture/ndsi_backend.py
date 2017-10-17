@@ -48,7 +48,6 @@ class NDSI_Source(Base_Source):
         self.ghost_mode_timeout = 10  # sec
         self._initial_refresh = True
         self.last_update = self.g_pool.get_timestamp()
-        self._intrinsics = None
 
         if not network:
             logger.debug('No network reference provided. Capture is started '
