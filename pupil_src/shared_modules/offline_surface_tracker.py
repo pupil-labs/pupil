@@ -327,7 +327,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                 #draw a quad on surface with false color of value.
                 s.gl_display_metrics()
 
-    def gl_display_cache_bars(self, width, height):
+    def gl_display_cache_bars(self, width, height, scale):
         """
         """
         with gl_utils.Coord_System(0, self.cache.length - 1, height, 0):
@@ -336,9 +336,9 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             for r in self.cache.visited_ranges:  # [[0,1],[3,4]]
                 cached_ranges += (r[0], 0), (r[1], 0)  # [(0,0),(1,0),(3,0),(4,0)]
 
-            glTranslatef(0, self.timeline_line_height / 2, 0)
+            glTranslatef(0, scale * self.timeline_line_height / 2, 0)
             color = RGBA(.8, .6, .2, .8)
-            draw_polyline(cached_ranges, color=color, line_type=GL_LINES, thickness=4)
+            draw_polyline(cached_ranges, color=color, line_type=GL_LINES, thickness=scale * 4)
 
             # Lines where surfaces have been found in video
             cached_surfaces = []
@@ -352,14 +352,14 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             color = RGBA(0, .7, .3, .8)
 
             for s in cached_surfaces:
-                glTranslatef(0, self.timeline_line_height, 0)
-                draw_polyline(s, color=color, line_type=GL_LINES, thickness=2)
+                glTranslatef(0, scale * self.timeline_line_height, 0)
+                draw_polyline(s, color=color, line_type=GL_LINES, thickness=scale * 2)
 
-    def draw_labels(self, width, height):
-        self.glfont.set_size(self.timeline_line_height * .8)
+    def draw_labels(self, width, height, scale):
+        self.glfont.set_size(self.timeline_line_height * .8 * scale)
         self.glfont.draw_text(width, 0, 'Marker Cache')
         for idx, s in enumerate(self.surfaces):
-            glTranslatef(0, self.timeline_line_height, 0)
+            glTranslatef(0, self.timeline_line_height * scale, 0)
             self.glfont.draw_text(width, 0, s.name)
 
     def save_surface_statsics_to_file(self, export_range, export_dir):

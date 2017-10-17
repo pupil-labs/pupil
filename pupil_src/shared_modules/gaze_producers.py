@@ -480,8 +480,8 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def draw_sections(self, width, height, scale):
         max_ts = len(self.g_pool.timestamps)
-        with gl_utils.Coord_System(0, max_ts, height / scale, 0):
-            gl.glTranslatef(0, 1 + self.timeline_line_height / 2, 0)
+        with gl_utils.Coord_System(0, max_ts, height, 0):
+            gl.glTranslatef(0, 0.001 + scale * self.timeline_line_height / 2, 0)
             for s in self.sections:
                 if s['hide_from_timeline']:
                     continue
@@ -499,7 +499,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                               line_type=gl.GL_LINES, thickness=8*scale)
                 draw_polyline([(map_slc.start, 0), (map_slc.stop, 0)], color=color,
                               line_type=gl.GL_LINES, thickness=2*scale)
-                gl.glTranslatef(0, self.timeline_line_height, 0)
+                gl.glTranslatef(0, scale * self.timeline_line_height, 0)
 
     def draw_labels(self, width, height, scale):
         self.glfont.set_size(self.timeline_line_height * .8 * scale)
