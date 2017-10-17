@@ -189,10 +189,6 @@ class NDSI_Source(Base_Source):
             self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
         return self._intrinsics
 
-    @intrinsics.setter
-    def intrinsics(self, new_intrinsics):
-        self._intrinsics = new_intrinsics
-
     @property
     def frame_size(self):
         return self._frame_size
