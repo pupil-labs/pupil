@@ -471,15 +471,16 @@ class Offline_Calibration(Gaze_Producer_Base):
                     alpha = 0.1 * alpha + 0.9 * (1. - alpha)
                     # Use draw_progress instead of draw_circle. draw_circle breaks
                     # because of the normalized coord-system.
-                    draw_progress(mr['norm_pos'], 0., 0.999, inner_radius=20., outer_radius=35., color=RGBA(.0, .0, 0.9, alpha))
+                    draw_progress(mr['norm_pos'], 0., 0.999, inner_radius=20.,
+                                  outer_radius=35., color=RGBA(.0, .0, 0.9, alpha))
                     draw_points([mr['norm_pos']], size=5, color=RGBA(.0, .9, 0.0, alpha))
 
         # calculate correct timeline height. Triggers timeline redraw only if changed
         self.timeline.height = max(1, self.timeline_line_height * sum((1 for s in self.sections if not s['hide_from_timeline'])))
 
-    def draw_sections(self, width, height):
+    def draw_sections(self, width, height, scale):
         max_ts = len(self.g_pool.timestamps)
-        with gl_utils.Coord_System(0, max_ts, height, 0):
+        with gl_utils.Coord_System(0, max_ts, height / scale, 0):
             gl.glTranslatef(0, 1 + self.timeline_line_height / 2, 0)
             for s in self.sections:
                 if s['hide_from_timeline']:
@@ -487,25 +488,27 @@ class Offline_Calibration(Gaze_Producer_Base):
                 color = RGBA(1., 1., 1., .5)
                 if s['calibration_method'] == "natural_features":
                     draw_x([(m['index'], 0) for m in self.manual_ref_positions],
-                              size=12, color=color)
+                           size=12, thickness=2*scale, color=color)
                 else:
                     draw_bars([(m['index'], 0) for m in self.circle_marker_positions],
-                              height=12, color=color)
+                              height=12, thickness=scale, color=color)
                 cal_slc = slice(*s['calibration_range'])
                 map_slc = slice(*s['mapping_range'])
                 color = RGBA(*s['color'])
-                draw_polyline([(cal_slc.start, 0), (cal_slc.stop, 0)], color=color, line_type=gl.GL_LINES, thickness=8)
-                draw_polyline([(map_slc.start, 0), (map_slc.stop, 0)], color=color, line_type=gl.GL_LINES, thickness=2)
+                draw_polyline([(cal_slc.start, 0), (cal_slc.stop, 0)], color=color,
+                              line_type=gl.GL_LINES, thickness=8*scale)
+                draw_polyline([(map_slc.start, 0), (map_slc.stop, 0)], color=color,
+                              line_type=gl.GL_LINES, thickness=2*scale)
                 gl.glTranslatef(0, self.timeline_line_height, 0)
 
-    def draw_labels(self, width, height):
-        self.glfont.set_size(self.timeline_line_height * .8)
+    def draw_labels(self, width, height, scale):
+        self.glfont.set_size(self.timeline_line_height * .8 * scale)
         for idx, s in enumerate(self.sections):
             if s['hide_from_timeline']:
                 continue
             label = 'Gaze Section {}'.format(idx + 1)
             self.glfont.draw_text(width, 0, label)
-            gl.glTranslatef(0, self.timeline_line_height, 0)
+            gl.glTranslatef(0, self.timeline_line_height * scale, 0)
 
     def cleanup(self):
         if self.process_pipe:

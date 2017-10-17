@@ -103,7 +103,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from gaze_producers import Gaze_From_Recording, Offline_Calibration
         from system_graphs import System_Graphs
 
-        assert pyglui_version >= '1.9', 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.10'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
         system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs]
