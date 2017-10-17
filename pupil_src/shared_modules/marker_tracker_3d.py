@@ -333,7 +333,7 @@ class Marker_Tracker_3D(Plugin):
             glfwSetKeyCallback(self._window,self.on_window_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
             glfwSetMouseButtonCallback(self._window,self.on_window_mouse_button)
-            glfwSetCursorPosCallback(self._window,self.on_pos)
+            glfwSetCursorPosCallback(self._window, self.on_window_pos)
             glfwSetScrollCallback(self._window,self.on_scroll)
 
             self.on_resize(self._window,*glfwGetFramebufferSize(self._window))
@@ -387,7 +387,7 @@ class Marker_Tracker_3D(Plugin):
             self.input['down'] = False
 
 
-    def on_pos(self,window,x, y):
+    def on_window_pos(self, window, x, y):
         if self.input['down']:
             old_x,old_y = self.input['mouse']
             self.trackball.drag_to(x-old_x,y-old_y)
