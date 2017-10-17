@@ -71,6 +71,9 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
     """docstring for Video_Export_Launcher
     this plugin can export the video in a seperate process using exporter
     """
+    icon_chr = chr(0xec09)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         # initialize empty menu
@@ -81,23 +84,18 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         default_path = "world_viz.mp4"
         self.rec_name = default_path
 
-    def init_gui(self):
-        # initialize the menu
-        self.menu = ui.Scrolling_Menu('Export Video')
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Export Video'
         # add menu to the window
-        self.g_pool.gui.append(self.menu)
-        self._update_gui()
+        self._update_ui()
 
-    def unset_alive(self):
-        self.alive = False
-
-    def _update_gui(self):
-        self.menu.elements[:] = []
-        self.menu.append(ui.Button('Close',self.unset_alive))
+    def _update_ui(self):
+        del self.menu.elements[:]
         self.menu.append(ui.Info_Text('Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.'))
         self.menu.append(ui.Text_Input('rec_name',self,label='export name'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
-        self.menu.append(ui.Text_Input('in_mark',getter=self.g_pool.trim_marks.get_string,setter=self.g_pool.trim_marks.set_string,label='frame range to export'))
+        self.menu.append(ui.Text_Input('in_mark',getter=self.g_pool.seek_control.get_trim_range_string,setter=self.g_pool.seek_control.set_trim_range_string,label='frame range to export'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
 
         for job in self.exports[::-1]:
@@ -108,13 +106,8 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
             submenu.append(ui.Button('cancel',job.cancel))
             self.menu.append(submenu)
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
-    def get_init_dict(self):
-        return {}
+    def deinit_ui(self):
+        self.remove_menu()
 
     def on_notify(self,notification):
         if notification['subject'] == "should_export":
@@ -149,22 +142,18 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         logger.debug("Starting export as new process %s" %new_export)
         new_export.start()
         self.exports.append(new_export)
-        self._update_gui()
+        self._update_ui()
 
     def recent_events(self, events):
         if self.new_export:
             self.launch_export(self.new_export)
             self.new_export = None
 
-    def gl_display(self):
-        pass
-
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happens either voluntarily or forced.
         if you have a GUI or glfw window destroy it here.
         """
-        self.deinit_gui()
         for e in self.exports:
             e.cancel()
             e.join(1.0)

@@ -38,7 +38,7 @@ if platform.system() == 'Darwin':
                    [('libglfw.dylib', '/usr/local/lib/libglfw.dylib','BINARY')],
                    [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
                    [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
-                   [('fontawesome-webfont.ttf',ui.get_fontawesome_font_path(),'DATA')],
+                   [('pupil_icons.ttf',ui.get_pupil_icons_font_path(),'DATA')],
                    strip=None,
                    upx=True,
                    name='Pupil Capture')
@@ -91,7 +91,7 @@ elif platform.system() == 'Linux':
                    [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
                    [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
                    [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
-                   [('fontawesome-webfont.ttf',ui.get_fontawesome_font_path(),'DATA')],
+                   [('pupil_icons.ttf',ui.get_pupil_icons_font_path(),'DATA')],
                    strip=True,
                    upx=True,
                    name='pupil_capture')
@@ -160,7 +160,7 @@ elif platform.system() == 'Windows':
                        [('glfw3.dll','../../pupil_external/glfw3.dll','BINARY')],
                        [('OpenSans-Regular.ttf', os.path.join(package_path, 'pyglui/OpenSans-Regular.ttf'),'DATA')],
                        [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
-                       [('fontawesome-webfont.ttf', os.path.join(package_path, 'pyglui/fontawesome-webfont.ttf'),'DATA')],
+                       [('pupil_icons.ttf', os.path.join(package_path, 'pyglui/pupil_icons.ttf'),'DATA')],
                        np_dll_list,
                        strip=False,
                        upx=True,

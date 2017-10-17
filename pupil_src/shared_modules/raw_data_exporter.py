@@ -36,11 +36,11 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
         --- optional fields depending on detector
 
         #in 2d the pupil appears as an ellipse available in `3d c++` and `2D c++` detector
-        2d_ellipse_center_x - x center of the pupil in image pixels
-        2d_ellipse_center_y - y center of the pupil in image pixels
-        2d_ellipse_axis_a - first axis of the pupil ellipse in pixels
-        2d_ellipse_axis_b - second axis of the pupil ellipse in pixels
-        2d_ellipse_angle - angle of the ellipse in degrees
+        ellipse_center_x - x center of the pupil in image pixels
+        ellipse_center_y - y center of the pupil in image pixels
+        ellipse_axis_a - first axis of the pupil ellipse in pixels
+        ellipse_axis_b - second axis of the pupil ellipse in pixels
+        ellipse_angle - angle of the ellipse in degrees
 
 
         #data made available by the `3d c++` detector
@@ -98,30 +98,23 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
         gaze_normal1_y - y normal of the visual axis for eye 1
         gaze_normal1_z - z normal of the visual axis for eye 1
         '''
-    def __init__(self, g_pool):
-        super().__init__(g_pool)
+    icon_chr = chr(0xe873)
+    icon_font = 'pupil_icons'
 
-    def init_gui(self):
-        self.menu = ui.Scrolling_Menu('Raw Data Exporter')
-        self.g_pool.gui.append(self.menu)
-
-        def close():
-            self.alive = False
-
-        self.menu.append(ui.Button('Close', close))
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Raw Data Exporter'
         self.menu.append(ui.Info_Text('Export Raw Pupil Capture data into .csv files.'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
         self.menu.append(ui.Text_Input('in_mark',
-                                       getter=self.g_pool.trim_marks.get_string,
-                                       setter=self.g_pool.trim_marks.set_string,
+                                       getter=self.g_pool.seek_control.get_trim_range_string,
+                                       setter=self.g_pool.seek_control.set_trim_range_string,
                                        label='frame range to export'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
+    def deinit_ui(self):
+        self.remove_menu()
 
     def on_notify(self, notification):
         if notification['subject'] == "should_export":
@@ -263,9 +256,3 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
 
         with open(os.path.join(export_dir, 'pupil_gaze_positions_info.txt'), 'w', encoding='utf-8', newline='') as info_file:
             info_file.write(self.__doc__)
-
-    def get_init_dict(self):
-        return {}
-
-    def cleanup(self):
-        self.deinit_gui()

@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 class Calibration_Plugin(Plugin):
     '''base class for all calibration routines'''
     uniqueness = 'by_base_class'
+    icon_chr = chr(0xec14)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -26,6 +28,29 @@ class Calibration_Plugin(Plugin):
         self.pupil_confidence_threshold = 0.6
         self.active = False
         self.mode = 'calibration'
+
+    def add_menu(self):
+        super().add_menu()
+        self.menu.label = 'Calibration'
+
+        calibration_plugins = [p for p in self.g_pool.plugin_by_name.values() if issubclass(p, Calibration_Plugin)]
+        calibration_plugins.sort(key=lambda p: p.__name__)
+        from pyglui import ui
+
+        self.menu_icon.order = 0.3
+
+        def open_plugin(p):
+            self.notify_all({'subject': 'start_plugin', 'name': p.__name__})
+
+        # We add the capture selection menu
+        self.menu.append(ui.Selector(
+                                'calibration_method',
+                                setter=open_plugin,
+                                getter=lambda: self.__class__,
+                                selection=calibration_plugins,
+                                labels=[p.__name__.replace('_', ' ') for p in calibration_plugins],
+                                label='Calibration Method'
+                            ))
 
     @property
     def mode_pretty(self):
@@ -67,7 +92,8 @@ class Calibration_Plugin(Plugin):
             else:
                 logger.warning('{} already stopped.'.format(self.mode_pretty))
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
         self.button = None
         self.calib_button = ui.Thumb('active', self, label='C', setter=self.toggle_calibration, hotkey='c')
         self.test_button = ui.Thumb('active', self, label='T', setter=self.toggle_accuracy_test, hotkey='t')
@@ -79,11 +105,12 @@ class Calibration_Plugin(Plugin):
         self.g_pool.quickbar.insert(0, self.calib_button)
         self.g_pool.quickbar.insert(1, self.test_button)
 
-    def deinit_gui(self):
+    def deinit_ui(self):
         self.g_pool.quickbar.remove(self.calib_button)
         self.g_pool.quickbar.remove(self.test_button)
         self.calib_button = None
         self.test_button = None
+        self.remove_menu()
 
     def toggle_calibration(self, _=None):
         if self.active:

@@ -15,14 +15,13 @@ import csv_utils
 from pyglui import ui
 import numpy as np
 # from scipy.interpolate import UnivariateSpline
-from plugin import Plugin
+from plugin import System_Plugin_Base
 from time import strftime, localtime, time, gmtime
 from shutil import copy2
 from file_methods import save_object, load_object
 from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer
 from ndsi import H264Writer
-from camera_models import save_intrinsics
 # logging
 import logging
 logger = logging.getLogger(__name__)
@@ -79,8 +78,11 @@ def get_auto_name():
 #         ts = s(frames)
 
 
-class Recorder(Plugin):
+class Recorder(System_Plugin_Base):
     """Capture Recorder"""
+    icon_chr = chr(0xe04b)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool, session_name=get_auto_name(), rec_dir=None,
                  user_info={'name': '', 'additional_field': 'change_me'},
                  info_menu_conf={}, show_info_menu=False, record_eye=False,
@@ -130,10 +132,11 @@ class Recorder(Plugin):
         d['raw_jpeg'] = self.raw_jpeg
         return d
 
-    def init_gui(self):
-        self.menu = ui.Growing_Menu('Recorder')
-        self.menu.collapsed = True
-        self.g_pool.sidebar.insert(3, self.menu)
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Recorder'
+        self.menu_icon.order = 0.29
+
         self.menu.append(ui.Info_Text('Pupil recordings are saved like this: "path_to_recordings/recording_session_name/nnn" where "nnn" is an increasing number to avoid overwrites. You can use "/" in your session name to create subdirectories.'))
         self.menu.append(ui.Info_Text('Recordings are saved to "~/pupil_recordings". You can change the path here but note that invalid input will be ignored.'))
         self.menu.append(ui.Text_Input('rec_dir', self, setter=self.set_rec_dir, label='Path to recordings'))
@@ -146,13 +149,10 @@ class Recorder(Plugin):
         self.button.on_color[:] = (1, .0, .0, .8)
         self.g_pool.quickbar.insert(2, self.button)
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu = None
-        if self.button:
-            self.g_pool.quickbar.remove(self.button)
-            self.button = None
+    def deinit_ui(self):
+        self.g_pool.quickbar.remove(self.button)
+        self.button = None
+        self.remove_menu()
 
     def toggle(self, _=None):
         if self.running:
@@ -206,19 +206,19 @@ class Recorder(Plugin):
         return strftime("%H:%M:%S", rec_time)
 
     def start(self):
+        session = os.path.join(self.rec_dir, self.session_name)
+        try:
+            os.makedirs(session, exist_ok=True)
+            logger.debug("Created new recordings session dir {}".format(session))
+        except OSError:
+            logger.error("Could not start recording. Session dir {} not writable.".format(session))
+            return
+
         self.data = {'pupil_positions': [], 'gaze_positions': [], 'notifications': []}
         self.frame_count = 0
         self.running = True
         self.menu.read_only = True
         self.start_time = time()
-
-        session = os.path.join(self.rec_dir, self.session_name)
-        try:
-            os.makedirs(session)
-            logger.debug("Created new recordings session dir {}".format(session))
-
-        except:
-            logger.debug("Recordings session dir {} already exists, using it.".format(session))
 
         # set up self incrementing folder within session folder
         counter = 0
@@ -364,7 +364,6 @@ class Recorder(Plugin):
         """
         if self.running:
             self.stop()
-        self.deinit_gui()
 
     def verify_path(self, val):
         try:

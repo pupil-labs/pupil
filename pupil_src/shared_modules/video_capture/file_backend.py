@@ -197,7 +197,7 @@ class File_Source(Base_Source):
     @property
     @ensure_initialisation(fallback_func=lambda: 20)
     def frame_rate(self):
-        return float(self.average_rate)
+        return 1./float(self.average_rate)
 
     def get_init_dict(self):
         settings = super().get_init_dict()
@@ -321,18 +321,21 @@ class File_Source(Base_Source):
         if notification['subject'] == 'file_source.seek' and notification.get('source_path') == self.source_path:
             self.seek_to_frame(notification['frame_index'])
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'File Source: {}'.format(os.path.split(self.source_path)[-1])
         from pyglui import ui
-        ui_elements = []
-        ui_elements.append(ui.Info_Text("Running Capture with '%s' as src"%self.source_path))
-        ui_elements.append(ui.Slider('slowdown', self, min=0, max=1.0))
+        self.menu.append(ui.Info_Text("Running Capture with '%s' as src"%self.source_path))
+        self.menu.append(ui.Slider('slowdown', self, min=0, max=1.0))
 
         def toggle_looping(val):
             self.loop = val
             if val:
                 self.play = True
-        ui_elements.append(ui.Switch('loop', self, setter=toggle_looping))
-        self.g_pool.capture_source_menu.extend(ui_elements)
+        self.menu.append(ui.Switch('loop', self, setter=toggle_looping))
+
+    def deinit_ui(self):
+        self.remove_menu()
 
     @property
     def jpeg_support(self):
@@ -355,24 +358,24 @@ class File_Manager(Base_Manager):
         default_rec_dir = os.path.join(base_dir,'recordings')
         self.root_folder = root_folder or default_rec_dir
 
-    def init_gui(self):
+    def init_ui(self):
+        self.add_menu()
         from pyglui import ui
-        ui_elements = []
-        ui_elements.append(ui.Info_Text('Enter a folder to enumerate all eligible video files. Be aware that entering folders with a lot of files can slow down Pupil Capture.'))
+        self.menu.append(ui.Info_Text('Enter a folder to enumerate all eligible video files. Be aware that entering folders with a lot of files can slow down Pupil Capture.'))
 
         def set_root(folder):
             if not os.path.isdir(folder):
                 logger.error('`%s` is not a valid folder path.'%folder)
             else: self.root_folder = folder
 
-        ui_elements.append(ui.Text_Input('root_folder',self,label='Source Folder',setter=set_root))
+        self.menu.append(ui.Text_Input('root_folder',self,label='Source Folder',setter=set_root))
 
         def split_enumeration():
             eligible_files = self.enumerate_folder(self.root_folder)
             eligible_files.insert(0, (None, 'Select to activate'))
             return zip(*eligible_files)
 
-        ui_elements.append(ui.Selector(
+        self.menu.append(ui.Selector(
             'selected_file',
             selection_getter=split_enumeration,
             getter=lambda: None,
@@ -380,7 +383,8 @@ class File_Manager(Base_Manager):
             label='Video File'
         ))
 
-        self.g_pool.capture_selector_menu.extend(ui_elements)
+    def deinit_ui(self):
+        self.remove_menu()
 
     def activate(self, full_path):
         if not full_path:

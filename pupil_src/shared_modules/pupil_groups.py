@@ -19,11 +19,15 @@ import msgpack as serializer
 import logging
 logger = logging.getLogger(__name__)
 
+
 class Pupil_Groups(Plugin):
     """Interface for local network discovery and many-to-many communication.
 
     Uses Pyre for local group member discovery.
     """
+    icon_chr = chr(0xe886)
+    icon_font = 'pupil_icons'
+
     def __init__(self, g_pool, name="Unnamed Group Member", active_group="pupil-groups"):
         super().__init__(g_pool)
         self.menu = None
@@ -33,21 +37,19 @@ class Pupil_Groups(Plugin):
         self.thread_pipe = None
         self.start_group_communication()
 
-    def init_gui(self):
-        def close():
-            self.alive = False
-
-        help_str = "Pupil Groups utilizes the ZeroMQ Realtime Exchange Protocol to discover other local group members. We use it to relay notifications to other group members. Example: Sychronise time."
-        self.menu = ui.Growing_Menu('Pupil Groups')
-        self.menu.append(ui.Button('Close',close))
+    def init_ui(self):
+        help_str = "Pupil Groups utilizes the ZeroMQ Realtime Exchange Protocol to discover other local group members. We use it to relay notifications to other group members. Example: Start recordings synchronosly."
+        self.add_menu()
+        self.menu.label = 'Pupil Groups'
         self.menu.append(ui.Info_Text(help_str))
-        self.menu.append(ui.Text_Input('name',self,label='Name:'))
-        self.menu.append(ui.Text_Input('active_group',self,label='Group:'))
+        self.menu.append(ui.Text_Input('name', self, label='Name:'))
+        self.menu.append(ui.Text_Input('active_group', self, label='Group:'))
         self.group_menu = ui.Growing_Menu('Other Group Members')
         self.update_member_menu()
         self.menu.append(self.group_menu)
-        self.g_pool.sidebar.append(self.menu)
 
+    def deinit_ui(self):
+        self.remove_menu()
 
     def start_group_communication(self):
         if self.thread_pipe:
@@ -115,9 +117,6 @@ class Pupil_Groups(Plugin):
         return {'name':self.name, 'active_group': self.active_group}
 
     def cleanup(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu = None
         self.stop_group_communication()
 
     def update_member_menu(self):

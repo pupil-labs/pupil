@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import cv2
-from plugin import Visualizer_Plugin_Base
+from plugin import Analysis_Plugin_Base
 import numpy as np
 from pyglui import ui
 from methods import denormalize,normalize
@@ -18,11 +18,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Vis_Scan_Path(Visualizer_Plugin_Base):
+class Vis_Scan_Path(Analysis_Plugin_Base):
     """docstring
     using this plugin will extend the recent_gaze_positions by x extra dots from previous frames.
     lock recent gaze points onto pixels.
     """
+    icon_chr = chr(0xe422)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,timeframe=.5):
         super().__init__(g_pool)
@@ -37,7 +39,6 @@ class Vis_Scan_Path(Visualizer_Plugin_Base):
         self.prev_frame_idx = -1
         self.past_gaze_positions = []
         self.prev_gray = None
-
 
     def recent_events(self, events):
         frame = events.get('frame')
@@ -97,27 +98,13 @@ class Vis_Scan_Path(Visualizer_Plugin_Base):
         self.prev_frame_idx = frame.index
         self.past_gaze_positions = events['gaze_positions']
 
-    def init_gui(self):
-        # initialize the menu
-        self.menu = ui.Scrolling_Menu('Scan Path')
-        self.g_pool.gui.append(self.menu)
-        self.menu.append(ui.Button('Close',self.unset_alive))
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Scan Path'
         self.menu.append(ui.Slider('timeframe',self,min=0,step=0.1,max=5,label="duration in sec"))
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
-    def unset_alive(self):
-        self.alive = False
+    def deinit_ui(self):
+        self.remove_menu()
 
     def get_init_dict(self):
-        return {'timeframe':self.timeframe}
-
-    def cleanup(self):
-        """ called when the plugin gets terminated.
-        This happens either voluntarily or forced.
-        if you have a GUI or glfw window destroy it here.
-        """
-        self.deinit_gui()
+        return {'timeframe': self.timeframe}

@@ -40,6 +40,8 @@ class Marker_Auto_Trim_Marks(Plugin):
     This plugin depends on the offline marker tracker plugin to be loaded.
 
     """
+    icon_chr = chr(0xe41f)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,man_in_marks=[],man_out_marks=[]):
         super().__init__(g_pool)
@@ -58,26 +60,14 @@ class Marker_Auto_Trim_Marks(Plugin):
         self.surface_export_queue = []
         self.current_frame_idx = 0
 
-    def init_gui(self):
+    def init_ui(self):
         # initialize the menu
-        self.menu = ui.Scrolling_Menu('Marker Auto Trim Marks')
-        self.g_pool.gui.append(self.menu)
+        self.add_menu()
+        self.menu.label = 'Marker Auto Trim Marks'
         self.menu.append(ui.Info_Text("Marker Auto uses the marker detector to get markers"))
-        self.menu.append(ui.Button('remove',self.unset_alive))
 
-        #set up bar display padding
-        self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
-
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
-    def on_window_resize(self,window,w,h):
-        self.win_size = w,h
-
-    def unset_alive(self):
-        self.alive = False
+    def deinit_ui(self):
+        self.remove_menu()
 
     def add_manual_in_mark(self):
         self.man_in_marks.append(self.current_frame_idx)
@@ -110,7 +100,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         if plugins:
             launcher = plugins[0]
             logger.info("exporting {!s}".format(section))
-            self.g_pool.trim_marks.set(section)
+            self.g_pool.seek_control.set_trim_range(section)
             launcher.rec_name.value = "world_viz_section_{}-{}".format(*section)
             launcher.add_export()
 
@@ -119,14 +109,14 @@ class Marker_Auto_Trim_Marks(Plugin):
         if plugins:
             tracker = plugins[0]
             logger.info("exporting {!s}".format(section))
-            self.g_pool.trim_marks.set(section)
+            self.g_pool.seek_control.set_trim_range(section)
             tracker.recalculate()
             tracker.save_surface_statsics_to_file()
         else:
             logger.warning("Please start Offline_Surface_Tracker Plugin for surface export.")
 
     def activate_section(self,section):
-        self.g_pool.trim_marks.set(section)
+        self.g_pool.seek_control.set_trim_range(section)
         self.active_section = section
 
     def get_init_dict(self):
@@ -221,9 +211,7 @@ class Marker_Auto_Trim_Marks(Plugin):
 
                 if self.sections:
                     self.activate_section=self.sections[0]
-                self.menu.elements[:] = []
-                self.menu.append(ui.Button('remove',self.unset_alive))
-                self.menu.label
+                del self.menu.elements[:]
                 self.menu.append(ui.Slider('in_marker_id',self,min=0,step=1,max=63,label='IN marker id'))
                 self.menu.append(ui.Slider('out_marker_id',self,min=0,step=1,max=63,label='OUT marker id'))
                 self.menu.append(ui.Selector('active_section',self,selection=self.sections,setter=self.activate_section,label='set section'))
@@ -251,7 +239,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
-        width,height = self.win_size
+        width,height = self.g_pool.camera_render_size
         h_pad = padding * (frame_max-2)/float(width)
         v_pad = padding* 1./(height-2)
         gluOrtho(-h_pad,  (frame_max-1)+h_pad, -v_pad, 1+v_pad,-1, 1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
@@ -267,6 +255,3 @@ class Marker_Auto_Trim_Marks(Plugin):
         glPopMatrix()
         glMatrixMode(GL_MODELVIEW)
         glPopMatrix()
-
-    def cleanup(self):
-        self.deinit_gui()

@@ -20,6 +20,8 @@ from methods import denormalize
 
 class Vis_Polyline(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
+    icon_chr = chr(0xe922)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool,color=(1.0,0.0,0.4,1.0),thickness=2):
         super().__init__(g_pool)
@@ -42,11 +44,9 @@ class Vis_Polyline(Visualizer_Plugin_Base):
             pts = np.array([pts],dtype=np.int32)
             cv2.polylines(frame.img, pts, isClosed=False, color=bgra, thickness=self.thickness, lineType=cv2.LINE_AA)
 
-    def init_gui(self):
-        # initialize the menu
-        self.menu = ui.Scrolling_Menu('Gaze Polyline')
-        self.g_pool.gui.append(self.menu)
-        self.menu.append(ui.Button('Close',self.unset_alive))
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Gaze Polyline'
         self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15,label='Line thickness'))
 
         color_menu = ui.Growing_Menu('Color')
@@ -57,20 +57,8 @@ class Vis_Polyline(Visualizer_Plugin_Base):
         color_menu.append(ui.Slider('b',self,min=0.0,step=0.05,max=1.0,label='Blue'))
         self.menu.append(color_menu)
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.gui.remove(self.menu)
-            self.menu = None
-
-    def unset_alive(self):
-        self.alive = False
+    def deinit_ui(self):
+        self.remove_menu()
 
     def get_init_dict(self):
         return {'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness}
-
-    def cleanup(self):
-        """ called when the plugin gets terminated.
-        This happens either voluntarily or forced.
-        if you have a GUI or glfw window destroy it here.
-        """
-        self.deinit_gui()

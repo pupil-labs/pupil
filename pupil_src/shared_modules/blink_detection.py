@@ -23,6 +23,8 @@ class Blink_Detection(Plugin):
     pupil detection confidence.
     """
     order = .8
+    icon_chr = chr(0xe81a)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool, history_length=0.2, onset_confidence_threshold=0.5, offset_confidence_threshold=0.5, visualize=True):
         super(Blink_Detection, self).__init__(g_pool)
@@ -35,10 +37,9 @@ class Blink_Detection(Plugin):
         self.menu = None
         self._recent_blink = None
 
-    def init_gui(self):
-        self.menu = ui.Growing_Menu('Blink Detector')
-        self.g_pool.sidebar.append(self.menu)
-        self.menu.append(ui.Button('Close', self.close))
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Blink Detector'
         self.menu.append(ui.Info_Text('This plugin detects blink on- and offsets based on confidence drops.'))
         self.menu.append(ui.Switch('visualize', self, label='Visualize'))
         self.menu.append(ui.Slider('history_length', self,
@@ -51,16 +52,8 @@ class Blink_Detection(Plugin):
                                    label='Offset confidence threshold',
                                    min=0., max=1., step=.05))
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu = None
-
-    def close(self):
-        self.alive = False
-
-    def cleanup(self):
-        self.deinit_gui()
+    def deinit_ui(self):
+        self.remove_menu()
 
     def recent_events(self, events={}):
         events['blinks'] = []

@@ -29,9 +29,11 @@ from math import sqrt
 import logging
 logger = logging.getLogger(__name__)
 
+
 class Surface_Tracker(Plugin):
-    """docstring
-    """
+    icon_chr = chr(0xec07)
+    icon_font = 'pupil_icons'
+
     def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
         super().__init__(g_pool)
         self.order = .2
@@ -57,6 +59,7 @@ class Surface_Tracker(Plugin):
         self.invert_image = invert_image
 
         self.img_shape = None
+        self._last_mouse_pos = 0,0
 
         self.menu = None
         self.button =  None
@@ -75,6 +78,10 @@ class Surface_Tracker(Plugin):
         if notification['subject'] == 'surfaces_changed':
             logger.info('Surfaces changed. Saving to file.')
             self.save_surface_definitions_to_file()
+
+    def on_pos(self,pos):
+        self._last_mouse_pos = normalize(pos,self.g_pool.capture.frame_size,flip_y=True)
+
     def on_click(self,pos,button,action):
         if self.mode == 'Show Markers and Surfaces':
             if action == GLFW_PRESS:
@@ -126,7 +133,7 @@ class Surface_Tracker(Plugin):
         self.surfaces.append(surf)
         self.update_gui_markers()
 
-    def remove_surface(self,i):
+    def remove_surface(self, i):
         remove_surface = self.surfaces[i]
         if remove_surface == self.marker_edit_surface:
             self.marker_edit_surface = None
@@ -138,9 +145,9 @@ class Surface_Tracker(Plugin):
         self.update_gui_markers()
         self.notify_all({'subject': 'surfaces_changed'})
 
-    def init_gui(self):
-        self.menu = ui.Growing_Menu('Surface Tracker')
-        self.g_pool.sidebar.append(self.menu)
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label ='Surface Tracker'
 
         self.button = ui.Thumb('running',self,label='S',hotkey='s')
         self.button.on_color[:] = (.1,.2,1.,.8)
@@ -149,24 +156,15 @@ class Surface_Tracker(Plugin):
         self.g_pool.quickbar.append(self.add_button)
         self.update_gui_markers()
 
-    def deinit_gui(self):
-        if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu= None
-        if self.button:
-            self.g_pool.quickbar.remove(self.button)
-            self.button = None
-        if self.add_button:
-            self.g_pool.quickbar.remove(self.add_button)
-            self.add_button = None
+    def deinit_ui(self):
+        self.g_pool.quickbar.remove(self.button)
+        self.button = None
+        self.g_pool.quickbar.remove(self.add_button)
+        self.add_button = None
+        self.remove_menu()
 
     def update_gui_markers(self):
-
-        def close():
-            self.alive = False
-
         self.menu.elements[:] = []
-        self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text('This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*.'))
         self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
         self.menu.append(ui.Switch('invert_image',self,label='Use inverted markers'))
@@ -239,9 +237,7 @@ class Surface_Tracker(Plugin):
         if self.mode == 'Show Markers and Surfaces':
             # edit surfaces by user
             if self.edit_surf_verts:
-                window = glfwGetCurrentContext()
-                pos = glfwGetCursorPos(window)
-                pos = normalize(pos,glfwGetWindowSize(window),flip_y=True)
+                pos = self._last_mouse_pos
                 for s,v_idx in self.edit_surf_verts:
                     if s.detected:
                         new_pos = s.img_to_ref_surface(np.array(pos))
@@ -306,4 +302,4 @@ class Surface_Tracker(Plugin):
 
         for s in self.surfaces:
             s.cleanup()
-        self.deinit_gui()
+
