@@ -55,7 +55,6 @@ class ColorFrame(object):
         self._yuv[y_plane+u_plane:] = self._yuv422[:, 1::2, 1].flatten()
         self._bgr = None
         self._gray = None
-        self._needs_restart = False
 
     @property
     def height(self):
@@ -213,6 +212,7 @@ class Realsense_Source(Base_Source):
         self.mouse_drag = False
         self.last_pos = (0,0)
         self.depth_window = None
+        self._needs_restart = False
         self._initialize_device(device_id, frame_size, frame_rate,
                                 depth_frame_size, depth_frame_rate, device_options)
 
@@ -295,6 +295,7 @@ class Realsense_Source(Base_Source):
 
         self.update_menu()
         self._needs_restart = False
+
     def _enumerate_formats(self, device_id):
         '''Enumerate formats into hierachical structure:
 
