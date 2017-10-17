@@ -256,6 +256,15 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.glfont.set_color_float((1., 1., 1., .8))
         self.glfont.set_align_string(v_align='right', h_align='top')
 
+        def jump_next_natural_feature():
+            current = self.g_pool.capture.get_frame_index()
+            for nf in self.manual_ref_positions:
+                if nf['index'] > current:
+                    self.g_pool.capture.seek_to_frame(nf['index'])
+                    self.g_pool.new_seek = True
+                    return
+            logger.error('No further natural feature available')
+
         def clear_natural_features():
             self.manual_ref_positions = []
 
@@ -264,8 +273,9 @@ class Offline_Calibration(Gaze_Producer_Base):
         slider = ui.Slider('detection_progress', self, label='Detection Progress', setter=lambda _: _)
         slider.display_format = '%3.0f%%'
         self.menu.append(slider)
-        self.menu.append(ui.Switch('manual_ref_edit_mode',self,label="Natural feature edit mode"))
-        self.menu.append(ui.Button('Clear natural features',clear_natural_features))
+        self.menu.append(ui.Button('Jump to next natural feature', jump_next_natural_feature))
+        self.menu.append(ui.Switch('manual_ref_edit_mode', self, label="Natural feature edit mode"))
+        self.menu.append(ui.Button('Clear natural features', clear_natural_features))
         self.menu.append(ui.Button('Add section', self.append_section))
 
         # set to minimum height
