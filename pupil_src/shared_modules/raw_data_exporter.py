@@ -36,11 +36,11 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
         --- optional fields depending on detector
 
         #in 2d the pupil appears as an ellipse available in `3d c++` and `2D c++` detector
-        2d_ellipse_center_x - x center of the pupil in image pixels
-        2d_ellipse_center_y - y center of the pupil in image pixels
-        2d_ellipse_axis_a - first axis of the pupil ellipse in pixels
-        2d_ellipse_axis_b - second axis of the pupil ellipse in pixels
-        2d_ellipse_angle - angle of the ellipse in degrees
+        ellipse_center_x - x center of the pupil in image pixels
+        ellipse_center_y - y center of the pupil in image pixels
+        ellipse_axis_a - first axis of the pupil ellipse in pixels
+        ellipse_axis_b - second axis of the pupil ellipse in pixels
+        ellipse_angle - angle of the ellipse in degrees
 
 
         #data made available by the `3d c++` detector
