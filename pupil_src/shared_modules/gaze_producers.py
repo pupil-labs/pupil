@@ -183,6 +183,7 @@ def calibrate_and_map(g_pool, ref_list, calib_list, map_list, x_offset, y_offset
 
 def make_section_dict(calib_range, map_range):
         return {'uid': np.random.rand(),  # ensures unique entry in self.sections
+                'label': 'Unnamed section',
                 'calibration_range': calib_range,
                 'mapping_range': map_range,
                 'mapping_method': '3d',
@@ -196,7 +197,7 @@ def make_section_dict(calib_range, map_range):
 
 
 class Offline_Calibration(Gaze_Producer_Base):
-    session_data_version = 5
+    session_data_version = 6
 
     def __init__(self, g_pool, manual_ref_edit_mode=False):
         super().__init__(g_pool)
@@ -293,7 +294,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.glfont = None
 
     def append_section_menu(self, sec):
-        section_menu = ui.Growing_Menu('Gaze Section {}'.format(self.sections.index(sec) + 1))
+        section_menu = ui.Growing_Menu('Section Settings')
         section_menu.color = RGBA(*sec['color'])
 
         def make_validate_fn(sec, key):
@@ -322,6 +323,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
             return remove
 
+        section_menu.append(ui.Text_Input('label', sec, label='Label'))
         section_menu.append(ui.Selector('calibration_method', sec,
                                         label="Calibration Method",
                                         labels=['Circle Marker', 'Natural Features'],
@@ -500,8 +502,7 @@ class Offline_Calibration(Gaze_Producer_Base):
     def draw_labels(self, width, height, scale):
         self.glfont.set_size(self.timeline_line_height * .8 * scale)
         for idx, s in enumerate(self.sections):
-            label = 'Gaze Section {}'.format(idx + 1)
-            self.glfont.draw_text(width, 0, label)
+            self.glfont.draw_text(width, 0, s['label'])
             gl.glTranslatef(0, self.timeline_line_height * scale, 0)
 
     def cleanup(self):
