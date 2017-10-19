@@ -92,12 +92,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     try:
 
-        # display
-        import glfw
-        from pyglui import ui, cygl, __version__ as pyglui_version
-        assert pyglui_version >= '1.9', 'pyglui out of date, please upgrade to newest version'
-        from pyglui.cygl.utils import Named_Texture
-        import gl_utils
 
         # helpers/utils
         from version_utils import VersionFormat
@@ -107,6 +101,13 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         logger.info('Application Version: {}'.format(version))
         logger.info('System Info: {}'.format(get_system_info()))
 
+        # display
+        import glfw
+        from pyglui import ui, cygl, __version__ as pyglui_version
+        assert pyglui_version >= VersionFormat('1.9'), 'pyglui out of date, please upgrade to newest version'
+        from pyglui.cygl.utils import Named_Texture
+        import gl_utils
+        
         import audio
 
         # trigger pupil detector cpp build:
