@@ -431,7 +431,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             events['frame'] = frame
             # report time between now and the last loop interation
             events['dt'] = get_dt()
-            # new positons we make a deepcopy just like the image is a copy.
+
+            # pupil and gaze positions are added by their respective producer plugins
             events['pupil_positions'] = []
             events['gaze_positions'] = []
 
