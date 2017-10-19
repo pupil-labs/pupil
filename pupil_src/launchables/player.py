@@ -103,7 +103,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from gaze_producers import Gaze_From_Recording, Offline_Calibration
         from system_graphs import System_Graphs
 
-        assert pyglui_version >= '1.9', 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.10'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
         system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs]
@@ -320,7 +320,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
         g_pool.timelines = ui.Container((0, 0), (0, 0), (0, 0))
         g_pool.timelines.horizontal_constraint = g_pool.menubar
-        g_pool.user_timelines = ui.Timeline_Menu('User Timelines', pos=(0., -150.),
+        g_pool.user_timelines = ui.Timeline_Menu('User Timelines', pos=(0., -.001),
                                                  size=(0., 0.), header_pos='headline')
         g_pool.user_timelines.color = RGBA(a=0.)
         g_pool.user_timelines.collapsed = True
@@ -431,9 +431,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             events['frame'] = frame
             # report time between now and the last loop interation
             events['dt'] = get_dt()
-            # new positons we make a deepcopy just like the image is a copy.
-            events['gaze_positions'] = deepcopy(g_pool.gaze_positions_by_frame[frame.index])
-            events['pupil_positions'] = deepcopy(g_pool.pupil_positions_by_frame[frame.index])
+
+            # pupil and gaze positions are added by their respective producer plugins
+            events['pupil_positions'] = []
+            events['gaze_positions'] = []
 
             # allow each Plugin to do its work.
             for p in g_pool.plugins:
@@ -513,7 +514,6 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
     import zmq
     import zmq_tools
     from time import sleep
-
 
     # zmq ipc setup
     zmq_ctx = zmq.Context()
