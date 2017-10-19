@@ -320,7 +320,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
         g_pool.timelines = ui.Container((0, 0), (0, 0), (0, 0))
         g_pool.timelines.horizontal_constraint = g_pool.menubar
-        g_pool.user_timelines = ui.Timeline_Menu('User Timelines', pos=(0., -.001),
+        g_pool.user_timelines = ui.Timeline_Menu('User Timelines', pos=(0., -150.),
                                                  size=(0., 0.), header_pos='headline')
         g_pool.user_timelines.color = RGBA(a=0.)
         g_pool.user_timelines.collapsed = True
