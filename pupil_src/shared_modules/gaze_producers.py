@@ -102,9 +102,9 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         try:
             session_data = load_object(os.path.join(self.result_dir, 'manual_gaze_correction'))
         except OSError:
-            session_data = {}
-        self.x_offset = session_data.get('dx', 0.)
-        self.y_offset = session_data.get('dy', 0.)
+            session_data = {'dx': 0., 'dy': 0.}
+        self.x_offset = session_data['dx']
+        self.y_offset = session_data['dy']
         self.load_data_with_offset()
 
     def load_data_with_offset(self):
@@ -146,7 +146,7 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.remove_menu()
 
     def cleanup(self):
-        session_data = {'dx': self.x_offset, 'dy': self.y_offset}
+        session_data = {'dx': self.x_offset, 'dy': self.y_offset, 'version': 0}
         save_object(session_data, os.path.join(self.result_dir, 'manual_gaze_correction'))
 
 
