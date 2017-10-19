@@ -71,7 +71,7 @@ class Seek_Control(System_Plugin_Base):
 
     @play.setter
     def play(self, new_state):
-        if self.current_index >= self.frame_count - 1:
+        if new_state and self.current_index >= self.frame_count - 1:
             self.g_pool.capture.seek_to_frame(0)  # avoid pause set by hitting trimmark pause.
             logger.warning("End of video - restart at beginning.")
         self.g_pool.capture.play = new_state
