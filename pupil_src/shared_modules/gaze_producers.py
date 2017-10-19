@@ -192,8 +192,7 @@ def make_section_dict(calib_range, map_range):
                 'gaze_positions': [],
                 'bg_task': None,
                 'x_offset': 0.,
-                'y_offset': 0.,
-                'hide_from_timeline': False}
+                'y_offset': 0.}
 
 
 class Offline_Calibration(Gaze_Producer_Base):
@@ -334,7 +333,6 @@ class Offline_Calibration(Gaze_Producer_Base):
         section_menu.append(ui.Text_Input('mapping_range', sec, label='Mapping range',
                                           setter=make_validate_fn(sec, 'mapping_range')))
         section_menu.append(ui.Button('Recalibrate', make_calibrate_fn(sec)))
-        section_menu.append(ui.Switch('hide_from_timeline', sec, label='Hide from timeline'))
         section_menu.append(ui.Button('Remove section', make_remove_fn(sec)))
 
         # manual gaze correction menu
@@ -476,15 +474,13 @@ class Offline_Calibration(Gaze_Producer_Base):
                     draw_points([mr['norm_pos']], size=5, color=RGBA(.0, .9, 0.0, alpha))
 
         # calculate correct timeline height. Triggers timeline redraw only if changed
-        self.timeline.height = max(1, self.timeline_line_height * sum((1 for s in self.sections if not s['hide_from_timeline'])))
+        self.timeline.height = max(0.001, self.timeline_line_height * len(self.sections))
 
     def draw_sections(self, width, height, scale):
         max_ts = len(self.g_pool.timestamps)
         with gl_utils.Coord_System(0, max_ts, height, 0):
             gl.glTranslatef(0, 0.001 + scale * self.timeline_line_height / 2, 0)
             for s in self.sections:
-                if s['hide_from_timeline']:
-                    continue
                 color = RGBA(1., 1., 1., .5)
                 if s['calibration_method'] == "natural_features":
                     draw_x([(m['index'], 0) for m in self.manual_ref_positions],
@@ -504,8 +500,6 @@ class Offline_Calibration(Gaze_Producer_Base):
     def draw_labels(self, width, height, scale):
         self.glfont.set_size(self.timeline_line_height * .8 * scale)
         for idx, s in enumerate(self.sections):
-            if s['hide_from_timeline']:
-                continue
             label = 'Gaze Section {}'.format(idx + 1)
             self.glfont.draw_text(width, 0, label)
             gl.glTranslatef(0, self.timeline_line_height * scale, 0)
