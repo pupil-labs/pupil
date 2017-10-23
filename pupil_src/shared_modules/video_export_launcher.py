@@ -136,7 +136,7 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
                         'pupil_data':self.g_pool.pupil_data}
         process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,self.g_pool.min_data_confidence,start_frame,end_frame,plugins,out_file_path,pre_computed))
         self.new_export = process
-        logger.warning("adding export")
+        logger.warning("Added export")
 
     def launch_export(self, new_export):
         logger.debug("Starting export as new process %s" %new_export)
