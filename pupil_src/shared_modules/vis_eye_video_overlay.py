@@ -20,7 +20,7 @@ from glfw import glfwGetCursorPos, glfwGetWindowSize, glfwGetCurrentContext
 from plugin import Visualizer_Plugin_Base
 from player_methods import transparent_image_overlay
 from methods import normalize, denormalize
-from video_capture import EndofVideoFileError, FileSeekError, FileCaptureError, File_Source
+from video_capture import EndofVideoFileError, FileCaptureError, File_Source
 
 # logging
 import logging
@@ -44,8 +44,9 @@ def correlate_eye_world(eye_timestamps, world_timestamps):
 
 
 class Eye_Wrapper(object):
-    def __init__(self, eyeid, pos, hflip=False, vflip=False):
+    def __init__(self, g_pool, eyeid, pos, hflip=False, vflip=False):
         super().__init__()
+        self.g_pool = g_pool
         self.eyeid = eyeid
         self.pos = pos
         self.hflip = hflip
@@ -115,7 +116,7 @@ class Eye_Wrapper(object):
         # 2. dragging image
         if self.drag_offset is not None:
             pos = glfwGetCursorPos(glfwGetCurrentContext())
-            pos = normalize(pos, glfwGetWindowSize(glfwGetCurrentContext()))
+            pos = normalize(pos, self.g_pool.camera_render_size)
             # Position in img pixels
             pos = denormalize(pos, (frame.img.shape[1], frame.img.shape[0]))
             self.pos = int(pos[0] + self.drag_offset[0]), int(pos[1] + self.drag_offset[1])
@@ -189,8 +190,8 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
         self.show_ellipses = show_ellipses
         self.move_around = False
 
-        self.eye0 = Eye_Wrapper(0, **eye0_config)
-        self.eye1 = Eye_Wrapper(1, **eye1_config)
+        self.eye0 = Eye_Wrapper(g_pool, 0, **eye0_config)
+        self.eye1 = Eye_Wrapper(g_pool, 1, **eye1_config)
 
         self.eye0.initliaze_video(g_pool.rec_dir, g_pool.timestamps)
         self.eye1.initliaze_video(g_pool.rec_dir, g_pool.timestamps)
