@@ -54,6 +54,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
            start_frame=None, end_frame=None, plugin_initializers=(), out_file_path=None, pre_computed={}):
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()))
+    logger.info('Starting video export with pid: {}'.format(os.getpid()))
 
     try:
 
@@ -123,6 +124,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
 
         start_time = time()
 
+        g_pool.plugin_by_name = plugin_by_name
         g_pool.capture = cap
         g_pool.rec_dir = rec_dir
         g_pool.user_dir = user_dir
@@ -142,7 +144,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
         g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
 
         # add plugins
-        g_pool.plugins = Plugin_List(g_pool, plugin_by_name, plugin_initializers)
+        g_pool.plugins = Plugin_List(g_pool, plugin_initializers)
 
         while frames_to_export.value > current_frame.value:
 
