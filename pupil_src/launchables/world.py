@@ -136,6 +136,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         from accuracy_visualizer import Accuracy_Visualizer
         # from saccade_detector import Saccade_Detector
         from system_graphs import System_Graphs
+        from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
 
         # UI Platform tweaks
         if platform.system() == 'Linux':
@@ -176,7 +177,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
         user_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
                         Annotation_Capture, Log_History, Fixation_Detector, Blink_Detection,
-                        Remote_Recorder, Accuracy_Visualizer]
+                        Remote_Recorder, Accuracy_Visualizer, Camera_Intrinsics_Estimation]
         system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay, Plugin_Manager, System_Graphs] + manager_classes + source_classes
         plugins = system_plugins + user_plugins + runtime_plugins + calibration_plugins + gaze_mapping_plugins
         user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source, System_Plugin_Base,
