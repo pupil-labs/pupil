@@ -408,13 +408,13 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         ts = g_pool.get_timestamp()
 
         cpu_graph = graph.Bar_Graph()
-        cpu_graph.pos = (20, 130)
+        cpu_graph.pos = (20, 50)
         cpu_graph.update_fn = ps.cpu_percent
         cpu_graph.update_rate = 5
         cpu_graph.label = 'CPU %0.1f'
 
         fps_graph = graph.Bar_Graph()
-        fps_graph.pos = (140, 130)
+        fps_graph.pos = (140, 50)
         fps_graph.update_rate = 5
         fps_graph.label = "%0.0f FPS"
         g_pool.graphs = [cpu_graph, fps_graph]
