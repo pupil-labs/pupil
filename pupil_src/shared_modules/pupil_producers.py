@@ -158,6 +158,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.eye_processes[eye_id] = None
 
     def recent_events(self, events):
+        super().recent_events(events)
         while self.data_sub.new_data:
             topic, payload = self.data_sub.recv()
             if topic.startswith('pupil.'):
