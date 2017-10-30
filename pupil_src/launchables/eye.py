@@ -164,20 +164,19 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             nonlocal window_size
             nonlocal camera_render_size
 
-            if is_window_visible(window):
-                active_window = glfw.glfwGetCurrentContext()
-                glfw.glfwMakeContextCurrent(window)
-                hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
-                g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
-                window_size = w, h
-                camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
-                g_pool.gui.update_window(w, h)
-                g_pool.gui.collect_menus()
-                for g in g_pool.graphs:
-                    g.scale = hdpi_factor
-                    g.adjust_window_size(w, h)
-                adjust_gl_view(w, h)
-                glfw.glfwMakeContextCurrent(active_window)
+            active_window = glfw.glfwGetCurrentContext()
+            glfw.glfwMakeContextCurrent(window)
+            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
+            window_size = w, h
+            camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
+            g_pool.gui.update_window(w, h)
+            g_pool.gui.collect_menus()
+            for g in g_pool.graphs:
+                g.scale = hdpi_factor
+                g.adjust_window_size(w, h)
+            adjust_gl_view(w, h)
+            glfw.glfwMakeContextCurrent(active_window)
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
