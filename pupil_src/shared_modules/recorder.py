@@ -189,7 +189,14 @@ class Recorder(System_Plugin_Base):
             if self.running:
                 logger.info('Recording already running!')
             elif not self.g_pool.capture.online:
-                logger.error("Current world capture is offline. Please reconnect or switch to fake capture")
+                logger.warning("Current world capture is offline. Starting fake capture.")
+                settings = {}
+                settings['frame_rate'] = self.g_pool.capture.frame_rate
+                settings['frame_size'] = self.g_pool.capture.frame_size
+                settings['name'] = self.g_pool.capture.name
+                self.notify_all({'subject': 'start_plugin', "name": "Fake_Source", 'args': settings})
+                self.notify_all({'subject': 'recording.should_start',
+                                 'session_name': notification.get("session_name", "")})
             else:
                 if notification.get("session_name", ""):
                     self.set_session_name(notification["session_name"])

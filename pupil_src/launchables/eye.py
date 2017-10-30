@@ -468,6 +468,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                                                        g_pool.capture.frame_rate)
                         else:
                             g_pool.writer = AV_Writer(video_path, g_pool.capture.frame_rate)
+                    elif notification['record_eye']:
+                        logger.error('Current eye capture is offline. Cannot record eye video.')
                 elif subject == 'recording.stopped':
                     if g_pool.writer:
                         logger.info("Done recording.")
