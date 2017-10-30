@@ -185,14 +185,26 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     def on_notify(self, notification):
         if notification['subject'] == 'eye_process.started':
             self.set_detection_mapping_mode(self.detection_method)
+        elif notification['subject'] == 'eye_process.stopped':
+            self.eye_processes[notification['eye_id']] = None
 
     def update_progress(self, pupil_position):
         eye_id = pupil_position['id']
         cur_ts = pupil_position['timestamp']
-        min_ts = self.eye_processes[eye_id].min_ts
-        max_ts = self.eye_processes[eye_id].max_ts
-        self.detection_progress[eye_id] = 100 * (cur_ts - min_ts) / (max_ts - min_ts)
-        self.menu_icon.indicator_stop = sum(self.detection_progress) / 200.
+        if self.eye_processes[eye_id] is not None:
+            min_ts = self.eye_processes[eye_id].min_ts
+            max_ts = self.eye_processes[eye_id].max_ts
+            current_progress = 100 * (cur_ts - min_ts) / (max_ts - min_ts)
+            self.detection_progress[eye_id] = current_progress
+            total_progress = 100.
+        else:
+            current_progress = 0.
+            total_progress = 0.
+        other_eye_id = 0 if eye_id else 1
+        if self.eye_processes[other_eye_id] is not None:
+            current_progress += self.detection_progress[other_eye_id]
+            total_progress += 100.
+        self.menu_icon.indicator_stop = current_progress / total_progress if total_progress else 0.
 
     def cleanup(self):
         self.stop_eye_process(0)
@@ -201,11 +213,11 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.data_sub = None
 
         session_data = {}
-        session_data["detection_method"]= self.detection_method
+        session_data["detection_method"] = self.detection_method
         session_data['pupil_positions'] = self.pupil_positions
         session_data['detection_progress'] = self.detection_progress
         session_data['detection_status'] = self.detection_status
-        save_object(session_data, os.path.join(self.data_dir,'offline_pupil_data'))
+        save_object(session_data, os.path.join(self.data_dir, 'offline_pupil_data'))
 
     def redetect(self):
         del self.pupil_positions[:]  # delete previously detected pupil positions
