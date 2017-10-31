@@ -62,8 +62,8 @@ if platform.system() == 'Windows':
 else:
     # opencv3 - highgui module has been split into parts: imgcodecs, videoio, and highgui itself
     opencv_libraries = ['opencv_core', 'opencv_highgui', 'opencv_videoio', 'opencv_imgcodecs', 'opencv_imgproc', 'opencv_video']
-    opencv_library_dir = '/usr/local/opt/opencv3/lib'
-    opencv_include_dir = '/usr/local/opt/opencv3/include'
+    opencv_library_dir = '/usr/local/opt/opencv/lib'
+    opencv_include_dir = '/usr/local/opt/opencv/include'
     if(not os.path.isfile(opencv_library_dir+'/libopencv_core.so')):
         ros_dists = ['kinetic', 'jade', 'indigo']
         for ros_dist in ros_dists:
