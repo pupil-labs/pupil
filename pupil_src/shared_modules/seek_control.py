@@ -51,9 +51,6 @@ class Seek_Control(System_Plugin_Base):
             self.g_pool.capture.play = False
 
     def on_seek(self, seeking):
-        """
-        gets called when the user clicks in the window screen
-        """
         if seeking:
             self.was_playing = self.g_pool.capture.play
             self.g_pool.capture.play = False
