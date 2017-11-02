@@ -29,7 +29,7 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
     def __init__(self, g_pool,timeframe=.5):
         super().__init__(g_pool)
         #let the plugin work after most other plugins.
-        self.order = .6
+        self.order = .1
         self.menu = None
 
         #user settings
@@ -81,7 +81,7 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
         if same_frame:
             # paused
             # re-use last result
-            events['gaze_positions'][:] = self.past_gaze_positions[:]
+            events['gaze_positions'] = self.past_gaze_positions[:]
         else:
             # trim gaze that is too old
             if events['gaze_positions']:
@@ -90,7 +90,7 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
                 updated_past_gaze = [g for g in updated_past_gaze if g['timestamp']>cutoff]
 
             #inject the scan path gaze points into recent_gaze_positions
-            events['gaze_positions'][:] = updated_past_gaze + events['gaze_positions']
+            events['gaze_positions'] = updated_past_gaze + events['gaze_positions']
             events['gaze_positions'].sort(key=lambda x: x['timestamp']) #this may be redundant...
 
         #update info for next frame.
