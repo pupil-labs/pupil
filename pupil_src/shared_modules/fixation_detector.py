@@ -339,9 +339,11 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                                (self.g_pool.timestamps[1] - self.g_pool.timestamps[0])
                     self.menu_icon.indicator_stop = progress
             if self.bg_task.completed:
+                self.status = "%s fixations detected"%len(self.fixations)
                 self.correlate_and_publish()
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.
+
 
         frame = events.get('frame')
         if not frame:
@@ -392,11 +394,10 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         for idx, f in enumerate(fixations):
             f['id'] = idx + 1
         self.g_pool.fixations = fixations
-        # now lets bin fixations into frames. Fixations may be repeated this way as they span muliple frames
+        # now lets bin fixations into frames. Fixations are allotted to the first frame they appear in.
         fixations_by_frame = [[] for x in self.g_pool.timestamps]
         for f in self.fixations:
-            for idx in range(f['start_frame_index'], f['end_frame_index'] + 1):
-                fixations_by_frame[idx].append(f)
+            fixations_by_frame[f['start_frame_index']].append(f)
 
         self.g_pool.fixations_by_frame = fixations_by_frame
         self.notify_all({'subject': 'fixations_changed', 'delay': 1})
