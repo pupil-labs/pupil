@@ -147,11 +147,10 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
     Q = deque()
     enum = deque(gaze_data)
     while enum:
-        datum = enum.popleft()
-        Q.append(datum)
-
         # check if Q contains enough data
         if len(Q) < 2 or Q[-1]['timestamp'] - Q[0]['timestamp'] < min_duration:
+            datum = enum.popleft()
+            Q.append(datum)
             continue
 
         # min duration reached, check for fixation
@@ -195,7 +194,8 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             dispersion, origin, base_data = gaze_dispersion(capture, slicable[:right_idx], use_pupil=use_pupil)
 
         yield 'Detecting fixations...', [fixation_from_data(dispersion, origin, base_data, capture.timestamps)]
-        Q = deque(slicable[right_idx:])
+        Q = deque()  # clear queue
+        enum.extendleft(slicable[right_idx:])
 
     yield "Fixation detection complete", []
 
