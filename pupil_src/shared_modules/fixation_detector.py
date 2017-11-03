@@ -397,7 +397,8 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         # now lets bin fixations into frames. Fixations are allotted to the first frame they appear in.
         fixations_by_frame = [[] for x in self.g_pool.timestamps]
         for f in self.fixations:
-            fixations_by_frame[f['start_frame_index']].append(f)
+            for idx in range(f['start_frame_index'], f['end_frame_index'] + 1):
+                fixations_by_frame[idx].append(f)
 
         self.g_pool.fixations_by_frame = fixations_by_frame
         self.notify_all({'subject': 'fixations_changed', 'delay': 1})
