@@ -72,11 +72,13 @@ class Task_Proxy(object):
                     yield datum
 
     def cancel(self, timeout=1):
-        self._should_terminate_flag.value = True
-        for x in self.fetch():
-            # fetch to flush pipe to allow process to react to cancel comand.
-            pass
-        self.process.join(timeout)
+        if self.process is not None:
+            self._should_terminate_flag.value = True
+            for x in self.fetch():
+                # fetch to flush pipe to allow process to react to cancel comand.
+                pass
+            self.process.join(timeout)
+            self.process = None
 
     @property
     def completed(self):
