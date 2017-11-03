@@ -144,7 +144,7 @@ class Reference_Surface(object):
         self.defined = True
         self.build_up_status = self.required_build_up
 
-    def build_correspondance(self, visible_markers, min_marker_perimeter, min_id_confidence):
+    def build_correspondence(self, visible_markers, min_marker_perimeter, min_id_confidence):
         """
         - use all visible markers
         - fit a convex quadrangle around it
@@ -199,13 +199,13 @@ class Reference_Surface(object):
                 self.markers[m['id']] = Support_Marker(m['id'])
                 self.markers[m['id']].add_uv_coords(uv)
 
-        #average collection of uv correspondences accros detected markers
+        #average collection of uv correspondences across detected markers
         self.build_up_status = sum([len(m.collected_uv_coords) for m in self.markers.values()])/float(len(self.markers))
 
         if self.build_up_status >= self.required_build_up:
-            self.finalize_correnspondance()
+            self.finalize_correspondence()
 
-    def finalize_correnspondance(self):
+    def finalize_correspondence(self):
         """
         - prune markers that have been visible in less than x percent of frames.
         - of those markers select a good subset of uv coords and compute mean.
@@ -289,7 +289,7 @@ class Reference_Surface(object):
         """
 
         if not self.defined:
-            self.build_correspondance(visible_markers,min_marker_perimeter,min_id_confidence)
+            self.build_correspondence(visible_markers,min_marker_perimeter,min_id_confidence)
 
         res = self._get_location(visible_markers,min_marker_perimeter,min_id_confidence,locate_3d)
         self.detected = res['detected']
