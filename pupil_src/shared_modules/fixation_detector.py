@@ -337,7 +337,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                 if self.fixations:
                     current = self.fixations[-1]['timestamp']
                     progress = (current - self.g_pool.timestamps[0]) /\
-                               (self.g_pool.timestamps[1] - self.g_pool.timestamps[0])
+                               (self.g_pool.timestamps[-1] - self.g_pool.timestamps[0])
                     self.menu_icon.indicator_stop = progress
             if self.bg_task.completed:
                 self.status = "%s fixations detected"%len(self.fixations)
