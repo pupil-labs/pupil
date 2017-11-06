@@ -197,11 +197,11 @@ cdef class Detector_3D:
 
     @property
     def pretty_class_name(self):
-        return self.menu.label
+        return 'Pupil Detector 3D'
 
     def init_ui(self):
         Plugin.add_menu(self)
-        self.menu.label = 'Pupil Detector 3D'
+        self.menu.label = self.pretty_class_name
         info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
