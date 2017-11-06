@@ -181,11 +181,11 @@ cdef class Detector_2D:
 
     @property
     def pretty_class_name(self):
-        return self.menu.label
+        return 'Pupil Detector 2D'
 
     def init_ui(self):
         Plugin.add_menu(self)
-        self.menu.label = 'Pupil Detector 2D'
+        self.menu.label = self.pretty_class_name
         self.menu_icon.label_font = 'pupil_icons'
         info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
