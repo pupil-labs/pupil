@@ -99,8 +99,11 @@ def fixation_from_data(dispersion, method, base_data, timestamps=None):
 
 def spherical_dispersion(polar_coord):
     polar_coord.shape = 1, -1, 2
-    dispersion = cv2.minEnclosingCircle(polar_coord)[1] * 2
-    return dispersion
+    if polar_coord.shape[1] == 3:
+        # bug in cv2.minEnclosingCircle calculates wrong result for 3 points
+        # https://github.com/pupil-labs/pupil/issues/909
+        polar_coord = np.hstack([polar_coord, polar_coord])
+    return cv2.minEnclosingCircle(polar_coord)[1] * 2
 
 
 def gaze_dispersion(capture, gaze_subset, use_pupil=True):
@@ -137,7 +140,8 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
 
         sphericals = cart2spherical(undistorted_3d)[:, 1:]  # only use theta/phi, exclude radius
 
-    return spherical_dispersion(sphericals), method, base_data
+    dist = spherical_dispersion(sphericals)
+    return dist, method, base_data
 
 
 def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_duration):
@@ -161,7 +165,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             Q.popleft()
             continue
 
-        left_idx = len(Q) - 1
+        left_idx = len(Q)
 
         # minimal fixation found. collect maximal data
         # to perform binary search for fixation end
@@ -179,7 +183,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             continue
 
         slicable = list(Q)  # deque does not support slicing
-        right_idx = len(Q) - 1
+        right_idx = len(Q)
 
         # binary search
         while left_idx + 1 < right_idx:
@@ -192,7 +196,10 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
                 right_idx = middle_idx - 1
 
         if dispersion > max_dispersion:
-            dispersion, origin, base_data = gaze_dispersion(capture, slicable[:right_idx], use_pupil=use_pupil)
+            middle_idx = (left_idx + right_idx) // 2
+            dispersion, origin, base_data = gaze_dispersion(capture, slicable[:middle_idx], use_pupil=use_pupil)
+
+        assert dispersion <= max_dispersion
 
         yield 'Detecting fixations...', [fixation_from_data(dispersion, origin, base_data, capture.timestamps)]
         Q = deque()  # clear queue
@@ -340,7 +347,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                                (self.g_pool.timestamps[-1] - self.g_pool.timestamps[0])
                     self.menu_icon.indicator_stop = progress
             if self.bg_task.completed:
-                self.status = "%s fixations detected"%len(self.fixations)
+                self.status = "{} fixations detected".format(len(self.fixations))
                 self.correlate_and_publish()
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.
