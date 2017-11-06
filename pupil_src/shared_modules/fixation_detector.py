@@ -90,6 +90,7 @@ def fixation_from_data(dispersion, method, base_data, timestamps=None):
     if timestamps is not None:
         start, end = base_data[0]['timestamp'], base_data[-1]['timestamp']
         start, end = np.searchsorted(timestamps, [start, end])
+        end = min(end, len(timestamps) - 1)  # fix `list index out of range` error
         fix['start_frame_index'] = start
         fix['end_frame_index'] = end
         fix['mid_frame_index'] = (start + end) // 2
@@ -343,7 +344,6 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                 self.correlate_and_publish()
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.
-
 
         frame = events.get('frame')
         if not frame:
