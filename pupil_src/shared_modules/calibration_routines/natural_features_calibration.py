@@ -109,29 +109,24 @@ class Natural_Features_Calibration(Calibration_Plugin):
             else:
                 self.button.status_text = 'Click to Sample at Location'
 
-
-
-
     def gl_display(self):
         if self.detected:
-            draw_points_norm([self.pos],size=self.r,color=RGBA(0.,1.,0.,.5))
+            draw_points_norm([self.pos], size=self.r, color=RGBA(0., 1., 0., .5))
 
-
-
-    def on_click(self,pos,button,action):
+    def on_click(self, pos, button, action):
         if action == GLFW_PRESS and self.active:
             self.first_img = None
-            self.point = np.array([pos,],dtype=np.float32)
+            self.point = np.array([pos], dtype=np.float32)
             self.count = 30
 
     def get_init_dict(self):
         return {}
 
-
-    def cleanup(self):
+    def deinit_ui(self):
         """gets called when the plugin get terminated.
         This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         if self.active:
             self.stop()
+        super().deinit_ui()

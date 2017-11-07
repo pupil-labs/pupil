@@ -261,10 +261,11 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         else:
             pass
 
-    def cleanup(self):
+    def deinit_ui(self):
         """gets called when the plugin get terminated.
         This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         if self.active:
             self.stop()
+        super().deinit_ui()
