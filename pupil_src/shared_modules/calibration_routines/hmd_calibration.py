@@ -127,7 +127,7 @@ class HMD_Calibration(Calibration_Plugin):
             cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil0_data)
             map_fn0,inliers0,params0 = calibrate.calibrate_2d_polynomial(cal_pt_cloud,hmd_video_frame_size,binocular=False)
             if not inliers0.any():
-                self.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg})
+                self.notify_all({'subject': 'calibration.failed', 'reason':solver_failed_to_converge_error_msg})
                 return
         else:
             logger.warning('No matched ref<->pupil data collected for id0')
@@ -137,38 +137,42 @@ class HMD_Calibration(Calibration_Plugin):
             cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil1_data)
             map_fn1,inliers1,params1 = calibrate.calibrate_2d_polynomial(cal_pt_cloud,hmd_video_frame_size,binocular=False)
             if not inliers1.any():
-                self.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg})
+                self.notify_all({'subject': 'calibration.failed', 'reason':solver_failed_to_converge_error_msg})
                 return
         else:
             logger.warning('No matched ref<->pupil data collected for id1')
             params1 = None
 
-        if params0 and params1:
-            g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
-                                                         'name': 'Dual_Monocular_Gaze_Mapper',
-                                                         'args': {'params0': params0,
-                                                                  'params1': params1}})
-            method = 'dual monocular polynomial regression'
-        elif params0:
-            g_pool.plugins.add(Monocular_Gaze_Mapper,args={'params':params0})
-            g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
-                                                         'name': 'Monocular_Gaze_Mapper',
-                                                         'args': {'params': params0,
-                                                                  }})
-            method = 'monocular polynomial regression'
-        elif params1:
-            g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
-                                                         'name': 'Monocular_Gaze_Mapper',
-                                                         'args': {'params': params1,
-                                                                  }})
-            method = 'monocular polynomial regression'
+        if params0 or params1:
+            ts = g_pool.get_timestamp()
+            if params0 and params1:
+                method = 'dual monocular polynomial regression'
+                mapper = 'Dual_Monocular_Gaze_Mapper'
+                args = {'params0': params0, 'params1': params1}
+            elif params0:
+                method = 'monocular polynomial regression'
+                mapper = 'Monocular_Gaze_Mapper'
+                args = {'params': params0}
+            elif params1:
+                method = 'monocular polynomial regression'
+                mapper = 'Monocular_Gaze_Mapper'
+                args = {'params': params1}
+
+            # Announce success
+            self.notify_all({'subject': 'calibration.successful', 'method': method, 'timestamp': ts, 'record': True})
+
+            # Announce calibration data
+            self.notify_all({'subject': 'calibration.calibration_data', 'timestamp': ts, 'pupil_list': pupil_list, 'ref_list': ref_list, 'calibration_method': method, 'record': True})
+
+            # Start mapper
+            self.notify_all({'subject': 'start_plugin', 'name': mapper, 'args': args})
+
         else:
             logger.error('Calibration failed for both eyes. No data found')
-            self.notify_all({'subject':'calibration.failed','reason':not_enough_data_error_msg})
+            self.notify_all({'subject': 'calibration.failed', 'reason': not_enough_data_error_msg})
             return
 
-
-    def recent_events(self,events):
+    def recent_events(self, events):
         if self.active:
             for p_pt in events['pupil_positions']:
                 if p_pt['confidence'] > self.pupil_confidence_threshold:
@@ -253,14 +257,13 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
 
         save_object(matched_data,'hmd_cal_data')
 
-
-        ref_points_3d_unscaled = np.array([ d['ref']['mm_pos']      for d in matched_data ])
-        gaze0_dir     = [ d['pupil']['circle_3d']['normal'] for d in matched_data ]
-        gaze1_dir     = [ d['pupil1']['circle_3d']['normal']for d in matched_data ]
+        ref_points_3d_unscaled = np.array([d['ref']['mm_pos'] for d in matched_data])
+        gaze0_dir = [d['pupil']['circle_3d']['normal'] for d in matched_data if '3d' in d['pupil']['method']]
+        gaze1_dir = [d['pupil1']['circle_3d']['normal']for d in matched_data if '3d' in d['pupil']['method']]
 
         if len(ref_points_3d_unscaled) < 1 or len(gaze0_dir) < 1 or len(gaze1_dir) < 1:
             logger.error(not_enough_data_error_msg)
-            self.notify_all({'subject':'calibration.failed','reason':not_enough_data_error_msg,'timestamp':self.g_pool.get_timestamp(),'record':True})
+            self.notify_all({'subject': 'calibration.failed', 'reason': not_enough_data_error_msg, 'timestamp': self.g_pool.get_timestamp(), 'record': True})
             return
 
         smallest_residual = 1000
@@ -297,10 +300,9 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
                 scales[-1] = s
 
         if not success:
-            self.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg,'timestamp':self.g_pool.get_timestamp(),'record':True})
+            self.notify_all({'subject': 'calibration.failed','reason':solver_failed_to_converge_error_msg,'timestamp':self.g_pool.get_timestamp(),'record':True})
             logger.error("Calibration solver faild to converge.")
             return
-
 
         eye0, eye1 = observers
 
