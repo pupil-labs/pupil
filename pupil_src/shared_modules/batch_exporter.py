@@ -145,10 +145,11 @@ class Batch_Exporter(Analysis_Plugin_Base):
             user_dir = self.g_pool.user_dir
 
             # we need to know the timestamps of our exports.
-            try:  # 0.4
+            try:
                 frames_to_export.value = len(np.load(os.path.join(export_dir, 'world_timestamps.npy')))
-            except:  # <0.4
-                frames_to_export.value = len(np.load(os.path.join(export_dir, 'timestamps.npy')))
+            except:
+                logger.error('Invalid export directory: {}'.format(export_dir))
+                continue
 
             # Here we make clones of every plugin that supports it.
             # So it runs in the current config when we lauch the exporter.
