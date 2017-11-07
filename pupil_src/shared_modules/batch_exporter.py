@@ -89,8 +89,9 @@ class Batch_Exporter(Analysis_Plugin_Base):
 
         for idx, job in enumerate(self.exports[::-1]):
             submenu = ui.Growing_Menu("Export Job {}: '{}'".format(idx, job.out_file_path))
-            progress_bar = ui.Slider('progress', getter=job.status, min=0, max=job.frames_to_export.value)
+            progress_bar = ui.Slider('Progress', getter=job.status, min=0, max=job.frames_to_export.value)
             progress_bar.read_only = True
+            progress_bar.display_format = '%i frames'
             submenu.append(progress_bar)
             submenu.append(ui.Button('cancel', job.cancel))
             self.menu.append(submenu)
