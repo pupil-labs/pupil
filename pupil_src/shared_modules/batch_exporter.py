@@ -85,7 +85,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.menu.elements[:] = []
         self.menu.append(ui.Text_Input('source_dir', self, label='Recording Source Directory', setter=self.set_src_dir))
         self.menu.append(ui.Text_Input('destination_dir', self, label='Recording Destination Directory', setter=self.set_dest_dir))
-        self.menu.append(ui.Button('start export', self.start))
+        self.menu.append(ui.Button('Start Export', self.start))
 
         for idx, job in enumerate(self.exports[::-1]):
             submenu = ui.Growing_Menu("Export Job {}: '{}'".format(idx, job.out_file_path))
@@ -95,7 +95,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
             submenu.append(ui.Button('cancel', job.cancel))
             self.menu.append(submenu)
         if not self.exports:
-            self.menu.append(ui.Info_Text('Please select a Recording Source directory from with to pull all recordings for export.'))
+            self.menu.append(ui.Info_Text('Please select a Recording Source directory from which to pull all recordings for the batch export.'))
 
     def deinit_ui(self):
         self.remove_menu()
