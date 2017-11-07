@@ -24,6 +24,7 @@ import csv
 import numpy as np
 import cv2
 
+from scipy.spatial.distance import pdist
 from collections import deque
 from itertools import chain
 from pyglui import ui
@@ -48,26 +49,6 @@ class Empty(object):
 class Fixation_Detector_Base(Analysis_Plugin_Base):
     icon_chr = chr(0xec02)
     icon_font = 'pupil_icons'
-
-
-def cart2spherical(xyz):
-    '''Convert 3d points to spherical coords
-
-    Taken from https://stackoverflow.com/questions/4116658/faster-numpy-cartesian-to-spherical-coordinate-conversion
-
-    > pts = np.random.rand(3000000, 3)
-    > %timeit cart2spherical(pts)
-    376 ms ± 1.98 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
-    '''
-    ptsnew = np.zeros(xyz.shape, dtype=xyz.dtype)
-    xy = xyz[:, 0]**2 + xyz[:, 1]**2
-    ptsnew[:, 0] = np.sqrt(xy + xyz[:, 2]**2)
-    # for elevation angle defined from Z-axis down
-    ptsnew[:, 1] = np.arctan2(np.sqrt(xy), xyz[:, 2])
-    # for elevation angle defined from XY-plane up
-    # ptsnew[:,4] = np.arctan2(xyz[:,2], np.sqrt(xy))
-    ptsnew[:, 2] = np.arctan2(xyz[:, 1], xyz[:, 0])
-    return ptsnew
 
 
 def fixation_from_data(dispersion, method, base_data, timestamps=None):
@@ -97,13 +78,9 @@ def fixation_from_data(dispersion, method, base_data, timestamps=None):
     return fix
 
 
-def spherical_dispersion(polar_coord):
-    polar_coord.shape = 1, -1, 2
-    if polar_coord.shape[1] == 3:
-        # bug in cv2.minEnclosingCircle calculates wrong result for 3 points
-        # https://github.com/pupil-labs/pupil/issues/909
-        polar_coord = np.hstack([polar_coord, polar_coord])
-    return cv2.minEnclosingCircle(polar_coord)[1] * 2
+def vector_dispersion(vectors):
+    distances = pdist(vectors, metric='cosine')
+    return np.arccos(1. - distances.max())
 
 
 def gaze_dispersion(capture, gaze_subset, use_pupil=True):
@@ -122,7 +99,7 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
 
         all_pp = chain(*(gp['base_data'] for gp in base_data))
         pp_with_eye_id = (pp for pp in all_pp if pp['id'] == eye_id)
-        sphericals = np.array([(pp['theta'], pp['phi']) for pp in pp_with_eye_id], dtype=np.float32)
+        vectors = np.array([pp['circle_3d']['normal'] for pp in pp_with_eye_id], dtype=np.float32)
     else:
         method = 'gaze'
         base_data = gaze_subset
@@ -135,12 +112,10 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
 
         # undistort onto 3d plane
         undistorted = capture.intrinsics.undistortPoints(locations)
-        undistorted_3d = np.ones((undistorted.shape[0], 3), dtype=undistorted.dtype)
-        undistorted_3d[:, :-1] = undistorted
+        vectors = np.ones((undistorted.shape[0], 3), dtype=undistorted.dtype)
+        vectors[:, :-1] = undistorted
 
-        sphericals = cart2spherical(undistorted_3d)[:, 1:]  # only use theta/phi, exclude radius
-
-    dist = spherical_dispersion(sphericals)
+    dist = vector_dispersion(vectors)
     return dist, method, base_data
 
 
@@ -368,7 +343,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             for f in self.g_pool.fixations_by_frame[frame.index]:
                 x = int(f['norm_pos'][0] * frame.width)
                 y = int((1. - f['norm_pos'][1]) * frame.height)
-                transparent_circle(frame.img, (x, y), radius=25., color=(0., 1., 1., 1.), thickness=-1)
+                transparent_circle(frame.img, (x, y), radius=25., color=(0., 1., 1., 1.), thickness=3)
                 cv2.putText(frame.img, '{}'.format(f['id']), (x + 30, y),
                             cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 150, 100))
 
