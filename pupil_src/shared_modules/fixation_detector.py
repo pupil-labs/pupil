@@ -198,10 +198,15 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
         if dispersion > max_dispersion:
             middle_idx = (left_idx + right_idx) // 2
             dispersion, origin, base_data = gaze_dispersion(capture, slicable[:middle_idx], use_pupil=use_pupil)
+        # Create fixation datum
+        fixation_datum = fixation_from_data(dispersion, origin, base_data, capture.timestamps)
 
-        assert dispersion <= max_dispersion
+        # Assert constraints
+        assert dispersion <= max_dispersion, 'Fixation too big: {}'.format(fixation_datum)
+        assert min_duration <= fixation_datum['duration'] / 1000, 'Fixation too short: {}'.format(fixation_datum)
+        assert fixation_datum['duration'] / 1000 <= max_duration, 'Fixation too long: {}'.format(fixation_datum)
 
-        yield 'Detecting fixations...', [fixation_from_data(dispersion, origin, base_data, capture.timestamps)]
+        yield 'Detecting fixations...', [fixation_datum]
         Q = deque()  # clear queue
         enum.extendleft(slicable[right_idx:])
 
