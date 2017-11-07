@@ -85,17 +85,18 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.menu.elements[:] = []
         self.menu.append(ui.Text_Input('source_dir', self, label='Recording Source Directory', setter=self.set_src_dir))
         self.menu.append(ui.Text_Input('destination_dir', self, label='Recording Destination Directory', setter=self.set_dest_dir))
-        self.menu.append(ui.Button('start export', self.start))
+        self.menu.append(ui.Button('Start Export', self.start))
 
         for idx, job in enumerate(self.exports[::-1]):
             submenu = ui.Growing_Menu("Export Job {}: '{}'".format(idx, job.out_file_path))
-            progress_bar = ui.Slider('progress', getter=job.status, min=0, max=job.frames_to_export.value)
+            progress_bar = ui.Slider('Progress', getter=job.status, min=0, max=job.frames_to_export.value)
             progress_bar.read_only = True
+            progress_bar.display_format = '%i frames'
             submenu.append(progress_bar)
             submenu.append(ui.Button('cancel', job.cancel))
             self.menu.append(submenu)
         if not self.exports:
-            self.menu.append(ui.Info_Text('Please select a Recording Source directory from with to pull all recordings for export.'))
+            self.menu.append(ui.Info_Text('Please select a Recording Source directory from which to pull all recordings for the batch export.'))
 
     def deinit_ui(self):
         self.remove_menu()
@@ -145,10 +146,11 @@ class Batch_Exporter(Analysis_Plugin_Base):
             user_dir = self.g_pool.user_dir
 
             # we need to know the timestamps of our exports.
-            try:  # 0.4
+            try:
                 frames_to_export.value = len(np.load(os.path.join(export_dir, 'world_timestamps.npy')))
-            except:  # <0.4
-                frames_to_export.value = len(np.load(os.path.join(export_dir, 'timestamps.npy')))
+            except:
+                logger.error('Invalid export directory: {}'.format(export_dir))
+                continue
 
             # Here we make clones of every plugin that supports it.
             # So it runs in the current config when we lauch the exporter.
@@ -166,7 +168,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
 
                 process = Export_Process(target=export, args=(should_terminate, frames_to_export, current_frame,
                                                               export_dir, user_dir, self.g_pool.min_data_confidence,
-                                                              start_frame, end_frame, plugins, out_file_path,None))
+                                                              start_frame, end_frame, plugins, out_file_path, {}))
                 self.exports.append(process)
 
     def start(self):

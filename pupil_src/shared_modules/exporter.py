@@ -25,7 +25,7 @@ from video_capture import File_Source, EndofVideoFileError
 from player_methods import update_recording_to_recent, load_meta_info
 from av_writer import AV_Writer
 from file_methods import load_object
-from player_methods import correlate_data
+from player_methods import correlate_data, update_recording_to_recent
 
 
 # logging
@@ -57,6 +57,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     logger.info('Starting video export with pid: {}'.format(os.getpid()))
 
     try:
+        update_recording_to_recent(rec_dir)
 
         vis_plugins = sorted([Vis_Circle, Vis_Cross, Vis_Polyline, Vis_Light_Points,
                               Vis_Watermark, Vis_Scan_Path, Vis_Eye_Video_Overlay],
