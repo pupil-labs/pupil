@@ -195,9 +195,10 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             else:
                 right_idx = middle_idx - 1
 
-        if dispersion > max_dispersion:
-            middle_idx = (left_idx + right_idx) // 2
-            dispersion, origin, base_data = gaze_dispersion(capture, slicable[:middle_idx], use_pupil=use_pupil)
+        middle_idx = (left_idx + right_idx) // 2
+        # if dispersion > max_dispersion:
+        dispersion, origin, base_data = gaze_dispersion(capture, slicable[:middle_idx], use_pupil=use_pupil)
+
         # Create fixation datum
         fixation_datum = fixation_from_data(dispersion, origin, base_data, capture.timestamps)
 
@@ -208,7 +209,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
 
         yield 'Detecting fixations...', [fixation_datum]
         Q = deque()  # clear queue
-        enum.extendleft(slicable[right_idx:])
+        enum.extendleft(slicable[middle_idx:])
 
     yield "Fixation detection complete", []
 
