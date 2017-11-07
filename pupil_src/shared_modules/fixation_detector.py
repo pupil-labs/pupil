@@ -227,11 +227,11 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             self.notify_all({'subject': 'fixation_detector.should_recalculate', 'delay': 1.})
 
         def set_min_duration(new_value):
-            self.min_duration = new_value
+            self.min_duration = min(new_value, self.max_duration)
             self.notify_all({'subject': 'fixation_detector.should_recalculate', 'delay': 1.})
 
         def set_max_duration(new_value):
-            self.max_duration = new_value
+            self.max_duration = max(new_value, self.min_duration)
             self.notify_all({'subject': 'fixation_detector.should_recalculate', 'delay': 1.})
 
         def jump_next_fixation(_):
