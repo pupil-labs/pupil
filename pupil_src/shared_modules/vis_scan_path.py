@@ -39,6 +39,11 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
         self.prev_frame_idx = -1
         self.past_gaze_positions = []
         self.prev_gray = None
+        self.gaze_changed = False
+
+    def on_notify(self, notification):
+        if notification['subject'] == 'gaze_positions_changed':
+            self.gaze_changed = True
 
     def recent_events(self, events):
         frame = events.get('frame')
@@ -78,7 +83,7 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
             # we must be seeking, do not try to do optical flow, or pausing: see below.
             pass
 
-        if same_frame:
+        if same_frame and not self.gaze_changed:
             # paused
             # re-use last result
             events['gaze_positions'] = self.past_gaze_positions[:]
@@ -94,6 +99,7 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
             events['gaze_positions'].sort(key=lambda x: x['timestamp']) #this may be redundant...
 
         #update info for next frame.
+        self.gaze_changed = False
         self.prev_gray = gray_img
         self.prev_frame_idx = frame.index
         self.past_gaze_positions = events['gaze_positions']
