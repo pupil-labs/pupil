@@ -49,9 +49,13 @@ class HMD_Calibration(Calibration_Plugin):
         self.g_pool.quickbar.insert(0, self.button)
 
     def deinit_ui(self):
+        if self.active:
+            self.stop()
+
         if self.button:
             self.g_pool.quickbar.remove(self.button)
             self.button = None
+
         super().deinit_ui()
 
     def on_notify(self,notification):
@@ -181,13 +185,6 @@ class HMD_Calibration(Calibration_Plugin):
     def get_init_dict(self):
         d = {}
         return d
-
-    def cleanup(self):
-        """gets called when the plugin get terminated.
-           either voluntarily or forced.
-        """
-        if self.active:
-            self.stop()
 
 
 class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):

@@ -294,7 +294,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         d['marker_scale'] = self.marker_scale
         return d
 
-    def cleanup(self):
+    def deinit_ui(self):
         """gets called when the plugin get terminated.
            either voluntarily or forced.
         """
@@ -302,3 +302,4 @@ class Single_Marker_Calibration(Calibration_Plugin):
             self.stop()
         if self._window:
             self.close_window()
+        super().deinit_ui()
