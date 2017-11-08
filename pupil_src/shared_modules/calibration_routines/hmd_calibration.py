@@ -191,6 +191,7 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
     """docstring for HMD 3d calibratoin"""
     def __init__(self, g_pool):
         super(HMD_Calibration_3D, self).__init__(g_pool)
+        self.eye_translations = [0,0,0],[0,0,0] # overwritten on start_calibrate
 
     def on_notify(self,notification):
         '''Calibrates user gaze for HMDs
@@ -212,6 +213,9 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
                 if self.active:
                     logger.warning('Calibration already running.')
                 else:
+                    assert len(notification['translation_eye0']) == 3
+                    assert len(notification['translation_eye1']) == 3
+                    self.eye_translations = notification['translation_eye0'] , notification['translation_eye1']
                     self.start()
             elif notification['subject'].startswith('calibration.should_stop'):
                 if self.active:
@@ -271,8 +275,8 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
 
 
 
-            initial_translation0 = np.array([30,0,0])
-            initial_translation1 = np.array([-30,0,0])
+            initial_translation0 = np.array(self.eye_translations[0])
+            initial_translation1 = np.array(self.eye_translations[1])
             method = 'binocular 3d model hmd'
 
             sphere_pos0 = matched_data[-1]['pupil']['sphere']['center']
