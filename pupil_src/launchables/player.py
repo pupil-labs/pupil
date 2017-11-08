@@ -92,7 +92,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from seek_control import Seek_Control
         from video_export_launcher import Video_Export_Launcher
         from offline_surface_tracker import Offline_Surface_Tracker
-        from marker_auto_trim_marks import Marker_Auto_Trim_Marks
+        # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
         from fixation_detector import Offline_Fixation_Detector
         from batch_exporter import Batch_Exporter
         from log_display import Log_Display
@@ -111,7 +111,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                         Vis_Cross, Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path,
                         Offline_Fixation_Detector,
                         Video_Export_Launcher, Offline_Surface_Tracker, Raw_Data_Exporter,
-                        Batch_Exporter, Annotation_Player, Log_History, Marker_Auto_Trim_Marks,
+                        Batch_Exporter, Annotation_Player, Log_History,
                         Pupil_From_Recording, Offline_Pupil_Detection, Gaze_From_Recording,
                         Offline_Calibration] + runtime_plugins
 

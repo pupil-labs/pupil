@@ -54,7 +54,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
            start_frame=None, end_frame=None, plugin_initializers=(), out_file_path=None, pre_computed={}):
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()))
-    logger.info('Starting video export with pid: {}'.format(os.getpid()))
+    print('Starting video export with pid: {}'.format(os.getpid()))
 
     try:
         update_recording_to_recent(rec_dir)
@@ -194,11 +194,11 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
         effective_fps = float(current_frame.value)/duration
 
         result = "Export done: Exported {} frames to {}. This took {} seconds. Exporter ran at {} frames per second."
-        logger.info(result.format(current_frame.value, out_file_path, duration, effective_fps))
+        print(result.format(current_frame.value, out_file_path, duration, effective_fps))
 
     except:
         from time import sleep
         import traceback
         trace = traceback.format_exc()
-        logger.error('Process Export (pid: {}) crashed with trace:\n{}'.format(os.getpid(), trace))
+        print('Process Export (pid: {}) crashed with trace:\n{}'.format(os.getpid(), trace))
         sleep(1.0)
