@@ -58,20 +58,16 @@ class Batch_Exporter(Analysis_Plugin_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
-        # initialize empty menu
-        # and load menu configuration of last session
-        self.menu = None
-
         self.exports = []
         self.new_exports = []
         self.active_exports = []
-        default_path = os.path.expanduser('~/work/pupil/recordings/demo')
+        default_path = os.path.expanduser('~/work/pupil/recordings/BATCH')
         self.destination_dir = default_path
         self.source_dir = default_path
 
         self.run = False
-        self.workers = [None for x in range(mp.cpu_count())]
-        logger.info("Using a maximum of {} CPUs to process visualizations in parallel...".format(mp.cpu_count()))
+        self.workers = [None for x in range(mp.cpu_count() - 1)]
+        logger.info("Using a maximum of {} CPUs to process visualizations in parallel...".format(mp.cpu_count() - 1))
 
     def init_ui(self):
         self.add_menu()
@@ -91,9 +87,8 @@ class Batch_Exporter(Analysis_Plugin_Base):
             submenu = ui.Growing_Menu("Export Job {}: '{}'".format(idx, job.out_file_path))
             progress_bar = ui.Slider('Progress', getter=job.status, min=0, max=job.frames_to_export.value)
             progress_bar.read_only = True
-            progress_bar.display_format = '%i frames'
             submenu.append(progress_bar)
-            submenu.append(ui.Button('cancel', job.cancel))
+            submenu.append(ui.Button('Cancel', job.cancel))
             self.menu.append(submenu)
         if not self.exports:
             self.menu.append(ui.Info_Text('Please select a Recording Source directory from which to pull all recordings for the batch export.'))
@@ -180,12 +175,13 @@ class Batch_Exporter(Analysis_Plugin_Base):
         if not frame:
             return
         if self.run:
+            print(self.active_exports)
             for i in range(len(self.workers)):
                 if self.workers[i] and self.workers[i].is_alive():
                     pass
                 else:
-                    logger.info("starting new job")
                     if self.active_exports:
+                        logger.info("Starting new job")
                         self.workers[i] = self.active_exports.pop(0)
                         if not self.workers[i].is_alive():
                             self.workers[i].start()
