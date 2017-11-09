@@ -17,7 +17,7 @@ from .base_backend import InitialisationError, Base_Source, Base_Manager
 from camera_models import load_intrinsics
 
 # check versions for our own depedencies as they are fast-changing
-assert VersionFormat(uvc.__version__) >= VersionFormat('0.12')
+assert VersionFormat(uvc.__version__) >= VersionFormat('0.13')
 
 # logging
 logger = logging.getLogger(__name__)
