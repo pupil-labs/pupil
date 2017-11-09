@@ -17,7 +17,7 @@ if platform.system() == 'Darwin':
                  pathex=['../../pupil_src/shared_modules/'],
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports,
                  hookspath=None,
-                 runtime_hooks=['../rthook_multiprocessing.py'],
+                 runtime_hooks=None,
                  excludes=['matplotlib','pyrealsense'])
     pyz = PYZ(a.pure)
     exe = EXE(pyz,
