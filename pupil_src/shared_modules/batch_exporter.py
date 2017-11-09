@@ -65,7 +65,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.exports = []
         self.new_exports = []
         self.active_exports = []
-        default_path = os.path.expanduser('~/')
+        default_path = os.path.expanduser('~/work/pupil/recordings/demo')
         self.destination_dir = default_path
         self.source_dir = default_path
 
@@ -187,7 +187,8 @@ class Batch_Exporter(Analysis_Plugin_Base):
                     logger.info("starting new job")
                     if self.active_exports:
                         self.workers[i] = self.active_exports.pop(0)
-                        self.workers[i].start()
+                        if not self.workers[i].is_alive():
+                            self.workers[i].start()
                     else:
                         self.run = False
 
