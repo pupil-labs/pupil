@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+import numpy as np
 from pyglui import ui
 import os
 import sys
@@ -85,17 +86,19 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.menu.append(ui.Text_Input('destination_dir', self, label='Destination Directory', setter=self.set_dest_dir))
         self.menu.append(ui.Button('Export selected', self.export_selected))
         self.menu.append(ui.Button('Clear search results', self._clear_avail))
-        self.menu.append(ui.Separator())
 
         self._update_ui()
 
     def _update_ui(self):
         del self.menu.elements[7:]
 
-        for queued in self.queued_exports[::-1]:
-            def prio_qd():
-                pass
-            self.menu.append(ui.Button('Prioritize', prio_qd, outer_label=queued['dest']))
+        if self.queued_exports:
+            self.menu.append(ui.Separator())
+            self.menu.append(ui.Info_Text('Queued exports:'))
+            for queued in self.queued_exports[::-1]:
+                def prio_qd():
+                    pass
+                self.menu.append(ui.Button('Prioritize', prio_qd, outer_label=queued['dest']))
 
         if self.active_exports:
             self.menu.append(ui.Separator())
@@ -179,9 +182,31 @@ class Batch_Exporter(Analysis_Plugin_Base):
     def export_selected(self):
         for avail in self.available_exports[:]:
             if avail['selected']:
+                try:
+                    frames_to_export = len(np.load(os.path.join(avail['source'], 'world_timestamps.npy')))
+                except:
+                    logger.error('Invalid export directory: {}'.format(avail['source']))
+                    self.available_exports.remove(avail)
+                    continue
+
+                # make a unique name created from rec_session and dir name
+                rec_session, rec_dir = avail['source'].rsplit(os.path.sep, 2)[1:]
+                out_name = rec_session+"_"+rec_dir+".mp4"
+                out_file_path = os.path.join(self.destination_dir, out_name)
+
+                if (out_file_path in (e['dest'] for e in self.queued_exports) or
+                        out_file_path in (e.out_file_path for e in self.active_exports)):
+                    logger.error("This export setting would try to save {} at least twice please rename dirs to prevent this. Skipping recording.".format(out_file_path))
+                    continue
+                if out_file_path in (e.out_file_path for e in self.previous_exports):
+                    logger.error("This export setting would the previous export {}. Please clear the previous exports if you want to overwrite it.".format(out_file_path))
+                    continue
+
+                export = {'source': avail['source'], 'dest': out_file_path, 'frames_to_export': frames_to_export}
                 self.available_exports.remove(avail)
-                # self.queued_exports.append()
+                self.queued_exports.append(export)
         self._update_avail_recs_menu()
+        self._update_ui()
 
     def recent_events(self, events):
         if self.search_task:
