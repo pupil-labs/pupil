@@ -130,6 +130,8 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
             recent = [d for d in e.fetch()]
             if recent:
                 e.status, e.progress = recent[-1]
+            if e.canceled:
+                e.status = 'Export has been canceled.'
 
     def cleanup(self):
         """ called when the plugin gets terminated.

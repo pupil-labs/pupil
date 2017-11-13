@@ -27,6 +27,7 @@ class Task_Proxy(object):
 
         self._should_terminate_flag = mp.Value(c_bool, 0)
         self._completed = False
+        self._canceled = False
 
         pipe_recv, pipe_send = mp.Pipe(False)
         wrapper_args = [pipe_send, self._should_terminate_flag, generator]
@@ -44,10 +45,9 @@ class Task_Proxy(object):
                     raise EarlyCancellationError('Task was cancelled')
                 pipe.send(datum)
         except Exception as e:
-            if not isinstance(e, EarlyCancellationError):
-                pipe.send(e)
-                import traceback
-                logger.warning(traceback.format_exc())
+            pipe.send(e)
+            import traceback
+            logger.warning(traceback.format_exc())
         else:
             pipe.send(StopIteration())
         finally:
@@ -66,6 +66,9 @@ class Task_Proxy(object):
                 if isinstance(datum, StopIteration):
                     self._completed = True
                     return
+                elif isinstance(datum, EarlyCancellationError):
+                    self._canceled = True
+                    return
                 elif isinstance(datum, Exception):
                     raise datum
                 else:
@@ -83,6 +86,10 @@ class Task_Proxy(object):
     @property
     def completed(self):
         return self._completed
+
+    @property
+    def canceled(self):
+        return self._canceled
 
     def __del__(self):
         self.cancel(timeout=.1)
