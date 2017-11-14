@@ -51,7 +51,6 @@ def get_recording_dirs(data_dir):
 class Batch_Export(System_Plugin_Base):
     """Sub plugin that manages a single batch export"""
     uniqueness = 'not_unique'
-    menu_icon_order = {'in_queue': 0.8, 'active': 0.7, 'finished': 0.9}
     icon_font = 'pupil_icons'
     icon_chr = chr(0xe2c4)  # character shown in menu icon
 
@@ -77,7 +76,6 @@ class Batch_Export(System_Plugin_Base):
         self.menu[0].label = 'Cancel'
         self.menu_icon.indicator_start = 0.
         self.menu_icon.indicator_stop = 0.1
-        self.menu_icon.order = self.menu_icon_order['in_queue']
         self.menu_icon.tooltip = export_name
         self.menu.append(ui.Text_Input('rec_dir', self, label='Recording', setter=lambda x: None))
         self.menu.append(ui.Text_Input('out_file_path', self, label='Output', setter=lambda x: None))
@@ -88,21 +86,24 @@ class Batch_Export(System_Plugin_Base):
 
     def recent_events(self, events):
         if self.process:
-            recent = [d for d in self.process.fetch()]
-            if recent:
-                self.status, self.progress = recent[-1]
+            try:
+                recent = [d for d in self.process.fetch()]
+            except Exception as e:
+                self.status, self.progress = '{}: {}'.format(type(e).__name__, e), 0
+            else:
+                if recent:
+                    self.status, self.progress = recent[-1]
+
 
             # Update status if process has been canceled or completed
             if self.process.canceled:
                 self.process = None
                 self.status = 'Export has been canceled.'
                 self.notify_all({'subject': 'batch_export.canceled', 'out_file_path': self.out_file_path})
-                self.menu_icon.order = self.menu_icon_order['finished']
                 self.menu[0].label = 'Close'  # change button label back to close
             elif self.process.completed:
                 self.process = None
                 self.notify_all({'subject': 'batch_export.completed', 'out_file_path': self.out_file_path})
-                self.menu_icon.order = self.menu_icon_order['finished']
                 self.menu[0].label = 'Close'  # change button label back to close
 
         if self.in_queue:
@@ -119,20 +120,18 @@ class Batch_Export(System_Plugin_Base):
                 self._accelerate = True
         else:
             self.menu_icon.indicator_start = 0.
-            self.menu_icon.indicator_stop = max(1, self.progress) / self.frames_to_export
+            self.menu_icon.indicator_stop = self.progress / self.frames_to_export
 
     def on_notify(self, n):
         if n['subject'] == 'batch_export.should_start' and n['out_file_path'] == self.out_file_path:
             self.init_export()
         if n['subject'] == 'batch_export.should_cancel' and n.get('out_file_path', self.out_file_path) == self.out_file_path:
             self.cancel_export()
-            self.menu_icon.order = self.menu_icon_order['finished']
             if n.get('remove_menu', False):
                 self.alive = False
 
     def init_export(self):
         self.in_queue = False
-        self.menu_icon.order = self.menu_icon_order['active']
         args = (self.rec_dir, self.g_pool.user_dir, self.g_pool.min_data_confidence,
                 None, None, self.plugins, self.out_file_path, {})
         self.process = bh.Task_Proxy('Pupil Batch Export {}'.format(self.out_file_path), export_function, args=args)
@@ -160,7 +159,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
     icon_chr = chr(0xec05)
     icon_font = 'pupil_icons'
 
-    def __init__(self, g_pool, source_dir='~/work/pupil/recordings/BATCH', destination_dir='~/'):
+    def __init__(self, g_pool, source_dir='~/', destination_dir='~/'):
         super().__init__(g_pool)
 
         self.available_exports = []
@@ -181,7 +180,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.menu.label = 'Batch Export Recordings'
 
         self.menu.append(ui.Info_Text('Search will walk through the source direcotry recursively and detect available Pupil recordings.'))
-        self.menu.append(ui.Text_Input('source_dir', self, label='Source Directory', setter=self.set_src_dir))
+        self.menu.append(ui.Text_Input('source_dir', self, label='Source directory', setter=self.set_src_dir))
 
         self.search_button = ui.Button('Search', self.detect_recordings)
         self.menu.append(self.search_button)
@@ -190,7 +189,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self._update_avail_recs_menu()
         self.menu.append(self.avail_recs_menu)
 
-        self.menu.append(ui.Text_Input('destination_dir', self, label='Destination Directory', setter=self.set_dest_dir))
+        self.menu.append(ui.Text_Input('destination_dir', self, label='Destination directory', setter=self.set_dest_dir))
         self.menu.append(ui.Button('Export selected', self.queue_selected))
         self.menu.append(ui.Button('Clear search results', self._clear_avail))
         self.menu.append(ui.Separator())
