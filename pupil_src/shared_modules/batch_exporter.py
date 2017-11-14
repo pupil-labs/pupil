@@ -55,10 +55,9 @@ class Batch_Exporter(Analysis_Plugin_Base):
     icon_chr = chr(0xec05)
     icon_font = 'pupil_icons'
 
-    def __init__(self, g_pool, source_dir='~/', destination_dir='~/'):
+    def __init__(self, g_pool, source_dir='~/work/pupil/recordings/BATCH', destination_dir='~/'):
         super().__init__(g_pool)
 
-        self._requires_ui_update = False
         self.available_exports = []
         self.queued_exports = []
         self.active_exports = []
@@ -91,15 +90,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.menu.append(ui.Button('Export selected', self.queue_selected))
         self.menu.append(ui.Button('Clear search results', self._clear_avail))
 
-        self._mark_outdated_ui()
-
-    def _mark_outdated_ui(self):
-        self._requires_ui_update = True
-
-    def gl_display(self):
-        if self._requires_ui_update:
-            self._update_ui()
-            self._requires_ui_update = False
+        self._update_ui()
 
     def _update_ui(self):
         del self.menu.elements[7:]
@@ -114,7 +105,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
                             self.queued_exports.remove(qd)
                             self.available_exports.append({'source': qd['source'], 'selected': True})
                             self._update_avail_recs_menu()
-                            self._mark_outdated_ui()
+                            self._update_ui()
                     return cancel
                 self.menu.append(ui.Button('Cancel', cancel_qd(queued), outer_label=queued['dest']))
 
@@ -183,7 +174,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
 
     def _clear_previous(self):
         del self.previous_exports[:]
-        self._mark_outdated_ui()
+        self._update_ui()
 
     def _clear_avail(self):
         del self.available_exports[:]
@@ -224,7 +215,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
                 self.available_exports.remove(avail)
                 self.queued_exports.append(export)
         self._update_avail_recs_menu()
-        self._mark_outdated_ui()
+        self._update_ui()
 
     def start_export(self, queued):
         user_dir = self.g_pool.user_dir
@@ -239,6 +230,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
         process.progress = 0
         self.active_exports.append(process)
         self.queued_exports.remove(queued)
+        self._update_ui()
 
     def recent_events(self, events):
         if self.search_task:
@@ -264,7 +256,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
             if process.canceled or process.completed:
                 self.active_exports.remove(process)
                 self.previous_exports.append(process)
-                self._mark_outdated_ui()
+                self._update_ui()
 
         # Add queued exports to active queue
         for queued in self.queued_exports[:self.worker_count - len(self.active_exports)]:
