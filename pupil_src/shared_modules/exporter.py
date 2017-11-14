@@ -196,9 +196,10 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
 
     except GeneratorExit:
         print('Video export with pid {} was canceled.'.format(os.getpid()))
-    except:
+    except Exception as e:
         from time import sleep
         import traceback
         trace = traceback.format_exc()
         print('Process Export (pid: {}) crashed with trace:\n{}'.format(os.getpid(), trace))
+        yield e
         sleep(1.0)
