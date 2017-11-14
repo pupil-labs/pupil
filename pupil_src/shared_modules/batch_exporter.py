@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
 from plugin import Analysis_Plugin_Base
 
-from exporter import export
+from exporter import export as export_function
 from player_methods import is_pupil_rec_dir
 
 
@@ -55,9 +55,10 @@ class Batch_Exporter(Analysis_Plugin_Base):
     icon_chr = chr(0xec05)
     icon_font = 'pupil_icons'
 
-    def __init__(self, g_pool, source_dir='~/work/pupil/recordings/BATCH', destination_dir='~/'):
+    def __init__(self, g_pool, source_dir='~/', destination_dir='~/'):
         super().__init__(g_pool)
 
+        self._requires_ui_update = False
         self.available_exports = []
         self.queued_exports = []
         self.active_exports = []
@@ -68,6 +69,9 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.search_task = None
         self.worker_count = cpu_count() - 1
         logger.info("Using a maximum of {} CPUs to process visualizations in parallel...".format(cpu_count() - 1))
+
+    def get_init_dict(self):
+        return {'source_dir': self.source_dir, 'destination_dir': self.destination_dir}
 
     def init_ui(self):
         self.add_menu()
@@ -84,10 +88,18 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.menu.append(self.avail_recs_menu)
 
         self.menu.append(ui.Text_Input('destination_dir', self, label='Destination Directory', setter=self.set_dest_dir))
-        self.menu.append(ui.Button('Export selected', self.export_selected))
+        self.menu.append(ui.Button('Export selected', self.queue_selected))
         self.menu.append(ui.Button('Clear search results', self._clear_avail))
 
-        self._update_ui()
+        self._mark_outdated_ui()
+
+    def _mark_outdated_ui(self):
+        self._requires_ui_update = True
+
+    def gl_display(self):
+        if self._requires_ui_update:
+            self._update_ui()
+            self._requires_ui_update = False
 
     def _update_ui(self):
         del self.menu.elements[7:]
@@ -96,9 +108,15 @@ class Batch_Exporter(Analysis_Plugin_Base):
             self.menu.append(ui.Separator())
             self.menu.append(ui.Info_Text('Queued exports:'))
             for queued in self.queued_exports[::-1]:
-                def prio_qd():
-                    pass
-                self.menu.append(ui.Button('Prioritize', prio_qd, outer_label=queued['dest']))
+                def cancel_qd(qd):
+                    def cancel():
+                        if qd in self.queued_exports:
+                            self.queued_exports.remove(qd)
+                            self.available_exports.append({'source': qd['source'], 'selected': True})
+                            self._update_avail_recs_menu()
+                            self._mark_outdated_ui()
+                    return cancel
+                self.menu.append(ui.Button('Cancel', cancel_qd(queued), outer_label=queued['dest']))
 
         if self.active_exports:
             self.menu.append(ui.Separator())
@@ -165,7 +183,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
 
     def _clear_previous(self):
         del self.previous_exports[:]
-        self._update_ui()
+        self._mark_outdated_ui()
 
     def _clear_avail(self):
         del self.available_exports[:]
@@ -179,7 +197,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
         else:
             self.avail_recs_menu.append(ui.Info_Text('No recordings available yet. Use Search to find recordings.'))
 
-    def export_selected(self):
+    def queue_selected(self):
         for avail in self.available_exports[:]:
             if avail['selected']:
                 try:
@@ -206,7 +224,21 @@ class Batch_Exporter(Analysis_Plugin_Base):
                 self.available_exports.remove(avail)
                 self.queued_exports.append(export)
         self._update_avail_recs_menu()
-        self._update_ui()
+        self._mark_outdated_ui()
+
+    def start_export(self, queued):
+        user_dir = self.g_pool.user_dir
+        plugins = self.g_pool.plugins.get_initializers()
+        out_file_path = queued['dest']
+        args = (queued['source'], user_dir, self.g_pool.min_data_confidence, None,
+                None, plugins, out_file_path, {})
+        process = bh.Task_Proxy('Pupil Export {}'.format(out_file_path), export_function, args=args)
+        process.out_file_path = out_file_path
+        process.frames_to_export = queued['frames_to_export']
+        process.status = ''
+        process.progress = 0
+        self.active_exports.append(process)
+        self.queued_exports.remove(queued)
 
     def recent_events(self, events):
         if self.search_task:
@@ -220,6 +252,29 @@ class Batch_Exporter(Analysis_Plugin_Base):
                 self.search_button.outer_label = ''
                 self.search_button.label = 'Search'
 
+        for process in self.active_exports[:]:
+            recent = [d for d in process.fetch()]
+            if recent:
+                process.status, process.progress = recent[-1]
+            # Update status if process has been canceled
+            if process.canceled:
+                process.status = 'Export has been canceled.'
+            # Move process from `active` to `previous` exports list after
+            # completion or cancelation
+            if process.canceled or process.completed:
+                self.active_exports.remove(process)
+                self.previous_exports.append(process)
+                self._mark_outdated_ui()
+
+        # Add queued exports to active queue
+        for queued in self.queued_exports[:self.worker_count - len(self.active_exports)]:
+            self.start_export(queued)
+
+    def cleanup(self):
+        if self.search_task:
+            self.search_task.cancel()
+        for process in self.active_exports:
+            process.cancel()
 
 def main():
 
