@@ -213,6 +213,8 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.min_duration = min_duration
         self.max_duration = max_duration
         self.show_fixations = show_fixations
+        self.current_fixation_details = None
+        self.fixations = deque()
         self.prev_index = -1
         self.bg_task = None
         self.status = ''
@@ -374,7 +376,8 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                 else:
                     info += '    Time to next fixation: N/A\n'
 
-            self.current_fixation_details.text = info
+            if self.current_fixation_details:
+                self.current_fixation_details.text = info
             self.prev_index = frame.index
 
     def correlate_and_publish(self):
