@@ -465,7 +465,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                 gl_utils.glViewport(0, 0, *window_size)
                 unused_elements = g_pool.gui.update()
                 for button, action, mods in unused_elements.buttons:
-                    pos = glfw.glfwGetCursorPos(main_window)
+                    x, y = glfw.glfwGetCursorPos(main_window)
+                    pos = x * hdpi_factor, y * hdpi_factor
                     pos = normalize(pos, camera_render_size)
                     # Position in img pixels
                     pos = denormalize(pos, g_pool.capture.frame_size)

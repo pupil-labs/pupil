@@ -120,16 +120,16 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         # Callback functions
         def on_resize(window, w, h):
             nonlocal window_size
+            nonlocal hdpi_factor
 
-            if gl_utils.is_window_visible(window):
-                hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
-                g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
-                window_size = w, h
-                g_pool.camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
-                g_pool.gui.update_window(*window_size)
-                g_pool.gui.collect_menus()
-                for p in g_pool.plugins:
-                    p.on_window_resize(window, *g_pool.camera_render_size)
+            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
+            window_size = w, h
+            g_pool.camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
+            g_pool.gui.update_window(*window_size)
+            g_pool.gui.collect_menus()
+            for p in g_pool.plugins:
+                p.on_window_resize(window, *g_pool.camera_render_size)
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
@@ -141,7 +141,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0]/glfw.glfwGetWindowSize(window)[0])
             x, y = x * hdpi_factor, y * hdpi_factor
             g_pool.gui.update_mouse(x, y)
             pos = x, y
@@ -181,6 +180,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
         icon_bar_width = 50
         window_size = None
+        hdpi_factor = 1.0
 
         # create container for globally scoped vars
         g_pool = Global_Container()
@@ -213,8 +213,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.main_window = main_window
 
         def set_scale(new_scale):
-            hdpi_factor = float(glfw.glfwGetFramebufferSize(
-                main_window)[0]) / glfw.glfwGetWindowSize(main_window)[0]
             g_pool.gui_user_scale = new_scale
             window_size = (g_pool.camera_render_size[0] + int(icon_bar_width*g_pool.gui_user_scale*hdpi_factor),
                            glfw.glfwGetFramebufferSize(main_window)[1])
@@ -458,7 +456,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                 unused_elements = g_pool.gui.update()
                 for b in unused_elements.buttons:
                     button, action, mods = b
-                    pos = glfw.glfwGetCursorPos(main_window)
+                    x, y = glfw.glfwGetCursorPos(main_window)
+                    pos = x * hdpi_factor, y * hdpi_factor
                     pos = normalize(pos, g_pool.camera_render_size)
                     pos = denormalize(pos, g_pool.capture.frame_size)
                     for p in g_pool.plugins:
