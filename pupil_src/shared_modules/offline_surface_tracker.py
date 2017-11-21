@@ -471,22 +471,27 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                         if ref_srf_data is not None and ref_srf_data is not False:
                             csv_writer.writerow( (idx,ts,ref_srf_data['m_to_screen'],ref_srf_data['m_from_screen'],ref_srf_data['detected_markers']) )
 
-
             # save gaze on srf as csv.
-            with open(os.path.join(metrics_dir,'gaze_positions_on_surface'+surface_name+'.csv'),'w',encoding='utf-8',newline='') as csvfile:
+            with open(os.path.join(metrics_dir, 'gaze_positions_on_surface'+surface_name+'.csv'), 'w', encoding='utf-8', newline='') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter=',')
-                csv_writer.writerow(('world_timestamp','world_frame_idx','gaze_timestamp','x_norm','y_norm','x_scaled','y_scaled','on_srf'))
-                for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
+                csv_writer.writerow(('world_timestamp', 'world_frame_idx', 'gaze_timestamp',
+                                     'x_norm', 'y_norm', 'x_scaled', 'y_scaled', 'on_srf', 'confidence'))
+                for idx, ts, ref_srf_data in zip(range(len(self.g_pool.timestamps)), self.g_pool.timestamps, s.cache):
                     if in_mark <= idx <= out_mark:
                         if ref_srf_data is not None and ref_srf_data is not False:
-                            for gp in s.gaze_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
-                                csv_writer.writerow( (ts,idx,gp['base_data']['timestamp'],gp['norm_pos'][0],gp['norm_pos'][1],gp['norm_pos'][0]*s.real_world_size['x'],gp['norm_pos'][1]*s.real_world_size['y'],gp['on_srf']) )
-
+                            for gp in s.gaze_on_srf_by_frame_idx(idx, ref_srf_data['m_from_screen']):
+                                csv_writer.writerow((ts, idx, gp['base_data']['timestamp'],
+                                                     gp['norm_pos'][0], gp['norm_pos'][1],
+                                                     gp['norm_pos'][0]*s.real_world_size['x'],
+                                                     gp['norm_pos'][1]*s.real_world_size['y'],
+                                                     gp['on_srf'], gp['confidence']))
 
             # save fixation on srf as csv.
             with open(os.path.join(metrics_dir,'fixations_on_surface'+surface_name+'.csv'),'w',encoding='utf-8',newline='') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter=',')
-                csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','x_scaled','y_scaled','on_srf'))
+                csv_writer.writerow(('id', 'start_timestamp', 'duration', 'start_frame',
+                                     'end_frame', 'norm_pos_x', 'norm_pos_y', 'x_scaled',
+                                     'y_scaled', 'on_srf'))
                 fixations_on_surface = []
                 for idx,ref_srf_data in zip(range(len(self.g_pool.timestamps)),s.cache):
                     if in_mark <= idx <= out_mark:
