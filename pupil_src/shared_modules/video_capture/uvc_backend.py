@@ -285,10 +285,6 @@ class UVC_Source(Base_Source):
         self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
     @property
-    def intrinsics(self):
-        return self._intrinsics
-
-    @property
     def frame_rate(self):
         if self.uvc_capture:
             return self.uvc_capture.frame_rate

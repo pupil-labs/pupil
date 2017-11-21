@@ -186,10 +186,6 @@ class File_Source(Base_Source):
         return self._initialised
 
     @property
-    def intrinsics(self):
-        return self._intrinsics
-
-    @property
     @ensure_initialisation(fallback_func=lambda: (640, 480))
     def frame_size(self):
         return int(self.video_stream.format.width), int(self.video_stream.format.height)

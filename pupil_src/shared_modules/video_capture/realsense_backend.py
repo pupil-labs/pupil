@@ -676,10 +676,6 @@ class Realsense_Source(Base_Source):
         self.depth_video_writer = None
 
     @property
-    def intrinsics(self):
-        return self._intrinsics
-
-    @property
     def frame_size(self):
         stream = self.streams[0]
         return stream.width, stream.height

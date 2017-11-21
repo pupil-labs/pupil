@@ -108,10 +108,6 @@ class Fake_Source(Base_Source):
         return self._name
 
     @property
-    def intrinsics(self):
-        return self._intrinsics
-
-    @property
     def settings(self):
         return {'frame_size': self.frame_size, 'frame_rate': self.frame_rate}
 
