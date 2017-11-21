@@ -213,6 +213,8 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.min_duration = min_duration
         self.max_duration = max_duration
         self.show_fixations = show_fixations
+        self.current_fixation_details = None
+        self.fixations = deque()
         self.prev_index = -1
         self.bg_task = None
         self.status = ''
@@ -296,6 +298,9 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         '''
         classify fixations
         '''
+        if self.g_pool.app == 'exporter':
+            return
+
         if self.bg_task:
             self.bg_task.cancel()
 
@@ -347,7 +352,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                 cv2.putText(frame.img, '{}'.format(f['id']), (x + 30, y),
                             cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 150, 100))
 
-        if self.prev_index != frame.index:
+        if self.current_fixation_details and self.prev_index != frame.index:
             info = ''
             for f in self.g_pool.fixations_by_frame[frame.index]:
                 info += 'Current fixation, {} of {}\n'.format(f['id'], len(self.g_pool.fixations))

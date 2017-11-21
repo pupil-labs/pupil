@@ -143,11 +143,11 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         g_pool.pupil_data = pupil_data
         g_pool.pupil_positions = pre_computed.get("pupil_positions") or pupil_data['pupil_positions']
         g_pool.gaze_positions = pre_computed.get("gaze_positions") or pupil_data['gaze_positions']
-        g_pool.fixations = [] # populated by the fixation detector plugin
+        g_pool.fixations = pre_computed.get("fixations", [])
 
-        g_pool.pupil_positions_by_frame = correlate_data(g_pool.pupil_positions,g_pool.timestamps)
-        g_pool.gaze_positions_by_frame = correlate_data(g_pool.gaze_positions,g_pool.timestamps)
-        g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
+        g_pool.pupil_positions_by_frame = correlate_data(g_pool.pupil_positions, g_pool.timestamps)
+        g_pool.gaze_positions_by_frame = correlate_data(g_pool.gaze_positions, g_pool.timestamps)
+        g_pool.fixations_by_frame = correlate_data(g_pool.fixations, g_pool.timestamps)
 
         # add plugins
         g_pool.plugins = Plugin_List(g_pool, plugin_initializers)

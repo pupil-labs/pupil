@@ -112,7 +112,8 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         out_file_path = verify_out_file_path(self.rec_name, export_dir)
         pre_computed = {'gaze_positions': self.g_pool.gaze_positions,
                         'pupil_positions': self.g_pool.pupil_positions,
-                        'pupil_data': self.g_pool.pupil_data}
+                        'pupil_data': self.g_pool.pupil_data,
+                        'fixations': self.g_pool.fixations}
 
         args = (rec_dir, user_dir, self.g_pool.min_data_confidence, start_frame,
                 end_frame, plugins, out_file_path, pre_computed)
