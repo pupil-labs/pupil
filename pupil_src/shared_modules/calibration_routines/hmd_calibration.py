@@ -367,5 +367,6 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
                                 'cal_points_3d': points,
                                 'cal_ref_points_3d': points_a,
                                 'cal_gaze_points0_3d': points_b,
-                                'cal_gaze_points1_3d': points_c}}
+                                'cal_gaze_points1_3d': points_c,
+                                'backproject': False}}
         self.g_pool.active_calibration_plugin.notify_all(mapper_args)
