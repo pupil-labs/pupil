@@ -33,6 +33,7 @@ class Task_Proxy(object):
         wrapper_args = [pipe_send, self._should_terminate_flag, generator]
         wrapper_args.extend(args)
         self.process = mp.Process(target=self._wrapper, name=name, args=wrapper_args, kwargs=kwargs)
+        self.process.daemon = True
         self.process.start()
         self.pipe = pipe_recv
 
@@ -61,13 +62,17 @@ class Task_Proxy(object):
                 datum = self.pipe.recv()
             except EOFError:
                 logger.debug("Process canceled be user.")
+                self._canceled = True
+                self.process = None
                 return
             else:
                 if isinstance(datum, StopIteration):
                     self._completed = True
+                    self.process = None
                     return
                 elif isinstance(datum, EarlyCancellationError):
                     self._canceled = True
+                    self.process = None
                     return
                 elif isinstance(datum, Exception):
                     raise datum

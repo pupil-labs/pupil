@@ -53,8 +53,9 @@ class Global_Container(object):
 def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=None,
            plugin_initializers=(), out_file_path=None, pre_computed={}):
 
-    logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()))
-    start_status = 'Starting video export with pid: {}'.format(os.getpid())
+    PID = str(os.getpid())
+    logger = logging.getLogger(__name__+' with pid: '+PID)
+    start_status = 'Starting video export with pid: {}'.format(PID)
     print(start_status)
     yield start_status, 0
 
@@ -181,7 +182,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
 
             writer.write_video_frame(frame)
             current_frame += 1
-            yield 'Exporting', current_frame
+            yield 'Exporting with pid {}'.format(PID), current_frame
 
         writer.close()
         writer = None
@@ -195,9 +196,10 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
 
     except GeneratorExit:
         print('Video export with pid {} was canceled.'.format(os.getpid()))
-    except:
+    except Exception as e:
         from time import sleep
         import traceback
         trace = traceback.format_exc()
         print('Process Export (pid: {}) crashed with trace:\n{}'.format(os.getpid(), trace))
+        yield e
         sleep(1.0)
