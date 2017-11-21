@@ -254,14 +254,14 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         g_pool.capture_manager = manager_class_by_name[manager_class_name](g_pool,**manager_settings)
 
         if eye_id == 0:
-            cap_src = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]
+            cap_src = ["Pupil Cam1 ID0", "HD-6000", "HD USB Camera", "USB 2.0 Camera"]
         else:
-            cap_src = ["Pupil Cam1 ID1","HD-6000","Integrated Camera"]
+            cap_src = ["Pupil Cam1 ID1", "HD-6000"]
 
         # Initialize capture
-        default_settings = ('UVC_Source',{
-                            'preferred_names'  : cap_src,
-                            'frame_size': (640,480),
+        default_settings = ('UVC_Source', {
+                            'preferred_names': cap_src,
+                            'frame_size': (640, 480),
                             'frame_rate': 90
                             })
 
