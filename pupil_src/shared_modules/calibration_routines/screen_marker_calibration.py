@@ -1,14 +1,3 @@
-'''
-(*)~---------------------------------------------------------------------------
-Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
-
-Distributed under the terms of the GNU
-Lesser General Public License (LGPL v3.0).
-See COPYING and COPYING.LESSER for license details.
----------------------------------------------------------------------------~(*)
-'''
-
 import os
 import cv2
 import numpy as np
@@ -16,7 +5,7 @@ from methods import normalize
 from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
-from circle_detector import find_concetric_circles
+from circle_detector import CircleTracker
 from platform import system
 
 import audio
@@ -109,14 +98,16 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         else:
             self.window_position_default = (0, 0)
 
+        self.circle_tracker = CircleTracker(wait_interval=30)
+
     def init_ui(self):
         super().init_ui()
-        self.menu.label = "Screen Marker Calibration"
+        self.menu.label = 'Screen Marker Calibration'
         self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
         #primary_monitor = glfwGetPrimaryMonitor()
 
-        self.menu.append(ui.Info_Text("Calibrate gaze parameters using a screen based animation."))
+        self.menu.append(ui.Info_Text('Calibrate gaze parameters using a screen based animation.'))
 
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
@@ -125,11 +116,11 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     def start(self):
         if not self.g_pool.capture.online:
-            logger.error("{} requireds world capture video input.".format(self.mode_pretty))
+            logger.error('{} requireds world capture video input.'.format(self.mode_pretty))
             return
         super().start()
-        audio.say("Starting {}".format(self.mode_pretty))
-        logger.info("Starting {}".format(self.mode_pretty))
+        audio.say('Starting {}'.format(self.mode_pretty))
+        logger.info('Starting {}'.format(self.mode_pretty))
 
         if self.g_pool.detection_mapping_mode == '3d':
             if self.mode == 'calibration':
@@ -191,8 +182,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     def stop(self):
         # TODO: redundancy between all gaze mappers -> might be moved to parent class
-        audio.say("Stopping {}".format(self.mode_pretty))
-        logger.info("Stopping {}".format(self.mode_pretty))
+        audio.say('Stopping {}'.format(self.mode_pretty))
+        logger.info('Stopping {}'.format(self.mode_pretty))
         self.smooth_pos = 0, 0
         self.counter = 0
         self.close_window()
@@ -223,26 +214,32 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 self.stop()
                 return
 
-            # detect the marker
-            self.markers = find_concetric_circles(gray_img, min_ring_count=4)
+            # update the marker
+            self.markers = self.circle_tracker.update(gray_img)
+            self.nr_markers = len(self.markers)
 
-            if len(self.markers) > 0:
+            if self.nr_markers > 0:
                 self.detected = True
-                marker_pos = self.markers[0][0][0]  # first marker, innermost ellipse,center
-                self.pos = normalize(marker_pos, (frame.width, frame.height), flip_y=True)
-
+                # Set the pos to be the center of the first detected marker
+                marker_pos = self.markers[0]['img_pos']
+                self.pos = self.markers[0]['norm_pos']
             else:
                 self.detected = False
                 self.pos = None  # indicate that no reference is detected
+
+            # Check if there are more than one markers
+            if self.nr_markers > 1:
+                audio.tink()
+                logger.warning('{} markers detected. Please remove all the other markers'.format(self.nr_markers))
 
             # only save a valid ref position if within sample window of calibration routine
             on_position = self.lead_in < self.screen_marker_state < (self.lead_in+self.sample_duration)
 
             if on_position and self.detected:
                 ref = {}
-                ref["norm_pos"] = self.pos
-                ref["screen_pos"] = marker_pos
-                ref["timestamp"] = frame.timestamp
+                ref['norm_pos'] = self.pos
+                ref['screen_pos'] = marker_pos
+                ref['timestamp'] = frame.timestamp
                 self.ref_list.append(ref)
 
             # always save pupil positions
@@ -266,7 +263,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.stop()
                     return
                 self.active_site = self.sites.pop(0)
-                logger.debug("Moving screen marker to site at {} {}".format(*self.active_site))
+                logger.debug('Moving screen marker to site at {} {}'.format(*self.active_site))
 
             # use np.arrays for per element wise math
             self.display_pos = np.array(self.active_site)
@@ -288,7 +285,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         # debug mode within world will show green ellipses around detected ellipses
         if self.active and self.detected:
             for marker in self.markers:
-                e = marker[-1]  # outermost ellipse
+                e = marker['ellipses'][-1]# outermost ellipse
                 pts = cv2.ellipse2Poly((int(e[0][0]), int(e[0][1])),
                                        (int(e[1][0]/2), int(e[1][1]/2)),
                                        int(e[-1]), 0, 360, 15)
@@ -305,7 +302,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         clear_gl_screen()
 
         hdpi_factor = glfwGetFramebufferSize(self._window)[0]/glfwGetWindowSize(self._window)[0]
-        r = 110*self.marker_scale * hdpi_factor
+        r = 130*self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetFramebufferSize(self._window)
@@ -322,13 +319,16 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         screen_pos = map_value(self.display_pos[0],out_range=(pad,p_window_size[0]-pad)),map_value(self.display_pos[1],out_range=(p_window_size[1]-pad,pad))
         alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
-        draw_concentric_circles(screen_pos,r,4,alpha)
+        #draw_concentric_circles(screen_pos,r,2,alpha)
+        # draw_concentric_circles(screen_pos, r, 2, alpha, sharpness=0.1)
+        draw_concentric_circles(screen_pos, r, 2, alpha)
         #some feedback on the detection state
 
+        draw_points([screen_pos], size=35*self.marker_scale, color=RGBA(0., 0., 0., alpha), sharpness=0.9)
         if self.detected and self.on_position:
-            draw_points([screen_pos],size=10*self.marker_scale,color=RGBA(0.,.8,0.,alpha),sharpness=0.5)
+            draw_points([screen_pos],size=10*self.marker_scale,color=RGBA(0.,.8,0.,alpha),sharpness=0.9)
         else:
-            draw_points([screen_pos],size=10*self.marker_scale,color=RGBA(0.8,0.,0.,alpha),sharpness=0.5)
+            draw_points([screen_pos],size=10*self.marker_scale,color=RGBA(0.8,0.,0.,alpha),sharpness=0.9)
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))
@@ -351,4 +351,3 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.stop()
         if self._window:
             self.close_window()
-        super().deinit_ui()
