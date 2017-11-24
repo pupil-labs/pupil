@@ -1,4 +1,4 @@
-"""
+'''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2017  Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-"""
+'''
 
 import os
 import cv2
@@ -23,7 +23,7 @@ from platform import system
 import audio
 
 from pyglui import ui
-from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA,draw_concentric_circles, draw_circle
+from pyglui.cygl.utils import draw_points, draw_polyline, RGBA
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from . calibration_plugin_base import Calibration_Plugin
@@ -42,10 +42,10 @@ def on_resize(window,w,h):
 
 
 class Single_Marker_Calibration(Calibration_Plugin):
-    """Calibrate using a single marker.
+    '''Calibrate using a single marker.
        Move your head for example in a spiral motion while gazing
        at the marker to quickly sample a wide range gaze angles.
-    """
+    '''
 
     def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
         super().__init__(g_pool)
@@ -70,15 +70,15 @@ class Single_Marker_Calibration(Calibration_Plugin):
         self.clicks_to_close = 5
 
         self.glfont = fontstash.Context()
-        self.glfont.add_font('opensans',get_opensans_font_path())
+        self.glfont.add_font("opensans",get_opensans_font_path())
         self.glfont.set_size(32)
         self.glfont.set_color_float((0.2,0.5,0.9,1.0))
-        self.glfont.set_align_string(v_align='center')
+        self.glfont.set_align_string(v_align="center")
 
         # UI Platform tweaks
-        if system() == 'Linux':
+        if system() == "Linux":
             self.window_position_default = (0, 0)
-        elif system() == 'Windows':
+        elif system() == "Windows":
             self.window_position_default = (8, 31)
         else:
             self.window_position_default = (0, 0)
@@ -91,18 +91,18 @@ class Single_Marker_Calibration(Calibration_Plugin):
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
         #primary_monitor = glfwGetPrimaryMonitor()
-        self.menu.append(ui.Info_Text('Calibrate gaze parameters using a single gae targets and active head movements.'))
-        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
-        self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
-        self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
+        self.menu.append(ui.Info_Text("Calibrate gaze parameters using a single gae targets and active head movements."))
+        self.menu.append(ui.Selector("monitor_idx",self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label="Monitor"))
+        self.menu.append(ui.Switch("fullscreen",self,label="Use fullscreen"))
+        self.menu.append(ui.Slider("marker_scale",self,step=0.1,min=0.5,max=2.0,label="Marker size"))
 
     def start(self):
         if not self.g_pool.capture.online:
-            logger.error('Calibration required world capture video input.')
+            logger.error("Calibration required world capture video input.")
             return
         super().start()
-        audio.say('Starting {}'.format(self.mode_pretty))
-        logger.info('Starting {}'.format(self.mode_pretty))
+        audio.say("Starting {}".format(self.mode_pretty))
+        logger.info("Starting {}".format(self.mode_pretty))
 
         self.active = True
         self.ref_list = []
@@ -110,7 +110,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         self.clicks_to_close = 5
         self.open_window(self.mode_pretty)
 
-    def open_window(self, title='new_window'):
+    def open_window(self, title="new_window"):
         if not self._window:
             if self.fullscreen:
                 monitor = glfwGetMonitors()[self.monitor_idx]
@@ -143,7 +143,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def on_window_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
-            if self.mode == 'calibration':
+            if self.mode == "calibration":
                 target_key = GLFW_KEY_C
             else:
                 target_key = GLFW_KEY_T
@@ -158,16 +158,16 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def stop(self):
         # TODO: redundancy between all gaze mappers -> might be moved to parent class
-        audio.say('Stopping  {}'.format(self.mode_pretty))
-        logger.info('Stopping  {}'.format(self.mode_pretty))
+        audio.say("Stopping  {}".format(self.mode_pretty))
+        logger.info("Stopping  {}".format(self.mode_pretty))
         self.smooth_pos = 0,0
         self.counter = 0
         self.close_window()
         self.active = False
-        self.button.status_text = ''
-        if self.mode == 'calibration':
+        self.button.status_text = ""
+        if self.mode == "calibration":
             finish_calibration(self.g_pool, self.pupil_list, self.ref_list)
-        elif self.mode == 'accuracy_test':
+        elif self.mode == "accuracy_test":
             self.finish_accuracy_test(self.pupil_list, self.ref_list)
         super().stop()
 
@@ -182,9 +182,9 @@ class Single_Marker_Calibration(Calibration_Plugin):
             glfwMakeContextCurrent(active_window)
 
     def recent_events(self, events):
-        frame = events.get('frame')
+        frame = events.get("frame")
         if self.active and frame:
-            recent_pupil_positions = events['pupil_positions']
+            recent_pupil_positions = events["pupil_positions"]
             gray_img = frame.gray
 
             if self.clicks_to_close <=0:
@@ -198,11 +198,11 @@ class Single_Marker_Calibration(Calibration_Plugin):
             if self.nr_markers > 0:
                 self.detected = True
                 # Set the pos to be the center of the first detected marker
-                marker_pos = self.markers[0]['img_pos']
-                self.pos = self.markers[0]['norm_pos']
+                marker_pos = self.markers[0]["img_pos"]
+                self.pos = self.markers[0]["norm_pos"]
                 # Check if there are stop markers
                 for marker in self.markers:
-                    if marker['stop_marker']:
+                    if marker["stop_marker"]:
                         self.auto_stop += 1
                         self.stop_marker_found = True
                         break
@@ -216,21 +216,21 @@ class Single_Marker_Calibration(Calibration_Plugin):
             # Check if there are more than one markers
             if self.nr_markers > 1:
                 audio.tink()
-                logger.warning('{} markers detected. Please remove all the other markers'.format(self.nr_markers))
+                logger.warning("{} markers detected. Please remove all the other markers".format(self.nr_markers))
 
             # only save a valid ref position if within sample window of calibraiton routine
             on_position = self.lead_in < self.screen_marker_state
 
             if on_position and self.detected:
                 ref = {}
-                ref['norm_pos'] = self.pos
-                ref['screen_pos'] = marker_pos
-                ref['timestamp'] = frame.timestamp
+                ref["norm_pos"] = self.pos
+                ref["screen_pos"] = marker_pos
+                ref["timestamp"] = frame.timestamp
                 self.ref_list.append(ref)
 
             # always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
+                if p_pt["confidence"] > self.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
 
@@ -245,18 +245,18 @@ class Single_Marker_Calibration(Calibration_Plugin):
             self.gl_display_in_window()
 
     def gl_display(self):
-        """
+        '''
         use gl calls to render
         at least:
             the published position of the reference
         better:
             show the detected postion even if not published
-        """
+        '''
 
         # debug mode within world will show green ellipses around detected ellipses
         if self.active and self.detected:
             for marker in self.markers:
-                e = marker['ellipses'][-1]  # outermost ellipse
+                e = marker["ellipses"][-1]  # outermost ellipse
                 pts = cv2.ellipse2Poly((int(e[0][0]), int(e[0][1])),
                                        (int(e[1][0]/2), int(e[1][1]/2)),
                                        int(e[-1]), 0, 360, 15)
@@ -273,7 +273,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         clear_gl_screen()
 
         hdpi_factor = glfwGetFramebufferSize(self._window)[0]/glfwGetWindowSize(self._window)[0]
-        r = 110*self.marker_scale * hdpi_factor
+        r = self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetFramebufferSize(self._window)
@@ -286,38 +286,38 @@ class Single_Marker_Calibration(Calibration_Plugin):
             ratio = (out_range[1]-out_range[0])/(in_range[1]-in_range[0])
             return (value-in_range[0])*ratio+out_range[0]
 
-        pad = .7*r
+        pad = 90 * r
         screen_pos = map_value(self.display_pos[0],out_range=(pad,p_window_size[0]-pad)),map_value(self.display_pos[1],out_range=(p_window_size[1]-pad,pad))
         alpha = 1.0 #interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
-        #draw_concentric_circles(screen_pos,r,4,alpha)
-        # draw_concentric_circles(screen_pos, r, 2, alpha, sharpness=0.1)
-        draw_concentric_circles(screen_pos, r, 2, alpha)
-        #some feedback on the detection state
+        #draw_concentric_circles(screen_pos,r,2,alpha)
+        sharpness = 0.9 if r >= 1 else 0.83
+        r2 = 2 * r
+        draw_points([screen_pos], size=60*r2, color=RGBA(0., 0., 0., alpha), sharpness=sharpness+0.08)
+        draw_points([screen_pos], size=34*r2, color=RGBA(1., 1., 1., alpha), sharpness=sharpness+0.07)
+        draw_points([screen_pos], size=18*r2, color=RGBA(0., 0., 0., alpha), sharpness=sharpness+0.03)
 
-        draw_points([screen_pos], size=34*self.marker_scale, color=RGBA(0., 0., 0., alpha), sharpness=0.9)
-        if self.detected and self.on_position:
-            draw_circle(screen_pos, radius=r+8*self.marker_scale, stroke_width=8*self.marker_scale, color=RGBA(0., 0.8, 0., alpha), sharpness=0.9)
-        else:
-            draw_circle(screen_pos, radius=r+8*self.marker_scale, stroke_width=8*self.marker_scale, color=RGBA(0.8, 0., 0., alpha), sharpness=0.9)
+        # some feedback on the detection state
+        color = RGBA(0., .8, 0., alpha) if self.detected and self.on_position else RGBA(0.8, 0., 0., alpha)
+        draw_points([screen_pos], size=3*r2, color=color, sharpness=sharpness+0.03)
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))
-            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch {} more times to cancel calibration.'.format(self.clicks_to_close))
+            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,"Touch {} more times to cancel calibration.".format(self.clicks_to_close))
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
 
     def get_init_dict(self):
         d = {}
-        d['fullscreen'] = self.fullscreen
-        d['marker_scale'] = self.marker_scale
+        d["fullscreen"] = self.fullscreen
+        d["marker_scale"] = self.marker_scale
         return d
 
     def deinit_ui(self):
-        """gets called when the plugin get terminated.
+        '''gets called when the plugin get terminated.
            either voluntarily or forced.
-        """
+        '''
         if self.active:
             self.stop()
         if self._window:
