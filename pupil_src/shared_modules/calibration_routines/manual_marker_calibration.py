@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2017  Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 import cv2
 import numpy as np
@@ -27,12 +27,12 @@ logger = logging.getLogger(__name__)
 
 
 class Manual_Marker_Calibration(Calibration_Plugin):
-    '''
+    """
         CircleTracker looks for proper markers
         Using at least 9 positions/points within the FOV
         Ref detector will direct one to good positions with audio cues
         Calibration only collects data at the good positions
-    '''
+    """
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.detected = False
@@ -56,32 +56,32 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
     def init_ui(self):
         super().init_ui()
-        self.menu.label = "Manual Calibration"
-        self.menu.append(ui.Info_Text("Calibrate gaze parameters using a handheld marker."))
+        self.menu.label = 'Manual Calibration'
+        self.menu.append(ui.Info_Text('Calibrate gaze parameters using a handheld marker.'))
 
     def start(self):
         super().start()
-        audio.say("Starting {}".format(self.mode_pretty))
-        logger.info("Starting {}".format(self.mode_pretty))
+        audio.say('Starting {}'.format(self.mode_pretty))
+        logger.info('Starting {}'.format(self.mode_pretty))
         self.active = True
         self.ref_list = []
         self.pupil_list = []
 
     def stop(self):
-        audio.say("Stopping  {}".format(self.mode_pretty))
-        logger.info("Stopping  {}".format(self.mode_pretty))
+        audio.say('Stopping  {}'.format(self.mode_pretty))
+        logger.info('Stopping  {}'.format(self.mode_pretty))
         self.screen_marker_state = 0
         self.active = False
         # self.close_window()
-        self.button.status_text = ""
-        if self.mode == "calibration":
+        self.button.status_text = ''
+        if self.mode == 'calibration':
             finish_calibration(self.g_pool, self.pupil_list, self.ref_list)
-        elif self.mode == "accuracy_test":
+        elif self.mode == 'accuracy_test':
             self.finish_accuracy_test(self.pupil_list, self.ref_list)
         super().stop()
 
     def on_notify(self, notification):
-        '''
+        """
         Reacts to notifications:
            ``calibration.should_start``: Starts the calibration procedure
            ``calibration.should_stop``: Stops the calibration procedure
@@ -94,37 +94,37 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             ``calibration.marker_sample_completed``: Enough data points sampled
             ``calibration.multiple_marker_detected``: more than one markers are detected
 
-        '''
+        """
         super().on_notify(notification)
 
     def recent_events(self, events):
-        '''
+        """
         gets called once every frame.
         reference positon need to be published to shared_pos
         if no reference was found, publish 0,0
-        '''
-        frame = events.get("frame")
+        """
+        frame = events.get('frame')
         self.detected = False
         if self.active and frame:
-            recent_pupil_positions = events["pupil_positions"]
+            recent_pupil_positions = events['pupil_positions']
 
             gray_img = frame.gray
 
             if self.world_size is None:
                 self.world_size = frame.width,frame.height
 
-            # update the marker
+            # Update the marker
             self.markers = self.circle_tracker.update(gray_img)
             self.nr_markers = len(self.markers)
 
             if self.nr_markers > 0:
                 self.detected = True
                 # Set the pos to be the center of the first detected marker
-                marker_pos = self.markers[0]["img_pos"]
-                self.pos = self.markers[0]["norm_pos"]
+                marker_pos = self.markers[0]['img_pos']
+                self.pos = self.markers[0]['norm_pos']
                 # Check if there are stop markers
                 for marker in self.markers:
-                    if marker["stop_marker"]:
+                    if marker['stop_marker']:
                         self.auto_stop += 1
                         self.stop_marker_found = True
                         break
@@ -138,8 +138,8 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             # Check if there are more than one markers
             if self.nr_markers > 1:
                 audio.tink()
-                logger.warning("{} markers detected. Please remove all the other markers".format(self.nr_markers))
-                self.notify_all({"subject": "calibration.multiple_marker_detected", "timestamp": self.g_pool.get_timestamp(),"record": True})
+                logger.warning('{} markers detected. Please remove all the other markers'.format(self.nr_markers))
+                self.notify_all({'subject': 'calibration.multiple_marker_detected', 'timestamp': self.g_pool.get_timestamp(),'record': True})
 
             # tracking logic
             if self.detected and not self.stop_marker_found:
@@ -159,47 +159,49 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 #distance to last sampled site
                 sample_ref_dist = smooth_pos-np.array(self.sample_site)
                 sample_ref_dist = abs(sample_ref_dist[0])+abs(sample_ref_dist[1])
+
+                # start counter if ref is resting in place and not at last sample site
                 if self.counter <= 0:
                     if self.smooth_vel < 0.01 and sample_ref_dist > 0.1:
                         self.sample_site = self.smooth_pos
                         audio.beep()
-                        logger.debug("Steady marker found. Starting to sample {} datapoints".format(self.counter_max))
-                        self.notify_all({"subject":"calibration.marker_found","timestamp":self.g_pool.get_timestamp(),"record":True})
+                        logger.debug('Steady marker found. Starting to sample {} datapoints'.format(self.counter_max))
+                        self.notify_all({'subject':'calibration.marker_found','timestamp':self.g_pool.get_timestamp(),'record':True})
                         self.counter = self.counter_max
 
                 if self.counter > 0:
                     if self.smooth_vel > 0.01:
                         audio.tink()
-                        logger.warning("Marker moved too quickly: Aborted sample. Sampled {} datapoints. Looking for steady marker again.".format(self.counter_max-self.counter))
-                        self.notify_all({"subject":"calibration.marker_moved_too_quickly","timestamp":self.g_pool.get_timestamp(),"record":True})
+                        logger.warning('Marker moved too quickly: Aborted sample. Sampled {} datapoints. Looking for steady marker again.'.format(self.counter_max-self.counter))
+                        self.notify_all({'subject':'calibration.marker_moved_too_quickly','timestamp':self.g_pool.get_timestamp(),'record':True})
                         self.counter = 0
                     else:
                         self.counter -= 1
                         ref = {}
-                        ref["norm_pos"] = self.pos
-                        ref["screen_pos"] = marker_pos
-                        ref["timestamp"] = frame.timestamp
+                        ref['norm_pos'] = self.pos
+                        ref['screen_pos'] = marker_pos
+                        ref['timestamp'] = frame.timestamp
                         self.ref_list.append(ref)
-                        if events.get("fixations", []):
+                        if events.get('fixations', []):
                             self.counter -= 5
                         if self.counter <= 0:
                             #last sample before counter done and moving on
                             audio.tink()
-                            logger.debug("Sampled {} datapoints. Stopping to sample. Looking for steady marker again.".format(self.counter_max))
-                            self.notify_all({"subject":"calibration.marker_sample_completed","timestamp":self.g_pool.get_timestamp(),"record":True})
+                            logger.debug('Sampled {} datapoints. Stopping to sample. Looking for steady marker again.'.format(self.counter_max))
+                            self.notify_all({'subject':'calibration.marker_sample_completed','timestamp':self.g_pool.get_timestamp(),'record':True})
 
-            #always save pupil positions
+            # Always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt["confidence"] > self.pupil_confidence_threshold:
+                if p_pt['confidence'] > self.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
             if self.counter:
                 if self.detected:
-                    self.button.status_text = "Sampling Gaze Data"
+                    self.button.status_text = 'Sampling Gaze Data'
                 else:
-                    self.button.status_text = "Marker Lost"
+                    self.button.status_text = 'Marker Lost'
             else:
-                self.button.status_text = "Looking for Marker"
+                self.button.status_text = 'Looking for Marker'
 
 
 
@@ -214,13 +216,13 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
 
     def gl_display(self):
-        '''
+        """
         use gl calls to render
         at least:
             the published position of the reference
         better:
             show the detected postion even if not published
-        '''
+        """
 
         if self.active:
             draw_points_norm([self.smooth_pos],size=15,color=RGBA(1.,1.,0.,.5))
@@ -228,15 +230,16 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         if self.active and self.detected:
             # draw the largest ellipse of all detected markers
             for marker in self.markers:
-                e = marker["ellipses"][-1]
-                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
-                                    (int(e[1][0]/2),int(e[1][1]/2)),
-                                    int(e[-1]),0,360,15)
-                draw_polyline(pts,color=RGBA(0.,1.,0,1.))
+                for e in marker['ellipses']:
+                    # e = marker['ellipses'][-1]
+                    pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                        (int(e[1][0]/2),int(e[1][1]/2)),
+                                        int(e[-1]),0,360,15)
+                    draw_polyline(pts,color=RGBA(0.,1.,0,1.))
 
             # draw indicator on the first detected marker
             if self.counter:
-                e = self.markers[0]["ellipses"][-1]
+                e = self.markers[0]['ellipses'][-1]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360//self.counter_max)
@@ -246,8 +249,8 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             # draw indicator on the stop marker(s)
             if self.auto_stop:
                 for marker in self.markers:
-                    if marker["stop_marker"]:
-                        e = marker["ellipses"][-1]
+                    if marker['stop_marker']:
+                        e = marker['ellipses'][-1]
                         pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                             (int(e[1][0]/2),int(e[1][1]/2)),
                                             int(e[-1]),0,360,360//self.auto_stop_max)
@@ -257,9 +260,9 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             pass
 
     def deinit_ui(self):
-        '''gets called when the plugin get terminated.
+        """gets called when the plugin get terminated.
         This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
-        '''
+        """
         if self.active:
             self.stop()
