@@ -63,16 +63,13 @@ class Task_Proxy(object):
             except EOFError:
                 logger.debug("Process canceled be user.")
                 self._canceled = True
-                self.process = None
                 return
             else:
                 if isinstance(datum, StopIteration):
                     self._completed = True
-                    self.process = None
                     return
                 elif isinstance(datum, EarlyCancellationError):
                     self._canceled = True
-                    self.process = None
                     return
                 elif isinstance(datum, Exception):
                     raise datum
@@ -80,11 +77,12 @@ class Task_Proxy(object):
                     yield datum
 
     def cancel(self, timeout=1):
-        if self.process is not None:
+        if not (self.completed or self.canceled):
             self._should_terminate_flag.value = True
             for x in self.fetch():
                 # fetch to flush pipe to allow process to react to cancel comand.
                 pass
+        if self.process is not None:
             self.process.join(timeout)
             self.process = None
 
