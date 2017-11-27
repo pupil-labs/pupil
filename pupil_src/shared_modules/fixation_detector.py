@@ -203,7 +203,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
     based on the positional angle of the eye. These fixations have their method
     field set to "pupil". If no 3d pupil data is available the plugin will
     assume that the gaze data is calibrated and calculate the dispersion in
-    visual angle with in the coordinate system of the world camera. These
+    visual angle within the coordinate system of the world camera. These
     fixations will have their method field set to "gaze".
     '''
     def __init__(self, g_pool, max_dispersion=1.0, min_duration=300, max_duration=1000, show_fixations=True):
