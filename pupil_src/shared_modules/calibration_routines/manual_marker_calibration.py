@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 import cv2
 import numpy as np
-from methods import normalize
 from pyglui.cygl.utils import draw_points_norm, draw_polyline, RGBA
 from OpenGL.GL import GL_POLYGON
 from circle_detector import CircleTracker
@@ -50,7 +49,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
         self.menu = None
 
-        self.circle_tracker = CircleTracker(wait_interval=30)
+        self.circle_tracker = CircleTracker()
         self.markers = []
         self.nr_markers = 0
 
@@ -111,7 +110,10 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             gray_img = frame.gray
 
             if self.world_size is None:
-                self.world_size = frame.width,frame.height
+                self.world_size = frame.width, frame.height
+            elif self.world_size != (frame.width, frame.height):
+                self.circle_tracker = CircleTracker()
+                self.world_size = frame.width, frame.height
 
             # Update the marker
             self.markers = self.circle_tracker.update(gray_img)
@@ -230,12 +232,11 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         if self.active and self.detected:
             # draw the largest ellipse of all detected markers
             for marker in self.markers:
-                for e in marker['ellipses']:
-                    # e = marker['ellipses'][-1]
-                    pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
-                                        (int(e[1][0]/2),int(e[1][1]/2)),
-                                        int(e[-1]),0,360,15)
-                    draw_polyline(pts,color=RGBA(0.,1.,0,1.))
+                e = marker['ellipses'][-1]
+                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                    (int(e[1][0]/2),int(e[1][1]/2)),
+                                    int(e[-1]),0,360,15)
+                draw_polyline(pts,color=RGBA(0.,1.,0,1.))
 
             # draw indicator on the first detected marker
             if self.counter:

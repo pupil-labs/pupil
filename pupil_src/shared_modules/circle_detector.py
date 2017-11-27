@@ -16,8 +16,9 @@ from methods import dist_pts_ellipse, normalize
 
 
 class CircleTracker(object):
-    def __init__(self, wait_interval=30):
+    def __init__(self, wait_interval=30, roi_wait_interval=120):
         self.wait_interval = wait_interval
+        self.roi_wait_interval = roi_wait_interval
         self.previous_markers = []
         self.predict_motion = []
         self.wait_count = 0
@@ -34,7 +35,7 @@ class CircleTracker(object):
             self.flag_check = True
             self.flag_check_roi = False
             self.wait_count = self.wait_interval
-            self.roi_wait_count = self.wait_interval * 4
+            self.roi_wait_count = self.roi_wait_interval
 
         markers = []
         if self.flag_check:
@@ -96,10 +97,10 @@ class CircleTracker(object):
                     b3 = predict_center[1] + largest_ellipse[1][0] + abs(self.predict_motion[i][1]) * 2
                 else:
                     predict_center = largest_ellipse[0]
-                    b0 = predict_center[0] - largest_ellipse[1][1] * 3
-                    b1 = predict_center[0] + largest_ellipse[1][1] * 3
-                    b2 = predict_center[1] - largest_ellipse[1][0] * 3
-                    b3 = predict_center[1] + largest_ellipse[1][0] * 3
+                    b0 = predict_center[0] - largest_ellipse[1][1]
+                    b1 = predict_center[0] + largest_ellipse[1][1]
+                    b2 = predict_center[1] - largest_ellipse[1][0]
+                    b3 = predict_center[1] + largest_ellipse[1][0]
 
                 b0 = 0 if b0 < 0 else int(b0)
                 b1 = img_size[0] - 1 if b1 > img_size[0] - 1 else int(b1)
@@ -131,22 +132,27 @@ def find_pupil_circle_marker(img, scale):
     # Resize the image
     img_resize = cv2.resize(img, dsize=(0, 0), fx=scale, fy=scale)
 
-    # Use two kinds of adaptive threshold to extract the edges of the image
-    # The first one is for normal and complicated scene
-    # The Second one is for marker in low contrast
-    img_resize_blur = cv2.GaussianBlur(img_resize, (3, 3), 0)
-    edges = [cv2.adaptiveThreshold(img_resize_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 29, 35),
+    # Use three kinds of adaptive threshold to extract the edges of the image
+    # The first one is for complicated scene
+    # The Second one is for normal scene
+    # The last one is for marker in low contrast
+    img_resize_blur = cv2.GaussianBlur(img_resize, (3, 3), 0.25)
+    edges = [cv2.adaptiveThreshold(img_resize_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 29, 36),
+             cv2.adaptiveThreshold(img_resize_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 29, 18),
              cv2.adaptiveThreshold(img_resize_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 29, 3)]
 
     ellipses_list = []
-    marker_found_pos = []
+    found_pos = []
+    found_size = []
     for edge in edges:
-        circle_clusters = find_concentric_circles(edge, first_check=True, min_ellipses_num=2)
+        circle_clusters = find_concentric_circles(edge, found_pos, found_size, first_check=True, min_ellipses_num=2)
 
         for ellipses, boundary in circle_clusters:
-            img_pos = ellipses[0][0]
+            ellipse_pos = np.array(ellipses[0][0])
+            ellipse_size = min(ellipses[-1][1])
             # Discard duplicates
-            if len(marker_found_pos) and min((abs(np.array(img_pos) - np.array(marker_found_pos))).max(axis=1)) < max(ellipses[1][1]):
+            duplicates = [k for k in range(len(found_pos)) if LA.norm(ellipse_pos - found_pos[k]) < found_size[k]]
+            if len(duplicates) > 0:
                 continue
 
             # Set up the boundary of the ellipses
@@ -168,13 +174,13 @@ def find_pupil_circle_marker(img, scale):
             img_ellipse_mean = np.mean(img_ellipse)
 
             # Calculate the kernel_size for edge extraction
-            block_size = max(5, int(max(img_ellipse_size) / 4) * 2 - 1)
-            c = img_ellipse_mean / 64
+            block_size = max(7, int(max(img_ellipse_size) / 4) * 2 + 1)
+            c = img_ellipse_mean / 16
 
             # Extract the edges of the candidate marker again with more appropriate kernel_size
             img_ellipse_blur = cv2.GaussianBlur(img_ellipse, (3, 3), 1)
             mask_outer = cv2.adaptiveThreshold(img_ellipse_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, block_size, c)
-            temp = find_concentric_circles(mask_outer, first_check=False, min_ellipses_num=3)
+            temp = find_concentric_circles(mask_outer, [], [], first_check=False, min_ellipses_num=3)
 
             if len(temp) == 0:
                 continue
@@ -182,7 +188,7 @@ def find_pupil_circle_marker(img, scale):
             single_marker = temp[0][0]
 
             # Get the ellipses of the dot and the ring
-            divider_size = sum(single_marker[-1][1]) * 0.2
+            divider_size = sum(single_marker[-1][1]) * 0.1
             larger_ellipses = [e for e in single_marker if sum(e[1]) >= divider_size]
             if len(larger_ellipses) != 3:
                 continue
@@ -203,7 +209,7 @@ def find_pupil_circle_marker(img, scale):
             # Check if it is a normal marker
             if mask_ring_dot_mean >= 128:
                 # Check the ring ratio
-                if not 1.2 < ring_ratio < 2.1:
+                if not 1.3 < ring_ratio < 2:
                     continue
 
                 outer_mean = np.ma.array(img_ellipse, mask=mask_outer).mean()
@@ -233,13 +239,13 @@ def find_pupil_circle_marker(img, scale):
 
                 single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
                 ellipses_list.append({'ellipses': single_marker, 'stop_marker': False})
-                marker_found_pos.append(img_pos)
-                return ellipses_list
+                found_pos.append(ellipse_pos)
+                found_size.append(ellipse_size)
 
             # Check if it is a stop marker
             else:
                 # Check the ring ratio
-                if not 1.4 < ring_ratio < 2.7:
+                if not 1.4 < ring_ratio < 2.2:
                     continue
 
                 outer_mean = np.ma.array(img_ellipse, mask=cv2.bitwise_not(mask_outer)).mean()
@@ -271,15 +277,17 @@ def find_pupil_circle_marker(img, scale):
 
                 single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
                 ellipses_list.append({'ellipses': single_marker, 'stop_marker': True})
-                marker_found_pos.append(img_pos)
-                return ellipses_list
+                found_pos.append(ellipse_pos)
+                found_size.append(ellipse_size)
 
     return ellipses_list
 
 
-def find_concentric_circles(edge, first_check=True, min_ellipses_num=2):
+def find_concentric_circles(edge, found_pos, found_size, first_check=True, min_ellipses_num=2):
     """
     :param edge: the edge extraction of the image
+    :param found_pos: the found marker position
+    :param found_size: the found marker size
     :param first_check: if it is the first time to find contours
     :param min_ellipses_num: minimum requirement of the number of the ellipses in the marker
     :return: all candidate markers
@@ -307,11 +315,23 @@ def find_concentric_circles(edge, first_check=True, min_ellipses_num=2):
                 else:
                     if len(c) >= 5:
                         e = cv2.fitEllipse(c)
+                        # Discard duplicates
+                        if first_ellipse:
+                            duplicates = [k for k in range(len(found_pos)) if LA.norm(e[0] - found_pos[k]) < found_size[k] + min(e[1])]
+                            if len(duplicates) > 0:
+                                break
+
                         fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0
                         e = e if min(e[1]) else (e[0], (1, 1), e[2])
                     else:
-                        fit = 0
                         center = c[len(c)//2][0]
+                        # Discard duplicates
+                        if first_ellipse:
+                            duplicates = [k for k in range(len(found_pos)) if LA.norm(center - found_pos[k]) < found_size[k] + 1]
+                            if len(duplicates) > 0:
+                                break
+
+                        fit = 0
                         e = ((center[0], center[1]), (1, 1), 0)
 
                     ellipses[i] = e, fit

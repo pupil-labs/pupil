@@ -12,7 +12,6 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import cv2
 import numpy as np
-from methods import normalize,denormalize
 from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
@@ -80,7 +79,8 @@ class Single_Marker_Calibration(Calibration_Plugin):
         else:
             self.window_position_default = (0, 0)
 
-        self.circle_tracker = CircleTracker(wait_interval=30)
+        self.world_size = None
+        self.circle_tracker = CircleTracker()
         self.markers = []
         self.nr_markers = 0
 
@@ -190,6 +190,12 @@ class Single_Marker_Calibration(Calibration_Plugin):
                 self.stop()
                 return
 
+            if self.world_size is None:
+                self.world_size = frame.width, frame.height
+            elif self.world_size != (frame.width, frame.height):
+                self.circle_tracker = CircleTracker()
+                self.world_size = frame.width, frame.height
+
             # Update the marker
             self.markers = self.circle_tracker.update(gray_img)
             self.nr_markers = len(self.markers)
@@ -284,7 +290,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         sharpness = 0.9 if r >= 1 else 0.83
         r2 = 2 * r
         draw_points([screen_pos], size=60*r2, color=RGBA(0., 0., 0., alpha), sharpness=sharpness+0.08)
-        draw_points([screen_pos], size=34*r2, color=RGBA(1., 1., 1., alpha), sharpness=sharpness+0.07)
+        draw_points([screen_pos], size=36*r2, color=RGBA(1., 1., 1., alpha), sharpness=sharpness+0.07)
         draw_points([screen_pos], size=18*r2, color=RGBA(0., 0., 0., alpha), sharpness=sharpness+0.03)
 
         # some feedback on the detection state
