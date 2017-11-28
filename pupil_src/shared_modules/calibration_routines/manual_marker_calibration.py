@@ -215,12 +215,11 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         if self.active and len(self.markers):
             # draw the largest ellipse of all detected markers
             for marker in self.markers:
-                # e = marker['ellipses'][-1]
-                for e in marker['ellipses']:
-                    pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
-                                        (int(e[1][0]/2),int(e[1][1]/2)),
-                                        int(e[-1]),0,360,15)
-                    draw_polyline(pts,color=RGBA(0.,1.,0,1.))
+                e = marker['ellipses'][-1]
+                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                    (int(e[1][0]/2),int(e[1][1]/2)),
+                                    int(e[-1]),0,360,15)
+                draw_polyline(pts,color=RGBA(0.,1.,0,1.))
 
             # draw indicator on the first detected marker
             if self.counter and self.markers[0]['marker_type'] == 'Ref':
