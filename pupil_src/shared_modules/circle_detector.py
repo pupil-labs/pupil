@@ -1,4 +1,4 @@
-"""
+'''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2017  Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-"""
+'''
 
 import numpy as np
 from numpy import linalg as LA
@@ -19,59 +19,80 @@ class CircleTracker(object):
     def __init__(self, wait_interval=30, roi_wait_interval=120):
         self.wait_interval = wait_interval
         self.roi_wait_interval = roi_wait_interval
-        self.previous_markers = []
-        self.predict_motion = []
-        self.wait_count = 0
-        self.roi_wait_count = 0
-        self.flag_check = False
-        self.flag_check_roi = False
+        self._previous_markers = []
+        self._predict_motion = []
+        self._wait_count = 0
+        self._roi_wait_count = 0
+        self._flag_check = False
+        self._flag_check_roi = False
+        self._world_size = None
 
     def update(self, img):
         """
         Decide whether to track the marker in the roi or in the whole frame
         Return all detected markers
+
+        :param img: input gray image
+        :type img: numpy.ndarray
+        :return: all detected markers including the information about their ellipses, center positions and their type
+        (Ref/Stop)
+        :rtype: a list containing dictionary with keys: 'ellipses', 'img_pos', 'norm_pos', 'marker_type'
         """
-        if self.wait_count <= 0 or self.roi_wait_count <= 0:
-            self.flag_check = True
-            self.flag_check_roi = False
-            self.wait_count = self.wait_interval
-            self.roi_wait_count = self.roi_wait_interval
+        img_size = img.shape[::-1]
+        if self._world_size is None:
+            self._world_size = img_size
+        elif self._world_size != img_size:
+            self._previous_markers = []
+            self._predict_motion = []
+            self._wait_count = 0
+            self._roi_wait_count = 0
+            self._world_size = img_size
+
+        if self._wait_count <= 0 or self._roi_wait_count <= 0:
+            self._flag_check = True
+            self._flag_check_roi = False
+            self._wait_count = self.wait_interval
+            self._roi_wait_count = self.roi_wait_interval
 
         markers = []
-        if self.flag_check:
-            markers = self.check_frame(img)
+        if self._flag_check:
+            markers = self._check_frame(img)
             predict_motion = []
             if len(markers) > 0:
-                if len(self.previous_markers) in (0, len(markers)):
-                    self.flag_check = True
-                    self.flag_check_roi = True
-                    self.roi_wait_count -= 1
-                    for i in range(len(self.previous_markers)):
-                        predict_motion.append(np.array(markers[i]['img_pos']) - np.array(self.previous_markers[i]['img_pos']))
+                if len(self._previous_markers) in (0, len(markers)):
+                    self._flag_check = True
+                    self._flag_check_roi = True
+                    self._roi_wait_count -= 1
+                    for i in range(len(self._previous_markers)):
+                        predict_motion.append(np.array(markers[i]['img_pos']) - np.array(self._previous_markers[i]['img_pos']))
             else:
-                if self.flag_check_roi:
-                    self.flag_check = True
-                    self.flag_check_roi = False
+                if self._flag_check_roi:
+                    self._flag_check = True
+                    self._flag_check_roi = False
                 else:
-                    self.flag_check = False
-                    self.flag_check_roi = False
+                    self._flag_check = False
+                    self._flag_check_roi = False
 
-        self.wait_count -= 1
-        self.previous_markers = markers
+        self._wait_count -= 1
+        self._previous_markers = markers
         return markers
 
-    def check_frame(self, img):
+    def _check_frame(self, img):
         """
-        Resize the image and then track the markers in the ROIs / in the whole frame
-        Return all detected markers including the information about their ellipses, center positions and
-        whether they are stop markers
+        Track the markers in the ROIs / in the whole frame
+
+        :param img: input gray image
+        :type img: numpy.ndarray
+        :return: all detected markers including the information about their ellipses, center positions and their type
+        (Ref/Stop)
+        :rtype: a list containing dictionary with keys: 'ellipses', 'img_pos', 'norm_pos', 'marker_type'
         """
         img_size = img.shape[::-1]
         scale = 0.5 if img_size[0] >= 1280 else 640 / img_size[0]
 
         marker_list = []
         # Check whole frame
-        if not self.flag_check_roi:
+        if not self._flag_check_roi:
             ellipses_list = find_pupil_circle_marker(img, scale)
 
             # Save the markers in dictionaries
@@ -80,21 +101,21 @@ class CircleTracker(object):
                 img_pos = ellipses[0][0]
                 norm_pos = normalize(img_pos, img_size, flip_y=True)
                 marker_list.append({'ellipses': ellipses, 'img_pos': img_pos, 'norm_pos': norm_pos,
-                                    'stop_marker': ellipses_['stop_marker']})
+                                    'marker_type': ellipses_['marker_type']})
 
         # Check roi
         else:
-            for i in range(len(self.previous_markers)):
-                largest_ellipse = self.previous_markers[i]['ellipses'][-1]
+            for i in range(len(self._previous_markers)):
+                largest_ellipse = self._previous_markers[i]['ellipses'][-1]
 
                 # Set up the boundary of the roi
-                if self.predict_motion:
-                    predict_center = (largest_ellipse[0][0] + self.predict_motion[i][0],
-                                      largest_ellipse[0][1] + self.predict_motion[i][1])
-                    b0 = predict_center[0] - largest_ellipse[1][1] - abs(self.predict_motion[i][0]) * 2
-                    b1 = predict_center[0] + largest_ellipse[1][1] + abs(self.predict_motion[i][0]) * 2
-                    b2 = predict_center[1] - largest_ellipse[1][0] - abs(self.predict_motion[i][1]) * 2
-                    b3 = predict_center[1] + largest_ellipse[1][0] + abs(self.predict_motion[i][1]) * 2
+                if self._predict_motion:
+                    predict_center = (largest_ellipse[0][0] + self._predict_motion[i][0],
+                                      largest_ellipse[0][1] + self._predict_motion[i][1])
+                    b0 = predict_center[0] - largest_ellipse[1][1] - abs(self._predict_motion[i][0]) * 2
+                    b1 = predict_center[0] + largest_ellipse[1][1] + abs(self._predict_motion[i][0]) * 2
+                    b2 = predict_center[1] - largest_ellipse[1][0] - abs(self._predict_motion[i][1]) * 2
+                    b3 = predict_center[1] + largest_ellipse[1][0] + abs(self._predict_motion[i][1]) * 2
                 else:
                     predict_center = largest_ellipse[0]
                     b0 = predict_center[0] - largest_ellipse[1][1]
@@ -111,23 +132,26 @@ class CircleTracker(object):
 
                 ellipses_list = find_pupil_circle_marker(img[slice(*row_slice), slice(*col_slice)], scale)
 
-                # Save the markers in dictionaries
-                for ellipses_ in ellipses_list:
-                    ellipses = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in ellipses_['ellipses']]
+                # Track the marker which was detected last frame;
+                # To avoid more than one markers are detected in one ROI
+                if len(ellipses_list):
+                    if len(ellipses_list) == 1:
+                        right_ellipses = ellipses_list[0]
+                    else:
+                        pre_pos = np.array((self._previous_markers[i]['img_pos'][0]-b0, self._previous_markers[i]['img_pos'][1]-b2))
+                        temp_dist = [LA.norm(e['ellipses'][0][0] - pre_pos) for e in ellipses_list]
+                        right_ellipses = ellipses_list[temp_dist.index(min(temp_dist))]
+                    ellipses = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in right_ellipses['ellipses']]
                     img_pos = ellipses[0][0]
                     norm_pos = normalize(img_pos, img_size, flip_y=True)
+                    # Save the marker in dictionary
                     marker_list.append({'ellipses': ellipses, 'img_pos': img_pos, 'norm_pos': norm_pos,
-                                        'stop_marker': ellipses_['stop_marker']})
+                                        'marker_type': right_ellipses['marker_type']})
 
         return marker_list
 
 
 def find_pupil_circle_marker(img, scale):
-    """
-    :param img: gray image
-    :param scale: the ratio of 640 to the width of the img
-    :return: all detected markers with the information of their ellipses and whether a stop marker or not
-    """
     img_size = img.shape[::-1]
     # Resize the image
     img_resize = cv2.resize(img, dsize=(0, 0), fx=scale, fy=scale)
@@ -144,7 +168,8 @@ def find_pupil_circle_marker(img, scale):
     ellipses_list = []
     found_pos = []
     found_size = []
-    for edge in edges:
+    for i in range(len(edges)):
+        edge = edges[i]
         circle_clusters = find_concentric_circles(edge, found_pos, found_size, first_check=True, min_ellipses_num=2)
 
         for ellipses, boundary in circle_clusters:
@@ -179,123 +204,133 @@ def find_pupil_circle_marker(img, scale):
 
             # Extract the edges of the candidate marker again with more appropriate kernel_size
             img_ellipse_blur = cv2.GaussianBlur(img_ellipse, (3, 3), 1)
-            mask_outer = cv2.adaptiveThreshold(img_ellipse_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, block_size, c)
-            temp = find_concentric_circles(mask_outer, [], [], first_check=False, min_ellipses_num=3)
+            mask_edge = cv2.adaptiveThreshold(img_ellipse_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, block_size, c)
+            temp = find_concentric_circles(mask_edge, [], [], first_check=False, min_ellipses_num=3)
 
             if len(temp) == 0:
                 continue
-
             single_marker = temp[0][0]
-
-            # Get the ellipses of the dot and the ring
-            divider_size = sum(single_marker[-1][1]) * 0.1
-            larger_ellipses = [e for e in single_marker if sum(e[1]) >= divider_size]
-            if len(larger_ellipses) != 3:
+            if len(single_marker) < 3:
                 continue
-            dot_ellipse = larger_ellipses[0]
-            inner_ellipse = larger_ellipses[1]
-            outer_ellipse = larger_ellipses[2]
+            elif len(single_marker) > 3:
+                if sum(single_marker[2][1]) / sum(single_marker[0][1]) < 12:
+                    single_marker = [single_marker[0], single_marker[1], single_marker[2]]
 
-            # Calculate the ring ratio
-            ring_ratio = sum(outer_ellipse[1]) / sum(inner_ellipse[1])
+            for j in (0, 1):
+                # Check if it is a normal marker
+                if j == 0:
+                    # Get the ellipses of the dot and the ring
+                    dot_ellipse = single_marker[-3]
+                    inner_ellipse = single_marker[-2]
+                    outer_ellipse = single_marker[-1]
 
-            # Check if it is a normal / stop marker by the mean grayscale of the ring and the dot
-            mask_ring_dot = np.ones_like(img_ellipse) * 255
-            cv2.ellipse(mask_ring_dot, outer_ellipse, color=(0, 0, 0), thickness=-1)
-            cv2.ellipse(mask_ring_dot, inner_ellipse, color=(255, 255, 255), thickness=-1)
-            cv2.ellipse(mask_ring_dot, dot_ellipse, color=(0, 0, 0), thickness=-1)
-            mask_ring_dot_mean = np.ma.array(mask_outer, mask=mask_ring_dot).mean()
+                    # Check the ring ratio and dot ratio
+                    ring_ratio = sum(outer_ellipse[1]) / sum(inner_ellipse[1])
+                    if not 1.15 < ring_ratio < 2.2:
+                        continue
+                    dot_ratio = sum(outer_ellipse[1]) / sum(dot_ellipse[1])
+                    if not 2 < dot_ratio < 12:
+                        continue
 
-            # Check if it is a normal marker
-            if mask_ring_dot_mean >= 128:
-                # Check the ring ratio
-                if not 1.3 < ring_ratio < 2:
-                    continue
+                    # Check if it is a normal / stop marker by the mean grayscale of the ring
+                    mask_ring = np.ones_like(img_ellipse) * 255
+                    cv2.ellipse(mask_ring, outer_ellipse, color=(0, 0, 0), thickness=-1)
+                    cv2.ellipse(mask_ring, inner_ellipse, color=(255, 255, 255), thickness=-1)
+                    mask_ring_mean = np.ma.array(mask_edge, mask=mask_ring).mean()
+                    if mask_ring_mean < 128:
+                        continue
 
-                outer_mean = np.ma.array(img_ellipse, mask=mask_outer).mean()
+                    mask_outer = np.zeros_like(img_ellipse)
+                    cv2.ellipse(mask_outer, outer_ellipse, color=(255, 255, 255), thickness=-1)
+                    outer_mean = np.ma.array(img_ellipse, mask=mask_outer).mean()
+                    ring_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_ring))
+                    # The grayscale of the outer part of the ring should be brighter than the grayscale of the ring
+                    if outer_mean - ring_median < img_ellipse_mean / 2:
+                        continue
 
-                ring_dot_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_ring_dot))
+                    mask_middle = np.ones_like(img_ellipse) * 255
+                    cv2.ellipse(mask_middle, inner_ellipse, color=(0, 0, 0), thickness=-1)
+                    cv2.ellipse(mask_middle, inner_ellipse, color=(255, 255, 255), thickness=2)
+                    cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
+                    mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
+                    middle_median = np.ma.median(mask_middle_value)
+                    # The grayscale of the part between the ring and the dot should be brighter than the grayscale of the ring
+                    if middle_median - ring_median < img_ellipse_mean / 4:
+                        continue
 
-                # The grayscale of the outer part of the ring should be brighter than the grayscale of the ring
-                if outer_mean - ring_dot_median < img_ellipse_mean / 4:
-                    continue
+                    middle_std = mask_middle_value.std()
+                    white_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_edge))
+                    # The std of the part between the ring and the dot should not be too large
+                    if middle_std / white_median > 0.4:
+                        continue
 
-                mask_middle = np.ones_like(img_ellipse) * 255
-                cv2.ellipse(mask_middle, inner_ellipse, color=(0, 0, 0), thickness=-1)
-                cv2.ellipse(mask_middle, inner_ellipse, color=(255, 255, 255), thickness=2)
-                cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
-                mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
-                middle_median = np.ma.median(mask_middle_value)
+                    single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
+                    ellipses_list.append({'ellipses': single_marker, 'marker_type': 'Ref'})
+                    found_pos.append(ellipse_pos)
+                    found_size.append(ellipse_size)
+                    break
 
-                # The grayscale of the part between the ring and the dot should be brighter than the grayscale of the ring
-                if middle_median - ring_dot_median < img_ellipse_mean / 4:
-                    continue
+                # Check if it is a stop marker
+                if j == 1:
+                    # Get the ellipses of the dot and the ring
+                    dot_ellipse = single_marker[0]
+                    inner_ellipse = single_marker[1]
+                    outer_ellipse = single_marker[2]
 
-                middle_std = mask_middle_value.std()
-                white_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_outer))
-                # The std of the part between the ring and the dot should not be too large
-                if middle_std / white_median > 0.4:
-                    continue
+                    # Check the ring ratio and dot ratio
+                    ring_ratio = sum(outer_ellipse[1]) / sum(inner_ellipse[1])
+                    if not 1.2 < ring_ratio < 2.2:
+                        continue
+                    dot_ratio = sum(outer_ellipse[1]) / sum(dot_ellipse[1])
+                    if not 2 < dot_ratio < 12:
+                        continue
 
-                single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
-                ellipses_list.append({'ellipses': single_marker, 'stop_marker': False})
-                found_pos.append(ellipse_pos)
-                found_size.append(ellipse_size)
+                    # Check if it is a normal / stop marker by the mean grayscale of the ring
+                    mask_ring = np.ones_like(img_ellipse) * 255
+                    cv2.ellipse(mask_ring, outer_ellipse, color=(0, 0, 0), thickness=-1)
+                    cv2.ellipse(mask_ring, inner_ellipse, color=(255, 255, 255), thickness=-1)
+                    mask_ring_mean = np.ma.array(mask_edge, mask=mask_ring).mean()
+                    if mask_ring_mean >= 128:
+                        continue
 
-            # Check if it is a stop marker
-            else:
-                # Check the ring ratio
-                if not 1.4 < ring_ratio < 2.2:
-                    continue
+                    mask_outer = np.zeros_like(img_ellipse)
+                    cv2.ellipse(mask_outer, outer_ellipse, color=(255, 255, 255), thickness=-1)
+                    outer_mean = np.ma.array(img_ellipse, mask=mask_outer).mean()
+                    ring_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_ring))
+                    # The grayscale of the outer part of the ring should be darker than the grayscale of the ring
+                    if ring_median - outer_mean < img_ellipse_mean / 2:
+                        continue
 
-                outer_mean = np.ma.array(img_ellipse, mask=cv2.bitwise_not(mask_outer)).mean()
+                    mask_middle = np.ones_like(img_ellipse)*255
+                    cv2.ellipse(mask_middle, inner_ellipse, color=(0, 0, 0), thickness=-1)
+                    cv2.ellipse(mask_middle, inner_ellipse, color=(255, 255, 255), thickness=1)
+                    cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
+                    mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
+                    middle_median = np.ma.median(mask_middle_value)
+                    # The grayscale of the part between the ring and the dot should be darker than the grayscale of the ring
+                    if ring_median - middle_median < img_ellipse_mean / 4:
+                        continue
 
-                # cv2.ellipse(mask_ring_dot, outer_ellipse, color=(255, 255, 255), thickness=1)
-                ring_dot_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_ring_dot))
+                    middle_std = mask_middle_value.std()
+                    white_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_edge))
+                    # The std of the part between the ring and the dot should not be too large
+                    if middle_std / white_median > 0.4:
+                        continue
 
-                # The grayscale of the outer part of the ring should be darker than the grayscale of the ring
-                if ring_dot_median - outer_mean < img_ellipse_mean / 4:
-                    continue
-
-                mask_middle = np.ones_like(img_ellipse)*255
-                cv2.ellipse(mask_middle, inner_ellipse, color=(0, 0, 0), thickness=-1)
-                cv2.ellipse(mask_middle, inner_ellipse, color=(255, 255, 255), thickness=1)
-                cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
-                mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
-                middle_median = np.ma.median(mask_middle_value)
-
-                # The grayscale of the part between the ring and the dot should be darker than the grayscale of the ring
-                if ring_dot_median - middle_median < img_ellipse_mean / 4:
-                    continue
-
-                middle_std = mask_middle_value.std()
-                white_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_outer))
-
-                # The std of the part between the ring and the dot should not be too large
-                if middle_std / white_median > 0.4:
-                    continue
-
-                single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
-                ellipses_list.append({'ellipses': single_marker, 'stop_marker': True})
-                found_pos.append(ellipse_pos)
-                found_size.append(ellipse_size)
+                    single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
+                    ellipses_list.append({'ellipses': single_marker, 'marker_type': 'Stop'})
+                    found_pos.append(ellipse_pos)
+                    found_size.append(ellipse_size)
 
     return ellipses_list
 
 
 def find_concentric_circles(edge, found_pos, found_size, first_check=True, min_ellipses_num=2):
-    """
-    :param edge: the edge extraction of the image
-    :param found_pos: the found marker position
-    :param found_size: the found marker size
-    :param first_check: if it is the first time to find contours
-    :param min_ellipses_num: minimum requirement of the number of the ellipses in the marker
-    :return: all candidate markers
-    """
 
     if first_check:
         concentric_circle_clusters = []
-        _, contours, hierarchy = cv2.findContours(edge, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE, offset=(0, 0)) # TC89_KCOS
+        # CHAIN_APPROX_TC89_KCOS does not store absolutely all the contour points
+        _, contours, hierarchy = cv2.findContours(edge, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_TC89_KCOS)
 
         if contours is None or hierarchy is None:
             return []
@@ -305,11 +340,11 @@ def find_concentric_circles(edge, found_pos, found_size, first_check=True, min_e
 
         for cluster in clusters:
             candidate_ellipses = []
-            if len(cluster) < min_ellipses_num:
-                continue
             first_ellipse = True
             for i in cluster:
                 c = contours[i]
+                if len(c) > 100:
+                    continue
                 if i in ellipses:
                     e, fit = ellipses[i]
                 else:
@@ -319,20 +354,23 @@ def find_concentric_circles(edge, found_pos, found_size, first_check=True, min_e
                         if first_ellipse:
                             duplicates = [k for k in range(len(found_pos)) if LA.norm(e[0] - found_pos[k]) < found_size[k] + min(e[1])]
                             if len(duplicates) > 0:
+                                ellipses[i] = e, 100
                                 break
-
-                        fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0
-                        e = e if min(e[1]) else (e[0], (1, 1), e[2])
+                            fit = 0
+                        else:
+                            fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0
+                        e = e if min(e[1]) else (e[0], (0.1, 0.1), e[2])
                     else:
                         center = c[len(c)//2][0]
                         # Discard duplicates
                         if first_ellipse:
                             duplicates = [k for k in range(len(found_pos)) if LA.norm(center - found_pos[k]) < found_size[k] + 1]
                             if len(duplicates) > 0:
+                                e = ((center[0], center[1]), (0.1, 0.1), 0)
+                                ellipses[i] = e, 100
                                 break
-
                         fit = 0
-                        e = ((center[0], center[1]), (1, 1), 0)
+                        e = ((center[0], center[1]), (0.1, 0.1), 0)
 
                     ellipses[i] = e, fit
 
@@ -367,52 +405,45 @@ def find_concentric_circles(edge, found_pos, found_size, first_check=True, min_e
 
         # Return clusters sorted by the number of ellipses and the size of largest ellipse
         return sorted(concentric_circle_clusters, key=lambda x: (-len(x[0]), -max(x[0][-1][1])))
+
     else:
-        for j in (0, 1):
-            # Need to inverse the edge so that the curves of a stop marker on the boundary could be taken as a contour
-            if j == 1:
-                edge = 255-edge
-            _, contours, hierarchy = cv2.findContours(edge, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE, offset=(0, 0))  # TC89_KCOS
+        _, contours, hierarchy = cv2.findContours(edge, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE)
 
-            if contours is None or hierarchy is None:
-                return []
-            clusters = get_nested_clusters(contours, hierarchy[0], min_ellipses_num)
-            # speed up code by caching computed ellipses
-            ellipses = {}
+        if contours is None or hierarchy is None:
+            return []
+        clusters = get_nested_clusters(contours, hierarchy[0], min_ellipses_num)
+        # speed up code by caching computed ellipses
+        ellipses = {}
 
-            for cluster in clusters:
-                candidate_ellipses = []
-                if len(cluster) < min_ellipses_num:
-                    continue
-                for i in cluster:
-                    c = contours[i]
-                    if i in ellipses:
-                        e, fit = ellipses[i]
+        for cluster in clusters:
+            candidate_ellipses = []
+            for i in cluster:
+                c = contours[i]
+                if i in ellipses:
+                    e, fit = ellipses[i]
+                else:
+                    if len(c) >= 5:
+                        e = cv2.fitEllipse(c)
+                        fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0
+                        if min(e[1]) == 0:
+                            e = (e[0], (e[1][0]+1, e[1][1]+1), e[2])
                     else:
-                        if len(c) >= 5:
-                            e = cv2.fitEllipse(c)
-                            fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0
-                            e = e if min(e[1]) else (e[0], (e[1][0]+1, e[1][1]+1), e[2])
-                        else:
-                            fit = 0
-                            center = c[len(c) // 2][0]
-                            e = ((center[0], center[1]), (c[-1][0][0] - c[0][0][0] + 1, c[-1][0][1] - c[0][0][1] + 1), 0)
+                        fit = 0
+                        center = c[len(c) // 2][0]
+                        e = ((center[0], center[1]), (abs(c[-1][0][0]-c[0][0][0])+1, abs(c[-1][0][1]-c[0][0][1])+1), 0)
 
-                        ellipses[i] = e, fit
+                    ellipses[i] = e, fit
+                # Discard the contour which does not fit the ellipse so well
+                if fit < max(2, max(e[1]) / 10):
+                    candidate_ellipses.append(e)
+                    if len(candidate_ellipses) == 4:
+                        break
 
-                    # Discard the contour which does not fit the ellipse so well
-                    if fit < max(1.5, max(e[1]) / 50):
-                        candidate_ellipses.append(e)
-                        if len(candidate_ellipses) == 3 and sum(candidate_ellipses[0][1])/sum(e[1]) > 0.2:
-                            break
-                        elif len(candidate_ellipses) == 4:
-                            break
+            # Discard false positives
+            if len(candidate_ellipses) < min_ellipses_num:
+                continue
 
-                # Discard false positives
-                if len(candidate_ellipses) < min_ellipses_num:
-                    continue
-
-                return [(candidate_ellipses, [[0, 0], [0, 0]])]
+            return [(candidate_ellipses, [[0, 0], [0, 0]])]
 
     return []
 
@@ -431,11 +462,10 @@ def get_nested_clusters(contours, hierarchy, min_nested_count):
     # we create a cluster for each of these children.
     # to reduce CPU load we only keep the biggest cluster for clusters where the innermost parent is the same.
     for i in np.where(hierarchy[:, 2] == -1)[0]:  # contours with no children
-        if len(contours[i]) >= 1:  # we assume that valid markers innermost contour is more than 1 pixel
-            cluster = add_parents(i, hierarchy, [])
-            # is this cluster bigger that the current contender in the innermost parent group if if already exsists?
-            if min_nested_count <= len(cluster) > len(clusters.get(cluster[1], [])):
-                clusters[cluster[1]] = cluster
+        cluster = add_parents(i, hierarchy, [])
+        # is this cluster bigger that the current contender in the innermost parent group if if already exists?
+        if min_nested_count <= len(cluster) > len(clusters.get(cluster[1], [])):
+            clusters[cluster[1]] = cluster
     return clusters.values()
 
 
@@ -456,8 +486,8 @@ if __name__ == '__main__':
 
 
     import cProfile,subprocess,os
-    cProfile.runctx('bench()',{},locals(),'world.pstats')
+    cProfile.runctx("bench()",{},locals(),"world.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-    subprocess.call('python '+gprof2dot_loc+' -f pstats world.pstats | dot -Tpng -o world_cpu_time.png', shell=True)
-    print('created  time graph for  process. Please check out the png next to this file')
+    subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
+    print("created  time graph for  process. Please check out the png next to this file")

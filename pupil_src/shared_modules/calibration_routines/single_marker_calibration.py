@@ -1,4 +1,4 @@
-"""
+'''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2017  Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-"""
+'''
 
 import os
 import cv2
@@ -48,7 +48,6 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
         super().__init__(g_pool)
-        self.detected = False
         self.screen_marker_state = 0.
         self.lead_in = 25  # frames of marker shown before starting to sample
 
@@ -79,10 +78,8 @@ class Single_Marker_Calibration(Calibration_Plugin):
         else:
             self.window_position_default = (0, 0)
 
-        self.world_size = None
         self.circle_tracker = CircleTracker()
         self.markers = []
-        self.nr_markers = 0
 
     def init_ui(self):
         super().init_ui()
@@ -90,18 +87,18 @@ class Single_Marker_Calibration(Calibration_Plugin):
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
         #primary_monitor = glfwGetPrimaryMonitor()
-        self.menu.append(ui.Info_Text('Calibrate gaze parameters using a single gae targets and active head movements.'))
+        self.menu.append(ui.Info_Text("Calibrate gaze parameters using a single gae targets and active head movements."))
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
         self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
 
     def start(self):
         if not self.g_pool.capture.online:
-            logger.error('Calibration required world capture video input.')
+            logger.error("Calibration required world capture video input.")
             return
         super().start()
-        audio.say('Starting {}'.format(self.mode_pretty))
-        logger.info('Starting {}'.format(self.mode_pretty))
+        audio.say("Starting {}".format(self.mode_pretty))
+        logger.info("Starting {}".format(self.mode_pretty))
 
         self.active = True
         self.ref_list = []
@@ -157,7 +154,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def stop(self):
         # TODO: redundancy between all gaze mappers -> might be moved to parent class
-        audio.say('Stopping  {}'.format(self.mode_pretty))
+        audio.say("Stopping  {}".format(self.mode_pretty))
         logger.info('Stopping  {}'.format(self.mode_pretty))
         self.smooth_pos = 0,0
         self.counter = 0
@@ -190,38 +187,29 @@ class Single_Marker_Calibration(Calibration_Plugin):
                 self.stop()
                 return
 
-            if self.world_size is None:
-                self.world_size = frame.width, frame.height
-            elif self.world_size != (frame.width, frame.height):
-                self.circle_tracker = CircleTracker()
-                self.world_size = frame.width, frame.height
-
             # Update the marker
             self.markers = self.circle_tracker.update(gray_img)
-            self.nr_markers = len(self.markers)
 
-            if self.nr_markers > 0:
-                self.detected = True
+            if len(self.markers):
                 # Set the pos to be the center of the first detected marker
                 marker_pos = self.markers[0]['img_pos']
                 self.pos = self.markers[0]['norm_pos']
             else:
-                self.detected = False
                 self.pos = None  # indicate that no reference is detected
 
             # Check if there are more than one markers
-            if self.nr_markers > 1:
+            if len(self.markers) > 1:
                 audio.tink()
-                logger.warning('{} markers detected. Please remove all the other markers'.format(self.nr_markers))
+                logger.warning("{} markers detected. Please remove all the other markers".format(len(self.markers)))
 
             # only save a valid ref position if within sample window of calibraiton routine
             on_position = self.lead_in < self.screen_marker_state
 
-            if on_position and self.detected:
+            if on_position and len(self.markers):
                 ref = {}
-                ref['norm_pos'] = self.pos
-                ref['screen_pos'] = marker_pos
-                ref['timestamp'] = frame.timestamp
+                ref["norm_pos"] = self.pos
+                ref["screen_pos"] = marker_pos
+                ref["timestamp"] = frame.timestamp
                 self.ref_list.append(ref)
 
             # always save pupil positions
@@ -231,7 +219,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
 
             # Animate the screen marker
-            if self.detected or not on_position:
+            if len(self.markers) or not on_position:
                 self.screen_marker_state += 1
 
 
@@ -250,7 +238,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         """
 
         # debug mode within world will show green ellipses around detected ellipses
-        if self.active and self.detected:
+        if self.active and len(self.markers):
             for marker in self.markers:
                 e = marker['ellipses'][-1]  # outermost ellipse
                 pts = cv2.ellipse2Poly((int(e[0][0]), int(e[0][1])),
@@ -294,7 +282,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         draw_points([screen_pos], size=18*r2, color=RGBA(0., 0., 0., alpha), sharpness=sharpness+0.03)
 
         # some feedback on the detection state
-        color = RGBA(0., .8, 0., alpha) if self.detected and self.on_position else RGBA(0.8, 0., 0., alpha)
+        color = RGBA(0., .8, 0., alpha) if len(self.markers) and self.on_position else RGBA(0.8, 0., 0., alpha)
         draw_points([screen_pos], size=3*r2, color=color, sharpness=sharpness+0.03)
 
         if self.clicks_to_close <5:
@@ -318,3 +306,4 @@ class Single_Marker_Calibration(Calibration_Plugin):
             self.stop()
         if self._window:
             self.close_window()
+        super().deinit_ui()
