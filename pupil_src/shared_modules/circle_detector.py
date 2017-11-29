@@ -225,8 +225,6 @@ def find_pupil_circle_marker(img, scale):
             dot_ratio = sum(outer_ellipse[1]) / sum(dot_ellipse[1])
             if not 2 < dot_ratio < 10:
                 continue
-            print("ring_ratio", ring_ratio)
-            print("dot_ratio", dot_ratio)
 
             # Check if it is a Ref / stop marker by the mean grayscale of the ring
             mask_ring = np.ones_like(img_ellipse) * 255
