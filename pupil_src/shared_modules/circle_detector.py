@@ -210,117 +210,86 @@ def find_pupil_circle_marker(img, scale):
             if len(temp) == 0:
                 continue
             single_marker = temp[0][0]
-            if len(single_marker) < 3:
+            if len(single_marker) > 3 and sum(single_marker[2][1]) / sum(single_marker[0][1]) < 12:
+                single_marker = [single_marker[0], single_marker[1], single_marker[2]]
+
+            # Get the ellipses of the dot and the ring
+            outer_ellipse = single_marker[-1]
+            inner_ellipse = single_marker[-2]
+            dot_ellipse = single_marker[-3]
+
+            # Check the ring ratio and dot ratio
+            ring_ratio = sum(outer_ellipse[1]) / sum(inner_ellipse[1])
+            if not 1.15 < ring_ratio < 2.2:
                 continue
-            elif len(single_marker) > 3:
-                if sum(single_marker[2][1]) / sum(single_marker[0][1]) < 12:
-                    single_marker = [single_marker[0], single_marker[1], single_marker[2]]
+            dot_ratio = sum(outer_ellipse[1]) / sum(dot_ellipse[1])
+            if not 2 < dot_ratio < 10:
+                continue
 
-            for j in (0, 1):
-                # Check if it is a normal marker
-                if j == 0:
-                    # Get the ellipses of the dot and the ring
-                    dot_ellipse = single_marker[-3]
-                    inner_ellipse = single_marker[-2]
-                    outer_ellipse = single_marker[-1]
+            # Check if it is a Ref / stop marker by the mean grayscale of the ring
+            mask_ring = np.ones_like(img_ellipse) * 255
+            cv2.ellipse(mask_ring, outer_ellipse, color=(0, 0, 0), thickness=-1)
+            cv2.ellipse(mask_ring, inner_ellipse, color=(255, 255, 255), thickness=-1)
+            mask_ring_mean = np.ma.array(mask_edge, mask=mask_ring).mean()
 
-                    # Check the ring ratio and dot ratio
-                    ring_ratio = sum(outer_ellipse[1]) / sum(inner_ellipse[1])
-                    if not 1.15 < ring_ratio < 2.2:
-                        continue
-                    dot_ratio = sum(outer_ellipse[1]) / sum(dot_ellipse[1])
-                    if not 2 < dot_ratio < 12:
-                        continue
+            mask_outer = np.zeros_like(img_ellipse)
+            cv2.ellipse(mask_outer, outer_ellipse, color=(255, 255, 255), thickness=-1)
+            outer_mean = np.ma.array(img_ellipse, mask=mask_outer).mean()
+            ring_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_ring))
 
-                    # Check if it is a normal / stop marker by the mean grayscale of the ring
-                    mask_ring = np.ones_like(img_ellipse) * 255
-                    cv2.ellipse(mask_ring, outer_ellipse, color=(0, 0, 0), thickness=-1)
-                    cv2.ellipse(mask_ring, inner_ellipse, color=(255, 255, 255), thickness=-1)
-                    mask_ring_mean = np.ma.array(mask_edge, mask=mask_ring).mean()
-                    if mask_ring_mean < 128:
-                        continue
+            # Check if it is a Ref marker
+            if mask_ring_mean >= 128:
+                # The grayscale of the outer part of the ring should be brighter than the grayscale of the ring
+                if outer_mean - ring_median < img_ellipse_mean / 2:
+                    continue
 
-                    mask_outer = np.zeros_like(img_ellipse)
-                    cv2.ellipse(mask_outer, outer_ellipse, color=(255, 255, 255), thickness=-1)
-                    outer_mean = np.ma.array(img_ellipse, mask=mask_outer).mean()
-                    ring_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_ring))
-                    # The grayscale of the outer part of the ring should be brighter than the grayscale of the ring
-                    if outer_mean - ring_median < img_ellipse_mean / 2:
-                        continue
+                mask_middle = np.ones_like(img_ellipse) * 255
+                cv2.ellipse(mask_middle, inner_ellipse, color=(0, 0, 0), thickness=-1)
+                cv2.ellipse(mask_middle, inner_ellipse, color=(255, 255, 255), thickness=2)
+                cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
+                mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
+                middle_median = np.ma.median(mask_middle_value)
+                # The grayscale of the part between the ring and the dot should be brighter than the grayscale of the ring
+                if middle_median - ring_median < img_ellipse_mean / 4:
+                    continue
 
-                    mask_middle = np.ones_like(img_ellipse) * 255
-                    cv2.ellipse(mask_middle, inner_ellipse, color=(0, 0, 0), thickness=-1)
-                    cv2.ellipse(mask_middle, inner_ellipse, color=(255, 255, 255), thickness=2)
-                    cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
-                    mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
-                    middle_median = np.ma.median(mask_middle_value)
-                    # The grayscale of the part between the ring and the dot should be brighter than the grayscale of the ring
-                    if middle_median - ring_median < img_ellipse_mean / 4:
-                        continue
+                middle_std = mask_middle_value.std()
+                white_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_edge))
+                # The std of the part between the ring and the dot should not be too large
+                if middle_std / white_median > 0.4:
+                    continue
 
-                    middle_std = mask_middle_value.std()
-                    white_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_edge))
-                    # The std of the part between the ring and the dot should not be too large
-                    if middle_std / white_median > 0.4:
-                        continue
+                single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
+                ellipses_list.append({'ellipses': single_marker, 'marker_type': 'Ref'})
+                found_pos.append(ellipse_pos)
+                found_size.append(ellipse_size)
 
-                    single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
-                    ellipses_list.append({'ellipses': single_marker, 'marker_type': 'Ref'})
-                    found_pos.append(ellipse_pos)
-                    found_size.append(ellipse_size)
-                    break
+            # Check if it is a stop marker
+            else:
+                # The grayscale of the outer part of the ring should be darker than the grayscale of the ring
+                if ring_median - outer_mean < img_ellipse_mean / 2:
+                    continue
 
-                # Check if it is a stop marker
-                if j == 1:
-                    # Get the ellipses of the dot and the ring
-                    dot_ellipse = single_marker[0]
-                    inner_ellipse = single_marker[1]
-                    outer_ellipse = single_marker[2]
+                mask_middle = np.ones_like(img_ellipse)*255
+                cv2.ellipse(mask_middle, inner_ellipse, color=(0, 0, 0), thickness=-1)
+                cv2.ellipse(mask_middle, inner_ellipse, color=(255, 255, 255), thickness=1)
+                cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
+                mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
+                middle_median = np.ma.median(mask_middle_value)
+                # The grayscale of the part between the ring and the dot should be darker than the grayscale of the ring
+                if ring_median - middle_median < img_ellipse_mean / 4:
+                    continue
 
-                    # Check the ring ratio and dot ratio
-                    ring_ratio = sum(outer_ellipse[1]) / sum(inner_ellipse[1])
-                    if not 1.2 < ring_ratio < 2.2:
-                        continue
-                    dot_ratio = sum(outer_ellipse[1]) / sum(dot_ellipse[1])
-                    if not 2 < dot_ratio < 12:
-                        continue
+                middle_std = mask_middle_value.std()
+                white_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_edge))
+                # The std of the part between the ring and the dot should not be too large
+                if middle_std / white_median > 0.2:
+                    continue
 
-                    # Check if it is a normal / stop marker by the mean grayscale of the ring
-                    mask_ring = np.ones_like(img_ellipse) * 255
-                    cv2.ellipse(mask_ring, outer_ellipse, color=(0, 0, 0), thickness=-1)
-                    cv2.ellipse(mask_ring, inner_ellipse, color=(255, 255, 255), thickness=-1)
-                    mask_ring_mean = np.ma.array(mask_edge, mask=mask_ring).mean()
-                    if mask_ring_mean >= 128:
-                        continue
-
-                    mask_outer = np.zeros_like(img_ellipse)
-                    cv2.ellipse(mask_outer, outer_ellipse, color=(255, 255, 255), thickness=-1)
-                    outer_mean = np.ma.array(img_ellipse, mask=mask_outer).mean()
-                    ring_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_ring))
-                    # The grayscale of the outer part of the ring should be darker than the grayscale of the ring
-                    if ring_median - outer_mean < img_ellipse_mean / 2:
-                        continue
-
-                    mask_middle = np.ones_like(img_ellipse)*255
-                    cv2.ellipse(mask_middle, inner_ellipse, color=(0, 0, 0), thickness=-1)
-                    cv2.ellipse(mask_middle, inner_ellipse, color=(255, 255, 255), thickness=1)
-                    cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
-                    mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
-                    middle_median = np.ma.median(mask_middle_value)
-                    # The grayscale of the part between the ring and the dot should be darker than the grayscale of the ring
-                    if ring_median - middle_median < img_ellipse_mean / 4:
-                        continue
-
-                    middle_std = mask_middle_value.std()
-                    white_median = np.ma.median(np.ma.array(img_ellipse, mask=mask_edge))
-                    # The std of the part between the ring and the dot should not be too large
-                    if middle_std / white_median > 0.4:
-                        continue
-
-                    single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
-                    ellipses_list.append({'ellipses': single_marker, 'marker_type': 'Stop'})
-                    found_pos.append(ellipse_pos)
-                    found_size.append(ellipse_size)
+                single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
+                ellipses_list.append({'ellipses': single_marker, 'marker_type': 'Stop'})
+                found_pos.append(ellipse_pos)
+                found_size.append(ellipse_size)
 
     return ellipses_list
 
