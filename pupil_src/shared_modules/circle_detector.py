@@ -345,7 +345,8 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
                                 ellipses[i] = e, 100
                                 break
                         fit = 0
-                        e = ((center[0], center[1]), (0.1, 0.1), 0)
+                        e_center = float(center[0]), float(center[1])
+                        e = (e_center, (0.1, 0.1), 0)
 
                     ellipses[i] = e, fit
 
@@ -405,16 +406,16 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
                             e = (e[0], (e[1][0]+1, e[1][1]+1), e[2])
                     else:
                         fit = 0
-                        center = c[len(c) // 2][0]
-                        e = ((center[0], center[1]), (abs(c[-1][0][0]-c[0][0][0])+1, abs(c[-1][0][1]-c[0][0][1])+1), 0)
-
+                        e_center = float(c[len(c) // 2][0][0]), float(c[len(c) // 2][0][1])
+                        e_size = float(abs(c[-1][0][0]-c[0][0][0])+1), float(abs(c[-1][0][1]-c[0][0][1])+1)
+                        e = (e_center, e_size, 0)
                     ellipses[i] = e, fit
                 # Discard the contour which does not fit the ellipse so well
                 if first_ellipse:
                     fit_thres = 0.5 + (256 - img_contrast) / 256
                 else:
                     if img_contrast <= 96:
-                        fit_thres = max(0.5, max(e[1]) * scale / 10 + (256-img_contrast)/256)
+                        fit_thres = max(e[1]) * scale / 10 + (256-img_contrast)/256
                     else:
                         fit_thres = max(0.5, max(e[1]) * scale / 10)
 
