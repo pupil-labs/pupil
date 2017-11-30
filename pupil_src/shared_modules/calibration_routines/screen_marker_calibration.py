@@ -324,15 +324,14 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         screen_pos = map_value(self.display_pos[0],out_range=(pad,p_window_size[0]-pad)),map_value(self.display_pos[1],out_range=(p_window_size[1]-pad,pad))
         alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
-        sharpness = 0.9 if r >= 1 else 0.83
         r2 = 2 * r
-        draw_points([screen_pos], size=60*r2, color=RGBA(0., 0., 0., alpha), sharpness=sharpness+0.08)
-        draw_points([screen_pos], size=36*r2, color=RGBA(1., 1., 1., alpha), sharpness=sharpness+0.07)
-        draw_points([screen_pos], size=18*r2, color=RGBA(0., 0., 0., alpha), sharpness=sharpness+0.03)
+        draw_points([screen_pos], size=60*r2, color=RGBA(0., 0., 0., alpha), sharpness=0.9)
+        draw_points([screen_pos], size=38*r2, color=RGBA(1., 1., 1., alpha), sharpness=0.8)
+        draw_points([screen_pos], size=19*r2, color=RGBA(0., 0., 0., alpha), sharpness=0.55)
 
         # some feedback on the detection state
         color = RGBA(0., .8, 0., alpha) if len(self.markers) and self.on_position else RGBA(0.8, 0., 0., alpha)
-        draw_points([screen_pos], size=3*r2, color=color, sharpness=sharpness+0.03)
+        draw_points([screen_pos], size=3*r2, color=color, sharpness=0.5)
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))
