@@ -221,16 +221,11 @@ def find_pupil_circle_marker(img, scale):
             inner_ellipse = single_marker[-2]
             dot_ellipse = single_marker[-3]
 
-            # Check the ring ratio and dot ratio
+            # Calculate the ring ratio and dot ratio
             ring_ratio = sum(outer_ellipse[1]) / sum(inner_ellipse[1])
-            if not 1.3 < ring_ratio < 2.1:
-                continue
-
             dot_ratio = sum(outer_ellipse[1]) / sum(dot_ellipse[1])
-            if not 2.5 < dot_ratio < 5:
-                continue
 
-            # Check if it is a Ref / stop marker by the mean grayscale of the ring
+            # Check if it is a Ref / stop marker by the mean gray scale of the ring
             mask_ring = np.ones_like(img_ellipse) * 255
             cv2.ellipse(mask_ring, outer_ellipse, color=(0, 0, 0), thickness=-1)
             cv2.ellipse(mask_ring, inner_ellipse, color=(255, 255, 255), thickness=-1)
@@ -243,7 +238,11 @@ def find_pupil_circle_marker(img, scale):
 
             # Check if it is a Ref marker
             if mask_ring_mean >= 128:
-                # The grayscale of the outer part of the ring should be brighter than the grayscale of the ring
+                # Check the ring ratio and dot ratio
+                if not 1.2 < ring_ratio < 2 or not 2.5 < dot_ratio < 6:
+                    continue
+
+                # The gray scale of the outer part of the ring should be brighter than the gray scale of the ring
                 if outer_mean - ring_median < 0:
                     continue
 
@@ -253,7 +252,7 @@ def find_pupil_circle_marker(img, scale):
                 cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
                 mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
                 middle_median = np.ma.median(mask_middle_value)
-                # The grayscale of the part between the ring and the dot should be brighter than the grayscale of the ring
+                # The gray scale of the part between the ring and the dot should be brighter than the gray scale of the ring
                 if middle_median - ring_median < img_contrast / 4:
                     continue
 
@@ -270,7 +269,11 @@ def find_pupil_circle_marker(img, scale):
 
             # Check if it is a stop marker
             else:
-                # The grayscale of the outer part of the ring should be darker than the grayscale of the ring
+                # Check the ring ratio and dot ratio
+                if not 1.3 < ring_ratio < 2.1 or not 2.5 < dot_ratio < 5:
+                    continue
+
+                # The gray scale of the outer part of the ring should be darker than the gray scale of the ring
                 if ring_median - outer_mean < 0:
                     continue
 
@@ -280,7 +283,7 @@ def find_pupil_circle_marker(img, scale):
                 cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
                 mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
                 middle_median = np.ma.median(mask_middle_value)
-                # The grayscale of the part between the ring and the dot should be darker than the grayscale of the ring
+                # The gray scale of the part between the ring and the dot should be darker than the gray scale of the ring
                 if ring_median - middle_median < img_contrast / 4:
                     continue
 
@@ -356,8 +359,8 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
             if len(candidate_ellipses) < min_ellipses_num:
                 continue
 
-            # Discard the ellipses whose center is far away from the center of the innermost ellipse
-            cluster_center = np.array(candidate_ellipses[0][0])
+            # Discard the ellipses whose center is far away from the center of the second innermost ellipse
+            cluster_center = np.array(candidate_ellipses[1][0])
             if max(candidate_ellipses[-1][1]) > 200:
                 candidate_ellipses = [e for e in candidate_ellipses if LA.norm(e[0] - cluster_center) < max(e[1]) / 5]
             elif max(candidate_ellipses[-1][1]) > 100:
@@ -368,14 +371,13 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
             # Discard false positives
             if len(candidate_ellipses) < min_ellipses_num:
                 continue
-            if min(candidate_ellipses[-1][1]) < 10:
-                continue
 
             c = contours[candidate_ellipses[-1][3]]
             boundary = (np.amin(c, axis=0)[0][0], np.amax(c, axis=0)[0][0]), (np.amin(c, axis=0)[0][1], np.amax(c, axis=0)[0][1])
 
             candidate_ellipses = [(e[0], e[1], e[2]) for e in candidate_ellipses]
             concentric_circle_clusters.append((candidate_ellipses, boundary))
+
         # Return clusters sorted by the number of ellipses and the size of largest ellipse
         return sorted(concentric_circle_clusters, key=lambda x: (-len(x[0]), -max(x[0][-1][1])))
 
@@ -409,7 +411,7 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
                     ellipses[i] = e, fit
                 # Discard the contour which does not fit the ellipse so well
                 if first_ellipse:
-                    fit_thres = 1
+                    fit_thres = 0.5 + (256 - img_contrast) / 256
                 else:
                     if img_contrast <= 96:
                         fit_thres = max(0.5, max(e[1]) * scale / 10 + (256-img_contrast)/256)
@@ -425,7 +427,18 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
             # Discard false positives
             if len(candidate_ellipses) < min_ellipses_num:
                 continue
-            if min(candidate_ellipses[-1][1])*scale < 10:
+
+            # Discard the ellipses whose center is far away from the center of the innermost ellipse
+            cluster_center = np.array(candidate_ellipses[0][0])
+            if max(candidate_ellipses[-1][1])*scale > 200:
+                candidate_ellipses = [e for e in candidate_ellipses if LA.norm(e[0] - cluster_center) < max(e[1]) / 5]
+            elif max(candidate_ellipses[-1][1])*scale > 100:
+                candidate_ellipses = [e for e in candidate_ellipses if LA.norm(e[0] - cluster_center) < max(e[1]) / 10]
+            else:
+                candidate_ellipses = [e for e in candidate_ellipses if LA.norm(e[0] - cluster_center) < max(max(e[1]) / 20, 2)]
+
+            # Discard false positives
+            if len(candidate_ellipses) < min_ellipses_num:
                 continue
 
             return [(candidate_ellipses, [[0, 0], [0, 0]])]

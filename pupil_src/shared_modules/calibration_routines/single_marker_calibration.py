@@ -189,6 +189,8 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
             # Update the marker
             self.markers = self.circle_tracker.update(gray_img)
+            # Screen marker takes only Ref marker
+            self.markers = [marker for marker in self.markers if marker['marker_type'] == 'Ref']
 
             if len(self.markers):
                 # Set the pos to be the center of the first detected marker
