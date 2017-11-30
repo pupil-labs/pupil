@@ -220,7 +220,6 @@ def find_pupil_circle_marker(img, scale):
             outer_ellipse = single_marker[-1]
             inner_ellipse = single_marker[-2]
             dot_ellipse = single_marker[-3]
-
             # Calculate the ring ratio and dot ratio
             ring_ratio = sum(outer_ellipse[1]) / sum(inner_ellipse[1])
             dot_ratio = sum(outer_ellipse[1]) / sum(dot_ellipse[1])
@@ -256,9 +255,9 @@ def find_pupil_circle_marker(img, scale):
                 if middle_median - ring_median < img_contrast / 4:
                     continue
 
-                middle_std = mask_middle_value.std()
                 # The std of the part between the ring and the dot should not be too large
                 if len(np.where(mask_middle == 0)[0]) > 15:
+                    middle_std = mask_middle_value.std()
                     if middle_std > img_contrast / 2:
                         continue
 
@@ -287,9 +286,9 @@ def find_pupil_circle_marker(img, scale):
                 if ring_median - middle_median < img_contrast / 4:
                     continue
 
-                middle_std = mask_middle_value.std()
                 # The std of the part between the ring and the dot should not be too large
                 if len(np.where(mask_middle == 0)[0]) > 15:
+                    middle_std = mask_middle_value.std()
                     if middle_std > img_contrast / 2:
                         continue
 
@@ -329,29 +328,27 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
                         if first_ellipse:
                             duplicates = [k for k in range(len(found_pos)) if LA.norm(e[0] - found_pos[k]) < found_size[k] + min(e[1])]
                             if len(duplicates) > 0:
-                                ellipses[i] = e, 100
+                                ellipses[i] = e, 100.
                                 break
                             fit = 0
                         else:
-                            fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0
+                            fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0.
                         e = e if min(e[1]) else (e[0], (0.1, 0.1), e[2])
                     else:
-                        center = c[len(c)//2][0]
+                        e_center = float(c[len(c)//2][0][0]), float(c[len(c)//2][0][1])
+                        e = (e_center, (0.1, 0.1), 0.)
                         # Discard duplicates
                         if first_ellipse:
-                            duplicates = [k for k in range(len(found_pos)) if LA.norm(center - found_pos[k]) < found_size[k] + 1]
+                            duplicates = [k for k in range(len(found_pos)) if LA.norm(e_center - found_pos[k]) < found_size[k] + 1]
                             if len(duplicates) > 0:
-                                e = ((center[0], center[1]), (0.1, 0.1), 0)
-                                ellipses[i] = e, 100
+                                ellipses[i] = e, 100.
                                 break
                         fit = 0
-                        e_center = float(center[0]), float(center[1])
-                        e = (e_center, (0.1, 0.1), 0)
 
                     ellipses[i] = e, fit
 
                 # Discard the contour which does not fit the ellipse so well
-                if first_ellipse or fit < max(1, max(e[1]) / 100):
+                if first_ellipse or fit < max(1, max(e[1]) / 50):
                     e = (e[0], e[1], e[2], i)
                     candidate_ellipses.append(e)
                 first_ellipse = False
@@ -401,9 +398,9 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
                 else:
                     if len(c) >= 5:
                         e = cv2.fitEllipse(c)
-                        fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0
+                        fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0.
                         if min(e[1]) == 0:
-                            e = (e[0], (e[1][0]+1, e[1][1]+1), e[2])
+                            e = (e[0], (e[1][0]+1., e[1][1]+1.), e[2])
                     else:
                         fit = 0
                         e_center = float(c[len(c) // 2][0][0]), float(c[len(c) // 2][0][1])
@@ -412,7 +409,7 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
                     ellipses[i] = e, fit
                 # Discard the contour which does not fit the ellipse so well
                 if first_ellipse:
-                    fit_thres = 0.5 + (256 - img_contrast) / 256
+                    fit_thres = 0.5 + (256-img_contrast) / 256
                 else:
                     if img_contrast <= 96:
                         fit_thres = max(e[1]) * scale / 10 + (256-img_contrast)/256
