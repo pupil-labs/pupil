@@ -240,13 +240,15 @@ class Single_Marker_Calibration(Calibration_Plugin):
         """
 
         # debug mode within world will show green ellipses around detected ellipses
-        if self.active and len(self.markers):
+        if self.active:
             for marker in self.markers:
                 e = marker['ellipses'][-1]  # outermost ellipse
                 pts = cv2.ellipse2Poly((int(e[0][0]), int(e[0][1])),
                                        (int(e[1][0]/2), int(e[1][1]/2)),
                                        int(e[-1]), 0, 360, 15)
                 draw_polyline(pts, 1, RGBA(0.,1.,0.,1.))
+                if len(self.markers) > 1:
+                    draw_polyline(pts, 1, RGBA(1., 0., 0., .5), line_type=gl.GL_POLYGON)
 
     def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()
