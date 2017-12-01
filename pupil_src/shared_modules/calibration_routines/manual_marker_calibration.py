@@ -220,6 +220,8 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
                 draw_polyline(pts,color=RGBA(0.,1.,0,1.))
+                if len(self.markers) > 1:
+                    draw_polyline(pts, 1, RGBA(1., 0., 0., .5), line_type=GL_POLYGON)
 
             # draw indicator on the first detected marker
             if self.counter and self.markers[0]['marker_type'] == 'Ref':
