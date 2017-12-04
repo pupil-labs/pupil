@@ -166,9 +166,9 @@ class UDP_Backend(Plugin):
                             topic.startswith('gaze')):
                         _, method, eye = payload['subject'].split('.')
                         if method == '2d':
-                            data = b'EG%s%s%s' % (method[0], eye, struct.pack('ff', *payload['norm_pos']))
+                            data = b'EG%s%s%s' % (method[:1], eye, struct.pack('ff', *payload['norm_pos']))
                         elif method == '3d':
-                            data = b'EG%s%s%s' % (method[0], eye, struct.pack('fff', *payload['gaze_point_3d']))
+                            data = b'EG%s%s%s' % (method[:1], eye, struct.pack('fff', *payload['gaze_point_3d']))
                         else:
                             logger.error('Error while relaying gaze: "{}": {}'.format(topic, payload))
                             data = b'EGFError while relaying gaze'
@@ -196,7 +196,7 @@ class UDP_Backend(Plugin):
             byte_msg, sender = socket.recvfrom(1024)
         except OSError:
             return
-        print(byte_msg, sender)
+        print('R', byte_msg, sender)
 
         if byte_msg[:1] == b'R':  # reference point
             try:
@@ -217,12 +217,12 @@ class UDP_Backend(Plugin):
             response = b'0s'
 
         elif byte_msg[:1] == b'I':
-            mode = struct.unpack('B', byte_msg[1])
+            mode = byte_msg[1:2]
             response = b'0I'
 
-            if mode == 2:
+            if mode == b'2':
                 self.detection_mode = '2d'
-            elif mode == 3:
+            elif mode == b'3':
                 self.detection_mode = '3d'
             else:
                 response = b'FIUnknown detection mode "%i"' % mode
@@ -250,11 +250,11 @@ class UDP_Backend(Plugin):
 
         elif byte_msg[:1] == b'T':
             try:
-                target = struct.unpack('f', byte_msg[1])
+                target = struct.unpack('f', byte_msg[1:])[0]
             except IndexError:
                 response = b'FTTimestamp required'
             except Exception:
-                response = b"ET'%s' cannot be converted to float." % (byte_msg[1])
+                response = b"FT'%s' cannot be converted to float." % (byte_msg[1])
             else:
                 raw_time = self.g_pool.get_now()
                 self.g_pool.timebase.value = raw_time-target
@@ -266,7 +266,8 @@ class UDP_Backend(Plugin):
             response = b'FFUnknown command. "%s"' % byte_msg
 
         if response[:1] == b'F':
-            logger.error((b'Failed "%s": %s' % (response[1], response[2:])).decode())
+            logger.error((b'Failed "%s": %s' % (response[1:2], response[2:])).decode())
+        print('S', response, sender)
         socket.sendto(response, sender)
 
     def get_init_dict(self):
