@@ -96,7 +96,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.menu.append(self.show_undistortion_switch)
         self.show_undistortion_switch.read_only = not (hasattr(self.g_pool.capture, 'intrinsics') and self.g_pool.capture.intrinsics)
 
-        self.button = ui.Thumb('collect_new', self, setter=self.advance, label='C', hotkey='c')
+        self.button = ui.Thumb('collect_new', self, setter=self.advance, label='I', hotkey='i')
         self.button.on_color[:] = (.3, .2, 1., .9)
         self.g_pool.quickbar.insert(0, self.button)
 
