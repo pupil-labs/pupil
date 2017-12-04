@@ -12,7 +12,6 @@ See COPYING and COPYING.LESSER for license details.
 from time import sleep
 import socket
 import struct
-import audio
 import zmq
 import zmq_tools
 from pyre import zhelper
@@ -22,7 +21,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-__version__ = 1
+__version__ = 2
+
 
 class UDP_Backend(Plugin):
     """UDP_Backend
@@ -89,7 +89,7 @@ class UDP_Backend(Plugin):
 
             try:
                 ip = socket.gethostbyname(socket.gethostname())
-            except:
+            except Exception:
                 ip = 'Your external ip'
 
         else:
@@ -102,7 +102,8 @@ class UDP_Backend(Plugin):
 
         help_str = 'The UDP backend allows remote control and gaze relay via udp.'
         self.menu.append(ui.Info_Text(help_str))
-        self.menu.append(ui.Switch('use_primary_interface', self, setter=set_iface, label="Use primary network interface"))
+        self.menu.append(ui.Switch('use_primary_interface', self, setter=set_iface,
+                                   label="Use primary network interface"))
         if self.use_primary_interface:
             self.menu.append(ui.Text_Input('port', self, setter=set_port, label='Port'))
             self.menu.append(ui.Info_Text('Connect locally:   "127.0.0.1:{}"'.format(self.port)))
@@ -112,18 +113,20 @@ class UDP_Backend(Plugin):
                                            getter=lambda: '{}:{}'.format(self.host, self.port)))
             self.menu.append(ui.Info_Text('Bound to: "{}:{}"'.format(self.host, self.port)))
 
-
     def thread_loop(self, context, pipe):
         poller = zmq.Poller()
         ipc_pub = zmq_tools.Msg_Dispatcher(context, self.g_pool.ipc_push_url)
-        ipc_sub = zmq_tools.Msg_Receiver(context, self.g_pool.ipc_sub_url)
+        ipc_sub = zmq_tools.Msg_Receiver(context, self.g_pool.ipc_sub_url,
+                                         ('gaze', 'notify.calibration.failed',
+                                          'notify.calibration.successful'))
         poller.register(pipe, zmq.POLLIN)
         poller.register(ipc_sub.socket, zmq.POLLIN)
         remote_socket = None
-        gaze_receiver = None
+        self.gaze_receiver = None
+        self.calib_result_receiver = None
 
         while True:
-            items = dict(poller.poll())
+            items = [sock for sock, _ in poller.poll()]
             if pipe in items:
                 cmd = pipe.recv_string()
                 if cmd == 'Exit':
@@ -148,30 +151,53 @@ class UDP_Backend(Plugin):
                         # TODO: get addr
                         pipe.send_string(new_url)
                         poller.register(remote_socket, zmq.POLLIN)
-            # if remote_socket in items:
-            gaze_receiver = self.on_recv(remote_socket, ipc_pub, gaze_receiver)
+
+            if remote_socket.fileno() in items:
+                self.on_recv(remote_socket, ipc_pub)
 
             if ipc_sub in items:
                 while ipc_sub.new_data:
                     # we should only receive gaze data
-                    payload = ipc_sub.recv()[1]
-                    if remote_socket is not None and gaze_receiver is not None:
-                        if '2d' in payload['method']:
-                            data = b'g%s'%struct.pack('ff', *payload['norm_pos'])
-                        elif '3d' in payload['method']:
-                            data = b'G%s'%struct.pack('fff', *payload['gaze_point_3d'])
-                        else:
-                            data = b'EgError while relaying gaze'
-                        remote_socket.sendto(data, gaze_receiver)
+                    topic, payload = ipc_sub.recv()
 
+                    # gaze events
+                    if (self.gaze_receiver is not None and
+                            remote_socket is not None and
+                            topic.startswith('gaze')):
+                        _, method, eye = payload['subject'].split('.')
+                        if method == '2d':
+                            data = b'EG%s%s%s' % (method[0], eye, struct.pack('ff', *payload['norm_pos']))
+                        elif method == '3d':
+                            data = b'EG%s%s%s' % (method[0], eye, struct.pack('fff', *payload['gaze_point_3d']))
+                        else:
+                            logger.error('Error while relaying gaze: "{}": {}'.format(topic, payload))
+                            data = b'EGFError while relaying gaze'
+                        remote_socket.sendto(data, self.gaze_receiver)
+
+                    # calibration events
+                    elif (self.calib_result_receiver is not None and
+                            remote_socket is not None and
+                            topic.startswith('notify.calibration.')):
+
+                        if payload['subject'] == 'calibration.successful':
+                            # event calibration successful
+                            remote_socket.sendto(b'ECS', self.calib_result_receiver)
+                            self.calib_result_receiver = None
+                        elif payload['subject'] == 'calibration.failed':
+                            # event calibration failed
+                            remote_socket.sendto(b'ECF', self.calib_result_receiver)
+                            self.calib_result_receiver = None
+
+        remote_socket.close()
         self.thread_pipe = None
 
-    def on_recv(self, socket, ipc_pub, gaze_receiver):
+    def on_recv(self, socket, ipc_pub):
         try:
             byte_msg, sender = socket.recvfrom(1024)
         except OSError:
             return
         print(byte_msg, sender)
+
         if byte_msg[:1] == b'R':  # reference point
             try:
                 # relay reference point
@@ -179,42 +205,69 @@ class UDP_Backend(Plugin):
                 ipc_pub.socket.send(byte_msg[1:])
             except Exception as e:
                 # respond with <error byte><headercode byte>[<byte>, ...]
-                response = b'ERReference point mal-formatted or missing: %s'%str(e).encode()
+                response = b'FRReference point mal-formatted or missing: %s' % str(e).encode()
             else:
                 response = b'0R'
         elif byte_msg[:1] == b'S':
-            gaze_receiver = sender
+            self.gaze_receiver = sender
             response = b'0S'
+
         elif byte_msg[:1] == b's':
-            gaze_receiver = None
+            self.gaze_receiver = None
             response = b'0s'
-        elif byte_msg[:1] == b'M':
+
+        elif byte_msg[:1] == b'I':
             mode = struct.unpack('B', byte_msg[1])
-            # todo: start both eyes, set mode
-            response = b'0M'
+            response = b'0I'
+
+            if mode == 2:
+                self.detection_mode = '2d'
+            elif mode == 3:
+                self.detection_mode = '3d'
+            else:
+                response = b'FIUnknown detection mode "%i"' % mode
+
+            if response[:1] == b'0':  # only start eyes if mode was set correctly
+                ipc_pub.notify({'subject': 'eye_process.should_start', 'eye_id': 0})
+                ipc_pub.notify({'subject': 'eye_process.should_start', 'eye_id': 1})
+
+        elif byte_msg[:1] == b'i':
+            ipc_pub.notify({'subject': 'eye_process.should_stop', 'eye_id': 0})
+            ipc_pub.notify({'subject': 'eye_process.should_stop', 'eye_id': 1})
+            response = b'0i'
+
         elif byte_msg[:1] == b'C':
-            ipc_pub.notify({'subject': 'calibration.should_start'})
+            width, height, outlier_threshold = struct.unpack('HHf', byte_msg[1:])
+            ipc_pub.notify({'subject': 'calibration.should_start',
+                            'hmd_video_frame_size': (width, height),
+                            'outlier_threshold': outlier_threshold})
             response = b'0C'
+
         elif byte_msg[:1] == b'c':
+            self.calib_result_receiver = sender
             ipc_pub.notify({'subject': 'calibration.should_stop'})
             response = b'0c'
+
         elif byte_msg[:1] == b'T':
             try:
                 target = struct.unpack('f', byte_msg[1])
             except IndexError:
-                response = b'ETTimestamp required'
-            except:
-                response = b"ET'%s' cannot be converted to float."%(byte_msg[1])
+                response = b'FTTimestamp required'
+            except Exception:
+                response = b"ET'%s' cannot be converted to float." % (byte_msg[1])
             else:
                 raw_time = self.g_pool.get_now()
                 self.g_pool.timebase.value = raw_time-target
                 response = b'0T'
         elif byte_msg[:1] == b'V':
-            response = b'0V%s'%bytes(__version__)
+            response = b'0V%s' % bytes(__version__)
+
         else:
-            response = b'EEUnknown command. "%s"'%byte_msg
+            response = b'FFUnknown command. "%s"' % byte_msg
+
+        if response[:1] == b'F':
+            logger.error((b'Failed "%s": %s' % (response[1], response[2:])).decode())
         socket.sendto(response, sender)
-        return gaze_receiver
 
     def get_init_dict(self):
         return {'port': self.port, 'host': self.host, 'use_primary_interface': self.use_primary_interface}
