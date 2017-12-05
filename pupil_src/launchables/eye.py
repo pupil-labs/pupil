@@ -30,10 +30,6 @@ class Is_Alive_Manager(object):
         self.logger = logger
 
     def __enter__(self):
-        if self.is_alive.value:
-            # indicates eye process that this is a duplicated startup
-            return None
-
         self.is_alive.value = True
         self.ipc_socket.notify({'subject': 'eye_process.started',
                                 'eye_id': self.eye_id})
@@ -97,11 +93,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
-    with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id, logger) as check:
+    if is_alive_flag.value:
+        # indicates eye process that this is a duplicated startup
+        logger.warning('Aborting redundant eye process startup')
+        return
 
-        if not check:
-            return  # duplicated eye startup
-
+    with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id, logger):
         # general imports
         import numpy as np
         import cv2
