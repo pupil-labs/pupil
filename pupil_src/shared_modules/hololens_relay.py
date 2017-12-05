@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 __version__ = 2
 
 
-class UDP_Backend(Plugin):
-    """UDP_Backend
+class Hololens_Relay(Plugin):
+    """Hololens_Relay
     """
     icon_chr = chr(0xe307)
     icon_font = 'pupil_icons'

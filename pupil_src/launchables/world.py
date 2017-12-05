@@ -137,7 +137,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         # from saccade_detector import Saccade_Detector
         from system_graphs import System_Graphs
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
-        from udp_backend import UDP_Backend
+        from hololens_relay import Hololens_Relay
 
         # UI Platform tweaks
         if platform.system() == 'Linux':
@@ -189,7 +189,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                         Remote_Recorder,
                         Accuracy_Visualizer,
                         Camera_Intrinsics_Estimation,
-                        UDP_Backend]
+                        Hololens_Relay]
         system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay, Plugin_Manager, System_Graphs] + manager_classes + source_classes
         plugins = system_plugins + user_plugins + runtime_plugins + calibration_plugins + gaze_mapping_plugins
         user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source, System_Plugin_Base,
