@@ -17,6 +17,10 @@ class Global_Container(object):
     pass
 
 
+class Duplicated_Eye_Startup_Error(Exception):
+    pass
+
+
 class Is_Alive_Manager(object):
     '''
     A context manager to wrap the is_alive flag.
@@ -31,13 +35,13 @@ class Is_Alive_Manager(object):
 
     def __enter__(self):
         if self.is_alive.value:
-            raise Exception("eye process already running!")
+            raise Duplicated_Eye_Startup_Error("Eye process already running!")
         self.is_alive.value = True
         self.ipc_socket.notify({'subject': 'eye_process.started',
                                 'eye_id': self.eye_id})
 
     def __exit__(self, etype, value, traceback):
-        if etype is not None:
+        if etype is not None and etype is not Duplicated_Eye_Startup_Error:
             import traceback as tb
             self.logger.error('Process Eye{} crashed with trace:\n'.format(self.eye_id) +
                               ''.join(tb.format_exception(etype, value, traceback)))
