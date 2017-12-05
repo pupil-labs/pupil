@@ -155,7 +155,7 @@ class Hololens_Relay(Plugin):
             if remote_socket.fileno() in items:
                 self.on_recv(remote_socket, ipc_pub)
 
-            if ipc_sub in items:
+            if ipc_sub.socket in items:
                 while ipc_sub.new_data:
                     # we should only receive gaze data
                     topic, payload = ipc_sub.recv()
@@ -164,11 +164,15 @@ class Hololens_Relay(Plugin):
                     if (self.gaze_receiver is not None and
                             remote_socket is not None and
                             topic.startswith('gaze')):
-                        _, method, eye = payload['subject'].split('.')
+                        _, method, eye = payload['topic'].split('.')
                         if method == '2d':
-                            data = b'EG%s%s%s' % (method[:1], eye, struct.pack('ff', *payload['norm_pos']))
+                            data = b'EG%s%s%s' % (method[:1].encode(),
+                                                  eye.encode(),
+                                                  struct.pack('ff', *payload['norm_pos']))
                         elif method == '3d':
-                            data = b'EG%s%s%s' % (method[:1], eye, struct.pack('fff', *payload['gaze_point_3d']))
+                            data = b'EG%s%s%s' % (method[:1].encode(),
+                                                  eye.encode(),
+                                                  struct.pack('fff', *payload['gaze_point_3d']))
                         else:
                             logger.error('Error while relaying gaze: "{}": {}'.format(topic, payload))
                             data = b'EGFError while relaying gaze'
@@ -196,11 +200,9 @@ class Hololens_Relay(Plugin):
             byte_msg, sender = socket.recvfrom(2048)
         except OSError:
             return
-        print('R', byte_msg, sender)
 
         if byte_msg[:1] == b'R':  # reference point
             # read amount of msgpack bytes
-            print('len', len(byte_msg))
             try:
                 # relay reference point
                 ipc_pub.socket.send_string('notify.calibration.add_ref_data', flags=zmq.SNDMORE)
@@ -276,7 +278,6 @@ class Hololens_Relay(Plugin):
 
         if response[:1] == b'F':
             logger.error((b'Failed "%s": %s' % (response[1:2], response[2:])).decode())
-        print('S', response, sender)
         socket.sendto(response, sender)
 
     def get_init_dict(self):
