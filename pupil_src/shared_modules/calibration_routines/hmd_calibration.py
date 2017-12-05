@@ -37,15 +37,15 @@ class HMD_Calibration(Calibration_Plugin):
         self.menu = None
 
     def init_ui(self):
-        super().init_ui()
+        self.add_menu()
         self.menu.label = "HMD Calibration"
         self.menu.append(ui.Info_Text("Calibrate gaze parameters to map onto an HMD."))
+        self.calib_button = ui.Thumb('active', self, label='C', setter=self.toggle_calibration, hotkey='c')
 
     def deinit_ui(self):
         if self.active:
             self.stop()
-
-        super().deinit_ui()
+        self.remove_menu()
 
     def on_notify(self,notification):
         '''Calibrates user gaze for HMDs
@@ -84,7 +84,6 @@ class HMD_Calibration(Calibration_Plugin):
             logger.error('Notification: {} not conform. Raised error {}'.format(notification,e))
 
     def start(self, hmd_video_frame_size, outlier_threshold):
-        super().start()
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
         self.active = True
@@ -92,13 +91,16 @@ class HMD_Calibration(Calibration_Plugin):
         self.ref_list = []
         self.hmd_video_frame_size = hmd_video_frame_size
         self.outlier_threshold = outlier_threshold
+        self.g_pool.quickbar.insert(0, self.calib_button)
+        self.notify_all({'subject': 'calibration.started'})
 
     def stop(self):
         audio.say("Stopping Calibration")
         logger.info("Stopping Calibration")
         self.active = False
         self.finish_calibration()
-        super().stop()
+        self.g_pool.quickbar.remove(self.calib_button)
+        self.notify_all({'subject': 'calibration.stopped'})
 
     def finish_calibration(self):
         pupil_list = self.pupil_list
