@@ -91,6 +91,9 @@ class Accuracy_Visualizer(Plugin):
 
     def on_notify(self, notification):
         if notification['subject'] in ('calibration.calibration_data', 'accuracy_test.data'):
+            if 'hmd' in notification['calibration_method']:
+                logger.error('Accuracy visualization is disabled for 3d hmd calibration')
+                return
             self.recent_input = notification['pupil_list']
             self.recent_labels = notification['ref_list']
             if self.recent_input and self.recent_labels:

@@ -35,28 +35,17 @@ class HMD_Calibration(Calibration_Plugin):
         super().__init__(g_pool)
         self.info = None
         self.menu = None
-        self.button = None
 
     def init_ui(self):
-        super().init_ui()
-
-        def dummy(_):
-            logger.error("HMD calibration must be initiated from the HMD client.")
-
+        self.add_menu()
+        self.menu.label = "HMD Calibration"
         self.menu.append(ui.Info_Text("Calibrate gaze parameters to map onto an HMD."))
-        self.button = ui.Thumb('active',self,setter=dummy,label='C',hotkey='c')
-        self.button.on_color[:] = (.3,.2,1.,.9)
-        self.g_pool.quickbar.insert(0, self.button)
+        self.calib_button = ui.Thumb('active', self, label='C', setter=self.toggle_calibration, hotkey='c')
 
     def deinit_ui(self):
         if self.active:
             self.stop()
-
-        if self.button:
-            self.g_pool.quickbar.remove(self.button)
-            self.button = None
-
-        super().deinit_ui()
+        self.remove_menu()
 
     def on_notify(self,notification):
         '''Calibrates user gaze for HMDs
@@ -94,24 +83,26 @@ class HMD_Calibration(Calibration_Plugin):
         except KeyError as e:
             logger.error('Notification: {} not conform. Raised error {}'.format(notification,e))
 
-    def start(self,hmd_video_frame_size,outlier_threshold):
-        self.active = True
+    def start(self, hmd_video_frame_size, outlier_threshold):
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
-        self.notify_all({'subject':'calibration.started'})
+        self.active = True
         self.pupil_list = []
         self.ref_list = []
         self.hmd_video_frame_size = hmd_video_frame_size
         self.outlier_threshold = outlier_threshold
+        self.g_pool.quickbar.insert(0, self.calib_button)
+        self.notify_all({'subject': 'calibration.started'})
 
     def stop(self):
         audio.say("Stopping Calibration")
         logger.info("Stopping Calibration")
-        self.notify_all({'subject':'calibration.stopped'})
         self.active = False
-        if self.button:
-            self.button.status_text = ''
+        self.finish_calibration()
+        self.g_pool.quickbar.remove(self.calib_button)
+        self.notify_all({'subject': 'calibration.stopped'})
 
+    def finish_calibration(self):
         pupil_list = self.pupil_list
         ref_list = self.ref_list
         hmd_video_frame_size = self.hmd_video_frame_size
@@ -170,11 +161,9 @@ class HMD_Calibration(Calibration_Plugin):
 
             # Start mapper
             self.notify_all({'subject': 'start_plugin', 'name': mapper, 'args': args})
-
         else:
             logger.error('Calibration failed for both eyes. No data found')
             self.notify_all({'subject': 'calibration.failed', 'reason': not_enough_data_error_msg})
-            return
 
     def recent_events(self, events):
         if self.active:
@@ -216,7 +205,7 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
                     assert len(notification['translation_eye0']) == 3
                     assert len(notification['translation_eye1']) == 3
                     self.eye_translations = notification['translation_eye0'] , notification['translation_eye1']
-                    self.start()
+                    self.start(None, None)
             elif notification['subject'].startswith('calibration.should_stop'):
                 if self.active:
                     self.stop()
@@ -228,24 +217,9 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
                 else:
                     logger.error("Ref data can only be added when calibratio is running.")
         except KeyError as e:
-            logger.error('Notification: %s not conform. Raised error %s'%(notification,e))
+            logger.error('Notification: %s not conform. Raised error %s'%(notification, e))
 
-    def start(self):
-        self.active = True
-        audio.say("Starting Calibration")
-        logger.info("Starting Calibration")
-        self.notify_all({'subject':'calibration.started'})
-        self.pupil_list = []
-        self.ref_list = []
-
-    def stop(self):
-        audio.say("Stopping Calibration")
-        logger.info("Stopping Calibration")
-        self.notify_all({'subject':'calibration.stopped'})
-        self.active = False
-        if self.button:
-            self.button.status_text = ''
-
+    def finish_calibration(self):
         pupil_list = self.pupil_list
         ref_list = self.ref_list
 
@@ -273,8 +247,6 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
 
             ref_points_3d = ref_points_3d_unscaled * (1,-1,s)
 
-
-
             initial_translation0 = np.array(self.eye_translations[0])
             initial_translation1 = np.array(self.eye_translations[1])
             method = 'binocular 3d model hmd'
@@ -292,7 +264,6 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
             eye1 = { "observations" : gaze1_dir , "translation" : initial_translation1 , "rotation" : initial_rotation1,'fix':['translation']  }
             initial_observers = [eye0,eye1]
             initial_points = np.array(ref_points_3d)
-
 
             success, residual, observers, points = bundle_adjust_calibration(initial_observers , initial_points, fix_points=True )
 
@@ -351,7 +322,7 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
         eye_camera_to_world_matrix1[:3, :3] = R_world1
         eye_camera_to_world_matrix1[:3, 3:4] = np.reshape(camera_translation, (3, 1))
 
-        method = 'binocular 3d model'
+        method = 'hmd binocular 3d model'
         ts = g_pool.get_timestamp()
         g_pool.active_calibration_plugin.notify_all({'subject': 'calibration.successful','method':method,'timestamp': ts, 'record':True})
         g_pool.active_calibration_plugin.notify_all({'subject': 'calibration.calibration_data','timestamp': ts, 'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method,'record':True})
@@ -368,5 +339,5 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
                                 'cal_ref_points_3d': points_a,
                                 'cal_gaze_points0_3d': points_b,
                                 'cal_gaze_points1_3d': points_c,
-                                'backproject': False}}
+                                'backproject': hasattr(self.g_pool, 'capture')}}
         self.g_pool.active_calibration_plugin.notify_all(mapper_args)
