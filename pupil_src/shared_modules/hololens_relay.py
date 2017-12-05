@@ -63,6 +63,8 @@ class Hololens_Relay(Plugin):
                     2. Launches both eye processs
                     3. Starts the HMD Calibration (3D) plugin
 
+    i           Deinit. Closes the eye processes but does not stop the gaze broadcast
+
     T<float32 "timestamp">
                 Sets Pupil's timebase to "timestamp"
 
@@ -72,9 +74,9 @@ class Hololens_Relay(Plugin):
 
     c           Stop calibration
 
-    S           Start gaze subscription
+    S           Start gaze broadcast
 
-    s           Stop gaze subscription
+    s           Stop gaze broadcast
 
     R[<bytes>, ...]
                 List of reference points encoded with msgpack. This message
