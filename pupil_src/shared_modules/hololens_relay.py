@@ -246,6 +246,7 @@ class Hololens_Relay(Plugin):
             response = b'0i'
 
         elif byte_msg[:1] == b'C':
+            self.calib_result_receiver = sender
             width, height, outlier_threshold = struct.unpack('HHf', byte_msg[1:])
             ipc_pub.notify({'subject': 'calibration.should_start',
                             'hmd_video_frame_size': (width, height),
@@ -255,7 +256,6 @@ class Hololens_Relay(Plugin):
             response = b'0C'
 
         elif byte_msg[:1] == b'c':
-            self.calib_result_receiver = sender
             ipc_pub.notify({'subject': 'calibration.should_stop'})
             response = b'0c'
 
