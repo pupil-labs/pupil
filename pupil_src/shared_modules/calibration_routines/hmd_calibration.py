@@ -273,8 +273,6 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
 
             ref_points_3d = ref_points_3d_unscaled * (1,-1,s)
 
-
-
             initial_translation0 = np.array(self.eye_translations[0])
             initial_translation1 = np.array(self.eye_translations[1])
             method = 'binocular 3d model hmd'
@@ -292,7 +290,6 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
             eye1 = { "observations" : gaze1_dir , "translation" : initial_translation1 , "rotation" : initial_rotation1,'fix':['translation']  }
             initial_observers = [eye0,eye1]
             initial_points = np.array(ref_points_3d)
-
 
             success, residual, observers, points = bundle_adjust_calibration(initial_observers , initial_points, fix_points=True )
 
@@ -351,7 +348,7 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
         eye_camera_to_world_matrix1[:3, :3] = R_world1
         eye_camera_to_world_matrix1[:3, 3:4] = np.reshape(camera_translation, (3, 1))
 
-        method = 'binocular 3d model'
+        method = 'hmd binocular 3d model'
         ts = g_pool.get_timestamp()
         g_pool.active_calibration_plugin.notify_all({'subject': 'calibration.successful','method':method,'timestamp': ts, 'record':True})
         g_pool.active_calibration_plugin.notify_all({'subject': 'calibration.calibration_data','timestamp': ts, 'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method,'record':True})
@@ -368,5 +365,5 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
                                 'cal_ref_points_3d': points_a,
                                 'cal_gaze_points0_3d': points_b,
                                 'cal_gaze_points1_3d': points_c,
-                                'backproject': False}}
+                                'backproject': hasattr(self.g_pool, 'capture')}}
         self.g_pool.active_calibration_plugin.notify_all(mapper_args)

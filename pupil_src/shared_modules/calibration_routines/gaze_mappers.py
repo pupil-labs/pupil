@@ -391,10 +391,13 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
 
         p_id = p['id']
         gaze_point = np.array(p['circle_3d']['normal']) * self.last_gaze_distance + np.array(p['sphere']['center'])
-        image_point = self.g_pool.capture.intrinsics.projectPoints(np.array([gaze_point]),self.rotation_vectors[p_id], self.translation_vectors[p_id])
-        image_point = image_point.reshape(-1, 2)
-        image_point = normalize(image_point[0], self.g_pool.capture.intrinsics.resolution, flip_y=True)
-        image_point = _clamp_norm_point(image_point)
+
+        if self.backproject:
+            image_point = self.g_pool.capture.intrinsics.projectPoints(np.array([gaze_point]), self.rotation_vectors[p_id], self.translation_vectors[p_id])
+            image_point = image_point.reshape(-1, 2)
+            image_point = normalize(image_point[0], self.g_pool.capture.intrinsics.resolution, flip_y=True)
+            image_point = _clamp_norm_point(image_point)
+
         if p_id == 0:
             eye_center = self.eye0_to_World(p['sphere']['center'])
             gaze_3d = self.eye0_to_World(gaze_point)
@@ -405,13 +408,15 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
         normal_3d = self.rotation_matricies[p_id] @ np.array(p['circle_3d']['normal'])
 
         g = {'topic': 'gaze.3d.2',
-             'norm_pos': image_point,
              'eye_centers_3d': {p['id']: eye_center.tolist()},
              'gaze_normals_3d': {p['id']: normal_3d.tolist()},
              'gaze_point_3d': gaze_3d.tolist(),
              'confidence': p['confidence'],
              'timestamp': p['timestamp'],
              'base_data': [p]}
+
+        if self.backproject:
+            g['norm_pos'] = image_point
 
         if hasattr(self, 'visualizer') and self.visualizer.window:
             if p_id == 0:
@@ -466,7 +471,6 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
             image_point = image_point.reshape(-1,2)
             image_point = normalize( image_point[0], self.g_pool.capture.intrinsics.resolution , flip_y = True)
             image_point = _clamp_norm_point(image_point)
-
 
         if hasattr(self, 'visualizer') and self.visualizer.window:
             gaze0_3d =  s0_normal * self.last_gaze_distance  + s0_center
