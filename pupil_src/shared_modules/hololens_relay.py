@@ -214,13 +214,16 @@ class Hololens_Relay(Plugin):
                 response = b'0R'
         elif byte_msg[:1] == b'S':
             self.gaze_receiver = sender
+            logger.info('{}:{} subscribed'.format(*sender))
             response = b'0S'
 
         elif byte_msg[:1] == b's':
             self.gaze_receiver = None
+            logger.info('{}:{} unsubscribed'.format(*sender))
             response = b'0s'
 
         elif byte_msg[:1] == b'I':
+            logger.info('{}:{} connected'.format(*sender))
             mode = byte_msg[1:2]
 
             init_2d = mode == b'2'
@@ -241,6 +244,7 @@ class Hololens_Relay(Plugin):
             response = b'0I'
 
         elif byte_msg[:1] == b'i':
+            logger.info('{}:{} disconnected'.format(*sender))
             ipc_pub.notify({'subject': 'eye_process.should_stop', 'eye_id': 0})
             ipc_pub.notify({'subject': 'eye_process.should_stop', 'eye_id': 1})
             response = b'0i'
