@@ -351,7 +351,7 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
         eye_camera_to_world_matrix1[:3, :3] = R_world1
         eye_camera_to_world_matrix1[:3, 3:4] = np.reshape(camera_translation, (3, 1))
 
-        method = 'binocular 3d model'
+        method = 'hmd binocular 3d model'
         ts = g_pool.get_timestamp()
         g_pool.active_calibration_plugin.notify_all({'subject': 'calibration.successful','method':method,'timestamp': ts, 'record':True})
         g_pool.active_calibration_plugin.notify_all({'subject': 'calibration.calibration_data','timestamp': ts, 'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method,'record':True})
