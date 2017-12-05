@@ -193,12 +193,14 @@ class UDP_Backend(Plugin):
 
     def on_recv(self, socket, ipc_pub):
         try:
-            byte_msg, sender = socket.recvfrom(1024)
+            byte_msg, sender = socket.recvfrom(2048)
         except OSError:
             return
         print('R', byte_msg, sender)
 
         if byte_msg[:1] == b'R':  # reference point
+            # read amount of msgpack bytes
+            print('len', len(byte_msg))
             try:
                 # relay reference point
                 ipc_pub.socket.send_string('notify.calibration.add_ref_data', flags=zmq.SNDMORE)
@@ -218,18 +220,23 @@ class UDP_Backend(Plugin):
 
         elif byte_msg[:1] == b'I':
             mode = byte_msg[1:2]
-            response = b'0I'
 
-            if mode == b'2':
-                self.detection_mode = '2d'
-            elif mode == b'3':
-                self.detection_mode = '3d'
+            init_2d = mode == b'2'
+            if init_2d:
+                detection_mode = '2d'
+                calib_method = 'HMD_Calibration'
             else:
-                response = b'FIUnknown detection mode "%i"' % mode
+                detection_mode = '3d'
+                calib_method = 'HMD_Calibration_3D'
 
-            if response[:1] == b'0':  # only start eyes if mode was set correctly
-                ipc_pub.notify({'subject': 'eye_process.should_start', 'eye_id': 0})
-                ipc_pub.notify({'subject': 'eye_process.should_start', 'eye_id': 1})
+            ipc_pub.notify({'subject': 'start_plugin', 'name': calib_method})
+            ipc_pub.notify({'subject': 'set_detection_mapping_mode',
+                            'mode': detection_mode})
+            ipc_pub.notify({'subject': 'eye_process.should_start.{}'.format(0),
+                            'eye_id': 0, 'delay': .4})
+            ipc_pub.notify({'subject': 'eye_process.should_start.{}'.format(1),
+                            'eye_id': 1, 'delay': .2})
+            response = b'0I'
 
         elif byte_msg[:1] == b'i':
             ipc_pub.notify({'subject': 'eye_process.should_stop', 'eye_id': 0})
