@@ -35,26 +35,15 @@ class HMD_Calibration(Calibration_Plugin):
         super().__init__(g_pool)
         self.info = None
         self.menu = None
-        self.button = None
 
     def init_ui(self):
         super().init_ui()
-
-        def dummy(_):
-            logger.error("HMD calibration must be initiated from the HMD client.")
-
+        self.menu.label = "HMD Calibration"
         self.menu.append(ui.Info_Text("Calibrate gaze parameters to map onto an HMD."))
-        self.button = ui.Thumb('active',self,setter=dummy,label='C',hotkey='c')
-        self.button.on_color[:] = (.3,.2,1.,.9)
-        self.g_pool.quickbar.insert(0, self.button)
 
     def deinit_ui(self):
         if self.active:
             self.stop()
-
-        if self.button:
-            self.g_pool.quickbar.remove(self.button)
-            self.button = None
 
         super().deinit_ui()
 
@@ -94,11 +83,11 @@ class HMD_Calibration(Calibration_Plugin):
         except KeyError as e:
             logger.error('Notification: {} not conform. Raised error {}'.format(notification,e))
 
-    def start(self,hmd_video_frame_size,outlier_threshold):
-        self.active = True
+    def start(self, hmd_video_frame_size, outlier_threshold):
+        super().start()
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
-        self.notify_all({'subject':'calibration.started'})
+        self.active = True
         self.pupil_list = []
         self.ref_list = []
         self.hmd_video_frame_size = hmd_video_frame_size
@@ -107,11 +96,11 @@ class HMD_Calibration(Calibration_Plugin):
     def stop(self):
         audio.say("Stopping Calibration")
         logger.info("Stopping Calibration")
-        self.notify_all({'subject':'calibration.stopped'})
         self.active = False
-        if self.button:
-            self.button.status_text = ''
+        self.finish_calibration()
+        super().stop()
 
+    def finish_calibration(self):
         pupil_list = self.pupil_list
         ref_list = self.ref_list
         hmd_video_frame_size = self.hmd_video_frame_size
@@ -170,11 +159,9 @@ class HMD_Calibration(Calibration_Plugin):
 
             # Start mapper
             self.notify_all({'subject': 'start_plugin', 'name': mapper, 'args': args})
-
         else:
             logger.error('Calibration failed for both eyes. No data found')
             self.notify_all({'subject': 'calibration.failed', 'reason': not_enough_data_error_msg})
-            return
 
     def recent_events(self, events):
         if self.active:
@@ -216,7 +203,7 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
                     assert len(notification['translation_eye0']) == 3
                     assert len(notification['translation_eye1']) == 3
                     self.eye_translations = notification['translation_eye0'] , notification['translation_eye1']
-                    self.start()
+                    self.start(None, None)
             elif notification['subject'].startswith('calibration.should_stop'):
                 if self.active:
                     self.stop()
@@ -228,24 +215,9 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
                 else:
                     logger.error("Ref data can only be added when calibratio is running.")
         except KeyError as e:
-            logger.error('Notification: %s not conform. Raised error %s'%(notification,e))
+            logger.error('Notification: %s not conform. Raised error %s'%(notification, e))
 
-    def start(self):
-        self.active = True
-        audio.say("Starting Calibration")
-        logger.info("Starting Calibration")
-        self.notify_all({'subject':'calibration.started'})
-        self.pupil_list = []
-        self.ref_list = []
-
-    def stop(self):
-        audio.say("Stopping Calibration")
-        logger.info("Stopping Calibration")
-        self.notify_all({'subject':'calibration.stopped'})
-        self.active = False
-        if self.button:
-            self.button.status_text = ''
-
+    def finish_calibration(self):
         pupil_list = self.pupil_list
         ref_list = self.ref_list
 
