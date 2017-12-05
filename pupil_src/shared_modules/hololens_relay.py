@@ -25,7 +25,81 @@ __version__ = 2
 
 
 class Hololens_Relay(Plugin):
-    """Hololens_Relay
+    """UDP relay for Pupil to Hololens communication
+
+    This plugins defines a very narrow api that is custimized to work with
+    the Pupil-Hololens-integration. On startup a udp socket is opened that
+    can be changed in the user settings.
+
+    The Hololens side will be called the `client` and the plugin the `server`.
+
+    Communication is initialized by the client. The server determines the
+    address of the client by calling `recvfrom()`. All server respones are sent
+    to the most recent client address. This means that the client needs to
+    listen on the same socket that it uses to send requests.
+
+    All messages start with an ascii-encoded header byte. Server acknowledgments
+    start either with ascii `0` on success or `F` on failure, followed by the
+    request's header byte. In some cases, there are further bytes containing
+    response-specific information.
+
+    Events are server-side initiated messages that are not responses to specific
+    requests. Events include gaze data and calibration results. See below for
+    details.
+
+    - Messages are composed of blocks. The default type of a block is an unsigned
+        ascii character. All blocks are little endian.
+    - <type "name"> denotes a block named "name" with its value encoded as `type`.
+        Depending on the type the block can take up more than one byte in space,
+        e.g. <float32> requires 4 bytes.
+    - (X|3|<type>) represents of a group of mutually exclusive blocks.
+    - [<type>, ...] represents a list of zero or more blocks
+
+
+    ### Request messages
+
+    I(2|3)      Initializes the relay in 2d or 3d mode. This request triggers
+                    1. Sets the detection and mapping mode to its corresponding value
+                    2. Launches both eye processs
+                    3. Starts the HMD Calibration (3D) plugin
+
+    T<float32 "timestamp">
+                Sets Pupil's timebase to "timestamp"
+
+    C<uint16 "width"><uint16 "height"><float32 "outlier-threshold">
+                Start calibration with "width"x"height" as hmd frame size
+                and "outlier-threshold" as threshold for the 2d hmd calibration.
+
+    c           Stop calibration
+
+    S           Start gaze subscription
+
+    s           Stop gaze subscription
+
+    R[<bytes>, ...]
+                List of reference points encoded with msgpack. This message
+                should not exceed 2048 bytes. The Python socket.recvfrom()
+                implemetation drops all exceeding bytes upon reading.
+
+    V           Protocol version. This message is responded to with:
+                    0V[<bytes>, ...]
+
+    ### Responses
+
+    0<byte "header">[<byte>, ...]
+                Response to a successful "header" request
+
+    F<byte "header">[<byte>, ...]
+                Error response to "header" including an error message
+
+    ### Events
+
+    EC(S|F|U)   Indicates a *S*uccessful, *F*ailed, or *U*nknown calibration result.
+
+    EG(2|3)(0|1|2)[<float32 "gaze component">]
+                Gaze datum. The first group indicates the number of gaze components.
+                The second group indicates if the datum belongs to a specific eye,
+                0 or 1, or if it is a binocular result, 2.
     """
     icon_chr = chr(0xe307)
     icon_font = 'pupil_icons'
