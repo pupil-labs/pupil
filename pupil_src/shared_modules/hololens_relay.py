@@ -67,7 +67,7 @@ class Hololens_Relay(Plugin):
 
     def init_ui(self):
         self.add_menu()
-        self.menu.label = 'UDP Backend'
+        self.menu.label = 'Hololens Relay'
         self.update_menu()
 
     def deinit_ui(self):
@@ -100,7 +100,7 @@ class Hololens_Relay(Plugin):
                 self.start_server(new_address)
                 self.update_menu()
 
-        help_str = 'The UDP backend allows remote control and gaze relay via udp.'
+        help_str = 'The Hololens Relay is the bridge between Pupil Capture and the Hololens client. It uses UDP sockets to relay data.'
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Switch('use_primary_interface', self, setter=set_iface,
                                    label="Use primary network interface"))
@@ -247,7 +247,9 @@ class Hololens_Relay(Plugin):
             width, height, outlier_threshold = struct.unpack('HHf', byte_msg[1:])
             ipc_pub.notify({'subject': 'calibration.should_start',
                             'hmd_video_frame_size': (width, height),
-                            'outlier_threshold': outlier_threshold})
+                            'outlier_threshold': outlier_threshold,
+                            'translation_eye0': [-15., 0., 0.],
+                            'translation_eye1': [15., 0., 0.]})
             response = b'0C'
 
         elif byte_msg[:1] == b'c':
