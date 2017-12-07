@@ -17,10 +17,6 @@ class Global_Container(object):
     pass
 
 
-class Duplicated_Eye_Startup_Error(Exception):
-    pass
-
-
 class Is_Alive_Manager(object):
     '''
     A context manager to wrap the is_alive flag.
@@ -34,14 +30,13 @@ class Is_Alive_Manager(object):
         self.logger = logger
 
     def __enter__(self):
-        if self.is_alive.value:
-            raise Duplicated_Eye_Startup_Error("Eye process already running!")
         self.is_alive.value = True
         self.ipc_socket.notify({'subject': 'eye_process.started',
                                 'eye_id': self.eye_id})
+        return self
 
     def __exit__(self, etype, value, traceback):
-        if etype is not None and etype is not Duplicated_Eye_Startup_Error:
+        if etype is not None:
             import traceback as tb
             self.logger.error('Process Eye{} crashed with trace:\n'.format(self.eye_id) +
                               ''.join(tb.format_exception(etype, value, traceback)))
@@ -97,6 +92,11 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
     logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url))
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
+
+    if is_alive_flag.value:
+        # indicates eye process that this is a duplicated startup
+        logger.warning('Aborting redundant eye process startup')
+        return
 
     with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id, logger):
         # general imports
