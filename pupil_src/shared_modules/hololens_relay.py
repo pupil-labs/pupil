@@ -369,8 +369,8 @@ class Hololens_Relay(Plugin):
             ipc_pub.notify({'subject': 'calibration.should_start',
                             'hmd_video_frame_size': (width, height),
                             'outlier_threshold': outlier_threshold,
-                            'translation_eye0': [-15., 0., 0.],
-                            'translation_eye1': [15., 0., 0.]})
+                            'translation_eye0': [27.84765, 0., 0.],
+                            'translation_eye1': [-27.84765, 0., 0.]})
             response = b'0C'
 
         elif byte_msg[:1] == b'c':
