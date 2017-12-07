@@ -102,6 +102,44 @@ class Hololens_Relay(Plugin):
                 Gaze datum. The first group indicates the number of gaze components.
                 The second group indicates if the datum belongs to a specific eye,
                 0 or 1, or if it is a binocular result, 2.
+
+    ### Example
+
+    A typical sequence of events between client (C) and server (S) would
+    look similar to this:
+
+    C:      I2
+    S:      0I
+
+    C:      T<time>
+    S:      0T
+
+    C:      C<width><height><threshold>
+    S:      0C
+
+    C:      R<refpoint bytes>
+    S:      0R
+        .
+        .
+        .
+
+    C:      c
+    S:      0c
+    S:      ECS
+
+    C:      S
+    S:      0S
+
+    S:      EG20<gaze x><gaze y>
+        .
+        .
+        .
+
+    C:      s
+    S:      0s
+
+    C:      i
+    S:      0i
     """
     icon_chr = chr(0xe307)
     icon_font = 'pupil_icons'
