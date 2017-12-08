@@ -16,6 +16,8 @@ import sys
 import time
 
 from ctypes import c_bool, c_int
+from multiprocessing import cpu_count
+import background_helper as bh
 
 import logging
 logger = logging.getLogger(__name__)
@@ -25,10 +27,9 @@ if __name__ == '__main__':
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
 
-from plugin import Analysis_Plugin_Base
-from video_export_launcher import mp, Export_Process
+from plugin import Analysis_Plugin_Base, System_Plugin_Base
 
-from exporter import export
+from exporter import export as export_function
 from player_methods import is_pupil_rec_dir
 
 
@@ -38,89 +39,188 @@ def get_recording_dirs(data_dir):
         - all folders within will be checked for necessary files
         - in order to make a visualization
     '''
-    filtered_recording_dirs = []
     if is_pupil_rec_dir(data_dir):
-        filtered_recording_dirs.append(data_dir)
+        yield data_dir
     for root, dirs, files in os.walk(data_dir):
-        filtered_recording_dirs += [os.path.join(root, d) for d in dirs
-                                    if not d.startswith(".") and is_pupil_rec_dir(os.path.join(root, d))]
-    logger.debug("Filtered Recording Dirs: {}".format(filtered_recording_dirs))
-    return filtered_recording_dirs
+        for d in dirs:
+            joined = os.path.join(root, d)
+            if not d.startswith(".") and is_pupil_rec_dir(joined):
+                yield joined
 
 
-class Batch_Exporter(Analysis_Plugin_Base):
-    """docstring for Batch_Exporter
-    this plugin can export videos in a seperate process using exporter
-    """
-    icon_chr = chr(0xec05)
+class Batch_Export(System_Plugin_Base):
+    """Sub plugin that manages a single batch export"""
+    uniqueness = 'not_unique'
     icon_font = 'pupil_icons'
+    icon_chr = chr(0xe2c4)  # character shown in menu icon
 
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, rec_dir, out_file_path, frames_to_export):
         super().__init__(g_pool)
-
-        # initialize empty menu
-        # and load menu configuration of last session
-        self.menu = None
-
-        self.exports = []
-        self.new_exports = []
-        self.active_exports = []
-        default_path = os.path.expanduser('~/')
-        self.destination_dir = default_path
-        self.source_dir = default_path
-
-        self.run = False
-        self.workers = [None for x in range(mp.cpu_count())]
-        logger.info("Using a maximum of {} CPUs to process visualizations in parallel...".format(mp.cpu_count()))
+        self.rec_dir = rec_dir
+        self.out_file_path = out_file_path
+        self.plugins = self.g_pool.plugins.get_initializers()
+        self.process = None
+        self.status = 'In queue'
+        self.progress = 0
+        self.frames_to_export = frames_to_export
+        self.in_queue = True
+        self._accelerate = True
+        self.notify_all({'subject': 'batch_export.queued', 'out_file_path': self.out_file_path})
 
     def init_ui(self):
         self.add_menu()
-        # initialize the menu
-        self.menu.label = 'Batch Export Recordings'
-        # load the configuration of last session
-        # add menu to the window
-        self._update_ui()
+        # uniqueness = 'not_unique' -> Automatic `Close` button
+        # -> Rename to `Cancel`
+        export_name = os.path.split(self.out_file_path)[-1]
+        self.menu.label = 'Batch Export {}'.format(export_name)
+        self.menu[0].label = 'Cancel'
+        self.menu_icon.indicator_start = 0.
+        self.menu_icon.indicator_stop = 0.1
+        self.menu_icon.tooltip = export_name
+        self.menu.append(ui.Text_Input('rec_dir', self, label='Recording', setter=lambda x: None))
+        self.menu.append(ui.Text_Input('out_file_path', self, label='Output', setter=lambda x: None))
+        self.menu.append(ui.Text_Input('status', self, label='Status', setter=lambda x: None))
+        progress_bar = ui.Slider('progress', self, min=0, max=self.frames_to_export, label='Progress')
+        progress_bar.read_only = True
+        self.menu.append(progress_bar)
 
-    def _update_ui(self):
-        self.menu.elements[:] = []
-        self.menu.append(ui.Text_Input('source_dir', self, label='Recording Source Directory', setter=self.set_src_dir))
-        self.menu.append(ui.Text_Input('destination_dir', self, label='Recording Destination Directory', setter=self.set_dest_dir))
-        self.menu.append(ui.Button('start export', self.start))
+    def recent_events(self, events):
+        if self.process:
+            try:
+                recent = [d for d in self.process.fetch()]
+            except Exception as e:
+                self.status, self.progress = '{}: {}'.format(type(e).__name__, e), 0
+            else:
+                if recent:
+                    self.status, self.progress = recent[-1]
 
-        for idx, job in enumerate(self.exports[::-1]):
-            submenu = ui.Growing_Menu("Export Job {}: '{}'".format(idx, job.out_file_path))
-            progress_bar = ui.Slider('progress', getter=job.status, min=0, max=job.frames_to_export.value)
-            progress_bar.read_only = True
-            submenu.append(progress_bar)
-            submenu.append(ui.Button('cancel', job.cancel))
-            self.menu.append(submenu)
-        if not self.exports:
-            self.menu.append(ui.Info_Text('Please select a Recording Source directory from with to pull all recordings for export.'))
+
+            # Update status if process has been canceled or completed
+            if self.process.canceled:
+                self.process = None
+                self.status = 'Export has been canceled.'
+                self.notify_all({'subject': 'batch_export.canceled', 'out_file_path': self.out_file_path})
+                self.menu[0].label = 'Close'  # change button label back to close
+            elif self.process.completed:
+                self.process = None
+                self.notify_all({'subject': 'batch_export.completed', 'out_file_path': self.out_file_path})
+                self.menu[0].label = 'Close'  # change button label back to close
+
+        if self.in_queue:
+            if self._accelerate:
+                self.menu_icon.indicator_start += 0.01
+                self.menu_icon.indicator_stop += 0.02
+            else:
+                self.menu_icon.indicator_start += 0.02
+                self.menu_icon.indicator_stop += 0.01
+            d = abs(self.menu_icon.indicator_start - self.menu_icon.indicator_stop)
+            if self._accelerate and d > .5:
+                self._accelerate = False
+            elif not self._accelerate and d < .1:
+                self._accelerate = True
+        else:
+            self.menu_icon.indicator_start = 0.
+            self.menu_icon.indicator_stop = self.progress / self.frames_to_export
+
+    def on_notify(self, n):
+        if n['subject'] == 'batch_export.should_start' and n['out_file_path'] == self.out_file_path:
+            self.init_export()
+        if n['subject'] == 'batch_export.should_cancel' and n.get('out_file_path', self.out_file_path) == self.out_file_path:
+            self.cancel_export()
+            if n.get('remove_menu', False):
+                self.alive = False
+
+    def init_export(self):
+        self.in_queue = False
+        args = (self.rec_dir, self.g_pool.user_dir, self.g_pool.min_data_confidence,
+                None, None, self.plugins, self.out_file_path, {})
+        self.process = bh.Task_Proxy('Pupil Batch Export {}'.format(self.out_file_path), export_function, args=args)
+        self.notify_all({'subject': 'batch_export.started', 'out_file_path': self.out_file_path})
+
+    def cancel_export(self):
+        if self.process:
+            self.process.cancel()
+        self.notify_all({'subject': 'batch_export.canceled', 'out_file_path': self.out_file_path})
+
+    def get_init_dict(self):
+        # do not be session persistent
+        raise NotImplementedError()
 
     def deinit_ui(self):
         self.remove_menu()
 
+    def cleanup(self):
+        self.cancel_export()
+        self.notify_all({'subject': 'batch_export.removed', 'out_file_path': self.out_file_path})
+
+
+class Batch_Exporter(Analysis_Plugin_Base):
+    """The Batch_Exporter searches for available recordings and exports them to a common location"""
+    icon_chr = chr(0xec05)
+    icon_font = 'pupil_icons'
+
+    def __init__(self, g_pool, source_dir='~/', destination_dir='~/'):
+        super().__init__(g_pool)
+
+        self.available_exports = []
+        self.queued_exports = []
+        self.active_exports = []
+        self.destination_dir = os.path.expanduser(destination_dir)
+        self.source_dir = os.path.expanduser(source_dir)
+
+        self.search_task = None
+        self.worker_count = cpu_count() - 1
+        logger.info("Using a maximum of {} CPUs to process visualizations in parallel...".format(cpu_count() - 1))
+
+    def get_init_dict(self):
+        return {'source_dir': self.source_dir, 'destination_dir': self.destination_dir}
+
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = 'Batch Export Recordings'
+
+        self.menu.append(ui.Info_Text('Search will walk through the source direcotry recursively and detect available Pupil recordings.'))
+        self.menu.append(ui.Text_Input('source_dir', self, label='Source directory', setter=self.set_src_dir))
+
+        self.search_button = ui.Button('Search', self.detect_recordings)
+        self.menu.append(self.search_button)
+
+        self.avail_recs_menu = ui.Growing_Menu('Available Recordings')
+        self._update_avail_recs_menu()
+        self.menu.append(self.avail_recs_menu)
+
+        self.menu.append(ui.Text_Input('destination_dir', self, label='Destination directory', setter=self.set_dest_dir))
+        self.menu.append(ui.Button('Export selected', self.queue_selected))
+        self.menu.append(ui.Button('Clear search results', self._clear_avail))
+        self.menu.append(ui.Separator())
+        self.menu.append(ui.Button('Cancel all exports', self.cancel_all))
+
+
+    def deinit_ui(self):
+        self.menu.remove(self.avail_recs_menu)
+        self.avail_recs_menu = None
+        self.remove_menu()
+
+    def detect_recordings(self):
+        if self.search_task:
+            self.search_task.cancel()
+            self.search_task = None
+            self.search_button.outer_label = ''
+            self.search_button.label = 'Search'
+        else:
+            self.search_button.outer_label = 'Searching...'
+            self.search_button.label = 'Cancel'
+            self.search_task = bh.Task_Proxy('Searching recordings in {}'.format(self.source_dir), get_recording_dirs, args=[self.source_dir])
+
     def set_src_dir(self, new_dir):
-        new_dir = new_dir
-        self.new_exports = []
-        self.exports = []
         new_dir = os.path.expanduser(new_dir)
         if os.path.isdir(new_dir):
             self.source_dir = new_dir
-            self.new_exports = get_recording_dirs(new_dir)
         else:
             logger.warning('"{}" is not a directory'.format(new_dir))
             return
-        if self.new_exports is []:
-            logger.warning('"{}" does not contain recordings'.format(new_dir))
-            return
-
-        self.add_exports()
-        self._update_ui()
 
     def set_dest_dir(self, new_dir):
-        new_dir = new_dir
-
         new_dir = os.path.expanduser(new_dir)
         if os.path.isdir(new_dir):
             self.destination_dir = new_dir
@@ -128,66 +228,81 @@ class Batch_Exporter(Analysis_Plugin_Base):
             logger.warning('"{}" is not a directory'.format(new_dir))
             return
 
-        self.exports = []
-        self.add_exports()
-        self._update_ui()
+    def _clear_avail(self):
+        del self.available_exports[:]
+        self._update_avail_recs_menu()
 
-    def add_exports(self):
-        outfiles = set()
-        for d in self.new_exports:
-            logger.debug("Adding new export.")
-            should_terminate = mp.Value(c_bool, False)
-            frames_to_export = mp.Value(c_int, 0)
-            current_frame = mp.Value(c_int, 0)
-            start_frame = None
-            end_frame = None
-            export_dir = d
-            user_dir = self.g_pool.user_dir
+    def _update_avail_recs_menu(self):
+        del self.avail_recs_menu[:]
+        if self.available_exports:
+            for avail in self.available_exports:
+                self.avail_recs_menu.append(ui.Switch('selected', avail, label=avail['source']))
+        else:
+            self.avail_recs_menu.append(ui.Info_Text('No recordings available yet. Use Search to find recordings.'))
 
-            # we need to know the timestamps of our exports.
-            try:  # 0.4
-                frames_to_export.value = len(np.load(os.path.join(export_dir, 'world_timestamps.npy')))
-            except:  # <0.4
-                frames_to_export.value = len(np.load(os.path.join(export_dir, 'timestamps.npy')))
+    def queue_selected(self):
+        for avail in self.available_exports[:]:
+            if avail['selected']:
+                try:
+                    frames_to_export = len(np.load(os.path.join(avail['source'], 'world_timestamps.npy')))
+                except:
+                    logger.error('Invalid export directory: {}'.format(avail['source']))
+                    self.available_exports.remove(avail)
+                    continue
 
-            # Here we make clones of every plugin that supports it.
-            # So it runs in the current config when we lauch the exporter.
-            plugins = self.g_pool.plugins.get_initializers()
+                # make a unique name created from rec_session and dir name
+                rec_session, rec_dir = avail['source'].rsplit(os.path.sep, 2)[1:]
+                out_name = rec_session+"_"+rec_dir+".mp4"
+                out_file_path = os.path.join(self.destination_dir, out_name)
 
-            # make a unique name created from rec_session and dir name
-            rec_session, rec_dir = export_dir.rsplit(os.path.sep, 2)[1:]
-            out_name = rec_session+"_"+rec_dir+".mp4"
-            out_file_path = os.path.join(self.destination_dir, out_name)
-            if out_file_path in outfiles:
-                logger.error("This export setting would try to save {} at least twice please rename dirs to prevent this. Skipping File".format(out_file_path))
-            else:
-                outfiles.add(out_file_path)
-                logger.info("Exporting to: {}".format(out_file_path))
+                if out_file_path in self.queued_exports or out_file_path in self.active_exports:
+                    logger.error("This export setting would try to save {} at least twice please rename dirs to prevent this. Skipping recording.".format(out_file_path))
+                    continue
 
-                process = Export_Process(target=export, args=(should_terminate, frames_to_export, current_frame,
-                                                              export_dir, user_dir, self.g_pool.min_data_confidence,
-                                                              start_frame, end_frame, plugins, out_file_path,None))
-                self.exports.append(process)
+                self.notify_all({'subject': 'start_plugin', 'name': 'Batch_Export',
+                                'args': {'out_file_path': out_file_path,
+                                         'rec_dir': avail['source'],
+                                         'frames_to_export': frames_to_export}})
+                self.available_exports.remove(avail)
+                self.queued_exports.append(out_file_path)
+        self._update_avail_recs_menu()
 
-    def start(self):
-        self.active_exports = self.exports[:]
-        self.run = True
+    def start_export(self, queued):
+        self.notify_all({'subject': 'batch_export.should_start', 'out_file_path': queued})
+        self.active_exports.append(queued)
+        self.queued_exports.remove(queued)
+
+    def on_notify(self, n):
+        if n['subject'] in ('batch_export.canceled', 'batch_export.completed'):
+            if n['out_file_path'] in self.queued_exports:
+                self.queued_exports.remove(n['out_file_path'])
+            if n['out_file_path'] in self.active_exports:
+                self.active_exports.remove(n['out_file_path'])
+
+        # Add queued exports to active queue
+        for queued in self.queued_exports[:self.worker_count - len(self.active_exports)]:
+            self.start_export(queued)
+
 
     def recent_events(self, events):
-        frame = events.get('frame')
-        if not frame:
-            return
-        if self.run:
-            for i in range(len(self.workers)):
-                if self.workers[i] and self.workers[i].is_alive():
-                    pass
-                else:
-                    logger.info("starting new job")
-                    if self.active_exports:
-                        self.workers[i] = self.active_exports.pop(0)
-                        self.workers[i].start()
-                    else:
-                        self.run = False
+        if self.search_task:
+            recent = [d for d in self.search_task.fetch()]
+            if recent:
+                currently_avail = [rec['source'] for rec in self.available_exports]
+                self.available_exports.extend([{'source': rec, 'selected': True} for rec in recent if rec not in currently_avail])
+                self._update_avail_recs_menu()
+            if self.search_task.completed:
+                self.search_task = None
+                self.search_button.outer_label = ''
+                self.search_button.label = 'Search'
+
+    def cancel_all(self):
+        self.notify_all({'subject': 'batch_export.should_cancel', 'remove_menu': True})
+
+    def cleanup(self):
+        self.cancel_all()
+        if self.search_task:
+            self.search_task.cancel()
 
 def main():
 

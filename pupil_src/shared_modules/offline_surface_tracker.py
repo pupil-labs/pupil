@@ -258,7 +258,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             if self.edit_surf_verts:
                 window = glfwGetCurrentContext()
                 pos = glfwGetCursorPos(window)
-                pos = normalize(pos,glfwGetWindowSize(window),flip_y=True)
+                pos = normalize(pos, self.g_pool.camera_render_size, flip_y=True)
                 for s,v_idx in self.edit_surf_verts:
                     if s.detected:
                         new_pos =  s.img_to_ref_surface(np.array(pos))
@@ -327,7 +327,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                 #draw a quad on surface with false color of value.
                 s.gl_display_metrics()
 
-    def gl_display_cache_bars(self, width, height):
+    def gl_display_cache_bars(self, width, height, scale):
         """
         """
         with gl_utils.Coord_System(0, self.cache.length - 1, height, 0):
@@ -336,9 +336,9 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             for r in self.cache.visited_ranges:  # [[0,1],[3,4]]
                 cached_ranges += (r[0], 0), (r[1], 0)  # [(0,0),(1,0),(3,0),(4,0)]
 
-            glTranslatef(0, self.timeline_line_height / 2, 0)
+            glTranslatef(0, scale * self.timeline_line_height / 2, 0)
             color = RGBA(.8, .6, .2, .8)
-            draw_polyline(cached_ranges, color=color, line_type=GL_LINES, thickness=4)
+            draw_polyline(cached_ranges, color=color, line_type=GL_LINES, thickness=scale * 4)
 
             # Lines where surfaces have been found in video
             cached_surfaces = []
@@ -352,14 +352,14 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             color = RGBA(0, .7, .3, .8)
 
             for s in cached_surfaces:
-                glTranslatef(0, self.timeline_line_height, 0)
-                draw_polyline(s, color=color, line_type=GL_LINES, thickness=2)
+                glTranslatef(0, scale * self.timeline_line_height, 0)
+                draw_polyline(s, color=color, line_type=GL_LINES, thickness=scale * 2)
 
-    def draw_labels(self, width, height):
-        self.glfont.set_size(self.timeline_line_height * .8)
+    def draw_labels(self, width, height, scale):
+        self.glfont.set_size(self.timeline_line_height * .8 * scale)
         self.glfont.draw_text(width, 0, 'Marker Cache')
         for idx, s in enumerate(self.surfaces):
-            glTranslatef(0, self.timeline_line_height, 0)
+            glTranslatef(0, self.timeline_line_height * scale, 0)
             self.glfont.draw_text(width, 0, s.name)
 
     def save_surface_statsics_to_file(self, export_range, export_dir):
@@ -471,22 +471,27 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                         if ref_srf_data is not None and ref_srf_data is not False:
                             csv_writer.writerow( (idx,ts,ref_srf_data['m_to_screen'],ref_srf_data['m_from_screen'],ref_srf_data['detected_markers']) )
 
-
             # save gaze on srf as csv.
-            with open(os.path.join(metrics_dir,'gaze_positions_on_surface'+surface_name+'.csv'),'w',encoding='utf-8',newline='') as csvfile:
+            with open(os.path.join(metrics_dir, 'gaze_positions_on_surface'+surface_name+'.csv'), 'w', encoding='utf-8', newline='') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter=',')
-                csv_writer.writerow(('world_timestamp','world_frame_idx','gaze_timestamp','x_norm','y_norm','x_scaled','y_scaled','on_srf'))
-                for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
+                csv_writer.writerow(('world_timestamp', 'world_frame_idx', 'gaze_timestamp',
+                                     'x_norm', 'y_norm', 'x_scaled', 'y_scaled', 'on_srf', 'confidence'))
+                for idx, ts, ref_srf_data in zip(range(len(self.g_pool.timestamps)), self.g_pool.timestamps, s.cache):
                     if in_mark <= idx <= out_mark:
                         if ref_srf_data is not None and ref_srf_data is not False:
-                            for gp in s.gaze_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
-                                csv_writer.writerow( (ts,idx,gp['base_data']['timestamp'],gp['norm_pos'][0],gp['norm_pos'][1],gp['norm_pos'][0]*s.real_world_size['x'],gp['norm_pos'][1]*s.real_world_size['y'],gp['on_srf']) )
-
+                            for gp in s.gaze_on_srf_by_frame_idx(idx, ref_srf_data['m_from_screen']):
+                                csv_writer.writerow((ts, idx, gp['base_data']['timestamp'],
+                                                     gp['norm_pos'][0], gp['norm_pos'][1],
+                                                     gp['norm_pos'][0]*s.real_world_size['x'],
+                                                     gp['norm_pos'][1]*s.real_world_size['y'],
+                                                     gp['on_srf'], gp['confidence']))
 
             # save fixation on srf as csv.
             with open(os.path.join(metrics_dir,'fixations_on_surface'+surface_name+'.csv'),'w',encoding='utf-8',newline='') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter=',')
-                csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','x_scaled','y_scaled','on_srf'))
+                csv_writer.writerow(('id', 'start_timestamp', 'duration', 'start_frame',
+                                     'end_frame', 'norm_pos_x', 'norm_pos_y', 'x_scaled',
+                                     'y_scaled', 'on_srf'))
                 fixations_on_surface = []
                 for idx,ref_srf_data in zip(range(len(self.g_pool.timestamps)),s.cache):
                     if in_mark <= idx <= out_mark:

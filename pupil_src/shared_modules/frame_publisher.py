@@ -72,6 +72,7 @@ class Frame_Publisher(Plugin):
 
         Reacts to notifications:
             ``eye_process.started``: Re-emits ``frame_publishing.started``
+            ``frame_publishing.set_format``: Sets image format specified in ``format`` field
 
         Emits notifications:
            ``frame_publishing.started``: Frame publishing started
@@ -80,6 +81,9 @@ class Frame_Publisher(Plugin):
         if notification['subject'].startswith('eye_process.started'):
             # trigger notification
             self.format = self.format
+        elif notification['subject'] == 'frame_publishing.set_format':
+            # update format and trigger notification
+            self.format = notification['format']
 
     def get_init_dict(self):
         return {'format':self.format}

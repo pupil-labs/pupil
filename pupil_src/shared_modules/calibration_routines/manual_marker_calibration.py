@@ -11,10 +11,9 @@ See COPYING and COPYING.LESSER for license details.
 
 import cv2
 import numpy as np
-from methods import normalize
 from pyglui.cygl.utils import draw_points_norm, draw_polyline, RGBA
 from OpenGL.GL import GL_POLYGON
-from circle_detector import find_concetric_circles
+from circle_detector import CircleTracker
 from . finish_calibration import finish_calibration
 
 import audio
@@ -27,33 +26,29 @@ logger = logging.getLogger(__name__)
 
 
 class Manual_Marker_Calibration(Calibration_Plugin):
-    """Detector looks for a white ring on a black background.
+    """
+        CircleTracker looks for proper markers
         Using at least 9 positions/points within the FOV
         Ref detector will direct one to good positions with audio cues
         Calibration only collects data at the good positions
-
-        Steps:
-            Adaptive threshold to obtain robust edge-based image of marker
-            Find contours and filter into 2 level list using RETR_CCOMP
-            Fit ellipses
     """
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.detected = False
         self.pos = None
         self.smooth_pos = 0.,0.
         self.smooth_vel = 0.
         self.sample_site = (-2,-2)
         self.counter = 0
         self.counter_max = 30
-        self.markers = []
-        self.world_size = None
 
         self.stop_marker_found = False
         self.auto_stop = 0
         self.auto_stop_max = 30
 
         self.menu = None
+
+        self.circle_tracker = CircleTracker()
+        self.markers = []
 
     def init_ui(self):
         super().init_ui()
@@ -107,45 +102,36 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         if self.active and frame:
             recent_pupil_positions = events['pupil_positions']
 
-            gray_img  = frame.gray
+            gray_img = frame.gray
 
-            if self.world_size is None:
-                self.world_size = frame.width,frame.height
+            # Update the marker
+            self.markers = self.circle_tracker.update(gray_img)
 
-            self.markers = find_concetric_circles(gray_img,min_ring_count=3)
-
-            if len(self.markers) > 0:
-                self.detected = True
-                marker_pos = self.markers[0][0][0] #first marker innermost ellipse, pos
-                self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
-
+            self.stop_marker_found = False
+            if len(self.markers):
+                # Set the pos to be the center of the first detected marker
+                marker_pos = self.markers[0]['img_pos']
+                self.pos = self.markers[0]['norm_pos']
+                # Check if there are stop markers
+                for marker in self.markers:
+                    if marker['marker_type'] == 'Stop':
+                        self.auto_stop += 1
+                        self.stop_marker_found = True
+                        break
             else:
-                self.detected = False
                 self.pos = None  # indicate that no reference is detected
 
-            # center dark or white?
-            if self.detected:
-                second_ellipse = self.markers[0][1]
-                col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
-                row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
-                marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
-                avg = cv2.mean(marker_gray)[0]
-                center = marker_gray[int(second_ellipse[1][1])//2, int(second_ellipse[1][0])//2]
-                rel_shade = center-avg
+            if self.stop_marker_found is False:
+                self.auto_stop = 0
 
-                # auto_stop logic
-                if rel_shade > 30:
-                    # bright marker center found
-                    self.auto_stop +=1
-                    self.stop_marker_found = True
+            # Check if there are more than one markers
+            if len(self.markers) > 1:
+                audio.tink()
+                logger.warning("{} markers detected. Please remove all the other markers".format(len(self.markers)))
 
-                else:
-                    self.auto_stop = 0
-                    self.stop_marker_found = False
-
-
-            #tracking logic
-            if self.detected and not self.stop_marker_found:
+            # tracking logic
+            if len(self.markers) and not self.stop_marker_found:
+                # start counter if ref is resting in place and not at last sample site
                 # calculate smoothed manhattan velocity
                 smoother = 0.3
                 smooth_pos = np.array(self.smooth_pos)
@@ -164,7 +150,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
                 # start counter if ref is resting in place and not at last sample site
                 if self.counter <= 0:
-
                     if self.smooth_vel < 0.01 and sample_ref_dist > 0.1:
                         self.sample_site = self.smooth_pos
                         audio.beep()
@@ -193,27 +178,23 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                             logger.debug("Sampled {} datapoints. Stopping to sample. Looking for steady marker again.".format(self.counter_max))
                             self.notify_all({'subject':'calibration.marker_sample_completed','timestamp':self.g_pool.get_timestamp(),'record':True})
 
-
-            #always save pupil positions
+            # Always save pupil positions
             for p_pt in recent_pupil_positions:
                 if p_pt['confidence'] > self.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
             if self.counter:
-                if self.detected:
+                if len(self.markers):
                     self.button.status_text = 'Sampling Gaze Data'
                 else:
                     self.button.status_text = 'Marker Lost'
             else:
                 self.button.status_text = 'Looking for Marker'
 
-
-
-            #stop if autostop condition is satisfied:
+            # Stop if autostop condition is satisfied:
             if self.auto_stop >=self.auto_stop_max:
                 self.auto_stop = 0
                 self.stop()
-
 
         else:
             pass
@@ -231,40 +212,44 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         if self.active:
             draw_points_norm([self.smooth_pos],size=15,color=RGBA(1.,1.,0.,.5))
 
-        if self.active and self.detected:
+        if self.active and len(self.markers):
+            # draw the largest ellipse of all detected markers
             for marker in self.markers:
-                e = marker[-1]
+                e = marker['ellipses'][-1]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
                 draw_polyline(pts,color=RGBA(0.,1.,0,1.))
+                if len(self.markers) > 1:
+                    draw_polyline(pts, 1, RGBA(1., 0., 0., .5), line_type=GL_POLYGON)
 
-            if self.counter:
-                # lets draw an indicator on the count
-                e = self.markers[0][-1]
-                # cv2 requires integer arguments
+            # draw indicator on the first detected marker
+            if self.counter and self.markers[0]['marker_type'] == 'Ref':
+                e = self.markers[0]['ellipses'][-1]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360//self.counter_max)
                 indicator = [e[0]] + pts[self.counter:].tolist()[::-1] + [e[0]]
-                draw_polyline(indicator,color=RGBA(0.1,.5,.7,.8),line_type=GL_POLYGON)
+                draw_polyline(indicator, color=RGBA(0.1,.5,.7,.8),line_type=GL_POLYGON)
 
+            # draw indicator on the stop marker(s)
             if self.auto_stop:
-                # lets draw an indicator on the autostop count
-                e = self.markers[0][-1]
-                # cv2 requires integer arguments
-                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
-                                    (int(e[1][0]/2),int(e[1][1]/2)),
-                                    int(e[-1]),0,360,360//self.auto_stop_max)
-                indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
-                draw_polyline(indicator,color=RGBA(8.,0.1,0.1,.8),line_type=GL_POLYGON)
+                for marker in self.markers:
+                    if marker['marker_type'] == 'Stop':
+                        e = marker['ellipses'][-1]
+                        pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                            (int(e[1][0]/2),int(e[1][1]/2)),
+                                            int(e[-1]),0,360,360//self.auto_stop_max)
+                        indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
+                        draw_polyline(indicator,color=RGBA(8.,0.1,0.1,.8),line_type=GL_POLYGON)
         else:
             pass
 
-    def cleanup(self):
+    def deinit_ui(self):
         """gets called when the plugin get terminated.
         This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         if self.active:
             self.stop()
+        super().deinit_ui()

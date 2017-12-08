@@ -30,11 +30,10 @@ class Is_Alive_Manager(object):
         self.logger = logger
 
     def __enter__(self):
-        if self.is_alive.value:
-            raise Exception("eye process already running!")
         self.is_alive.value = True
         self.ipc_socket.notify({'subject': 'eye_process.started',
                                 'eye_id': self.eye_id})
+        return self
 
     def __exit__(self, etype, value, traceback):
         if etype is not None:
@@ -93,6 +92,11 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
     logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url))
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
+
+    if is_alive_flag.value:
+        # indicates eye process that this is a duplicated startup
+        logger.warning('Aborting redundant eye process startup')
+        return
 
     with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id, logger):
         # general imports
@@ -164,20 +168,19 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             nonlocal window_size
             nonlocal camera_render_size
 
-            if is_window_visible(window):
-                active_window = glfw.glfwGetCurrentContext()
-                glfw.glfwMakeContextCurrent(window)
-                hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
-                g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
-                window_size = w, h
-                camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
-                g_pool.gui.update_window(w, h)
-                g_pool.gui.collect_menus()
-                for g in g_pool.graphs:
-                    g.scale = hdpi_factor
-                    g.adjust_window_size(w, h)
-                adjust_gl_view(w, h)
-                glfw.glfwMakeContextCurrent(active_window)
+            active_window = glfw.glfwGetCurrentContext()
+            glfw.glfwMakeContextCurrent(window)
+            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
+            window_size = w, h
+            camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
+            g_pool.gui.update_window(w, h)
+            g_pool.gui.collect_menus()
+            for g in g_pool.graphs:
+                g.scale = hdpi_factor
+                g.adjust_window_size(w, h)
+            adjust_gl_view(w, h)
+            glfw.glfwMakeContextCurrent(active_window)
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
@@ -255,14 +258,14 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         g_pool.capture_manager = manager_class_by_name[manager_class_name](g_pool,**manager_settings)
 
         if eye_id == 0:
-            cap_src = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]
+            cap_src = ["Pupil Cam1 ID0", "HD-6000", "HD USB Camera", "USB 2.0 Camera"]
         else:
-            cap_src = ["Pupil Cam1 ID1","HD-6000","Integrated Camera"]
+            cap_src = ["Pupil Cam1 ID1", "HD-6000"]
 
         # Initialize capture
-        default_settings = ('UVC_Source',{
-                            'preferred_names'  : cap_src,
-                            'frame_size': (640,480),
+        default_settings = ('UVC_Source', {
+                            'preferred_names': cap_src,
+                            'frame_size': (640, 480),
                             'frame_rate': 90
                             })
 
@@ -408,13 +411,13 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         ts = g_pool.get_timestamp()
 
         cpu_graph = graph.Bar_Graph()
-        cpu_graph.pos = (20, 130)
+        cpu_graph.pos = (20, 50)
         cpu_graph.update_fn = ps.cpu_percent
         cpu_graph.update_rate = 5
         cpu_graph.label = 'CPU %0.1f'
 
         fps_graph = graph.Bar_Graph()
-        fps_graph.pos = (140, 130)
+        fps_graph.pos = (140, 50)
         fps_graph.update_rate = 5
         fps_graph.label = "%0.0f FPS"
         g_pool.graphs = [cpu_graph, fps_graph]

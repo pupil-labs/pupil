@@ -92,9 +92,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from seek_control import Seek_Control
         from video_export_launcher import Video_Export_Launcher
         from offline_surface_tracker import Offline_Surface_Tracker
-        from marker_auto_trim_marks import Marker_Auto_Trim_Marks
+        # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
         from fixation_detector import Offline_Fixation_Detector
-        from batch_exporter import Batch_Exporter
+        from batch_exporter import Batch_Exporter, Batch_Export
         from log_display import Log_Display
         from annotations import Annotation_Player
         from raw_data_exporter import Raw_Data_Exporter
@@ -103,15 +103,15 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from gaze_producers import Gaze_From_Recording, Offline_Calibration
         from system_graphs import System_Graphs
 
-        assert pyglui_version >= '1.9', 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.11'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
-        system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs]
+        system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs, Batch_Export]
         user_plugins = [Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points,
                         Vis_Cross, Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path,
-                        Offline_Fixation_Detector,
+                        Offline_Fixation_Detector, Batch_Exporter,
                         Video_Export_Launcher, Offline_Surface_Tracker, Raw_Data_Exporter,
-                        Batch_Exporter, Annotation_Player, Log_History, Marker_Auto_Trim_Marks,
+                        Annotation_Player, Log_History,
                         Pupil_From_Recording, Offline_Pupil_Detection, Gaze_From_Recording,
                         Offline_Calibration] + runtime_plugins
 
@@ -120,16 +120,16 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         # Callback functions
         def on_resize(window, w, h):
             nonlocal window_size
+            nonlocal hdpi_factor
 
-            if gl_utils.is_window_visible(window):
-                hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
-                g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
-                window_size = w, h
-                g_pool.camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
-                g_pool.gui.update_window(*window_size)
-                g_pool.gui.collect_menus()
-                for p in g_pool.plugins:
-                    p.on_window_resize(window, *g_pool.camera_render_size)
+            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
+            window_size = w, h
+            g_pool.camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
+            g_pool.gui.update_window(*window_size)
+            g_pool.gui.collect_menus()
+            for p in g_pool.plugins:
+                p.on_window_resize(window, *g_pool.camera_render_size)
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
@@ -141,7 +141,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0]/glfw.glfwGetWindowSize(window)[0])
             x, y = x * hdpi_factor, y * hdpi_factor
             g_pool.gui.update_mouse(x, y)
             pos = x, y
@@ -181,6 +180,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
         icon_bar_width = 50
         window_size = None
+        hdpi_factor = 1.0
 
         # create container for globally scoped vars
         g_pool = Global_Container()
@@ -213,8 +213,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.main_window = main_window
 
         def set_scale(new_scale):
-            hdpi_factor = float(glfw.glfwGetFramebufferSize(
-                main_window)[0]) / glfw.glfwGetWindowSize(main_window)[0]
             g_pool.gui_user_scale = new_scale
             window_size = (g_pool.camera_render_size[0] + int(icon_bar_width*g_pool.gui_user_scale*hdpi_factor),
                            glfw.glfwGetFramebufferSize(main_window)[1])
@@ -431,9 +429,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             events['frame'] = frame
             # report time between now and the last loop interation
             events['dt'] = get_dt()
-            # new positons we make a deepcopy just like the image is a copy.
-            events['gaze_positions'] = deepcopy(g_pool.gaze_positions_by_frame[frame.index])
-            events['pupil_positions'] = deepcopy(g_pool.pupil_positions_by_frame[frame.index])
+
+            # pupil and gaze positions are added by their respective producer plugins
+            events['pupil_positions'] = []
+            events['gaze_positions'] = []
 
             # allow each Plugin to do its work.
             for p in g_pool.plugins:
@@ -457,7 +456,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                 unused_elements = g_pool.gui.update()
                 for b in unused_elements.buttons:
                     button, action, mods = b
-                    pos = glfw.glfwGetCursorPos(main_window)
+                    x, y = glfw.glfwGetCursorPos(main_window)
+                    pos = x * hdpi_factor, y * hdpi_factor
                     pos = normalize(pos, g_pool.camera_render_size)
                     pos = denormalize(pos, g_pool.capture.frame_size)
                     for p in g_pool.plugins:
@@ -513,7 +513,6 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
     import zmq
     import zmq_tools
     from time import sleep
-
 
     # zmq ipc setup
     zmq_ctx = zmq.Context()

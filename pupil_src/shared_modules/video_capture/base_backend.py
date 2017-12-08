@@ -138,7 +138,7 @@ class Base_Source(Plugin):
 
     @property
     def intrinsics(self):
-        raise NotImplementedError()
+        return self._intrinsics
 
     @intrinsics.setter
     def intrinsics(self, model):

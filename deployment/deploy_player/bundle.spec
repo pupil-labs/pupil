@@ -18,7 +18,7 @@ if platform.system() == 'Darwin':
                  pathex=['../../pupil_src/shared_modules/'],
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports+pyndsi_hidden_imports,
                  hookspath=None,
-                 runtime_hooks=['../rthook_multiprocessing.py'],
+                 runtime_hooks=None,
                  excludes=['matplotlib','pyrealsense'])
 
     pyz = PYZ(a.pure)
@@ -82,6 +82,9 @@ elif platform.system() == 'Linux':
 
     # required for 14.04 16.04 interoperability.
     binaries = [b for b in binaries if not "libgomp.so.1" in b[0]]
+
+    # required for 17.10 interoperability.
+    binaries = [b for b in binaries if not "libdrm.so.2" in b[0]]
 
     coll = COLLECT(exe,
                    binaries,

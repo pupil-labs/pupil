@@ -122,6 +122,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         name_by_index = [p.__name__ for p in plugin_by_index]
         plugin_by_name = dict(zip(name_by_index, plugin_by_index))
         default_plugins = [('Dummy_Gaze_Mapper', {}), ('HMD_Calibration', {}), ('Pupil_Remote', {})]
+        g_pool.plugin_by_name = plugin_by_name
 
         tick = delta_t()
 
@@ -141,7 +142,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         audio.audio_mode = session_settings.get('audio_mode', audio.default_audio_mode)
 
         # plugins that are loaded based on user settings from previous session
-        g_pool.plugins = Plugin_List(g_pool, plugin_by_name, session_settings.get('loaded_plugins', default_plugins))
+        g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
 
         def handle_notifications(n):
             subject = n['subject']

@@ -44,3 +44,6 @@ SphereCircleTest.cpp
 *.mp4
 *.mkv
 *.egg-info
+hmd_cal_data
+
+mprofile_*.dat

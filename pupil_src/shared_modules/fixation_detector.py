@@ -24,6 +24,7 @@ import csv
 import numpy as np
 import cv2
 
+from scipy.spatial.distance import pdist
 from collections import deque
 from itertools import chain
 from pyglui import ui
@@ -50,26 +51,6 @@ class Fixation_Detector_Base(Analysis_Plugin_Base):
     icon_font = 'pupil_icons'
 
 
-def cart2spherical(xyz):
-    '''Convert 3d points to spherical coords
-
-    Taken from https://stackoverflow.com/questions/4116658/faster-numpy-cartesian-to-spherical-coordinate-conversion
-
-    > pts = np.random.rand(3000000, 3)
-    > %timeit cart2spherical(pts)
-    376 ms ± 1.98 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
-    '''
-    ptsnew = np.zeros(xyz.shape, dtype=xyz.dtype)
-    xy = xyz[:, 0]**2 + xyz[:, 1]**2
-    ptsnew[:, 0] = np.sqrt(xy + xyz[:, 2]**2)
-    # for elevation angle defined from Z-axis down
-    ptsnew[:, 1] = np.arctan2(np.sqrt(xy), xyz[:, 2])
-    # for elevation angle defined from XY-plane up
-    # ptsnew[:,4] = np.arctan2(xyz[:,2], np.sqrt(xy))
-    ptsnew[:, 2] = np.arctan2(xyz[:, 1], xyz[:, 0])
-    return ptsnew
-
-
 def fixation_from_data(dispersion, method, base_data, timestamps=None):
     norm_pos = np.mean([gp['norm_pos'] for gp in base_data], axis=0).tolist()
     dispersion = np.rad2deg(dispersion)  # in degrees
@@ -90,16 +71,16 @@ def fixation_from_data(dispersion, method, base_data, timestamps=None):
     if timestamps is not None:
         start, end = base_data[0]['timestamp'], base_data[-1]['timestamp']
         start, end = np.searchsorted(timestamps, [start, end])
+        end = min(end, len(timestamps) - 1)  # fix `list index out of range` error
         fix['start_frame_index'] = start
         fix['end_frame_index'] = end
         fix['mid_frame_index'] = (start + end) // 2
     return fix
 
 
-def spherical_dispersion(polar_coord):
-    polar_coord.shape = 1, -1, 2
-    dispersion = cv2.minEnclosingCircle(polar_coord)[1] * 2
-    return dispersion
+def vector_dispersion(vectors):
+    distances = pdist(vectors, metric='cosine')
+    return np.arccos(1. - distances.max())
 
 
 def gaze_dispersion(capture, gaze_subset, use_pupil=True):
@@ -118,7 +99,7 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
 
         all_pp = chain(*(gp['base_data'] for gp in base_data))
         pp_with_eye_id = (pp for pp in all_pp if pp['id'] == eye_id)
-        sphericals = np.array([(pp['theta'], pp['phi']) for pp in pp_with_eye_id], dtype=np.float32)
+        vectors = np.array([pp['circle_3d']['normal'] for pp in pp_with_eye_id], dtype=np.float32)
     else:
         method = 'gaze'
         base_data = gaze_subset
@@ -131,12 +112,11 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
 
         # undistort onto 3d plane
         undistorted = capture.intrinsics.undistortPoints(locations)
-        undistorted_3d = np.ones((undistorted.shape[0], 3), dtype=undistorted.dtype)
-        undistorted_3d[:, :-1] = undistorted
+        vectors = np.ones((undistorted.shape[0], 3), dtype=undistorted.dtype)
+        vectors[:, :-1] = undistorted
 
-        sphericals = cart2spherical(undistorted_3d)[:, 1:]  # only use theta/phi, exclude radius
-
-    return spherical_dispersion(sphericals), method, base_data
+    dist = vector_dispersion(vectors)
+    return dist, method, base_data
 
 
 def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_duration):
@@ -147,11 +127,10 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
     Q = deque()
     enum = deque(gaze_data)
     while enum:
-        datum = enum.popleft()
-        Q.append(datum)
-
         # check if Q contains enough data
         if len(Q) < 2 or Q[-1]['timestamp'] - Q[0]['timestamp'] < min_duration:
+            datum = enum.popleft()
+            Q.append(datum)
             continue
 
         # min duration reached, check for fixation
@@ -161,7 +140,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             Q.popleft()
             continue
 
-        left_idx = len(Q) - 1
+        left_idx = len(Q)
 
         # minimal fixation found. collect maximal data
         # to perform binary search for fixation end
@@ -179,7 +158,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             continue
 
         slicable = list(Q)  # deque does not support slicing
-        right_idx = len(Q) - 1
+        right_idx = len(Q)
 
         # binary search
         while left_idx + 1 < right_idx:
@@ -191,11 +170,21 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             else:
                 right_idx = middle_idx - 1
 
-        if dispersion > max_dispersion:
-            dispersion, origin, base_data = gaze_dispersion(capture, slicable[:right_idx], use_pupil=use_pupil)
+        middle_idx = (left_idx + right_idx) // 2
+        # if dispersion > max_dispersion:
+        dispersion, origin, base_data = gaze_dispersion(capture, slicable[:middle_idx], use_pupil=use_pupil)
 
-        yield 'Detecting fixations...', [fixation_from_data(dispersion, origin, base_data, capture.timestamps)]
-        Q = deque(slicable[right_idx:])
+        # Create fixation datum
+        fixation_datum = fixation_from_data(dispersion, origin, base_data, capture.timestamps)
+
+        # Assert constraints
+        assert dispersion <= max_dispersion, 'Fixation too big: {}'.format(fixation_datum)
+        assert min_duration <= fixation_datum['duration'] / 1000, 'Fixation too short: {}'.format(fixation_datum)
+        assert fixation_datum['duration'] / 1000 <= max_duration, 'Fixation too long: {}'.format(fixation_datum)
+
+        yield 'Detecting fixations...', [fixation_datum]
+        Q = deque()  # clear queue
+        enum.extendleft(slicable[middle_idx:])
 
     yield "Fixation detection complete", []
 
@@ -214,7 +203,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
     based on the positional angle of the eye. These fixations have their method
     field set to "pupil". If no 3d pupil data is available the plugin will
     assume that the gaze data is calibrated and calculate the dispersion in
-    visual angle with in the coordinate system of the world camera. These
+    visual angle within the coordinate system of the world camera. These
     fixations will have their method field set to "gaze".
     '''
     def __init__(self, g_pool, max_dispersion=1.0, min_duration=300, max_duration=1000, show_fixations=True):
@@ -224,6 +213,8 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.min_duration = min_duration
         self.max_duration = max_duration
         self.show_fixations = show_fixations
+        self.current_fixation_details = None
+        self.fixations = deque()
         self.prev_index = -1
         self.bg_task = None
         self.status = ''
@@ -238,11 +229,11 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             self.notify_all({'subject': 'fixation_detector.should_recalculate', 'delay': 1.})
 
         def set_min_duration(new_value):
-            self.min_duration = new_value
+            self.min_duration = min(new_value, self.max_duration)
             self.notify_all({'subject': 'fixation_detector.should_recalculate', 'delay': 1.})
 
         def set_max_duration(new_value):
-            self.max_duration = new_value
+            self.max_duration = max(new_value, self.min_duration)
             self.notify_all({'subject': 'fixation_detector.should_recalculate', 'delay': 1.})
 
         def jump_next_fixation(_):
@@ -307,6 +298,9 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         '''
         classify fixations
         '''
+        if self.g_pool.app == 'exporter':
+            return
+
         if self.bg_task:
             self.bg_task.cancel()
 
@@ -336,9 +330,10 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                 if self.fixations:
                     current = self.fixations[-1]['timestamp']
                     progress = (current - self.g_pool.timestamps[0]) /\
-                               (self.g_pool.timestamps[1] - self.g_pool.timestamps[0])
+                               (self.g_pool.timestamps[-1] - self.g_pool.timestamps[0])
                     self.menu_icon.indicator_stop = progress
             if self.bg_task.completed:
+                self.status = "{} fixations detected".format(len(self.fixations))
                 self.correlate_and_publish()
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.
@@ -353,11 +348,11 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             for f in self.g_pool.fixations_by_frame[frame.index]:
                 x = int(f['norm_pos'][0] * frame.width)
                 y = int((1. - f['norm_pos'][1]) * frame.height)
-                transparent_circle(frame.img, (x, y), radius=25., color=(0., 1., 1., 1.), thickness=-1)
+                transparent_circle(frame.img, (x, y), radius=25., color=(0., 1., 1., 1.), thickness=3)
                 cv2.putText(frame.img, '{}'.format(f['id']), (x + 30, y),
                             cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 150, 100))
 
-        if self.prev_index != frame.index:
+        if self.current_fixation_details and self.prev_index != frame.index:
             info = ''
             for f in self.g_pool.fixations_by_frame[frame.index]:
                 info += 'Current fixation, {} of {}\n'.format(f['id'], len(self.g_pool.fixations))
@@ -392,7 +387,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         for idx, f in enumerate(fixations):
             f['id'] = idx + 1
         self.g_pool.fixations = fixations
-        # now lets bin fixations into frames. Fixations may be repeated this way as they span muliple frames
+        # now lets bin fixations into frames. Fixations are allotted to the first frame they appear in.
         fixations_by_frame = [[] for x in self.g_pool.timestamps]
         for f in self.fixations:
             for idx in range(f['start_frame_index'], f['end_frame_index'] + 1):

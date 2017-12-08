@@ -27,11 +27,13 @@ class Task_Proxy(object):
 
         self._should_terminate_flag = mp.Value(c_bool, 0)
         self._completed = False
+        self._canceled = False
 
         pipe_recv, pipe_send = mp.Pipe(False)
         wrapper_args = [pipe_send, self._should_terminate_flag, generator]
         wrapper_args.extend(args)
         self.process = mp.Process(target=self._wrapper, name=name, args=wrapper_args, kwargs=kwargs)
+        self.process.daemon = True
         self.process.start()
         self.pipe = pipe_recv
 
@@ -44,10 +46,9 @@ class Task_Proxy(object):
                     raise EarlyCancellationError('Task was cancelled')
                 pipe.send(datum)
         except Exception as e:
-            if not isinstance(e, EarlyCancellationError):
-                pipe.send(e)
-                import traceback
-                logger.warning(traceback.format_exc())
+            pipe.send(e)
+            import traceback
+            logger.warning(traceback.format_exc())
         else:
             pipe.send(StopIteration())
         finally:
@@ -61,10 +62,14 @@ class Task_Proxy(object):
                 datum = self.pipe.recv()
             except EOFError:
                 logger.debug("Process canceled be user.")
+                self._canceled = True
                 return
             else:
                 if isinstance(datum, StopIteration):
                     self._completed = True
+                    return
+                elif isinstance(datum, EarlyCancellationError):
+                    self._canceled = True
                     return
                 elif isinstance(datum, Exception):
                     raise datum
@@ -72,15 +77,22 @@ class Task_Proxy(object):
                     yield datum
 
     def cancel(self, timeout=1):
-        self._should_terminate_flag.value = True
-        for x in self.fetch():
-            # fetch to flush pipe to allow process to react to cancel comand.
-            pass
-        self.process.join(timeout)
+        if not (self.completed or self.canceled):
+            self._should_terminate_flag.value = True
+            for x in self.fetch():
+                # fetch to flush pipe to allow process to react to cancel comand.
+                pass
+        if self.process is not None:
+            self.process.join(timeout)
+            self.process = None
 
     @property
     def completed(self):
         return self._completed
+
+    @property
+    def canceled(self):
+        return self._canceled
 
     def __del__(self):
         self.cancel(timeout=.1)

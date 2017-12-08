@@ -25,7 +25,7 @@ from video_capture import File_Source, EndofVideoFileError
 from player_methods import update_recording_to_recent, load_meta_info
 from av_writer import AV_Writer
 from file_methods import load_object
-from player_methods import correlate_data
+from player_methods import correlate_data, update_recording_to_recent
 
 
 # logging
@@ -50,12 +50,17 @@ class Global_Container(object):
     pass
 
 
-def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir, min_data_confidence,
-           start_frame=None, end_frame=None, plugin_initializers=(), out_file_path=None, pre_computed={}):
+def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=None,
+           plugin_initializers=(), out_file_path=None, pre_computed={}):
 
-    logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()))
+    PID = str(os.getpid())
+    logger = logging.getLogger(__name__+' with pid: '+PID)
+    start_status = 'Starting video export with pid: {}'.format(PID)
+    print(start_status)
+    yield start_status, 0
 
     try:
+        update_recording_to_recent(rec_dir)
 
         vis_plugins = sorted([Vis_Circle, Vis_Cross, Vis_Polyline, Vis_Light_Points,
                               Vis_Watermark, Vis_Scan_Path, Vis_Eye_Video_Overlay],
@@ -82,7 +87,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
         cap = File_Source(g_pool, video_path)
         timestamps = cap.timestamps
 
-        # Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
+        # Out file path verification, we do this before but if one uses a separate tool, this will kick in.
         if out_file_path is None:
             out_file_path = os.path.join(rec_dir, "world_viz.mp4")
         else:
@@ -104,17 +109,19 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
         # We define them like python list slices, thus we can test them like such.
         trimmed_timestamps = timestamps[start_frame:end_frame]
         if len(trimmed_timestamps) == 0:
-            logger.warn("Start and end frames are set such that no video will be exported.")
-            return False
+            warn = "Start and end frames are set such that no video will be exported."
+            logger.warning(warn)
+            yield warn, 0.
+            return
 
         if start_frame is None:
             start_frame = 0
 
         # these two vars are shared with the lauching process and give a job length and progress report.
-        frames_to_export.value = len(trimmed_timestamps)
-        current_frame.value = 0
+        frames_to_export = len(trimmed_timestamps)
+        current_frame = 0
         exp_info = "Will export from frame {} to frame {}. This means I will export {} frames."
-        logger.debug(exp_info.format(start_frame, start_frame + frames_to_export.value, frames_to_export.value))
+        logger.debug(exp_info.format(start_frame, start_frame + frames_to_export, frames_to_export))
 
         # setup of writer
         writer = AV_Writer(out_file_path, fps=cap.frame_rate, audio_loc=audio_path, use_timestamps=True)
@@ -123,6 +130,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
 
         start_time = time()
 
+        g_pool.plugin_by_name = plugin_by_name
         g_pool.capture = cap
         g_pool.rec_dir = rec_dir
         g_pool.user_dir = user_dir
@@ -135,31 +143,22 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
         g_pool.pupil_data = pupil_data
         g_pool.pupil_positions = pre_computed.get("pupil_positions") or pupil_data['pupil_positions']
         g_pool.gaze_positions = pre_computed.get("gaze_positions") or pupil_data['gaze_positions']
-        g_pool.fixations = [] # populated by the fixation detector plugin
+        g_pool.fixations = pre_computed.get("fixations", [])
 
-        g_pool.pupil_positions_by_frame = correlate_data(g_pool.pupil_positions,g_pool.timestamps)
-        g_pool.gaze_positions_by_frame = correlate_data(g_pool.gaze_positions,g_pool.timestamps)
-        g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
+        g_pool.pupil_positions_by_frame = correlate_data(g_pool.pupil_positions, g_pool.timestamps)
+        g_pool.gaze_positions_by_frame = correlate_data(g_pool.gaze_positions, g_pool.timestamps)
+        g_pool.fixations_by_frame = correlate_data(g_pool.fixations, g_pool.timestamps)
 
         # add plugins
-        g_pool.plugins = Plugin_List(g_pool, plugin_by_name, plugin_initializers)
+        g_pool.plugins = Plugin_List(g_pool, plugin_initializers)
 
-        while frames_to_export.value > current_frame.value:
-
-            if should_terminate.value:
-                logger.warning("User aborted export. Exported {} frames to {}.".format(current_frame.value, out_file_path))
-
-                # explicit release of VideoWriter
-                writer.close()
-                writer = None
-                return False
-
+        while frames_to_export > current_frame:
             try:
                 frame = cap.get_frame()
             except EndofVideoFileError:
                 break
 
-            events = {'frame':frame}
+            events = {'frame': frame}
             # new positons and events
             events['gaze_positions'] = g_pool.gaze_positions_by_frame[frame.index]
             events['pupil_positions'] = g_pool.pupil_positions_by_frame[frame.index]
@@ -182,20 +181,25 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
                 p.recent_events(events)
 
             writer.write_video_frame(frame)
-            current_frame.value += 1
+            current_frame += 1
+            yield 'Exporting with pid {}'.format(PID), current_frame
 
         writer.close()
         writer = None
 
         duration = time()-start_time
-        effective_fps = float(current_frame.value)/duration
+        effective_fps = float(current_frame)/duration
 
         result = "Export done: Exported {} frames to {}. This took {} seconds. Exporter ran at {} frames per second."
-        logger.info(result.format(current_frame.value, out_file_path, duration, effective_fps))
+        print(result.format(current_frame, out_file_path, duration, effective_fps))
+        yield 'Export done. This took {:.0f} seconds.'.format(duration), current_frame
 
-    except:
+    except GeneratorExit:
+        print('Video export with pid {} was canceled.'.format(os.getpid()))
+    except Exception as e:
         from time import sleep
         import traceback
         trace = traceback.format_exc()
-        logger.error('Process Export (pid: {}) crashed with trace:\n{}'.format(os.getpid(), trace))
+        print('Process Export (pid: {}) crashed with trace:\n{}'.format(os.getpid(), trace))
+        yield e
         sleep(1.0)
