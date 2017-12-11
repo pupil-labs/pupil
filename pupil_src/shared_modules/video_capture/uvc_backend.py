@@ -94,7 +94,7 @@ class UVC_Source(Base_Source):
         import os
         import subprocess
 
-        DEV_HW_IDS = [(0x05A3, 0x9230, "Pupil Cam1 ID0"),  (0x05A3, 0x9231, "Pupil Cam1 ID1"), (0x05A3, 0x9232, "Pupil Cam1 ID2"), (0x046D, 0x0843, "Logitech Webcam C930e"), (0x17EF,0x480F, "Lenovo Integrated Camera")]
+        DEV_HW_IDS = [(0x05A3, 0x9230, "Pupil Cam1 ID0"),  (0x05A3, 0x9231, "Pupil Cam1 ID1"), (0x05A3, 0x9232, "Pupil Cam1 ID2"), (0x046D, 0x0843, "Logitech Webcam C930e"), (0x17EF,0x480F, "Lenovo Integrated Camera"), (0x0C45, 0x64AB, "Pupil Cam2 ID0")]
         ids_present = 0;
         ids_to_install = [];
         for id in DEV_HW_IDS:
