@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Plugin
+from plugin import Analysis_Plugin_Base
 from pyglui import ui, cygl
 from collections import deque
 import numpy as np
@@ -17,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Blink_Detection(Plugin):
+class Blink_Detection(Analysis_Plugin_Base):
     """
     This plugin implements a blink detection algorithm, based on sudden drops in the
     pupil detection confidence.
@@ -27,7 +27,7 @@ class Blink_Detection(Plugin):
     icon_font = 'pupil_icons'
 
     def __init__(self, g_pool, history_length=0.2, onset_confidence_threshold=0.5, offset_confidence_threshold=0.5, visualize=True):
-        super(Blink_Detection, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.visualize = visualize
         self.history_length = history_length  # unit: seconds
         self.onset_confidence_threshold = onset_confidence_threshold
@@ -81,8 +81,7 @@ class Blink_Detection(Plugin):
 
         if -self.offset_confidence_threshold <= filter_response <= self.onset_confidence_threshold:
             return  # response cannot be classified as blink onset or offset
-
-        if filter_response > self.onset_confidence_threshold:
+        elif filter_response > self.onset_confidence_threshold:
             blink_type = 'onset'
         else:
             blink_type = 'offset'
@@ -104,11 +103,40 @@ class Blink_Detection(Plugin):
     def gl_display(self):
         if self._recent_blink and self.visualize:
             if self._recent_blink['type'] == 'onset':
-                cygl.utils.push_ortho(1,1)
-                cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8), alpha=self._recent_blink['confidence']*0.5)
+                cygl.utils.push_ortho(1, 1)
+                cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8),
+                                           alpha=self._recent_blink['confidence'] * 0.5)
                 cygl.utils.pop_ortho()
 
     def get_init_dict(self):
         return {'history_length': self.history_length, 'visualize': self.visualize,
                 'onset_confidence_threshold': self.onset_confidence_threshold,
                 'offset_confidence_threshold': self.offset_confidence_threshold}
+
+
+class Offline_Blink_Detection(Blink_Detection):
+    def __init__(self, g_pool, history_length=0.2, onset_confidence_threshold=0.5,
+                 offset_confidence_threshold=0.5, visualize=True):
+        super().__init__(g_pool, history_length, onset_confidence_threshold,
+                         offset_confidence_threshold, visualize)
+        self.recalculate()
+
+    def recent_events(self, events):
+        pass
+
+    def gl_display(self):
+        pass
+
+    def on_notify(self, notification):
+        pass
+
+    def export(self, export_dir):
+        pass
+
+    def recalculate(self):
+        all_pp = self.g_pool.pupil_positions
+        conf_iter = (pp['confidence'] for pp in all_pp)
+        pupil_conf = np.fromiter(conf_iter, dtype=float, count=len(all_pp))
+        total_time = all_pp[-1]['timestamp'] - all_pp[0]['timestamp']
+        filter_len = int(len(all_pp) * self.history_length / total_time)
+        print(filter_len, all_pp[filter_len]['timestamp'] - all_pp[0]['timestamp'])
