@@ -117,9 +117,12 @@ class Blink_Detection(Analysis_Plugin_Base):
 class Offline_Blink_Detection(Blink_Detection):
     def __init__(self, g_pool, history_length=0.2, onset_confidence_threshold=0.5,
                  offset_confidence_threshold=0.5, visualize=True):
+        self._history_length = None
+        self._onset_confidence_threshold = None
+        self._offset_confidence_threshold = None
+
         super().__init__(g_pool, history_length, onset_confidence_threshold,
                          offset_confidence_threshold, visualize)
-        self.recalculate()
 
     def recent_events(self, events):
         pass
@@ -128,15 +131,65 @@ class Offline_Blink_Detection(Blink_Detection):
         pass
 
     def on_notify(self, notification):
-        pass
+        if notification['subject'] == 'blink_detection.should_recalculate':
+            self.recalculate()
+        elif notification['subject'] == 'pupil_positions_changed':
+            logger.info('Pupil postions changed. Recalculating.')
+            self.recalculate()
+        elif notification['subject'] == "should_export":
+            self.export(notification['range'], notification['export_dir'])
 
-    def export(self, export_dir):
+    def export(self, export_range, export_dir):
         pass
 
     def recalculate(self):
+        import time
+        t0 = time.time()
         all_pp = self.g_pool.pupil_positions
         conf_iter = (pp['confidence'] for pp in all_pp)
-        pupil_conf = np.fromiter(conf_iter, dtype=float, count=len(all_pp))
+        activity = np.fromiter(conf_iter, dtype=float, count=len(all_pp))
         total_time = all_pp[-1]['timestamp'] - all_pp[0]['timestamp']
-        filter_len = int(len(all_pp) * self.history_length / total_time)
-        print(filter_len, all_pp[filter_len]['timestamp'] - all_pp[0]['timestamp'])
+        filter_size = round(len(all_pp) * self.history_length / total_time)
+        blink_filter = np.ones(filter_size) / filter_size
+        blink_filter[filter_size // 2:] *= -1
+
+        # The theoretical response maximum is +-0.5
+        # Response of +-0.45 seems sufficient for a confidence of 1.
+        filter_response = np.convolve(activity, blink_filter, 'same') / 0.45
+
+        onsets = filter_response > self.onset_confidence_threshold
+        offsets = filter_response < -self.onset_confidence_threshold
+
+        tm1 = time.time()
+        print('Recalculating took\n\t{:.4f}sec for {} pp\n\t{} pp/sec\n\tsize: {}'.format(tm1 - t0, len(all_pp), len(all_pp) / (tm1 - t0), filter_size))
+        print(onsets.sum(), offsets.sum())
+
+    @property
+    def history_length(self):
+        return self._history_length
+
+    @history_length.setter
+    def history_length(self, val):
+        if self._history_length != val:
+            self.notify_all({'subject': 'blink_detection.should_recalculate', 'delay': .2})
+        self._history_length = val
+
+    @property
+    def onset_confidence_threshold(self):
+        return self._onset_confidence_threshold
+
+    @onset_confidence_threshold.setter
+    def onset_confidence_threshold(self, val):
+        if self._onset_confidence_threshold != val:
+            self.notify_all({'subject': 'blink_detection.should_recalculate', 'delay': .2})
+        self._onset_confidence_threshold = val
+
+    @property
+    def offset_confidence_threshold(self):
+        return self._offset_confidence_threshold
+
+    @offset_confidence_threshold.setter
+    def offset_confidence_threshold(self, val):
+        if self._offset_confidence_threshold != val:
+            self.notify_all({'subject': 'blink_detection.should_recalculate', 'delay': .2})
+        self._offset_confidence_threshold = val
