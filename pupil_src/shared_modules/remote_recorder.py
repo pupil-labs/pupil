@@ -72,8 +72,7 @@ class Remote_Recorder(Plugin):
         self.menu_toggle = ui.Button('Start Recording', self.toggle_recording)
         # ↴: Unicode: U+21B4, UTF-8: E2 86 B4
         self.quickbar_toggle = ui.Thumb('running', self, setter=self.toggle_recording,
-                                        label=chr(0xe04b), label_font='pupil_icons',
-                                        label_offset_size=-30, hotkey='e')
+                                        label=chr(0xe04b), label_font='pupil_icons', hotkey='e')
         self.quickbar_toggle.on_color[:] = (1, .0, .0, .8)
 
         self.menu.append(self.menu_toggle)
