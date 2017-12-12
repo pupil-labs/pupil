@@ -13,6 +13,11 @@ from plugin import Analysis_Plugin_Base
 from pyglui import ui, cygl
 from collections import deque
 import numpy as np
+import OpenGL.GL as gl
+
+from pyglui.cygl.utils import *
+import gl_utils
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -123,6 +128,18 @@ class Offline_Blink_Detection(Blink_Detection):
 
         super().__init__(g_pool, history_length, onset_confidence_threshold,
                          offset_confidence_threshold, visualize)
+        self.filter_response = []
+        self.response_classification = []
+
+    def init_ui(self):
+        super().init_ui()
+        self.timeline = ui.Timeline('Blink Detection', self.draw_activation)
+        self.g_pool.user_timelines.append(self.timeline)
+
+    def deinit_ui(self):
+        super().deinit_ui()
+        self.g_pool.user_timelines.remove(self.timeline)
+        self.timeline = None
 
     def recent_events(self, events):
         pass
@@ -155,14 +172,35 @@ class Offline_Blink_Detection(Blink_Detection):
 
         # The theoretical response maximum is +-0.5
         # Response of +-0.45 seems sufficient for a confidence of 1.
-        filter_response = np.convolve(activity, blink_filter, 'same') / 0.45
+        self.filter_response = np.convolve(activity, blink_filter, 'same') / 0.45
 
-        onsets = filter_response > self.onset_confidence_threshold
-        offsets = filter_response < -self.onset_confidence_threshold
+        onsets = self.filter_response > self.onset_confidence_threshold
+        offsets = self.filter_response < -self.onset_confidence_threshold
+
+        self.response_classification = np.zeros(self.filter_response.shape)
+        self.response_classification[onsets] = 1.
+        self.response_classification[offsets] = -1.
+        self.timeline.refresh()
 
         tm1 = time.time()
         print('Recalculating took\n\t{:.4f}sec for {} pp\n\t{} pp/sec\n\tsize: {}'.format(tm1 - t0, len(all_pp), len(all_pp) / (tm1 - t0), filter_size))
         print(onsets.sum(), offsets.sum())
+
+    def draw_activation(self, width, height, scale):
+        response_points = [(i, r) for i, r in enumerate(self.filter_response)]
+        if len(response_points) == 0:
+            return
+
+        thresholds = [(0, self.onset_confidence_threshold),
+                      (len(response_points), self.onset_confidence_threshold),
+                      (0, -self.offset_confidence_threshold),
+                      (len(response_points), -self.offset_confidence_threshold)]
+
+        with gl_utils.Coord_System(0, len(response_points), -1, 1):
+            draw_polyline(response_points, color=RGBA(0.6602, 0.8594, 0.4609, 0.8),
+                          line_type=gl.GL_LINE_STRIP, thickness=1*scale)
+            draw_polyline(thresholds, color=RGBA(0.9961, 0.8438, 0.3984, 0.8),
+                          line_type=gl.GL_LINES, thickness=1*scale)
 
     @property
     def history_length(self):
