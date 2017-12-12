@@ -141,8 +141,7 @@ class Hololens_Relay(Plugin):
     C:      i
     S:      0i
     """
-    icon_chr = chr(0xe307)
-    icon_font = 'pupil_icons'
+    icon_chr = 'H'
 
     def __init__(self, g_pool, port="50021", host="", use_primary_interface=True):
         super().__init__(g_pool)
