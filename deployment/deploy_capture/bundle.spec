@@ -36,6 +36,7 @@ if platform.system() == 'Darwin':
                    a.zipfiles,
                    a.datas,
                    [('libglfw.dylib', '/usr/local/lib/libglfw.dylib','BINARY')],
+                   [('librealsense.dylib','/usr/local/lib/librealsense.dylib','BINARY')],
                    [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
                    [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
                    [('pupil_icons.ttf',ui.get_pupil_icons_font_path(),'DATA')],
