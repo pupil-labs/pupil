@@ -61,7 +61,7 @@ elif platform.system() == 'Linux':
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports+pyndsi_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None,
-                 excludes=['matplotlib'])
+                 excludes=['matplotlib','pyrealsense'])
 
     pyz = PYZ(a.pure)
     exe = EXE(pyz,
@@ -142,7 +142,7 @@ elif platform.system() == 'Windows':
                      hiddenimports=['pyglui.cygl.shader']+scipy_imports+av_hidden_imports+pyndsi_hidden_imports,
                      hookspath=None,
                      runtime_hooks=None,
-                 excludes=['matplotlib'])
+                 excludes=['matplotlib','pyrealsense'])
 
 
         pyz = PYZ(a.pure)

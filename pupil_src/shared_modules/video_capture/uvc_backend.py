@@ -94,7 +94,7 @@ class UVC_Source(Base_Source):
         import os
         import subprocess
 
-        DEV_HW_IDS = [(0x05A3, 0x9230, "Pupil Cam1 ID0"),  (0x05A3, 0x9231, "Pupil Cam1 ID1"), (0x05A3, 0x9232, "Pupil Cam1 ID2"), (0x046D, 0x0843, "Logitech Webcam C930e"), (0x17EF,0x480F, "Lenovo Integrated Camera")]
+        DEV_HW_IDS = [(0x05A3, 0x9230, "Pupil Cam1 ID0"),  (0x05A3, 0x9231, "Pupil Cam1 ID1"), (0x05A3, 0x9232, "Pupil Cam1 ID2"), (0x046D, 0x0843, "Logitech Webcam C930e"), (0x17EF,0x480F, "Lenovo Integrated Camera"), (0x0C45, 0x64AB, "Pupil Cam2 ID0")]
         ids_present = 0;
         ids_to_install = [];
         for id in DEV_HW_IDS:
@@ -131,6 +131,9 @@ class UVC_Source(Base_Source):
         # UVC setting quirks:
         controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
 
+        if ("Pupil Cam2" in self.uvc_capture.name) and frame_size == (320, 240):
+            frame_size = (192, 192)
+
         self.frame_size = frame_size
         self.frame_rate = frame_rate
         for c in self.uvc_capture.controls:
@@ -144,8 +147,7 @@ class UVC_Source(Base_Source):
         except KeyError:
             pass
 
-        if ("Pupil Cam1" in self.uvc_capture.name or
-            "USB2.0 Camera" in self.uvc_capture.name):
+        if ("Pupil Cam1" in self.uvc_capture.name):
 
             if ("ID0" in self.uvc_capture.name or "ID1" in self.uvc_capture.name):
 
@@ -173,6 +175,18 @@ class UVC_Source(Base_Source):
                 self.uvc_capture.bandwidth_factor = 2.0
                 try: controls_dict['Auto Exposure Priority'].value = 1
                 except KeyError: pass
+
+        elif ("Pupil Cam2" in self.uvc_capture.name):
+
+            try: controls_dict['Auto Exposure Mode'].value = 1
+            except KeyError: pass
+
+            try:controls_dict['Saturation'].value = 0
+            except KeyError: pass
+
+            try: controls_dict['Gamma'].value = 200
+            except KeyError: pass
+
         else:
             self.uvc_capture.bandwidth_factor = 2.0
             try: controls_dict['Auto Focus'].value = 0
@@ -232,7 +246,7 @@ class UVC_Source(Base_Source):
             time.sleep(0.02)
             self._restart_logic()
         else:
-            if self.ts_offset: #c930 timestamps need to be set here. The camera does not provide valid pts from device
+            if self.ts_offset:  # c930 timestamps need to be set here. The camera does not provide valid pts from device
                 frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
             frame.timestamp -= self.g_pool.timebase.value
             self._recent_frame = frame
@@ -284,6 +298,7 @@ class UVC_Source(Base_Source):
 
         self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
+
     @property
     def frame_rate(self):
         if self.uvc_capture:
@@ -302,6 +317,14 @@ class UVC_Source(Base_Source):
                 new_rate, self.uvc_capture.frame_size, self.uvc_capture.name, rate))
         self.uvc_capture.frame_rate = rate
         self.frame_rate_backup = rate
+
+        if ("Pupil Cam2" in self.uvc_capture.name):
+
+            controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
+
+            special_settings = {200: 28, 180: 31}
+            try: controls_dict['Absolute Exposure Time'].value = special_settings.get(new_rate, 32)
+            except KeyError: pass
 
     @property
     def jpeg_support(self):
@@ -362,9 +385,19 @@ class UVC_Source(Base_Source):
             return (self.uvc_capture.frame_rates, [str(fr) for fr in self.uvc_capture.frame_rates])
         sensor_control.append(ui.Selector('frame_rate', self, selection_getter=frame_rate_getter, label='Frame rate'))
 
+        if ("Pupil Cam" in self.uvc_capture.name):
+            blacklist = ['Auto Focus', 'Absolute Focus', 'Absolute Iris ',
+                         'Scanning Mode ', 'Zoom absolute control', 'Pan control',
+                         'Tilt control', 'Roll absolute control',
+                         'Privacy Shutter control']
+        else:
+            blacklist = []
+
         for control in self.uvc_capture.controls:
             c = None
             ctl_name = control.display_name
+            if ctl_name in blacklist:
+                continue
 
             # now we add controls
             if control.d_type == bool:
