@@ -94,7 +94,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def start(self):
         if not self.g_pool.capture.online:
-            logger.error("Calibration required world capture video input.")
+            logger.error("This calibration requires world capture video input.")
             return
         super().start()
         audio.say("Starting {}".format(self.mode_pretty))
