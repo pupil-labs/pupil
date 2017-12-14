@@ -18,7 +18,7 @@ if platform.system() == 'Darwin':
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None,
-                 excludes=['matplotlib','pyrealsense'])
+                 excludes=['matplotlib'])
     pyz = PYZ(a.pure)
     exe = EXE(pyz,
               a.scripts,
@@ -36,6 +36,7 @@ if platform.system() == 'Darwin':
                    a.zipfiles,
                    a.datas,
                    [('libglfw.dylib', '/usr/local/lib/libglfw.dylib','BINARY')],
+                   [('librealsense.dylib','/usr/local/lib/librealsense.dylib','BINARY')],
                    [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
                    [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
                    [('pupil_icons.ttf',ui.get_pupil_icons_font_path(),'DATA')],
@@ -59,7 +60,7 @@ elif platform.system() == 'Linux':
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None,
-                 excludes=['matplotlib'])
+                 excludes=['matplotlib','pyrealsense'])
 
     pyz = PYZ(a.pure)
     exe = EXE(pyz,

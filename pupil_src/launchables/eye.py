@@ -258,14 +258,14 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         g_pool.capture_manager = manager_class_by_name[manager_class_name](g_pool,**manager_settings)
 
         if eye_id == 0:
-            cap_src = ["Pupil Cam1 ID0", "HD-6000", "HD USB Camera", "USB 2.0 Camera"]
+            cap_src = ["Pupil Cam2 ID0", "Pupil Cam1 ID0", "HD-6000"]
         else:
-            cap_src = ["Pupil Cam1 ID1", "HD-6000"]
+            cap_src = ["Pupil Cam2 ID1", "Pupil Cam1 ID1"]
 
         # Initialize capture
         default_settings = ('UVC_Source', {
                             'preferred_names': cap_src,
-                            'frame_size': (640, 480),
+                            'frame_size': (320, 240),
                             'frame_rate': 90
                             })
 
@@ -309,8 +309,14 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         # Initialize glfw
         glfw.glfwInit()
         title = "Pupil Capture - eye {}".format(eye_id)
+
+        width, height = g_pool.capture.frame_size
+        width *= 2
+        height *= 2
+        width += icon_bar_width
+
         width, height = session_settings.get(
-            'window_size', g_pool.capture.frame_size)
+            'window_size', (width, height))
         main_window = glfw.glfwCreateWindow(width, height, title, None, None)
         window_pos = session_settings.get(
             'window_position', window_position_default)
@@ -344,7 +350,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         def set_window_size():
             f_width, f_height = g_pool.capture.frame_size
-            f_width += int(icon_bar_width*g_pool.gui.scale)
+            f_width *= 2
+            f_height *= 2
+            f_width += int(icon_bar_width * g_pool.gui.scale)
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
         general_settings.append(ui.Button('Reset window size', set_window_size))
         general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
