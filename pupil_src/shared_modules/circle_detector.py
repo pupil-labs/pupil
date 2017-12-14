@@ -491,10 +491,9 @@ def marker_3d_pose(marker, cam_model, marker_diameter=7.6):
 
     target_circle = [[0, 0], [marker_diameter, marker_diameter], 0]
     target_pts = getEllipsePts(target_circle)
-    target_pts3D = np.zeros((target_pts.shape[0], target_pts.shape[1] + 1))
+    target_pts3D = np.zeros((target_pts.shape[0], target_pts.shape[1] + 1), dtype=np.float32)
     target_pts3D[:, :-1] = target_pts
     target_pts3D.shape = -1, 1, 3
-    target_pts3D = target_pts3D.astype('float32')
 
     e = marker['ellipses'][-1]
 
