@@ -485,10 +485,6 @@ def getEllipsePts(e, num_pts=10):
     pts_rot[:, 0] += c1
     pts_rot[:, 1] += c2
 
-    # import matplotlib.pyplot as plt
-    # plt.scatter(pts_rot[:, 0], pts_rot[:, 1])
-    # plt.show()
-
     return pts_rot
 
 def marker_3d_pose(marker, cam_model, marker_diameter=7.6):
