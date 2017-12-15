@@ -166,10 +166,10 @@ class Visualizer(object):
             else:
                 self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None, share= glfwGetCurrentContext() )
 
-            self.other_window = glfwGetCurrentContext();
+            self.other_window = glfwGetCurrentContext()
 
             glfwMakeContextCurrent(self.window)
-
+            glfwSwapInterval(0)
             glfwSetWindowPos(self.window,window_position_default[0],window_position_default[1])
             # Register callbacks window
             glfwSetFramebufferSizeCallback(self.window,self.on_resize)

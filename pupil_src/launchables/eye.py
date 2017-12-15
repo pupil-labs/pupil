@@ -623,10 +623,11 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
                     make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
 
+                    g_pool.pupil_detector.visualize()  # detector decides if we visualize or not
+
                     # update screen
                     glfw.glfwSwapBuffers(main_window)
                 glfw.glfwPollEvents()
-                g_pool.pupil_detector.visualize()  # detector decides if we visualize or not
 
         # END while running
 
