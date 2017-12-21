@@ -13,7 +13,6 @@ import numpy as np
 from numpy import linalg as LA
 import cv2
 from methods import dist_pts_ellipse, normalize
-import math
 
 
 class CircleTracker(object):
@@ -472,7 +471,7 @@ def getEllipsePts(e, num_pts=10):
     b = e[1][1]
     angle = e[2]
 
-    steps = np.linspace(0, 2 * math.pi, num=num_pts, endpoint=False)
+    steps = np.linspace(0, 2 * np.pi, num=num_pts, endpoint=False)
     rot = cv2.getRotationMatrix2D((0, 0), -angle, 1)
 
     pts1 = a / 2.0 * np.cos(steps)
