@@ -128,15 +128,11 @@ class Eye_Wrapper(object):
         self.pos = (min(frame.img.shape[1] - video_size[0], max(self.pos[0], 0)),
                     min(frame.img.shape[0] - video_size[1], max(self.pos[1], 0)))
 
-        # 4. vflipping images, converting to greyscale
-        eye_gray = self.current_eye_frame.gray
-        eyeimage = cv2.resize(eye_gray, (0, 0), fx=scale, fy=scale)
-        if self.hflip:
-            eyeimage = np.fliplr(eyeimage)
-        if self.vflip:
-            eyeimage = np.flipud(eyeimage)
 
+        # 4. vflipping images, converting to greyscale
+        eyeimage = self.current_eye_frame.gray
         eyeimage = cv2.cvtColor(eyeimage, cv2.COLOR_GRAY2BGR)
+
         if show_ellipses:
             try:
                 pp = next((pp for pp in pupil_positions if pp['id'] == self.eyeid and pp['timestamp'] == self.current_eye_frame.timestamp))
@@ -145,19 +141,17 @@ class Eye_Wrapper(object):
             else:
                 el = pp['ellipse']
                 conf = int(pp.get('model_confidence', pp.get('confidence', 0.1)) * 255)
-                center = list(map(lambda val: int(scale*val), el['center']))
-                el['axes'] = tuple(map(lambda val: int(scale*val/2), el['axes']))
-                el['angle'] = int(el['angle'])
-                el_points = cv2.ellipse2Poly(tuple(center), el['axes'], el['angle'], 0, 360, 1)
-                if self.hflip:
-                    el_points = [(video_size[0] - x, y) for x, y in el_points]
-                    center[0] = video_size[0] - center[0]
-                if self.vflip:
-                    el_points = [(x, video_size[1] - y) for x, y in el_points]
-                    center[1] = video_size[1] - center[1]
+                el_points = getEllipsePts((el['center'], el["axes"], el['angle']))
+                cv2.polylines(eyeimage, [np.asarray(el_points,dtype='i')], True, (0, 0, 255, conf), thickness=1)
+                cv2.circle(eyeimage,(int(el['center'][0]),int(el['center'][1])), 5, (0, 0, 255, conf), thickness=-1)
 
-                cv2.polylines(eyeimage, [np.asarray(el_points)], True, (0, 0, 255, conf), thickness=int(np.ceil(2*scale)))
-                cv2.circle(eyeimage, tuple(center), int(5*scale), (0, 0, 255, conf), thickness=-1)
+
+        #flip and scale
+        eyeimage = cv2.resize(eyeimage, (0, 0), fx=scale, fy=scale)
+        if self.hflip:
+            eyeimage = np.fliplr(eyeimage)
+        if self.vflip:
+            eyeimage = np.flipud(eyeimage)
 
         transparent_image_overlay(self.pos, eyeimage, frame.img, alpha)
 
@@ -175,6 +169,27 @@ class Eye_Wrapper(object):
             self.drag_offset = None
             return False
 
+def getEllipsePts(e, num_pts=10):
+    c1 = e[0][0]
+    c2 = e[0][1]
+    a = e[1][0]
+    b = e[1][1]
+    angle = e[2]
+
+    steps = np.linspace(0, 2 * np.pi, num=num_pts, endpoint=False)
+    rot = cv2.getRotationMatrix2D((0, 0), -angle, 1)
+
+    pts1 = a / 2.0 * np.cos(steps)
+    pts2 = b / 2.0 * np.sin(steps)
+    pts = np.column_stack((pts1, pts2, np.ones(pts1.shape[0])))
+
+    pts_rot = np.matmul(rot, pts.T)
+    pts_rot = pts_rot.T
+
+    pts_rot[:, 0] += c1
+    pts_rot[:, 1] += c2
+
+    return pts_rot
 
 class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
     icon_chr = chr(0xec02)
