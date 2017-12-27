@@ -8,15 +8,6 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
-'''
-(*)~---------------------------------------------------------------------------
-Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
-
-Distributed under the terms of the GNU
-Lesser General Public License (LGPL v3.0).
-See COPYING and COPYING.LESSER for license details.
----------------------------------------------------------------------------~(*)
 
 Fixations general knowledge from literature review
     + Goldberg et al. - fixations rarely < 100ms and range between 200ms and 400ms in duration (Irwin, 1992 - fixations dependent on task between 150ms - 600ms)
