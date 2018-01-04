@@ -42,7 +42,8 @@ class Camera_Intrinsics_Estimation(Plugin):
         This method is not a gaze calibration.
         This method is used to calculate camera intrinsics.
     """
-    icon_chr = 'I'
+    icon_chr = chr(0xec06)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool, fullscreen=False):
         super().__init__(g_pool)
