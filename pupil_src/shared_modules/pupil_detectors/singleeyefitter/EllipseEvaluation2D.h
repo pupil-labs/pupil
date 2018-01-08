@@ -1,5 +1,3 @@
-
-
 #ifndef singleeyefitter_EllipseEvaluation2D_h__
 #define singleeyefitter_EllipseEvaluation2D_h__
 

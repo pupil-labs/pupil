@@ -1,4 +1,3 @@
-
 #include "EyeModelFitter.h"
 #include "Fit/CircleOnSphereFit.h"
 #include "CircleDeviationVariance3D.h"
