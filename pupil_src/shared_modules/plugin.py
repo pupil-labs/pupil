@@ -333,7 +333,7 @@ class Plugin_List(object):
         '''
         plugins may flag themselves as dead or are flagged as dead. We need to remove them.
         '''
-        for p in self._plugins[:]:
+        for p in self._plugins[::-1]:
             if not p.alive:
                 if self.g_pool.app in ("capture", "player"):
                     p.deinit_ui()

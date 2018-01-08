@@ -437,8 +437,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                 for p in g_pool.plugins:
                     p.on_notify(n)
 
-
-            #a dictionary that allows plugins to post and read events
+            # a dictionary that allows plugins to post and read events
             events = {}
             # report time between now and the last loop interation
             events['dt'] = get_dt()

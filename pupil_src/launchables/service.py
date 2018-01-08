@@ -121,7 +121,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         plugin_by_index = runtime_plugins+calibration_plugins+gaze_mapping_plugins+user_launchable_plugins
         name_by_index = [p.__name__ for p in plugin_by_index]
         plugin_by_name = dict(zip(name_by_index, plugin_by_index))
-        default_plugins = [('Dummy_Gaze_Mapper', {}), ('HMD_Calibration', {}), ('Pupil_Remote', {})]
+        default_plugins = [('Service_UI', {}), ('Dummy_Gaze_Mapper', {}), ('HMD_Calibration', {}), ('Pupil_Remote', {})]
         g_pool.plugin_by_name = plugin_by_name
 
         tick = delta_t()
