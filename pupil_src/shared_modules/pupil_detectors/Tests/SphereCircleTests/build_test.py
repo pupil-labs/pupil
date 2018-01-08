@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
+
 if __name__ == '__main__':
     import subprocess as sp
     sp.call("python setup_test.py build_ext --inplace",shell=True)

@@ -9,8 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 */
 
-
-
 #include "../singleeyefitter/utils.h" // random
 #include "common/types.h"
 

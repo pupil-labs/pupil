@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 */
 
-
 #include <string>
 #include <iostream>
 #include "logger/pycpplogger.h"

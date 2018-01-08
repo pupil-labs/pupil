@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-
 # import detector classes from sibling files
 from . screen_marker_calibration import Screen_Marker_Calibration
 from . manual_marker_calibration import Manual_Marker_Calibration

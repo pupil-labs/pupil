@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-#when running from source compile cpp extension if nessesary.
+# when running from source compile cpp extension if necessary.
 
 import sys
 if not getattr(sys, 'frozen', False):

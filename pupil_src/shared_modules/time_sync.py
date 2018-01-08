@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-
 from plugin import Plugin
 from pyglui import ui
 from socket import gethostname

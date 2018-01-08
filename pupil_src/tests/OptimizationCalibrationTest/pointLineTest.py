@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
+
 import os, sys, platform
 loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
 sys.path.append(os.path.join(loc[0], 'pupil_src', 'shared_modules'))

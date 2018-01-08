@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
+
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
 from libcpp.deque cimport deque

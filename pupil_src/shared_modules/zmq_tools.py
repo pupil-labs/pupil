@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-
 '''
 This file contains convenience classes for communication with
 the Pupil IPC Backbone.

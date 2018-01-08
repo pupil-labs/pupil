@@ -9,8 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-
-
 from CircleGoodnessTest import test
 
 def main():

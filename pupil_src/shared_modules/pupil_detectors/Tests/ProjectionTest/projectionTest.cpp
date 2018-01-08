@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 */
 
-
 #include <iostream>
 #include "../../singleeyefitter/projection.h"
 #include "geometry/Ellipse.h"
