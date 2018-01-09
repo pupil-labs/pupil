@@ -259,6 +259,8 @@ class Plugin(object):
         toggle_menu(False)
 
     def remove_menu(self):
+        if not self.menu.collapsed:
+            self.g_pool.menubar.collapsed = True
         self.g_pool.menubar.remove(self.menu)
         self.g_pool.iconbar.remove(self.menu_icon)
         self.menu = None
