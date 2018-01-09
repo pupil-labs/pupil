@@ -177,6 +177,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.g_pool.pupil_positions_by_frame = correlate_data(list(self.pupil_positions.values()), self.g_pool.timestamps)
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
+        self.save_offline_data()
 
     def on_notify(self, notification):
         if notification['subject'] == 'eye_process.started':
@@ -189,12 +190,16 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.stop_eye_process(1)
         # close sockets before context is terminated
         self.data_sub = None
+        self.save_offline_data()
 
+    def save_offline_data(self):
         session_data = {}
         session_data["detection_method"] = self.detection_method
         session_data['pupil_positions'] = list(self.pupil_positions.values())
         session_data['detection_status'] = self.detection_status
-        save_object(session_data, os.path.join(self.data_dir, 'offline_pupil_data'))
+        cache_path = os.path.join(self.data_dir, 'offline_pupil_data')
+        save_object(session_data, cache_path)
+        logger.info('Cached detected pupil data to {}'.format(cache_path))
 
     def redetect(self):
         self.pupil_positions.clear()  # delete previously detected pupil positions
