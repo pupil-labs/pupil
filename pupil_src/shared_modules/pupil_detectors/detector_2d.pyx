@@ -56,7 +56,7 @@ cdef class Detector_2D:
         self.g_pool = g_pool
         self.uniqueness = 'unique'
         self.icon_font = 'pupil_icons'
-        self.icon_chr = chr(0xec19)
+        self.icon_chr = chr(0xec18)
         self.detectProperties = settings or {}
         self.coarseDetectionPreviousWidth = -1
         self.coarseDetectionPreviousPosition =  (0,0)
