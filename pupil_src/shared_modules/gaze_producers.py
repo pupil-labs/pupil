@@ -415,6 +415,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.g_pool.gaze_positions = sorted(all_gaze, key=lambda d: d['timestamp'])
         self.g_pool.gaze_positions_by_frame = correlate_data(self.g_pool.gaze_positions, self.g_pool.timestamps)
         self.notify_all({'subject': 'gaze_positions_changed','delay':1})
+        self.save_offline_data()
 
     def calibrate_section(self,sec):
         if sec['bg_task']:
@@ -519,7 +520,9 @@ class Offline_Calibration(Gaze_Producer_Base):
                 sec['bg_task'].cancel()
             sec['bg_task'] = None
             sec["gaze_positions"] = []
+        self.save_offline_data()
 
+    def save_offline_data(self):
         session_data = {}
         session_data['sections'] = self.sections
         session_data['version'] = self.session_data_version
@@ -528,4 +531,6 @@ class Offline_Calibration(Gaze_Producer_Base):
             session_data['circle_marker_positions'] = self.circle_marker_positions
         else:
             session_data['circle_marker_positions'] = []
-        save_object(session_data, os.path.join(self.result_dir, 'offline_calibration_gaze'))
+        cache_path = os.path.join(self.result_dir, 'offline_calibration_gaze')
+        save_object(session_data, cache_path)
+        logger.info('Cached offline calibration data to {}'.format(cache_path))
