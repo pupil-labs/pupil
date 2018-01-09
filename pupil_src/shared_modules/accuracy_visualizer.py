@@ -34,8 +34,9 @@ class Accuracy_Visualizer(Plugin):
     icon_chr = chr(0xec11)
     icon_font = 'pupil_icons'
 
-    def __init__(self, g_pool, outlier_threshold=5.):
+    def __init__(self, g_pool, outlier_threshold=5., visualize=True):
         super().__init__(g_pool)
+        self.visualize = visualize
         self.accuracy = None
         self.precision = None
         self.error_lines = None
@@ -48,6 +49,8 @@ class Accuracy_Visualizer(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Accuracy Visualizer'
+
+        self.menu.append(ui.Switch('visualize', self, label='Visualize mapping error'))
 
         general_help = '''Measure gaze mapping accuracy and precision using samples
                           that were collected during calibration. The outlier threshold
@@ -170,10 +173,10 @@ class Accuracy_Visualizer(Plugin):
         logger.info("Angular precision: {}. Used {} of {} samples.".format(self.precision, num_used, num_total))
 
     def gl_display(self):
-        if self.error_lines is not None:
+        if self.visualize and self.error_lines is not None:
             draw_polyline_norm(self.error_lines, color=RGBA(1., 0.5, 0., .5), line_type=gl.GL_LINES)
             draw_points_norm(self.error_lines[1::2], color=RGBA(.0, 0.5, 0.5, .5), size=3)
             draw_points_norm(self.error_lines[0::2], color=RGBA(.5, 0.0, 0.0, .5), size=3)
 
     def get_init_dict(self):
-        return {'outlier_threshold': self.outlier_threshold}
+        return {'outlier_threshold': self.outlier_threshold, 'visualize': self.visualize}
