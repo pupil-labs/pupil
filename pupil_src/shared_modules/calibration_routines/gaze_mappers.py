@@ -35,7 +35,7 @@ class Gaze_Mapping_Plugin(Plugin):
     '''base class for all gaze mapping routines'''
     uniqueness = 'by_base_class'
     order = .1
-    icon_chr = chr(0xec03)
+    icon_chr = chr(0xec20)
     icon_font = 'pupil_icons'
 
     def __init__(self, g_pool):
