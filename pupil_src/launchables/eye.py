@@ -127,9 +127,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         from video_capture import manager_classes
 
         # Pupil detectors
-        from pupil_detectors import Detector_2D, Detector_3D
+        from pupil_detectors import Detector_2D, Detector_3D, Detector_Dummy
         pupil_detectors = {Detector_2D.__name__: Detector_2D,
-                           Detector_3D.__name__: Detector_3D}
+                           Detector_3D.__name__: Detector_3D,
+                           Detector_Dummy.__name__: Detector_Dummy}
 
         # UI Platform tweaks
         if platform.system() == 'Linux':
@@ -248,7 +249,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. This uses the least amount of CPU power",
                                          'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be as small as possible, but large enough to capture all pupil movements.",
                                          'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below."}
-
 
         capture_manager_settings = session_settings.get(
             'capture_manager_settings', ('UVC_Manager',{}))
@@ -369,9 +369,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         detector_selector = ui.Selector('pupil_detector',
                                         getter=lambda: g_pool.pupil_detector.__class__,
-                                        setter=set_detector, selection=[
-                                            Detector_2D, Detector_3D],
-                                        labels=['C++ 2d detector',
+                                        setter=set_detector,
+                                        selection=[Detector_Dummy,
+                                                   Detector_2D,
+                                                   Detector_3D],
+                                        labels=['disabled',
+                                                'C++ 2d detector',
                                                 'C++ 3d detector'],
                                         label="Detection method")
         general_settings.append(detector_selector)
@@ -460,10 +463,14 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         if not isinstance(g_pool.pupil_detector, Detector_3D):
                             set_detector(Detector_3D)
                         detector_selector.read_only = True
-                    else:
+                    elif notification['mode'] == '2d':
                         if not isinstance(g_pool.pupil_detector, Detector_2D):
                             set_detector(Detector_2D)
                         detector_selector.read_only = False
+                    else:
+                        if not isinstance(g_pool.pupil_detector, Detector_Dummy):
+                            set_detector(Detector_Dummy)
+                        detector_selector.read_only = True
                 elif subject == 'recording.started':
                     if notification['record_eye'] and g_pool.capture.online:
                         record_path = notification['rec_path']
@@ -547,10 +554,11 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
                 # pupil ellipse detection
                 result = g_pool.pupil_detector.detect(frame, g_pool.u_r, g_pool.display_mode == 'algorithm')
-                result['id'] = eye_id
+                if result is not None:
+                    result['id'] = eye_id
 
-                # stream the result
-                pupil_socket.send('pupil.%s'%eye_id,result)
+                    # stream the result
+                    pupil_socket.send('pupil.%s'%eye_id,result)
 
             cpu_graph.update()
 
@@ -574,7 +582,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
                     f_width, f_height = g_pool.capture.frame_size
                     make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
-                    if frame:
+                    if frame and result:
                         if result['method'] == '3d c++':
                             eye_ball = result['projected_sphere']
                             try:

@@ -236,7 +236,6 @@ def launcher():
             rec_dir = None
         cmd_push.notify({'subject':'player_drop_process.should_start','rec_dir':rec_dir})
 
-
     with Prevent_Idle_Sleep():
         while True:
             # listen for relevant messages.
