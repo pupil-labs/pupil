@@ -172,11 +172,10 @@ def calibrate_and_map(g_pool, ref_list, calib_list, map_list, x_offset, y_offset
 
             if mapped_gaze:
                 progress = (100 * (idx+1)/len(map_list))
-                if progress == 100:
-                    progress = "Mapping complete."
-                else:
-                    progress = "Mapping..{}%".format(int(progress))
+                progress = "Mapping..{}%".format(int(progress))
                 yield progress, mapped_gaze
+        progress = "Mapping complete."
+        yield progress, []
     else:
         yield "calibration failed", []
 
