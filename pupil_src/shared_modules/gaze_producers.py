@@ -197,7 +197,7 @@ def make_section_dict(calib_range, map_range):
 
 
 class Offline_Calibration(Gaze_Producer_Base):
-    session_data_version = 6
+    session_data_version = 7
 
     def __init__(self, g_pool, manual_ref_edit_mode=False):
         super().__init__(g_pool)
@@ -256,6 +256,10 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.glfont.set_color_float((1., 1., 1., .8))
         self.glfont.set_align_string(v_align='right', h_align='top')
 
+        def use_as_natural_features():
+            self.manual_ref_positions.extend(self.circle_marker_positions)
+            self.manual_ref_positions.sort(key=lambda mr: mr['index'])
+
         def jump_next_natural_feature():
             self.manual_ref_positions.sort(key=lambda mr: mr['index'])
             current = self.g_pool.capture.get_frame_index()
@@ -274,6 +278,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         slider = ui.Slider('detection_progress', self, label='Detection Progress', setter=lambda _: _)
         slider.display_format = '%3.0f%%'
         self.menu.append(slider)
+        self.menu.append(ui.Button('Use calibration markers as natural features', use_as_natural_features))
         self.menu.append(ui.Button('Jump to next natural feature', jump_next_natural_feature))
         self.menu.append(ui.Switch('manual_ref_edit_mode', self, label="Natural feature edit mode"))
         self.menu.append(ui.Button('Clear natural features', clear_natural_features))
