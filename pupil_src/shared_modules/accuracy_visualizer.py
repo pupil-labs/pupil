@@ -66,7 +66,7 @@ class Accuracy_Visualizer(Plugin):
                             of the angular distance (in degrees of visual angle)
                             between successive samples during a fixation.'''.replace("\n", " ").replace("  ", '')
 
-        def ignore():
+        def ignore(_):
             pass
 
         self.menu.append(ui.Info_Text(accuracy_help))
