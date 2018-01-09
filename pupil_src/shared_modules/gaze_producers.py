@@ -519,12 +519,18 @@ class Offline_Calibration(Gaze_Producer_Base):
             if sec['bg_task']:
                 sec['bg_task'].cancel()
             sec['bg_task'] = None
-            sec["gaze_positions"] = []
+            sec['gaze_positions'] = []
         self.save_offline_data()
 
     def save_offline_data(self):
         session_data = {}
-        session_data['sections'] = self.sections
+        session_data['sections'] = []
+        for s in self.sections:
+            # we need a shallow copy with bg_task=None and gaze_positions=[]
+            sec = s.copy()
+            sec['bg_task'] = None
+            sec['gaze_positions'] = []
+            session_data['sections'].append(sec)
         session_data['version'] = self.session_data_version
         session_data['manual_ref_positions'] = self.manual_ref_positions
         if self.detection_progress == 100.0:
