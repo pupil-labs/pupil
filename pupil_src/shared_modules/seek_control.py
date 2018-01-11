@@ -36,7 +36,7 @@ class Seek_Control(System_Plugin_Base):
 
     def init_ui(self):
         self.seek_bar = ui.Seek_Bar(self, self.frame_count - 1, self.on_seek, self.g_pool.user_timelines)
-        self.g_pool.timelines.append(self.seek_bar)
+        self.g_pool.timelines.insert(0, self.seek_bar)
 
     def deinit_ui(self):
         self.g_pool.timelines.remove(self.seek_bar)
