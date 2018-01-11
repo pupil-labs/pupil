@@ -65,7 +65,7 @@ cdef class Detector_3D:
         self.g_pool = g_pool
         self.uniqueness = 'unique'
         self.icon_font = 'pupil_icons'
-        self.icon_chr = chr(0xec20)
+        self.icon_chr = chr(0xec19)
         self.detectProperties2D = settings['2D_Settings'] if settings else {}
         self.detectProperties3D = settings['3D_Settings'] if settings else {}
 

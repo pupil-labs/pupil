@@ -230,12 +230,8 @@ def launcher():
     elif  app == 'capture':
        cmd_push.notify({'subject':'world_process.should_start'})
     elif app == 'player':
-        if len(sys.argv) > 2:
-            rec_dir = os.path.expanduser(sys.argv[-1])
-        else:
-            rec_dir = None
+        rec_dir = os.path.expanduser(sys.argv[-1])
         cmd_push.notify({'subject':'player_drop_process.should_start','rec_dir':rec_dir})
-
 
     with Prevent_Idle_Sleep():
         while True:
