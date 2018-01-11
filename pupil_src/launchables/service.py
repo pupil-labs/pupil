@@ -205,7 +205,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
             g_pool.plugins.clean()
 
         session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
-        session_settings['version'] = g_pool.version
+        session_settings['version'] = str(g_pool.version)
         session_settings['eye0_process_alive'] = eyes_are_alive[0].value
         session_settings['eye1_process_alive'] = eyes_are_alive[1].value
         session_settings['detection_mapping_mode'] = g_pool.detection_mapping_mode
