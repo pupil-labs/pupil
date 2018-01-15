@@ -93,6 +93,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         from calibration_routines import calibration_plugins, gaze_mapping_plugins
         from pupil_remote import Pupil_Remote
         from pupil_groups import Pupil_Groups
+        from service_ui import Service_UI
 
         logger.info('Application Version: {}'.format(version))
         logger.info('System Info: {}'.format(get_system_info()))
@@ -117,7 +118,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
 
         # manage plugins
         runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
-        user_launchable_plugins = [Pupil_Groups, Pupil_Remote]+runtime_plugins
+        user_launchable_plugins = [Service_UI, Pupil_Groups, Pupil_Remote]+runtime_plugins
         plugin_by_index = runtime_plugins+calibration_plugins+gaze_mapping_plugins+user_launchable_plugins
         name_by_index = [p.__name__ for p in plugin_by_index]
         plugin_by_name = dict(zip(name_by_index, plugin_by_index))
@@ -179,6 +180,9 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         ipc_pub.notify({'subject': 'service_process.started'})
         logger.warning('Process started.')
         g_pool.service_should_run = True
+
+        # initiate ui update loop
+        ipc_pub.notify({'subject': 'service_process.ui.should_update', 'delay': 1/30})
 
         # Event loop
         while g_pool.service_should_run:
