@@ -109,6 +109,7 @@ class Service_UI(System_Plugin_Base):
     def on_notify(self, notification):
         if notification['subject'] == 'service_process.ui.should_update':
             # resend delayed notification, keep ui loop running:
+            notification['delay'] = notification['initial_delay']
             self.notify_all(notification)
             self.update_ui()
 

@@ -182,7 +182,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         g_pool.service_should_run = True
 
         # initiate ui update loop
-        ipc_pub.notify({'subject': 'service_process.ui.should_update', 'delay': 1/30})
+        ipc_pub.notify({'subject': 'service_process.ui.should_update', 'initial_delay': 1/40})
 
         # Event loop
         while g_pool.service_should_run:
