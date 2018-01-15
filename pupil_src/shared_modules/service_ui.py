@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import platform
 import logging
+import socket
 
 import numpy as np
 
@@ -30,7 +31,7 @@ else:
     scroll_factor = 1.0
     window_position_default = (0, 0)
 
-window_size_default = (400, 350)
+window_size_default = (400, 400)
 logger = logging.getLogger(__name__)
 
 
@@ -98,6 +99,13 @@ class Service_UI(System_Plugin_Base):
                                           label='Interface size'))
 
         g_pool.menubar.append(ui.Button('Reset window size', set_window_size))
+
+        pupil_remote_addr = '{}:50020'.format(socket.gethostbyname(socket.gethostname()))
+        g_pool.menubar.append(ui.Text_Input('pupil_remote_addr',
+                                            getter=lambda: pupil_remote_addr,
+                                            setter=lambda x: None,
+                                            label='Pupil Remote address'))
+
         g_pool.menubar.append(ui.Selector('detection_mapping_mode',
                                           g_pool,
                                           label='Detection & mapping mode',
