@@ -375,6 +375,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         glfw.glfwSetScrollCallback(main_window, on_scroll)
         glfw.glfwSetDropCallback(main_window, on_drop)
 
+        toggle_general_settings(True)
+
         g_pool.gui.configuration = session_settings.get('ui_config', {})
 
         # gl_state settings
