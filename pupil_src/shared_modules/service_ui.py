@@ -51,25 +51,6 @@ class Service_UI(System_Plugin_Base):
                                            header_pos='headline')
         g_pool.gui.append(g_pool.menubar)
 
-        def set_window_size():
-            glfw.glfwSetWindowSize(main_window, 300, 300)
-        g_pool.menubar.append(ui.Button('Reset window size', set_window_size))
-        g_pool.menubar.append(ui.Selector('detection_mapping_mode',
-                                          g_pool,
-                                          label='Detection & mapping mode',
-                                          setter=self.set_detection_mapping_mode,
-                                          selection=['disabled', '2d', '3d']))
-        g_pool.menubar.append(ui.Switch('eye0_process',
-                                        label='Detect eye 0',
-                                        setter=lambda alive: self.start_stop_eye(0, alive),
-                                        getter=lambda: g_pool.eyes_are_alive[0].value))
-        g_pool.menubar.append(ui.Switch('eye1_process',
-                                        label='Detect eye 1',
-                                        setter=lambda alive: self.start_stop_eye(1, alive),
-                                        getter=lambda: g_pool.eyes_are_alive[1].value))
-
-        g_pool.menubar.append(ui.Info_Text('Service Version: {}'.format(g_pool.version)))
-
         # Callback functions
         def on_resize(window, w, h):
             self.window_size = w, h
@@ -93,6 +74,35 @@ class Service_UI(System_Plugin_Base):
 
         def on_scroll(window, x, y):
             g_pool.gui.update_scroll(x, y * scroll_factor)
+
+        def set_scale(new_scale):
+            g_pool.gui_user_scale = new_scale
+            on_resize(main_window, *self.window_size)
+
+        def set_window_size():
+            glfw.glfwSetWindowSize(main_window, 300, 300)
+
+        g_pool.menubar.append(ui.Selector('gui_user_scale', g_pool,
+                                          setter=set_scale,
+                                          selection=[.6, .8, 1., 1.2, 1.4],
+                                          label='Interface size'))
+
+        g_pool.menubar.append(ui.Button('Reset window size', set_window_size))
+        g_pool.menubar.append(ui.Selector('detection_mapping_mode',
+                                          g_pool,
+                                          label='Detection & mapping mode',
+                                          setter=self.set_detection_mapping_mode,
+                                          selection=['disabled', '2d', '3d']))
+        g_pool.menubar.append(ui.Switch('eye0_process',
+                                        label='Detect eye 0',
+                                        setter=lambda alive: self.start_stop_eye(0, alive),
+                                        getter=lambda: g_pool.eyes_are_alive[0].value))
+        g_pool.menubar.append(ui.Switch('eye1_process',
+                                        label='Detect eye 1',
+                                        setter=lambda alive: self.start_stop_eye(1, alive),
+                                        getter=lambda: g_pool.eyes_are_alive[1].value))
+
+        g_pool.menubar.append(ui.Info_Text('Service Version: {}'.format(g_pool.version)))
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
