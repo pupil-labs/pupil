@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import platform
+import logging
 
 import numpy as np
 
@@ -29,9 +30,12 @@ else:
     scroll_factor = 1.0
     window_position_default = (0, 0)
 
+window_size_default = (400, 350)
+logger = logging.getLogger(__name__)
+
 
 class Service_UI(System_Plugin_Base):
-    def __init__(self, g_pool, window_size=(400, 300),
+    def __init__(self, g_pool, window_size=window_size_default,
                  window_position=window_position_default,
                  gui_scale=1., ui_config={}):
         super().__init__(g_pool)
@@ -80,7 +84,13 @@ class Service_UI(System_Plugin_Base):
             on_resize(main_window, *self.window_size)
 
         def set_window_size():
-            glfw.glfwSetWindowSize(main_window, 300, 300)
+            glfw.glfwSetWindowSize(main_window, *window_size_default)
+
+        def reset_restart():
+            logger.warning("Resetting all settings and restarting Capture.")
+            glfw.glfwSetWindowShouldClose(main_window, True)
+            self.notify_all({'subject': 'clear_settings_process.should_start'})
+            self.notify_all({'subject': 'service_process.should_start', 'delay': 2.})
 
         g_pool.menubar.append(ui.Selector('gui_user_scale', g_pool,
                                           setter=set_scale,
@@ -103,6 +113,8 @@ class Service_UI(System_Plugin_Base):
                                         getter=lambda: g_pool.eyes_are_alive[1].value))
 
         g_pool.menubar.append(ui.Info_Text('Service Version: {}'.format(g_pool.version)))
+
+        g_pool.menubar.append(ui.Button('Restart with default settings', reset_restart))
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
