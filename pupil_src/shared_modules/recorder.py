@@ -240,8 +240,8 @@ class Recorder(System_Plugin_Base):
                 'Recording Name': self.session_name,
                 'Start Date': strftime("%d.%m.%Y", localtime(self.start_time)),
                 'Start Time': strftime("%H:%M:%S", localtime(self.start_time)),
-                'Start Time (Unix)': self.start_time,
-                'Start Time (synced)': start_time_synced
+                'Start Time (System)': self.start_time,
+                'Start Time (Synced)': start_time_synced
             })
 
         self.video_path = os.path.join(self.rec_path, "world.mp4")
