@@ -291,6 +291,9 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
 
     def deinit_ui(self):
+        # needs to be called here since makes calls to the ui:
+        self.cancel_marker_detection()
+
         self.remove_menu()
         self.g_pool.user_timelines.remove(self.timeline)
         self.timeline = None
@@ -538,7 +541,6 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.toggle_detection_button.label = 'Start circle marker detection'
 
     def cleanup(self):
-        self.cancel_marker_detection()
         for sec in self.sections:
             if sec['bg_task']:
                 sec['bg_task'].cancel()
