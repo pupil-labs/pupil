@@ -15,6 +15,7 @@ from pyglui.cygl.utils import RGBA as cygl_rgba
 from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
 from OpenGL.GL import GL_LINE_LOOP
 
+
 class UIRoi(Roi):
     """
     this object inherits from ROI and adds some UI helper functions
@@ -33,7 +34,7 @@ class UIRoi(Roi):
         self.uY = min(self.max_y,self.uY)
 
 
-        self.handle_size = 45
+        self.handle_size = 35
         self.active_edit_pt = False
         self.active_pt_idx = None
         self.handle_color = cygl_rgba(.5,.5,.9,.9)
@@ -94,4 +95,3 @@ class UIRoi(Roi):
         else:
             cygl_draw_points(self.rect,size=(self.handle_size+10)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
             cygl_draw_points(self.rect,size=self.handle_size*ui_scale,color=self.handle_color,sharpness=0.9)
-

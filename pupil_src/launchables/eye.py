@@ -193,25 +193,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             g_pool.iconified = iconified
 
         def on_window_mouse_button(window, button, action, mods):
-            if g_pool.display_mode == 'roi':
-                if action == glfw.GLFW_RELEASE and g_pool.u_r.active_edit_pt:
-                    g_pool.u_r.active_edit_pt = False
-                    # if the roi interacts we dont want
-                    # the gui to interact as well
-                    return
-                elif action == glfw.GLFW_PRESS:
-                    pos = glfw.glfwGetCursorPos(window)
-                    # pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
-                    pos = normalize(pos, camera_render_size)
-                    if g_pool.flip:
-                        pos = 1 - pos[0], 1 - pos[1]
-                    # Position in img pixels
-                    pos = denormalize(pos,g_pool.capture.frame_size) # Position in img pixels
-                    if g_pool.u_r.mouse_over_edit_pt(pos, g_pool.u_r.handle_size + 40,g_pool.u_r.handle_size + 40):
-                        # if the roi interacts we dont want
-                        # the gui to interact as well
-                        return
-
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
@@ -222,9 +203,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             if g_pool.u_r.active_edit_pt:
                 pos = normalize((x, y), camera_render_size)
                 if g_pool.flip:
-                    pos = 1-pos[0],1-pos[1]
-                pos = denormalize(pos,g_pool.capture.frame_size )
-                g_pool.u_r.move_vertex(g_pool.u_r.active_pt_idx,pos)
+                    pos = 1 - pos[0], 1 - pos[1]
+                pos = denormalize(pos, g_pool.capture.frame_size)
+                g_pool.u_r.move_vertex(g_pool.u_r.active_pt_idx, pos)
 
         def on_scroll(window, x, y):
             g_pool.gui.update_scroll(x, y * scroll_factor)
@@ -354,6 +335,27 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             f_height *= 2
             f_width += int(icon_bar_width * g_pool.gui.scale)
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
+
+        def uroi_on_mouse_button(button, action, mods):
+            if g_pool.display_mode == 'roi':
+                if action == glfw.GLFW_RELEASE and g_pool.u_r.active_edit_pt:
+                    g_pool.u_r.active_edit_pt = False
+                    # if the roi interacts we dont want
+                    # the gui to interact as well
+                    return
+                elif action == glfw.GLFW_PRESS:
+                    pos = glfw.glfwGetCursorPos(main_window)
+                    # pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
+                    pos = normalize(pos, camera_render_size)
+                    if g_pool.flip:
+                        pos = 1 - pos[0], 1 - pos[1]
+                    # Position in img pixels
+                    pos = denormalize(pos, g_pool.capture.frame_size)  # Position in img pixels
+                    if g_pool.u_r.mouse_over_edit_pt(pos, g_pool.u_r.handle_size, g_pool.u_r.handle_size):
+                        # if the roi interacts we dont want
+                        # the gui to interact as well
+                        return
+
         general_settings.append(ui.Button('Reset window size', set_window_size))
         general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
         general_settings.append(ui.Selector('display_mode',
@@ -611,15 +613,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                                             color=RGBA(1., 0., 0., confidence),
                                             sharpness=1.)
 
-                    glViewport(0, 0, *window_size)
-                    make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
-                    # render graphs
-                    fps_graph.draw()
-                    cpu_graph.draw()
-
-                    # render GUI
-                    g_pool.gui.update()
-
                     glViewport(0, 0, *camera_render_size)
                     make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     # render the ROI
@@ -628,6 +621,15 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         g_pool.u_r.draw_points(g_pool.gui.scale)
 
                     glViewport(0, 0, *window_size)
+                    make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
+                    # render graphs
+                    fps_graph.draw()
+                    cpu_graph.draw()
+
+                    # render GUI
+                    unused_elements = g_pool.gui.update()
+                    for butt in unused_elements.buttons:
+                        uroi_on_mouse_button(*butt)
 
                     make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
 
