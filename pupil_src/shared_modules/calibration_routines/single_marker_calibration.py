@@ -93,7 +93,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         #primary_monitor = glfwGetPrimaryMonitor()
         self.menu.append(ui.Info_Text("Calibrate gaze parameters using a single gae targets and active head movements."))
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
-        self.menu.append(ui.Selector('marker_mode', self, selection=['Full screen', 'Window', 'Manual'], label='Marker Mode'))
+        self.menu.append(ui.Selector('marker_mode', self, selection=['Full screen', 'Window', 'Manual'], label='Marker display mode'))
         self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
 
     def start(self):
