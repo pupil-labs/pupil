@@ -219,6 +219,7 @@ class Recorder(System_Plugin_Base):
         self.running = True
         self.menu.read_only = True
         self.start_time = time()
+        start_time_synced = self.g_pool.get_timestamp()
 
         # set up self incrementing folder within session folder
         counter = 0
@@ -238,7 +239,9 @@ class Recorder(System_Plugin_Base):
             csv_utils.write_key_value_file(csvfile, {
                 'Recording Name': self.session_name,
                 'Start Date': strftime("%d.%m.%Y", localtime(self.start_time)),
-                'Start Time': strftime("%H:%M:%S", localtime(self.start_time))
+                'Start Time': strftime("%H:%M:%S", localtime(self.start_time)),
+                'Start Time (System)': self.start_time,
+                'Start Time (Synced)': start_time_synced
             })
 
         self.video_path = os.path.join(self.rec_path, "world.mp4")
