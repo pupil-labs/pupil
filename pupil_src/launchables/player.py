@@ -349,7 +349,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
         g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (100, -100))
         g_pool.export_button = ui.Thumb('export',
-                                        label=chr(0xe2c4),
+                                        label=chr(0xe2c5),
                                         getter=lambda: False,
                                         setter=do_export,
                                         hotkey='e',
