@@ -175,7 +175,7 @@ class NDSI_Source(Base_Source):
     # local notifications
     def on_notify(self, notification):
         subject = notification['subject']
-        if subject.startswith('remote_recording.'):
+        if subject.startswith('remote_recording.') and self.online:
             if 'should_start' in subject and self.online:
                 session_name = notification['session_name']
                 self.sensor.set_control_value('capture_session_name', session_name)
