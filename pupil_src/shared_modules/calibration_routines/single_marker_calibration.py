@@ -46,7 +46,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
        at the marker to quickly sample a wide range gaze angles.
     """
 
-    def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
+    def __init__(self, g_pool, marker_mode='Full screen', marker_scale=1.0, sample_duration=40):
         super().__init__(g_pool)
         self.screen_marker_state = 0.
         self.lead_in = 25  # frames of marker shown before starting to sample
@@ -61,7 +61,11 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
         self.menu = None
 
-        self.fullscreen = fullscreen
+        self.stop_marker_found = False
+        self.auto_stop = 0
+        self.auto_stop_max = 30
+
+        self.marker_mode = marker_mode
         self.clicks_to_close = 5
 
         self.glfont = fontstash.Context()
@@ -89,7 +93,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         #primary_monitor = glfwGetPrimaryMonitor()
         self.menu.append(ui.Info_Text("Calibrate gaze parameters using a single gae targets and active head movements."))
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
-        self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
+        self.menu.append(ui.Selector('marker_mode', self, selection=['Full screen', 'Window', 'Manual'], label='Marker display mode'))
         self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
 
     def start(self):
@@ -104,19 +108,21 @@ class Single_Marker_Calibration(Calibration_Plugin):
         self.ref_list = []
         self.pupil_list = []
         self.clicks_to_close = 5
-        self.open_window(self.mode_pretty)
+
+        if self.marker_mode != 'Manual':
+            self.open_window(self.mode_pretty)
 
     def open_window(self, title='new_window'):
         if not self._window:
-            if self.fullscreen:
+            if self.marker_mode == 'Full screen':
                 monitor = glfwGetMonitors()[self.monitor_idx]
                 width, height, redBits, blueBits, greenBits, refreshRate = glfwGetVideoMode(monitor)
             else:
                 monitor = None
-                width,height= 640,360
+                width, height= 640, 360
 
             self._window = glfwCreateWindow(width, height, title, monitor=monitor, share=glfwGetCurrentContext())
-            if not self.fullscreen:
+            if self.marker_mode == 'Window':
                 glfwSetWindowPos(self._window, self.window_position_default[0], self.window_position_default[1])
 
             glfwSetInputMode(self._window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN)
@@ -181,6 +187,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         frame = events.get('frame')
         if self.active and frame:
             recent_pupil_positions = events['pupil_positions']
+
             gray_img = frame.gray
 
             if self.clicks_to_close <=0:
@@ -189,15 +196,23 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
             # Update the marker
             self.markers = self.circle_tracker.update(gray_img)
-            # Screen marker takes only Ref marker
-            self.markers = [marker for marker in self.markers if marker['marker_type'] == 'Ref']
 
+            self.stop_marker_found = False
             if len(self.markers):
                 # Set the pos to be the center of the first detected marker
                 marker_pos = self.markers[0]['img_pos']
                 self.pos = self.markers[0]['norm_pos']
+                # Check if there are stop markers
+                for marker in self.markers:
+                    if marker['marker_type'] == 'Stop':
+                        self.auto_stop += 1
+                        self.stop_marker_found = True
+                        break
             else:
                 self.pos = None  # indicate that no reference is detected
+
+            if self.stop_marker_found is False:
+                self.auto_stop = 0
 
             # Check if there are more than one markers
             if len(self.markers) > 1:
@@ -207,7 +222,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
             # only save a valid ref position if within sample window of calibraiton routine
             on_position = self.lead_in < self.screen_marker_state
 
-            if on_position and len(self.markers):
+            if on_position and len(self.markers) and not self.stop_marker_found:
                 ref = {}
                 ref["norm_pos"] = self.pos
                 ref["screen_pos"] = marker_pos
@@ -224,6 +239,10 @@ class Single_Marker_Calibration(Calibration_Plugin):
             if len(self.markers) or not on_position:
                 self.screen_marker_state += 1
 
+            # Stop if autostop condition is satisfied:
+            if self.auto_stop >=self.auto_stop_max:
+                self.auto_stop = 0
+                self.stop()
 
             # use np.arrays for per element wise math
             self.on_position = on_position
@@ -239,16 +258,27 @@ class Single_Marker_Calibration(Calibration_Plugin):
             show the detected postion even if not published
         """
 
-        # debug mode within world will show green ellipses around detected ellipses
         if self.active:
+            # draw the largest ellipse of all detected markers
             for marker in self.markers:
-                e = marker['ellipses'][-1]  # outermost ellipse
-                pts = cv2.ellipse2Poly((int(e[0][0]), int(e[0][1])),
-                                       (int(e[1][0]/2), int(e[1][1]/2)),
-                                       int(e[-1]), 0, 360, 15)
-                draw_polyline(pts, 1, RGBA(0.,1.,0.,1.))
+                e = marker['ellipses'][-1]
+                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                    (int(e[1][0]/2),int(e[1][1]/2)),
+                                    int(e[-1]),0,360,15)
+                draw_polyline(pts,color=RGBA(0.,1.,0,1.))
                 if len(self.markers) > 1:
                     draw_polyline(pts, 1, RGBA(1., 0., 0., .5), line_type=gl.GL_POLYGON)
+
+            # draw indicator on the stop marker(s)
+            if self.auto_stop:
+                for marker in self.markers:
+                    if marker['marker_type'] == 'Stop':
+                        e = marker['ellipses'][-1]
+                        pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                            (int(e[1][0]/2),int(e[1][1]/2)),
+                                            int(e[-1]),0,360,360//self.auto_stop_max)
+                        indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
+                        draw_polyline(indicator,color=RGBA(8.,0.1,0.1,.8),line_type=gl.GL_POLYGON)
 
     def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()
@@ -296,7 +326,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def get_init_dict(self):
         d = {}
-        d['fullscreen'] = self.fullscreen
+        d['marker_mode'] = self.marker_mode
         d['marker_scale'] = self.marker_scale
         return d
 
