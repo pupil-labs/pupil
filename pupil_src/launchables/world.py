@@ -401,7 +401,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         gl_utils.basic_gl_setup()
         g_pool.image_tex = Named_Texture()
 
-        toggle_general_settings(False)
+        toggle_general_settings(True)
 
         # now the we have  aproper window we can load the last gui configuration
         g_pool.gui.configuration = session_settings.get('ui_config', {})
