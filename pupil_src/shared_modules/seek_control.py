@@ -55,10 +55,6 @@ class Seek_Control(System_Plugin_Base):
             self.was_playing = self.g_pool.capture.play
             self.g_pool.capture.play = False
         else:
-            try:
-                self.g_pool.capture.seek_to_frame(self.current_index)
-            except:
-                pass
             self.g_pool.new_seek = True
             self.g_pool.capture.play = self.was_playing
 
@@ -106,6 +102,42 @@ class Seek_Control(System_Plugin_Base):
             except:
                 pass
             self.g_pool.new_seek = True
+
+    @property
+    def forwards(self):
+        pass
+
+    @forwards.setter
+    def forwards(self, x):
+        if self.g_pool.capture.play:
+            # playback mode, increase playback speed
+            speeds = self.g_pool.capture.allowed_speeds
+            old_idx = speeds.index(self.g_pool.capture.playback_speed)
+            new_idx = min(len(speeds) - 1, old_idx + 1)
+            self.g_pool.capture.playback_speed = speeds[new_idx]
+        else:
+            # frame-by-frame mode, seek one frame forward
+            self.current_index = min(self.current_index + 1, self.frame_count - 1)
+
+    @property
+    def backwards(self):
+        pass
+
+    @backwards.setter
+    def backwards(self, x):
+        if self.g_pool.capture.play:
+            # playback mode, decrease playback speed
+            speeds = self.g_pool.capture.allowed_speeds
+            old_idx = speeds.index(self.g_pool.capture.playback_speed)
+            new_idx = max(0, old_idx - 1)
+            self.g_pool.capture.playback_speed = speeds[new_idx]
+        else:
+            # frame-by-frame mode, seek one frame backwards
+            self.current_index = max(self.current_index - 1, 0)
+
+    @property
+    def playback_speed(self):
+        return self.g_pool.capture.playback_speed if self.g_pool.capture.play else 0.
 
     def set_trim_range(self, mark_range):
         self.trim_left, self.trim_right = mark_range

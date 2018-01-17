@@ -103,7 +103,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from gaze_producers import Gaze_From_Recording, Offline_Calibration
         from system_graphs import System_Graphs
 
-        assert VersionFormat(pyglui_version) >= VersionFormat('1.13'), 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.14'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
         system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs, Batch_Export]
@@ -202,6 +202,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             logger.info("Session setting are a different version of this app. I will not use those.")
             session_settings.clear()
 
+        g_pool.capture.playback_speed = session_settings.get('playback_speed', 1.)
+
         width, height = session_settings.get('window_size', g_pool.capture.frame_size)
         window_pos = session_settings.get('window_position', window_position_default)
         glfw.glfwInit()
@@ -239,28 +241,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer`
         g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer
         g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
-
-        # def next_frame(_):
-        #     try:
-        #         g_pool.capture.seek_to_frame(g_pool.capture.get_frame_index() + 1)
-        #     except(FileSeekError):
-        #         logger.warning("Could not seek to next frame.")
-        #     else:
-        #         g_pool.new_seek = True
-
-        # def prev_frame(_):
-        #     try:
-        #         g_pool.capture.seek_to_frame(g_pool.capture.get_frame_index() - 1)
-        #     except(FileSeekError):
-        #         logger.warning("Could not seek to previous frame.")
-        #     else:
-        #         g_pool.new_seek = True
-
-        # def toggle_play(new_state):
-        #     if g_pool.capture.get_frame_index() >= g_pool.capture.get_frame_count()-5:
-        #         g_pool.capture.seek_to_frame(1)  # avoid pause set by hitting trimmark pause.
-        #         logger.warning("End of video - restart at beginning.")
-        #     g_pool.capture.play = new_state
 
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence
@@ -479,6 +459,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             g_pool.capture.wait(frame)
             glfw.glfwPollEvents()
 
+        session_settings['playback_speed'] = g_pool.capture.playback_speed
         session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
         session_settings['min_data_confidence'] = g_pool.min_data_confidence
         session_settings['gui_scale'] = g_pool.gui_user_scale
