@@ -103,7 +103,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from gaze_producers import Gaze_From_Recording, Offline_Calibration
         from system_graphs import System_Graphs
 
-        assert VersionFormat(pyglui_version) >= VersionFormat('1.14'), 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.15'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
         system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs, Batch_Export]
@@ -435,8 +435,17 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
                 gl_utils.glViewport(0, 0, *window_size)
 
-                unused_elements = g_pool.gui.update()
-                for b in unused_elements.buttons:
+                try:
+                    clipboard = glfw.glfwGetClipboardString(main_window).decode()
+                except AttributeError:  # clipbaord is None, might happen on startup
+                    clipboard = ''
+                g_pool.gui.update_clipboard(clipboard)
+                user_input = g_pool.gui.update()
+                if user_input.clipboard and user_input.clipboard != clipboard:
+                    # only write to clipboard if content changed
+                    glfw.glfwSetClipboardString(main_window, user_input.clipboard.encode())
+
+                for b in user_input.buttons:
                     button, action, mods = b
                     x, y = glfw.glfwGetCursorPos(main_window)
                     pos = x * hdpi_factor, y * hdpi_factor
@@ -445,11 +454,11 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                     for p in g_pool.plugins:
                         p.on_click(pos, button, action)
 
-                for key, scancode, action, mods in unused_elements.keys:
+                for key, scancode, action, mods in user_input.keys:
                     for p in g_pool.plugins:
                         p.on_key(key, scancode, action, mods)
 
-                for char_ in unused_elements.chars:
+                for char_ in user_input.chars:
                     for p in g_pool.plugins:
                         p.on_char(char_)
 

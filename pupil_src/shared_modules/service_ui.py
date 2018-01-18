@@ -147,7 +147,16 @@ class Service_UI(System_Plugin_Base):
         if not glfw.glfwWindowShouldClose(self.g_pool.main_window):
             gl_utils.glViewport(0, 0, *self.window_size)
             self.gl_display()
-            self.g_pool.gui.update()
+            try:
+                clipboard = glfw.glfwGetClipboardString(self.g_pool.main_window).decode()
+            except AttributeError:  # clipbaord is None, might happen on startup
+                clipboard = ''
+            self.g_pool.gui.update_clipboard(clipboard)
+            user_input = self.g_pool.gui.update()
+            if user_input.clipboard and user_input.clipboard != clipboard:
+                # only write to clipboard if content changed
+                glfw.glfwSetClipboardString(self.g_pool.main_window, user_input.clipboard.encode())
+
             glfw.glfwSwapBuffers(self.g_pool.main_window)
             glfw.glfwPollEvents()
         else:
