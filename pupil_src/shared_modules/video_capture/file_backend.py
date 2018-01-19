@@ -287,9 +287,10 @@ class File_Source(Base_Source):
             self.notify_all({"subject":'file_source.video_finished', 'source_path': self.source_path})
             self.play = False
         else:
-            if self.timed_playback and self.wait(frame):
-                self._recent_frame = frame
-                events['frame'] = frame
+            if self.timed_playback:
+                self.wait(frame)
+            self._recent_frame = frame
+            events['frame'] = frame
 
     @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
