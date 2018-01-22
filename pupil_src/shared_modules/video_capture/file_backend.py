@@ -52,7 +52,7 @@ class FileSeekError(Exception):
 
 class Frame(object):
     """docstring of Frame"""
-    def __init__(self, timestamp,av_frame,index):
+    def __init__(self, timestamp, av_frame, index):
         self._av_frame = av_frame
         self.timestamp = timestamp
         self.index = index
@@ -60,10 +60,10 @@ class Frame(object):
         self._gray = None
         self.jpeg_buffer = None
         self.yuv_buffer = None
-        self.height,self.width = av_frame.height,av_frame.width
+        self.height, self.width = av_frame.height, av_frame.width
 
     def copy(self):
-        return Frame(self.timestamp,self._av_frame,self.index)
+        return Frame(self.timestamp, self._av_frame, self.index)
 
     @property
     def img(self):
@@ -78,7 +78,13 @@ class Frame(object):
     @property
     def gray(self):
         if self._gray is None:
-            self._gray = np.frombuffer(self._av_frame.planes[0], np.uint8).reshape(self.height,self.width)
+            plane = self._av_frame.planes[0]
+            self._gray = np.frombuffer(plane, np.uint8)
+            try:
+                self._gray.shape = self.height, self.width
+            except ValueError:
+                self._gray = self._gray.reshape(-1, plane.line_size)
+                self._gray = np.ascontiguousarray(self._gray[:, :self.width])
         return self._gray
 
 
