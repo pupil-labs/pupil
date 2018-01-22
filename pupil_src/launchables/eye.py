@@ -146,6 +146,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         icon_bar_width = 50
         window_size = None
         camera_render_size = None
+        hdpi_factor = 1.
 
         # g_pool holds variables for this process
         g_pool = Global_Container()
@@ -168,6 +169,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         def on_resize(window, w, h):
             nonlocal window_size
             nonlocal camera_render_size
+            nonlocal hdpi_factor
 
             active_window = glfw.glfwGetCurrentContext()
             glfw.glfwMakeContextCurrent(window)
@@ -196,9 +198,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            hdpi_factor = glfw.glfwGetFramebufferSize(
-                window)[0] / glfw.glfwGetWindowSize(window)[0]
-            g_pool.gui.update_mouse(x * hdpi_factor, y * hdpi_factor)
+            x *= hdpi_factor
+            y *= hdpi_factor
+            g_pool.gui.update_mouse(x, y)
 
             if g_pool.u_r.active_edit_pt:
                 pos = normalize((x, y), camera_render_size)
@@ -344,9 +346,11 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                     # the gui to interact as well
                     return
                 elif action == glfw.GLFW_PRESS:
-                    pos = glfw.glfwGetCursorPos(main_window)
+                    x, y = glfw.glfwGetCursorPos(main_window)
                     # pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
-                    pos = normalize(pos, camera_render_size)
+                    x *= hdpi_factor
+                    y *= hdpi_factor
+                    pos = normalize((x, y), camera_render_size)
                     if g_pool.flip:
                         pos = 1 - pos[0], 1 - pos[1]
                     # Position in img pixels
