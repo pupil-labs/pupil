@@ -509,8 +509,8 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.timeline.height = max(0.001, self.timeline_line_height * len(self.sections))
 
     def draw_sections(self, width, height, scale):
-        max_ts = len(self.g_pool.timestamps)
-        with gl_utils.Coord_System(0, max_ts, height, 0):
+        max_idx = len(self.g_pool.timestamps) - 1
+        with gl_utils.Coord_System(0, max_idx, height, 0):
             gl.glTranslatef(0, 0.001 + scale * self.timeline_line_height / 2, 0)
             for s in self.sections:
                 color = RGBA(1., 1., 1., .5)
