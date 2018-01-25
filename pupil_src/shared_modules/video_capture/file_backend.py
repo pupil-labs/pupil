@@ -274,7 +274,7 @@ class File_Source(Base_Source):
         self.show_time = timestamp
         self.target_frame_idx = index+1
         self.current_frame_idx = index
-        return Frame(timestamp,frame,index=index)
+        return Frame(timestamp, frame, index=index)
 
     def wait(self, frame):
         if self.display_time:
@@ -329,6 +329,12 @@ class File_Source(Base_Source):
             self.play = True
         elif notification['subject'] == 'file_source.should_pause' and notification.get('source_path') == self.source_path:
             self.play = False
+
+    def seek_to_next_frame(self):
+        self.get_frame()
+
+    def seek_to_prev_frame(self):
+        self.seek_to_frame(max(0, self.current_frame_idx - 1))
 
     def init_ui(self):
         self.add_menu()
