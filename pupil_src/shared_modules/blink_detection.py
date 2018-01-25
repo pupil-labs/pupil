@@ -165,6 +165,12 @@ class Offline_Blink_Detection(Blink_Detection):
         import time
         t0 = time.time()
         all_pp = self.g_pool.pupil_positions
+        if not all_pp:
+            self.filter_response = []
+            self.response_classification = []
+            self.timestamps = []
+            return
+
         conf_iter = (pp['confidence'] for pp in all_pp)
         activity = np.fromiter(conf_iter, dtype=float, count=len(all_pp))
         total_time = all_pp[-1]['timestamp'] - all_pp[0]['timestamp']

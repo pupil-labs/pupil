@@ -96,9 +96,9 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
         right = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 0]
         left = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 1]
-        max_dia = max(chain((pp[1] for pp in right), (pp[1] for pp in left)))
+        max_val = max(chain((pp[1] for pp in right), (pp[1] for pp in left)))
 
-        with gl_utils.Coord_System(t0, t1, -1, max_dia):
+        with gl_utils.Coord_System(t0, t1, 0, max_val):
             draw_points(right, size=2.*scale, color=right_color)
             draw_points(left, size=2.*scale, color=left_color)
 
