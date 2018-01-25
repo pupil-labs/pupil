@@ -35,7 +35,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     import logging
     import errno
     from glob import glob
-    from copy import deepcopy
     from time import time
     # networking
     import zmq
@@ -102,18 +101,33 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
         from gaze_producers import Gaze_From_Recording, Offline_Calibration
         from system_graphs import System_Graphs
+        from blink_detection import Offline_Blink_Detection
 
         assert VersionFormat(pyglui_version) >= VersionFormat('1.15'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
         system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs, Batch_Export]
-        user_plugins = [Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points,
-                        Vis_Cross, Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path,
-                        Offline_Fixation_Detector, Batch_Exporter,
-                        Video_Export_Launcher, Offline_Surface_Tracker, Raw_Data_Exporter,
-                        Annotation_Player, Log_History,
-                        Pupil_From_Recording, Offline_Pupil_Detection, Gaze_From_Recording,
-                        Offline_Calibration] + runtime_plugins
+        user_plugins = [Vis_Circle,
+                        Vis_Fixation,
+                        Vis_Polyline,
+                        Vis_Light_Points,
+                        Vis_Cross,
+                        Vis_Watermark,
+                        Vis_Eye_Video_Overlay,
+                        Vis_Scan_Path,
+                        Offline_Fixation_Detector,
+                        Offline_Blink_Detection,
+                        Batch_Exporter,
+                        Video_Export_Launcher,
+                        Offline_Surface_Tracker,
+                        Raw_Data_Exporter,
+                        Annotation_Player,
+                        Log_History,
+                        Pupil_From_Recording,
+                        Offline_Pupil_Detection,
+                        Gaze_From_Recording,
+                        Offline_Calibration
+                        ] + runtime_plugins
 
         plugins = system_plugins + user_plugins
 
