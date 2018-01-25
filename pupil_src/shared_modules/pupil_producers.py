@@ -89,16 +89,12 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
         if not self.g_pool.pupil_positions:
             return
 
+        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
         right = [(pp['timestamp'], pp['diameter']) for pp in self.g_pool.pupil_positions if pp['id'] == 0]
         left = [(pp['timestamp'], pp['diameter']) for pp in self.g_pool.pupil_positions if pp['id'] == 1]
-        min_ts = min(right[0][0], left[0][0])
-        max_ts = min(right[-1][0], left[-1][0])
         max_dia = max(chain((pp[1] for pp in right), (pp[1] for pp in left)))
 
-        coord_sys = [(min_ts, max_dia), (min_ts, 0), (max_ts, 0)]
-
-        with gl_utils.Coord_System(min_ts, max_ts, -1, max_dia):
-            draw_polyline(coord_sys, line_type=gl.GL_LINE_STRIP, thickness=2.*scale, color=RGBA(1., 1., 1., .8))
+        with gl_utils.Coord_System(t0, t1, -1, max_dia):
             draw_points(right, size=2.*scale, color=right_color)
             draw_points(left, size=2.*scale, color=left_color)
 

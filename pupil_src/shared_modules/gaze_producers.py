@@ -110,11 +110,10 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
         if not self.g_pool.gaze_positions:
             return
 
+        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
         gaze_conf = [(gp['timestamp'], gp['confidence']) for gp in self.g_pool.gaze_positions]
-        coord_sys = [(gaze_conf[0][0], 1.5), (gaze_conf[0][0], 0), (gaze_conf[-1][0], 0)]
 
-        with gl_utils.Coord_System(gaze_conf[0][0], gaze_conf[-1][0], 0., 1.5):
-            draw_polyline(coord_sys, line_type=gl.GL_LINE_STRIP, thickness=2.*scale, color=RGBA(1., 1., 1., .8))
+        with gl_utils.Coord_System(t0, t1, 0., 1.5):
             draw_polyline(gaze_conf, line_type=gl.GL_LINES, thickness=2.*scale, color=RGBA(0.9961, 0.3789, 0.5313, 0.8))
 
 

@@ -130,10 +130,12 @@ class Offline_Blink_Detection(Blink_Detection):
                          offset_confidence_threshold, visualize)
         self.filter_response = []
         self.response_classification = []
+        self.timestamps = []
 
     def init_ui(self):
         super().init_ui()
         self.timeline = ui.Timeline('Blink Detection', self.draw_activation)
+        self.timeline.height *= 1.5
         self.g_pool.user_timelines.append(self.timeline)
 
     def deinit_ui(self):
@@ -169,6 +171,7 @@ class Offline_Blink_Detection(Blink_Detection):
         filter_size = round(len(all_pp) * self.history_length / total_time)
         blink_filter = np.ones(filter_size) / filter_size
         blink_filter[filter_size // 2:] *= -1
+        self.timestamps = [pp['timestamp'] for pp in all_pp]
 
         # The theoretical response maximum is +-0.5
         # Response of +-0.45 seems sufficient for a confidence of 1.
@@ -183,21 +186,24 @@ class Offline_Blink_Detection(Blink_Detection):
         self.timeline.refresh()
 
         tm1 = time.time()
-        print('Recalculating took\n\t{:.4f}sec for {} pp\n\t{} pp/sec\n\tsize: {}'.format(tm1 - t0, len(all_pp), len(all_pp) / (tm1 - t0), filter_size))
-        print(onsets.sum(), offsets.sum())
+        logger.debug('Recalculating took\n\t{:.4f}sec for {} pp\n\t{} pp/sec\n\tsize: {}'.format(tm1 - t0, len(all_pp), len(all_pp) / (tm1 - t0), filter_size))
 
     def draw_activation(self, width, height, scale):
-        response_points = [(i, r) for i, r in enumerate(self.filter_response)]
+        response_points = [(t, r) for t, r in zip(self.timestamps, self.filter_response)]
+        class_points = [(t, r) for t, r in zip(self.timestamps, self.response_classification)]
         if len(response_points) == 0:
             return
 
-        thresholds = [(0, self.onset_confidence_threshold),
-                      (len(response_points), self.onset_confidence_threshold),
-                      (0, -self.offset_confidence_threshold),
-                      (len(response_points), -self.offset_confidence_threshold)]
+        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
+        thresholds = [(t0, self.onset_confidence_threshold),
+                      (t1, self.onset_confidence_threshold),
+                      (t0, -self.offset_confidence_threshold),
+                      (t1, -self.offset_confidence_threshold)]
 
-        with gl_utils.Coord_System(0, len(response_points), -1, 1):
+        with gl_utils.Coord_System(t0, t1, 1, -1):
             draw_polyline(response_points, color=RGBA(0.6602, 0.8594, 0.4609, 0.8),
+                          line_type=gl.GL_LINE_STRIP, thickness=1*scale)
+            draw_polyline(class_points, color=RGBA(0.9961, 0.3789, 0.5313, 0.8),
                           line_type=gl.GL_LINE_STRIP, thickness=1*scale)
             draw_polyline(thresholds, color=RGBA(0.9961, 0.8438, 0.3984, 0.8),
                           line_type=gl.GL_LINES, thickness=1*scale)
