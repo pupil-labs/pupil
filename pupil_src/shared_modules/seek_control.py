@@ -28,9 +28,8 @@ class Seek_Control(System_Plugin_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         g_pool.seek_control = self
-        # _trim_* are timestamo indices, # trim_* properties are timestamps
-        self._trim_left = 0
-        self._trim_right = len(self.g_pool.timestamps) - 1
+        self.trim_left = 0
+        self.trim_right = len(self.g_pool.timestamps) - 1
         self.drag_mode = False
         self.was_playing = True
 
@@ -72,21 +71,21 @@ class Seek_Control(System_Plugin_Base):
         self.g_pool.capture.play = new_state
 
     @property
-    def trim_left(self):
-        return self.g_pool.timestamps[self._trim_left]
+    def trim_left_ts(self):
+        return self.g_pool.timestamps[self.trim_left]
 
-    @trim_left.setter
-    def trim_left(self, val):
-        self._trim_left = bisect(self.g_pool.timestamps, val, hi=self._trim_right-1)
+    @trim_left_ts.setter
+    def trim_left_ts(self, val):
+        self.trim_left = bisect(self.g_pool.timestamps, val, hi=self.trim_right-1)
 
     @property
-    def trim_right(self):
-        return self.g_pool.timestamps[self._trim_right]
+    def trim_right_ts(self):
+        return self.g_pool.timestamps[self.trim_right]
 
-    @trim_right.setter
-    def trim_right(self, val):
+    @trim_right_ts.setter
+    def trim_right_ts(self, val):
         # left + 1 <= right <= frame_count -1
-        self._trim_right = bisect(self.g_pool.timestamps, val, lo=self._trim_left+1)
+        self.trim_right = bisect(self.g_pool.timestamps, val, lo=self.trim_left+1)
 
     @property
     def current_ts(self):
