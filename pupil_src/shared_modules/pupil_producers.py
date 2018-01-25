@@ -67,42 +67,58 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
         self.glfont = fs.Context()
         self.glfont.add_font('opensans', ui.get_opensans_font_path())
         self.glfont.set_font('opensans')
-        self.timeline = ui.Timeline('Pupil Diameter [px]', self.draw_pupil_diameter, self.draw_legend)
-        self.timeline.height *= 1.5
-        self.g_pool.user_timelines.append(self.timeline)
+        self.dia_timeline = ui.Timeline('Pupil Diameter [px]', self.draw_pupil_diameter, self.draw_dia_legend)
+        self.conf_timeline = ui.Timeline('Pupil Confidence', self.draw_pupil_conf, self.draw_conf_legend)
+        self.g_pool.user_timelines.append(self.dia_timeline)
+        self.g_pool.user_timelines.append(self.conf_timeline)
 
     def on_notify(self, notification):
         if notification['subject'] == 'pupil_positions_changed':
-            self.timeline.refresh()
+            self.dia_timeline.refresh()
+            self.conf_timeline.refresh()
 
     def deinit_ui(self):
         self.remove_menu()
-        self.g_pool.user_timelines.remove(self.timeline)
-        self.timeline = None
+        self.g_pool.user_timelines.remove(self.dia_timeline)
+        self.g_pool.user_timelines.remove(self.conf_timeline)
+        self.dia_timeline = None
+        self.conf_timeline = None
 
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
             events['pupil_positions'] = self.g_pool.pupil_positions_by_frame[frm_idx]
 
-    def draw_pupil_diameter(self, width, height, scale):
+    def draw_pupil_data(self, key, width, height, scale):
         if not self.g_pool.pupil_positions:
             return
 
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
-        right = [(pp['timestamp'], pp['diameter']) for pp in self.g_pool.pupil_positions if pp['id'] == 0]
-        left = [(pp['timestamp'], pp['diameter']) for pp in self.g_pool.pupil_positions if pp['id'] == 1]
+        right = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 0]
+        left = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 1]
         max_dia = max(chain((pp[1] for pp in right), (pp[1] for pp in left)))
 
         with gl_utils.Coord_System(t0, t1, -1, max_dia):
             draw_points(right, size=2.*scale, color=right_color)
             draw_points(left, size=2.*scale, color=left_color)
 
-    def draw_legend(self, width, height, scale):
+    def draw_pupil_diameter(self, width, height, scale):
+        self.draw_pupil_data('diameter', width, height, scale)
+
+    def draw_dia_legend(self, width, height, scale):
+        self.draw_legend(self.dia_timeline.label, width, height, scale)
+
+    def draw_pupil_conf(self, width, height, scale):
+        self.draw_pupil_data('confidence', width, height, scale)
+
+    def draw_conf_legend(self, width, height, scale):
+        self.draw_legend(self.conf_timeline.label, width, height, scale)
+
+    def draw_legend(self, label, width, height, scale):
         self.glfont.push_state()
         self.glfont.set_align_string(v_align='right', h_align='top')
         self.glfont.set_size(15. * scale)
-        self.glfont.draw_text(width, 0, self.timeline.label)
+        self.glfont.draw_text(width, 0, label)
 
         legend_height = 13. * scale
         pad = 10 * scale
