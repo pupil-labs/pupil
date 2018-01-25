@@ -8,6 +8,22 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
-import sys,os
-sys.path.append(os.path.join('../../', 'pupil_src', 'shared_modules'))
-from version_utils import *
+
+from plugin import Plugin
+
+
+class Detector_Dummy(Plugin):
+    def __init__(g_pool, *args, **kwargs):
+        super().__init__(g_pool)
+
+    def detect(self, frame, *args, **kwargs):
+        return None
+
+    def visualize(self):
+        pass
+
+    def get_settings(self):
+        return {}
+
+    def on_resolution_change(self, *args, **kwargs):
+        pass

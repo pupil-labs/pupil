@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -96,7 +96,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         import glfw
         from version_utils import VersionFormat
         from pyglui import ui, cygl, __version__ as pyglui_version
-        assert VersionFormat(pyglui_version) >= VersionFormat('1.9'), 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.15'), 'pyglui out of date, please upgrade to newest version'
         from pyglui.cygl.utils import Named_Texture
         import gl_utils
 
@@ -361,8 +361,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                                             g_pool,
                                             label='detection & mapping mode',
                                             setter=set_detection_mapping_mode,
-                                            selection=['2d','3d']
-                                        ))
+                                            selection=['disabled', '2d', '3d']))
         general_settings.append(ui.Switch('eye0_process',
                                             label='Detect eye 0',
                                             setter=lambda alive: start_stop_eye(0,alive),
@@ -402,7 +401,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         gl_utils.basic_gl_setup()
         g_pool.image_tex = Named_Texture()
 
-        toggle_general_settings(False)
+        toggle_general_settings(True)
 
         # now the we have  aproper window we can load the last gui configuration
         g_pool.gui.configuration = session_settings.get('ui_config', {})
@@ -438,8 +437,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                 for p in g_pool.plugins:
                     p.on_notify(n)
 
-
-            #a dictionary that allows plugins to post and read events
+            # a dictionary that allows plugins to post and read events
             events = {}
             # report time between now and the last loop interation
             events['dt'] = get_dt()
@@ -475,8 +473,17 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                     p.gl_display()
 
                 gl_utils.glViewport(0, 0, *window_size)
-                unused_elements = g_pool.gui.update()
-                for button, action, mods in unused_elements.buttons:
+                try:
+                    clipboard = glfw.glfwGetClipboardString(main_window).decode()
+                except AttributeError:  # clipbaord is None, might happen on startup
+                    clipboard = ''
+                g_pool.gui.update_clipboard(clipboard)
+                user_input = g_pool.gui.update()
+                if user_input.clipboard != clipboard:
+                    # only write to clipboard if content changed
+                    glfw.glfwSetClipboardString(main_window, user_input.clipboard.encode())
+
+                for button, action, mods in user_input.buttons:
                     x, y = glfw.glfwGetCursorPos(main_window)
                     pos = x * hdpi_factor, y * hdpi_factor
                     pos = normalize(pos, camera_render_size)
@@ -485,11 +492,11 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                     for p in g_pool.plugins:
                         p.on_click(pos, button, action)
 
-                for key, scancode, action, mods in unused_elements.keys:
+                for key, scancode, action, mods in user_input.keys:
                     for p in g_pool.plugins:
                         p.on_key(key, scancode, action, mods)
 
-                for char_ in unused_elements.chars:
+                for char_ in user_input.chars:
                     for p in g_pool.plugins:
                         p.on_char(char_)
 

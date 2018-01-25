@@ -1,5 +1,3 @@
-
-
 #include "EyeModel.h"
 
 #include <algorithm>

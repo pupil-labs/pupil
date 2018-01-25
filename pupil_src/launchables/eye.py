@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -127,9 +127,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         from video_capture import manager_classes
 
         # Pupil detectors
-        from pupil_detectors import Detector_2D, Detector_3D
+        from pupil_detectors import Detector_2D, Detector_3D, Detector_Dummy
         pupil_detectors = {Detector_2D.__name__: Detector_2D,
-                           Detector_3D.__name__: Detector_3D}
+                           Detector_3D.__name__: Detector_3D,
+                           Detector_Dummy.__name__: Detector_Dummy}
 
         # UI Platform tweaks
         if platform.system() == 'Linux':
@@ -192,25 +193,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             g_pool.iconified = iconified
 
         def on_window_mouse_button(window, button, action, mods):
-            if g_pool.display_mode == 'roi':
-                if action == glfw.GLFW_RELEASE and g_pool.u_r.active_edit_pt:
-                    g_pool.u_r.active_edit_pt = False
-                    # if the roi interacts we dont want
-                    # the gui to interact as well
-                    return
-                elif action == glfw.GLFW_PRESS:
-                    pos = glfw.glfwGetCursorPos(window)
-                    # pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
-                    pos = normalize(pos, camera_render_size)
-                    if g_pool.flip:
-                        pos = 1 - pos[0], 1 - pos[1]
-                    # Position in img pixels
-                    pos = denormalize(pos,g_pool.capture.frame_size) # Position in img pixels
-                    if g_pool.u_r.mouse_over_edit_pt(pos, g_pool.u_r.handle_size + 40,g_pool.u_r.handle_size + 40):
-                        # if the roi interacts we dont want
-                        # the gui to interact as well
-                        return
-
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
@@ -221,9 +203,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             if g_pool.u_r.active_edit_pt:
                 pos = normalize((x, y), camera_render_size)
                 if g_pool.flip:
-                    pos = 1-pos[0],1-pos[1]
-                pos = denormalize(pos,g_pool.capture.frame_size )
-                g_pool.u_r.move_vertex(g_pool.u_r.active_pt_idx,pos)
+                    pos = 1 - pos[0], 1 - pos[1]
+                pos = denormalize(pos, g_pool.capture.frame_size)
+                g_pool.u_r.move_vertex(g_pool.u_r.active_pt_idx, pos)
 
         def on_scroll(window, x, y):
             g_pool.gui.update_scroll(x, y * scroll_factor)
@@ -248,7 +230,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. This uses the least amount of CPU power",
                                          'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be as small as possible, but large enough to capture all pupil movements.",
                                          'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below."}
-
 
         capture_manager_settings = session_settings.get(
             'capture_manager_settings', ('UVC_Manager',{}))
@@ -354,6 +335,27 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             f_height *= 2
             f_width += int(icon_bar_width * g_pool.gui.scale)
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
+
+        def uroi_on_mouse_button(button, action, mods):
+            if g_pool.display_mode == 'roi':
+                if action == glfw.GLFW_RELEASE and g_pool.u_r.active_edit_pt:
+                    g_pool.u_r.active_edit_pt = False
+                    # if the roi interacts we dont want
+                    # the gui to interact as well
+                    return
+                elif action == glfw.GLFW_PRESS:
+                    pos = glfw.glfwGetCursorPos(main_window)
+                    # pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
+                    pos = normalize(pos, camera_render_size)
+                    if g_pool.flip:
+                        pos = 1 - pos[0], 1 - pos[1]
+                    # Position in img pixels
+                    pos = denormalize(pos, g_pool.capture.frame_size)  # Position in img pixels
+                    if g_pool.u_r.mouse_over_edit_pt(pos, g_pool.u_r.handle_size, g_pool.u_r.handle_size):
+                        # if the roi interacts we dont want
+                        # the gui to interact as well
+                        return
+
         general_settings.append(ui.Button('Reset window size', set_window_size))
         general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
         general_settings.append(ui.Selector('display_mode',
@@ -369,9 +371,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         detector_selector = ui.Selector('pupil_detector',
                                         getter=lambda: g_pool.pupil_detector.__class__,
-                                        setter=set_detector, selection=[
-                                            Detector_2D, Detector_3D],
-                                        labels=['C++ 2d detector',
+                                        setter=set_detector,
+                                        selection=[Detector_Dummy,
+                                                   Detector_2D,
+                                                   Detector_3D],
+                                        labels=['disabled',
+                                                'C++ 2d detector',
                                                 'C++ 3d detector'],
                                         label="Detection method")
         general_settings.append(detector_selector)
@@ -460,10 +465,14 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         if not isinstance(g_pool.pupil_detector, Detector_3D):
                             set_detector(Detector_3D)
                         detector_selector.read_only = True
-                    else:
+                    elif notification['mode'] == '2d':
                         if not isinstance(g_pool.pupil_detector, Detector_2D):
                             set_detector(Detector_2D)
                         detector_selector.read_only = False
+                    else:
+                        if not isinstance(g_pool.pupil_detector, Detector_Dummy):
+                            set_detector(Detector_Dummy)
+                        detector_selector.read_only = True
                 elif subject == 'recording.started':
                     if notification['record_eye'] and g_pool.capture.online:
                         record_path = notification['rec_path']
@@ -547,10 +556,11 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
                 # pupil ellipse detection
                 result = g_pool.pupil_detector.detect(frame, g_pool.u_r, g_pool.display_mode == 'algorithm')
-                result['id'] = eye_id
+                if result is not None:
+                    result['id'] = eye_id
 
-                # stream the result
-                pupil_socket.send('pupil.%s'%eye_id,result)
+                    # stream the result
+                    pupil_socket.send('pupil.%s'%eye_id,result)
 
             cpu_graph.update()
 
@@ -574,7 +584,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
                     f_width, f_height = g_pool.capture.frame_size
                     make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
-                    if frame:
+                    if frame and result:
                         if result['method'] == '3d c++':
                             eye_ball = result['projected_sphere']
                             try:
@@ -603,15 +613,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                                             color=RGBA(1., 0., 0., confidence),
                                             sharpness=1.)
 
-                    glViewport(0, 0, *window_size)
-                    make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
-                    # render graphs
-                    fps_graph.draw()
-                    cpu_graph.draw()
-
-                    # render GUI
-                    g_pool.gui.update()
-
                     glViewport(0, 0, *camera_render_size)
                     make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     # render the ROI
@@ -620,13 +621,23 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         g_pool.u_r.draw_points(g_pool.gui.scale)
 
                     glViewport(0, 0, *window_size)
+                    make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
+                    # render graphs
+                    fps_graph.draw()
+                    cpu_graph.draw()
+
+                    # render GUI
+                    unused_elements = g_pool.gui.update()
+                    for butt in unused_elements.buttons:
+                        uroi_on_mouse_button(*butt)
 
                     make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
+
+                    g_pool.pupil_detector.visualize()  # detector decides if we visualize or not
 
                     # update screen
                     glfw.glfwSwapBuffers(main_window)
                 glfw.glfwPollEvents()
-                g_pool.pupil_detector.visualize()  # detector decides if we visualize or not
 
         # END while running
 

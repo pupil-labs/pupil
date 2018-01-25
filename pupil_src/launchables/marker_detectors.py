@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -63,6 +63,7 @@ def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
                 ref = {"norm_pos": markers[0]['norm_pos'],
                        "screen_pos": markers[0]['img_pos'],
                        "timestamp": frame.timestamp,
+                       'index_range': tuple(range(frame.index - 5, frame.index + 5)),
                        'index': frame.index}
                 queue.append((progress, ref))
             else:

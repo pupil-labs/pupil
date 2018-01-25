@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -15,7 +15,7 @@ import re
 license_txt = """\
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -65,10 +65,10 @@ def write_header(file_name, license_txt):
     else:
         raise Exception("Dont know how to deal with this filetype")
 
-    with file(file_name, 'r') as original:
+    with open(file_name, 'r') as original:
         data = original.read()
 
-    with file(file_name, 'w') as modified:
+    with open(file_name, 'w') as modified:
         if re.findall(pattern, data):
             # if header already exists, then update, but dont add the last newline.
             modified.write(re.sub(pattern, license_txt[:-1], data))
@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
     # Add a license/docstring header to selected files
     match_files = get_files(pupil_dir, includes, excludes)
-    print len(match_files)
+    print(len(match_files))
 
     for f in match_files:
         write_header(f, license_txt)

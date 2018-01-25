@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -141,7 +141,8 @@ class Hololens_Relay(Plugin):
     C:      i
     S:      0i
     """
-    icon_chr = 'H'
+    icon_chr = chr(0xec21)
+    icon_font = 'pupil_icons'
 
     def __init__(self, g_pool, port="50021", host="", use_primary_interface=True):
         super().__init__(g_pool)

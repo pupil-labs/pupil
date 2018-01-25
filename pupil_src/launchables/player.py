@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -103,7 +103,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from gaze_producers import Gaze_From_Recording, Offline_Calibration
         from system_graphs import System_Graphs
 
-        assert VersionFormat(pyglui_version) >= VersionFormat('1.11'), 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.15'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
         system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs, Batch_Export]
@@ -202,6 +202,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             logger.info("Session setting are a different version of this app. I will not use those.")
             session_settings.clear()
 
+        g_pool.capture.playback_speed = session_settings.get('playback_speed', 1.)
+
         width, height = session_settings.get('window_size', g_pool.capture.frame_size)
         window_pos = session_settings.get('window_position', window_position_default)
         glfw.glfwInit()
@@ -239,28 +241,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer`
         g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer
         g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
-
-        # def next_frame(_):
-        #     try:
-        #         g_pool.capture.seek_to_frame(g_pool.capture.get_frame_index() + 1)
-        #     except(FileSeekError):
-        #         logger.warning("Could not seek to next frame.")
-        #     else:
-        #         g_pool.new_seek = True
-
-        # def prev_frame(_):
-        #     try:
-        #         g_pool.capture.seek_to_frame(g_pool.capture.get_frame_index() - 1)
-        #     except(FileSeekError):
-        #         logger.warning("Could not seek to previous frame.")
-        #     else:
-        #         g_pool.new_seek = True
-
-        # def toggle_play(new_state):
-        #     if g_pool.capture.get_frame_index() >= g_pool.capture.get_frame_count()-5:
-        #         g_pool.capture.seek_to_frame(1)  # avoid pause set by hitting trimmark pause.
-        #         logger.warning("End of video - restart at beginning.")
-        #     g_pool.capture.play = new_state
 
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence
@@ -349,7 +329,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
         g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (100, -100))
         g_pool.export_button = ui.Thumb('export',
-                                        label=chr(0xe2c4),
+                                        label=chr(0xe2c5),
                                         getter=lambda: False,
                                         setter=do_export,
                                         hotkey='e',
@@ -374,6 +354,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         glfw.glfwSetCursorPosCallback(main_window, on_pos)
         glfw.glfwSetScrollCallback(main_window, on_scroll)
         glfw.glfwSetDropCallback(main_window, on_drop)
+
+        toggle_general_settings(True)
 
         g_pool.gui.configuration = session_settings.get('ui_config', {})
 
@@ -453,8 +435,17 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
                 gl_utils.glViewport(0, 0, *window_size)
 
-                unused_elements = g_pool.gui.update()
-                for b in unused_elements.buttons:
+                try:
+                    clipboard = glfw.glfwGetClipboardString(main_window).decode()
+                except AttributeError:  # clipbaord is None, might happen on startup
+                    clipboard = ''
+                g_pool.gui.update_clipboard(clipboard)
+                user_input = g_pool.gui.update()
+                if user_input.clipboard and user_input.clipboard != clipboard:
+                    # only write to clipboard if content changed
+                    glfw.glfwSetClipboardString(main_window, user_input.clipboard.encode())
+
+                for b in user_input.buttons:
                     button, action, mods = b
                     x, y = glfw.glfwGetCursorPos(main_window)
                     pos = x * hdpi_factor, y * hdpi_factor
@@ -463,11 +454,11 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                     for p in g_pool.plugins:
                         p.on_click(pos, button, action)
 
-                for key, scancode, action, mods in unused_elements.keys:
+                for key, scancode, action, mods in user_input.keys:
                     for p in g_pool.plugins:
                         p.on_key(key, scancode, action, mods)
 
-                for char_ in unused_elements.chars:
+                for char_ in user_input.chars:
                     for p in g_pool.plugins:
                         p.on_char(char_)
 
@@ -477,6 +468,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             g_pool.capture.wait(frame)
             glfw.glfwPollEvents()
 
+        session_settings['playback_speed'] = g_pool.capture.playback_speed
         session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
         session_settings['min_data_confidence'] = g_pool.min_data_confidence
         session_settings['gui_scale'] = g_pool.gui_user_scale

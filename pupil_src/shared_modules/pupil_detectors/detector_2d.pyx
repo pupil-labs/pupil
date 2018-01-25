@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -56,7 +56,7 @@ cdef class Detector_2D:
         self.g_pool = g_pool
         self.uniqueness = 'unique'
         self.icon_font = 'pupil_icons'
-        self.icon_chr = chr(0xec19)
+        self.icon_chr = chr(0xec18)
         self.detectProperties = settings or {}
         self.coarseDetectionPreviousWidth = -1
         self.coarseDetectionPreviousPosition =  (0,0)
@@ -130,7 +130,7 @@ cdef class Detector_2D:
         roi_height  = roi.get()[3] - roi.get()[1]
         cdef int[:,::1] integral
 
-        if self.detectProperties['coarse_detection']:
+        if self.detectProperties['coarse_detection'] and image_width > 200:
             scale = 2 # half the integral image. boost up integral
             # TODO maybe implement our own Integral so we don't have to half the image
             user_roi_image = frame_.gray[user_roi.view]

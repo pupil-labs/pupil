@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -52,7 +52,7 @@ class FileSeekError(Exception):
 
 class Frame(object):
     """docstring of Frame"""
-    def __init__(self, timestamp,av_frame,index):
+    def __init__(self, timestamp, av_frame, index):
         self._av_frame = av_frame
         self.timestamp = timestamp
         self.index = index
@@ -60,10 +60,10 @@ class Frame(object):
         self._gray = None
         self.jpeg_buffer = None
         self.yuv_buffer = None
-        self.height,self.width = av_frame.height,av_frame.width
+        self.height, self.width = av_frame.height, av_frame.width
 
     def copy(self):
-        return Frame(self.timestamp,self._av_frame,self.index)
+        return Frame(self.timestamp, self._av_frame, self.index)
 
     @property
     def img(self):
@@ -78,7 +78,13 @@ class Frame(object):
     @property
     def gray(self):
         if self._gray is None:
-            self._gray = np.frombuffer(self._av_frame.planes[0], np.uint8).reshape(self.height,self.width)
+            plane = self._av_frame.planes[0]
+            self._gray = np.frombuffer(plane, np.uint8)
+            try:
+                self._gray.shape = self.height, self.width
+            except ValueError:
+                self._gray = self._gray.reshape(-1, plane.line_size)
+                self._gray = np.ascontiguousarray(self._gray[:, :self.width])
         return self._gray
 
 
@@ -90,14 +96,16 @@ class File_Source(Base_Source):
         timestamps (str): Path to timestamps file
     """
 
-    def __init__(self, g_pool, source_path=None, timed_playback=False, loop=False):
+    allowed_speeds = [.25, .5, 1., 1.5, 2., 4.]
+
+    def __init__(self, g_pool, source_path=None, timed_playback=False, loop=False, playback_speed=1.):
         super().__init__(g_pool)
 
         # minimal attribute set
         self._initialised = True
-        self.slowdown     = 0.0
-        self.source_path  = source_path
-        self.timestamps   = None
+        self.playback_speed = playback_speed
+        self.source_path = source_path
+        self.timestamps = None
         self.timed_playback = timed_playback
         self.loop = loop
 
@@ -200,6 +208,7 @@ class File_Source(Base_Source):
         settings['source_path'] = self.source_path
         settings['timed_playback'] = self.timed_playback
         settings['loop'] = self.loop
+        settings['playback_speed'] = self.playback_speed
         return settings
 
     @property
@@ -267,13 +276,13 @@ class File_Source(Base_Source):
         self.current_frame_idx = index
         return Frame(timestamp,frame,index=index)
 
-    def wait(self,frame):
+    def wait(self, frame):
         if self.display_time:
-            wait_time  = frame.timestamp - self.display_time - time()
-            if 1 > wait_time > 0 :
+            wait_time = frame.timestamp - self.display_time - time()
+            wait_time /= self.playback_speed
+            if 1 > wait_time > 0:
                 sleep(wait_time)
         self.display_time = frame.timestamp - time()
-        sleep(self.slowdown)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05), requires_playback=True)
     def recent_events(self, events):
@@ -284,10 +293,10 @@ class File_Source(Base_Source):
             self.notify_all({"subject":'file_source.video_finished', 'source_path': self.source_path})
             self.play = False
         else:
-            self._recent_frame = frame
-            events['frame'] = frame
             if self.timed_playback:
                 self.wait(frame)
+            self._recent_frame = frame
+            events['frame'] = frame
 
     @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
@@ -326,7 +335,9 @@ class File_Source(Base_Source):
         self.menu.label = 'File Source: {}'.format(os.path.split(self.source_path)[-1])
         from pyglui import ui
         self.menu.append(ui.Info_Text("Running Capture with '%s' as src"%self.source_path))
-        self.menu.append(ui.Slider('slowdown', self, min=0, max=1.0))
+        self.menu.append(ui.Selector('playback_speed', self,
+                                     label='Playback speed',
+                                     selection=self.allowed_speeds))
 
         def toggle_looping(val):
             self.loop = val

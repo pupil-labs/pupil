@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -147,12 +147,12 @@ class System_Graphs(System_Plugin_Base):
                     self.fps_graph.add(1./dt)
                 except ZeroDivisionError:
                     pass
-
-                for p in events["pupil_positions"]:
-                    (self.conf0_graph if p['id'] == 0 else self.conf1_graph).add(p['confidence'])
-                    (self.dia0_graph if p['id'] == 0 else self.dia1_graph).add(p.get('diameter_3d', 0.))
             else:
                 self.ts = t
+
+        for p in events["pupil_positions"]:
+            (self.conf0_graph if p['id'] == 0 else self.conf1_graph).add(p['confidence'])
+            (self.dia0_graph if p['id'] == 0 else self.dia1_graph).add(p.get('diameter_3d', 0.))
 
     def deinit_ui(self):
         self.remove_menu()

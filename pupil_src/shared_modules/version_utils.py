@@ -3,8 +3,6 @@
 # Changes, Additions: Moritz Kassner <moritz@pupil-labs.com>, Will Patera <will@pupil-labs.com>
 # This file is placed into the public domain.
 
-
-
 from subprocess import check_output,CalledProcessError,STDOUT
 import os,sys
 from distutils.version import LooseVersion as VersionFormat
