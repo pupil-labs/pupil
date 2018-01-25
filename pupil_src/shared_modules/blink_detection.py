@@ -9,6 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+import os
+import csv
+
 from plugin import Analysis_Plugin_Base
 from pyglui import ui, cygl
 from collections import deque
@@ -132,6 +135,8 @@ class Offline_Blink_Detection(Blink_Detection):
         self.filter_response = []
         self.response_classification = []
         self.timestamps = []
+        g_pool.blinks = []
+        g_pool.blinks_by_frame = [[] for x in self.g_pool.timestamps]
 
     def init_ui(self):
         super().init_ui()
@@ -162,7 +167,37 @@ class Offline_Blink_Detection(Blink_Detection):
             self.export(notification['range'], notification['export_dir'])
 
     def export(self, export_range, export_dir):
-        pass
+        """
+        Between in and out mark
+
+            blink_detection_report.csv:
+                - history lenght
+                - onset threshold
+                - offset threshold
+
+            blinks.csv:
+                id | start_timestamp | duration | end_timestamp |
+                start_frame_index | index | end_frame_index |
+                confidence | filter_response | base_data
+        """
+        if not self.g_pool.blinks:
+            logger.warning('No blinks were detected in this recording. Nothing to export.')
+            return
+
+        header = ('id', 'start_timestamp', 'duration', 'end_timestamp',
+                  'start_frame_index', 'index', 'end_frame_index', 'confidence',
+                  'filter_response', 'base_data')
+
+        start, end = export_range
+        blinks_in_section = [b for b in self.g_pool.blinks if start <= b['index'] <= end]
+
+        with open(os.path.join(export_dir, 'blinks.csv'), 'w',
+                  encoding='utf-8', newline='') as csvfile:
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerow(header)
+            for b in blinks_in_section:
+                csv_writer.writerow(self.csv_representation_for_blink(b, header))
+            logger.info("Created 'fixations.csv' file.")
 
     def recalculate(self):
         import time
@@ -198,13 +233,6 @@ class Offline_Blink_Detection(Blink_Detection):
         self.response_classification[onsets] = 1.
         self.response_classification[offsets] = -1.
 
-        np.savez_compressed('blink.data',
-                            activity=activity,
-                            blink_filter=blink_filter,
-                            timestamps=self.timestamps,
-                            filter_response=self.filter_response,
-                            response_classification=self.response_classification)
-
         self.consolidate_classifications()
 
         tm1 = time.time()
@@ -212,15 +240,18 @@ class Offline_Blink_Detection(Blink_Detection):
 
     def consolidate_classifications(self):
         blink = None
-        state = 'no blink'  # 'blink started' | 'blink ending'
+        state = 'no blink'  # others: 'blink started' | 'blink ending'
         all_blinks = deque()
+        counter = 1
 
         def start_blink(idx):
             nonlocal blink
             nonlocal state
+            nonlocal counter
             blink = {'topic': 'blink', '__start_frame_index__': idx,
-                     'start_timestamp': self.timestamps[idx]}
+                     'start_timestamp': self.timestamps[idx], 'id': counter}
             state = 'blink started'
+            counter += 1
 
         def blink_finished(idx):
             nonlocal blink
@@ -331,3 +362,17 @@ class Offline_Blink_Detection(Blink_Detection):
         if self._offset_confidence_threshold != val:
             self.notify_all({'subject': 'blink_detection.should_recalculate', 'delay': .2})
         self._offset_confidence_threshold = val
+
+    def csv_representation_for_blink(self, b, header):
+        data = [b[k] for k in header if k not in ('filter_response', 'base_data')]
+        try:
+            resp = " ".join(['{}'.format(val) for val in b['filter_response']])
+            data.insert(header.index('filter_response'), resp)
+        except IndexError:
+            pass
+        try:
+            base = " ".join(['{}'.format(pp['timestamp']) for pp in b['base_data']])
+            data.insert(header.index('base_data'), base)
+        except IndexError:
+            pass
+        return data
