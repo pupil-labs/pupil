@@ -103,7 +103,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from system_graphs import System_Graphs
         from blink_detection import Offline_Blink_Detection
 
-        assert VersionFormat(pyglui_version) >= VersionFormat('1.16'), 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.15'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
         system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs, Batch_Export]
