@@ -12,6 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 from plugin import Analysis_Plugin_Base
 from pyglui import ui, cygl
 from collections import deque
+from scipy.signal import fftconvolve
 import numpy as np
 import OpenGL.GL as gl
 
@@ -155,6 +156,8 @@ class Offline_Blink_Detection(Blink_Detection):
         elif notification['subject'] == 'pupil_positions_changed':
             logger.info('Pupil postions changed. Recalculating.')
             self.recalculate()
+        elif notification['subject'] == 'blinks_changed':
+            self.timeline.refresh()
         elif notification['subject'] == "should_export":
             self.export(notification['range'], notification['export_dir'])
 
@@ -176,37 +179,122 @@ class Offline_Blink_Detection(Blink_Detection):
         total_time = all_pp[-1]['timestamp'] - all_pp[0]['timestamp']
         filter_size = round(len(all_pp) * self.history_length / total_time)
         blink_filter = np.ones(filter_size) / filter_size
-        blink_filter[filter_size // 2:] *= -1
+
+        # This is different from the online filter. Convolution will flip
+        # the filter and result in a reverse filter response. Therefore
+        # we set the first half of the filter to -1 instead of the second
+        # half such that we get the expected result.
+        blink_filter[:filter_size // 2] *= -1
         self.timestamps = [pp['timestamp'] for pp in all_pp]
 
         # The theoretical response maximum is +-0.5
         # Response of +-0.45 seems sufficient for a confidence of 1.
-        self.filter_response = np.convolve(activity, blink_filter, 'same') / 0.45
+        self.filter_response = fftconvolve(activity, blink_filter, 'same') / 0.45
 
         onsets = self.filter_response > self.onset_confidence_threshold
-        offsets = self.filter_response < -self.onset_confidence_threshold
+        offsets = self.filter_response < -self.offset_confidence_threshold
 
         self.response_classification = np.zeros(self.filter_response.shape)
         self.response_classification[onsets] = 1.
         self.response_classification[offsets] = -1.
-        self.timeline.refresh()
+
+        np.savez_compressed('blink.data',
+                            activity=activity,
+                            blink_filter=blink_filter,
+                            timestamps=self.timestamps,
+                            filter_response=self.filter_response,
+                            response_classification=self.response_classification)
+
+        self.consolidate_classifications()
 
         tm1 = time.time()
         logger.debug('Recalculating took\n\t{:.4f}sec for {} pp\n\t{} pp/sec\n\tsize: {}'.format(tm1 - t0, len(all_pp), len(all_pp) / (tm1 - t0), filter_size))
 
+    def consolidate_classifications(self):
+        blink = None
+        state = 'no blink'  # 'blink started' | 'blink ending'
+        all_blinks = deque()
+
+        def start_blink(idx):
+            nonlocal blink
+            nonlocal state
+            blink = {'topic': 'blink', '__start_frame_index__': idx,
+                     'start_timestamp': self.timestamps[idx]}
+            state = 'blink started'
+
+        def blink_finished(idx):
+            nonlocal blink
+
+            # get tmp pupil idx
+            start_idx = blink['__start_frame_index__']
+            del blink['__start_frame_index__']
+
+            blink['end_timestamp'] = self.timestamps[idx]
+            blink['timestamp'] = (blink['end_timestamp'] + blink['start_timestamp']) / 2
+            blink['duration'] = blink['end_timestamp'] - blink['start_timestamp']
+            blink['base_data'] = self.g_pool.pupil_positions[start_idx:idx]
+            blink['filter_response'] = self.filter_response[start_idx:idx]
+            # blink confidence is the mean of the absolute filter response
+            # during the blink event, clamped at 1.
+            blink['confidence'] = min(np.abs(blink['filter_response']).mean(), 1.)
+
+            # correlate world indices
+            start, end = blink['start_timestamp'], blink['end_timestamp']
+            start, end = np.searchsorted(self.g_pool.timestamps, [start, end])
+            # fix `list index out of range` error
+            end = min(end, len(self.g_pool.timestamps) - 1)
+            blink['start_frame_index'] = start
+            blink['end_frame_index'] = end
+            blink['index'] = (start + end) // 2
+
+            all_blinks.append(blink)
+
+        for idx, classification in enumerate(self.response_classification):
+            if state == 'no blink' and classification > 0:
+                start_blink(idx)
+            elif state == 'blink started' and classification == -1:
+                state = 'blink ending'
+            elif state == 'blink ending' and classification >= 0:
+                blink_finished(idx - 1)  # blink ended previously
+                if classification > 0:
+                    start_blink(0)
+                else:
+                    blink = None
+                    state = 'no blink'
+
+        if state == 'blink ending':
+            # only finish blink if it was already ending
+            blink_finished(idx)  # idx is the last possible idx
+
+        self.g_pool.blinks = list(all_blinks)
+        blinks_by_frame = [[] for x in self.g_pool.timestamps]
+        for f in all_blinks:
+            for idx in range(f['start_frame_index'], f['end_frame_index'] + 1):
+                blinks_by_frame[idx].append(f)
+
+        self.g_pool.blinks_by_frame = blinks_by_frame
+        self.notify_all({'subject': 'blinks_changed', 'delay': .2})
+
     def draw_activation(self, width, height, scale):
-        response_points = [(t, r) for t, r in zip(self.timestamps, self.filter_response)]
-        class_points = [(t, r) for t, r in zip(self.timestamps, self.response_classification)]
+        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
+        response_points = tuple(zip(self.timestamps, self.filter_response))
         if len(response_points) == 0:
             return
 
-        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
+        class_points = deque([(t0, -.9)])
+        for b in self.g_pool.blinks:
+            class_points.append((b['start_timestamp'], -.9))
+            class_points.append((b['start_timestamp'],  .9))
+            class_points.append((b['end_timestamp'], .9))
+            class_points.append((b['end_timestamp'], -.9))
+        class_points.append((t1, -.9))
+
         thresholds = [(t0, self.onset_confidence_threshold),
                       (t1, self.onset_confidence_threshold),
                       (t0, -self.offset_confidence_threshold),
                       (t1, -self.offset_confidence_threshold)]
 
-        with gl_utils.Coord_System(t0, t1, 1, -1):
+        with gl_utils.Coord_System(t0, t1, -1, 1):
             draw_polyline(response_points, color=RGBA(0.6602, 0.8594, 0.4609, 0.8),
                           line_type=gl.GL_LINE_STRIP, thickness=1*scale)
             draw_polyline(class_points, color=RGBA(0.9961, 0.3789, 0.5313, 0.8),
