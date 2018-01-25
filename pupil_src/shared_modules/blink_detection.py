@@ -19,6 +19,7 @@ from scipy.signal import fftconvolve
 import numpy as np
 import OpenGL.GL as gl
 
+from csv_utils import write_key_value_file
 from pyglui.cygl.utils import *
 import gl_utils
 
@@ -197,7 +198,15 @@ class Offline_Blink_Detection(Blink_Detection):
             csv_writer.writerow(header)
             for b in blinks_in_section:
                 csv_writer.writerow(self.csv_representation_for_blink(b, header))
-            logger.info("Created 'fixations.csv' file.")
+            logger.info("Created 'blinks.csv' file.")
+
+        with open(os.path.join(export_dir, 'blink_detection_report.csv'), 'w',
+                  encoding='utf-8', newline='') as csvfile:
+            write_key_value_file(csvfile, {'history_length': self.history_length,
+                                           'onset_confidence_threshold': self.onset_confidence_threshold,
+                                           'offset_confidence_threshold': self.offset_confidence_threshold,
+                                           'blinks_exported': len(blinks_in_section)})
+            logger.info("Created 'blink_detection_report.csv' file.")
 
     def recalculate(self):
         import time
