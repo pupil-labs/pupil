@@ -88,33 +88,13 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
                                 label='Gaze Producers'
                             ))
 
-        self.gaze_conf_timeline = ui.Timeline('Gaze Confidence', self.draw_gaze_conf)
-        self.gaze_conf_timeline.height *= 1.5
-        self.g_pool.user_timelines.append(self.gaze_conf_timeline)
-
-    def on_notify(self, notification):
-        if notification['subject'] == 'gaze_positions_changed':
-            self.gaze_conf_timeline.refresh()
-
     def deinit_ui(self):
         self.remove_menu()
-        self.g_pool.user_timelines.remove(self.gaze_conf_timeline)
-        self.gaze_conf_timeline = None
 
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
             events['gaze_positions'] = self.g_pool.gaze_positions_by_frame[frm_idx]
-
-    def draw_gaze_conf(self, width, height, scale):
-        if not self.g_pool.gaze_positions:
-            return
-
-        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
-        gaze_conf = [(gp['timestamp'], gp['confidence']) for gp in self.g_pool.gaze_positions]
-
-        with gl_utils.Coord_System(t0, t1, 0., 1.5):
-            draw_polyline(gaze_conf, line_type=gl.GL_LINES, thickness=2.*scale, color=RGBA(0.9961, 0.3789, 0.5313, 0.8))
 
 
 class Gaze_From_Recording(Gaze_Producer_Base):
