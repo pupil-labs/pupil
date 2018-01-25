@@ -89,6 +89,12 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
             frm_idx = events['frame'].index
             events['pupil_positions'] = self.g_pool.pupil_positions_by_frame[frm_idx]
 
+    def draw_pupil_diameter(self, width, height, scale):
+        self.draw_pupil_data('diameter', width, height, scale)
+
+    def draw_pupil_conf(self, width, height, scale):
+        self.draw_pupil_data('confidence', width, height, scale)
+
     def draw_pupil_data(self, key, width, height, scale):
         if not self.g_pool.pupil_positions:
             return
@@ -96,20 +102,16 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
         right = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 0]
         left = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 1]
-        max_val = max(chain((pp[1] for pp in right), (pp[1] for pp in left)))
+
+        # max_val must not be 0, else gl will crash
+        max_val = max(chain((pp[1] for pp in right), (pp[1] for pp in left))) or 1
 
         with gl_utils.Coord_System(t0, t1, 0, max_val):
             draw_points(right, size=2.*scale, color=right_color)
             draw_points(left, size=2.*scale, color=left_color)
 
-    def draw_pupil_diameter(self, width, height, scale):
-        self.draw_pupil_data('diameter', width, height, scale)
-
     def draw_dia_legend(self, width, height, scale):
         self.draw_legend(self.dia_timeline.label, width, height, scale)
-
-    def draw_pupil_conf(self, width, height, scale):
-        self.draw_pupil_data('confidence', width, height, scale)
 
     def draw_conf_legend(self, width, height, scale):
         self.draw_legend(self.conf_timeline.label, width, height, scale)
