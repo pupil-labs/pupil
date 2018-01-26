@@ -142,7 +142,6 @@ class Offline_Blink_Detection(Blink_Detection):
     def init_ui(self):
         super().init_ui()
         self.timeline = ui.Timeline('Blink Detection', self.draw_activation)
-        self.timeline.height *= 1.5
         self.g_pool.user_timelines.append(self.timeline)
 
     def deinit_ui(self):
