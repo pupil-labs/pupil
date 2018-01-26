@@ -9,6 +9,8 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+from bisect import bisect_left as bisect
+
 from pyglui import ui
 from plugin import System_Plugin_Base
 
@@ -26,16 +28,15 @@ class Seek_Control(System_Plugin_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         g_pool.seek_control = self
-        self.current_frame_index = self.g_pool.capture.get_frame_index()
-        self.frame_count = self.g_pool.capture.get_frame_count()
-        self._trim_left = 0
-        self._trim_right = self.frame_count - 1
-
+        self.trim_left = 0
+        self.trim_right = len(self.g_pool.timestamps) - 1
         self.drag_mode = False
         self.was_playing = True
 
     def init_ui(self):
-        self.seek_bar = ui.Seek_Bar(self, self.frame_count - 1, self.on_seek, self.g_pool.user_timelines)
+        self.seek_bar = ui.Seek_Bar(self, self.g_pool.timestamps[0],
+                                    self.g_pool.timestamps[-1], self.on_seek,
+                                    self.g_pool.user_timelines)
         self.g_pool.timelines.insert(0, self.seek_bar)
 
     def deinit_ui(self):
@@ -47,7 +48,7 @@ class Seek_Control(System_Plugin_Base):
         if not frame:
             return
 
-        if frame.index == self.trim_left or frame.index == self.trim_right:
+        if frame.timestamp == self.trim_left or frame.timestamp == self.trim_right:
             self.g_pool.capture.play = False
 
     def on_seek(self, seeking):
@@ -64,43 +65,41 @@ class Seek_Control(System_Plugin_Base):
 
     @play.setter
     def play(self, new_state):
-        if new_state and self.current_index >= self.frame_count - 1:
+        if new_state and self.current_ts >= self.g_pool.timestamps[-1]:
             self.g_pool.capture.seek_to_frame(0)  # avoid pause set by hitting trimmark pause.
             logger.warning("End of video - restart at beginning.")
         self.g_pool.capture.play = new_state
 
     @property
-    def trim_left(self):
-        return self._trim_left
+    def trim_left_ts(self):
+        return self.g_pool.timestamps[self.trim_left]
 
-    @trim_left.setter
-    def trim_left(self, val):
-        if val != self._trim_left:
-            # 0 <= left <= right + 1
-            self._trim_left = max(0, min(val, self.trim_right - 1))
+    @trim_left_ts.setter
+    def trim_left_ts(self, val):
+        self.trim_left = bisect(self.g_pool.timestamps, val, hi=self.trim_right-1)
 
     @property
-    def trim_right(self):
-        return self._trim_right
+    def trim_right_ts(self):
+        return self.g_pool.timestamps[self.trim_right]
 
-    @trim_right.setter
-    def trim_right(self, val):
-        if val != self._trim_right:
-            # left + 1 <= right <= frame_count -1
-            self._trim_right = max(self.trim_left + 1, min(val, self.frame_count - 1))
+    @trim_right_ts.setter
+    def trim_right_ts(self, val):
+        # left + 1 <= right <= frame_count -1
+        self.trim_right = bisect(self.g_pool.timestamps, val, lo=self.trim_left+1)
 
     @property
-    def current_index(self):
-        return self.g_pool.capture.get_frame_index()
+    def current_ts(self):
+        return self.g_pool.timestamps[self.g_pool.capture.get_frame_index()]
 
-    @current_index.setter
-    def current_index(self, val):
-        if self.current_index != val:
+    @current_ts.setter
+    def current_ts(self, val):
+        if self.current_ts != val:
             try:
-                # logger.info('seeking to {} form {}'.format(seek_pos,self.current_frame_index))
-                self.g_pool.capture.seek_to_frame(val)
+                val_idx = bisect(self.g_pool.timestamps, val)
+                self.g_pool.capture.seek_to_frame(val_idx)
             except:
-                pass
+                import traceback as tb
+                logger.error(tb.format_exc())
             self.g_pool.new_seek = True
 
     @property
@@ -117,7 +116,8 @@ class Seek_Control(System_Plugin_Base):
             self.g_pool.capture.playback_speed = speeds[new_idx]
         else:
             # frame-by-frame mode, seek one frame forward
-            self.current_index = min(self.current_index + 1, self.frame_count - 1)
+            self.g_pool.capture.seek_to_next_frame()
+            self.g_pool.new_seek = True
 
     @property
     def backwards(self):
@@ -133,7 +133,8 @@ class Seek_Control(System_Plugin_Base):
             self.g_pool.capture.playback_speed = speeds[new_idx]
         else:
             # frame-by-frame mode, seek one frame backwards
-            self.current_index = max(self.current_index - 1, 0)
+            self.g_pool.capture.seek_to_prev_frame()
+            self.g_pool.new_seek = True
 
     @property
     def playback_speed(self):
