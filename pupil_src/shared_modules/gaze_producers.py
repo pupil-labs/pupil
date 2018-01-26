@@ -489,23 +489,27 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.timeline.height = max(0.001, self.timeline_line_height * len(self.sections))
 
     def draw_sections(self, width, height, scale):
-        max_idx = len(self.g_pool.timestamps) - 1
-        with gl_utils.Coord_System(0, max_idx, height, 0):
+        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
+        with gl_utils.Coord_System(t0, t1, height, 0):
             gl.glTranslatef(0, 0.001 + scale * self.timeline_line_height / 2, 0)
             for s in self.sections:
                 color = RGBA(1., 1., 1., .5)
                 if s['calibration_method'] == "natural_features":
-                    draw_x([(m['index'], 0) for m in self.manual_ref_positions],
+                    draw_x([(m['timestamp'], 0) for m in self.manual_ref_positions],
                            size=12, thickness=2*scale, color=color)
                 else:
-                    draw_bars([(m['index'], 0) for m in self.circle_marker_positions],
+                    draw_bars([(m['timestamp'], 0) for m in self.circle_marker_positions],
                               height=12, thickness=scale, color=color)
                 cal_slc = slice(*s['calibration_range'])
                 map_slc = slice(*s['mapping_range'])
+                cal_ts = self.g_pool.timestamps[cal_slc]
+                map_ts = self.g_pool.timestamps[map_slc]
+
+
                 color = RGBA(*s['color'])
-                draw_polyline([(cal_slc.start, 0), (cal_slc.stop, 0)], color=color,
+                draw_polyline([(cal_ts[0], 0), (cal_ts[-1], 0)], color=color,
                               line_type=gl.GL_LINES, thickness=8*scale)
-                draw_polyline([(map_slc.start, 0), (map_slc.stop, 0)], color=color,
+                draw_polyline([(map_ts[0], 0), (map_ts[-1], 0)], color=color,
                               line_type=gl.GL_LINES, thickness=2*scale)
                 gl.glTranslatef(0, scale * self.timeline_line_height, 0)
 
