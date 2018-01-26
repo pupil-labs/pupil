@@ -88,6 +88,9 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
                                 label='Gaze Producers'
                             ))
 
+    def deinit_ui(self):
+        self.remove_menu()
+
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
@@ -143,7 +146,7 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.menu.append(offset_menu)
 
     def deinit_ui(self):
-        self.remove_menu()
+        super().deinit_ui()
 
     def cleanup(self):
         session_data = {'dx': self.x_offset, 'dy': self.y_offset, 'version': 0}
@@ -293,8 +296,7 @@ class Offline_Calibration(Gaze_Producer_Base):
     def deinit_ui(self):
         # needs to be called here since makes calls to the ui:
         self.cancel_marker_detection()
-
-        self.remove_menu()
+        super().deinit_ui()
         self.g_pool.user_timelines.remove(self.timeline)
         self.timeline = None
         self.glfont = None
@@ -487,8 +489,8 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.timeline.height = max(0.001, self.timeline_line_height * len(self.sections))
 
     def draw_sections(self, width, height, scale):
-        max_ts = len(self.g_pool.timestamps)
-        with gl_utils.Coord_System(0, max_ts, height, 0):
+        max_idx = len(self.g_pool.timestamps) - 1
+        with gl_utils.Coord_System(0, max_idx, height, 0):
             gl.glTranslatef(0, 0.001 + scale * self.timeline_line_height / 2, 0)
             for s in self.sections:
                 color = RGBA(1., 1., 1., .5)

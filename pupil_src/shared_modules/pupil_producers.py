@@ -9,23 +9,28 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import sys
 import os
-import platform
-import glob
 import zmq
 import zmq_tools
 import numpy as np
+from itertools import chain
 from plugin import Producer_Plugin_Base
 from pyglui import ui
-from time import sleep
 from player_methods import correlate_data
-from file_methods import load_object,save_object
+from file_methods import load_object, save_object
+
+from pyglui.pyfontstash import fontstash as fs
+from pyglui.cygl.utils import *
+import OpenGL.GL as gl
+import gl_utils
 
 import pupil_detectors  # trigger module compilation
 
 import logging
 logger = logging.getLogger(__name__)
+
+right_color = RGBA(0.9844, 0.5938, 0.4023, 0.8)
+left_color = RGBA(0.668, 0.6133, 0.9453, 0.8)
 
 
 class Empty(object):
@@ -59,13 +64,78 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
                                 label='Pupil Producers'
                             ))
 
+        self.glfont = fs.Context()
+        self.glfont.add_font('opensans', ui.get_opensans_font_path())
+        self.glfont.set_font('opensans')
+        self.dia_timeline = ui.Timeline('Pupil Diameter [px]', self.draw_pupil_diameter, self.draw_dia_legend)
+        self.conf_timeline = ui.Timeline('Pupil Confidence', self.draw_pupil_conf, self.draw_conf_legend)
+        self.g_pool.user_timelines.append(self.dia_timeline)
+        self.g_pool.user_timelines.append(self.conf_timeline)
+
+    def on_notify(self, notification):
+        if notification['subject'] == 'pupil_positions_changed':
+            self.dia_timeline.refresh()
+            self.conf_timeline.refresh()
+
     def deinit_ui(self):
         self.remove_menu()
+        self.g_pool.user_timelines.remove(self.dia_timeline)
+        self.g_pool.user_timelines.remove(self.conf_timeline)
+        self.dia_timeline = None
+        self.conf_timeline = None
 
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
             events['pupil_positions'] = self.g_pool.pupil_positions_by_frame[frm_idx]
+
+    def draw_pupil_diameter(self, width, height, scale):
+        self.draw_pupil_data('diameter', width, height, scale)
+
+    def draw_pupil_conf(self, width, height, scale):
+        self.draw_pupil_data('confidence', width, height, scale)
+
+    def draw_pupil_data(self, key, width, height, scale):
+        if not self.g_pool.pupil_positions:
+            return
+
+        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
+        right = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 0]
+        left = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 1]
+
+        # max_val must not be 0, else gl will crash
+        max_val = max(chain((pp[1] for pp in right), (pp[1] for pp in left))) or 1
+
+        with gl_utils.Coord_System(t0, t1, 0, max_val):
+            draw_points(right, size=2.*scale, color=right_color)
+            draw_points(left, size=2.*scale, color=left_color)
+
+    def draw_dia_legend(self, width, height, scale):
+        self.draw_legend(self.dia_timeline.label, width, height, scale)
+
+    def draw_conf_legend(self, width, height, scale):
+        self.draw_legend(self.conf_timeline.label, width, height, scale)
+
+    def draw_legend(self, label, width, height, scale):
+        self.glfont.push_state()
+        self.glfont.set_align_string(v_align='right', h_align='top')
+        self.glfont.set_size(15. * scale)
+        self.glfont.draw_text(width, 0, label)
+
+        legend_height = 13. * scale
+        pad = 10 * scale
+        self.glfont.set_align_string(v_align='left', h_align='top')
+        self.glfont.draw_text(width / 4 + pad, legend_height, 'right')
+        self.glfont.draw_text(width * 3 / 4 + pad, legend_height, 'left')
+
+        self.glfont.pop_state()
+
+        draw_polyline([(pad, 1.5 * legend_height),
+                       (width / 4, 1.5 * legend_height)],
+                      color=left_color, line_type=gl.GL_LINES, thickness=4.*scale)
+        draw_polyline([(width / 2 + pad, 1.5 * legend_height),
+                       (width * 3 / 4, 1.5 * legend_height)],
+                      color=right_color, line_type=gl.GL_LINES, thickness=4.*scale)
 
 
 class Pupil_From_Recording(Pupil_Producer_Base):
@@ -96,7 +166,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         try:
             session_data = load_object(os.path.join(self.data_dir, 'offline_pupil_data'))
             assert session_data.get('version') != self.session_data_version
-        except:
+        except Exception():
             session_data = {}
             session_data["detection_method"] = '3d'
             session_data['pupil_positions'] = []
@@ -180,6 +250,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.save_offline_data()
 
     def on_notify(self, notification):
+        super().on_notify(notification)
         if notification['subject'] == 'eye_process.started':
             self.set_detection_mapping_mode(self.detection_method)
         elif notification['subject'] == 'eye_process.stopped':
