@@ -330,11 +330,12 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
     def gl_display_cache_bars(self, width, height, scale):
         """
         """
-        with gl_utils.Coord_System(0, self.cache.length - 1, height, 0):
+        TS = self.g_pool.timestamps
+        with gl_utils.Coord_System(TS[0], TS[-1], height, 0):
             # Lines for areas that have been cached
             cached_ranges = []
             for r in self.cache.visited_ranges:  # [[0,1],[3,4]]
-                cached_ranges += (r[0], 0), (r[1], 0)  # [(0,0),(1,0),(3,0),(4,0)]
+                cached_ranges += (TS[r[0]], 0), (TS[r[1]], 0)  # [(0,0),(1,0),(3,0),(4,0)]
 
             glTranslatef(0, scale * self.timeline_line_height / 2, 0)
             color = RGBA(.8, .6, .2, .8)
@@ -346,7 +347,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                 found_at = []
                 if s.cache is not None:
                     for r in s.cache.positive_ranges:  # [[0,1],[3,4]]
-                        found_at += (r[0], 0), (r[1], 0)  # [(0,0),(1,0),(3,0),(4,0)]
+                        found_at += (TS[r[0]], 0), (TS[r[1]], 0)  # [(0,0),(1,0),(3,0),(4,0)]
                     cached_surfaces.append(found_at)
 
             color = RGBA(0, .7, .3, .8)
