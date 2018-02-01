@@ -29,8 +29,8 @@ import pupil_detectors  # trigger module compilation
 import logging
 logger = logging.getLogger(__name__)
 
-right_color = RGBA(0.9844, 0.5938, 0.4023, 0.8)
-left_color = RGBA(0.668, 0.6133, 0.9453, 0.8)
+right_color = RGBA(0.9844, 0.5938, 0.4023, 1.)
+left_color = RGBA(0.668, 0.6133, 0.9453, 1.)
 
 
 class Empty(object):
@@ -124,9 +124,9 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 
         legend_height = 13. * scale
         pad = 10 * scale
-        self.glfont.set_align_string(v_align='left', h_align='top')
-        self.glfont.draw_text(width / 4 + pad, legend_height, 'right')
-        self.glfont.draw_text(width * 3 / 4 + pad, legend_height, 'left')
+        self.glfont.set_align_string(v_align='right', h_align='top')
+        self.glfont.draw_text(width / 2, legend_height, 'left')
+        self.glfont.draw_text(width, legend_height, 'right')
 
         self.glfont.pop_state()
 
