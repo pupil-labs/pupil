@@ -82,24 +82,26 @@ class System_Timelines(System_Plugin_Base):
 
         legend_height = 13. * scale
         pad = 10 * scale
-        self.glfont.set_align_string(v_align='right', h_align='top')
-
-        if self.show_eye_fps:
-            self.glfont.draw_text(width / 2, legend_height, 'left')
-            self.glfont.draw_text(width, legend_height, 'right')
-            draw_polyline([(pad, legend_height + pad * 2 / 3),
-                           (width / 4, legend_height + pad * 2 / 3)],
-                          color=left_color, line_type=gl.GL_LINES, thickness=4.*scale)
-            draw_polyline([(width / 2 + pad, legend_height + pad * 2 / 3),
-                           (width * 3 / 4, legend_height + pad * 2 / 3)],
-                          color=right_color, line_type=gl.GL_LINES, thickness=4.*scale)
-            legend_height += legend_height + pad / 2
 
         if self.show_world_fps:
-            self.glfont.draw_text(width, legend_height, 'world')
-            draw_polyline([(width / 2 + pad, legend_height + pad * 2 / 3),
-                           (width * 3 / 4 - pad / 2, legend_height + pad * 2 / 3)],
+            self.glfont.draw_text(width, legend_height, 'world FPS')
+            draw_polyline([(pad, legend_height + pad * 2 / 3),
+                           (width / 2, legend_height + pad * 2 / 3)],
                           color=world_color, line_type=gl.GL_LINES, thickness=4.*scale)
+            legend_height += 1.5 * pad
+
+        if self.show_eye_fps:
+            self.glfont.draw_text(width, legend_height, 'eye1 FPS')
+            draw_polyline([(pad, legend_height + pad * 2 / 3),
+                           (width / 2, legend_height + pad * 2 / 3)],
+                          color=left_color, line_type=gl.GL_LINES, thickness=4.*scale)
+            legend_height += 1.5 * pad
+
+            self.glfont.draw_text(width, legend_height, 'eye0 FPS')
+            draw_polyline([(pad, legend_height + pad * 2 / 3),
+                           (width / 2, legend_height + pad * 2 / 3)],
+                          color=right_color, line_type=gl.GL_LINES, thickness=4.*scale)
+
 
         self.glfont.pop_state()
 

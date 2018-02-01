@@ -124,7 +124,6 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 
         legend_height = 13. * scale
         pad = 10 * scale
-        self.glfont.set_align_string(v_align='right', h_align='top')
         self.glfont.draw_text(width / 2, legend_height, 'left')
         self.glfont.draw_text(width, legend_height, 'right')
 
