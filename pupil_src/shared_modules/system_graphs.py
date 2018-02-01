@@ -35,6 +35,7 @@ class System_Graphs(System_Plugin_Base):
         self.dia_max = dia_max
         self.conf_grad_limits = .0, 1.
         self.ts = None
+        self.idx = None
 
     def init_ui(self):
         self.add_menu()
@@ -138,6 +139,7 @@ class System_Graphs(System_Plugin_Base):
 
     def recent_events(self, events):
         self.cpu_graph.update()
+
         # update performace graphs
         if 'frame' in events:
             t = events["frame"].timestamp
@@ -150,9 +152,15 @@ class System_Graphs(System_Plugin_Base):
             else:
                 self.ts = t
 
-        for p in events["pupil_positions"]:
-            (self.conf0_graph if p['id'] == 0 else self.conf1_graph).add(p['confidence'])
-            (self.dia0_graph if p['id'] == 0 else self.dia1_graph).add(p.get('diameter_3d', 0.))
+            if self.idx != events["frame"].index:
+                for p in events["pupil_positions"]:
+                    # update confidence graph
+                    cg = self.conf0_graph if p['id'] == 0 else self.conf1_graph
+                    cg.add(p['confidence'])
+                    # update diameter graph
+                    dg = self.dia0_graph if p['id'] == 0 else self.dia1_graph
+                    dg.add(p.get('diameter_3d', 0.))
+                self.idx = events["frame"].index
 
     def deinit_ui(self):
         self.remove_menu()
