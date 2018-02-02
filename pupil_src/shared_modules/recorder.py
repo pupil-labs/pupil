@@ -351,8 +351,9 @@ class Recorder(System_Plugin_Base):
         self.close_info_menu()
 
         self.running = False
-        self.menu.read_only = False
-        self.button.status_text = ''
+        if self.menu:
+            self.menu.read_only = False
+            self.button.status_text = ''
 
         self.data = {'pupil_positions': [], 'gaze_positions': []}
         self.pupil_pos_list = []
