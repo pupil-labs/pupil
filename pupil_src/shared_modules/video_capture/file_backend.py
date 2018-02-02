@@ -331,7 +331,7 @@ class File_Source(Base_Source):
             self.play = False
 
     def seek_to_next_frame(self):
-        self.get_frame()
+        self.seek_to_frame(min(self.current_frame_idx + 1, self.get_frame_count() - 1))
 
     def seek_to_prev_frame(self):
         self.seek_to_frame(max(0, self.current_frame_idx - 1))

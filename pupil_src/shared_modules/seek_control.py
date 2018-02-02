@@ -32,6 +32,7 @@ class Seek_Control(System_Plugin_Base):
         self.trim_right = len(self.g_pool.timestamps) - 1
         self.drag_mode = False
         self.was_playing = True
+        g_pool.capture.play = False
 
     def init_ui(self):
         self.seek_bar = ui.Seek_Bar(self, self.g_pool.timestamps[0],
@@ -56,7 +57,6 @@ class Seek_Control(System_Plugin_Base):
             self.was_playing = self.g_pool.capture.play
             self.g_pool.capture.play = False
         else:
-            self.g_pool.new_seek = True
             self.g_pool.capture.play = self.was_playing
 
     @property
