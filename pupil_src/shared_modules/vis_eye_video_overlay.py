@@ -210,8 +210,11 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
         self.show_ellipses = show_ellipses
         self.move_around = False
 
-        window = g_pool.main_window
-        self.hdpi_factor = float(glfwGetFramebufferSize(window)[0] / glfwGetWindowSize(window)[0])
+        if self.g_pool.app != 'exporter':
+            window = g_pool.main_window
+            self.hdpi_factor = float(glfwGetFramebufferSize(window)[0] / glfwGetWindowSize(window)[0])
+        else:
+            self.hdpi_factor = 1.
 
         self.eye0 = Eye_Wrapper(g_pool, 0, hdpi_fac=self.hdpi_factor, **eye0_config)
         self.eye1 = Eye_Wrapper(g_pool, 1, hdpi_fac=self.hdpi_factor, **eye1_config)
