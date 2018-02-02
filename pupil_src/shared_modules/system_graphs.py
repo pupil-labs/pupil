@@ -138,9 +138,20 @@ class System_Graphs(System_Plugin_Base):
             self.dia1_graph.draw()
 
     def recent_events(self, events):
+        # update cpu graph
         self.cpu_graph.update()
 
-        # update performace graphs
+        # update pupil graphs
+        if 'frame' not in events or self.idx != events["frame"].index:
+            for p in events["pupil_positions"]:
+                # update confidence graph
+                cg = self.conf0_graph if p['id'] == 0 else self.conf1_graph
+                cg.add(p['confidence'])
+                # update diameter graph
+                dg = self.dia0_graph if p['id'] == 0 else self.dia1_graph
+                dg.add(p.get('diameter_3d', 0.))
+
+        # update wprld fps graph
         if 'frame' in events:
             t = events["frame"].timestamp
             if self.ts and t != self.ts:
@@ -151,16 +162,7 @@ class System_Graphs(System_Plugin_Base):
                     pass
             else:
                 self.ts = t
-
-            if self.idx != events["frame"].index:
-                for p in events["pupil_positions"]:
-                    # update confidence graph
-                    cg = self.conf0_graph if p['id'] == 0 else self.conf1_graph
-                    cg.add(p['confidence'])
-                    # update diameter graph
-                    dg = self.dia0_graph if p['id'] == 0 else self.dia1_graph
-                    dg.add(p.get('diameter_3d', 0.))
-                self.idx = events["frame"].index
+            self.idx = events["frame"].index  # required for eye graph logic in player
 
     def deinit_ui(self):
         self.remove_menu()
