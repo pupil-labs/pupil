@@ -45,34 +45,34 @@ class System_Timelines(System_Plugin_Base):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
         max_val = 1
         if self.show_world_fps:
-            wts = np.asarray(self.g_pool.timestamps)
-            wfps = 1. / np.diff(wts)
-            max_val = max(max_val, np.max(wfps))
-            wfps = [fps for fps in zip(wts, wfps)]
+            w_ts = np.asarray(self.g_pool.timestamps)
+            w_fps = 1. / np.diff(w_ts)
+            max_val = max(max_val, np.max(w_fps))
+            w_fps = [fps for fps in zip(w_ts, w_fps)]
 
         if self.show_eye_fps:
-            e0ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 0])
-            if e0ts.shape[0] > 1:
-                e0fps = 1. / np.diff(e0ts)
-                max_val = max(max_val, e0fps.max())
-                e0fps = [fps for fps in zip(e0ts, e0fps)]
+            e0_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 0])
+            if e0_ts.shape[0] > 1:
+                e0_fps = 1. / np.diff(e0_ts)
+                max_val = max(max_val, e0_fps.max())
+                e0_fps = [fps for fps in zip(e0_ts, e0_fps)]
             else:
-                e0fps = []
+                e0_fps = []
 
-            e1ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 1])
-            if e1ts.shape[0] > 1:
-                e1fps = 1. / np.diff(e1ts)
-                max_val = max(max_val, e1fps.max())
-                e1fps = [fps for fps in zip(e1ts, e1fps)]
+            e1_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 1])
+            if e1_ts.shape[0] > 1:
+                e1_fps = 1. / np.diff(e1_ts)
+                max_val = max(max_val, e1_fps.max())
+                e1_fps = [fps for fps in zip(e1_ts, e1_fps)]
             else:
-                e1fps = []
+                e1_fps = []
 
         with gl_utils.Coord_System(t0, t1, 0, max_val):
             if self.show_world_fps:
-                draw_points(wfps, size=2*scale, color=world_color)
+                draw_points(w_fps, size=2*scale, color=world_color)
             if self.show_eye_fps:
-                draw_points(e0fps, size=2*scale, color=right_color)
-                draw_points(e1fps, size=2*scale, color=left_color)
+                draw_points(e0_fps, size=2*scale, color=right_color)
+                draw_points(e1_fps, size=2*scale, color=left_color)
 
     def draw_fps_legend(self, width, height, scale):
         self.glfont.push_state()
@@ -102,9 +102,7 @@ class System_Timelines(System_Plugin_Base):
                            (width / 2, legend_height + pad * 2 / 3)],
                           color=right_color, line_type=gl.GL_LINES, thickness=4.*scale)
 
-
         self.glfont.pop_state()
-
 
     def on_notify(self, notification):
         if notification['subject'] == 'pupil_positions_changed':
