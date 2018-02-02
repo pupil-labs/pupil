@@ -49,7 +49,7 @@ class Seek_Control(System_Plugin_Base):
         if not frame:
             return
 
-        if frame.timestamp == self.trim_left or frame.timestamp == self.trim_right:
+        if frame.timestamp == self.trim_left_ts or frame.timestamp == self.trim_right_ts:
             self.g_pool.capture.play = False
 
     def on_seek(self, seeking):
