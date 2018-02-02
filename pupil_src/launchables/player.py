@@ -101,12 +101,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
         from gaze_producers import Gaze_From_Recording, Offline_Calibration
         from system_graphs import System_Graphs
+        from system_timelines import System_Timelines
         from blink_detection import Offline_Blink_Detection
 
         assert VersionFormat(pyglui_version) >= VersionFormat('1.16'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
-        system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs, Batch_Export]
+        system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs, Batch_Export, System_Timelines]
         user_plugins = [Vis_Circle,
                         Vis_Fixation,
                         Vis_Polyline,
@@ -355,9 +356,17 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.gui.append(g_pool.quickbar)
 
         # we always load these plugins
-        default_plugins = [('Plugin_Manager', {}), ('Seek_Control', {}), ('Log_Display', {}),
-                           ('Vis_Scan_Path', {}), ('Vis_Polyline', {}), ('Vis_Circle', {}), ('System_Graphs', {}),
-                           ('Video_Export_Launcher', {}), ('Pupil_From_Recording', {}), ('Gaze_From_Recording', {})]
+        default_plugins = [('Plugin_Manager', {}),
+                           ('Seek_Control', {}),
+                           ('Log_Display', {}),
+                           ('Vis_Scan_Path', {}),
+                           ('Vis_Polyline', {}),
+                           ('Vis_Circle', {}),
+                           ('System_Graphs', {}),
+                           ('System_Timelines', {}),
+                           ('Video_Export_Launcher', {}),
+                           ('Pupil_From_Recording', {}),
+                           ('Gaze_From_Recording', {})]
         g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
 
         # Register callbacks main_window
