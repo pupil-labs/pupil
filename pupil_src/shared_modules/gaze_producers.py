@@ -490,13 +490,14 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def draw_sections(self, width, height, scale):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
+        pixel_to_time_fac = height / (t1 - t0)
         with gl_utils.Coord_System(t0, t1, height, 0):
             gl.glTranslatef(0, 0.001 + scale * self.timeline_line_height / 2, 0)
             for s in self.sections:
                 color = RGBA(1., 1., 1., .5)
                 if s['calibration_method'] == "natural_features":
                     draw_x([(m['timestamp'], 0) for m in self.manual_ref_positions],
-                           size=12, thickness=2*scale, color=color)
+                           height=12, width=3 * pixel_to_time_fac, thickness=scale, color=color)
                 else:
                     draw_bars([(m['timestamp'], 0) for m in self.circle_marker_positions],
                               height=12, thickness=scale, color=color)
