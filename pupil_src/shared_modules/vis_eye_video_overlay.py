@@ -15,7 +15,7 @@ from glob import glob
 import cv2
 import numpy as np
 from pyglui import ui
-from glfw import glfwGetCursorPos, glfwGetWindowSize, glfwGetCurrentContext
+from glfw import glfwGetCursorPos, glfwGetFramebufferSize, glfwGetWindowSize, glfwGetCurrentContext
 
 from plugin import Visualizer_Plugin_Base
 from player_methods import transparent_image_overlay
@@ -44,7 +44,7 @@ def correlate_eye_world(eye_timestamps, world_timestamps):
 
 
 class Eye_Wrapper(object):
-    def __init__(self, g_pool, eyeid, pos, hflip=False, vflip=False):
+    def __init__(self, g_pool, eyeid, pos, hdpi_fac=1., hflip=False, vflip=False):
         super().__init__()
         self.g_pool = g_pool
         self.eyeid = eyeid
@@ -56,6 +56,7 @@ class Eye_Wrapper(object):
         self.current_eye_frame = None
         self.drag_offset = None
         self.menu = None
+        self.hdpi_fac = hdpi_fac
 
     def initliaze_video(self, rec_dir, world_timestamps):
         eye_loc = os.path.join(rec_dir, 'eye{}.*'.format(self.eyeid))
@@ -115,7 +116,8 @@ class Eye_Wrapper(object):
 
         # 2. dragging image
         if self.drag_offset is not None:
-            pos = glfwGetCursorPos(glfwGetCurrentContext())
+            x, y = glfwGetCursorPos(glfwGetCurrentContext())
+            pos = x * self.hdpi_fac, y * self.hdpi_fac
             pos = normalize(pos, self.g_pool.camera_render_size)
             # Position in img pixels
             pos = denormalize(pos, (frame.img.shape[1], frame.img.shape[0]))
@@ -155,11 +157,12 @@ class Eye_Wrapper(object):
 
         transparent_image_overlay(self.pos, eyeimage, frame.img, alpha)
 
-    def on_click(self, pos, button, action, scale):
+    def on_click(self, pos, button, action, hdpi_fac, eye_scale):
+        self.hdpi_fac = hdpi_fac
         if not self.initialized:
             return False  # click event has not been consumed
 
-        video_size = round(self.current_eye_frame.width * scale), round(self.current_eye_frame.height * scale)
+        video_size = round(self.current_eye_frame.width * eye_scale), round(self.current_eye_frame.height * eye_scale)
 
         if (self.pos[0] < pos[0] < self.pos[0] + video_size[0] and
                 self.pos[1] < pos[1] < self.pos[1] + video_size[1]):
@@ -168,6 +171,7 @@ class Eye_Wrapper(object):
         else:
             self.drag_offset = None
             return False
+
 
 def getEllipsePts(e, num_pts=10):
     c1 = e[0][0]
@@ -191,6 +195,7 @@ def getEllipsePts(e, num_pts=10):
 
     return pts_rot
 
+
 class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
     icon_chr = chr(0xec02)
     icon_font = 'pupil_icons'
@@ -205,8 +210,11 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
         self.show_ellipses = show_ellipses
         self.move_around = False
 
-        self.eye0 = Eye_Wrapper(g_pool, 0, **eye0_config)
-        self.eye1 = Eye_Wrapper(g_pool, 1, **eye1_config)
+        window = g_pool.main_window
+        self.hdpi_factor = float(glfwGetFramebufferSize(window)[0] / glfwGetWindowSize(window)[0])
+
+        self.eye0 = Eye_Wrapper(g_pool, 0, hdpi_fac=self.hdpi_factor, **eye0_config)
+        self.eye1 = Eye_Wrapper(g_pool, 1, hdpi_fac=self.hdpi_factor, **eye1_config)
 
         self.eye0.initliaze_video(g_pool.rec_dir, g_pool.timestamps)
         self.eye1.initliaze_video(g_pool.rec_dir, g_pool.timestamps)
@@ -242,8 +250,8 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
         # eye1 is drawn above eye0. Therefore eye1 gets the priority during click event handling
         # wrapper.on_click returns bool indicating the consumption of the click event
         if self.move_around and action == 1:
-            if not self.eye1.on_click(pos, button, action, self.eye_scale_factor):
-                self.eye0.on_click(pos, button, action, self.eye_scale_factor)
+            if not self.eye1.on_click(pos, button, action, self.hdpi_factor, self.eye_scale_factor):
+                self.eye0.on_click(pos, button, action, self.hdpi_factor, self.eye_scale_factor)
         else:
             self.eye0.drag_offset = None
             self.eye1.drag_offset = None
@@ -263,3 +271,7 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
     def get_init_dict(self):
         return {'alpha': self.alpha, 'eye_scale_factor': self.eye_scale_factor, 'show_ellipses': self.show_ellipses,
                 'eye0_config': self.eye0.config, 'eye1_config': self.eye1.config}
+
+    def on_window_resize(self, window, camera_render_width, camera_render_height):
+        self.hdpi_factor = float(glfwGetFramebufferSize(window)[0] / glfwGetWindowSize(window)[0])
+
