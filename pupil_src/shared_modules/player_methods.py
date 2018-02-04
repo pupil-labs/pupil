@@ -154,7 +154,7 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         else:
             video_loc = existing_locs[0]
 
-        if time_name in ('Pupil Cam1 ID0', 'Pupil Cam1 ID1'):
+        if time_name in ('Pupil Cam1 ID0', 'Pupil Cam1 ID1', 'Pupil Cam2 ID0', 'Pupil Cam2 ID1'):
             time_name = 'eye'+time_name[-1]  # rename eye files
         elif time_name in ('Pupil Cam1 ID2', 'Logitech Webcam C930e'):
             video = av.open(video_loc, 'r')
