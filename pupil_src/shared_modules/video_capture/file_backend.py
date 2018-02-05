@@ -136,7 +136,8 @@ class File_Source(Base_Source):
             self._initialised = False
             return
 
-        self.display_time = 0.
+        self.time_discrepancy = 0.
+        self._recent_wait_idx = -1
         self.target_frame_idx = 0
         self.current_frame_idx = 0
 
@@ -277,12 +278,16 @@ class File_Source(Base_Source):
         return Frame(timestamp, frame, index=index)
 
     def wait(self, frame):
-        if self.display_time:
-            wait_time = frame.timestamp - self.display_time - time()
+        if frame.index == self._recent_wait_idx:
+            sleep(1/60)  # 60 fps on Player pause
+        elif self.time_discrepancy:
+            wait_time = frame.timestamp - self.time_discrepancy - time()
             wait_time /= self.playback_speed
+            print(frame.timestamp, wait_time)
             if 1 > wait_time > 0:
                 sleep(wait_time)
-        self.display_time = frame.timestamp - time()
+        self._recent_wait_idx = frame.index
+        self.time_discrepancy = frame.timestamp - time()
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05), requires_playback=True)
     def recent_events(self, events):
@@ -307,7 +312,7 @@ class File_Source(Base_Source):
             raise FileSeekError()
         else:
             self.next_frame = self._next_frame()
-            self.display_time = 0
+            self.time_discrepancy = 0
             self.target_frame_idx = seek_pos
 
     @ensure_initialisation()
@@ -319,7 +324,7 @@ class File_Source(Base_Source):
             raise FileSeekError()
         else:
             self.next_frame = self._next_frame()
-            self.display_time = 0
+            self.time_discrepancy = 0
             self.target_frame_idx = seek_pos
 
     def on_notify(self, notification):
