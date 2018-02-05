@@ -306,7 +306,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         if self.bg_task:
             self.bg_task.cancel()
 
-        gaze_data = [gp for gp in self.g_pool.gaze_positions if gp['confidence'] > self.g_pool.min_data_confidence]
+        gaze_data = [gp for gp in self.g_pool.gaze_positions if gp['confidence'] >= self.g_pool.min_data_confidence]
         if not gaze_data:
             logger.error('No gaze data available to find fixations')
             self.status = 'Fixation detection failed'
@@ -487,7 +487,7 @@ class Fixation_Detector(Fixation_Detector_Base):
         events['fixations'] = []
         gaze = events['gaze_positions']
 
-        self.queue.extend((gp for gp in gaze if gp['confidence'] > self.confidence_threshold))
+        self.queue.extend((gp for gp in gaze if gp['confidence'] >= self.confidence_threshold))
 
         try:  # use newest gaze point to determine age threshold
             age_threshold = self.queue[-1]['timestamp'] - self.min_duration / 1000.
