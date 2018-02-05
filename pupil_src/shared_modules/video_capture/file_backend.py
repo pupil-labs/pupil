@@ -283,7 +283,6 @@ class File_Source(Base_Source):
         elif self.time_discrepancy:
             wait_time = frame.timestamp - self.time_discrepancy - time()
             wait_time /= self.playback_speed
-            print(frame.timestamp, wait_time)
             if 1 > wait_time > 0:
                 sleep(wait_time)
         self._recent_wait_idx = frame.index
