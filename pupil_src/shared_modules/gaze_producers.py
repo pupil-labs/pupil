@@ -183,7 +183,7 @@ def calibrate_and_map(g_pool, ref_list, calib_list, map_list, x_offset, y_offset
         yield "calibration failed", []
 
 
-def make_section_dict(calib_range, map_range):
+def make_section_dict(calib_range=(0, 0), map_range=(0, 0)):
         return {'uid': np.random.rand(),  # ensures unique entry in self.sections
                 'label': 'Unnamed section',
                 'calibration_range': calib_range,
@@ -216,10 +216,8 @@ class Offline_Calibration(Gaze_Producer_Base):
                 logger.warning("Session data from old version. Will not use this.")
                 assert False
         except Exception as e:
-            map_range = [0, len(self.g_pool.timestamps)]
-            calib_range = [len(self.g_pool.timestamps)//10, len(self.g_pool.timestamps)//2]
             session_data = {}
-            session_data['sections'] = [make_section_dict(calib_range, map_range), ]
+            session_data['sections'] = [make_section_dict()]
             session_data['circle_marker_positions'] = []
             session_data['manual_ref_positions'] = []
         self.sections = session_data['sections']
@@ -234,9 +232,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.detection_progress = 0.0
 
     def append_section(self):
-        map_range = [0, len(self.g_pool.timestamps)]
-        calib_range = [len(self.g_pool.timestamps)//10, len(self.g_pool.timestamps)//2]
-        sec = make_section_dict(calib_range, map_range)
+        sec = make_section_dict()
         self.sections.append(sec)
         if self.menu is not None:
             self.append_section_menu(sec)
@@ -247,7 +243,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         self.glfont = fontstash.Context()
         self.glfont.add_font('opensans', ui.get_opensans_font_path())
-        self.glfont.set_color_float((1., 1., 1., .8))
+        self.glfont.set_color_float((1., 1., 1., 1.))
         self.glfont.set_align_string(v_align='right', h_align='top')
 
         def use_as_natural_features():
@@ -331,17 +327,43 @@ class Offline_Calibration(Gaze_Producer_Base):
 
             return remove
 
+        def set_trim_fn(button, sec, key):
+            def trim(format_only=False):
+                if format_only:
+                    left_idx, right_idx = sec[key]
+                else:
+                    right_idx = self.g_pool.seek_control.trim_right
+                    left_idx = self.g_pool.seek_control.trim_left
+                    sec[key] = left_idx, right_idx
+
+                time_fmt = key.replace('_', ' ').title() + ': '
+                min_ts = self.g_pool.timestamps[0]
+                for idx in (left_idx, right_idx):
+                    ts = self.g_pool.timestamps[idx] - min_ts
+                    minutes = ts // 60
+                    seconds = ts - (minutes * 60.)
+                    time_fmt += ' {:02.0f}:{:02.0f} -'.format(abs(minutes), seconds)
+                button.outer_label = time_fmt[:-2]  # remove final ' - '
+            button.function = trim
+
         section_menu.append(ui.Text_Input('label', sec, label='Label'))
         section_menu.append(ui.Selector('calibration_method', sec,
                                         label="Calibration Method",
                                         labels=['Circle Marker', 'Natural Features'],
                                         selection=['circle_marker', 'natural_features']))
-        section_menu.append(ui.Selector('mapping_method', sec, label='Calibration Mode',selection=['2d','3d']))
+        section_menu.append(ui.Selector('mapping_method', sec, label='Calibration Mode',selection=['2d', '3d']))
         section_menu.append(ui.Text_Input('status', sec, label='Calibration Status', setter=lambda _: _))
-        section_menu.append(ui.Text_Input('calibration_range', sec, label='Calibration range',
-                                          setter=make_validate_fn(sec, 'calibration_range')))
-        section_menu.append(ui.Text_Input('mapping_range', sec, label='Mapping range',
-                                          setter=make_validate_fn(sec, 'mapping_range')))
+
+        calib_range_button = ui.Button('Trim calibration range', None)
+        set_trim_fn(calib_range_button, sec, 'calibration_range')
+        calib_range_button.function(format_only=True)  # set initial label
+        section_menu.append(calib_range_button)
+
+        mapping_range_button = ui.Button('Trim mapping range', None)
+        set_trim_fn(mapping_range_button, sec, 'mapping_range')
+        mapping_range_button.function(format_only=True)  # set initial label
+        section_menu.append(mapping_range_button)
+
         section_menu.append(ui.Button('Recalibrate', make_calibrate_fn(sec)))
         section_menu.append(ui.Button('Remove section', make_remove_fn(sec)))
 
@@ -508,14 +530,16 @@ class Offline_Calibration(Gaze_Producer_Base):
 
 
                 color = RGBA(*s['color'])
-                draw_polyline([(cal_ts[0], 0), (cal_ts[-1], 0)], color=color,
-                              line_type=gl.GL_LINES, thickness=8*scale)
-                draw_polyline([(map_ts[0], 0), (map_ts[-1], 0)], color=color,
-                              line_type=gl.GL_LINES, thickness=2*scale)
+                if len(cal_ts):
+                    draw_polyline([(cal_ts[0], 0), (cal_ts[-1], 0)], color=color,
+                                  line_type=gl.GL_LINES, thickness=8*scale)
+                if len(map_ts):
+                    draw_polyline([(map_ts[0], 0), (map_ts[-1], 0)], color=color,
+                                  line_type=gl.GL_LINES, thickness=2*scale)
                 gl.glTranslatef(0, scale * self.timeline_line_height, 0)
 
     def draw_labels(self, width, height, scale):
-        self.glfont.set_size(self.timeline_line_height * .8 * scale)
+        self.glfont.set_size(self.timeline_line_height * scale)
         for idx, s in enumerate(self.sections):
             self.glfont.draw_text(width, 0, s['label'])
             gl.glTranslatef(0, self.timeline_line_height * scale, 0)
