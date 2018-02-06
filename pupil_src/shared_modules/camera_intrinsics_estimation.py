@@ -87,7 +87,7 @@ class Camera_Intrinsics_Estimation(Plugin):
 
         monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
         # primary_monitor = glfwGetPrimaryMonitor()
-        self.menu.append(ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern."))
+        self.menu.append(ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'i' to capture a pattern."))
 
         self.menu.append(ui.Button('show Pattern', self.open_window))
         self.menu.append(ui.Selector('monitor_idx', self, selection=range(len(monitor_names)),
