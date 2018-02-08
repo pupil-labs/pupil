@@ -9,26 +9,25 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os,sys
+import os
 import av
-assert av.__version__ >= '0.2.5'
+from time import sleep
 
-
-from .base_backend import Base_Source, Base_Manager
+from .base_backend import Playback_Source, Base_Manager
 from camera_models import load_intrinsics
 
 import numpy as np
-from time import time,sleep
-from fractions import Fraction
-from  multiprocessing import cpu_count
+from multiprocessing import cpu_count
 import os.path
 
-#logging
+# logging
 import logging
 logger = logging.getLogger(__name__)
 
+assert av.__version__ >= '0.2.5'
 av.logging.set_level(av.logging.ERROR)
 logging.getLogger('libav').setLevel(logging.ERROR)
+
 
 class FileCaptureError(Exception):
     """General Exception for this module"""
@@ -88,7 +87,7 @@ class Frame(object):
         return self._gray
 
 
-class File_Source(Base_Source):
+class File_Source(Playback_Source):
     """Simple file capture.
 
     Attributes:
@@ -96,17 +95,13 @@ class File_Source(Base_Source):
         timestamps (str): Path to timestamps file
     """
 
-    allowed_speeds = [.25, .5, 1., 1.5, 2., 4.]
-
-    def __init__(self, g_pool, source_path=None, timed_playback=False, loop=False, playback_speed=1.):
-        super().__init__(g_pool)
+    def __init__(self, g_pool, source_path=None, loop=False, *args, **kwargs):
+        super().__init__(g_pool, *args, **kwargs)
 
         # minimal attribute set
         self._initialised = True
-        self.playback_speed = playback_speed
         self.source_path = source_path
         self.timestamps = None
-        self.timed_playback = timed_playback
         self.loop = loop
 
         if not source_path or not os.path.isfile(source_path):
@@ -136,8 +131,6 @@ class File_Source(Base_Source):
             self._initialised = False
             return
 
-        self.time_discrepancy = 0.
-        self._recent_wait_idx = -1
         self.target_frame_idx = 0
         self.current_frame_idx = 0
 
@@ -171,7 +164,6 @@ class File_Source(Base_Source):
 
         loc, name = os.path.split(os.path.splitext(source_path)[0])
         self._intrinsics = load_intrinsics(loc, name, self.frame_size)
-        self.play = True
 
     def ensure_initialisation(fallback_func=None, requires_playback=False):
         from functools import wraps
@@ -276,17 +268,6 @@ class File_Source(Base_Source):
         self.target_frame_idx = index+1
         self.current_frame_idx = index
         return Frame(timestamp, frame, index=index)
-
-    def wait(self, frame):
-        if frame.index == self._recent_wait_idx:
-            sleep(1/60)  # 60 fps on Player pause
-        elif self.time_discrepancy:
-            wait_time = frame.timestamp - self.time_discrepancy - time()
-            wait_time /= self.playback_speed
-            if 1 > wait_time > 0:
-                sleep(wait_time)
-        self._recent_wait_idx = frame.index
-        self.time_discrepancy = frame.timestamp - time()
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05), requires_playback=True)
     def recent_events(self, events):

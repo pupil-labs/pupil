@@ -70,7 +70,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from pyglui.cygl.utils import Named_Texture, RGBA
         import gl_utils
         # capture
-        from video_capture import File_Source, EndofVideoFileError
+        from video_capture import File_Source, Fake_Source, EndofVideoFileError
 
         # helpers/utils
         from version_utils import VersionFormat
@@ -210,6 +210,23 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
         # sets itself to g_pool.capture
         File_Source(g_pool, video_path)
+        if g_pool.capture.initialised:
+            min_ts = np.inf
+            max_ts = -np.inf
+            for f in glob(os.path.join(rec_dir, "eye*_timestamps.npy")):
+                try:
+                    eye_ts = np.load(f)
+                    assert len(eye_ts.shape) == 1
+                    assert eye_ts.shape[0] > 1
+                    min_ts = min(min_ts, eye_ts[0])
+                    max_ts = max(max_ts, eye_ts[-1])
+                except (FileNotFoundError, AssertionError):
+                    pass
+
+            error_msg = 'Could not generate world timestamps from eye timestamps. This is an invalid recording.'
+            assert -np.inf < min_ts < max_ts < np.inf, error_msg
+
+            Fake_Source(g_pool, 'fake world', (800, 600), 60, (min_ts, max_ts))
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
@@ -310,7 +327,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.gui = ui.UI()
         g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
         g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos='left')
-        g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
+        g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width, 0), size=(0, 0), header_pos='hidden')
         g_pool.timelines = ui.Container((0, 0), (0, 0), (0, 0))
         g_pool.timelines.horizontal_constraint = g_pool.menubar
         g_pool.user_timelines = ui.Timeline_Menu('User Timelines', pos=(0., -150.),
@@ -424,10 +441,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                 g_pool.new_seek = False
                 try:
                     new_frame = g_pool.capture.get_frame()
-                except EndofVideoFileError:
+                except (EndofVideoFileError, IndexError):
                     # end of video logic: pause at last frame.
                     g_pool.capture.play = False
-                    logger.warning("end of video")
+                    logger.warning("End of video")
 
             frame = new_frame.copy()
             events = {}

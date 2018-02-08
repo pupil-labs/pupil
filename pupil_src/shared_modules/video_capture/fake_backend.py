@@ -9,29 +9,29 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from .base_backend import Base_Source, Base_Manager
+from .base_backend import Playback_Source, Base_Manager
 
 import cv2
 import numpy as np
-from time import time,sleep
+from time import time, sleep
 from pyglui import ui
 from camera_models import Dummy_Camera
 
-#logging
+# logging
 import logging
 logger = logging.getLogger(__name__)
 
 
 class Frame(object):
     """docstring of Frame"""
-    def __init__(self, timestamp,img,index):
+    def __init__(self, timestamp, img, index):
         self.timestamp = timestamp
         self._img = img
         self.bgr = img
-        self.height,self.width,_ = img.shape
+        self.height, self.width, _ = img.shape
         self._gray = None
         self.index = index
-        #indicate that the frame does not have a native yuv or jpeg buffer
+        # indicate that the frame does not have a native yuv or jpeg buffer
         self.yuv_buffer = None
         self.jpeg_buffer = None
 
@@ -42,14 +42,14 @@ class Frame(object):
     @property
     def gray(self):
         if self._gray is None:
-            self._gray = cv2.cvtColor(self._img,cv2.COLOR_BGR2GRAY)
+            self._gray = cv2.cvtColor(self._img, cv2.COLOR_BGR2GRAY)
         return self._gray
-    @gray.setter
-    def gray(self, value):
-        raise Exception('Read only.')
+
+    def copy(self):
+        return Frame(self.timestamp, self._img.copy(), self.index)
 
 
-class Fake_Source(Base_Source):
+class Fake_Source(Playback_Source):
     """Simple source which shows random, static image.
 
     It is used as falback in case the original source fails. `preferred_source`
@@ -57,51 +57,95 @@ class Fake_Source(Base_Source):
     it becomes accessible again.
 
     Attributes:
-        frame_count (int): Sequence counter
+        current_frame_idx (int): Sequence counter
         frame_rate (int)
         frame_size (tuple)
     """
-    def __init__(self, g_pool, name,frame_size,frame_rate):
-        super().__init__(g_pool)
+    def __init__(self, g_pool, name, frame_size, frame_rate, timestamp_range=None, *args, **kwargs):
+        super().__init__(g_pool, *args, **kwargs)
         self.fps = frame_rate
         self._name = name
         self.presentation_time = time()
         self.make_img(tuple(frame_size))
-        self.frame_count = 0
+        self.current_frame_idx = 0
+        self.target_frame_idx = 0
+        if timestamp_range is not None:
+            self.timestamps = np.arange(*timestamp_range, 1/frame_rate)
+        else:
+            self.timestamps = None
 
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Static Image Source"
 
-        from pyglui import ui
         text = ui.Info_Text("Fake capture source streaming test images.")
         self.menu.append(text)
 
     def deinit_ui(self):
         self.remove_menu()
 
-    def make_img(self,size):
-        c_w ,c_h = max(1,size[0]/30),max(1,size[1]/30)
-        coarse = np.random.randint(0,200,size=(int(c_h),int(c_w),3)).astype(np.uint8)
+    def make_img(self, size):
+        # c_w, c_h = max(1, size[0]/30), max(1, size[1]/30)
+        # coarse = np.random.randint(0, 200, size=(int(c_h), int(c_w), 3)).astype(np.uint8)
         # coarse[:,:,1] /=5
         # coarse[:,:,2] *=0
         # coarse[:,:,1] /=30
         # self._img = np.ones((size[1],size[0],3),dtype=np.uint8)
-        self._img = cv2.resize(coarse,size,interpolation=cv2.INTER_LANCZOS4)
+        # self._img = cv2.resize(coarse, size, interpolation=cv2.INTER_LANCZOS4)
+        self._img = 200 * np.ones((size[1], size[0], 3), dtype=np.uint8)
+        X, Y = np.meshgrid(range(10, size[0], 10), range(10, size[1], 10))
+        self._img[Y, X, :] = 0
+
         self._intrinsics = Dummy_Camera(size, self.name)
 
-    def recent_events(self,events):
-        now = time()
-        spent = now - self.presentation_time
-        wait = max(0, 1./self.fps - spent)
-        sleep(wait)
-        self.presentation_time = time()
-        self.frame_count += 1
-        timestamp = self.g_pool.get_timestamp()
-        frame = Frame(timestamp,self._img.copy(),self.frame_count)
-        cv2.putText(frame.img, "Fake Source Frame %s"%self.frame_count,(20,20), cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,100,100))
-        events['frame'] = frame
-        self._recent_frame = frame
+    def recent_events(self, events):
+        try:
+            frame = self.get_frame()
+        except IndexError:
+            logger.info('Recording has ended.')
+            self.play = False
+        else:
+            self.wait(frame)
+            self._recent_frame = frame
+            events['frame'] = frame
+
+    def get_frame(self):
+        if self.timestamps is None:
+            timestamp = self.g_pool.get_timestamp()
+        else:
+            timestamp = self.timestamps[self.target_frame_idx]
+
+        frame = Frame(timestamp, self._img.copy(), self.current_frame_idx)
+        cv2.putText(frame.img, "Fake Source Frame {}".format(self.current_frame_idx),
+                    (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 100, 100))
+
+        self.target_frame_idx += 1
+        self.current_frame_idx = self.target_frame_idx
+
+        if self.timed_playback:
+            now = time()
+            spent = now - self.time_discrepancy
+            wait = max(0, 1./self.fps - spent)
+            sleep(wait)
+            self.time_discrepancy = time()
+
+        return frame
+
+    def get_frame_count(self):
+        return len(self.timestamps)
+
+    def seek_to_frame(self, frame_idx):
+        self.target_frame_idx = frame_idx
+        self.time_discrepancy = 0
+
+    def get_frame_index(self):
+        return self.current_frame_idx
+
+    def seek_to_next_frame(self):
+        self.seek_to_frame(min(self.current_frame_idx + 1, self.get_frame_count() - 1))
+
+    def seek_to_prev_frame(self):
+        self.seek_to_frame(max(0, self.current_frame_idx - 1))
 
     @property
     def name(self):
@@ -132,15 +176,16 @@ class Fake_Source(Base_Source):
 
     @property
     def frame_rates(self):
-        return (30,60,90,120)
+        return (30, 60, 90, 120)
 
     @property
     def frame_sizes(self):
-        return ((640,480),(1280,720),(1920,1080))
+        return ((640, 480), (1280, 720), (1920, 1080))
 
     @property
     def frame_rate(self):
         return self.fps
+
     @frame_rate.setter
     def frame_rate(self,new_rate):
         rates = [ abs(r-new_rate) for r in self.frame_rates ]
@@ -180,13 +225,14 @@ class Fake_Manager(Base_Manager):
         text = ui.Info_Text('Convenience manager to select a fake source explicitly.')
 
         def activate():
-            #a capture leaving is a must stop for recording.
-            self.notify_all( {'subject':'recording.should_stop'} )
+            # a capture leaving is a must stop for recording.
+            self.notify_all({'subject': 'recording.should_stop'})
             settings = {}
+            settings['timed_playback'] = True
             settings['frame_rate'] = self.g_pool.capture.frame_rate
             settings['frame_size'] = self.g_pool.capture.frame_size
             settings['name'] = self.g_pool.capture.name
-            #if the user set fake capture, we dont want it to auto jump back to the old capture.
+            # if the user set fake capture, we dont want it to auto jump back to the old capture.
             if self.g_pool.process == 'world':
                 self.notify_all({'subject':'start_plugin',"name":"Fake_Source",'args':settings})
             else:
