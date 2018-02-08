@@ -16,7 +16,7 @@ from pyglui import ui
 from methods import denormalize,normalize
 import logging
 logger = logging.getLogger(__name__)
-
+from copy import deepcopy
 
 class Vis_Scan_Path(Analysis_Plugin_Base):
     """docstring
@@ -102,7 +102,7 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
         self.gaze_changed = False
         self.prev_gray = gray_img
         self.prev_frame_idx = frame.index
-        self.past_gaze_positions = events['gaze_positions']
+        self.past_gaze_positions = deepcopy(events['gaze_positions'])
 
     def init_ui(self):
         self.add_menu()
