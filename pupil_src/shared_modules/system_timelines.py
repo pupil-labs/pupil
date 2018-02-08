@@ -45,30 +45,28 @@ class System_Timelines(System_Plugin_Base):
     def cache_fps_data(self):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
         max_val = 1
-        if self.show_world_fps:
-            w_ts = np.asarray(self.g_pool.timestamps)
-            w_fps = 1. / np.diff(w_ts)
-            max_val = max(max_val, np.max(w_fps))
-            w_fps = [fps for fps in zip(w_ts, w_fps)]
+
+        w_ts = np.asarray(self.g_pool.timestamps)
+        w_fps = 1. / np.diff(w_ts)
+        max_val = max(max_val, np.max(w_fps))
+        w_fps = [fps for fps in zip(w_ts, w_fps)]
+
+        e0_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 0])
+        if e0_ts.shape[0] > 1:
+            e0_fps = 1. / np.diff(e0_ts)
+            max_val = max(max_val, e0_fps.max())
+            e0_fps = [fps for fps in zip(e0_ts, e0_fps)]
         else:
-            w_fps = []
+            e0_fps = []
 
-        if self.show_eye_fps:
-            e0_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 0])
-            if e0_ts.shape[0] > 1:
-                e0_fps = 1. / np.diff(e0_ts)
-                max_val = max(max_val, e0_fps.max())
-                e0_fps = [fps for fps in zip(e0_ts, e0_fps)]
-            else:
-                e0_fps = []
+        e1_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 1])
+        if e1_ts.shape[0] > 1:
+            e1_fps = 1. / np.diff(e1_ts)
+            max_val = max(max_val, e1_fps.max())
+            e1_fps = [fps for fps in zip(e1_ts, e1_fps)]
+        else:
+            e1_fps = []
 
-            e1_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 1])
-            if e1_ts.shape[0] > 1:
-                e1_fps = 1. / np.diff(e1_ts)
-                max_val = max(max_val, e1_fps.max())
-                e1_fps = [fps for fps in zip(e1_ts, e1_fps)]
-            else:
-                e1_fps = []
         self.cache = {'world': w_fps, 'eye0': e0_fps, 'eye1': e1_fps,
                       'xlim': [t0, t1], 'ylim': [0, max_val]}
 
@@ -112,4 +110,5 @@ class System_Timelines(System_Plugin_Base):
 
     def on_notify(self, notification):
         if notification['subject'] == 'pupil_positions_changed':
+            self.cache_fps_data()
             self.fps_timeline.refresh()
