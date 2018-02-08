@@ -28,6 +28,7 @@ class System_Timelines(System_Plugin_Base):
         super().__init__(g_pool)
         self.show_world_fps = show_world_fps
         self.show_eye_fps = show_eye_fps
+        self.cache_fps_data()
 
     def init_ui(self):
         self.glfont = fs.Context()
@@ -41,38 +42,41 @@ class System_Timelines(System_Plugin_Base):
         self.g_pool.user_timelines.remove(self.fps_timeline)
         self.fps_timeline = None
 
-    def draw_fps(self, width, height, scale):
+    def cache_fps_data(self):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
         max_val = 1
-        if self.show_world_fps:
-            w_ts = np.asarray(self.g_pool.timestamps)
-            w_fps = 1. / np.diff(w_ts)
-            max_val = max(max_val, np.max(w_fps))
-            w_fps = [fps for fps in zip(w_ts, w_fps)]
 
-        if self.show_eye_fps:
-            e0_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 0])
-            if e0_ts.shape[0] > 1:
-                e0_fps = 1. / np.diff(e0_ts)
-                max_val = max(max_val, e0_fps.max())
-                e0_fps = [fps for fps in zip(e0_ts, e0_fps)]
-            else:
-                e0_fps = []
+        w_ts = np.asarray(self.g_pool.timestamps)
+        w_fps = 1. / np.diff(w_ts)
+        max_val = max(max_val, np.max(w_fps))
+        w_fps = [fps for fps in zip(w_ts, w_fps)]
 
-            e1_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 1])
-            if e1_ts.shape[0] > 1:
-                e1_fps = 1. / np.diff(e1_ts)
-                max_val = max(max_val, e1_fps.max())
-                e1_fps = [fps for fps in zip(e1_ts, e1_fps)]
-            else:
-                e1_fps = []
+        e0_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 0])
+        if e0_ts.shape[0] > 1:
+            e0_fps = 1. / np.diff(e0_ts)
+            max_val = max(max_val, e0_fps.max())
+            e0_fps = [fps for fps in zip(e0_ts, e0_fps)]
+        else:
+            e0_fps = []
 
-        with gl_utils.Coord_System(t0, t1, 0, max_val):
+        e1_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 1])
+        if e1_ts.shape[0] > 1:
+            e1_fps = 1. / np.diff(e1_ts)
+            max_val = max(max_val, e1_fps.max())
+            e1_fps = [fps for fps in zip(e1_ts, e1_fps)]
+        else:
+            e1_fps = []
+
+        self.cache = {'world': w_fps, 'eye0': e0_fps, 'eye1': e1_fps,
+                      'xlim': [t0, t1], 'ylim': [0, max_val]}
+
+    def draw_fps(self, width, height, scale):
+        with gl_utils.Coord_System(*self.cache['xlim'], *self.cache['ylim']):
             if self.show_world_fps:
-                draw_points(w_fps, size=2*scale, color=world_color)
+                draw_points(self.cache['world'], size=2*scale, color=world_color)
             if self.show_eye_fps:
-                draw_points(e0_fps, size=2*scale, color=right_color)
-                draw_points(e1_fps, size=2*scale, color=left_color)
+                draw_points(self.cache['eye0'], size=2*scale, color=right_color)
+                draw_points(self.cache['eye1'], size=2*scale, color=left_color)
 
     def draw_fps_legend(self, width, height, scale):
         self.glfont.push_state()
@@ -106,4 +110,5 @@ class System_Timelines(System_Plugin_Base):
 
     def on_notify(self, notification):
         if notification['subject'] == 'pupil_positions_changed':
+            self.cache_fps_data()
             self.fps_timeline.refresh()

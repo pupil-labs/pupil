@@ -64,9 +64,14 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
                                 label='Pupil Producers'
                             ))
 
+        self.cache = {}
+        self.cache_pupil_timeline_data('diameter')
+        self.cache_pupil_timeline_data('confidence')
+
         self.glfont = fs.Context()
         self.glfont.add_font('opensans', ui.get_opensans_font_path())
         self.glfont.set_font('opensans')
+
         self.dia_timeline = ui.Timeline('Pupil Diameter [px]', self.draw_pupil_diameter, self.draw_dia_legend)
         self.conf_timeline = ui.Timeline('Pupil Confidence', self.draw_pupil_conf, self.draw_conf_legend)
         self.g_pool.user_timelines.append(self.dia_timeline)
@@ -74,6 +79,8 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 
     def on_notify(self, notification):
         if notification['subject'] == 'pupil_positions_changed':
+            self.cache_pupil_timeline_data('diameter')
+            self.cache_pupil_timeline_data('confidence')
             self.dia_timeline.refresh()
             self.conf_timeline.refresh()
 
@@ -89,6 +96,21 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
             frm_idx = events['frame'].index
             events['pupil_positions'] = self.g_pool.pupil_positions_by_frame[frm_idx]
 
+    def cache_pupil_timeline_data(self, key):
+        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
+        if not self.g_pool.pupil_positions:
+            self.cache[key] = {'left': [], 'right': [],
+                               'xlim': [t0, t1], 'ylim': [0, 1]}
+        else:
+            right = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 0]
+            left = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 1]
+
+            # max_val must not be 0, else gl will crash
+            max_val = max(chain((pp[1] for pp in right), (pp[1] for pp in left))) or 1
+
+            self.cache[key] = {'left': left, 'right': right,
+                               'xlim': [t0, t1], 'ylim': [0, max_val]}
+
     def draw_pupil_diameter(self, width, height, scale):
         self.draw_pupil_data('diameter', width, height, scale)
 
@@ -96,17 +118,10 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
         self.draw_pupil_data('confidence', width, height, scale)
 
     def draw_pupil_data(self, key, width, height, scale):
-        if not self.g_pool.pupil_positions:
-            return
+        right = self.cache[key]['right']
+        left = self.cache[key]['left']
 
-        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
-        right = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 0]
-        left = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 1]
-
-        # max_val must not be 0, else gl will crash
-        max_val = max(chain((pp[1] for pp in right), (pp[1] for pp in left))) or 1
-
-        with gl_utils.Coord_System(t0, t1, 0, max_val):
+        with gl_utils.Coord_System(*self.cache[key]['xlim'], *self.cache[key]['ylim']):
             draw_points(right, size=2.*scale, color=right_color)
             draw_points(left, size=2.*scale, color=left_color)
 
