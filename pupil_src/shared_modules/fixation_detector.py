@@ -208,7 +208,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
     visual angle within the coordinate system of the world camera. These
     fixations will have their method field set to "gaze".
     '''
-    def __init__(self, g_pool, max_dispersion=1.0, min_duration=300, max_duration=4000, show_fixations=True):
+    def __init__(self, g_pool, max_dispersion=1.0, min_duration=300, max_duration=1000, show_fixations=True):
         super().__init__(g_pool)
         # g_pool.min_data_confidence
         self.max_dispersion = max_dispersion
