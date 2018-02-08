@@ -237,8 +237,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             'capture_manager_settings', ('UVC_Manager',{}))
 
         manager_class_name, manager_settings = capture_manager_settings
-        manager_class_by_name = {c.__name__:c for c in manager_classes}
-        g_pool.capture_manager = manager_class_by_name[manager_class_name](g_pool,**manager_settings)
+        manager_class_by_name = {c.__name__: c for c in manager_classes}
+        g_pool.capture_manager = manager_class_by_name[manager_class_name](g_pool, **manager_settings)
 
         if eye_id == 0:
             cap_src = ["Pupil Cam2 ID0", "Pupil Cam1 ID0", "HD-6000"]
@@ -249,7 +249,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         default_settings = ('UVC_Source', {
                             'preferred_names': cap_src,
                             'frame_size': (320, 240),
-                            'frame_rate': 90
+                            'frame_rate': 120
                             })
 
         capture_source_settings = overwrite_cap_settings or session_settings.get('capture_settings', default_settings)
