@@ -284,7 +284,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                     logger.error("Could not create export dir")
                     raise e
                 else:
-                    overwrite_warning = "Previous export for range [{}-{}] already exsits - overwriting."
+                    overwrite_warning = "Previous export for range [{}-{}] already exists - overwriting."
                     logger.warning(overwrite_warning.format(*export_range))
             else:
                 logger.info('Created export dir at "{}"'.format(export_dir))
