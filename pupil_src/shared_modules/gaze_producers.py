@@ -519,7 +519,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                     draw_points([mr['norm_pos']], size=5, color=RGBA(.0, .9, 0.0, alpha))
 
         # calculate correct timeline height. Triggers timeline redraw only if changed
-        self.timeline.height = max(0.001, self.timeline_line_height * len(self.sections))
+        self.timeline.content_height = max(0.001, self.timeline_line_height * len(self.sections))
 
     def draw_sections(self, width, height, scale):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]

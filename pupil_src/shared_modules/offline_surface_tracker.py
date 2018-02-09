@@ -182,7 +182,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
     def add_surface(self):
         self.surfaces.append(Offline_Reference_Surface(self.g_pool))
-        self.timeline.height += self.timeline_line_height
+        self.timeline.content_height += self.timeline_line_height
         self.update_gui_markers()
 
     def remove_surface(self, i):

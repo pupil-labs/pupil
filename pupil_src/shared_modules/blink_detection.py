@@ -151,7 +151,7 @@ class Offline_Blink_Detection(Blink_Detection):
         self.glfont.add_font('opensans', ui.get_opensans_font_path())
         self.glfont.set_font('opensans')
         self.timeline = ui.Timeline('Blink Detection', self.draw_activation, self.draw_legend)
-        self.timeline.height *= 1.5
+        self.timeline.content_height *= 2
         self.g_pool.user_timelines.append(self.timeline)
 
     def deinit_ui(self):
