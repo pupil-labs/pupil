@@ -85,16 +85,11 @@ class Fake_Source(Playback_Source):
         self.remove_menu()
 
     def make_img(self, size):
-        # c_w, c_h = max(1, size[0]/30), max(1, size[1]/30)
-        # coarse = np.random.randint(0, 200, size=(int(c_h), int(c_w), 3)).astype(np.uint8)
-        # coarse[:,:,1] /=5
-        # coarse[:,:,2] *=0
-        # coarse[:,:,1] /=30
-        # self._img = np.ones((size[1],size[0],3),dtype=np.uint8)
-        # self._img = cv2.resize(coarse, size, interpolation=cv2.INTER_LANCZOS4)
-        self._img = 200 * np.ones((size[1], size[0], 3), dtype=np.uint8)
-        X, Y = np.meshgrid(range(10, size[0], 10), range(10, size[1], 10))
-        self._img[Y, X, :] = 0
+        # Generate Pupil Labs colored gradient
+        self._img = np.zeros((size[1], size[0], 3), dtype=np.uint8)
+        self._img[:, :, 0] += np.linspace(91, 157, self.frame_size[0], dtype=np.uint8)
+        self._img[:, :, 1] += np.linspace(165, 161, self.frame_size[0], dtype=np.uint8)
+        self._img[:, :, 2] += np.linspace(35, 112, self.frame_size[0], dtype=np.uint8)
 
         self._intrinsics = Dummy_Camera(size, self.name)
 
@@ -116,8 +111,36 @@ class Fake_Source(Playback_Source):
             timestamp = self.g_pool.get_timestamp()
 
         frame = Frame(timestamp, self._img.copy(), self.target_frame_idx)
-        cv2.putText(frame.img, "Fake Source Frame {}".format(self.target_frame_idx),
-                    (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 100, 100))
+
+        frame_txt_font_name = cv2.FONT_HERSHEY_SIMPLEX
+        frame_txt_font_scale = 1.
+        frame_txt_thickness = 1
+
+        # first line: frame index
+        frame_txt = "Fake source frame {}".format(frame.index)
+        frame_txt_size = cv2.getTextSize(frame_txt, frame_txt_font_name,
+                                         frame_txt_font_scale,
+                                         frame_txt_thickness)[0]
+
+        frame_txt_loc = (self.frame_size[0] // 2 - frame_txt_size[0] // 2,
+                         self.frame_size[1] // 2 - frame_txt_size[1])
+
+        cv2.putText(frame.img, frame_txt, frame_txt_loc, frame_txt_font_name,
+                    frame_txt_font_scale, (255, 255, 255),
+                    thickness=frame_txt_thickness, lineType=cv2.LINE_8)
+
+        # second line: resolution @ fps
+        frame_txt = "{}x{} @ {} fps".format(*self.frame_size, self.frame_rate)
+        frame_txt_size = cv2.getTextSize(frame_txt, frame_txt_font_name,
+                                         frame_txt_font_scale,
+                                         frame_txt_thickness)[0]
+
+        frame_txt_loc = (self.frame_size[0] // 2 - frame_txt_size[0] // 2,
+                         self.frame_size[1] // 2 + frame_txt_size[1])
+
+        cv2.putText(frame.img, frame_txt, frame_txt_loc, frame_txt_font_name,
+                    frame_txt_font_scale, (255, 255, 255),
+                    thickness=frame_txt_thickness, lineType=cv2.LINE_8)
 
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
