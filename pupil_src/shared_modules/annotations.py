@@ -184,7 +184,7 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
             return
 
         start, end = export_range
-        annotations_in_section = [a for a in self.annotations_list if start <= a['index'] <= end]
+        annotations_in_section = [a for a in self.annotations_list if start <= a['index'] < end]
         csv_keys = self.parse_csv_keys(annotations_in_section)
 
         with open(os.path.join(export_dir, 'annotations.csv'), 'w', encoding='utf-8', newline='') as csvfile:
