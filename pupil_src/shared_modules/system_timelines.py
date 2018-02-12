@@ -35,7 +35,7 @@ class System_Timelines(System_Plugin_Base):
         self.glfont.add_font('opensans', ui.get_opensans_font_path())
         self.glfont.set_font('opensans')
         self.fps_timeline = ui.Timeline('Recorded FPS', self.draw_fps, self.draw_fps_legend)
-        self.fps_timeline.height *= 1.5
+        self.fps_timeline.content_height *= 2
         self.g_pool.user_timelines.append(self.fps_timeline)
 
     def deinit_ui(self):

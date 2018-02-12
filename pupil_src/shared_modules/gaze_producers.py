@@ -325,7 +325,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         def make_remove_fn(sec):
             def remove():
-                del self.menu[self.sections.index(sec)-len(self.sections)]
+                del self.menu[self.sections.index(sec) - len(self.sections)]
                 del self.sections[self.sections.index(sec)]
                 self.correlate_and_publish()
 
@@ -519,7 +519,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                     draw_points([mr['norm_pos']], size=5, color=RGBA(.0, .9, 0.0, alpha))
 
         # calculate correct timeline height. Triggers timeline redraw only if changed
-        self.timeline.height = max(0.001, self.timeline_line_height * len(self.sections))
+        self.timeline.content_height = max(0.001, self.timeline_line_height * len(self.sections))
 
     def draw_sections(self, width, height, scale):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
@@ -527,26 +527,33 @@ class Offline_Calibration(Gaze_Producer_Base):
         with gl_utils.Coord_System(t0, t1, height, 0):
             gl.glTranslatef(0, 0.001 + scale * self.timeline_line_height / 2, 0)
             for s in self.sections:
-                color = RGBA(1., 1., 1., .5)
-                if s['calibration_method'] == "natural_features":
-                    draw_x([(m['timestamp'], 0) for m in self.manual_ref_positions],
-                           height=12, width=3 * pixel_to_time_fac, thickness=scale, color=color)
-                else:
-                    draw_bars([(m['timestamp'], 0) for m in self.circle_marker_positions],
-                              height=12, thickness=scale, color=color)
                 cal_slc = slice(*s['calibration_range'])
                 map_slc = slice(*s['mapping_range'])
                 cal_ts = self.g_pool.timestamps[cal_slc]
                 map_ts = self.g_pool.timestamps[map_slc]
 
-
-                color = RGBA(*s['color'])
+                color = RGBA(*s['color'][:3], 1.)
                 if len(cal_ts):
-                    draw_polyline([(cal_ts[0], 0), (cal_ts[-1], 0)], color=color,
-                                  line_type=gl.GL_LINES, thickness=8*scale)
+                    draw_rounded_rect((cal_ts[0], -4 * scale),
+                                      (cal_ts[-1] - cal_ts[0], 8 * scale),
+                                      corner_radius=0,
+                                      color=color,
+                                      sharpness=1.)
                 if len(map_ts):
-                    draw_polyline([(map_ts[0], 0), (map_ts[-1], 0)], color=color,
-                                  line_type=gl.GL_LINES, thickness=2*scale)
+                    draw_rounded_rect((map_ts[0], -scale),
+                                      (map_ts[-1] - map_ts[0], 2 * scale),
+                                      corner_radius=0,
+                                      color=color,
+                                      sharpness=1.)
+
+                color = RGBA(1., 1., 1., .5)
+                if s['calibration_method'] == "natural_features":
+                    draw_x([(m['timestamp'], 0) for m in self.manual_ref_positions],
+                           height=12 * scale, width=3 * pixel_to_time_fac / scale, thickness=scale, color=color)
+                else:
+                    draw_bars([(m['timestamp'], 0) for m in self.circle_marker_positions],
+                              height=12 * scale, thickness=scale, color=color)
+
                 gl.glTranslatef(0, scale * self.timeline_line_height, 0)
 
     def draw_labels(self, width, height, scale):

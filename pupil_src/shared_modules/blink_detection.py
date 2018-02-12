@@ -144,6 +144,7 @@ class Offline_Blink_Detection(Blink_Detection):
         self.timestamps = []
         g_pool.blinks = []
         g_pool.blinks_by_frame = [[] for x in self.g_pool.timestamps]
+        self.cache = {'response_points': (), 'class_points': (), 'thresholds': ()}
 
     def init_ui(self):
         super().init_ui()
@@ -151,7 +152,7 @@ class Offline_Blink_Detection(Blink_Detection):
         self.glfont.add_font('opensans', ui.get_opensans_font_path())
         self.glfont.set_font('opensans')
         self.timeline = ui.Timeline('Blink Detection', self.draw_activation, self.draw_legend)
-        self.timeline.height *= 1.5
+        self.timeline.content_height *= 2
         self.g_pool.user_timelines.append(self.timeline)
 
     def deinit_ui(self):
@@ -172,6 +173,7 @@ class Offline_Blink_Detection(Blink_Detection):
             logger.info('Pupil postions changed. Recalculating.')
             self.recalculate()
         elif notification['subject'] == 'blinks_changed':
+            self.cache_activation()
             self.timeline.refresh()
         elif notification['subject'] == "should_export":
             self.export(notification['range'], notification['export_dir'])
@@ -225,6 +227,7 @@ class Offline_Blink_Detection(Blink_Detection):
             self.filter_response = []
             self.response_classification = []
             self.timestamps = []
+            self.consolidate_classifications()
             return
 
         conf_iter = (pp['confidence'] for pp in all_pp)
@@ -324,10 +327,16 @@ class Offline_Blink_Detection(Blink_Detection):
         self.g_pool.blinks_by_frame = blinks_by_frame
         self.notify_all({'subject': 'blinks_changed', 'delay': .2})
 
-    def draw_activation(self, width, height, scale):
+    def cache_activation(self):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
-        response_points = tuple(zip(self.timestamps, self.filter_response))
-        if len(response_points) == 0:
+        self.cache['thresholds'] = ((t0, self.onset_confidence_threshold),
+                                    (t1, self.onset_confidence_threshold),
+                                    (t0, -self.offset_confidence_threshold),
+                                    (t1, -self.offset_confidence_threshold))
+
+        self.cache['response_points'] = tuple(zip(self.timestamps, self.filter_response))
+        if len(self.cache['response_points']) == 0:
+            self.cache['class_points'] = ()
             return
 
         class_points = deque([(t0, -.9)])
@@ -337,19 +346,17 @@ class Offline_Blink_Detection(Blink_Detection):
             class_points.append((b['end_timestamp'], .9))
             class_points.append((b['end_timestamp'], -.9))
         class_points.append((t1, -.9))
+        self.cache['class_points'] = tuple(class_points)
 
-        thresholds = [(t0, self.onset_confidence_threshold),
-                      (t1, self.onset_confidence_threshold),
-                      (t0, -self.offset_confidence_threshold),
-                      (t1, -self.offset_confidence_threshold)]
-
+    def draw_activation(self, width, height, scale):
+        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
         with gl_utils.Coord_System(t0, t1, -1, 1):
-            draw_polyline(response_points, color=activity_color,
-                          line_type=gl.GL_LINE_STRIP, thickness=1*scale)
-            draw_polyline(class_points, color=blink_color,
-                          line_type=gl.GL_LINE_STRIP, thickness=1*scale)
-            draw_polyline(thresholds, color=threshold_color,
-                          line_type=gl.GL_LINES, thickness=1*scale)
+            draw_polyline(self.cache['response_points'], color=activity_color,
+                          line_type=gl.GL_LINE_STRIP, thickness=scale)
+            draw_polyline(self.cache['class_points'], color=blink_color,
+                          line_type=gl.GL_LINE_STRIP, thickness=scale)
+            draw_polyline(self.cache['thresholds'], color=threshold_color,
+                          line_type=gl.GL_LINES, thickness=scale)
 
     def draw_legend(self, width, height, scale):
         self.glfont.push_state()
