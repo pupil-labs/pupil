@@ -18,9 +18,14 @@ source provides the stream of image frames.
 These backends are available:
 - UVC: Local USB sources
 - NDSI: Remote Pupil Mobile sources
-- Fake: Fallback, static random image
+- Fake: Fallback, static grid image
 - File: Loads video from file
 '''
+
+import os
+import numpy as np
+from glob import glob
+from camera_models import load_intrinsics
 
 import logging
 logger = logging.getLogger(__name__)
@@ -50,3 +55,38 @@ except ImportError:
 else:
     source_classes.append(Realsense_Source)
     manager_classes.append(Realsense_Manager)
+
+
+def init_playback_source(g_pool, rec_dir, name_pattern,
+                         fallback_framesize=(640, 480),
+                         fallback_framerate=60):
+    '''Factory method to create correct playback source'''
+
+    valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')
+    existing_videos = [f for f in glob(os.path.join(rec_dir, name_pattern))
+                       if os.path.splitext(f)[1] in valid_ext]
+
+    if existing_videos:
+        source = File_Source(g_pool, existing_videos[0])
+
+    if not existing_videos or not source.initialised:
+        min_ts = np.inf
+        max_ts = -np.inf
+        for f in glob(os.path.join(rec_dir, "eye*_timestamps.npy")):
+            try:
+                eye_ts = np.load(f)
+                assert len(eye_ts.shape) == 1
+                assert eye_ts.shape[0] > 1
+                min_ts = min(min_ts, eye_ts[0])
+                max_ts = max(max_ts, eye_ts[-1])
+            except (FileNotFoundError, AssertionError):
+                pass
+
+        error_msg = 'Could not generate world timestamps from eye timestamps. This is an invalid recording.'
+        assert -np.inf < min_ts < max_ts < np.inf, error_msg
+
+        logger.warning('No world video available. Constructing an artificial replacement.')
+        source = Fake_Source(g_pool, 'fake world', fallback_framesize,
+                             fallback_framerate, (min_ts, max_ts))
+
+    return source

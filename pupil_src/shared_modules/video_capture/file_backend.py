@@ -285,7 +285,7 @@ class File_Source(Playback_Source):
 
     @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
-        ###frame accurate seeking
+        # frame accurate seeking
         try:
             self.video_stream.seek(self.idx_to_pts(seek_pos),mode='time')
         except av.AVError as e:
@@ -314,9 +314,6 @@ class File_Source(Playback_Source):
             self.play = True
         elif notification['subject'] == 'file_source.should_pause' and notification.get('source_path') == self.source_path:
             self.play = False
-
-    def seek_to_next_frame(self):
-        self.seek_to_frame(min(self.current_frame_idx + 1, self.get_frame_count() - 1))
 
     def seek_to_prev_frame(self):
         self.seek_to_frame(max(0, self.current_frame_idx - 1))

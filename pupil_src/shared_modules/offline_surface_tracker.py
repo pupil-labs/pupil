@@ -283,9 +283,14 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         self.init_marker_cacher()
 
     def init_marker_cacher(self):
+        try:
+            video_file_path = self.g_pool.capture.source_path
+        except AttributeError:
+            logger.error('The artificial video source does not support marker detection.')
+            return
+
         from marker_detector_cacher import fill_cache
         visited_list = [False if x is False else True for x in self.cache]
-        video_file_path =  self.g_pool.capture.source_path
         self.cache_queue = mp.Queue()
         self.cacher_seek_idx = mp.Value('i',0)
         self.cacher_run = mp.Value(c_bool,True)

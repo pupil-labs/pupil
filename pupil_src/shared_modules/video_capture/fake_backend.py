@@ -110,42 +110,43 @@ class Fake_Source(Playback_Source):
             events['frame'] = frame
 
     def get_frame(self):
-        if self.timestamps is None:
-            timestamp = self.g_pool.get_timestamp()
-        else:
+        try:
             timestamp = self.timestamps[self.target_frame_idx]
+        except TypeError:
+            timestamp = self.g_pool.get_timestamp()
 
-        frame = Frame(timestamp, self._img.copy(), self.current_frame_idx)
-        cv2.putText(frame.img, "Fake Source Frame {}".format(self.current_frame_idx),
+        frame = Frame(timestamp, self._img.copy(), self.target_frame_idx)
+        cv2.putText(frame.img, "Fake Source Frame {}".format(self.target_frame_idx),
                     (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 100, 100))
 
-        self.target_frame_idx += 1
         self.current_frame_idx = self.target_frame_idx
+        self.target_frame_idx += 1
 
         if self.timed_playback:
             now = time()
             spent = now - self.time_discrepancy
             wait = max(0, 1./self.fps - spent)
+            wait /= self.playback_speed
             sleep(wait)
             self.time_discrepancy = time()
 
         return frame
 
     def get_frame_count(self):
-        return len(self.timestamps)
+        try:
+            return len(self.timestamps)
+        except TypeError:
+            return self.current_frame_idx + 1
 
     def seek_to_frame(self, frame_idx):
-        self.target_frame_idx = frame_idx
+        self.target_frame_idx = max(0, min(frame_idx, self.get_frame_count() - 1))
         self.time_discrepancy = 0
 
     def get_frame_index(self):
         return self.current_frame_idx
 
-    def seek_to_next_frame(self):
-        self.seek_to_frame(min(self.current_frame_idx + 1, self.get_frame_count() - 1))
-
     def seek_to_prev_frame(self):
-        self.seek_to_frame(max(0, self.current_frame_idx - 1))
+        self.seek_to_frame(self.current_frame_idx - 1)
 
     @property
     def name(self):
@@ -167,7 +168,7 @@ class Fake_Source(Playback_Source):
     @frame_size.setter
     def frame_size(self, new_size):
         # closest match for size
-        sizes = [abs(r[0]-new_size[0]) for r in self.frame_sizesp]
+        sizes = [abs(r[0]-new_size[0]) for r in self.frame_sizes]
         best_size_idx = sizes.index(min(sizes))
         size = self.frame_sizes[best_size_idx]
         if size != new_size:

@@ -34,7 +34,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     from time import sleep
     import logging
     import errno
-    from glob import glob
     from time import time
     # networking
     import zmq
@@ -70,7 +69,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from pyglui.cygl.utils import Named_Texture, RGBA
         import gl_utils
         # capture
-        from video_capture import File_Source, Fake_Source, EndofVideoFileError
+        from video_capture import init_playback_source, EndofVideoFileError
 
         # helpers/utils
         from version_utils import VersionFormat
@@ -183,8 +182,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         def get_dt():
             return next(tick)
 
-        video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
-                      if os.path.splitext(f)[1] in ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')][0]
         pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
         meta_info = load_meta_info(rec_dir)
@@ -208,25 +205,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
         g_pool.camera_render_size = None
 
-        # sets itself to g_pool.capture
-        File_Source(g_pool, video_path)
-        if g_pool.capture.initialised:
-            min_ts = np.inf
-            max_ts = -np.inf
-            for f in glob(os.path.join(rec_dir, "eye*_timestamps.npy")):
-                try:
-                    eye_ts = np.load(f)
-                    assert len(eye_ts.shape) == 1
-                    assert eye_ts.shape[0] > 1
-                    min_ts = min(min_ts, eye_ts[0])
-                    max_ts = max(max_ts, eye_ts[-1])
-                except (FileNotFoundError, AssertionError):
-                    pass
-
-            error_msg = 'Could not generate world timestamps from eye timestamps. This is an invalid recording.'
-            assert -np.inf < min_ts < max_ts < np.inf, error_msg
-
-            Fake_Source(g_pool, 'fake world', (800, 600), 60, (min_ts, max_ts))
+        init_playback_source(g_pool, rec_dir, "world.*")
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))

@@ -116,7 +116,6 @@ class Seek_Control(System_Plugin_Base):
             self.g_pool.capture.playback_speed = speeds[new_idx]
         else:
             # frame-by-frame mode, seek one frame forward
-            self.g_pool.capture.seek_to_next_frame()
             self.g_pool.new_seek = True
 
     @property

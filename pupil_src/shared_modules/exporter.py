@@ -21,7 +21,7 @@ import os
 from time import time
 from glob import glob
 import numpy as np
-from video_capture import File_Source, EndofVideoFileError
+from video_capture import init_playback_source, EndofVideoFileError
 from player_methods import update_recording_to_recent, load_meta_info
 from av_writer import AV_Writer
 from file_methods import load_object
@@ -74,8 +74,6 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
 
         update_recording_to_recent(rec_dir)
 
-        video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
-                      if os.path.splitext(f)[-1] in ('.mp4', '.mkv', '.avi', '.mjpeg')][0]
         pupil_data_path = os.path.join(rec_dir, "pupil_data")
         audio_path = os.path.join(rec_dir, "audio.mp4")
 
@@ -84,7 +82,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         g_pool = Global_Container()
         g_pool.app = 'exporter'
         g_pool.min_data_confidence = min_data_confidence
-        cap = File_Source(g_pool, video_path)
+        cap = init_playback_source(g_pool, rec_dir, "world.*")
         timestamps = cap.timestamps
 
         # Out file path verification, we do this before but if one uses a separate tool, this will kick in.
@@ -155,7 +153,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         while frames_to_export > current_frame:
             try:
                 frame = cap.get_frame()
-            except EndofVideoFileError:
+            except (EndofVideoFileError, IndexError):
                 break
 
             events = {'frame': frame}
