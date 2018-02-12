@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from bisect import bisect_left as bisect
+from bisect import bisect_left
 
 from pyglui import ui
 from plugin import System_Plugin_Base
@@ -78,7 +78,7 @@ class Seek_Control(System_Plugin_Base):
 
     @trim_left_ts.setter
     def trim_left_ts(self, val):
-        self.trim_left = bisect(self.g_pool.timestamps, val, hi=self.trim_right-1)
+        self.trim_left = bisect_left(self.g_pool.timestamps, val, hi=self.trim_right-1)
 
     @property
     def trim_right_ts(self):
@@ -87,7 +87,8 @@ class Seek_Control(System_Plugin_Base):
     @trim_right_ts.setter
     def trim_right_ts(self, val):
         # left + 1 <= right <= frame_count -1
-        self.trim_right = bisect(self.g_pool.timestamps, val, lo=self.trim_left+1)
+        self.trim_right = bisect_left(self.g_pool.timestamps, val, lo=self.trim_left+1)
+        self.trim_right = min(self.trim_right, len(self.g_pool.timestamps) - 1)
 
     @property
     def current_ts(self):
@@ -97,7 +98,7 @@ class Seek_Control(System_Plugin_Base):
     def current_ts(self, val):
         if self.current_ts != val:
             try:
-                val_idx = bisect(self.g_pool.timestamps, val)
+                val_idx = bisect_left(self.g_pool.timestamps, val)
                 self.g_pool.capture.seek_to_frame(val_idx)
             except:
                 import traceback as tb
@@ -146,14 +147,46 @@ class Seek_Control(System_Plugin_Base):
         self.trim_left, self.trim_right = mark_range
 
     def get_trim_range_string(self):
-        return '{} - {}'.format(self.trim_left, self.trim_right)
+        time_fmt = ''
+        min_ts = self.g_pool.timestamps[0]
+        for ts in (self.trim_left_ts, self.trim_right_ts):
+            ts -= min_ts
+            minutes = ts // 60
+            seconds = ts - (minutes * 60.)
+            micro_seconds_e1 = int((seconds - int(seconds)) * 1e3)
+            time_fmt += '{:02.0f}:{:02d}.{:03d} - '.format(abs(minutes), int(seconds), micro_seconds_e1)
+        return time_fmt[:-3]
 
-    def set_trim_range_string(self, str):
+    def set_trim_range_string(self, range_str):
         try:
-            in_m, out_m = str.split('-')
-            in_m = int(in_m)
-            out_m = int(out_m)
-            self.trim_left = in_m
-            self.trim_right = out_m
-        except:
-            logger.warning("Setting Trimmarks via string failed.")
+            range_list = range_str.split('-')
+            assert len(range_list) == 2
+
+            def convert_to_ts(time_str):
+                time_list = time_str.split(':')
+                assert len(time_list) == 2
+                minutes, seconds = map(float, time_list)
+                return minutes * 60 + seconds + self.g_pool.timestamps[0]
+
+            left, right = map(convert_to_ts, range_list)
+            assert left < right
+            # setting right trim first ensures previous assertion even if
+            # g_pool.timestamps[-1] < left < right. The possibility is
+            # desirable, because it enables to set the range to the maximum
+            # value without knowing the actual maximum value.
+            self.trim_right_ts = right
+            self.trim_left_ts = left
+
+        except (AssertionError, ValueError):
+            logger.warning('Invalid trim range entered')
+
+    def get_folder_name_from_trims(self):
+        time_fmt = ''
+        min_ts = self.g_pool.timestamps[0]
+        for ts in (self.trim_left_ts, self.trim_right_ts):
+            ts -= min_ts
+            minutes = ts // 60
+            seconds = ts - (minutes * 60.)
+            micro_seconds_e1 = int((seconds - int(seconds)) * 1e3)
+            time_fmt += '{:02.0f}_{:02d}_{:03d}-'.format(abs(minutes), int(seconds), micro_seconds_e1)
+        return time_fmt[:-1]

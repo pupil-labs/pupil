@@ -283,8 +283,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             g_pool.plugins.clean()
 
         def do_export(_):
-            export_range = g_pool.seek_control.trim_left, g_pool.seek_control.trim_right
-            export_dir = os.path.join(g_pool.rec_dir, 'exports', '{}-{}'.format(*export_range))
+            left_idx = g_pool.seek_control.trim_left
+            right_idx = g_pool.seek_control.trim_right
+            export_range = left_idx, right_idx + 1  # exclusive range.stop
+
+            export_dir = os.path.join(g_pool.rec_dir, g_pool.seek_control.get_folder_name_from_trims())
+
             try:
                 os.makedirs(export_dir)
             except OSError as e:
@@ -292,8 +296,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                     logger.error("Could not create export dir")
                     raise e
                 else:
-                    overwrite_warning = "Previous export for range [{}-{}] already exists - overwriting."
-                    logger.warning(overwrite_warning.format(*export_range))
+                    overwrite_warning = "Previous export for range [{}] already exists - overwriting."
+                    logger.warning(overwrite_warning.format(g_pool.seek_control.get_trim_range_string()))
             else:
                 logger.info('Created export dir at "{}"'.format(export_dir))
 
