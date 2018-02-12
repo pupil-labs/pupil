@@ -58,8 +58,8 @@ else:
 
 
 def init_playback_source(g_pool, rec_dir, name_pattern,
-                         fallback_framesize=(640, 480),
-                         fallback_framerate=60):
+                         fallback_framesize=(1280, 800),
+                         fallback_framerate=30):
     '''Factory method to create correct playback source'''
 
     valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')
