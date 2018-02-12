@@ -297,9 +297,14 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         width *= 2
         height *= 2
         width += icon_bar_width
+        default = width, height
 
         width, height = session_settings.get(
-            'window_size', (width, height))
+            'window_size', default)
+
+        if 0 in (width, height):  # Avoid glfw window creation error
+            width, height = default
+
         main_window = glfw.glfwCreateWindow(width, height, title, None, None)
         window_pos = session_settings.get(
             'window_position', window_position_default)

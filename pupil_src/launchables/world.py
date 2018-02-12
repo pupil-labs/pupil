@@ -305,9 +305,17 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                                         'actor': p.class_name,
                                         'doc': p.on_notify.__doc__})
 
+        width, height = 1280, 720
+        width += icon_bar_width
+        default = width, height
+
+        width, height = session_settings.get('window_size', default)
+
+        if 0 in (width, height):  # Avoid glfw window creation error
+            width, height = default
+
         # window and gl setup
         glfw.glfwInit()
-        width, height = session_settings.get('window_size', (1280+icon_bar_width, 720))
         main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
         window_pos = session_settings.get('window_position', window_position_default)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
@@ -355,6 +363,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             f_width, f_height = g_pool.capture.frame_size
             f_width += int(icon_bar_width*g_pool.gui.scale)
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
+
         general_settings.append(ui.Button('Reset window size', set_window_size))
         general_settings.append(ui.Selector('audio_mode', audio, selection=audio.audio_modes))
         general_settings.append(ui.Selector('detection_mapping_mode',

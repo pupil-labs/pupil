@@ -219,7 +219,15 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
         g_pool.capture.playback_speed = session_settings.get('playback_speed', 1.)
 
-        width, height = session_settings.get('window_size', g_pool.capture.frame_size)
+        width, height = g_pool.capture.frame_size
+        width += icon_bar_width
+        default = width, height
+
+        width, height = session_settings.get('window_size', default)
+
+        if 0 in (width, height):  # Avoid glfw window creation error
+            width, height = default
+
         window_pos = session_settings.get('window_position', window_position_default)
         glfw.glfwInit()
         main_window = glfw.glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "
@@ -322,9 +330,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         vert_constr.append(g_pool.user_timelines)
         g_pool.timelines.append(vert_constr)
 
+        def set_window_size():
+            f_width, f_height = g_pool.capture.frame_size
+            f_width += int(icon_bar_width * g_pool.gui.scale)
+            glfw.glfwSetWindowSize(main_window, f_width, f_height)
+
         general_settings = ui.Growing_Menu('General', header_pos='headline')
-        general_settings.append(ui.Button('Reset window size',
-                                          lambda: glfw.glfwSetWindowSize(main_window, g_pool.capture.frame_size[0], g_pool.capture.frame_size[1])))
+        general_settings.append(ui.Button('Reset window size', set_window_size))
         general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2]+list(np.arange(1.5, 5.1, .5)), label='Interface Size'))
         general_settings.append(ui.Info_Text('Player Version: {}'.format(g_pool.version)))
         general_settings.append(ui.Info_Text('Capture Version: {}'.format(meta_info['Capture Software Version'])))

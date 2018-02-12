@@ -43,6 +43,9 @@ class Service_UI(System_Plugin_Base):
 
         self.texture = np.zeros((1, 1, 3), dtype=np.uint8) + 128
 
+        if 0 in window_size:  # Avoid glfw window creation error
+            window_size = window_size_default
+
         glfw.glfwInit()
         main_window = glfw.glfwCreateWindow(*window_size, "Pupil Service")
         glfw.glfwSetWindowPos(main_window, *window_position)
