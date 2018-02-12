@@ -57,6 +57,9 @@ class Task_Proxy(object):
 
     def fetch(self):
         '''Fetches progress and available results from background'''
+        if self.completed or self.canceled:
+            return
+
         while self.pipe.poll(0):
             try:
                 datum = self.pipe.recv()
