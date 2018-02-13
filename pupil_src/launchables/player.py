@@ -34,6 +34,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     from time import sleep
     import logging
     import errno
+    from glob import glob
     from time import time
     # networking
     import zmq
@@ -69,7 +70,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from pyglui.cygl.utils import Named_Texture, RGBA
         import gl_utils
         # capture
-        from video_capture import init_playback_source, EndofVideoFileError
+        from video_capture import File_Source, Fake_Source, EndofVideoFileError
 
         # helpers/utils
         from version_utils import VersionFormat
@@ -205,7 +206,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
         g_pool.camera_render_size = None
 
-        init_playback_source(g_pool, rec_dir, "world.*")
+        valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
+        video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
+                      if os.path.splitext(f)[1] in valid_ext][0]
+        if os.path.splitext(video_path)[1] == '.fake':
+            Fake_Source(g_pool, source_path=video_path)
+        else:
+            File_Source(g_pool, source_path=video_path)
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
@@ -615,8 +622,12 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
             glfw.glfwSwapBuffers(window)
 
             if rec_dir:
-                update_recording_to_recent(rec_dir)
-                glfw.glfwSetWindowShouldClose(window, True)
+                try:
+                    update_recording_to_recent(rec_dir)
+                except AssertionError as err:
+                    logger.error(str(err))
+                else:
+                    glfw.glfwSetWindowShouldClose(window, True)
 
             glfw.glfwPollEvents()
 

@@ -11,11 +11,13 @@ See COPYING and COPYING.LESSER for license details.
 
 from .base_backend import Playback_Source, Base_Manager
 
+import os
 import cv2
 import numpy as np
 from time import time, sleep
 from pyglui import ui
 from camera_models import Dummy_Camera
+from file_methods import load_object
 
 # logging
 import logging
@@ -61,18 +63,22 @@ class Fake_Source(Playback_Source):
         frame_rate (int)
         frame_size (tuple)
     """
-    def __init__(self, g_pool, name, frame_size, frame_rate, timestamp_range=None, *args, **kwargs):
+    def __init__(self, g_pool, source_path=None, frame_size=None,
+                 frame_rate=None, name='Fake Source', *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
+        if source_path:
+            meta = load_object(source_path)
+            frame_size = meta['frame_size']
+            frame_rate = meta['frame_rate']
+            self.timestamps = np.load(os.path.splitext(source_path)[0] + '_timestamps.npy')
+        else:
+            self.timestamps = None
+
         self.fps = frame_rate
         self._name = name
-        self.presentation_time = time()
         self.make_img(tuple(frame_size))
         self.current_frame_idx = 0
         self.target_frame_idx = 0
-        if timestamp_range is not None:
-            self.timestamps = np.arange(*timestamp_range, 1/frame_rate)
-        else:
-            self.timestamps = None
 
     def init_ui(self):
         self.add_menu()
@@ -211,12 +217,12 @@ class Fake_Source(Playback_Source):
         return self.fps
 
     @frame_rate.setter
-    def frame_rate(self,new_rate):
-        rates = [ abs(r-new_rate) for r in self.frame_rates ]
+    def frame_rate(self, new_rate):
+        rates = [abs(r-new_rate) for r in self.frame_rates]
         best_rate_idx = rates.index(min(rates))
         rate = self.frame_rates[best_rate_idx]
         if rate != new_rate:
-            logger.warning("%sfps capture mode not available at (%s) on 'Fake Source'. Selected %sfps. "%(new_rate,self.frame_size,rate))
+            logger.warning("%sfps capture mode not available at (%s) on 'Fake Source'. Selected %sfps. "%(new_rate, self.frame_size, rate))
         self.fps = rate
 
     @property
