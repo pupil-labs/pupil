@@ -201,7 +201,7 @@ def make_section_dict(calib_range, map_range):
 
 
 class Offline_Calibration(Gaze_Producer_Base):
-    session_data_version = 7
+    session_data_version = 8
 
     def __init__(self, g_pool, manual_ref_edit_mode=False):
         super().__init__(g_pool)
