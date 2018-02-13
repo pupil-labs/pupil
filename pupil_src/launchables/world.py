@@ -307,12 +307,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
         width, height = 1280, 720
         width += icon_bar_width
-        default = width, height
-
-        width, height = session_settings.get('window_size', default)
-
-        if 0 in (width, height):  # Avoid glfw window creation error
-            width, height = default
+        width, height = session_settings.get('window_size', (width, height))
 
         # window and gl setup
         glfw.glfwInit()
@@ -516,13 +511,17 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
         session_settings['gui_scale'] = g_pool.gui_user_scale
         session_settings['ui_config'] = g_pool.gui.configuration
-        session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
         session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
         session_settings['version'] = str(g_pool.version)
         session_settings['eye0_process_alive'] = eyes_are_alive[0].value
         session_settings['eye1_process_alive'] = eyes_are_alive[1].value
         session_settings['detection_mapping_mode'] = g_pool.detection_mapping_mode
         session_settings['audio_mode'] = audio.audio_mode
+
+        session_window_size = glfw.glfwGetWindowSize(main_window)
+        if 0 not in session_window_size:
+            session_settings['window_size'] = session_window_size
+
         session_settings.close()
 
         # de-init all running plugins

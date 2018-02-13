@@ -221,17 +221,14 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
         width, height = g_pool.capture.frame_size
         width += icon_bar_width
-        default = width, height
-
-        width, height = session_settings.get('window_size', default)
-
-        if 0 in (width, height):  # Avoid glfw window creation error
-            width, height = default
+        width, height = session_settings.get('window_size', (width, height))
 
         window_pos = session_settings.get('window_position', window_position_default)
+        window_name = "Pupil Player: {} - {}".format(meta_info["Recording Name"],
+                                                     os.path.split(rec_dir)[-1])
+
         glfw.glfwInit()
-        main_window = glfw.glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "
-                                       + rec_dir.split(os.path.sep)[-1], None, None)
+        main_window = glfw.glfwCreateWindow(width, height, window_name, None, None)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
@@ -512,9 +509,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         session_settings['min_data_confidence'] = g_pool.min_data_confidence
         session_settings['gui_scale'] = g_pool.gui_user_scale
         session_settings['ui_config'] = g_pool.gui.configuration
-        session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
         session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
         session_settings['version'] = str(g_pool.version)
+
+        session_window_size = glfw.glfwGetWindowSize(main_window)
+        if 0 not in session_window_size:
+            session_settings['window_size'] = session_window_size
+
         session_settings.close()
 
         # de-init all running plugins
