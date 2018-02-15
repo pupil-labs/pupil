@@ -485,7 +485,7 @@ def update_recording_v13_v14(rec_dir):
         frame_rate = 30
         timestamps = np.arange(min_ts, max_ts, 1/frame_rate)
         np.save(os.path.join(rec_dir, 'world_timestamps'), timestamps)
-        save_object({'frame_rate': frame_rate, 'frame_size': (1280, 720)},
+        save_object({'frame_rate': frame_rate, 'frame_size': (1280, 720), 'version': 0},
                     os.path.join(rec_dir, 'world.fake'))
 
     meta_info_path = os.path.join(rec_dir, "info.csv")
