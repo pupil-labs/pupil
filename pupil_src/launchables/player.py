@@ -219,11 +219,16 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
         g_pool.capture.playback_speed = session_settings.get('playback_speed', 1.)
 
-        width, height = session_settings.get('window_size', g_pool.capture.frame_size)
+        width, height = g_pool.capture.frame_size
+        width += icon_bar_width
+        width, height = session_settings.get('window_size', (width, height))
+
         window_pos = session_settings.get('window_position', window_position_default)
+        window_name = "Pupil Player: {} - {}".format(meta_info["Recording Name"],
+                                                     os.path.split(rec_dir)[-1])
+
         glfw.glfwInit()
-        main_window = glfw.glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "
-                                       + rec_dir.split(os.path.sep)[-1], None, None)
+        main_window = glfw.glfwCreateWindow(width, height, window_name, None, None)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
@@ -275,8 +280,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             g_pool.plugins.clean()
 
         def do_export(_):
-            export_range = g_pool.seek_control.trim_left, g_pool.seek_control.trim_right
-            export_dir = os.path.join(g_pool.rec_dir, 'exports', '{}-{}'.format(*export_range))
+            left_idx = g_pool.seek_control.trim_left
+            right_idx = g_pool.seek_control.trim_right
+            export_range = left_idx, right_idx + 1  # exclusive range.stop
+
+            export_dir = os.path.join(g_pool.rec_dir, g_pool.seek_control.get_folder_name_from_trims())
+
             try:
                 os.makedirs(export_dir)
             except OSError as e:
@@ -284,8 +293,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                     logger.error("Could not create export dir")
                     raise e
                 else:
-                    overwrite_warning = "Previous export for range [{}-{}] already exists - overwriting."
-                    logger.warning(overwrite_warning.format(*export_range))
+                    overwrite_warning = "Previous export for range [{}] already exists - overwriting."
+                    logger.warning(overwrite_warning.format(g_pool.seek_control.get_trim_range_string()))
             else:
                 logger.info('Created export dir at "{}"'.format(export_dir))
 
@@ -322,9 +331,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         vert_constr.append(g_pool.user_timelines)
         g_pool.timelines.append(vert_constr)
 
+        def set_window_size():
+            f_width, f_height = g_pool.capture.frame_size
+            f_width += int(icon_bar_width * g_pool.gui.scale)
+            glfw.glfwSetWindowSize(main_window, f_width, f_height)
+
         general_settings = ui.Growing_Menu('General', header_pos='headline')
-        general_settings.append(ui.Button('Reset window size',
-                                          lambda: glfw.glfwSetWindowSize(main_window, g_pool.capture.frame_size[0], g_pool.capture.frame_size[1])))
+        general_settings.append(ui.Button('Reset window size', set_window_size))
         general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2]+list(np.arange(1.5, 5.1, .5)), label='Interface Size'))
         general_settings.append(ui.Info_Text('Player Version: {}'.format(g_pool.version)))
         general_settings.append(ui.Info_Text('Capture Version: {}'.format(meta_info['Capture Software Version'])))
@@ -496,9 +509,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         session_settings['min_data_confidence'] = g_pool.min_data_confidence
         session_settings['gui_scale'] = g_pool.gui_user_scale
         session_settings['ui_config'] = g_pool.gui.configuration
-        session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
         session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
         session_settings['version'] = str(g_pool.version)
+
+        session_window_size = glfw.glfwGetWindowSize(main_window)
+        if 0 not in session_window_size:
+            session_settings['window_size'] = session_window_size
+
         session_settings.close()
 
         # de-init all running plugins

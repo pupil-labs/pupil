@@ -201,7 +201,7 @@ class Offline_Blink_Detection(Blink_Detection):
                   'filter_response', 'base_data')
 
         start, end = export_range
-        blinks_in_section = [b for b in self.g_pool.blinks if start <= b['index'] <= end]
+        blinks_in_section = [b for b in self.g_pool.blinks if start <= b['index'] < end]
 
         with open(os.path.join(export_dir, 'blinks.csv'), 'w',
                   encoding='utf-8', newline='') as csvfile:

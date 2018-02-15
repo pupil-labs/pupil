@@ -182,10 +182,15 @@ class Service_UI(System_Plugin_Base):
         del self.texture
 
     def get_init_dict(self):
-        return {'window_size': glfw.glfwGetWindowSize(self.g_pool.main_window),
-                'window_position': glfw.glfwGetWindowPos(self.g_pool.main_window),
+        sess = {'window_position': glfw.glfwGetWindowPos(self.g_pool.main_window),
                 'gui_scale': self.g_pool.gui_user_scale,
                 'ui_config': self.g_pool.gui.configuration}
+
+        session_window_size = glfw.glfwGetWindowSize(self.g_pool.main_window)
+        if 0 not in session_window_size:
+            sess['window_size'] = session_window_size
+
+        return sess
 
     def start_stop_eye(self, eye_id, make_alive):
         if make_alive:

@@ -305,9 +305,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                                         'actor': p.class_name,
                                         'doc': p.on_notify.__doc__})
 
+        width, height = session_settings.get('window_size', (1280 + icon_bar_width, 720))
+
         # window and gl setup
         glfw.glfwInit()
-        width, height = session_settings.get('window_size', (1280+icon_bar_width, 720))
         main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
         window_pos = session_settings.get('window_position', window_position_default)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
@@ -355,6 +356,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             f_width, f_height = g_pool.capture.frame_size
             f_width += int(icon_bar_width*g_pool.gui.scale)
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
+
         general_settings.append(ui.Button('Reset window size', set_window_size))
         general_settings.append(ui.Selector('audio_mode', audio, selection=audio.audio_modes))
         general_settings.append(ui.Selector('detection_mapping_mode',
@@ -507,13 +509,17 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
         session_settings['gui_scale'] = g_pool.gui_user_scale
         session_settings['ui_config'] = g_pool.gui.configuration
-        session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
         session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
         session_settings['version'] = str(g_pool.version)
         session_settings['eye0_process_alive'] = eyes_are_alive[0].value
         session_settings['eye1_process_alive'] = eyes_are_alive[1].value
         session_settings['detection_mapping_mode'] = g_pool.detection_mapping_mode
         session_settings['audio_mode'] = audio.audio_mode
+
+        session_window_size = glfw.glfwGetWindowSize(main_window)
+        if 0 not in session_window_size:
+            session_settings['window_size'] = session_window_size
+
         session_settings.close()
 
         # de-init all running plugins

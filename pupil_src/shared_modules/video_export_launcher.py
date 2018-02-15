@@ -77,7 +77,10 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         self.menu.append(ui.Info_Text('Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.'))
         self.menu.append(ui.Text_Input('rec_name',self,label='Export name'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
-        self.menu.append(ui.Text_Input('in_mark',getter=self.g_pool.seek_control.get_trim_range_string,setter=self.g_pool.seek_control.set_trim_range_string,label='Frame range to export'))
+        self.menu.append(ui.Text_Input('trim_section',
+                                       getter=self.g_pool.seek_control.get_trim_range_string,
+                                       setter=self.g_pool.seek_control.set_trim_range_string,
+                                       label='Frame range to export'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
 
         for job in self.exports[::-1]:
@@ -97,13 +100,12 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
             self.add_export(notification['range'], notification['export_dir'])
 
     def add_export(self, export_range, export_dir):
-        export_range = slice(*export_range)
         logger.warning("Adding new video export process.")
 
         rec_dir = self.g_pool.rec_dir
         user_dir = self.g_pool.user_dir
-        start_frame = export_range.start
-        end_frame = export_range.stop + 1  # end_frame is exclusive
+        # export_range.stop is exclusive
+        start_frame, end_frame = export_range
 
         # Here we make clones of every plugin that supports it.
         # So it runs in the current config when we lauch the exporter.
