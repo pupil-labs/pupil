@@ -305,9 +305,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                                         'actor': p.class_name,
                                         'doc': p.on_notify.__doc__})
 
-        width, height = 1280, 720
-        width += icon_bar_width
-        width, height = session_settings.get('window_size', (width, height))
+        width, height = session_settings.get('window_size', (1280 + icon_bar_width, 720))
 
         # window and gl setup
         glfw.glfwInit()
