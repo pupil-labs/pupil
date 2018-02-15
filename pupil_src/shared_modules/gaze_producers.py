@@ -563,13 +563,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def start_marker_detection(self):
         self.circle_marker_positions = []
-
-        try:
-            source_path = self.g_pool.capture.source_path
-        except AttributeError:
-            logger.error('The artificial video source does not support marker detection.')
-            return
-
+        source_path = self.g_pool.capture.source_path
         self.process_pipe = zmq_tools.Msg_Pair_Server(self.g_pool.zmq_ctx)
         self.notify_all({'subject': 'circle_detector_process.should_start',
                          'source_path': source_path, "pair_url": self.process_pipe.url})
