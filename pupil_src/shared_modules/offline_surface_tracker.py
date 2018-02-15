@@ -283,19 +283,24 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         self.init_marker_cacher()
 
     def init_marker_cacher(self):
+
         from marker_detector_cacher import fill_cache
         visited_list = [False if x is False else True for x in self.cache]
-        video_file_path =  self.g_pool.capture.source_path
         self.cache_queue = mp.Queue()
-        self.cacher_seek_idx = mp.Value('i',0)
-        self.cacher_run = mp.Value(c_bool,True)
-        self.cacher = mp.Process(target=fill_cache, args=(visited_list,video_file_path,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter_cacher,self.invert_image))
+        self.cacher_seek_idx = mp.Value('i', 0)
+        self.cacher_run = mp.Value(c_bool, True)
+
+        video_file_path = self.g_pool.capture.source_path
+        args = (visited_list, video_file_path, self.cache_queue,
+                self.cacher_seek_idx, self.cacher_run,
+                self.min_marker_perimeter_cacher, self.invert_image)
+        self.cacher = mp.Process(target=fill_cache, args=args)
         self.cacher.start()
 
     def update_marker_cache(self):
         while not self.cache_queue.empty():
-            idx,c_m = self.cache_queue.get()
-            self.cache.update(idx,c_m)
+            idx, c_m = self.cache_queue.get()
+            self.cache.update(idx, c_m)
 
             for s in self.surfaces:
                 s.update_cache(self.cache, min_marker_perimeter=self.min_marker_perimeter,

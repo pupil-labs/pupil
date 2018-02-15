@@ -67,10 +67,13 @@ class Seek_Control(System_Plugin_Base):
     def play(self, new_state):
         if new_state and self.current_ts == self.trim_right_ts:
             self.g_pool.capture.seek_to_frame(self.trim_left)
+            self.g_pool.new_seek = True
         elif new_state and self.current_ts >= self.g_pool.timestamps[-10]:
-            self.g_pool.capture.seek_to_frame(0)  # avoid pause set by hitting trimmark pause.
+            self.g_pool.capture.seek_to_frame(0)
+            self.g_pool.new_seek = True
             logger.warning("End of video - restart at beginning.")
-        self.g_pool.capture.play = new_state
+        else:
+            self.g_pool.capture.play = new_state
 
     @property
     def trim_left_ts(self):
@@ -119,7 +122,6 @@ class Seek_Control(System_Plugin_Base):
             self.g_pool.capture.playback_speed = speeds[new_idx]
         else:
             # frame-by-frame mode, seek one frame forward
-            self.g_pool.capture.seek_to_next_frame()
             self.g_pool.new_seek = True
 
     @property

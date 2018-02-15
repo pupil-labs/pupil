@@ -20,7 +20,7 @@ from glfw import glfwGetCursorPos, glfwGetFramebufferSize, glfwGetWindowSize, gl
 from plugin import Visualizer_Plugin_Base
 from player_methods import transparent_image_overlay
 from methods import normalize, denormalize
-from video_capture import EndofVideoFileError, FileCaptureError, File_Source
+from video_capture import EndofVideoError, FileCaptureError, File_Source
 
 # logging
 import logging
@@ -111,7 +111,7 @@ class Eye_Wrapper(object):
 
             try:
                 self.current_eye_frame = self.source.get_frame()
-            except EndofVideoFileError:
+            except EndofVideoError:
                 logger.info("Reached the end of the eye video for eye video {}.".format(self.eyeid))
 
         # 2. dragging image

@@ -347,7 +347,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                     minutes = ts // 60
                     seconds = ts - (minutes * 60.)
                     time_fmt += ' {:02.0f}:{:02.0f} -'.format(abs(minutes), seconds)
-                button.outer_label = time_fmt[:-2]  # remove final ' - '
+                button.outer_label = time_fmt[:-2]  # remove final ' -'
             button.function = trim
 
         section_menu.append(ui.Text_Input('label', sec, label='Label'))
@@ -569,9 +569,9 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.start_marker_detection()
 
     def start_marker_detection(self):
-        self.process_pipe = zmq_tools.Msg_Pair_Server(self.g_pool.zmq_ctx)
         self.circle_marker_positions = []
         source_path = self.g_pool.capture.source_path
+        self.process_pipe = zmq_tools.Msg_Pair_Server(self.g_pool.zmq_ctx)
         self.notify_all({'subject': 'circle_detector_process.should_start',
                          'source_path': source_path, "pair_url": self.process_pipe.url})
 

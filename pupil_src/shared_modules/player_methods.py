@@ -121,6 +121,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v0913_to_v0915(rec_dir)
     if rec_version < VersionFormat('1.3'):
         update_recording_v0915_v13(rec_dir)
+    if rec_version < VersionFormat('1.4'):
+        update_recording_v13_v14(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -453,6 +455,43 @@ def update_recording_v0915_v13(rec_dir):
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Data Format Version'] = 'v1.3'
+    update_meta_info(rec_dir, meta_info)
+
+
+def update_recording_v13_v14(rec_dir):
+    logger.info("Updating recording from v1.3 to v1.4")
+    valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')
+    existing_videos = [f for f in glob.glob(os.path.join(rec_dir, 'world.*'))
+                       if os.path.splitext(f)[1] in valid_ext]
+
+    if not existing_videos:
+        min_ts = np.inf
+        max_ts = -np.inf
+        for f in glob.glob(os.path.join(rec_dir, "eye*_timestamps.npy")):
+            try:
+                eye_ts = np.load(f)
+                assert len(eye_ts.shape) == 1
+                assert eye_ts.shape[0] > 1
+                min_ts = min(min_ts, eye_ts[0])
+                max_ts = max(max_ts, eye_ts[-1])
+            except (FileNotFoundError, AssertionError):
+                pass
+
+        error_msg = 'Could not generate world timestamps from eye timestamps. This is an invalid recording.'
+        assert -np.inf < min_ts < max_ts < np.inf, error_msg
+
+        logger.warning('No world video found. Constructing an artificial replacement.')
+
+        frame_rate = 30
+        timestamps = np.arange(min_ts, max_ts, 1/frame_rate)
+        np.save(os.path.join(rec_dir, 'world_timestamps'), timestamps)
+        save_object({'frame_rate': frame_rate, 'frame_size': (1280, 720), 'version': 0},
+                    os.path.join(rec_dir, 'world.fake'))
+
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v1.4'
     update_meta_info(rec_dir, meta_info)
 
 

@@ -70,7 +70,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from pyglui.cygl.utils import Named_Texture, RGBA
         import gl_utils
         # capture
-        from video_capture import File_Source, EndofVideoFileError
+        from video_capture import init_playback_source, EndofVideoError
 
         # helpers/utils
         from version_utils import VersionFormat
@@ -183,8 +183,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         def get_dt():
             return next(tick)
 
-        video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
-                      if os.path.splitext(f)[1] in ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')][0]
         pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
         meta_info = load_meta_info(rec_dir)
@@ -208,8 +206,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
         g_pool.camera_render_size = None
 
-        # sets itself to g_pool.capture
-        File_Source(g_pool, video_path)
+        valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
+        video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
+                      if os.path.splitext(f)[1] in valid_ext][0]
+        init_playback_source(g_pool, source_path=video_path)
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
@@ -319,7 +319,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.gui = ui.UI()
         g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
         g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos='left')
-        g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
+        g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width, 0), size=(0, 0), header_pos='hidden')
         g_pool.timelines = ui.Container((0, 0), (0, 0), (0, 0))
         g_pool.timelines.horizontal_constraint = g_pool.menubar
         g_pool.user_timelines = ui.Timeline_Menu('User Timelines', pos=(0., -150.),
@@ -437,10 +437,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                 g_pool.new_seek = False
                 try:
                     new_frame = g_pool.capture.get_frame()
-                except EndofVideoFileError:
+                except EndofVideoError:
                     # end of video logic: pause at last frame.
                     g_pool.capture.play = False
-                    logger.warning("end of video")
+                    logger.warning("End of video")
 
             frame = new_frame.copy()
             events = {}
@@ -636,8 +636,12 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
             glfw.glfwSwapBuffers(window)
 
             if rec_dir:
-                update_recording_to_recent(rec_dir)
-                glfw.glfwSetWindowShouldClose(window, True)
+                try:
+                    update_recording_to_recent(rec_dir)
+                except AssertionError as err:
+                    logger.error(str(err))
+                else:
+                    glfw.glfwSetWindowShouldClose(window, True)
 
             glfw.glfwPollEvents()
 

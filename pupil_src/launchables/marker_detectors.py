@@ -34,11 +34,12 @@ def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
 
     # imports
     from time import sleep
-    from video_capture import File_Source, EndofVideoFileError
+    from video_capture import init_playback_source, EndofVideoError
     from circle_detector import CircleTracker
 
     try:
-        src = File_Source(Empty(), source_path, timed_playback=False)
+        src = init_playback_source(Empty(), source_path, timed_playback=False)
+
         frame = src.get_frame()
         logger.info('Starting calibration marker detection...')
         frame_count = src.get_frame_count()
@@ -77,7 +78,7 @@ def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
 
             frame = src.get_frame()
 
-    except EndofVideoFileError:
+    except EndofVideoError:
         process_pipe.send(topic='progress', payload={'data': queue})
         process_pipe.send(topic='finished', payload={})
         logger.debug("Process finished")

@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+from time import time, sleep
 from plugin import Plugin
 
 import gl_utils
@@ -21,12 +22,14 @@ logger = logging.getLogger(__name__)
 
 
 class InitialisationError(Exception):
-    def __init__(self, msg=None):
-        super().__init__()
-        self.message = msg
+    pass
 
 
 class StreamError(Exception):
+    pass
+
+
+class EndofVideoError(Exception):
     pass
 
 
@@ -191,3 +194,38 @@ class Base_Manager(Plugin):
 
         # here is where you add all your menu entries.
         self.menu.label = "Backend Manager"
+
+
+class Playback_Source(Base_Source):
+    allowed_speeds = [.25, .5, 1., 1.5, 2., 4.]
+
+    def __init__(self, g_pool, timed_playback=False, playback_speed=1., *args, **kwargs):
+        super().__init__(g_pool)
+        self.playback_speed = playback_speed
+        self.timed_playback = timed_playback
+        self.time_discrepancy = 0.
+        self._recent_wait_idx = -1
+        self.play = True
+
+    def seek_to_frame(self, frame_idx):
+        raise NotImplementedError()
+
+    def get_frame_index(self):
+        raise NotImplementedError()
+
+    def seek_to_prev_frame(self):
+        raise NotImplementedError()
+
+    def get_frame(self):
+        raise NotImplementedError()
+
+    def wait(self, frame):
+        if frame.index == self._recent_wait_idx:
+            sleep(1/60)  # 60 fps on Player pause
+        elif self.time_discrepancy:
+            wait_time = frame.timestamp - self.time_discrepancy - time()
+            wait_time /= self.playback_speed
+            if 1 > wait_time > 0:
+                sleep(wait_time)
+        self._recent_wait_idx = frame.index
+        self.time_discrepancy = frame.timestamp - time()
