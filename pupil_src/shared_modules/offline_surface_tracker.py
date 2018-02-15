@@ -182,7 +182,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
     def add_surface(self):
         self.surfaces.append(Offline_Reference_Surface(self.g_pool))
-        self.timeline.height += self.timeline_line_height
+        self.timeline.content_height += self.timeline_line_height
         self.update_gui_markers()
 
     def remove_surface(self, i):
@@ -473,7 +473,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                 csv_writer =csv.writer(csvfile, delimiter=',')
                 csv_writer.writerow(('frame_idx','timestamp','m_to_screen','m_from_screen','detected_markers'))
                 for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
-                    if in_mark <= idx <= out_mark:
+                    if in_mark <= idx < out_mark:
                         if ref_srf_data is not None and ref_srf_data is not False:
                             csv_writer.writerow( (idx,ts,ref_srf_data['m_to_screen'],ref_srf_data['m_from_screen'],ref_srf_data['detected_markers']) )
 
@@ -483,7 +483,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                 csv_writer.writerow(('world_timestamp', 'world_frame_idx', 'gaze_timestamp',
                                      'x_norm', 'y_norm', 'x_scaled', 'y_scaled', 'on_srf', 'confidence'))
                 for idx, ts, ref_srf_data in zip(range(len(self.g_pool.timestamps)), self.g_pool.timestamps, s.cache):
-                    if in_mark <= idx <= out_mark:
+                    if in_mark <= idx < out_mark:
                         if ref_srf_data is not None and ref_srf_data is not False:
                             for gp in s.gaze_on_srf_by_frame_idx(idx, ref_srf_data['m_from_screen']):
                                 csv_writer.writerow((ts, idx, gp['base_data']['timestamp'],
@@ -500,7 +500,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                                      'y_scaled', 'on_srf'))
                 fixations_on_surface = []
                 for idx,ref_srf_data in zip(range(len(self.g_pool.timestamps)),s.cache):
-                    if in_mark <= idx <= out_mark:
+                    if in_mark <= idx < out_mark:
                         if ref_srf_data is not None and ref_srf_data is not False:
                             for f in s.fixations_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
                                 fixations_on_surface.append(f)

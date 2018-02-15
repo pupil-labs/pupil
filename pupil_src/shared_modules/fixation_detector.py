@@ -26,6 +26,7 @@ import csv
 import numpy as np
 import cv2
 
+from bisect import bisect_left, bisect_right
 from scipy.spatial.distance import pdist
 from collections import deque
 from itertools import chain
@@ -239,13 +240,20 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             self.notify_all({'subject': 'fixation_detector.should_recalculate', 'delay': 1.})
 
         def jump_next_fixation(_):
-            ts = self.last_frame_ts
-            for f in self.g_pool.fixations:
-                if f['timestamp'] > ts:
-                    self.g_pool.capture.seek_to_frame(f['mid_frame_index'])
-                    self.g_pool.new_seek = True
-                    return
-            logger.error('No further fixation available')
+            cur_idx = self.last_frame_idx
+            all_idc = [f['mid_frame_index'] for f in self.g_pool.fixations]
+            # wrap-around index
+            tar_fix = bisect_right(all_idc, cur_idx) % len(all_idc)
+            self.g_pool.capture.seek_to_frame(self.g_pool.fixations[tar_fix]['mid_frame_index'])
+            self.g_pool.new_seek = True
+
+        def jump_prev_fixation(_):
+            cur_idx = self.last_frame_idx
+            all_idc = [f['mid_frame_index'] for f in self.g_pool.fixations]
+            # wrap-around index
+            tar_fix = (bisect_left(all_idc, cur_idx) - 1) % len(all_idc)
+            self.g_pool.capture.seek_to_frame(self.g_pool.fixations[tar_fix]['mid_frame_index'])
+            self.g_pool.new_seek = True
 
         for help_block in self.__doc__.split('\n\n'):
             help_str = help_block.replace('\n', ' ').replace('  ', '').strip()
@@ -263,17 +271,23 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.current_fixation_details = ui.Info_Text('')
         self.menu.append(self.current_fixation_details)
 
-        self.add_button = ui.Thumb('jump_next_fixation', setter=jump_next_fixation,
+        self.next_fix_button = ui.Thumb('jump_next_fixation', setter=jump_next_fixation,
                                    getter=lambda: False, label=chr(0xe044), hotkey='f',
                                    label_font='pupil_icons')
-        self.add_button.status_text = 'Next Fixation'
-        self.g_pool.quickbar.append(self.add_button)
+        self.next_fix_button.status_text = 'Next Fixation'
+        self.g_pool.quickbar.append(self.next_fix_button)
+
+        self.prev_fix_button = ui.Thumb('jump_prev_fixation', setter=jump_prev_fixation,
+                                   getter=lambda: False, label=chr(0xe045), hotkey='F',
+                                   label_font='pupil_icons')
+        self.prev_fix_button.status_text = 'Previous Fixation'
+        self.g_pool.quickbar.append(self.prev_fix_button)
 
     def deinit_ui(self):
         self.remove_menu()
         self.current_fixation_details = None
-        self.g_pool.quickbar.remove(self.add_button)
-        self.add_button = None
+        self.g_pool.quickbar.remove(self.next_fix_button)
+        self.next_fix_button = None
 
     def cleanup(self):
         if self.bg_task:
@@ -344,7 +358,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         if not frame:
             return
 
-        self.last_frame_ts = frame.timestamp
+        self.last_frame_idx = frame.index
         events['fixations'] = self.g_pool.fixations_by_frame[frame.index]
         if self.show_fixations:
             for f in self.g_pool.fixations_by_frame[frame.index]:

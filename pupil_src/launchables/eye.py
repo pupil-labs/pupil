@@ -297,12 +297,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         width *= 2
         height *= 2
         width += icon_bar_width
+        width, height = session_settings.get('window_size', (width, height))
 
-        width, height = session_settings.get(
-            'window_size', (width, height))
         main_window = glfw.glfwCreateWindow(width, height, title, None, None)
-        window_pos = session_settings.get(
-            'window_position', window_position_default)
+        window_pos = session_settings.get('window_position', window_position_default)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
@@ -659,11 +657,15 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         session_settings['ui_config'] = g_pool.gui.configuration
         session_settings['capture_settings'] = g_pool.capture.class_name, g_pool.capture.get_init_dict()
         session_settings['capture_manager_settings'] = g_pool.capture_manager.class_name, g_pool.capture_manager.get_init_dict()
-        session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
         session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
         session_settings['version'] = str(g_pool.version)
         session_settings['last_pupil_detector'] = g_pool.pupil_detector.__class__.__name__
         session_settings['pupil_detector_settings'] = g_pool.pupil_detector.get_settings()
+
+        session_window_size = glfw.glfwGetWindowSize(main_window)
+        if 0 not in session_window_size:
+            session_settings['window_size'] = session_window_size
+
         session_settings.close()
 
         g_pool.capture.deinit_ui()
