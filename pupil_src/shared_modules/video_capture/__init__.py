@@ -30,7 +30,7 @@ from camera_models import load_intrinsics
 import logging
 logger = logging.getLogger(__name__)
 
-from .base_backend import InitialisationError, StreamError
+from .base_backend import InitialisationError, StreamError, EndofVideoError
 from .base_backend import Base_Source, Base_Manager
 from .fake_backend import Fake_Source, Fake_Manager
 from .file_backend import FileCaptureError, FileSeekError
