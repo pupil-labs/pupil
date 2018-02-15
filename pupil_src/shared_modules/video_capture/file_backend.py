@@ -13,7 +13,7 @@ import os
 import av
 from time import sleep
 
-from .base_backend import Playback_Source, Base_Manager
+from .base_backend import Playback_Source, Base_Manager, EndofVideoError
 from camera_models import load_intrinsics
 
 import numpy as np
@@ -30,23 +30,11 @@ logging.getLogger('libav').setLevel(logging.ERROR)
 
 
 class FileCaptureError(Exception):
-    """General Exception for this module"""
-    def __init__(self, arg):
-        super().__init__()
-        self.arg = arg
-
-
-class EndofVideoFileError(Exception):
-    """docstring for EndofVideoFileError"""
-    def __init__(self, arg):
-        super().__init__()
-        self.arg = arg
+    pass
 
 
 class FileSeekError(Exception):
-    """docstring for EndofVideoFileError"""
-    def __init__(self):
-        super().__init__()
+    pass
 
 
 class Frame(object):
@@ -257,12 +245,12 @@ class File_Source(Playback_Source):
                 return self.get_frame()
             else:
                 logger.info("End of videofile %s %s"%(self.current_frame_idx,len(self.timestamps)))
-                raise EndofVideoFileError('Reached end of videofile')
+                raise EndofVideoError('Reached end of video file')
         try:
             timestamp = self.timestamps[index]
         except IndexError:
             logger.info("Reached end of timestamps list.")
-            raise EndofVideoFileError("Reached end of timestamps list.")
+            raise EndofVideoError("Reached end of timestamps list.")
 
         self.show_time = timestamp
         self.target_frame_idx = index+1
@@ -273,9 +261,9 @@ class File_Source(Playback_Source):
     def recent_events(self, events):
         try:
             frame = self.get_frame()
-        except EndofVideoFileError:
+        except EndofVideoError:
             logger.info('Video has ended.')
-            self.notify_all({"subject":'file_source.video_finished', 'source_path': self.source_path})
+            self.notify_all({"subject": 'file_source.video_finished', 'source_path': self.source_path})
             self.play = False
         else:
             if self.timed_playback:
@@ -287,7 +275,7 @@ class File_Source(Playback_Source):
     def seek_to_frame(self, seek_pos):
         # frame accurate seeking
         try:
-            self.video_stream.seek(self.idx_to_pts(seek_pos),mode='time')
+            self.video_stream.seek(self.idx_to_pts(seek_pos), mode='time')
         except av.AVError as e:
             raise FileSeekError()
         else:

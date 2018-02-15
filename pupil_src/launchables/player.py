@@ -70,7 +70,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from pyglui.cygl.utils import Named_Texture, RGBA
         import gl_utils
         # capture
-        from video_capture import File_Source, Fake_Source, EndofVideoFileError
+        from video_capture import init_playback_source, EndofVideoError
 
         # helpers/utils
         from version_utils import VersionFormat
@@ -209,10 +209,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
         video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
                       if os.path.splitext(f)[1] in valid_ext][0]
-        if os.path.splitext(video_path)[1] == '.fake':
-            Fake_Source(g_pool, source_path=video_path)
-        else:
-            File_Source(g_pool, source_path=video_path)
+        init_playback_source(g_pool, source_path=video_path)
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
@@ -427,7 +424,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                 g_pool.new_seek = False
                 try:
                     new_frame = g_pool.capture.get_frame()
-                except (EndofVideoFileError, IndexError):
+                except EndofVideoError:
                     # end of video logic: pause at last frame.
                     g_pool.capture.play = False
                     logger.warning("End of video")

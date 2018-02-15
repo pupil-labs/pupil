@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from .base_backend import Playback_Source, Base_Manager
+from .base_backend import Playback_Source, Base_Manager, EndofVideoError
 
 import os
 import cv2
@@ -77,6 +77,7 @@ class Fake_Source(Playback_Source):
         self.fps = frame_rate
         self._name = name
         self.make_img(tuple(frame_size))
+        self.source_path = source_path
         self.current_frame_idx = 0
         self.target_frame_idx = 0
 
@@ -113,6 +114,8 @@ class Fake_Source(Playback_Source):
     def get_frame(self):
         try:
             timestamp = self.timestamps[self.target_frame_idx]
+        except IndexError:
+            raise EndofVideoError('Reached end of timestamps list.')
         except TypeError:
             timestamp = self.g_pool.get_timestamp()
 

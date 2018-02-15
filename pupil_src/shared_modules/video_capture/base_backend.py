@@ -22,12 +22,14 @@ logger = logging.getLogger(__name__)
 
 
 class InitialisationError(Exception):
-    def __init__(self, msg=None):
-        super().__init__()
-        self.message = msg
+    pass
 
 
 class StreamError(Exception):
+    pass
+
+
+class EndofVideoError(Exception):
     pass
 
 

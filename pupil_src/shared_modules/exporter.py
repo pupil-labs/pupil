@@ -20,7 +20,7 @@ if __name__ == '__main__':
 import os
 from time import time
 from glob import glob
-from video_capture import File_Source, Fake_Source, EndofVideoFileError
+from video_capture import init_playback_source, EndofVideoError
 from player_methods import update_recording_to_recent, load_meta_info
 from av_writer import AV_Writer
 from file_methods import load_object
@@ -85,10 +85,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
         video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
                       if os.path.splitext(f)[1] in valid_ext][0]
-        if os.path.splitext(video_path)[1] == '.fake':
-            cap = Fake_Source(g_pool, source_path=video_path)
-        else:
-            cap = File_Source(g_pool, source_path=video_path)
+        cap = init_playback_source(g_pool, source_path=video_path)
 
         timestamps = cap.timestamps
 
@@ -160,7 +157,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         while frames_to_export > current_frame:
             try:
                 frame = cap.get_frame()
-            except (EndofVideoFileError, IndexError):
+            except EndofVideoError:
                 break
 
             events = {'frame': frame}
