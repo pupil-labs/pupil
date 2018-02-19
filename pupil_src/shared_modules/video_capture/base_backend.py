@@ -81,8 +81,8 @@ class Base_Source(Plugin):
     def gl_display(self):
         if self._recent_frame is not None:
             frame = self._recent_frame
-            if frame.yuv_buffer is not None:
-                self.g_pool.image_tex.update_from_yuv_buffer(frame.yuv_buffer,frame.width,frame.height)
+            if getattr(frame, 'yuv_buffer', None) is not None:
+                self.g_pool.image_tex.update_from_yuv_buffer(frame.yuv_buffer, frame.width, frame.height)
             else:
                 self.g_pool.image_tex.update_from_ndarray(frame.bgr)
             gl_utils.glFlush()

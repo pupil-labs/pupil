@@ -45,8 +45,6 @@ class Frame(object):
         self.index = index
         self._img = None
         self._gray = None
-        self.jpeg_buffer = None
-        self.yuv_buffer = None
         self.height, self.width = av_frame.height, av_frame.width
 
     def copy(self):

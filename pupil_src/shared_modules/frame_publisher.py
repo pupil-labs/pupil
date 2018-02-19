@@ -21,7 +21,7 @@ class Frame_Publisher(Plugin):
     icon_chr = chr(0xec17)
     icon_font = 'pupil_icons'
 
-    def __init__(self,g_pool,format='jpeg'):
+    def __init__(self, g_pool, format='jpeg'):
         super().__init__(g_pool)
         self._format = format
 
@@ -35,7 +35,7 @@ class Frame_Publisher(Plugin):
     def deinit_ui(self):
         self.remove_menu()
 
-    def recent_events(self,events):
+    def recent_events(self, events):
         frame = events.get("frame")
         if frame:
             try:
