@@ -18,6 +18,8 @@ from time import time, sleep
 from pyglui import ui
 from camera_models import Dummy_Camera
 from file_methods import load_object
+from bisect import bisect_left as bisect
+
 
 # logging
 import logging
@@ -65,7 +67,7 @@ class Fake_Source(Playback_Source):
     """
     def __init__(self, g_pool, source_path=None, frame_size=None,
                  frame_rate=None, name='Fake Source', *args, **kwargs):
-        super().__init__(g_pool, *args, **kwargs)
+        super().__init__(g_pool, source_path, *args, **kwargs)
         if source_path:
             meta = load_object(source_path)
             frame_size = meta['frame_size']
@@ -112,6 +114,12 @@ class Fake_Source(Playback_Source):
             events['frame'] = frame
 
     def get_frame(self):
+        if not self.timed_playback:
+            playback_now = self.g_pool.seek_control.current_playback_time - self.audio_sync
+            if self.play:
+                now_idx = bisect(self.timestamps, playback_now)
+                if now_idx > self.target_frame_idx:
+                    self.target_frame_idx = now_idx
         try:
             timestamp = self.timestamps[self.target_frame_idx]
         except IndexError:
@@ -154,6 +162,12 @@ class Fake_Source(Playback_Source):
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
 
+        super().get_frame(self.current_frame_idx)
+
+
+        # if time_diff > 0.1:
+        #    print("Time diff: {}".format(time_diff))
+
         if self.timed_playback:
             now = time()
             spent = now - self.time_discrepancy
@@ -161,6 +175,13 @@ class Fake_Source(Playback_Source):
             wait /= self.playback_speed
             sleep(wait)
             self.time_discrepancy = time()
+        else:
+            playback_now = self.g_pool.seek_control.current_playback_time - self.audio_sync
+            time_diff = (self.timestamps[self.current_frame_idx] - playback_now) / self.playback_speed
+            if self.play and time_diff > .005:
+                sleep(time_diff)
+            elif not self.play:
+                sleep(1 / 60)
 
         return frame
 
@@ -172,7 +193,9 @@ class Fake_Source(Playback_Source):
 
     def seek_to_frame(self, frame_idx):
         self.target_frame_idx = max(0, min(frame_idx, self.get_frame_count() - 1))
+        self.current_frame_idx = self.target_frame_idx
         self.time_discrepancy = 0
+        super().seek_to_frame(frame_idx)
 
     def get_frame_index(self):
         return self.current_frame_idx
