@@ -104,6 +104,10 @@ class Annotation_Capture(Plugin):
                         'timestamp': t, 'duration': 0.0, 'record': True}
         self.notify_all(notification)
 
+    def on_notify(self, notification):
+        if notification['subject'] == 'annotation':
+            logger.info('Received {} annotation'.format(notification['label']))
+
     def get_init_dict(self):
         return {'annotations': self.annotations}
 
