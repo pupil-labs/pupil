@@ -155,7 +155,7 @@ class Fake_Source(Playback_Source):
         if self.timed_playback:
             now = time()
             spent = now - self.time_discrepancy
-            wait = max(0, 1./self.fps - spent)
+            wait = max(0, 1. / self.fps - spent)
             wait /= self.playback_speed
             sleep(wait)
             self.time_discrepancy = time()
@@ -238,6 +238,7 @@ class Fake_Source(Playback_Source):
         d = super().get_init_dict()
         d['frame_size'] = self.frame_size
         d['frame_rate'] = self.frame_rate
+        d['timed_playback'] = self.timed_playback
         d['name'] = self.name
         return d
 
