@@ -262,9 +262,9 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
 
         self.menu.append(ui.Slider('max_dispersion', self, min=0.01, step=0.1, max=5.,
                                    label='Maximum Dispersion [degrees]', setter=set_max_dispersion))
-        self.menu.append(ui.Slider('min_duration', self, min=10, step=10, max=1500,
+        self.menu.append(ui.Slider('min_duration', self, min=10, step=10, max=4000,
                                    label='Minimum Duration [milliseconds]', setter=set_min_duration))
-        self.menu.append(ui.Slider('max_duration', self, min=10, step=10, max=1500,
+        self.menu.append(ui.Slider('max_duration', self, min=10, step=10, max=4000,
                                    label='Maximum Duration [milliseconds]', setter=set_max_duration))
         self.menu.append(ui.Text_Input('status', self, label='Detection progress:', setter=lambda x: None))
         self.menu.append(ui.Switch('show_fixations', self, label='Show fixations'))
