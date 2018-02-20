@@ -310,7 +310,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         clear_gl_screen()
 
-        hdpi_factor = glfwGetFramebufferSize(self._window)[0]/glfwGetWindowSize(self._window)[0]
+        try:
+            hdpi_factor = glfwGetFramebufferSize(self._window)[0]/glfwGetWindowSize(self._window)[0]
+        except ZeroDivisionError:
+            hdpi_factor = 1.
         r = self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()

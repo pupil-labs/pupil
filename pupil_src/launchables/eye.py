@@ -173,7 +173,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
             active_window = glfw.glfwGetCurrentContext()
             glfw.glfwMakeContextCurrent(window)
-            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            try:
+                hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            except ZeroDivisionError:
+                pass
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w, h
             camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h

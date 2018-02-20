@@ -217,7 +217,10 @@ class Visualizer(object):
             self.input['button'] = None
 
     def on_pos(self,window,x, y):
-        hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
+        try:
+            hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
+        except ZeroDivisionError:
+            hdpi_factor = 1.
         x,y = x*hdpi_factor,y*hdpi_factor
         # self.gui.update_mouse(x,y)
         if self.input['button']==GLFW_MOUSE_BUTTON_RIGHT:
