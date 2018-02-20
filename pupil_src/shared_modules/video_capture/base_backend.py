@@ -244,8 +244,13 @@ class Playback_Source(Base_Source):
                                                                      rate=self.audio_stream.rate)
             self.audio_paused = False
             af0, af1 = next(self.next_audio_frame), next(self.next_audio_frame)
-            self.audio_pts_rate = af1.pts
+            self.audio_pts_rate = af1.samples
             self.seek_to_audio_frame(0)
+
+            print("Audio file format {} chans {} rate {} framesize {} ".format(self.audio_stream.format,
+                                                                               self.audio_stream.channels,
+                                                                               self.audio_stream.rate,
+                                                                               self.audio_stream.frame_size))
 
             def audio_callback(in_data, frame_count, time_info, status):
                 #return (None, pa.paComplete)
@@ -330,6 +335,12 @@ class Playback_Source(Base_Source):
                     self.pa_stream.stop_stream()
                     self.pa_stream.start_stream()
                     self.audio_paused = False
+                    print("Audio - Video TS[0] diff {}".format(self.audio_timestamps[0] - self.timestamps[0]))
+                    td = self.pa_stream.get_output_latency() + self.audio_timestamps[0] - self.timestamps[0]
+                    if td < 0:
+                        self.audio_sync = td
+                    print("Audio sync {}".format(self.audio_sync))
+
             elif not self.pa_stream.is_stopped():
                 self.pa_stream.stop_stream()
 
