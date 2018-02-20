@@ -284,7 +284,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             right_idx = g_pool.seek_control.trim_right
             export_range = left_idx, right_idx + 1  # exclusive range.stop
 
-            export_dir = os.path.join(g_pool.rec_dir, g_pool.seek_control.get_folder_name_from_trims())
+            export_dir = os.path.join(g_pool.rec_dir, 'exports',
+                                      g_pool.seek_control.get_folder_name_from_trims())
 
             try:
                 os.makedirs(export_dir)
