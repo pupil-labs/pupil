@@ -131,16 +131,16 @@ class AV_Writer(object):
             self.video_stream.width = input_frame.width
             self.configured = True
             self.start_time = input_frame.timestamp
-            if getattr(input_frame, 'yuv_buffer', None) is not None:
+            if input_frame.yuv_buffer is not None:
                 self.frame = av.VideoFrame(input_frame.width, input_frame.height, 'yuv422p')
             else:
-                self.frame = av.VideoFrame(input_frame.width, input_frame.height, 'bgr24')
+                self.frame = av.VideoFrame(input_frame.width,input_frame.height, 'bgr24')
             if self.use_timestamps:
                 self.frame.time_base = self.time_base
             else:
-                self.frame.time_base = Fraction(1, self.fps)
+                self.frame.time_base = Fraction(1,self.fps)
 
-        if getattr(input_frame, 'yuv_buffer', None) is not None:
+        if input_frame.yuv_buffer is not None:
             y, u, v = input_frame.yuv422
             self.frame.planes[0].update(y)
             self.frame.planes[1].update(u)
