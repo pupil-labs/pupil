@@ -46,7 +46,8 @@ class Single_Marker_Calibration(Calibration_Plugin):
        at the marker to quickly sample a wide range gaze angles.
     """
 
-    def __init__(self, g_pool, marker_mode='Full screen', marker_scale=1.0, sample_duration=40):
+    def __init__(self, g_pool, marker_mode='Full screen', marker_scale=1.0,
+                 sample_duration=40, monitor_name=None):
         super().__init__(g_pool)
         self.screen_marker_state = 0.
         self.lead_in = 25  # frames of marker shown before starting to sample
@@ -65,6 +66,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         self.auto_stop = 0
         self.auto_stop_max = 30
 
+        self._monitor_name = monitor_name  # temporary name storage
         self.marker_mode = marker_mode
         self.clicks_to_close = 5
 
@@ -87,8 +89,13 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def init_ui(self):
         super().init_ui()
-        self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+        try:
+            self.monitor_idx = self.monitor_names.index(self._monitor_name)
+        except ValueError:  # self._monitor_name was not in list
+            self.monitor_idx = 0
+        finally:
+            del self._monitor_name  # not longer required
 
         #primary_monitor = glfwGetPrimaryMonitor()
         self.menu.append(ui.Info_Text("Calibrate using a single marker. Gaze at the center of the marker and move your head (e.g. in a slow spiral movement). This calibration method enables you to quickly sample a wide range of gaze angles and cover a large range of your FOV."))
@@ -328,6 +335,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         d = {}
         d['marker_mode'] = self.marker_mode
         d['marker_scale'] = self.marker_scale
+        d['monitor_name'] = self.monitor_names[self.monitor_idx]
         return d
 
     def deinit_ui(self):
