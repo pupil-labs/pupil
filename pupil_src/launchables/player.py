@@ -641,6 +641,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
                     update_recording_to_recent(rec_dir)
                 except AssertionError as err:
                     logger.error(str(err))
+                    rec_dir = None
                 else:
                     glfw.glfwSetWindowShouldClose(window, True)
 
