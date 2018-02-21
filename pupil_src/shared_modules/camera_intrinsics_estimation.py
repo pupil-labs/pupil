@@ -45,7 +45,7 @@ class Camera_Intrinsics_Estimation(Plugin):
     icon_chr = chr(0xec06)
     icon_font = 'pupil_icons'
 
-    def __init__(self, g_pool, fullscreen=False):
+    def __init__(self, g_pool, fullscreen=False, monitor_name=None):
         super().__init__(g_pool)
         self.collect_new = False
         self.calculated = False
@@ -61,8 +61,8 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.button = None
         self.clicks_to_close = 5
         self.window_should_close = False
+        self._monitor_name = monitor_name  # temporary name storage
         self.fullscreen = fullscreen
-        self.monitor_idx = 0
         self.dist_mode = "Fisheye"
 
         self.glfont = fontstash.Context()
@@ -85,13 +85,19 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.add_menu()
         self.menu.label = 'Camera Intrinsics Estimation'
 
-        monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+        self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+        try:
+            self.monitor_idx = self.monitor_names.index(self._monitor_name)
+        except ValueError:  # self._monitor_name was not in list
+            self.monitor_idx = 0
+        finally:
+            del self._monitor_name  # not longer required
         # primary_monitor = glfwGetPrimaryMonitor()
         self.menu.append(ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'i' to capture a pattern."))
 
         self.menu.append(ui.Button('show Pattern', self.open_window))
-        self.menu.append(ui.Selector('monitor_idx', self, selection=range(len(monitor_names)),
-                                     labels=monitor_names, label='Monitor'))
+        self.menu.append(ui.Selector('monitor_idx', self, selection=range(len(self.monitor_names)),
+                                     labels=self.monitor_names, label='Monitor'))
         dist_modes = ["Fisheye", "Radial"]
         self.menu.append(ui.Selector('dist_mode', self, selection=dist_modes, label='Distortion Model'))
         self.menu.append(ui.Switch('fullscreen', self, label='Use Fullscreen'))
@@ -304,7 +310,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         glfwMakeContextCurrent(active_window)
 
     def get_init_dict(self):
-        return {}
+        return {'monitor_name': self.monitor_names[self.monitor_idx]}
 
     def cleanup(self):
         """gets called when the plugin get terminated.

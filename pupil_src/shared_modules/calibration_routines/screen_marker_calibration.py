@@ -69,12 +69,13 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     Points are collected at sites - not between
 
     """
-    def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
+    def __init__(self, g_pool, fullscreen=True, marker_scale=1.0,
+                 sample_duration=40, monitor_name=None):
         super().__init__(g_pool)
         self.screen_marker_state = 0.
-        self.sample_duration =  sample_duration # number of frames to sample per site
-        self.lead_in = 25 #frames of marker shown before starting to sample
-        self.lead_out = 5 #frames of markers shown after sampling is donw
+        self.sample_duration = sample_duration  # number of frames to sample per site
+        self.lead_in = 25  # frames of marker shown before starting to sample
+        self.lead_out = 5  # frames of markers shown after sampling is donw
 
         self.active_site = None
         self.sites = []
@@ -88,6 +89,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         self.menu = None
 
+        self._monitor_name = monitor_name  # temporary name storage
         self.fullscreen = fullscreen
         self.clicks_to_close = 5
 
@@ -111,8 +113,13 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def init_ui(self):
         super().init_ui()
         self.menu.label = "Screen Marker Calibration"
-        self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+        try:
+            self.monitor_idx = self.monitor_names.index(self._monitor_name)
+        except ValueError:  # self._monitor_name was not in list
+            self.monitor_idx = 0
+        finally:
+            del self._monitor_name  # not longer required
         #primary_monitor = glfwGetPrimaryMonitor()
 
         self.menu.append(ui.Info_Text("Calibrate gaze parameters using a screen based animation."))
@@ -348,6 +355,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         d = {}
         d['fullscreen'] = self.fullscreen
         d['marker_scale'] = self.marker_scale
+        d['monitor_name'] = self.monitor_names[self.monitor_idx]
         return d
 
     def deinit_ui(self):
