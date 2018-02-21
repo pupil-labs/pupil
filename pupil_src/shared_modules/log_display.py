@@ -67,10 +67,7 @@ class Log_Display(System_Plugin_Base):
         self.alpha = min(self.alpha, 6.)
 
     def on_window_resize(self, window, w, h):
-        try:
-            self.window_scale = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
-        except ZeroDivisionError:
-            self.window_scale = 1.
+        self.window_scale = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
         self.glfont.set_size(32*self.window_scale)
         self.window_size = w, h
         self.tex.resize(*self.window_size)

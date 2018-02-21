@@ -220,10 +220,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             nonlocal window_size
             nonlocal camera_render_size
             nonlocal hdpi_factor
-            try:
-                hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
-            except ZeroDivisionError:
-                pass  # keep previous value
+            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w,h
             camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h

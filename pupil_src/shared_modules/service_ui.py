@@ -59,10 +59,7 @@ class Service_UI(System_Plugin_Base):
         # Callback functions
         def on_resize(window, w, h):
             self.window_size = w, h
-            try:
-                self.hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
-            except ZeroDivisionError:
-                self.hdpi_factor = 1.
+            self.hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
             g_pool.gui.scale = g_pool.gui_user_scale * self.hdpi_factor
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()

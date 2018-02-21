@@ -212,10 +212,7 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
 
         if self.g_pool.app != 'exporter':
             window = g_pool.main_window
-            try:
-                self.hdpi_factor = float(glfwGetFramebufferSize(window)[0] / glfwGetWindowSize(window)[0])
-            except ZeroDivisionError:
-                self.hdpi_factor = 1.
+            self.hdpi_factor = float(glfwGetFramebufferSize(window)[0] / glfwGetWindowSize(window)[0])
         else:
             self.hdpi_factor = 1.
 

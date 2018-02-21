@@ -137,10 +137,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             nonlocal window_size
             nonlocal hdpi_factor
 
-            try:
-                hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
-            except ZeroDivisionError:
-                pass
+            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w, h
             g_pool.camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
@@ -610,10 +607,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
         while not glfw.glfwWindowShouldClose(window):
 
             fb_size = glfw.glfwGetFramebufferSize(window)
-            try:
-                hdpi_factor = float(fb_size[0] / glfw.glfwGetWindowSize(window)[0])
-            except ZeroDivisionError:
-                hdpi_factor = 1.
+            hdpi_factor = float(fb_size[0] / glfw.glfwGetWindowSize(window)[0])
             gl_utils.adjust_gl_view(*fb_size)
 
             if rec_dir:
