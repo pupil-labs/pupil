@@ -148,7 +148,7 @@ class Seek_Control(System_Plugin_Base):
     def set_trim_range(self, mark_range):
         self.trim_left, self.trim_right = mark_range
 
-    def get_trim_range_string(self):
+    def get_rel_time_trim_range_string(self):
         time_fmt = ''
         min_ts = self.g_pool.timestamps[0]
         for ts in (self.trim_left_ts, self.trim_right_ts):
@@ -159,7 +159,7 @@ class Seek_Control(System_Plugin_Base):
             time_fmt += '{:02.0f}:{:02d}.{:03d} - '.format(abs(minutes), int(seconds), micro_seconds_e1)
         return time_fmt[:-3]
 
-    def set_trim_range_string(self, range_str):
+    def set_rel_time_trim_range_string(self, range_str):
         try:
             range_list = range_str.split('-')
             assert len(range_list) == 2
@@ -180,7 +180,28 @@ class Seek_Control(System_Plugin_Base):
             self.trim_left_ts = left
 
         except (AssertionError, ValueError):
-            logger.warning('Invalid trim range entered')
+            logger.warning('Invalid time range entered')
+
+    def get_abs_time_trim_range_string(self):
+        return '{} - {}'.format(self.g_pool.timestamps[self.trim_left],
+                                self.g_pool.timestamps[self.trim_right])
+
+    def get_frame_index_trim_range_string(self):
+        return '{} - {}'.format(self.trim_left, self.trim_right)
+
+    def set_frame_index_trim_range_string(self, range_str):
+        try:
+            range_list = range_str.split('-')
+            assert len(range_list) == 2
+
+            left, right = map(int, range_list)
+            assert left < right
+
+            self.trim_right = right
+            self.trim_left = left
+
+        except AssertionError:
+            logger.warning('Invalid frame index range entered')
 
     def get_folder_name_from_trims(self):
         time_fmt = ''
