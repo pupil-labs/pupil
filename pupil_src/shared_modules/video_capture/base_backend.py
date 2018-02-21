@@ -336,9 +336,8 @@ class Playback_Source(Base_Source):
                     self.pa_stream.start_stream()
                     self.audio_paused = False
                     print("Audio - Video TS[0] diff {}".format(self.audio_timestamps[0] - self.timestamps[0]))
-                    td = self.pa_stream.get_output_latency() + self.audio_timestamps[0] - self.timestamps[0]
-                    if td < 0:
-                        self.audio_sync = td
+                    td = self.pa_stream.get_output_latency() - self.audio_timestamps[0] + self.timestamps[0]
+                    self.audio_sync = td
                     print("Audio sync {}".format(self.audio_sync))
 
             elif not self.pa_stream.is_stopped():
