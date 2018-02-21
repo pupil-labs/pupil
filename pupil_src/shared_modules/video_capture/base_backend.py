@@ -22,6 +22,7 @@ from bisect import bisect_left as bisect
 import logging
 import pyaudio as pa
 import itertools
+from threading import Timer
 logger = logging.getLogger(__name__)
 
 
@@ -215,6 +216,7 @@ class Playback_Source(Base_Source):
 
         self.pa_stream = None
         self.audio_sync = 0.
+        self.audio_delay = 0.
         self.audio_container = None
         self.audio_stream = None
         self.next_audio_frame = None
@@ -281,6 +283,7 @@ class Playback_Source(Base_Source):
                                               start=False)
                 print("Audio output latency: {}".format(self.pa_stream.get_output_latency()))
                 self.audio_sync = self.pa_stream.get_output_latency()
+
             except ValueError:
                 self.pa_stream = None
 
@@ -322,7 +325,21 @@ class Playback_Source(Base_Source):
                 if self.pa_stream.is_stopped() or self.audio_paused:
                     if frame_idx == -1:
                         frame_idx = 0
+                    ts_delay = self.audio_timestamps[0] - self.timestamps[frame_idx]
+                    if ts_delay > 0.:
+                        delay_lat = ts_delay - self.pa_stream.get_output_latency()
+                        if delay_lat > 0.:
+                            self.audio_delay = delay_lat
+                            self.audio_sync = 0
+                        else:
+                            self.audio_delay = 0
+                            self.audio_sync = - delay_lat
+                    else:
+                        self.audio_delay = 0.
+                        self.audio_sync = self.pa_stream.get_output_latency()
+
                     audio_idx = bisect(self.audio_timestamps, self.timestamps[frame_idx])
+
                     self.seek_to_audio_frame(audio_idx)
 
                 frames_chunk = itertools.islice(self.next_audio_frame, 10)
@@ -333,12 +350,19 @@ class Playback_Source(Base_Source):
                 #print("AudioFIFO samples: {}".format(samples_written))
                 if self.pa_stream.is_stopped() or self.audio_paused:
                     self.pa_stream.stop_stream()
-                    self.pa_stream.start_stream()
+                    if self.audio_delay < 0.001:
+                        self.pa_stream.start_stream()
+                    else:
+                        def delayed_audio_start():
+                            if self.pa_stream.is_stopped():
+                                self.pa_stream.start_stream()
+                                print("Started delayed audio")
+                            self.audio_timer.cancel()
+
+                        self.audio_timer = Timer(self.audio_delay,  delayed_audio_start)
+                        self.audio_timer.start()
+
                     self.audio_paused = False
-                    print("Audio - Video TS[0] diff {}".format(self.audio_timestamps[0] - self.timestamps[0]))
-                    td = self.pa_stream.get_output_latency() - self.audio_timestamps[0] + self.timestamps[0]
-                    self.audio_sync = td
-                    print("Audio sync {}".format(self.audio_sync))
 
             elif not self.pa_stream.is_stopped():
                 self.pa_stream.stop_stream()
@@ -353,3 +377,9 @@ class Playback_Source(Base_Source):
                 sleep(wait_time)
         self._recent_wait_idx = frame.index
         self.time_discrepancy = frame.timestamp - time()
+
+    def set_audio_latency(self, latency):
+        if self.pa_stream is not None:
+            pass
+
+
