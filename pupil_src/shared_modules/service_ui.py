@@ -26,7 +26,7 @@ if platform.system() == 'Linux':
     window_position_default = (30, 30)
 elif platform.system() == 'Windows':
     scroll_factor = 10.0
-    window_position_default = (8, 31)
+    window_position_default = (8, 51)
 else:
     scroll_factor = 1.0
     window_position_default = (0, 0)
