@@ -15,7 +15,7 @@ from glob import glob
 import cv2
 import numpy as np
 from pyglui import ui
-from glfw import glfwGetCursorPos, glfwGetFramebufferSize, glfwGetWindowSize, glfwGetCurrentContext
+from glfw import glfwGetCursorPos, glfwGetFramebufferSize, glfwGetWindowSize, glfwGetCurrentContext, getHDPIFactor
 
 from plugin import Visualizer_Plugin_Base
 from player_methods import transparent_image_overlay
@@ -212,7 +212,7 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
 
         if self.g_pool.app != 'exporter':
             window = g_pool.main_window
-            self.hdpi_factor = float(glfwGetFramebufferSize(window)[0] / glfwGetWindowSize(window)[0])
+            self.hdpi_factor = getHDPIFactor(window)
         else:
             self.hdpi_factor = 1.
 
