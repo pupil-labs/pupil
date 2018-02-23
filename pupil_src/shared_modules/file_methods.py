@@ -15,6 +15,7 @@ import os
 import numpy as np
 import traceback as tb
 import logging
+from glob import iglob
 logger = logging.getLogger(__name__)
 UnpicklingError = pickle.UnpicklingError
 
@@ -81,75 +82,14 @@ def save_object(object_, file_path):
         msgpack.pack(object_, fh, use_bin_type=True,default=ndarrray_to_list)
 
 
+def next_export_sub_dir(root_export_dir):
+    # match any sub directories or files a three digit pattern
+    pattern = os.path.join(root_export_dir, '[0-9][0-9][0-9]')
+    existing_subs = sorted(iglob(pattern))
+    try:
+        latest = os.path.split(existing_subs[-1])[-1]
+        next_sub_dir = '{:03d}'.format(int(latest) + 1)
+    except IndexError:
+        next_sub_dir = '000'
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
-    # settings = Persistent_Dict("~/Desktop/test")
-    # settings['f'] = "this is a test"
-    # settings['list'] = ["list 1","list2"]
-    # settings.close()
-
-    # save_object("string",'test')
-    # print load_object('test')
-    # settings = Persistent_Dict('~/Desktop/pupil_settings/user_settings_eye')
-    # print settings['roi']
-
-    def run():
-
-        # example. Write out pupil data into csv file.
-        from time import time
-        t = time()
-        l = load_object('/Users/mkassner/Downloads/data/pupil_data')
-        # print(l['notifications'])
-        print(time()-t)
-        # t = time()
-        save_object((np.ones((2,2)),np.ones((2,2))),'/Users/mkassner/Downloads/data/arrry')
-        print(load_object('/Users/mkassner/Downloads/data/arrry'))
-        t = time()
-        save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
-        print(time()-t)
-
-        t = time()
-        l = load_object('/Users/mkassner/Downloads/data/pupil_data2')
-        # print(l['gaze_positions'][:100])
-
-        print(time()-t)
-        # save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
-
-    run()
-    exit()
-    import csv
-    with open(os.path.join('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_postions.csv'), 'w') as csvfile:
-        csv_writer = csv.writer(csvfile, delimiter=',')
-        csv_writer.writerow(('timestamp',
-                             'id',
-                             'confidence',
-                             'norm_pos_x',
-                             'norm_pos_y',
-                             'diameter',
-                             'method',
-                             'ellipse_center_x',
-                             'ellipse_center_y',
-                             'ellipse_axis_a',
-                             'ellipse_axis_b',
-                             'ellipse_angle'))
-        for p in l['pupil_positions']:
-            data_2d = [str(p['timestamp']),  # use str to be consitant with csv lib.
-                       p['id'],
-                       p['confidence'],
-                       p['norm_pos'][0],
-                       p['norm_pos'][1],
-                       p['diameter'],
-                       p['method']]
-            try:
-                ellipse_data = [p['ellipse']['center'][0],
-                                p['ellipse']['center'][1],
-                                p['ellipse']['axes'][0],
-                                p['ellipse']['axes'][1],
-                                p['ellipse']['angle']]
-            except KeyError:
-                ellipse_data = [None]*5
-
-            row = data_2d + ellipse_data
-            csv_writer.writerow(row)
-
+    return os.path.join(root_export_dir, next_sub_dir)

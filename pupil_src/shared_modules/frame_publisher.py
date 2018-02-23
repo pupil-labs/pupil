@@ -41,15 +41,15 @@ class Frame_Publisher(Plugin):
             try:
                 if self.format == "jpeg":
                     data = frame.jpeg_buffer
-                elif self.format == "yuv" and hasattr(frame, 'yuv_buffer'):
+                elif self.format == "yuv":
                     data = frame.yuv_buffer
-                elif self.format == "bgr" and hasattr(frame, 'bgr'):
+                elif self.format == "bgr":
                     data = frame.bgr
-                elif self.format == "gray" and hasattr(frame, 'gray'):
+                elif self.format == "gray":
                     data = frame.gray
-                else:
-                    raise AttributeError()
-            except AttributeError:
+                assert data is not None
+
+            except (AttributeError, AssertionError, NameError):
                 logger.warning('{}s are not compatible with format "{}"'.format(type(frame), self.format))
                 return
 

@@ -22,7 +22,7 @@ if platform.system() == 'Linux':
     window_position_default = (30, 30)
 elif platform.system() == 'Windows':
     scroll_factor = 10.0
-    window_position_default = (8, 31)
+    window_position_default = (8, 51)
 else:
     scroll_factor = 1.0
     window_position_default = (0, 0)
@@ -33,9 +33,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     # general imports
     from time import sleep
     import logging
-    import errno
     from glob import glob
-    from time import time
+    from time import time, strftime, localtime
     # networking
     import zmq
     import zmq_tools
@@ -59,7 +58,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     try:
 
         # imports
-        from file_methods import Persistent_Dict, load_object
+        from file_methods import Persistent_Dict, load_object, next_export_sub_dir
 
         # display
         import glfw
@@ -76,6 +75,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from version_utils import VersionFormat
         from methods import normalize, denormalize, delta_t, get_system_info
         from player_methods import correlate_data, is_pupil_rec_dir, load_meta_info
+        from csv_utils import write_key_value_file
 
         # Plug-ins
         from plugin import Plugin, Plugin_List, import_runtime_plugins
@@ -137,7 +137,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             nonlocal window_size
             nonlocal hdpi_factor
 
-            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            hdpi_factor = glfw.getHDPIFactor(window)
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w, h
             g_pool.camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
@@ -284,19 +284,21 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             right_idx = g_pool.seek_control.trim_right
             export_range = left_idx, right_idx + 1  # exclusive range.stop
 
-            export_dir = os.path.join(g_pool.rec_dir, g_pool.seek_control.get_folder_name_from_trims())
+            export_dir = os.path.join(g_pool.rec_dir, 'exports')
+            export_dir = next_export_sub_dir(export_dir)
 
-            try:
-                os.makedirs(export_dir)
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    logger.error("Could not create export dir")
-                    raise e
-                else:
-                    overwrite_warning = "Previous export for range [{}] already exists - overwriting."
-                    logger.warning(overwrite_warning.format(g_pool.seek_control.get_trim_range_string()))
-            else:
-                logger.info('Created export dir at "{}"'.format(export_dir))
+            os.makedirs(export_dir)
+            logger.info('Created export dir at "{}"'.format(export_dir))
+
+            export_info = {'Player Software Version': str(g_pool.version),
+                           'Data Format Version': meta_info['Data Format Version'],
+                           'Export Date': strftime("%d.%m.%Y", localtime()),
+                           'Export Time': strftime("%H:%M:%S", localtime()),
+                           'Frame Index Range:': g_pool.seek_control.get_frame_index_trim_range_string(),
+                           'Relative Time Range': g_pool.seek_control.get_rel_time_trim_range_string(),
+                           'Absolute Time Range': g_pool.seek_control.get_abs_time_trim_range_string()}
+            with open(os.path.join(export_dir, 'export_info.csv'), 'w') as csv:
+                write_key_value_file(csv, export_info)
 
             notification = {'subject': 'should_export', 'range': export_range, 'export_dir': export_dir}
             g_pool.ipc_pub.notify(notification)
@@ -344,6 +346,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         general_settings.append(ui.Info_Text('Data Format Version: {}'.format(meta_info['Data Format Version'])))
         general_settings.append(ui.Slider('min_data_confidence', g_pool, setter=set_data_confidence,
                                           step=.05, min=0.0, max=1.0, label='Confidence threshold'))
+
         general_settings.append(ui.Button('Restart with default settings', reset_restart))
 
         g_pool.menubar.append(general_settings)
@@ -381,6 +384,15 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                            ('Pupil_From_Recording', {}),
                            ('Gaze_From_Recording', {})]
         g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
+
+        general_settings.insert(-1 ,ui.Text_Input('rel_time_trim_section',
+                                              getter=g_pool.seek_control.get_rel_time_trim_range_string,
+                                              setter=g_pool.seek_control.set_rel_time_trim_range_string,
+                                              label='Relative time range to export'))
+        general_settings.insert(-1 ,ui.Text_Input('frame_idx_trim_section',
+                                              getter=g_pool.seek_control.get_frame_index_trim_range_string,
+                                              setter=g_pool.seek_control.set_frame_index_trim_range_string,
+                                              label='Frame index range to export'))
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -606,7 +618,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
         while not glfw.glfwWindowShouldClose(window):
 
             fb_size = glfw.glfwGetFramebufferSize(window)
-            hdpi_factor = float(fb_size[0] / glfw.glfwGetWindowSize(window)[0])
+            hdpi_factor = glfw.getHDPIFactor(window)
             gl_utils.adjust_gl_view(*fb_size)
 
             if rec_dir:
@@ -640,6 +652,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
                     update_recording_to_recent(rec_dir)
                 except AssertionError as err:
                     logger.error(str(err))
+                    rec_dir = None
                 else:
                     glfw.glfwSetWindowShouldClose(window, True)
 

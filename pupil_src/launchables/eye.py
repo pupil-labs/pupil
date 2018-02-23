@@ -138,7 +138,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             window_position_default = (600, 300 * eye_id + 30)
         elif platform.system() == 'Windows':
             scroll_factor = 10.0
-            window_position_default = (600, 31 + 300 * eye_id)
+            window_position_default = (600, 51 + 300 * eye_id)
         else:
             scroll_factor = 1.0
             window_position_default = (600, 300 * eye_id)
@@ -173,7 +173,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
             active_window = glfw.glfwGetCurrentContext()
             glfw.glfwMakeContextCurrent(window)
-            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            hdpi_factor = glfw.getHDPIFactor(window)
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w, h
             camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h

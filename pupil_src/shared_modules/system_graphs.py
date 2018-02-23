@@ -101,7 +101,7 @@ class System_Graphs(System_Plugin_Base):
 
     def on_window_resize(self, window, *args):
         fb_size = glfw.glfwGetFramebufferSize(window)
-        hdpi_factor = fb_size[0] / glfw.glfwGetWindowSize(window)[0]
+        hdpi_factor = glfw.getHDPIFactor(window)
 
         self.cpu_graph.scale = hdpi_factor
         self.fps_graph.scale = hdpi_factor

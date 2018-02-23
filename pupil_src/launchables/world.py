@@ -145,7 +145,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             window_position_default = (30, 30)
         elif platform.system() == 'Windows':
             scroll_factor = 10.0
-            window_position_default = (8, 31)
+            window_position_default = (8, 51)
         else:
             scroll_factor = 1.0
             window_position_default = (0, 0)
@@ -220,7 +220,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             nonlocal window_size
             nonlocal camera_render_size
             nonlocal hdpi_factor
-            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            hdpi_factor = glfw.getHDPIFactor(window)
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w,h
             camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h

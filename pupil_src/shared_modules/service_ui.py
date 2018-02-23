@@ -26,7 +26,7 @@ if platform.system() == 'Linux':
     window_position_default = (30, 30)
 elif platform.system() == 'Windows':
     scroll_factor = 10.0
-    window_position_default = (8, 31)
+    window_position_default = (8, 51)
 else:
     scroll_factor = 1.0
     window_position_default = (0, 0)
@@ -59,7 +59,7 @@ class Service_UI(System_Plugin_Base):
         # Callback functions
         def on_resize(window, w, h):
             self.window_size = w, h
-            self.hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            self.hdpi_factor = glfw.getHDPIFactor(window)
             g_pool.gui.scale = g_pool.gui_user_scale * self.hdpi_factor
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
