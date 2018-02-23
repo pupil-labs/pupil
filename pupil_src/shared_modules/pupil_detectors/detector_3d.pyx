@@ -79,7 +79,7 @@ cdef class Detector_3D:
             self.detectProperties2D["canny_ration"] = 2
             self.detectProperties2D["canny_aperture"] = 5
             self.detectProperties2D["pupil_size_max"] = 150
-            self.detectProperties2D["pupil_size_min"] = 20
+            self.detectProperties2D["pupil_size_min"] = 10
             self.detectProperties2D["strong_perimeter_ratio_range_min"] = 0.8
             self.detectProperties2D["strong_perimeter_ratio_range_max"] = 1.1
             self.detectProperties2D["strong_area_ratio_range_min"] = 0.6
