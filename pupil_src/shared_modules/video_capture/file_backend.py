@@ -137,14 +137,8 @@ class File_Source(Playback_Source):
         assert isinstance(self.timestamps[0], float), 'Timestamps need to be instances of python float, got {}'.format(type(self.timestamps[0]))
         self.timestamps = self.timestamps
 
-        #if self.audio_timestamps is not None:
-        #    self.audio_sync += - self.audio_timestamps[0] + self.timestamps[0]
-        #    print("Audio - Video TS[0] diff {}".format(self.audio_timestamps[0] - self.timestamps[0]))
-        #    print("Audio sync {}".format(self.audio_sync))
-        #    if self.audio_sync < 0.:
-        #        self.audio_delay = self.audio_timestamps[0] - self.timestamps[0]
-        #        print("Audio delay {}".format(self.audio_delay))
-        #        self.audio_sync = 0.
+        if self.audio_timestamps is not None:
+             logger.info("Audio - Video TS[0] diff {}".format(self.audio_timestamps[0] - self.timestamps[0]))
 
         # set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
         self.next_frame = self._next_frame()
@@ -236,7 +230,7 @@ class File_Source(Playback_Source):
             if self.play:
                 now_idx = bisect(self.timestamps, playback_now)
                 if now_idx > self.target_frame_idx:
-                    print("Will skip {} frames!".format(now_idx - self.target_frame_idx))
+                    logger.info("Will skip {} frames!".format(now_idx - self.target_frame_idx))
                     self.target_frame_idx = now_idx
         except AttributeError:
             pass
@@ -275,8 +269,6 @@ class File_Source(Playback_Source):
         try:
             playback_now = self.g_pool.seek_control.current_playback_time - self.audio_sync
             time_diff = (self.timestamps[self.current_frame_idx] - playback_now) / self.playback_speed
-            #if time_diff > 0.1:
-            #    print("Time diff: {}".format(time_diff))
             if self.play and time_diff > .005:
                 sleep(time_diff)
             elif not self.play:

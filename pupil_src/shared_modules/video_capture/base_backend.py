@@ -249,26 +249,23 @@ class Playback_Source(Base_Source):
             self.audio_pts_rate = af1.samples
             self.seek_to_audio_frame(0)
 
-            print("Audio file format {} chans {} rate {} framesize {} ".format(self.audio_stream.format,
+            logger.info("Audio file format {} chans {} rate {} framesize {} ".format(self.audio_stream.format,
                                                                                self.audio_stream.channels,
                                                                                self.audio_stream.rate,
                                                                                self.audio_stream.frame_size))
 
             def audio_callback(in_data, frame_count, time_info, status):
-                #return (None, pa.paComplete)
-                #frame = self.audio_fifo.read(frame_count)
-                #samples = frame.planes[0].tobytes()
                 #print("Time diff {}".format(time_info['output_buffer_dac_time'] - time_info['current_time']))
                 if not self.play:
                     self.audio_paused = True
-                    print("audio cb abort 1")
+                    logger.info("audio cb abort 1")
                     return (None, pa.paAbort)
                 try:
                     samples = self.audio_bytes_fifo.pop(0)
                     return (samples, pa.paContinue)
                 except IndexError:
                     self.audio_paused = True
-                    print("audio cb abort 2")
+                    logger.info("audio cb abort 2")
                     return (None, pa.paAbort)
 
 
@@ -281,7 +278,7 @@ class Playback_Source(Base_Source):
                                               stream_callback=audio_callback,
                                               output=True,
                                               start=False)
-                print("Audio output latency: {}".format(self.pa_stream.get_output_latency()))
+                logger.info("Audio output latency: {}".format(self.pa_stream.get_output_latency()))
                 self.audio_sync = self.pa_stream.get_output_latency()
 
             except ValueError:
@@ -346,8 +343,6 @@ class Playback_Source(Base_Source):
                 for audio_frame_p in frames_chunk:
                     audio_frame = self.audio_resampler.resample(audio_frame_p)
                     self.audio_bytes_fifo.append(bytes(audio_frame.planes[0]))
-                    #self.audio_fifo.write(audio_frame)
-                #print("AudioFIFO samples: {}".format(samples_written))
                 if self.pa_stream.is_stopped() or self.audio_paused:
                     self.pa_stream.stop_stream()
                     if self.audio_delay < 0.001:
@@ -356,7 +351,7 @@ class Playback_Source(Base_Source):
                         def delayed_audio_start():
                             if self.pa_stream.is_stopped():
                                 self.pa_stream.start_stream()
-                                print("Started delayed audio")
+                                logger.info("Started delayed audio")
                             self.audio_timer.cancel()
 
                         self.audio_timer = Timer(self.audio_delay,  delayed_audio_start)
