@@ -24,6 +24,7 @@ class Frame_Publisher(Plugin):
     def __init__(self,g_pool,format='jpeg'):
         super().__init__(g_pool)
         self._format = format
+        self._did_warn_recently = False
 
     def init_ui(self):
         self.add_menu()
@@ -50,8 +51,12 @@ class Frame_Publisher(Plugin):
                 assert data is not None
 
             except (AttributeError, AssertionError, NameError):
-                logger.warning('{}s are not compatible with format "{}"'.format(type(frame), self.format))
+                if not self._did_warn_recently:
+                    logger.warning('{}s are not compatible with format "{}"'.format(type(frame), self.format))
+                    self._did_warn_recently = True
                 return
+            else:
+                self._did_warn_recently = False
 
             # Create serializable object.
             # Not necessary if __raw_data__ key is used.
