@@ -135,11 +135,6 @@ class UVC_Source(Base_Source):
 
         self.frame_size = frame_size
         self.frame_rate = frame_rate
-        for c in self.uvc_capture.controls:
-            try:
-                c.value = uvc_controls[c.display_name]
-            except KeyError:
-                logger.debug('No UVC setting "{}" found from settings.'.format(c.display_name))
 
         try:
             controls_dict['Auto Focus'].value = 0
@@ -190,6 +185,13 @@ class UVC_Source(Base_Source):
             self.uvc_capture.bandwidth_factor = 2.0
             try: controls_dict['Auto Focus'].value = 0
             except KeyError: pass
+
+        # Restore session settings after setting defaults
+        for c in self.uvc_capture.controls:
+            try:
+                c.value = uvc_controls[c.display_name]
+            except KeyError:
+                logger.debug('No UVC setting "{}" found from settings.'.format(c.display_name))
 
     def _re_init_capture(self, uid):
         current_size = self.uvc_capture.frame_size
