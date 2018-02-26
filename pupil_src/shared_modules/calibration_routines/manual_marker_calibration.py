@@ -100,8 +100,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         """
         frame = events.get('frame')
         if self.active and frame:
-            recent_pupil_positions = events['pupil_positions']
-
             gray_img = frame.gray
 
             # Update the marker
@@ -179,9 +177,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                             self.notify_all({'subject':'calibration.marker_sample_completed','timestamp':self.g_pool.get_timestamp(),'record':True})
 
             # Always save pupil positions
-            for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
+            self.pupil_list.extend(events['pupil_positions'])
 
             if self.counter:
                 if len(self.markers):

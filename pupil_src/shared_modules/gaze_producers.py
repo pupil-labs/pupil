@@ -40,7 +40,7 @@ class Empty(object):
         pass
 
 
-def setup_fake_pool(frame_size, intrinsics, detection_mode, rec_dir):
+def setup_fake_pool(frame_size, intrinsics, detection_mode, rec_dir, min_calibration_confidence):
     cap = Empty()
     cap.frame_size = frame_size
     cap.intrinsics = intrinsics
@@ -48,6 +48,7 @@ def setup_fake_pool(frame_size, intrinsics, detection_mode, rec_dir):
     pool.capture = cap
     pool.get_timestamp = time
     pool.detection_mapping_mode = detection_mode
+    pool.min_calibration_confidence = min_calibration_confidence
     pool.rec_dir = rec_dir
     pool.app = 'player'
     return pool
@@ -283,6 +284,12 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.menu.append(ui.Button('Jump to next natural feature', jump_next_natural_feature))
         self.menu.append(ui.Switch('manual_ref_edit_mode', self, label="Natural feature edit mode"))
         self.menu.append(ui.Button('Clear natural features', clear_natural_features))
+
+        self.menu.append(ui.Info_Text('Calibration only considers pupil data that has an equal or higher confidence than the minimum calibration confidence.'))
+        self.menu.append(ui.Slider('min_calibration_confidence', self.g_pool,
+                                   step=.01, min=0.0, max=1.0,
+                                   label='Minimum calibration confidence'))
+
         self.menu.append(ui.Button('Add section', self.append_section))
 
         # set to minimum height
@@ -484,8 +491,11 @@ class Offline_Calibration(Gaze_Producer_Base):
             logger.warning("Pupil data is 2d, calibration and mapping mode forced to 2d.")
             sec["mapping_method"] = '2d'
 
-        fake = setup_fake_pool(self.g_pool.capture.frame_size, self.g_pool.capture.intrinsics,
-                               detection_mode=sec["mapping_method"], rec_dir=self.g_pool.rec_dir)
+        fake = setup_fake_pool(self.g_pool.capture.frame_size,
+                               self.g_pool.capture.intrinsics,
+                               sec["mapping_method"],
+                               self.g_pool.rec_dir,
+                               self.g_pool.min_calibration_confidence)
         generator_args = (fake, ref_list, calib_list, map_list, sec['x_offset'], sec['y_offset'])
 
         logger.info('Calibrating section {} ({}) in {} mode...'.format(self.sections.index(sec) + 1, sec['label'], sec["mapping_method"]))

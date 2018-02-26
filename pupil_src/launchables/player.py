@@ -252,6 +252,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.rec_dir = rec_dir
         g_pool.meta_info = meta_info
         g_pool.min_data_confidence = session_settings.get('min_data_confidence', 0.6)
+        g_pool.min_calibration_confidence = session_settings.get('min_calibration_confidence', 0.8)
 
         g_pool.pupil_positions = []
         g_pool.gaze_positions = []
@@ -344,8 +345,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         general_settings.append(ui.Info_Text('Player Version: {}'.format(g_pool.version)))
         general_settings.append(ui.Info_Text('Capture Version: {}'.format(meta_info['Capture Software Version'])))
         general_settings.append(ui.Info_Text('Data Format Version: {}'.format(meta_info['Data Format Version'])))
-        general_settings.append(ui.Slider('min_data_confidence', g_pool, setter=set_data_confidence,
-                                          step=.05, min=0.0, max=1.0, label='Confidence threshold'))
+
+        general_settings.append(ui.Info_Text('High level data, e.g. fixations, or visualizations only consider gaze data that has an equal or higher confidence than the minimum data confidence.'))
+        general_settings.append(ui.Slider('min_data_confidence', g_pool,
+                                          setter=set_data_confidence,
+                                          step=.05, min=0.0, max=1.0,
+                                          label='Minimum data confidence'))
 
         general_settings.append(ui.Button('Restart with default settings', reset_restart))
 
@@ -519,6 +524,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         session_settings['playback_speed'] = g_pool.capture.playback_speed
         session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
         session_settings['min_data_confidence'] = g_pool.min_data_confidence
+        session_settings['min_calibration_confidence'] = g_pool.min_calibration_confidence
         session_settings['gui_scale'] = g_pool.gui_user_scale
         session_settings['ui_config'] = g_pool.gui.configuration
         session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)

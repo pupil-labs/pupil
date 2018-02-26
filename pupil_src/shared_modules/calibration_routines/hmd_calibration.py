@@ -173,9 +173,7 @@ class HMD_Calibration(Calibration_Plugin):
 
     def recent_events(self, events):
         if self.active:
-            for p_pt in events['pupil_positions']:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
+            self.pupil_list.extend(events['pupil_positions'])
 
     def get_init_dict(self):
         d = {}

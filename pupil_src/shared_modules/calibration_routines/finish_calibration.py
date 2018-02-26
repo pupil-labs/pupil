@@ -23,7 +23,7 @@ import logging
 logger = logging.getLogger(__name__)
 from . gaze_mappers import *
 
-not_enough_data_error_msg = 'Did not collect enough data during calibration.'
+not_enough_data_error_msg = 'Not enough ref point or pupil data available for calibration.'
 solver_failed_to_converge_error_msg = 'Paramters could not be estimated from data.'
 
 
@@ -281,7 +281,6 @@ def match_data(g_pool, pupil_list, ref_list):
         return {'subject': 'calibration.failed', 'reason': not_enough_data_error_msg,
                 'timestamp': g_pool.get_timestamp(), 'record': True}
 
-
     # match eye data and check if biocular and or monocular
     pupil0 = [p for p in pupil_list if p['id'] == 0]
     pupil1 = [p for p in pupil_list if p['id'] == 1]
@@ -303,6 +302,17 @@ def match_data(g_pool, pupil_list, ref_list):
 
 
 def select_calibration_method(g_pool, pupil_list, ref_list):
+
+    len_pre_filter = len(pupil_list)
+    pupil_list = [p for p in pupil_list if p['confidence'] >= g_pool.min_calibration_confidence]
+    len_post_filter = len(pupil_list)
+    try:
+        dismissed_percentage = 100 * (1. - len_post_filter / len_pre_filter)
+    except ZeroDivisionError:
+        pass  # empty pupil_list, is being handled in match_data
+    else:
+        logger.info('Dismissing {:.2f}% pupil data due to confidence < {:.2f}'.format(dismissed_percentage, g_pool.min_calibration_confidence))
+
     matched_data = match_data(g_pool, pupil_list, ref_list)  # calculate matching data
     if not isinstance(matched_data, tuple):
         return None, matched_data  # matched_data is a error notification

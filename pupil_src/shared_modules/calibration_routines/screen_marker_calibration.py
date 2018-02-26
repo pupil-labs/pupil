@@ -222,7 +222,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def recent_events(self, events):
         frame = events.get('frame')
         if self.active and frame:
-            recent_pupil_positions = events['pupil_positions']
             gray_img = frame.gray
 
             if self.clicks_to_close <=0:
@@ -257,9 +256,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 self.ref_list.append(ref)
 
             # Always save pupil positions
-            for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
+            self.pupil_list.extend(events['pupil_positions'])
 
             if on_position and len(self.markers) and events.get('fixations', []):
                 fixation_boost = 5
