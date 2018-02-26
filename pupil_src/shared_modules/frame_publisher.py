@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 from plugin import Plugin
 from pyglui import ui
-import numpy as np
 
 import logging
 logger = logging.getLogger(__name__)
@@ -21,21 +20,24 @@ class Frame_Publisher(Plugin):
     icon_chr = chr(0xec17)
     icon_font = 'pupil_icons'
 
-    def __init__(self,g_pool,format='jpeg'):
+    def __init__(self, g_pool, format='jpeg'):
         super().__init__(g_pool)
         self._format = format
+        self._did_warn_recently = False
 
     def init_ui(self):
         self.add_menu()
         help_str = "Publishes frame data in different formats under the topic \"frame.world\"."
         self.menu.label = 'Frame Publisher'
         self.menu.append(ui.Info_Text(help_str))
-        self.menu.append(ui.Selector('format',self,selection=["jpeg","yuv","bgr","gray"], labels=["JPEG", "YUV", "BGR", "Gray Image"],label='Format'))
+        self.menu.append(ui.Selector('format', self, label='Format',
+                                     selection=["jpeg", "yuv", "bgr", "gray"],
+                                     labels=["JPEG", "YUV", "BGR", "Gray Image"]))
 
     def deinit_ui(self):
         self.remove_menu()
 
-    def recent_events(self,events):
+    def recent_events(self, events):
         frame = events.get("frame")
         if frame:
             try:
@@ -50,8 +52,12 @@ class Frame_Publisher(Plugin):
                 assert data is not None
 
             except (AttributeError, AssertionError, NameError):
-                logger.warning('{}s are not compatible with format "{}"'.format(type(frame), self.format))
+                if not self._did_warn_recently:
+                    logger.warning('{}s are not compatible with format "{}"'.format(type(frame), self.format))
+                    self._did_warn_recently = True
                 return
+            else:
+                self._did_warn_recently = False
 
             # Create serializable object.
             # Not necessary if __raw_data__ key is used.
@@ -68,7 +74,7 @@ class Frame_Publisher(Plugin):
                 '__raw_data__': [blob]
             }]
 
-    def on_notify(self,notification):
+    def on_notify(self, notification):
         """Publishes frame data in several formats
 
         Reacts to notifications:
@@ -87,16 +93,16 @@ class Frame_Publisher(Plugin):
             self.format = notification['format']
 
     def get_init_dict(self):
-        return {'format':self.format}
+        return {'format': self.format}
 
     def cleanup(self):
-        self.notify_all({'subject':'frame_publishing.stopped'})
+        self.notify_all({'subject': 'frame_publishing.stopped'})
 
     @property
     def format(self):
         return self._format
 
     @format.setter
-    def format(self,value):
+    def format(self, value):
         self._format = value
-        self.notify_all({'subject':'frame_publishing.started','format':value})
+        self.notify_all({'subject': 'frame_publishing.started', 'format': value})

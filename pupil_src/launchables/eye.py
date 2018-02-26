@@ -442,6 +442,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         should_publish_frames = False
         frame_publish_format = 'jpeg'
+        frame_publish_format_recent_warning = False
 
         # create a timer to control window update frequency
         window_update_timer = timer(1 / 60)
@@ -532,11 +533,13 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                             data = frame.bgr
                         elif frame_publish_format == "gray":
                             data = frame.gray
-                        else:
-                            raise AttributeError()
-                    except AttributeError:
-                        pass
+                        assert data is not None
+                    except (AttributeError, AssertionError, NameError):
+                        if not frame_publish_format_recent_warning:
+                            frame_publish_format_recent_warning = True
+                            logger.warning('{}s are not compatible with format "{}"'.format(type(frame), frame_publish_format))
                     else:
+                        frame_publish_format_recent_warning = False
                         pupil_socket.send('frame.eye.%s'%eye_id,{
                             'width': frame.width,
                             'height': frame.height,
