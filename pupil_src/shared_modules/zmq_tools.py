@@ -11,7 +11,10 @@ See COPYING and COPYING.LESSER for license details.
 
 '''
 This file contains convenience classes for communication with
-the Pupil IPC Backbone.
+the Pupil IPC Backbone. These are intended to be used by plugins.
+
+See the pupil helpers for example scripts that interface remotely:
+https://github.com/pupil-labs/pupil-helpers/tree/master/pupil_remote
 '''
 
 import logging
@@ -209,85 +212,3 @@ class Msg_Pair_Client(Msg_Pair_Base):
             self.socket.disable_monitor()
         else:
             self.socket.connect(url)
-
-
-if __name__ == '__main__':
-    from time import sleep, time
-    # tap into the IPC backbone of pupil capture
-    ctx = zmq.Context()
-
-    # the requester talks to Pupil remote and
-    # recevied the session unique IPC SUB URL
-    requester = ctx.socket(zmq.REQ)
-    requester.connect('tcp://127.0.0.1:50020')
-
-    requester.send('SUB_PORT')
-    ipc_sub_port = requester.recv()
-    requester.send('PUB_PORT')
-    ipc_pub_port = requester.recv()
-
-    print('ipc_sub_port:', ipc_sub_port)
-    print('ipc_pub_port:', ipc_pub_port)
-
-    # more topics: gaze, pupil, logging, ...
-    log_monitor = Msg_Receiver(
-        ctx, 'tcp://127.0.0.1:{}'.format(ipc_sub_port),
-        topics=('logging.',))
-    notification_monitor = Msg_Receiver(
-        ctx,
-        'tcp://127.0.0.1:{}'.format(ipc_sub_port),
-        topics=('notify.',))
-    monitor = Msg_Receiver(
-        ctx, 'tcp://127.0.0.1:{}'.format(ipc_sub_port),
-        topics=('pingback_test.3',))
-    # gaze_monitor = Msg_Receiver(ctx,'tcp://
-    # localhost:%s'%ipc_sub_port,topics=('gaze.',))
-
-    # you can also publish to the IPC Backbone directly.
-    publisher = Msg_Streamer(ctx, 'tcp://127.0.0.1:{}'.format(ipc_pub_port))
-    sleep(1)
-
-    def roundtrip_latency_reqrep():
-        ts = []
-        for x in range(100):
-            sleep(0.003)
-            t = time()
-            requester.send('t')
-            requester.recv()
-            ts.append(time()-t)
-        print(min(ts), sum(ts)/len(ts), max(ts))
-
-    def roundtrip_latency_pubsub():
-        ts = []
-        for x in range(100):
-            sleep(0.003)
-            t = time()
-            publisher.send('pingback_test.3', {'subject': 'pingback_test.3',
-                                               'index': x})
-            monitor.recv()
-            ts.append(time()-t)
-        print(min(ts), sum(ts)/len(ts), max(ts))
-
-    # roundtrip_latency_reqrep()
-    # roundtrip_latency_pubsub()
-
-    monitor.subscribe('frame.')
-    while True:
-        topic, msg = monitor.recv()
-        print(topic, msg['format'])
-
-    # # now lets get the current pupil time.
-    # requester.send('t')
-    # print(requester.recv())
-    # requester.send_multipart(('notify.service_process.should_stop',serializer.dumps({'subject':'service_process.should_stop'})))
-    # print(requester.recv())
-    # requester.send_multipart(('notify.meta.should_doc',serializer.dumps({'subject':'meta.should_doc'})))
-    # print(requester.recv())
-    # # listen to all notifications.
-    # while True:
-    #     topic,msg = notification_monitor.recv()
-    #     print('%s: %s' %(msg.get('actor'), msg.get('doc')))
-
-    # # listen to all log messages.
-    # while True:
-    #     print(log_monitor.recv())
