@@ -95,6 +95,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         from pupil_groups import Pupil_Groups
         from frame_publisher import Frame_Publisher
         from service_ui import Service_UI
+        from video_capture import Fake_Source
 
         logger.info('Application Version: {}'.format(version))
         logger.info('System Info: {}'.format(get_system_info()))
@@ -118,12 +119,14 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         g_pool.get_timestamp = get_timestamp
 
         # manage plugins
-        runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
-        user_launchable_plugins = [Service_UI, Pupil_Groups, Pupil_Remote, Frame_Publisher]+runtime_plugins
-        plugin_by_index = runtime_plugins+calibration_plugins+gaze_mapping_plugins+user_launchable_plugins
-        name_by_index = [p.__name__ for p in plugin_by_index]
-        plugin_by_name = dict(zip(name_by_index, plugin_by_index))
-        default_plugins = [('Service_UI', {}), ('Dummy_Gaze_Mapper', {}), ('HMD_Calibration', {}), ('Pupil_Remote', {})]
+        plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
+        plugins += [Service_UI, Pupil_Groups, Pupil_Remote, Frame_Publisher, Fake_Source]
+        plugins += calibration_plugins + gaze_mapping_plugins
+        plugin_by_name = {p.__name__: p for p in plugins}
+        default_plugins = [('Service_UI', {}),
+                           ('Dummy_Gaze_Mapper', {}),
+                           ('HMD_Calibration', {}),
+                           ('Pupil_Remote', {})]
         g_pool.plugin_by_name = plugin_by_name
 
         tick = delta_t()
