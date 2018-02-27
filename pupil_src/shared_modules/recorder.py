@@ -167,9 +167,10 @@ class Recorder(System_Plugin_Base):
 
         Reacts to notifications:
             ``recording.should_start``: Starts a new recording session.
-                fields: 'session_name' change session name
-                    use `/` to att dirs.
+                fields:
+                - 'session_name' change session name
                     start with `/` to ingore the rec base dir and start from root instead.
+                - `record_eye` boolean that indicates recording of the eyes, defaults to current setting
             ``recording.should_stop``: Stops current recording session
 
         Emits notifications:
@@ -189,6 +190,7 @@ class Recorder(System_Plugin_Base):
             if self.running:
                 logger.info('Recording already running!')
             else:
+                self.record_eye = notification.get('record_eye', self.record_eye)
                 if notification.get("session_name", ""):
                     self.set_session_name(notification["session_name"])
                 self.start()
