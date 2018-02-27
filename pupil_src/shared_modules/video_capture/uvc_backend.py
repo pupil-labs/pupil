@@ -88,6 +88,7 @@ class UVC_Source(Base_Source):
             self.name_backup = (self.name,)
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
+        self.backup_uvc_controls = {}
 
     def verify_drivers(self):
         import os
@@ -202,12 +203,12 @@ class UVC_Source(Base_Source):
         self.configure_capture(current_size, current_fps, current_uvc_controls)
         self.update_menu()
 
-    def _init_capture(self, uid):
+    def _init_capture(self, uid, backup_uvc_controls={}):
         self.uvc_capture = uvc.Capture(uid)
-        self.configure_capture(self.frame_size_backup, self.frame_rate_backup, self._get_uvc_controls())
+        self.configure_capture(self.frame_size_backup, self.frame_rate_backup, backup_uvc_controls)
         self.update_menu()
 
-    def _re_init_capture_by_names(self, names):
+    def _re_init_capture_by_names(self, names, backup_uvc_controls={}):
         # burn-in test specific. Do not change text!
         self.devices.update()
         for d in self.devices:
@@ -217,7 +218,7 @@ class UVC_Source(Base_Source):
                     if self.uvc_capture:
                         self._re_init_capture(d['uid'])
                     else:
-                        self._init_capture(d['uid'])
+                        self._init_capture(d['uid'], backup_uvc_controls)
                     return
         raise InitialisationError('Could not find Camera {} during re initilization.'.format(names))
 
@@ -226,9 +227,10 @@ class UVC_Source(Base_Source):
             if self.uvc_capture:
                 logger.warning("Capture failed to provide frames. Attempting to reinit.")
                 self.name_backup = (self.uvc_capture.name,)
+                self.backup_uvc_controls = self._get_uvc_controls()
                 self.uvc_capture = None
             try:
-                self._re_init_capture_by_names(self.name_backup)
+                self._re_init_capture_by_names(self.name_backup, self.backup_uvc_controls)
             except (InitialisationError, uvc.InitError):
                 time.sleep(0.02)
                 self.update_menu()

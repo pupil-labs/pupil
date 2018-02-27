@@ -124,6 +124,9 @@ def update_recording_to_recent(rec_dir):
     if rec_version < VersionFormat('1.4'):
         update_recording_v13_v14(rec_dir)
 
+    # Do this independent of rec_version
+    check_for_worldless_recording(rec_dir)
+
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
     #    update_recording_v081_to_FUTURE(rec_dir)
@@ -460,6 +463,15 @@ def update_recording_v0915_v13(rec_dir):
 
 def update_recording_v13_v14(rec_dir):
     logger.info("Updating recording from v1.3 to v1.4")
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v1.4'
+    update_meta_info(rec_dir, meta_info)
+
+
+def check_for_worldless_recording(rec_dir):
+    logger.info("Checking for world-less recording")
     valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')
     existing_videos = [f for f in glob.glob(os.path.join(rec_dir, 'world.*'))
                        if os.path.splitext(f)[1] in valid_ext]
@@ -487,12 +499,6 @@ def update_recording_v13_v14(rec_dir):
         np.save(os.path.join(rec_dir, 'world_timestamps'), timestamps)
         save_object({'frame_rate': frame_rate, 'frame_size': (1280, 720), 'version': 0},
                     os.path.join(rec_dir, 'world.fake'))
-
-    meta_info_path = os.path.join(rec_dir, "info.csv")
-    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Data Format Version'] = 'v1.4'
-    update_meta_info(rec_dir, meta_info)
 
 
 def update_recording_bytes_to_unicode(rec_dir):

@@ -401,7 +401,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             g_pool.capture.init_ui()
             if g_pool.writer:
                 logger.info("Done recording.")
-                g_pool.writer.release()
+                try:
+                    g_pool.writer.release()
+                except RuntimeError:
+                    logger.error('No eye video recorded')
                 g_pool.writer = None
 
         g_pool.replace_source = replace_source # for ndsi capture
@@ -494,7 +497,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                 elif subject == 'recording.stopped':
                     if g_pool.writer:
                         logger.info("Done recording.")
-                        g_pool.writer.release()
+                        try:
+                            g_pool.writer.release()
+                        except RuntimeError:
+                            logger.error('No eye video recorded')
                         g_pool.writer = None
                 elif subject.startswith('meta.should_doc'):
                     ipc_socket.notify({
