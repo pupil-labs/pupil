@@ -179,16 +179,14 @@ class AV_Writer(object):
                     break  # wait for next image
 
     def close(self):
-        # flush encoder
-        while 1:
+        # only flush encoder if there has been at least one frame
+        while self.configured:
             packet = self.video_stream.encode()
             if packet:
                 self.container.mux(packet)
             else:
                 break
-
-        self.container.close()
-        logger.debug("Closed media container")
+        self.container.close()  # throws RuntimeError if no frames were written
         write_timestamps(self.file_loc, self.timestamps)
 
     def release(self):
@@ -239,11 +237,7 @@ class JPEG_Writer(object):
         self.timestamps.append(input_frame.timestamp)
 
     def close(self):
-        try:
-            self.container.close()
-        except(RuntimeError):
-            logger.error("Media file does not contain any frames.")
-        logger.debug("Closed media container")
+        self.container.close()  # throws RuntimeError if no frames were written
         write_timestamps(self.file_loc, self.timestamps)
 
     def release(self):

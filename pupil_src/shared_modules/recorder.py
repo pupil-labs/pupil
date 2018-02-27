@@ -188,8 +188,6 @@ class Recorder(System_Plugin_Base):
         elif notification['subject'] == 'recording.should_start':
             if self.running:
                 logger.info('Recording already running!')
-            elif not self.g_pool.capture.online:
-                logger.error("Current world capture is offline. Please reconnect or switch to fake capture")
             else:
                 if notification.get("session_name", ""):
                     self.set_session_name(notification["session_name"])
@@ -295,7 +293,7 @@ class Recorder(System_Plugin_Base):
             self.g_pool.gui.remove(self.info_menu)
             self.info_menu = None
 
-    def recent_events(self,events):
+    def recent_events(self, events):
         if self.running:
             for key, data in events.items():
                 if key not in ('dt', 'frame', 'depth_frame'):
@@ -316,8 +314,15 @@ class Recorder(System_Plugin_Base):
 
     def stop(self):
         # explicit release of VideoWriter
-        self.writer.release()
-        self.writer = None
+        try:
+            self.writer.release()
+        except RuntimeError:
+            logger.error("No world video recorded")
+        else:
+            logger.debug("Closed media container")
+            self.g_pool.capture.intrinsics.save(self.rec_path, custom_name='world')
+        finally:
+            self.writer = None
 
         save_object(self.data, os.path.join(self.rec_path, "pupil_data"))
 
@@ -326,8 +331,6 @@ class Recorder(System_Plugin_Base):
                   os.path.join(self.rec_path, "surface_definitions"))
         except:
             logger.info("No surface_definitions data found. You may want this if you do marker tracking.")
-
-        self.g_pool.capture.intrinsics.save(self.rec_path, custom_name='world')
 
         try:
             with open(self.meta_info_path, 'a', newline='') as csvfile:
