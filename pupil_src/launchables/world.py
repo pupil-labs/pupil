@@ -267,6 +267,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             logger.info("Session setting are from a different version of this app. I will not use those.")
             session_settings.clear()
 
+        g_pool.min_calibration_confidence = session_settings.get('min_calibration_confidence', 0.8)
         g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode', '3d')
         g_pool.active_calibration_plugin = None
         g_pool.active_gaze_mapping_plugin = None
@@ -513,6 +514,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         session_settings['version'] = str(g_pool.version)
         session_settings['eye0_process_alive'] = eyes_are_alive[0].value
         session_settings['eye1_process_alive'] = eyes_are_alive[1].value
+        session_settings['min_calibration_confidence'] = g_pool.min_calibration_confidence
         session_settings['detection_mapping_mode'] = g_pool.detection_mapping_mode
         session_settings['audio_mode'] = audio.audio_mode
 

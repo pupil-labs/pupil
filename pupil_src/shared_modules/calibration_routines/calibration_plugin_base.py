@@ -25,7 +25,6 @@ class Calibration_Plugin(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.g_pool.active_calibration_plugin = self
-        self.pupil_confidence_threshold = 0.6
         self.active = False
         self.mode = 'calibration'
 
@@ -51,6 +50,11 @@ class Calibration_Plugin(Plugin):
                                 labels=[p.__name__.replace('_', ' ') for p in calibration_plugins],
                                 label='Calibration Method'
                             ))
+
+        self.menu.append(ui.Info_Text('Calibration only considers pupil data that has an equal or higher confidence than the minimum calibration confidence.'))
+        self.menu.append(ui.Slider('min_calibration_confidence', self.g_pool,
+                                   step=.01, min=0.0, max=1.0,
+                                   label='Minimum calibration confidence'))
 
     @property
     def mode_pretty(self):

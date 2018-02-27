@@ -193,11 +193,9 @@ class Single_Marker_Calibration(Calibration_Plugin):
     def recent_events(self, events):
         frame = events.get('frame')
         if self.active and frame:
-            recent_pupil_positions = events['pupil_positions']
-
             gray_img = frame.gray
 
-            if self.clicks_to_close <=0:
+            if self.clicks_to_close <= 0:
                 self.stop()
                 return
 
@@ -237,17 +235,14 @@ class Single_Marker_Calibration(Calibration_Plugin):
                 self.ref_list.append(ref)
 
             # always save pupil positions
-            for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
-
+            self.pupil_list.extend(events['pupil_positions'])
 
             # Animate the screen marker
             if len(self.markers) or not on_position:
                 self.screen_marker_state += 1
 
             # Stop if autostop condition is satisfied:
-            if self.auto_stop >=self.auto_stop_max:
+            if self.auto_stop >= self.auto_stop_max:
                 self.auto_stop = 0
                 self.stop()
 

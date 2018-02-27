@@ -60,15 +60,11 @@ class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
     """Base class to implement the map callback"""
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.min_pupil_confidence = 0.0
 
     def on_pupil_datum(self, p):
-        if p['confidence'] >= self.min_pupil_confidence:
-            g = self._map_monocular(p)
-            if g:
-                return [g,]
-            else:
-                return []
+        g = self._map_monocular(p)
+        if g:
+            return [g]
         else:
             return []
 
@@ -94,10 +90,17 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
         return results
 
     def on_pupil_datum(self, p):
-        if p['confidence'] >= self.min_pupil_confidence:
-            self._caches[p['id']].append(p)
+        self._caches[p['id']].append(p)
 
-        if self._caches[0] and self._caches[1]:
+        # map low confidence pupil data monocularly
+        if self._caches[0] and self._caches[0][0]['confidence'] < self.min_pupil_confidence:
+            p = self._caches[0].popleft()
+            gaze_datum = self._map_monocular(p)
+        elif self._caches[1] and self._caches[1][0]['confidence'] < self.min_pupil_confidence:
+            p = self._caches[1].popleft()
+            gaze_datum = self._map_monocular(p)
+        # map high confidence data binocularly if available
+        elif self._caches[0] and self._caches[1]:
             # we have binocular data
             if self._caches[0][0]['timestamp'] < self._caches[1][0]['timestamp']:
                 p0 = self._caches[0].popleft()
@@ -109,7 +112,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
                 older_pt = p1
 
             if abs(p0['timestamp'] - p1['timestamp']) < self.temportal_cutoff:
-                gaze_datum = self._map_binocular(p0,p1)
+                gaze_datum = self._map_binocular(p0, p1)
             else:
                 gaze_datum = self._map_monocular(older_pt)
 
@@ -123,7 +126,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
             gaze_datum = None
 
         if gaze_datum:
-            return [gaze_datum,]
+            return [gaze_datum]
         else:
             return []
 

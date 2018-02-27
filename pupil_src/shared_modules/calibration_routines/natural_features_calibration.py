@@ -73,8 +73,6 @@ class Natural_Features_Calibration(Calibration_Plugin):
         if not frame:
             return
         if self.active:
-            recent_pupil_positions = events['pupil_positions']
-
             if self.first_img is None:
                 self.first_img = frame.gray.copy()
 
@@ -99,10 +97,8 @@ class Natural_Features_Calibration(Calibration_Plugin):
                     ref["timestamp"] = frame.timestamp
                     self.ref_list.append(ref)
 
-            #always save pupil positions
-            for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
+            # Always save pupil positions
+            self.pupil_list.extend(events['pupil_positions'])
 
             if self.count:
                 self.button.status_text = 'Sampling Gaze Data'
