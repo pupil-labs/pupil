@@ -68,7 +68,11 @@ class Seek_Control(System_Plugin_Base):
         if new_state and self.current_ts == self.trim_right_ts:
             self.g_pool.capture.seek_to_frame(self.trim_left)
             self.g_pool.new_seek = True
-        elif new_state and self.current_ts >= self.g_pool.timestamps[-10]:
+
+        # Sometimes there is less video frames than timestamps. The rewind
+        # logic needs to catch these cases but work for recordings with less
+        # than 10 frames
+        elif new_state and self.current_ts >= self.g_pool.timestamps[-10:][0]:
             self.g_pool.capture.seek_to_frame(0)
             self.g_pool.new_seek = True
             logger.warning("End of video - restart at beginning.")
