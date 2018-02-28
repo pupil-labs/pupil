@@ -220,6 +220,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             nonlocal window_size
             nonlocal camera_render_size
             nonlocal hdpi_factor
+            if w == 0 or h == 0:
+                return
             hdpi_factor = glfw.getHDPIFactor(window)
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w,h
