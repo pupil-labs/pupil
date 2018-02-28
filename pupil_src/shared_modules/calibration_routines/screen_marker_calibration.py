@@ -103,7 +103,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if system() == 'Linux':
             self.window_position_default = (0, 0)
         elif system() == 'Windows':
-            self.window_position_default = (8, 31)
+            self.window_position_default = (8, 90)
         else:
             self.window_position_default = (0, 0)
 
