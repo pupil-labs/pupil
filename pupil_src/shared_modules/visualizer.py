@@ -22,11 +22,11 @@ import numpy as np
 
 #UI Platform tweaks
 if system() == 'Linux':
-    window_position_default = (0,0)
+    window_position_default = (0, 0)
 elif system() == 'Windows':
-    window_position_default = (8,31)
+    window_position_default = (8, 90)
 else:
-    window_position_default = (0,0)
+    window_position_default = (0, 0)
 
 class Visualizer(object):
     """docstring for Visualizer
