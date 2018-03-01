@@ -179,7 +179,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
         self.add_menu()
         self.menu.label = 'Batch Export Recordings'
 
-        self.menu.append(ui.Info_Text('Search will walk through the source direcotry recursively and detect available Pupil recordings.'))
+        self.menu.append(ui.Info_Text('Search will walk through the source directory recursively and detect available Pupil recordings.'))
         self.menu.append(ui.Text_Input('source_dir', self, label='Source directory', setter=self.set_src_dir))
 
         self.search_button = ui.Button('Search', self.detect_recordings)
