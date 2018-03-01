@@ -122,11 +122,11 @@ class Gaze_From_Recording(Gaze_Producer_Base):
 
     def _set_offset_x(self, offset_x):
         self.x_offset = offset_x
-        self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': .5})
+        self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': 1.})
 
     def _set_offset_y(self, offset_y):
         self.y_offset = offset_y
-        self.load_data_with_offset()
+        self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': 1.})
 
     def on_notify(self, notification):
         if notification['subject'] == 'manual_gaze_correction.offset_changed':
