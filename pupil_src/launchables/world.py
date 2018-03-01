@@ -155,7 +155,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         camera_render_size = None
         hdpi_factor = 1.0
 
-        # g_pool holds variables for this process they are accesible to all plugins
+        # g_pool holds variables for this process they are accessible to all plugins
         g_pool = Global_Container()
         g_pool.app = 'capture'
         g_pool.process = 'world'
@@ -333,7 +333,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         def toggle_general_settings(collapsed):
             # this is the menu toggle logic.
             # Only one menu can be open.
-            # If no menu is open the menubar should collapse.
+            # If no menu is opened, the menubar should collapse.
             g_pool.menubar.collapsed = collapsed
             for m in g_pool.menubar.elements:
                 m.collapsed = True
@@ -405,7 +405,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
         toggle_general_settings(True)
 
-        # now the we have  aproper window we can load the last gui configuration
+        # now that we have a proper window we can load the last gui configuration
         g_pool.gui.configuration = session_settings.get('ui_config', {})
 
         # create a timer to control window update frequency
@@ -455,7 +455,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             del events['pupil_positions']  # already on the wire
             del events['gaze_positions']  # sent earlier
             if 'frame' in events:
-                del events['frame']  # send explicity with frame publisher
+                del events['frame']  # send explicitly with frame publisher
             if 'depth_frame' in events:
                 del events['depth_frame']
             if 'audio_packets' in events:
@@ -477,7 +477,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                 gl_utils.glViewport(0, 0, *window_size)
                 try:
                     clipboard = glfw.glfwGetClipboardString(main_window).decode()
-                except AttributeError:  # clipbaord is None, might happen on startup
+                except AttributeError:  # clipboard is None, might happen on startup
                     clipboard = ''
                 g_pool.gui.update_clipboard(clipboard)
                 user_input = g_pool.gui.update()
