@@ -56,7 +56,7 @@ class Blink_Detection(Analysis_Plugin_Base):
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Blink Detector'
-        self.menu.append(ui.Info_Text('This plugin detects blink on- and offsets based on confidence drops.'))
+        self.menu.append(ui.Info_Text('This plugin detects blink onsets and offsets based on confidence drops.'))
         self.menu.append(ui.Switch('visualize', self, label='Visualize'))
         self.menu.append(ui.Slider('history_length', self,
                                    label='Filter length [seconds]',
