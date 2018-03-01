@@ -187,7 +187,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
     def remove_surface(self, i):
         super().remove_surface(i)
-        self.timeline.height -= self.timeline_line_height
+        self.timeline.content_height -= self.timeline_line_height
 
     def recalculate(self):
 
