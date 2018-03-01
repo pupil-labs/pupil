@@ -15,9 +15,14 @@ from plugin import Plugin
 import gl_utils
 from pyglui import cygl
 import numpy as np
-
+import os
+import av
+from bisect import bisect_left as bisect
 
 import logging
+import pyaudio as pa
+import itertools
+from threading import Timer
 logger = logging.getLogger(__name__)
 
 
@@ -199,16 +204,110 @@ class Base_Manager(Plugin):
 class Playback_Source(Base_Source):
     allowed_speeds = [.25, .5, 1., 1.5, 2., 4.]
 
-    def __init__(self, g_pool, timed_playback=False, playback_speed=1., *args, **kwargs):
+    def __init__(self, g_pool, source_path=None, timed_playback=False, playback_speed=1., play_audio=False, *args, **kwargs):
         super().__init__(g_pool)
         self.playback_speed = playback_speed
         self.timed_playback = timed_playback
         self.time_discrepancy = 0.
         self._recent_wait_idx = -1
         self.play = True
+        self.timestamps = None
+        
+
+        self.pa_stream = None
+        self.audio_sync = 0.
+        self.audio_delay = 0.
+        self.audio_container = None
+        self.audio_stream = None
+        self.next_audio_frame = None
+        if not play_audio or source_path is None:
+            return
+        audio_file = os.path.join(os.path.dirname(source_path), 'audio.mp4')
+        if os.path.isfile(audio_file):
+                self.audio_container = av.open(str(audio_file))
+                try:
+                    self.audio_stream = next(s for s in self.audio_container.streams if s.type == 'audio')
+                    logger.debug("loaded audiostream: %s" % self.audio_stream)
+                except StopIteration:
+                    self.audio_stream = None
+                    logger.debug("No audiostream found in media container")
+        if self.audio_stream is not None:
+            self.audio_bytes_fifo = []
+            audiots_path = os.path.splitext(audio_file)[0] + '_timestamps.npy'
+            try:
+                self.audio_timestamps = np.load(audiots_path)
+            except IOError:
+                self.audio_timestamps = None
+                logger.warning("Could not load audio timestamps")
+            self.next_audio_frame = self._next_audio_frame()
+            self.audio_fifo = av.audio.fifo.AudioFifo()
+            self.audio_resampler = av.audio.resampler.AudioResampler(format=self.audio_stream.format.packed,
+                                                                     layout=self.audio_stream.layout,
+                                                                     rate=self.audio_stream.rate)
+            self.audio_paused = False
+            af0, af1 = next(self.next_audio_frame), next(self.next_audio_frame)
+            self.audio_pts_rate = af1.samples
+            self.seek_to_audio_frame(0)
+
+            logger.info("Audio file format {} chans {} rate {} framesize {} ".format(self.audio_stream.format,
+                                                                               self.audio_stream.channels,
+                                                                               self.audio_stream.rate,
+                                                                               self.audio_stream.frame_size))
+
+            def audio_callback(in_data, frame_count, time_info, status):
+                #print("Time diff {}".format(time_info['output_buffer_dac_time'] - time_info['current_time']))
+                if not self.play:
+                    self.audio_paused = True
+                    logger.info("audio cb abort 1")
+                    return (None, pa.paAbort)
+                try:
+                    samples = self.audio_bytes_fifo.pop(0)
+                    return (samples, pa.paContinue)
+                except IndexError:
+                    self.audio_paused = True
+                    logger.info("audio cb abort 2")
+                    return (None, pa.paAbort)
+
+
+            try:
+                self.pa = pa.PyAudio()
+                self.pa_stream = self.pa.open(format=self.pa.get_format_from_width(self.audio_stream.format.bytes),
+                                              channels=self.audio_stream.channels,
+                                              rate=self.audio_stream.rate,
+                                              frames_per_buffer=self.audio_stream.frame_size,
+                                              stream_callback=audio_callback,
+                                              output=True,
+                                              start=False)
+                logger.info("Audio output latency: {}".format(self.pa_stream.get_output_latency()))
+                self.audio_sync = self.pa_stream.get_output_latency()
+
+            except ValueError:
+                self.pa_stream = None
+
+    def _next_audio_frame(self):
+        for packet in self.audio_container.demux(self.audio_stream):
+            for frame in packet.decode():
+                if frame:
+                    yield frame
+        raise StopIteration()
+
+    def audio_idx_to_pts(self, idx):
+        return idx*self.audio_pts_rate
+
+    def seek_to_audio_frame(self, seek_pos):
+        try:
+            self.audio_stream.seek(self.audio_idx_to_pts(seek_pos), mode='time')
+        except av.AVError as e:
+            raise FileSeekError()
+        else:
+            self.next_audio_frame = self._next_audio_frame()
+            self.audio_bytes_fifo.clear()     
 
     def seek_to_frame(self, frame_idx):
-        raise NotImplementedError()
+        if self.audio_stream is not None:
+            audio_idx = bisect(self.audio_timestamps, self.timestamps[frame_idx])
+            self.seek_to_audio_frame(audio_idx)
+
 
     def get_frame_index(self):
         raise NotImplementedError()
@@ -216,8 +315,52 @@ class Playback_Source(Base_Source):
     def seek_to_prev_frame(self):
         raise NotImplementedError()
 
-    def get_frame(self):
-        raise NotImplementedError()
+    def get_frame(self, frame_idx=-1):
+        if self.pa_stream is not None and self.play:
+            samples_written = 0
+            if self.playback_speed == 1.:
+                if self.pa_stream.is_stopped() or self.audio_paused:
+                    if frame_idx == -1:
+                        frame_idx = 0
+                    ts_delay = self.audio_timestamps[0] - self.timestamps[frame_idx]
+                    if ts_delay > 0.:
+                        delay_lat = ts_delay - self.pa_stream.get_output_latency()
+                        if delay_lat > 0.:
+                            self.audio_delay = delay_lat
+                            self.audio_sync = 0
+                        else:
+                            self.audio_delay = 0
+                            self.audio_sync = - delay_lat
+                    else:
+                        self.audio_delay = 0.
+                        self.audio_sync = self.pa_stream.get_output_latency()
+
+                    audio_idx = bisect(self.audio_timestamps, self.timestamps[frame_idx])
+
+                    self.seek_to_audio_frame(audio_idx)
+
+                frames_chunk = itertools.islice(self.next_audio_frame, 10)
+                for audio_frame_p in frames_chunk:
+                    audio_frame = self.audio_resampler.resample(audio_frame_p)
+                    self.audio_bytes_fifo.append(bytes(audio_frame.planes[0]))
+                if self.pa_stream.is_stopped() or self.audio_paused:
+                    self.pa_stream.stop_stream()
+                    if self.audio_delay < 0.001:
+                        self.pa_stream.start_stream()
+                    else:
+                        def delayed_audio_start():
+                            if self.pa_stream.is_stopped():
+                                self.pa_stream.start_stream()
+                                logger.info("Started delayed audio")
+                            self.audio_timer.cancel()
+
+                        self.audio_timer = Timer(self.audio_delay,  delayed_audio_start)
+                        self.audio_timer.start()
+
+                    self.audio_paused = False
+
+            elif not self.pa_stream.is_stopped():
+                self.pa_stream.stop_stream()
 
     def wait(self, frame):
         if frame.index == self._recent_wait_idx:
@@ -229,3 +372,9 @@ class Playback_Source(Base_Source):
                 sleep(wait_time)
         self._recent_wait_idx = frame.index
         self.time_discrepancy = frame.timestamp - time()
+
+    def set_audio_latency(self, latency):
+        if self.pa_stream is not None:
+            pass
+
+

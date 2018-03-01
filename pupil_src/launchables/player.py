@@ -209,7 +209,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
         video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
                       if os.path.splitext(f)[1] in valid_ext][0]
-        init_playback_source(g_pool, source_path=video_path)
+        init_playback_source(g_pool, source_path=video_path, play_audio=True)
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
@@ -518,7 +518,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                 glfw.glfwSwapBuffers(main_window)
 
             # present frames at appropriate speed
-            g_pool.capture.wait(frame)
+            #g_pool.capture.wait(frame)
             glfw.glfwPollEvents()
 
         session_settings['playback_speed'] = g_pool.capture.playback_speed

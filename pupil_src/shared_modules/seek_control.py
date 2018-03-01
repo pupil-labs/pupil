@@ -13,6 +13,7 @@ from bisect import bisect_left
 
 from pyglui import ui
 from plugin import System_Plugin_Base
+import time
 
 import logging
 logger = logging.getLogger(__name__)
@@ -32,6 +33,8 @@ class Seek_Control(System_Plugin_Base):
         self.trim_right = len(self.g_pool.timestamps) - 1
         self.drag_mode = False
         self.was_playing = True
+        self.start_time = 0.
+        self.start_ts = 0.
         g_pool.capture.play = False
 
     def init_ui(self):
@@ -56,8 +59,13 @@ class Seek_Control(System_Plugin_Base):
         if seeking:
             self.was_playing = self.g_pool.capture.play
             self.g_pool.capture.play = False
+            self.start_time = 0.
+            self.start_ts = 0.
         else:
             self.g_pool.capture.play = self.was_playing
+            if self.g_pool.capture.play:
+                self.start_time = time.monotonic()
+                self.start_ts = self.current_ts
 
     @property
     def play(self):
@@ -78,6 +86,20 @@ class Seek_Control(System_Plugin_Base):
             logger.warning("End of video - restart at beginning.")
         else:
             self.g_pool.capture.play = new_state
+        if new_state:
+            self.start_time = time.monotonic()
+            self.start_ts = self.current_ts
+        else:
+            self.start_time = self.start_ts = 0.
+
+        self.g_pool.capture.play = new_state
+
+    @property
+    def current_playback_time(self):
+        if self.g_pool.capture.play:
+            return (time.monotonic() - self.start_time) * self.playback_speed + self.start_ts
+        else:
+            return 0.
 
     @property
     def trim_left_ts(self):
@@ -124,6 +146,8 @@ class Seek_Control(System_Plugin_Base):
             old_idx = speeds.index(self.g_pool.capture.playback_speed)
             new_idx = min(len(speeds) - 1, old_idx + 1)
             self.g_pool.capture.playback_speed = speeds[new_idx]
+            self.start_time = time.monotonic()
+            self.start_ts = self.current_ts
         else:
             # frame-by-frame mode, seek one frame forward
             self.g_pool.new_seek = True
@@ -140,6 +164,8 @@ class Seek_Control(System_Plugin_Base):
             old_idx = speeds.index(self.g_pool.capture.playback_speed)
             new_idx = max(0, old_idx - 1)
             self.g_pool.capture.playback_speed = speeds[new_idx]
+            self.start_time = time.monotonic()
+            self.start_ts = self.current_ts
         else:
             # frame-by-frame mode, seek one frame backwards
             self.g_pool.capture.seek_to_prev_frame()

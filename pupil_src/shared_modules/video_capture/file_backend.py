@@ -19,6 +19,7 @@ from camera_models import load_intrinsics
 import numpy as np
 from multiprocessing import cpu_count
 import os.path
+from bisect import bisect_left as bisect
 
 # logging
 import logging
@@ -83,8 +84,8 @@ class File_Source(Playback_Source):
         timestamps (str): Path to timestamps file
     """
 
-    def __init__(self, g_pool, source_path=None, loop=False, *args, **kwargs):
-        super().__init__(g_pool, *args, **kwargs)
+    def __init__(self, g_pool, source_path=None, loop=False,  *args, **kwargs):
+        super().__init__(g_pool, source_path,  *args, **kwargs)
 
         # minimal attribute set
         self._initialised = True
@@ -107,15 +108,8 @@ class File_Source(Playback_Source):
             self.video_stream = None
             logger.error("No videostream found in media container")
 
-        try:
-            self.audio_stream = next(s for s in self.container.streams if s.type=='audio')# looking for the first audiostream
-            logger.debug("loaded audiostream: %s"%self.audio_stream)
-        except StopIteration:
-            self.audio_stream = None
-            logger.debug("No audiostream found in media container")
-
-        if not self.video_stream and not self.audio_stream:
-            logger.error('Init failed. Could not find any video or audio stream in the given source file.')
+        if not self.video_stream:
+            logger.error('Init failed. Could not find any video stream in the given source file.')
             self._initialised = False
             return
 
@@ -142,6 +136,9 @@ class File_Source(Playback_Source):
             logger.debug("Auto loaded %s timestamps from %s" % (len(self.timestamps), timestamps_path))
         assert isinstance(self.timestamps[0], float), 'Timestamps need to be instances of python float, got {}'.format(type(self.timestamps[0]))
         self.timestamps = self.timestamps
+
+        if self.audio_timestamps is not None:
+             logger.info("Audio - Video TS[0] diff {}".format(self.audio_timestamps[0] - self.timestamps[0]))
 
         # set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
         self.next_frame = self._next_frame()
@@ -227,6 +224,17 @@ class File_Source(Playback_Source):
     @ensure_initialisation()
     def get_frame(self):
         frame = None
+
+        try:
+            playback_now = self.g_pool.seek_control.current_playback_time - self.audio_sync
+            if self.play:
+                now_idx = bisect(self.timestamps, playback_now)
+                if now_idx > self.target_frame_idx:
+                    logger.info("Will skip {} frames!".format(now_idx - self.target_frame_idx))
+                    self.target_frame_idx = now_idx
+        except AttributeError:
+            pass
+
         for frame in self.next_frame:
             index = self.pts_to_idx(frame.pts)
             if index == self.target_frame_idx:
@@ -255,6 +263,18 @@ class File_Source(Playback_Source):
         self.show_time = timestamp
         self.target_frame_idx = index+1
         self.current_frame_idx = index
+
+        super().get_frame(self.current_frame_idx)
+
+        try:
+            playback_now = self.g_pool.seek_control.current_playback_time - self.audio_sync
+            time_diff = (self.timestamps[self.current_frame_idx] - playback_now) / self.playback_speed
+            if self.play and time_diff > .005:
+                sleep(time_diff)
+            elif not self.play:
+                sleep(1/60)
+        except AttributeError:
+            pass
         return Frame(timestamp, frame, index=index)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05), requires_playback=True)
@@ -282,6 +302,9 @@ class File_Source(Playback_Source):
             self.next_frame = self._next_frame()
             self.time_discrepancy = 0
             self.target_frame_idx = seek_pos
+            self.current_frame_idx = seek_pos
+            super().seek_to_frame(seek_pos)
+
 
     @ensure_initialisation()
     def seek_to_frame_fast(self, seek_pos):
