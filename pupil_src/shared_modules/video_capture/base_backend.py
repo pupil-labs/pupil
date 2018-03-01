@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from time import time, sleep
+from time import monotonic, sleep
 from plugin import Plugin
 
 import gl_utils
@@ -203,8 +203,8 @@ class Playback_Source(Base_Source):
         super().__init__(g_pool)
         self.playback_speed = playback_speed
         self.timed_playback = timed_playback
-        self.time_discrepancy = 0.
-        self._recent_wait_idx = -1
+        self.finished_sleep = 0.
+        self._recent_wait_ts = -1
         self.play = True
 
     def seek_to_frame(self, frame_idx):
@@ -220,12 +220,14 @@ class Playback_Source(Base_Source):
         raise NotImplementedError()
 
     def wait(self, frame):
-        if frame.index == self._recent_wait_idx:
+        if frame.timestamp == self._recent_wait_ts:
             sleep(1/60)  # 60 fps on Player pause
-        elif self.time_discrepancy:
-            wait_time = frame.timestamp - self.time_discrepancy - time()
-            wait_time /= self.playback_speed
-            if 1 > wait_time > 0:
-                sleep(wait_time)
-        self._recent_wait_idx = frame.index
-        self.time_discrepancy = frame.timestamp - time()
+        elif self.finished_sleep:
+            target_wait_time = frame.timestamp - self._recent_wait_ts
+            target_wait_time /= self.playback_speed
+            time_spent = monotonic() - self.finished_sleep
+            target_wait_time -= time_spent
+            if 1 > target_wait_time > 0:
+                sleep(target_wait_time)
+        self._recent_wait_ts = frame.timestamp
+        self.finished_sleep = monotonic()

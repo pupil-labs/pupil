@@ -13,7 +13,7 @@ import os
 import av
 from time import sleep
 
-from .base_backend import Playback_Source, Base_Manager, EndofVideoError
+from .base_backend import Base_Source, Playback_Source, Base_Manager, EndofVideoError
 from camera_models import load_intrinsics
 
 import numpy as np
@@ -75,7 +75,7 @@ class Frame(object):
         return self._gray
 
 
-class File_Source(Playback_Source):
+class File_Source(Playback_Source, Base_Source):
     """Simple file capture.
 
     Attributes:
@@ -252,7 +252,6 @@ class File_Source(Playback_Source):
             logger.info("Reached end of timestamps list.")
             raise EndofVideoError("Reached end of timestamps list.")
 
-        self.show_time = timestamp
         self.target_frame_idx = index+1
         self.current_frame_idx = index
         return Frame(timestamp, frame, index=index)
@@ -280,7 +279,7 @@ class File_Source(Playback_Source):
             raise FileSeekError()
         else:
             self.next_frame = self._next_frame()
-            self.time_discrepancy = 0
+            self.finished_sleep = 0
             self.target_frame_idx = seek_pos
 
     @ensure_initialisation()
@@ -292,7 +291,7 @@ class File_Source(Playback_Source):
             raise FileSeekError()
         else:
             self.next_frame = self._next_frame()
-            self.time_discrepancy = 0
+            self.finished_sleep = 0
             self.target_frame_idx = seek_pos
 
     def on_notify(self, notification):

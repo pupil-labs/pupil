@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from .base_backend import Playback_Source, Base_Manager, EndofVideoError
+from .base_backend import Base_Source, Playback_Source, Base_Manager, EndofVideoError
 
 import os
 import cv2
@@ -51,7 +51,7 @@ class Frame(object):
         return Frame(self.timestamp, self._img.copy(), self.index)
 
 
-class Fake_Source(Playback_Source):
+class Fake_Source(Playback_Source, Base_Source):
     """Simple source which shows random, static image.
 
     It is used as falback in case the original source fails. `preferred_source`
@@ -107,7 +107,8 @@ class Fake_Source(Playback_Source):
             logger.info('Recording has ended.')
             self.play = False
         else:
-            self.wait(frame)
+            if self.timed_playback:
+                self.wait(frame)
             self._recent_frame = frame
             events['frame'] = frame
 
@@ -117,7 +118,7 @@ class Fake_Source(Playback_Source):
         except IndexError:
             raise EndofVideoError('Reached end of timestamps list.')
         except TypeError:
-            timestamp = self.g_pool.get_timestamp()
+            timestamp = self._recent_wait_ts + 1 / self.fps
 
         frame = Frame(timestamp, self._img.copy(), self.target_frame_idx)
 
@@ -154,14 +155,6 @@ class Fake_Source(Playback_Source):
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
 
-        if self.timed_playback:
-            now = time()
-            spent = now - self.time_discrepancy
-            wait = max(0, 1. / self.fps - spent)
-            wait /= self.playback_speed
-            sleep(wait)
-            self.time_discrepancy = time()
-
         return frame
 
     def get_frame_count(self):
@@ -172,7 +165,7 @@ class Fake_Source(Playback_Source):
 
     def seek_to_frame(self, frame_idx):
         self.target_frame_idx = max(0, min(frame_idx, self.get_frame_count() - 1))
-        self.time_discrepancy = 0
+        self.finished_sleep = 0
 
     def get_frame_index(self):
         return self.current_frame_idx
@@ -265,7 +258,7 @@ class Fake_Manager(Base_Manager):
             settings['timed_playback'] = True
             settings['frame_rate'] = self.g_pool.capture.frame_rate
             settings['frame_size'] = self.g_pool.capture.frame_size
-            settings['name'] = self.g_pool.capture.name
+            settings['name'] = 'Fake Source'
             # if the user set fake capture, we dont want it to auto jump back to the old capture.
             if self.g_pool.process == 'world':
                 self.notify_all({'subject':'start_plugin',"name":"Fake_Source",'args':settings})
