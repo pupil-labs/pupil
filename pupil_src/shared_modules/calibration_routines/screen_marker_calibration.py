@@ -279,7 +279,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             # use np.arrays for per element wise math
             self.display_pos = np.array(self.active_site)
             self.on_position = on_position
-            self.button.status_text = '{} / {}'.format(self.active_site, 9)
+            self.button.status_text = '{}'.format(self.active_site)
 
         if self._window:
             self.gl_display_in_window()
