@@ -77,7 +77,7 @@ class Fingertip_Calibration(Calibration_Plugin):
             # Update the marker
             if self.mode == 'calibration':
                 if self.press_key in (-1, 2):
-                    self.button.status_text = 'Cover the 5 rectangles with your index finger and then press space'
+                    self.button.status_text = 'Cover the rectangles with your index finger and then press space'
                 elif self.press_key == 1 and self.fingertip_tracker.train_done == 1:
                     self.button.status_text = 'Press space to start calibration'
                 elif self.press_key == 1 and self.fingertip_tracker.train_done == 2:
