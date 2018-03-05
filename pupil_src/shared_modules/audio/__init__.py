@@ -22,6 +22,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
 audio_modes = ('voice and sound', 'sound only','voice only','silent')
 default_audio_mode = audio_modes[0]
 audio_mode = default_audio_mode
@@ -135,6 +136,36 @@ elif os_name == "Darwin":
     def say(message):
         if 'voice' in audio_mode:
             sp.Popen(["say", message, "-v" "Victoria"])
+
+elif os_name == "Windows":
+    def beep():
+        if 'sound' in audio_mode:
+            print('\a')
+
+    def tink():
+        if 'sound' in audio_mode:
+            print('\a')
+
+    def say(message):
+        if 'voice' in audio_mode:
+            print('\a')
+            print(message)
+
+
+    class Audio_Input_Dict(dict):
+        """docstring for Audio_Input_Dict"""
+        def __init__(self):
+            super().__init__()
+            try:
+                import pyaudio as pa
+            except ImportError:
+                logger.info('Please install pyaudio for audio capture on Windows')
+            else:
+                pyaudio = pa.PyAudio()
+                ds_info = pyaudio.get_host_api_info_by_type(pa.paDirectSound)
+                for input_dev_name in [dev_info['name'] for dev_info in [pyaudio.get_device_info_by_host_api_device_index(ds_info['index'], dev_idx) for dev_idx in range(ds_info['deviceCount'])] if dev_info['maxInputChannels'] > 0]:
+                    self[input_dev_name] = input_dev_name
+            self['No Audio'] = None
 
 else:
     def beep():

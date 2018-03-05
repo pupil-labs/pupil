@@ -228,6 +228,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
             g_pool.gui.update_window(*window_size)
             g_pool.gui.collect_menus()
+
             for p in g_pool.plugins:
                 p.on_window_resize(window, *camera_render_size)
 
