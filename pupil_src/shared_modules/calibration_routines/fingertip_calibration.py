@@ -37,6 +37,14 @@ class Fingertip_Calibration(Calibration_Plugin):
         super().init_ui()
         self.menu.label = 'Fingertip Calibration'
         self.menu.append(Info_Text('Calibrate gaze parameters using finger'))
+        self.menu.append(Info_Text('This is an experimental calibration routine. '
+                                   'Move your index finger in your field of view while looking at the fingertip.'
+                                   'This plugin is for prototyping and experimentation only. '
+                                   'The detection robustness is not production grade. '
+                                   'We will put a lot more effort into this going forward but wanted to release the idea and hope for feedback!'))
+        self.menu.append(Info_Text('This is two step process: '
+                                   '(1) calibrating for skin tone of the participant '
+                                   '(2) collecting calibration samples.'))
 
     def start(self):
         super().start()
@@ -57,7 +65,6 @@ class Fingertip_Calibration(Calibration_Plugin):
         audio.say('Stopping  {}'.format(self.mode_pretty))
         logger.info('Stopping  {}'.format(self.mode_pretty))
         self.active = False
-        # self.close_window()
         if self.mode == 'calibration':
             finish_calibration(self.g_pool, self.pupil_list, self.ref_list)
         elif self.mode == 'accuracy_test':
@@ -81,7 +88,7 @@ class Fingertip_Calibration(Calibration_Plugin):
                 elif self.press_key == 1 and self.fingertip_tracker.train_done == 1:
                     self.button.status_text = 'Press space to start calibration'
                 elif self.press_key == 1 and self.fingertip_tracker.train_done == 2:
-                    self.button.status_text = 'Press F to re-detect the skin color if needed; Press C to stop calibration'
+                    self.button.status_text = 'Press C to stop calibration; Press F to re-detect the skin tone if needed'
 
             self.fingertip = self.fingertip_tracker.update(frame.bgr, self.press_key)
             self.press_key = 0
@@ -100,8 +107,7 @@ class Fingertip_Calibration(Calibration_Plugin):
 
             # Always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
+                self.pupil_list.append(p_pt)
         else:
             pass
 
@@ -115,7 +121,9 @@ class Fingertip_Calibration(Calibration_Plugin):
         """
         if self.active:
             if self.pos is not None:
-                draw_points_norm([self.pos], size=15, color=RGBA(1.0,0.0,0.0,0.5))
+                draw_points_norm([self.pos], size=15, color=RGBA(0.1,0.8,0.9,1.0))
+                p = self.fingertip['norm_rect_points']
+                draw_polyline_norm([p[0], p[1], p[2], p[3], p[0]], color=RGBA(0.1,0.8,0.9,0.3), thickness=3)
 
             if self.mode == 'calibration' and self.fingertip_tracker.train_done in (0, 1):
                 for p in self.fingertip_tracker.ROIpts:

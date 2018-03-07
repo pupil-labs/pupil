@@ -114,7 +114,6 @@ class FingertipTracker(object):
     def _checkFrame(self, img):
         img_size = img.shape[1], img.shape[0]
 
-        finger_dict = None
         # Check whole frame
         if not self._flag_check_roi:
             b0, b1, b2, b3 = 0, img_size[0], 0, img_size[1]
@@ -125,18 +124,17 @@ class FingertipTracker(object):
             # Set up the boundary of the roi
             temp = img_size[0] / 16
             if self._predict_motion is not None:
-                predict_center = previous_fingertip_center[0] + self._predict_motion[0], previous_fingertip_center[1] + \
-                                 self._predict_motion[1]
-                b0 = predict_center[0] - temp / 2 - abs(self._predict_motion[0]) * 2
-                b1 = predict_center[0] + temp / 2 + abs(self._predict_motion[0]) * 2
+                predict_center = previous_fingertip_center[0] + self._predict_motion[0], previous_fingertip_center[1] + self._predict_motion[1]
+                b0 = predict_center[0] - temp * 0.5 - abs(self._predict_motion[0]) * 2
+                b1 = predict_center[0] + temp * 0.5 + abs(self._predict_motion[0]) * 2
                 b2 = predict_center[1] - temp * 0.8 - abs(self._predict_motion[1]) * 2
-                b3 = predict_center[1] + temp * 1.5 + abs(self._predict_motion[1]) * 2
+                b3 = predict_center[1] + temp * 2.0 + abs(self._predict_motion[1]) * 2
             else:
                 predict_center = previous_fingertip_center
-                b0 = predict_center[0] - temp / 2
-                b1 = predict_center[0] + temp / 2
+                b0 = predict_center[0] - temp * 0.5
+                b1 = predict_center[0] + temp * 0.5
                 b2 = predict_center[1] - temp * 0.8
-                b3 = predict_center[1] + temp * 1.5
+                b3 = predict_center[1] + temp * 2.0
 
             b0 = 0 if b0 < 0 else int(b0)
             b1 = img_size[0] - 1 if b1 > img_size[0] - 1 else int(b1)
@@ -148,13 +146,14 @@ class FingertipTracker(object):
 
         handmask = self.method.generateMask(img)
         handmask_smooth = self._smoothmask(handmask)
-        fingertip_center = self._findFingertip(handmask_smooth, img_size, b0, b2)
+        f_dict = self._findFingertip(handmask_smooth, img_size, b0, b2)
 
-        if fingertip_center is not None:
-            norm_pos = normalize(fingertip_center, img_size, flip_y=True)
-            finger_dict = {'screen_pos': fingertip_center, 'norm_pos': norm_pos}
-
-        return finger_dict
+        if f_dict is not None:
+            norm_pos = normalize(f_dict['fingertip_center'], img_size, flip_y=True)
+            norm_rect_points = [normalize(p, img_size, flip_y=True) for p in f_dict['rect_points']]
+            return {'screen_pos': f_dict['fingertip_center'], 'norm_pos': norm_pos, 'norm_rect_points': norm_rect_points}
+        else:
+            return None
 
     def _findFingertip(self, handmask_smooth, img_size, b0, b2):
         _, contours, _ = cv2.findContours(handmask_smooth, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_TC89_KCOS)
@@ -281,7 +280,9 @@ class FingertipTracker(object):
         if fingertip_center[0] > img_size[0] - self._margin or min(fingertip_center) < self._margin:
             return None
 
-        return fingertip_center
+        rect_points = cv2.boxPoints(best_rect) + np.array((b0, b2))  # For visualization of the fingertip detector
+        return {'fingertip_center': fingertip_center, 'rect_points': rect_points}
+
 
     def _defineROIpts(self):
         roi_len_h = 1 / 20
