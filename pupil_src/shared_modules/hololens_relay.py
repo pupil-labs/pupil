@@ -278,7 +278,7 @@ class Hololens_Relay(Plugin):
                     if (self.gaze_receiver is not None and
                             remote_socket is not None and
                             topic.startswith('gaze')):
-                        _, method, eye = payload['topic'].split('.')
+                        method, eye = payload['topic'].split('.')[1:3]
                         if method == '2d':
                             data = b'EG%s%s%s' % (method[:1].encode(),
                                                   eye.encode(),
