@@ -158,14 +158,16 @@ class File_Source(Playback_Source, Base_Source):
         loc, name = os.path.split(os.path.splitext(source_path)[0])
         self._intrinsics = load_intrinsics(loc, name, self.frame_size)
 
-    def ensure_initialisation(fallback_func=None):
+    def ensure_initialisation(fallback_func=None, requires_playback=False):
         from functools import wraps
 
         def decorator(func):
             @wraps(func)
             def run_func(self, *args, **kwargs):
                 if self._initialised and self.video_stream:
-                    return func(self, *args, **kwargs)
+                    # test self.play only if requires_playback is True
+                    if not requires_playback or self.play:
+                        return func(self, *args, **kwargs)
                 if fallback_func:
                     return fallback_func(*args, **kwargs)
                 else:
@@ -289,7 +291,8 @@ class File_Source(Playback_Source, Base_Source):
             self._recent_frame = frame
             events['frame'] = frame
 
-    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
+    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05),
+                           requires_playback=True)
     def recent_events_stand_alone(self, events):
         try:
             frame = self.get_frame()

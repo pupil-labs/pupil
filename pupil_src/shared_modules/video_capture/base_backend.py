@@ -229,9 +229,6 @@ class Playback_Source(Base_Source):
     def get_frame_index(self):
         raise NotImplementedError()
 
-    def seek_to_prev_frame(self):
-        raise NotImplementedError()
-
     def get_frame(self):
         raise NotImplementedError()
 
