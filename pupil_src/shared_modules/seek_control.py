@@ -37,6 +37,7 @@ class Seek_Control(System_Plugin_Base):
         self.start_ts = self.g_pool.timestamps[0]
         self.time_slew = 0.
         g_pool.capture.play = False
+        self._recent_playback_time = self.current_playback_time
 
     def init_ui(self):
         self.seek_bar = ui.Seek_Bar(self, self.g_pool.timestamps[0],
@@ -49,8 +50,19 @@ class Seek_Control(System_Plugin_Base):
         self.seek_bar = None
 
     def recent_events(self, events):
-        if self.current_ts == self.trim_left_ts or self.current_ts == self.trim_right_ts:
+        pbt = self.current_playback_time
+        if self.play and self._recent_playback_time < self.trim_left_ts <= pbt:
+            # print(f'{self._recent_playback_time}\t<\t{self.trim_left_ts}\t<=\t{pbt}')
+            self._recent_playback_time = self.trim_left_ts
             self.play = False
+            self.start_ts = self.trim_left_ts
+        elif self.play and self._recent_playback_time < self.trim_right_ts <= pbt:
+            # print(f'{self._recent_playback_time}\t<\t{self.trim_right_ts}\t<=\t{pbt}')
+            self._recent_playback_time = self.trim_right_ts
+            self.play = False
+            self.start_ts = self.trim_right_ts
+        else:
+            self._recent_playback_time = pbt
 
     def on_seek(self, seeking):
         if seeking:
@@ -65,16 +77,18 @@ class Seek_Control(System_Plugin_Base):
 
     @play.setter
     def play(self, new_state):
-
-        if new_state and self.current_ts == self.trim_right_ts:
+        # print(f'{new_state}: {self._recent_playback_time}\t=?=\t{self.trim_right_ts}')
+        if new_state and self._recent_playback_time == self.trim_right_ts:
             self.start_ts = self.trim_left_ts
+            new_state = False  # Do not auto-play on rewind
 
         # Sometimes there is less video frames than timestamps. The rewind
         # logic needs to catch these cases but work for recordings with less
         # than 10 frames
-        elif new_state and self.current_ts >= self.g_pool.timestamps[-10:][0]:
+        elif new_state and self._recent_playback_time >= self.g_pool.timestamps[-10:][0]:
             self.start_ts = self.g_pool.timestamps[0]
             logger.warning("End of video - restart at beginning.")
+            new_state = False  # Do not auto-play on rewind
 
         else:
             self.start_ts = self.current_ts
@@ -113,7 +127,7 @@ class Seek_Control(System_Plugin_Base):
 
     @current_ts.setter
     def current_ts(self, val):
-        print(f'current_ts <- {val}')
+        # print(f'current_ts <- {val}')
         if self.current_ts != val:
             val_idx = self.ts_idx_from_playback_time(val)
             self.start_ts = self.g_pool.timestamps[val_idx]

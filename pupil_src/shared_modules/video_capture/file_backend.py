@@ -270,7 +270,6 @@ class File_Source(Playback_Source, Base_Source):
         frame = None
         pbt = self.g_pool.seek_control.current_playback_time
         ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
-        print(f'recent_events_slaved {pbt} -> {ts_idx}')
         if ts_idx == last_index:
             frame = self._recent_frame.copy()
         elif ts_idx < last_index or ts_idx > last_index + 1:
