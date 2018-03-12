@@ -117,20 +117,17 @@ class Fake_Source(Playback_Source, Base_Source):
         ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
         if ts_idx == last_index:
             frame = self._recent_frame.copy()
+            if self.play and ts_idx == self.get_frame_count() - 1:
+                logger.info('Recording has ended.')
+                self.g_pool.seek_control.play = False
         elif ts_idx < last_index or ts_idx > last_index + 1:
             # time to seek
             self.seek_to_frame(ts_idx)
 
-        try:
-            # Only call get_frame() if the next frame is actually needed
-            frame = frame or self.get_frame()
-        except IndexError:
-            logger.info('Recording has ended.')
-            self.g_pool.seek_control.play = False
-            frame = self._recent_frame.copy()
-        finally:
-            self._recent_frame = frame
-            events['frame'] = frame
+        # Only call get_frame() if the next frame is actually needed
+        frame = frame or self.get_frame()
+        self._recent_frame = frame
+        events['frame'] = frame
 
     def recent_events_stand_alone(self, events):
         try:

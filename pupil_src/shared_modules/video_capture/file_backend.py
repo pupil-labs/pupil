@@ -274,22 +274,18 @@ class File_Source(Playback_Source, Base_Source):
         ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
         if ts_idx == last_index:
             frame = self._recent_frame.copy()
+            if self.play and ts_idx == self.get_frame_count() - 1:
+                logger.info('Video has ended.')
+                self.g_pool.seek_control.play = False
+
         elif ts_idx < last_index or ts_idx > last_index + 1:
             # time to seek
             self.seek_to_frame(ts_idx)
 
-        try:
-            # Only call get_frame() if the next frame is actually needed
-            frame = frame or self.get_frame()
-        except EndofVideoError:
-            logger.info('Video has ended.')
-            self.notify_all({"subject": 'file_source.video_finished', 'source_path': self.source_path})
-            self.g_pool.seek_control.play = False
-            # display most recent frame
-            frame = self._recent_frame.copy()
-        finally:
-            self._recent_frame = frame
-            events['frame'] = frame
+        # Only call get_frame() if the next frame is actually needed
+        frame = frame or self.get_frame()
+        self._recent_frame = frame
+        events['frame'] = frame
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05),
                            requires_playback=True)
