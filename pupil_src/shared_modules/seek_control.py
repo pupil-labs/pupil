@@ -34,7 +34,8 @@ class Seek_Control(System_Plugin_Base):
         self.drag_mode = False
         self.was_playing = True
         self.start_time = 0.
-        self.start_ts = 0.
+        self.start_ts = self.g_pool.timestamps[0]
+        self.time_slew = 0.
         g_pool.capture.play = False
 
     def init_ui(self):
@@ -48,24 +49,15 @@ class Seek_Control(System_Plugin_Base):
         self.seek_bar = None
 
     def recent_events(self, events):
-        frame = events.get('frame')
-        if not frame:
-            return
-
-        if frame.timestamp == self.trim_left_ts or frame.timestamp == self.trim_right_ts:
-            self.g_pool.capture.play = False
+        if self.current_ts == self.trim_left_ts or self.current_ts == self.trim_right_ts:
+            self.play = False
 
     def on_seek(self, seeking):
         if seeking:
-            self.was_playing = self.g_pool.capture.play
-            self.g_pool.capture.play = False
-            self.start_time = 0.
-            self.start_ts = 0.
+            self.was_playing = self.play
+            self.play = False
         else:
-            self.g_pool.capture.play = self.was_playing
-            if self.g_pool.capture.play:
-                self.start_time = time.monotonic()
-                self.start_ts = self.current_ts
+            self.play = self.was_playing
 
     @property
     def play(self):
@@ -73,33 +65,29 @@ class Seek_Control(System_Plugin_Base):
 
     @play.setter
     def play(self, new_state):
+
         if new_state and self.current_ts == self.trim_right_ts:
-            self.g_pool.capture.seek_to_frame(self.trim_left)
-            self.g_pool.new_seek = True
+            self.start_ts = self.trim_left_ts
 
         # Sometimes there is less video frames than timestamps. The rewind
         # logic needs to catch these cases but work for recordings with less
         # than 10 frames
         elif new_state and self.current_ts >= self.g_pool.timestamps[-10:][0]:
-            self.g_pool.capture.seek_to_frame(0)
-            self.g_pool.new_seek = True
+            self.start_ts = self.g_pool.timestamps[0]
             logger.warning("End of video - restart at beginning.")
-        else:
-            self.g_pool.capture.play = new_state
-        if new_state:
-            self.start_time = time.monotonic()
-            self.start_ts = self.current_ts
-        else:
-            self.start_time = self.start_ts = 0.
 
+        else:
+            self.start_ts = self.current_ts
+
+        self.start_time = time.monotonic()
         self.g_pool.capture.play = new_state
 
     @property
     def current_playback_time(self):
+        playback_time = self.start_ts - self.time_slew
         if self.g_pool.capture.play:
-            return (time.monotonic() - self.start_time) * self.playback_speed + self.start_ts
-        else:
-            return 0.
+            playback_time += (time.monotonic() - self.start_time) * self.playback_speed
+        return playback_time
 
     @property
     def trim_left_ts(self):
@@ -121,18 +109,32 @@ class Seek_Control(System_Plugin_Base):
 
     @property
     def current_ts(self):
-        return self.g_pool.timestamps[self.g_pool.capture.get_frame_index()]
+        return self.g_pool.timestamps[self.ts_idx_from_playback_time(self.current_playback_time)]
 
     @current_ts.setter
     def current_ts(self, val):
+        print(f'current_ts <- {val}')
         if self.current_ts != val:
-            try:
-                val_idx = bisect_left(self.g_pool.timestamps, val)
-                self.g_pool.capture.seek_to_frame(val_idx)
-            except:
-                import traceback as tb
-                logger.error(tb.format_exc())
-            self.g_pool.new_seek = True
+            val_idx = self.ts_idx_from_playback_time(val)
+            self.start_ts = self.g_pool.timestamps[val_idx]
+
+    def ts_idx_from_playback_time(self, playback_time):
+        all_ts = self.g_pool.timestamps
+        index = bisect_left(all_ts, playback_time)
+        # test which timestamp is closer
+        try:
+            ts_left, ts_right = self.g_pool.timestamps[index-1:index+1]
+            if playback_time < (ts_left + ts_right) / 2:
+                index -= 1
+        except ValueError:  # if index==0 or index==len(all_ts)
+            if index == len(all_ts):
+                index = len(all_ts) - 1
+            elif index == 0:
+                pass
+            else:
+                print(f'ts[{index-1}:{index}] -> {self.g_pool.timestamps[index - 1:index]}')
+                raise
+        return index
 
     @property
     def forwards(self):
@@ -141,16 +143,18 @@ class Seek_Control(System_Plugin_Base):
     @forwards.setter
     def forwards(self, x):
         if self.g_pool.capture.play:
+            self.start_ts = self.current_ts
+            self.start_time = time.monotonic()
             # playback mode, increase playback speed
             speeds = self.g_pool.capture.allowed_speeds
             old_idx = speeds.index(self.g_pool.capture.playback_speed)
             new_idx = min(len(speeds) - 1, old_idx + 1)
             self.g_pool.capture.playback_speed = speeds[new_idx]
-            self.start_time = time.monotonic()
-            self.start_ts = self.current_ts
         else:
             # frame-by-frame mode, seek one frame forward
-            self.g_pool.new_seek = True
+            ts_idx = self.ts_idx_from_playback_time(self.current_playback_time)
+            ts_idx = min(ts_idx + 1, len(self.g_pool.timestamps) - 1)
+            self.start_ts = self.g_pool.timestamps[ts_idx]
 
     @property
     def backwards(self):
@@ -159,17 +163,18 @@ class Seek_Control(System_Plugin_Base):
     @backwards.setter
     def backwards(self, x):
         if self.g_pool.capture.play:
+            self.start_ts = self.current_ts
+            self.start_time = time.monotonic()
             # playback mode, decrease playback speed
             speeds = self.g_pool.capture.allowed_speeds
             old_idx = speeds.index(self.g_pool.capture.playback_speed)
             new_idx = max(0, old_idx - 1)
             self.g_pool.capture.playback_speed = speeds[new_idx]
-            self.start_time = time.monotonic()
-            self.start_ts = self.current_ts
         else:
-            # frame-by-frame mode, seek one frame backwards
-            self.g_pool.capture.seek_to_prev_frame()
-            self.g_pool.new_seek = True
+            # frame-by-frame mode, seek one frame forward
+            ts_idx = self.ts_idx_from_playback_time(self.current_playback_time)
+            ts_idx = max(0, ts_idx - 1)
+            self.start_ts = self.g_pool.timestamps[ts_idx]
 
     @property
     def playback_speed(self):

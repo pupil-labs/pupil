@@ -199,10 +199,26 @@ class Base_Manager(Plugin):
 class Playback_Source(Base_Source):
     allowed_speeds = [.25, .5, 1., 1.5, 2., 4.]
 
-    def __init__(self, g_pool, timed_playback=False, playback_speed=1., *args, **kwargs):
+    def __init__(self, g_pool, stand_alone=True, timed_playback=False, playback_speed=1., *args, **kwargs):
+        '''
+        Possible configurations:
+                                    stand_alone
+                             |   True    | False
+                       ------+-----------+--------
+                        True |  Capture  |   /
+        timed_playback ------+-----------+--------
+                       False | Detectors | Player
+
+
+        Capture: Fake/File Source is used as UVC Source replecement.
+        Player: Seek Control provides
+        '''
         super().__init__(g_pool)
-        self.playback_speed = playback_speed
+        self.stand_alone = stand_alone
         self.timed_playback = timed_playback
+        assert stand_alone or not timed_playback, 'Invalid configuration'
+
+        self.playback_speed = playback_speed
         self.finished_sleep = 0.
         self._recent_wait_ts = -1
         self.play = True
@@ -219,15 +235,15 @@ class Playback_Source(Base_Source):
     def get_frame(self):
         raise NotImplementedError()
 
-    def wait(self, frame):
-        if frame.timestamp == self._recent_wait_ts:
+    def wait(self, timestamp):
+        if timestamp == self._recent_wait_ts:
             sleep(1/60)  # 60 fps on Player pause
         elif self.finished_sleep:
-            target_wait_time = frame.timestamp - self._recent_wait_ts
+            target_wait_time = timestamp - self._recent_wait_ts
             target_wait_time /= self.playback_speed
             time_spent = monotonic() - self.finished_sleep
             target_wait_time -= time_spent
             if 1 > target_wait_time > 0:
                 sleep(target_wait_time)
-        self._recent_wait_ts = frame.timestamp
+        self._recent_wait_ts = timestamp
         self.finished_sleep = monotonic()

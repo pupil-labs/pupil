@@ -86,6 +86,11 @@ class File_Source(Playback_Source, Base_Source):
     def __init__(self, g_pool, source_path=None, loop=False, *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
 
+        if self.stand_alone:
+            self.recent_events = self.recent_events_stand_alone
+        else:
+            self.recent_events = self.recent_events_slaved
+
         # minimal attribute set
         self._initialised = True
         self.source_path = source_path
@@ -153,16 +158,14 @@ class File_Source(Playback_Source, Base_Source):
         loc, name = os.path.split(os.path.splitext(source_path)[0])
         self._intrinsics = load_intrinsics(loc, name, self.frame_size)
 
-    def ensure_initialisation(fallback_func=None, requires_playback=False):
+    def ensure_initialisation(fallback_func=None):
         from functools import wraps
 
         def decorator(func):
             @wraps(func)
             def run_func(self, *args, **kwargs):
                 if self._initialised and self.video_stream:
-                    # test self.play only if requires_playback is True
-                    if not requires_playback or self.play:
-                        return func(self, *args, **kwargs)
+                    return func(self, *args, **kwargs)
                 if fallback_func:
                     return fallback_func(*args, **kwargs)
                 else:
@@ -256,8 +259,39 @@ class File_Source(Playback_Source, Base_Source):
         self.current_frame_idx = index
         return Frame(timestamp, frame, index=index)
 
-    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05), requires_playback=True)
-    def recent_events(self, events):
+    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
+    def recent_events_slaved(self, events):
+        try:
+            last_index = self._recent_frame.index
+        except AttributeError:
+            # called once on start when self._recent_frame is None
+            last_index = -1
+
+        frame = None
+        pbt = self.g_pool.seek_control.current_playback_time
+        ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
+        print(f'recent_events_slaved {pbt} -> {ts_idx}')
+        if ts_idx == last_index:
+            frame = self._recent_frame.copy()
+        elif ts_idx < last_index or ts_idx > last_index + 1:
+            # time to seek
+            self.seek_to_frame(ts_idx)
+
+        try:
+            # Only call get_frame() if the next frame is actually needed
+            frame = frame or self.get_frame()
+        except EndofVideoError:
+            logger.info('Video has ended.')
+            self.notify_all({"subject": 'file_source.video_finished', 'source_path': self.source_path})
+            self.g_pool.seek_control.play = False
+            # display most recent frame
+            frame = self._recent_frame.copy()
+        finally:
+            self._recent_frame = frame
+            events['frame'] = frame
+
+    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
+    def recent_events_stand_alone(self, events):
         try:
             frame = self.get_frame()
         except EndofVideoError:
@@ -266,7 +300,7 @@ class File_Source(Playback_Source, Base_Source):
             self.play = False
         else:
             if self.timed_playback:
-                self.wait(frame)
+                self.wait(frame.timestamp)
             self._recent_frame = frame
             events['frame'] = frame
 

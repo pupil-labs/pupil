@@ -66,6 +66,11 @@ class Fake_Source(Playback_Source, Base_Source):
     def __init__(self, g_pool, source_path=None, frame_size=None,
                  frame_rate=None, name='Fake Source', *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
+        if self.stand_alone:
+            self.recent_events = self.recent_events_stand_alone
+        else:
+            self.recent_events = self.recent_events_slaved
+
         if source_path:
             meta = load_object(source_path)
             frame_size = meta['frame_size']
@@ -100,7 +105,34 @@ class Fake_Source(Playback_Source, Base_Source):
 
         self._intrinsics = Dummy_Camera(size, self.name)
 
-    def recent_events(self, events):
+    def recent_events_slaved(self, events):
+        try:
+            last_index = self._recent_frame.index
+        except AttributeError:
+            # called once on start when self._recent_frame is None
+            last_index = -1
+
+        frame = None
+        pbt = self.g_pool.seek_control.current_playback_time
+        ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
+        if ts_idx == last_index:
+            frame = self._recent_frame.copy()
+        elif ts_idx < last_index or ts_idx > last_index + 1:
+            # time to seek
+            self.seek_to_frame(ts_idx)
+
+        try:
+            # Only call get_frame() if the next frame is actually needed
+            frame = frame or self.get_frame()
+        except IndexError:
+            logger.info('Recording has ended.')
+            self.g_pool.seek_control.play = False
+            frame = self._recent_frame.copy()
+        finally:
+            self._recent_frame = frame
+            events['frame'] = frame
+
+    def recent_events_stand_alone(self, events):
         try:
             frame = self.get_frame()
         except IndexError:
@@ -108,7 +140,7 @@ class Fake_Source(Playback_Source, Base_Source):
             self.play = False
         else:
             if self.timed_playback:
-                self.wait(frame)
+                self.wait(frame.timestamp)
             self._recent_frame = frame
             events['frame'] = frame
 
@@ -169,9 +201,6 @@ class Fake_Source(Playback_Source, Base_Source):
 
     def get_frame_index(self):
         return self.current_frame_idx
-
-    def seek_to_prev_frame(self):
-        self.seek_to_frame(self.current_frame_idx - 1)
 
     @property
     def name(self):

@@ -58,7 +58,7 @@ else:
 
 
 def init_playback_source(g_pool, source_path=None, *args, **kwargs):
-        if source_path is None or os.path.splitext(source_path)[1] == '.fake':
-            return Fake_Source(g_pool, source_path=source_path, *args, **kwargs)
-        else:
-            return File_Source(g_pool, source_path=source_path, *args, **kwargs)
+    if source_path is None or os.path.splitext(source_path)[1] == '.fake':
+        return Fake_Source(g_pool, source_path=source_path, *args, **kwargs)
+    else:
+        return File_Source(g_pool, source_path=source_path, *args, **kwargs)

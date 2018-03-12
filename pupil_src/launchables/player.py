@@ -209,7 +209,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
         video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
                       if os.path.splitext(f)[1] in valid_ext][0]
-        init_playback_source(g_pool, source_path=video_path)
+        init_playback_source(g_pool, stand_alone=False, source_path=video_path)
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
@@ -247,7 +247,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.version = app_version
         g_pool.timestamps = g_pool.capture.timestamps
         g_pool.get_timestamp = lambda: 0.
-        g_pool.new_seek = True
         g_pool.user_dir = user_dir
         g_pool.rec_dir = rec_dir
         g_pool.meta_info = meta_info
@@ -390,6 +389,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                            ('Gaze_From_Recording', {})]
         g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
 
+        # Manually add g_pool.capture to the plugin list
+        g_pool.plugins._plugins.append(g_pool.capture)
+        g_pool.plugins._plugins.sort(key=lambda p: p.order)
+
         general_settings.insert(-1 ,ui.Text_Input('rel_time_trim_section',
                                               getter=g_pool.seek_control.get_rel_time_trim_range_string,
                                               setter=g_pool.seek_control.set_rel_time_trim_range_string,
@@ -449,19 +452,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                 for p in g_pool.plugins:
                     p.on_notify(n)
 
-            # grab new frame
-            if g_pool.capture.play or g_pool.new_seek:
-                g_pool.new_seek = False
-                try:
-                    new_frame = g_pool.capture.get_frame()
-                except EndofVideoError:
-                    # end of video logic: pause at last frame.
-                    g_pool.capture.play = False
-                    logger.warning("End of video")
-
-            frame = new_frame.copy()
             events = {}
-            events['frame'] = frame
             # report time between now and the last loop interation
             events['dt'] = get_dt()
 
@@ -481,7 +472,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             if gl_utils.is_window_visible(main_window):
 
                 gl_utils.glViewport(0, 0, *g_pool.camera_render_size)
-                g_pool.capture._recent_frame = frame
                 g_pool.capture.gl_display()
                 for p in g_pool.plugins:
                     p.gl_display()
@@ -515,11 +505,15 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                     for p in g_pool.plugins:
                         p.on_char(char_)
 
+                # present frames at appropriate speed
+                g_pool.capture.wait(events['frame'].timestamp)
                 glfw.glfwSwapBuffers(main_window)
 
-            # present frames at appropriate speed
-            g_pool.capture.wait(frame)
             glfw.glfwPollEvents()
+
+        # Remove manually to avoid being included in `loaded_plugins`
+        # and `deinit_ui()` call on `g_pool.plugins.clean()`
+        g_pool.plugins._plugins.remove(g_pool.capture)
 
         session_settings['playback_speed'] = g_pool.capture.playback_speed
         session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
