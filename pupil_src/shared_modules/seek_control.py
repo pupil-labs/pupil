@@ -135,19 +135,8 @@ class Seek_Control(System_Plugin_Base):
     def ts_idx_from_playback_time(self, playback_time):
         all_ts = self.g_pool.timestamps
         index = bisect_left(all_ts, playback_time)
-        # test which timestamp is closer
-        try:
-            ts_left, ts_right = self.g_pool.timestamps[index-1:index+1]
-            if playback_time < (ts_left + ts_right) / 2:
-                index -= 1
-        except ValueError:  # if index==0 or index==len(all_ts)
-            if index == len(all_ts):
-                index = len(all_ts) - 1
-            elif index == 0:
-                pass
-            else:
-                print(f'ts[{index-1}:{index}] -> {self.g_pool.timestamps[index - 1:index]}')
-                raise
+        if index == len(all_ts):
+            index = len(all_ts) - 1
         return index
 
     @property
@@ -262,3 +251,11 @@ class Seek_Control(System_Plugin_Base):
             micro_seconds_e1 = int((seconds - int(seconds)) * 1e3)
             time_fmt += '{:02.0f}_{:02d}_{:03d}-'.format(abs(minutes), int(seconds), micro_seconds_e1)
         return time_fmt[:-1]
+    def wait(self, ts):
+        if self.play:
+            playback_now = self.current_playback_time
+            time_diff = (ts - playback_now) / self.playback_speed
+            if time_diff > .005:
+                time.sleep(time_diff)
+        else:
+            time.sleep(1 / 60)
