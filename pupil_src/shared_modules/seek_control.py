@@ -120,13 +120,20 @@ class Seek_Control(System_Plugin_Base):
 
     @property
     def current_ts(self):
-        return self.g_pool.timestamps[self.ts_idx_from_playback_time(self.current_playback_time)]
+        return self.g_pool.timestamps[self.current_ts_idx]
 
     @current_ts.setter
     def current_ts(self, val):
-        if self.current_ts != val:
-            val_idx = self.ts_idx_from_playback_time(val)
-            self.start_ts = self.g_pool.timestamps[val_idx]
+        self.current_ts_idx = self.ts_idx_from_playback_time(val)
+
+    @property
+    def current_ts_idx(self):
+        return self.g_pool.capture.get_frame_index()
+
+    @current_ts_idx.setter
+    def current_ts_idx(self, val):
+        if self.current_ts_idx != val:
+            self.start_ts = self.g_pool.timestamps[val]
 
     def ts_idx_from_playback_time(self, playback_time):
         all_ts = self.g_pool.timestamps
@@ -151,7 +158,7 @@ class Seek_Control(System_Plugin_Base):
             self.g_pool.capture.playback_speed = speeds[new_idx]
         else:
             # frame-by-frame mode, seek one frame forward
-            ts_idx = self.ts_idx_from_playback_time(self.current_playback_time)
+            ts_idx = self.current_ts_idx
             ts_idx = min(ts_idx + 1, len(self.g_pool.timestamps) - 1)
             self.start_ts = self.g_pool.timestamps[ts_idx]
 
@@ -171,7 +178,7 @@ class Seek_Control(System_Plugin_Base):
             self.g_pool.capture.playback_speed = speeds[new_idx]
         else:
             # frame-by-frame mode, seek one frame forward
-            ts_idx = self.ts_idx_from_playback_time(self.current_playback_time)
+            ts_idx = self.current_ts_idx
             ts_idx = max(0, ts_idx - 1)
             self.start_ts = self.g_pool.timestamps[ts_idx]
 
@@ -247,11 +254,13 @@ class Seek_Control(System_Plugin_Base):
             micro_seconds_e1 = int((seconds - int(seconds)) * 1e3)
             time_fmt += '{:02.0f}_{:02d}_{:03d}-'.format(abs(minutes), int(seconds), micro_seconds_e1)
         return time_fmt[:-1]
+
     def wait(self, ts):
         if self.play:
             playback_now = self.current_playback_time
             time_diff = (ts - playback_now) / self.playback_speed
             if time_diff > .005:
+                print(time_diff)
                 time.sleep(time_diff)
         else:
             time.sleep(1 / 60)

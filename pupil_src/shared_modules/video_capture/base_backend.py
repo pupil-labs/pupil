@@ -234,7 +234,7 @@ class Playback_Source(Base_Source):
 
     def wait(self, timestamp):
         if timestamp == self._recent_wait_ts:
-            sleep(1/60)  # 60 fps on Player pause
+            sleep(1/60)  # 60 fps on pause
         elif self.finished_sleep:
             target_wait_time = timestamp - self._recent_wait_ts
             target_wait_time /= self.playback_speed
