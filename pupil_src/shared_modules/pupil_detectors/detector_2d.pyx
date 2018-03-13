@@ -130,7 +130,7 @@ cdef class Detector_2D:
         roi_height  = roi.get()[3] - roi.get()[1]
         cdef int[:,::1] integral
 
-        if self.detectProperties['coarse_detection'] and image_width > 200:
+        if self.detectProperties['coarse_detection'] and roi_width*roi_height > 320*240:
             scale = 2 # half the integral image. boost up integral
             # TODO maybe implement our own Integral so we don't have to half the image
             user_roi_image = frame_.gray[user_roi.view]
