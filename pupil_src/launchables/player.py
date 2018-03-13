@@ -506,7 +506,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                         p.on_char(char_)
 
                 # present frames at appropriate speed
-                g_pool.capture.wait(events['frame'].timestamp)
+                g_pool.seek_control.wait(events['frame'].timestamp)
                 glfw.glfwSwapBuffers(main_window)
 
             glfw.glfwPollEvents()

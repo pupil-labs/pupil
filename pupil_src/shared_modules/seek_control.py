@@ -52,12 +52,10 @@ class Seek_Control(System_Plugin_Base):
     def recent_events(self, events):
         pbt = self.current_playback_time
         if self.play and self._recent_playback_time < self.trim_left_ts <= pbt:
-            # print(f'{self._recent_playback_time}\t<\t{self.trim_left_ts}\t<=\t{pbt}')
             self._recent_playback_time = self.trim_left_ts
             self.play = False
             self.start_ts = self.trim_left_ts
         elif self.play and self._recent_playback_time < self.trim_right_ts <= pbt:
-            # print(f'{self._recent_playback_time}\t<\t{self.trim_right_ts}\t<=\t{pbt}')
             self._recent_playback_time = self.trim_right_ts
             self.play = False
             self.start_ts = self.trim_right_ts
@@ -77,7 +75,6 @@ class Seek_Control(System_Plugin_Base):
 
     @play.setter
     def play(self, new_state):
-        # print(f'{new_state}: {self._recent_playback_time}\t=?=\t{self.trim_right_ts}')
         if new_state and self._recent_playback_time == self.trim_right_ts:
             self.start_ts = self.trim_left_ts
             new_state = False  # Do not auto-play on rewind
@@ -127,7 +124,6 @@ class Seek_Control(System_Plugin_Base):
 
     @current_ts.setter
     def current_ts(self, val):
-        # print(f'current_ts <- {val}')
         if self.current_ts != val:
             val_idx = self.ts_idx_from_playback_time(val)
             self.start_ts = self.g_pool.timestamps[val_idx]
