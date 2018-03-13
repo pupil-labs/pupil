@@ -50,7 +50,7 @@ class Seek_Control(System_Plugin_Base):
         self.seek_bar = None
 
     def recent_events(self, events):
-        pbt = self.current_playback_time
+        pbt = self.current_ts
         if self.play and self._recent_playback_time < self.trim_left_ts <= pbt:
             self._recent_playback_time = self.trim_left_ts
             self.play = False
@@ -92,10 +92,12 @@ class Seek_Control(System_Plugin_Base):
 
         self.start_time = time.monotonic()
         self.g_pool.capture.play = new_state
+        self.time_slew = 0
 
     @property
     def current_playback_time(self):
         playback_time = self.start_ts - self.time_slew
+
         if self.g_pool.capture.play:
             playback_time += (time.monotonic() - self.start_time) * self.playback_speed
         return playback_time

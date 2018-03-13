@@ -37,6 +37,7 @@ class Audio_Capture(Plugin):
     """docstring for Audio_Capture"""
     icon_chr = chr(0xe029)
     icon_font = 'pupil_icons'
+    order = .0
 
     def __init__(self, g_pool, audio_src='No Audio'):
         super().__init__(g_pool)

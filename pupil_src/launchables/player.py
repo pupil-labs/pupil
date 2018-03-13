@@ -103,6 +103,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from system_graphs import System_Graphs
         from system_timelines import System_Timelines
         from blink_detection import Offline_Blink_Detection
+        from audio_playback import Audio_Playback
 
         assert VersionFormat(pyglui_version) >= VersionFormat('1.18'), 'pyglui out of date, please upgrade to newest version'
 
@@ -387,10 +388,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                            ('Video_Export_Launcher', {}),
                            ('Pupil_From_Recording', {}),
                            ('Gaze_From_Recording', {})]
+
         g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
 
         # Manually add g_pool.capture to the plugin list
         g_pool.plugins._plugins.append(g_pool.capture)
+        if os.path.isfile(os.path.join(rec_dir, 'audio.mp4')):
+            g_pool.plugins._plugins.append(Audio_Playback(g_pool))
         g_pool.plugins._plugins.sort(key=lambda p: p.order)
 
         general_settings.insert(-1 ,ui.Text_Input('rel_time_trim_section',
