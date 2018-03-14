@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 from .base_backend import InitialisationError, StreamError, EndofVideoError
 from .base_backend import Base_Source, Base_Manager
 from .fake_backend import Fake_Source, Fake_Manager
-from .file_backend import FileCaptureError, FileSeekError
+from .file_backend import FileSeekError
 from .file_backend import File_Source, File_Manager
 from .uvc_backend import UVC_Source,  UVC_Manager
 

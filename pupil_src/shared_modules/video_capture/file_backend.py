@@ -29,10 +29,6 @@ av.logging.set_level(av.logging.ERROR)
 logging.getLogger('libav').setLevel(logging.ERROR)
 
 
-class FileCaptureError(Exception):
-    pass
-
-
 class FileSeekError(Exception):
     pass
 
