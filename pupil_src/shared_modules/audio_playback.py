@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import numpy as np
-from plugin import Plugin
+from plugin import System_Plugin_Base
 import os
 import av
 from bisect import bisect_left as bisect
@@ -25,7 +25,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Audio_Playback(Plugin):
+class Audio_Playback(System_Plugin_Base):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites not between
