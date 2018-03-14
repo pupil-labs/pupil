@@ -262,7 +262,6 @@ class Seek_Control(System_Plugin_Base):
             playback_now = self.current_playback_time
             time_diff = (ts - playback_now) / self.playback_speed
             if time_diff > .005:
-                print(time_diff)
                 time.sleep(time_diff)
         else:
             time.sleep(1 / 60)
