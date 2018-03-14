@@ -24,6 +24,9 @@ from time import monotonic
 import logging
 logger = logging.getLogger(__name__)
 
+class FileSeekError(Exception):
+    pass
+
 
 class Audio_Playback(System_Plugin_Base):
     """Calibrate using a marker on your screen
@@ -42,6 +45,7 @@ class Audio_Playback(System_Plugin_Base):
         self.audio_stream = None
         self.next_audio_frame = None
         self.audio_start_pts = 0
+        self.check_ts_consistency = False
         audio_file = os.path.join(self.g_pool.rec_dir, 'audio.mp4')
         if os.path.isfile(audio_file):
             self.audio_container = av.open(str(audio_file))
@@ -74,17 +78,18 @@ class Audio_Playback(System_Plugin_Base):
             self.audio_start_pts = 0
             logger.info("audio_pts_rate = {} start_pts = {}".format(self.audio_pts_rate, self.audio_start_pts))
 
-            print("**** Checking stream")
-            for i, af in enumerate(self.next_audio_frame):
-                fnum = i + 2
-                if af.samples != af0.samples:
-                    print("fnum {} samples = {}".format(fnum, af.samples))
-                if af.pts != self.audio_idx_to_pts(fnum):
-                    print("af.pts = {} fnum = {} idx2pts = {}".format(af.pts, fnum, self.audio_idx_to_pts(fnum)))
-                if self.audio_timestamps[fnum] != self.audio_timestamps[0] + af.pts * self.audio_stream.time_base:
-                    print("ts[0] + af.pts = {} fnum = {} timestamp = {}".format(
-                        self.audio_timestamps[0] + af.pts * self.audio_stream.time_base, fnum, self.audio_timestamps[fnum]))
-            print("**** Done")
+            if self.check_ts_consistency:
+                print("**** Checking stream")
+                for i, af in enumerate(self.next_audio_frame):
+                    fnum = i + 2
+                    if af.samples != af0.samples:
+                        print("fnum {} samples = {}".format(fnum, af.samples))
+                    if af.pts != self.audio_idx_to_pts(fnum):
+                        print("af.pts = {} fnum = {} idx2pts = {}".format(af.pts, fnum, self.audio_idx_to_pts(fnum)))
+                    if self.audio_timestamps[fnum] != self.audio_timestamps[0] + af.pts * self.audio_stream.time_base:
+                        print("ts[0] + af.pts = {} fnum = {} timestamp = {}".format(
+                            self.audio_timestamps[0] + af.pts * self.audio_stream.time_base, fnum, self.audio_timestamps[fnum]))
+                print("**** Done")
             self.seek_to_audio_frame(0)
 
             logger.info("Audio file format {} chans {} rate {} framesize {} ".format(self.audio_stream.format,
@@ -103,10 +108,8 @@ class Audio_Playback(System_Plugin_Base):
                     self.audio_sync -= lat_diff
                     self.g_pool.seek_control.time_slew = self.audio_sync
 
-                    print("Measured latency = {}".format(self.audio_measured_latency))
+                    logger.info("Measured latency = {}".format(self.audio_measured_latency))
 
-                    # print("Time diff {}".format(time_info['output_buffer_dac_time'] - time_info['current_time']))
-                    # print("Callback delay from audio start {}".format(monotonic() - self.audio_start_time))
                 if not self.play:
                     self.audio_paused = True
                     logger.info("audio cb abort 1")
@@ -170,84 +173,7 @@ class Audio_Playback(System_Plugin_Base):
     def seek_to_frame(self, frame_idx):
         if self.audio_stream is not None:
             audio_idx = bisect(self.audio_timestamps, self.timestamps[frame_idx])
-            print("audio_idx = {}, ts = {}".format(audio_idx, self.timestamps[frame_idx]))
             self.seek_to_audio_frame(audio_idx)
-
-
-    def get_frame_index(self):
-        raise NotImplementedError()
-
-
-    def seek_to_prev_frame(self):
-        raise NotImplementedError()
-
-
-    def get_frame(self, frame_idx=-1):
-        if self.pa_stream is not None and self.play:
-            samples_written = 0
-            if self.playback_speed == 1.:
-                if (self.pa_stream.is_stopped() or self.audio_paused) and self.audio_delay <= 0.001:
-                    if frame_idx == -1:
-                        frame_idx = 0
-                    playback_start_audio = monotonic()
-                    audio_idx = bisect(self.audio_timestamps, self.timestamps[frame_idx])
-                    self.seek_to_audio_frame(audio_idx)
-                frames_chunk = itertools.islice(self.next_audio_frame, 10)
-                for audio_frame_p in frames_chunk:
-                    audio_frame = self.audio_resampler.resample(audio_frame_p)
-                    self.audio_bytes_fifo.append(bytes(audio_frame.planes[0]))
-                if (self.pa_stream.is_stopped() or self.audio_paused) and self.audio_delay <= 0.001:
-                    if frame_idx == -1:
-                        frame_idx = 0
-                    playback_clock_delay = monotonic() - playback_start_audio
-                    print("Delay from starting playback is {}".format(playback_clock_delay))
-                    rt_delay = self.audio_timestamps[audio_idx] - self.g_pool.seek_control.current_playback_time
-                    adj_delay = rt_delay - self.pa_stream.get_output_latency()
-                    self.audio_delay = 0
-                    self.audio_sync = 0
-                    if adj_delay > 0:
-                        self.audio_delay = adj_delay
-                        self.audio_sync = 0
-                    else:
-                        self.audio_sync = adj_delay
-
-                    self.g_pool.seek_control.time_slew = self.audio_sync
-
-                    # ts_delay = self.audio_timestamps[0] - self.timestamps[frame_idx]
-                    # if ts_delay > 0.:
-                    #    delay_lat = ts_delay - self.pa_stream.get_output_latency() - playback_clock_delay
-                    #    if delay_lat > 0.:
-                    #        self.audio_delay = delay_lat
-                    #        self.audio_sync = 0
-                    #    else:
-                    #        self.audio_delay = 0
-                    #        self.audio_sync = - delay_lat
-                    # else:
-                    #    self.audio_delay = 0.
-                    #    self.audio_sync = self.pa_stream.get_output_latency() + playback_clock_delay
-
-                    # if self.pa_stream.is_stopped() or self.audio_paused:
-                    self.pa_stream.stop_stream()
-                    self.audio_measured_latency = -1
-                if self.audio_delay < 0.001:
-                    self.audio_start_time = monotonic()
-                    self.pa_stream.start_stream()
-                else:
-                    def delayed_audio_start():
-                        if self.pa_stream.is_stopped():
-                            self.audio_start_time = monotonic()
-                            self.pa_stream.start_stream()
-                            self.audio_delay = 0
-                            logger.info("Started delayed audio")
-                        self.audio_timer.cancel()
-
-                    self.audio_timer = Timer(self.audio_delay, delayed_audio_start)
-                    self.audio_timer.start()
-
-                self.audio_paused = False
-
-        elif not self.pa_stream.is_stopped():
-            self.pa_stream.stop_stream()
 
     def on_notify(self, notification):
         pass
@@ -258,7 +184,6 @@ class Audio_Playback(System_Plugin_Base):
             if (self.pa_stream.is_stopped() or self.audio_paused) and self.audio_delay <= 0.001:
                 pbt = self.g_pool.seek_control.current_playback_time
                 frame_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
-                playback_start_audio = monotonic()
                 audio_idx = bisect(self.audio_timestamps, self.g_pool.timestamps[frame_idx])
                 self.seek_to_audio_frame(audio_idx)
             frames_chunk = itertools.islice(self.next_audio_frame, 10)
@@ -266,8 +191,6 @@ class Audio_Playback(System_Plugin_Base):
                 audio_frame = self.audio_resampler.resample(audio_frame_p)
                 self.audio_bytes_fifo.append(bytes(audio_frame.planes[0]))
             if (self.pa_stream.is_stopped() or self.audio_paused) and self.audio_delay <= 0.001:
-                playback_clock_delay = monotonic() - playback_start_audio
-                print("Delay from starting playback is {}".format(playback_clock_delay))
                 rt_delay = self.audio_timestamps[audio_idx] - self.g_pool.seek_control.current_playback_time
                 adj_delay = rt_delay - self.pa_stream.get_output_latency()
                 self.audio_delay = 0
@@ -278,20 +201,6 @@ class Audio_Playback(System_Plugin_Base):
                 else:
                     self.audio_sync = adj_delay
 
-                # ts_delay = self.audio_timestamps[0] - self.timestamps[frame_idx]
-                # if ts_delay > 0.:
-                #    delay_lat = ts_delay - self.pa_stream.get_output_latency() - playback_clock_delay
-                #    if delay_lat > 0.:
-                #        self.audio_delay = delay_lat
-                #        self.audio_sync = 0
-                #    else:
-                #        self.audio_delay = 0
-                #        self.audio_sync = - delay_lat
-                # else:
-                #    self.audio_delay = 0.
-                #    self.audio_sync = self.pa_stream.get_output_latency() + playback_clock_delay
-
-                # if self.pa_stream.is_stopped() or self.audio_paused:
                 self.pa_stream.stop_stream()
                 self.audio_measured_latency = -1
                 if self.audio_delay < 0.001:
