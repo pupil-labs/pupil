@@ -173,7 +173,10 @@ class Audio_Playback(System_Plugin_Base):
             self.seek_to_audio_frame(audio_idx)
 
     def on_notify(self, notification):
-        pass
+        if notification['subject'] == 'seek_control.was_seeking':
+            if self.pa_stream is not None and not self.pa_stream.is_stopped():
+                self.pa_stream.stop_stream()
+                self.play = False
 
     def recent_events(self, events):
         if self.g_pool.seek_control.play and self.pa_stream is not None and self.g_pool.capture.playback_speed == 1.:
