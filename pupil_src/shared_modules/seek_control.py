@@ -31,8 +31,8 @@ class Seek_Control(System_Plugin_Base):
         g_pool.seek_control = self
         self.trim_left = 0
         self.trim_right = len(self.g_pool.timestamps) - 1
-        self.drag_mode = False
         self.was_playing = True
+        self.was_seeking = False
         self.start_time = 0.
         self.start_ts = self.g_pool.timestamps[0]
         self.time_slew = 0.
@@ -64,10 +64,11 @@ class Seek_Control(System_Plugin_Base):
 
     def on_seek(self, seeking):
         if seeking:
+            self.was_seeking = True
             self.was_playing = self.play
             self.play = False
-        else:
-            self.play = self.was_playing
+        elif self.was_playing:
+            self.play = True
 
     @property
     def play(self):
@@ -87,7 +88,7 @@ class Seek_Control(System_Plugin_Base):
             logger.warning("End of video - restart at beginning.")
             new_state = False  # Do not auto-play on rewind
 
-        else:
+        elif not new_state:
             self.start_ts = self.current_ts
 
         self.start_time = time.monotonic()
@@ -259,10 +260,11 @@ class Seek_Control(System_Plugin_Base):
         return time_fmt[:-1]
 
     def wait(self, ts):
-        if self.play:
+        if self.play and not self.was_seeking:
             playback_now = self.current_playback_time
             time_diff = (ts - playback_now) / self.playback_speed
             if time_diff > .005:
                 time.sleep(time_diff)
         else:
             time.sleep(1 / 60)
+            self.was_seeking = False
