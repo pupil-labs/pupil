@@ -390,8 +390,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                            ('Gaze_From_Recording', {}),
                            ('Audio_Playback', {})]
 
-        plugins = session_settings.get('loaded_plugins', default_plugins)
-        g_pool.plugins = Plugin_List(g_pool, plugins)
+        g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
 
         # Manually add g_pool.capture to the plugin list
         g_pool.plugins._plugins.append(g_pool.capture)
