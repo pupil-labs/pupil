@@ -158,6 +158,7 @@ class Seek_Control(System_Plugin_Base):
             old_idx = speeds.index(self.g_pool.capture.playback_speed)
             new_idx = min(len(speeds) - 1, old_idx + 1)
             self.g_pool.capture.playback_speed = speeds[new_idx]
+            self.time_slew = 0
         else:
             # frame-by-frame mode, seek one frame forward
             ts_idx = self.current_ts_idx

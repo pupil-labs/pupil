@@ -196,8 +196,10 @@ class Audio_Playback(System_Plugin_Base):
                     self.audio_delay = adj_delay
                     self.audio_sync = 0
                 else:
-                    self.audio_sync = adj_delay
+                    self.audio_sync = - adj_delay
 
+                logger.info("Audio sync = {} rt_delay = {} adj_delay = {}".format(self.audio_sync, rt_delay, adj_delay))
+                self.g_pool.seek_control.time_slew = self.audio_sync
                 self.pa_stream.stop_stream()
                 self.audio_measured_latency = -1
                 if self.audio_delay < 0.001:
