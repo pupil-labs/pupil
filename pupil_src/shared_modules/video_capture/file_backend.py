@@ -245,7 +245,7 @@ class File_Source(Playback_Source, Base_Source):
                 self.target_frame_idx = 0
                 return self.get_frame()
             else:
-                logger.info("End of videofile %s %s"%(self.current_frame_idx,len(self.timestamps)))
+                logger.debug("End of videofile %s %s"%(self.current_frame_idx,len(self.timestamps)))
                 raise EndofVideoError('Reached end of video file')
         try:
             timestamp = self.timestamps[index]
@@ -279,9 +279,15 @@ class File_Source(Playback_Source, Base_Source):
             self.seek_to_frame(ts_idx)
 
         # Only call get_frame() if the next frame is actually needed
-        frame = frame or self.get_frame()
-        self._recent_frame = frame
+        try:
+            frame = frame or self.get_frame()
+        except EndofVideoError:
+            logger.info('Video has ended.')
+            self.g_pool.seek_control.play = False
+            frame = frame or self._recent_frame.copy()
+
         events['frame'] = frame
+        self._recent_frame = frame
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05),
                            requires_playback=True)
