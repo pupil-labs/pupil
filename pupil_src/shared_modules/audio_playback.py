@@ -25,6 +25,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class FileSeekError(Exception):
+    pass
+
+
 class Audio_Playback(System_Plugin_Base):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
@@ -135,7 +139,6 @@ class Audio_Playback(System_Plugin_Base):
             except ValueError:
                 self.pa_stream = None
 
-
     def get_audio_sync(self):
         # Audio has been started without delay
         if self.audio_measured_latency > 0:
@@ -144,7 +147,6 @@ class Audio_Playback(System_Plugin_Base):
         else:
             return self.audio_sync
 
-
     def _next_audio_frame(self):
         for packet in self.audio_container.demux(self.audio_stream):
             for frame in packet.decode():
@@ -152,10 +154,8 @@ class Audio_Playback(System_Plugin_Base):
                     yield frame
         raise StopIteration()
 
-
     def audio_idx_to_pts(self, idx):
         return idx * self.audio_pts_rate
-
 
     def seek_to_audio_frame(self, seek_pos):
         try:
@@ -166,21 +166,11 @@ class Audio_Playback(System_Plugin_Base):
             self.next_audio_frame = self._next_audio_frame()
             self.audio_bytes_fifo.clear()
 
-
     def seek_to_frame(self, frame_idx):
         if self.audio_stream is not None:
             audio_idx = bisect(self.audio_timestamps, self.timestamps[frame_idx])
             print("audio_idx = {}, ts = {}".format(audio_idx, self.timestamps[frame_idx]))
             self.seek_to_audio_frame(audio_idx)
-
-
-    def get_frame_index(self):
-        raise NotImplementedError()
-
-
-    def seek_to_prev_frame(self):
-        raise NotImplementedError()
-
 
     def get_frame(self, frame_idx=-1):
         if self.pa_stream is not None and self.play:
