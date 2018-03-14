@@ -67,6 +67,7 @@ class Seek_Control(System_Plugin_Base):
             self.was_seeking = True
             self.was_playing = self.play
             self.play = False
+            self.notify_all({'subject': 'seek_control.was_seeking'})
         elif self.was_playing:
             self.play = True
 
