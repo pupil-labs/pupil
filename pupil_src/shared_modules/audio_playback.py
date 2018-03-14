@@ -24,9 +24,6 @@ from time import monotonic
 import logging
 logger = logging.getLogger(__name__)
 
-class FileSeekError(Exception):
-    pass
-
 
 class FileSeekError(Exception):
     pass
