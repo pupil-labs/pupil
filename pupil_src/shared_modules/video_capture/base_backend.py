@@ -198,25 +198,18 @@ class Base_Manager(Plugin):
 
 class Playback_Source(Base_Source):
 
-    def __init__(self, g_pool, stand_alone=True, timed_playback=False, *args, **kwargs):
+    def __init__(self, g_pool, timing='own', *args, **kwargs):
         '''
-        Possible configurations:
-                                    stand_alone
-                             |   True    | False
-                       ------+-----------+--------
-                        True |  Capture  |   /
-        timed_playback ------+-----------+--------
-                       False | Detectors | Player
-
-
-        Capture: Fake/File Source is used as UVC Source replecement.
-        Player: Seek Control provides
+        The `timing` argument defines the source's behavior during recent_event calls
+            'own': Timing is based on recorded timestamps; uses own wait function;
+                    used in Capture as an online source
+            'external': Uses Seek_Control's current playback time to figure out
+                    most appropriate frame; does not wait on its own
+            None: Simply returns next frame as fast as possible; used for detectors
         '''
         super().__init__(g_pool)
-        self.stand_alone = stand_alone
-        self.timed_playback = timed_playback
-        assert stand_alone or not timed_playback, 'Invalid configuration'
-
+        assert timing in ('external', 'own', None), 'invalid timing argument: {}'.format(timing)
+        self.timing = timing
         self.finished_sleep = 0.
         self._recent_wait_ts = -1
         self.play = True

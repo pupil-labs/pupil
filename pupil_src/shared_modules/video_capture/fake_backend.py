@@ -66,10 +66,10 @@ class Fake_Source(Playback_Source, Base_Source):
     def __init__(self, g_pool, source_path=None, frame_size=None,
                  frame_rate=None, name='Fake Source', *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
-        if self.stand_alone:
-            self.recent_events = self.recent_events_stand_alone
+        if self.timing == 'external':
+            self.recent_events = self.recent_events_external_timing
         else:
-            self.recent_events = self.recent_events_slaved
+            self.recent_events = self.recent_events_own_timing
 
         if source_path:
             meta = load_object(source_path)
@@ -105,7 +105,7 @@ class Fake_Source(Playback_Source, Base_Source):
 
         self._intrinsics = Dummy_Camera(size, self.name)
 
-    def recent_events_slaved(self, events):
+    def recent_events_external_timing(self, events):
         try:
             last_index = self._recent_frame.index
         except AttributeError:
@@ -129,14 +129,14 @@ class Fake_Source(Playback_Source, Base_Source):
         self._recent_frame = frame
         events['frame'] = frame
 
-    def recent_events_stand_alone(self, events):
+    def recent_events_own_timing(self, events):
         try:
             frame = self.get_frame()
         except IndexError:
             logger.info('Recording has ended.')
             self.play = False
         else:
-            if self.timed_playback:
+            if self.timing:
                 self.wait(frame.timestamp)
             self._recent_frame = frame
             events['frame'] = frame
@@ -259,7 +259,6 @@ class Fake_Source(Playback_Source, Base_Source):
         d = super().get_init_dict()
         d['frame_size'] = self.frame_size
         d['frame_rate'] = self.frame_rate
-        d['timed_playback'] = self.timed_playback
         d['name'] = self.name
         return d
 
@@ -281,7 +280,7 @@ class Fake_Manager(Base_Manager):
             # a capture leaving is a must stop for recording.
             self.notify_all({'subject': 'recording.should_stop'})
             settings = {}
-            settings['timed_playback'] = True
+            settings['timing'] = 'own'
             settings['frame_rate'] = self.g_pool.capture.frame_rate
             settings['frame_size'] = self.g_pool.capture.frame_size
             settings['name'] = 'Fake Source'

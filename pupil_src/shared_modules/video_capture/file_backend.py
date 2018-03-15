@@ -81,11 +81,10 @@ class File_Source(Playback_Source, Base_Source):
 
     def __init__(self, g_pool, source_path=None, loop=False, *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
-
-        if self.stand_alone:
-            self.recent_events = self.recent_events_stand_alone
+        if self.timing == 'external':
+            self.recent_events = self.recent_events_external_timing
         else:
-            self.recent_events = self.recent_events_slaved
+            self.recent_events = self.recent_events_own_timing
 
         # minimal attribute set
         self._initialised = True
@@ -188,7 +187,6 @@ class File_Source(Playback_Source, Base_Source):
     def get_init_dict(self):
         settings = super().get_init_dict()
         settings['source_path'] = self.source_path
-        settings['timed_playback'] = self.timed_playback
         settings['loop'] = self.loop
         return settings
 
@@ -257,7 +255,7 @@ class File_Source(Playback_Source, Base_Source):
         return Frame(timestamp, frame, index=index)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
-    def recent_events_slaved(self, events):
+    def recent_events_external_timing(self, events):
         try:
             last_index = self._recent_frame.index
         except AttributeError:
@@ -290,7 +288,7 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05),
                            requires_playback=True)
-    def recent_events_stand_alone(self, events):
+    def recent_events_own_timing(self, events):
         try:
             frame = self.get_frame()
         except EndofVideoError:
@@ -298,7 +296,7 @@ class File_Source(Playback_Source, Base_Source):
             self.notify_all({"subject": 'file_source.video_finished', 'source_path': self.source_path})
             self.play = False
         else:
-            if self.timed_playback:
+            if self.timing:
                 self.wait(frame.timestamp)
             self._recent_frame = frame
             events['frame'] = frame
@@ -407,7 +405,7 @@ class File_Manager(Base_Manager):
             return
         settings = {
             'source_path': full_path,
-            'timed_playback': True
+            'timing': 'own'
         }
         self.activate_source(settings)
 

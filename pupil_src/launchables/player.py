@@ -210,7 +210,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
         video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
                       if os.path.splitext(f)[1] in valid_ext][0]
-        init_playback_source(g_pool, stand_alone=False, source_path=video_path)
+        init_playback_source(g_pool, timing='external', source_path=video_path)
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
