@@ -183,6 +183,7 @@ class Base_Manager(Plugin):
                 self.notify_all({'subject': 'start_plugin', 'name': manager_class.__name__})
 
         # We add the capture selection menu
+        manager_classes.sort(key=lambda x: x.gui_name)
         self.menu.append(ui.Selector(
                             'capture_manager',
                             setter    = replace_backend_manager,

@@ -364,7 +364,7 @@ class File_Manager(Base_Manager):
         root_folder (str): Folder path, which includes file sources
     """
     gui_name = 'Video File Source'
-    file_exts = ['.mp4','.mkv','.mov']
+    file_exts = ['.mp4', '.mkv', '.mov', '.mjpeg']
 
     def __init__(self, g_pool, root_folder=None):
         super().__init__(g_pool)
@@ -425,6 +425,7 @@ class File_Manager(Base_Manager):
                 disp_p = full_p.replace(path,'')
                 return (full_p, disp_p)
             eligible_files.extend(map(root_split, filter(is_eligible, files)))
+        eligible_files.sort(key=lambda x: x[1])
         return eligible_files
 
     def get_init_dict(self):
