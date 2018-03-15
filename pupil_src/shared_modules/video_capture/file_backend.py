@@ -185,10 +185,13 @@ class File_Source(Playback_Source, Base_Source):
         return 1./float(self.average_rate)
 
     def get_init_dict(self):
-        settings = super().get_init_dict()
-        settings['source_path'] = self.source_path
-        settings['loop'] = self.loop
-        return settings
+        if self.g_pool.app == 'capture':
+            settings = super().get_init_dict()
+            settings['source_path'] = self.source_path
+            settings['loop'] = self.loop
+            return settings
+        else:
+            raise NotImplementedError()
 
     @property
     def name(self):
@@ -340,14 +343,31 @@ class File_Source(Playback_Source, Base_Source):
         self.add_menu()
         self.menu.label = 'File Source: {}'.format(os.path.split(self.source_path)[-1])
         from pyglui import ui
-        self.menu.append(ui.Info_Text("Running Capture with '%s' as src"%self.source_path))
 
-        def toggle_looping(val):
-            self.loop = val
-            if val:
-                self.play = True
-        self.menu.append(ui.Switch('loop', self, setter=toggle_looping))
+        self.menu.append(ui.Info_Text('The file source plugin loads and displays video from a given file.'))
 
+        if self.g_pool.app == 'capture':
+            def toggle_looping(val):
+                self.loop = val
+                if val:
+                    self.play = True
+
+            self.menu.append(ui.Switch('loop', self, setter=toggle_looping))
+
+        self.menu.append(ui.Text_Input('source_path', self, label='Full path',
+                                       setter=lambda x: None))
+
+        self.menu.append(ui.Text_Input('frame_size', label='Frame size',
+                                       setter=lambda x: None,
+                                       getter=lambda: '{} x {}'.format(*self.frame_size)))
+
+        self.menu.append(ui.Text_Input('frame_rate', label='Frame rate',
+                                       setter=lambda x: None,
+                                       getter=lambda: '{:.0f} FPS'.format(self.frame_rate)))
+
+        self.menu.append(ui.Text_Input('frame_num', label='Number of frames',
+                                       setter=lambda x: None,
+                                       getter=lambda: self.get_frame_count()))
     def deinit_ui(self):
         self.remove_menu()
 

@@ -90,8 +90,23 @@ class Fake_Source(Playback_Source, Base_Source):
         self.add_menu()
         self.menu.label = "Static Image Source"
 
-        text = ui.Info_Text("Fake capture source streaming test images.")
+        text = ui.Info_Text("This plugin displays a static image.")
         self.menu.append(text)
+
+        self.menu.append(ui.Text_Input('frame_size', label='Frame size',
+                                       setter=lambda x: None,
+                                       getter=lambda: '{} x {}'.format(*self.frame_size)))
+
+        self.menu.append(ui.Text_Input('frame_rate', label='Frame rate',
+                                       setter=lambda x: None,
+                                       getter=lambda: '{:.0f} FPS'.format(self.frame_rate)))
+
+        if self.g_pool.app == 'player':
+            # get_frame_count() is not constant in Capture and would trigger
+            # a redraw on each frame
+            self.menu.append(ui.Text_Input('frame_num', label='Number of frames',
+                                           setter=lambda x: None,
+                                           getter=lambda: self.get_frame_count()))
 
     def deinit_ui(self):
         self.remove_menu()
@@ -256,11 +271,14 @@ class Fake_Source(Playback_Source, Base_Source):
         return True
 
     def get_init_dict(self):
-        d = super().get_init_dict()
-        d['frame_size'] = self.frame_size
-        d['frame_rate'] = self.frame_rate
-        d['name'] = self.name
-        return d
+        if self.g_pool.app == 'capture':
+            d = super().get_init_dict()
+            d['frame_size'] = self.frame_size
+            d['frame_rate'] = self.frame_rate
+            d['name'] = self.name
+            return d
+        else:
+            raise NotImplementedError()
 
 
 class Fake_Manager(Base_Manager):
