@@ -131,7 +131,7 @@ class Audio_Playback(System_Plugin_Base):
             self.g_pool.seek_control.time_slew = self.audio_sync
 
             logger.info("Measured latency = {}".format(self.audio_measured_latency))
-        #print("DAC Time diff = {}".format(time_info['output_buffer_dac_time'] - self.last_dac_time))
+        print("DAC Time diff = {}".format(time_info['output_buffer_dac_time'] - self.last_dac_time))
         self.last_dac_time = time_info['output_buffer_dac_time']
         if not self.play:
             self.audio_paused = True
