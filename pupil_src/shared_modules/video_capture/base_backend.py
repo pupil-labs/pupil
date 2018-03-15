@@ -224,6 +224,10 @@ class Playback_Source(Base_Source):
     def get_frame(self):
         raise NotImplementedError()
 
+    def get_frame_index_ts(self):
+        idx = self.get_frame_index()
+        return idx, self.timestamps[idx]
+
     def wait(self, timestamp):
         if timestamp == self._recent_wait_ts:
             sleep(1/60)  # 60 fps on pause
