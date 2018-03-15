@@ -25,10 +25,12 @@ class Seek_Control(System_Plugin_Base):
     it will show the current positon and allow you to drag to any postion in the video file.
     """
     order = 0.01
+    available_speeds = [.25, .5, 1., 1.5, 2., 4.]
 
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, playback_speed=1.):
         super().__init__(g_pool)
         g_pool.seek_control = self
+        self._playback_speed = playback_speed
         self.trim_left = 0
         self.trim_right = len(self.g_pool.timestamps) - 1
         self.was_playing = True
@@ -101,7 +103,7 @@ class Seek_Control(System_Plugin_Base):
         playback_time = self.start_ts - self.time_slew
 
         if self.g_pool.capture.play:
-            playback_time += (time.monotonic() - self.start_time) * self.playback_speed
+            playback_time += (time.monotonic() - self.start_time) * self._playback_speed
         return playback_time
 
     @property
@@ -156,10 +158,9 @@ class Seek_Control(System_Plugin_Base):
             self.start_ts = self.current_ts
             self.start_time = time.monotonic()
             # playback mode, increase playback speed
-            speeds = self.g_pool.capture.allowed_speeds
-            old_idx = speeds.index(self.g_pool.capture.playback_speed)
-            new_idx = min(len(speeds) - 1, old_idx + 1)
-            self.g_pool.capture.playback_speed = speeds[new_idx]
+            old_idx = self.available_speeds.index(self._playback_speed)
+            new_idx = min(len(self.available_speeds) - 1, old_idx + 1)
+            self._playback_speed = self.available_speeds[new_idx]
             self.time_slew = 0
         else:
             # frame-by-frame mode, seek one frame forward
@@ -177,10 +178,9 @@ class Seek_Control(System_Plugin_Base):
             self.start_ts = self.current_ts
             self.start_time = time.monotonic()
             # playback mode, decrease playback speed
-            speeds = self.g_pool.capture.allowed_speeds
-            old_idx = speeds.index(self.g_pool.capture.playback_speed)
+            old_idx = self.available_speeds.index(self._playback_speed)
             new_idx = max(0, old_idx - 1)
-            self.g_pool.capture.playback_speed = speeds[new_idx]
+            self._playback_speed = self.available_speeds[new_idx]
         else:
             # frame-by-frame mode, seek one frame forward
             ts_idx = self.current_ts_idx
@@ -189,7 +189,7 @@ class Seek_Control(System_Plugin_Base):
 
     @property
     def playback_speed(self):
-        return self.g_pool.capture.playback_speed if self.g_pool.capture.play else 0.
+        return self._playback_speed if self.play else 0.
 
     def set_trim_range(self, mark_range):
         self.trim_left, self.trim_right = mark_range
@@ -263,9 +263,12 @@ class Seek_Control(System_Plugin_Base):
     def wait(self, ts):
         if self.play and not self.was_seeking:
             playback_now = self.current_playback_time
-            time_diff = (ts - playback_now) / self.playback_speed
+            time_diff = (ts - playback_now) / self._playback_speed
             if time_diff > .005:
                 time.sleep(time_diff)
         else:
             time.sleep(1 / 60)
             self.was_seeking = False
+
+    def get_init_dict(self):
+        return {'playback_speed': self._playback_speed}

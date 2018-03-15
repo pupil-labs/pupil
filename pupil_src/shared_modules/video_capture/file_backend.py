@@ -190,7 +190,6 @@ class File_Source(Playback_Source, Base_Source):
         settings['source_path'] = self.source_path
         settings['timed_playback'] = self.timed_playback
         settings['loop'] = self.loop
-        settings['playback_speed'] = self.playback_speed
         return settings
 
     @property
@@ -344,9 +343,6 @@ class File_Source(Playback_Source, Base_Source):
         self.menu.label = 'File Source: {}'.format(os.path.split(self.source_path)[-1])
         from pyglui import ui
         self.menu.append(ui.Info_Text("Running Capture with '%s' as src"%self.source_path))
-        self.menu.append(ui.Selector('playback_speed', self,
-                                     label='Playback speed',
-                                     selection=self.allowed_speeds))
 
         def toggle_looping(val):
             self.loop = val
