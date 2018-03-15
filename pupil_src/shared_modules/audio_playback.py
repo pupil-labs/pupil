@@ -179,7 +179,7 @@ class Audio_Playback(System_Plugin_Base):
                 self.play = False
 
     def recent_events(self, events):
-        if self.g_pool.seek_control.play and self.pa_stream is not None and self.g_pool.capture.playback_speed == 1.:
+        if self.g_pool.seek_control.playback_speed == 1. and self.pa_stream is not None:
             self.play = True
             if (self.pa_stream.is_stopped() or self.audio_paused) and self.audio_delay <= 0.001:
                 pbt = self.g_pool.seek_control.current_playback_time
