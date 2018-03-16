@@ -77,7 +77,7 @@ class Audio_Playback(System_Plugin_Base):
 
             self.audio_pts_rate = af0.samples  # af1.pts - af0.pts
             self.audio_start_pts = 0
-            logger.info("audio_pts_rate = {} start_pts = {}".format(self.audio_pts_rate, self.audio_start_pts))
+            logger.debug("audio_pts_rate = {} start_pts = {}".format(self.audio_pts_rate, self.audio_start_pts))
 
             if self.check_ts_consistency:
                 print("**** Checking stream")
@@ -93,36 +93,14 @@ class Audio_Playback(System_Plugin_Base):
                 print("**** Done")
             self.seek_to_audio_frame(0)
 
-            logger.info("Audio file format {} chans {} rate {} framesize {}"
-                        .format(self.audio_stream.format.name,
-                                self.audio_stream.channels,
-                                self.audio_stream.rate,
-                                self.audio_stream.frame_size))
+            logger.debug("Audio file format {} chans {} rate {} framesize {}"
+                         .format(self.audio_stream.format.name,
+                                 self.audio_stream.channels,
+                                 self.audio_stream.rate,
+                                 self.audio_stream.frame_size))
             self.audio_start_time = 0
             self.audio_measured_latency = -1.
-
-            def audio_callback(in_data, frame_count, time_info, status):
-                cb_to_adc_time = time_info['output_buffer_dac_time'] - time_info['current_time']
-                start_to_cb_time = monotonic() - self.audio_start_time
-                if self.audio_measured_latency < 0:
-                    self.audio_measured_latency = start_to_cb_time + cb_to_adc_time
-                    lat_diff = self.audio_reported_latency - self.audio_measured_latency
-                    self.audio_sync -= lat_diff
-                    self.g_pool.seek_control.time_slew = self.audio_sync
-
-                    logger.info("Measured latency = {}".format(self.audio_measured_latency))
-
-                if not self.play:
-                    self.audio_paused = True
-                    logger.info("audio cb abort 1")
-                    return (None, pa.paAbort)
-                try:
-                    samples = self.audio_bytes_fifo.pop(0)
-                    return (samples, pa.paContinue)
-                except IndexError:
-                    self.audio_paused = True
-                    logger.info("audio cb abort 2")
-                    return (None, pa.paAbort)
+            self.last_dac_time = 0
 
             try:
                 self.pa = pa.PyAudio()
@@ -130,15 +108,43 @@ class Audio_Playback(System_Plugin_Base):
                                               channels=self.audio_stream.channels,
                                               rate=self.audio_stream.rate,
                                               frames_per_buffer=self.audio_stream.frame_size,
-                                              stream_callback=audio_callback,
+                                              stream_callback=self.audio_callback,
                                               output=True,
                                               start=False)
-                logger.info("Audio output latency: {}".format(self.pa_stream.get_output_latency()))
+                logger.debug("Audio output latency: {}".format(self.pa_stream.get_output_latency()))
                 self.audio_sync = self.pa_stream.get_output_latency()
                 self.audio_reported_latency = self.pa_stream.get_output_latency()
 
             except ValueError:
                 self.pa_stream = None
+
+    def audio_callback(self, in_data, frame_count, time_info, status):
+        cb_to_adc_time = time_info['output_buffer_dac_time'] - time_info['current_time']
+        start_to_cb_time = monotonic() - self.audio_start_time
+        if self.audio_measured_latency < 0:
+            self.audio_measured_latency = start_to_cb_time + cb_to_adc_time
+            lat_diff = self.audio_reported_latency - self.audio_measured_latency
+            self.audio_sync -= lat_diff
+            self.g_pool.seek_control.time_slew = self.audio_sync
+
+            logger.debug("Measured latency = {}".format(self.audio_measured_latency))
+        self.last_dac_time = time_info['output_buffer_dac_time']
+        if not self.play:
+            self.audio_paused = True
+            logger.debug("audio cb abort 1")
+            return (None, pa.paAbort)
+        try:
+            samples, ts = self.audio_bytes_fifo.pop(0)
+            desync = abs(self.g_pool.seek_control.current_playback_time + cb_to_adc_time - ts)
+            if desync > 0.09:
+                logger.debug("*** Audio desync detected: {}".format(desync))
+                self.audio_paused = True
+                return (None, pa.paAbort)
+            return (samples, pa.paContinue)
+        except IndexError:
+            self.audio_paused = True
+            logger.debug("audio cb abort 2")
+            return (None, pa.paAbort)
 
     def get_audio_sync(self):
         # Audio has been started without delay
@@ -179,9 +185,29 @@ class Audio_Playback(System_Plugin_Base):
                 self.play = False
 
     def recent_events(self, events):
+        if self.pa_stream is not None and not self.pa_stream.is_stopped():
+            if not self.audio_paused and not self.pa_stream.is_active():
+                logger.info("Reopening audio stream...")
+                try:
+                    self.pa_stream = self.pa.open(format=self.pa.get_format_from_width(self.audio_stream.format.bytes),
+                                                  channels=self.audio_stream.channels,
+                                                  rate=self.audio_stream.rate,
+                                                  frames_per_buffer=self.audio_stream.frame_size,
+                                                  stream_callback=self.audio_callback,
+                                                  output=True,
+                                                  start=False)
+                    logger.debug("Audio output latency: {}".format(self.pa_stream.get_output_latency()))
+                    self.audio_sync = self.pa_stream.get_output_latency()
+                    self.audio_reported_latency = self.pa_stream.get_output_latency()
+
+                except ValueError:
+                    self.pa_stream = None
+        start_stream = False
+
         if self.g_pool.seek_control.playback_speed == 1. and self.pa_stream is not None:
             self.play = True
             if (self.pa_stream.is_stopped() or self.audio_paused) and self.audio_delay <= 0.001:
+                start_stream = True
                 pbt = self.g_pool.seek_control.current_playback_time
                 frame_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
                 audio_idx = bisect(self.audio_timestamps, self.g_pool.timestamps[frame_idx])
@@ -189,8 +215,8 @@ class Audio_Playback(System_Plugin_Base):
             frames_chunk = itertools.islice(self.next_audio_frame, 10)
             for audio_frame_p in frames_chunk:
                 audio_frame = self.audio_resampler.resample(audio_frame_p)
-                self.audio_bytes_fifo.append(bytes(audio_frame.planes[0]))
-            if (self.pa_stream.is_stopped() or self.audio_paused) and self.audio_delay <= 0.001:
+                self.audio_bytes_fifo.append((bytes(audio_frame.planes[0]), self.audio_timestamps[0] + audio_frame.pts * self.audio_stream.time_base))
+            if start_stream:
                 rt_delay = self.audio_timestamps[audio_idx] - self.g_pool.seek_control.current_playback_time
                 adj_delay = rt_delay - self.pa_stream.get_output_latency()
                 self.audio_delay = 0
@@ -201,7 +227,7 @@ class Audio_Playback(System_Plugin_Base):
                 else:
                     self.audio_sync = - adj_delay
 
-                logger.info("Audio sync = {} rt_delay = {} adj_delay = {}".format(self.audio_sync, rt_delay, adj_delay))
+                logger.debug("Audio sync = {} rt_delay = {} adj_delay = {}".format(self.audio_sync, rt_delay, adj_delay))
                 self.g_pool.seek_control.time_slew = self.audio_sync
                 self.pa_stream.stop_stream()
                 self.audio_measured_latency = -1
@@ -214,7 +240,7 @@ class Audio_Playback(System_Plugin_Base):
                             self.audio_start_time = monotonic()
                             self.pa_stream.start_stream()
                             self.audio_delay = 0
-                            logger.info("Started delayed audio")
+                            logger.debug("Started delayed audio")
                         self.audio_timer.cancel()
 
                     self.audio_timer = Timer(self.audio_delay, delayed_audio_start)
