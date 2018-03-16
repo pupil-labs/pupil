@@ -138,7 +138,12 @@ class Audio_Playback(System_Plugin_Base):
             logger.info("audio cb abort 1")
             return (None, pa.paAbort)
         try:
-            samples = self.audio_bytes_fifo.pop(0)
+            samples, ts = self.audio_bytes_fifo.pop(0)
+            desync =  abs(self.g_pool.seek_control.current_playback_time + cb_to_adc_time - ts)
+            if desync > 0.1:
+                print("*** Audio desync detected: {}".format(desync))
+                self.audio_paused = True
+                return (None, pa.paAbort)
             return (samples, pa.paContinue)
         except IndexError:
             self.audio_paused = True
@@ -212,7 +217,7 @@ class Audio_Playback(System_Plugin_Base):
             frames_chunk = itertools.islice(self.next_audio_frame, 10)
             for audio_frame_p in frames_chunk:
                 audio_frame = self.audio_resampler.resample(audio_frame_p)
-                self.audio_bytes_fifo.append(bytes(audio_frame.planes[0]))
+                self.audio_bytes_fifo.append((bytes(audio_frame.planes[0]), self.audio_timestamps[0] + audio_frame.pts * self.audio_stream.time_base))
             if (self.pa_stream.is_stopped() or self.audio_paused) and self.audio_delay <= 0.001:
                 rt_delay = self.audio_timestamps[audio_idx] - self.g_pool.seek_control.current_playback_time
                 adj_delay = rt_delay - self.pa_stream.get_output_latency()
