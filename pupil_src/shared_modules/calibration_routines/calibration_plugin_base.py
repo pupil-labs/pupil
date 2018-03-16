@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from pyglui import ui
-from plugin import Plugin
+from plugin import Plugin, Experimental_Plugin_Base
 
 import logging
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class Calibration_Plugin(Plugin):
         self.menu.label = 'Calibration'
 
         calibration_plugins = [p for p in self.g_pool.plugin_by_name.values() if issubclass(p, Calibration_Plugin)]
-        calibration_plugins.sort(key=lambda p: p.__name__)
+        calibration_plugins.sort(key=lambda p: (issubclass(p, Experimental_Plugin_Base), p.__name__))
         from pyglui import ui
 
         self.menu_icon.order = 0.3
