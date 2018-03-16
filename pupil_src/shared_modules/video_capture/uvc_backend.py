@@ -122,11 +122,11 @@ class UVC_Source(Base_Source):
 
     def configure_capture(self, frame_size, frame_rate, uvc_controls):
         # Set camera defaults. Override with previous settings afterwards
-        if 'C930e' in self.uvc_capture.name:
-                logger.debug('Timestamp offset for c930 applied: -0.1sec')
-                self.ts_offset = -0.1
-        else:
+        if 'Pupil Cam' in self.uvc_capture.name:
             self.ts_offset = 0.0
+        else:
+            logger.info('Hardware timestamps not supported for {}. Using software timestamps.'.format(self.uvc_capture.name))
+            self.ts_offset = -0.1
 
         # UVC setting quirks:
         controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
