@@ -105,7 +105,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from blink_detection import Offline_Blink_Detection
         from audio_playback import Audio_Playback
 
-        assert VersionFormat(pyglui_version) >= VersionFormat('1.18'), 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.20'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
         system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs, Batch_Export, System_Timelines, Audio_Playback]
@@ -210,15 +210,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
         video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
                       if os.path.splitext(f)[1] in valid_ext][0]
-        init_playback_source(g_pool, stand_alone=False, source_path=video_path)
+        init_playback_source(g_pool, timing='external', source_path=video_path)
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
         if VersionFormat(session_settings.get("version", '0.0')) != app_version:
             logger.info("Session setting are a different version of this app. I will not use those.")
             session_settings.clear()
-
-        g_pool.capture.playback_speed = session_settings.get('playback_speed', 1.)
 
         width, height = g_pool.capture.frame_size
         width += icon_bar_width
@@ -395,15 +393,16 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         # Manually add g_pool.capture to the plugin list
         g_pool.plugins._plugins.append(g_pool.capture)
         g_pool.plugins._plugins.sort(key=lambda p: p.order)
+        g_pool.capture.init_ui()
 
-        general_settings.insert(-1 ,ui.Text_Input('rel_time_trim_section',
-                                              getter=g_pool.seek_control.get_rel_time_trim_range_string,
-                                              setter=g_pool.seek_control.set_rel_time_trim_range_string,
-                                              label='Relative time range to export'))
-        general_settings.insert(-1 ,ui.Text_Input('frame_idx_trim_section',
-                                              getter=g_pool.seek_control.get_frame_index_trim_range_string,
-                                              setter=g_pool.seek_control.set_frame_index_trim_range_string,
-                                              label='Frame index range to export'))
+        general_settings.insert(-1, ui.Text_Input('rel_time_trim_section',
+                                                  getter=g_pool.seek_control.get_rel_time_trim_range_string,
+                                                  setter=g_pool.seek_control.set_rel_time_trim_range_string,
+                                                  label='Relative time range to export'))
+        general_settings.insert(-1, ui.Text_Input('frame_idx_trim_section',
+                                                  getter=g_pool.seek_control.get_frame_index_trim_range_string,
+                                                  setter=g_pool.seek_control.set_frame_index_trim_range_string,
+                                                  label='Frame index range to export'))
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -514,11 +513,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
             glfw.glfwPollEvents()
 
-        # Remove manually to avoid being included in `loaded_plugins`
-        # and `deinit_ui()` call on `g_pool.plugins.clean()`
-        g_pool.plugins._plugins.remove(g_pool.capture)
-
-        session_settings['playback_speed'] = g_pool.capture.playback_speed
         session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
         session_settings['min_data_confidence'] = g_pool.min_data_confidence
         session_settings['min_calibration_confidence'] = g_pool.min_calibration_confidence

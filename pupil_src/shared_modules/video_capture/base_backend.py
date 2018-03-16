@@ -183,6 +183,7 @@ class Base_Manager(Plugin):
                 self.notify_all({'subject': 'start_plugin', 'name': manager_class.__name__})
 
         # We add the capture selection menu
+        manager_classes.sort(key=lambda x: x.gui_name)
         self.menu.append(ui.Selector(
                             'capture_manager',
                             setter    = replace_backend_manager,
@@ -197,28 +198,19 @@ class Base_Manager(Plugin):
 
 
 class Playback_Source(Base_Source):
-    allowed_speeds = [.25, .5, 1., 1.5, 2., 4.]
 
-    def __init__(self, g_pool, stand_alone=True, timed_playback=False, playback_speed=1., *args, **kwargs):
+    def __init__(self, g_pool, timing='own', *args, **kwargs):
         '''
-        Possible configurations:
-                                    stand_alone
-                             |   True    | False
-                       ------+-----------+--------
-                        True |  Capture  |   /
-        timed_playback ------+-----------+--------
-                       False | Detectors | Player
-
-
-        Capture: Fake/File Source is used as UVC Source replecement.
-        Player: Seek Control provides
+        The `timing` argument defines the source's behavior during recent_event calls
+            'own': Timing is based on recorded timestamps; uses own wait function;
+                    used in Capture as an online source
+            'external': Uses Seek_Control's current playback time to figure out
+                    most appropriate frame; does not wait on its own
+            None: Simply returns next frame as fast as possible; used for detectors
         '''
         super().__init__(g_pool)
-        self.stand_alone = stand_alone
-        self.timed_playback = timed_playback
-        assert stand_alone or not timed_playback, 'Invalid configuration'
-
-        self.playback_speed = playback_speed
+        assert timing in ('external', 'own', None), 'invalid timing argument: {}'.format(timing)
+        self.timing = timing
         self.finished_sleep = 0.
         self._recent_wait_ts = -1
         self.play = True
@@ -232,12 +224,15 @@ class Playback_Source(Base_Source):
     def get_frame(self):
         raise NotImplementedError()
 
+    def get_frame_index_ts(self):
+        idx = self.get_frame_index()
+        return idx, self.timestamps[idx]
+
     def wait(self, timestamp):
         if timestamp == self._recent_wait_ts:
             sleep(1/60)  # 60 fps on pause
         elif self.finished_sleep:
             target_wait_time = timestamp - self._recent_wait_ts
-            target_wait_time /= self.playback_speed
             time_spent = monotonic() - self.finished_sleep
             target_wait_time -= time_spent
             if 1 > target_wait_time > 0:

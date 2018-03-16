@@ -94,14 +94,13 @@ class Audio_Playback(System_Plugin_Base):
             self.seek_to_audio_frame(0)
 
             logger.debug("Audio file format {} chans {} rate {} framesize {}"
-                        .format(self.audio_stream.format.name,
-                                self.audio_stream.channels,
-                                self.audio_stream.rate,
-                                self.audio_stream.frame_size))
+                         .format(self.audio_stream.format.name,
+                                 self.audio_stream.channels,
+                                 self.audio_stream.rate,
+                                 self.audio_stream.frame_size))
             self.audio_start_time = 0
             self.audio_measured_latency = -1.
             self.last_dac_time = 0
-            
 
             try:
                 self.pa = pa.PyAudio()
@@ -119,8 +118,7 @@ class Audio_Playback(System_Plugin_Base):
             except ValueError:
                 self.pa_stream = None
 
-    
-    def audio_callback(self,in_data, frame_count, time_info, status):
+    def audio_callback(self, in_data, frame_count, time_info, status):
         cb_to_adc_time = time_info['output_buffer_dac_time'] - time_info['current_time']
         start_to_cb_time = monotonic() - self.audio_start_time
         if self.audio_measured_latency < 0:
@@ -137,7 +135,7 @@ class Audio_Playback(System_Plugin_Base):
             return (None, pa.paAbort)
         try:
             samples, ts = self.audio_bytes_fifo.pop(0)
-            desync =  abs(self.g_pool.seek_control.current_playback_time + cb_to_adc_time - ts)
+            desync = abs(self.g_pool.seek_control.current_playback_time + cb_to_adc_time - ts)
             if desync > 0.09:
                 logger.debug("*** Audio desync detected: {}".format(desync))
                 self.audio_paused = True
@@ -147,6 +145,7 @@ class Audio_Playback(System_Plugin_Base):
             self.audio_paused = True
             logger.debug("audio cb abort 2")
             return (None, pa.paAbort)
+
     def get_audio_sync(self):
         # Audio has been started without delay
         if self.audio_measured_latency > 0:
@@ -204,7 +203,8 @@ class Audio_Playback(System_Plugin_Base):
                 except ValueError:
                     self.pa_stream = None
         start_stream = False
-        if self.g_pool.seek_control.play and self.pa_stream is not None and self.g_pool.capture.playback_speed == 1.:
+
+        if self.g_pool.seek_control.playback_speed == 1. and self.pa_stream is not None:
             self.play = True
             if (self.pa_stream.is_stopped() or self.audio_paused) and self.audio_delay <= 0.001:
                 start_stream = True
