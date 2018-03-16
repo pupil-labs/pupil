@@ -17,13 +17,14 @@ import audio
 from fingertip_detector import FingertipTracker
 from . finish_calibration import finish_calibration
 from . calibration_plugin_base import Calibration_Plugin
+from plugin import Experimental_Plugin_Base
 
 # logging
 import logging
 logger = logging.getLogger(__name__)
 
 
-class Fingertip_Calibration(Calibration_Plugin):
+class Fingertip_Calibration(Experimental_Plugin_Base, Calibration_Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.pos = None
@@ -36,13 +37,13 @@ class Fingertip_Calibration(Calibration_Plugin):
     def init_ui(self):
         super().init_ui()
         self.menu.label = 'Fingertip Calibration'
-        self.menu.append(Info_Text('Calibrate gaze parameters using finger'))
+        self.menu.append(Info_Text('Calibrate gaze parameters using your finger tip.'))
         self.menu.append(Info_Text('This is an experimental calibration routine. '
-                                   'Move your index finger in your field of view while looking at the fingertip.'
+                                   'Move your index finger into your field of view while looking at the fingertip.'
                                    'This plugin is for prototyping and experimentation only. '
                                    'The detection robustness is not production grade. '
                                    'We will put a lot more effort into this going forward but wanted to release the idea and hope for feedback!'))
-        self.menu.append(Info_Text('This is two step process: '
+        self.menu.append(Info_Text('This is a two step process: '
                                    '(1) calibrating for skin tone of the participant '
                                    '(2) collecting calibration samples.'))
 

@@ -405,3 +405,7 @@ class Producer_Plugin_Base(Plugin):
 
 class System_Plugin_Base(Plugin):
     pass
+
+
+class Experimental_Plugin_Base(Plugin):
+    pass
