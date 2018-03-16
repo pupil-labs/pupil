@@ -29,10 +29,6 @@ av.logging.set_level(av.logging.ERROR)
 logging.getLogger('libav').setLevel(logging.ERROR)
 
 
-class FileCaptureError(Exception):
-    pass
-
-
 class FileSeekError(Exception):
     pass
 
@@ -85,6 +81,10 @@ class File_Source(Playback_Source, Base_Source):
 
     def __init__(self, g_pool, source_path=None, loop=False, *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
+        if self.timing == 'external':
+            self.recent_events = self.recent_events_external_timing
+        else:
+            self.recent_events = self.recent_events_own_timing
 
         # minimal attribute set
         self._initialised = True
@@ -185,12 +185,13 @@ class File_Source(Playback_Source, Base_Source):
         return 1./float(self.average_rate)
 
     def get_init_dict(self):
-        settings = super().get_init_dict()
-        settings['source_path'] = self.source_path
-        settings['timed_playback'] = self.timed_playback
-        settings['loop'] = self.loop
-        settings['playback_speed'] = self.playback_speed
-        return settings
+        if self.g_pool.app == 'capture':
+            settings = super().get_init_dict()
+            settings['source_path'] = self.source_path
+            settings['loop'] = self.loop
+            return settings
+        else:
+            raise NotImplementedError()
 
     @property
     def name(self):
@@ -244,7 +245,7 @@ class File_Source(Playback_Source, Base_Source):
                 self.target_frame_idx = 0
                 return self.get_frame()
             else:
-                logger.info("End of videofile %s %s"%(self.current_frame_idx,len(self.timestamps)))
+                logger.debug("End of videofile %s %s"%(self.current_frame_idx,len(self.timestamps)))
                 raise EndofVideoError('Reached end of video file')
         try:
             timestamp = self.timestamps[index]
@@ -256,8 +257,41 @@ class File_Source(Playback_Source, Base_Source):
         self.current_frame_idx = index
         return Frame(timestamp, frame, index=index)
 
-    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05), requires_playback=True)
-    def recent_events(self, events):
+    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
+    def recent_events_external_timing(self, events):
+        try:
+            last_index = self._recent_frame.index
+        except AttributeError:
+            # called once on start when self._recent_frame is None
+            last_index = -1
+
+        frame = None
+        pbt = self.g_pool.seek_control.current_playback_time
+        ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
+        if ts_idx == last_index:
+            frame = self._recent_frame.copy()
+            if self.play and ts_idx == self.get_frame_count() - 1:
+                logger.info('Video has ended.')
+                self.g_pool.seek_control.play = False
+
+        elif ts_idx < last_index or ts_idx > last_index + 1:
+            # time to seek
+            self.seek_to_frame(ts_idx)
+
+        # Only call get_frame() if the next frame is actually needed
+        try:
+            frame = frame or self.get_frame()
+        except EndofVideoError:
+            logger.info('Video has ended.')
+            self.g_pool.seek_control.play = False
+            frame = frame or self._recent_frame.copy()
+
+        events['frame'] = frame
+        self._recent_frame = frame
+
+    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05),
+                           requires_playback=True)
+    def recent_events_own_timing(self, events):
         try:
             frame = self.get_frame()
         except EndofVideoError:
@@ -265,8 +299,8 @@ class File_Source(Playback_Source, Base_Source):
             self.notify_all({"subject": 'file_source.video_finished', 'source_path': self.source_path})
             self.play = False
         else:
-            if self.timed_playback:
-                self.wait(frame)
+            if self.timing:
+                self.wait(frame.timestamp)
             self._recent_frame = frame
             events['frame'] = frame
 
@@ -309,17 +343,31 @@ class File_Source(Playback_Source, Base_Source):
         self.add_menu()
         self.menu.label = 'File Source: {}'.format(os.path.split(self.source_path)[-1])
         from pyglui import ui
-        self.menu.append(ui.Info_Text("Running Capture with '%s' as src"%self.source_path))
-        self.menu.append(ui.Selector('playback_speed', self,
-                                     label='Playback speed',
-                                     selection=self.allowed_speeds))
 
-        def toggle_looping(val):
-            self.loop = val
-            if val:
-                self.play = True
-        self.menu.append(ui.Switch('loop', self, setter=toggle_looping))
+        self.menu.append(ui.Info_Text('The file source plugin loads and displays video from a given file.'))
 
+        if self.g_pool.app == 'capture':
+            def toggle_looping(val):
+                self.loop = val
+                if val:
+                    self.play = True
+
+            self.menu.append(ui.Switch('loop', self, setter=toggle_looping))
+
+        self.menu.append(ui.Text_Input('source_path', self, label='Full path',
+                                       setter=lambda x: None))
+
+        self.menu.append(ui.Text_Input('frame_size', label='Frame size',
+                                       setter=lambda x: None,
+                                       getter=lambda: '{} x {}'.format(*self.frame_size)))
+
+        self.menu.append(ui.Text_Input('frame_rate', label='Frame rate',
+                                       setter=lambda x: None,
+                                       getter=lambda: '{:.0f} FPS'.format(self.frame_rate)))
+
+        self.menu.append(ui.Text_Input('frame_num', label='Number of frames',
+                                       setter=lambda x: None,
+                                       getter=lambda: self.get_frame_count()))
     def deinit_ui(self):
         self.remove_menu()
 
@@ -336,7 +384,7 @@ class File_Manager(Base_Manager):
         root_folder (str): Folder path, which includes file sources
     """
     gui_name = 'Video File Source'
-    file_exts = ['.mp4','.mkv','.mov']
+    file_exts = ['.mp4', '.mkv', '.mov', '.mjpeg']
 
     def __init__(self, g_pool, root_folder=None):
         super().__init__(g_pool)
@@ -377,7 +425,7 @@ class File_Manager(Base_Manager):
             return
         settings = {
             'source_path': full_path,
-            'timed_playback': True
+            'timing': 'own'
         }
         self.activate_source(settings)
 
@@ -397,6 +445,7 @@ class File_Manager(Base_Manager):
                 disp_p = full_p.replace(path,'')
                 return (full_p, disp_p)
             eligible_files.extend(map(root_split, filter(is_eligible, files)))
+        eligible_files.sort(key=lambda x: x[1])
         return eligible_files
 
     def get_init_dict(self):

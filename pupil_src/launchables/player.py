@@ -103,11 +103,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from system_graphs import System_Graphs
         from system_timelines import System_Timelines
         from blink_detection import Offline_Blink_Detection
+        from audio_playback import Audio_Playback
 
-        assert VersionFormat(pyglui_version) >= VersionFormat('1.18'), 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.20'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))
-        system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs, Batch_Export, System_Timelines]
+        system_plugins = [Log_Display, Seek_Control, Plugin_Manager, System_Graphs, Batch_Export, System_Timelines, Audio_Playback]
         user_plugins = [Vis_Circle,
                         Vis_Fixation,
                         Vis_Polyline,
@@ -209,15 +210,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
         video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
                       if os.path.splitext(f)[1] in valid_ext][0]
-        init_playback_source(g_pool, source_path=video_path)
+        init_playback_source(g_pool, timing='external', source_path=video_path)
 
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
         if VersionFormat(session_settings.get("version", '0.0')) != app_version:
             logger.info("Session setting are a different version of this app. I will not use those.")
             session_settings.clear()
-
-        g_pool.capture.playback_speed = session_settings.get('playback_speed', 1.)
 
         width, height = g_pool.capture.frame_size
         width += icon_bar_width
@@ -247,7 +246,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.version = app_version
         g_pool.timestamps = g_pool.capture.timestamps
         g_pool.get_timestamp = lambda: 0.
-        g_pool.new_seek = True
         g_pool.user_dir = user_dir
         g_pool.rec_dir = rec_dir
         g_pool.meta_info = meta_info
@@ -387,17 +385,24 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                            ('System_Timelines', {}),
                            ('Video_Export_Launcher', {}),
                            ('Pupil_From_Recording', {}),
-                           ('Gaze_From_Recording', {})]
+                           ('Gaze_From_Recording', {}),
+                           ('Audio_Playback', {})]
+
         g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
 
-        general_settings.insert(-1 ,ui.Text_Input('rel_time_trim_section',
-                                              getter=g_pool.seek_control.get_rel_time_trim_range_string,
-                                              setter=g_pool.seek_control.set_rel_time_trim_range_string,
-                                              label='Relative time range to export'))
-        general_settings.insert(-1 ,ui.Text_Input('frame_idx_trim_section',
-                                              getter=g_pool.seek_control.get_frame_index_trim_range_string,
-                                              setter=g_pool.seek_control.set_frame_index_trim_range_string,
-                                              label='Frame index range to export'))
+        # Manually add g_pool.capture to the plugin list
+        g_pool.plugins._plugins.append(g_pool.capture)
+        g_pool.plugins._plugins.sort(key=lambda p: p.order)
+        g_pool.capture.init_ui()
+
+        general_settings.insert(-1, ui.Text_Input('rel_time_trim_section',
+                                                  getter=g_pool.seek_control.get_rel_time_trim_range_string,
+                                                  setter=g_pool.seek_control.set_rel_time_trim_range_string,
+                                                  label='Relative time range to export'))
+        general_settings.insert(-1, ui.Text_Input('frame_idx_trim_section',
+                                                  getter=g_pool.seek_control.get_frame_index_trim_range_string,
+                                                  setter=g_pool.seek_control.set_frame_index_trim_range_string,
+                                                  label='Frame index range to export'))
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -449,19 +454,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                 for p in g_pool.plugins:
                     p.on_notify(n)
 
-            # grab new frame
-            if g_pool.capture.play or g_pool.new_seek:
-                g_pool.new_seek = False
-                try:
-                    new_frame = g_pool.capture.get_frame()
-                except EndofVideoError:
-                    # end of video logic: pause at last frame.
-                    g_pool.capture.play = False
-                    logger.warning("End of video")
-
-            frame = new_frame.copy()
             events = {}
-            events['frame'] = frame
             # report time between now and the last loop interation
             events['dt'] = get_dt()
 
@@ -481,7 +474,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             if gl_utils.is_window_visible(main_window):
 
                 gl_utils.glViewport(0, 0, *g_pool.camera_render_size)
-                g_pool.capture._recent_frame = frame
                 g_pool.capture.gl_display()
                 for p in g_pool.plugins:
                     p.gl_display()
@@ -515,13 +507,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                     for p in g_pool.plugins:
                         p.on_char(char_)
 
+                # present frames at appropriate speed
+                g_pool.seek_control.wait(events['frame'].timestamp)
                 glfw.glfwSwapBuffers(main_window)
 
-            # present frames at appropriate speed
-            g_pool.capture.wait(frame)
             glfw.glfwPollEvents()
 
-        session_settings['playback_speed'] = g_pool.capture.playback_speed
         session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
         session_settings['min_data_confidence'] = g_pool.min_data_confidence
         session_settings['min_calibration_confidence'] = g_pool.min_calibration_confidence

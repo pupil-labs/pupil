@@ -38,7 +38,7 @@ def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
     from circle_detector import CircleTracker
 
     try:
-        src = init_playback_source(Empty(), source_path, timed_playback=False)
+        src = init_playback_source(Empty(), source_path, timing=None)
 
         frame = src.get_frame()
         logger.info('Starting calibration marker detection...')

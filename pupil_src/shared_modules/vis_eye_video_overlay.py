@@ -20,7 +20,7 @@ from glfw import glfwGetCursorPos, glfwGetFramebufferSize, glfwGetWindowSize, gl
 from plugin import Visualizer_Plugin_Base
 from player_methods import transparent_image_overlay
 from methods import normalize, denormalize
-from video_capture import EndofVideoError, FileCaptureError, File_Source
+from video_capture import EndofVideoError, File_Source
 
 # logging
 import logging
@@ -63,7 +63,7 @@ class Eye_Wrapper(object):
         try:
             self.source = File_Source(Empty(), source_path=glob(eye_loc)[0])
             self.current_eye_frame = self.source.get_frame()
-        except (FileNotFoundError, IndexError, FileCaptureError):
+        except (FileNotFoundError, IndexError):
             logger.warning('Video for eye{} was not found or could not be opened.'.format(self.eyeid))
         else:
             self.eye_world_frame_map = correlate_eye_world(self.source.timestamps, world_timestamps)
