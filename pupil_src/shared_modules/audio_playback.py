@@ -187,7 +187,7 @@ class Audio_Playback(System_Plugin_Base):
 
     def recent_events(self, events):
         if self.pa_stream is not None and not self.pa_stream.is_stopped():
-            if not self.pa_stream.is_active():
+            if not self.audio_paused and not self.pa_stream.is_active():
                 logger.info("Reopening audio stream...")
                 try:
                     self.pa_stream = self.pa.open(format=self.pa.get_format_from_width(self.audio_stream.format.bytes),
