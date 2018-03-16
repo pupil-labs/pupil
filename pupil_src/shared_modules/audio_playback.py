@@ -140,7 +140,7 @@ class Audio_Playback(System_Plugin_Base):
         try:
             samples, ts = self.audio_bytes_fifo.pop(0)
             desync =  abs(self.g_pool.seek_control.current_playback_time + cb_to_adc_time - ts)
-            if desync > 0.1:
+            if desync > 0.09:
                 print("*** Audio desync detected: {}".format(desync))
                 self.audio_paused = True
                 return (None, pa.paAbort)
@@ -206,10 +206,11 @@ class Audio_Playback(System_Plugin_Base):
 
                 except ValueError:
                     self.pa_stream = None
-            
+        start_stream = False
         if self.g_pool.seek_control.play and self.pa_stream is not None and self.g_pool.capture.playback_speed == 1.:
             self.play = True
             if (self.pa_stream.is_stopped() or self.audio_paused) and self.audio_delay <= 0.001:
+                start_stream = True
                 pbt = self.g_pool.seek_control.current_playback_time
                 frame_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
                 audio_idx = bisect(self.audio_timestamps, self.g_pool.timestamps[frame_idx])
@@ -218,7 +219,7 @@ class Audio_Playback(System_Plugin_Base):
             for audio_frame_p in frames_chunk:
                 audio_frame = self.audio_resampler.resample(audio_frame_p)
                 self.audio_bytes_fifo.append((bytes(audio_frame.planes[0]), self.audio_timestamps[0] + audio_frame.pts * self.audio_stream.time_base))
-            if (self.pa_stream.is_stopped() or self.audio_paused) and self.audio_delay <= 0.001:
+            if start_stream:
                 rt_delay = self.audio_timestamps[audio_idx] - self.g_pool.seek_control.current_playback_time
                 adj_delay = rt_delay - self.pa_stream.get_output_latency()
                 self.audio_delay = 0
