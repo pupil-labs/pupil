@@ -12,13 +12,13 @@ See COPYING and COPYING.LESSER for license details.
 import numpy as np
 
 
-class CheckFrameStripes(object):
+class Check_Frame_Stripes(object):
     def __init__(self, frame_size, num_check_frames=200):
         self.row_index = np.linspace(0, frame_size[0] - 1, 10, dtype=np.int)
         self.num_check_frames = num_check_frames
         self.num_local_optimum = []
 
-    def __call__(self, frame):
+    def check(self, frame):
         restart_flag = 0
         self.num_local_optimum.append(self.check_row(frame))
         if len(self.num_local_optimum) >= self.num_check_frames:
@@ -35,13 +35,9 @@ class CheckFrameStripes(object):
         for i in self.row_index:
             arr = np.array(frame[i, :], dtype=np.int)
 
-            local_max = \
-            np.where(np.r_[False, True, arr[2:] > arr[:-2] + 20] & np.r_[arr[:-2] > arr[2:] + 20, True, False] == True)[
-                0]
+            local_max = np.where(np.r_[False, True, arr[2:] > arr[:-2] + 20] & np.r_[arr[:-2] > arr[2:] + 20, True, False] == True)[0]
             num_local_max += len(local_max)
-            local_min = \
-            np.where(np.r_[False, True, arr[2:] + 20 < arr[:-2]] & np.r_[arr[:-2] + 20 < arr[2:], True, False] == True)[
-                0]
+            local_min = np.where(np.r_[False, True, arr[2:] + 20 < arr[:-2]] & np.r_[arr[:-2] + 20 < arr[2:], True, False] == True)[0]
             num_local_min += len(local_min)
 
         return num_local_max + num_local_min

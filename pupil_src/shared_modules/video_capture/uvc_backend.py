@@ -15,7 +15,7 @@ import uvc
 from version_utils import VersionFormat
 from .base_backend import InitialisationError, Base_Source, Base_Manager
 from camera_models import load_intrinsics
-from .utils import CheckFrameStripes
+from .utils import Check_Frame_Stripes
 
 # check versions for our own depedencies as they are fast-changing
 assert VersionFormat(uvc.__version__) >= VersionFormat('0.13')
@@ -174,7 +174,7 @@ class UVC_Source(Base_Source):
                 except KeyError: pass
 
         elif ("Pupil Cam2" in self.uvc_capture.name):
-            self.checkframestripes = CheckFrameStripes(self.uvc_capture.frame_size)
+            self.checkframestripes = Check_Frame_Stripes(self.uvc_capture.frame_size)
 
             try: controls_dict['Auto Exposure Mode'].value = 1
             except KeyError: pass
@@ -246,7 +246,7 @@ class UVC_Source(Base_Source):
             frame = self.uvc_capture.get_frame(0.05)
 
             if self.checkframestripes is not None:
-                restart_flag = self.checkframestripes(frame.gray)
+                restart_flag = self.checkframestripes.check(frame.gray)
                 if restart_flag == 1:
                     self._restart_in = -1
                     self._restart_logic()
@@ -314,7 +314,7 @@ class UVC_Source(Base_Source):
         self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
         if ("Pupil Cam2" in self.uvc_capture.name):
-            self.checkframestripes = CheckFrameStripes(self.uvc_capture.frame_size)
+            self.checkframestripes = Check_Frame_Stripes(self.uvc_capture.frame_size)
         else:
             self.checkframestripes = None
 
@@ -338,7 +338,7 @@ class UVC_Source(Base_Source):
         self.frame_rate_backup = rate
 
         if ("Pupil Cam2" in self.uvc_capture.name):
-            self.checkframestripes = CheckFrameStripes(self.uvc_capture.frame_size)
+            self.checkframestripes = Check_Frame_Stripes(self.uvc_capture.frame_size)
 
             controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
 
