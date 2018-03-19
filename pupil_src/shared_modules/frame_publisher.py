@@ -22,7 +22,7 @@ class Frame_Publisher(Plugin):
 
     def __init__(self, g_pool, format='jpeg'):
         super().__init__(g_pool)
-        self._format = format
+        self.format = format
         self._did_warn_recently = False
 
     def init_ui(self):
