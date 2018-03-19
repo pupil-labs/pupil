@@ -15,6 +15,7 @@ import uvc
 from version_utils import VersionFormat
 from .base_backend import InitialisationError, Base_Source, Base_Manager
 from camera_models import load_intrinsics
+from .utils import Check_Frame_Stripes
 
 # check versions for our own depedencies as they are fast-changing
 assert VersionFormat(uvc.__version__) >= VersionFormat('0.13')
@@ -75,6 +76,7 @@ class UVC_Source(Base_Source):
                             logger.error("Camera failed to initialize.")
                         else:
                             break
+        self.checkframestripes = None
 
         # check if we were sucessfull
         if not self.uvc_capture:
@@ -172,6 +174,7 @@ class UVC_Source(Base_Source):
                 except KeyError: pass
 
         elif ("Pupil Cam2" in self.uvc_capture.name):
+            self.checkframestripes = Check_Frame_Stripes()
 
             try: controls_dict['Auto Exposure Mode'].value = 1
             except KeyError: pass
@@ -241,6 +244,10 @@ class UVC_Source(Base_Source):
     def recent_events(self, events):
         try:
             frame = self.uvc_capture.get_frame(0.05)
+
+            if self.checkframestripes and self.checkframestripes.require_restart(frame):
+                self.frame_rate = self.frame_rate  # set the self.frame_rate in order to restart
+
         except uvc.StreamError:
             self._recent_frame = None
             self._restart_logic()
@@ -301,6 +308,11 @@ class UVC_Source(Base_Source):
 
         self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
+        if ("Pupil Cam2" in self.uvc_capture.name):
+            self.checkframestripes = Check_Frame_Stripes()
+        else:
+            self.checkframestripes = None
+
     @property
     def frame_rate(self):
         if self.uvc_capture:
@@ -321,12 +333,15 @@ class UVC_Source(Base_Source):
         self.frame_rate_backup = rate
 
         if ("Pupil Cam2" in self.uvc_capture.name):
+            self.checkframestripes = Check_Frame_Stripes()
 
             controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
 
             special_settings = {200: 28, 180: 31}
             try: controls_dict['Absolute Exposure Time'].value = special_settings.get(new_rate, 32)
             except KeyError: pass
+        else:
+            self.checkframestripes = None
 
     @property
     def jpeg_support(self):
