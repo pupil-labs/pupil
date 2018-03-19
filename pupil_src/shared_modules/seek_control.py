@@ -113,7 +113,13 @@ class Seek_Control(System_Plugin_Base):
     def set_playback_time(self, val):
         '''Callback used by seek bar on user input'''
         idx = self.ts_idx_from_playback_time(val)
+        self.set_playback_time_idx(idx)
+
+    def set_playback_time_idx(self, idx):
+        '''Callback used by plugins to request seek'''
         self.start_ts = self.g_pool.timestamps[idx]
+        self.was_seeking = True
+        self.notify_all({'subject': 'seek_control.was_seeking'})
 
     @property
     def trim_left_ts(self):
