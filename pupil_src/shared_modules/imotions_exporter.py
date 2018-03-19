@@ -36,25 +36,6 @@ class Empty(object):
         pass
 
 
-def bitrate(video_height, fps):
-    '''
-    Returns bitrate given these recommendations:
-    https://support.google.com/youtube/answer/1722171?hl=en
-    '''
-    if video_height < 420:
-        bitrate = 1e6
-    elif video_height < 600:
-        bitrate = 2.5e6
-    elif video_height < 900:
-        bitrate = 5e6
-    else:
-        bitrate = 8e6
-
-    if fps > 40:
-        bitrate *= 1.5
-    return bitrate * 50
-
-
 def export_undistorted_h264(distorted_video_loc, target_video_loc, export_range):
     yield "Converting scene video", .1
     capture = File_Source(Empty(), distorted_video_loc)
@@ -69,8 +50,8 @@ def export_undistorted_h264(distorted_video_loc, target_video_loc, export_range)
 
     target_container = av.open(target_video_loc, 'w')
     video_stream = target_container.add_stream('mpeg4', 1/time_base)
-    video_stream.bit_rate = bitrate(capture.frame_size[1], average_fps)
-    video_stream.bit_rate_tolerance = video_stream.bit_rate / 5
+    video_stream.bit_rate = 150e6
+    video_stream.bit_rate_tolerance = video_stream.bit_rate / 20
     video_stream.thread_count = max(1, mp.cpu_count() - 1)
     video_stream.width, video_stream.height = capture.frame_size
 
