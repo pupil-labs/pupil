@@ -174,7 +174,7 @@ class UVC_Source(Base_Source):
                 except KeyError: pass
 
         elif ("Pupil Cam2" in self.uvc_capture.name):
-            self.checkframestripes = Check_Frame_Stripes(self.uvc_capture.frame_size)
+            self.checkframestripes = Check_Frame_Stripes()
 
             try: controls_dict['Auto Exposure Mode'].value = 1
             except KeyError: pass
@@ -245,13 +245,8 @@ class UVC_Source(Base_Source):
         try:
             frame = self.uvc_capture.get_frame(0.05)
 
-            if self.checkframestripes is not None:
-                restart_flag = self.checkframestripes.check(frame.gray)
-                if restart_flag == 1:
-                    self._restart_in = -1
-                    self._restart_logic()
-                elif restart_flag == -1:
-                    self.checkframestripes = None
+            if self.checkframestripes and self.checkframestripes.require_restart(frame):
+                self.frame_rate = self.frame_rate  # set the self.frame_rate in order to restart
 
         except uvc.StreamError:
             self._recent_frame = None
@@ -314,7 +309,7 @@ class UVC_Source(Base_Source):
         self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
         if ("Pupil Cam2" in self.uvc_capture.name):
-            self.checkframestripes = Check_Frame_Stripes(self.uvc_capture.frame_size)
+            self.checkframestripes = Check_Frame_Stripes()
         else:
             self.checkframestripes = None
 
@@ -338,7 +333,7 @@ class UVC_Source(Base_Source):
         self.frame_rate_backup = rate
 
         if ("Pupil Cam2" in self.uvc_capture.name):
-            self.checkframestripes = Check_Frame_Stripes(self.uvc_capture.frame_size)
+            self.checkframestripes = Check_Frame_Stripes()
 
             controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
 
