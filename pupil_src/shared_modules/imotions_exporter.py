@@ -20,7 +20,7 @@ from fractions import Fraction
 import numpy as np
 from pyglui import ui
 from plugin import Analysis_Plugin_Base
-from video_capture import File_Source, EndofVideoFileError
+from video_capture import File_Source, EndofVideoError
 from methods import denormalize
 import background_helper as bh
 import csv_utils
@@ -63,7 +63,7 @@ def export_undistorted_h264(distorted_video_loc, target_video_loc, export_range)
     while True:
         try:
             frame = capture.get_frame()
-        except EndofVideoFileError:
+        except EndofVideoError:
             break
 
         if frame.index > export_range[1]:

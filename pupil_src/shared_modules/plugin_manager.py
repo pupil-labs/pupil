@@ -23,7 +23,8 @@ class Plugin_Manager(System_Plugin_Base):
         super().__init__(g_pool)
         non_user_plugins = (System_Plugin_Base, Base_Manager, Base_Source,
                             Calibration_Plugin, Gaze_Mapping_Plugin, Producer_Plugin_Base)
-        self.user_plugins = [p for p in sorted(g_pool.plugin_by_name.values(), key=lambda p: p.__name__)
+        self.user_plugins = [p for p in sorted(g_pool.plugin_by_name.values(),
+                                               key=lambda p: p.__name__.lower())
                              if not issubclass(p, non_user_plugins)]
 
     def init_ui(self):
