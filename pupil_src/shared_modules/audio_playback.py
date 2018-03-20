@@ -13,6 +13,7 @@ import numpy as np
 from plugin import System_Plugin_Base
 import os
 import av
+import av.filter
 from bisect import bisect_left as bisect
 
 import pyaudio as pa
@@ -23,7 +24,6 @@ from time import monotonic
 # logging
 import logging
 logger = logging.getLogger(__name__)
-
 
 class FileSeekError(Exception):
     pass
@@ -101,7 +101,7 @@ class Audio_Playback(System_Plugin_Base):
             self.audio_start_time = 0
             self.audio_measured_latency = -1.
             self.last_dac_time = 0
-
+            self.filter_graph = None
             try:
                 self.pa = pa.PyAudio()
                 self.pa_stream = self.pa.open(format=self.pa.get_format_from_width(self.audio_stream.format.bytes),
@@ -166,7 +166,7 @@ class Audio_Playback(System_Plugin_Base):
 
     def seek_to_audio_frame(self, seek_pos):
         try:
-            self.audio_stream.seek(self.audio_start_pts + self.audio_idx_to_pts(seek_pos), mode='time')
+            self.audio_stream.seek(self.audio_start_pts + self.audio_idx_to_pts(seek_pos))#, mode='time')
         except av.AVError as e:
             raise FileSeekError()
         else:
@@ -212,9 +212,29 @@ class Audio_Playback(System_Plugin_Base):
                 frame_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
                 audio_idx = bisect(self.audio_timestamps, self.g_pool.timestamps[frame_idx])
                 self.seek_to_audio_frame(audio_idx)
+                graph = av.filter.Graph()
+                fchain = []
+                fchain.append(graph.add_buffer(template=self.audio_stream))
+                fchain.append(graph.add("volume","volume=0.01:precision=float"))
+                fchain[-2].link_to(fchain[-1])
+                fchain.append(graph.add("abuffersink"))
+                fchain[-2].link_to(fchain[-1])
+                graph.configure()
+                self.filter_graph = fchain
+                print("fchain: {}".format(fchain))
             frames_chunk = itertools.islice(self.next_audio_frame, 10)
             for audio_frame_p in frames_chunk:
-                audio_frame = self.audio_resampler.resample(audio_frame_p)
+                pts = audio_frame_p.pts
+                audio_frame_f = None
+                if self.filter_graph is not None:
+                    self.filter_graph[0].push(audio_frame_p)
+                    audio_frame_f = self.filter_graph[-1].pull()
+                    audio_frame_f.pts = None
+                else:
+                    print("No filter graph!")
+                    audio_frame_f = audio_frame_p
+                audio_frame = self.audio_resampler.resample(audio_frame_f)
+                audio_frame.pts = pts
                 self.audio_bytes_fifo.append((bytes(audio_frame.planes[0]), self.audio_timestamps[0] + audio_frame.pts * self.audio_stream.time_base))
             if start_stream:
                 rt_delay = self.audio_timestamps[audio_idx] - self.g_pool.seek_control.current_playback_time
