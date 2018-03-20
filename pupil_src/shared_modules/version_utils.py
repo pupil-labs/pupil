@@ -25,23 +25,6 @@ def get_tag_commit():
         logger.error('Could not call git, is it installed? error msg: "{}"'.format(e))
         return None
 
-def dpkg_deb_version():
-    '''
-    [major].[minor].[rev]-[trailing-untagged-commits]
-    '''
-    version = get_tag_commit().decode('utf-8')
-    if version is None:
-        raise ValueError('Version Error')
-    version = version.replace("\n","")#strip newlines
-    version = version.replace("v","")#strip version 'v'
-    if '-' in version:
-        parts = version.split("-")
-        parts[-2] = '-'+parts[-2]
-        version = '.'.join(parts[:-2])
-        version += parts[-2]
-    return version
-
-
 def pupil_version():
     '''
     [major].[minor].[rev].[trailing-untagged-commits]
