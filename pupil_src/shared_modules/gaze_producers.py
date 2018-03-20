@@ -260,8 +260,8 @@ class Offline_Calibration(Gaze_Producer_Base):
             current = self.g_pool.capture.get_frame_index()
             for nf in self.manual_ref_positions:
                 if nf['index'] > current:
-                    self.g_pool.seek_control.set_playback_time_idx(nf['index'])
-                    self.g_pool.new_seek = True
+                    self.notify_all({'subject': 'seek_control.should_seek',
+                                     'index': nf['index']})
                     return
             logger.error('No further natural feature available')
 

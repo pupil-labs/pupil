@@ -244,16 +244,16 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             all_idc = [f['mid_frame_index'] for f in self.g_pool.fixations]
             # wrap-around index
             tar_fix = bisect_right(all_idc, cur_idx) % len(all_idc)
-            self.g_pool.seek_control.set_playback_time_idx(self.g_pool.fixations[tar_fix]['mid_frame_index'])
-            self.g_pool.new_seek = True
+            self.notify_all({'subject': 'seek_control.should_seek',
+                             'index': self.g_pool.fixations[tar_fix]['mid_frame_index']})
 
         def jump_prev_fixation(_):
             cur_idx = self.last_frame_idx
             all_idc = [f['mid_frame_index'] for f in self.g_pool.fixations]
             # wrap-around index
             tar_fix = (bisect_left(all_idc, cur_idx) - 1) % len(all_idc)
-            self.g_pool.seek_control.set_playback_time_idx(self.g_pool.fixations[tar_fix]['mid_frame_index'])
-            self.g_pool.new_seek = True
+            self.notify_all({'subject': 'seek_control.should_seek',
+                             'index': self.g_pool.fixations[tar_fix]['mid_frame_index']})
 
         for help_block in self.__doc__.split('\n\n'):
             help_str = help_block.replace('\n', ' ').replace('  ', '').strip()
