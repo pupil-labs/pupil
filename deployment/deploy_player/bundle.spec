@@ -11,7 +11,7 @@ from pyglui import ui
 
 if platform.system() == 'Darwin':
     sys.path.append('.')
-    from version import dpkg_deb_version
+    from version import pupil_version
     del sys.path[-1]
 
     a = Analysis(['../../pupil_src/main.py'],
@@ -48,7 +48,7 @@ if platform.system() == 'Darwin':
     app = BUNDLE(coll,
                  name='Pupil Player.app',
                  icon='pupil-player.icns',
-                 version = str(dpkg_deb_version()),
+                 version = str(pupil_version()),
                  info_plist={
                           'NSHighResolutionCapable': 'True'
                             },
