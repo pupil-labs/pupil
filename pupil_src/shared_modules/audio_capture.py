@@ -23,6 +23,7 @@ from time import time
 
 import platform
 import logging
+import re
 
 assert(av.__version__ >= '0.3.0')
 logger = logging.getLogger(__name__)
@@ -151,7 +152,9 @@ class Audio_Capture(Plugin):
             if platform.system() == "Darwin":
                 in_container = av.open('none:{}'.format(audio_src), format="avfoundation")
             elif platform.system() == "Linux":
-                in_container = av.open('hw:{}'.format(audio_src), format="alsa")
+                print("audio src = {}".format(audio_src))
+                dev_str = re.search("(hw:\s*\d+,\s*\d+)", audio_src)
+                in_container = av.open(dev_str.group(0), format="alsa")
             elif platform.system() == "Windows":
                 in_container = av.open('audio={}'.format(audio_src), format="dshow", options={'audio_buffer_size':'23'})
             else:

@@ -21,6 +21,8 @@ import signal
 import logging
 logger = logging.getLogger(__name__)
 
+import pyaudio as pa
+
 
 
 audio_modes = ('voice and sound', 'sound only','voice only','silent')
@@ -33,6 +35,12 @@ def set_audio_mode(new_mode):
     if new_mode in ('voice and sound', 'silent','voice only', 'sound only'):
         global audio_mode
         audio_mode = new_mode
+
+def get_input_devices_by_api(api):
+    pyaudio = pa.PyAudio()
+    ds_info = pyaudio.get_host_api_info_by_type(api)
+    return [dev_info for dev_info in [pyaudio.get_device_info_by_host_api_device_index(ds_info['index'], dev_idx) for dev_idx in range(ds_info['deviceCount'])] if dev_info['maxInputChannels'] > 0]
+
 
 # OS specific audio players via terminal
 if os_name == "Linux":
@@ -86,32 +94,11 @@ if os_name == "Linux":
         def __init__(self):
             super().__init__()
             self['No Audio'] = -1
-            try:
-                ret = sp.check_output([arecord_bin,"-l"]).decode(sys.stdout.encoding)
-            except OSError:
-                logger.warning("Could not enumerate audio input devices. Calling arecord failed.")
-                return
-            '''
-            **** List of CAPTURE Hardware Devices ****
-            card 0: AudioPCI [Ensoniq AudioPCI], device 0: ES1371/1 [ES1371 DAC2/ADC]
-              Subdevices: 1/1
-              Subdevice #0: subdevice #0
-            card 1: C930e [Logitech Webcam C930e], device 0: USB Audio [USB Audio]
-              Subdevices: 1/1
-              Subdevice #0: subdevice #0
 
-            '''
-            # logger.debug(ret)
-
-            lines = ret.split("\n")
-            # logger.debug(lines)
-            devices = [l.split(',')[0] for l in lines[1:] if not l.startswith("  ") and l]
-            logger.debug(devices)
-            device_names = [w.split(":")[-1][1:] for w in devices]
-            device_ids = [w.split(":")[0][-1] for w in devices]
-            for d,idx in zip(device_names,device_ids):
-                self[d] = idx
-
+            for dev_info in get_input_devices_by_api(pa.paALSA):
+                #print(dev_info)
+                if "hw:" in dev_info['name']:
+                    self[dev_info['name']] = dev_info['name']
 
 elif os_name == "Darwin":
 
@@ -121,6 +108,9 @@ elif os_name == "Darwin":
             super().__init__()
             self['No Audio'] = -1
             self['Default Mic'] = 0
+            for dev_info in get_input_devices_by_api(pa.paCoreAudio):
+                print(dev_info)
+
 
 
 
@@ -156,15 +146,8 @@ elif os_name == "Windows":
         """docstring for Audio_Input_Dict"""
         def __init__(self):
             super().__init__()
-            try:
-                import pyaudio as pa
-            except ImportError:
-                logger.info('Please install pyaudio for audio capture on Windows')
-            else:
-                pyaudio = pa.PyAudio()
-                ds_info = pyaudio.get_host_api_info_by_type(pa.paDirectSound)
-                for input_dev_name in [dev_info['name'] for dev_info in [pyaudio.get_device_info_by_host_api_device_index(ds_info['index'], dev_idx) for dev_idx in range(ds_info['deviceCount'])] if dev_info['maxInputChannels'] > 0]:
-                    self[input_dev_name] = input_dev_name
+            for dev_info in get_input_devices_by_api(pa.paDirectSound):
+                self[dev_info['name']] = dev_info['name']
             self['No Audio'] = None
 
 else:
