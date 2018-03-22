@@ -215,6 +215,7 @@ class JPEG_Writer(object):
 
         self.video_stream = self.container.add_stream('mjpeg', 1/self.time_base)
         self.video_stream.pix_fmt = "yuvj422p"
+        self.video_stream.time_base = self.time_base
         self.configured = False
         self.frame_count = 0
 
@@ -229,8 +230,8 @@ class JPEG_Writer(object):
         packet = Packet()
         packet.payload = input_frame.jpeg_buffer
         # we are setting the packet pts manually this uses a different timebase av.frame!
-        packet.dts = int(self.frame_count/self.video_stream.time_base/self.fps)
-        packet.pts = int(self.frame_count/self.video_stream.time_base/self.fps)
+        packet.dts = int(self.frame_count/self.time_base/self.fps)
+        packet.pts = int(self.frame_count/self.time_base/self.fps)
         self.frame_count += 1
         self.container.mux(packet)
         self.timestamps.append(input_frame.timestamp)
