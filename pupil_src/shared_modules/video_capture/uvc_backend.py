@@ -246,7 +246,9 @@ class UVC_Source(Base_Source):
             frame = self.uvc_capture.get_frame(0.05)
 
             if self.checkframestripes and self.checkframestripes.require_restart(frame):
-                self.frame_rate = self.frame_rate  # set the self.frame_rate in order to restart
+                # set the self.frame_rate in order to restart
+                self.frame_rate = self.frame_rate
+                logger.info('Stripes detected')
 
         except uvc.StreamError:
             self._recent_frame = None
