@@ -39,7 +39,10 @@ def set_audio_mode(new_mode):
 def get_input_devices_by_api(api):
     pyaudio = pa.PyAudio()
     ds_info = pyaudio.get_host_api_info_by_type(api)
-    return [dev_info for dev_info in [pyaudio.get_device_info_by_host_api_device_index(ds_info['index'], dev_idx) for dev_idx in range(ds_info['deviceCount'])] if dev_info['maxInputChannels'] > 0]
+    dev_list = [dev_info for dev_info in [pyaudio.get_device_info_by_host_api_device_index(ds_info['index'], dev_idx) for dev_idx in range(ds_info['deviceCount'])] if dev_info['maxInputChannels'] > 0]
+    pyaudio.terminate()
+    return dev_list
+
 
 
 # OS specific audio players via terminal
@@ -107,9 +110,9 @@ elif os_name == "Darwin":
         def __init__(self):
             super().__init__()
             self['No Audio'] = -1
-            self['Default Mic'] = 0
-            for dev_info in get_input_devices_by_api(pa.paCoreAudio):
-                print(dev_info)
+            for idx, dev_info in enumerate(get_input_devices_by_api(pa.paCoreAudio)):
+                if 'NoMachine' not in dev_info['name']:
+                    self[dev_info['name']] = idx
 
 
 
