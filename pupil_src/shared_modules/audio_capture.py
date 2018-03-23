@@ -65,7 +65,14 @@ class Audio_Capture(Plugin):
 
         def audio_dev_getter():
             # fetch list of currently available
+            audio_src_val = None
+            if self.audio_devices_dict is not None:
+                if self.audio_src in self.audio_devices_dict.keys():
+                    audio_src_val = self.audio_devices_dict[self.audio_src]
             self.audio_devices_dict = Audio_Input_Dict()
+            if audio_src_val is not None:
+                self.audio_devices_dict[self.audio_src] = audio_src_val
+
             devices = list(self.audio_devices_dict.keys())
             return devices, devices
 
