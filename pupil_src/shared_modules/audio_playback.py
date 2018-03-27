@@ -27,6 +27,10 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logger.DEBUG)
 
+#av.logging.set_level(av.logging.DEBUG)
+#logging.getLogger('libav').setLevel(logging.DEBUG)
+
+
 class FileSeekError(Exception):
     pass
 
@@ -124,6 +128,48 @@ class Audio_Playback(System_Plugin_Base):
 
             except ValueError:
                 self.pa_stream = None
+
+            ## Test lowpass filtering + viz
+            #lp_graph = av.filter.Graph()
+            #lp_graph_list = []
+            #lp_graph_list.append(lp_graph.add_buffer(template=self.audio_stream))
+            #args = "f=10"
+            #print("args = {}".format(args))
+            #lp_graph_list.append( lp_graph.add("lowpass", args))
+            #lp_graph_list[-2].link_to(lp_graph_list[-1])
+            ##lp_graph_list.append(lp_graph.add("aresample", "osr=30"))
+            ##lp_graph_list[-2].link_to(lp_graph_list[-1])
+            #lp_graph_list.append(lp_graph.add("abuffersink"))
+            #lp_graph_list[-2].link_to(lp_graph_list[-1])
+            #lp_graph.configure()
+
+            #audio_resampler = av.audio.resampler.AudioResampler(format=self.audio_stream.format,
+            #                                                         layout=self.audio_stream.layout,
+            #                                                         rate=30)
+            #filt_frames = []
+            #frames_chunk = itertools.islice(self.next_audio_frame, int(5 * 48000 / 1024))
+            #allSamples = None
+            #for af in frames_chunk:
+            #    lp_graph_list[0].push(af)
+            #    audio_frame = lp_graph_list[-1].pull()
+            #    audio_frame.pts = None
+            #    audio_frame_rs = audio_resampler.resample(audio_frame)
+            #    if audio_frame_rs is None:
+            #        continue
+            #    samples = np.frombuffer(audio_frame_rs.planes[0], dtype=np.float32)
+            #    if allSamples is not None:
+            #        allSamples = np.concatenate((allSamples, samples), axis=0)
+            #    else:
+            #        allSamples = samples
+            #from matplotlib  import pyplot as plt
+            #index = np.arange(len(allSamples))
+            #scaled_samples = (allSamples - allSamples.min()) / (allSamples.max() - allSamples.min())
+            ##shift_samples = scaled_samples - scaled_samples/2
+            ##plt.bar(index, np.abs(scaled_samples))
+            #plt.show()
+
+
+
     def init_ui(self):
         self.add_menu()
         self.menu_icon.order = 0.01
