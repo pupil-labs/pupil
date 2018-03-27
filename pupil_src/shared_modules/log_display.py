@@ -18,17 +18,10 @@ from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 import glfw
 
-from time import time
-
-class Log_to_Callback(logging.Handler):
-    def __init__(self,cb):
-        super().__init__()
-        self.cb = cb
-    def emit(self,record):
-        self.cb(record)
 
 def color_from_level(lvl):
     return {"CRITICAL":(.8,0,0,1),"ERROR":(1,0,0,1),"WARNING":(1.0,.8,0,1),"INFO":(1,1,1,1),"DEBUG":(1,1,1,.5),"NOTSET":(.5,.5,.5,.2)}[lvl]
+
 
 def duration_from_level(lvl):
     return {"CRITICAL":3,"ERROR":2,"WARNING":1.5,"INFO":1,"DEBUG":1,"NOTSET":1}[lvl]
@@ -36,6 +29,8 @@ def duration_from_level(lvl):
 
 class Log_Display(System_Plugin_Base):
     """docstring for Log_Display"""
+    subscriptions = ('logging.info', 'logging.warning', 'logging.error', 'logging.critical')
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.rendered_log = []
@@ -53,8 +48,10 @@ class Log_Display(System_Plugin_Base):
 
         self.window_size = glfwGetFramebufferSize(glfwGetCurrentContext())
         self.tex = Render_Target(*self.window_size)
-        self._socket = zmq_tools.Msg_Receiver(self.g_pool.zmq_ctx,self.g_pool.ipc_sub_url,('logging',))
 
+        self._socket = zmq_tools.Msg_Receiver(self.g_pool.zmq_ctx,
+                                              self.g_pool.ipc_sub_url,
+                                              self.subscriptions)
 
     def on_log(self,record):
         if self.alpha < 1.0:
