@@ -23,6 +23,7 @@ from time import time
 
 import platform
 import logging
+import re
 
 assert(av.__version__ >= '0.3.0')
 logger = logging.getLogger(__name__)
@@ -64,7 +65,14 @@ class Audio_Capture(Plugin):
 
         def audio_dev_getter():
             # fetch list of currently available
+            audio_src_val = None
+            if self.audio_devices_dict is not None:
+                if self.audio_src in self.audio_devices_dict.keys():
+                    audio_src_val = self.audio_devices_dict[self.audio_src]
             self.audio_devices_dict = Audio_Input_Dict()
+            if audio_src_val is not None:
+                self.audio_devices_dict[self.audio_src] = audio_src_val
+
             devices = list(self.audio_devices_dict.keys())
             return devices, devices
 
@@ -151,7 +159,9 @@ class Audio_Capture(Plugin):
             if platform.system() == "Darwin":
                 in_container = av.open('none:{}'.format(audio_src), format="avfoundation")
             elif platform.system() == "Linux":
-                in_container = av.open('hw:{}'.format(audio_src), format="alsa")
+                print("audio src = {}".format(audio_src))
+                dev_str = re.search("(hw:\s*\d+,\s*\d+)", audio_src)
+                in_container = av.open(dev_str.group(0), format="alsa")
             elif platform.system() == "Windows":
                 in_container = av.open('audio={}'.format(audio_src), format="dshow", options={'audio_buffer_size':'23'})
             else:
