@@ -138,10 +138,7 @@ def launcher():
         #Get the root logger
         logger = logging.getLogger()
         #set log level
-        if log_level_debug:
-            logger.setLevel(logging.DEBUG)
-        else:
-            logger.setLevel(logging.INFO)
+        logger.setLevel(logging.NOTSET)
         #Stream to file
         fh = logging.FileHandler(os.path.join(user_dir,'{}.log'.format(app)),mode='w')
         fh.setFormatter(logging.Formatter('%(asctime)s - %(processName)s - [%(levelname)s] %(name)s: %(message)s'))
@@ -149,6 +146,10 @@ def launcher():
         #Stream to console.
         ch = logging.StreamHandler()
         ch.setFormatter(logging.Formatter('%(processName)s - [%(levelname)s] %(name)s: %(message)s'))
+        if log_level_debug:
+            ch.setLevel(logging.DEBUG)
+        else:
+            ch.setLevel(logging.INFO)
         logger.addHandler(ch)
         # IPC setup to receive log messages. Use zmq_tools.ZMQ_handler to send messages to here.
         sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=("logging",))
