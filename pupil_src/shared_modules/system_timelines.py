@@ -81,8 +81,11 @@ class Audio_Viz_Transform():
                                                             layout=self.audio_stream.layout,
                                                             rate=60)
         self.next_audio_frame = self._next_audio_frame()
-        self.samples_min = 999.
-        self.samples_max = -999.
+        self.all_abs_samples = None
+        self.finished = False
+        self.a_levels = None
+        self.final_rescale = True
+        self.log_scale = False
 
     def _next_audio_frame(self):
         for packet in self.audio_container.demux(self.audio_stream):
@@ -94,51 +97,98 @@ class Audio_Viz_Transform():
     def sec_to_frames(self, sec):
         return int(np.ceil(sec * self.audio_stream.rate / self.audio_stream.frame_size))
 
-    def get_data(self, seconds=30.):
+    def get_data(self, seconds=30., height=210):
         import itertools
-        allSamples = None
-        frames_to_fetch = self.sec_to_frames(seconds)
-        if frames_to_fetch > 0:
-            frames_chunk = itertools.islice(self.next_audio_frame, frames_to_fetch)
-        for af in frames_chunk:
-            audio_frame = af
-            # af_dbl = audio_resampler1.resample(af)
-            # lp_graph_list[0].push(af)
-            # audio_frame = lp_graph_list[-1].pull()
-            # if audio_frame is None:
-            #    continue
-            # audio_frame.pts = None
-            audio_frame_rs = self.audio_resampler.resample(audio_frame)
-            if audio_frame_rs is None:
-                continue
-            samples = np.frombuffer(audio_frame_rs.planes[0], dtype=np.float32)
+
+        if not self.finished:
+            allSamples = None
+            frames_to_fetch = self.sec_to_frames(seconds)
+            if frames_to_fetch > 0:
+                frames_chunk = itertools.islice(self.next_audio_frame, frames_to_fetch)
+            for af in frames_chunk:
+                audio_frame = af
+                # af_dbl = audio_resampler1.resample(af)
+                # lp_graph_list[0].push(af)
+                # audio_frame = lp_graph_list[-1].pull()
+                # if audio_frame is None:
+                #    continue
+                # audio_frame.pts = None
+                audio_frame_rs = self.audio_resampler.resample(audio_frame)
+                if audio_frame_rs is None:
+                    continue
+                samples = np.frombuffer(audio_frame_rs.planes[0], dtype=np.float32)
+                if allSamples is not None:
+                    allSamples = np.concatenate((allSamples, samples), axis=0)
+                else:
+                    allSamples = samples
+
+            # flush
+            audio_frame_rs = self.audio_resampler.resample(None)
+            if audio_frame_rs is not None:
+                samples = np.frombuffer(audio_frame_rs.planes[0], dtype=np.float32)
+                if allSamples is not None:
+                    allSamples = np.concatenate((allSamples, samples), axis=0)
+                else:
+                    allSamples = samples
             if allSamples is not None:
-                allSamples = np.concatenate((allSamples, samples), axis=0)
+                new_ts = np.arange(0, len(allSamples), 1, dtype=np.float32) / self.audio_resampler.rate
+                new_ts += self.start_ts
+                self.start_ts = new_ts[-1] + 1 / self.audio_resampler.rate
+
+                abs_samples = np.abs(allSamples)
+                if self.all_abs_samples is not None:
+                    self.all_abs_samples = np.concatenate((self.all_abs_samples, abs_samples), axis=0)
+                else:
+                    self.all_abs_samples = abs_samples
+
+                if abs_samples.max() - abs_samples.min() > 0.:
+                    scaled_samples = (abs_samples - abs_samples.min()) / (abs_samples.max() - abs_samples.min())
+                elif abs_samples.max() > 0.:
+                    scaled_samples = abs_samples / abs_samples.max()
+                else:
+                    scaled_samples = abs_samples
+
+
             else:
-                allSamples = samples
-        if allSamples is None:
-            return
-        # flush
-        audio_frame_rs = self.audio_resampler.resample(None)
-        if audio_frame_rs is not None:
-            samples = np.frombuffer(audio_frame_rs.planes[0], dtype=np.float32)
-            if allSamples is not None:
-                allSamples = np.concatenate((allSamples, samples), axis=0)
-            else:
-                allSamples = samples
+                new_ts = np.arange(0, len(self.all_abs_samples), 1, dtype=np.float32) / self.audio_resampler.rate
+                new_ts += self.audio_timestamps[0]
 
-        new_ts = np.arange(0, len(allSamples), 1) / self.audio_resampler.rate
-        new_ts += self.start_ts
-        self.start_ts = new_ts[-1] + 1 / self.audio_resampler.rate
+                #self.all_abs_samples = np.log10(self.all_abs_samples)
+                self.all_abs_samples[-1] = 0.
 
-        abs_samples = np.abs(allSamples)
+                abs_max = self.all_abs_samples.max()
 
-        # TODO: handle min/max adequately
+                scaled_samples = self.all_abs_samples / abs_max + .0001
 
-        scaled_samples = (abs_samples - abs_samples.min()) / (abs_samples.max() - abs_samples.min())
-        a_levels = [alevel for alevel in zip(new_ts, scaled_samples)]
+                if self.log_scale:
+                    scaled_samples = 10 * np.log10(scaled_samples)
+                    sc_min =  scaled_samples.min()
+                    scaled_samples += - sc_min
+                    sc_max = scaled_samples.max()
+                    scaled_samples /= sc_max
+                else:
+                    if self.all_abs_samples.max() - self.all_abs_samples.min() > 0.:
+                        scaled_samples = (self.all_abs_samples - self.all_abs_samples.min()) / (self.all_abs_samples.max() - self.all_abs_samples.min())
+                    elif self.all_abs_samples.max() > 0.:
+                        scaled_samples = self.all_abs_samples / self.all_abs_samples.max()
+                    else:
+                        scaled_samples = self.all_abs_samples
 
-        return a_levels
+                self.a_levels = None
+                self.finished = True
+            if not self.finished or self.final_rescale:
+                points_y1 = scaled_samples * (-height / 2) + height / 2
+                points_xy1 = np.concatenate((new_ts.reshape(-1, 1), points_y1.reshape(-1, 1)), 1).reshape(-1)
+                points_y2 = scaled_samples * (height / 2) + height / 2
+                points_xy2 = np.concatenate((new_ts.reshape(-1, 1), points_y2.reshape(-1, 1)), 1).reshape(-1)
+                # a_levels = [alevel for alevel in zip(new_ts, scaled_samples)]
+                a_levels = np.concatenate((points_xy1.reshape(-1, 2), points_xy2.reshape(-1, 2)), 1).reshape(-1)
+                if self.a_levels is not None:
+                    self.a_levels = np.concatenate((self.a_levels, a_levels), axis=0)
+                else:
+                    self.a_levels = a_levels
+
+        return self.a_levels, self.finished
 
 
 
@@ -294,13 +344,10 @@ class System_Timelines(System_Plugin_Base):
                     self.get_audio_data = False
                     return
 
-            a_levels = self.aud_viz_trans.get_data()
+            a_levels, finished = self.aud_viz_trans.get_data()
             if a_levels is not None:
-                if 'audio_level' not in self.cache.keys():
                     self.cache['audio_level'] = a_levels
-                else:
-                    self.cache['audio_level'] = np.concatenate((self.cache['audio_level'] , a_levels), axis=0)
-            else:
+            if a_levels is None or finished:
                 self.get_audio_data = False
         return self.get_audio_data
         # shift_samples = scaled_samples - scaled_samples/2
