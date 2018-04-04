@@ -58,7 +58,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     try:
 
         # imports
-        from file_methods import Persistent_Dict, load_object, next_export_sub_dir
+        from file_methods import Persistent_Dict, load_object, next_export_sub_dir, load_pupil_data_file
 
         # display
         import glfw
@@ -243,7 +243,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             glfw.glfwSetWindowSize(main_window, *window_size)
 
         # load pupil_positions, gaze_positions
-        g_pool.pupil_data = load_object(pupil_data_path)
+        g_pool.pupil_data = load_pupil_data_file(pupil_data_path)
+
         g_pool.binocular = meta_info.get('Eye Mode', 'monocular') == 'binocular'
         g_pool.version = app_version
         g_pool.timestamps = g_pool.capture.timestamps

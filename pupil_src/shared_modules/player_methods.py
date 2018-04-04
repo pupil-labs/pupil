@@ -59,7 +59,7 @@ def correlate_data(data, timestamps):
             break
 
         if datum['timestamp'] <= ts:
-            datum['index'] = frame_idx
+            # datum['index'] = frame_idx
             data_by_frame[frame_idx].append(datum)
             data_index += 1
         else:
