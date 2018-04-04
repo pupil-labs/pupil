@@ -90,18 +90,20 @@ class System_Timelines(System_Plugin_Base):
                     self.aud_viz_trans = Audio_Viz_Transform(self.g_pool.rec_dir)
                 except FileNotFoundError:
                     self.get_audio_data = False
-                    return
+                    return False
 
             a_levels, finished = self.aud_viz_trans.get_data()
             if a_levels is not None:
                     self.cache['audio_level'] = a_levels
             if a_levels is None or finished:
                 self.get_audio_data = False
-        return self.get_audio_data
+            return True
+        else:
+            return False
 
     def draw_audio(self, width, height, scale):
         with gl_utils.Coord_System(*self.cache['xlim'], *self.cache['ylim']):
-            draw_bars2(self.cache['audio_level'], 210, color=right_color)
+            draw_bars_buffer(self.cache['audio_level'], color=right_color)
 
 
     def draw_fps(self, width, height, scale):

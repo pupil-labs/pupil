@@ -69,8 +69,8 @@ class Audio_Viz_Transform():
         self.all_abs_samples = None
         self.finished = False
         self.a_levels = None
+        self.a_levels_log = None
         self.final_rescale = True
-        self.log_scale = False
 
     def _next_audio_frame(self):
         for packet in self.audio_container.demux(self.audio_stream):
@@ -82,7 +82,7 @@ class Audio_Viz_Transform():
     def sec_to_frames(self, sec):
         return int(np.ceil(sec * self.audio_stream.rate / self.audio_stream.frame_size))
 
-    def get_data(self, seconds=30., height=210):
+    def get_data(self, seconds=30., height=210, log_scale=False):
         import itertools
 
         if not self.finished:
@@ -126,6 +126,8 @@ class Audio_Viz_Transform():
                 else:
                     self.all_abs_samples = abs_samples
 
+                scaled_samples_log = self.log_scale(abs_samples)
+
                 if abs_samples.max() - abs_samples.min() > 0.:
                     scaled_samples = (abs_samples - abs_samples.min()) / (abs_samples.max() - abs_samples.min())
                 elif abs_samples.max() > 0.:
@@ -141,36 +143,55 @@ class Audio_Viz_Transform():
                 #self.all_abs_samples = np.log10(self.all_abs_samples)
                 self.all_abs_samples[-1] = 0.
 
-                abs_max = self.all_abs_samples.max()
+                scaled_samples_log = self.log_scale(self.all_abs_samples)
 
-                scaled_samples = self.all_abs_samples / abs_max + .0001
-
-                if self.log_scale:
-                    scaled_samples = 10 * np.log10(scaled_samples)
-                    sc_min =  scaled_samples.min()
-                    scaled_samples += - sc_min
-                    sc_max = scaled_samples.max()
-                    scaled_samples /= sc_max
+                if self.all_abs_samples.max() - self.all_abs_samples.min() > 0.:
+                    scaled_samples = (self.all_abs_samples - self.all_abs_samples.min()) / (self.all_abs_samples.max() - self.all_abs_samples.min())
+                elif self.all_abs_samples.max() > 0.:
+                    scaled_samples = self.all_abs_samples / self.all_abs_samples.max()
                 else:
-                    if self.all_abs_samples.max() - self.all_abs_samples.min() > 0.:
-                        scaled_samples = (self.all_abs_samples - self.all_abs_samples.min()) / (self.all_abs_samples.max() - self.all_abs_samples.min())
-                    elif self.all_abs_samples.max() > 0.:
-                        scaled_samples = self.all_abs_samples / self.all_abs_samples.max()
-                    else:
-                        scaled_samples = self.all_abs_samples
+                    scaled_samples = self.all_abs_samples
 
                 self.a_levels = None
                 self.finished = True
             if not self.finished or self.final_rescale:
-                points_y1 = scaled_samples * (-height / 2) + height / 2
-                points_xy1 = np.concatenate((new_ts.reshape(-1, 1), points_y1.reshape(-1, 1)), 1).reshape(-1)
-                points_y2 = scaled_samples * (height / 2) + height / 2
-                points_xy2 = np.concatenate((new_ts.reshape(-1, 1), points_y2.reshape(-1, 1)), 1).reshape(-1)
-                # a_levels = [alevel for alevel in zip(new_ts, scaled_samples)]
-                a_levels = np.concatenate((points_xy1.reshape(-1, 2), points_xy2.reshape(-1, 2)), 1).reshape(-1)
+                a_levels = self.get_verteces(new_ts, scaled_samples, height)
+
                 if self.a_levels is not None:
                     self.a_levels = np.concatenate((self.a_levels, a_levels), axis=0)
                 else:
                     self.a_levels = a_levels
 
-        return self.a_levels, self.finished
+                a_levels_log = self.get_verteces(new_ts, scaled_samples_log, height)
+
+                if self.a_levels_log is not None:
+                    self.a_levels_log = np.concatenate((self.a_levels_log, a_levels_log), axis=0)
+                else:
+                    self.a_levels_log = a_levels_log
+
+        if not log_scale:
+            ret = self.a_levels
+        else:
+            ret = self.a_levels_log
+
+        return ret, self.finished
+
+    def get_verteces(self, new_ts, scaled_samples, height):
+        points_y1 = scaled_samples * (-height / 2) + height / 2
+        points_xy1 = np.concatenate((new_ts.reshape(-1, 1), points_y1.reshape(-1, 1)), 1).reshape(-1)
+        points_y2 = scaled_samples * (height / 2) + height / 2
+        points_xy2 = np.concatenate((new_ts.reshape(-1, 1), points_y2.reshape(-1, 1)), 1).reshape(-1)
+        # a_levels = [alevel for alevel in zip(new_ts, scaled_samples)]
+        a_levels = np.concatenate((points_xy1.reshape(-1, 2), points_xy2.reshape(-1, 2)), 1).reshape(-1)
+
+        return a_levels
+
+    def log_scale(self, abs_samples):
+        scaled_samples = abs_samples / abs_samples.max() + .0001
+        scaled_samples_log = 10 * np.log10(scaled_samples)
+        sc_min = scaled_samples_log.min()
+        scaled_samples_log += - sc_min
+        sc_max = scaled_samples_log.max()
+        scaled_samples_log /= sc_max
+
+        return scaled_samples_log
