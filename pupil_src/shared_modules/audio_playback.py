@@ -14,6 +14,7 @@ from plugin import System_Plugin_Base
 from pyglui import ui
 import os
 import av
+assert av.__version__ >= '0.4.0'
 import av.filter
 from bisect import bisect_left as bisect
 
