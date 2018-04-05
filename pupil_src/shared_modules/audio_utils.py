@@ -71,6 +71,7 @@ class Audio_Viz_Transform():
         self.a_levels = None
         self.a_levels_log = None
         self.final_rescale = True
+        self.log_scaling = False
 
     def _next_audio_frame(self):
         for packet in self.audio_container.demux(self.audio_stream):
@@ -85,7 +86,8 @@ class Audio_Viz_Transform():
     def get_data(self, seconds=30., height=210, log_scale=False):
         import itertools
 
-        if not self.finished:
+        finished = self.finished
+        if not finished:
             allSamples = None
             frames_to_fetch = self.sec_to_frames(seconds)
             if frames_to_fetch > 0:
@@ -174,7 +176,11 @@ class Audio_Viz_Transform():
         else:
             ret = self.a_levels_log
 
-        return ret, self.finished
+        if self.log_scaling != log_scale:
+            self.log_scaling = log_scale
+            finished = False
+
+        return ret, finished
 
     def get_verteces(self, new_ts, scaled_samples, height):
         points_y1 = scaled_samples * (-height / 2) + height / 2

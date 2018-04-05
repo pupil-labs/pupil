@@ -12,6 +12,9 @@ See COPYING and COPYING.LESSER for license details.
 import numpy as np
 from plugin import System_Plugin_Base
 from pyglui import ui
+import gl_utils
+from pyglui.cygl.utils import *
+from audio_utils import Audio_Viz_Transform
 import os
 import av
 assert av.__version__ >= '0.4.0'
@@ -30,6 +33,8 @@ logger.setLevel(logger.DEBUG)
 
 #av.logging.set_level(av.logging.DEBUG)
 #logging.getLogger('libav').setLevel(logging.DEBUG)
+
+viz_color = RGBA(0.9844, 0.5938, 0.4023, 1.)
 
 
 class FileSeekError(Exception):
@@ -130,46 +135,13 @@ class Audio_Playback(System_Plugin_Base):
             except ValueError:
                 self.pa_stream = None
 
-            ## Test lowpass filtering + viz
-            #lp_graph = av.filter.Graph()
-            #lp_graph_list = []
-            #lp_graph_list.append(lp_graph.add_buffer(template=self.audio_stream))
-            #args = "f=10"
-            #print("args = {}".format(args))
-            #lp_graph_list.append( lp_graph.add("lowpass", args))
-            #lp_graph_list[-2].link_to(lp_graph_list[-1])
-            ##lp_graph_list.append(lp_graph.add("aresample", "osr=30"))
-            ##lp_graph_list[-2].link_to(lp_graph_list[-1])
-            #lp_graph_list.append(lp_graph.add("abuffersink"))
-            #lp_graph_list[-2].link_to(lp_graph_list[-1])
-            #lp_graph.configure()
+            self.audio_timeline = None
 
-            #audio_resampler = av.audio.resampler.AudioResampler(format=self.audio_stream.format,
-            #                                                         layout=self.audio_stream.layout,
-            #                                                         rate=30)
-            #filt_frames = []
-            #frames_chunk = itertools.islice(self.next_audio_frame, int(5 * 48000 / 1024))
-            #allSamples = None
-            #for af in frames_chunk:
-            #    lp_graph_list[0].push(af)
-            #    audio_frame = lp_graph_list[-1].pull()
-            #    audio_frame.pts = None
-            #    audio_frame_rs = audio_resampler.resample(audio_frame)
-            #    if audio_frame_rs is None:
-            #        continue
-            #    samples = np.frombuffer(audio_frame_rs.planes[0], dtype=np.float32)
-            #    if allSamples is not None:
-            #        allSamples = np.concatenate((allSamples, samples), axis=0)
-            #    else:
-            #        allSamples = samples
-            #from matplotlib  import pyplot as plt
-            #index = np.arange(len(allSamples))
-            #scaled_samples = (allSamples - allSamples.min()) / (allSamples.max() - allSamples.min())
-            ##shift_samples = scaled_samples - scaled_samples/2
-            ##plt.bar(index, np.abs(scaled_samples))
-            #plt.show()
-
-
+            self.audio_viz_trans = Audio_Viz_Transform(self.g_pool.rec_dir)
+            self.audio_viz_data = None
+            self.log_scale = False
+            self.xlim = (self.g_pool.timestamps[0], self.g_pool.timestamps[-1])
+            self.ylim = (0, 210)
 
     def init_ui(self):
         self.add_menu()
@@ -186,6 +158,11 @@ class Audio_Playback(System_Plugin_Base):
                                    # setter=set_volume,
                                    step=.05, min=0.0, max=1.0,
                                    label='Buffer size (s)'))
+
+        self.audio_timeline = ui.Timeline('Audio level', self.draw_audio, None)
+        self.audio_timeline.content_height *= 2
+        self.g_pool.user_timelines.append(self.audio_timeline)
+        self.menu.append(ui.Switch('log_scale', self, label='Log scale'))
 
     def sec_to_frames(self, sec):
         return int(np.ceil(sec * self.audio_stream.rate / self.audio_stream.frame_size))
@@ -263,6 +240,11 @@ class Audio_Playback(System_Plugin_Base):
                 self.play = False
 
     def recent_events(self, events):
+        if self.audio_viz_trans is not None:
+            self.audio_viz_data, finished = self.audio_viz_trans.get_data(log_scale=self.log_scale)
+            if not finished:
+                self.audio_timeline.refresh()
+
         if self.pa_stream is not None and not self.pa_stream.is_stopped():
             #print("req_volume = {}".format(self.req_audio_volume))
             if not self.audio_paused and not self.pa_stream.is_active():
@@ -380,3 +362,26 @@ class Audio_Playback(System_Plugin_Base):
             if self.pa_stream is not None and not self.pa_stream.is_stopped():
                 self.pa_stream.stop_stream()
             self.play = False
+
+    def cache_audio_data(self):
+        if self.get_audio_data:
+            if self.audio_viz_trans is None:
+                try:
+                    self.audio_viz_trans = Audio_Viz_Transform(self.g_pool.rec_dir)
+                except FileNotFoundError:
+                    self.get_audio_data = False
+                    return False
+
+            a_levels, finished = self.audio_viz_trans.get_data()
+            if a_levels is not None:
+                self.cache['audio_level'] = a_levels
+            if a_levels is None or finished:
+                self.get_audio_data = False
+            return True
+        else:
+            return False
+
+    def draw_audio(self, width, height, scale):
+        with gl_utils.Coord_System(*self.xlim, *self.ylim):
+            draw_bars_buffer(self.audio_viz_data, color=viz_color)
+

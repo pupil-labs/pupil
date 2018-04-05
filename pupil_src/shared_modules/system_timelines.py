@@ -14,14 +14,9 @@ from pyglui import ui
 from pyglui.pyfontstash import fontstash as fs
 from pyglui.cygl.utils import *
 import OpenGL.GL as gl
-from audio_utils import Audio_Viz_Transform
 
 from plugin import System_Plugin_Base
 import gl_utils
-# logging
-import logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logger.DEBUG)
 
 world_color = RGBA(0.66, 0.86, 0.461, 1.)
 right_color = RGBA(0.9844, 0.5938, 0.4023, 1.)
@@ -33,11 +28,7 @@ class System_Timelines(System_Plugin_Base):
         super().__init__(g_pool)
         self.show_world_fps = show_world_fps
         self.show_eye_fps = show_eye_fps
-        self.cache = {}
-        self.aud_viz_trans = None
-        self.get_audio_data = True
         self.cache_fps_data()
-        self.cache_audio_data()
 
     def init_ui(self):
         self.glfont = fs.Context()
@@ -46,9 +37,6 @@ class System_Timelines(System_Plugin_Base):
         self.fps_timeline = ui.Timeline('Recorded FPS', self.draw_fps, self.draw_fps_legend)
         self.fps_timeline.content_height *= 2
         self.g_pool.user_timelines.append(self.fps_timeline)
-        self.audio_timeline = ui.Timeline('Audio level', self.draw_audio, None)
-        self.audio_timeline.content_height *= 2
-        self.g_pool.user_timelines.append(self.audio_timeline)
 
     def deinit_ui(self):
         self.g_pool.user_timelines.remove(self.fps_timeline)
@@ -75,36 +63,8 @@ class System_Timelines(System_Plugin_Base):
         else:
             e1_fps = []
 
-        #self.cache = {'world': w_fps, 'eye0': e0_fps, 'eye1': e1_fps,
-        #              'xlim': [t0, t1], 'ylim': [0, 210]}
-        self.cache['world'] = w_fps
-        self.cache['eye0'] = e0_fps
-        self.cache['eye1'] = e1_fps
-        self.cache['xlim'] = [t0, t1]
-        self.cache['ylim'] = [0, 210]
-
-    def cache_audio_data(self):
-        if self.get_audio_data:
-            if self.aud_viz_trans is None:
-                try:
-                    self.aud_viz_trans = Audio_Viz_Transform(self.g_pool.rec_dir)
-                except FileNotFoundError:
-                    self.get_audio_data = False
-                    return False
-
-            a_levels, finished = self.aud_viz_trans.get_data()
-            if a_levels is not None:
-                    self.cache['audio_level'] = a_levels
-            if a_levels is None or finished:
-                self.get_audio_data = False
-            return True
-        else:
-            return False
-
-    def draw_audio(self, width, height, scale):
-        with gl_utils.Coord_System(*self.cache['xlim'], *self.cache['ylim']):
-            draw_bars_buffer(self.cache['audio_level'], color=right_color)
-
+        self.cache = {'world': w_fps, 'eye0': e0_fps, 'eye1': e1_fps,
+                      'xlim': [t0, t1], 'ylim': [0, 210]}
 
     def draw_fps(self, width, height, scale):
         with gl_utils.Coord_System(*self.cache['xlim'], *self.cache['ylim']):
@@ -148,7 +108,3 @@ class System_Timelines(System_Plugin_Base):
         if notification['subject'] == 'pupil_positions_changed':
             self.cache_fps_data()
             self.fps_timeline.refresh()
-
-    def recent_events(self, events):
-        if self.cache_audio_data():
-            self.audio_timeline.refresh()
