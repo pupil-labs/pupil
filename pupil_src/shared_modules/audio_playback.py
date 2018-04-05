@@ -64,6 +64,7 @@ class Audio_Playback(System_Plugin_Base):
         self.req_audio_volume = 1.
         self.current_audio_volume = 1.
         self.req_buffer_size_secs = .5
+        self.audio_viz_trans = None
         audio_file = os.path.join(self.g_pool.rec_dir, 'audio.mp4')
         if os.path.isfile(audio_file):
             self.audio_container = av.open(str(audio_file))
@@ -144,6 +145,8 @@ class Audio_Playback(System_Plugin_Base):
             self.ylim = (0, 210)
 
     def init_ui(self):
+        if self.pa_stream is None:
+            return
         self.add_menu()
         self.menu_icon.order = 0.01
         self.menu.label = 'Audio Playback'
