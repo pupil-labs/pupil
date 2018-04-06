@@ -294,7 +294,7 @@ class Audio_Playback(System_Plugin_Base):
                 audio_idx = bisect(self.audio_timestamps, self.g_pool.timestamps[frame_idx])
                 self.seek_to_audio_frame(audio_idx)
 
-            if self.filter_graph_list is None or self.req_audio_volume != self.current_audio_volume:
+            if self.filter_graph_list is None:
                 self.current_audio_volume = self.req_audio_volume
                 print("Setting volume {} ".format(self.current_audio_volume))
                 #if self.filter_graph is not None:
@@ -305,27 +305,32 @@ class Audio_Playback(System_Plugin_Base):
                 self.filter_graph_list.append(self.filter_graph.add_buffer(template=self.audio_stream))
                 args = "volume={}:precision=float".format(self.current_audio_volume)
                 print("args = {}".format(args))
-                self.filter_graph_list.append(
-                    self.filter_graph.add("volume", args))
+                self.volume_filter = self.filter_graph.add("volume", args)
+                self.filter_graph_list.append(self.volume_filter)
+                self.filter_graph_list[-2].link_to(self.filter_graph_list[-1])
+                self.filter_graph_list.append(self.filter_graph.add("aresample", "osf={}".format(self.audio_stream.format.packed.name)))
                 self.filter_graph_list[-2].link_to(self.filter_graph_list[-1])
                 self.filter_graph_list.append(self.filter_graph.add("abuffersink"))
                 self.filter_graph_list[-2].link_to(self.filter_graph_list[-1])
                 self.filter_graph.configure()
+            elif self.req_audio_volume != self.current_audio_volume:
+                self.current_audio_volume = self.req_audio_volume
+                args = "{}".format(self.current_audio_volume)
+                self.volume_filter.cmd("volume", args)
+
             frames_to_fetch = self.sec_to_frames(max(0, self.req_buffer_size_secs - self.buffer_len_secs()))
             if frames_to_fetch > 0:
                 frames_chunk = itertools.islice(self.next_audio_frame, frames_to_fetch)
                 for audio_frame_p in frames_chunk:
                     pts = audio_frame_p.pts
+                    audio_frame_p.pts = None
                     audio_frame_f = None
                     if self.filter_graph_list is not None:
                         self.filter_graph_list[0].push(audio_frame_p)
-                        audio_frame_f = self.filter_graph_list[-1].pull()
-                        audio_frame_f.pts = None
+                        audio_frame = self.filter_graph_list[-1].pull()
                     else:
                         #print("No filter graph!")
-                        audio_frame_f = audio_frame_p
-                        audio_frame_f.pts = None
-                    audio_frame = self.audio_resampler.resample(audio_frame_f)
+                        audio_frame = self.audio_resampler.resample(audio_frame_p)
                     audio_frame.pts = pts
                     self.audio_bytes_fifo.append((bytes(audio_frame.planes[0]), self.audio_timestamps[0] + audio_frame.pts * self.audio_stream.time_base))
             #print("Frames in buffer {}".format(len(self.audio_bytes_fifo)))
