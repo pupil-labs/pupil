@@ -83,12 +83,13 @@ def save_object(object_, file_path):
 
 def load_pupil_data_file(file_path):
     """
-    load Pupil data file, output data is dics of topics with tuples of data inside.
+    load Pupil data file, output data is dicts of toplevel topic with tuples of data inside.
     Each datum is a immutable dict that is unpacked on access.
     """
     with open(file_path,"rb") as fh:
         pupil_data = {}
         for topic, payload in msgpack.Unpacker(fh, raw=False, use_list=False):
+            topic = topic.split(".")[0]
             if topic not in pupil_data:
                 pupil_data[topic] = []
             pupil_data[topic].append(Serialized_Dict(payload=payload))
