@@ -44,20 +44,20 @@ class Audio_Viz_Transform():
         self.start_ts = self.audio_timestamps[0]
 
         # Test lowpass filtering + viz
-        self.lp_graph = av.filter.Graph()
-        self.lp_graph_list = []
-        self.lp_graph_list.append(self.lp_graph.add_buffer(template=self.audio_stream))
-        args = "f=10"
-        print("args = {}".format(args))
-        # lp_graph_list.append(lp_graph.add("lowpass", args))
-        # "attacks=.1|.1:decays=.2|.2:points=.-900/-900|-50.1/-900|-50/-50:soft-knee=.01:gain=0:volume=-90:delay=.1")
-        self.lp_graph_list.append(self.lp_graph.add("compand", ".1|.1:.2|.2:-900/-900|-50.1/-900|-50/-50:.01:0:-90:.1"))
-        self.lp_graph_list[-2].link_to(self.lp_graph_list[-1])
-        # lp_graph_list.append(lp_graph.add("aresample", "osr=30"))
-        # lp_graph_list[-2].link_to(lp_graph_list[-1])
-        self.lp_graph_list.append(self.lp_graph.add("abuffersink"))
-        self.lp_graph_list[-2].link_to(self.lp_graph_list[-1])
-        self.lp_graph.configure()
+        #self.lp_graph = av.filter.Graph()
+        #self.lp_graph_list = []
+        #self.lp_graph_list.append(self.lp_graph.add_buffer(template=self.audio_stream))
+        #args = "f=10"
+        #print("args = {}".format(args))
+        ## lp_graph_list.append(lp_graph.add("lowpass", args))
+        ## "attacks=.1|.1:decays=.2|.2:points=.-900/-900|-50.1/-900|-50/-50:soft-knee=.01:gain=0:volume=-90:delay=.1")
+        #self.lp_graph_list.append(self.lp_graph.add("compand", ".1|.1:.2|.2:-900/-900|-50.1/-900|-50/-50:.01:0:-90:.1"))
+        #self.lp_graph_list[-2].link_to(self.lp_graph_list[-1])
+        ## lp_graph_list.append(lp_graph.add("aresample", "osr=30"))
+        ## lp_graph_list[-2].link_to(lp_graph_list[-1])
+        #self.lp_graph_list.append(self.lp_graph.add("abuffersink"))
+        #self.lp_graph_list[-2].link_to(self.lp_graph_list[-1])
+        #self.lp_graph.configure()
 
         #audio_resampler1 = av.audio.resampler.AudioResampler(format=av.AudioFormat('dblp'),
         #                                                     layout=audio_stream.layout,
@@ -94,6 +94,7 @@ class Audio_Viz_Transform():
                 frames_chunk = itertools.islice(self.next_audio_frame, frames_to_fetch)
             for af in frames_chunk:
                 audio_frame = af
+                audio_frame.pts = None
                 # af_dbl = audio_resampler1.resample(af)
                 # lp_graph_list[0].push(af)
                 # audio_frame = lp_graph_list[-1].pull()
