@@ -107,7 +107,7 @@ class Eye_Wrapper(object):
                 # if we just need to seek by one frame, its faster to just read one and and throw it away.
                 self.source.get_frame()
             if requested_eye_frame_idx != self.source.get_frame_index() + 1:
-                self.source.seek_to_frame(requested_eye_frame_idx)
+                self.source.seek_to_frame(int(requested_eye_frame_idx))
 
             try:
                 self.current_eye_frame = self.source.get_frame()

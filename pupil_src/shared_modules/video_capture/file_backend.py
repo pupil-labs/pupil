@@ -313,7 +313,7 @@ class File_Source(Playback_Source, Base_Source):
     def seek_to_frame(self, seek_pos):
         # frame accurate seeking
         try:
-            self.video_stream.seek(self.idx_to_pts(seek_pos))#, mode='time')
+            self.video_stream.seek(int(self.idx_to_pts(seek_pos)))
         except av.AVError as e:
             raise FileSeekError()
         else:
