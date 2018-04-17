@@ -224,7 +224,7 @@ class Audio_Playback(System_Plugin_Base):
 
     def seek_to_audio_frame(self, seek_pos):
         try:
-            self.audio_stream.seek(self.audio_start_pts + self.audio_idx_to_pts(seek_pos))#, mode='time')
+            self.audio_stream.seek(self.audio_start_pts + self.audio_idx_to_pts(seek_pos))
         except av.AVError as e:
             raise FileSeekError()
         else:

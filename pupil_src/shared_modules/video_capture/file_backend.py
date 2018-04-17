@@ -321,18 +321,6 @@ class File_Source(Playback_Source, Base_Source):
             self.finished_sleep = 0
             self.target_frame_idx = seek_pos
 
-    @ensure_initialisation()
-    def seek_to_frame_fast(self, seek_pos):
-        # frame accurate seeking
-        try:
-            self.video_stream.seek(self.idx_to_pts(seek_pos), mode='time', any_frame=True)
-        except av.AVError as e:
-            raise FileSeekError()
-        else:
-            self.next_frame = self._next_frame()
-            self.finished_sleep = 0
-            self.target_frame_idx = seek_pos
-
     def on_notify(self, notification):
         if notification['subject'] == 'file_source.seek' and notification.get('source_path') == self.source_path:
             self.seek_to_frame(notification['frame_index'])
