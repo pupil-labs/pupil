@@ -83,7 +83,10 @@ def fixation_from_data(dispersion, method, base_data, timestamps=None):
 
 def vector_dispersion(vectors):
     distances = pdist(vectors, metric='cosine')
-    return np.arccos(1. - distances.max())
+    distances.sort()  # sort by distance
+    # use 20% biggest distances, but at least 4
+    cut_off = np.max([distances.shape[0] // 5, 4])
+    return np.arccos(1. - distances[-cut_off:].mean())
 
 
 def gaze_dispersion(capture, gaze_subset, use_pupil=True):
@@ -209,7 +212,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
     visual angle within the coordinate system of the world camera. These
     fixations will have their method field set to "gaze".
     '''
-    def __init__(self, g_pool, max_dispersion=1.0, min_duration=300, max_duration=1000, show_fixations=True):
+    def __init__(self, g_pool, max_dispersion=3.0, min_duration=300, max_duration=1000, show_fixations=True):
         super().__init__(g_pool)
         # g_pool.min_data_confidence
         self.max_dispersion = max_dispersion
