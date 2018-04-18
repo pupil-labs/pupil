@@ -170,7 +170,7 @@ class Accuracy_Visualizer(Plugin):
         # offset (distance) (in degrees of visual angle)
         # between fixations locations and the corresponding
         # locations of the fixation targets.
-        undistorted = intrinsics.undistortPoints(locations)
+        undistorted = intrinsics.unprojectPoints(locations)
         undistorted.shape = -1, 2
         # append column with z=1
         # using idea from https://stackoverflow.com/questions/8486294/how-to-add-an-extra-column-to-an-numpy-array

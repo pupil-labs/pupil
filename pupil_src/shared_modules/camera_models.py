@@ -160,10 +160,10 @@ class Fisheye_Dist_Camera(object):
 
         return undistorted_img
 
-    def undistortPoints(self, dist_pts, use_distortion=True):
+    def unprojectPoints(self, dist_pts, use_distortion=True):
         """
         Undistorts points according to the camera model.
-        cv2.fisheye.undistortPoints does *NOT* perform the same unprojection step the original cv2.undistortPoints does.
+        cv2.fisheye.unprojectPoints does *NOT* perform the same unprojection step the original cv2.unprojectPoints does.
         Thus we implement this function ourselves.
         :param dist_pts: Distorted points. Can be a list of points or a single point.
         :return: Array of undistorted points with the same shape as the input
@@ -244,15 +244,15 @@ class Fisheye_Dist_Camera(object):
         return image_points
 
     def solvePnP(self, uv3d, xy):
-        # xy_undist = self.undistortPoints(xy)
+        # xy_undist = self.unprojectPoints(xy)
         # f = np.array((self.K[0, 0], self.K[1, 1])).reshape(1, 2)
         # c = np.array((self.K[0, 2], self.K[1, 2])).reshape(1, 2)
         # xy_undist = xy_undist * f + c
-        # xy_undist = cv2.fisheye.undistortPoints(xy, self.K, self.D, P=self.K)
+        # xy_undist = cv2.fisheye.unprojectPoints(xy, self.K, self.D, P=self.K)
         if xy.ndim == 2:
             xy= np.expand_dims(xy, 0)
 
-        xy_undist = cv2.fisheye.undistortPoints(
+        xy_undist = cv2.fisheye.unprojectPoints(
             xy.astype(np.float32),
             self.K,
             self.D,
@@ -295,7 +295,7 @@ class Radial_Dist_Camera(object):
         undist_img = cv2.undistort(img, self.K, self.D)
         return undist_img
 
-    def undistortPoints(self, dist_pts, use_distortion=True):
+    def unprojectPoints(self, dist_pts, use_distortion=True):
         """
         Undistorts points according to the camera model.
         :param dist_pts: Distorted points. Can be a list of points or a single point.

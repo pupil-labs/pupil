@@ -348,7 +348,7 @@ def preprocess_3d_data(matched_data, g_pool):
             # projected point uv to normal ray vector of camera
             ref = data_point['ref']['screen_pos']
             ref_vector = np.array(ref).reshape(-1,1,2)
-            ref_vector = g_pool.capture.intrinsics.undistortPoints(ref_vector)
+            ref_vector = g_pool.capture.intrinsics.unprojectPoints(ref_vector)
             ref_vector = cv2.convertPointsToHomogeneous(np.float32(ref_vector))
             ref_vector.shape = (-1, 3)
             ref_vector = ref_vector.tolist()[0]
