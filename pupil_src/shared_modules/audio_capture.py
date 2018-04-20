@@ -208,6 +208,7 @@ class Audio_Capture(Plugin):
             nonlocal out_container, out_stream, in_stream, in_frame_size, timestamps, out_frame_num
             if out_container is not None:
                 timestamps.append(timestamp)
+                audio_frame.pts = None
                 out_packets = [out_stream.encode(audio_frame)]
                 while out_packets[-1]:
                     out_packets.append(out_stream.encode(None))
@@ -254,6 +255,7 @@ class Audio_Capture(Plugin):
                         timestamps = []
 
                     timestamps.append(timestamp)
+                    audio_frame.pts = None
                     out_packets = [out_stream.encode(audio_frame)]
                     for out_packet in out_packets:
                         if out_packet is not None:

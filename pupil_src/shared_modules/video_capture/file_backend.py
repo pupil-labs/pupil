@@ -19,6 +19,7 @@ from camera_models import load_intrinsics
 import numpy as np
 from multiprocessing import cpu_count
 import os.path
+from fractions import Fraction
 
 # logging
 import logging
@@ -126,7 +127,11 @@ class File_Source(Playback_Source, Base_Source):
         # self.selected_streams = [s for s in (self.video_stream,self.audio_stream) if s]
         # self.av_packet_iterator = self.container.demux(self.selected_streams)
 
-        if float(self.video_stream.average_rate)%1 != 0.0:
+        avg_rate = self.video_stream.average_rate
+        if avg_rate is None:
+            avg_rate = Fraction(0,1)
+
+        if float(avg_rate)%1 != 0.0:
             logger.error('Videofile pts are not evenly spaced, pts to index conversion may fail and be inconsitent.')
 
         # load/generate timestamps.
@@ -136,7 +141,7 @@ class File_Source(Playback_Source, Base_Source):
             self.timestamps = np.load(timestamps_path)
         except IOError:
             logger.warning("did not find timestamps file, making timetamps up based on fps and frame count. Frame count and timestamps are not accurate!")
-            frame_rate = float(self.video_stream.average_rate)
+            frame_rate = float(avg_rate)
             self.timestamps = [i/frame_rate for i in range(int(self.container.duration/av.time_base*frame_rate)+100)]  # we are adding some slack.
         else:
             logger.debug("Auto loaded %s timestamps from %s" % (len(self.timestamps), timestamps_path))
@@ -308,19 +313,7 @@ class File_Source(Playback_Source, Base_Source):
     def seek_to_frame(self, seek_pos):
         # frame accurate seeking
         try:
-            self.video_stream.seek(self.idx_to_pts(seek_pos), mode='time')
-        except av.AVError as e:
-            raise FileSeekError()
-        else:
-            self.next_frame = self._next_frame()
-            self.finished_sleep = 0
-            self.target_frame_idx = seek_pos
-
-    @ensure_initialisation()
-    def seek_to_frame_fast(self, seek_pos):
-        # frame accurate seeking
-        try:
-            self.video_stream.seek(self.idx_to_pts(seek_pos), mode='time', any_frame=True)
+            self.video_stream.seek(int(self.idx_to_pts(seek_pos)))
         except av.AVError as e:
             raise FileSeekError()
         else:
