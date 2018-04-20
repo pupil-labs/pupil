@@ -100,6 +100,7 @@ class Reference_Surface(object):
         self.window_should_close = False
 
         self.gaze_on_srf = []  # points on surface for realtime feedback display
+        self.fixations_on_srf = []  # fixations on surface
 
         self.glfont = fontstash.Context()
         self.glfont.add_font('opensans', get_opensans_font_path())

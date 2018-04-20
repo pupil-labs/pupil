@@ -497,6 +497,8 @@ class Fixation_Detector(Fixation_Detector_Base):
 
     The Offline Fixation Detector yields fixations that do not overlap.
     '''
+    order = .19
+
     def __init__(self, g_pool, max_dispersion=3.0, min_duration=300, confidence_threshold=0.75):
         super().__init__(g_pool)
         self.queue = deque()
