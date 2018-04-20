@@ -46,7 +46,7 @@ class Audio_Playback(System_Plugin_Base):
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites not between
     """
-    icon_chr = chr(0xe029)
+    icon_chr = chr(0xe050)
     icon_font = 'pupil_icons'
 
     def __init__(self, g_pool):
