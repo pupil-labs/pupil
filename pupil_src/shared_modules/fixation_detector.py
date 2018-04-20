@@ -83,8 +83,9 @@ def fixation_from_data(dispersion, method, base_data, timestamps=None):
 
 def vector_dispersion(vectors):
     distances = pdist(vectors, metric='cosine')
+    # use 20% biggest distances, but at least 4, see reasoning at
+    # https://github.com/pupil-labs/pupil/issues/1133#issuecomment-382412175
     distances.sort()  # sort by distance
-    # use 20% biggest distances, but at least 4
     cut_off = np.max([distances.shape[0] // 5, 4])
     return np.arccos(1. - distances[-cut_off:].mean())
 
