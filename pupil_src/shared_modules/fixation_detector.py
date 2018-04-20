@@ -117,9 +117,7 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
         locations[:, 1] = (1. - locations[:, 1]) * height
 
         # undistort onto 3d plane
-        undistorted = capture.intrinsics.unprojectPoints(locations)
-        vectors = np.ones((undistorted.shape[0], 3), dtype=undistorted.dtype)
-        vectors[:, :-1] = undistorted
+        vectors = capture.intrinsics.unprojectPoints(locations)
 
     dist = vector_dispersion(vectors)
     return dist, method, base_data

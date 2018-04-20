@@ -160,17 +160,17 @@ class Fisheye_Dist_Camera(object):
 
         return undistorted_img
 
-    def unprojectPoints(self, dist_pts, use_distortion=True):
+    def unprojectPoints(self, pts_2d, use_distortion=True, normalize=False):
         """
         Undistorts points according to the camera model.
         cv2.fisheye.undistortPoints does *NOT* perform the same unprojection step the original cv2.unprojectPoints does.
         Thus we implement this function ourselves.
-        :param dist_pts: Distorted points. Can be a list of points or a single point.
-        :return: Array of undistorted points with the same shape as the input
+        :param pts_2d: Distorted points. Can be a list of points or a single point.
+        :return: Array of unprojected 3d points
         """
-        input_shape = dist_pts.shape
+        input_shape = pts_2d.shape
 
-        dist_pts = dist_pts.reshape((-1, 2))
+        pts_2d = pts_2d.reshape((-1, 2))
         eps = np.finfo(np.float32).eps
 
         f = np.array((self.K[0, 0], self.K[1, 1])).reshape(1, 2)
@@ -180,7 +180,7 @@ class Fisheye_Dist_Camera(object):
         else:
             k = np.asarray([1. / 3., 2. / 15., 17. / 315., 62. / 2835.], dtype=np.float32)
 
-        pi = dist_pts.astype(np.float32)
+        pi = pts_2d.astype(np.float32)
         pw = (pi - c) / f
 
         theta_d = np.linalg.norm(pw, ord=2, axis=1)
@@ -194,10 +194,15 @@ class Fisheye_Dist_Camera(object):
 
         scale = np.tan(theta) / (theta_d + eps)
 
-        pu = pw * scale.reshape(-1, 1)
+        pts_2d_undist = pw * scale.reshape(-1, 1)
 
-        pu.shape = input_shape
-        return pu
+        pts_3d = cv2.convertPointsToHomogeneous(pts_2d_undist)
+        pts_3d.shape = -1, 3
+
+        if normalize:
+            pts_3d /= np.linalg.norm(pts_3d, axis=1)
+
+        return pts_3d
 
     def projectPoints(self, object_points, rvec=None, tvec=None, use_distortion=True):
         """
@@ -295,42 +300,45 @@ class Radial_Dist_Camera(object):
         undist_img = cv2.undistort(img, self.K, self.D)
         return undist_img
 
-    def unprojectPoints(self, dist_pts, use_distortion=True):
+    def unprojectPoints(self, pts_2d, use_distortion=True, normalize=False):
         """
         Undistorts points according to the camera model.
-        :param dist_pts: Distorted points. Can be a list of points or a single point.
-        :return: Array of undistorted points with the same shape as the input
+        :param pts_2d: 2d points. Can be a list of points or a single point.
+        :return: Array of unprojected 3d points
         """
-        dist_pts = np.array(dist_pts)
-        input_shape = dist_pts.shape
+        pts_2d = np.array(pts_2d, dtype=np.float32)
+        input_shape = pts_2d.shape
 
         # If given a single point expand to a 1-point list
-        if len(dist_pts.shape) == 1:
-            dist_pts = dist_pts.reshape((1, 2))
+        if len(pts_2d.shape) == 1:
+            pts_2d = pts_2d.reshape((1, 2))
 
         # Delete any posibly wrong 3rd dimension
-        if dist_pts.ndim == 3:
-            dist_pts = dist_pts.reshape((-1, 2))
+        if pts_2d.ndim == 3:
+            pts_2d = pts_2d.reshape((-1, 2))
 
         # Add third dimension the way cv2 wants it
-        if dist_pts.ndim == 2:
-            dist_pts = dist_pts.reshape((-1, 1, 2))
+        if pts_2d.ndim == 2:
+            pts_2d = pts_2d.reshape((-1, 1, 2))
 
         if use_distortion:
             _D = self.D
         else:
             _D = np.asarray([[0.,0.,0.,0.,0.]])
 
-        undist_pts = cv2.undistortPoints(
-            dist_pts.astype(np.float32),
+        pts_2d_undist = cv2.undistortPoints(
+            pts_2d,
             self.K,
             _D,
         )
 
-        # Restore whatever shape we had in the beginning
-        undist_pts.shape = input_shape
+        pts_3d = cv2.convertPointsToHomogeneous(pts_2d_undist)
+        pts_3d.shape = -1, 3
 
-        return undist_pts
+        if normalize:
+            pts_3d /= np.linalg.norm(pts_3d, axis=1)
+
+        return pts_3d
 
     def projectPoints(self, object_points, rvec=None, tvec=None, use_distortion=True):
         """
