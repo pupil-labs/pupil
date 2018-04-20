@@ -242,7 +242,7 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 
 	//from edges to contours
 	Contours_2D contours ;
-	cv::findContours(edges, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+	cv::findContours(edges, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
 
 	//first we want to filter out the bad stuff, to short ones
 	const auto contour_size_min_pred = [&props](const Contour_2D & contour) {

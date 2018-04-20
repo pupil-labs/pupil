@@ -85,7 +85,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
         video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
                       if os.path.splitext(f)[1] in valid_ext][0]
-        cap = init_playback_source(g_pool, source_path=video_path)
+        cap = init_playback_source(g_pool, source_path=video_path, timing=None)
 
         timestamps = cap.timestamps
 
