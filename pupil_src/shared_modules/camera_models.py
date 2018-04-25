@@ -165,10 +165,9 @@ class Fisheye_Dist_Camera(object):
         Undistorts points according to the camera model.
         cv2.fisheye.undistortPoints does *NOT* perform the same unprojection step the original cv2.unprojectPoints does.
         Thus we implement this function ourselves.
-        :param pts_2d: Distorted points. Can be a list of points or a single point.
-        :return: Array of unprojected 3d points
+        :param pts_2d, shape: Nx2
+        :return: Array of unprojected 3d points, shape: Nx3
         """
-        input_shape = pts_2d.shape
 
         pts_2d = pts_2d.reshape((-1, 2))
         eps = np.finfo(np.float32).eps
@@ -303,15 +302,10 @@ class Radial_Dist_Camera(object):
     def unprojectPoints(self, pts_2d, use_distortion=True, normalize=False):
         """
         Undistorts points according to the camera model.
-        :param pts_2d: 2d points. Can be a list of points or a single point.
-        :return: Array of unprojected 3d points
+        :param pts_2d, shape: Nx2
+        :return: Array of unprojected 3d points, shape: Nx3
         """
         pts_2d = np.array(pts_2d, dtype=np.float32)
-        input_shape = pts_2d.shape
-
-        # If given a single point expand to a 1-point list
-        if len(pts_2d.shape) == 1:
-            pts_2d = pts_2d.reshape((1, 2))
 
         # Delete any posibly wrong 3rd dimension
         if pts_2d.ndim == 3:
@@ -336,7 +330,7 @@ class Radial_Dist_Camera(object):
         pts_3d.shape = -1, 3
 
         if normalize:
-            pts_3d /= np.linalg.norm(pts_3d, axis=1)
+            pts_3d /= np.linalg.norm(pts_3d, axis=1)[:, np.newaxis]
 
         return pts_3d
 
