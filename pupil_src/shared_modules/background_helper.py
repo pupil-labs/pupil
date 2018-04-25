@@ -47,8 +47,9 @@ class Task_Proxy(object):
                 pipe.send(datum)
         except Exception as e:
             pipe.send(e)
-            import traceback
-            logger.warning(traceback.format_exc())
+            if not isinstance(e, EarlyCancellationError):
+                import traceback
+                print(traceback.format_exc())
         else:
             pipe.send(StopIteration())
         finally:
