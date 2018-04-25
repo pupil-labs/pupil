@@ -335,8 +335,6 @@ def preprocess_3d_data(matched_data, g_pool):
     ref = np.array([dp['ref']['screen_pos'] for dp in matched_data])
     ref_processed = g_pool.capture.intrinsics.unprojectPoints(ref, normalize=True)
 
-    print(len(ref_processed), len(pupil0_processed), len(pupil1_processed))
-
     return ref_processed, pupil0_processed, pupil1_processed
 
 
