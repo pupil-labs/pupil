@@ -27,7 +27,7 @@ def get_tag_commit():
 
 def pupil_version():
     '''
-    [major].[minor].[rev].[trailing-untagged-commits]
+    [major].[minor].[trailing-untagged-commits]
     '''
     version = get_tag_commit().decode('utf-8')
     # print(version)
