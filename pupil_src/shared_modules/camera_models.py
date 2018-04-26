@@ -169,7 +169,12 @@ class Fisheye_Dist_Camera(object):
         :return: Array of unprojected 3d points, shape: Nx3
         """
 
-        pts_2d = pts_2d.reshape((-1, 2))
+        pts_2d = np.array(pts_2d, dtype=np.float32)
+
+        # Delete any posibly wrong 3rd dimension
+        if pts_2d.ndim == 1 or pts_2d.ndim == 3:
+            pts_2d = pts_2d.reshape((-1, 2))
+
         eps = np.finfo(np.float32).eps
 
         f = np.array((self.K[0, 0], self.K[1, 1])).reshape(1, 2)
@@ -308,7 +313,7 @@ class Radial_Dist_Camera(object):
         pts_2d = np.array(pts_2d, dtype=np.float32)
 
         # Delete any posibly wrong 3rd dimension
-        if pts_2d.ndim == 3:
+        if pts_2d.ndim == 1 or pts_2d.ndim == 3:
             pts_2d = pts_2d.reshape((-1, 2))
 
         # Add third dimension the way cv2 wants it
