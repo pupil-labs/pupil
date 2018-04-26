@@ -35,4 +35,3 @@ deploy:
   on:
     branch: master
     repo: pupil-labs/pupil
-    tags: true
