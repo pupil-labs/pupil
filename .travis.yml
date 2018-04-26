@@ -2,6 +2,9 @@ sudo: required
 services:
 - docker
 language: python
+branches:
+  only:
+    - master
 os:
 - linux
 
@@ -30,6 +33,6 @@ deploy:
   body: $TRAVIS_TAG $TRAVIS_OS_NAME release built by CI
   draft: true
   on:
-    tags: true
     branch: master
     repo: pupil-labs/pupil
+    tags: true
