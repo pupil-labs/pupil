@@ -2,9 +2,6 @@ sudo: required
 services:
 - docker
 language: python
-branches:
-  only:
-  - master
 os:
 - linux
 
@@ -29,9 +26,10 @@ deploy:
   file_glob: true
   file: $TRAVIS_BUILD_DIR/deployment/*.zip
   skip_cleanup: true
-  name: "release from travis ci"
-  body: "release from travis ci for linux"
+  name: $TRAVIS_TAG $TRAVIS_OS_NAME - CI
+  body: $TRAVIS_TAG $TRAVIS_OS_NAME release built by CI
   draft: true
   on:
+    tags: true
+    branch: master
     repo: pupil-labs/pupil
-    branch: travis_ci_linux
