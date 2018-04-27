@@ -4,12 +4,12 @@
 current_tag=$(git describe --tags | awk -F"-" '{print $1"."$2}')
 current_tag=${current_tag%?} #strip trailing .
 
-if [[ "$(uname)" == "Darwin" ]]; then
-    release_dir=$(echo "pupil_${current_tag}_macos_x64")
-    ext=dmg
-elif [[ "$(expr substr $(uname -s) 1 5)" == "Linux" ]]; then
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
     release_dir=$(echo "pupil_${current_tag}_linux_x64")
-    ext=deb
+    ext=*.deb
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    release_dir=$(echo "pupil_${current_tag}_macos_x64")
+    ext=*.dmg
 fi
 echo "release_dir:  ${release_dir}"
 mkdir ${release_dir}
