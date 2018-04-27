@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # create release dir from latest tag
 current_tag=$(git describe --tags | awk -F"-" '{print $1"."$2}')
