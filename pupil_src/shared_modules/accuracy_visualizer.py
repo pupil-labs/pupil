@@ -165,6 +165,7 @@ class Accuracy_Visualizer(Plugin):
         error_lines = locations.copy()  # n x 4
         locations[:, ::2] *= width
         locations[:, 1::2] = (1. - locations[:, 1::2]) * height
+        locations.shape = -1, 2
 
         # Accuracy is calculated as the average angular
         # offset (distance) (in degrees of visual angle)
