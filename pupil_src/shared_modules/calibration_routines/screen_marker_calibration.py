@@ -130,7 +130,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     def start(self):
         if not self.g_pool.capture.online:
-            logger.error("{} requireds world capture video input.".format(self.mode_pretty))
+            logger.error("{} requiers world capture video input.".format(self.mode_pretty))
             return
         super().start()
         audio.say("Starting {}".format(self.mode_pretty))
