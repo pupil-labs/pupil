@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import platform
 import sys, os
-from version import write_version_file,pupil_version
+from version import write_version_file, get_tag_commit
 import shutil
 from subprocess import call
 
@@ -23,7 +23,7 @@ if platform.system() == 'Darwin':
     shutil.rmtree('dist/Pupil Capture')
     print( 'removed the non-app dist bundle')
 
-    bundle_name = 'pupil_capture_mac_os_x64_v%s'%pupil_version()
+    bundle_name = 'pupil_capture_mac_os_x64_%s'%get_tag_commit()
     bundle_dmg_name = 'Install Pupil Capture'
     src_dir = 'dist'
     bundle_app_dir = os.path.join(src_dir,'Pupil Capture.app/' )
@@ -56,7 +56,7 @@ elif platform.system() == 'Linux':
             pass
 
     #lets build the structure for our deb package.
-    deb_root = 'pupil_capture_linux_os_x64_v%s'%pupil_version()
+    deb_root = 'pupil_capture_linux_os_x64_%s'%get_tag_commit()
     DEBIAN_dir = os.path.join(deb_root,'DEBIAN')
     opt_dir = os.path.join(deb_root,'opt')
     bin_dir = os.path.join(deb_root,'usr','bin')
@@ -78,7 +78,7 @@ Maintainer: Pupil Labs <info@pupil-labs.com>
 Priority: optional
 Description: Pupil Capture is part of the Pupil Eye Tracking Platform
 Installed-Size: %s
-'''%(pupil_version(),dist_size/1024)
+'''%(get_tag_commit(),dist_size/1024)
         f.write(content)
     os.chmod(os.path.join(DEBIAN_dir,'control'),0o644)
 

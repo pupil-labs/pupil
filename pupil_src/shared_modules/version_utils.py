@@ -3,8 +3,8 @@
 # Changes, Additions: Moritz Kassner <moritz@pupil-labs.com>, Will Patera <will@pupil-labs.com>
 # This file is placed into the public domain.
 
-from subprocess import check_output,CalledProcessError,STDOUT
-import os,sys
+from subprocess import check_output, CalledProcessError, STDOUT
+import os, sys
 from distutils.version import LooseVersion as VersionFormat
 
 
@@ -17,13 +17,16 @@ def get_tag_commit():
     returns string: 'tag'-'commits since tag'-'7 digit commit id'
     """
     try:
-        return check_output(['git', 'describe','--tags'],stderr=STDOUT,cwd=os.path.dirname(os.path.abspath(__file__)))
+        return check_output(['git', 'describe', '--tags'],
+                            stderr=STDOUT,
+                            cwd=os.path.dirname(os.path.abspath(__file__)))
     except CalledProcessError as e:
-        logger.error('Error calling git: "{}" \n output: "{}"'.format(e,e.output))
+        logger.error('Error calling git: "{}" \n output: "{}"'.format(e, e.output))
         return None
     except OSError as e:
         logger.error('Could not call git, is it installed? error msg: "{}"'.format(e))
         return None
+
 
 def pupil_version():
     '''
@@ -42,7 +45,7 @@ def pupil_version():
 
 
 def get_version(version_file=None):
-    #get the current software version
+    # get the current software version
     if getattr(sys, 'frozen', False):
         with open(version_file, 'r') as f:
             version = f.read()
