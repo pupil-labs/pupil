@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import platform
 import sys, os
-from version import write_version_file, get_tag_commit
+from version import write_version_file, get_tag_commit,pupil_version
 import shutil
 from subprocess import call
 
@@ -78,7 +78,7 @@ Maintainer: Pupil Labs <info@pupil-labs.com>
 Priority: optional
 Description: Pupil Capture is part of the Pupil Eye Tracking Platform
 Installed-Size: %s
-'''%(get_tag_commit(),dist_size/1024)
+'''%(pupil_version(),dist_size/1024)
         f.write(content)
     os.chmod(os.path.join(DEBIAN_dir,'control'),0o644)
 
