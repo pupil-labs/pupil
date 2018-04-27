@@ -204,7 +204,7 @@ class Fisheye_Dist_Camera(object):
         pts_3d.shape = -1, 3
 
         if normalize:
-            pts_3d /= np.linalg.norm(pts_3d, axis=1)
+            pts_3d /= np.linalg.norm(pts_3d, axis=1)[:, np.newaxis]
 
         return pts_3d
 
