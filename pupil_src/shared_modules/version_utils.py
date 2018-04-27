@@ -17,9 +17,12 @@ def get_tag_commit():
     returns string: 'tag'-'commits since tag'-'7 digit commit id'
     """
     try:
-        return check_output(['git', 'describe', '--tags'],
-                            stderr=STDOUT,
-                            cwd=os.path.dirname(os.path.abspath(__file__)))
+        desc_tag = check_output(['git', 'describe', '--tags'],
+                                stderr=STDOUT,
+                                cwd=os.path.dirname(os.path.abspath(__file__)))
+        desc_tag = desc_tag.decode('utf-8')
+        desc_tag = desc_tag.replace("\n", "")  # strip newlines
+        return desc_tag
     except CalledProcessError as e:
         logger.error('Error calling git: "{}" \n output: "{}"'.format(e, e.output))
         return None
@@ -32,12 +35,12 @@ def pupil_version():
     '''
     [major].[minor].[trailing-untagged-commits]
     '''
-    version = get_tag_commit().decode('utf-8')
-    # print(version)
+    version = get_tag_commit()
     if version is None:
         raise ValueError('Version Error')
-    version = version.replace("\n","")#strip newlines
-    version = version.replace("v","")#strip version 'v'
+
+    version = version.replace("v", "")  # strip version 'v'
+    # print(version)
     if '-' in version:
         parts = version.split('-')
         version = '.'.join(parts[:-1])
