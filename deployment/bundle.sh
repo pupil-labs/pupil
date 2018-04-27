@@ -1,15 +1,7 @@
 #!/bin/bash
 
 # get most major.minor tag, without trailing count
-current_tag=$(git describe --tags | awk -F"-" '{print $1}' | awk -F"." '{print $1"."$2}')
-
-# count trailing commits
-trailing_count=$(git rev-list $current_tag.. --count)
-
-# append $trailing_count
-if [ "$trailing_count" -gt "0" ]; then
-    current_tag=$current_tag"."$trailing_count
-fi
+current_tag=$(git describe --tags)
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
     release_dir=$(echo "pupil_${current_tag}_linux_x64")
