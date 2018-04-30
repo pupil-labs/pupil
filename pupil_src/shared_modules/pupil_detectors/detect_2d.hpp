@@ -215,9 +215,11 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 			ellipse = toEllipse<double>(refit_ellipse);
 
 	    	ellipse_circumference = ellipse.circumference();
-			support_pixels = ellipse_true_support(props,ellipse, ellipse_circumference, raw_edges);
-	     	support_ratio = support_pixels.size() / ellipse_circumference;
-
+			auto support_pixels_narrow = ellipse_true_support(props,ellipse, ellipse_circumference, raw_edges);
+			props.ellipse_true_support_min_dist *=2.;
+			auto support_pixels_wide = ellipse_true_support(props,ellipse, ellipse_circumference, raw_edges);
+			props.ellipse_true_support_min_dist /=2.;
+	     	support_ratio = pow((float(support_pixels_narrow.size())/float(support_pixels_wide.size())), props.support_pixel_ratio_exponent)  * (float(support_pixels_narrow.size())/ float(ellipse_circumference));
 			ellipse.center[0] += roi.x;
 			ellipse.center[1] += roi.y;
 
