@@ -424,6 +424,8 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 
 	solutions = filter_subset(solutions);
 
+    double max_support_ratio = props.final_perimeter_ratio_range_min; //KEEPS TRACK OF MAXIMUM SUPPORT RATIO REACHED SO FAR
+
 	int index_best_Solution = -1;
 	int enum_index = 0;
 
@@ -448,8 +450,10 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 		double support_ratio = support_pixels.size() / ellipse_circumference;
 		//TODO: refine the selection of final candidate
 
-		if (support_ratio >= props.final_perimeter_ratio_range_min && is_Ellipse(cv_ellipse)) {
+		if (support_ratio >= max_support_ratio && is_Ellipse(cv_ellipse)) {
+
 			index_best_Solution = enum_index;
+            max_support_ratio = support_ratio;
 
 			if (support_ratio >= props.strong_perimeter_ratio_range_min) {
 				ellipse.center[0] += roi.x;
