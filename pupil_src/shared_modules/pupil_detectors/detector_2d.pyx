@@ -81,6 +81,7 @@ cdef class Detector_2D:
             self.detectProperties["final_perimeter_ratio_range_min"] = 0.5
             self.detectProperties["final_perimeter_ratio_range_max"] = 1.0
             self.detectProperties["ellipse_true_support_min_dist"] = 3.0
+            self.detectProperties["support_pixel_ratio_exponent"] = 2.0
 
     def get_settings(self):
         return self.detectProperties
