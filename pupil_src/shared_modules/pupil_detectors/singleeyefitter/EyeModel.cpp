@@ -404,7 +404,8 @@ double EyeModel::refineWithEdges(Sphere& sphere )
                 new EllipseDistanceResidualFunction<double>( pupilInliers, sphere.radius, mFocalLength),
                 pupilInliers.size()
                 ),
-                NULL, &x[0], &x[3 + 3 * i]);
+                new ceres::CauchyLoss(0.01),
+                &x[0], &x[3 + 3 * i]);
         }
     }
 
