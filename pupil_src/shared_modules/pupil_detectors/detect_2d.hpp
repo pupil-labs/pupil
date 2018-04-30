@@ -424,18 +424,40 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 
 	solutions = filter_subset(solutions);
 
+    Contours_2D split_contours_resolved(split_contours.size()); // WILL CONTAIN RESOLVED SPLIT CONTOURS TO TEST QUALITY OF CANDIDATE ELLIPSES
+
+    auto resolve_contour = [&](std::vector<cv::Point>& contour, cv::Mat & edges) -> std::vector<cv::Point> {
+		cv::Mat support_mask(edges.rows, edges.cols, edges.type(), {0, 0, 0});
+		cv::polylines(support_mask, contour, false, {255, 255, 255}, 2);
+		cv::Mat new_edges;
+		std::vector<cv::Point> new_contours;
+		cv::min(edges, support_mask, new_edges);
+		cv::findNonZero(new_edges, new_contours);
+		return new_contours;
+	};
+
     double max_support_ratio = props.final_perimeter_ratio_range_min; //KEEPS TRACK OF MAXIMUM SUPPORT RATIO REACHED SO FAR
 
 	int index_best_Solution = -1;
 	int enum_index = 0;
 
 	for (auto& s : solutions) {
+
 		std::vector<cv::Point> test_contour;
 
-		//concatenate contours to one contour
 		for (int i : s) {
-			std::vector<cv::Point>& c = split_contours.at(i);
-			test_contour.insert(test_contour.end(), c.begin(), c.end());
+
+            //RESOLVE CONTOUR IF IT IS PART OF A SOLUTION AND HAS NOT BEEN RESOLVED YET
+		    if (split_contours_resolved[i].size()==0){
+                std::vector<cv::Point> generated_edges = resolve_contour(split_contours[i], edges);
+                split_contours_resolved[i].reserve(std::distance(generated_edges.begin(), generated_edges.end()));
+                split_contours_resolved[i].insert(split_contours_resolved[i].end(), generated_edges.begin(), generated_edges.end());
+            }
+
+    		//CONCATENATE CONTOURS TO ONE CONTOUR
+			std::vector<cv::Point>& c = split_contours_resolved.at(i);
+     		test_contour.insert(test_contour.end(), c.begin(), c.end());
+
 		}
 
 		auto cv_ellipse = cv::fitEllipse(test_contour);
@@ -446,7 +468,7 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 
 		Ellipse ellipse = toEllipse<double>(cv_ellipse);
 		double ellipse_circumference = ellipse.circumference();
-		std::vector<cv::Point>  support_pixels = ellipse_true_support(props, ellipse, ellipse_circumference, raw_edges);
+		std::vector<cv::Point>  support_pixels = ellipse_true_support(props, ellipse, ellipse_circumference, test_contour);
 		double support_ratio = support_pixels.size() / ellipse_circumference;
 		//TODO: refine the selection of final candidate
 
