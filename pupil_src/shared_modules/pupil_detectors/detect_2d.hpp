@@ -469,7 +469,7 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 		Ellipse ellipse = toEllipse<double>(cv_ellipse);
 		double ellipse_circumference = ellipse.circumference();
 		std::vector<cv::Point>  support_pixels = ellipse_true_support(props, ellipse, ellipse_circumference, test_contour);
-		double support_ratio = support_pixels.size() / ellipse_circumference;
+		double support_ratio = (support_pixels.size() / ellipse_circumference)*pow(support_pixels.size()/test_contour.size(),2.0);
 		//TODO: refine the selection of final candidate
 
 		if (support_ratio >= max_support_ratio && is_Ellipse(cv_ellipse)) {
@@ -568,7 +568,7 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
     double ellipse_circumference = (result->ellipse).circumference();
     std::vector<cv::Point>  support_pixels = ellipse_true_support(props, result->ellipse, ellipse_circumference, final_edges);
 	double support_ratio = support_pixels.size() / ellipse_circumference;
-	double goodness = std::min(double(0.99), support_ratio);
+	double goodness = std::min(double(0.99),support_ratio)*pow(support_pixels.size()/final_edges.size(),2.0);
 
 	result->confidence = goodness;
 	result->ellipse.center[0] += roi.x;
@@ -589,5 +589,6 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 
 	result->raw_edges = std::move(raw_edges);
 	return result;
+
 }
 
