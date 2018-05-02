@@ -458,7 +458,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
             # send new events to ipc:
             del events['pupil']  # already on the wire
-            del events['gaze_positions']  # sent earlier
+            del events['gaze']  # sent earlier
             if 'frame' in events:
                 del events['frame']  # send explicitly with frame publisher
             if 'depth_frame' in events:

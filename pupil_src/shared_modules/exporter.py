@@ -144,7 +144,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         pupil_data = pre_computed.get("pupil_data") or load_object(pupil_data_path)
         g_pool.pupil_data = pupil_data
         g_pool.pupil_positions = pre_computed.get("pupil_positions") or pupil_data['pupil']
-        g_pool.gaze_positions = pre_computed.get("gaze_positions") or pupil_data['gaze_positions']
+        g_pool.gaze_positions = pre_computed.get("gaze_positions") or pupil_data['gaze']
         g_pool.fixations = pre_computed.get("fixations", [])
 
         g_pool.pupil_positions_by_frame = correlate_data(g_pool.pupil_positions, g_pool.timestamps)
@@ -162,7 +162,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
 
             events = {'frame': frame}
             # new positons and events
-            events['gaze_positions'] = g_pool.gaze_positions_by_frame[frame.index]
+            events['gaze'] = g_pool.gaze_positions_by_frame[frame.index]
             events['pupil'] = g_pool.pupil_positions_by_frame[frame.index]
 
             # publish delayed notifiactions when their time has come.

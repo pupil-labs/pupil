@@ -209,7 +209,7 @@ def update_recording_v082_to_v083(rec_dir):
     pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     meta_info_path = os.path.join(rec_dir,"info.csv")
 
-    for d in pupil_data['gaze_positions']:
+    for d in pupil_data['gaze']:
         if 'base' in d:
             d['base_data'] = d.pop('base')
 

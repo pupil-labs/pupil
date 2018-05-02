@@ -463,7 +463,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
             # pupil and gaze positions are added by their respective producer plugins
             events['pupil'] = []
-            events['gaze_positions'] = []
+            events['gaze'] = []
 
             # allow each Plugin to do its work.
             for p in g_pool.plugins:

@@ -509,7 +509,7 @@ class Fixation_Detector(Fixation_Detector_Base):
 
     def recent_events(self, events):
         events['fixations'] = []
-        gaze = events['gaze_positions']
+        gaze = events['gaze']
 
         self.queue.extend((gp for gp in gaze if gp['confidence'] >= self.confidence_threshold))
 

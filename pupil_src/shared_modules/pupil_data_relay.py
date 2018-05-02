@@ -36,4 +36,4 @@ class Pupil_Data_Relay(System_Plugin_Base):
             recent_gaze_data += new_gaze_data
 
         events['pupil'] = recent_pupil_data
-        events['gaze_positions'] = recent_gaze_data
+        events['gaze'] = recent_gaze_data

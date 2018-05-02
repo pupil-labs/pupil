@@ -95,7 +95,7 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
-            events['gaze_positions'] = self.g_pool.gaze_positions_by_frame[frm_idx]
+            events['gaze'] = self.g_pool.gaze_positions_by_frame[frm_idx]
 
 
 class Gaze_From_Recording(Gaze_Producer_Base):
@@ -112,7 +112,7 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.load_data_with_offset()
 
     def load_data_with_offset(self):
-        self.g_pool.gaze_positions = deepcopy(self.g_pool.pupil_data['gaze_positions'])
+        self.g_pool.gaze_positions = deepcopy(self.g_pool.pupil_data['gaze'])
         for gp in self.g_pool.gaze_positions:
             gp['norm_pos'][0] += self.x_offset
             gp['norm_pos'][1] += self.y_offset
@@ -445,14 +445,14 @@ class Offline_Calibration(Gaze_Producer_Base):
                 recent = [d for d in sec["bg_task"].fetch()]
                 if recent:
                     progress, data = zip(*recent)
-                    sec['gaze_positions'].extend(chain(*data))
+                    sec['gaze'].extend(chain(*data))
                     sec['status'] = progress[-1]
                 if sec["bg_task"].completed:
                     self.correlate_and_publish()
                     sec['bg_task'] = None
 
     def correlate_and_publish(self):
-        all_gaze = list(chain(*[s['gaze_positions'] for s in self.sections]))
+        all_gaze = list(chain(*[s['gaze'] for s in self.sections]))
         self.g_pool.gaze_positions = sorted(all_gaze, key=lambda d: d['timestamp'])
         self.g_pool.gaze_positions_by_frame = correlate_data(self.g_pool.gaze_positions, self.g_pool.timestamps)
         self.notify_all({'subject': 'gaze_positions_changed', 'delay':1})
@@ -462,7 +462,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             sec['bg_task'].cancel()
 
         sec['status'] = 'Starting calibration' # This will be overwritten on success
-        sec['gaze_positions'] = []  # reset interim buffer for given section
+        sec['gaze'] = []  # reset interim buffer for given section
 
         calib_list = list(chain(*self.g_pool.pupil_positions_by_frame[slice(*sec['calibration_range'])]))
         map_list = list(chain(*self.g_pool.pupil_positions_by_frame[slice(*sec['mapping_range'])]))
@@ -604,7 +604,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             if sec['bg_task']:
                 sec['bg_task'].cancel()
             sec['bg_task'] = None
-            sec['gaze_positions'] = []
+            sec['gaze'] = []
         self.save_offline_data()
 
     def save_offline_data(self):
@@ -614,7 +614,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             # we need a shallow copy with bg_task=None and gaze_positions=[]
             sec = s.copy()
             sec['bg_task'] = None
-            sec['gaze_positions'] = []
+            sec['gaze'] = []
             session_data['sections'].append(sec)
         session_data['version'] = self.session_data_version
         session_data['manual_ref_positions'] = self.manual_ref_positions
