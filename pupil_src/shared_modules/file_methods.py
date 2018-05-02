@@ -81,6 +81,7 @@ def save_object(object_, file_path):
     with open(file_path, 'wb') as fh:
         msgpack.pack(object_, fh, use_bin_type=True,default=ndarrray_to_list)
 
+
 def load_pupil_data_file(file_path):
     """
     load Pupil data file, output data is dicts of toplevel topic with tuples of data inside.
@@ -95,17 +96,19 @@ def load_pupil_data_file(file_path):
             pupil_data[topic].append(Serialized_Dict(payload=payload))
     return pupil_data
 
-def save_pupil_data_file(file_path,data):
+
+def save_pupil_data_file(file_path, data):
     """
     example implementation of data saver, this should really be done incrementally during
     recording and based on the serialized the message on the IPC.
     data is a list of datums each a dict with at least a 'topic' field.
     """
     packer = msgpack.Packer(use_bin_type=True)
-    with open("file_path","wb") as fb:
+    with open(file_path, "wb") as fb:
         for datum in data:
-            payload = (datum['topic'],msgpack.dumps(datum,use_bin_type=True))
+            payload = (datum['topic'], packer.pack(datum))
             fb.write(packer.pack(payload))
+
 
 def next_export_sub_dir(root_export_dir):
     # match any sub directories or files a three digit pattern
@@ -120,7 +123,7 @@ def next_export_sub_dir(root_export_dir):
     return os.path.join(root_export_dir, next_sub_dir)
 
 
-class Serialized_Dict():
+class Serialized_Dict(object):
 
     cache_len = 100
 
@@ -130,7 +133,7 @@ class Serialized_Dict():
 
     _cache_ref = [Empty()]*cache_len
 
-    #an Immutable dict for dics nested inside this dict.
+    # an Immutable dict for dics nested inside this dict.
     class FrozenDict(dict):
 
         def __setitem__(self, key, value):
@@ -142,15 +145,14 @@ class Serialized_Dict():
         def update(self, *args, **kwargs):
             raise NotImplementedError()
 
-    def __init__(self, mapping=None,payload=None):
+    def __init__(self, mapping=None, payload=None):
         if type(mapping) is dict:
-            self._ser_data = msgpack.dumps(mapping,use_bin_type=True)
+            self._ser_data = msgpack.packb(mapping, use_bin_type=True)
         elif type(payload) is bytes:
             self._ser_data = payload
         else:
             raise Exception("neither mapping nor payload is supplied or wrong format.")
         self._data = None
-
 
     def _object_hook(self,obj):
         if type(obj) is dict:
@@ -158,7 +160,8 @@ class Serialized_Dict():
 
     def _deser(self):
         if not self._data:
-            self._data = msgpack.loads(self._ser_data,raw=False,use_list=False, object_hook=self._object_hook)
+            self._data = msgpack.unpackb(self._ser_data, raw=False, use_list=False,
+                                         object_hook=self._object_hook)
             self._cache_ref.pop(0).purge_cache()
             self._cache_ref.append(self)
 
@@ -249,10 +252,10 @@ def bench_save():
     with open("test","wb") as fb:
         packer = msgpack.Packer(use_bin_type=True)
         for x in range(inters):
-            a = "pupil",msgpack.dumps(dummy_datum,use_bin_type=True)
-            b = "pupil",msgpack.dumps(dummy_datum,use_bin_type=True)
-            c = "gaze",msgpack.dumps(dummy_datum,use_bin_type=True)
-            aa = "aa",msgpack.dumps({"test":{"nested":True}},use_bin_type=True)
+            a = "pupil",msgpack.packb(dummy_datum,use_bin_type=True)
+            b = "pupil",msgpack.packb(dummy_datum,use_bin_type=True)
+            c = "gaze",msgpack.packb(dummy_datum,use_bin_type=True)
+            aa = "aa",msgpack.packb({"test":{"nested":True}},use_bin_type=True)
             fb.write(packer.pack(a))
             fb.write(packer.pack(b))
             fb.write(packer.pack(c))
@@ -267,7 +270,6 @@ def bench_load():
     pupil_data = load_pupil_data_file("test")
     print(pupil_data.keys())
     print("loaded in %s"%(time.time()-start))
-
 
 
 if __name__ == '__main__':
@@ -289,5 +291,3 @@ if __name__ == '__main__':
     from time import sleep
     # sleep(3)
     bench_load()
-
-
