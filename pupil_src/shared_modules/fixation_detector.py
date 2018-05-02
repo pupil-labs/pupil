@@ -83,7 +83,11 @@ def fixation_from_data(dispersion, method, base_data, timestamps=None):
 
 def vector_dispersion(vectors):
     distances = pdist(vectors, metric='cosine')
-    return np.arccos(1. - distances.max())
+    # use 20% biggest distances, but at least 4, see reasoning at
+    # https://github.com/pupil-labs/pupil/issues/1133#issuecomment-382412175
+    distances.sort()  # sort by distance
+    cut_off = np.max([distances.shape[0] // 5, 4])
+    return np.arccos(1. - distances[-cut_off:].mean())
 
 
 def gaze_dispersion(capture, gaze_subset, use_pupil=True):
@@ -114,9 +118,7 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
         locations[:, 1] = (1. - locations[:, 1]) * height
 
         # undistort onto 3d plane
-        undistorted = capture.intrinsics.undistortPoints(locations)
-        vectors = np.ones((undistorted.shape[0], 3), dtype=undistorted.dtype)
-        vectors[:, :-1] = undistorted
+        vectors = capture.intrinsics.unprojectPoints(locations)
 
     dist = vector_dispersion(vectors)
     return dist, method, base_data
@@ -209,7 +211,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
     visual angle within the coordinate system of the world camera. These
     fixations will have their method field set to "gaze".
     '''
-    def __init__(self, g_pool, max_dispersion=1.0, min_duration=300, max_duration=1000, show_fixations=True):
+    def __init__(self, g_pool, max_dispersion=3.0, min_duration=300, max_duration=1000, show_fixations=True):
         super().__init__(g_pool)
         # g_pool.min_data_confidence
         self.max_dispersion = max_dispersion
@@ -242,18 +244,24 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         def jump_next_fixation(_):
             cur_idx = self.last_frame_idx
             all_idc = [f['mid_frame_index'] for f in self.g_pool.fixations]
+            if not all_idc:
+                logger.warning('No fixations available')
+                return
             # wrap-around index
             tar_fix = bisect_right(all_idc, cur_idx) % len(all_idc)
             self.notify_all({'subject': 'seek_control.should_seek',
-                             'index': self.g_pool.fixations[tar_fix]['mid_frame_index']})
+                             'index': int(self.g_pool.fixations[tar_fix]['mid_frame_index'])})
 
         def jump_prev_fixation(_):
             cur_idx = self.last_frame_idx
             all_idc = [f['mid_frame_index'] for f in self.g_pool.fixations]
+            if not all_idc:
+                logger.warning('No fixations available')
+                return
             # wrap-around index
             tar_fix = (bisect_left(all_idc, cur_idx) - 1) % len(all_idc)
             self.notify_all({'subject': 'seek_control.should_seek',
-                             'index': self.g_pool.fixations[tar_fix]['mid_frame_index']})
+                             'index': int(self.g_pool.fixations[tar_fix]['mid_frame_index'])})
 
         for help_block in self.__doc__.split('\n\n'):
             help_str = help_block.replace('\n', ' ').replace('  ', '').strip()
@@ -489,6 +497,8 @@ class Fixation_Detector(Fixation_Detector_Base):
 
     The Offline Fixation Detector yields fixations that do not overlap.
     '''
+    order = .19
+
     def __init__(self, g_pool, max_dispersion=3.0, min_duration=300, confidence_threshold=0.75):
         super().__init__(g_pool)
         self.queue = deque()

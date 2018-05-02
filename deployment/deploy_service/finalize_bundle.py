@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import platform
 import sys, os
-from version import write_version_file,pupil_version
+from version import write_version_file,get_tag_commit,pupil_version
 import shutil
 from subprocess import call
 
@@ -23,7 +23,7 @@ if platform.system() == 'Darwin':
     shutil.rmtree('dist/Pupil Service')
     print( 'removed the non-app dist bundle')
 
-    bundle_name = 'pupil_service_mac_os_x64_v%s'%pupil_version()
+    bundle_name = 'pupil_service_mac_os_x64_%s'%get_tag_commit()
     bundle_dmg_name = 'Install Pupil Service'
     src_dir = 'dist'
     bundle_app_dir = os.path.join(src_dir,'Pupil Service.app/' )
@@ -56,7 +56,7 @@ elif platform.system() == 'Linux':
             pass
 
     #lets build the structure for our deb package.
-    deb_root = 'pupil_service_linux_os_x64_v%s'%pupil_version()
+    deb_root = 'pupil_service_linux_os_x64_%s'%get_tag_commit()
     DEBIAN_dir = os.path.join(deb_root,'DEBIAN')
     opt_dir = os.path.join(deb_root,'opt')
     bin_dir = os.path.join(deb_root,'usr','bin')

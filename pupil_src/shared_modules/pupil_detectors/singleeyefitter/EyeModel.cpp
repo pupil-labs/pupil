@@ -128,14 +128,14 @@ std::pair<Circle,ConfidenceValue> EyeModel::presentObservation(const Observation
         //check first if the observations is strong enough to build the eye model ontop of it
         // the confidence is above 0.99 only if we have a strong prior.
         // also binchecking
-        if (confidence2D > 0.99 && isSpatialRelevant(unprojectedCircle)) {
+        if (confidence2D >= 0.98 && isSpatialRelevant(unprojectedCircle)) {
             shouldAddObservation = true;
         } else {
             //std::cout << " spatial check failed"  << std::endl;
         }
 
 
-    } else { // no valid sphere yet
+    } else if (confidence2D > 0.98) { // no valid sphere yet
         shouldAddObservation = true;
     }
      mModelMutex.unlock();
@@ -404,7 +404,8 @@ double EyeModel::refineWithEdges(Sphere& sphere )
                 new EllipseDistanceResidualFunction<double>( pupilInliers, sphere.radius, mFocalLength),
                 pupilInliers.size()
                 ),
-                NULL, &x[0], &x[3 + 3 * i]);
+                new ceres::CauchyLoss(0.01),
+                &x[0], &x[3 + 3 * i]);
         }
     }
 

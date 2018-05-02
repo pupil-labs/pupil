@@ -204,9 +204,7 @@ class iMotions_Exporter(Analysis_Plugin_Base):
                             pupil_dia[p['id']] = p['diameter_3d']
 
                         pixel_pos = denormalize(g['norm_pos'], self.g_pool.capture.frame_size, flip_y=True)
-                        undistorted2d = self.g_pool.capture.intrinsics.undistortPoints(pixel_pos)
-                        undistorted3d = np.ones(3)
-                        undistorted3d[:2] = undistorted2d
+                        undistorted3d = self.g_pool.capture.intrinsics.unprojectPoints(pixel_pos)
                         undistorted2d = self.g_pool.capture.intrinsics.projectPoints(undistorted3d, use_distortion=False)
 
                         data = (g['timestamp'],

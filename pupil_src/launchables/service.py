@@ -94,6 +94,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         from pupil_remote import Pupil_Remote
         from pupil_groups import Pupil_Groups
         from frame_publisher import Frame_Publisher
+        from blink_detection import Blink_Detection
         from service_ui import Service_UI
 
         logger.info('Application Version: {}'.format(version))
@@ -119,7 +120,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
 
         # manage plugins
         runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
-        user_launchable_plugins = [Service_UI, Pupil_Groups, Pupil_Remote, Frame_Publisher]+runtime_plugins
+        user_launchable_plugins = [Service_UI, Pupil_Groups, Pupil_Remote, Frame_Publisher, Blink_Detection]+runtime_plugins
         plugin_by_index = runtime_plugins+calibration_plugins+gaze_mapping_plugins+user_launchable_plugins
         name_by_index = [p.__name__ for p in plugin_by_index]
         plugin_by_name = dict(zip(name_by_index, plugin_by_index))

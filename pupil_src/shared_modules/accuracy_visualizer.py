@@ -165,19 +165,13 @@ class Accuracy_Visualizer(Plugin):
         error_lines = locations.copy()  # n x 4
         locations[:, ::2] *= width
         locations[:, 1::2] = (1. - locations[:, 1::2]) * height
+        locations.shape = -1, 2
 
         # Accuracy is calculated as the average angular
         # offset (distance) (in degrees of visual angle)
         # between fixations locations and the corresponding
         # locations of the fixation targets.
-        undistorted = intrinsics.undistortPoints(locations)
-        undistorted.shape = -1, 2
-        # append column with z=1
-        # using idea from https://stackoverflow.com/questions/8486294/how-to-add-an-extra-column-to-an-numpy-array
-        undistorted_3d = np.ones((undistorted.shape[0], 3))  # shape: 2n x 3
-        undistorted_3d[:, :-1] = undistorted
-        # normalize vectors:
-        undistorted_3d /= np.linalg.norm(undistorted_3d, axis=1)[:, np.newaxis]
+        undistorted_3d = intrinsics.unprojectPoints(locations, normalize=True)
 
         # Cosine distance of A and B: (A @ B) / (||A|| * ||B||)
         # No need to calculate norms, since A and B are normalized in our case.

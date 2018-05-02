@@ -107,17 +107,21 @@ class UVC_Source(Base_Source):
             if proc.returncode == 2:
                 ids_present += 1
                 ids_to_install.append(id)
-        cmd_str_inst = "Start-Process PupilDrvInst.exe -Wait -WorkingDirectory \\\\\\\"{}\\\\\\\"  -argument ''--vid {} --pid {} --desc \\\\\\\"{}\\\\\\\" --vendor \\\\\\\"Pupil Labs\\\\\\\" --inst'' ;"
+        cmd_str_inst = "Start-Process PupilDrvInst.exe -Wait -WorkingDirectory \\\"{}\\\"  -ArgumentList '--vid {} --pid {} --desc \\\"{}\\\" --vendor \\\"Pupil Labs\\\" --inst' -Verb runas;"
         work_dir = os.getcwd()
         # print('work_dir = ', work_dir)
         if ids_present > 0:
-            cmd_str = 'Remove-Item {}\\win_drv -recurse;'.format(work_dir)
+            try:
+                os.mkdir(os.path.join(work_dir, "win_drv"))
+            except FileExistsError:
+                pass
+            cmd_str = ''
+            rmdir_str = 'Remove-Item {}\\win_drv -recurse -Force;'.format(work_dir)
             for id in ids_to_install:
-                cmd_str += cmd_str_inst.format(work_dir, id[0],id[1], id[2])
+                cmd_str += rmdir_str + cmd_str_inst.format(work_dir, id[0],id[1], id[2])
             logger.warning('Updating drivers, please wait...');
-            full_str = "'" + cmd_str + "'"
-            elevation_cmd = 'powershell.exe  Start-Process powershell.exe -WorkingDirectory \\\"{}\\\" -WindowStyle hidden -Wait  -argument {} -Verb runAs'.format(work_dir, full_str)
-            #print(elevation_cmd)
+            elevation_cmd = 'powershell.exe -version 5 -Command "{}"'.format(cmd_str)
+            print(elevation_cmd)
             proc = subprocess.Popen(elevation_cmd)
             proc.wait()
             logger.warning('Done updating drivers!')

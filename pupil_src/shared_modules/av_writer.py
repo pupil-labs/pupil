@@ -100,6 +100,14 @@ class AV_Writer(object):
         else:
             self.time_base = Fraction(1000, self.fps*1000)  # timebase is fps
 
+
+
+        self.video_stream = self.container.add_stream(video_stream['codec'], 1/self.time_base)
+        self.video_stream.bit_rate = video_stream['bit_rate']
+        self.video_stream.bit_rate_tolerance = video_stream['bit_rate']/20
+        self.video_stream.thread_count = max(1, mp.cpu_count() - 1)
+        # self.video_stream.pix_fmt = "yuv420p"
+
         if audio_loc:
             audio_dir = os.path.split(audio_loc)[0]
             audio_ts_loc = os.path.join(audio_dir, 'audio_timestamps.npy')
@@ -113,12 +121,6 @@ class AV_Writer(object):
                 self.audio_export = False
         else:
             self.audio_export = False
-
-        self.video_stream = self.container.add_stream(video_stream['codec'], 1/self.time_base)
-        self.video_stream.bit_rate = video_stream['bit_rate']
-        self.video_stream.bit_rate_tolerance = video_stream['bit_rate']/20
-        self.video_stream.thread_count = max(1, mp.cpu_count() - 1)
-        # self.video_stream.pix_fmt = "yuv420p"
         self.configured = False
         self.start_time = None
 
@@ -154,8 +156,7 @@ class AV_Writer(object):
             # our timebase is 1/30  so a frame idx is the correct pts for an fps recorded video.
             self.frame.pts = self.current_frame_idx
         # send frame of to encoder
-        packet = self.video_stream.encode(self.frame)
-        if packet:
+        for packet in self.video_stream.encode(self.frame):
             self.container.mux(packet)
         self.current_frame_idx += 1
         self.timestamps.append(input_frame.timestamp)
@@ -180,12 +181,10 @@ class AV_Writer(object):
 
     def close(self):
         # only flush encoder if there has been at least one frame
-        while self.configured:
-            packet = self.video_stream.encode()
-            if packet:
+        if self.configured:
+            for packet in self.video_stream.encode(None):
                 self.container.mux(packet)
-            else:
-                break
+
         self.container.close()  # throws RuntimeError if no frames were written
         write_timestamps(self.file_loc, self.timestamps)
 
@@ -216,6 +215,7 @@ class JPEG_Writer(object):
 
         self.video_stream = self.container.add_stream('mjpeg', 1/self.time_base)
         self.video_stream.pix_fmt = "yuvj422p"
+        self.video_stream.time_base = self.time_base
         self.configured = False
         self.frame_count = 0
 
@@ -230,8 +230,8 @@ class JPEG_Writer(object):
         packet = Packet()
         packet.payload = input_frame.jpeg_buffer
         # we are setting the packet pts manually this uses a different timebase av.frame!
-        packet.dts = int(self.frame_count/self.video_stream.time_base/self.fps)
-        packet.pts = int(self.frame_count/self.video_stream.time_base/self.fps)
+        packet.dts = int(self.frame_count/self.time_base/self.fps)
+        packet.pts = int(self.frame_count/self.time_base/self.fps)
         self.frame_count += 1
         self.container.mux(packet)
         self.timestamps.append(input_frame.timestamp)

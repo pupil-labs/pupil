@@ -70,7 +70,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     """
     def __init__(self, g_pool, fullscreen=True, marker_scale=1.0,
-                 sample_duration=40, monitor_name=None):
+                 sample_duration=40, monitor_idx=0):
         super().__init__(g_pool)
         self.screen_marker_state = 0.
         self.sample_duration = sample_duration  # number of frames to sample per site
@@ -89,7 +89,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         self.menu = None
 
-        self._monitor_name = monitor_name  # temporary name storage
+        self.monitor_idx = monitor_idx
         self.fullscreen = fullscreen
         self.clicks_to_close = 5
 
@@ -113,25 +113,24 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def init_ui(self):
         super().init_ui()
         self.menu.label = "Screen Marker Calibration"
-        self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
-        try:
-            self.monitor_idx = self.monitor_names.index(self._monitor_name)
-        except ValueError:  # self._monitor_name was not in list
+
+        def get_monitors_idx_list():
+            monitors = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+            return range(len(monitors)),monitors
+
+        if self.monitor_idx not in get_monitors_idx_list()[0]:
+            logger.warning("Monitor at index %s no longer availalbe using default"%idx)
             self.monitor_idx = 0
-        finally:
-            del self._monitor_name  # not longer required
-        #primary_monitor = glfwGetPrimaryMonitor()
 
         self.menu.append(ui.Info_Text("Calibrate gaze parameters using a screen based animation."))
-
-        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
+        self.menu.append(ui.Selector('monitor_idx',self,selection_getter = get_monitors_idx_list,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
         self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
         self.menu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
 
     def start(self):
         if not self.g_pool.capture.online:
-            logger.error("{} requireds world capture video input.".format(self.mode_pretty))
+            logger.error("{} requiers world capture video input.".format(self.mode_pretty))
             return
         super().start()
         audio.say("Starting {}".format(self.mode_pretty))
@@ -159,7 +158,12 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def open_window(self, title='new_window'):
         if not self._window:
             if self.fullscreen:
-                monitor = glfwGetMonitors()[self.monitor_idx]
+                try:
+                    monitor = glfwGetMonitors()[self.monitor_idx]
+                except:
+                    logger.warning("Monitor at index %s no longer availalbe using default"%idx)
+                    self.monitor_idx = 0
+                    monitor = glfwGetMonitors()[self.monitor_idx]
                 width, height, redBits, blueBits, greenBits, refreshRate = glfwGetVideoMode(monitor)
             else:
                 monitor = None
@@ -352,7 +356,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         d = {}
         d['fullscreen'] = self.fullscreen
         d['marker_scale'] = self.marker_scale
-        d['monitor_name'] = self.monitor_names[self.monitor_idx]
+        d['monitor_idx'] = self.monitor_idx
         return d
 
     def deinit_ui(self):

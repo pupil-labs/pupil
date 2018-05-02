@@ -218,15 +218,17 @@ class Surface_Tracker(Plugin):
         for s in self.surfaces:
             s.locate(self.markers,self.min_marker_perimeter,self.min_id_confidence, self.locate_3d)
             if s.detected:
-                s.gaze_on_srf = s.map_data_to_surface(events.get('gaze_positions',[]),s.m_from_screen)
+                s.gaze_on_srf = s.map_data_to_surface(events.get('gaze_positions', []), s.m_from_screen)
+                s.fixations_on_srf = s.map_data_to_surface(events.get('fixations', []), s.m_from_screen)
                 s.update_gaze_history()
             else:
-                s.gaze_on_srf =[]
+                s.gaze_on_srf = []
+                s.fixations_on_srf = []
 
         events['surfaces'] = []
         for s in self.surfaces:
             if s.detected:
-                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
+                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'fixations_on_srf': s.fixations_on_srf, 'timestamp': frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
 
 
         if self.running:

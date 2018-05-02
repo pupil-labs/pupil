@@ -96,7 +96,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         import glfw
         from version_utils import VersionFormat
         from pyglui import ui, cygl, __version__ as pyglui_version
-        assert VersionFormat(pyglui_version) >= VersionFormat('1.15'), 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.21'), 'pyglui out of date, please upgrade to newest version'
         from pyglui.cygl.utils import Named_Texture
         import gl_utils
 
@@ -421,7 +421,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         # trigger setup of window and gl sizes
         on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
-        if session_settings.get('eye1_process_alive', False):
+        if session_settings.get('eye1_process_alive', True):
             launch_eye_process(1, delay=0.6)
         if session_settings.get('eye0_process_alive', True):
             launch_eye_process(0, delay=0.3)

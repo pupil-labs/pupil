@@ -215,9 +215,11 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 			ellipse = toEllipse<double>(refit_ellipse);
 
 	    	ellipse_circumference = ellipse.circumference();
-			support_pixels = ellipse_true_support(props,ellipse, ellipse_circumference, raw_edges);
-	     	support_ratio = support_pixels.size() / ellipse_circumference;
-
+			auto support_pixels_narrow = ellipse_true_support(props,ellipse, ellipse_circumference, raw_edges);
+			props.ellipse_true_support_min_dist *=2.;
+			auto support_pixels_wide = ellipse_true_support(props,ellipse, ellipse_circumference, raw_edges);
+			props.ellipse_true_support_min_dist /=2.;
+	     	support_ratio = pow((float(support_pixels_narrow.size())/float(support_pixels_wide.size())), props.support_pixel_ratio_exponent)  * (float(support_pixels_narrow.size())/ float(ellipse_circumference));
 			ellipse.center[0] += roi.x;
 			ellipse.center[1] += roi.y;
 
@@ -242,7 +244,7 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 
 	//from edges to contours
 	Contours_2D contours ;
-	cv::findContours(edges, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+	cv::findContours(edges, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
 
 	//first we want to filter out the bad stuff, to short ones
 	const auto contour_size_min_pred = [&props](const Contour_2D & contour) {
@@ -424,16 +426,40 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 
 	solutions = filter_subset(solutions);
 
+    Contours_2D split_contours_resolved(split_contours.size()); // WILL CONTAIN RESOLVED SPLIT CONTOURS TO TEST QUALITY OF CANDIDATE ELLIPSES
+
+    auto resolve_contour = [&](std::vector<cv::Point>& contour, cv::Mat & edges) -> std::vector<cv::Point> {
+		cv::Mat support_mask(edges.rows, edges.cols, edges.type(), {0, 0, 0});
+		cv::polylines(support_mask, contour, false, {255, 255, 255}, 2);
+		cv::Mat new_edges;
+		std::vector<cv::Point> new_contours;
+		cv::min(edges, support_mask, new_edges);
+		cv::findNonZero(new_edges, new_contours);
+		return new_contours;
+	};
+
+    double max_support_ratio = props.final_perimeter_ratio_range_min; //KEEPS TRACK OF MAXIMUM SUPPORT RATIO REACHED SO FAR
+
 	int index_best_Solution = -1;
 	int enum_index = 0;
 
 	for (auto& s : solutions) {
+
 		std::vector<cv::Point> test_contour;
 
-		//concatenate contours to one contour
 		for (int i : s) {
-			std::vector<cv::Point>& c = split_contours.at(i);
-			test_contour.insert(test_contour.end(), c.begin(), c.end());
+
+            //RESOLVE CONTOUR IF IT IS PART OF A SOLUTION AND HAS NOT BEEN RESOLVED YET
+		    if (split_contours_resolved[i].size()==0){
+                std::vector<cv::Point> generated_edges = resolve_contour(split_contours[i], edges);
+                split_contours_resolved[i].reserve(std::distance(generated_edges.begin(), generated_edges.end()));
+                split_contours_resolved[i].insert(split_contours_resolved[i].end(), generated_edges.begin(), generated_edges.end());
+            }
+
+    		//CONCATENATE CONTOURS TO ONE CONTOUR
+			std::vector<cv::Point>& c = split_contours_resolved.at(i);
+     		test_contour.insert(test_contour.end(), c.begin(), c.end());
+
 		}
 
 		auto cv_ellipse = cv::fitEllipse(test_contour);
@@ -444,12 +470,14 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 
 		Ellipse ellipse = toEllipse<double>(cv_ellipse);
 		double ellipse_circumference = ellipse.circumference();
-		std::vector<cv::Point>  support_pixels = ellipse_true_support(props, ellipse, ellipse_circumference, raw_edges);
-		double support_ratio = support_pixels.size() / ellipse_circumference;
+		std::vector<cv::Point>  support_pixels = ellipse_true_support(props, ellipse, ellipse_circumference, test_contour);
+		double support_ratio = (support_pixels.size() / ellipse_circumference)*pow(support_pixels.size()/test_contour.size(), props.support_pixel_ratio_exponent);
 		//TODO: refine the selection of final candidate
 
-		if (support_ratio >= props.final_perimeter_ratio_range_min && is_Ellipse(cv_ellipse)) {
+		if (support_ratio >= max_support_ratio && is_Ellipse(cv_ellipse)) {
+
 			index_best_Solution = enum_index;
+            max_support_ratio = support_ratio;
 
 			if (support_ratio >= props.strong_perimeter_ratio_range_min) {
 				ellipse.center[0] += roi.x;
@@ -491,13 +519,7 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 	}
 
 	auto cv_ellipse = cv::fitEllipse(best_contour);
-	// final calculation of goodness of fit
-	auto ellipse = toEllipse<double>(cv_ellipse);
-	double ellipse_circumference = ellipse.circumference();
-	std::vector<cv::Point>  support_pixels = ellipse_true_support(props, ellipse, ellipse_circumference, raw_edges);
-	double support_ratio = support_pixels.size() / ellipse_circumference;
-	double goodness = std::min(double(0.99), support_ratio);
-	//final fitting and return of result
+	//final fitting on resolved contour
 	auto final_fitting = [&](std::vector<std::vector<cv::Point>>& contours, cv::Mat & edges) -> std::vector<cv::Point> {
 		//use the real edge pixels to fit, not the aproximated contours
 		cv::Mat support_mask(edges.rows, edges.cols, edges.type(), {0, 0, 0});
@@ -529,7 +551,7 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 		return new_contours;
 
 	};
-	std::vector<cv::Point> final_edges =  final_fitting(best_contours, edges);
+	std::vector<cv::Point> final_edges = final_fitting(best_contours, edges);
 	auto cv_new_Ellipse = cv::fitEllipse(final_edges);
 	double size_difference  = std::abs(1.0 - cv_ellipse.size.height / cv_new_Ellipse.size.height);
 	auto& cv_final_Ellipse = cv_ellipse;
@@ -537,14 +559,20 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 		if (use_debug_image) {
 			cv::ellipse(debug_image, cv_new_Ellipse, mGreen_color);
 		}
-
 		cv_final_Ellipse = cv_new_Ellipse;
 	}
 
 	//cv::imshow("debug_image", debug_image);
 	mPupil_Size =  cv_final_Ellipse.size.height;
-	result->confidence = goodness;
 	result->ellipse = toEllipse<double>(cv_final_Ellipse);
+
+    // final calculation of goodness of fit on final_edges
+    double ellipse_circumference = (result->ellipse).circumference();
+    std::vector<cv::Point>  support_pixels = ellipse_true_support(props, result->ellipse, ellipse_circumference, final_edges);
+	double support_ratio = support_pixels.size() / ellipse_circumference;
+	double goodness = std::min(double(0.99),support_ratio)*pow(support_pixels.size()/final_edges.size(), props.support_pixel_ratio_exponent);
+
+	result->confidence = goodness;
 	result->ellipse.center[0] += roi.x;
 	result->ellipse.center[1] += roi.y;
 	//result->final_contours = std::move(best_contours);
@@ -559,9 +587,10 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 	// split_contours = singleeyefitter::detector::split_rough_contours_optimized(approx_contours, 150.0 , split_contour_size_min);
 
 	// result->contours = std::move(split_contours);
-	 result->final_edges = std::move(final_edges);// need for optimisation
+	result->final_edges = std::move(final_edges);// need for optimisation
 
 	result->raw_edges = std::move(raw_edges);
 	return result;
+
 }
 

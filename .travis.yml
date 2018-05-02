@@ -1,0 +1,38 @@
+sudo: required
+services:
+- docker
+language: python
+branches:
+  only:
+    - master
+os:
+- linux
+
+before_install:
+- docker --version
+- docker run -d --name pupil-ubuntu --mount type=bind,source=$TRAVIS_BUILD_DIR,target=/root/pupil
+  pupillabs/pupil-docker-ubuntu:latest tail -f /dev/null
+- docker ps
+
+script:
+- docker exec -t pupil-ubuntu bash -c "chmod +x pupil && 
+  cd pupil/deployment &&
+  ./bundle.sh"
+
+before_deploy:
+  - echo "Preparing to deploy to Github"
+
+deploy:
+  provider: releases
+  api_key:
+    secure: Qlzhn0zM3J+JPTW1aTUwb2uY2LCljna5pgZjJfF5fxoEMb0RHwFXazncqTlqgXwF+WJfefdgdsvXIuLJ6cuylikzMhebv5x5oq11j+B//16lV/juiQCA0B6ej7CyTWVUevWS1Av/ImfaUOcF18wdNHiKJX+T5tnwirYswnDwK4DFmTwduYQtCuyDCMvPZQtzVhHS807+fPJCnoWAPp+nir44WvOMW31KSSYVz/LOqndb3+rAZl7LVVW4riF1uSMB7La16NQ9qx/ZvMNOAk3IXelKrkzOWp5kWWF3PEj6xGf5r1SAf/caCcfBbMYOTNXvcUNBhBED+klRK0nNtEATrHDN5+K3MGMOSklKUz5MNi6EPrj8rNfUjs0H7nyCXzh8qjV6/fJ807lIywVsIsASAjD2mfYBztX/flDMNmUDC5mntZYUmMlbDgJdF3Zxs9LHJBb5j53LYQ4QCRhnShKp4/ZtAsFFgtQw9i/cj+lE/m+hF2iZOtqYUPMlV2/zHIPm8PZWPA5tE16B3pr/rq5JXtrfjReEE2cr8+TyjycUA1yvVgyjeqHD5jgf8l2Fbn4FNAsU8bylbKGLxHGJV3LPJtqg44SQSTaqDkpbs5XWM52M5tCgiBtpa0gj8rY8Qe+f/4P6+LVzUezGMn+4RgBavhL6IFKigc7X9E99hc7/U2o=
+  file_glob: true
+  file: $TRAVIS_BUILD_DIR/deployment/*.zip
+  skip_cleanup: true
+  name: $TRAVIS_TAG $TRAVIS_OS_NAME - CI
+  body: $TRAVIS_TAG $TRAVIS_OS_NAME release built by CI
+  draft: true
+  on:
+    # tags: true
+    branch: master
+    repo: pupil-labs/pupil

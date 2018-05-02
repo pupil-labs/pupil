@@ -90,6 +90,7 @@ cdef class Detector_3D:
             self.detectProperties2D["final_perimeter_ratio_range_min"] = 0.6
             self.detectProperties2D["final_perimeter_ratio_range_max"] = 1.2
             self.detectProperties2D["ellipse_true_support_min_dist"] = 2.5
+            self.detectProperties2D["support_pixel_ratio_exponent"] = 2.0
 
 
         if not self.detectProperties3D:

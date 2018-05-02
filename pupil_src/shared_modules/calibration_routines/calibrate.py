@@ -313,58 +313,34 @@ def closest_matches_monocular(ref_pts, pupil_pts, max_dispersion=1/15.):
 
 
 def preprocess_2d_data_monocular(matched_data):
-    cal_data = []
-    for pair in matched_data:
-        ref,pupil = pair['ref'],pair['pupil']
-        cal_data.append( (pupil["norm_pos"][0], pupil["norm_pos"][1],ref['norm_pos'][0],ref['norm_pos'][1]) )
+    cal_data = [(*pair['pupil']["norm_pos"],
+                 *pair['ref']["norm_pos"])
+                for pair in matched_data]
     return cal_data
+
 
 def preprocess_2d_data_binocular(matched_data):
-    cal_data = []
-    for triplet in matched_data:
-        ref,p0,p1 = triplet['ref'],triplet['pupil'],triplet['pupil1']
-        data_pt = p0["norm_pos"][0], p0["norm_pos"][1],p1["norm_pos"][0], p1["norm_pos"][1],ref['norm_pos'][0],ref['norm_pos'][1]
-        cal_data.append( data_pt )
+    cal_data = [(*triplet['pupil']["norm_pos"],
+                 *triplet['pupil1']["norm_pos"],
+                 *triplet['ref']["norm_pos"])
+                for triplet in matched_data]
     return cal_data
 
+
 def preprocess_3d_data(matched_data, g_pool):
-    ref_processed = []
-    pupil0_processed = []
-    pupil1_processed = []
+    pupil0_processed = [dp['pupil']['circle_3d']['normal'] for dp in matched_data if 'circle_3d' in dp['pupil']]
 
-    is_binocular = len(matched_data[0] ) == 3
-    for data_point in matched_data:
-        try:
-            # taking the pupil normal as line of sight vector
-            pupil0 = data_point['pupil']
-            gaze_vector0 = np.array(pupil0['circle_3d']['normal'])
-            pupil0_processed.append( gaze_vector0 )
+    pupil1_processed = [dp['pupil1']['circle_3d']['normal'] for dp in matched_data if 'pupil1' in dp and 'circle_3d' in dp['pupil1']]
 
-            if is_binocular: # we have binocular data
-                pupil1 = data_point['pupil1']
-                gaze_vector1 = np.array(pupil1['circle_3d']['normal'])
-                pupil1_processed.append( gaze_vector1 )
+    ref = np.array([dp['ref']['screen_pos'] for dp in matched_data])
+    ref_processed = g_pool.capture.intrinsics.unprojectPoints(ref, normalize=True)
 
-            # projected point uv to normal ray vector of camera
-            ref = data_point['ref']['screen_pos']
-            ref_vector = np.array(ref).reshape(-1,1,2)
-            ref_vector = g_pool.capture.intrinsics.undistortPoints(ref_vector)
-            ref_vector = cv2.convertPointsToHomogeneous(np.float32(ref_vector))
-            ref_vector.shape = (-1, 3)
-            ref_vector = ref_vector.tolist()[0]
-
-            ref_vector = ref_vector / np.linalg.norm(ref_vector)
-            # assuming a fixed (assumed) distance we get a 3d point in world camera 3d coords.
-            ref_processed.append(ref_vector)
-
-        except KeyError as e:
-            # this pupil data point did not have 3d detected data.
-            pass
-
-    return ref_processed,pupil0_processed,pupil1_processed
+    return ref_processed, pupil0_processed, pupil1_processed
 
 
 def find_rigid_transform(A, B):
+    # we expect the shape to be of length 2
+    assert len(A.shape) == len(B.shape) == 2
     assert A.shape[0] == B.shape[0]
 
     centroid_A = np.mean(A, axis=0)
