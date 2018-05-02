@@ -186,7 +186,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         def get_dt():
             return next(tick)
 
-        pupil_data_path = os.path.join(rec_dir, "pupil_data")
+        pupil_data_path = os.path.join(rec_dir, "pupil_data.pldata")
 
         meta_info = load_meta_info(rec_dir)
 
@@ -259,7 +259,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.gaze_positions = []
         g_pool.fixations = []
 
-        g_pool.notifications_by_frame = correlate_data(g_pool.pupil_data['notifications'], g_pool.timestamps)
+        g_pool.notifications_by_frame = correlate_data(g_pool.pupil_data['notify'], g_pool.timestamps)
         g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer`
         g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer
         g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
