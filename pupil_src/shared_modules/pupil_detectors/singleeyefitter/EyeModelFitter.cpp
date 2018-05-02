@@ -116,8 +116,8 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 
         // overwrite confidence based on 3D observation
         double confidence2D = observation2D->confidence;
-        // result.confidence = confidence2D * (1.0 - observationFit.confidence) + observationFit.value * observationFit.confidence;
-        result.confidence = confidence2D;
+        result.confidence = confidence2D * (1.0 - observationFit.confidence) + observationFit.value * observationFit.confidence;
+        // result.confidence = confidence2D;
         result.circle = circle;
 
 
