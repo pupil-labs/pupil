@@ -45,7 +45,7 @@ class Persistent_Dict(dict):
 def _load_object_legacy(file_path):
     file_path = os.path.expanduser(file_path)
     with open(file_path, 'rb') as fh:
-        data = pickle.load(fh, raw=True)
+        data = pickle.load(fh, encoding='bytes')
     return data
 
 
@@ -236,12 +236,6 @@ class Serialized_Dict():
     def __iter__(self):
         self._deser()
         return iter(self._data)
-
-    def __unicode__(self):
-        self._deser()
-        return unicode(repr(self._data))
-
-
 
 
 def bench_save():
