@@ -173,7 +173,7 @@ class HMD_Calibration(Calibration_Plugin):
 
     def recent_events(self, events):
         if self.active:
-            self.pupil_list.extend(events['pupil_positions'])
+            self.pupil_list.extend(events['pupil'])
 
     def get_init_dict(self):
         d = {}

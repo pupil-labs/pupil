@@ -457,7 +457,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             g_pool.plugins.clean()
 
             # send new events to ipc:
-            del events['pupil_positions']  # already on the wire
+            del events['pupil']  # already on the wire
             del events['gaze_positions']  # sent earlier
             if 'frame' in events:
                 del events['frame']  # send explicitly with frame publisher

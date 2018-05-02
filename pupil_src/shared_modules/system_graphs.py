@@ -143,7 +143,7 @@ class System_Graphs(System_Plugin_Base):
 
         # update pupil graphs
         if 'frame' not in events or self.idx != events["frame"].index:
-            for p in events["pupil_positions"]:
+            for p in events['pupil']:
                 # update confidence graph
                 cg = self.conf0_graph if p['id'] == 0 else self.conf1_graph
                 cg.add(p['confidence'])

@@ -541,7 +541,7 @@ def update_recording_v073_to_v074(rec_dir):
     logger.info("Updating recording from v0.7x format to v0.7.4 format")
     pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     modified = False
-    for p in pupil_data['pupil_positions']:
+    for p in pupil_data['pupil']:
         if p['method'] == "3D c++":
             p['method'] = "3d c++"
             try:
@@ -565,7 +565,7 @@ def update_recording_v05_to_v074(rec_dir):
     logger.info("Updating recording from v0.5x/v0.6x/v0.7x format to v0.7.4 format")
     pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data_old"))
-    for p in pupil_data['pupil_positions']:
+    for p in pupil_data['pupil']:
         p['method'] = '2d python'
     try:
         save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))

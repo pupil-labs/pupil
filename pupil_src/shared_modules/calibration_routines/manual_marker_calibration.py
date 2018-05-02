@@ -177,7 +177,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                             self.notify_all({'subject':'calibration.marker_sample_completed','timestamp':self.g_pool.get_timestamp(),'record':True})
 
             # Always save pupil positions
-            self.pupil_list.extend(events['pupil_positions'])
+            self.pupil_list.extend(events['pupil'])
 
             if self.counter:
                 if len(self.markers):

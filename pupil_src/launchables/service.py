@@ -198,7 +198,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
 
                 events = {}
                 events['gaze_positions'] = new_gaze_data
-                events['pupil_positions'] = [p]
+                events['pupil'] = [p]
                 for plugin in g_pool.plugins:
                     plugin.recent_events(events=events)
 

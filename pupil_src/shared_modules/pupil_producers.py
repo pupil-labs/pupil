@@ -94,7 +94,7 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
-            events['pupil_positions'] = self.g_pool.pupil_positions_by_frame[frm_idx]
+            events['pupil'] = self.g_pool.pupil_positions_by_frame[frm_idx]
 
     def cache_pupil_timeline_data(self, key):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
@@ -155,7 +155,7 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 class Pupil_From_Recording(Pupil_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        g_pool.pupil_positions = g_pool.pupil_data['pupil_positions']
+        g_pool.pupil_positions = g_pool.pupil_data['pupil']
         g_pool.pupil_positions_by_frame = correlate_data(g_pool.pupil_positions, g_pool.timestamps)
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
@@ -183,10 +183,10 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         except Exception:
             session_data = {}
             session_data["detection_method"] = '3d'
-            session_data['pupil_positions'] = []
+            session_data['pupil'] = []
             session_data['detection_status'] = ["unknown", "unknown"]
         self.detection_method = session_data["detection_method"]
-        self.pupil_positions = {pp['timestamp']: pp for pp in session_data['pupil_positions']}
+        self.pupil_positions = {pp['timestamp']: pp for pp in session_data['pupil']}
         self.detection_status = session_data['detection_status']
         self.eye_video_loc = [None, None]
         self.eye_frame_num = [0, 0]
@@ -280,7 +280,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     def save_offline_data(self):
         session_data = {}
         session_data["detection_method"] = self.detection_method
-        session_data['pupil_positions'] = list(self.pupil_positions.values())
+        session_data['pupil'] = list(self.pupil_positions.values())
         session_data['detection_status'] = self.detection_status
         cache_path = os.path.join(self.data_dir, 'offline_pupil_data')
         save_object(session_data, cache_path)

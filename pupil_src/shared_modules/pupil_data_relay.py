@@ -35,5 +35,5 @@ class Pupil_Data_Relay(System_Plugin_Base):
                 self.gaze_pub.send('gaze', g)
             recent_gaze_data += new_gaze_data
 
-        events['pupil_positions'] = recent_pupil_data
+        events['pupil'] = recent_pupil_data
         events['gaze_positions'] = recent_gaze_data

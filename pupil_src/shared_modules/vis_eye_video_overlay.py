@@ -264,9 +264,9 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
         if not frame:
             return
         self.eye0.visualize(frame, self.alpha, self.eye_scale_factor,
-                            self.show_ellipses, events['pupil_positions'])
+                            self.show_ellipses, events['pupil'])
         self.eye1.visualize(frame, self.alpha, self.eye_scale_factor,
-                            self.show_ellipses, events['pupil_positions'])
+                            self.show_ellipses, events['pupil'])
 
     def deinit_ui(self):
         self.remove_menu()

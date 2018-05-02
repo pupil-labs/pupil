@@ -81,7 +81,7 @@ class Fingertip_Calibration(Experimental_Plugin_Base, Calibration_Plugin):
         frame = events.get('frame')
 
         if self.active and frame:
-            recent_pupil_positions = events['pupil_positions']
+            recent_pupil_positions = events['pupil']
             # Update the marker
             if self.mode == 'calibration':
                 if self.press_key in (-1, 2):
