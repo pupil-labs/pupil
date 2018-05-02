@@ -22,6 +22,11 @@ from file_methods import save_object, load_object
 from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer
 from ndsi import H264Writer
+
+import msgpack
+import zmq
+from zmq_tools import Msg_Receiver
+
 # logging
 import logging
 logger = logging.getLogger(__name__)
@@ -83,6 +88,8 @@ class Recorder(System_Plugin_Base):
     icon_chr = chr(0xe04b)
     icon_font = 'pupil_icons'
 
+    topic_blacklist = ('frame', 'logging',  'remote_notify')
+
     def __init__(self, g_pool, session_name=get_auto_name(), rec_dir=None,
                  user_info={'name': '', 'additional_field': 'change_me'},
                  info_menu_conf={}, show_info_menu=False, record_eye=True,
@@ -120,6 +127,8 @@ class Recorder(System_Plugin_Base):
         self.show_info_menu = show_info_menu
         self.info_menu = None
         self.info_menu_conf = info_menu_conf
+
+        self.receiver = Msg_Receiver(self.g_pool.zmq_ctx, self.g_pool.ipc_sub_url, topics=('',))
 
     def get_init_dict(self):
         d = {}
@@ -214,7 +223,6 @@ class Recorder(System_Plugin_Base):
             logger.error("Could not start recording. Session dir {} not writable.".format(session))
             return
 
-        self.data = {'pupil_positions': [], 'gaze_positions': [], 'notifications': []}
         self.frame_count = 0
         self.running = True
         self.menu.read_only = True
@@ -271,6 +279,8 @@ class Recorder(System_Plugin_Base):
                          'session_name': self.session_name, 'record_eye': self.record_eye,
                          'compression': self.raw_jpeg})
 
+        self.pupil_data_fh = open(os.path.join(self.rec_path, "pupil_data.pldata"), 'wb')
+
     def open_info_menu(self):
         self.info_menu = ui.Growing_Menu('additional Recording Info', size=(300, 300), pos=(300, 300))
         self.info_menu.configuration = self.info_menu_conf
@@ -296,14 +306,28 @@ class Recorder(System_Plugin_Base):
             self.info_menu = None
 
     def recent_events(self, events):
+        while self.receiver.new_data:
+            topic = self.receiver.socket.recv_string()
+            payload = self.receiver.socket.recv()
+            while self.receiver.socket.get(zmq.RCVMORE):
+                self.receiver.socket.recv()  # drop extra frames
+
+            if self.running:
+                for blacklisted in self.topic_blacklist:
+                    if topic.startswith(blacklisted):
+                        break
+                else:
+                    pair = msgpack.packb((topic, payload), use_bin_type=True)
+                    self.pupil_data_fh.write(pair)
+
         if self.running:
-            for key, data in events.items():
-                if key not in ('dt', 'frame', 'depth_frame'):
-                    try:
-                        self.data[key] += data
-                    except KeyError:
-                        self.data[key] = []
-                        self.data[key] += data
+            # for key, data in events.items():
+            #     if key not in ('dt', 'frame', 'depth_frame'):
+            #         try:
+            #             self.data[key] += data
+            #         except KeyError:
+            #             self.data[key] = []
+            #             self.data[key] += data
 
             if 'frame' in events:
                 frame = events['frame']
@@ -326,7 +350,9 @@ class Recorder(System_Plugin_Base):
         finally:
             self.writer = None
 
-        save_object(self.data, os.path.join(self.rec_path, "pupil_data"))
+        # save_object(self.data, os.path.join(self.rec_path, "pupil_data"))
+        self.pupil_data_fh.close()
+        self.pupil_data_fh = None
 
         try:
             copy2(os.path.join(self.g_pool.user_dir, "surface_definitions"),
@@ -359,10 +385,6 @@ class Recorder(System_Plugin_Base):
         if self.menu:
             self.menu.read_only = False
             self.button.status_text = ''
-
-        self.data = {'pupil_positions': [], 'gaze_positions': []}
-        self.pupil_pos_list = []
-        self.gaze_pos_list = []
 
         logger.info("Saved Recording.")
         self.notify_all({'subject': 'recording.stopped', 'rec_path': self.rec_path})
