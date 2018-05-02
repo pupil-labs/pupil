@@ -622,7 +622,7 @@ def update_recording_v03_to_v074(rec_dir):
 
 def is_pupil_rec_dir(rec_dir):
     if not os.path.isdir(rec_dir):
-        logger.error("No valid dir supplied")
+        logger.error("No valid dir supplied ({})".format(rec_dir))
         return False
     try:
         meta_info = load_meta_info(rec_dir)
