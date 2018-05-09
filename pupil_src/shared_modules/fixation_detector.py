@@ -104,7 +104,7 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
         eye_id = 1 if len(data[1]) > len(data[0]) else 0
         base_data = data[eye_id]
 
-        all_pp = chain(*(gp['base_data'] for gp in base_data))
+        all_pp = chain.from_iterable((gp['base_data'] for gp in base_data))
         pp_with_eye_id = (pp for pp in all_pp if pp['id'] == eye_id)
         vectors = np.array([pp['circle_3d']['normal'] for pp in pp_with_eye_id], dtype=np.float32)
     else:
@@ -349,7 +349,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             recent = [d for d in self.bg_task.fetch()]
             if recent:
                 progress, data = zip(*recent)
-                self.fixations.extend(chain(*data))
+                self.fixations.extend(chain.from_iterable(data))
                 self.status = progress[-1]
                 if self.fixations:
                     current = self.fixations[-1]['timestamp']
@@ -458,7 +458,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             logger.warning('No fixations in this recording nothing to export')
             return
 
-        fixations_in_section = chain(*self.g_pool.fixations_by_frame[slice(*export_range)])
+        fixations_in_section = chain.from_iterable(self.g_pool.fixations_by_frame[slice(*export_range)])
         fixations_in_section = list(dict([(f['id'], f) for f in fixations_in_section]).values()) # remove duplicates
         fixations_in_section.sort(key=lambda f: f['id'])
 

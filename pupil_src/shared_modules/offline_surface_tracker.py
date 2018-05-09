@@ -428,7 +428,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             csv_writer = csv.writer(csvfile, delimiter=',')
 
             # gaze distribution report
-            gaze_in_section = list(chain(*self.g_pool.gaze_positions_by_frame[section]))
+            gaze_in_section = list(chain.from_iterable(self.g_pool.gaze_positions_by_frame[section]))
             not_on_any_srf = set([gp['timestamp'] for gp in gaze_in_section])
 
             csv_writer.writerow(('total_gaze_point_count',len(gaze_in_section)))

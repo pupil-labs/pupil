@@ -445,14 +445,14 @@ class Offline_Calibration(Gaze_Producer_Base):
                 recent = [d for d in sec["bg_task"].fetch()]
                 if recent:
                     progress, data = zip(*recent)
-                    sec['gaze_positions'].extend(chain(*data))
+                    sec['gaze_positions'].extend(chain.from_iterable(data))
                     sec['status'] = progress[-1]
                 if sec["bg_task"].completed:
                     self.correlate_and_publish()
                     sec['bg_task'] = None
 
     def correlate_and_publish(self):
-        all_gaze = list(chain(*[s['gaze_positions'] for s in self.sections]))
+        all_gaze = list(chain.from_iterable((s['gaze_positions'] for s in self.sections)))
         self.g_pool.gaze_positions = sorted(all_gaze, key=lambda d: d['timestamp'])
         self.g_pool.gaze_positions_by_frame = correlate_data(self.g_pool.gaze_positions, self.g_pool.timestamps)
         self.notify_all({'subject': 'gaze_positions_changed', 'delay':1})
@@ -464,8 +464,8 @@ class Offline_Calibration(Gaze_Producer_Base):
         sec['status'] = 'Starting calibration' # This will be overwritten on success
         sec['gaze_positions'] = []  # reset interim buffer for given section
 
-        calib_list = list(chain(*self.g_pool.pupil_positions_by_frame[slice(*sec['calibration_range'])]))
-        map_list = list(chain(*self.g_pool.pupil_positions_by_frame[slice(*sec['mapping_range'])]))
+        calib_list = list(chain.from_iterable(self.g_pool.pupil_positions_by_frame[slice(*sec['calibration_range'])]))
+        map_list = list(chain.from_iterable(self.g_pool.pupil_positions_by_frame[slice(*sec['mapping_range'])]))
 
         if sec['calibration_method'] == 'circle_marker':
             ref_list = self.circle_marker_positions
