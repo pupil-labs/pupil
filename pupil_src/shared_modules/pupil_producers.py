@@ -155,7 +155,7 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 class Pupil_From_Recording(Pupil_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        g_pool.pupil_positions = g_pool.pupil_data['pupil']
+        g_pool.pupil_positions = g_pool.pupil_data.get('pupil', [])
         g_pool.pupil_positions_by_frame = correlate_data(g_pool.pupil_positions, g_pool.timestamps)
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')

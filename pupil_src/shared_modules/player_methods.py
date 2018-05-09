@@ -12,6 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import os, cv2, csv_utils
 import numpy as np
 from scipy.interpolate import interp1d
+from itertools import chain
 import collections
 import glob
 import av
@@ -19,7 +20,7 @@ import av
 # logging
 import logging
 logger = logging.getLogger(__name__)
-from file_methods import save_object, load_object, UnpicklingError
+from file_methods import save_object, load_object, UnpicklingError, save_pupil_data_file
 from version_utils import VersionFormat
 from version_utils import read_rec_version
 from camera_models import load_intrinsics
@@ -126,6 +127,9 @@ def update_recording_to_recent(rec_dir):
 
     # Do this independent of rec_version
     check_for_worldless_recording(rec_dir)
+
+    if rec_version < VersionFormat('1.7'):
+        update_recording_v14_v17(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -470,6 +474,20 @@ def update_recording_v13_v14(rec_dir):
     update_meta_info(rec_dir, meta_info)
 
 
+def update_recording_v14_v17(rec_dir):
+    logger.info("Updating recording from v1.4 to v1.47")
+
+    pd_old = load_object(os.path.join(rec_dir, "pupil_data"))
+    pd_chain = chain.from_iterable(pd_old.values())
+    save_pupil_data_file(os.path.join(rec_dir, "pupil_data.pldata"), pd_chain)
+
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v1.7'
+    update_meta_info(rec_dir, meta_info)
+
+
 def check_for_worldless_recording(rec_dir):
     logger.info("Checking for world-less recording")
     valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')
@@ -572,6 +590,7 @@ def update_recording_v05_to_v074(rec_dir):
     except IOError:
         pass
 
+
 def update_recording_v04_to_v074(rec_dir):
     logger.info("Updating recording from v0.4x format to v0.7.4 format")
     gaze_array = np.load(os.path.join(rec_dir,'gaze_positions.npy'))
@@ -595,6 +614,7 @@ def update_recording_v04_to_v074(rec_dir):
         save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
     except IOError:
         pass
+
 
 def update_recording_v03_to_v074(rec_dir):
     logger.info("Updating recording from v0.3x format to v0.7.4 format")

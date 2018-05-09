@@ -112,7 +112,7 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.load_data_with_offset()
 
     def load_data_with_offset(self):
-        self.g_pool.gaze_positions = self.g_pool.pupil_data['gaze']
+        self.g_pool.gaze_positions = self.g_pool.pupil_data.get('gaze', [])
         # self.g_pool.gaze_positions = deepcopy(self.g_pool.pupil_data['gaze'])
         # for gp in self.g_pool.gaze_positions:
         #     gp['norm_pos'][0] += self.x_offset
