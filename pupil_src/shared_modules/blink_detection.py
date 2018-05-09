@@ -91,6 +91,9 @@ class Blink_Detection(Analysis_Plugin_Base):
         blink_filter = np.ones(filter_size) / filter_size
         blink_filter[filter_size // 2:] *= -1
 
+        if filter_size % 2 == 1:  # make filter symmetrical
+            blink_filter[filter_size // 2] = 0.
+
         # The theoretical response maximum is +-0.5
         # Response of +-0.45 seems sufficient for a confidence of 1.
         filter_response = activity @ blink_filter / 0.45
@@ -233,7 +236,7 @@ class Offline_Blink_Detection(Blink_Detection):
         conf_iter = (pp['confidence'] for pp in all_pp)
         activity = np.fromiter(conf_iter, dtype=float, count=len(all_pp))
         total_time = all_pp[-1]['timestamp'] - all_pp[0]['timestamp']
-        filter_size = round(len(all_pp) * self.history_length / total_time)
+        filter_size = 2 * round(len(all_pp) * self.history_length / total_time / 2.)
         blink_filter = np.ones(filter_size) / filter_size
 
         # This is different from the online filter. Convolution will flip
