@@ -45,7 +45,7 @@ def correlate_data(data, timestamps):
     frame_idx = 0
     data_index = 0
 
-    data.sort(key=lambda d: d.get('timestamp', 0.))
+    data.sort(key=lambda d: d['timestamp'])
 
     while True:
         try:
@@ -58,7 +58,7 @@ def correlate_data(data, timestamps):
             # we might loose a data point at the end but we dont care
             break
 
-        if datum.get('timestamp', 0.) <= ts:
+        if datum['timestamp'] <= ts:
             # datum['index'] = frame_idx
             data_by_frame[frame_idx].append(datum)
             data_index += 1
