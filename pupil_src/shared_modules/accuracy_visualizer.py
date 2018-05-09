@@ -226,4 +226,5 @@ class Accuracy_Visualizer(Plugin):
 
     def get_init_dict(self):
         return {'outlier_threshold': self.outlier_threshold,
-                'vis_mapping_error': self.vis_mapping_error}
+                'vis_mapping_error': self.vis_mapping_error,
+                'vis_calibration_area': self.vis_calibration_area}
