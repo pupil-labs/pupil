@@ -473,7 +473,7 @@ class UVC_Source(Base_Source):
                 logger.info("Check Stripes for camera {} is now off".format(self.uvc_capture.name))
 
         if ("Pupil Cam2" in self.uvc_capture.name):
-            ui_elements.append(ui.Switch('check_stripes', self, setter=set_check_stripes, on_val=1, off_val=0, label="Check Stripes"))
+            ui_elements.append(ui.Switch('check_stripes', self, setter=set_check_stripes, label="Check Stripes"))
         self.menu.extend(ui_elements)
 
     def cleanup(self):
