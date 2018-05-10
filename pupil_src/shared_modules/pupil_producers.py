@@ -179,8 +179,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         os.makedirs(self.data_dir, exist_ok=True)
         try:
             session_data = load_object(os.path.join(self.data_dir, 'offline_pupil_data'))
-            assert session_data.get('version') != self.session_data_version
-        except Exception:
+            assert session_data.get('version') == self.session_data_version
+        except AssertionError:
             session_data = {}
             session_data["detection_method"] = '3d'
             session_data['pupil'] = []
@@ -283,6 +283,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         session_data["detection_method"] = self.detection_method
         session_data['pupil'] = list(self.pupil_positions.values())
         session_data['detection_status'] = self.detection_status
+        session_data['version'] = self.session_data_version
         cache_path = os.path.join(self.data_dir, 'offline_pupil_data')
         save_object(session_data, cache_path)
         logger.info('Cached detected pupil data to {}'.format(cache_path))
