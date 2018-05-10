@@ -83,14 +83,23 @@ class Accessor(object):
 
 
 class Data_Correlator(object):
-    '''Proxy class data correlation and access
-
-    Correlates data to a list of target timestamps. Allows access via:
-    - direct indexing
-    - target indeces
-    - timestamps
-    '''
     def __init__(self, data, target_timestamps, data_timestamps=None):
+        '''Proxy class data correlation and access
+
+        Correlates `data` to a list of `target timestamps`. Allows access via:
+        - direct indexing
+        - target indeces
+        - timestamps
+
+        data: iterable with length N containing data elements
+
+        target_timestamps: iterable of length K containing timestamps
+
+        data_timestamps: iterable of length N containing timestamps for `data`.
+            If not specified `data` will be assumed to contain dicts that have
+            a `timestamp` key.
+        '''
+
         self.target_ts = np.asarray(target_timestamps)
 
         if data_timestamps is None:
