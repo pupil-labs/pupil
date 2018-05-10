@@ -180,7 +180,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         try:
             session_data = load_object(os.path.join(self.data_dir, 'offline_pupil_data'))
             assert session_data.get('version') == self.session_data_version
-        except AssertionError:
+        except (AssertionError, FileNotFoundError):
             session_data = {}
             session_data["detection_method"] = '3d'
             session_data['pupil_positions'] = []
