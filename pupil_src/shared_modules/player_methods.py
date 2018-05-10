@@ -26,6 +26,127 @@ from version_utils import read_rec_version
 from camera_models import load_intrinsics
 
 
+def reorder(arr, indeces):
+    '''Function to reorder elements of arr[] according to indeces[]
+
+    Uses O(n) time and O(1) extra space to sort an array according to given
+    indeces. Implementation taken from:
+
+    https://www.geeksforgeeks.org/reorder-a-array-according-to-given-indexes/
+    '''
+    assert len(arr) == len(indeces)
+
+    # Fix all elements one by one
+    for i in range(len(arr)):
+        #  While indeces[i] and arr[i] are not fixed
+        while (indeces[i] != i):
+            # Store values of the target (or correct)
+            # position before placing arr[i] there
+            oldTargetI = indeces[indeces[i]]
+            oldTargetE = arr[indeces[i]]
+
+            # Place arr[i] at its target (or correct)
+            # position. Also copy corrected indeces for
+            # new position
+            arr[indeces[i]] = arr[i]
+            indeces[indeces[i]] = indeces[i]
+
+            # Copy old target values to arr[i] and
+            # index[i]
+            indeces[i] = oldTargetI
+            arr[i] = oldTargetE
+
+
+def find_closest(target, source):
+    '''Find indeces of closest `target` elements for elements in `source`.
+
+    `source` is assumed to be sorted. Result has same shape as `source`.
+    Implementation taken from:
+
+    https://stackoverflow.com/questions/8914491/finding-the-nearest-value-and-return-the-index-of-array-in-python/8929827#8929827
+    '''
+    idx = np.searchsorted(target, source)
+    idx = np.clip(idx, 1, len(target)-1)
+    left = target[idx-1]
+    right = target[idx]
+    idx -= source - left < right - source
+    return idx
+
+
+class Accessor(object):
+    '''Auxilary class to access data using subscriptions'''
+    def __init__(self, access_callback):
+        self.access_callback = access_callback
+
+    def __getitem__(self, key):
+        return self.access_callback(key)
+
+
+class Data_Correlator(object):
+    def __init__(self, data, reference_timestamps, data_timestamps=None):
+        self.ref_ts = np.asarray(reference_timestamps)
+
+        if data_timestamps is None:
+            data_timestamps = [d['timestamp'] for d in data]
+
+        self.data = data
+        self.data_ts = np.asarray(data_timestamps)
+
+        # Find correct order once and reorder both lists in-place
+        sorted_idc = np.argsort(self.data_ts)
+        reorder(self.data, sorted_idc)
+        reorder(self.data_ts, sorted_idc)
+        # memory-vs-cpu trade-off alternative:
+        # self.data_ts = self.data_ts[sorted_idc]
+
+        # data index -> reference index mapping, result is automatically sorted
+        self.data_to_ref_mapping = find_closest(self.ref_ts, self.data_ts)
+
+        # setup auxilary objects that allow to access data by frames or time
+        # e.g. data_correlator_instance.by_time[t0:t1]
+        self.by_frames = Accessor(self.__access_by_frames__)
+        self.by_time = Accessor(self.__access_by_time__)
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __len__(self):
+        return len(self.data)
+
+    def __access_by_frames__(self, frames):
+        '''Returns data that corresponds to `frames`
+
+        frames: Either (a) single frame index or (b) frame index slice
+            (a) returns all data points that belong to `frames`
+            (b) returns all data points that correspond to `frames` slice
+                (`frames.stride` will be ignored)
+        '''
+        if isinstance(frames, slice):
+            start = frames.start or 0
+            stop = frames.stop or len(self.ref_ts)
+        else:
+            start = frames
+            stop = frames + 1
+        start, stop = np.searchsorted(self.data_to_ref_mapping, [start, stop])
+        return self.data[start:stop]
+
+    def __access_by_time__(self, time):
+        '''Returns data that corresponds to `time`
+
+        time: Either (a) single timestamp or (b) timestamp slice
+            (a) returns single data point that is closest to `time`
+            (b) returns all data points that correspond to `time` slice
+                (`time.stride` will be ignored)
+        '''
+        if isinstance(time, slice):
+            start = time.start or self.data_ts[0]
+            stop = time.stop or self.data_ts[-1]
+            start, stop = np.searchsorted(self.data_ts, [start, stop])
+            return self.data[start:stop]
+        else:
+            return self.data[find_closest(self.data_ts, time)]
+
+
 def correlate_data(data, timestamps):
     '''
     data:  list of data :
