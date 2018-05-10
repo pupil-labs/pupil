@@ -83,8 +83,15 @@ class Accessor(object):
 
 
 class Data_Correlator(object):
-    def __init__(self, data, reference_timestamps, data_timestamps=None):
-        self.ref_ts = np.asarray(reference_timestamps)
+    '''Proxy class data correlation and access
+
+    Correlates data to a list of target timestamps. Allows access via:
+    - direct indexing
+    - target indeces
+    - timestamps
+    '''
+    def __init__(self, data, target_timestamps, data_timestamps=None):
+        self.target_ts = np.asarray(target_timestamps)
 
         if data_timestamps is None:
             data_timestamps = [d['timestamp'] for d in data]
@@ -100,11 +107,11 @@ class Data_Correlator(object):
         # self.data_ts = self.data_ts[sorted_idc]
 
         # data index -> reference index mapping, result is automatically sorted
-        self.data_to_ref_mapping = find_closest(self.ref_ts, self.data_ts)
+        self.data_to_ref_mapping = find_closest(self.target_ts, self.data_ts)
 
-        # setup auxilary objects that allow to access data by frames or time
+        # setup auxilary objects that allow to access data by frame or time
         # e.g. data_correlator_instance.by_time[t0:t1]
-        self.by_frames = Accessor(self.__access_by_frames__)
+        self.by_target_idx = Accessor(self.__access_by_target_idx__)
         self.by_time = Accessor(self.__access_by_time__)
 
     def __getitem__(self, key):
@@ -113,20 +120,20 @@ class Data_Correlator(object):
     def __len__(self):
         return len(self.data)
 
-    def __access_by_frames__(self, frames):
-        '''Returns data that corresponds to `frames`
+    def __access_by_target_idx__(self, frame):
+        '''Returns data that corresponds to `frame`
 
-        frames: Either (a) single frame index or (b) frame index slice
-            (a) returns all data points that belong to `frames`
-            (b) returns all data points that correspond to `frames` slice
-                (`frames.stride` will be ignored)
+        frame: Either (a) single frame index or (b) frame index slice
+            (a) returns all data points that belong to `frame`
+            (b) returns all data points that correspond to `frame` slice
+                (`frame.stride` will be ignored)
         '''
-        if isinstance(frames, slice):
-            start = frames.start or 0
-            stop = frames.stop or len(self.ref_ts)
+        if isinstance(frame, slice):
+            start = frame.start or 0
+            stop = frame.stop or len(self.target_ts)
         else:
-            start = frames
-            stop = frames + 1
+            start = frame
+            stop = frame + 1
         start, stop = np.searchsorted(self.data_to_ref_mapping, [start, stop])
         return self.data[start:stop]
 
