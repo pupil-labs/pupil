@@ -16,7 +16,7 @@ import numpy as np
 from itertools import chain
 from plugin import Producer_Plugin_Base
 from pyglui import ui
-from player_methods import correlate_data
+from player_methods import Data_Correlator
 from file_methods import load_object, save_object
 
 from pyglui.pyfontstash import fontstash as fs
@@ -94,7 +94,7 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
-            events['pupil'] = self.g_pool.pupil_positions_by_frame[frm_idx]
+            events['pupil'] = self.g_pool.pupil_positions.by_target_idx[frm_idx]
 
     def cache_pupil_timeline_data(self, key):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
@@ -155,8 +155,8 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 class Pupil_From_Recording(Pupil_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        g_pool.pupil_positions = g_pool.pupil_data.get('pupil', [])
-        g_pool.pupil_positions_by_frame = correlate_data(g_pool.pupil_positions, g_pool.timestamps)
+        g_pool.pupil_positions = Data_Correlator(g_pool.pupil_data.get('pupil', []),
+                                                 g_pool.timestamps)
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
 
@@ -257,8 +257,9 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.menu_icon.indicator_stop = len(self.pupil_positions) / total if total else 0.
 
     def correlate_publish(self):
-        self.g_pool.pupil_positions = sorted(self.pupil_positions.values(), key=lambda pp: pp['timestamp'])
-        self.g_pool.pupil_positions_by_frame = correlate_data(list(self.pupil_positions.values()), self.g_pool.timestamps)
+        all_pp = self.pupil_positions.values()
+        self.g_pool.pupil_positions = Data_Correlator(list(all_pp),
+                                                      self.g_pool.timestamps)
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
         self.save_offline_data()
@@ -288,7 +289,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def redetect(self):
         self.pupil_positions.clear()  # delete previously detected pupil positions
-        self.g_pool.pupil_positions_by_frame = [[] for x in self.g_pool.timestamps]
+        self.g_pool.pupil_positions = Data_Correlator([], self.g_pool.timestamps)
         self.detection_finished_flag = False
         self.detection_paused = False
         for eye_id in range(2):

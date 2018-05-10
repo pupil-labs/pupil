@@ -58,7 +58,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     try:
 
         # imports
-        from file_methods import Persistent_Dict, load_object, next_export_sub_dir, load_pupil_data_file
+        from file_methods import Persistent_Dict, next_export_sub_dir, load_pupil_data_file
 
         # display
         import glfw
@@ -69,12 +69,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from pyglui.cygl.utils import Named_Texture, RGBA
         import gl_utils
         # capture
-        from video_capture import init_playback_source, EndofVideoError
+        from video_capture import init_playback_source
 
         # helpers/utils
         from version_utils import VersionFormat
         from methods import normalize, denormalize, delta_t, get_system_info
-        from player_methods import correlate_data, is_pupil_rec_dir, load_meta_info
+        from player_methods import Data_Correlator, is_pupil_rec_dir, load_meta_info
         from csv_utils import write_key_value_file
 
         # Plug-ins
@@ -255,13 +255,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.min_data_confidence = session_settings.get('min_data_confidence', 0.6)
         g_pool.min_calibration_confidence = session_settings.get('min_calibration_confidence', 0.8)
 
-        g_pool.pupil_positions = []
-        g_pool.gaze_positions = []
-        g_pool.fixations = []
+        # populated by producers
+        g_pool.pupil_positions = Data_Correlator([], g_pool.timestamps)
+        g_pool.gaze_positions = Data_Correlator([], g_pool.timestamps)
 
-        g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer`
-        g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer
-        g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
+        g_pool.fixations = []  # populated by the fixation detector plugin
+        g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]
 
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence

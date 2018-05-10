@@ -113,7 +113,7 @@ class Offline_Reference_Surface(Reference_Surface):
         self.cache = None
 
     def gaze_on_srf_by_frame_idx(self, frame_index, m_from_screen):
-        return self.map_data_to_surface(self.g_pool.gaze_positions_by_frame[frame_index], m_from_screen)
+        return self.map_data_to_surface(self.g_pool.gaze_positions.by_target_idx[frame_index], m_from_screen)
 
     def fixations_on_srf_by_frame_idx(self, frame_index, m_from_screen):
         return self.map_data_to_surface(self.g_pool.fixations_by_frame[frame_index], m_from_screen)

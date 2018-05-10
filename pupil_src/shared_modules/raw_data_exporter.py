@@ -155,7 +155,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  'projected_sphere_axis_b',
                                  'projected_sphere_angle'))
 
-            for p in list(chain(*self.g_pool.pupil_positions_by_frame[export_range])):
+            for p in self.g_pool.pupil_positions.by_target_idx[export_range]:
                 data_2d = ['{}'.format(p['timestamp']),  # use str to be consitant with csv lib.
                            p['index'],
                            p['id'],
@@ -224,7 +224,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  "gaze_normal1_y",
                                  "gaze_normal1_z"))
 
-            for g in list(chain(*self.g_pool.gaze_positions_by_frame[export_range])):
+            for g in self.g_pool.gaze_positions.by_target_idx[export_range]:
                 data = ['{}'.format(g["timestamp"]), g["index"], g["confidence"], g["norm_pos"][0], g["norm_pos"][1],
                         " ".join(['{}-{}'.format(b['timestamp'], b['id']) for b in g['base_data']])]  # use str on timestamp to be consitant with csv lib.
 

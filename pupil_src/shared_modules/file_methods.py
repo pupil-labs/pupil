@@ -87,7 +87,7 @@ def load_pupil_data_file(file_path):
     load Pupil data file, output data is dicts of toplevel topic with tuples of data inside.
     Each datum is a immutable dict that is unpacked on access.
     """
-    with open(file_path,"rb") as fh:
+    with open(file_path, "rb") as fh:
         pupil_data = {}
         for topic, payload in msgpack.Unpacker(fh, raw=False, use_list=False):
             topic = topic.split(".")[0]
