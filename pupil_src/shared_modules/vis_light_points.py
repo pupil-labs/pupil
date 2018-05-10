@@ -42,7 +42,7 @@ class Vis_Light_Points(Visualizer_Plugin_Base):
         falloff = self.falloff
 
         img = frame.img
-        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[]) if pt['confidence']>=self.g_pool.min_data_confidence]
+        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze',[]) if pt['confidence']>=self.g_pool.min_data_confidence]
 
         overlay = np.ones(img.shape[:-1],dtype=img.dtype)
 

@@ -47,7 +47,7 @@ class Vis_Fixation(Visualizer_Plugin_Base):
             thickness = self.thickness
 
         fixation_pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('fixations',[])]
-        not_fixation_pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[])]
+        not_fixation_pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze',[])]
 
         if fixation_pts:
             for pt in fixation_pts:

@@ -219,7 +219,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             if session_data['version'] != self.session_data_version:
                 logger.warning("Session data from old version. Will not use this.")
                 assert False
-        except Exception as e:
+        except (AssertionError, FileNotFoundError) as e:
             session_data = {}
             max_idx = len(self.g_pool.timestamps) - 1
             session_data['sections'] = [make_section_dict((0, max_idx), (0, max_idx))]
@@ -453,7 +453,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                     sec['bg_task'] = None
 
     def correlate_and_publish(self):
-        all_gaze = list(chain.from_iterator((s['gaze'] for s in self.sections)))
+        all_gaze = list(chain.from_iterable((s['gaze'] for s in self.sections)))
         self.g_pool.gaze_positions = Data_Correlator(all_gaze, self.g_pool.timestamps)
         self.notify_all({'subject': 'gaze_positions_changed', 'delay':1})
 

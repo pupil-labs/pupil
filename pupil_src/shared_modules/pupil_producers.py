@@ -168,7 +168,7 @@ class Pupil_From_Recording(Pupil_Producer_Base):
 
 class Offline_Pupil_Detection(Pupil_Producer_Base):
     """docstring for Offline_Pupil_Detection"""
-    session_data_version = 1
+    session_data_version = 2
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -180,7 +180,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         try:
             session_data = load_object(os.path.join(self.data_dir, 'offline_pupil_data'))
             assert session_data.get('version') == self.session_data_version
-        except AssertionError:
+        except (AssertionError, FileNotFoundError):
             session_data = {}
             session_data["detection_method"] = '3d'
             session_data['pupil'] = []

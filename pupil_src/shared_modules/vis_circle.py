@@ -45,7 +45,7 @@ class Vis_Circle(Visualizer_Plugin_Base):
         else:
             thickness = self.thickness
 
-        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[]) if pt['confidence']>=self.g_pool.min_data_confidence]
+        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze',[]) if pt['confidence']>=self.g_pool.min_data_confidence]
         for pt in pts:
             transparent_circle(frame.img, pt, radius=self.radius, color=(self.b, self.g, self.r, self.a), thickness=thickness)
 

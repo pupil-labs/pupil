@@ -218,7 +218,7 @@ class Surface_Tracker(Plugin):
         for s in self.surfaces:
             s.locate(self.markers,self.min_marker_perimeter,self.min_id_confidence, self.locate_3d)
             if s.detected:
-                s.gaze_on_srf = s.map_data_to_surface(events.get('gaze_positions', []), s.m_from_screen)
+                s.gaze_on_srf = s.map_data_to_surface(events.get('gaze', []), s.m_from_screen)
                 s.fixations_on_srf = s.map_data_to_surface(events.get('fixations', []), s.m_from_screen)
                 s.update_gaze_history()
             else:
