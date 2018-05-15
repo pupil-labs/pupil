@@ -29,7 +29,7 @@ class UVC_Source(Base_Source):
     """
     Camera Capture is a class that encapsualtes uvc.Capture:
     """
-    def __init__(self, g_pool, frame_size, frame_rate, name=None, preferred_names=(), uid=None, uvc_controls={}):
+    def __init__(self, g_pool, frame_size, frame_rate, name=None, preferred_names=(), uid=None, uvc_controls={}, check_stripes=True):
         import platform
 
         super().__init__(g_pool)
@@ -76,6 +76,15 @@ class UVC_Source(Base_Source):
                             logger.error("Camera failed to initialize.")
                         else:
                             break
+        if ("Pupil Cam2" in self.uvc_capture.name):
+            self.check_stripes = check_stripes
+            if self.check_stripes:
+                logger.info("Check Stripes for camera {} is now on".format(self.uvc_capture.name))
+            else:
+                logger.info("Check Stripes for camera {} is now off".format(self.uvc_capture.name))
+        else:
+            self.check_stripes = False
+
         self.checkframestripes = None
 
         # check if we were sucessfull
@@ -178,7 +187,8 @@ class UVC_Source(Base_Source):
                 except KeyError: pass
 
         elif ("Pupil Cam2" in self.uvc_capture.name):
-            self.checkframestripes = Check_Frame_Stripes()
+            if self.check_stripes:
+                self.checkframestripes = Check_Frame_Stripes()
 
             try: controls_dict['Auto Exposure Mode'].value = 1
             except KeyError: pass
@@ -280,6 +290,7 @@ class UVC_Source(Base_Source):
         d = super().get_init_dict()
         d['frame_size'] = self.frame_size
         d['frame_rate'] = self.frame_rate
+        d['check_stripes'] = self.check_stripes
         if self.uvc_capture:
             d['name'] = self.name
             d['uvc_controls'] = self._get_uvc_controls()
@@ -314,7 +325,7 @@ class UVC_Source(Base_Source):
 
         self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
-        if ("Pupil Cam2" in self.uvc_capture.name):
+        if self.check_stripes and ("Pupil Cam2" in self.uvc_capture.name):
             self.checkframestripes = Check_Frame_Stripes()
         else:
             self.checkframestripes = None
@@ -339,13 +350,14 @@ class UVC_Source(Base_Source):
         self.frame_rate_backup = rate
 
         if ("Pupil Cam2" in self.uvc_capture.name):
-            self.checkframestripes = Check_Frame_Stripes()
-
             controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
 
             special_settings = {200: 28, 180: 31}
             try: controls_dict['Absolute Exposure Time'].value = special_settings.get(new_rate, 32)
             except KeyError: pass
+
+        if self.check_stripes and ("Pupil Cam2" in self.uvc_capture.name):
+            self.checkframestripes = Check_Frame_Stripes()
         else:
             self.checkframestripes = None
 
@@ -450,6 +462,18 @@ class UVC_Source(Base_Source):
             ui_elements.append(image_processing)
         ui_elements.append(ui.Button("refresh",gui_update_from_device))
         ui_elements.append(ui.Button("load defaults",gui_load_defaults))
+
+        def set_check_stripes(check_stripes):
+            self.check_stripes = check_stripes
+            if self.check_stripes:
+                self.checkframestripes = Check_Frame_Stripes()
+                logger.info("Check Stripes for camera {} is now on".format(self.uvc_capture.name))
+            else:
+                self.checkframestripes = None
+                logger.info("Check Stripes for camera {} is now off".format(self.uvc_capture.name))
+
+        if ("Pupil Cam2" in self.uvc_capture.name):
+            ui_elements.append(ui.Switch('check_stripes', self, setter=set_check_stripes, label="Check Stripes"))
         self.menu.extend(ui_elements)
 
     def cleanup(self):
