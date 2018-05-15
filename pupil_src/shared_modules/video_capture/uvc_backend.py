@@ -356,10 +356,10 @@ class UVC_Source(Base_Source):
             try: controls_dict['Absolute Exposure Time'].value = special_settings.get(new_rate, 32)
             except KeyError: pass
 
-        if self.check_stripes and ("Pupil Cam2" in self.uvc_capture.name):
-            self.checkframestripes = Check_Frame_Stripes()
-        else:
-            self.checkframestripes = None
+            if self.check_stripes:
+                self.checkframestripes = Check_Frame_Stripes()
+            else:
+                self.checkframestripes = None
 
     @property
     def jpeg_support(self):
