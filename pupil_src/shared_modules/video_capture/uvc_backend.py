@@ -327,8 +327,6 @@ class UVC_Source(Base_Source):
 
         if self.check_stripes and ("Pupil Cam2" in self.uvc_capture.name):
             self.checkframestripes = Check_Frame_Stripes()
-        else:
-            self.checkframestripes = None
 
     @property
     def frame_rate(self):
@@ -358,8 +356,6 @@ class UVC_Source(Base_Source):
 
             if self.check_stripes:
                 self.checkframestripes = Check_Frame_Stripes()
-            else:
-                self.checkframestripes = None
 
     @property
     def jpeg_support(self):
@@ -463,16 +459,16 @@ class UVC_Source(Base_Source):
         ui_elements.append(ui.Button("refresh",gui_update_from_device))
         ui_elements.append(ui.Button("load defaults",gui_load_defaults))
 
-        def set_check_stripes(check_stripes):
-            self.check_stripes = check_stripes
-            if self.check_stripes:
-                self.checkframestripes = Check_Frame_Stripes()
-                logger.info("Check Stripes for camera {} is now on".format(self.uvc_capture.name))
-            else:
-                self.checkframestripes = None
-                logger.info("Check Stripes for camera {} is now off".format(self.uvc_capture.name))
-
         if ("Pupil Cam2" in self.uvc_capture.name):
+            def set_check_stripes(check_stripes):
+                self.check_stripes = check_stripes
+                if self.check_stripes:
+                    self.checkframestripes = Check_Frame_Stripes()
+                    logger.info("Check Stripes for camera {} is now on".format(self.uvc_capture.name))
+                else:
+                    self.checkframestripes = None
+                    logger.info("Check Stripes for camera {} is now off".format(self.uvc_capture.name))
+
             ui_elements.append(ui.Switch('check_stripes', self, setter=set_check_stripes, label="Check Stripes"))
         self.menu.extend(ui_elements)
 
