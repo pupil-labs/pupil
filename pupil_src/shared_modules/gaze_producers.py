@@ -476,12 +476,12 @@ class Offline_Calibration(Gaze_Producer_Base):
         end = sec['calibration_range'][1]
         ref_list = [r for r in ref_list if start <= r['index'] <= end]
 
-        if not calib_list:
+        if not len(calib_list):
             logger.error('No pupil data to calibrate section "{}"'.format(self.sections.index(sec) + 1))
             sec['status'] = 'calibration failed'
             return
 
-        if not calib_list:
+        if not ref_list:
             logger.error('No referece marker data to calibrate section "{}"'.format(self.sections.index(sec) + 1))
             sec['status'] = 'calibration failed'
             return

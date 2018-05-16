@@ -26,37 +26,6 @@ from version_utils import read_rec_version
 from camera_models import load_intrinsics
 
 
-def reorder(arr, indeces):
-    '''Function to reorder elements of arr[] according to indeces[]
-
-    Uses O(n) time and O(1) extra space to sort an array according to given
-    indeces. Implementation taken from:
-
-    https://www.geeksforgeeks.org/reorder-a-array-according-to-given-indexes/
-    '''
-    assert len(arr) == len(indeces)
-
-    # Fix all elements one by one
-    for i in range(len(arr)):
-        #  While indeces[i] and arr[i] are not fixed
-        while (indeces[i] != i):
-            # Store values of the target (or correct)
-            # position before placing arr[i] there
-            oldTargetI = indeces[indeces[i]]
-            oldTargetE = arr[indeces[i]]
-
-            # Place arr[i] at its target (or correct)
-            # position. Also copy corrected indeces for
-            # new position
-            arr[indeces[i]] = arr[i]
-            indeces[indeces[i]] = indeces[i]
-
-            # Copy old target values to arr[i] and
-            # index[i]
-            indeces[i] = oldTargetI
-            arr[i] = oldTargetE
-
-
 def find_closest(target, source):
     '''Find indeces of closest `target` elements for elements in `source`.
 
@@ -105,18 +74,13 @@ class Data_Correlator(object):
         if data_timestamps is None:
             data_timestamps = [d['timestamp'] for d in data]
 
-        self.data = data
+        self.data = np.asarray(data)
         self.data_ts = np.asarray(data_timestamps)
 
         # Find correct order once and reorder both lists in-place
         sorted_idc = np.argsort(self.data_ts)
-        reorder(self.data, sorted_idc)
-        reorder(self.data_ts, sorted_idc)
-        # memory-vs-cpu trade-off alternative:
-        # self.data_ts = self.data_ts[sorted_idc]
-
-        # data index -> reference index mapping, result is automatically sorted
-        self.data_to_ref_mapping = find_closest(self.target_ts, self.data_ts)
+        self.data = self.data[sorted_idc]
+        self.data_ts = self.data_ts[sorted_idc]
 
         # setup auxilary objects that allow to access data by frame or time
         # e.g. data_correlator_instance.by_time[t0:t1]
@@ -143,8 +107,8 @@ class Data_Correlator(object):
         else:
             start = frame
             stop = frame + 1
-        start, stop = np.searchsorted(self.data_to_ref_mapping, [start, stop])
-        return self.data[start:stop]
+        time_slc = slice(self.target_ts[start], self.target_ts[stop])
+        return self.__access_by_time__(time_slc)
 
     def __access_by_time__(self, time):
         '''Returns data that corresponds to `time`
