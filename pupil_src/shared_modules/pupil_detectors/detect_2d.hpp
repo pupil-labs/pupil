@@ -76,130 +76,139 @@ std::vector<cv::Point> Detector2D::ellipse_true_support(Detector2DProperties& pr
 
 cv::Rect Detector2D::coarsePupilDetection(const cv::Mat &frame, const float &minCoverage, const int &workingWidth, const int &workingHeight)
 	{
-		// We can afford to work on a very small input for haar features, but retain the aspect ratio
-		float xr = frame.cols / (float)workingWidth;
-		float yr = frame.rows / (float)workingHeight;
-		float r = std::min(xr, yr);
+	using namespace std;
+    using namespace cv;
 
-		cv::Mat downscaled;
-		cv::resize(frame, downscaled, cv::Size(), 1 / r, 1 / r, CV_INTER_LINEAR);
+	// We can afford to work on a very small input for haar features, but retain the aspect ratio
+    float xr = frame.cols / (float) workingWidth;
+    float yr = frame.rows / (float) workingHeight;
+    float r = max( xr, yr );
 
-		int ystep = (int)std::max<float>(0.01f*downscaled.rows, 1.0f);
-		int xstep = (int)std::max<float>(0.01f*downscaled.cols, 1.0f);
+    Mat downscaled;
+    resize(frame, downscaled, Size(), 1/r, 1/r, CV_INTER_LINEAR);
 
-		float d = (float)sqrt(pow(downscaled.rows, 2) + pow(downscaled.cols, 2));
+    int ystep = (int) max<float>( 0.01f*downscaled.rows, 1.0f);
+    int xstep = (int) max<float>( 0.01f*downscaled.cols, 1.0f);
 
-		// Pupil radii is based on PuRe assumptions
-		int min_r = (int)(0.5 * 0.05 * d);
-		int max_r = (int)(0.5 * 0.12 * d);
-		int r_step = (int)std::max<float>(0.1f*(max_r + min_r), 1.0f);
+    float d = (float) sqrt( pow(downscaled.rows, 2) + pow(downscaled.cols, 2) );
 
-		// TODO: padding so we consider the borders as well!
+    // Pupil radii is based on PuRe assumptions
+    int min_r = (int) (0.5 * 0.07 * d);
+    int max_r = (int) (0.5 * 0.29 * d);
+    int r_step = (int) max<float>( 0.2f*(max_r + min_r), 1.0f);
 
-		cv::Mat itg;
-		cv::integral(downscaled, itg, CV_32S);
-		cv::Mat res = cv::Mat::zeros(downscaled.rows, downscaled.cols, CV_32F);
-		float best_response = std::numeric_limits<float>::min();
-		std::deque< std::pair<cv::Rect, float> > candidates;
-		for (int r = min_r; r <= max_r; r += r_step) {
-			int step = 3 * r;
+    // TODO: padding so we consider the borders as well!
 
-			cv::Point ia, ib, ic, id;
-			cv::Point oa, ob, oc, od;
+    /* Haar-like feature suggested by Swirski. For details, see
+     * Świrski, Lech, Andreas Bulling, and Neil Dodgson.
+     * "Robust real-time pupil tracking in highly off-axis images."
+     * Proceedings of the Symposium on Eye Tracking Research and Applications. ACM, 2012.
+     *
+     * However, we collect a per-pixel maxima instead of the global one
+    */
+    Mat itg;
+    integral(downscaled, itg, CV_32S);
+    Mat res = Mat::zeros( downscaled.rows, downscaled.cols, CV_32F);
+    float best_response = std::numeric_limits<float>::min();
+    deque< pair<Rect, float> > candidates;
+    for (int r = min_r; r<=max_r; r+=r_step) {
+        int step = 3*r;
 
-			int inner_count = (2 * r) * (2 * r);
-			int outer_count = (2 * step)*(2 * step) - inner_count;
+        Point ia, ib, ic, id;
+        Point oa, ob, oc, od;
 
-			float inner_norm = 1.0f / (255 * inner_count);
-			float outer_norm = 1.0f / (255 * outer_count);
+        int inner_count = (2*r) * (2*r);
+        int outer_count = (2*step)*(2*step) - inner_count;
 
-			for (int y = step; y < downscaled.rows - step; y += ystep) {
-				oa.y = y - step;
-				ob.y = y - step;
-				oc.y = y + step;
-				od.y = y + step;
-				ia.y = y - r;
-				ib.y = y - r;
-				ic.y = y + r;
-				id.y = y + r;
-				for (int x = step; x < downscaled.cols - step; x += xstep) {
-					oa.x = x - step;
-					ob.x = x + step;
-					oc.x = x + step;
-					od.x = x - step;
-					ia.x = x - r;
-					ib.x = x + r;
-					ic.x = x + r;
-					id.x = x - r;
-					int inner = itg.ptr<int>(ic.y)[ic.x] + itg.ptr<int>(ia.y)[ia.x] -
-						itg.ptr<int>(ib.y)[ib.x] - itg.ptr<int>(id.y)[id.x];
-					int outer = itg.ptr<int>(oc.y)[oc.x] + itg.ptr<int>(oa.y)[oa.x] -
-						itg.ptr<int>(ob.y)[ob.x] - itg.ptr<int>(od.y)[od.x] - inner;
+        float inner_norm = 1.0f / (255*inner_count);
+        float outer_norm = 1.0f / (255*outer_count);
 
-					float inner_mean = inner_norm * inner;
-					float outer_mean = outer_norm * outer;
-					float response = (outer_mean - inner_mean);
+        for (int y = step; y<downscaled.rows-step; y+=ystep) {
+            oa.y = y - step;
+            ob.y = y - step;
+            oc.y = y + step;
+            od.y = y + step;
+            ia.y = y - r;
+            ib.y = y - r;
+            ic.y = y + r;
+            id.y = y + r;
+            for (int x = step; x<downscaled.cols-step; x+=xstep) {
+                oa.x = x - step;
+                ob.x = x + step;
+                oc.x = x + step;
+                od.x = x - step;
+                ia.x = x - r;
+                ib.x = x + r;
+                ic.x = x + r;
+                id.x = x - r;
+                int inner = itg.ptr<int>(ic.y)[ic.x] + itg.ptr<int>(ia.y)[ia.x] -
+                        itg.ptr<int>(ib.y)[ib.x] - itg.ptr<int>(id.y)[id.x];
+                int outer = itg.ptr<int>(oc.y)[oc.x] + itg.ptr<int>(oa.y)[oa.x] -
+                        itg.ptr<int>(ob.y)[ob.x] - itg.ptr<int>(od.y)[od.x] - inner;
 
-					if (response > best_response)
-						best_response = response;
+                float inner_mean = inner_norm*inner;
+                float outer_mean = outer_norm*outer;
+                float response = (outer_mean - inner_mean);
 
-					if (response > res.ptr<float>(y)[x]) {
-						res.ptr<float>(y)[x] = response;
-						// The pupil is too small, the padding too large; we combine them.
-						candidates.push_back(std::make_pair(cv::Rect(0.5*(ia + oa), 0.5*(ic + oc)), response));
-					}
+                if ( response < 0.5*best_response)
+                    continue;
 
-				}
-			}
-		}
+                if (response < 0.5 * best_response)
+                    continue;
 
-		// Eliminate low response candidates then sort and combine
-		for (auto c = candidates.begin(); c != candidates.end();) {
-			if (c->second < 0.5 * best_response)
-				c = candidates.erase(c);
-			else
-				c++;
-		}
-		auto compare = [](const std::pair<cv::Rect, float> &a, const std::pair<cv::Rect, float> &b) {
-			return (a.second > b.second);
-		};
-		sort(candidates.begin(), candidates.end(), compare);
+                if (response > best_response)
+                    best_response = response;
 
-		// Now add until we reach the minimum coverage or run out of candidates
-		cv::Rect coarse;
-		int minWidth = minCoverage * downscaled.cols;
-		int minHeight = minCoverage * downscaled.rows;
-		for (int i = 0; i < candidates.size(); i++) {
-			auto &c = candidates[i];
-			if (coarse.area() == 0)
-				coarse = c.first;
-			else
-				coarse |= c.first;
+                if ( response > res.ptr<float>(y)[x] ) {
+                    res.ptr<float>(y)[x] = response;
+                    // The pupil is too small, the padding too large; we combine them.
+                    candidates.push_back( make_pair(Rect( 0.5*(ia+oa), 0.5*(ic+oc) ), response) );
+                }
 
-			if (coarse.width > minWidth && coarse.height > minHeight)
-				break;
-		}
+            }
+        }
+    }
 
-		// Upscale result
-		coarse.x *= r;
-		coarse.y *= r;
-		coarse.width *= r;
-		coarse.height *= r;
+    auto compare = [] (const pair<Rect, float> &a, const pair<Rect,float> &b) {
+        return (a.second > b.second);
+    };
+    sort( candidates.begin(), candidates.end(), compare);
 
-		// Sanity test
-		cv::Rect imRoi = cv::Rect(0, 0, frame.cols, frame.rows);
-		coarse &= imRoi;
-		if (coarse.area() == 0)
-			return imRoi;
+    // Now add until we reach the minimum coverage or run out of candidates
+    Rect coarse;
+    int minWidth = minCoverage * downscaled.cols;
+    int minHeight = minCoverage * downscaled.rows;
+    for ( int i=0; i<candidates.size(); i++ ) {
+        auto &c = candidates[i];
+        if (coarse.area() == 0)
+            coarse = c.first;
+        else
+            coarse |= c.first;
 
-		return coarse;
-	}
+        if (coarse.width > minWidth && coarse.height > minHeight)
+            break;
+    }
+
+    // Upscale result
+    coarse.x *= r;
+    coarse.y *= r;
+    coarse.width *= r;
+    coarse.height *= r;
+
+    // Sanity test
+    Rect imRoi = Rect(0, 0, frame.cols, frame.rows);
+    coarse &= imRoi;
+    if (coarse.area() == 0)
+        return imRoi;
+
+    return coarse;
+}
 
 std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image, bool pause_video = false)
 {
 	std::shared_ptr<Detector2DResult> result = std::make_shared<Detector2DResult>();
 
-	roi = this->coarsePupilDetection(cv::Mat(image, roi).clone(), 0.225, 50, 50);
+	roi = this->coarsePupilDetection(cv::Mat(image, roi).clone(), 0.25f, 60, 40);
 
 	result->current_roi = roi;
 	result->image_width =  image.size().width;
