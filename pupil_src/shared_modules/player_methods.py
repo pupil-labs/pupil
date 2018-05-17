@@ -20,7 +20,7 @@ import av
 # logging
 import logging
 logger = logging.getLogger(__name__)
-from file_methods import save_object, load_object, UnpicklingError, save_pupil_data_file
+from file_methods import save_object, load_object, UnpicklingError, PLData_Writer
 from version_utils import VersionFormat
 from version_utils import read_rec_version
 from camera_models import load_intrinsics
@@ -576,11 +576,12 @@ def update_recording_v13_v14(rec_dir):
 
 
 def update_recording_v14_v17(rec_dir):
-    logger.info("Updating recording from v1.4 to v1.47")
+    logger.info("Updating recording from v1.4 to v1.7")
 
     pd_old = load_object(os.path.join(rec_dir, "pupil_data"))
-    pd_chain = chain.from_iterable(pd_old.values())
-    save_pupil_data_file(os.path.join(rec_dir, "pupil_data.pldata"), pd_chain)
+    for topic in pd_old:
+        with PLData_Writer(rec_dir, topic) as writer:
+            writer.extend(pd_old[topic])
 
     meta_info_path = os.path.join(rec_dir, "info.csv")
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:

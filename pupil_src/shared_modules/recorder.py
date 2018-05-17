@@ -18,14 +18,10 @@ import numpy as np
 from plugin import System_Plugin_Base
 from time import strftime, localtime, time, gmtime
 from shutil import copy2
-from file_methods import save_object, load_object
+from file_methods import load_object, PLData_Writer
 from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer
 from ndsi import H264Writer
-
-import msgpack
-import zmq
-from zmq_tools import Msg_Receiver
 
 # logging
 import logging
@@ -35,60 +31,11 @@ logger = logging.getLogger(__name__)
 def get_auto_name():
     return strftime("%Y_%m_%d", localtime())
 
-# def sanitize_timestamps(ts):
-#     logger.debug("Checking %s timestamps for monotony in direction and smoothness"%ts.shape[0])
-#     avg_frame_time = (ts[-1] - ts[0])/ts.shape[0]
-#     logger.debug('average_frame_time: %s'%(1./avg_frame_time))
-
-#     raw_ts = ts #only needed for visualization
-#     runs = 0
-#     while True:
-#         #forward check for non monotonic increasing behaviour
-#         clean = np.ones((ts.shape[0]),dtype=np.bool)
-#         damper  = 0
-#         for idx in range(ts.shape[0]-1):
-#             if ts[idx] >= ts[idx+1]: #not monotonically increasing timestamp
-#                 damper = 50
-#             clean[idx] = damper <= 0
-#             damper -=1
-
-#         #backward check to smooth timejumps forward
-#         damper  = 0
-#         for idx in range(ts.shape[0]-1)[::-1]:
-#             if ts[idx+1]-ts[idx]>1: #more than one second forward jump
-#                 damper = 50
-#             clean[idx] &= damper <= 0
-#             damper -=1
-
-#         if clean.all() == True:
-#             if runs >0:
-#                 logger.debug("Timestamps were bad but are ok now. Correction runs: %s"%runs)
-#                 # from matplotlib import pyplot as plt
-#                 # plt.plot(frames,raw_ts)
-#                 # plt.plot(frames,ts)
-#                 # # plt.scatter(frames[~clean],ts[~clean])
-#                 # plt.show()
-#             else:
-#                 logger.debug("Timestamps are clean.")
-#             return ts
-
-#         runs +=1
-#         if runs > 4:
-#             logger.error("Timestamps could not be fixed!")
-#             return ts
-
-#         logger.warning("Timestamps are not sane. We detected non monotitc or jumpy timestamps. Fixing them now")
-#         frames = np.arange(len(ts))
-#         s = UnivariateSpline(frames[clean],ts[clean],s=0)
-#         ts = s(frames)
-
 
 class Recorder(System_Plugin_Base):
     """Capture Recorder"""
     icon_chr = chr(0xe04b)
     icon_font = 'pupil_icons'
-
-    topic_blacklist = ('frame', 'logging',  'remote_notify')
 
     def __init__(self, g_pool, session_name=get_auto_name(), rec_dir=None,
                  user_info={'name': '', 'additional_field': 'change_me'},
@@ -127,8 +74,6 @@ class Recorder(System_Plugin_Base):
         self.show_info_menu = show_info_menu
         self.info_menu = None
         self.info_menu_conf = info_menu_conf
-
-        self.receiver = Msg_Receiver(self.g_pool.zmq_ctx, self.g_pool.ipc_sub_url, topics=('',))
 
     def get_init_dict(self):
         d = {}
@@ -194,7 +139,14 @@ class Recorder(System_Plugin_Base):
             if 'timestamp' not in notification:
                 logger.error("Notification without timestamp will not be saved.")
             else:
-                self.data['notifications'].append(notification)
+                notification['topic'] = 'notify.' + notification['subject']
+                try:
+                    writer = self.pldata_writers['notifications']
+                except KeyError:
+                    writer = PLData_Writer(self.rec_dir, 'notifications')
+                    self.pldata_writers['notifications'] = writer
+                writer.append(notification)
+
         elif notification['subject'] == 'recording.should_start':
             if self.running:
                 logger.info('Recording already running!')
@@ -279,7 +231,7 @@ class Recorder(System_Plugin_Base):
                          'session_name': self.session_name, 'record_eye': self.record_eye,
                          'compression': self.raw_jpeg})
 
-        self.pupil_data_fh = open(os.path.join(self.rec_path, "pupil_data.pldata"), 'wb')
+        self.pldata_writers = {}
 
     def open_info_menu(self):
         self.info_menu = ui.Growing_Menu('additional Recording Info', size=(300, 300), pos=(300, 300))
@@ -306,29 +258,15 @@ class Recorder(System_Plugin_Base):
             self.info_menu = None
 
     def recent_events(self, events):
-        while self.receiver.new_data:
-            topic = self.receiver.socket.recv_string()
-            payload = self.receiver.socket.recv()
-            while self.receiver.socket.get(zmq.RCVMORE):
-                self.receiver.socket.recv()  # drop extra frames
-
-            if self.running:
-                for blacklisted in self.topic_blacklist:
-                    if topic.startswith(blacklisted):
-                        break
-                else:
-                    pair = msgpack.packb((topic, payload), use_bin_type=True)
-                    self.pupil_data_fh.write(pair)
-
         if self.running:
-            # for key, data in events.items():
-            #     if key not in ('dt', 'frame', 'depth_frame'):
-            #         try:
-            #             self.data[key] += data
-            #         except KeyError:
-            #             self.data[key] = []
-            #             self.data[key] += data
-
+            for key, data in events.items():
+                if key not in ('dt', 'frame', 'depth_frame'):
+                    try:
+                        writer = self.pldata_writers[key]
+                    except KeyError:
+                        writer = PLData_Writer(self.rec_dir, key)
+                        self.pldata_writers[key] = writer
+                    writer.extend(data)
             if 'frame' in events:
                 frame = events['frame']
                 self.writer.write_video_frame(frame)
@@ -351,8 +289,10 @@ class Recorder(System_Plugin_Base):
             self.writer = None
 
         # save_object(self.data, os.path.join(self.rec_path, "pupil_data"))
-        self.pupil_data_fh.close()
-        self.pupil_data_fh = None
+        for writer in self.pldata_writers.values():
+            writer.close()
+
+        del self.pldata_writers
 
         try:
             copy2(os.path.join(self.g_pool.user_dir, "surface_definitions"),

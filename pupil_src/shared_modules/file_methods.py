@@ -16,6 +16,8 @@ import numpy as np
 import traceback as tb
 import logging
 from glob import iglob
+from collections import deque
+
 logger = logging.getLogger(__name__)
 UnpicklingError = pickle.UnpicklingError
 
@@ -108,6 +110,43 @@ def save_pupil_data_file(file_path, data):
         for datum in data:
             payload = (datum['topic'], packer.pack(datum))
             fb.write(packer.pack(payload))
+
+
+class PLData_Writer(object):
+    """docstring for PLData_Writer"""
+    def __init__(self, directory, name):
+        super().__init__()
+        self.directory = directory
+        self.name = name
+        self.ts_queue = deque()
+        file_name = name + '.pldata'
+        self.file_handle = open(os.path.join(directory, file_name), 'wb')
+
+    def append(self, datum):
+        self.ts_queue.append(datum['timestamp'])
+        payload = msgpack.packb(datum, use_bin_type=True)
+        pair = msgpack.packb((datum['topic'], payload),
+                             use_bin_type=True)
+        self.file_handle.write(pair)
+
+    def extend(self, data):
+        for datum in data:
+            self.append(data)
+
+    def close(self):
+        self.file_handle.close()
+        self.file_handle = None
+
+        ts_file = self.name + '_timestamps.npy'
+        ts_path = os.path.join(self.directory, ts_file)
+        np.save(ts_path, self.ts_queue)
+        self.ts_queue = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
 
 
 def next_export_sub_dir(root_export_dir):
