@@ -61,7 +61,7 @@ cdef class Detector_2D:
         self.coarseDetectionPreviousWidth = -1
         self.coarseDetectionPreviousPosition =  (0,0)
         if not self.detectProperties:
-            self.detectProperties["coarse_detection"] = True
+            self.detectProperties["coarse_detection"] = False
             self.detectProperties["coarse_filter_min"] = 128
             self.detectProperties["coarse_filter_max"] = 280
             self.detectProperties["intensity_range"] = 23

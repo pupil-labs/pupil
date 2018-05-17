@@ -49,3 +49,18 @@ hmd_cal_data
 
 mprofile_*.dat
 .ipynb_checkpoints/
+.idea/misc.xml
+.idea/modules.xml
+.idea/other.xml
+.idea/pupil-coarse-detect.iml
+.idea/vcs.xml
+.idea/workspace.xml
+.idea/runConfigurations/pupil.xml
+venv/pip-selfcheck.json
+venv/pyvenv.cfg
+venv/bin/activate
+venv/bin/activate.csh
+venv/bin/activate.fish
+venv/bin/python
+venv/bin/python3
+venv/bin/python3.6
