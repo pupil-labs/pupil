@@ -76,15 +76,9 @@ class UVC_Source(Base_Source):
                             logger.error("Camera failed to initialize.")
                         else:
                             break
-        if ("Pupil Cam2" in self.uvc_capture.name):
-            self.check_stripes = check_stripes
-            if self.check_stripes:
-                logger.info("Check Stripes for camera {} is now on".format(self.uvc_capture.name))
-            else:
-                logger.info("Check Stripes for camera {} is now off".format(self.uvc_capture.name))
-        else:
-            self.check_stripes = False
 
+        # checkframestripes will be initialized accordingly in configure_capture()
+        self.check_stripes = check_stripes
         self.checkframestripes = None
 
         # check if we were sucessfull
