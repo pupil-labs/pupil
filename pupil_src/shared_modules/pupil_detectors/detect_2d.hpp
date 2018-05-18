@@ -76,6 +76,9 @@ std::vector<cv::Point> Detector2D::ellipse_true_support(Detector2DProperties& pr
 
 cv::Rect Detector2D::coarsePupilDetection(const cv::Mat &frame, const float &minCoverage, const int &workingWidth, const int &workingHeight)
 	{
+	// Coarse Detection heavily inspired from "PuRe", https://atreus.informatik.uni-tuebingen.de/santini/EyeRecToo
+
+
 	using namespace std;
     using namespace cv;
 
@@ -92,12 +95,10 @@ cv::Rect Detector2D::coarsePupilDetection(const cv::Mat &frame, const float &min
 
     float d = (float) sqrt( pow(downscaled.rows, 2) + pow(downscaled.cols, 2) );
 
-    // Pupil radii is based on PuRe assumptions
-    int min_r = (int) (0.5 * 0.07 * d);
-    int max_r = (int) (0.5 * 0.29 * d);
+    // Handcrafted. max_r is not very important, but min_r is crucial for discarding eye lashes etc.
+    int min_r = 10;
+    int max_r = 20;
     int r_step = (int) max<float>( 0.2f*(max_r + min_r), 1.0f);
-
-    // TODO: padding so we consider the borders as well!
 
     /* Haar-like feature suggested by Swirski. For details, see
      * Świrski, Lech, Andreas Bulling, and Neil Dodgson.
@@ -150,9 +151,6 @@ cv::Rect Detector2D::coarsePupilDetection(const cv::Mat &frame, const float &min
                 float outer_mean = outer_norm*outer;
                 float response = (outer_mean - inner_mean);
 
-                if ( response < 0.5*best_response)
-                    continue;
-
                 if (response < 0.5 * best_response)
                     continue;
 
@@ -204,11 +202,13 @@ cv::Rect Detector2D::coarsePupilDetection(const cv::Mat &frame, const float &min
     return coarse;
 }
 
-std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image, bool pause_video = false)
+std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& user_roi, bool visualize, bool use_debug_image, bool pause_video = false)
 {
 	std::shared_ptr<Detector2DResult> result = std::make_shared<Detector2DResult>();
 
-	roi = this->coarsePupilDetection(cv::Mat(image, roi).clone(), 0.25f, 60, 40);
+	cv::Rect roi = this->coarsePupilDetection(cv::Mat(image, user_roi).clone(), 0.1f, (int)round(user_roi.width), (int)round(user_roi.height/2));
+    roi.x += user_roi.x;
+    roi.y += user_roi.y;
 
 	result->current_roi = roi;
 	result->image_width =  image.size().width;
