@@ -17,114 +17,43 @@ import collections
 import glob
 import av
 
-# logging
-import logging
-logger = logging.getLogger(__name__)
 from file_methods import save_object, load_object, UnpicklingError, PLData_Writer
 from version_utils import VersionFormat
 from version_utils import read_rec_version
 from camera_models import load_intrinsics
 
-
-def find_closest(target, source):
-    '''Find indeces of closest `target` elements for elements in `source`.
-
-    `source` is assumed to be sorted. Result has same shape as `source`.
-    Implementation taken from:
-
-    https://stackoverflow.com/questions/8914491/finding-the-nearest-value-and-return-the-index-of-array-in-python/8929827#8929827
-    '''
-    idx = np.searchsorted(target, source)
-    idx = np.clip(idx, 1, len(target)-1)
-    left = target[idx-1]
-    right = target[idx]
-    idx -= source - left < right - source
-    return idx
+# logging
+import logging
+logger = logging.getLogger(__name__)
 
 
-class Accessor(object):
-    '''Auxilary class to access data using subscriptions'''
-    def __init__(self, access_callback):
-        self.access_callback = access_callback
-
-    def __getitem__(self, key):
-        return self.access_callback(key)
+def ts_window(timestamps, idx):
+    before = timestamps[idx - 1] if idx > 0 else -np.inf
+    now = timestamps[idx]
+    after = timestamps[idx + 1] if idx < len(timestamps) - 1 else np.inf
+    return (now - before) / 2., (after - now) / 2.
 
 
-class Data_Correlator(object):
-    def __init__(self, data, target_timestamps, data_timestamps=None):
-        '''Proxy class data correlation and access
-
-        Correlates `data` to a list of `target timestamps`. Allows access via:
-        - direct indexing
-        - target indeces
-        - timestamps
-
-        data: iterable with length N containing data elements
-
-        target_timestamps: iterable of length K containing timestamps
-
-        data_timestamps: iterable of length N containing timestamps for `data`.
-            If not specified `data` will be assumed to contain dicts that have
-            a `timestamp` key.
-        '''
-
-        self.target_ts = np.asarray(target_timestamps)
-
-        if data_timestamps is None:
-            data_timestamps = [d['timestamp'] for d in data]
-
+class Bisector(object):
+    """docstring for ClassName"""
+    def __init__(self, data, data_ts):
         self.data = np.asarray(data)
-        self.data_ts = np.asarray(data_timestamps)
+        self.data_ts = np.asarray(data_ts)
 
         # Find correct order once and reorder both lists in-place
         sorted_idc = np.argsort(self.data_ts)
-        self.data = self.data[sorted_idc]
+        self.data = self.data[sorted_idc].tolist()
         self.data_ts = self.data_ts[sorted_idc]
 
-        # setup auxilary objects that allow to access data by frame or time
-        # e.g. data_correlator_instance.by_time[t0:t1]
-        self.by_target_idx = Accessor(self.__access_by_target_idx__)
-        self.by_time = Accessor(self.__access_by_time__)
+    def by_ts_window(self, ts_window):
+        start_idx, stop_idx = np.searchsorted(self.data_ts, ts_window)
+        return self.data[start_idx:stop_idx]
 
     def __getitem__(self, key):
         return self.data[key]
 
     def __len__(self):
         return len(self.data)
-
-    def __access_by_target_idx__(self, frame):
-        '''Returns data that corresponds to `frame`
-
-        frame: Either (a) single frame index or (b) frame index slice
-            (a) returns all data points that belong to `frame`
-            (b) returns all data points that correspond to `frame` slice
-                (`frame.stride` will be ignored)
-        '''
-        if isinstance(frame, slice):
-            start = frame.start or 0
-            stop = frame.stop or len(self.target_ts)
-        else:
-            start = frame
-            stop = frame + 1
-        time_slc = slice(self.target_ts[start], self.target_ts[stop])
-        return self.__access_by_time__(time_slc)
-
-    def __access_by_time__(self, time):
-        '''Returns data that corresponds to `time`
-
-        time: Either (a) single timestamp or (b) timestamp slice
-            (a) returns single data point that is closest to `time`
-            (b) returns all data points that correspond to `time` slice
-                (`time.stride` will be ignored)
-        '''
-        if isinstance(time, slice):
-            start = time.start or self.data_ts[0]
-            stop = time.stop or self.data_ts[-1]
-            start, stop = np.searchsorted(self.data_ts, [start, stop])
-            return self.data[start:stop]
-        else:
-            return self.data[find_closest(self.data_ts, time)]
 
 
 def correlate_data(data, timestamps):
