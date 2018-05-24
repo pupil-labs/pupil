@@ -38,6 +38,7 @@ cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
   cdef cppclass Point_[T]:
     Point_() except +
+    T x, y
 
 cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
@@ -189,6 +190,18 @@ cdef extern from "singleeyefitter/EyeModelFitter.h" namespace "singleeyefitter":
         Sphere[double] mCurrentSphere
 
 
+cdef extern from "PupilDetectionMethod.h":
+    cdef cppclass Pupil:
+        Pupil()
+        int majorAxis()
+        int minorAxis()
+        Point_[float] center
+        float angle
+        float confidence
 
+cdef extern from "PuRe.h":
+    cdef cppclass PuRe:
+        PuRe()
+        void run(const Mat &frame, const Rect_[int] &roi, Pupil &pupil, const float &userMinPupilDiameterPx, const float &userMaxPupilDiameterPx)
 
 

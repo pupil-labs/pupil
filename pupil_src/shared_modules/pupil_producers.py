@@ -310,7 +310,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.menu.label = "Offline Pupil Detector"
         self.menu.append(ui.Info_Text('Detects pupil positions from the recording\'s eye videos.'))
         self.menu.append(ui.Selector('detection_method', self, label='Detection Method',
-                                     selection=['2d', '3d'], setter=self.set_detection_mapping_mode))
+                                     selection=['2d', '3d', 'PuRe'], setter=self.set_detection_mapping_mode))
         self.menu.append(ui.Switch('detection_paused', self, label='Pause detection'))
         self.menu.append(ui.Button('Redetect', self.redetect))
         self.menu.append(ui.Text_Input("0", label='eye0:', getter=lambda: self.detection_status[0], setter=lambda _: _))

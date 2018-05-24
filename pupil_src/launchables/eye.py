@@ -127,10 +127,11 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         from video_capture import manager_classes
 
         # Pupil detectors
-        from pupil_detectors import Detector_2D, Detector_3D, Detector_Dummy
+        from pupil_detectors import Detector_2D, Detector_3D, Detector_Dummy, Detector_PuRe
         pupil_detectors = {Detector_2D.__name__: Detector_2D,
                            Detector_3D.__name__: Detector_3D,
-                           Detector_Dummy.__name__: Detector_Dummy}
+                           Detector_Dummy.__name__: Detector_Dummy,
+                           Detector_PuRe.__name__: Detector_PuRe}
 
         # UI Platform tweaks
         if platform.system() == 'Linux':
@@ -376,10 +377,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                                         setter=set_detector,
                                         selection=[Detector_Dummy,
                                                    Detector_2D,
-                                                   Detector_3D],
+                                                   Detector_3D,
+                                                   Detector_PuRe],
                                         labels=['disabled',
                                                 'C++ 2d detector',
-                                                'C++ 3d detector'],
+                                                'C++ 3d detector',
+                                                'C++ PuRe detector'],
                                         label="Detection method")
         general_settings.append(detector_selector)
 
@@ -474,6 +477,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                     elif notification['mode'] == '2d':
                         if not isinstance(g_pool.pupil_detector, Detector_2D):
                             set_detector(Detector_2D)
+                        detector_selector.read_only = False
+                    elif notification['mode'] == 'PuRe':
+                        if not isinstance(g_pool.pupil_detector, Detector_PuRe):
+                            set_detector(Detector_PuRe)
                         detector_selector.read_only = False
                     else:
                         if not isinstance(g_pool.pupil_detector, Detector_Dummy):

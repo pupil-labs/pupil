@@ -18,6 +18,7 @@ if not getattr(sys, 'frozen', False):
 from .detector_2d import Detector_2D
 from .detector_3d import Detector_3D
 from .detector_dummy import Detector_Dummy
+from .detector_PuRe import Detector_PuRe
 
 
 #explicit import here for pyinstaller because it will not search .pyx source files.

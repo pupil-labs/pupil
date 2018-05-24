@@ -107,6 +107,17 @@ extensions = [
         extra_objects = xtra_obj2d,
         depends= dependencies,
         language="c++"),
+    Extension(
+        name="pupil_detectors.detector_PuRe",
+        sources=['detector_PuRe.pyx','PuRe.cpp','PupilDetectionMethod.cpp'],
+        include_dirs = include_dirs,
+        libraries = libs,
+        library_dirs = library_dirs,
+        extra_link_args=[], #'-WL,-R/usr/local/lib'
+        extra_compile_args=["-D_USE_MATH_DEFINES","-std=c++11",'-w','-O2'],#,'-O2'], #-w hides warnings
+        extra_objects = xtra_obj2d,
+        depends= dependencies,
+        language="c++"),
 ]
 
 if __name__ == '__main__':
