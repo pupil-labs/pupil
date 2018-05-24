@@ -199,6 +199,11 @@ cdef extern from "PupilDetectionMethod.h":
         float angle
         float confidence
 
+    cdef cppclass PupilDetectionMethod:
+        @staticmethod
+        Rect_[int] coarsePupilDetection(const Mat &frame, const float &minCoverage, const int &workingWidth, const int &workingHeight)
+
+
 cdef extern from "PuRe.h":
     cdef cppclass PuRe:
         PuRe()

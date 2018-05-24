@@ -67,7 +67,7 @@ cdef class Detector_PuRe:
         image_width = frame_.width
         image_height = frame_.height
 
-        cdef unsigned char[:,::1] img = frame_.gray
+        cdef unsigned char[:,::1] img = frame_.gray #[user_roi.view]
         cdef Mat frame = Mat(image_height, image_width, CV_8UC1, <void *> &img[0,0] )
 
         
@@ -79,9 +79,10 @@ cdef class Detector_PuRe:
         roi_width  = roi.get()[2] - roi.get()[0]
         roi_height  = roi.get()[3] - roi.get()[1]
 
-        #         void run(const Mat &frame, const Rect_[int] &roi, Pupil &pupil, const float &userMinPupilDiameterPx=-1, const float &userMaxPupilDiameterPx=-1
+        coarserect = PupilDetectionMethod.coarsePupilDetection(frame,  0.1, roi_width, roi_height)
 
-        self.thisptr.run(frame, Rect_[int](roi_x,roi_y,roi_width,roi_height),self.pupil, self.detectProperties["pupil_size_min"], self.detectProperties["pupil_size_max"] )
+        cv2.rectangle( frame_.img, (coarserect.x, coarserect.y),(coarserect.x+coarserect.width, coarserect.y+coarserect.height), (255,255,0))
+        self.thisptr.run(frame, coarserect,self.pupil, self.detectProperties["pupil_size_min"], self.detectProperties["pupil_size_max"] )
 
         py_result = {}
 
