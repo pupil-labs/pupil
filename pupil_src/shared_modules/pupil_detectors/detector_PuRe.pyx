@@ -70,13 +70,7 @@ cdef class Detector_PuRe:
 
     def detect(self, frame_, user_roi, visualize, pause_video = False ):
 
-        image_width = frame_.width
-        image_height = frame_.height
 
-        cdef unsigned char[:,::1] img = frame_.gray #[user_roi.view]
-        cdef Mat frame = Mat(image_height, image_width, CV_8UC1, <void *> &img[0,0] )
-
-        
         py_result = None
         roi = Roi((0,0))
         roi.set( user_roi.get() )
@@ -85,16 +79,25 @@ cdef class Detector_PuRe:
         roi_width  = roi.get()[2] - roi.get()[0]
         roi_height  = roi.get()[3] - roi.get()[1]
 
+        image_width = frame_.width
+        image_height = frame_.height
+        user_roi_image = np.copy(frame_.gray[user_roi.view])
+        cdef unsigned char[:,::1] img = user_roi_image
+        cdef Mat frame = Mat(roi_height, roi_width, CV_8UC1, <void *> &img[0,0] )
+
+        
+
+
         coarserect = PupilDetectionMethod.coarsePupilDetection(frame,  0.1, roi_width, roi_height)
 
-        cv2.rectangle( frame_.img, (coarserect.x, coarserect.y),(coarserect.x+coarserect.width, coarserect.y+coarserect.height), (255,255,0))
+        cv2.rectangle( frame_.img, (coarserect.x+roi_x, coarserect.y+roi_y),(coarserect.x+roi_x+coarserect.width, coarserect.y+roi_y+coarserect.height), (255,255,0))
 
         self.thisptr.runFromBase(frame_.timestamp, frame, coarserect,self.pupil, deref(self.pureptr)) #self.detectProperties["pupil_size_min"], self.detectProperties["pupil_size_max"] )
 #        void run(const Timestamp &ts, const Mat &frame, const Rect_[int] &roi, Pupil &pupil, PupilDetectionMethod &pupilDetectionMethod)
         py_result = {}
 
         ellipse = {}
-        ellipse['center'] = (self.pupil.center.x, self.pupil.center.y)
+        ellipse['center'] = (self.pupil.center.x+roi_x, self.pupil.center.y+roi_y)
         ellipse['axes'] =  (self.pupil.minorAxis(), self.pupil.majorAxis())
         ellipse['angle'] = self.pupil.angle
 
