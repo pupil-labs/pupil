@@ -31,8 +31,11 @@ import sys
 
 cdef class Detector_PuRe:
 
-    cdef PuRe* thisptr
+    cdef PuReST* thisptr
+    cdef PupilDetectionMethod* pureptr
     cdef Pupil pupil
+    # cdef Pupil previousPupil
+
     cdef dict detectProperties
 
     cdef bint windowShouldOpen, windowShouldClose
@@ -45,8 +48,11 @@ cdef class Detector_PuRe:
     cdef readonly basestring icon_font
 
     def __cinit__(self,g_pool = None, settings = None ):
-        self.thisptr = new PuRe()
+        self.thisptr = new PuReST()
         self.pupil = Pupil()
+        self.pureptr = new PuRe()
+        # self.previousPupil = Pupil()
+
 
     def __init__(self, g_pool, settings = None):
         #super().__init__(g_pool)
@@ -58,9 +64,9 @@ cdef class Detector_PuRe:
         self.icon_font = 'pupil_icons'
         self.icon_chr = chr(0xec18)
         self.detectProperties = settings or {}
-        if not self.detectProperties:
-            self.detectProperties["pupil_size_max"] = 120
-            self.detectProperties["pupil_size_min"] = 10
+        # if not self.detectProperties:
+        #     self.detectProperties["pupil_size_max"] = 120
+        #     self.detectProperties["pupil_size_min"] = 10
 
     def detect(self, frame_, user_roi, visualize, pause_video = False ):
 
@@ -82,8 +88,9 @@ cdef class Detector_PuRe:
         coarserect = PupilDetectionMethod.coarsePupilDetection(frame,  0.1, roi_width, roi_height)
 
         cv2.rectangle( frame_.img, (coarserect.x, coarserect.y),(coarserect.x+coarserect.width, coarserect.y+coarserect.height), (255,255,0))
-        self.thisptr.run(frame, coarserect,self.pupil, self.detectProperties["pupil_size_min"], self.detectProperties["pupil_size_max"] )
 
+        self.thisptr.runFromBase(frame_.timestamp, frame, coarserect,self.pupil, deref(self.pureptr)) #self.detectProperties["pupil_size_min"], self.detectProperties["pupil_size_max"] )
+#        void run(const Timestamp &ts, const Mat &frame, const Rect_[int] &roi, Pupil &pupil, PupilDetectionMethod &pupilDetectionMethod)
         py_result = {}
 
         ellipse = {}
@@ -132,8 +139,8 @@ cdef class Detector_PuRe:
         #self.menu.append(info)
         #self.menu.append(ui.Switch('coarse_detection',self.detectProperties2D,label='Use coarse detection'))
         #self.menu.append(ui.Slider('intensity_range',self.detectProperties2D,label='Pupil intensity range',min=0,max=60,step=1))
-        self.menu.append(ui.Slider('pupil_size_min',self.detectProperties,label='Pupil min',min=1,max=50,step=1))
-        self.menu.append(ui.Slider('pupil_size_max',self.detectProperties,label='Pupil max',min=10,max=150,step=1))
+        # self.menu.append(ui.Slider('pupil_size_min',self.detectProperties,label='Pupil min',min=1,max=50,step=1))
+        # self.menu.append(ui.Slider('pupil_size_max',self.detectProperties,label='Pupil max',min=10,max=150,step=1))
         #self.menu.append(ui.Slider('ellipse_roundness_ratio',self.detectProperties2D,min=0.01,max=1.0,step=0.01))
         #self.menu.append(ui.Slider('initial_ellipse_fit_treshhold',self.detectProperties2D,min=0.01,max=6.0,step=0.01))
         #self.menu.append(ui.Slider('canny_treshold',self.detectProperties2D,min=1,max=1000,step=1))
