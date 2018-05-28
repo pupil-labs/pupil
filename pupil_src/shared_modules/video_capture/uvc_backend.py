@@ -77,6 +77,9 @@ class UVC_Source(Base_Source):
                         else:
                             break
 
+        # checkframestripes will be initialized accordingly in configure_capture()
+        self.check_stripes = check_stripes
+        self.checkframestripes = None
 
         # check if we were sucessfull
         if not self.uvc_capture:
@@ -85,17 +88,6 @@ class UVC_Source(Base_Source):
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
             self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
-
-            if "Pupil Cam2" in self.uvc_capture.name:
-                self.check_stripes = check_stripes
-                if self.check_stripes:
-                    logger.info("Check Stripes for camera {} is now on".format(self.uvc_capture.name))
-                else:
-                    logger.info("Check Stripes for camera {} is now off".format(self.uvc_capture.name))
-            else:
-                self.check_stripes = False
-
-            self.checkframestripes = None
         else:
             self.configure_capture(frame_size, frame_rate, uvc_controls)
             self.name_backup = (self.name,)
