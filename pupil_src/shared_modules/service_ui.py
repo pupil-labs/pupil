@@ -110,7 +110,7 @@ class Service_UI(System_Plugin_Base):
                                           g_pool,
                                           label='Detection & mapping mode',
                                           setter=self.set_detection_mapping_mode,
-                                          selection=['disabled', '2d', '3d']))
+                                          selection=['disabled', '2d', '3d', 'PuRe']))
         g_pool.menubar.append(ui.Switch('eye0_process',
                                         label='Detect eye 0',
                                         setter=lambda alive: self.start_stop_eye(0, alive),

@@ -70,7 +70,7 @@ cdef class Detector_3D:
         self.detectProperties3D = settings['3D_Settings'] if settings else {}
 
         if not self.detectProperties2D:
-            self.detectProperties2D["coarse_detection"] = True
+            self.detectProperties2D["coarse_detection"] = False
             self.detectProperties2D["coarse_filter_min"] = 128
             self.detectProperties2D["coarse_filter_max"] = 280
             self.detectProperties2D["intensity_range"] = 23

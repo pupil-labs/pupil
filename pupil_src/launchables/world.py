@@ -368,7 +368,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                                             g_pool,
                                             label='detection & mapping mode',
                                             setter=set_detection_mapping_mode,
-                                            selection=['disabled', '2d', '3d']))
+                                            selection=['disabled', '2d', '3d', 'PuRe']))
         general_settings.append(ui.Switch('eye0_process',
                                             label='Detect eye 0',
                                             setter=lambda alive: start_stop_eye(0,alive),

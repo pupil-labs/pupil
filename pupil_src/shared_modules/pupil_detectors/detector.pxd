@@ -12,7 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
 from libcpp.pair cimport pair
-from libc.stdint cimport int32_t
+from libc.stdint cimport int32_t, int64_t
 
 cdef extern from '<opencv2/core.hpp>':
 
@@ -38,6 +38,7 @@ cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
   cdef cppclass Point_[T]:
     Point_() except +
+    T x, y
 
 cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
@@ -189,6 +190,35 @@ cdef extern from "singleeyefitter/EyeModelFitter.h" namespace "singleeyefitter":
         Sphere[double] mCurrentSphere
 
 
+ctypedef int64_t Timestamp
+
+cdef extern from "PupilTrackingMethod.h":
+    cdef cppclass PupilTrackingMethod:
+        PupilTrackingMethod() except +
+
+cdef extern from "PupilDetectionMethod.h":
+    cdef cppclass Pupil:
+        Pupil() except +
+        int majorAxis()
+        int minorAxis()
+        Point_[float] center
+        float angle
+        float confidence
+
+    cdef cppclass PupilDetectionMethod:
+        PupilDetectionMethod() except +
+        @staticmethod
+        Rect_[int] coarsePupilDetection(const Mat &frame, const float &minCoverage, const int &workingWidth, const int &workingHeight)
 
 
+cdef extern from "PuRe.h":
+    cdef cppclass PuRe(PupilDetectionMethod):
+        PuRe() except +
 
+cdef extern from "PuReST.h":
+    cdef cppclass PuReST(PupilTrackingMethod):
+        PuReST() except +
+        # void run(const Mat &frame, const Rect_[int] &roi, Pupil &pupil, const float &userMinPupilDiameterPx, const float &userMaxPupilDiameterPx)
+        # void run(const Mat &frame, const Rect_[int] &roi, const Pupil &previousPupil, Pupil &pupil, const float &userMinPupilDiameterPx, const float &userMaxPupilDiameterPx)
+        # void run(const Mat &frame, const Rect_[int] &roi, const Pupil &previousPupil, Pupil &pupil, const float &userMinPupilDiameterPx, const float &userMaxPupilDiameterPx)
+        void runFromBase(const Timestamp &ts, const Mat &frame, const Rect_[int] &roi, Pupil &pupil, PupilDetectionMethod &pupilDetectionMethod)
