@@ -32,7 +32,7 @@ class Pupil_Data_Relay(System_Plugin_Base):
             recent_pupil_data.append(p)
             new_gaze_data = self.g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
             for g in new_gaze_data:
-                self.gaze_pub.send('gaze', g)
+                self.gaze_pub.send(g['topic'], g)
             recent_gaze_data += new_gaze_data
 
         events['pupil_positions'] = recent_pupil_data
