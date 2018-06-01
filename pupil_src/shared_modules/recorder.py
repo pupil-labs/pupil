@@ -131,7 +131,8 @@ class Recorder(System_Plugin_Base):
         self.info_menu_conf = info_menu_conf
 
         self.low_disk_space_thumb = None
-        self.low_disk_space_check_timer = timer(1.)
+        check_timer = timer(1.)
+        self.check_space = lambda: next(check_timer)
 
     def get_init_dict(self):
         d = {}
@@ -315,7 +316,7 @@ class Recorder(System_Plugin_Base):
 
     def recent_events(self, events):
 
-        if next(self.low_disk_space_check_timer):
+        if self.check_space():
             disk_space = available_gb(self.rec_dir)
             if disk_space < self.warning_low_disk_space_th and self.low_disk_space_thumb not in self.g_pool.quickbar:
                 self.g_pool.quickbar.append(self.low_disk_space_thumb)
