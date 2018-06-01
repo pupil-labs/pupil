@@ -19,7 +19,7 @@ from plugin import System_Plugin_Base
 from time import strftime, localtime, time, gmtime
 from shutil import copy2
 from file_methods import save_object, load_object
-from methods import get_system_info
+from methods import get_system_info, timer
 from av_writer import JPEG_Writer, AV_Writer
 from ndsi import H264Writer
 # logging
@@ -77,11 +77,20 @@ def get_auto_name():
 #         s = UnivariateSpline(frames[clean],ts[clean],s=0)
 #         ts = s(frames)
 
+def available_gb(path):
+    stats = os.statvfs(path)
+    num_avail_gb = stats.f_bsize * stats.f_bavail / 1e9
+    logger.debug('{} has {:.2f} GB available'.format(path, num_avail_gb))
+    return num_avail_gb
+
 
 class Recorder(System_Plugin_Base):
     """Capture Recorder"""
     icon_chr = chr(0xe04b)
     icon_font = 'pupil_icons'
+
+    warning_low_disk_space_th = 5.0  # threshold in GB
+    stop_rec_low_disk_space_th = 1.0  # threshold in GB
 
     def __init__(self, g_pool, session_name=get_auto_name(), rec_dir=None,
                  user_info={'name': '', 'additional_field': 'change_me'},
@@ -121,6 +130,9 @@ class Recorder(System_Plugin_Base):
         self.info_menu = None
         self.info_menu_conf = info_menu_conf
 
+        self.low_disk_space_thumb = None
+        self.low_disk_space_check_timer = timer(1.)
+
     def get_init_dict(self):
         d = {}
         d['record_eye'] = self.record_eye
@@ -149,7 +161,13 @@ class Recorder(System_Plugin_Base):
         self.button.on_color[:] = (1, .0, .0, .8)
         self.g_pool.quickbar.insert(2, self.button)
 
+        self.low_disk_space_thumb = ui.Thumb('low_disk_warn', label='!', getter=lambda: True, setter=lambda x: None)
+        self.low_disk_space_thumb.on_color[:] = (1, .0, .0, .8)
+        self.low_disk_space_thumb.status_text = 'Low disk space'
+
     def deinit_ui(self):
+        if self.low_disk_space_thumb in self.g_pool.quickbar:
+            self.g_pool.quickbar.remove(self.low_disk_space_thumb)
         self.g_pool.quickbar.remove(self.button)
         self.button = None
         self.remove_menu()
@@ -296,6 +314,18 @@ class Recorder(System_Plugin_Base):
             self.info_menu = None
 
     def recent_events(self, events):
+
+        if next(self.low_disk_space_check_timer):
+            disk_space = available_gb(self.rec_dir)
+            if disk_space < self.warning_low_disk_space_th and self.low_disk_space_thumb not in self.g_pool.quickbar:
+                self.g_pool.quickbar.append(self.low_disk_space_thumb)
+            elif disk_space >= self.warning_low_disk_space_th and self.low_disk_space_thumb in self.g_pool.quickbar:
+                self.g_pool.quickbar.remove(self.low_disk_space_thumb)
+
+            if self.running and disk_space <= self.stop_rec_low_disk_space_th:
+                self.stop()
+                logger.error('Recording was stopped due to low disk space!')
+
         if self.running:
             for key, data in events.items():
                 if key not in ('dt', 'frame', 'depth_frame'):
