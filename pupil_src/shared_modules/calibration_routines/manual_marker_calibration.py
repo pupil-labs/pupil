@@ -68,6 +68,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         logger.info('Stopping  {}'.format(self.mode_pretty))
         self.screen_marker_state = 0
         self.active = False
+        self.smooth_pos = 0.,0.
         # self.close_window()
         self.button.status_text = ''
         if self.mode == 'calibration':
