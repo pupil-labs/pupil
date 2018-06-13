@@ -15,7 +15,7 @@ import uvc
 from version_utils import VersionFormat
 from .base_backend import InitialisationError, Base_Source, Base_Manager
 from camera_models import load_intrinsics
-from .utils import Check_Frame_Stripes
+from .utils import Check_Frame_Stripes, GetExposureTime
 
 # check versions for our own depedencies as they are fast-changing
 assert VersionFormat(uvc.__version__) >= VersionFormat('0.13')
@@ -29,7 +29,7 @@ class UVC_Source(Base_Source):
     """
     Camera Capture is a class that encapsualtes uvc.Capture:
     """
-    def __init__(self, g_pool, frame_size, frame_rate, name=None, preferred_names=(), uid=None, uvc_controls={}, check_stripes=True):
+    def __init__(self, g_pool, frame_size, frame_rate, name=None, preferred_names=(), uid=None, uvc_controls={}, check_stripes=True, exposure_mode="manual"):
         import platform
 
         super().__init__(g_pool)
@@ -79,7 +79,9 @@ class UVC_Source(Base_Source):
 
         # checkframestripes will be initialized accordingly in configure_capture()
         self.check_stripes = check_stripes
+        self.exposure_mode = exposure_mode
         self.checkframestripes = None
+        self.get_exposure_time = None
 
         # check if we were sucessfull
         if not self.uvc_capture:
@@ -87,12 +89,15 @@ class UVC_Source(Base_Source):
             self.name_backup = preferred_names
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
+            self.exposure_time_backup = None
             self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
         else:
             self.configure_capture(frame_size, frame_rate, uvc_controls)
             self.name_backup = (self.name,)
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
+            controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
+            self.exposure_time_backup = controls_dict['Absolute Exposure Time'].value
         self.backup_uvc_controls = {}
 
     def verify_drivers(self):
@@ -181,11 +186,16 @@ class UVC_Source(Base_Source):
                 except KeyError: pass
 
         elif ("Pupil Cam2" in self.uvc_capture.name):
+            if self.exposure_mode == "auto":
+                special_settings = {200: 28, 180: 31}
+                controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
+                self.get_exposure_time = GetExposureTime(max_ET=special_settings.get(self.frame_rate, 32), frame_rate=self.frame_rate, mode=self.exposure_mode)
+
             if self.check_stripes:
                 self.checkframestripes = Check_Frame_Stripes()
 
-            try: controls_dict['Auto Exposure Mode'].value = 1
-            except KeyError: pass
+            # try: controls_dict['Auto Exposure Mode'].value = 1
+            # except KeyError: pass
 
             try:controls_dict['Saturation'].value = 0
             except KeyError: pass
@@ -253,6 +263,11 @@ class UVC_Source(Base_Source):
         try:
             frame = self.uvc_capture.get_frame(0.05)
 
+            if self.get_exposure_time:
+                exposure_time_target = self.get_exposure_time.cal_exposure_time(frame)
+                if exposure_time_target is not None:
+                    self.exposure_time = exposure_time_target
+
             if self.checkframestripes and self.checkframestripes.require_restart(frame):
                 # set the self.frame_rate in order to restart
                 self.frame_rate = self.frame_rate
@@ -285,6 +300,7 @@ class UVC_Source(Base_Source):
         d['frame_size'] = self.frame_size
         d['frame_rate'] = self.frame_rate
         d['check_stripes'] = self.check_stripes
+        d['exposure_mode'] = self.exposure_mode
         if self.uvc_capture:
             d['name'] = self.name
             d['uvc_controls'] = self._get_uvc_controls()
@@ -342,14 +358,31 @@ class UVC_Source(Base_Source):
         self.frame_rate_backup = rate
 
         if ("Pupil Cam2" in self.uvc_capture.name):
-            controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
-
             special_settings = {200: 28, 180: 31}
-            try: controls_dict['Absolute Exposure Time'].value = special_settings.get(new_rate, 32)
-            except KeyError: pass
+            if self.exposure_mode == "auto":
+                self.get_exposure_time = GetExposureTime(max_ET=special_settings.get(new_rate, 32), frame_rate=new_rate, mode=self.exposure_mode)
+            else:
+                self.exposure_time = min(self.exposure_time, special_settings.get(new_rate, 32))
 
             if self.check_stripes:
                 self.checkframestripes = Check_Frame_Stripes()
+
+    @property
+    def exposure_time(self):
+        if self.uvc_capture:
+            controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
+            return controls_dict['Absolute Exposure Time'].value
+        else:
+            return self.exposure_time_backup
+
+    @exposure_time.setter
+    def exposure_time(self, new_et):
+        try:
+            controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
+            if abs(new_et - controls_dict['Absolute Exposure Time'].value) >= 1:
+                controls_dict['Absolute Exposure Time'].value = new_et
+                print("Exposure Time is set to", int(new_et))
+        except KeyError: pass
 
     @property
     def jpeg_support(self):
@@ -387,6 +420,10 @@ class UVC_Source(Base_Source):
         def set_frame_size(new_size):
             self.frame_size = new_size
 
+        def set_frame_rate(new_rate):
+            self.frame_rate = new_rate
+            self.update_menu()
+
         if self.uvc_capture is None:
             ui_elements.append(ui.Info_Text('Capture initialization failed.'))
             self.menu.extend(ui_elements)
@@ -399,16 +436,28 @@ class UVC_Source(Base_Source):
         image_processing = ui.Growing_Menu(label='Image Post Processing')
         image_processing.collapsed = True
 
-        sensor_control.append(ui.Selector(
-            'frame_size', self,
-            setter=set_frame_size,
-            selection=self.uvc_capture.frame_sizes,
-            label='Resolution'
-        ))
+        sensor_control.append(ui.Selector('frame_size', self, setter=set_frame_size, selection=self.uvc_capture.frame_sizes, label='Resolution'))
+        sensor_control.append(ui.Selector('frame_rate', self, setter=set_frame_rate, selection=self.uvc_capture.frame_rates, label='Frame rate'))
 
-        def frame_rate_getter():
-            return (self.uvc_capture.frame_rates, [str(fr) for fr in self.uvc_capture.frame_rates])
-        sensor_control.append(ui.Selector('frame_rate', self, selection_getter=frame_rate_getter, label='Frame rate'))
+        if ("Pupil Cam2" in self.uvc_capture.name):
+            special_settings = {200: 28, 180: 31}
+
+            def set_exposure_mode(exposure_mode):
+                self.exposure_mode = exposure_mode
+                if self.exposure_mode == "auto":
+                    self.get_exposure_time = GetExposureTime(max_ET=special_settings.get(self.frame_rate, 32), frame_rate=self.frame_rate, mode=self.exposure_mode)
+                else:
+                    self.get_exposure_time = None
+
+                logger.info("Exposure mode for camera {0} is now set to {1} mode".format(self.uvc_capture.name, exposure_mode))
+                self.update_menu()
+
+            def exposure_mode_getter():
+                return ["manual", "auto"], ["manual mode", "auto mode"]
+            sensor_control.append(ui.Selector('exposure_mode', self, setter=set_exposure_mode, selection_getter=exposure_mode_getter, selection=self.exposure_mode, label="Exposure Mode"))
+
+            if self.exposure_mode == "manual":
+                sensor_control.append(ui.Slider('exposure_time', self, label='Absolute Exposure Time', min=1, max=special_settings.get(self.frame_rate, 32), step=1))
 
         if ("Pupil Cam" in self.uvc_capture.name):
             blacklist = ['Auto Focus', 'Absolute Focus', 'Absolute Iris ',
@@ -417,6 +466,9 @@ class UVC_Source(Base_Source):
                          'Privacy Shutter control']
         else:
             blacklist = []
+
+        if ("Pupil Cam2" in self.uvc_capture.name):
+            blacklist += ['Auto Exposure Mode', 'Auto Exposure Priority', 'Absolute Exposure Time']
 
         for control in self.uvc_capture.controls:
             c = None
@@ -448,6 +500,7 @@ class UVC_Source(Base_Source):
                     sensor_control.append(c)
 
         ui_elements.append(sensor_control)
+
         if image_processing.elements:
             ui_elements.append(image_processing)
         ui_elements.append(ui.Button("refresh",gui_update_from_device))
