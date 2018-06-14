@@ -321,7 +321,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             general_settings.collapsed = collapsed
 
         g_pool.gui = ui.UI()
-        g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
+        g_pool.gui_user_scale = session_settings.get('gui_scale', 2.)
         g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos='left')
         g_pool.iconbar = ui.Scrolling_Menu("Icons", pos=(-icon_bar_width, 0), size=(0, 0), header_pos='hidden')
         g_pool.timelines = ui.Container((0, 0), (0, 0), (0, 0))
@@ -342,7 +342,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
 
         general_settings = ui.Growing_Menu('General', header_pos='headline')
         general_settings.append(ui.Button('Reset window size', set_window_size))
-        general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[.8, .9, 1., 1.1, 1.2]+list(np.arange(1.5, 5.1, .5)), label='Interface Size'))
+        general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[1.4, 2., 2.25, 2.5, 2.75, 3.]+list(np.arange(1.5, 5.1, .5)), label='Interface Size'))
         general_settings.append(ui.Info_Text('Player Version: {}'.format(g_pool.version)))
         general_settings.append(ui.Info_Text('Capture Version: {}'.format(meta_info['Capture Software Version'])))
         general_settings.append(ui.Info_Text('Data Format Version: {}'.format(meta_info['Data Format Version'])))
