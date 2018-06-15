@@ -212,7 +212,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                            ('Screen_Marker_Calibration', {}),
                            ('Recorder', {}),
                            ('Pupil_Remote', {}),
-                           ('Accuracy_Visualizer', {}),
                            ('Plugin_Manager', {}),
                            ('System_Graphs', {})]
 
