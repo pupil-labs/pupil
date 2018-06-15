@@ -46,7 +46,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
        at the marker to quickly sample a wide range gaze angles.
     """
 
-    def __init__(self, g_pool, marker_mode='Full screen', marker_scale=1.0,
+    def __init__(self, g_pool, marker_mode='Manual', marker_scale=1.0,
                  sample_duration=40, monitor_idx=0):
         super().__init__(g_pool)
         self.screen_marker_state = 0.
