@@ -295,7 +295,9 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.remove_menu()
         self.current_fixation_details = None
         self.g_pool.quickbar.remove(self.next_fix_button)
+        self.g_pool.quickbar.remove(self.prev_fix_button)
         self.next_fix_button = None
+        self.prev_fix_button = None
 
     def cleanup(self):
         if self.bg_task:
