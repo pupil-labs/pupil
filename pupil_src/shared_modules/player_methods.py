@@ -175,8 +175,8 @@ def update_recording_to_recent(rec_dir):
     # Do this independent of rec_version
     check_for_worldless_recording(rec_dir)
 
-    if rec_version < VersionFormat('1.7'):
-        update_recording_v14_v17(rec_dir)
+    if rec_version < VersionFormat('1.8'):
+        update_recording_v14_v18(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -521,8 +521,8 @@ def update_recording_v13_v14(rec_dir):
     update_meta_info(rec_dir, meta_info)
 
 
-def update_recording_v14_v17(rec_dir):
-    logger.info("Updating recording from v1.4 to v1.7")
+def update_recording_v14_v18(rec_dir):
+    logger.info("Updating recording from v1.4 to v1.8")
 
     pd_old = load_object(os.path.join(rec_dir, "pupil_data"))
     for topic in pd_old:
@@ -532,7 +532,7 @@ def update_recording_v14_v17(rec_dir):
     meta_info_path = os.path.join(rec_dir, "info.csv")
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Data Format Version'] = 'v1.7'
+        meta_info['Data Format Version'] = 'v1.8'
     update_meta_info(rec_dir, meta_info)
 
 
