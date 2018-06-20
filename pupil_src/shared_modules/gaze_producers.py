@@ -14,7 +14,7 @@ import numpy as np
 # from copy import deepcopy
 from pyglui import ui
 from plugin import Producer_Plugin_Base
-from player_methods import Data_Correlator
+from player_methods import Bisector, ts_window
 from methods import normalize
 import OpenGL.GL as gl
 from pyglui.cygl.utils import *
@@ -37,7 +37,7 @@ gaze_mapping_plugins_by_name = {p.__name__: p for p in gaze_mapping_plugins}
 
 
 class Empty(object):
-        pass
+    pass
 
 
 def setup_fake_pool(frame_size, intrinsics, detection_mode, rec_dir, min_calibration_confidence):
@@ -95,7 +95,8 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
-            events['gaze'] = self.g_pool.gaze_positions.by_target_idx[frm_idx]
+            window = ts_window(self.g_pool.timestamps, frm_idx)
+            events['gaze'] = self.g_pool.gaze_positions.by_ts_window(window)
 
 
 class Gaze_From_Recording(Gaze_Producer_Base):
@@ -112,7 +113,7 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.load_data_with_offset()
 
     def load_data_with_offset(self):
-        self.g_pool.gaze_positions = Data_Correlator(self.g_pool.pupil_data.get('gaze', []),
+        self.g_pool.gaze_positions = Bisector(self.g_pool.pupil_data.get('gaze', []),
                                                      self.g_pool.timestamps)
         # self.g_pool.gaze_positions = deepcopy(self.g_pool.pupil_data['gaze'])
         # for gp in self.g_pool.gaze_positions:
@@ -454,8 +455,8 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def correlate_and_publish(self):
         all_gaze = list(chain.from_iterable((s['gaze'] for s in self.sections)))
-        self.g_pool.gaze_positions = Data_Correlator(all_gaze, self.g_pool.timestamps)
-        self.notify_all({'subject': 'gaze_positions_changed', 'delay':1})
+        self.g_pool.gaze_positions = Bisector(all_gaze, self.g_pool.timestamps)
+        self.notify_all({'subject': 'gaze_positions_changed', 'delay': 1})
 
     def calibrate_section(self, sec):
         if sec['bg_task']:

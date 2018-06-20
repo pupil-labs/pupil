@@ -24,7 +24,7 @@ from video_capture import init_playback_source, EndofVideoError
 from player_methods import update_recording_to_recent, load_meta_info
 from av_writer import AV_Writer
 from file_methods import load_object
-from player_methods import correlate_data, update_recording_to_recent, Data_Correlator
+from player_methods import correlate_data, update_recording_to_recent, Bisector
 
 
 # logging
@@ -145,8 +145,8 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         g_pool.pupil_data = pupil_data
         g_pool.fixations = pre_computed.get("fixations", [])
         g_pool.fixations_by_frame = correlate_data(g_pool.fixations, g_pool.timestamps)
-        g_pool.pupil_positions = Data_Correlator(pre_computed.get("pupil_positions") or pupil_data.get('pupil', []), g_pool.timestamps)
-        g_pool.gaze_positions = Data_Correlator(pre_computed.get("gaze_positions") or pupil_data.get('gaze', []), g_pool.timestamps)
+        g_pool.pupil_positions = Bisector(pre_computed.get("pupil_positions") or pupil_data.get('pupil', []), g_pool.timestamps)
+        g_pool.gaze_positions = Bisector(pre_computed.get("gaze_positions") or pupil_data.get('gaze', []), g_pool.timestamps)
 
         # add plugins
         g_pool.plugins = Plugin_List(g_pool, plugin_initializers)

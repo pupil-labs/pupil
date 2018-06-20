@@ -74,7 +74,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         # helpers/utils
         from version_utils import VersionFormat
         from methods import normalize, denormalize, delta_t, get_system_info
-        from player_methods import Data_Correlator, is_pupil_rec_dir, load_meta_info
+        from player_methods import Bisector, is_pupil_rec_dir, load_meta_info
         from csv_utils import write_key_value_file
 
         # Plug-ins
@@ -256,8 +256,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.min_calibration_confidence = session_settings.get('min_calibration_confidence', 0.8)
 
         # populated by producers
-        g_pool.pupil_positions = Data_Correlator([], g_pool.timestamps)
-        g_pool.gaze_positions = Data_Correlator([], g_pool.timestamps)
+        g_pool.pupil_positions = Bisector([], g_pool.timestamps)
+        g_pool.gaze_positions = Bisector([], g_pool.timestamps)
 
         g_pool.fixations = []  # populated by the fixation detector plugin
         g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]

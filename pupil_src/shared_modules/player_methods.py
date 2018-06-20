@@ -42,8 +42,9 @@ class Bisector(object):
 
         # Find correct order once and reorder both lists in-place
         self.sorted_idc = np.argsort(self.data_ts)
-        self.data = self.data[self.sorted_idc].tolist()
         self.data_ts = self.data_ts[self.sorted_idc]
+        if self.data.shape[0]:
+            self.data = self.data[self.sorted_idc].tolist()
 
     def by_ts_window(self, ts_window):
         start_idx, stop_idx = np.searchsorted(self.data_ts, ts_window)
