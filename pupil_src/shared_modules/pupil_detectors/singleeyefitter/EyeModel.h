@@ -1,4 +1,3 @@
-
 #ifndef EYEMODEL_H__
 #define EYEMODEL_H__
 

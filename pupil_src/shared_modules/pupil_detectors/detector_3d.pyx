@@ -1,8 +1,7 @@
-
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -66,7 +65,7 @@ cdef class Detector_3D:
         self.g_pool = g_pool
         self.uniqueness = 'unique'
         self.icon_font = 'pupil_icons'
-        self.icon_chr = chr(0xec20)
+        self.icon_chr = chr(0xec19)
         self.detectProperties2D = settings['2D_Settings'] if settings else {}
         self.detectProperties3D = settings['3D_Settings'] if settings else {}
 
@@ -75,12 +74,12 @@ cdef class Detector_3D:
             self.detectProperties2D["coarse_filter_min"] = 128
             self.detectProperties2D["coarse_filter_max"] = 280
             self.detectProperties2D["intensity_range"] = 23
-            self.detectProperties2D["blur_size"] = 3
-            self.detectProperties2D["canny_treshold"] = 200
-            self.detectProperties2D["canny_ration"] = 3
+            self.detectProperties2D["blur_size"] = 5
+            self.detectProperties2D["canny_treshold"] = 160
+            self.detectProperties2D["canny_ration"] = 2
             self.detectProperties2D["canny_aperture"] = 5
             self.detectProperties2D["pupil_size_max"] = 150
-            self.detectProperties2D["pupil_size_min"] = 30
+            self.detectProperties2D["pupil_size_min"] = 10
             self.detectProperties2D["strong_perimeter_ratio_range_min"] = 0.8
             self.detectProperties2D["strong_perimeter_ratio_range_max"] = 1.1
             self.detectProperties2D["strong_area_ratio_range_min"] = 0.6
@@ -91,6 +90,7 @@ cdef class Detector_3D:
             self.detectProperties2D["final_perimeter_ratio_range_min"] = 0.6
             self.detectProperties2D["final_perimeter_ratio_range_max"] = 1.2
             self.detectProperties2D["ellipse_true_support_min_dist"] = 2.5
+            self.detectProperties2D["support_pixel_ratio_exponent"] = 2.0
 
 
         if not self.detectProperties3D:
@@ -133,7 +133,7 @@ cdef class Detector_3D:
         roi_height  = roi.get()[3] - roi.get()[1]
         cdef int[:,::1] integral
 
-        if self.detectProperties2D['coarse_detection']:
+        if self.detectProperties2D['coarse_detection'] and roi_width*roi_height > 320*240:
             scale = 2 # half the integral image. boost up integral
             # TODO maybe implement our own Integral so we don't have to half the image
             user_roi_image = frame.gray[user_roi.view]
@@ -197,11 +197,11 @@ cdef class Detector_3D:
 
     @property
     def pretty_class_name(self):
-        return self.menu.label
+        return 'Pupil Detector 3D'
 
     def init_ui(self):
         Plugin.add_menu(self)
-        self.menu.label = 'Pupil Detector 3D'
+        self.menu.label = self.pretty_class_name
         info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")

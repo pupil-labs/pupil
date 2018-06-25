@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -15,9 +15,10 @@ import uvc
 from version_utils import VersionFormat
 from .base_backend import InitialisationError, Base_Source, Base_Manager
 from camera_models import load_intrinsics
+from .utils import Check_Frame_Stripes
 
 # check versions for our own depedencies as they are fast-changing
-assert VersionFormat(uvc.__version__) >= VersionFormat('0.12')
+assert VersionFormat(uvc.__version__) >= VersionFormat('0.13')
 
 # logging
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class UVC_Source(Base_Source):
     """
     Camera Capture is a class that encapsualtes uvc.Capture:
     """
-    def __init__(self, g_pool, frame_size, frame_rate, name=None, preferred_names=(), uid=None, uvc_controls={}):
+    def __init__(self, g_pool, frame_size, frame_rate, name=None, preferred_names=(), uid=None, uvc_controls={}, check_stripes=True):
         import platform
 
         super().__init__(g_pool)
@@ -76,6 +77,10 @@ class UVC_Source(Base_Source):
                         else:
                             break
 
+        # checkframestripes will be initialized accordingly in configure_capture()
+        self.check_stripes = check_stripes
+        self.checkframestripes = None
+
         # check if we were sucessfull
         if not self.uvc_capture:
             logger.error("Init failed. Capture is started in ghost mode. No images will be supplied.")
@@ -88,13 +93,13 @@ class UVC_Source(Base_Source):
             self.name_backup = (self.name,)
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
+        self.backup_uvc_controls = {}
 
     def verify_drivers(self):
-        import time
         import os
         import subprocess
 
-        DEV_HW_IDS = [(0x05A3, 0x9230, "Pupil Cam1 ID0"),  (0x05A3, 0x9231, "Pupil Cam1 ID1"), (0x05A3, 0x9232, "Pupil Cam1 ID2"), (0x046D, 0x0843, "Logitech Webcam C930e"), (0x17EF,0x480F, "Lenovo Integrated Camera")]
+        DEV_HW_IDS = [(0x05A3, 0x9230, "Pupil Cam1 ID0"),  (0x05A3, 0x9231, "Pupil Cam1 ID1"), (0x05A3, 0x9232, "Pupil Cam1 ID2"), (0x046D, 0x0843, "Logitech Webcam C930e"), (0x17EF,0x480F, "Lenovo Integrated Camera"), (0x0C45, 0x64AB, "Pupil Cam2 ID0")]
         ids_present = 0;
         ids_to_install = [];
         for id in DEV_HW_IDS:
@@ -105,47 +110,48 @@ class UVC_Source(Base_Source):
             if proc.returncode == 2:
                 ids_present += 1
                 ids_to_install.append(id)
-        cmd_str_inst = "Start-Process PupilDrvInst.exe -Wait -WorkingDirectory \\\\\\\"{}\\\\\\\"  -argument ''--vid {} --pid {} --desc \\\\\\\"{}\\\\\\\" --vendor \\\\\\\"Pupil Labs\\\\\\\" --inst'' ;"
+        cmd_str_inst = "Start-Process PupilDrvInst.exe -Wait -WorkingDirectory \\\"{}\\\"  -ArgumentList '--vid {} --pid {} --desc \\\"{}\\\" --vendor \\\"Pupil Labs\\\" --inst' -Verb runas;"
         work_dir = os.getcwd()
         # print('work_dir = ', work_dir)
         if ids_present > 0:
-            cmd_str = 'Remove-Item {}\\win_drv -recurse;'.format(work_dir)
+            try:
+                os.mkdir(os.path.join(work_dir, "win_drv"))
+            except FileExistsError:
+                pass
+            cmd_str = ''
+            rmdir_str = 'Remove-Item {}\\win_drv -recurse -Force;'.format(work_dir)
             for id in ids_to_install:
-                cmd_str += cmd_str_inst.format(work_dir, id[0],id[1], id[2])
+                cmd_str += rmdir_str + cmd_str_inst.format(work_dir, id[0],id[1], id[2])
             logger.warning('Updating drivers, please wait...');
-            full_str = "'" + cmd_str + "'"
-            elevation_cmd = 'powershell.exe  Start-Process powershell.exe -WorkingDirectory \\\"{}\\\" -WindowStyle hidden -Wait  -argument {} -Verb runAs'.format(work_dir, full_str)
-            #print(elevation_cmd)
+            elevation_cmd = 'powershell.exe -version 5 -Command "{}"'.format(cmd_str)
+            print(elevation_cmd)
             proc = subprocess.Popen(elevation_cmd)
             proc.wait()
             logger.warning('Done updating drivers!')
 
     def configure_capture(self, frame_size, frame_rate, uvc_controls):
         # Set camera defaults. Override with previous settings afterwards
-        if 'C930e' in self.uvc_capture.name:
-                logger.debug('Timestamp offset for c930 applied: -0.1sec')
-                self.ts_offset = -0.1
-        else:
+        if 'Pupil Cam' in self.uvc_capture.name:
             self.ts_offset = 0.0
+        else:
+            logger.info('Hardware timestamps not supported for {}. Using software timestamps.'.format(self.uvc_capture.name))
+            self.ts_offset = -0.1
 
         # UVC setting quirks:
         controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
 
+        if ("Pupil Cam2" in self.uvc_capture.name) and frame_size == (320, 240):
+            frame_size = (192, 192)
+
         self.frame_size = frame_size
         self.frame_rate = frame_rate
-        for c in self.uvc_capture.controls:
-            try:
-                c.value = uvc_controls[c.display_name]
-            except KeyError:
-                logger.debug('No UVC setting "{}" found from settings.'.format(c.display_name))
 
         try:
             controls_dict['Auto Focus'].value = 0
         except KeyError:
             pass
 
-        if ("Pupil Cam1" in self.uvc_capture.name or
-            "USB2.0 Camera" in self.uvc_capture.name):
+        if ("Pupil Cam1" in self.uvc_capture.name):
 
             if ("ID0" in self.uvc_capture.name or "ID1" in self.uvc_capture.name):
 
@@ -173,10 +179,31 @@ class UVC_Source(Base_Source):
                 self.uvc_capture.bandwidth_factor = 2.0
                 try: controls_dict['Auto Exposure Priority'].value = 1
                 except KeyError: pass
+
+        elif ("Pupil Cam2" in self.uvc_capture.name):
+            if self.check_stripes:
+                self.checkframestripes = Check_Frame_Stripes()
+
+            try: controls_dict['Auto Exposure Mode'].value = 1
+            except KeyError: pass
+
+            try:controls_dict['Saturation'].value = 0
+            except KeyError: pass
+
+            try: controls_dict['Gamma'].value = 200
+            except KeyError: pass
+
         else:
             self.uvc_capture.bandwidth_factor = 2.0
             try: controls_dict['Auto Focus'].value = 0
             except KeyError: pass
+
+        # Restore session settings after setting defaults
+        for c in self.uvc_capture.controls:
+            try:
+                c.value = uvc_controls[c.display_name]
+            except KeyError:
+                logger.debug('No UVC setting "{}" found from settings.'.format(c.display_name))
 
     def _re_init_capture(self, uid):
         current_size = self.uvc_capture.frame_size
@@ -187,12 +214,12 @@ class UVC_Source(Base_Source):
         self.configure_capture(current_size, current_fps, current_uvc_controls)
         self.update_menu()
 
-    def _init_capture(self, uid):
+    def _init_capture(self, uid, backup_uvc_controls={}):
         self.uvc_capture = uvc.Capture(uid)
-        self.configure_capture(self.frame_size_backup, self.frame_rate_backup, self._get_uvc_controls())
+        self.configure_capture(self.frame_size_backup, self.frame_rate_backup, backup_uvc_controls)
         self.update_menu()
 
-    def _re_init_capture_by_names(self, names):
+    def _re_init_capture_by_names(self, names, backup_uvc_controls={}):
         # burn-in test specific. Do not change text!
         self.devices.update()
         for d in self.devices:
@@ -202,7 +229,7 @@ class UVC_Source(Base_Source):
                     if self.uvc_capture:
                         self._re_init_capture(d['uid'])
                     else:
-                        self._init_capture(d['uid'])
+                        self._init_capture(d['uid'], backup_uvc_controls)
                     return
         raise InitialisationError('Could not find Camera {} during re initilization.'.format(names))
 
@@ -211,9 +238,10 @@ class UVC_Source(Base_Source):
             if self.uvc_capture:
                 logger.warning("Capture failed to provide frames. Attempting to reinit.")
                 self.name_backup = (self.uvc_capture.name,)
+                self.backup_uvc_controls = self._get_uvc_controls()
                 self.uvc_capture = None
             try:
-                self._re_init_capture_by_names(self.name_backup)
+                self._re_init_capture_by_names(self.name_backup, self.backup_uvc_controls)
             except (InitialisationError, uvc.InitError):
                 time.sleep(0.02)
                 self.update_menu()
@@ -224,6 +252,12 @@ class UVC_Source(Base_Source):
     def recent_events(self, events):
         try:
             frame = self.uvc_capture.get_frame(0.05)
+
+            if self.checkframestripes and self.checkframestripes.require_restart(frame):
+                # set the self.frame_rate in order to restart
+                self.frame_rate = self.frame_rate
+                logger.info('Stripes detected')
+
         except uvc.StreamError:
             self._recent_frame = None
             self._restart_logic()
@@ -232,7 +266,7 @@ class UVC_Source(Base_Source):
             time.sleep(0.02)
             self._restart_logic()
         else:
-            if self.ts_offset: #c930 timestamps need to be set here. The camera does not provide valid pts from device
+            if self.ts_offset:  # c930 timestamps need to be set here. The camera does not provide valid pts from device
                 frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
             frame.timestamp -= self.g_pool.timebase.value
             self._recent_frame = frame
@@ -250,6 +284,7 @@ class UVC_Source(Base_Source):
         d = super().get_init_dict()
         d['frame_size'] = self.frame_size
         d['frame_rate'] = self.frame_rate
+        d['check_stripes'] = self.check_stripes
         if self.uvc_capture:
             d['name'] = self.name
             d['uvc_controls'] = self._get_uvc_controls()
@@ -284,9 +319,8 @@ class UVC_Source(Base_Source):
 
         self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
-    @property
-    def intrinsics(self):
-        return self._intrinsics
+        if self.check_stripes and ("Pupil Cam2" in self.uvc_capture.name):
+            self.checkframestripes = Check_Frame_Stripes()
 
     @property
     def frame_rate(self):
@@ -306,6 +340,16 @@ class UVC_Source(Base_Source):
                 new_rate, self.uvc_capture.frame_size, self.uvc_capture.name, rate))
         self.uvc_capture.frame_rate = rate
         self.frame_rate_backup = rate
+
+        if ("Pupil Cam2" in self.uvc_capture.name):
+            controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
+
+            special_settings = {200: 28, 180: 31}
+            try: controls_dict['Absolute Exposure Time'].value = special_settings.get(new_rate, 32)
+            except KeyError: pass
+
+            if self.check_stripes:
+                self.checkframestripes = Check_Frame_Stripes()
 
     @property
     def jpeg_support(self):
@@ -366,9 +410,19 @@ class UVC_Source(Base_Source):
             return (self.uvc_capture.frame_rates, [str(fr) for fr in self.uvc_capture.frame_rates])
         sensor_control.append(ui.Selector('frame_rate', self, selection_getter=frame_rate_getter, label='Frame rate'))
 
+        if ("Pupil Cam" in self.uvc_capture.name):
+            blacklist = ['Auto Focus', 'Absolute Focus', 'Absolute Iris ',
+                         'Scanning Mode ', 'Zoom absolute control', 'Pan control',
+                         'Tilt control', 'Roll absolute control',
+                         'Privacy Shutter control']
+        else:
+            blacklist = []
+
         for control in self.uvc_capture.controls:
             c = None
             ctl_name = control.display_name
+            if ctl_name in blacklist:
+                continue
 
             # now we add controls
             if control.d_type == bool:
@@ -398,6 +452,18 @@ class UVC_Source(Base_Source):
             ui_elements.append(image_processing)
         ui_elements.append(ui.Button("refresh",gui_update_from_device))
         ui_elements.append(ui.Button("load defaults",gui_load_defaults))
+
+        if ("Pupil Cam2" in self.uvc_capture.name):
+            def set_check_stripes(check_stripes):
+                self.check_stripes = check_stripes
+                if self.check_stripes:
+                    self.checkframestripes = Check_Frame_Stripes()
+                    logger.info("Check Stripes for camera {} is now on".format(self.uvc_capture.name))
+                else:
+                    self.checkframestripes = None
+                    logger.info("Check Stripes for camera {} is now off".format(self.uvc_capture.name))
+
+            ui_elements.append(ui.Switch('check_stripes', self, setter=set_check_stripes, label="Check Stripes"))
         self.menu.extend(ui_elements)
 
     def cleanup(self):

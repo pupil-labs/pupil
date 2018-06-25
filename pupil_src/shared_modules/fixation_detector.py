@@ -1,13 +1,15 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
+'''
 
+"""
 Fixations general knowledge from literature review
     + Goldberg et al. - fixations rarely < 100ms and range between 200ms and 400ms in duration (Irwin, 1992 - fixations dependent on task between 150ms - 600ms)
     + Very short fixations are considered not meaningful for studying behavior - eye+brain require time for info to be registered (see Munn et al. APGV, 2008)
@@ -17,13 +19,15 @@ Fixations general knowledge from literature review
 Terms
     + dispersion (spatial) = how much spatial movement is allowed within one fixation (in visual angular degrees or pixels)
     + duration (temporal) = what is the minimum time required for gaze data to be within dispersion threshold?
-'''
+"""
 
 import os
 import csv
 import numpy as np
 import cv2
 
+from bisect import bisect_left, bisect_right
+from scipy.spatial.distance import pdist
 from collections import deque
 from itertools import chain
 from pyglui import ui
@@ -50,26 +54,6 @@ class Fixation_Detector_Base(Analysis_Plugin_Base):
     icon_font = 'pupil_icons'
 
 
-def cart2spherical(xyz):
-    '''Convert 3d points to spherical coords
-
-    Taken from https://stackoverflow.com/questions/4116658/faster-numpy-cartesian-to-spherical-coordinate-conversion
-
-    > pts = np.random.rand(3000000, 3)
-    > %timeit cart2spherical(pts)
-    376 ms ± 1.98 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
-    '''
-    ptsnew = np.zeros(xyz.shape, dtype=xyz.dtype)
-    xy = xyz[:, 0]**2 + xyz[:, 1]**2
-    ptsnew[:, 0] = np.sqrt(xy + xyz[:, 2]**2)
-    # for elevation angle defined from Z-axis down
-    ptsnew[:, 1] = np.arctan2(np.sqrt(xy), xyz[:, 2])
-    # for elevation angle defined from XY-plane up
-    # ptsnew[:,4] = np.arctan2(xyz[:,2], np.sqrt(xy))
-    ptsnew[:, 2] = np.arctan2(xyz[:, 1], xyz[:, 0])
-    return ptsnew
-
-
 def fixation_from_data(dispersion, method, base_data, timestamps=None):
     norm_pos = np.mean([gp['norm_pos'] for gp in base_data], axis=0).tolist()
     dispersion = np.rad2deg(dispersion)  # in degrees
@@ -90,16 +74,20 @@ def fixation_from_data(dispersion, method, base_data, timestamps=None):
     if timestamps is not None:
         start, end = base_data[0]['timestamp'], base_data[-1]['timestamp']
         start, end = np.searchsorted(timestamps, [start, end])
+        end = min(end, len(timestamps) - 1)  # fix `list index out of range` error
         fix['start_frame_index'] = start
         fix['end_frame_index'] = end
         fix['mid_frame_index'] = (start + end) // 2
     return fix
 
 
-def spherical_dispersion(polar_coord):
-    polar_coord.shape = 1, -1, 2
-    dispersion = cv2.minEnclosingCircle(polar_coord)[1] * 2
-    return dispersion
+def vector_dispersion(vectors):
+    distances = pdist(vectors, metric='cosine')
+    # use 20% biggest distances, but at least 4, see reasoning at
+    # https://github.com/pupil-labs/pupil/issues/1133#issuecomment-382412175
+    distances.sort()  # sort by distance
+    cut_off = np.max([distances.shape[0] // 5, 4])
+    return np.arccos(1. - distances[-cut_off:].mean())
 
 
 def gaze_dispersion(capture, gaze_subset, use_pupil=True):
@@ -116,9 +104,9 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
         eye_id = 1 if len(data[1]) > len(data[0]) else 0
         base_data = data[eye_id]
 
-        all_pp = chain(*(gp['base_data'] for gp in base_data))
+        all_pp = chain.from_iterable((gp['base_data'] for gp in base_data))
         pp_with_eye_id = (pp for pp in all_pp if pp['id'] == eye_id)
-        sphericals = np.array([(pp['theta'], pp['phi']) for pp in pp_with_eye_id], dtype=np.float32)
+        vectors = np.array([pp['circle_3d']['normal'] for pp in pp_with_eye_id], dtype=np.float32)
     else:
         method = 'gaze'
         base_data = gaze_subset
@@ -130,13 +118,10 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
         locations[:, 1] = (1. - locations[:, 1]) * height
 
         # undistort onto 3d plane
-        undistorted = capture.intrinsics.undistortPoints(locations)
-        undistorted_3d = np.ones((undistorted.shape[0], 3), dtype=undistorted.dtype)
-        undistorted_3d[:, :-1] = undistorted
+        vectors = capture.intrinsics.unprojectPoints(locations)
 
-        sphericals = cart2spherical(undistorted_3d)[:, 1:]  # only use theta/phi, exclude radius
-
-    return spherical_dispersion(sphericals), method, base_data
+    dist = vector_dispersion(vectors)
+    return dist, method, base_data
 
 
 def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_duration):
@@ -147,11 +132,10 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
     Q = deque()
     enum = deque(gaze_data)
     while enum:
-        datum = enum.popleft()
-        Q.append(datum)
-
         # check if Q contains enough data
         if len(Q) < 2 or Q[-1]['timestamp'] - Q[0]['timestamp'] < min_duration:
+            datum = enum.popleft()
+            Q.append(datum)
             continue
 
         # min duration reached, check for fixation
@@ -161,7 +145,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             Q.popleft()
             continue
 
-        left_idx = len(Q) - 1
+        left_idx = len(Q)
 
         # minimal fixation found. collect maximal data
         # to perform binary search for fixation end
@@ -179,7 +163,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             continue
 
         slicable = list(Q)  # deque does not support slicing
-        right_idx = len(Q) - 1
+        right_idx = len(Q)
 
         # binary search
         while left_idx + 1 < right_idx:
@@ -191,11 +175,21 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
             else:
                 right_idx = middle_idx - 1
 
-        if dispersion > max_dispersion:
-            dispersion, origin, base_data = gaze_dispersion(capture, slicable[:right_idx], use_pupil=use_pupil)
+        middle_idx = (left_idx + right_idx) // 2
+        # if dispersion > max_dispersion:
+        dispersion, origin, base_data = gaze_dispersion(capture, slicable[:middle_idx], use_pupil=use_pupil)
 
-        yield 'Detecting fixations...', [fixation_from_data(dispersion, origin, base_data, capture.timestamps)]
-        Q = deque(slicable[right_idx:])
+        # Create fixation datum
+        fixation_datum = fixation_from_data(dispersion, origin, base_data, capture.timestamps)
+
+        # Assert constraints
+        assert dispersion <= max_dispersion, 'Fixation too big: {}'.format(fixation_datum)
+        assert min_duration <= fixation_datum['duration'] / 1000, 'Fixation too short: {}'.format(fixation_datum)
+        assert fixation_datum['duration'] / 1000 <= max_duration, 'Fixation too long: {}'.format(fixation_datum)
+
+        yield 'Detecting fixations...', [fixation_datum]
+        Q = deque()  # clear queue
+        enum.extendleft(slicable[middle_idx:])
 
     yield "Fixation detection complete", []
 
@@ -214,16 +208,18 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
     based on the positional angle of the eye. These fixations have their method
     field set to "pupil". If no 3d pupil data is available the plugin will
     assume that the gaze data is calibrated and calculate the dispersion in
-    visual angle with in the coordinate system of the world camera. These
+    visual angle within the coordinate system of the world camera. These
     fixations will have their method field set to "gaze".
     '''
-    def __init__(self, g_pool, max_dispersion=1.0, min_duration=300, max_duration=1000, show_fixations=True):
+    def __init__(self, g_pool, max_dispersion=3.0, min_duration=300, max_duration=1000, show_fixations=True):
         super().__init__(g_pool)
         # g_pool.min_data_confidence
         self.max_dispersion = max_dispersion
         self.min_duration = min_duration
         self.max_duration = max_duration
         self.show_fixations = show_fixations
+        self.current_fixation_details = None
+        self.fixations = deque()
         self.prev_index = -1
         self.bg_task = None
         self.status = ''
@@ -238,21 +234,34 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             self.notify_all({'subject': 'fixation_detector.should_recalculate', 'delay': 1.})
 
         def set_min_duration(new_value):
-            self.min_duration = new_value
+            self.min_duration = min(new_value, self.max_duration)
             self.notify_all({'subject': 'fixation_detector.should_recalculate', 'delay': 1.})
 
         def set_max_duration(new_value):
-            self.max_duration = new_value
+            self.max_duration = max(new_value, self.min_duration)
             self.notify_all({'subject': 'fixation_detector.should_recalculate', 'delay': 1.})
 
         def jump_next_fixation(_):
-            ts = self.last_frame_ts
-            for f in self.g_pool.fixations:
-                if f['timestamp'] > ts:
-                    self.g_pool.capture.seek_to_frame(f['mid_frame_index'])
-                    self.g_pool.new_seek = True
-                    return
-            logger.error('No further fixation available')
+            cur_idx = self.last_frame_idx
+            all_idc = [f['mid_frame_index'] for f in self.g_pool.fixations]
+            if not all_idc:
+                logger.warning('No fixations available')
+                return
+            # wrap-around index
+            tar_fix = bisect_right(all_idc, cur_idx) % len(all_idc)
+            self.notify_all({'subject': 'seek_control.should_seek',
+                             'index': int(self.g_pool.fixations[tar_fix]['mid_frame_index'])})
+
+        def jump_prev_fixation(_):
+            cur_idx = self.last_frame_idx
+            all_idc = [f['mid_frame_index'] for f in self.g_pool.fixations]
+            if not all_idc:
+                logger.warning('No fixations available')
+                return
+            # wrap-around index
+            tar_fix = (bisect_left(all_idc, cur_idx) - 1) % len(all_idc)
+            self.notify_all({'subject': 'seek_control.should_seek',
+                             'index': int(self.g_pool.fixations[tar_fix]['mid_frame_index'])})
 
         for help_block in self.__doc__.split('\n\n'):
             help_str = help_block.replace('\n', ' ').replace('  ', '').strip()
@@ -261,26 +270,34 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
 
         self.menu.append(ui.Slider('max_dispersion', self, min=0.01, step=0.1, max=5.,
                                    label='Maximum Dispersion [degrees]', setter=set_max_dispersion))
-        self.menu.append(ui.Slider('min_duration', self, min=10, step=10, max=1500,
+        self.menu.append(ui.Slider('min_duration', self, min=10, step=10, max=4000,
                                    label='Minimum Duration [milliseconds]', setter=set_min_duration))
-        self.menu.append(ui.Slider('max_duration', self, min=10, step=10, max=1500,
+        self.menu.append(ui.Slider('max_duration', self, min=10, step=10, max=4000,
                                    label='Maximum Duration [milliseconds]', setter=set_max_duration))
         self.menu.append(ui.Text_Input('status', self, label='Detection progress:', setter=lambda x: None))
         self.menu.append(ui.Switch('show_fixations', self, label='Show fixations'))
         self.current_fixation_details = ui.Info_Text('')
         self.menu.append(self.current_fixation_details)
 
-        self.add_button = ui.Thumb('jump_next_fixation', setter=jump_next_fixation,
+        self.next_fix_button = ui.Thumb('jump_next_fixation', setter=jump_next_fixation,
                                    getter=lambda: False, label=chr(0xe044), hotkey='f',
                                    label_font='pupil_icons')
-        self.add_button.status_text = 'Next Fixation'
-        self.g_pool.quickbar.append(self.add_button)
+        self.next_fix_button.status_text = 'Next Fixation'
+        self.g_pool.quickbar.append(self.next_fix_button)
+
+        self.prev_fix_button = ui.Thumb('jump_prev_fixation', setter=jump_prev_fixation,
+                                   getter=lambda: False, label=chr(0xe045), hotkey='F',
+                                   label_font='pupil_icons')
+        self.prev_fix_button.status_text = 'Previous Fixation'
+        self.g_pool.quickbar.append(self.prev_fix_button)
 
     def deinit_ui(self):
         self.remove_menu()
         self.current_fixation_details = None
-        self.g_pool.quickbar.remove(self.add_button)
-        self.add_button = None
+        self.g_pool.quickbar.remove(self.next_fix_button)
+        self.g_pool.quickbar.remove(self.prev_fix_button)
+        self.next_fix_button = None
+        self.prev_fix_button = None
 
     def cleanup(self):
         if self.bg_task:
@@ -307,10 +324,13 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         '''
         classify fixations
         '''
+        if self.g_pool.app == 'exporter':
+            return
+
         if self.bg_task:
             self.bg_task.cancel()
 
-        gaze_data = [gp for gp in self.g_pool.gaze_positions if gp['confidence'] > self.g_pool.min_data_confidence]
+        gaze_data = [gp for gp in self.g_pool.gaze_positions if gp['confidence'] >= self.g_pool.min_data_confidence]
         if not gaze_data:
             logger.error('No gaze data available to find fixations')
             self.status = 'Fixation detection failed'
@@ -331,14 +351,15 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             recent = [d for d in self.bg_task.fetch()]
             if recent:
                 progress, data = zip(*recent)
-                self.fixations.extend(chain(*data))
+                self.fixations.extend(chain.from_iterable(data))
                 self.status = progress[-1]
                 if self.fixations:
                     current = self.fixations[-1]['timestamp']
                     progress = (current - self.g_pool.timestamps[0]) /\
-                               (self.g_pool.timestamps[1] - self.g_pool.timestamps[0])
+                               (self.g_pool.timestamps[-1] - self.g_pool.timestamps[0])
                     self.menu_icon.indicator_stop = progress
             if self.bg_task.completed:
+                self.status = "{} fixations detected".format(len(self.fixations))
                 self.correlate_and_publish()
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.
@@ -347,17 +368,17 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         if not frame:
             return
 
-        self.last_frame_ts = frame.timestamp
+        self.last_frame_idx = frame.index
         events['fixations'] = self.g_pool.fixations_by_frame[frame.index]
         if self.show_fixations:
             for f in self.g_pool.fixations_by_frame[frame.index]:
                 x = int(f['norm_pos'][0] * frame.width)
                 y = int((1. - f['norm_pos'][1]) * frame.height)
-                transparent_circle(frame.img, (x, y), radius=25., color=(0., 1., 1., 1.), thickness=-1)
+                transparent_circle(frame.img, (x, y), radius=25., color=(0., 1., 1., 1.), thickness=3)
                 cv2.putText(frame.img, '{}'.format(f['id']), (x + 30, y),
                             cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 150, 100))
 
-        if self.prev_index != frame.index:
+        if self.current_fixation_details and self.prev_index != frame.index:
             info = ''
             for f in self.g_pool.fixations_by_frame[frame.index]:
                 info += 'Current fixation, {} of {}\n'.format(f['id'], len(self.g_pool.fixations))
@@ -392,7 +413,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         for idx, f in enumerate(fixations):
             f['id'] = idx + 1
         self.g_pool.fixations = fixations
-        # now lets bin fixations into frames. Fixations may be repeated this way as they span muliple frames
+        # now lets bin fixations into frames. Fixations are allotted to the first frame they appear in.
         fixations_by_frame = [[] for x in self.g_pool.timestamps]
         for f in self.fixations:
             for idx in range(f['start_frame_index'], f['end_frame_index'] + 1):
@@ -439,7 +460,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             logger.warning('No fixations in this recording nothing to export')
             return
 
-        fixations_in_section = chain(*self.g_pool.fixations_by_frame[slice(*export_range)])
+        fixations_in_section = chain.from_iterable(self.g_pool.fixations_by_frame[slice(*export_range)])
         fixations_in_section = list(dict([(f['id'], f) for f in fixations_in_section]).values()) # remove duplicates
         fixations_in_section.sort(key=lambda f: f['id'])
 
@@ -478,6 +499,8 @@ class Fixation_Detector(Fixation_Detector_Base):
 
     The Offline Fixation Detector yields fixations that do not overlap.
     '''
+    order = .19
+
     def __init__(self, g_pool, max_dispersion=3.0, min_duration=300, confidence_threshold=0.75):
         super().__init__(g_pool)
         self.queue = deque()
@@ -490,7 +513,7 @@ class Fixation_Detector(Fixation_Detector_Base):
         events['fixations'] = []
         gaze = events['gaze_positions']
 
-        self.queue.extend((gp for gp in gaze if gp['confidence'] > self.confidence_threshold))
+        self.queue.extend((gp for gp in gaze if gp['confidence'] >= self.confidence_threshold))
 
         try:  # use newest gaze point to determine age threshold
             age_threshold = self.queue[-1]['timestamp'] - self.min_duration / 1000.
@@ -540,7 +563,7 @@ class Fixation_Detector(Fixation_Detector_Base):
 
         self.menu.append(ui.Slider('max_dispersion', self, min=0.01, step=0.1, max=5.,
                                    label='Maximum Dispersion [degrees]'))
-        self.menu.append(ui.Slider('min_duration', self, min=10, step=10, max=1500,
+        self.menu.append(ui.Slider('min_duration', self, min=10, step=10, max=4000,
                                    label='Minimum Duration [milliseconds]'))
 
         self.menu.append(ui.Slider('confidence_threshold', self, min=0.0, max=1.0, label='Confidence Threshold'))

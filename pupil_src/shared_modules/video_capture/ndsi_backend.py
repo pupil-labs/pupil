@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -19,7 +19,7 @@ from camera_models import load_intrinsics
 
 try:
     from ndsi import __version__
-    assert __version__ >= '0.3.2'
+    assert __version__ >= '0.4'
     from ndsi import __protocol_version__
 except (ImportError, AssertionError):
     raise Exception("pyndsi version is to old. Please upgrade")
@@ -175,7 +175,7 @@ class NDSI_Source(Base_Source):
     # local notifications
     def on_notify(self, notification):
         subject = notification['subject']
-        if subject.startswith('remote_recording.'):
+        if subject.startswith('remote_recording.') and self.online:
             if 'should_start' in subject and self.online:
                 session_name = notification['session_name']
                 self.sensor.set_control_value('capture_session_name', session_name)
@@ -188,6 +188,10 @@ class NDSI_Source(Base_Source):
         if self._intrinsics is None or self._intrinsics.resolution != self.frame_size:
             self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
         return self._intrinsics
+
+    @intrinsics.setter
+    def intrinsics(self, model):
+        self._intrinsics = model
 
     @property
     def frame_size(self):

@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -17,6 +17,7 @@ if not getattr(sys, 'frozen', False):
 
 from .detector_2d import Detector_2D
 from .detector_3d import Detector_3D
+from .detector_dummy import Detector_Dummy
 
 
 #explicit import here for pyinstaller because it will not search .pyx source files.

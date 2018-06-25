@@ -3,22 +3,22 @@
 
 import platform, sys, os, os.path, numpy, ntpath,glob
 
-av_hidden_imports = ['av.format','av.packet','av.buffer','av.bytesource','av.frame','av.stream','av.descriptor','av.plane','av.audio.plane','av.container.streams','av.dictionary', 'av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane','av.option']
+av_hidden_imports = ['av.format','av.packet','av.buffer','av.bytesource','av.frame','av.stream','av.descriptor','av.plane','av.audio.plane','av.container.streams','av.dictionary', 'av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane','av.option','av.container.pyio','av.video.codeccontext','av.audio.codeccontext','av.filter.context','av.filter.link','av.filter.pad']
 pyglui_hidden_imports = ['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']
 
 from pyglui import ui
 
 if platform.system() == 'Darwin':
     sys.path.append('.')
-    from version import dpkg_deb_version
+    from version import pupil_version
     del sys.path[-1]
 
     a = Analysis(['../../pupil_src/main.py'],
                  pathex=['../../pupil_src/shared_modules/'],
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports,
                  hookspath=None,
-                 runtime_hooks=['../rthook_multiprocessing.py'],
-                 excludes=['matplotlib','pyrealsense'])
+                 runtime_hooks=None,
+                 excludes=['matplotlib'])
     pyz = PYZ(a.pure)
     exe = EXE(pyz,
               a.scripts,
@@ -36,6 +36,7 @@ if platform.system() == 'Darwin':
                    a.zipfiles,
                    a.datas,
                    [('libglfw.dylib', '/usr/local/lib/libglfw.dylib','BINARY')],
+                   [('librealsense.dylib','/usr/local/lib/librealsense.dylib','BINARY')],
                    [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
                    [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
                    [('pupil_icons.ttf',ui.get_pupil_icons_font_path(),'DATA')],
@@ -46,7 +47,7 @@ if platform.system() == 'Darwin':
     app = BUNDLE(coll,
                  name='Pupil Capture.app',
                  icon='pupil-capture.icns',
-                 version = str(dpkg_deb_version()),
+                 version = str(pupil_version()),
                  info_plist={
                           'NSHighResolutionCapable': 'True'
                             },
@@ -59,7 +60,7 @@ elif platform.system() == 'Linux':
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None,
-                 excludes=['matplotlib'])
+                 excludes=['matplotlib','pyrealsense'])
 
     pyz = PYZ(a.pure)
     exe = EXE(pyz,
@@ -82,12 +83,15 @@ elif platform.system() == 'Linux':
     # required for 14.04 16.04 interoperability.
     binaries = [b for b in binaries if not "libgomp.so.1" in b[0]]
 
+    # required for 17.10 interoperability.
+    binaries = [b for b in binaries if not "libdrm.so.2" in b[0]]
+
 
     coll = COLLECT(exe,
                    binaries,
                    a.zipfiles,
                    a.datas,
-                   [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
+                   [('libglfw.so', '/usr/lib/x86_64-linux-gnu/libglfw.so','BINARY')],
                    [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
                    [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
                    [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],

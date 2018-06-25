@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 from threading import Thread
 from threading import Event
+import multiprocessing as mp
 
 
 """
@@ -99,6 +100,14 @@ class AV_Writer(object):
         else:
             self.time_base = Fraction(1000, self.fps*1000)  # timebase is fps
 
+
+
+        self.video_stream = self.container.add_stream(video_stream['codec'], 1/self.time_base)
+        self.video_stream.bit_rate = video_stream['bit_rate']
+        self.video_stream.bit_rate_tolerance = video_stream['bit_rate']/20
+        self.video_stream.thread_count = max(1, mp.cpu_count() - 1)
+        # self.video_stream.pix_fmt = "yuv420p"
+
         if audio_loc:
             audio_dir = os.path.split(audio_loc)[0]
             audio_ts_loc = os.path.join(audio_dir, 'audio_timestamps.npy')
@@ -112,12 +121,6 @@ class AV_Writer(object):
                 self.audio_export = False
         else:
             self.audio_export = False
-
-        self.video_stream = self.container.add_stream(video_stream['codec'], 1/self.time_base)
-        self.video_stream.bit_rate = video_stream['bit_rate']
-        self.video_stream.bit_rate_tolerance = video_stream['bit_rate']/20
-        self.video_stream.thread_count = 1
-        # self.video_stream.pix_fmt = "yuv420p"
         self.configured = False
         self.start_time = None
 
@@ -153,8 +156,7 @@ class AV_Writer(object):
             # our timebase is 1/30  so a frame idx is the correct pts for an fps recorded video.
             self.frame.pts = self.current_frame_idx
         # send frame of to encoder
-        packet = self.video_stream.encode(self.frame)
-        if packet:
+        for packet in self.video_stream.encode(self.frame):
             self.container.mux(packet)
         self.current_frame_idx += 1
         self.timestamps.append(input_frame.timestamp)
@@ -178,16 +180,12 @@ class AV_Writer(object):
                     break  # wait for next image
 
     def close(self):
-        # flush encoder
-        while 1:
-            packet = self.video_stream.encode()
-            if packet:
+        # only flush encoder if there has been at least one frame
+        if self.configured:
+            for packet in self.video_stream.encode(None):
                 self.container.mux(packet)
-            else:
-                break
 
-        self.container.close()
-        logger.debug("Closed media container")
+        self.container.close()  # throws RuntimeError if no frames were written
         write_timestamps(self.file_loc, self.timestamps)
 
     def release(self):
@@ -217,6 +215,7 @@ class JPEG_Writer(object):
 
         self.video_stream = self.container.add_stream('mjpeg', 1/self.time_base)
         self.video_stream.pix_fmt = "yuvj422p"
+        self.video_stream.time_base = self.time_base
         self.configured = False
         self.frame_count = 0
 
@@ -231,18 +230,15 @@ class JPEG_Writer(object):
         packet = Packet()
         packet.payload = input_frame.jpeg_buffer
         # we are setting the packet pts manually this uses a different timebase av.frame!
-        packet.dts = int(self.frame_count/self.video_stream.time_base/self.fps)
-        packet.pts = int(self.frame_count/self.video_stream.time_base/self.fps)
+        packet.time_base = self.time_base
+        packet.dts = int(self.frame_count/self.time_base/self.fps)
+        packet.pts = int(self.frame_count/self.time_base/self.fps)
         self.frame_count += 1
         self.container.mux(packet)
         self.timestamps.append(input_frame.timestamp)
 
     def close(self):
-        try:
-            self.container.close()
-        except(RuntimeError):
-            logger.error("Media file does not contain any frames.")
-        logger.debug("Closed media container")
+        self.container.close()  # throws RuntimeError if no frames were written
         write_timestamps(self.file_loc, self.timestamps)
 
     def release(self):

@@ -1,4 +1,3 @@
-
 #include "detectorUtils.h"
 #include "mathHelper.h"
 #include "utils.h"

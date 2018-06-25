@@ -19,6 +19,7 @@ Thumbs.db
 # user generated files will be ignored if in directory named 'recordings...' #
 # user generated settings files will also be ignored #
 recordings/
+recordings
 capture_settings/
 service_settings/
 player_settings/
@@ -44,3 +45,7 @@ SphereCircleTest.cpp
 *.mp4
 *.mkv
 *.egg-info
+hmd_cal_data
+
+mprofile_*.dat
+.ipynb_checkpoints/

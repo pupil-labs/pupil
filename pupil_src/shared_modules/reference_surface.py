@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -100,6 +100,7 @@ class Reference_Surface(object):
         self.window_should_close = False
 
         self.gaze_on_srf = []  # points on surface for realtime feedback display
+        self.fixations_on_srf = []  # fixations on surface
 
         self.glfont = fontstash.Context()
         self.glfont.add_font('opensans', get_opensans_font_path())
@@ -114,7 +115,7 @@ class Reference_Surface(object):
         if system() == 'Linux':
             self.window_position_default = (0, 0)
         elif system() == 'Windows':
-            self.window_position_default = (8, 31)
+            self.window_position_default = (8, 90)
         else:
             self.window_position_default = (0, 0)
 
@@ -144,7 +145,7 @@ class Reference_Surface(object):
         self.defined = True
         self.build_up_status = self.required_build_up
 
-    def build_correspondance(self, visible_markers, min_marker_perimeter, min_id_confidence):
+    def build_correspondence(self, visible_markers, min_marker_perimeter, min_id_confidence):
         """
         - use all visible markers
         - fit a convex quadrangle around it
@@ -158,9 +159,11 @@ class Reference_Surface(object):
             return
         all_verts = np.array(all_verts,dtype=np.float32)
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
-        # all_verts_undistorted_normalized centered in img center flipped in y and range [-1,1]
-        all_verts_undistorted_normalized = self.g_pool.capture.intrinsics.undistortPoints(all_verts, use_distortion=self.use_distortion)
-        hull = cv2.convexHull(all_verts_undistorted_normalized.astype(np.float32),clockwise=False)
+
+
+        all_verts_undistorted_normalized = self.g_pool.capture.intrinsics.unprojectPoints(all_verts, use_distortion=self.use_distortion)[:, :2] # we ommit the z corrd as it is 1.
+        all_verts_undistorted_normalized.shape = -1, 1, 2
+        hull = cv2.convexHull(all_verts_undistorted_normalized.astype(np.float32), clockwise=False)
 
         #simplify until we have excatly 4 verts
         if hull.shape[0]>4:
@@ -199,13 +202,13 @@ class Reference_Surface(object):
                 self.markers[m['id']] = Support_Marker(m['id'])
                 self.markers[m['id']].add_uv_coords(uv)
 
-        #average collection of uv correspondences accros detected markers
+        #average collection of uv correspondences across detected markers
         self.build_up_status = sum([len(m.collected_uv_coords) for m in self.markers.values()])/float(len(self.markers))
 
         if self.build_up_status >= self.required_build_up:
-            self.finalize_correnspondance()
+            self.finalize_correspondence()
 
-    def finalize_correnspondance(self):
+    def finalize_correspondence(self):
         """
         - prune markers that have been visible in less than x percent of frames.
         - of those markers select a good subset of uv coords and compute mean.
@@ -289,7 +292,7 @@ class Reference_Surface(object):
         """
 
         if not self.defined:
-            self.build_correspondance(visible_markers,min_marker_perimeter,min_id_confidence)
+            self.build_correspondence(visible_markers,min_marker_perimeter,min_id_confidence)
 
         res = self._get_location(visible_markers,min_marker_perimeter,min_id_confidence,locate_3d)
         self.detected = res['detected']
@@ -317,12 +320,13 @@ class Reference_Surface(object):
             detected = True
             xy = np.array( [marker_by_id[i]['verts'] for i in overlap] )
             uv = np.array( [self.markers[i].uv_coords for i in overlap] )
-            uv.shape=(-1,1,2)
-
+            uv.shape=(-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
+            xy.shape=(-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
             # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
             # compute the homography transform from marker into the undistored normalized image space
-            # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
-            xy_undistorted_normalized = self.g_pool.capture.intrinsics.undistortPoints(xy.reshape(-1,2), use_distortion=self.use_distortion)
+            # we ommit the z corrd as it is always one.
+            xy_undistorted_normalized = self.g_pool.capture.intrinsics.unprojectPoints(xy, use_distortion=self.use_distortion)[:, :2]
+            xy_undistorted_normalized.shape = -1, 1, 2
 
             m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized, method=cv2.RANSAC,ransacReprojThreshold=100)
             if not mask.all():
@@ -510,12 +514,9 @@ class Reference_Surface(object):
         if res['detected']:
             support_marker = Support_Marker(marker['id'])
             marker_verts = np.array(marker['verts'])
-            marker_verts.shape = (-1,1,2)
-            if self.use_distortion:
-                marker_verts_undistorted_normalized = self.g_pool.capture.intrinsics.undistortPoints(marker_verts)
-            else:
-                marker_verts_undistorted_normalized = self.g_pool.capture.intrinsics.undistortPoints(marker_verts)
-            marker_uv_coords =  cv2.perspectiveTransform(marker_verts_undistorted_normalized,res['m_from_undistored_norm_space'])
+            marker_verts_undistorted_normalized = self.g_pool.capture.intrinsics.unprojectPoints(marker_verts, use_distortion=self.use_distortion)[:, :2]
+            marker_verts_undistorted_normalized.shape = -1, 1, 2
+            marker_uv_coords = cv2.perspectiveTransform(marker_verts_undistorted_normalized,res['m_from_undistored_norm_space'])
             support_marker.load_uv_coords(marker_uv_coords)
             self.markers[marker['id']] = support_marker
 

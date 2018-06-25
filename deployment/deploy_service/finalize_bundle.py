@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import platform
 import sys, os
-from version import write_version_file,dpkg_deb_version
+from version import write_version_file,get_tag_commit,pupil_version
 import shutil
 from subprocess import call
 
@@ -23,7 +23,7 @@ if platform.system() == 'Darwin':
     shutil.rmtree('dist/Pupil Service')
     print( 'removed the non-app dist bundle')
 
-    bundle_name = 'pupil_service_mac_os_x64_v%s'%dpkg_deb_version()
+    bundle_name = 'pupil_service_mac_os_x64_%s'%get_tag_commit()
     bundle_dmg_name = 'Install Pupil Service'
     src_dir = 'dist'
     bundle_app_dir = os.path.join(src_dir,'Pupil Service.app/' )
@@ -33,6 +33,7 @@ if platform.system() == 'Darwin':
     # if call("spctl --assess --type execute '%s'"%bundle_app_dir,shell=True) != 0:
         # print Exception("Codesing verification  failed")
     call("ln -s /Applications/ %s/Applications"%src_dir,shell=True)
+    call("rm dist/Pupil\ Service.app/Contents/MacOS/.DS_Store",shell=True)
     call("hdiutil create -volname '%s' -srcfolder %s -format UDZO '%s.dmg'"%(bundle_dmg_name,src_dir,bundle_name),shell=True)
 
 elif platform.system() == 'Windows':
@@ -56,7 +57,7 @@ elif platform.system() == 'Linux':
             pass
 
     #lets build the structure for our deb package.
-    deb_root = 'pupil_service_linux_os_x64_v%s'%dpkg_deb_version()
+    deb_root = 'pupil_service_linux_os_x64_%s'%get_tag_commit()
     DEBIAN_dir = os.path.join(deb_root,'DEBIAN')
     opt_dir = os.path.join(deb_root,'opt')
     bin_dir = os.path.join(deb_root,'usr','bin')
@@ -78,7 +79,7 @@ Maintainer: Pupil Labs <info@pupil-labs.com>
 Priority: optional
 Description: Pupil Service is part of the Pupil Eye Tracking Platform
 Installed-Size: %s
-'''%(dpkg_deb_version(),dist_size/1024)
+'''%(pupil_version(),dist_size/1024)
         f.write(content)
     os.chmod(os.path.join(DEBIAN_dir,'control'),0o644)
 

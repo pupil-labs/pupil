@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -119,6 +119,13 @@ def update_recording_to_recent(rec_dir):
         update_recording_v094_to_v0913(rec_dir)
     if rec_version < VersionFormat('0.9.15'):
         update_recording_v0913_to_v0915(rec_dir)
+    if rec_version < VersionFormat('1.3'):
+        update_recording_v0915_v13(rec_dir)
+    if rec_version < VersionFormat('1.4'):
+        update_recording_v13_v14(rec_dir)
+
+    # Do this independent of rec_version
+    check_for_worldless_recording(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -154,7 +161,7 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         else:
             video_loc = existing_locs[0]
 
-        if time_name in ('Pupil Cam1 ID0', 'Pupil Cam1 ID1'):
+        if time_name in ('Pupil Cam1 ID0', 'Pupil Cam1 ID1', 'Pupil Cam2 ID0', 'Pupil Cam2 ID1'):
             time_name = 'eye'+time_name[-1]  # rename eye files
         elif time_name in ('Pupil Cam1 ID2', 'Logitech Webcam C930e'):
             video = av.open(video_loc, 'r')
@@ -418,6 +425,82 @@ def update_recording_v0913_to_v0915(rec_dir):
     update_meta_info(rec_dir, meta_info)
 
 
+def update_recording_v0915_v13(rec_dir):
+    logger.info("Updating recording from v0.9.15 to v1.3")
+    # Look for unconverted Pupil Cam2 videos
+    time_pattern = os.path.join(rec_dir, '*.time')
+    for time_loc in glob.glob(time_pattern):
+        time_file_name = os.path.split(time_loc)[1]
+        time_name, time_ext = os.path.splitext(time_file_name)
+
+        potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.mp4','.m4a')]
+        existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
+        if not existing_locs:
+            continue
+        else:
+            video_loc = existing_locs[0]
+
+        if time_name in ('Pupil Cam2 ID0', 'Pupil Cam2 ID1'):
+            time_name = 'eye'+time_name[-1]  # rename eye files
+        else:
+            continue
+
+        timestamps = np.fromfile(time_loc, dtype='>f8')
+        timestamp_loc = os.path.join(rec_dir, '{}_timestamps.npy'.format(time_name))
+        logger.info('Creating "{}"'.format(os.path.split(timestamp_loc)[1]))
+        np.save(timestamp_loc, timestamps)
+
+        video_dst = os.path.join(rec_dir, time_name) + os.path.splitext(video_loc)[1]
+        logger.info('Renaming "{}" to "{}"'.format(os.path.split(video_loc)[1], os.path.split(video_dst)[1]))
+        os.rename(video_loc, video_dst)
+
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v1.3'
+    update_meta_info(rec_dir, meta_info)
+
+
+def update_recording_v13_v14(rec_dir):
+    logger.info("Updating recording from v1.3 to v1.4")
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v1.4'
+    update_meta_info(rec_dir, meta_info)
+
+
+def check_for_worldless_recording(rec_dir):
+    logger.info("Checking for world-less recording")
+    valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')
+    existing_videos = [f for f in glob.glob(os.path.join(rec_dir, 'world.*'))
+                       if os.path.splitext(f)[1] in valid_ext]
+
+    if not existing_videos:
+        min_ts = np.inf
+        max_ts = -np.inf
+        for f in glob.glob(os.path.join(rec_dir, "eye*_timestamps.npy")):
+            try:
+                eye_ts = np.load(f)
+                assert len(eye_ts.shape) == 1
+                assert eye_ts.shape[0] > 1
+                min_ts = min(min_ts, eye_ts[0])
+                max_ts = max(max_ts, eye_ts[-1])
+            except (FileNotFoundError, AssertionError):
+                pass
+
+        error_msg = 'Could not generate world timestamps from eye timestamps. This is an invalid recording.'
+        assert -np.inf < min_ts < max_ts < np.inf, error_msg
+
+        logger.warning('No world video found. Constructing an artificial replacement.')
+
+        frame_rate = 30
+        timestamps = np.arange(min_ts, max_ts, 1/frame_rate)
+        np.save(os.path.join(rec_dir, 'world_timestamps'), timestamps)
+        save_object({'frame_rate': frame_rate, 'frame_size': (1280, 720), 'version': 0},
+                    os.path.join(rec_dir, 'world.fake'))
+
+
 def update_recording_bytes_to_unicode(rec_dir):
     logger.info("Updating recording from bytes to unicode.")
 
@@ -539,7 +622,7 @@ def update_recording_v03_to_v074(rec_dir):
 
 def is_pupil_rec_dir(rec_dir):
     if not os.path.isdir(rec_dir):
-        logger.error("No valid dir supplied")
+        logger.error("No valid dir supplied ({})".format(rec_dir))
         return False
     try:
         meta_info = load_meta_info(rec_dir)

@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -138,10 +138,7 @@ def launcher():
         #Get the root logger
         logger = logging.getLogger()
         #set log level
-        if log_level_debug:
-            logger.setLevel(logging.DEBUG)
-        else:
-            logger.setLevel(logging.INFO)
+        logger.setLevel(logging.NOTSET)
         #Stream to file
         fh = logging.FileHandler(os.path.join(user_dir,'{}.log'.format(app)),mode='w')
         fh.setFormatter(logging.Formatter('%(asctime)s - %(processName)s - [%(levelname)s] %(name)s: %(message)s'))
@@ -149,6 +146,10 @@ def launcher():
         #Stream to console.
         ch = logging.StreamHandler()
         ch.setFormatter(logging.Formatter('%(processName)s - [%(levelname)s] %(name)s: %(message)s'))
+        if log_level_debug:
+            ch.setLevel(logging.DEBUG)
+        else:
+            ch.setLevel(logging.INFO)
         logger.addHandler(ch)
         # IPC setup to receive log messages. Use zmq_tools.ZMQ_handler to send messages to here.
         sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=("logging",))
@@ -230,12 +231,8 @@ def launcher():
     elif  app == 'capture':
        cmd_push.notify({'subject':'world_process.should_start'})
     elif app == 'player':
-        if len(sys.argv) > 2:
-            rec_dir = os.path.expanduser(sys.argv[-1])
-        else:
-            rec_dir = None
+        rec_dir = os.path.expanduser(sys.argv[-1])
         cmd_push.notify({'subject':'player_drop_process.should_start','rec_dir':rec_dir})
-
 
     with Prevent_Idle_Sleep():
         while True:

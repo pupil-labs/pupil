@@ -28,7 +28,7 @@ namespace singleeyefitter {
         }
 
 
-        inline cv::Mat& line(cv::Mat& dst, cv::Point2f from, cv::Point2f to, cv::Scalar color, int thickness = 1, int linetype = CV_AA, int shift = 8)
+        inline cv::Mat& line(cv::Mat& dst, cv::Point2f from, cv::Point2f to, cv::Scalar color, int thickness = 1, int linetype = cv::LINE_AA, int shift = 8)
         {
             auto from_i = cv::Point(from.x * (1 << shift), from.y * (1 << shift));
             auto to_i = cv::Point(to.x * (1 << shift), to.y * (1 << shift));
@@ -36,12 +36,12 @@ namespace singleeyefitter {
             return dst;
         }
 
-        inline void cross(cv::Mat& img, cv::Point2f center, double radius, const cv::Scalar& colour, int thickness = 1, int lineType = CV_AA, int shift = 8)
+        inline void cross(cv::Mat& img, cv::Point2f center, double radius, const cv::Scalar& colour, int thickness = 1, int lineType = cv::LINE_AA, int shift = 8)
         {
             cvx::line(img, center + cv::Point2f(-radius, -radius), center + cv::Point2f(radius, radius), colour, thickness, lineType, shift);
             cvx::line(img, center + cv::Point2f(-radius, radius), center + cv::Point2f(radius, -radius), colour, thickness, lineType, shift);
         }
-        inline void plus(cv::Mat& img, cv::Point2f center, double radius, const cv::Scalar& colour, int thickness = 1, int lineType = CV_AA, int shift = 8)
+        inline void plus(cv::Mat& img, cv::Point2f center, double radius, const cv::Scalar& colour, int thickness = 1, int lineType = cv::LINE_AA, int shift = 8)
         {
             cvx::line(img, center + cv::Point2f(0, -radius), center + cv::Point2f(0, radius), colour, thickness, lineType, shift);
             cvx::line(img, center + cv::Point2f(-radius, 0), center + cv::Point2f(radius, 0), colour, thickness, lineType, shift);

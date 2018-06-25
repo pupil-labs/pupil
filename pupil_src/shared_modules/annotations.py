@@ -1,13 +1,14 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
+
 import os
 import csv
 from pyglui import ui
@@ -95,11 +96,17 @@ class Annotation_Capture(Plugin):
             print(annotation, self.annotations)
         self.update_buttons()
 
-    def fire_annotation(self,annotation_label):
+    def fire_annotation(self, annotation_label):
         t = self.g_pool.get_timestamp()
         logger.info('"{}"@{}'.format(annotation_label, t))
-        notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','record':True} #you may add more field to this dictionary if you want.
+        # you may add more field to this dictionary if you want.
+        notification = {'subject': 'annotation', 'label': annotation_label,
+                        'timestamp': t, 'duration': 0.0, 'record': True}
         self.notify_all(notification)
+
+    def on_notify(self, notification):
+        if notification['subject'] == 'annotation':
+            logger.info('Received {} annotation'.format(notification['label']))
 
     def get_init_dict(self):
         return {'annotations': self.annotations}
@@ -150,42 +157,45 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
         self.menu.append(self.sub_menu)
         self.update_buttons()
 
-    def fire_annotation(self,annotation_label):
+    def fire_annotation(self, annotation_label):
         t = self.last_frame_ts
         logger.info('"{}"@{}'.format(annotation_label, t))
-        notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','added_in_player':True,'index':self.g_pool.capture.get_frame_index()-1} #you may add more field to this dictionary if you want.
+        # you may add more field to this dictionary if you want.
+        notification = {'subject': 'annotation', 'label': annotation_label,
+                        'timestamp': t, 'duration': 0.0, 'added_in_player': True,
+                        'index': self.g_pool.capture.get_frame_index()-1}
         self.annotations_list.append(notification)
         self.annotations_by_frame[notification['index']].append(notification)
 
     @classmethod
-    def csv_representation_keys(self):
-        return ('label', 'timestamp','duration','source','index')
+    def parse_csv_keys(self, annotations):
+        csv_keys = ('index', 'timestamp', 'label', 'duration')
+        system_keys = set(csv_keys)
+        user_keys = set()
+        for anno in annotations:
+            # selects keys that are not included in system_keys and
+            # adds them to user_keys if they were not included before
+            user_keys |= set(anno.keys()) - system_keys
 
-    @classmethod
-    def csv_representation_for_annotations(self, annotation):
-        return (
-            annotation['label'],
-            annotation['timestamp'],
-            annotation['duration'],
-            annotation['source'],
-            annotation['index']
-        )
+        # return tuple with system keys first and alphabetically sorted
+        # user keys afterwards
+        return csv_keys + tuple(sorted(user_keys))
 
-    def export_annotations(self,export_range,export_dir):
+    def export_annotations(self, export_range, export_dir):
 
         if not self.annotations:
             logger.warning('No annotations in this recording nothing to export')
             return
 
-        annotations_in_section = chain(*self.annotations_by_frame[slice(*export_range)])
-        annotations_in_section = list({a['index']: a for a in annotations_in_section}.values())  # remove duplicates
-        annotations_in_section.sort(key=lambda a:a['index'])
+        start, end = export_range
+        annotations_in_section = [a for a in self.annotations_list if start <= a['index'] < end]
+        csv_keys = self.parse_csv_keys(annotations_in_section)
 
-        with open(os.path.join(export_dir,'annotations.csv'),'w',encoding='utf-8',newline='') as csvfile:
+        with open(os.path.join(export_dir, 'annotations.csv'), 'w', encoding='utf-8', newline='') as csvfile:
             csv_writer = csv.writer(csvfile)
-            csv_writer.writerow(self.csv_representation_keys())
+            csv_writer.writerow(csv_keys)
             for a in annotations_in_section:
-                csv_writer.writerow(self.csv_representation_for_annotations(a))
+                csv_writer.writerow((a.get(k, '') for k in csv_keys))
             logger.info("Created 'annotations.csv' file.")
 
     def recent_events(self, events):

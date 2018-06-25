@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -32,7 +32,7 @@ class Pupil_Remote(Plugin):
         'c' stop currently selected calibration
         'T 1234.56' Timesync: make timestamps count form 1234.56 from now on.
         't' get pupil capture timestamp returns a float as string.
-
+        'v' get pupil software version string
 
         # IPC Backbone communication
         'PUB_PORT' return the current pub port of the IPC Backbone
@@ -250,6 +250,8 @@ class Pupil_Remote(Plugin):
                 response = 'Timesync successful.'
         elif msg[0] == 't':
             response = repr(self.g_pool.get_timestamp())
+        elif msg[0] == 'v':
+            response = '{}'.format(self.g_pool.version)
         else:
             response = 'Unknown command.'
         socket.send_string(response)

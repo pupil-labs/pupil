@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -93,6 +93,9 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         from calibration_routines import calibration_plugins, gaze_mapping_plugins
         from pupil_remote import Pupil_Remote
         from pupil_groups import Pupil_Groups
+        from frame_publisher import Frame_Publisher
+        from blink_detection import Blink_Detection
+        from service_ui import Service_UI
 
         logger.info('Application Version: {}'.format(version))
         logger.info('System Info: {}'.format(get_system_info()))
@@ -117,11 +120,12 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
 
         # manage plugins
         runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
-        user_launchable_plugins = [Pupil_Groups, Pupil_Remote]+runtime_plugins
+        user_launchable_plugins = [Service_UI, Pupil_Groups, Pupil_Remote, Frame_Publisher, Blink_Detection]+runtime_plugins
         plugin_by_index = runtime_plugins+calibration_plugins+gaze_mapping_plugins+user_launchable_plugins
         name_by_index = [p.__name__ for p in plugin_by_index]
         plugin_by_name = dict(zip(name_by_index, plugin_by_index))
-        default_plugins = [('Dummy_Gaze_Mapper', {}), ('HMD_Calibration', {}), ('Pupil_Remote', {})]
+        default_plugins = [('Service_UI', {}), ('Dummy_Gaze_Mapper', {}), ('HMD_Calibration', {}), ('Pupil_Remote', {})]
+        g_pool.plugin_by_name = plugin_by_name
 
         tick = delta_t()
 
@@ -134,6 +138,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
             logger.info("Session setting are from older version of this app. I will not use those.")
             session_settings.clear()
 
+        g_pool.min_calibration_confidence = session_settings.get('min_calibration_confidence', 0.8)
         g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode', '2d')
         g_pool.active_calibration_plugin = None
         g_pool.active_gaze_mapping_plugin = None
@@ -141,7 +146,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         audio.audio_mode = session_settings.get('audio_mode', audio.default_audio_mode)
 
         # plugins that are loaded based on user settings from previous session
-        g_pool.plugins = Plugin_List(g_pool, plugin_by_name, session_settings.get('loaded_plugins', default_plugins))
+        g_pool.plugins = Plugin_List(g_pool, session_settings.get('loaded_plugins', default_plugins))
 
         def handle_notifications(n):
             subject = n['subject']
@@ -179,6 +184,9 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         logger.warning('Process started.')
         g_pool.service_should_run = True
 
+        # initiate ui update loop
+        ipc_pub.notify({'subject': 'service_process.ui.should_update', 'initial_delay': 1/40})
+
         # Event loop
         while g_pool.service_should_run:
             socks = dict(poller.poll())
@@ -204,9 +212,10 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
             g_pool.plugins.clean()
 
         session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
-        session_settings['version'] = g_pool.version
+        session_settings['version'] = str(g_pool.version)
         session_settings['eye0_process_alive'] = eyes_are_alive[0].value
         session_settings['eye1_process_alive'] = eyes_are_alive[1].value
+        session_settings['min_calibration_confidence'] = g_pool.min_calibration_confidence
         session_settings['detection_mapping_mode'] = g_pool.detection_mapping_mode
         session_settings['audio_mode'] = audio.audio_mode
         session_settings.close()

@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -73,8 +73,6 @@ class Natural_Features_Calibration(Calibration_Plugin):
         if not frame:
             return
         if self.active:
-            recent_pupil_positions = events['pupil_positions']
-
             if self.first_img is None:
                 self.first_img = frame.gray.copy()
 
@@ -99,39 +97,32 @@ class Natural_Features_Calibration(Calibration_Plugin):
                     ref["timestamp"] = frame.timestamp
                     self.ref_list.append(ref)
 
-            #always save pupil positions
-            for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
+            # Always save pupil positions
+            self.pupil_list.extend(events['pupil_positions'])
 
             if self.count:
                 self.button.status_text = 'Sampling Gaze Data'
             else:
                 self.button.status_text = 'Click to Sample at Location'
 
-
-
-
     def gl_display(self):
         if self.detected:
-            draw_points_norm([self.pos],size=self.r,color=RGBA(0.,1.,0.,.5))
+            draw_points_norm([self.pos], size=self.r, color=RGBA(0., 1., 0., .5))
 
-
-
-    def on_click(self,pos,button,action):
+    def on_click(self, pos, button, action):
         if action == GLFW_PRESS and self.active:
             self.first_img = None
-            self.point = np.array([pos,],dtype=np.float32)
+            self.point = np.array([pos], dtype=np.float32)
             self.count = 30
 
     def get_init_dict(self):
         return {}
 
-
-    def cleanup(self):
+    def deinit_ui(self):
         """gets called when the plugin get terminated.
         This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         if self.active:
             self.stop()
+        super().deinit_ui()

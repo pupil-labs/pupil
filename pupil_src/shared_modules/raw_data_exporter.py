@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -106,11 +106,6 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
         self.menu.label = 'Raw Data Exporter'
         self.menu.append(ui.Info_Text('Export Raw Pupil Capture data into .csv files.'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
-        self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
-        self.menu.append(ui.Text_Input('in_mark',
-                                       getter=self.g_pool.seek_control.get_trim_range_string,
-                                       setter=self.g_pool.seek_control.set_trim_range_string,
-                                       label='frame range to export'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
 
     def deinit_ui(self):
@@ -160,7 +155,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  'projected_sphere_axis_b',
                                  'projected_sphere_angle'))
 
-            for p in list(chain(*self.g_pool.pupil_positions_by_frame[export_range])):
+            for p in list(chain.from_iterable(self.g_pool.pupil_positions_by_frame[export_range])):
                 data_2d = ['{}'.format(p['timestamp']),  # use str to be consitant with csv lib.
                            p['index'],
                            p['id'],
@@ -229,7 +224,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  "gaze_normal1_y",
                                  "gaze_normal1_z"))
 
-            for g in list(chain(*self.g_pool.gaze_positions_by_frame[export_range])):
+            for g in list(chain.from_iterable(self.g_pool.gaze_positions_by_frame[export_range])):
                 data = ['{}'.format(g["timestamp"]), g["index"], g["confidence"], g["norm_pos"][0], g["norm_pos"][1],
                         " ".join(['{}-{}'.format(b['timestamp'], b['id']) for b in g['base_data']])]  # use str on timestamp to be consitant with csv lib.
 

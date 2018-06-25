@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2018 Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 from plugin import System_Plugin_Base
@@ -31,7 +32,7 @@ class Pupil_Data_Relay(System_Plugin_Base):
             recent_pupil_data.append(p)
             new_gaze_data = self.g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
             for g in new_gaze_data:
-                self.gaze_pub.send('gaze', g)
+                self.gaze_pub.send(g['topic'], g)
             recent_gaze_data += new_gaze_data
 
         events['pupil_positions'] = recent_pupil_data

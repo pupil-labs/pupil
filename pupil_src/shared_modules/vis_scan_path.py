@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -16,7 +16,7 @@ from pyglui import ui
 from methods import denormalize,normalize
 import logging
 logger = logging.getLogger(__name__)
-
+from copy import deepcopy
 
 class Vis_Scan_Path(Analysis_Plugin_Base):
     """docstring
@@ -29,7 +29,7 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
     def __init__(self, g_pool,timeframe=.5):
         super().__init__(g_pool)
         #let the plugin work after most other plugins.
-        self.order = .6
+        self.order = .1
         self.menu = None
 
         #user settings
@@ -39,6 +39,11 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
         self.prev_frame_idx = -1
         self.past_gaze_positions = []
         self.prev_gray = None
+        self.gaze_changed = False
+
+    def on_notify(self, notification):
+        if notification['subject'] == 'gaze_positions_changed':
+            self.gaze_changed = True
 
     def recent_events(self, events):
         frame = events.get('frame')
@@ -78,10 +83,10 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
             # we must be seeking, do not try to do optical flow, or pausing: see below.
             pass
 
-        if same_frame:
+        if same_frame and not self.gaze_changed:
             # paused
             # re-use last result
-            events['gaze_positions'][:] = self.past_gaze_positions[:]
+            events['gaze_positions'] = self.past_gaze_positions[:]
         else:
             # trim gaze that is too old
             if events['gaze_positions']:
@@ -90,13 +95,14 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
                 updated_past_gaze = [g for g in updated_past_gaze if g['timestamp']>cutoff]
 
             #inject the scan path gaze points into recent_gaze_positions
-            events['gaze_positions'][:] = updated_past_gaze + events['gaze_positions']
+            events['gaze_positions'] = updated_past_gaze + events['gaze_positions']
             events['gaze_positions'].sort(key=lambda x: x['timestamp']) #this may be redundant...
 
         #update info for next frame.
+        self.gaze_changed = False
         self.prev_gray = gray_img
         self.prev_frame_idx = frame.index
-        self.past_gaze_positions = events['gaze_positions']
+        self.past_gaze_positions = deepcopy(events['gaze_positions'])
 
     def init_ui(self):
         self.add_menu()

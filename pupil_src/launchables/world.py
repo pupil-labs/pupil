@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -66,7 +66,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     logging.getLogger("OpenGL").setLevel(logging.ERROR)
     logger = logging.getLogger()
     logger.handlers = []
-    # logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.NOTSET)
     logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url))
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
@@ -94,13 +94,13 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
         # display
         import glfw
+        from version_utils import VersionFormat
         from pyglui import ui, cygl, __version__ as pyglui_version
-        assert pyglui_version >= '1.9', 'pyglui out of date, please upgrade to newest version'
+        assert VersionFormat(pyglui_version) >= VersionFormat('1.21'), 'pyglui out of date, please upgrade to newest version'
         from pyglui.cygl.utils import Named_Texture
         import gl_utils
 
         # helpers/utils
-        from version_utils import VersionFormat
         from file_methods import Persistent_Dict
         from methods import normalize, denormalize, delta_t, get_system_info, timer
         from uvc import get_time_monotonic
@@ -136,7 +136,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         from accuracy_visualizer import Accuracy_Visualizer
         # from saccade_detector import Saccade_Detector
         from system_graphs import System_Graphs
-        from marker_tracker_3d import Marker_Tracker_3D
+        from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
+        from hololens_relay import Hololens_Relay
 
         # UI Platform tweaks
         if platform.system() == 'Linux':
@@ -144,7 +145,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             window_position_default = (30, 30)
         elif platform.system() == 'Windows':
             scroll_factor = 10.0
-            window_position_default = (8, 31)
+            window_position_default = (8, 90)
         else:
             scroll_factor = 1.0
             window_position_default = (0, 0)
@@ -154,7 +155,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         camera_render_size = None
         hdpi_factor = 1.0
 
-        # g_pool holds variables for this process they are accesible to all plugins
+        # g_pool holds variables for this process they are accessible to all plugins
         g_pool = Global_Container()
         g_pool.app = 'capture'
         g_pool.process = 'world'
@@ -175,9 +176,20 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
         # manage plugins
         runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
-        user_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
-                        Annotation_Capture, Log_History, Fixation_Detector, Blink_Detection,
-                        Remote_Recorder, Accuracy_Visualizer, Marker_Tracker_3D]
+        user_plugins = [Audio_Capture,
+                        Pupil_Groups,
+                        Frame_Publisher,
+                        Pupil_Remote,
+                        Time_Sync,
+                        Surface_Tracker,
+                        Annotation_Capture,
+                        Log_History,
+                        Fixation_Detector,
+                        Blink_Detection,
+                        Remote_Recorder,
+                        Accuracy_Visualizer,
+                        Camera_Intrinsics_Estimation,
+                        Hololens_Relay]
         system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay, Plugin_Manager, System_Graphs] + manager_classes + source_classes
         plugins = system_plugins + user_plugins + runtime_plugins + calibration_plugins + gaze_mapping_plugins
         user_plugins += [p for p in runtime_plugins if not isinstance(p, (Base_Manager, Base_Source, System_Plugin_Base,
@@ -200,6 +212,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                            ('Screen_Marker_Calibration', {}),
                            ('Recorder', {}),
                            ('Pupil_Remote', {}),
+                           ('Accuracy_Visualizer', {}),
                            ('Plugin_Manager', {}),
                            ('System_Graphs', {})]
 
@@ -208,12 +221,15 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             nonlocal window_size
             nonlocal camera_render_size
             nonlocal hdpi_factor
-            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            if w == 0 or h == 0:
+                return
+            hdpi_factor = glfw.getHDPIFactor(window)
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w,h
             camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
             g_pool.gui.update_window(*window_size)
             g_pool.gui.collect_menus()
+
             for p in g_pool.plugins:
                 p.on_window_resize(window, *camera_render_size)
 
@@ -255,6 +271,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             logger.info("Session setting are from a different version of this app. I will not use those.")
             session_settings.clear()
 
+        g_pool.min_calibration_confidence = session_settings.get('min_calibration_confidence', 0.8)
         g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode', '3d')
         g_pool.active_calibration_plugin = None
         g_pool.active_gaze_mapping_plugin = None
@@ -293,9 +310,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                                         'actor': p.class_name,
                                         'doc': p.on_notify.__doc__})
 
+        width, height = session_settings.get('window_size', (1280 + icon_bar_width, 720))
+
         # window and gl setup
         glfw.glfwInit()
-        width, height = session_settings.get('window_size', (1280+icon_bar_width, 720))
         main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
         window_pos = session_settings.get('window_position', window_position_default)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
@@ -320,7 +338,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         def toggle_general_settings(collapsed):
             # this is the menu toggle logic.
             # Only one menu can be open.
-            # If no menu is open the menubar should collapse.
+            # If no menu is opened, the menubar should collapse.
             g_pool.menubar.collapsed = collapsed
             for m in g_pool.menubar.elements:
                 m.collapsed = True
@@ -343,14 +361,14 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             f_width, f_height = g_pool.capture.frame_size
             f_width += int(icon_bar_width*g_pool.gui.scale)
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
+
         general_settings.append(ui.Button('Reset window size', set_window_size))
         general_settings.append(ui.Selector('audio_mode', audio, selection=audio.audio_modes))
         general_settings.append(ui.Selector('detection_mapping_mode',
                                             g_pool,
                                             label='detection & mapping mode',
                                             setter=set_detection_mapping_mode,
-                                            selection=['2d','3d']
-                                        ))
+                                            selection=['disabled', '2d', '3d']))
         general_settings.append(ui.Switch('eye0_process',
                                             label='Detect eye 0',
                                             setter=lambda alive: start_stop_eye(0,alive),
@@ -390,9 +408,9 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         gl_utils.basic_gl_setup()
         g_pool.image_tex = Named_Texture()
 
-        toggle_general_settings(False)
+        toggle_general_settings(True)
 
-        # now the we have  aproper window we can load the last gui configuration
+        # now that we have a proper window we can load the last gui configuration
         g_pool.gui.configuration = session_settings.get('ui_config', {})
 
         # create a timer to control window update frequency
@@ -403,7 +421,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         # trigger setup of window and gl sizes
         on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
-        if session_settings.get('eye1_process_alive', False):
+        if session_settings.get('eye1_process_alive', True):
             launch_eye_process(1, delay=0.6)
         if session_settings.get('eye0_process_alive', True):
             launch_eye_process(0, delay=0.3)
@@ -426,8 +444,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                 for p in g_pool.plugins:
                     p.on_notify(n)
 
-
-            #a dictionary that allows plugins to post and read events
+            # a dictionary that allows plugins to post and read events
             events = {}
             # report time between now and the last loop interation
             events['dt'] = get_dt()
@@ -443,7 +460,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             del events['pupil_positions']  # already on the wire
             del events['gaze_positions']  # sent earlier
             if 'frame' in events:
-                del events['frame']  # send explicity with frame publisher
+                del events['frame']  # send explicitly with frame publisher
             if 'depth_frame' in events:
                 del events['depth_frame']
             if 'audio_packets' in events:
@@ -463,20 +480,30 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                     p.gl_display()
 
                 gl_utils.glViewport(0, 0, *window_size)
-                unused_elements = g_pool.gui.update()
-                for button, action, mods in unused_elements.buttons:
-                    pos = glfw.glfwGetCursorPos(main_window)
+                try:
+                    clipboard = glfw.glfwGetClipboardString(main_window).decode()
+                except AttributeError:  # clipboard is None, might happen on startup
+                    clipboard = ''
+                g_pool.gui.update_clipboard(clipboard)
+                user_input = g_pool.gui.update()
+                if user_input.clipboard != clipboard:
+                    # only write to clipboard if content changed
+                    glfw.glfwSetClipboardString(main_window, user_input.clipboard.encode())
+
+                for button, action, mods in user_input.buttons:
+                    x, y = glfw.glfwGetCursorPos(main_window)
+                    pos = x * hdpi_factor, y * hdpi_factor
                     pos = normalize(pos, camera_render_size)
                     # Position in img pixels
                     pos = denormalize(pos, g_pool.capture.frame_size)
                     for p in g_pool.plugins:
                         p.on_click(pos, button, action)
 
-                for key, scancode, action, mods in unused_elements.keys:
+                for key, scancode, action, mods in user_input.keys:
                     for p in g_pool.plugins:
                         p.on_key(key, scancode, action, mods)
 
-                for char_ in unused_elements.chars:
+                for char_ in user_input.chars:
                     for p in g_pool.plugins:
                         p.on_char(char_)
 
@@ -487,13 +514,18 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
         session_settings['gui_scale'] = g_pool.gui_user_scale
         session_settings['ui_config'] = g_pool.gui.configuration
-        session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
         session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
         session_settings['version'] = str(g_pool.version)
         session_settings['eye0_process_alive'] = eyes_are_alive[0].value
         session_settings['eye1_process_alive'] = eyes_are_alive[1].value
+        session_settings['min_calibration_confidence'] = g_pool.min_calibration_confidence
         session_settings['detection_mapping_mode'] = g_pool.detection_mapping_mode
         session_settings['audio_mode'] = audio.audio_mode
+
+        session_window_size = glfw.glfwGetWindowSize(main_window)
+        if 0 not in session_window_size:
+            session_settings['window_size'] = session_window_size
+
         session_settings.close()
 
         # de-init all running plugins

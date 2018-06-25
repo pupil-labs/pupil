@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -16,7 +16,7 @@ import os
 
 import pyrealsense as pyrs
 from pyrealsense.stream import ColorStream, DepthStream, DACStream, PointStream
-from pyrealsense.constants import rs_stream, rs_option
+from pyrealsense.constants import rs_stream, rs_option, rs_preset
 from pyrealsense.extlib import rsutilwrapper
 
 from version_utils import VersionFormat
@@ -165,7 +165,6 @@ class Realsense_Controls(dict):
         if not device:
             super().__init__()
             return
-
         if presets:
             # presets: list of (option, value)-tuples
             try:
@@ -193,9 +192,9 @@ class Realsense_Source(Base_Source):
     """
     def __init__(self, g_pool, device_id=0,
                  frame_size=(1920, 1080), frame_rate=30,
-                 depth_frame_size=(640, 480), depth_frame_rate=30,
+                 depth_frame_size=(640, 480), depth_frame_rate=60,
                  align_streams=False, preview_depth=False,
-                 device_options=(), record_depth=True):
+                 device_options=(), record_depth=True, stream_preset = None):
         super().__init__(g_pool)
         self._intrinsics = None
         self.color_frame_index = 0
@@ -213,6 +212,7 @@ class Realsense_Source(Base_Source):
         self.last_pos = (0,0)
         self.depth_window = None
         self._needs_restart = False
+        self.stream_preset = stream_preset
         self._initialize_device(device_id, frame_size, frame_rate,
                                 depth_frame_size, depth_frame_rate, device_options)
 
@@ -271,9 +271,9 @@ class Realsense_Source(Base_Source):
 
         colorstream = ColorStream(width=color_frame_size[0],
                                   height=color_frame_size[1],
-                                  fps=color_fps, color_format='yuv')
+                                  fps=color_fps, color_format='yuv', preset=self.stream_preset)
         depthstream = DepthStream(width=depth_frame_size[0],
-                                  height=depth_frame_size[1], fps=depth_fps)
+                                  height=depth_frame_size[1], fps=depth_fps, preset=self.stream_preset)
         pointstream = PointStream(width=depth_frame_size[0],
                                   height=depth_frame_size[1], fps=depth_fps)
 
@@ -288,7 +288,6 @@ class Realsense_Source(Base_Source):
         # always initiliazes color + depth, adds rectified/aligned versions as necessary
 
         self.device = self.service.Device(device_id, streams=self.streams)
-
         self.controls = Realsense_Controls(self.device, device_options)
         self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
 
@@ -345,7 +344,8 @@ class Realsense_Source(Base_Source):
                 'preview_depth': self.preview_depth,
                 'record_depth': self.record_depth,
                 'align_streams': self.align_streams,
-                'device_options': self.controls.export_presets() if self.controls is not None else ()}
+                'device_options': self.controls.export_presets() if self.controls is not None else (),
+                'stream_preset': self.stream_preset}
 
     def get_frames(self):
         if self.device:
@@ -450,50 +450,68 @@ class Realsense_Source(Base_Source):
                 gl_utils.make_coord_system_norm_based()
 
                 # refresh speed settings
-                #glfwSwapInterval(0)
+                glfw.glfwSwapInterval(0)
 
                 glfw.glfwMakeContextCurrent(active_window)
-            #if self.depth_window is not None and not enable:
-            #    glfw.glfwDestroyWindow(self.depth_window)
-            #    self.depth_window = None
 
 
+        native_presets = [('None', None), ('Best Quality', rs_preset.RS_PRESET_BEST_QUALITY),
+                          ('Largest image', rs_preset.RS_PRESET_LARGEST_IMAGE),
+                          ('Highest framerate', rs_preset.RS_PRESET_HIGHEST_FRAMERATE)]
 
-        color_sizes = sorted(self._available_modes[rs_stream.RS_STREAM_COLOR], reverse=True)
+        def set_stream_preset(val):
+            if self.stream_preset != val:
+                self.stream_preset = val
+                self.restart_device()
         self.menu.append(ui.Selector(
+            'stream_preset', self,
+            setter=set_stream_preset,
+            labels = [preset[0] for preset in native_presets],
+            selection=[preset[1] for preset in native_presets],
+            label= 'Stream preset'
+        ))
+        color_sizes = sorted(self._available_modes[rs_stream.RS_STREAM_COLOR], reverse=True)
+        selector = ui.Selector(
             'frame_size', self,
             # setter=,
             selection=color_sizes,
-            label= 'Resolution' if self.align_streams else 'Color Resolution'
-        ))
+            label= 'Resolution' if self.align_streams else 'Color Resolution')
+        selector.read_only = self.stream_preset is not None
+        self.menu.append(selector)
 
         def color_fps_getter():
-            avail_fps = self._available_modes[rs_stream.RS_STREAM_COLOR][self.frame_size]
+            avail_fps = [fps for fps in self._available_modes[rs_stream.RS_STREAM_COLOR][self.frame_size] if self.depth_frame_rate % fps == 0]
             return avail_fps, [str(fps) for fps in avail_fps]
-        self.menu.append(ui.Selector(
+        selector = ui.Selector(
             'frame_rate', self,
             # setter=,
             selection_getter=color_fps_getter,
-            label='Color Frame Rate'
-        ))
+            label='Color Frame Rate',
+        )
+        selector.read_only = self.stream_preset is not None
+        self.menu.append(selector)
 
         if not self.align_streams:
             depth_sizes = sorted(self._available_modes[rs_stream.RS_STREAM_DEPTH], reverse=True)
-            self.menu.append(ui.Selector(
+            selector = ui.Selector(
                 'depth_frame_size', self,
                 # setter=,
                 selection=depth_sizes,
-                label='Depth Resolution'
-            ))
+                label='Depth Resolution',
+            )
+            selector.read_only = self.stream_preset is not None
+            self.menu.append(selector)
 
         def depth_fps_getter():
-            avail_fps = self._available_modes[rs_stream.RS_STREAM_DEPTH][self.depth_frame_size]
+            avail_fps = [fps for fps in self._available_modes[rs_stream.RS_STREAM_DEPTH][self.depth_frame_size] if fps % self.frame_rate == 0]
             return avail_fps, [str(fps) for fps in avail_fps]
-        self.menu.append(ui.Selector(
+        selector = ui.Selector(
             'depth_frame_rate', self,
             selection_getter=depth_fps_getter,
-            label='Depth Frame Rate'
-        ))
+            label='Depth Frame Rate',
+        )
+        selector.read_only = self.stream_preset is not None
+        self.menu.append(selector)
 
         def reset_options():
             if self.device:
@@ -561,13 +579,12 @@ class Realsense_Source(Base_Source):
 
             glEnableClientState( GL_VERTEX_ARRAY )
 
-            pointcloud = self.device.points
+            pointcloud = self.device.pointcloud
             glVertexPointer(3,GL_FLOAT,0,pointcloud)
             glEnableClientState(GL_COLOR_ARRAY);
             depth_to_color = np.zeros(depth_frame.height * depth_frame.width * 3, np.uint8)
             rsutilwrapper.project_pointcloud_to_pixel(depth_to_color, self.device.depth_intrinsics, self.device.color_intrinsics, extrinsics, pointcloud, self._recent_frame.bgr)
             glColorPointer(3, GL_UNSIGNED_BYTE,0, depth_to_color)
-
             glDrawArrays (GL_POINTS, 0, depth_frame.width * depth_frame.height)
             gl_utils.glFlush()
             glDisable(GL_DEPTH_TEST)
@@ -657,10 +674,6 @@ class Realsense_Source(Base_Source):
 
         self.depth_video_writer.close()
         self.depth_video_writer = None
-
-    @property
-    def intrinsics(self):
-        return self._intrinsics
 
     @property
     def frame_size(self):

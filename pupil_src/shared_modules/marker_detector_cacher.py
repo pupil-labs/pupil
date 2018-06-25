@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -14,7 +14,7 @@ class Global_Container(object):
     pass
 
 
-def fill_cache(visited_list, video_file_path, q, seek_idx, run,min_marker_perimeter, invert_image):
+def fill_cache(visited_list, video_file_path, q, seek_idx, run, min_marker_perimeter, invert_image):
     '''
     this function is part of marker_detector it is run as a seperate process.
     it must be kept in a seperate file for namespace sanatisation
@@ -23,11 +23,11 @@ def fill_cache(visited_list, video_file_path, q, seek_idx, run,min_marker_perime
     import logging
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()))
     logger.debug('Started cacher process for Marker Detector')
-    from video_capture import File_Source, EndofVideoFileError, FileSeekError
+    from video_capture import init_playback_source, EndofVideoError, FileSeekError
     from square_marker_detect import detect_markers_robust
     aperture = 9
     markers = []
-    cap = File_Source(Global_Container(), video_file_path)
+    cap = init_playback_source(Global_Container(), source_path=video_file_path, timing=None)
 
     def next_unvisited_idx(frame_idx):
         try:
@@ -68,7 +68,7 @@ def fill_cache(visited_list, video_file_path, q, seek_idx, run,min_marker_perime
 
         try:
             frame = cap.get_frame()
-        except EndofVideoFileError:
+        except EndofVideoError:
             logger.debug("Video File's last frame(s) not accesible")
 
             # could not read frame

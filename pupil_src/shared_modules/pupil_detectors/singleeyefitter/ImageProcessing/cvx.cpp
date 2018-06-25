@@ -1,4 +1,3 @@
-
 #include "cvx.h"
 #include "../mathHelper.h"
 

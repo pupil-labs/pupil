@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -35,6 +35,7 @@ class System_Graphs(System_Plugin_Base):
         self.dia_max = dia_max
         self.conf_grad_limits = .0, 1.
         self.ts = None
+        self.idx = None
 
     def init_ui(self):
         self.add_menu()
@@ -79,7 +80,7 @@ class System_Graphs(System_Plugin_Base):
         self.dia1_graph = graph.Bar_Graph(min_val=self.dia_min, max_val=self.dia_max)
         self.dia1_graph.pos = (380, 100)
         self.dia1_graph.update_rate = 5
-        self.dia1_graph.label = "id0 dia: %0.2f"
+        self.dia1_graph.label = "id1 dia: %0.2f"
 
         self.conf_grad = RGBA(1., .0, .0, self.conf0_graph.color[3]), self.conf0_graph.color
 
@@ -100,7 +101,7 @@ class System_Graphs(System_Plugin_Base):
 
     def on_window_resize(self, window, *args):
         fb_size = glfw.glfwGetFramebufferSize(window)
-        hdpi_factor = fb_size[0] / glfw.glfwGetWindowSize(window)[0]
+        hdpi_factor = glfw.getHDPIFactor(window)
 
         self.cpu_graph.scale = hdpi_factor
         self.fps_graph.scale = hdpi_factor
@@ -137,8 +138,20 @@ class System_Graphs(System_Plugin_Base):
             self.dia1_graph.draw()
 
     def recent_events(self, events):
+        # update cpu graph
         self.cpu_graph.update()
-        # update performace graphs
+
+        # update pupil graphs
+        if 'frame' not in events or self.idx != events["frame"].index:
+            for p in events["pupil_positions"]:
+                # update confidence graph
+                cg = self.conf0_graph if p['id'] == 0 else self.conf1_graph
+                cg.add(p['confidence'])
+                # update diameter graph
+                dg = self.dia0_graph if p['id'] == 0 else self.dia1_graph
+                dg.add(p.get('diameter_3d', 0.))
+
+        # update wprld fps graph
         if 'frame' in events:
             t = events["frame"].timestamp
             if self.ts and t != self.ts:
@@ -147,12 +160,9 @@ class System_Graphs(System_Plugin_Base):
                     self.fps_graph.add(1./dt)
                 except ZeroDivisionError:
                     pass
-
-                for p in events["pupil_positions"]:
-                    (self.conf0_graph if p['id'] == 0 else self.conf1_graph).add(p['confidence'])
-                    (self.dia0_graph if p['id'] == 0 else self.dia1_graph).add(p.get('diameter_3d', 0.))
             else:
                 self.ts = t
+            self.idx = events["frame"].index  # required for eye graph logic in player
 
     def deinit_ui(self):
         self.remove_menu()

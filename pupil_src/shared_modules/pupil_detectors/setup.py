@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -48,7 +48,7 @@ if platform.system() == 'Windows':
     library_dirs = ['C:\\work\\boost\\stage\\lib']
     lib_spec = [[np.get_include(), ''],
                ['C:\\work\\opencv\\build\\include', 'C:\\work\\opencv\\build\\x64\\vc14\\lib\\opencv_world320.lib'],
-               ['C:\\work\\Eigen', ''],
+               ['C:\\work\\ceres-windows\\Eigen', ''],
                ['C:\\work\\ceres-windows\\ceres-solver\\include', 'C:\\work\\ceres-windows\\x64\\Release\\ceres_static.lib'],
                ['C:\\work\\ceres-windows\\glog\\src\\windows','C:\\work\\ceres-windows\\x64\\Release\\libglog_static.lib'],
                ['C:\\work\\ceres-windows','' ],
@@ -62,8 +62,8 @@ if platform.system() == 'Windows':
 else:
     # opencv3 - highgui module has been split into parts: imgcodecs, videoio, and highgui itself
     opencv_libraries = ['opencv_core', 'opencv_highgui', 'opencv_videoio', 'opencv_imgcodecs', 'opencv_imgproc', 'opencv_video']
-    opencv_library_dir = '/usr/local/opt/opencv3/lib'
-    opencv_include_dir = '/usr/local/opt/opencv3/include'
+    opencv_library_dir = '/usr/local/opt/opencv/lib'
+    opencv_include_dir = '/usr/local/opt/opencv/include'
     if(not os.path.isfile(opencv_library_dir+'/libopencv_core.so')):
         ros_dists = ['kinetic', 'jade', 'indigo']
         for ros_dist in ros_dists:
@@ -74,12 +74,12 @@ else:
                 opencv_libraries = [lib + '3' for lib in opencv_libraries]
                 break
     include_dirs = [np.get_include(), '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path, singleeyefitter_include_path, opencv_include_dir]
+    python_version = sys.version_info
     if platform.system() == 'Linux':
-        python_version = sys.version_info
         # boost_python-py34
         boost_lib = 'boost_python-py'+str(python_version[0])+str(python_version[1])
     else:
-        boost_lib = 'boost_python3'
+        boost_lib = 'boost_python'+str(python_version[0])+str(python_version[1])
     libs = ['ceres', boost_lib]+opencv_libraries
     xtra_obj2d = []
     library_dirs = [opencv_library_dir]

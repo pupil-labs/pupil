@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+from time import monotonic, sleep
 from plugin import Plugin
 
 import gl_utils
@@ -21,12 +22,14 @@ logger = logging.getLogger(__name__)
 
 
 class InitialisationError(Exception):
-    def __init__(self, msg=None):
-        super().__init__()
-        self.message = msg
+    pass
 
 
 class StreamError(Exception):
+    pass
+
+
+class EndofVideoError(Exception):
     pass
 
 
@@ -138,7 +141,7 @@ class Base_Source(Plugin):
 
     @property
     def intrinsics(self):
-        raise NotImplementedError()
+        return self._intrinsics
 
     @intrinsics.setter
     def intrinsics(self, model):
@@ -180,6 +183,7 @@ class Base_Manager(Plugin):
                 self.notify_all({'subject': 'start_plugin', 'name': manager_class.__name__})
 
         # We add the capture selection menu
+        manager_classes.sort(key=lambda x: x.gui_name)
         self.menu.append(ui.Selector(
                             'capture_manager',
                             setter    = replace_backend_manager,
@@ -191,3 +195,47 @@ class Base_Manager(Plugin):
 
         # here is where you add all your menu entries.
         self.menu.label = "Backend Manager"
+
+
+class Playback_Source(Base_Source):
+
+    def __init__(self, g_pool, timing='own', *args, **kwargs):
+        '''
+        The `timing` argument defines the source's behavior during recent_event calls
+            'own': Timing is based on recorded timestamps; uses own wait function;
+                    used in Capture as an online source
+            'external': Uses Seek_Control's current playback time to figure out
+                    most appropriate frame; does not wait on its own
+            None: Simply returns next frame as fast as possible; used for detectors
+        '''
+        super().__init__(g_pool)
+        assert timing in ('external', 'own', None), 'invalid timing argument: {}'.format(timing)
+        self.timing = timing
+        self.finished_sleep = 0.
+        self._recent_wait_ts = -1
+        self.play = True
+
+    def seek_to_frame(self, frame_idx):
+        raise NotImplementedError()
+
+    def get_frame_index(self):
+        raise NotImplementedError()
+
+    def get_frame(self):
+        raise NotImplementedError()
+
+    def get_frame_index_ts(self):
+        idx = self.get_frame_index()
+        return idx, self.timestamps[idx]
+
+    def wait(self, timestamp):
+        if timestamp == self._recent_wait_ts:
+            sleep(1/60)  # 60 fps on pause
+        elif self.finished_sleep:
+            target_wait_time = timestamp - self._recent_wait_ts
+            time_spent = monotonic() - self.finished_sleep
+            target_wait_time -= time_spent
+            if 1 > target_wait_time > 0:
+                sleep(target_wait_time)
+        self._recent_wait_ts = timestamp
+        self.finished_sleep = monotonic()

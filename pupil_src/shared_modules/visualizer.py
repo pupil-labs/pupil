@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -22,11 +22,11 @@ import numpy as np
 
 #UI Platform tweaks
 if system() == 'Linux':
-    window_position_default = (0,0)
+    window_position_default = (0, 0)
 elif system() == 'Windows':
-    window_position_default = (8,31)
+    window_position_default = (8, 90)
 else:
-    window_position_default = (0,0)
+    window_position_default = (0, 0)
 
 class Visualizer(object):
     """docstring for Visualizer
@@ -166,10 +166,10 @@ class Visualizer(object):
             else:
                 self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None, share= glfwGetCurrentContext() )
 
-            self.other_window = glfwGetCurrentContext();
+            self.other_window = glfwGetCurrentContext()
 
             glfwMakeContextCurrent(self.window)
-
+            glfwSwapInterval(0)
             glfwSetWindowPos(self.window,window_position_default[0],window_position_default[1])
             # Register callbacks window
             glfwSetFramebufferSizeCallback(self.window,self.on_resize)
@@ -217,7 +217,7 @@ class Visualizer(object):
             self.input['button'] = None
 
     def on_pos(self,window,x, y):
-        hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
+        hdpi_factor = getHDPIFactor(window)
         x,y = x*hdpi_factor,y*hdpi_factor
         # self.gui.update_mouse(x,y)
         if self.input['button']==GLFW_MOUSE_BUTTON_RIGHT:
