@@ -381,7 +381,6 @@ class UVC_Source(Base_Source):
             controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
             if abs(new_et - controls_dict['Absolute Exposure Time'].value) >= 1:
                 controls_dict['Absolute Exposure Time'].value = new_et
-                print("Exposure Time is set to", int(new_et))
         except KeyError: pass
 
     @property
@@ -456,8 +455,9 @@ class UVC_Source(Base_Source):
                 return ["manual", "auto"], ["manual mode", "auto mode"]
             sensor_control.append(ui.Selector('exposure_mode', self, setter=set_exposure_mode, selection_getter=exposure_mode_getter, selection=self.exposure_mode, label="Exposure Mode"))
 
-            if self.exposure_mode == "manual":
-                sensor_control.append(ui.Slider('exposure_time', self, label='Absolute Exposure Time', min=1, max=special_settings.get(self.frame_rate, 32), step=1))
+            sensor_control.append(ui.Slider('exposure_time', self, label='Absolute Exposure Time', min=1, max=special_settings.get(self.frame_rate, 32), step=1))
+            if self.exposure_mode == "auto":
+                sensor_control[-1].read_only = True
 
         if ("Pupil Cam" in self.uvc_capture.name):
             blacklist = ['Auto Focus', 'Absolute Focus', 'Absolute Iris ',
