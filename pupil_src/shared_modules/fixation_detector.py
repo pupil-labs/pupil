@@ -50,7 +50,7 @@ class Empty(object):
 
 
 class Fixation_Detector_Base(Analysis_Plugin_Base):
-    icon_chr = chr(0xec02)
+    icon_chr = chr(0xec03)
     icon_font = 'pupil_icons'
 
 
