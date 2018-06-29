@@ -13,7 +13,7 @@ import numpy as np
 import cv2
 
 
-class GetExposureTime(object):
+class Exposure_Time(object):
     def __init__(self, max_ET, frame_rate, mode="manual"):
         self.mode = mode
         self.ET_thres = 1, min(10000 / frame_rate, max_ET)
@@ -33,7 +33,7 @@ class GetExposureTime(object):
         self.check_freq = 0.1/3
         self.last_check_timestamp = None
 
-    def cal_exposure_time(self, frame):
+    def calculate_based_on_frame(self, frame):
         if self.last_check_timestamp is None:
             self.last_check_timestamp = frame.timestamp
 

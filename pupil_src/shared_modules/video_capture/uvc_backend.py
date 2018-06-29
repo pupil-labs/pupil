@@ -15,7 +15,7 @@ import uvc
 from version_utils import VersionFormat
 from .base_backend import InitialisationError, Base_Source, Base_Manager
 from camera_models import load_intrinsics
-from .utils import Check_Frame_Stripes, GetExposureTime
+from .utils import Check_Frame_Stripes, Exposure_Time
 
 # check versions for our own depedencies as they are fast-changing
 assert VersionFormat(uvc.__version__) >= VersionFormat('0.13')
@@ -81,7 +81,7 @@ class UVC_Source(Base_Source):
         self.check_stripes = check_stripes
         self.exposure_mode = exposure_mode
         self.checkframestripes = None
-        self.get_exposure_time = None
+        self.preferred_exposure_time = None
 
         # check if we were sucessfull
         if not self.uvc_capture:
@@ -189,13 +189,10 @@ class UVC_Source(Base_Source):
             if self.exposure_mode == "auto":
                 special_settings = {200: 28, 180: 31}
                 controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
-                self.get_exposure_time = GetExposureTime(max_ET=special_settings.get(self.frame_rate, 32), frame_rate=self.frame_rate, mode=self.exposure_mode)
+                self.preferred_exposure_time = Exposure_Time(max_ET=special_settings.get(self.frame_rate, 32), frame_rate=self.frame_rate, mode=self.exposure_mode)
 
             if self.check_stripes:
                 self.checkframestripes = Check_Frame_Stripes()
-
-            # try: controls_dict['Auto Exposure Mode'].value = 1
-            # except KeyError: pass
 
             try:controls_dict['Saturation'].value = 0
             except KeyError: pass
@@ -263,10 +260,10 @@ class UVC_Source(Base_Source):
         try:
             frame = self.uvc_capture.get_frame(0.05)
 
-            if self.get_exposure_time:
-                exposure_time_target = self.get_exposure_time.cal_exposure_time(frame)
-                if exposure_time_target is not None:
-                    self.exposure_time = exposure_time_target
+            if self.preferred_exposure_time:
+                target = self.preferred_exposure_time.calculate_based_on_frame(frame)
+                if target is not None:
+                    self.exposure_time = target
 
             if self.checkframestripes and self.checkframestripes.require_restart(frame):
                 # set the self.frame_rate in order to restart
@@ -360,7 +357,7 @@ class UVC_Source(Base_Source):
         if ("Pupil Cam2" in self.uvc_capture.name):
             special_settings = {200: 28, 180: 31}
             if self.exposure_mode == "auto":
-                self.get_exposure_time = GetExposureTime(max_ET=special_settings.get(new_rate, 32), frame_rate=new_rate, mode=self.exposure_mode)
+                self.preferred_exposure_time = Exposure_Time(max_ET=special_settings.get(new_rate, 32), frame_rate=new_rate, mode=self.exposure_mode)
             else:
                 self.exposure_time = min(self.exposure_time, special_settings.get(new_rate, 32))
 
@@ -436,7 +433,10 @@ class UVC_Source(Base_Source):
         image_processing.collapsed = True
 
         sensor_control.append(ui.Selector('frame_size', self, setter=set_frame_size, selection=self.uvc_capture.frame_sizes, label='Resolution'))
-        sensor_control.append(ui.Selector('frame_rate', self, setter=set_frame_rate, selection=self.uvc_capture.frame_rates, label='Frame rate'))
+
+        def frame_rate_getter():
+            return (self.uvc_capture.frame_rates, [str(fr) for fr in self.uvc_capture.frame_rates])
+        sensor_control.append(ui.Selector('frame_rate', self, selection_getter=frame_rate_getter, setter=set_frame_rate, label='Frame rate'))
 
         if ("Pupil Cam2" in self.uvc_capture.name):
             special_settings = {200: 28, 180: 31}
@@ -444,9 +444,9 @@ class UVC_Source(Base_Source):
             def set_exposure_mode(exposure_mode):
                 self.exposure_mode = exposure_mode
                 if self.exposure_mode == "auto":
-                    self.get_exposure_time = GetExposureTime(max_ET=special_settings.get(self.frame_rate, 32), frame_rate=self.frame_rate, mode=self.exposure_mode)
+                    self.preferred_exposure_time = Exposure_Time(max_ET=special_settings.get(self.frame_rate, 32), frame_rate=self.frame_rate, mode=self.exposure_mode)
                 else:
-                    self.get_exposure_time = None
+                    self.preferred_exposure_time = None
 
                 logger.info("Exposure mode for camera {0} is now set to {1} mode".format(self.uvc_capture.name, exposure_mode))
                 self.update_menu()
