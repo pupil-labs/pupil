@@ -10,7 +10,51 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import numpy as np
+import cv2
 
+
+class Exposure_Time(object):
+    def __init__(self, max_ET, frame_rate, mode="manual"):
+        self.mode = mode
+        self.ET_thres = 1, min(10000 / frame_rate, max_ET)
+        self.last_ET = self.ET_thres[1]
+
+        self.targetY_thres = 90, 150
+
+        self.AE_Win = np.array([[3, 1, 1, 1, 1, 1, 1, 3],
+                                [3, 1, 1, 1, 1, 1, 1, 3],
+                                [2, 1, 1, 1, 1, 1, 1, 2],
+                                [2, 1, 1, 1, 1, 1, 1, 2],
+                                [2, 1, 1, 1, 1, 1, 1, 2],
+                                [2, 1, 1, 1, 1, 1, 1, 2],
+                                [3, 1, 1, 1, 1, 1, 1, 3],
+                                [3, 1, 1, 1, 1, 1, 1, 3]])
+        self.smooth = 1/3
+        self.check_freq = 0.1/3
+        self.last_check_timestamp = None
+
+    def calculate_based_on_frame(self, frame):
+        if self.last_check_timestamp is None:
+            self.last_check_timestamp = frame.timestamp
+
+        if frame.timestamp - self.last_check_timestamp > self.check_freq:
+            if self.mode == "manual":
+                self.last_ET = self.ET_thres[1]
+                return self.ET_thres[1]
+            elif self.mode == "auto":
+                image_block = cv2.resize(frame.gray, dsize=self.AE_Win.shape)
+                YTotal = max(np.multiply(self.AE_Win, image_block).sum() / self.AE_Win.sum(), 1)
+
+                if YTotal < self.targetY_thres[0]:
+                    targetET = self.last_ET * self.targetY_thres[0] / YTotal
+                elif YTotal > self.targetY_thres[1]:
+                    targetET = self.last_ET * self.targetY_thres[1] / YTotal
+                else:
+                    targetET = self.last_ET
+
+                next_ET = np.clip(self.last_ET + (targetET - self.last_ET) * self.smooth, self.ET_thres[0], self.ET_thres[1])
+                self.last_ET = next_ET
+                return next_ET
 
 class Check_Frame_Stripes(object):
     def __init__(self, check_freq_init=0.1, check_freq_upperbound=5, check_freq_lowerbound=0.00001, factor=0.8):
