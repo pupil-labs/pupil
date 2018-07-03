@@ -140,7 +140,7 @@ def launcher():
         #set log level
         logger.setLevel(logging.NOTSET)
         #Stream to file
-        fh = logging.FileHandler(os.path.join(user_dir,'{}.log'.format(app)),mode='w')
+        fh = logging.FileHandler(os.path.join(user_dir,'{}.log'.format(app)),mode='w', encoding='utf-8')
         fh.setFormatter(logging.Formatter('%(asctime)s - %(processName)s - [%(levelname)s] %(name)s: %(message)s'))
         logger.addHandler(fh)
         #Stream to console.

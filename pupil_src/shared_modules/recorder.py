@@ -254,7 +254,7 @@ class Recorder(System_Plugin_Base):
 
         self.meta_info_path = os.path.join(self.rec_path, "info.csv")
 
-        with open(self.meta_info_path, 'w', newline='') as csvfile:
+        with open(self.meta_info_path, 'w', newline='',  encoding='utf-8') as csvfile:
             csv_utils.write_key_value_file(csvfile, {
                 'Recording Name': self.session_name,
                 'Start Date': strftime("%d.%m.%Y", localtime(self.start_time)),
