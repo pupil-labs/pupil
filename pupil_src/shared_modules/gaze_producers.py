@@ -14,17 +14,18 @@ import numpy as np
 # from copy import deepcopy
 from pyglui import ui
 from plugin import Producer_Plugin_Base
-from player_methods import Bisector, ts_window
+from player_methods import Bisector, enclosing_window
 from methods import normalize
 import OpenGL.GL as gl
-from pyglui.cygl.utils import *
+import pyglui.cygl.utils as cygl_utils
 from pyglui.pyfontstash import fontstash
-from glfw import *
+import glfw
 from time import time
 from calibration_routines import gaze_mapping_plugins
 from calibration_routines.finish_calibration import select_calibration_method
 from file_methods import load_object, save_object
 
+import player_methods as pm
 import gl_utils
 import background_helper as bh
 import zmq_tools
@@ -95,7 +96,7 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
-            window = ts_window(self.g_pool.timestamps, frm_idx)
+            window = enclosing_window(self.g_pool.timestamps, frm_idx)
             events['gaze'] = self.g_pool.gaze_positions.by_ts_window(window)
 
 
@@ -158,6 +159,8 @@ class Gaze_From_Recording(Gaze_Producer_Base):
 
 def calibrate_and_map(g_pool, ref_list, calib_list, map_list, x_offset, y_offset):
     yield "calibrating", []
+    print('ref window', ref_list[0]['timestamp'], ref_list[-1]['timestamp'])
+    print('calib window', calib_list[0]['timestamp'], calib_list[-1]['timestamp'])
     method, result = select_calibration_method(g_pool, calib_list, ref_list)
     if result['subject'] != 'calibration.failed':
         logger.info('Offline calibration successful. Starting mapping using {}.'.format(method))
@@ -184,8 +187,9 @@ def calibrate_and_map(g_pool, ref_list, calib_list, map_list, x_offset, y_offset
         yield progress, []
     else:
         # logger does not work here, because we are in a subprocess
-        print('Calibration failed: {}'.format(result['reason']))
-        yield "calibration failed", []
+        fail_message = 'Calibration failed: {}'.format(result['reason'])
+        print(fail_message, len(calib_list), len(ref_list))
+        yield fail_message, []
 
 
 def make_section_dict(calib_range, map_range):
@@ -220,7 +224,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             if session_data['version'] != self.session_data_version:
                 logger.warning("Session data from old version. Will not use this.")
                 assert False
-        except (AssertionError, FileNotFoundError) as e:
+        except (AssertionError, FileNotFoundError):
             session_data = {}
             max_idx = len(self.g_pool.timestamps) - 1
             session_data['sections'] = [make_section_dict((0, max_idx), (0, max_idx))]
@@ -300,7 +304,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         for sec in self.sections:
             self.append_section_menu(sec)
-        self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
+        self.on_window_resize(glfw.glfwGetCurrentContext(), *glfw.glfwGetWindowSize(glfw.glfwGetCurrentContext()))
 
     def deinit_ui(self):
         # needs to be called here since makes calls to the ui:
@@ -312,20 +316,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def append_section_menu(self, sec):
         section_menu = ui.Growing_Menu('Section Settings')
-        section_menu.color = RGBA(*sec['color'])
-
-        def make_validate_fn(sec, key):
-            def validate(input_obj):
-                try:
-                    assert type(input_obj) in (tuple,list)
-                    assert type(input_obj[0]) is int
-                    assert type(input_obj[1]) is int
-                    assert 0 <= input_obj[0] <= input_obj[1] <=len(self.g_pool.timestamps)
-                except:
-                    pass
-                else:
-                    sec[key] = input_obj
-            return validate
+        section_menu.color = cygl_utils.RGBA(*sec['color'])
 
         def make_calibrate_fn(sec):
             def calibrate():
@@ -404,7 +395,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.save_offline_data()
 
     def on_click(self, pos, button, action):
-        if action == GLFW_PRESS and self.manual_ref_edit_mode:
+        if action == glfw.GLFW_PRESS and self.manual_ref_edit_mode:
             manual_refs_in_frame = [r for r in self.manual_ref_positions
                                     if self.g_pool.capture.get_frame_index() == r['index']]
             for ref in manual_refs_in_frame:
@@ -465,8 +456,11 @@ class Offline_Calibration(Gaze_Producer_Base):
         sec['status'] = 'Starting calibration' # This will be overwritten on success
         sec['gaze'] = []  # reset interim buffer for given section
 
-        calib_list = self.g_pool.pupil_positions.by_target_idx[slice(*sec['calibration_range'])]
-        map_list = self.g_pool.pupil_positions.by_target_idx[slice(*sec['mapping_range'])]
+        calibration_window = pm.exact_window(self.g_pool.timestamps, sec['calibration_range'])
+        mapping_window = pm.exact_window(self.g_pool.timestamps, sec['mapping_range'])
+        calibration_pupil_pos = self.g_pool.pupil_positions.by_ts_window(calibration_window)
+        print(sec['calibration_range'], calibration_window, (calibration_pupil_pos[0]['timestamp'], calibration_pupil_pos[-1]['timestamp']))
+        mapping_pupil_pos = self.g_pool.pupil_positions.by_ts_window(mapping_window)
 
         if sec['calibration_method'] == 'circle_marker':
             ref_list = self.circle_marker_positions
@@ -477,17 +471,17 @@ class Offline_Calibration(Gaze_Producer_Base):
         end = sec['calibration_range'][1]
         ref_list = [r for r in ref_list if start <= r['index'] <= end]
 
-        if not len(calib_list):
+        if not len(calibration_pupil_pos):
             logger.error('No pupil data to calibrate section "{}"'.format(self.sections.index(sec) + 1))
-            sec['status'] = 'calibration failed'
+            sec['status'] = 'Calibration failed. Not enough pupil positions.'
             return
 
         if not ref_list:
             logger.error('No referece marker data to calibrate section "{}"'.format(self.sections.index(sec) + 1))
-            sec['status'] = 'calibration failed'
+            sec['status'] = 'Calibration failed. Not enough reference positions.'
             return
 
-        if sec["mapping_method"] == '3d' and '2d' in calib_list[len(calib_list)//2]['method']:
+        if sec["mapping_method"] == '3d' and '2d' in calibration_pupil_pos[len(calibration_pupil_pos)//2]['method']:
             # select median pupil datum from calibration list and use its detection method as mapping method
             logger.warning("Pupil data is 2d, calibration and mapping mode forced to 2d.")
             sec["mapping_method"] = '2d'
@@ -497,7 +491,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                                sec["mapping_method"],
                                self.g_pool.rec_dir,
                                self.g_pool.min_calibration_confidence)
-        generator_args = (fake, ref_list, calib_list, map_list, sec['x_offset'], sec['y_offset'])
+        generator_args = (fake, ref_list, calibration_pupil_pos, mapping_pupil_pos, sec['x_offset'], sec['y_offset'])
 
         logger.info('Calibrating section {} ({}) in {} mode...'.format(self.sections.index(sec) + 1, sec['label'], sec["mapping_method"]))
         sec['bg_task'] = bh.Task_Proxy('{}'.format(self.sections.index(sec) + 1), calibrate_and_map, args=generator_args)
@@ -507,16 +501,16 @@ class Offline_Calibration(Gaze_Producer_Base):
         with gl_utils.Coord_System(0, 1, 0, 1):
             ref_point_norm = [r['norm_pos'] for r in self.circle_marker_positions
                               if self.g_pool.capture.get_frame_index() == r['index']]
-            draw_points(ref_point_norm, size=35, color=RGBA(0, .5, 0.5, .7))
-            draw_points(ref_point_norm, size=5, color=RGBA(.0, .9, 0.0, 1.0))
+            cygl_utils.draw_points(ref_point_norm, size=35, color=cygl_utils.RGBA(0, .5, 0.5, .7))
+            cygl_utils.draw_points(ref_point_norm, size=5, color=cygl_utils.RGBA(.0, .9, 0.0, 1.0))
 
             manual_refs_in_frame = [r for r in self.manual_ref_positions
                                     if self.g_pool.capture.get_frame_index() in r['index_range']]
             current = self.g_pool.capture.get_frame_index()
             for mr in manual_refs_in_frame:
                 if mr['index'] == current:
-                    draw_points([mr['norm_pos']], size=35, color=RGBA(.0, .0, 0.9, .8))
-                    draw_points([mr['norm_pos']], size=5, color=RGBA(.0, .9, 0.0, 1.0))
+                    cygl_utils.draw_points([mr['norm_pos']], size=35, color=cygl_utils.RGBA(.0, .0, 0.9, .8))
+                    cygl_utils.draw_points([mr['norm_pos']], size=5, color=cygl_utils.RGBA(.0, .9, 0.0, 1.0))
                 else:
                     distance = abs(current - mr['index'])
                     range_radius = (mr['index_range'][-1] - mr['index_range'][0]) // 2
@@ -525,9 +519,11 @@ class Offline_Calibration(Gaze_Producer_Base):
                     alpha = 0.1 * alpha + 0.9 * (1. - alpha)
                     # Use draw_progress instead of draw_circle. draw_circle breaks
                     # because of the normalized coord-system.
-                    draw_progress(mr['norm_pos'], 0., 0.999, inner_radius=20.,
-                                  outer_radius=35., color=RGBA(.0, .0, 0.9, alpha))
-                    draw_points([mr['norm_pos']], size=5, color=RGBA(.0, .9, 0.0, alpha))
+                    cygl_utils.draw_progress(mr['norm_pos'], 0., 0.999,
+                                             inner_radius=20.,
+                                             outer_radius=35.,
+                                             color=cygl_utils.RGBA(.0, .0, 0.9, alpha))
+                    cygl_utils.draw_points([mr['norm_pos']], size=5, color=cygl_utils.RGBA(.0, .9, 0.0, alpha))
 
         # calculate correct timeline height. Triggers timeline redraw only if changed
         self.timeline.content_height = max(0.001, self.timeline_line_height * len(self.sections))
@@ -543,33 +539,33 @@ class Offline_Calibration(Gaze_Producer_Base):
                 cal_ts = self.g_pool.timestamps[cal_slc]
                 map_ts = self.g_pool.timestamps[map_slc]
 
-                color = RGBA(*s['color'][:3], 1.)
+                color = cygl_utils.RGBA(*s['color'][:3], 1.)
                 if len(cal_ts):
-                    draw_rounded_rect((cal_ts[0], -4 * scale),
+                    cygl_utils.draw_rounded_rect((cal_ts[0], -4 * scale),
                                       (cal_ts[-1] - cal_ts[0], 8 * scale),
                                       corner_radius=0,
                                       color=color,
                                       sharpness=1.)
                 if len(map_ts):
-                    draw_rounded_rect((map_ts[0], -scale),
+                    cygl_utils.draw_rounded_rect((map_ts[0], -scale),
                                       (map_ts[-1] - map_ts[0], 2 * scale),
                                       corner_radius=0,
                                       color=color,
                                       sharpness=1.)
 
-                color = RGBA(1., 1., 1., .5)
+                color = cygl_utils.RGBA(1., 1., 1., .5)
                 if s['calibration_method'] == "natural_features":
-                    draw_x([(m['timestamp'], 0) for m in self.manual_ref_positions],
+                    cygl_utils.draw_x([(m['timestamp'], 0) for m in self.manual_ref_positions],
                            height=12 * scale, width=3 * pixel_to_time_fac / scale, thickness=scale, color=color)
                 else:
-                    draw_bars([(m['timestamp'], 0) for m in self.circle_marker_positions],
+                    cygl_utils.draw_bars([(m['timestamp'], 0) for m in self.circle_marker_positions],
                               height=12 * scale, thickness=scale, color=color)
 
                 gl.glTranslatef(0, scale * self.timeline_line_height, 0)
 
     def draw_labels(self, width, height, scale):
         self.glfont.set_size(self.timeline_line_height * scale)
-        for idx, s in enumerate(self.sections):
+        for s in self.sections:
             self.glfont.draw_text(width, 0, s['label'])
             gl.glTranslatef(0, self.timeline_line_height * scale, 0)
 

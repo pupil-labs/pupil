@@ -16,7 +16,7 @@ import numpy as np
 from itertools import chain
 from plugin import Producer_Plugin_Base
 from pyglui import ui
-from player_methods import Bisector, ts_window
+from player_methods import Bisector, enclosing_window
 from file_methods import load_object, save_object
 
 from pyglui.pyfontstash import fontstash as fs
@@ -94,7 +94,7 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
-            window = ts_window(self.g_pool.timestamps, frm_idx)
+            window = enclosing_window(self.g_pool.timestamps, frm_idx)
             events['pupil'] = self.g_pool.pupil_positions.by_ts_window(window)
 
     def cache_pupil_timeline_data(self, key):

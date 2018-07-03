@@ -21,10 +21,9 @@ import os
 from time import time
 from glob import glob
 from video_capture import init_playback_source, EndofVideoError
-from player_methods import update_recording_to_recent, load_meta_info
 from av_writer import AV_Writer
 from file_methods import load_object
-from player_methods import correlate_data, update_recording_to_recent, Bisector
+import player_methods as pm
 
 
 # logging
@@ -59,7 +58,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
     yield start_status, 0
 
     try:
-        update_recording_to_recent(rec_dir)
+        pm.update_recording_to_recent(rec_dir)
 
         vis_plugins = sorted([Vis_Circle, Vis_Cross, Vis_Polyline, Vis_Light_Points,
                               Vis_Watermark, Vis_Scan_Path, Vis_Eye_Video_Overlay],
@@ -71,12 +70,12 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         name_by_index = [p.__name__ for p in available_plugins]
         plugin_by_name = dict(zip(name_by_index, available_plugins))
 
-        update_recording_to_recent(rec_dir)
+        pm.update_recording_to_recent(rec_dir)
 
         pupil_data_path = os.path.join(rec_dir, "pupil_data")
         audio_path = os.path.join(rec_dir, "audio.mp4")
 
-        meta_info = load_meta_info(rec_dir)
+        meta_info = pm.load_meta_info(rec_dir)
 
         g_pool = Global_Container()
         g_pool.app = 'exporter'
@@ -144,9 +143,9 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         pupil_data = pre_computed.get("pupil_data") or load_object(pupil_data_path)
         g_pool.pupil_data = pupil_data
         g_pool.fixations = pre_computed.get("fixations", [])
-        g_pool.fixations_by_frame = correlate_data(g_pool.fixations, g_pool.timestamps)
-        g_pool.pupil_positions = Bisector(pre_computed.get("pupil_positions") or pupil_data.get('pupil', []), g_pool.timestamps)
-        g_pool.gaze_positions = Bisector(pre_computed.get("gaze_positions") or pupil_data.get('gaze', []), g_pool.timestamps)
+        g_pool.fixations_by_frame = pm.correlate_data(g_pool.fixations, g_pool.timestamps)
+        g_pool.pupil_positions = pm.Bisector(pre_computed.get("pupil_positions") or pupil_data.get('pupil', []), g_pool.timestamps)
+        g_pool.gaze_positions = pm.Bisector(pre_computed.get("gaze_positions") or pupil_data.get('gaze', []), g_pool.timestamps)
 
         # add plugins
         g_pool.plugins = Plugin_List(g_pool, plugin_initializers)
@@ -159,8 +158,9 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
 
             events = {'frame': frame}
             # new positons and events
-            events['gaze'] = g_pool.gaze_positions.by_target_idx[frame.index]
-            events['pupil'] = g_pool.pupil_positions.by_target_idx[frame.index]
+            frame_window = pm.enclosing_window(g_pool.timestamps, frame.index)
+            events['gaze'] = g_pool.gaze_positions.by_ts_window(frame_window)
+            events['pupil'] = g_pool.pupil_positions.by_ts_window(frame_window)
 
             # publish delayed notifiactions when their time has come.
             for n in list(g_pool.delayed_notifications.values()):

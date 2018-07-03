@@ -13,6 +13,7 @@ import os
 import csv
 from itertools import chain
 import logging
+import player_methods as pm
 from plugin import Analysis_Plugin_Base
 from pyglui import ui
 # logging
@@ -116,7 +117,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
             self.export_data(notification['range'], notification['export_dir'])
 
     def export_data(self, export_range, export_dir):
-        export_range = slice(*export_range)
+        export_window = pm.exact_window(self.g_pool.timestamps, export_range)
         with open(os.path.join(export_dir, 'pupil_positions.csv'), 'w', encoding='utf-8', newline='') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',')
 
@@ -155,7 +156,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  'projected_sphere_axis_b',
                                  'projected_sphere_angle'))
 
-            for p in self.g_pool.pupil_positions.by_target_idx[export_range]:
+            for p in self.g_pool.pupil_positions.by_ts_window(export_window):
                 data_2d = ['{}'.format(p['timestamp']),  # use str to be consitant with csv lib.
                            p['index'],
                            p['id'],
@@ -224,7 +225,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  "gaze_normal1_y",
                                  "gaze_normal1_z"))
 
-            for g in self.g_pool.gaze_positions.by_target_idx[export_range]:
+            for g in self.g_pool.gaze_positions.by_ts_window(export_window):
                 data = ['{}'.format(g["timestamp"]), g["index"], g["confidence"], g["norm_pos"][0], g["norm_pos"][1],
                         " ".join(['{}-{}'.format(b['timestamp'], b['id']) for b in g['base_data']])]  # use str on timestamp to be consitant with csv lib.
 

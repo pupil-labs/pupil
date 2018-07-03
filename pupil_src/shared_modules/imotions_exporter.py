@@ -22,6 +22,7 @@ from pyglui import ui
 from plugin import Analysis_Plugin_Base
 from video_capture import File_Source, EndofVideoError
 from methods import denormalize
+import player_methods as pm
 import background_helper as bh
 import csv_utils
 
@@ -197,7 +198,8 @@ class iMotions_Exporter(Analysis_Plugin_Base):
 
             for media_idx in range(*export_range):
                 media_timestamp = self.g_pool.timestamps[media_idx]
-                for g in self.g_pool.gaze_positions.by_target_idx[media_idx]:
+                media_window = pm.enclosing_window(self.g_pool.timestamps, media_idx)
+                for g in self.g_pool.gaze_positions.by_ts_window(media_window):
                     try:
                         pupil_dia = {}
                         for p in g['base_data']:

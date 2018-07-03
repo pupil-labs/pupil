@@ -27,12 +27,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def ts_window(timestamps, idx):
+def enclosing_window(timestamps, idx):
     before = timestamps[idx - 1] if idx > 0 else -np.inf
     now = timestamps[idx]
     after = timestamps[idx + 1] if idx < len(timestamps) - 1 else np.inf
     return (now - before) / 2., (after - now) / 2.
 
+
+def exact_window(timestamps, index_range):
+    return timestamps[index_range[0]], timestamps[index_range[1]]
 
 class Bisector(object):
     """docstring for ClassName"""
@@ -203,7 +206,7 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
     time_pattern = os.path.join(rec_dir, '*.time')
     for time_loc in glob.glob(time_pattern):
         time_file_name = os.path.split(time_loc)[1]
-        time_name, time_ext = os.path.splitext(time_file_name)
+        time_name = os.path.splitext(time_file_name)[0]
 
         potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.mp4','.m4a')]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
@@ -482,7 +485,7 @@ def update_recording_v0915_v13(rec_dir):
     time_pattern = os.path.join(rec_dir, '*.time')
     for time_loc in glob.glob(time_pattern):
         time_file_name = os.path.split(time_loc)[1]
-        time_name, time_ext = os.path.splitext(time_file_name)
+        time_name = os.path.splitext(time_file_name)[0]
 
         potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.mp4','.m4a')]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
