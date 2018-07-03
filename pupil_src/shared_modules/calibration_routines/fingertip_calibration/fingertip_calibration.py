@@ -12,17 +12,14 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import cv2
 import numpy as np
-from platform import system
 import audio
 from pyglui import ui
 from pyglui.cygl.utils import draw_points, draw_polyline, draw_progress, RGBA
-from pyglui.pyfontstash import fontstash
-from pyglui.ui import get_opensans_font_path
-from ..calibration_plugin_base import Calibration_Plugin
-from ..finish_calibration import finish_calibration
+from calibration_routines.calibration_plugin_base import Calibration_Plugin
+from calibration_routines.finish_calibration import finish_calibration
 import torch
-from .models.unet import UNet
-from .models.ssd_lite import build_ssd_lite
+from calibration_routines.fingertip_calibration.models.unet import UNet
+from calibration_routines.fingertip_calibration.models.ssd_lite import build_ssd_lite
 
 # logging
 import logging
@@ -38,20 +35,6 @@ class Fingertip_Calibration(Calibration_Plugin):
         super().__init__(g_pool)
         self.menu = None
 
-        self.glfont = fontstash.Context()
-        self.glfont.add_font('opensans', get_opensans_font_path())
-        self.glfont.set_size(32)
-        self.glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
-        self.glfont.set_align_string(v_align='center')
-
-        # UI Platform tweaks
-        if system() == 'Linux':
-            self.window_position_default = (0, 0)
-        elif system() == 'Windows':
-            self.window_position_default = (8, 90)
-        else:
-            self.window_position_default = (0, 0)
-
         ### Initialize CNN pipeline ###
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         module_folder = os.path.join(os.path.split(__file__)[0], "weights")
@@ -61,7 +44,7 @@ class Fingertip_Calibration(Calibration_Plugin):
             'input_size': 225,
             'max_num_detection': 1,
             'nms_thresh': 0.45,
-            'conf_thresh': 0.9,
+            'conf_thresh': 0.8,
             'resume_path': os.path.join(module_folder, 'hand_detector_model.pkl'),
         }
         self.hand_transform = BaseTransform(self.hand_detector_cfg['input_size'], (117.77, 115.42, 107.29), (72.03, 69.83, 71.43))
@@ -91,13 +74,13 @@ class Fingertip_Calibration(Calibration_Plugin):
         self.menu.append(ui.Info_Text('Hold your index finger still at the center of the field of view of the world camera. '
                                       'Move your head horizontally and then vertically while gazing at your fingertip.'
                                       'Then show five fingers to finish the calibration.'))
-        self.menu.append(ui.Info_Text('Note that the frame rate might drop during fingertip detection.'))
         if self.device == torch.device("cpu"):
-            self.menu.append(ui.Info_Text('* No GPU utilized for fingertip detection network'))
+            self.menu.append(ui.Info_Text('* No GPU utilized for fingertip detection network. '
+                                          'Note that the frame rate will drop during fingertip detection.'))
         else:
             self.menu.append(ui.Info_Text('* GPUs utilized for fingertip detection network'))
 
-        self.vis_toggle = ui.Thumb('visualize', self, setter=self.toggle_vis, getter=lambda: self.visualize, label='V', hotkey='v')
+        self.vis_toggle = ui.Thumb('visualize', self, setter=self.toggle_vis, label='V', hotkey='v')
         self.g_pool.quickbar.append(self.vis_toggle)
 
     def start(self):

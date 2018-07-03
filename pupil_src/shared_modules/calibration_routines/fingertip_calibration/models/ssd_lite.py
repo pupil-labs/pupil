@@ -13,10 +13,9 @@ See COPYING and COPYING.LESSER for license details.
 
 import torch
 import torch.nn as nn
-from .layers.modules.l2norm import L2Norm
-from .layers.functions.prior_box import PriorBox
-from .layers.functions.detection import Detect
-from .mobilenet import mobilenet, depth_sep_conv
+from calibration_routines.fingertip_calibration.models.layers.functions.prior_box import PriorBox
+from calibration_routines.fingertip_calibration.models.layers.functions.detection import Detect
+from calibration_routines.fingertip_calibration.models.mobilenet import mobilenet, depth_sep_conv
 
 
 class SSDLite(nn.Module):
@@ -36,7 +35,6 @@ class SSDLite(nn.Module):
         super(SSDLite, self).__init__()
         self.cfg = cfg
         self.mobilenet = nn.ModuleList(base)
-        self.norm = L2Norm(cfg['feature_maps_channel'][0], 20)
         self.extras = nn.ModuleList(extras)
         self.loc = nn.ModuleList(head[0])
         self.conf = nn.ModuleList(head[1])
@@ -62,10 +60,7 @@ class SSDLite(nn.Module):
         for k in range(len(self.mobilenet)):
             x = self.mobilenet[k](x)
             if k in self.cfg['feature_maps_layer']:
-                if len(sources) == 0:
-                    sources.append(self.norm(x))
-                else:
-                    sources.append(x)
+                sources.append(x)
 
         # apply extra layers and cache source layer outputs
         for v in self.extras:
@@ -113,7 +108,7 @@ def add_head(cfg):
 def build_ssd_lite(cfg):
     width_multiplier = 0.25
     cfg['num_classes'] = 2
-    cfg['aspect_ratios'] = [[1 / 2], [1 / 2, 1 / 3], [1 / 2, 1 / 3], [1 / 2, 1 / 3], [1 / 2], [1 / 2]]
+    cfg['aspect_ratios'] = [[1 / 2, 1 / 3], [1 / 2, 1 / 3], [1 / 2, 1 / 3], [1 / 2, 1 / 3], [1 / 2, 1 / 3], [1 / 2, 1 / 3]]
     cfg['feature_maps_reso'] = [int(cfg['input_size'] / d + 1) for d in [16, 32, 64, 128, 256, 512]]
     cfg['feature_maps_channel'] = [int(d * width_multiplier) for d in [512, 1024, 512, 256, 256, 128]]
     cfg['feature_maps_layer'] = [11, 13, 'S', 'S', 'S', 'S']

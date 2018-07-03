@@ -12,7 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import torch
 from torch.autograd import Function
-from ..box_utils import decode, nms
+from calibration_routines.fingertip_calibration.models.layers.box_utils import decode, nms
 
 
 class Detect(Function):

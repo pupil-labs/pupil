@@ -9,4 +9,4 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from . fingertip_calibration import Fingertip_Calibration
+from calibration_routines.fingertip_calibration.fingertip_calibration import Fingertip_Calibration
