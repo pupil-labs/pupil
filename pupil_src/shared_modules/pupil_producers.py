@@ -16,8 +16,8 @@ import numpy as np
 from itertools import chain
 from plugin import Producer_Plugin_Base
 from pyglui import ui
-from player_methods import Bisector, enclosing_window
-from file_methods import load_object, save_object
+import player_methods as pm
+import file_methods as fm
 
 from pyglui.pyfontstash import fontstash as fs
 from pyglui.cygl.utils import *
@@ -94,7 +94,7 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
-            window = enclosing_window(self.g_pool.timestamps, frm_idx)
+            window = pm.enclosing_window(self.g_pool.timestamps, frm_idx)
             events['pupil'] = self.g_pool.pupil_positions.by_ts_window(window)
 
     def cache_pupil_timeline_data(self, key):
@@ -156,8 +156,10 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 class Pupil_From_Recording(Pupil_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        g_pool.pupil_positions = Bisector(g_pool.pupil_data.get('pupil', []),
-                                                 g_pool.timestamps)
+
+        data, data_ts = fm.load_pldata_file(g_pool.rec_dir, 'pupil')
+        g_pool.pupil_positions = pm.Bisector(data, data_ts)
+
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
 
@@ -258,9 +260,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.menu_icon.indicator_stop = len(self.pupil_positions) / total if total else 0.
 
     def correlate_publish(self):
-        all_pp = self.pupil_positions.values()
-        self.g_pool.pupil_positions = Bisector(list(all_pp),
-                                                      self.g_pool.timestamps)
+        all_pp, all_pp_ts = zip(*((pp, pp['timestamp']) for pp in self.pupil_positions.values()))
+        self.g_pool.pupil_positions = pm.Bisector(list(all_pp), list(all_pp_ts))
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
         self.save_offline_data()
@@ -291,7 +292,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def redetect(self):
         self.pupil_positions.clear()  # delete previously detected pupil positions
-        self.g_pool.pupil_positions = Bisector([], self.g_pool.timestamps)
+        self.g_pool.pupil_positions = pm.Bisector([], self.g_pool.timestamps)
         self.detection_finished_flag = False
         self.detection_paused = False
         for eye_id in range(2):

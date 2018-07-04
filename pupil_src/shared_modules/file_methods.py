@@ -84,32 +84,20 @@ def save_object(object_, file_path):
         msgpack.pack(object_, fh, use_bin_type=True,default=ndarrray_to_list)
 
 
-def load_pupil_data_file(file_path):
-    """
-    load Pupil data file, output data is dicts of toplevel topic with tuples of data inside.
-    Each datum is a immutable dict that is unpacked on access.
-    """
-    with open(file_path, "rb") as fh:
-        pupil_data = {}
-        for topic, payload in msgpack.Unpacker(fh, raw=False, use_list=False):
-            topic = topic.split(".")[0]
-            if topic not in pupil_data:
-                pupil_data[topic] = []
-            pupil_data[topic].append(Serialized_Dict(payload=payload))
-    return pupil_data
+def load_pldata_file(directory, topic):
+    ts_file = os.path.join(directory, topic + '_timestamps.npy')
+    msgpack_file = os.path.join(directory, topic + '.pldata')
+    try:
+        data = deque()
+        data_ts = np.load(ts_file)
+        with open(msgpack_file, "rb") as fh:
+            for topic, payload in msgpack.Unpacker(fh, raw=False, use_list=False):
+                data.append(Serialized_Dict(payload=payload))
+    except FileNotFoundError:
+        data = []
+        data_ts = []
 
-
-def save_pupil_data_file(file_path, data):
-    """
-    example implementation of data saver, this should really be done incrementally during
-    recording and based on the serialized the message on the IPC.
-    data is a list of datums each a dict with at least a 'topic' field.
-    """
-    packer = msgpack.Packer(use_bin_type=True)
-    with open(file_path, "wb") as fb:
-        for datum in data:
-            payload = (datum['topic'], packer.pack(datum))
-            fb.write(packer.pack(payload))
+    return data, data_ts
 
 
 class PLData_Writer(object):
@@ -131,7 +119,7 @@ class PLData_Writer(object):
 
     def extend(self, data):
         for datum in data:
-            self.append(data)
+            self.append(datum)
 
     def close(self):
         self.file_handle.close()

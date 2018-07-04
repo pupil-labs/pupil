@@ -58,7 +58,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     try:
 
         # imports
-        from file_methods import Persistent_Dict, next_export_sub_dir, load_pupil_data_file
+        from file_methods import Persistent_Dict, next_export_sub_dir
 
         # display
         import glfw
@@ -186,8 +186,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         def get_dt():
             return next(tick)
 
-        pupil_data_path = os.path.join(rec_dir, "pupil_data.pldata")
-
         meta_info = load_meta_info(rec_dir)
 
         # log info about Pupil Platform and Platform in player.log
@@ -243,8 +241,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             glfw.glfwSetWindowSize(main_window, *window_size)
 
         # load pupil_positions, gaze_positions
-        g_pool.pupil_data = load_pupil_data_file(pupil_data_path)
-
         g_pool.binocular = meta_info.get('Eye Mode', 'monocular') == 'binocular'
         g_pool.version = app_version
         g_pool.timestamps = g_pool.capture.timestamps
@@ -256,8 +252,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.min_calibration_confidence = session_settings.get('min_calibration_confidence', 0.8)
 
         # populated by producers
-        g_pool.pupil_positions = Bisector([], g_pool.timestamps)
-        g_pool.gaze_positions = Bisector([], g_pool.timestamps)
+        g_pool.pupil_positions = Bisector([], [])
+        g_pool.gaze_positions = Bisector([], [])
 
         g_pool.fixations = []  # populated by the fixation detector plugin
         g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]

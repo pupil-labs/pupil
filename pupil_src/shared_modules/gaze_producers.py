@@ -14,7 +14,6 @@ import numpy as np
 # from copy import deepcopy
 from pyglui import ui
 from plugin import Producer_Plugin_Base
-from player_methods import Bisector, enclosing_window
 from methods import normalize
 import OpenGL.GL as gl
 import pyglui.cygl.utils as cygl_utils
@@ -23,9 +22,9 @@ import glfw
 from time import time
 from calibration_routines import gaze_mapping_plugins
 from calibration_routines.finish_calibration import select_calibration_method
-from file_methods import load_object, save_object
 
 import player_methods as pm
+import file_methods as fm
 import gl_utils
 import background_helper as bh
 import zmq_tools
@@ -96,7 +95,7 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
-            window = enclosing_window(self.g_pool.timestamps, frm_idx)
+            window = pm.enclosing_window(self.g_pool.timestamps, frm_idx)
             events['gaze'] = self.g_pool.gaze_positions.by_ts_window(window)
 
 
@@ -106,7 +105,7 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.result_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.result_dir, exist_ok=True)
         try:
-            session_data = load_object(os.path.join(self.result_dir, 'manual_gaze_correction'))
+            session_data = fm.load_object(os.path.join(self.result_dir, 'manual_gaze_correction'))
         except OSError:
             session_data = {'dx': 0., 'dy': 0.}
         self.x_offset = session_data['dx']
@@ -114,8 +113,9 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.load_data_with_offset()
 
     def load_data_with_offset(self):
-        self.g_pool.gaze_positions = Bisector(self.g_pool.pupil_data.get('gaze', []),
-                                                     self.g_pool.timestamps)
+        data, data_ts = fm.load_pldata_file(self.g_pool.rec_dir, 'gaze')
+        self.g_pool.gaze_positions = pm.Bisector(data, data_ts)
+
         # self.g_pool.gaze_positions = deepcopy(self.g_pool.pupil_data['gaze'])
         # for gp in self.g_pool.gaze_positions:
         #     gp['norm_pos'][0] += self.x_offset
@@ -154,7 +154,7 @@ class Gaze_From_Recording(Gaze_Producer_Base):
 
     def cleanup(self):
         session_data = {'dx': self.x_offset, 'dy': self.y_offset, 'version': 0}
-        save_object(session_data, os.path.join(self.result_dir, 'manual_gaze_correction'))
+        fm.save_object(session_data, os.path.join(self.result_dir, 'manual_gaze_correction'))
 
 
 def calibrate_and_map(g_pool, ref_list, calib_list, map_list, x_offset, y_offset):
@@ -220,7 +220,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.result_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.result_dir, exist_ok=True)
         try:
-            session_data = load_object(os.path.join(self.result_dir, 'offline_calibration_gaze'))
+            session_data = fm.load_object(os.path.join(self.result_dir, 'offline_calibration_gaze'))
             if session_data['version'] != self.session_data_version:
                 logger.warning("Session data from old version. Will not use this.")
                 assert False
@@ -446,7 +446,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def correlate_and_publish(self):
         all_gaze = list(chain.from_iterable((s['gaze'] for s in self.sections)))
-        self.g_pool.gaze_positions = Bisector(all_gaze, self.g_pool.timestamps)
+        self.g_pool.gaze_positions = pm.Bisector(all_gaze, self.g_pool.timestamps)
         self.notify_all({'subject': 'gaze_positions_changed', 'delay': 1})
 
     def calibrate_section(self, sec):
@@ -620,5 +620,5 @@ class Offline_Calibration(Gaze_Producer_Base):
         else:
             session_data['circle_marker_positions'] = []
         cache_path = os.path.join(self.result_dir, 'offline_calibration_gaze')
-        save_object(session_data, cache_path)
+        fm.save_object(session_data, cache_path)
         logger.info('Cached offline calibration data to {}'.format(cache_path))

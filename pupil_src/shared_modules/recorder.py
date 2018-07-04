@@ -93,7 +93,7 @@ class Recorder(System_Plugin_Base):
 
         self.menu.append(ui.Info_Text('Pupil recordings are saved like this: "path_to_recordings/recording_session_name/nnn" where "nnn" is an increasing number to avoid overwrites. You can use "/" in your session name to create subdirectories.'))
         self.menu.append(ui.Info_Text('Recordings are saved to "~/pupil_recordings". You can change the path here but note that invalid input will be ignored.'))
-        self.menu.append(ui.Text_Input('rec_dir', self, setter=self.set_rec_dir, label='Path to recordings'))
+        self.menu.append(ui.Text_Input('rec_root_dir', self, setter=self.set_rec_root_dir, label='Path to recordings'))
         self.menu.append(ui.Text_Input('session_name', self, setter=self.set_session_name, label='Recording session name'))
         self.menu.append(ui.Switch('show_info_menu', self, on_val=True, off_val=False, label='Request additional user info'))
         self.menu.append(ui.Selector('raw_jpeg', self, selection=[True, False], labels=["bigger file, less CPU", "smaller file, more CPU"], label='Compression'))
@@ -358,7 +358,7 @@ class Recorder(System_Plugin_Base):
         else:
             return n_path
 
-    def set_rec_dir(self, val):
+    def set_rec_root_dir(self, val):
         n_path = self.verify_path(val)
         if n_path:
             self.rec_root_dir = n_path
