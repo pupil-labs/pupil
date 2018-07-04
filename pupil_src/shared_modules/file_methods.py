@@ -150,27 +150,26 @@ def next_export_sub_dir(root_export_dir):
     return os.path.join(root_export_dir, next_sub_dir)
 
 
+class _Empty(object):
+    def purge_cache(self):
+        pass
+
+
+# an Immutable dict for dics nested inside this dict.
+class _FrozenDict(dict):
+    def __setitem__(self, key, value):
+        raise NotImplementedError('Invalid operation')
+
+    def clear(self):
+        raise NotImplementedError()
+
+    def update(self, *args, **kwargs):
+        raise NotImplementedError()
+
+
 class Serialized_Dict(object):
-
     cache_len = 100
-
-    class Empty(object):
-        def purge_cache(self):
-            pass
-
-    _cache_ref = [Empty()]*cache_len
-
-    # an Immutable dict for dics nested inside this dict.
-    class FrozenDict(dict):
-
-        def __setitem__(self, key, value):
-            raise NotImplementedError('Invalid operation')
-
-        def clear(self):
-            raise NotImplementedError()
-
-        def update(self, *args, **kwargs):
-            raise NotImplementedError()
+    _cache_ref = [_Empty()]*cache_len
 
     def __init__(self, mapping=None, payload=None):
         if type(mapping) is dict:
@@ -183,7 +182,7 @@ class Serialized_Dict(object):
 
     def _object_hook(self,obj):
         if type(obj) is dict:
-            return self.FrozenDict(obj)
+            return _FrozenDict(obj)
 
     def _deser(self):
         if not self._data:
