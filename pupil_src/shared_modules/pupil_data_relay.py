@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+import collections
 from plugin import System_Plugin_Base
 import zmq_tools
 
@@ -22,18 +23,20 @@ class Pupil_Data_Relay(System_Plugin_Base):
         self.order = .01
         self.gaze_pub = zmq_tools.Msg_Streamer(self.g_pool.zmq_ctx,self.g_pool.ipc_pub_url)
         self.pupil_sub = zmq_tools.Msg_Receiver(self.g_pool.zmq_ctx,self.g_pool.ipc_sub_url,topics=('pupil',))
+        self.recent_pupil_data = collections.deque()
+        self.recent_gaze_data = collections.deque()
 
     def recent_events(self, events):
-        recent_pupil_data = []
-        recent_gaze_data = []
-
         while self.pupil_sub.new_data:
             t, p = self.pupil_sub.recv()
-            recent_pupil_data.append(p)
+            self.recent_pupil_data.append(p)
             new_gaze_data = self.g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
             for g in new_gaze_data:
                 self.gaze_pub.send('gaze', g)
-            recent_gaze_data += new_gaze_data
+            self.recent_gaze_data.extend(new_gaze_data)
 
-        events['pupil'] = recent_pupil_data
-        events['gaze'] = recent_gaze_data
+        events['pupil'] = list(self.recent_pupil_data)
+        events['gaze'] = list(self.recent_gaze_data)
+
+        self.recent_pupil_data.clear()
+        self.recent_gaze_data.clear()
