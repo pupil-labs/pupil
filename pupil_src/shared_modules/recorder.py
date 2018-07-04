@@ -37,7 +37,7 @@ class Recorder(System_Plugin_Base):
     icon_chr = chr(0xe04b)
     icon_font = 'pupil_icons'
 
-    def __init__(self, g_pool, session_name=get_auto_name(), rec_dir=None,
+    def __init__(self, g_pool, session_name=get_auto_name(), rec_root_dir=None,
                  user_info={'name': '', 'additional_field': 'change_me'},
                  info_menu_conf={}, show_info_menu=False, record_eye=True,
                  raw_jpeg=True):
@@ -47,20 +47,20 @@ class Recorder(System_Plugin_Base):
             session_name = get_auto_name()
 
         base_dir = self.g_pool.user_dir.rsplit(os.path.sep, 1)[0]
-        default_rec_dir = os.path.join(base_dir, 'recordings')
+        default_rec_root_dir = os.path.join(base_dir, 'recordings')
 
-        if rec_dir and rec_dir != default_rec_dir and self.verify_path(rec_dir):
-            self.rec_dir = rec_dir
+        if rec_root_dir and rec_root_dir != default_rec_root_dir and self.verify_path(rec_root_dir):
+            self.rec_root_dir = rec_root_dir
         else:
             try:
-                os.makedirs(default_rec_dir)
+                os.makedirs(default_rec_root_dir)
             except OSError as e:
                 if e.errno != errno.EEXIST:
                     logger.error("Could not create Rec dir")
                     raise e
             else:
-                logger.info('Created standard Rec dir at "{}"'.format(default_rec_dir))
-            self.rec_dir = default_rec_dir
+                logger.info('Created standard Rec dir at "{}"'.format(default_rec_root_dir))
+            self.rec_root_dir = default_rec_root_dir
 
         self.raw_jpeg = raw_jpeg
         self.order = .9
@@ -82,7 +82,7 @@ class Recorder(System_Plugin_Base):
         d['user_info'] = self.user_info
         d['info_menu_conf'] = self.info_menu_conf
         d['show_info_menu'] = self.show_info_menu
-        d['rec_dir'] = self.rec_dir
+        d['rec_root_dir'] = self.rec_root_dir
         d['raw_jpeg'] = self.raw_jpeg
         return d
 
@@ -143,7 +143,7 @@ class Recorder(System_Plugin_Base):
                 try:
                     writer = self.pldata_writers['notifications']
                 except KeyError:
-                    writer = PLData_Writer(self.rec_dir, 'notifications')
+                    writer = PLData_Writer(self.rec_path, 'notifications')
                     self.pldata_writers['notifications'] = writer
                 writer.append(notification)
 
@@ -167,7 +167,7 @@ class Recorder(System_Plugin_Base):
         return strftime("%H:%M:%S", rec_time)
 
     def start(self):
-        session = os.path.join(self.rec_dir, self.session_name)
+        session = os.path.join(self.rec_root_dir, self.session_name)
         try:
             os.makedirs(session, exist_ok=True)
             logger.debug("Created new recordings session dir {}".format(session))
@@ -175,6 +175,7 @@ class Recorder(System_Plugin_Base):
             logger.error("Could not start recording. Session dir {} not writable.".format(session))
             return
 
+        self.pldata_writers = {}
         self.frame_count = 0
         self.running = True
         self.menu.read_only = True
@@ -220,8 +221,12 @@ class Recorder(System_Plugin_Base):
             cal_data = load_object(cal_pt_path)
             notification = {'subject': 'calibration.calibration_data', 'record': True}
             notification.update(cal_data)
-            self.data['notifications'].append(notification)
-        except:
+            notification['topic'] = 'notify.' + notification['subject']
+
+            writer = PLData_Writer(self.rec_path, 'notifications')
+            writer.append(notification)
+            self.pldata_writers['notifications'] = writer
+        except FileNotFoundError:
             pass
 
         if self.show_info_menu:
@@ -230,8 +235,6 @@ class Recorder(System_Plugin_Base):
         self.notify_all({'subject': 'recording.started', 'rec_path': self.rec_path,
                          'session_name': self.session_name, 'record_eye': self.record_eye,
                          'compression': self.raw_jpeg})
-
-        self.pldata_writers = {}
 
     def open_info_menu(self):
         self.info_menu = ui.Growing_Menu('additional Recording Info', size=(300, 300), pos=(300, 300))
@@ -264,7 +267,7 @@ class Recorder(System_Plugin_Base):
                     try:
                         writer = self.pldata_writers[key]
                     except KeyError:
-                        writer = PLData_Writer(self.rec_dir, key)
+                        writer = PLData_Writer(self.rec_path, key)
                         self.pldata_writers[key] = writer
                     writer.extend(data)
             if 'frame' in events:
@@ -358,7 +361,7 @@ class Recorder(System_Plugin_Base):
     def set_rec_dir(self, val):
         n_path = self.verify_path(val)
         if n_path:
-            self.rec_dir = n_path
+            self.rec_root_dir = n_path
 
     def set_session_name(self, val):
         if not val:
