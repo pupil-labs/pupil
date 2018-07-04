@@ -242,20 +242,23 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     def recent_events(self, events):
         super().recent_events(events)
         while self.data_sub.new_data:
-            topic, payload = self.data_sub.recv()
+            topic = self.data_sub.recv_topic()
+            remaining_frames = self.data_sub.recv_remaining_frames()
             if topic.startswith('pupil.'):
-                self.pupil_positions[payload['timestamp']] = payload
-            elif payload['subject'] == 'file_source.video_finished':
-                if self.eye_video_loc[0] == payload['source_path']:
-                    logger.debug("eye 0 process complete")
-                    self.detection_status[0] = "complete"
-                    self.stop_eye_process(0)
-                elif self.eye_video_loc[1] == payload['source_path']:
-                    logger.debug("eye 1 process complete")
-                    self.detection_status[1] = "complete"
-                    self.stop_eye_process(1)
-                if self.eye_video_loc == [None, None]:
-                    self.correlate_publish()
+                # pupil data only has one remaining frame
+                payload_serialized = next(remaining_frames)
+                self.pupil_positions[payload['timestamp']] = fm.Serialized_Dict(payload=payload_serialized)
+            else:
+                payload = self.data_sub.deserialize_payload(*remaining_frames)
+                if payload['subject'] == 'file_source.video_finished':
+                    for eyeid n (0, 1):
+                        if self.eye_video_loc[eyeid] == payload['source_path']:
+                            logger.debug("eye {} process complete".format(eyeid))
+                            self.detection_status[eyeid] = "complete"
+                            self.stop_eye_process(eyeid)
+                            break
+                    if self.eye_video_loc == [None, None]:
+                        self.correlate_publish()
         total = sum(self.eye_frame_num)
         self.menu_icon.indicator_stop = len(self.pupil_positions) / total if total else 0.
 
