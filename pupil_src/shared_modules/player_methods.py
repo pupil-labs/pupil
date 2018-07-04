@@ -544,11 +544,15 @@ def update_recording_v13_v14(rec_dir):
 
 def update_recording_v14_v18(rec_dir):
     logger.info("Updating recording from v1.4 to v1.8")
+    legacy_topic_mapping = {'notifications': 'notify',
+                            'gaze_positions': 'gaze',
+                            'pupil_positions': 'pupil'}
 
     pd_old = load_object(os.path.join(rec_dir, "pupil_data"))
-    for topic in pd_old:
-        with PLData_Writer(rec_dir, topic) as writer:
-            writer.extend(pd_old[topic])
+    for old_topic in pd_old:
+        new_topic = legacy_topic_mapping.get(old_topic, d=old_topic)
+        with PLData_Writer(rec_dir, new_topic) as writer:
+            writer.extend(pd_old[old_topic])
 
     meta_info_path = os.path.join(rec_dir, "info.csv")
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
