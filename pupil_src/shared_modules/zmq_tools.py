@@ -93,14 +93,23 @@ class Msg_Receiver(ZMQ_Socket):
         Any addional message frames will be added as a list
         in the payload dict with key: '__raw_data__' .
         '''
-        topic = self.socket.recv_string()
-        payload = serializer.loads(self.socket.recv(), encoding='utf-8')
-        extra_frames = []
-        while self.socket.get(zmq.RCVMORE):
-            extra_frames.append(self.socket.recv())
+        topic = self.recv_topic()
+        remaining_frames = self.recv_remaining_frames()
+        payload = self.deserialize_payload(*remaining_frames)
+        return topic, payload
+
+    def recv_topic(self):
+        return self.socket.recv_string()
+
+    def recv_remaining_frames(self):
+        while self.new_data:
+            yield self.socket.recv()
+
+    def deserialize_payload(self, payload_serialized, *extra_frames):
+        payload = serializer.loads(payload_serialized, encoding='utf-8')
         if extra_frames:
             payload['__raw_data__'] = extra_frames
-        return topic, payload
+        return payload
 
     @property
     def new_data(self):
