@@ -141,10 +141,10 @@ class Recorder(System_Plugin_Base):
             else:
                 notification['topic'] = 'notify.' + notification['subject']
                 try:
-                    writer = self.pldata_writers['notifications']
+                    writer = self.pldata_writers['notify']
                 except KeyError:
-                    writer = PLData_Writer(self.rec_path, 'notifications')
-                    self.pldata_writers['notifications'] = writer
+                    writer = PLData_Writer(self.rec_path, 'notify')
+                    self.pldata_writers['notify'] = writer
                 writer.append(notification)
 
         elif notification['subject'] == 'recording.should_start':
@@ -223,9 +223,9 @@ class Recorder(System_Plugin_Base):
             notification.update(cal_data)
             notification['topic'] = 'notify.' + notification['subject']
 
-            writer = PLData_Writer(self.rec_path, 'notifications')
+            writer = PLData_Writer(self.rec_path, 'notify')
             writer.append(notification)
-            self.pldata_writers['notifications'] = writer
+            self.pldata_writers['notify'] = writer
         except FileNotFoundError:
             pass
 
