@@ -31,7 +31,7 @@ def enclosing_window(timestamps, idx):
     before = timestamps[idx - 1] if idx > 0 else -np.inf
     now = timestamps[idx]
     after = timestamps[idx + 1] if idx < len(timestamps) - 1 else np.inf
-    return (now - before) / 2., (after - now) / 2.
+    return (now + before) / 2., (after + now) / 2.
 
 
 def exact_window(timestamps, index_range):
@@ -40,13 +40,25 @@ def exact_window(timestamps, index_range):
 class Bisector(object):
     """docstring for ClassName"""
     def __init__(self, data, data_ts):
-        self.data = np.asarray(data)
-        self.data_ts = np.asarray(data_ts)
+        if len(data) != len(data_ts):
+            raise ValueError(('Each element in `data` requires a corresponding'
+                              ' timestamp in `data_ts`'))
+        elif not data:
+            self.data = []
+            self.data_ts = []
+        else:
+            self.data_ts = np.asarray(data_ts)
 
-        # Find correct order once and reorder both lists in-place
-        self.sorted_idc = np.argsort(self.data_ts)
-        self.data_ts = self.data_ts[self.sorted_idc]
-        if self.data.shape[0]:
+            # np.array() recursively iterates over `data` and its elements.
+            # If `data` includes dictionaries their iterator returns keys and a
+            # 2-dim array will be created. We want an explicit 1-dim array
+            # that we can sort and reconvert to an Python list.
+            self.data = np.empty(len(data), dtype=object)
+            self.data[:] = data
+
+            # Find correct order once and reorder both lists in-place
+            self.sorted_idc = np.argsort(self.data_ts)
+            self.data_ts = self.data_ts[self.sorted_idc]
             self.data = self.data[self.sorted_idc].tolist()
 
     def by_ts_window(self, ts_window):
@@ -58,6 +70,12 @@ class Bisector(object):
 
     def __len__(self):
         return len(self.data)
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __bool__(self):
+        return bool(self.data)
 
 
 class Affiliator(Bisector):
