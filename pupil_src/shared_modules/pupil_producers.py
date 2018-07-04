@@ -181,7 +181,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.data_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.data_dir, exist_ok=True)
         try:
-            session_data = load_object(os.path.join(self.data_dir, 'offline_pupil_data'))
+            session_data = pm.load_object(os.path.join(self.data_dir, 'offline_pupil_data'))
             assert session_data.get('version') == self.session_data_version
         except (AssertionError, FileNotFoundError):
             session_data = {}
@@ -287,12 +287,12 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         session_data['detection_status'] = self.detection_status
         session_data['version'] = self.session_data_version
         cache_path = os.path.join(self.data_dir, 'offline_pupil_data')
-        save_object(session_data, cache_path)
+        fm.save_object(session_data, cache_path)
         logger.info('Cached detected pupil data to {}'.format(cache_path))
 
     def redetect(self):
         self.pupil_positions.clear()  # delete previously detected pupil positions
-        self.g_pool.pupil_positions = pm.Bisector([], self.g_pool.timestamps)
+        self.g_pool.pupil_positions = pm.Bisector([], [])
         self.detection_finished_flag = False
         self.detection_paused = False
         for eye_id in range(2):

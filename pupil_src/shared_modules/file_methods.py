@@ -257,7 +257,7 @@ class Serialized_Dict(object):
 
     def __cmp__(self, dict_):
         self._deser()
-        return self.__cmp__(self._data, dict_)
+        return self._data.__cmp__(dict_)
 
     def __contains__(self, item):
         self._deser()

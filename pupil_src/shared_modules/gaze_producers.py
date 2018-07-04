@@ -445,8 +445,9 @@ class Offline_Calibration(Gaze_Producer_Base):
                     sec['bg_task'] = None
 
     def correlate_and_publish(self):
-        all_gaze = list(chain.from_iterable((s['gaze'] for s in self.sections)))
-        self.g_pool.gaze_positions = pm.Bisector(all_gaze, self.g_pool.timestamps)
+        gaze_data = list(chain.from_iterable((s['gaze'] for s in self.sections)))
+        gaze_ts = [gp['timestamp'] for gp in gaze_data]
+        self.g_pool.gaze_positions = pm.Bisector(gaze_data, gaze_ts)
         self.notify_all({'subject': 'gaze_positions_changed', 'delay': 1})
 
     def calibrate_section(self, sec):
