@@ -92,7 +92,7 @@ def load_pldata_file(directory, topic):
         data_ts = np.load(ts_file)
         with open(msgpack_file, "rb") as fh:
             for topic, payload in msgpack.Unpacker(fh, raw=False, use_list=False):
-                data.append(Serialized_Dict(payload=payload))
+                data.append(Serialized_Dict(msgpack_bytes=payload))
     except FileNotFoundError:
         data = []
         data_ts = []
@@ -175,11 +175,11 @@ class Serialized_Dict(object):
     cache_len = 100
     _cache_ref = [_Empty()]*cache_len
 
-    def __init__(self, mapping=None, payload=None):
-        if type(mapping) is dict:
-            self._ser_data = msgpack.packb(mapping, use_bin_type=True)
-        elif type(payload) is bytes:
-            self._ser_data = payload
+    def __init__(self, python_dict=None, msgpack_bytes=None):
+        if type(python_dict) is dict:
+            self._ser_data = msgpack.packb(python_dict, use_bin_type=True)
+        elif type(msgpack_bytes) is bytes:
+            self._ser_data = msgpack_bytes
         else:
             raise ValueError("Neither mapping nor payload is supplied or wrong format.")
         self._data = None
@@ -204,7 +204,6 @@ class Serialized_Dict(object):
 
     def __setitem__(self, key, item):
         raise NotImplementedError()
-        self._data[key] = item
 
     def __getitem__(self, key):
         self._deser()
@@ -220,8 +219,6 @@ class Serialized_Dict(object):
 
     def __delitem__(self, key):
         raise NotImplementedError()
-        self._deser()
-        del self._data[key]
 
     def get(self,key,default):
         try:
@@ -231,7 +228,6 @@ class Serialized_Dict(object):
 
     def clear(self):
         raise NotImplementedError()
-        return self._data.clear()
 
     def copy(self):
         self._deser()
@@ -243,8 +239,6 @@ class Serialized_Dict(object):
 
     def update(self, *args, **kwargs):
         raise NotImplementedError()
-        self._deser()
-        return self._data.update(*args, **kwargs)
 
     def keys(self):
         self._deser()
@@ -260,7 +254,6 @@ class Serialized_Dict(object):
 
     def pop(self, *args):
         raise NotImplementedError()
-        return self._data.pop(*args)
 
     def __cmp__(self, dict_):
         self._deser()

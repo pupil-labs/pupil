@@ -259,7 +259,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             if topic.startswith('pupil.'):
                 # pupil data only has one remaining frame
                 payload_serialized = next(remaining_frames)
-                pupil_datum = fm.Serialized_Dict(payload=payload_serialized)
+                pupil_datum = fm.Serialized_Dict(msgpack_bytes=payload_serialized)
                 self.pupil_positions[pupil_datum['timestamp']] = pupil_datum
             else:
                 payload = self.data_sub.deserialize_payload(*remaining_frames)
