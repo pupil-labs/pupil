@@ -102,7 +102,7 @@ class Msg_Receiver(ZMQ_Socket):
         return self.socket.recv_string()
 
     def recv_remaining_frames(self):
-        while self.new_data:
+        while self.socket.get(zmq.RCVMORE):
             yield self.socket.recv()
 
     def deserialize_payload(self, payload_serialized, *extra_frames):
