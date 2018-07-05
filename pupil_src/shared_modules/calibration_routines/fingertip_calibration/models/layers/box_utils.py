@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 '''
 # Adapted from https://github.com/amdegroot/ssd.pytorch/blob/master/layers/box_utils.py
 
+
 import torch
 
 
@@ -51,9 +52,9 @@ def nms(boxes, scores, overlap=0.5, top_k=10):
         The indices of the kept boxes with respect to num_priors.
     """
 
-    keep = scores.new(scores.size(0)).zero_().long()
     if boxes.numel() == 0:
-        return keep
+        return
+    keep = scores.new(scores.size(0)).zero_().long()
     x1 = boxes[:, 0]
     y1 = boxes[:, 1]
     x2 = boxes[:, 2]

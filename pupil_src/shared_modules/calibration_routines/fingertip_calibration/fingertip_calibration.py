@@ -9,24 +9,23 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+
+import torch
 import os
 import cv2
 import numpy as np
-import audio
-from pyglui import ui
-from pyglui.cygl.utils import draw_points, draw_polyline, draw_progress, RGBA
-from calibration_routines.calibration_plugin_base import Calibration_Plugin
-from calibration_routines.finish_calibration import finish_calibration
-import torch
-from calibration_routines.fingertip_calibration.models.unet import UNet
-from calibration_routines.fingertip_calibration.models.ssd_lite import build_ssd_lite
-
-# logging
 import logging
 logger = logging.getLogger(__name__)
 
+from pyglui import ui
+from pyglui.cygl import utils as cygl_utils
 
-class Fingertip_Calibration(Calibration_Plugin):
+import audio
+from calibration_routines import calibration_plugin_base, finish_calibration
+from calibration_routines.fingertip_calibration.models import ssd_lite, unet
+
+
+class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
     """Calibrate gaze parameters using your fingertip.
        Move your head for example horizontally and vertically while gazing at your fingertip
        to quickly sample a wide range gaze angles.
@@ -35,31 +34,30 @@ class Fingertip_Calibration(Calibration_Plugin):
         super().__init__(g_pool)
         self.menu = None
 
-        ### Initialize CNN pipeline ###
+        # Initialize CNN pipeline
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        module_folder = os.path.join(os.path.split(__file__)[0], "weights")
 
         # Hand Detector
         self.hand_detector_cfg = {
             'input_size': 225,
+            'confidence_thresh': 0.9,
             'max_num_detection': 1,
             'nms_thresh': 0.45,
-            'conf_thresh': 0.8,
-            'resume_path': os.path.join(module_folder, 'hand_detector_model.pkl'),
+            'weights_path': os.path.join(os.path.split(__file__)[0], "weights", 'hand_detector_model.pkl'),
         }
         self.hand_transform = BaseTransform(self.hand_detector_cfg['input_size'], (117.77, 115.42, 107.29), (72.03, 69.83, 71.43))
-        self.hand_detector = build_ssd_lite(self.hand_detector_cfg)
-        self.hand_detector.load_state_dict(torch.load(self.hand_detector_cfg['resume_path']))
+        self.hand_detector = ssd_lite.build_ssd_lite(self.hand_detector_cfg)
+        self.hand_detector.load_state_dict(torch.load(self.hand_detector_cfg['weights_path']))
         self.hand_detector.eval().to(self.device)
 
         # Fingertip Detector
         self.fingertip_detector_cfg = {
-            'conf_thresh': 0.7,
-            'resume_path': os.path.join(module_folder, "fingertip_detector_model.pkl"),
+            'confidence_thresh': 0.6,
+            'weights_path': os.path.join(os.path.split(__file__)[0], "weights", "fingertip_detector_model.pkl"),
         }
         self.fingertip_transform = BaseTransform(64, (121.97, 119.65, 111.42), (67.58, 65.17, 67.72))
-        self.fingertip_detector = UNet(num_classes=10, in_channels=3, depth=4, start_filts=32, up_mode='transpose')
-        self.fingertip_detector.load_state_dict(torch.load(self.fingertip_detector_cfg['resume_path']))
+        self.fingertip_detector = unet.UNet(num_classes=10, in_channels=3, depth=4, start_filts=32, up_mode='transpose')
+        self.fingertip_detector.load_state_dict(torch.load(self.fingertip_detector_cfg['weights_path']))
         self.fingertip_detector.eval().to(self.device)
 
         self.collect_tips = False
@@ -102,7 +100,7 @@ class Fingertip_Calibration(Calibration_Plugin):
         self.active = False
         self.button.status_text = ''
         if self.mode == 'calibration':
-            finish_calibration(self.g_pool, self.pupil_list, self.ref_list)
+            finish_calibration.finish_calibration(self.g_pool, self.pupil_list, self.ref_list)
         elif self.mode == 'accuracy_test':
             self.finish_accuracy_test(self.pupil_list, self.ref_list)
         super().stop()
@@ -111,8 +109,7 @@ class Fingertip_Calibration(Calibration_Plugin):
         frame = events.get('frame')
         if (self.visualize or self.active) and frame:
             orig_img = frame.img
-            img_width = frame.width
-            img_height = frame.height
+            img_width, img_height = frame.width, frame.height
             orig_img = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
 
             # Hand Detection
@@ -124,8 +121,8 @@ class Fingertip_Calibration(Calibration_Plugin):
             self.hand_viz = []
             self.finger_viz = []
             for hand_detection in hand_detections:
-                conf, x1, y1, x2, y2 = hand_detection
-                if conf == 0:
+                confidence, x1, y1, x2, y2 = hand_detection
+                if confidence == 0:
                     break
 
                 x1 *= img_width
@@ -137,7 +134,7 @@ class Fingertip_Calibration(Calibration_Plugin):
                 tl = np.array((x1, y1))
                 br = np.array((x2, y2))
                 W, H = br - tl
-                crop_len = np.clip(max(W, H) * 1.5, 1, min(img_width, img_height))
+                crop_len = np.clip(max(W, H) * 1.25, 1, min(img_width, img_height))
                 crop_center = (br + tl) / 2
                 crop_center = np.clip(crop_center, crop_len / 2, (img_width, img_height) - crop_len / 2)
                 crop_tl = (crop_center - crop_len / 2).astype(np.int)
@@ -154,7 +151,7 @@ class Fingertip_Calibration(Calibration_Plugin):
                 ref = None
                 for fingertip_detection in fingertip_detections:
                     p = np.unravel_index(fingertip_detection.argmax(), fingertip_detection.shape)
-                    if fingertip_detection[p] >= self.fingertip_detector_cfg['conf_thresh']:
+                    if fingertip_detection[p] >= self.fingertip_detector_cfg['confidence_thresh']:
                         p = np.array(p) / (fingertip_detection.shape) * (crop_br[1] - crop_tl[1], crop_br[0] - crop_tl[0]) + (crop_tl[1], crop_tl[0])
                         self.finger_viz[-1].append(p)
                         detected_fingers += 1
@@ -197,18 +194,18 @@ class Fingertip_Calibration(Calibration_Plugin):
             # Draw hand detection results
             for (x1, y1, x2, y2), fingertips in zip(self.hand_viz, self.finger_viz):
                 pts = np.array([[x1, y1], [x1, y2], [x2, y2], [x2, y1], [x1, y1]], np.int32)
-                draw_polyline(pts, thickness=3 * self.g_pool.gui_user_scale, color=RGBA(0., 1., 0., 1.))
-                for p in fingertips:
-                    if p is not None:
-                        p_flipped = p[::-1]
-                        draw_progress(p_flipped, 0., 1.,
+                cygl_utils.draw_polyline(pts, thickness=3 * self.g_pool.gui_user_scale, color=cygl_utils.RGBA(0., 1., 0., 1.))
+                for tip in fingertips:
+                    if tip is not None:
+                        y, x = tip
+                        cygl_utils.draw_progress((x, y), 0., 1.,
                                       inner_radius=25 * self.g_pool.gui_user_scale,
                                       outer_radius=35 * self.g_pool.gui_user_scale,
-                                      color=RGBA(1., 1., 1., 1.),
+                                      color=cygl_utils.RGBA(1., 1., 1., 1.),
                                       sharpness=0.9)
 
-                        draw_points([p_flipped], size=10 * self.g_pool.gui_user_scale,
-                                    color=RGBA(1., 1., 1., 1.),
+                        cygl_utils.draw_points([(x, y)], size=10 * self.g_pool.gui_user_scale,
+                                    color=cygl_utils.RGBA(1., 1., 1., 1.),
                                     sharpness=0.9)
 
     def deinit_ui(self):

@@ -10,10 +10,10 @@ See COPYING and COPYING.LESSER for license details.
 '''
 # Adapted from https://github.com/jaxony/unet-pytorch/blob/master/model.py
 
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import init
 
 
 def conv3x3(in_channels, out_channels, stride=1, padding=1, bias=True, groups=1):
@@ -216,8 +216,8 @@ class UNet(nn.Module):
     @staticmethod
     def weight_init(m):
         if isinstance(m, nn.Conv2d):
-            init.xavier_normal_(m.weight)
-            init.constant_(m.bias, 0)
+            nn.init.xavier_normal_(m.weight)
+            nn.init.constant_(m.bias, 0)
 
     def reset_params(self):
         for i, m in enumerate(self.modules()):

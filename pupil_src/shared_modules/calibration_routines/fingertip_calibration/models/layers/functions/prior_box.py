@@ -10,9 +10,10 @@ See COPYING and COPYING.LESSER for license details.
 '''
 # Adapted from https://github.com/amdegroot/ssd.pytorch/blob/master/layers/functions/prior_box.py
 
+
 import torch
-from math import sqrt as sqrt
-from itertools import product as product
+import math
+import itertools
 
 
 class PriorBox(object):
@@ -32,7 +33,7 @@ class PriorBox(object):
     def forward(self):
         mean = []
         for k, f in enumerate(self.feature_maps):
-            for i, j in product(range(f), repeat=2):
+            for i, j in itertools.product(range(f), repeat=2):
                 f_k = self.img_size / self.steps[k]
                 # unit center x,y
                 cx = (j + 0.5) / f_k
@@ -43,12 +44,12 @@ class PriorBox(object):
                 mean += [cx, cy, s_k, s_k]
 
                 # aspect_ratio: 1; rel size: sqrt(s_k * s_(k+1))
-                s_k_prime = sqrt(s_k * (self.max_sizes[k] / self.img_size))
+                s_k_prime = math.sqrt(s_k * (self.max_sizes[k] / self.img_size))
                 mean += [cx, cy, s_k_prime, s_k_prime]
 
                 # rest of aspect ratios
                 for ar in self.aspect_ratios[k]:
-                    mean += [cx, cy, s_k*sqrt(ar), s_k/sqrt(ar)]
+                    mean += [cx, cy, s_k*math.sqrt(ar), s_k/math.sqrt(ar)]
         output = torch.Tensor(mean).view(-1, 4)
         if self.clip:
             output.clamp_(max=1, min=0)

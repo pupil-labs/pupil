@@ -11,11 +11,12 @@ See COPYING and COPYING.LESSER for license details.
 # Adapted from https://github.com/ShuangXieIrene/ssds.pytorch/blob/master/lib/modeling/ssds/ssd_lite.py &
 # https://github.com/amdegroot/ssd.pytorch/blob/master/ssd.py
 
+
 import torch
 import torch.nn as nn
-from calibration_routines.fingertip_calibration.models.layers.functions.prior_box import PriorBox
-from calibration_routines.fingertip_calibration.models.layers.functions.detection import Detect
-from calibration_routines.fingertip_calibration.models.mobilenet import mobilenet, depth_sep_conv
+
+from calibration_routines.fingertip_calibration.models.layers.functions import prior_box, detection
+from calibration_routines.fingertip_calibration.models import mobilenet
 
 
 class SSDLite(nn.Module):
@@ -39,10 +40,10 @@ class SSDLite(nn.Module):
         self.loc = nn.ModuleList(head[0])
         self.conf = nn.ModuleList(head[1])
         self.softmax = nn.Softmax(dim=-1)
-        self.detect = Detect(cfg)
+        self.detect = detection.Detect(cfg)
 
         with torch.no_grad():
-            self.priors = PriorBox(self.cfg).forward()
+            self.priors = prior_box.PriorBox(self.cfg).forward()
 
     def forward(self, x):
         """Applies network layers on input image(s) x.
@@ -88,7 +89,7 @@ def add_extras(cfg):
     in_channels = None
     for layer, out_channels in zip(cfg['feature_maps_layer'], cfg['feature_maps_channel']):
         if layer == 'S':
-            extra_layers += [depth_sep_conv(in_channels, out_channels, stride=2) ]
+            extra_layers += [mobilenet.depth_sep_conv(in_channels, out_channels, stride=2) ]
         in_channels = out_channels
 
     return extra_layers
@@ -113,4 +114,4 @@ def build_ssd_lite(cfg):
     cfg['feature_maps_channel'] = [int(d * width_multiplier) for d in [512, 1024, 512, 256, 256, 128]]
     cfg['feature_maps_layer'] = [11, 13, 'S', 'S', 'S', 'S']
 
-    return SSDLite(cfg=cfg, base=mobilenet(width_multiplier), extras=add_extras(cfg), head=add_head(cfg))
+    return SSDLite(cfg=cfg, base=mobilenet.mobilenet(width_multiplier), extras=add_extras(cfg), head=add_head(cfg))

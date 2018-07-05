@@ -10,9 +10,10 @@ See COPYING and COPYING.LESSER for license details.
 '''
 # Adapted from https://github.com/amdegroot/ssd.pytorch/blob/master/layers/functions/detection.py
 
+
 import torch
 from torch.autograd import Function
-from calibration_routines.fingertip_calibration.models.layers.box_utils import decode, nms
+from calibration_routines.fingertip_calibration.models.layers import box_utils
 
 
 class Detect(Function):
@@ -26,7 +27,7 @@ class Detect(Function):
         self.num_classes = cfg['num_classes']
         self.top_k = cfg['max_num_detection']
         self.nms_thresh = cfg['nms_thresh']
-        self.conf_thresh = cfg['conf_thresh']
+        self.confidence_thresh = cfg['confidence_thresh']
         self.bkg_label = 0
         self.variance = [0.1, 0.2]
 
@@ -47,25 +48,24 @@ class Detect(Function):
 
         # Decode predictions into bboxes.
         for i in range(num):
-            decoded_boxes = decode(loc_data[i], prior_data, self.variance)
+            decoded_boxes = box_utils.decode(loc_data[i], prior_data, self.variance)
             # For each class, perform nms
             conf_scores = conf_preds[i].clone()
 
             for cl in range(self.num_classes):
                 if cl == self.bkg_label:
                     continue
-                c_mask = conf_scores[cl].gt(self.conf_thresh)
+                c_mask = conf_scores[cl].gt(self.confidence_thresh)
                 scores = conf_scores[cl][c_mask]
                 if scores.dim() == 0:
                     continue
                 l_mask = c_mask.unsqueeze(1).expand_as(decoded_boxes)
                 boxes = decoded_boxes[l_mask].view(-1, 4)
                 # idx of highest scoring and non-overlapping boxes per class
-                try:
-                    ids, count = nms(boxes, scores, self.nms_thresh, self.top_k)
-                except ValueError:
-                    continue
-                output[i, cl, :count] = torch.cat((scores[ids[:count]].unsqueeze(1), boxes[ids[:count]]), 1)
+                res = box_utils.nms(boxes, scores, self.nms_thresh, self.top_k)
+                if res is not None:
+                    ids, count = res
+                    output[i, cl, :count] = torch.cat((scores[ids[:count]].unsqueeze(1), boxes[ids[:count]]), 1)
 
         flt = output.contiguous().view(num, -1, 5)
         _, idx = flt[:, :, 0].sort(1, descending=True)
