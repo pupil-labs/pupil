@@ -111,10 +111,14 @@ class PLData_Writer(object):
         self.file_handle = open(os.path.join(directory, file_name), 'wb')
 
     def append(self, datum):
-        self.ts_queue.append(datum['timestamp'])
-        payload = msgpack.packb(datum, use_bin_type=True)
-        pair = msgpack.packb((datum['topic'], payload),
-                             use_bin_type=True)
+        datum_serialized = msgpack.packb(datum, use_bin_type=True)
+        self.append_serialized(datum['timestamp'],
+                               datum['topic'],
+                               datum_serialized)
+
+    def append_serialized(self, timestamp, topic, datum_serialized):
+        self.ts_queue.append(timestamp)
+        pair = msgpack.packb((topic, datum_serialized), use_bin_type=True)
         self.file_handle.write(pair)
 
     def extend(self, data):
@@ -177,7 +181,7 @@ class Serialized_Dict(object):
         elif type(payload) is bytes:
             self._ser_data = payload
         else:
-            raise Exception("neither mapping nor payload is supplied or wrong format.")
+            raise ValueError("Neither mapping nor payload is supplied or wrong format.")
         self._data = None
 
     def _object_hook(self,obj):
@@ -193,6 +197,10 @@ class Serialized_Dict(object):
 
     def purge_cache(self):
         self._data = None
+
+    @property
+    def serialized(self):
+        return self._ser_data
 
     def __setitem__(self, key, item):
         raise NotImplementedError()

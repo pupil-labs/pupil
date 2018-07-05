@@ -9,28 +9,29 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os
-import zmq
-import zmq_tools
-import numpy as np
-from itertools import chain
-from plugin import Producer_Plugin_Base
-from pyglui import ui
-import player_methods as pm
-import file_methods as fm
-
-from pyglui.pyfontstash import fontstash as fs
-from pyglui.cygl.utils import *
-import OpenGL.GL as gl
-import gl_utils
-
-import pupil_detectors  # trigger module compilation
-
 import logging
+import os
+from itertools import chain
+import collections
+
+import numpy as np
+import OpenGL.GL as gl
+import zmq
+from pyglui import ui
+import pyglui.cygl.utils as cygl_utils
+from pyglui.pyfontstash import fontstash as fs
+
+import file_methods as fm
+import gl_utils
+import player_methods as pm
+import pupil_detectors  # trigger module compilation
+import zmq_tools
+from plugin import Producer_Plugin_Base
+
 logger = logging.getLogger(__name__)
 
-right_color = RGBA(0.9844, 0.5938, 0.4023, 1.)
-left_color = RGBA(0.668, 0.6133, 0.9453, 1.)
+right_color = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.)
+left_color = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.)
 
 
 class Empty(object):
@@ -103,13 +104,17 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
             self.cache[key] = {'left': [], 'right': [],
                                'xlim': [t0, t1], 'ylim': [0, 1]}
         else:
-            right = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 0]
-            left = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 1]
+            pupil_data_right_left = collections.deque(), collections.deque()
+            for pp in self.g_pool.pupil_positions:
+                ts_value_pair = pp['timestamp'], pp[key]
+                pupil_data_right_left[pp['id']].append(ts_value_pair)
 
             # max_val must not be 0, else gl will crash
-            max_val = max(chain((pp[1] for pp in right), (pp[1] for pp in left))) or 1
+            pupil_data_chained = chain.from_iterable(pupil_data_right_left)
+            max_val = max((pd[1] for pd in pupil_data_chained)) or 1
 
-            self.cache[key] = {'left': left, 'right': right,
+            self.cache[key] = {'right': list(pupil_data_right_left[0]),
+                               'left': list(pupil_data_right_left[1]),
                                'xlim': [t0, t1], 'ylim': [0, max_val]}
 
     def draw_pupil_diameter(self, width, height, scale):
@@ -123,8 +128,8 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
         left = self.cache[key]['left']
 
         with gl_utils.Coord_System(*self.cache[key]['xlim'], *self.cache[key]['ylim']):
-            draw_points(right, size=2.*scale, color=right_color)
-            draw_points(left, size=2.*scale, color=left_color)
+            cygl_utils.draw_points(right, size=2.*scale, color=right_color)
+            cygl_utils.draw_points(left, size=2.*scale, color=left_color)
 
     def draw_dia_legend(self, width, height, scale):
         self.draw_legend(self.dia_timeline.label, width, height, scale)
@@ -145,12 +150,16 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 
         self.glfont.pop_state()
 
-        draw_polyline([(pad, 1.5 * legend_height),
-                       (width / 4, 1.5 * legend_height)],
-                      color=left_color, line_type=gl.GL_LINES, thickness=4.*scale)
-        draw_polyline([(width / 2 + pad, 1.5 * legend_height),
-                       (width * 3 / 4, 1.5 * legend_height)],
-                      color=right_color, line_type=gl.GL_LINES, thickness=4.*scale)
+        cygl_utils.draw_polyline([(pad, 1.5 * legend_height),
+                                  (width / 4, 1.5 * legend_height)],
+                                 color=left_color,
+                                 line_type=gl.GL_LINES,
+                                 thickness=4.*scale)
+        cygl_utils.draw_polyline([(width / 2 + pad, 1.5 * legend_height),
+                                  (width * 3 / 4, 1.5 * legend_height)],
+                                 color=right_color,
+                                 line_type=gl.GL_LINES,
+                                 thickness=4.*scale)
 
 
 class Pupil_From_Recording(Pupil_Producer_Base):
@@ -172,6 +181,7 @@ class Pupil_From_Recording(Pupil_Producer_Base):
 class Offline_Pupil_Detection(Pupil_Producer_Base):
     """docstring for Offline_Pupil_Detection"""
     session_data_version = 2
+    session_data_name = 'offline_pupil'
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -181,16 +191,18 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.data_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.data_dir, exist_ok=True)
         try:
-            session_data = pm.load_object(os.path.join(self.data_dir, 'offline_pupil_data'))
-            assert session_data.get('version') == self.session_data_version
+            session_meta_data = pm.load_object(os.path.join(self.data_dir, self.session_data_name+'.meta'))
+            assert session_meta_data.get('version') == self.session_data_version
         except (AssertionError, FileNotFoundError):
-            session_data = {}
-            session_data["detection_method"] = '3d'
-            session_data['pupil'] = []
-            session_data['detection_status'] = ["unknown", "unknown"]
-        self.detection_method = session_data["detection_method"]
-        self.pupil_positions = {pp['timestamp']: pp for pp in session_data['pupil']}
-        self.detection_status = session_data['detection_status']
+            session_meta_data = {}
+            session_meta_data["detection_method"] = '3d'
+            session_meta_data['detection_status'] = ["unknown", "unknown"]
+        self.detection_method = session_meta_data["detection_method"]
+        self.detection_status = session_meta_data['detection_status']
+
+        data, data_ts = fm.load_pldata_file(self.data_dir, self.session_data_name)
+        self.pupil_positions = {ts: pp for ts, pp in zip(data_ts, data)}
+
         self.eye_video_loc = [None, None]
         self.eye_frame_num = [0, 0]
         for pp in self.pupil_positions.values():
@@ -247,11 +259,12 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             if topic.startswith('pupil.'):
                 # pupil data only has one remaining frame
                 payload_serialized = next(remaining_frames)
-                self.pupil_positions[payload['timestamp']] = fm.Serialized_Dict(payload=payload_serialized)
+                pupil_datum = fm.Serialized_Dict(payload=payload_serialized)
+                self.pupil_positions[pupil_datum['timestamp']] = pupil_datum
             else:
                 payload = self.data_sub.deserialize_payload(*remaining_frames)
                 if payload['subject'] == 'file_source.video_finished':
-                    for eyeid n (0, 1):
+                    for eyeid in (0, 1):
                         if self.eye_video_loc[eyeid] == payload['source_path']:
                             logger.debug("eye {} process complete".format(eyeid))
                             self.detection_status[eyeid] = "complete"
@@ -284,12 +297,15 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.save_offline_data()
 
     def save_offline_data(self):
+        with fm.PLData_Writer(self.data_dir, 'offline_pupil') as writer:
+            for timestamp, datum in self.pupil_positions.items():
+                writer.append_serialized(timestamp, 'pupil', datum.serialized)
+
         session_data = {}
         session_data["detection_method"] = self.detection_method
-        session_data['pupil'] = list(self.pupil_positions.values())
         session_data['detection_status'] = self.detection_status
         session_data['version'] = self.session_data_version
-        cache_path = os.path.join(self.data_dir, 'offline_pupil_data')
+        cache_path = os.path.join(self.data_dir, 'offline_pupil.meta')
         fm.save_object(session_data, cache_path)
         logger.info('Cached detected pupil data to {}'.format(cache_path))
 
