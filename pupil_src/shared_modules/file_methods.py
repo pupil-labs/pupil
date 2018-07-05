@@ -174,6 +174,7 @@ class _FrozenDict(dict):
 class Serialized_Dict(object):
     cache_len = 100
     _cache_ref = [_Empty()]*cache_len
+    MSGPACK_EXT_CODE = 13
 
     def __init__(self, python_dict=None, msgpack_bytes=None):
         if type(python_dict) is dict:
@@ -184,16 +185,30 @@ class Serialized_Dict(object):
             raise ValueError("Neither mapping nor payload is supplied or wrong format.")
         self._data = None
 
-    def _object_hook(self,obj):
-        if type(obj) is dict:
-            return _FrozenDict(obj)
-
     def _deser(self):
         if not self._data:
             self._data = msgpack.unpackb(self._ser_data, raw=False, use_list=False,
-                                         object_hook=self._object_hook)
+                                         object_hook=self.unpacking_object_hook,
+                                         ext_hook=self.unpacking_ext_hook)
             self._cache_ref.pop(0).purge_cache()
             self._cache_ref.append(self)
+
+    @classmethod
+    def unpacking_object_hook(self,obj):
+        if type(obj) is dict:
+            return _FrozenDict(obj)
+
+    @classmethod
+    def packing_hook(self, obj):
+        if isinstance(obj, self):
+            return msgpack.ExtType(self.MSGPACK_EXT_CODE, obj.serialized)
+        raise TypeError("can't serialize {}({})".format(type(obj), repr(obj)))
+
+    @classmethod
+    def unpacking_ext_hook(self, code, data):
+        if code == self.MSGPACK_EXT_CODE:
+            return self(msgpack_bytes=data)
+        return msgpack.ExtType(code, data)
 
     def purge_cache(self):
         self._data = None
@@ -211,7 +226,7 @@ class Serialized_Dict(object):
 
     def __repr__(self):
         self._deser()
-        return repr(self._data)
+        return 'Serialized_Dict({})'.format(repr(self._data))
 
     def __len__(self):
         self._deser()

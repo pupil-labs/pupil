@@ -21,27 +21,28 @@ Terms
     + duration (temporal) = what is the minimum time required for gaze data to be within dispersion threshold?
 """
 
-import os
 import csv
-import numpy as np
-import cv2
-
-from bisect import bisect_left, bisect_right
-from scipy.spatial.distance import pdist
-from collections import deque
-from itertools import chain
-from pyglui import ui
-from pyglui.cygl.utils import draw_circle, RGBA
-from pyglui.pyfontstash import fontstash
-
-from methods import denormalize
-from player_methods import transparent_circle
-from plugin import Analysis_Plugin_Base
-
-import background_helper as bh
-
 # logging
 import logging
+import os
+from bisect import bisect_left, bisect_right
+from collections import deque
+from itertools import chain
+
+import msgpack
+import numpy as np
+from pyglui import ui
+from pyglui.cygl.utils import RGBA, draw_circle
+from pyglui.pyfontstash import fontstash
+from scipy.spatial.distance import pdist
+
+import background_helper as bh
+import cv2
+import file_methods as fm
+import player_methods as pm
+from methods import denormalize
+from plugin import Analysis_Plugin_Base
+
 logger = logging.getLogger(__name__)
 
 
@@ -75,10 +76,18 @@ def fixation_from_data(dispersion, method, base_data, timestamps=None):
         start, end = base_data[0]['timestamp'], base_data[-1]['timestamp']
         start, end = np.searchsorted(timestamps, [start, end])
         end = min(end, len(timestamps) - 1)  # fix `list index out of range` error
-        fix['start_frame_index'] = start
-        fix['end_frame_index'] = end
-        fix['mid_frame_index'] = (start + end) // 2
+        fix['start_frame_index'] = int(start)
+        fix['end_frame_index'] = int(end)
+        fix['mid_frame_index'] = int((start + end) // 2)
     return fix
+
+def serialized_from_datum(fixation_datum):
+    serialization_hook = fm.Serialized_Dict.packing_hook
+    fixation_serialized = msgpack.packb(fixation_datum, use_bin_type=True,
+                                        default=serialization_hook)
+    fixation_start = fixation_datum['timestamp']
+    fixation_stop = fixation_start + fixation_datum['duration']
+    return (fixation_serialized, fixation_start, fixation_stop)
 
 
 def vector_dispersion(vectors):
@@ -124,8 +133,11 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
     return dist, method, base_data
 
 
-def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_duration):
-    yield "Detecting fixations...", []
+def detect_fixations(capture, gaze_data, max_dispersion, min_duration,
+                     max_duration, min_data_confidence):
+    yield "Detecting fixations...", ()
+    gaze_data = [fm.Serialized_Dict(msgpack_bytes=serialized)
+                 for serialized in gaze_data]
     use_pupil = 'gaze_normal_3d' in gaze_data[0]
     logger.info('Starting fixation detection using {} data...'.format('3d' if use_pupil else '2d'))
 
@@ -158,8 +170,9 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
         # check for fixation with maximum duration
         dispersion, origin, base_data = gaze_dispersion(capture, Q, use_pupil=use_pupil)
         if dispersion <= max_dispersion:
-            yield 'Detecting fixations...', [fixation_from_data(dispersion, origin, base_data, capture.timestamps)]
-            Q = deque()  # discard old Q
+            fixation_datum = fixation_from_data(dispersion, origin, base_data, capture.timestamps)
+            yield 'Detecting fixations...', serialized_from_datum(fixation_datum)
+            Q.clear()  # discard old Q
             continue
 
         slicable = list(Q)  # deque does not support slicing
@@ -187,11 +200,11 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration, max_durat
         assert min_duration <= fixation_datum['duration'] / 1000, 'Fixation too short: {}'.format(fixation_datum)
         assert fixation_datum['duration'] / 1000 <= max_duration, 'Fixation too long: {}'.format(fixation_datum)
 
-        yield 'Detecting fixations...', [fixation_datum]
-        Q = deque()  # clear queue
+        yield 'Detecting fixations...', serialized_from_datum(fixation_datum)
+        Q.clear()  # clear queue
         enum.extendleft(slicable[middle_idx:])
 
-    yield "Fixation detection complete", []
+    yield "Fixation detection complete", ()
 
 
 class Offline_Fixation_Detector(Fixation_Detector_Base):
@@ -219,7 +232,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.max_duration = max_duration
         self.show_fixations = show_fixations
         self.current_fixation_details = None
-        self.fixations = deque()
+        self.fixation_data = deque()
         self.prev_index = -1
         self.bg_task = None
         self.status = ''
@@ -328,7 +341,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         if self.bg_task:
             self.bg_task.cancel()
 
-        gaze_data = [gp for gp in self.g_pool.gaze_positions if gp['confidence'] >= self.g_pool.min_data_confidence]
+        gaze_data = [gp.serialized for gp in self.g_pool.gaze_positions]
         if not gaze_data:
             logger.error('No gaze data available to find fixations')
             self.status = 'Fixation detection failed'
@@ -339,25 +352,31 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         cap.intrinsics = self.g_pool.capture.intrinsics
         cap.timestamps = self.g_pool.capture.timestamps
         generator_args = (cap, gaze_data, np.deg2rad(self.max_dispersion),
-                          self.min_duration / 1000, self.max_duration / 1000)
+                          self.min_duration / 1000, self.max_duration / 1000,
+                          self.g_pool.min_data_confidence)
 
-        self.fixations = deque()
+        self.fixation_data = deque()
+        self.fixation_start_ts = deque()
+        self.fixation_stop_ts = deque()
         self.bg_task = bh.Task_Proxy('Fixation detection', detect_fixations, args=generator_args)
 
     def recent_events(self, events):
         if self.bg_task:
-            recent = [d for d in self.bg_task.fetch()]
-            if recent:
-                progress, data = zip(*recent)
-                self.fixations.extend(chain.from_iterable(data))
-                self.status = progress[-1]
-                if self.fixations:
-                    current = self.fixations[-1]['timestamp']
-                    progress = (current - self.g_pool.timestamps[0]) /\
-                               (self.g_pool.timestamps[-1] - self.g_pool.timestamps[0])
+            for progress, fixation_result in self.bg_task.fetch():
+                self.status = progress
+                if fixation_result:
+                    serialized, start_ts, stop_ts = fixation_result
+                    self.fixation_data.append(fm.Serialized_Dict(msgpack_bytes=serialized))
+                    self.fixation_start_ts.append(start_ts)
+                    self.fixation_stop_ts.append(stop_ts)
+
+                if self.fixation_data:
+                    current_ts = self.fixation_stop_ts[-1]
+                    progress = ((current_ts - self.g_pool.timestamps[0]) /
+                                (self.g_pool.timestamps[-1] - self.g_pool.timestamps[0]))
                     self.menu_icon.indicator_stop = progress
             if self.bg_task.completed:
-                self.status = "{} fixations detected".format(len(self.fixations))
+                self.status = "{} fixations detected".format(len(self.fixation_data))
                 self.correlate_and_publish()
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.
@@ -367,18 +386,20 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             return
 
         self.last_frame_idx = frame.index
-        events['fixations'] = self.g_pool.fixations_by_frame[frame.index]
+        frame_window = pm.enclosing_window(self.g_pool.timestamps, frame.index)
+        fixations = self.g_pool.fixations.by_ts_window(frame_window)
+        events['fixations'] = fixations
         if self.show_fixations:
-            for f in self.g_pool.fixations_by_frame[frame.index]:
+            for f in fixations:
                 x = int(f['norm_pos'][0] * frame.width)
                 y = int((1. - f['norm_pos'][1]) * frame.height)
-                transparent_circle(frame.img, (x, y), radius=25., color=(0., 1., 1., 1.), thickness=3)
+                pm.transparent_circle(frame.img, (x, y), radius=25., color=(0., 1., 1., 1.), thickness=3)
                 cv2.putText(frame.img, '{}'.format(f['id']), (x + 30, y),
                             cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 150, 100))
 
         if self.current_fixation_details and self.prev_index != frame.index:
             info = ''
-            for f in self.g_pool.fixations_by_frame[frame.index]:
+            for f in fixations:
                 info += 'Current fixation, {} of {}\n'.format(f['id'], len(self.g_pool.fixations))
                 info += '    Confidence: {:.2f}\n'.format(f['confidence'])
                 info += '    Duration: {:.2f} milliseconds\n'.format(f['duration'])
@@ -407,17 +428,9 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             self.prev_index = frame.index
 
     def correlate_and_publish(self):
-        fixations = sorted(self.fixations, key=lambda f: f['timestamp'])
-        for idx, f in enumerate(fixations):
-            f['id'] = idx + 1
-        self.g_pool.fixations = fixations
-        # now lets bin fixations into frames. Fixations are allotted to the first frame they appear in.
-        fixations_by_frame = [[] for x in self.g_pool.timestamps]
-        for f in self.fixations:
-            for idx in range(f['start_frame_index'], f['end_frame_index'] + 1):
-                fixations_by_frame[idx].append(f)
-
-        self.g_pool.fixations_by_frame = fixations_by_frame
+        self.g_pool.fixations = pm.Affiliator(self.fixation_data,
+                                              self.fixation_start_ts,
+                                              self.fixation_stop_ts)
         self.notify_all({'subject': 'fixations_changed', 'delay': 1})
 
     @classmethod
@@ -454,7 +467,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                 norm_pos_x | norm_pos_y | dispersion | confidence | method |
                 gaze_point_3d_x | gaze_point_3d_y | gaze_point_3d_z | base_data
         """
-        if not self.fixations:
+        if not self.fixation_data:
             logger.warning('No fixations in this recording nothing to export')
             return
 

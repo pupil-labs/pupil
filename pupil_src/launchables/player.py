@@ -74,7 +74,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         # helpers/utils
         from version_utils import VersionFormat
         from methods import normalize, denormalize, delta_t, get_system_info
-        from player_methods import Bisector, is_pupil_rec_dir, load_meta_info
+        import player_methods as pm
         from csv_utils import write_key_value_file
 
         # Plug-ins
@@ -174,7 +174,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         def on_drop(window, count, paths):
             for x in range(count):
                 new_rec_dir = paths[x].decode('utf-8')
-                if is_pupil_rec_dir(new_rec_dir):
+                if pm.is_pupil_rec_dir(new_rec_dir):
                     logger.debug("Starting new session with '{}'".format(new_rec_dir))
                     ipc_pub.notify({"subject": "player_drop_process.should_start", "rec_dir": new_rec_dir})
                     glfw.glfwSetWindowShouldClose(window, True)
@@ -186,7 +186,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         def get_dt():
             return next(tick)
 
-        meta_info = load_meta_info(rec_dir)
+        meta_info = pm.load_meta_info(rec_dir)
 
         # log info about Pupil Platform and Platform in player.log
         logger.info('Application Version: {}'.format(app_version))
@@ -252,11 +252,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.min_calibration_confidence = session_settings.get('min_calibration_confidence', 0.8)
 
         # populated by producers
-        g_pool.pupil_positions = Bisector([], [])
-        g_pool.gaze_positions = Bisector([], [])
-
-        g_pool.fixations = []  # populated by the fixation detector plugin
-        g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]
+        g_pool.pupil_positions = pm.Bisector((), ())
+        g_pool.gaze_positions = pm.Bisector((), ())
+        g_pool.fixations = pm.Affiliator((), (), ())
 
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence
@@ -574,14 +572,14 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
         from file_methods import Persistent_Dict
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
-        from player_methods import is_pupil_rec_dir, update_recording_to_recent
+        import player_methods as pm
 
         def on_drop(window, count, paths):
             nonlocal rec_dir
             rec_dir = paths[0].decode('utf-8')
 
         if rec_dir:
-            if not is_pupil_rec_dir(rec_dir):
+            if not pm.is_pupil_rec_dir(rec_dir):
                 rec_dir = None
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
@@ -616,7 +614,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
             gl_utils.adjust_gl_view(*fb_size)
 
             if rec_dir:
-                if is_pupil_rec_dir(rec_dir):
+                if pm.is_pupil_rec_dir(rec_dir):
                     logger.info("Starting new session with '{}'".format(rec_dir))
                     text = "Updating recording format."
                     tip = "This may take a while!"
@@ -643,7 +641,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
 
             if rec_dir:
                 try:
-                    update_recording_to_recent(rec_dir)
+                    pm.update_recording_to_recent(rec_dir)
                 except AssertionError as err:
                     logger.error(str(err))
                     rec_dir = None

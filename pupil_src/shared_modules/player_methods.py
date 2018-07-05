@@ -46,6 +46,7 @@ class Bisector(object):
         elif not data:
             self.data = []
             self.data_ts = []
+            self.sorted_idc = []
         else:
             self.data_ts = np.asarray(data_ts)
 
@@ -80,17 +81,14 @@ class Bisector(object):
 
 class Affiliator(Bisector):
     """docstring for ClassName"""
-    def __init__(self, data, data_ts, start_ts, stop_ts):
-        super().__init__(data, data_ts)
-        self.start_ts = np.asarray(start_ts)
+    def __init__(self, data, start_ts, stop_ts):
+        super().__init__(data, start_ts)
         self.stop_ts = np.asarray(stop_ts)
-
-        self.start_ts = self.start_ts[self.sorted_idc]
         self.stop_ts = self.stop_ts[self.sorted_idc]
 
     def by_ts_window(self, ts_window):
         start_idx = np.searchsorted(self.stop_ts, ts_window[0])
-        stop_idx = np.searchsorted(self.start_ts, ts_window[1])
+        stop_idx = np.searchsorted(self.data_ts, ts_window[1])
         return self.data[start_idx:stop_idx]
 
 
