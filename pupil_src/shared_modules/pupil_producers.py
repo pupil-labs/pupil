@@ -161,13 +161,29 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
                                  line_type=gl.GL_LINES,
                                  thickness=4.*scale)
 
+    def split_by_topic(self, topics):
+        id0_id1_data = collections.deque(), collections.deque()
+        id0_id1_time = collections.deque(), collections.deque()
+
+        pupil_data = self.g_pool.pupil_positions
+        topic_data_ts = zip(topics, pupil_data, pupil_data.timestamps)
+        for topic, datum, timestamp in topic_data_ts:
+            eye_id = int(topic[-1])  # use topic to identify eye
+            id0_id1_data[eye_id].append(datum)
+            id0_id1_time[eye_id].append(timestamp)
+
+        bisector_id0 = pm.Bisector(id0_id1_data[0], id0_id1_time[0])
+        bisector_id1 = pm.Bisector(id0_id1_data[1], id0_id1_time[1])
+        return (bisector_id0, bisector_id1)
+
 
 class Pupil_From_Recording(Pupil_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
-        data, data_ts = fm.load_pldata_file(g_pool.rec_dir, 'pupil')
-        g_pool.pupil_positions = pm.Bisector(data, data_ts)
+        pupil = fm.load_pldata_file(g_pool.rec_dir, 'pupil')
+        g_pool.pupil_positions = pm.Bisector(pupil.data, pupil.timestamps)
+        g_pool.pupil_positions_by_id = self.split_by_topic(pupil.topics)
 
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
@@ -200,13 +216,17 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.detection_method = session_meta_data["detection_method"]
         self.detection_status = session_meta_data['detection_status']
 
-        data, data_ts = fm.load_pldata_file(self.data_dir, self.session_data_name)
-        self.pupil_positions = {ts: pp for ts, pp in zip(data_ts, data)}
+        pupil = fm.load_pldata_file(self.data_dir, self.session_data_name)
+        ts_data_zip = zip(pupil.timestamps, pupil.data)
+        ts_topic_zip = zip(pupil.timestamps, pupil.topics)
+        self.pupil_positions = collections.OrderedDict(ts_data_zip)
+        self.id_topics = collections.OrderedDict(ts_topic_zip)
 
         self.eye_video_loc = [None, None]
         self.eye_frame_num = [0, 0]
-        for pp in self.pupil_positions.values():
-            self.eye_frame_num[pp['id']] += 1
+        for topic in self.id_topics.values():
+            eye_id = int(topic[-1])
+            self.eye_frame_num[eye_id] += 1
 
         self.pause_switch = None
         self.detection_paused = False
@@ -261,6 +281,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 payload_serialized = next(remaining_frames)
                 pupil_datum = fm.Serialized_Dict(msgpack_bytes=payload_serialized)
                 self.pupil_positions[pupil_datum['timestamp']] = pupil_datum
+                self.id_topics[pupil_datum['timestamp']] = topic
             else:
                 payload = self.data_sub.deserialize_payload(*remaining_frames)
                 if payload['subject'] == 'file_source.video_finished':
@@ -276,8 +297,12 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.menu_icon.indicator_stop = len(self.pupil_positions) / total if total else 0.
 
     def correlate_publish(self):
-        all_pp, all_pp_ts = zip(*((pp, pp['timestamp']) for pp in self.pupil_positions.values()))
-        self.g_pool.pupil_positions = pm.Bisector(list(all_pp), list(all_pp_ts))
+        time = tuple(self.pupil_positions.keys())
+        data = tuple(self.pupil_positions.values())
+        topics = tuple(self.id_topics.values())
+        self.g_pool.pupil_positions = pm.Bisector(data, time)
+        self.g_pool.pupil_positions_by_id = self.split_by_topic(topics)
+
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
         self.save_offline_data()
@@ -297,9 +322,12 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.save_offline_data()
 
     def save_offline_data(self):
+        ts_topic_data_zip = zip(self.pupil_positions.keys(),
+                                self.id_topics.values(),
+                                self.pupil_positions.values())
         with fm.PLData_Writer(self.data_dir, 'offline_pupil') as writer:
-            for timestamp, datum in self.pupil_positions.items():
-                writer.append_serialized(timestamp, 'pupil', datum.serialized)
+            for timestamp, topic, datum in ts_topic_data_zip:
+                writer.append_serialized(timestamp, topic, datum.serialized)
 
         session_data = {}
         session_data["detection_method"] = self.detection_method

@@ -116,8 +116,8 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.load_data_with_offset()
 
     def load_data_with_offset(self):
-        data, data_ts = fm.load_pldata_file(self.g_pool.rec_dir, 'gaze')
-        self.g_pool.gaze_positions = pm.Bisector(data, data_ts)
+        gaze = fm.load_pldata_file(self.g_pool.rec_dir, 'gaze')
+        self.g_pool.gaze_positions = pm.Bisector(gaze.data, gaze.timestamps)
 
         # self.g_pool.gaze_positions = deepcopy(self.g_pool.pupil_data['gaze'])
         # for gp in self.g_pool.gaze_positions:

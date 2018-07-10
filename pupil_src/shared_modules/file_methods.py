@@ -15,12 +15,13 @@ import os
 import numpy as np
 import traceback as tb
 import logging
+import collections
 from glob import iglob
-from collections import deque
 
 logger = logging.getLogger(__name__)
 UnpicklingError = pickle.UnpicklingError
 
+PLData = collections.namedtuple('PLData', ['data', 'timestamps', 'topics'])
 
 class Persistent_Dict(dict):
     """a dict class that uses pickle to save inself to file"""
@@ -88,16 +89,19 @@ def load_pldata_file(directory, topic):
     ts_file = os.path.join(directory, topic + '_timestamps.npy')
     msgpack_file = os.path.join(directory, topic + '.pldata')
     try:
-        data = deque()
+        data = collections.deque()
+        topics = collections.deque()
         data_ts = np.load(ts_file)
         with open(msgpack_file, "rb") as fh:
             for topic, payload in msgpack.Unpacker(fh, raw=False, use_list=False):
                 data.append(Serialized_Dict(msgpack_bytes=payload))
+                topics.append(topic)
     except FileNotFoundError:
         data = []
         data_ts = []
+        topics = []
 
-    return data, data_ts
+    return PLData(data, data_ts, topics)
 
 
 class PLData_Writer(object):
@@ -106,7 +110,7 @@ class PLData_Writer(object):
         super().__init__()
         self.directory = directory
         self.name = name
-        self.ts_queue = deque()
+        self.ts_queue = collections.deque()
         file_name = name + '.pldata'
         self.file_handle = open(os.path.join(directory, file_name), 'wb')
 
