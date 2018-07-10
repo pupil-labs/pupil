@@ -178,7 +178,8 @@ class Serialized_Dict(object):
 
     def __init__(self, python_dict=None, msgpack_bytes=None):
         if type(python_dict) is dict:
-            self._ser_data = msgpack.packb(python_dict, use_bin_type=True)
+            self._ser_data = msgpack.packb(python_dict, use_bin_type=True,
+                                           default=self.packing_hook)
         elif type(msgpack_bytes) is bytes:
             self._ser_data = msgpack_bytes
         else:

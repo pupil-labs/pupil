@@ -79,6 +79,10 @@ class Bisector(object):
     def __bool__(self):
         return bool(self.data)
 
+    @property
+    def timestamps(self):
+        return self.data_ts
+
 
 class Affiliator(Bisector):
     """docstring for ClassName"""

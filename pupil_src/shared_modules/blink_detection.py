@@ -9,28 +9,30 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os
 import csv
-
-from plugin import Analysis_Plugin_Base
-from pyglui import ui, cygl
+import logging
+import os
 from collections import deque
-from scipy.signal import fftconvolve
+
 import numpy as np
 import OpenGL.GL as gl
-
-from csv_utils import write_key_value_file
+import pyglui.cygl.utils as cygl_utils
+from pyglui import ui
 from pyglui.pyfontstash import fontstash as fs
-from pyglui.cygl.utils import *
-import gl_utils
+from scipy.signal import fftconvolve
 
-import logging
+import csv_utils
+import file_methods as fm
+import gl_utils
+import player_methods as pm
+from plugin import Analysis_Plugin_Base
+
 logger = logging.getLogger(__name__)
 
 
-activity_color = RGBA(0.6602, 0.8594, 0.4609, 0.8)
-blink_color = RGBA(0.9961, 0.3789, 0.5313, 0.8)
-threshold_color = RGBA(0.9961, 0.8438, 0.3984, 0.8)
+activity_color = cygl_utils.RGBA(0.6602, 0.8594, 0.4609, 0.8)
+blink_color = cygl_utils.RGBA(0.9961, 0.3789, 0.5313, 0.8)
+threshold_color = cygl_utils.RGBA(0.9961, 0.8438, 0.3984, 0.8)
 
 
 class Blink_Detection(Analysis_Plugin_Base):
@@ -119,10 +121,10 @@ class Blink_Detection(Analysis_Plugin_Base):
     def gl_display(self):
         if self._recent_blink and self.visualize:
             if self._recent_blink['type'] == 'onset':
-                cygl.utils.push_ortho(1, 1)
-                cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8),
+                cygl_utils.push_ortho(1, 1)
+                cygl_utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8),
                                            alpha=self._recent_blink['confidence'] * 0.5)
-                cygl.utils.pop_ortho()
+                cygl_utils.pop_ortho()
 
     def get_init_dict(self):
         return {'history_length': self.history_length, 'visualize': self.visualize,
@@ -142,8 +144,7 @@ class Offline_Blink_Detection(Blink_Detection):
         self.filter_response = []
         self.response_classification = []
         self.timestamps = []
-        g_pool.blinks = []
-        g_pool.blinks_by_frame = [[] for x in self.g_pool.timestamps]
+        g_pool.blinks = pm.Affiliator((), (), ())
         self.cache = {'response_points': (), 'class_points': (), 'thresholds': ()}
 
     def init_ui(self):
@@ -213,7 +214,7 @@ class Offline_Blink_Detection(Blink_Detection):
 
         with open(os.path.join(export_dir, 'blink_detection_report.csv'), 'w',
                   encoding='utf-8', newline='') as csvfile:
-            write_key_value_file(csvfile, {'history_length': self.history_length,
+            csv_utils.write_key_value_file(csvfile, {'history_length': self.history_length,
                                            'onset_confidence_threshold': self.onset_confidence_threshold,
                                            'offset_confidence_threshold': self.offset_confidence_threshold,
                                            'blinks_exported': len(blinks_in_section)})
@@ -230,10 +231,12 @@ class Offline_Blink_Detection(Blink_Detection):
             self.consolidate_classifications()
             return
 
+        self.timestamps = all_pp.timestamps
+        total_time = self.timestamps[-1] - self.timestamps[0]
+
         conf_iter = (pp['confidence'] for pp in all_pp)
         activity = np.fromiter(conf_iter, dtype=float, count=len(all_pp))
-        total_time = all_pp[-1]['timestamp'] - all_pp[0]['timestamp']
-        filter_size = round(len(all_pp) * self.history_length / total_time)
+        filter_size = int(round(len(all_pp) * self.history_length / total_time))
         blink_filter = np.ones(filter_size) / filter_size
 
         # This is different from the online filter. Convolution will flip
@@ -241,7 +244,6 @@ class Offline_Blink_Detection(Blink_Detection):
         # we set the first half of the filter to -1 instead of the second
         # half such that we get the expected result.
         blink_filter[:filter_size // 2] *= -1
-        self.timestamps = [pp['timestamp'] for pp in all_pp]
 
         # The theoretical response maximum is +-0.5
         # Response of +-0.45 seems sufficient for a confidence of 1.
@@ -262,14 +264,16 @@ class Offline_Blink_Detection(Blink_Detection):
     def consolidate_classifications(self):
         blink = None
         state = 'no blink'  # others: 'blink started' | 'blink ending'
-        all_blinks = deque()
+        blink_data = deque()
+        blink_start_ts = deque()
+        blink_stop_ts = deque()
         counter = 1
 
         def start_blink(idx):
             nonlocal blink
             nonlocal state
             nonlocal counter
-            blink = {'topic': 'blink', '__start_frame_index__': idx,
+            blink = {'topic': 'blink', '__start_response_index__': idx,
                      'start_timestamp': self.timestamps[idx], 'id': counter}
             state = 'blink started'
             counter += 1
@@ -278,28 +282,31 @@ class Offline_Blink_Detection(Blink_Detection):
             nonlocal blink
 
             # get tmp pupil idx
-            start_idx = blink['__start_frame_index__']
-            del blink['__start_frame_index__']
+            start_idx = blink['__start_response_index__']
+            del blink['__start_response_index__']
 
             blink['end_timestamp'] = self.timestamps[idx]
             blink['timestamp'] = (blink['end_timestamp'] + blink['start_timestamp']) / 2
             blink['duration'] = blink['end_timestamp'] - blink['start_timestamp']
             blink['base_data'] = self.g_pool.pupil_positions[start_idx:idx]
-            blink['filter_response'] = self.filter_response[start_idx:idx]
+            blink['filter_response'] = self.filter_response[start_idx:idx].tolist()
             # blink confidence is the mean of the absolute filter response
             # during the blink event, clamped at 1.
-            blink['confidence'] = min(np.abs(blink['filter_response']).mean(), 1.)
+            blink['confidence'] = min(float(np.abs(blink['filter_response']).mean()), 1.)
 
             # correlate world indices
-            start, end = blink['start_timestamp'], blink['end_timestamp']
-            start, end = np.searchsorted(self.g_pool.timestamps, [start, end])
-            # fix `list index out of range` error
-            end = min(end, len(self.g_pool.timestamps) - 1)
-            blink['start_frame_index'] = start
-            blink['end_frame_index'] = end
-            blink['index'] = (start + end) // 2
+            ts_start, ts_end = blink['start_timestamp'], blink['end_timestamp']
 
-            all_blinks.append(blink)
+            idx_start, idx_end = np.searchsorted(self.g_pool.timestamps, [ts_start, ts_end])
+            # fix `list index out of range` error
+            idx_end = min(idx_end, len(self.g_pool.timestamps) - 1)
+            blink['start_frame_index'] = int(idx_start)
+            blink['end_frame_index'] = int(idx_end)
+            blink['index'] = int((idx_start + idx_end) // 2)
+
+            blink_data.append(fm.Serialized_Dict(python_dict=blink))
+            blink_start_ts.append(ts_start)
+            blink_stop_ts.append(ts_end)
 
         for idx, classification in enumerate(self.response_classification):
             if state == 'no blink' and classification > 0:
@@ -318,13 +325,7 @@ class Offline_Blink_Detection(Blink_Detection):
             # only finish blink if it was already ending
             blink_finished(idx)  # idx is the last possible idx
 
-        self.g_pool.blinks = list(all_blinks)
-        blinks_by_frame = [[] for x in self.g_pool.timestamps]
-        for f in all_blinks:
-            for idx in range(f['start_frame_index'], f['end_frame_index'] + 1):
-                blinks_by_frame[idx].append(f)
-
-        self.g_pool.blinks_by_frame = blinks_by_frame
+        self.g_pool.blinks = pm.Affiliator(blink_data, blink_start_ts, blink_stop_ts)
         self.notify_all({'subject': 'blinks_changed', 'delay': .2})
 
     def cache_activation(self):
@@ -351,12 +352,18 @@ class Offline_Blink_Detection(Blink_Detection):
     def draw_activation(self, width, height, scale):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
         with gl_utils.Coord_System(t0, t1, -1, 1):
-            draw_polyline(self.cache['response_points'], color=activity_color,
-                          line_type=gl.GL_LINE_STRIP, thickness=scale)
-            draw_polyline(self.cache['class_points'], color=blink_color,
-                          line_type=gl.GL_LINE_STRIP, thickness=scale)
-            draw_polyline(self.cache['thresholds'], color=threshold_color,
-                          line_type=gl.GL_LINES, thickness=scale)
+            cygl_utils.draw_polyline(self.cache['response_points'],
+                                     color=activity_color,
+                                     line_type=gl.GL_LINE_STRIP,
+                                     thickness=scale)
+            cygl_utils.draw_polyline(self.cache['class_points'],
+                                     color=blink_color,
+                                     line_type=gl.GL_LINE_STRIP,
+                                     thickness=scale)
+            cygl_utils.draw_polyline(self.cache['thresholds'],
+                                     color=threshold_color,
+                                     line_type=gl.GL_LINES,
+                                     thickness=scale)
 
     def draw_legend(self, width, height, scale):
         self.glfont.push_state()
@@ -368,19 +375,19 @@ class Offline_Blink_Detection(Blink_Detection):
         pad = 10 * scale
 
         self.glfont.draw_text(width, legend_height, 'Activaty')
-        draw_polyline([(pad, legend_height + pad * 2 / 3),
+        cygl_utils.draw_polyline([(pad, legend_height + pad * 2 / 3),
                        (width / 2, legend_height + pad * 2 / 3)],
                       color=activity_color, line_type=gl.GL_LINES, thickness=4.*scale)
         legend_height += 1.5 * pad
 
         self.glfont.draw_text(width, legend_height, 'Thresholds')
-        draw_polyline([(pad, legend_height + pad * 2 / 3),
+        cygl_utils.draw_polyline([(pad, legend_height + pad * 2 / 3),
                        (width / 2, legend_height + pad * 2 / 3)],
                       color=threshold_color, line_type=gl.GL_LINES, thickness=4.*scale)
         legend_height += 1.5 * pad
 
         self.glfont.draw_text(width, legend_height, 'Blinks')
-        draw_polyline([(pad, legend_height + pad * 2 / 3),
+        cygl_utils.draw_polyline([(pad, legend_height + pad * 2 / 3),
                        (width / 2, legend_height + pad * 2 / 3)],
                       color=blink_color, line_type=gl.GL_LINES, thickness=4.*scale)
 
