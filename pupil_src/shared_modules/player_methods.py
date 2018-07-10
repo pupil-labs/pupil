@@ -35,7 +35,8 @@ def enclosing_window(timestamps, idx):
 
 
 def exact_window(timestamps, index_range):
-    return timestamps[index_range[0]], timestamps[index_range[1]]
+    end_index = min(index_range[1], len(timestamps) - 1)
+    return (timestamps[index_range[0]], timestamps[end_index])
 
 class Bisector(object):
     """docstring for ClassName"""

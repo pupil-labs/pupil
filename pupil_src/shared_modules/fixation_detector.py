@@ -92,7 +92,7 @@ class Fixation_Result_Factory(object):
         datum = fixation_from_data(*args, **kwargs)
         self.set_fixation_id(datum)
         fixation_start = datum['timestamp']
-        fixation_stop = fixation_start + datum['duration']
+        fixation_stop = fixation_start + (datum['duration'] / 1000)
         datum = self.serialize(datum)
         return (datum, fixation_start, fixation_stop)
 
@@ -382,7 +382,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                     self.fixation_stop_ts.append(stop_ts)
 
                 if self.fixation_data:
-                    current_ts = self.fixation_start_ts[-1]
+                    current_ts = self.fixation_stop_ts[-1]
                     progress = ((current_ts - self.g_pool.timestamps[0]) /
                                 (self.g_pool.timestamps[-1] - self.g_pool.timestamps[0]))
                     self.menu_icon.indicator_stop = progress
@@ -482,9 +482,8 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             logger.warning('No fixations in this recording nothing to export')
             return
 
-        fixations_in_section = chain.from_iterable(self.g_pool.fixations_by_frame[slice(*export_range)])
-        fixations_in_section = list(dict([(f['id'], f) for f in fixations_in_section]).values()) # remove duplicates
-        fixations_in_section.sort(key=lambda f: f['id'])
+        export_window = pm.exact_window(self.g_pool.timestamps, export_range)
+        fixations_in_section = self.g_pool.fixations.by_ts_window(export_window)
 
         with open(os.path.join(export_dir,'fixations.csv'),'w',encoding='utf-8',newline='') as csvfile:
             csv_writer = csv.writer(csvfile)
