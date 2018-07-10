@@ -9,13 +9,17 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os
 import csv
-from itertools import chain
 import logging
+import os
+from itertools import chain
+
+import numpy as np
+from pyglui import ui
+
 import player_methods as pm
 from plugin import Analysis_Plugin_Base
-from pyglui import ui
+
 # logging
 logger = logging.getLogger(__name__)
 
@@ -156,9 +160,12 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  'projected_sphere_axis_b',
                                  'projected_sphere_angle'))
 
-            for p in self.g_pool.pupil_positions.by_ts_window(export_window):
+            pupil_data = self.g_pool.pupil_positions.by_ts_window(export_window)
+            pupil_ts = self.g_pool.pupil_positions.timestamps
+            pupil_world_idc = np.searchsorted(self.g_pool.timestamps, pupil_ts)
+            for p, idx in zip(pupil_data, pupil_world_idc):
                 data_2d = ['{}'.format(p['timestamp']),  # use str to be consitant with csv lib.
-                           p['index'],
+                           idx,
                            p['id'],
                            p['confidence'],
                            p['norm_pos'][0],
