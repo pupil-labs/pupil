@@ -97,6 +97,22 @@ class Affiliator(Bisector):
         return self.data[start_idx:stop_idx]
 
 
+def find_closest(target, source):
+    '''Find indeces of closest `target` elements for elements in `source`.
+    -
+    `source` is assumed to be sorted. Result has same shape as `source`.
+    Implementation taken from:
+    -
+    https://stackoverflow.com/questions/8914491/finding-the-nearest-value-and-return-the-index-of-array-in-python/8929827#8929827
+    '''
+    idx = np.searchsorted(target, source)
+    idx = np.clip(idx, 1, len(target)-1)
+    left = target[idx-1]
+    right = target[idx]
+    idx -= source - left < right - source
+    return idx
+
+
 def correlate_data(data, timestamps):
     '''
     data:  list of data :

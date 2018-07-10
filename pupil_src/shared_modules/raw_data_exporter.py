@@ -162,7 +162,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
 
             pupil_data = self.g_pool.pupil_positions.by_ts_window(export_window)
             pupil_ts = self.g_pool.pupil_positions.timestamps
-            pupil_world_idc = np.searchsorted(self.g_pool.timestamps, pupil_ts)
+            pupil_world_idc = pm.find_closest(self.g_pool.timestamps, pupil_ts)
             for p, idx in zip(pupil_data, pupil_world_idc):
                 data_2d = ['{}'.format(p['timestamp']),  # use str to be consitant with csv lib.
                            idx,
