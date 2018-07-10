@@ -30,9 +30,9 @@ from plugin import Producer_Plugin_Base
 
 logger = logging.getLogger(__name__)
 
-right_color = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.)
-left_color = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.)
-
+COLOR_LEGEND_EYE_RIGHT = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.)
+COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.)
+NUMBER_SAMPLES_TIMELINE = 4000
 
 class Empty(object):
         pass
@@ -43,6 +43,8 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
     order = 0.01
     icon_chr = chr(0xec12)
     icon_font = 'pupil_icons'
+
+
 
     def init_ui(self):
         self.add_menu()
@@ -104,17 +106,26 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
             self.cache[key] = {'left': [], 'right': [],
                                'xlim': [t0, t1], 'ylim': [0, 1]}
         else:
-            pupil_data_right_left = collections.deque(), collections.deque()
-            for pp in self.g_pool.pupil_positions:
-                ts_value_pair = pp['timestamp'], pp[key]
-                pupil_data_right_left[pp['id']].append(ts_value_pair)
+            timestamps_target = np.linspace(t0, t1, NUMBER_SAMPLES_TIMELINE)
+            pp_by_id = self.g_pool.pupil_positions_by_id
+            ts_data_pairs_right_left = collections.deque(), collections.deque()
+
+            for eye_id in (0, 1):
+                pupil_positions = pp_by_id[eye_id]
+                data_indeces = np.searchsorted(pp_by_id[eye_id].timestamps,
+                                               timestamps_target)
+                data_indeces = np.unique(data_indeces).clip(0, len(pupil_positions) - 1)
+                for idx in data_indeces:
+                    ts_data_pair = (pupil_positions.timestamps[idx],
+                                    pupil_positions[idx][key])
+                    ts_data_pairs_right_left[eye_id].append(ts_data_pair)
 
             # max_val must not be 0, else gl will crash
-            pupil_data_chained = chain.from_iterable(pupil_data_right_left)
+            pupil_data_chained = chain.from_iterable(ts_data_pairs_right_left)
             max_val = max((pd[1] for pd in pupil_data_chained)) or 1
 
-            self.cache[key] = {'right': list(pupil_data_right_left[0]),
-                               'left': list(pupil_data_right_left[1]),
+            self.cache[key] = {'right': list(ts_data_pairs_right_left[0]),
+                               'left': list(ts_data_pairs_right_left[1]),
                                'xlim': [t0, t1], 'ylim': [0, max_val]}
 
     def draw_pupil_diameter(self, width, height, scale):
@@ -128,8 +139,8 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
         left = self.cache[key]['left']
 
         with gl_utils.Coord_System(*self.cache[key]['xlim'], *self.cache[key]['ylim']):
-            cygl_utils.draw_points(right, size=2.*scale, color=right_color)
-            cygl_utils.draw_points(left, size=2.*scale, color=left_color)
+            cygl_utils.draw_points(right, size=2.*scale, color=COLOR_LEGEND_EYE_RIGHT)
+            cygl_utils.draw_points(left, size=2.*scale, color=COLOR_LEGEND_EYE_LEFT)
 
     def draw_dia_legend(self, width, height, scale):
         self.draw_legend(self.dia_timeline.label, width, height, scale)
@@ -152,12 +163,12 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 
         cygl_utils.draw_polyline([(pad, 1.5 * legend_height),
                                   (width / 4, 1.5 * legend_height)],
-                                 color=left_color,
+                                 color=COLOR_LEGEND_EYE_LEFT,
                                  line_type=gl.GL_LINES,
                                  thickness=4.*scale)
         cygl_utils.draw_polyline([(width / 2 + pad, 1.5 * legend_height),
                                   (width * 3 / 4, 1.5 * legend_height)],
-                                 color=right_color,
+                                 color=COLOR_LEGEND_EYE_RIGHT,
                                  line_type=gl.GL_LINES,
                                  thickness=4.*scale)
 
