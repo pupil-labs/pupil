@@ -81,14 +81,30 @@ def fixation_from_data(dispersion, method, base_data, timestamps=None):
         fix['mid_frame_index'] = int((start + end) // 2)
     return fix
 
-def serialized_from_datum(fixation_datum):
-    serialization_hook = fm.Serialized_Dict.packing_hook
-    fixation_serialized = msgpack.packb(fixation_datum, use_bin_type=True,
-                                        default=serialization_hook)
-    fixation_start = fixation_datum['timestamp']
-    fixation_stop = fixation_start + fixation_datum['duration']
-    return (fixation_serialized, fixation_start, fixation_stop)
 
+class Fixation_Result_Factory(object):
+    __slots__ = ('_id_counter',)
+
+    def __init__(self):
+        self._id_counter = 0
+
+    def from_data(self, *args, **kwargs):
+        datum = fixation_from_data(*args, **kwargs)
+        self.set_fixation_id(datum)
+        fixation_start = datum['timestamp']
+        fixation_stop = fixation_start + datum['duration']
+        datum = self.serialize(datum)
+        return (datum, fixation_start, fixation_stop)
+
+    def set_fixation_id(self, fixation):
+        fixation['id'] = self._id_counter
+        self._id_counter += 1
+
+    def serialize(self, fixation):
+        serialization_hook = fm.Serialized_Dict.packing_hook
+        fixation_serialized = msgpack.packb(fixation, use_bin_type=True,
+                                            default=serialization_hook)
+        return fixation_serialized
 
 def vector_dispersion(vectors):
     distances = pdist(vectors, metric='cosine')
@@ -140,6 +156,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration,
                  for serialized in gaze_data]
     use_pupil = 'gaze_normal_3d' in gaze_data[0]
     logger.info('Starting fixation detection using {} data...'.format('3d' if use_pupil else '2d'))
+    fixation_result = Fixation_Result_Factory()
 
     Q = deque()
     enum = deque(gaze_data)
@@ -170,8 +187,9 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration,
         # check for fixation with maximum duration
         dispersion, origin, base_data = gaze_dispersion(capture, Q, use_pupil=use_pupil)
         if dispersion <= max_dispersion:
-            fixation_datum = fixation_from_data(dispersion, origin, base_data, capture.timestamps)
-            yield 'Detecting fixations...', serialized_from_datum(fixation_datum)
+            fixation = fixation_result.from_data(dispersion, origin, base_data,
+                                                 capture.timestamps)
+            yield 'Detecting fixations...', fixation
             Q.clear()  # discard old Q
             continue
 
@@ -181,7 +199,9 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration,
         # binary search
         while left_idx + 1 < right_idx:
             middle_idx = (left_idx + right_idx) // 2 + 1
-            dispersion, origin, base_data = gaze_dispersion(capture, slicable[:middle_idx], use_pupil=use_pupil)
+            dispersion, origin, base_data = gaze_dispersion(capture,
+                                                            slicable[:middle_idx],
+                                                            use_pupil=use_pupil)
 
             if dispersion <= max_dispersion:
                 left_idx = middle_idx - 1
@@ -189,18 +209,9 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration,
                 right_idx = middle_idx - 1
 
         middle_idx = (left_idx + right_idx) // 2
-        # if dispersion > max_dispersion:
-        dispersion, origin, base_data = gaze_dispersion(capture, slicable[:middle_idx], use_pupil=use_pupil)
-
-        # Create fixation datum
-        fixation_datum = fixation_from_data(dispersion, origin, base_data, capture.timestamps)
-
-        # Assert constraints
-        assert dispersion <= max_dispersion, 'Fixation too big: {}'.format(fixation_datum)
-        assert min_duration <= fixation_datum['duration'] / 1000, 'Fixation too short: {}'.format(fixation_datum)
-        assert fixation_datum['duration'] / 1000 <= max_duration, 'Fixation too long: {}'.format(fixation_datum)
-
-        yield 'Detecting fixations...', serialized_from_datum(fixation_datum)
+        dispersion_result = gaze_dispersion(capture, slicable[:middle_idx], use_pupil=use_pupil)
+        fixation = fixation_result.from_data(*dispersion_result, capture.timestamps)
+        yield 'Detecting fixations...', fixation
         Q.clear()  # clear queue
         enum.extendleft(slicable[middle_idx:])
 
@@ -371,7 +382,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                     self.fixation_stop_ts.append(stop_ts)
 
                 if self.fixation_data:
-                    current_ts = self.fixation_stop_ts[-1]
+                    current_ts = self.fixation_start_ts[-1]
                     progress = ((current_ts - self.g_pool.timestamps[0]) /
                                 (self.g_pool.timestamps[-1] - self.g_pool.timestamps[0]))
                     self.menu_icon.indicator_stop = progress
