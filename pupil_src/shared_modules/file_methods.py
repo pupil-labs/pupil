@@ -254,7 +254,13 @@ class Serialized_Dict(object):
         self._deser()
         return 'Serialized_Dict({})'.format(repr(self._data))
 
-    def __len__(self):
+    @property
+    def len(self):
+        '''Replacement implementation for __len__
+
+        If __len__ is defined numpy will recognize this as nested structure and
+        start deserializing everything instead of using this object as it is.
+        '''
         self._deser()
         return len(self._data)
 

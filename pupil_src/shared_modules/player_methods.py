@@ -51,13 +51,7 @@ class Bisector(object):
             self.sorted_idc = []
         else:
             self.data_ts = np.asarray(data_ts)
-
-            # np.array() recursively iterates over `data` and its elements.
-            # If `data` includes dictionaries their iterator returns keys and a
-            # 2-dim array will be created. We want an explicit 1-dim array
-            # that we can sort and reconvert to an Python list.
-            self.data = np.empty(len(data), dtype=object)
-            self.data[:] = data
+            self.data = np.asarray(data, dtype=object)
 
             # Find correct order once and reorder both lists in-place
             self.sorted_idc = np.argsort(self.data_ts)
