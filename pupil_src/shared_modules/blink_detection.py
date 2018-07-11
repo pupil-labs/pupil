@@ -108,7 +108,7 @@ class Blink_Detection(Analysis_Plugin_Base):
         logger.debug('Blink {} detected with confidence {:0.3f}'.format(blink_type, confidence))
         # Add info to events
         blink_entry = {
-            'topic': 'blink',
+            'topic': 'blinks',
             'type': blink_type,
             'confidence': confidence,
             'base_data': list(self.history),

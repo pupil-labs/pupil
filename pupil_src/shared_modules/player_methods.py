@@ -575,7 +575,13 @@ def update_recording_v14_v18(rec_dir):
                 notification['topic'] = 'notify.' + notification['subject']
         elif new_topic == 'pupil':
             for pupil_datum in pd_old[old_topic]:
-                pupil_datum['topic'] += '.' + pupil_datum['id']
+                pupil_datum['topic'] += '.{}'.format(pupil_datum['id'])
+        elif new_topic == 'surface':
+            for surface in pd_old[old_topic]:
+                surface['topic'] = 'surfaces.' + surface['name']
+        elif new_topic == 'blinks' or new_topic == 'fixations':
+            for datum in pd_old[old_topic]:
+                datum['topic'] += 's'
 
         with PLData_Writer(rec_dir, new_topic) as writer:
             writer.extend(pd_old[old_topic])

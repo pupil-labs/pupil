@@ -60,7 +60,7 @@ def fixation_from_data(dispersion, method, base_data, timestamps=None):
     dispersion = np.rad2deg(dispersion)  # in degrees
 
     fix = {
-        'topic': 'fixation',
+        'topic': 'fixations',
         'norm_pos': norm_pos,
         'dispersion': dispersion,
         'method': method,
