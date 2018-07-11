@@ -569,7 +569,14 @@ def update_recording_v14_v18(rec_dir):
 
     pd_old = load_object(os.path.join(rec_dir, "pupil_data"))
     for old_topic in pd_old:
-        new_topic = legacy_topic_mapping.get(old_topic, d=old_topic)
+        new_topic = legacy_topic_mapping.get(old_topic, old_topic)
+        if new_topic == 'notify':
+            for notification in pd_old[old_topic]:
+                notification['topic'] = 'notify.' + notification['subject']
+        elif new_topic == 'pupil':
+            for pupil_datum in pd_old[old_topic]:
+                pupil_datum['topic'] += '.' + pupil_datum['id']
+
         with PLData_Writer(rec_dir, new_topic) as writer:
             writer.extend(pd_old[old_topic])
 
