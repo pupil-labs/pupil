@@ -252,9 +252,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.min_calibration_confidence = session_settings.get('min_calibration_confidence', 0.8)
 
         # populated by producers
-        g_pool.pupil_positions = pm.Bisector((), ())
-        g_pool.gaze_positions = pm.Bisector((), ())
-        g_pool.fixations = pm.Affiliator((), (), ())
+        g_pool.pupil_positions = pm.Bisector()
+        g_pool.pupil_positions_by_id = (pm.Bisector(), pm.Bisector())
+        g_pool.gaze_positions = pm.Bisector()
+        g_pool.fixations = pm.Affiliator()
 
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence

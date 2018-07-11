@@ -144,7 +144,7 @@ class Offline_Blink_Detection(Blink_Detection):
         self.filter_response = []
         self.response_classification = []
         self.timestamps = []
-        g_pool.blinks = pm.Affiliator((), (), ())
+        g_pool.blinks = pm.Affiliator()
         self.cache = {'response_points': (), 'class_points': (), 'thresholds': ()}
 
     def init_ui(self):

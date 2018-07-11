@@ -40,7 +40,7 @@ def exact_window(timestamps, index_range):
 
 class Bisector(object):
     """docstring for ClassName"""
-    def __init__(self, data, data_ts):
+    def __init__(self, data=(), data_ts=()):
         if len(data) != len(data_ts):
             raise ValueError(('Each element in `data` requires a corresponding'
                               ' timestamp in `data_ts`'))
@@ -86,7 +86,7 @@ class Bisector(object):
 
 class Affiliator(Bisector):
     """docstring for ClassName"""
-    def __init__(self, data, start_ts, stop_ts):
+    def __init__(self, data=(), start_ts=(), stop_ts=()):
         super().__init__(data, start_ts)
         self.stop_ts = np.asarray(stop_ts)
         self.stop_ts = self.stop_ts[self.sorted_idc]
