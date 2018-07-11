@@ -84,8 +84,27 @@ def save_object(object_, file_path):
     with open(file_path, 'wb') as fh:
         msgpack.pack(object_, fh, use_bin_type=True,default=ndarrray_to_list)
 
-# def load_legacy_pupil_data_iteratively(directory):
+class Iterative_Legacy_Pupil_Data_Loader(object):
+    def __init__(self, directory=''):
+        self.file_loc = os.path.join(directory, 'pupil_data')
 
+    def __enter__(self):
+        self.file_handle = open(self.file_loc, 'rb')
+        self.unpacker = msgpack.Unpacker(self.file_handle, raw=False, use_list=False)
+        self.num_key_value_pairs = self.unpacker.read_map_header()
+        self._skipped = True
+        return self
+
+    def __exit__(self, *exc):
+        self.file_handle.close()
+
+    def topic_values_pairs(self):
+        for _ in range(self.num_key_value_pairs):
+            yield self.unpacker.unpack(), self._next_values()
+
+    def _next_values(self):
+        for _ in range(self.unpacker.read_array_header()):
+            yield self.unpacker.unpack()
 
 def load_pldata_file(directory, topic):
     ts_file = os.path.join(directory, topic + '_timestamps.npy')
