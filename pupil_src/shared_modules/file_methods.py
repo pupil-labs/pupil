@@ -84,6 +84,8 @@ def save_object(object_, file_path):
     with open(file_path, 'wb') as fh:
         msgpack.pack(object_, fh, use_bin_type=True,default=ndarrray_to_list)
 
+# def load_legacy_pupil_data_iteratively(directory):
+
 
 def load_pldata_file(directory, topic):
     ts_file = os.path.join(directory, topic + '_timestamps.npy')

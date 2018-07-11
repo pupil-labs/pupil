@@ -584,7 +584,11 @@ def update_recording_v14_v18(rec_dir):
                 datum['topic'] += 's'
 
         with PLData_Writer(rec_dir, new_topic) as writer:
-            writer.extend(pd_old[old_topic])
+            try:
+                writer.extend(pd_old[old_topic])
+            except KeyError:
+                print(f'{old_topic}: {pd_old[old_topic][0]}')
+                raise
 
     meta_info_path = os.path.join(rec_dir, "info.csv")
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:

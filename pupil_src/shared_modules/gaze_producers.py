@@ -604,7 +604,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def cancel_marker_detection(self):
         if self.process_pipe:
-            self.process_pipe.send(topic='terminate', payload={})
+            self.process_pipe.send({'topic': 'terminate'})
             self.process_pipe.socket.close()
             self.process_pipe = None
 

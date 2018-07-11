@@ -469,7 +469,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             for data in events.values():
                 assert(isinstance(data, (list, tuple)))
                 for d in data:
-                    ipc_pub.send(d['topic'], d)
+                    ipc_pub.send(d)
 
             glfw.glfwMakeContextCurrent(main_window)
             # render visual feedback from loaded plugins

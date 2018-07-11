@@ -122,7 +122,7 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
         user_launchable_plugins = [Service_UI, Pupil_Groups, Pupil_Remote, Frame_Publisher, Blink_Detection]+runtime_plugins
         plugin_by_index = runtime_plugins+calibration_plugins+gaze_mapping_plugins+user_launchable_plugins
-        name_by_index = [p.__name__ for p in plugin_by_index]
+        name_by_index = [pupil_datum.__name__ for pupil_datum in plugin_by_index]
         plugin_by_name = dict(zip(name_by_index, plugin_by_index))
         default_plugins = [('Service_UI', {}), ('Dummy_Gaze_Mapper', {}), ('HMD_Calibration', {}), ('Pupil_Remote', {})]
         g_pool.plugin_by_name = plugin_by_name
@@ -191,19 +191,19 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         while g_pool.service_should_run:
             socks = dict(poller.poll())
             if pupil_sub.socket in socks:
-                t, p = pupil_sub.recv()
-                new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
-                for g in new_gaze_data:
-                    gaze_pub.send('gaze', g)
+                topic, pupil_datum = pupil_sub.recv()
+                new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(pupil_datum)
+                for gaze_datum in new_gaze_data:
+                    gaze_pub.send(gaze_datum)
 
                 events = {}
                 events['gaze'] = new_gaze_data
-                events['pupil'] = [p]
+                events['pupil'] = [pupil_datum]
                 for plugin in g_pool.plugins:
                     plugin.recent_events(events=events)
 
             if notify_sub.socket in socks:
-                t, n = notify_sub.recv()
+                topic, n = notify_sub.recv()
                 handle_notifications(n)
                 for plugin in g_pool.plugins:
                     plugin.on_notify(n)
@@ -221,8 +221,8 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         session_settings.close()
 
         # de-init all running plugins
-        for p in g_pool.plugins:
-            p.alive = False
+        for pupil_datum in g_pool.plugins:
+            pupil_datum.alive = False
         g_pool.plugins.clean()
 
     except:
