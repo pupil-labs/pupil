@@ -90,17 +90,17 @@ class Fixation_Result_Factory(object):
 
     def from_data(self, *args, **kwargs):
         datum = fixation_from_data(*args, **kwargs)
-        self.set_fixation_id(datum)
+        self._set_fixation_id(datum)
         fixation_start = datum['timestamp']
         fixation_stop = fixation_start + (datum['duration'] / 1000)
-        datum = self.serialize(datum)
+        datum = self._serialize(datum)
         return (datum, fixation_start, fixation_stop)
 
-    def set_fixation_id(self, fixation):
+    def _set_fixation_id(self, fixation):
         fixation['id'] = self._id_counter
         self._id_counter += 1
 
-    def serialize(self, fixation):
+    def _serialize(self, fixation):
         serialization_hook = fm.Serialized_Dict.packing_hook
         fixation_serialized = msgpack.packb(fixation, use_bin_type=True,
                                             default=serialization_hook)
