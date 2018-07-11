@@ -197,8 +197,9 @@ class _FrozenDict(dict):
 
 
 class Serialized_Dict(object):
+    __slots__ = ['_ser_data', '_data']
     cache_len = 100
-    _cache_ref = [_Empty()]*cache_len
+    _cache_ref = [_Empty()] * cache_len
     MSGPACK_EXT_CODE = 13
 
     def __init__(self, python_dict=None, msgpack_bytes=None):
