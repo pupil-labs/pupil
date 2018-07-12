@@ -112,6 +112,8 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 
             for eye_id in (0, 1):
                 pupil_positions = pp_by_id[eye_id]
+                if not pupil_positions:
+                    continue
                 data_indeces = np.searchsorted(pp_by_id[eye_id].timestamps,
                                                timestamps_target)
                 data_indeces = np.unique(data_indeces).clip(0, len(pupil_positions) - 1)
