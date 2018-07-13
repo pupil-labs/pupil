@@ -105,13 +105,11 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
             self.cache[key] = {'left': [], 'right': [],
                                'xlim': [t0, t1], 'ylim': [0, 1]}
         else:
-            xlims = []
             ts_data_pairs_right_left = [],[]
             for eye_id in (0, 1):
                 pupil_positions = self.g_pool.pupil_positions_by_id[eye_id]
                 if pupil_positions:
                     t0,t1 = pupil_positions.timestamps[0],pupil_positions.timestamps[-1]
-                    xlims.extend((t0,t1))
                     timestamps_target = np.linspace(t0, t1, NUMBER_SAMPLES_TIMELINE)
 
                     data_indeces = np.searchsorted(pupil_positions.timestamps,
@@ -128,7 +126,7 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 
             self.cache[key] = {'right': ts_data_pairs_right_left[0],
                                'left': ts_data_pairs_right_left[1],
-                               'xlim': [min(xlims), max(xlims)], 'ylim': [0, max_val]}
+                               'xlim': [self.g_pool.timestamps[0],self.g_pool.timestamps[-1]], 'ylim': [0, max_val]}
 
     def draw_pupil_diameter(self, width, height, scale):
         self.draw_pupil_data('diameter', width, height, scale)
