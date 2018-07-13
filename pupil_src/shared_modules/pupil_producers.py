@@ -218,7 +218,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.data_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.data_dir, exist_ok=True)
         try:
-            session_meta_data = pm.load_object(os.path.join(self.data_dir, self.session_data_name+'.meta'))
+            session_meta_data = fm.load_object(os.path.join(self.data_dir, self.session_data_name+'.meta'))
             assert session_meta_data.get('version') == self.session_data_version
         except (AssertionError, FileNotFoundError):
             session_meta_data = {}
