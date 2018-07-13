@@ -270,7 +270,7 @@ class Serialized_Dict(object):
 
     def get(self,key,default):
         try:
-            return self['key']
+            return self[key]
         except KeyError:
             return default
 
