@@ -47,7 +47,7 @@ class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
         }
         self.hand_transform = BaseTransform(self.hand_detector_cfg['input_size'], (117.77, 115.42, 107.29), (72.03, 69.83, 71.43))
         self.hand_detector = ssd_lite.build_ssd_lite(self.hand_detector_cfg)
-        self.hand_detector.load_state_dict(torch.load(self.hand_detector_cfg['weights_path']))
+        self.hand_detector.load_state_dict(torch.load(self.hand_detector_cfg['weights_path'], map_location=lambda storage, loc: storage))
         self.hand_detector.eval().to(self.device)
 
         # Fingertip Detector
@@ -57,7 +57,7 @@ class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
         }
         self.fingertip_transform = BaseTransform(64, (121.97, 119.65, 111.42), (67.58, 65.17, 67.72))
         self.fingertip_detector = unet.UNet(num_classes=10, in_channels=3, depth=4, start_filts=32, up_mode='transpose')
-        self.fingertip_detector.load_state_dict(torch.load(self.fingertip_detector_cfg['weights_path']))
+        self.fingertip_detector.load_state_dict(torch.load(self.fingertip_detector_cfg['weights_path'], map_location=lambda storage, loc: storage))
         self.fingertip_detector.eval().to(self.device)
 
         self.collect_tips = False
