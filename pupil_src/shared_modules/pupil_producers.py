@@ -101,32 +101,32 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
             events['pupil'] = self.g_pool.pupil_positions.by_ts_window(window)
 
     def cache_pupil_timeline_data(self, key):
-        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
         if not self.g_pool.pupil_positions:
             self.cache[key] = {'left': [], 'right': [],
                                'xlim': [t0, t1], 'ylim': [0, 1]}
         else:
-            timestamps_target = np.linspace(t0, t1, NUMBER_SAMPLES_TIMELINE)
-            pp_by_id = self.g_pool.pupil_positions_by_id
-            ts_data_pairs_right_left = collections.deque(), collections.deque()
-
+            ts_data_pairs_right_left = [],[]
             for eye_id in (0, 1):
-                pupil_positions = pp_by_id[eye_id]
-                data_indeces = np.searchsorted(pp_by_id[eye_id].timestamps,
-                                               timestamps_target)
-                data_indeces = np.unique(data_indeces).clip(0, len(pupil_positions) - 1)
-                for idx in data_indeces:
-                    ts_data_pair = (pupil_positions.timestamps[idx],
-                                    pupil_positions[idx][key])
-                    ts_data_pairs_right_left[eye_id].append(ts_data_pair)
+                pupil_positions = self.g_pool.pupil_positions_by_id[eye_id]
+                if pupil_positions:
+                    t0,t1 = pupil_positions.timestamps[0],pupil_positions.timestamps[-1]
+                    timestamps_target = np.linspace(t0, t1, NUMBER_SAMPLES_TIMELINE)
+
+                    data_indeces = np.searchsorted(pupil_positions.timestamps,
+                                                   timestamps_target)
+                    data_indeces = np.unique(data_indeces)
+                    for idx in data_indeces:
+                        ts_data_pair = (pupil_positions.timestamps[idx],
+                                        pupil_positions[idx][key])
+                        ts_data_pairs_right_left[eye_id].append(ts_data_pair)
 
             # max_val must not be 0, else gl will crash
-            pupil_data_chained = chain.from_iterable(ts_data_pairs_right_left)
-            max_val = max((pd[1] for pd in pupil_data_chained)) or 1
+            all_pupil_data_chained  = chain.from_iterable(ts_data_pairs_right_left)
+            max_val = max((pd[1] for pd in all_pupil_data_chained)) or 1
 
-            self.cache[key] = {'right': list(ts_data_pairs_right_left[0]),
-                               'left': list(ts_data_pairs_right_left[1]),
-                               'xlim': [t0, t1], 'ylim': [0, max_val]}
+            self.cache[key] = {'right': ts_data_pairs_right_left[0],
+                               'left': ts_data_pairs_right_left[1],
+                               'xlim': [self.g_pool.timestamps[0],self.g_pool.timestamps[-1]], 'ylim': [0, max_val]}
 
     def draw_pupil_diameter(self, width, height, scale):
         self.draw_pupil_data('diameter', width, height, scale)
@@ -218,7 +218,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.data_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.data_dir, exist_ok=True)
         try:
-            session_meta_data = pm.load_object(os.path.join(self.data_dir, self.session_data_name+'.meta'))
+            session_meta_data = fm.load_object(os.path.join(self.data_dir, self.session_data_name+'.meta'))
             assert session_meta_data.get('version') == self.session_data_version
         except (AssertionError, FileNotFoundError):
             session_meta_data = {}
