@@ -541,10 +541,15 @@ class Fixation_Detector(Fixation_Detector_Base):
                 new_fixation['id'] = self.id_counter
                 self.id_counter += 1
 
+            self.replace_basedata_with_references(new_fixation)
             events['fixations'].append(new_fixation)
             self.recent_fixation = new_fixation
         else:
             self.recent_fixation = None
+
+    def replace_basedata_with_references(self, fixation):
+        fixation['base_data'] = [(gaze['topic'], gaze['timestamp'])
+                                  for gaze in fixation['base_data']]
 
     def gl_display(self):
         if self.recent_fixation:
