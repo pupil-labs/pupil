@@ -38,6 +38,7 @@ def get_auto_name():
 
 def available_gb(path):
     if platform.system() == 'Windows':
+        # Taken from https://stackoverflow.com/a/2372171
         free_bytes = ctypes.c_ulonglong(0)
         ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(path),
                                                    None, None,
