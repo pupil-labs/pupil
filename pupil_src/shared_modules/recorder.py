@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import ctypes
 import errno
 # logging
 import logging
@@ -19,6 +18,7 @@ from shutil import copy2
 from time import gmtime, localtime, strftime, time
 
 import numpy as np
+import psutil
 from ndsi import H264Writer
 from pyglui import ui
 
@@ -37,16 +37,7 @@ def get_auto_name():
 
 
 def available_gb(path):
-    if platform.system() == 'Windows':
-        # Taken from https://stackoverflow.com/a/2372171
-        free_bytes = ctypes.c_ulonglong(0)
-        ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(path),
-                                                   None, None,
-                                                   ctypes.pointer(free_bytes))
-        num_avail_gb = free_bytes.value / 1e9
-    else:
-        stats = os.statvfs(path)
-        num_avail_gb = stats.f_bsize * stats.f_bavail / 1e9
+    num_avail_gb = psutil.disk_usage(path).free / 1e9
     logger.debug('{} has {:.2f} GB available'.format(path, num_avail_gb))
     return num_avail_gb
 
