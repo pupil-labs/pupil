@@ -230,6 +230,7 @@ class JPEG_Writer(object):
         packet = Packet()
         packet.payload = input_frame.jpeg_buffer
         # we are setting the packet pts manually this uses a different timebase av.frame!
+        packet.time_base = self.time_base
         packet.dts = int(self.frame_count/self.time_base/self.fps)
         packet.pts = int(self.frame_count/self.time_base/self.fps)
         self.frame_count += 1

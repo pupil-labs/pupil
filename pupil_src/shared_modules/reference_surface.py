@@ -158,8 +158,10 @@ class Reference_Surface(object):
         if not all_verts:
             return
         all_verts = np.array(all_verts,dtype=np.float32)
-        # all_verts_undistorted_normalized centered in img center flipped in y and range [-1,1]
-        all_verts_undistorted_normalized = self.g_pool.capture.intrinsics.unprojectPoints(all_verts, use_distortion=self.use_distortion)[:, :2]
+        all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
+
+
+        all_verts_undistorted_normalized = self.g_pool.capture.intrinsics.unprojectPoints(all_verts, use_distortion=self.use_distortion)[:, :2] # we ommit the z corrd as it is 1.
         all_verts_undistorted_normalized.shape = -1, 1, 2
         hull = cv2.convexHull(all_verts_undistorted_normalized.astype(np.float32), clockwise=False)
 
@@ -318,11 +320,11 @@ class Reference_Surface(object):
             detected = True
             xy = np.array( [marker_by_id[i]['verts'] for i in overlap] )
             uv = np.array( [self.markers[i].uv_coords for i in overlap] )
-            uv.shape=(-1,1,2)
-
+            uv.shape=(-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
+            xy.shape=(-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
             # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
             # compute the homography transform from marker into the undistored normalized image space
-            # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
+            # we ommit the z corrd as it is always one.
             xy_undistorted_normalized = self.g_pool.capture.intrinsics.unprojectPoints(xy, use_distortion=self.use_distortion)[:, :2]
             xy_undistorted_normalized.shape = -1, 1, 2
 

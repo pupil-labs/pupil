@@ -74,12 +74,12 @@ else:
                 opencv_libraries = [lib + '3' for lib in opencv_libraries]
                 break
     include_dirs = [np.get_include(), '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path, singleeyefitter_include_path, opencv_include_dir]
+    python_version = sys.version_info
     if platform.system() == 'Linux':
-        python_version = sys.version_info
         # boost_python-py34
         boost_lib = 'boost_python-py'+str(python_version[0])+str(python_version[1])
     else:
-        boost_lib = 'boost_python3'
+        boost_lib = 'boost_python'+str(python_version[0])+str(python_version[1])
     libs = ['ceres', boost_lib]+opencv_libraries
     xtra_obj2d = []
     library_dirs = [opencv_library_dir]

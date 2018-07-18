@@ -119,7 +119,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             return range(len(monitors)),monitors
 
         if self.monitor_idx not in get_monitors_idx_list()[0]:
-            logger.warning("Monitor at index %s no longer availalbe using default"%idx)
+            logger.warning("Monitor at index %s no longer availalbe using default"%self.monitor_idx)
             self.monitor_idx = 0
 
         self.menu.append(ui.Info_Text("Calibrate gaze parameters using a screen based animation."))
@@ -161,7 +161,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 try:
                     monitor = glfwGetMonitors()[self.monitor_idx]
                 except:
-                    logger.warning("Monitor at index %s no longer availalbe using default"%idx)
+                    logger.warning("Monitor at index %s no longer availalbe using default"%self.monitor_idx)
                     self.monitor_idx = 0
                     monitor = glfwGetMonitors()[self.monitor_idx]
                 width, height, redBits, blueBits, greenBits, refreshRate = glfwGetVideoMode(monitor)

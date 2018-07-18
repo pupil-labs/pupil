@@ -185,7 +185,7 @@ class Accuracy_Visualizer(Plugin):
         num_used, num_total = selected_samples.shape[0], angular_err.shape[0]
 
         error_lines = error_lines[selected_indices].reshape(-1, 2)  # shape: num_used x 2
-        accuracy = np.rad2deg(np.arccos(selected_samples.mean()))
+        accuracy = np.rad2deg(np.arccos(selected_samples.clip(-1., 1.).mean()))
         accuracy_result = Calculation_Result(accuracy, num_used, num_total)
 
         # lets calculate precision:  (RMS of distance of succesive samples.)
@@ -205,7 +205,7 @@ class Accuracy_Visualizer(Plugin):
                                           succesive_distances_ref > self.succession_threshold)
         succesive_distances = succesive_distances_gaze[selected_indices]
         num_used, num_total = succesive_distances.shape[0], succesive_distances_gaze.shape[0]
-        precision = np.sqrt(np.mean(np.arccos(succesive_distances) ** 2))
+        precision = np.sqrt(np.mean(np.rad2deg(np.arccos(succesive_distances.clip(-1., 1.))) ** 2))
         precision_result = Calculation_Result(precision, num_used, num_total)
 
         return accuracy_result, precision_result, error_lines
@@ -226,4 +226,5 @@ class Accuracy_Visualizer(Plugin):
 
     def get_init_dict(self):
         return {'outlier_threshold': self.outlier_threshold,
-                'vis_mapping_error': self.vis_mapping_error}
+                'vis_mapping_error': self.vis_mapping_error,
+                'vis_calibration_area': self.vis_calibration_area}
