@@ -84,7 +84,7 @@ def save_object(object_, file_path):
     with open(file_path, 'wb') as fh:
         msgpack.pack(object_, fh, use_bin_type=True,default=ndarrray_to_list)
 
-class Iterative_Legacy_Pupil_Data_Loader(object):
+class Incremental_Legacy_Pupil_Data_Loader(object):
     def __init__(self, directory=''):
         self.file_loc = os.path.join(directory, 'pupil_data')
 

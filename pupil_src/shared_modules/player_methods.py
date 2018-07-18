@@ -562,7 +562,7 @@ def update_recording_v14_v18(rec_dir):
                             'gaze_positions': 'gaze',
                             'pupil_positions': 'pupil'}
 
-    with fm.Iterative_Legacy_Pupil_Data_Loader(rec_dir) as loader:
+    with fm.Incremental_Legacy_Pupil_Data_Loader(rec_dir) as loader:
         for old_topic, values in loader.topic_values_pairs():
             new_topic = legacy_topic_mapping.get(old_topic, old_topic)
             with fm.PLData_Writer(rec_dir, new_topic) as writer:
