@@ -236,7 +236,7 @@ class Surface_Tracker(Plugin):
                          'fixations_on_srf': s.fixations_on_srf,
                          'timestamp': frame.timestamp,
                          'camera_pose_3d': s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None}
-                events['surfaces'].append()
+                events['surfaces'].append(datum)
 
 
         if self.running:

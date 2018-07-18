@@ -126,7 +126,9 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 
             self.cache[key] = {'right': ts_data_pairs_right_left[0],
                                'left': ts_data_pairs_right_left[1],
-                               'xlim': [self.g_pool.timestamps[0],self.g_pool.timestamps[-1]], 'ylim': [0, max_val]}
+                               'xlim': [self.g_pool.timestamps[0],
+                                        self.g_pool.timestamps[-1]],
+                               'ylim': [0, max_val]}
 
     def draw_pupil_diameter(self, width, height, scale):
         self.draw_pupil_data('diameter', width, height, scale)
