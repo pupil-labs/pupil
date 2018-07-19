@@ -118,7 +118,8 @@ class Offline_Reference_Surface(Reference_Surface):
         return self.map_data_to_surface(self.g_pool.gaze_positions.by_ts_window(frame_window), m_from_screen)
 
     def fixations_on_srf_by_frame_idx(self, frame_index, m_from_screen):
-        return self.map_data_to_surface(self.g_pool.fixations_by_frame[frame_index], m_from_screen)
+        frame_window = pm.enclosing_window(self.g_pool.timestamps, frame_index)
+        return self.map_data_to_surface(self.g_pool.fixations.by_ts_window(frame_window), m_from_screen)
 
     def gl_display_metrics(self):
         if self.metrics_texture and self.detected:
