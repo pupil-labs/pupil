@@ -160,10 +160,9 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  'projected_sphere_axis_b',
                                  'projected_sphere_angle'))
 
-            pupil_data = self.g_pool.pupil_positions.by_ts_window(export_window)
-            pupil_ts = self.g_pool.pupil_positions.timestamps
-            pupil_world_idc = pm.find_closest(self.g_pool.timestamps, pupil_ts)
-            for p, idx in zip(pupil_data, pupil_world_idc):
+            pupil_section = self.g_pool.pupil_positions.init_dict_for_window(export_window)
+            pupil_world_idc = pm.find_closest(self.g_pool.timestamps, pupil_section['data_ts'])
+            for p, idx in zip(pupil_section['data'], pupil_world_idc):
                 data_2d = ['{}'.format(p['timestamp']),  # use str to be consitant with csv lib.
                            idx,
                            p['id'],
@@ -232,11 +231,10 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  "gaze_normal1_y",
                                  "gaze_normal1_z"))
 
-            gaze_data = self.g_pool.gaze_positions.by_ts_window(export_window)
-            gaze_ts = self.g_pool.gaze_positions.timestamps
-            gaze_world_idc = pm.find_closest(self.g_pool.timestamps, gaze_ts)
+            gaze_section = self.g_pool.gaze_positions.init_dict_for_window(export_window)
+            gaze_world_idc = pm.find_closest(self.g_pool.timestamps, gaze_section['data_ts'])
 
-            for g, idx in zip(gaze_data, gaze_world_idc):
+            for g, idx in zip(gaze_section['data'], gaze_world_idc):
                 data = ['{}'.format(g["timestamp"]), idx, g["confidence"], g["norm_pos"][0], g["norm_pos"][1],
                         " ".join(['{}-{}'.format(b['timestamp'], b['id']) for b in g['base_data']])]  # use str on timestamp to be consitant with csv lib.
 
