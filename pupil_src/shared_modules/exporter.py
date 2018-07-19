@@ -17,31 +17,28 @@ if __name__ == '__main__':
     syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
     del syspath, ospath
 
-import os
-from time import time
-from glob import glob
-from video_capture import init_playback_source, EndofVideoError
-from av_writer import AV_Writer
-from file_methods import load_object
-import player_methods as pm
-
-
 # logging
 import logging
+import os
+from glob import glob
+from time import time
 
-# Plug-ins
-from plugin import Plugin_List, import_runtime_plugins
-from vis_circle import Vis_Circle
-from vis_cross import Vis_Cross
-from vis_polyline import Vis_Polyline
-from vis_light_points import Vis_Light_Points
-from vis_watermark import Vis_Watermark
-from vis_scan_path import Vis_Scan_Path
-from vis_eye_video_overlay import Vis_Eye_Video_Overlay
-
+import file_methods as fm
+import player_methods as pm
+from av_writer import AV_Writer
 # we are not importing manual gaze corrction. In Player corrections have already been applied.
 # in batch exporter this plugin makes little sense.
 from fixation_detector import Offline_Fixation_Detector
+# Plug-ins
+from plugin import Plugin_List, import_runtime_plugins
+from video_capture import EndofVideoError, init_playback_source
+from vis_circle import Vis_Circle
+from vis_cross import Vis_Cross
+from vis_eye_video_overlay import Vis_Eye_Video_Overlay
+from vis_light_points import Vis_Light_Points
+from vis_polyline import Vis_Polyline
+from vis_scan_path import Vis_Scan_Path
+from vis_watermark import Vis_Watermark
 
 
 class Global_Container(object):
@@ -72,7 +69,6 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
 
         pm.update_recording_to_recent(rec_dir)
 
-        pupil_data_path = os.path.join(rec_dir, "pupil_data")
         audio_path = os.path.join(rec_dir, "audio.mp4")
 
         meta_info = pm.load_meta_info(rec_dir)
@@ -139,13 +135,14 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         g_pool.timestamps = timestamps
         g_pool.delayed_notifications = {}
         g_pool.notifications = []
-        # load pupil_positions, gaze_positions
-        pupil_data = pre_computed.get("pupil_data") or load_object(pupil_data_path)
-        g_pool.pupil_data = pupil_data
-        g_pool.fixations = pre_computed.get("fixations", [])
-        g_pool.fixations_by_frame = pm.correlate_data(g_pool.fixations, g_pool.timestamps)
-        g_pool.pupil_positions = pm.Bisector(pre_computed.get("pupil_positions") or pupil_data.get('pupil', []), g_pool.timestamps)
-        g_pool.gaze_positions = pm.Bisector(pre_computed.get("gaze_positions") or pupil_data.get('gaze', []), g_pool.timestamps)
+
+        for initializers in pre_computed.values():
+            initializers['data'] = [fm.Serialized_Dict(msgpack_bytes=serialized)
+                                    for serialized in initializers['data']]
+
+        g_pool.pupil_positions = pm.Bisector(**pre_computed["pupil"])
+        g_pool.gaze_positions = pm.Bisector(**pre_computed["gaze"])
+        g_pool.fixations = pm.Affiliator(**pre_computed["fixations"])
 
         # add plugins
         g_pool.plugins = Plugin_List(g_pool, plugin_initializers)

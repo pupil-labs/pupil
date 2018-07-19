@@ -59,8 +59,11 @@ class Bisector(object):
             self.data = self.data[self.sorted_idc].tolist()
 
     def by_ts_window(self, ts_window):
-        start_idx, stop_idx = np.searchsorted(self.data_ts, ts_window)
+        start_idx, stop_idx = self._start_stop_idc_for_window(ts_window)
         return self.data[start_idx:stop_idx]
+
+    def _start_stop_idc_for_window(self, ts_window):
+        return np.searchsorted(self.data_ts, ts_window)
 
     def __getitem__(self, key):
         return self.data[key]
@@ -78,6 +81,11 @@ class Bisector(object):
     def timestamps(self):
         return self.data_ts
 
+    def init_dict_for_window(self, ts_window):
+        start_idx, stop_idx = self._start_stop_idc_for_window(ts_window)
+        return {'data': self.data[start_idx:stop_idx],
+                'data_ts': self.data_ts[start_idx:stop_idx]}
+
 
 class Affiliator(Bisector):
     """docstring for ClassName"""
@@ -86,10 +94,16 @@ class Affiliator(Bisector):
         self.stop_ts = np.asarray(stop_ts)
         self.stop_ts = self.stop_ts[self.sorted_idc]
 
-    def by_ts_window(self, ts_window):
+    def _start_stop_idc_for_window(self, ts_window):
         start_idx = np.searchsorted(self.stop_ts, ts_window[0])
         stop_idx = np.searchsorted(self.data_ts, ts_window[1])
-        return self.data[start_idx:stop_idx]
+        return start_idx, stop_idx
+
+    def init_dict_for_window(self, ts_window):
+        start_idx, stop_idx = self._start_stop_idc_for_window(ts_window)
+        return {'data': self.data[start_idx:stop_idx],
+                'start_ts': self.data_ts[start_idx:stop_idx],
+                'stop_ts': self.stop_ts[start_idx:stop_idx]}
 
 
 def find_closest(target, source):

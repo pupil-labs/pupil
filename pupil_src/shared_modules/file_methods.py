@@ -9,14 +9,16 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import pickle
-import msgpack
-import os
-import numpy as np
-import traceback as tb
-import logging
 import collections
+import logging
+import os
+import pickle
+import shutil
+import traceback as tb
 from glob import iglob
+
+import msgpack
+import numpy as np
 
 logger = logging.getLogger(__name__)
 UnpicklingError = pickle.UnpicklingError
@@ -124,6 +126,14 @@ def load_pldata_file(directory, topic):
 
     return PLData(data, data_ts, topics)
 
+
+def copy_pldata(src, dst, topic):
+    ts_file = topic + '_timestamps.npy'
+    msgpack_file = topic + '.pldata'
+    for file in (ts_file, msgpack_file):
+        src_file = os.path.join(src, file)
+        dst_file = os.path.join(dst, file)
+        shutil.copy(src_file, dst_file)
 
 class PLData_Writer(object):
     """docstring for PLData_Writer"""
