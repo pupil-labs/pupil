@@ -232,8 +232,12 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  "gaze_normal1_y",
                                  "gaze_normal1_z"))
 
-            for g in self.g_pool.gaze_positions.by_ts_window(export_window):
-                data = ['{}'.format(g["timestamp"]), g["index"], g["confidence"], g["norm_pos"][0], g["norm_pos"][1],
+            gaze_data = self.g_pool.gaze_positions.by_ts_window(export_window)
+            gaze_ts = self.g_pool.gaze_positions.timestamps
+            gaze_world_idc = pm.find_closest(self.g_pool.timestamps, gaze_ts)
+
+            for g, idx in zip(gaze_data, gaze_world_idc):
+                data = ['{}'.format(g["timestamp"]), idx, g["confidence"], g["norm_pos"][0], g["norm_pos"][1],
                         " ".join(['{}-{}'.format(b['timestamp'], b['id']) for b in g['base_data']])]  # use str on timestamp to be consitant with csv lib.
 
                 # add 3d data if avaiblable
