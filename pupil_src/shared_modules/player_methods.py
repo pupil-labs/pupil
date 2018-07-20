@@ -55,7 +55,7 @@ class Bisector(object):
 
             # Find correct order once and reorder both lists in-place
             self.sorted_idc = np.argsort(self.data_ts)
-            self.data_ts = self.data_ts[self.sorted_idc]
+            self.data_ts = self.data_ts[self.sorted_idc].tolist()
             self.data = self.data[self.sorted_idc].tolist()
 
     def by_ts_window(self, ts_window):
@@ -87,10 +87,6 @@ class Bisector(object):
                 'data_ts': self.data_ts[start_idx:stop_idx]}
 
 class Mutable_Bisector(Bisector):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.data_ts = self.data_ts.tolist()
-
     def insert(self, timestamp, datum):
         insert_idx = np.searchsorted(self.data_ts, timestamp)
         self.data_ts.insert(insert_idx, timestamp)
@@ -102,6 +98,7 @@ class Affiliator(Bisector):
         super().__init__(data, start_ts)
         self.stop_ts = np.asarray(stop_ts)
         self.stop_ts = self.stop_ts[self.sorted_idc]
+        self.stop_ts = self.stop_ts.tolist()
 
     def _start_stop_idc_for_window(self, ts_window):
         start_idx = np.searchsorted(self.stop_ts, ts_window[0])
