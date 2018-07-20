@@ -241,7 +241,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
                 self.ref_list.append(ref)
 
             # always save pupil positions
-            self.pupil_list.extend(events['pupil_positions'])
+            self.pupil_list.extend(events['pupil'])
 
             # Animate the screen marker
             if len(self.markers) or not on_position:

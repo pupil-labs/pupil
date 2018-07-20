@@ -39,7 +39,7 @@ class Vis_Cross(Visualizer_Plugin_Base):
         frame = events.get('frame')
         if not frame:
             return
-        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[]) if pt['confidence']>=self.g_pool.min_data_confidence]
+        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze',[]) if pt['confidence']>=self.g_pool.min_data_confidence]
         bgra = (self.b*255,self.g*255,self.r*255,self.a*255)
         for pt in pts:
             lines =  np.array( [((pt[0]-self.inner,pt[1]),(pt[0]-self.outer,pt[1])),((pt[0]+self.inner,pt[1]),(pt[0]+self.outer,pt[1])) , ((pt[0],pt[1]-self.inner),(pt[0],pt[1]-self.outer)) , ((pt[0],pt[1]+self.inner),(pt[0],pt[1]+self.outer))],dtype=np.int32 )

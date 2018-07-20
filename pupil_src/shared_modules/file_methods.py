@@ -9,16 +9,21 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import pickle
-import msgpack
-import os
-import numpy as np
-import traceback as tb
+import collections
 import logging
+import os
+import pickle
+import shutil
+import traceback as tb
 from glob import iglob
+
+import msgpack
+import numpy as np
+
 logger = logging.getLogger(__name__)
 UnpicklingError = pickle.UnpicklingError
 
+PLData = collections.namedtuple('PLData', ['data', 'timestamps', 'topics'])
 
 class Persistent_Dict(dict):
     """a dict class that uses pickle to save inself to file"""
@@ -55,7 +60,7 @@ def load_object(file_path,allow_legacy=True):
     with open(file_path, 'rb') as fh:
         try:
             gc.disable()  # speeds deserialization up.
-            data = msgpack.unpack(fh, encoding='utf-8')
+            data = msgpack.unpack(fh, raw=False)
         except Exception as e:
             if not allow_legacy:
                 raise e
@@ -81,6 +86,95 @@ def save_object(object_, file_path):
     with open(file_path, 'wb') as fh:
         msgpack.pack(object_, fh, use_bin_type=True,default=ndarrray_to_list)
 
+class Incremental_Legacy_Pupil_Data_Loader(object):
+    def __init__(self, directory=''):
+        self.file_loc = os.path.join(directory, 'pupil_data')
+
+    def __enter__(self):
+        self.file_handle = open(self.file_loc, 'rb')
+        self.unpacker = msgpack.Unpacker(self.file_handle, raw=False, use_list=False)
+        self.num_key_value_pairs = self.unpacker.read_map_header()
+        self._skipped = True
+        return self
+
+    def __exit__(self, *exc):
+        self.file_handle.close()
+
+    def topic_values_pairs(self):
+        for _ in range(self.num_key_value_pairs):
+            yield self.unpacker.unpack(), self._next_values()
+
+    def _next_values(self):
+        for _ in range(self.unpacker.read_array_header()):
+            yield self.unpacker.unpack()
+
+def load_pldata_file(directory, topic):
+    ts_file = os.path.join(directory, topic + '_timestamps.npy')
+    msgpack_file = os.path.join(directory, topic + '.pldata')
+    try:
+        data = collections.deque()
+        topics = collections.deque()
+        data_ts = np.load(ts_file)
+        with open(msgpack_file, "rb") as fh:
+            for topic, payload in msgpack.Unpacker(fh, raw=False, use_list=False):
+                data.append(Serialized_Dict(msgpack_bytes=payload))
+                topics.append(topic)
+    except FileNotFoundError:
+        data = []
+        data_ts = []
+        topics = []
+
+    return PLData(data, data_ts, topics)
+
+
+def copy_pldata(src, dst, topic):
+    ts_file = topic + '_timestamps.npy'
+    msgpack_file = topic + '.pldata'
+    for file in (ts_file, msgpack_file):
+        src_file = os.path.join(src, file)
+        dst_file = os.path.join(dst, file)
+        shutil.copy(src_file, dst_file)
+
+class PLData_Writer(object):
+    """docstring for PLData_Writer"""
+    def __init__(self, directory, name):
+        super().__init__()
+        self.directory = directory
+        self.name = name
+        self.ts_queue = collections.deque()
+        file_name = name + '.pldata'
+        self.file_handle = open(os.path.join(directory, file_name), 'wb')
+
+    def append(self, datum):
+        datum_serialized = msgpack.packb(datum, use_bin_type=True)
+        self.append_serialized(datum['timestamp'],
+                               datum['topic'],
+                               datum_serialized)
+
+    def append_serialized(self, timestamp, topic, datum_serialized):
+        self.ts_queue.append(timestamp)
+        pair = msgpack.packb((topic, datum_serialized), use_bin_type=True)
+        self.file_handle.write(pair)
+
+    def extend(self, data):
+        for datum in data:
+            self.append(datum)
+
+    def close(self):
+        self.file_handle.close()
+        self.file_handle = None
+
+        ts_file = self.name + '_timestamps.npy'
+        ts_path = os.path.join(self.directory, ts_file)
+        np.save(ts_path, self.ts_queue)
+        self.ts_queue = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
 
 def next_export_sub_dir(root_export_dir):
     # match any sub directories or files a three digit pattern
@@ -93,3 +187,192 @@ def next_export_sub_dir(root_export_dir):
         next_sub_dir = '000'
 
     return os.path.join(root_export_dir, next_sub_dir)
+
+
+class _Empty(object):
+    def purge_cache(self):
+        pass
+
+
+# an Immutable dict for dics nested inside this dict.
+class _FrozenDict(dict):
+    def __setitem__(self, key, value):
+        raise NotImplementedError('Invalid operation')
+
+    def clear(self):
+        raise NotImplementedError()
+
+    def update(self, *args, **kwargs):
+        raise NotImplementedError()
+
+
+class Serialized_Dict(object):
+    __slots__ = ['_ser_data', '_data']
+    cache_len = 100
+    _cache_ref = [_Empty()] * cache_len
+    MSGPACK_EXT_CODE = 13
+
+    def __init__(self, python_dict=None, msgpack_bytes=None):
+        if type(python_dict) is dict:
+            self._ser_data = msgpack.packb(python_dict, use_bin_type=True,
+                                           default=self.packing_hook)
+        elif type(msgpack_bytes) is bytes:
+            self._ser_data = msgpack_bytes
+        else:
+            raise ValueError("Neither mapping nor payload is supplied or wrong format.")
+        self._data = None
+
+    def _deser(self):
+        if not self._data:
+            self._data = msgpack.unpackb(self._ser_data, raw=False, use_list=False,
+                                         object_hook=self.unpacking_object_hook,
+                                         ext_hook=self.unpacking_ext_hook)
+            self._cache_ref.pop(0).purge_cache()
+            self._cache_ref.append(self)
+
+    @classmethod
+    def unpacking_object_hook(self,obj):
+        if type(obj) is dict:
+            return _FrozenDict(obj)
+
+    @classmethod
+    def packing_hook(self, obj):
+        if isinstance(obj, self):
+            return msgpack.ExtType(self.MSGPACK_EXT_CODE, obj.serialized)
+        raise TypeError("can't serialize {}({})".format(type(obj), repr(obj)))
+
+    @classmethod
+    def unpacking_ext_hook(self, code, data):
+        if code == self.MSGPACK_EXT_CODE:
+            return self(msgpack_bytes=data)
+        return msgpack.ExtType(code, data)
+
+    def purge_cache(self):
+        self._data = None
+
+    @property
+    def serialized(self):
+        return self._ser_data
+
+    def __setitem__(self, key, item):
+        raise NotImplementedError()
+
+    def __getitem__(self, key):
+        self._deser()
+        return self._data[key]
+
+    def __repr__(self):
+        self._deser()
+        return 'Serialized_Dict({})'.format(repr(self._data))
+
+    @property
+    def len(self):
+        '''Replacement implementation for __len__
+
+        If __len__ is defined numpy will recognize this as nested structure and
+        start deserializing everything instead of using this object as it is.
+        '''
+        self._deser()
+        return len(self._data)
+
+    def __delitem__(self, key):
+        raise NotImplementedError()
+
+    def get(self,key,default):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def clear(self):
+        raise NotImplementedError()
+
+    def copy(self):
+        self._deser()
+        return self._data.copy()
+
+    def has_key(self, k):
+        self._deser()
+        return k in self._data
+
+    def update(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    def keys(self):
+        self._deser()
+        return self._data.keys()
+
+    def values(self):
+        self._deser()
+        return self._data.values()
+
+    def items(self):
+        self._deser()
+        return self._data.items()
+
+    def pop(self, *args):
+        raise NotImplementedError()
+
+    def __cmp__(self, dict_):
+        self._deser()
+        return self._data.__cmp__(dict_)
+
+    def __contains__(self, item):
+        self._deser()
+        return item in self._data
+
+    def __iter__(self):
+        self._deser()
+        return iter(self._data)
+
+
+def bench_save():
+    import time
+    # in recorder
+    start = time.time()
+    data = []
+    inters= 200*60*60 # 1h recording
+    dummy_datum = {'topic': 'pupil', 'circle_3d': {'center': [0.0, -0.0, 0.0], 'normal': [0.0, -0.0, 0.0], 'radius': 0.0}, 'confidence': 0.0, 'timestamp': 0.9351908409998941, 'diameter_3d': 0.0, 'ellipse': {'center': [96.0, 96.0], 'axes': [0.0, 0.0], 'angle': 90.0}, 'norm_pos': [0.5, 0.5], 'diameter': 0.0, 'sphere': {'center': [-2.2063483765091934, 0.0836648916925231, 48.13110450930929], 'radius': 12.0}, 'projected_sphere': {'center': [67.57896110256269, 97.07772787219814], 'axes': [309.15558975219403, 309.15558975219403], 'angle': 90.0}, 'model_confidence': 1.0, 'model_id': 1, 'model_birth_timestamp': 640.773183, 'theta': 0, 'phi': 0, 'method': '3d c++', 'id': 0}
+
+    with open("test","wb") as fb:
+        packer = msgpack.Packer(use_bin_type=True)
+        for x in range(inters):
+            a = "pupil",msgpack.packb(dummy_datum,use_bin_type=True)
+            b = "pupil",msgpack.packb(dummy_datum,use_bin_type=True)
+            c = "gaze",msgpack.packb(dummy_datum,use_bin_type=True)
+            aa = "aa",msgpack.packb({"test":{"nested":True}},use_bin_type=True)
+            fb.write(packer.pack(a))
+            fb.write(packer.pack(b))
+            fb.write(packer.pack(c))
+            fb.write(packer.pack(aa))
+    print("generated and saved in %s"%(time.time()-start))
+
+
+def bench_load():
+
+    import time
+    start = time.time()
+    pupil_data = load_pupil_data_file("test")
+    print(pupil_data.keys())
+    print("loaded in %s"%(time.time()-start))
+
+
+if __name__ == '__main__':
+    import sys
+    # d = load_object("/Users/mkassner/Downloads/000/pupil_data")["gaze_positions"]
+    # size = len(d)
+    # print(size)
+    # # del d
+    # l = []
+    # for p in range(size):
+    #     l.append(Serialized_Dict(d[p]))
+    #     l[-1]['timestamp']
+    # del(d)
+    # print(size)
+    # print("slfrf")
+    # from time import sleep
+    # sleep(10)
+    bench_save()
+    from time import sleep
+    # sleep(3)
+    bench_load()

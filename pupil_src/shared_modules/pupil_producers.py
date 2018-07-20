@@ -9,29 +9,30 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os
-import zmq
-import zmq_tools
-import numpy as np
-from itertools import chain
-from plugin import Producer_Plugin_Base
-from pyglui import ui
-from player_methods import correlate_data
-from file_methods import load_object, save_object
-
-from pyglui.pyfontstash import fontstash as fs
-from pyglui.cygl.utils import *
-import OpenGL.GL as gl
-import gl_utils
-
-import pupil_detectors  # trigger module compilation
-
 import logging
+import os
+from itertools import chain
+import collections
+
+import numpy as np
+import OpenGL.GL as gl
+import zmq
+from pyglui import ui
+import pyglui.cygl.utils as cygl_utils
+from pyglui.pyfontstash import fontstash as fs
+
+import file_methods as fm
+import gl_utils
+import player_methods as pm
+import pupil_detectors  # trigger module compilation
+import zmq_tools
+from plugin import Producer_Plugin_Base
+
 logger = logging.getLogger(__name__)
 
-right_color = RGBA(0.9844, 0.5938, 0.4023, 1.)
-left_color = RGBA(0.668, 0.6133, 0.9453, 1.)
-
+COLOR_LEGEND_EYE_RIGHT = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.)
+COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.)
+NUMBER_SAMPLES_TIMELINE = 4000
 
 class Empty(object):
         pass
@@ -42,6 +43,8 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
     order = 0.01
     icon_chr = chr(0xec12)
     icon_font = 'pupil_icons'
+
+
 
     def init_ui(self):
         self.add_menu()
@@ -94,22 +97,38 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
-            events['pupil_positions'] = self.g_pool.pupil_positions_by_frame[frm_idx]
+            window = pm.enclosing_window(self.g_pool.timestamps, frm_idx)
+            events['pupil'] = self.g_pool.pupil_positions.by_ts_window(window)
 
     def cache_pupil_timeline_data(self, key):
-        t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
+        world_start_stop_ts = [self.g_pool.timestamps[0], self.g_pool.timestamps[-1]]
         if not self.g_pool.pupil_positions:
             self.cache[key] = {'left': [], 'right': [],
-                               'xlim': [t0, t1], 'ylim': [0, 1]}
+                               'xlim': world_start_stop_ts, 'ylim': [0, 1]}
         else:
-            right = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 0]
-            left = [(pp['timestamp'], pp[key]) for pp in self.g_pool.pupil_positions if pp['id'] == 1]
+            ts_data_pairs_right_left = [],[]
+            for eye_id in (0, 1):
+                pupil_positions = self.g_pool.pupil_positions_by_id[eye_id]
+                if pupil_positions:
+                    t0,t1 = pupil_positions.timestamps[0],pupil_positions.timestamps[-1]
+                    timestamps_target = np.linspace(t0, t1, NUMBER_SAMPLES_TIMELINE)
+
+                    data_indeces = np.searchsorted(pupil_positions.timestamps,
+                                                   timestamps_target)
+                    data_indeces = np.unique(data_indeces)
+                    for idx in data_indeces:
+                        ts_data_pair = (pupil_positions.timestamps[idx],
+                                        pupil_positions[idx][key])
+                        ts_data_pairs_right_left[eye_id].append(ts_data_pair)
 
             # max_val must not be 0, else gl will crash
-            max_val = max(chain((pp[1] for pp in right), (pp[1] for pp in left))) or 1
+            all_pupil_data_chained  = chain.from_iterable(ts_data_pairs_right_left)
+            max_val = max((pd[1] for pd in all_pupil_data_chained)) or 1
 
-            self.cache[key] = {'left': left, 'right': right,
-                               'xlim': [t0, t1], 'ylim': [0, max_val]}
+            self.cache[key] = {'right': ts_data_pairs_right_left[0],
+                               'left': ts_data_pairs_right_left[1],
+                               'xlim': world_start_stop_ts,
+                               'ylim': [0, max_val]}
 
     def draw_pupil_diameter(self, width, height, scale):
         self.draw_pupil_data('diameter', width, height, scale)
@@ -122,8 +141,8 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
         left = self.cache[key]['left']
 
         with gl_utils.Coord_System(*self.cache[key]['xlim'], *self.cache[key]['ylim']):
-            draw_points(right, size=2.*scale, color=right_color)
-            draw_points(left, size=2.*scale, color=left_color)
+            cygl_utils.draw_points(right, size=2.*scale, color=COLOR_LEGEND_EYE_RIGHT)
+            cygl_utils.draw_points(left, size=2.*scale, color=COLOR_LEGEND_EYE_LEFT)
 
     def draw_dia_legend(self, width, height, scale):
         self.draw_legend(self.dia_timeline.label, width, height, scale)
@@ -144,19 +163,41 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 
         self.glfont.pop_state()
 
-        draw_polyline([(pad, 1.5 * legend_height),
-                       (width / 4, 1.5 * legend_height)],
-                      color=left_color, line_type=gl.GL_LINES, thickness=4.*scale)
-        draw_polyline([(width / 2 + pad, 1.5 * legend_height),
-                       (width * 3 / 4, 1.5 * legend_height)],
-                      color=right_color, line_type=gl.GL_LINES, thickness=4.*scale)
+        cygl_utils.draw_polyline([(pad, 1.5 * legend_height),
+                                  (width / 4, 1.5 * legend_height)],
+                                 color=COLOR_LEGEND_EYE_LEFT,
+                                 line_type=gl.GL_LINES,
+                                 thickness=4.*scale)
+        cygl_utils.draw_polyline([(width / 2 + pad, 1.5 * legend_height),
+                                  (width * 3 / 4, 1.5 * legend_height)],
+                                 color=COLOR_LEGEND_EYE_RIGHT,
+                                 line_type=gl.GL_LINES,
+                                 thickness=4.*scale)
+
+    def split_by_topic(self, topics):
+        id0_id1_data = collections.deque(), collections.deque()
+        id0_id1_time = collections.deque(), collections.deque()
+
+        pupil_data = self.g_pool.pupil_positions
+        topic_data_ts = zip(topics, pupil_data, pupil_data.timestamps)
+        for topic, datum, timestamp in topic_data_ts:
+            eye_id = int(topic[-1])  # use topic to identify eye
+            id0_id1_data[eye_id].append(datum)
+            id0_id1_time[eye_id].append(timestamp)
+
+        bisector_id0 = pm.Bisector(id0_id1_data[0], id0_id1_time[0])
+        bisector_id1 = pm.Bisector(id0_id1_data[1], id0_id1_time[1])
+        return (bisector_id0, bisector_id1)
 
 
 class Pupil_From_Recording(Pupil_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        g_pool.pupil_positions = g_pool.pupil_data['pupil_positions']
-        g_pool.pupil_positions_by_frame = correlate_data(g_pool.pupil_positions, g_pool.timestamps)
+
+        pupil = fm.load_pldata_file(g_pool.rec_dir, 'pupil')
+        g_pool.pupil_positions = pm.Bisector(pupil.data, pupil.timestamps)
+        g_pool.pupil_positions_by_id = self.split_by_topic(pupil.topics)
+
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
 
@@ -168,7 +209,8 @@ class Pupil_From_Recording(Pupil_Producer_Base):
 
 class Offline_Pupil_Detection(Pupil_Producer_Base):
     """docstring for Offline_Pupil_Detection"""
-    session_data_version = 1
+    session_data_version = 2
+    session_data_name = 'offline_pupil'
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -178,20 +220,26 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.data_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.data_dir, exist_ok=True)
         try:
-            session_data = load_object(os.path.join(self.data_dir, 'offline_pupil_data'))
-            assert session_data.get('version') == self.session_data_version
+            session_meta_data = fm.load_object(os.path.join(self.data_dir, self.session_data_name+'.meta'))
+            assert session_meta_data.get('version') == self.session_data_version
         except (AssertionError, FileNotFoundError):
-            session_data = {}
-            session_data["detection_method"] = '3d'
-            session_data['pupil_positions'] = []
-            session_data['detection_status'] = ["unknown", "unknown"]
-        self.detection_method = session_data["detection_method"]
-        self.pupil_positions = {pp['timestamp']: pp for pp in session_data['pupil_positions']}
-        self.detection_status = session_data['detection_status']
+            session_meta_data = {}
+            session_meta_data["detection_method"] = '3d'
+            session_meta_data['detection_status'] = ["unknown", "unknown"]
+        self.detection_method = session_meta_data["detection_method"]
+        self.detection_status = session_meta_data['detection_status']
+
+        pupil = fm.load_pldata_file(self.data_dir, self.session_data_name)
+        ts_data_zip = zip(pupil.timestamps, pupil.data)
+        ts_topic_zip = zip(pupil.timestamps, pupil.topics)
+        self.pupil_positions = collections.OrderedDict(ts_data_zip)
+        self.id_topics = collections.OrderedDict(ts_topic_zip)
+
         self.eye_video_loc = [None, None]
         self.eye_frame_num = [0, 0]
-        for pp in self.pupil_positions.values():
-            self.eye_frame_num[pp['id']] += 1
+        for topic in self.id_topics.values():
+            eye_id = int(topic[-1])
+            self.eye_frame_num[eye_id] += 1
 
         self.pause_switch = None
         self.detection_paused = False
@@ -239,26 +287,35 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     def recent_events(self, events):
         super().recent_events(events)
         while self.data_sub.new_data:
-            topic, payload = self.data_sub.recv()
+            topic = self.data_sub.recv_topic()
+            remaining_frames = self.data_sub.recv_remaining_frames()
             if topic.startswith('pupil.'):
-                self.pupil_positions[payload['timestamp']] = payload
-            elif payload['subject'] == 'file_source.video_finished':
-                if self.eye_video_loc[0] == payload['source_path']:
-                    logger.debug("eye 0 process complete")
-                    self.detection_status[0] = "complete"
-                    self.stop_eye_process(0)
-                elif self.eye_video_loc[1] == payload['source_path']:
-                    logger.debug("eye 1 process complete")
-                    self.detection_status[1] = "complete"
-                    self.stop_eye_process(1)
-                if self.eye_video_loc == [None, None]:
-                    self.correlate_publish()
+                # pupil data only has one remaining frame
+                payload_serialized = next(remaining_frames)
+                pupil_datum = fm.Serialized_Dict(msgpack_bytes=payload_serialized)
+                self.pupil_positions[pupil_datum['timestamp']] = pupil_datum
+                self.id_topics[pupil_datum['timestamp']] = topic
+            else:
+                payload = self.data_sub.deserialize_payload(*remaining_frames)
+                if payload['subject'] == 'file_source.video_finished':
+                    for eyeid in (0, 1):
+                        if self.eye_video_loc[eyeid] == payload['source_path']:
+                            logger.debug("eye {} process complete".format(eyeid))
+                            self.detection_status[eyeid] = "complete"
+                            self.stop_eye_process(eyeid)
+                            break
+                    if self.eye_video_loc == [None, None]:
+                        self.correlate_publish()
         total = sum(self.eye_frame_num)
         self.menu_icon.indicator_stop = len(self.pupil_positions) / total if total else 0.
 
     def correlate_publish(self):
-        self.g_pool.pupil_positions = sorted(self.pupil_positions.values(), key=lambda pp: pp['timestamp'])
-        self.g_pool.pupil_positions_by_frame = correlate_data(list(self.pupil_positions.values()), self.g_pool.timestamps)
+        time = tuple(self.pupil_positions.keys())
+        data = tuple(self.pupil_positions.values())
+        topics = tuple(self.id_topics.values())
+        self.g_pool.pupil_positions = pm.Bisector(data, time)
+        self.g_pool.pupil_positions_by_id = self.split_by_topic(topics)
+
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
         self.save_offline_data()
@@ -278,18 +335,24 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.save_offline_data()
 
     def save_offline_data(self):
+        ts_topic_data_zip = zip(self.pupil_positions.keys(),
+                                self.id_topics.values(),
+                                self.pupil_positions.values())
+        with fm.PLData_Writer(self.data_dir, 'offline_pupil') as writer:
+            for timestamp, topic, datum in ts_topic_data_zip:
+                writer.append_serialized(timestamp, topic, datum.serialized)
+
         session_data = {}
         session_data["detection_method"] = self.detection_method
-        session_data['pupil_positions'] = list(self.pupil_positions.values())
         session_data['detection_status'] = self.detection_status
         session_data['version'] = self.session_data_version
-        cache_path = os.path.join(self.data_dir, 'offline_pupil_data')
-        save_object(session_data, cache_path)
+        cache_path = os.path.join(self.data_dir, 'offline_pupil.meta')
+        fm.save_object(session_data, cache_path)
         logger.info('Cached detected pupil data to {}'.format(cache_path))
 
     def redetect(self):
         self.pupil_positions.clear()  # delete previously detected pupil positions
-        self.g_pool.pupil_positions_by_frame = [[] for x in self.g_pool.timestamps]
+        self.g_pool.pupil_positions = pm.Bisector([], [])
         self.detection_finished_flag = False
         self.detection_paused = False
         for eye_id in range(2):

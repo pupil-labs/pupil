@@ -650,6 +650,7 @@ class Realsense_Source(Base_Source):
         if notification['subject'] == 'realsense_source.restart':
             kwargs = notification.copy()
             del kwargs['subject']
+            del kwargs['topic']
             self._initialize_device(**kwargs)
         elif notification['subject'] == 'recording.started':
             self.start_depth_recording(notification['rec_path'])

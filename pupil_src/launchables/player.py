@@ -58,7 +58,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     try:
 
         # imports
-        from file_methods import Persistent_Dict, load_object, next_export_sub_dir
+        from file_methods import Persistent_Dict, next_export_sub_dir
 
         # display
         import glfw
@@ -69,12 +69,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from pyglui.cygl.utils import Named_Texture, RGBA
         import gl_utils
         # capture
-        from video_capture import init_playback_source, EndofVideoError
+        from video_capture import init_playback_source
 
         # helpers/utils
         from version_utils import VersionFormat
         from methods import normalize, denormalize, delta_t, get_system_info
-        from player_methods import correlate_data, is_pupil_rec_dir, load_meta_info
+        import player_methods as pm
         from csv_utils import write_key_value_file
 
         # Plug-ins
@@ -86,7 +86,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from vis_light_points import Vis_Light_Points
         from vis_watermark import Vis_Watermark
         from vis_fixation import Vis_Fixation
-        from vis_scan_path import Vis_Scan_Path
+        # from vis_scan_path import Vis_Scan_Path
         from vis_eye_video_overlay import Vis_Eye_Video_Overlay
         from seek_control import Seek_Control
         from video_export_launcher import Video_Export_Launcher
@@ -117,7 +117,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                         Vis_Cross,
                         Vis_Watermark,
                         Vis_Eye_Video_Overlay,
-                        Vis_Scan_Path,
+                        # Vis_Scan_Path,
                         Offline_Fixation_Detector,
                         Offline_Blink_Detection,
                         Batch_Exporter,
@@ -175,7 +175,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         def on_drop(window, count, paths):
             for x in range(count):
                 new_rec_dir = paths[x].decode('utf-8')
-                if is_pupil_rec_dir(new_rec_dir):
+                if pm.is_pupil_rec_dir(new_rec_dir):
                     logger.debug("Starting new session with '{}'".format(new_rec_dir))
                     ipc_pub.notify({"subject": "player_drop_process.should_start", "rec_dir": new_rec_dir})
                     glfw.glfwSetWindowShouldClose(window, True)
@@ -187,9 +187,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         def get_dt():
             return next(tick)
 
-        pupil_data_path = os.path.join(rec_dir, "pupil_data")
-
-        meta_info = load_meta_info(rec_dir)
+        meta_info = pm.load_meta_info(rec_dir)
 
         # log info about Pupil Platform and Platform in player.log
         logger.info('Application Version: {}'.format(app_version))
@@ -244,7 +242,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             glfw.glfwSetWindowSize(main_window, *window_size)
 
         # load pupil_positions, gaze_positions
-        g_pool.pupil_data = load_object(pupil_data_path)
         g_pool.binocular = meta_info.get('Eye Mode', 'monocular') == 'binocular'
         g_pool.version = app_version
         g_pool.timestamps = g_pool.capture.timestamps
@@ -255,14 +252,11 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         g_pool.min_data_confidence = session_settings.get('min_data_confidence', 0.6)
         g_pool.min_calibration_confidence = session_settings.get('min_calibration_confidence', 0.8)
 
-        g_pool.pupil_positions = []
-        g_pool.gaze_positions = []
-        g_pool.fixations = []
-
-        g_pool.notifications_by_frame = correlate_data(g_pool.pupil_data['notifications'], g_pool.timestamps)
-        g_pool.pupil_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer`
-        g_pool.gaze_positions_by_frame = [[] for x in g_pool.timestamps]  # populated by producer
-        g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
+        # populated by producers
+        g_pool.pupil_positions = pm.Bisector()
+        g_pool.pupil_positions_by_id = (pm.Bisector(), pm.Bisector())
+        g_pool.gaze_positions = pm.Bisector()
+        g_pool.fixations = pm.Affiliator()
 
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence
@@ -462,8 +456,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             events['dt'] = get_dt()
 
             # pupil and gaze positions are added by their respective producer plugins
-            events['pupil_positions'] = []
-            events['gaze_positions'] = []
+            events['pupil'] = []
+            events['gaze'] = []
 
             # allow each Plugin to do its work.
             for p in g_pool.plugins:
@@ -580,14 +574,14 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
         from file_methods import Persistent_Dict
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
-        from player_methods import is_pupil_rec_dir, update_recording_to_recent
+        import player_methods as pm
 
         def on_drop(window, count, paths):
             nonlocal rec_dir
             rec_dir = paths[0].decode('utf-8')
 
         if rec_dir:
-            if not is_pupil_rec_dir(rec_dir):
+            if not pm.is_pupil_rec_dir(rec_dir):
                 rec_dir = None
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(user_dir, "user_settings_player"))
@@ -622,7 +616,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
             gl_utils.adjust_gl_view(*fb_size)
 
             if rec_dir:
-                if is_pupil_rec_dir(rec_dir):
+                if pm.is_pupil_rec_dir(rec_dir):
                     logger.info("Starting new session with '{}'".format(rec_dir))
                     text = "Updating recording format."
                     tip = "This may take a while!"
@@ -649,7 +643,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
 
             if rec_dir:
                 try:
-                    update_recording_to_recent(rec_dir)
+                    pm.update_recording_to_recent(rec_dir)
                 except AssertionError as err:
                     logger.error(str(err))
                     rec_dir = None

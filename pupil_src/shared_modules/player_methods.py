@@ -9,20 +9,123 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os, cv2, csv_utils
-import numpy as np
-from scipy.interpolate import interp1d
 import collections
 import glob
-import av
-
-# logging
 import logging
-logger = logging.getLogger(__name__)
-from file_methods import save_object, load_object, UnpicklingError
-from version_utils import VersionFormat
-from version_utils import read_rec_version
+import os
+from itertools import chain
+
+import av
+import numpy as np
+from scipy.interpolate import interp1d
+
+import csv_utils
+import cv2
+import file_methods as fm
 from camera_models import load_intrinsics
+from version_utils import VersionFormat, read_rec_version
+
+logger = logging.getLogger(__name__)
+
+
+def enclosing_window(timestamps, idx):
+    before = timestamps[idx - 1] if idx > 0 else -np.inf
+    now = timestamps[idx]
+    after = timestamps[idx + 1] if idx < len(timestamps) - 1 else np.inf
+    return (now + before) / 2., (after + now) / 2.
+
+
+def exact_window(timestamps, index_range):
+    end_index = min(index_range[1], len(timestamps) - 1)
+    return (timestamps[index_range[0]], timestamps[end_index])
+
+class Bisector(object):
+    """docstring for ClassName"""
+    def __init__(self, data=(), data_ts=()):
+        if len(data) != len(data_ts):
+            raise ValueError(('Each element in `data` requires a corresponding'
+                              ' timestamp in `data_ts`'))
+        elif not data:
+            self.data = []
+            self.data_ts = []
+            self.sorted_idc = []
+        else:
+            self.data_ts = np.asarray(data_ts)
+            self.data = np.asarray(data, dtype=object)
+
+            # Find correct order once and reorder both lists in-place
+            self.sorted_idc = np.argsort(self.data_ts)
+            self.data_ts = self.data_ts[self.sorted_idc].tolist()
+            self.data = self.data[self.sorted_idc].tolist()
+
+    def by_ts_window(self, ts_window):
+        start_idx, stop_idx = self._start_stop_idc_for_window(ts_window)
+        return self.data[start_idx:stop_idx]
+
+    def _start_stop_idc_for_window(self, ts_window):
+        return np.searchsorted(self.data_ts, ts_window)
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __len__(self):
+        return len(self.data)
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __bool__(self):
+        return bool(self.data)
+
+    @property
+    def timestamps(self):
+        return self.data_ts
+
+    def init_dict_for_window(self, ts_window):
+        start_idx, stop_idx = self._start_stop_idc_for_window(ts_window)
+        return {'data': self.data[start_idx:stop_idx],
+                'data_ts': self.data_ts[start_idx:stop_idx]}
+
+class Mutable_Bisector(Bisector):
+    def insert(self, timestamp, datum):
+        insert_idx = np.searchsorted(self.data_ts, timestamp)
+        self.data_ts.insert(insert_idx, timestamp)
+        self.data.insert(insert_idx, datum)
+
+class Affiliator(Bisector):
+    """docstring for ClassName"""
+    def __init__(self, data=(), start_ts=(), stop_ts=()):
+        super().__init__(data, start_ts)
+        self.stop_ts = np.asarray(stop_ts)
+        self.stop_ts = self.stop_ts[self.sorted_idc]
+        self.stop_ts = self.stop_ts.tolist()
+
+    def _start_stop_idc_for_window(self, ts_window):
+        start_idx = np.searchsorted(self.stop_ts, ts_window[0])
+        stop_idx = np.searchsorted(self.data_ts, ts_window[1])
+        return start_idx, stop_idx
+
+    def init_dict_for_window(self, ts_window):
+        start_idx, stop_idx = self._start_stop_idc_for_window(ts_window)
+        return {'data': self.data[start_idx:stop_idx],
+                'start_ts': self.data_ts[start_idx:stop_idx],
+                'stop_ts': self.stop_ts[start_idx:stop_idx]}
+
+
+def find_closest(target, source):
+    '''Find indeces of closest `target` elements for elements in `source`.
+    -
+    `source` is assumed to be sorted. Result has same shape as `source`.
+    Implementation taken from:
+    -
+    https://stackoverflow.com/questions/8914491/finding-the-nearest-value-and-return-the-index-of-array-in-python/8929827#8929827
+    '''
+    idx = np.searchsorted(target, source)
+    idx = np.clip(idx, 1, len(target)-1)
+    left = target[idx-1]
+    right = target[idx]
+    idx -= source - left < right - source
+    return idx
 
 
 def correlate_data(data, timestamps):
@@ -59,7 +162,7 @@ def correlate_data(data, timestamps):
             break
 
         if datum['timestamp'] <= ts:
-            datum['index'] = frame_idx
+            # datum['index'] = frame_idx
             data_by_frame[frame_idx].append(datum)
             data_index += 1
         else:
@@ -127,6 +230,9 @@ def update_recording_to_recent(rec_dir):
     # Do this independent of rec_version
     check_for_worldless_recording(rec_dir)
 
+    if rec_version < VersionFormat('1.8'):
+        update_recording_v14_v18(rec_dir)
+
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
     #    update_recording_v081_to_FUTURE(rec_dir)
@@ -152,7 +258,7 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
     time_pattern = os.path.join(rec_dir, '*.time')
     for time_loc in glob.glob(time_pattern):
         time_file_name = os.path.split(time_loc)[1]
-        time_name, time_ext = os.path.splitext(time_file_name)
+        time_name = os.path.splitext(time_file_name)[0]
 
         potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.mp4','.m4a')]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
@@ -191,7 +297,7 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
     pupil_data_loc = os.path.join(rec_dir, 'pupil_data')
     if not os.path.exists(pupil_data_loc):
         logger.info('Creating "pupil_data"')
-        save_object({'pupil_positions': [],
+        fm.save_object({'pupil_positions': [],
                      'gaze_positions': [],
                      'notifications': []}, pupil_data_loc)
 
@@ -206,14 +312,14 @@ def update_recording_v074_to_v082(rec_dir):
 
 def update_recording_v082_to_v083(rec_dir):
     logger.info("Updating recording from v0.8.2 format to v0.8.3 format")
-    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+    pupil_data = fm.load_object(os.path.join(rec_dir, "pupil_data"))
     meta_info_path = os.path.join(rec_dir,"info.csv")
 
-    for d in pupil_data['gaze_positions']:
+    for d in pupil_data['gaze']:
         if 'base' in d:
             d['base_data'] = d.pop('base')
 
-    save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    fm.save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
@@ -224,14 +330,14 @@ def update_recording_v082_to_v083(rec_dir):
 
 def update_recording_v083_to_v086(rec_dir):
     logger.info("Updating recording from v0.8.3 format to v0.8.6 format")
-    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+    pupil_data = fm.load_object(os.path.join(rec_dir, "pupil_data"))
     meta_info_path = os.path.join(rec_dir,"info.csv")
 
     for topic in pupil_data.keys():
         for d in pupil_data[topic]:
             d['topic'] = topic
 
-    save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    fm.save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
@@ -242,7 +348,7 @@ def update_recording_v083_to_v086(rec_dir):
 
 def update_recording_v086_to_v087(rec_dir):
     logger.info("Updating recording from v0.8.6 format to v0.8.7 format")
-    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+    pupil_data = fm.load_object(os.path.join(rec_dir, "pupil_data"))
     meta_info_path = os.path.join(rec_dir,"info.csv")
 
     def _clamp_norm_point(pos):
@@ -258,7 +364,7 @@ def update_recording_v086_to_v087(rec_dir):
             g['topic'] = 'gaze'
         g['norm_pos'] = _clamp_norm_point(g['norm_pos'])
 
-    save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    fm.save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
@@ -281,12 +387,12 @@ def update_recording_v087_to_v091(rec_dir):
 def update_recording_v091_to_v093(rec_dir):
     logger.info("Updating recording from v0.9.1 format to v0.9.3 format")
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+    pupil_data = fm.load_object(os.path.join(rec_dir, "pupil_data"))
     for g in pupil_data.get('gaze_positions', []):
         # fixing recordings made with bug https://github.com/pupil-labs/pupil/issues/598
         g['norm_pos'] = float(g['norm_pos'][0]), float(g['norm_pos'][1])
 
-    save_object(pupil_data, os.path.join(rec_dir, "pupil_data"))
+    fm.save_object(pupil_data, os.path.join(rec_dir, "pupil_data"))
 
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
@@ -304,12 +410,12 @@ def update_recording_v093_to_v094(rec_dir):
         rec_file = os.path.join(rec_dir, file)
 
         try:
-            rec_object = load_object(rec_file,allow_legacy=False)
-            save_object(rec_object, rec_file)
+            rec_object = fm.load_object(rec_file,allow_legacy=False)
+            fm.save_object(rec_object, rec_file)
         except:
             try:
-                rec_object = load_object(rec_file,allow_legacy=True)
-                save_object(rec_object, rec_file)
+                rec_object = fm.load_object(rec_file,allow_legacy=True)
+                fm.save_object(rec_object, rec_file)
                 logger.info('Converted `{}` from pickle to msgpack'.format(file))
             except:
                 logger.warning("did not convert {}".format(rec_file))
@@ -398,20 +504,20 @@ def update_recording_v0913_to_v0915(rec_dir):
 
     # add notifications entry to pupil_data if missing
     pupil_data_loc = os.path.join(rec_dir, 'pupil_data')
-    pupil_data = load_object(pupil_data_loc)
+    pupil_data = fm.load_object(pupil_data_loc)
     if 'notifications' not in pupil_data:
         pupil_data['notifications'] = []
-        save_object(pupil_data, pupil_data_loc)
+        fm.save_object(pupil_data, pupil_data_loc)
 
     try:  # upgrade camera intrinsics
         old_calib_loc = os.path.join(rec_dir, 'camera_calibration')
-        old_calib = load_object(old_calib_loc)
+        old_calib = fm.load_object(old_calib_loc)
         res = tuple(old_calib['resolution'])
         del old_calib['resolution']
         del old_calib['camera_name']
         old_calib['cam_type'] = 'radial'
         new_calib = {str(res): old_calib, 'version': 1}
-        save_object(new_calib, os.path.join(rec_dir, 'world.intrinsics'))
+        fm.save_object(new_calib, os.path.join(rec_dir, 'world.intrinsics'))
         logger.info('Replaced `camera_calibration` with `world.intrinsics`.')
 
         os.rename(old_calib_loc, old_calib_loc+'.deprecated')
@@ -431,7 +537,7 @@ def update_recording_v0915_v13(rec_dir):
     time_pattern = os.path.join(rec_dir, '*.time')
     for time_loc in glob.glob(time_pattern):
         time_file_name = os.path.split(time_loc)[1]
-        time_name, time_ext = os.path.splitext(time_file_name)
+        time_name = os.path.splitext(time_file_name)[0]
 
         potential_locs = [os.path.join(rec_dir, time_name+ext) for ext in ('.mjpeg', '.mp4','.m4a')]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
@@ -470,6 +576,35 @@ def update_recording_v13_v14(rec_dir):
     update_meta_info(rec_dir, meta_info)
 
 
+def update_recording_v14_v18(rec_dir):
+    logger.info("Updating recording from v1.4 to v1.8")
+    legacy_topic_mapping = {'notifications': 'notify',
+                            'gaze_positions': 'gaze',
+                            'pupil_positions': 'pupil'}
+
+    with fm.Incremental_Legacy_Pupil_Data_Loader(rec_dir) as loader:
+        for old_topic, values in loader.topic_values_pairs():
+            new_topic = legacy_topic_mapping.get(old_topic, old_topic)
+            with fm.PLData_Writer(rec_dir, new_topic) as writer:
+                for datum in values:
+                    if new_topic == 'notify':
+                        datum['topic'] = 'notify.' + datum['subject']
+                    elif new_topic == 'pupil':
+                        datum['topic'] += '.{}'.format(datum['id'])
+                    elif new_topic == 'surface':
+                        datum['topic'] = 'surfaces.' + datum['name']
+                    elif new_topic == 'blinks' or new_topic == 'fixations':
+                        datum['topic'] += 's'
+
+                    writer.append(datum)
+
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v1.8'
+    update_meta_info(rec_dir, meta_info)
+
+
 def check_for_worldless_recording(rec_dir):
     logger.info("Checking for world-less recording")
     valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg')
@@ -497,7 +632,7 @@ def check_for_worldless_recording(rec_dir):
         frame_rate = 30
         timestamps = np.arange(min_ts, max_ts, 1/frame_rate)
         np.save(os.path.join(rec_dir, 'world_timestamps'), timestamps)
-        save_object({'frame_rate': frame_rate, 'frame_size': (1280, 720), 'version': 0},
+        fm.save_object({'frame_rate': frame_rate, 'frame_size': (1280, 720), 'version': 0},
                     os.path.join(rec_dir, 'world.fake'))
 
 
@@ -521,12 +656,12 @@ def update_recording_bytes_to_unicode(rec_dir):
             continue
         rec_file = os.path.join(rec_dir, file)
         try:
-            rec_object = load_object(rec_file)
+            rec_object = fm.load_object(rec_file)
             converted_object = convert(rec_object)
             if converted_object != rec_object:
                 logger.info('Converted `{}` from bytes to unicode'.format(file))
-                save_object(converted_object, rec_file)
-        except (UnpicklingError, IsADirectoryError):
+                fm.save_object(converted_object, rec_file)
+        except (fm.UnpicklingError, IsADirectoryError):
             continue
 
     # manually convert k v dicts.
@@ -539,9 +674,9 @@ def update_recording_bytes_to_unicode(rec_dir):
 
 def update_recording_v073_to_v074(rec_dir):
     logger.info("Updating recording from v0.7x format to v0.7.4 format")
-    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+    pupil_data = fm.load_object(os.path.join(rec_dir, "pupil_data"))
     modified = False
-    for p in pupil_data['pupil_positions']:
+    for p in pupil_data['pupil']:
         if p['method'] == "3D c++":
             p['method'] = "3d c++"
             try:
@@ -554,23 +689,24 @@ def update_recording_v073_to_v074(rec_dir):
             p['diameter_3d'] = p.pop('diameter_3D')
             modified = True
     if modified:
-        save_object(load_object(os.path.join(rec_dir, "pupil_data")),os.path.join(rec_dir, "pupil_data_old"))
+        fm.save_object(fm.load_object(os.path.join(rec_dir, "pupil_data")),os.path.join(rec_dir, "pupil_data_old"))
     try:
-        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+        fm.save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
     except IOError:
         pass
 
 
 def update_recording_v05_to_v074(rec_dir):
     logger.info("Updating recording from v0.5x/v0.6x/v0.7x format to v0.7.4 format")
-    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
-    save_object(pupil_data,os.path.join(rec_dir, "pupil_data_old"))
-    for p in pupil_data['pupil_positions']:
+    pupil_data = fm.load_object(os.path.join(rec_dir, "pupil_data"))
+    fm.save_object(pupil_data,os.path.join(rec_dir, "pupil_data_old"))
+    for p in pupil_data['pupil']:
         p['method'] = '2d python'
     try:
-        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+        fm.save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
     except IOError:
         pass
+
 
 def update_recording_v04_to_v074(rec_dir):
     logger.info("Updating recording from v0.4x format to v0.7.4 format")
@@ -592,9 +728,10 @@ def update_recording_v04_to_v074(rec_dir):
 
     pupil_data = {'pupil_positions':pupil_list,'gaze_positions':gaze_list}
     try:
-        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+        fm.save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
     except IOError:
         pass
+
 
 def update_recording_v03_to_v074(rec_dir):
     logger.info("Updating recording from v0.3x format to v0.7.4 format")
@@ -610,7 +747,7 @@ def update_recording_v03_to_v074(rec_dir):
 
     pupil_data = {'pupil_positions':pupil_list,'gaze_positions':gaze_list}
     try:
-        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+        fm.save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
     except IOError:
         pass
 

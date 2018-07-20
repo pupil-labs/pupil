@@ -9,12 +9,17 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os
 import csv
-from itertools import chain
 import logging
-from plugin import Analysis_Plugin_Base
+import os
+from itertools import chain
+
+import numpy as np
 from pyglui import ui
+
+import player_methods as pm
+from plugin import Analysis_Plugin_Base
+
 # logging
 logger = logging.getLogger(__name__)
 
@@ -116,7 +121,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
             self.export_data(notification['range'], notification['export_dir'])
 
     def export_data(self, export_range, export_dir):
-        export_range = slice(*export_range)
+        export_window = pm.exact_window(self.g_pool.timestamps, export_range)
         with open(os.path.join(export_dir, 'pupil_positions.csv'), 'w', encoding='utf-8', newline='') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',')
 
@@ -155,9 +160,11 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  'projected_sphere_axis_b',
                                  'projected_sphere_angle'))
 
-            for p in list(chain.from_iterable(self.g_pool.pupil_positions_by_frame[export_range])):
+            pupil_section = self.g_pool.pupil_positions.init_dict_for_window(export_window)
+            pupil_world_idc = pm.find_closest(self.g_pool.timestamps, pupil_section['data_ts'])
+            for p, idx in zip(pupil_section['data'], pupil_world_idc):
                 data_2d = ['{}'.format(p['timestamp']),  # use str to be consitant with csv lib.
-                           p['index'],
+                           idx,
                            p['id'],
                            p['confidence'],
                            p['norm_pos'][0],
@@ -224,8 +231,11 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                                  "gaze_normal1_y",
                                  "gaze_normal1_z"))
 
-            for g in list(chain.from_iterable(self.g_pool.gaze_positions_by_frame[export_range])):
-                data = ['{}'.format(g["timestamp"]), g["index"], g["confidence"], g["norm_pos"][0], g["norm_pos"][1],
+            gaze_section = self.g_pool.gaze_positions.init_dict_for_window(export_window)
+            gaze_world_idc = pm.find_closest(self.g_pool.timestamps, gaze_section['data_ts'])
+
+            for g, idx in zip(gaze_section['data'], gaze_world_idc):
+                data = ['{}'.format(g["timestamp"]), idx, g["confidence"], g["norm_pos"][0], g["norm_pos"][1],
                         " ".join(['{}-{}'.format(b['timestamp'], b['id']) for b in g['base_data']])]  # use str on timestamp to be consitant with csv lib.
 
                 # add 3d data if avaiblable

@@ -36,6 +36,7 @@ from surface_tracker import Surface_Tracker
 from square_marker_detect import draw_markers, m_marker_to_screen
 from offline_reference_surface import Offline_Reference_Surface
 
+import player_methods as pm
 import multiprocessing
 import platform
 if platform.system() == 'Darwin':
@@ -428,7 +429,8 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             csv_writer = csv.writer(csvfile, delimiter=',')
 
             # gaze distribution report
-            gaze_in_section = list(chain.from_iterable(self.g_pool.gaze_positions_by_frame[section]))
+            export_window = pm.exact_window(self.g_pool.timestamps, export_range)
+            gaze_in_section = self.g_pool.gaze_positions.by_ts_window(export_window)
             not_on_any_srf = set([gp['timestamp'] for gp in gaze_in_section])
 
             csv_writer.writerow(('total_gaze_point_count',len(gaze_in_section)))

@@ -9,18 +9,18 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 import numpy as np
-
+import OpenGL.GL as gl
+import pyglui.cygl.utils as cygl_utils
 from pyglui import ui
 from pyglui.pyfontstash import fontstash as fs
-from pyglui.cygl.utils import *
-import OpenGL.GL as gl
 
-from plugin import System_Plugin_Base
 import gl_utils
+from plugin import System_Plugin_Base
 
-world_color = RGBA(0.66, 0.86, 0.461, 1.)
-right_color = RGBA(0.9844, 0.5938, 0.4023, 1.)
-left_color = RGBA(0.668, 0.6133, 0.9453, 1.)
+COLOR_LEGEND_WORLD = cygl_utils.RGBA(0.66, 0.86, 0.461, 1.)
+COLOR_LEGEND_EYE_RIGHT = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.)
+COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.)
+NUMBER_SAMPLES_TIMELINE = 4000
 
 
 class System_Timelines(System_Plugin_Base):
@@ -43,36 +43,27 @@ class System_Timelines(System_Plugin_Base):
         self.fps_timeline = None
 
     def cache_fps_data(self):
+        fps_world = self.calculate_fps(self.g_pool.timestamps)
+        fps_eye0 = self.calculate_fps(self.g_pool.pupil_positions_by_id[0].timestamps)
+        fps_eye1 = self.calculate_fps(self.g_pool.pupil_positions_by_id[1].timestamps)
+
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
-
-        w_ts = np.asarray(self.g_pool.timestamps)
-        w_fps = 1. / np.diff(w_ts)
-        w_fps = [fps for fps in zip(w_ts, w_fps)]
-
-        e0_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 0])
-        if e0_ts.shape[0] > 1:
-            e0_fps = 1. / np.diff(e0_ts)
-            e0_fps = [fps for fps in zip(e0_ts, e0_fps)]
-        else:
-            e0_fps = []
-
-        e1_ts = np.array([p['timestamp'] for p in self.g_pool.pupil_positions if p['id'] == 1])
-        if e1_ts.shape[0] > 1:
-            e1_fps = 1. / np.diff(e1_ts)
-            e1_fps = [fps for fps in zip(e1_ts, e1_fps)]
-        else:
-            e1_fps = []
-
-        self.cache = {'world': w_fps, 'eye0': e0_fps, 'eye1': e1_fps,
+        self.cache = {'world': fps_world, 'eye0': fps_eye0, 'eye1': fps_eye1,
                       'xlim': [t0, t1], 'ylim': [0, 210]}
+
+    def calculate_fps(self, timestamps):
+        if len(timestamps) > 1:
+            fps = 1. / np.diff(timestamps)
+            return tuple(zip(timestamps, fps))
+        return ()
 
     def draw_fps(self, width, height, scale):
         with gl_utils.Coord_System(*self.cache['xlim'], *self.cache['ylim']):
             if self.show_world_fps:
-                draw_points(self.cache['world'], size=2*scale, color=world_color)
+                cygl_utils.draw_points(self.cache['world'], size=2*scale, color=COLOR_LEGEND_WORLD)
             if self.show_eye_fps:
-                draw_points(self.cache['eye0'], size=2*scale, color=right_color)
-                draw_points(self.cache['eye1'], size=2*scale, color=left_color)
+                cygl_utils.draw_points(self.cache['eye0'], size=2*scale, color=COLOR_LEGEND_EYE_RIGHT)
+                cygl_utils.draw_points(self.cache['eye1'], size=2*scale, color=COLOR_LEGEND_EYE_LEFT)
 
     def draw_fps_legend(self, width, height, scale):
         self.glfont.push_state()
@@ -85,22 +76,22 @@ class System_Timelines(System_Plugin_Base):
 
         if self.show_world_fps:
             self.glfont.draw_text(width, legend_height, 'world FPS')
-            draw_polyline([(pad, legend_height + pad * 2 / 3),
-                           (width / 2, legend_height + pad * 2 / 3)],
-                          color=world_color, line_type=gl.GL_LINES, thickness=4.*scale)
+            cygl_utils.draw_polyline([(pad, legend_height + pad * 2 / 3),
+                                      (width / 2, legend_height + pad * 2 / 3)],
+                                     color=COLOR_LEGEND_WORLD, line_type=gl.GL_LINES, thickness=4.*scale)
             legend_height += 1.5 * pad
 
         if self.show_eye_fps:
             self.glfont.draw_text(width, legend_height, 'eye1 FPS')
-            draw_polyline([(pad, legend_height + pad * 2 / 3),
-                           (width / 2, legend_height + pad * 2 / 3)],
-                          color=left_color, line_type=gl.GL_LINES, thickness=4.*scale)
+            cygl_utils.draw_polyline([(pad, legend_height + pad * 2 / 3),
+                                      (width / 2, legend_height + pad * 2 / 3)],
+                                     color=COLOR_LEGEND_EYE_LEFT, line_type=gl.GL_LINES, thickness=4.*scale)
             legend_height += 1.5 * pad
 
             self.glfont.draw_text(width, legend_height, 'eye0 FPS')
-            draw_polyline([(pad, legend_height + pad * 2 / 3),
-                           (width / 2, legend_height + pad * 2 / 3)],
-                          color=right_color, line_type=gl.GL_LINES, thickness=4.*scale)
+            cygl_utils.draw_polyline([(pad, legend_height + pad * 2 / 3),
+                                      (width / 2, legend_height + pad * 2 / 3)],
+                                     color=COLOR_LEGEND_EYE_RIGHT, line_type=gl.GL_LINES, thickness=4.*scale)
 
         self.glfont.pop_state()
 

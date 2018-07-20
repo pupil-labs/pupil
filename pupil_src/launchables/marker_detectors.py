@@ -51,7 +51,8 @@ def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
             while process_pipe.new_data:
                 topic, n = process_pipe.recv()
                 if topic == 'terminate':
-                    process_pipe.send(topic='exception', payload={"reason": "User terminated."})
+                    process_pipe.send({'topic': 'exception',
+                                       "reason": "User terminated."})
                     logger.debug("Process terminated")
                     sleep(1.0)
                     return
@@ -74,18 +75,18 @@ def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
                 # dequeue batch
                 data = queue[:batch_size]
                 del queue[:batch_size]
-                process_pipe.send(topic='progress', payload={'data': data})
+                process_pipe.send({'topic': 'progress', 'data': data})
 
             frame = src.get_frame()
 
     except EndofVideoError:
-        process_pipe.send(topic='progress', payload={'data': queue})
-        process_pipe.send(topic='finished', payload={})
+        process_pipe.send({'topic': 'progress', 'data': queue})
+        process_pipe.send({'topic': 'finished'})
         logger.debug("Process finished")
 
     except Exception:
         import traceback
-        process_pipe.send(topic='exception', payload={'reason': traceback.format_exc()})
+        process_pipe.send({'topic': 'exception', 'reason': traceback.format_exc()})
         logger.debug("Process raised Exception")
 
     sleep(1.0)

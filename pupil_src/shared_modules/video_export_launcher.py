@@ -9,15 +9,17 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Analysis_Plugin_Base
+import logging
 import os
 import time
 
 from pyglui import ui
-from exporter import export
-import background_helper as bh
 
-import logging
+import background_helper as bh
+import player_methods as pm
+from exporter import export
+from plugin import Analysis_Plugin_Base
+
 logger = logging.getLogger(__name__)
 
 
@@ -108,10 +110,7 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         plugins = self.g_pool.plugins.get_initializers()
 
         out_file_path = verify_out_file_path(self.rec_name, export_dir)
-        pre_computed = {'gaze_positions': self.g_pool.gaze_positions,
-                        'pupil_positions': self.g_pool.pupil_positions,
-                        'pupil_data': self.g_pool.pupil_data,
-                        'fixations': self.g_pool.fixations}
+        pre_computed = self.precomputed_for_range(export_range)
 
         args = (rec_dir, user_dir, self.g_pool.min_data_confidence, start_frame,
                 end_frame, plugins, out_file_path, pre_computed)
@@ -143,3 +142,17 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         """
         for e in self.exports:
             e.cancel()
+
+    def precomputed_for_range(self, export_range):
+        export_window = pm.exact_window(self.g_pool.timestamps, export_range)
+        pre_computed = {'gaze': self.g_pool.gaze_positions,
+                        'pupil': self.g_pool.pupil_positions,
+                        'fixations': self.g_pool.fixations}
+
+        for key, bisector in pre_computed.items():
+            init_dict = bisector.init_dict_for_window(export_window)
+            init_dict['data'] = [datum.serialized for datum in init_dict['data']]
+            pre_computed[key] = init_dict
+
+        return pre_computed
+

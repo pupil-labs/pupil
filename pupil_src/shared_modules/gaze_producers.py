@@ -9,35 +9,38 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+import collections
+import logging
 import os
-import numpy as np
-from copy import deepcopy
-from pyglui import ui
-from plugin import Producer_Plugin_Base
-from player_methods import correlate_data
-from methods import normalize
-import OpenGL.GL as gl
-from pyglui.cygl.utils import *
-from pyglui.pyfontstash import fontstash
-from glfw import *
+from itertools import chain, cycle
 from time import time
+
+import msgpack
+import numpy as np
+import OpenGL.GL as gl
+import pyglui.cygl.utils as cygl_utils
+# from copy import deepcopy
+from pyglui import ui
+from pyglui.pyfontstash import fontstash
+
+import background_helper as bh
+import file_methods as fm
+import gl_utils
+import glfw
+import player_methods as pm
+import zmq_tools
 from calibration_routines import gaze_mapping_plugins
 from calibration_routines.finish_calibration import select_calibration_method
-from file_methods import load_object, save_object
+from methods import normalize
+from plugin import Producer_Plugin_Base
 
-import gl_utils
-import background_helper as bh
-import zmq_tools
-from itertools import chain, cycle
-
-import logging
 logger = logging.getLogger(__name__)
 
 gaze_mapping_plugins_by_name = {p.__name__: p for p in gaze_mapping_plugins}
 
 
 class Empty(object):
-        pass
+    pass
 
 
 def setup_fake_pool(frame_size, intrinsics, detection_mode, rec_dir, min_calibration_confidence):
@@ -95,7 +98,8 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
     def recent_events(self, events):
         if 'frame' in events:
             frm_idx = events['frame'].index
-            events['gaze_positions'] = self.g_pool.gaze_positions_by_frame[frm_idx]
+            window = pm.enclosing_window(self.g_pool.timestamps, frm_idx)
+            events['gaze'] = self.g_pool.gaze_positions.by_ts_window(window)
 
 
 class Gaze_From_Recording(Gaze_Producer_Base):
@@ -104,7 +108,7 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.result_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.result_dir, exist_ok=True)
         try:
-            session_data = load_object(os.path.join(self.result_dir, 'manual_gaze_correction'))
+            session_data = fm.load_object(os.path.join(self.result_dir, 'manual_gaze_correction'))
         except OSError:
             session_data = {'dx': 0., 'dy': 0.}
         self.x_offset = session_data['dx']
@@ -112,50 +116,54 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.load_data_with_offset()
 
     def load_data_with_offset(self):
-        self.g_pool.gaze_positions = deepcopy(self.g_pool.pupil_data['gaze_positions'])
-        for gp in self.g_pool.gaze_positions:
-            gp['norm_pos'][0] += self.x_offset
-            gp['norm_pos'][1] += self.y_offset
-        self.g_pool.gaze_positions_by_frame = correlate_data(self.g_pool.gaze_positions, self.g_pool.timestamps)
+        gaze = fm.load_pldata_file(self.g_pool.rec_dir, 'gaze')
+        self.g_pool.gaze_positions = pm.Bisector(gaze.data, gaze.timestamps)
+
+        # self.g_pool.gaze_positions = deepcopy(self.g_pool.pupil_data['gaze'])
+        # for gp in self.g_pool.gaze_positions:
+        #     gp['norm_pos'][0] += self.x_offset
+        #     gp['norm_pos'][1] += self.y_offset
         self.notify_all({'subject': 'gaze_positions_changed'})
         logger.debug('gaze positions changed')
 
-    def _set_offset_x(self, offset_x):
-        self.x_offset = offset_x
-        self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': 1.})
+    # def _set_offset_x(self, offset_x):
+    #     self.x_offset = offset_x
+    #     self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': 1.})
 
-    def _set_offset_y(self, offset_y):
-        self.y_offset = offset_y
-        self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': 1.})
+    # def _set_offset_y(self, offset_y):
+    #     self.y_offset = offset_y
+    #     self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': 1.})
 
-    def on_notify(self, notification):
-        if notification['subject'] == 'manual_gaze_correction.offset_changed':
-            self.load_data_with_offset()
+    # def on_notify(self, notification):
+    #     if notification['subject'] == 'manual_gaze_correction.offset_changed':
+    #         self.load_data_with_offset()
 
     def init_ui(self):
         super().init_ui()
         self.menu.label = "Gaze Data  From Recording"
         self.menu.append(ui.Info_Text('Currently, gaze positions are loaded from the recording.'))
-        offset_menu = ui.Growing_Menu('Manual Correction')
-        offset_menu.append(ui.Info_Text('The manual correction feature allows you to apply' +
-                                        ' a fixed offset to your gaze data.'))
-        offset_menu.append(ui.Slider('x_offset', self, min=-.5, step=0.01,
-                                     max=.5, setter=self._set_offset_x))
-        offset_menu.append(ui.Slider('y_offset', self, min=-.5, step=0.01,
-                                     max=.5, setter=self._set_offset_y))
-        offset_menu.collapsed = True
-        self.menu.append(offset_menu)
+        # offset_menu = ui.Growing_Menu('Manual Correction')
+        # offset_menu.append(ui.Info_Text('The manual correction feature allows you to apply' +
+        #                                 ' a fixed offset to your gaze data.'))
+        # offset_menu.append(ui.Slider('x_offset', self, min=-.5, step=0.01,
+        #                              max=.5, setter=self._set_offset_x))
+        # offset_menu.append(ui.Slider('y_offset', self, min=-.5, step=0.01,
+        #                              max=.5, setter=self._set_offset_y))
+        # offset_menu.collapsed = True
+        # self.menu.append(offset_menu)
 
     def deinit_ui(self):
         super().deinit_ui()
 
     def cleanup(self):
         session_data = {'dx': self.x_offset, 'dy': self.y_offset, 'version': 0}
-        save_object(session_data, os.path.join(self.result_dir, 'manual_gaze_correction'))
+        fm.save_object(session_data, os.path.join(self.result_dir, 'manual_gaze_correction'))
 
 
 def calibrate_and_map(g_pool, ref_list, calib_list, map_list, x_offset, y_offset):
     yield "calibrating", []
+    calib_list = [msgpack.unpackb(serialized, raw=False, use_list=False)
+                  for serialized in calib_list]
     method, result = select_calibration_method(g_pool, calib_list, ref_list)
     if result['subject'] != 'calibration.failed':
         logger.info('Offline calibration successful. Starting mapping using {}.'.format(method))
@@ -163,27 +171,31 @@ def calibrate_and_map(g_pool, ref_list, calib_list, map_list, x_offset, y_offset
         gaze_mapper_cls = gaze_mapping_plugins_by_name[name]
         gaze_mapper = gaze_mapper_cls(g_pool, **args)
 
-        for idx, datum in enumerate(map_list):
+        for idx_incoming, serialized in enumerate(map_list):
+            datum = msgpack.unpackb(serialized, raw=False, use_list=False)
             mapped_gaze = gaze_mapper.on_pupil_datum(datum)
 
             # apply manual correction
-            for gp in mapped_gaze:
+            for idx_outgoing, gaze_datum in enumerate(mapped_gaze):
                 # gp['norm_pos'] is a tuple by default
-                gp_norm_pos = list(gp['norm_pos'])
-                gp_norm_pos[1] += y_offset
-                gp_norm_pos[0] += x_offset
-                gp['norm_pos'] = gp_norm_pos
+                gaze_norm_pos = list(gaze_datum['norm_pos'])
+                gaze_norm_pos[1] += y_offset
+                gaze_norm_pos[0] += x_offset
+                gaze_datum['norm_pos'] = gaze_norm_pos
+                serialized = msgpack.packb(gaze_datum, use_bin_type=True)
+                mapped_gaze[idx_outgoing] = gaze_datum['timestamp'], serialized
 
             if mapped_gaze:
-                progress = (100 * (idx+1)/len(map_list))
+                progress = (100 * (idx_incoming + 1) / len(map_list))
                 progress = "Mapping..{}%".format(int(progress))
                 yield progress, mapped_gaze
         progress = "Mapping complete."
         yield progress, []
     else:
         # logger does not work here, because we are in a subprocess
-        print('Calibration failed: {}'.format(result['reason']))
-        yield "calibration failed", []
+        fail_message = 'Calibration failed: {}'.format(result['reason'])
+        print(fail_message, len(calib_list), len(ref_list))
+        yield fail_message, []
 
 
 def make_section_dict(calib_range, map_range):
@@ -195,14 +207,12 @@ def make_section_dict(calib_range, map_range):
                 'calibration_method': "circle_marker",
                 'status': 'unmapped',
                 'color': next(colors),
-                'gaze_positions': [],
-                'bg_task': None,
                 'x_offset': 0.,
                 'y_offset': 0.}
 
 
 class Offline_Calibration(Gaze_Producer_Base):
-    session_data_version = 8
+    session_data_version = 9
 
     def __init__(self, g_pool, manual_ref_edit_mode=False):
         super().__init__(g_pool)
@@ -214,7 +224,7 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.result_dir = os.path.join(g_pool.rec_dir, 'offline_data')
         os.makedirs(self.result_dir, exist_ok=True)
         try:
-            session_data = load_object(os.path.join(self.result_dir, 'offline_calibration_gaze'))
+            session_data = fm.load_object(os.path.join(self.result_dir, 'offline_calibration_gaze'))
             if session_data['version'] != self.session_data_version:
                 logger.warning("Session data from old version. Will not use this.")
                 assert False
@@ -298,7 +308,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         for sec in self.sections:
             self.append_section_menu(sec)
-        self.on_window_resize(glfwGetCurrentContext(), *glfwGetWindowSize(glfwGetCurrentContext()))
+        self.on_window_resize(glfw.glfwGetCurrentContext(), *glfw.glfwGetWindowSize(glfw.glfwGetCurrentContext()))
 
     def deinit_ui(self):
         # needs to be called here since makes calls to the ui:
@@ -310,20 +320,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def append_section_menu(self, sec):
         section_menu = ui.Growing_Menu('Section Settings')
-        section_menu.color = RGBA(*sec['color'])
-
-        def make_validate_fn(sec, key):
-            def validate(input_obj):
-                try:
-                    assert type(input_obj) in (tuple,list)
-                    assert type(input_obj[0]) is int
-                    assert type(input_obj[1]) is int
-                    assert 0 <= input_obj[0] <= input_obj[1] <=len(self.g_pool.timestamps)
-                except:
-                    pass
-                else:
-                    sec[key] = input_obj
-            return validate
+        section_menu.color = cygl_utils.RGBA(*sec['color'])
 
         def make_calibrate_fn(sec):
             def calibrate():
@@ -402,7 +399,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.save_offline_data()
 
     def on_click(self, pos, button, action):
-        if action == GLFW_PRESS and self.manual_ref_edit_mode:
+        if action == glfw.GLFW_PRESS and self.manual_ref_edit_mode:
             manual_refs_in_frame = [r for r in self.manual_ref_positions
                                     if self.g_pool.capture.get_frame_index() == r['index']]
             for ref in manual_refs_in_frame:
@@ -441,31 +438,41 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.menu_icon.indicator_stop = self.detection_progress / 100.
 
         for sec in self.sections:
-            if sec["bg_task"]:
-                recent = [d for d in sec["bg_task"].fetch()]
-                if recent:
-                    progress, data = zip(*recent)
-                    sec['gaze_positions'].extend(chain.from_iterable(data))
-                    sec['status'] = progress[-1]
+            if 'bg_task' in sec:
+                for progress, gaze_data in sec["bg_task"].fetch():
+                    for timestamp, serialized in gaze_data:
+                        gaze_datum = fm.Serialized_Dict(msgpack_bytes=serialized)
+                        sec['gaze'].append(gaze_datum)
+                        sec['gaze_ts'].append(timestamp)
+                    sec['status'] = progress
                 if sec["bg_task"].completed:
                     self.correlate_and_publish()
-                    sec['bg_task'] = None
+                    del sec['bg_task']
 
     def correlate_and_publish(self):
-        all_gaze = list(chain.from_iterable((s['gaze_positions'] for s in self.sections)))
-        self.g_pool.gaze_positions = sorted(all_gaze, key=lambda d: d['timestamp'])
-        self.g_pool.gaze_positions_by_frame = correlate_data(self.g_pool.gaze_positions, self.g_pool.timestamps)
-        self.notify_all({'subject': 'gaze_positions_changed', 'delay':1})
+        gaze_data = list(chain.from_iterable((s['gaze'] for s in self.sections)))
+        gaze_ts = list(chain.from_iterable((s['gaze_ts'] for s in self.sections)))
+        self.g_pool.gaze_positions = pm.Bisector(gaze_data, gaze_ts)
+        self.notify_all({'subject': 'gaze_positions_changed', 'delay': 1})
 
     def calibrate_section(self, sec):
-        if sec['bg_task']:
+        if 'bg_task' in sec:
             sec['bg_task'].cancel()
 
         sec['status'] = 'Starting calibration' # This will be overwritten on success
-        sec['gaze_positions'] = []  # reset interim buffer for given section
 
-        calib_list = list(chain.from_iterable(self.g_pool.pupil_positions_by_frame[slice(*sec['calibration_range'])]))
-        map_list = list(chain.from_iterable(self.g_pool.pupil_positions_by_frame[slice(*sec['mapping_range'])]))
+        try:
+            sec['gaze'].clear()
+            sec['gaze_ts'].clear()
+        except KeyError:
+            sec['gaze'] = collections.deque()
+            sec['gaze_ts'] = collections.deque()
+
+        calibration_window = pm.exact_window(self.g_pool.timestamps, sec['calibration_range'])
+        mapping_window = pm.exact_window(self.g_pool.timestamps, sec['mapping_range'])
+
+        calibration_pupil_pos = self.g_pool.pupil_positions.by_ts_window(calibration_window)
+        mapping_pupil_pos = self.g_pool.pupil_positions.by_ts_window(mapping_window)
 
         if sec['calibration_method'] == 'circle_marker':
             ref_list = self.circle_marker_positions
@@ -476,17 +483,17 @@ class Offline_Calibration(Gaze_Producer_Base):
         end = sec['calibration_range'][1]
         ref_list = [r for r in ref_list if start <= r['index'] <= end]
 
-        if not calib_list:
+        if not len(calibration_pupil_pos):
             logger.error('No pupil data to calibrate section "{}"'.format(self.sections.index(sec) + 1))
-            sec['status'] = 'calibration failed'
+            sec['status'] = 'Calibration failed. Not enough pupil positions.'
             return
 
-        if not calib_list:
+        if not ref_list:
             logger.error('No referece marker data to calibrate section "{}"'.format(self.sections.index(sec) + 1))
-            sec['status'] = 'calibration failed'
+            sec['status'] = 'Calibration failed. Not enough reference positions.'
             return
 
-        if sec["mapping_method"] == '3d' and '2d' in calib_list[len(calib_list)//2]['method']:
+        if sec["mapping_method"] == '3d' and '2d' in calibration_pupil_pos[len(calibration_pupil_pos)//2]['method']:
             # select median pupil datum from calibration list and use its detection method as mapping method
             logger.warning("Pupil data is 2d, calibration and mapping mode forced to 2d.")
             sec["mapping_method"] = '2d'
@@ -496,7 +503,11 @@ class Offline_Calibration(Gaze_Producer_Base):
                                sec["mapping_method"],
                                self.g_pool.rec_dir,
                                self.g_pool.min_calibration_confidence)
-        generator_args = (fake, ref_list, calib_list, map_list, sec['x_offset'], sec['y_offset'])
+
+        calibration_pupil_pos = [pp.serialized for pp in calibration_pupil_pos]
+        mapping_pupil_pos = [pp.serialized for pp in mapping_pupil_pos]
+
+        generator_args = (fake, ref_list, calibration_pupil_pos, mapping_pupil_pos, sec['x_offset'], sec['y_offset'])
 
         logger.info('Calibrating section {} ({}) in {} mode...'.format(self.sections.index(sec) + 1, sec['label'], sec["mapping_method"]))
         sec['bg_task'] = bh.Task_Proxy('{}'.format(self.sections.index(sec) + 1), calibrate_and_map, args=generator_args)
@@ -506,16 +517,16 @@ class Offline_Calibration(Gaze_Producer_Base):
         with gl_utils.Coord_System(0, 1, 0, 1):
             ref_point_norm = [r['norm_pos'] for r in self.circle_marker_positions
                               if self.g_pool.capture.get_frame_index() == r['index']]
-            draw_points(ref_point_norm, size=35, color=RGBA(0, .5, 0.5, .7))
-            draw_points(ref_point_norm, size=5, color=RGBA(.0, .9, 0.0, 1.0))
+            cygl_utils.draw_points(ref_point_norm, size=35, color=cygl_utils.RGBA(0, .5, 0.5, .7))
+            cygl_utils.draw_points(ref_point_norm, size=5, color=cygl_utils.RGBA(.0, .9, 0.0, 1.0))
 
             manual_refs_in_frame = [r for r in self.manual_ref_positions
                                     if self.g_pool.capture.get_frame_index() in r['index_range']]
             current = self.g_pool.capture.get_frame_index()
             for mr in manual_refs_in_frame:
                 if mr['index'] == current:
-                    draw_points([mr['norm_pos']], size=35, color=RGBA(.0, .0, 0.9, .8))
-                    draw_points([mr['norm_pos']], size=5, color=RGBA(.0, .9, 0.0, 1.0))
+                    cygl_utils.draw_points([mr['norm_pos']], size=35, color=cygl_utils.RGBA(.0, .0, 0.9, .8))
+                    cygl_utils.draw_points([mr['norm_pos']], size=5, color=cygl_utils.RGBA(.0, .9, 0.0, 1.0))
                 else:
                     distance = abs(current - mr['index'])
                     range_radius = (mr['index_range'][-1] - mr['index_range'][0]) // 2
@@ -524,9 +535,11 @@ class Offline_Calibration(Gaze_Producer_Base):
                     alpha = 0.1 * alpha + 0.9 * (1. - alpha)
                     # Use draw_progress instead of draw_circle. draw_circle breaks
                     # because of the normalized coord-system.
-                    draw_progress(mr['norm_pos'], 0., 0.999, inner_radius=20.,
-                                  outer_radius=35., color=RGBA(.0, .0, 0.9, alpha))
-                    draw_points([mr['norm_pos']], size=5, color=RGBA(.0, .9, 0.0, alpha))
+                    cygl_utils.draw_progress(mr['norm_pos'], 0., 0.999,
+                                             inner_radius=20.,
+                                             outer_radius=35.,
+                                             color=cygl_utils.RGBA(.0, .0, 0.9, alpha))
+                    cygl_utils.draw_points([mr['norm_pos']], size=5, color=cygl_utils.RGBA(.0, .9, 0.0, alpha))
 
         # calculate correct timeline height. Triggers timeline redraw only if changed
         self.timeline.content_height = max(0.001, self.timeline_line_height * len(self.sections))
@@ -542,33 +555,33 @@ class Offline_Calibration(Gaze_Producer_Base):
                 cal_ts = self.g_pool.timestamps[cal_slc]
                 map_ts = self.g_pool.timestamps[map_slc]
 
-                color = RGBA(*s['color'][:3], 1.)
+                color = cygl_utils.RGBA(*s['color'][:3], 1.)
                 if len(cal_ts):
-                    draw_rounded_rect((cal_ts[0], -4 * scale),
+                    cygl_utils.draw_rounded_rect((cal_ts[0], -4 * scale),
                                       (cal_ts[-1] - cal_ts[0], 8 * scale),
                                       corner_radius=0,
                                       color=color,
                                       sharpness=1.)
                 if len(map_ts):
-                    draw_rounded_rect((map_ts[0], -scale),
+                    cygl_utils.draw_rounded_rect((map_ts[0], -scale),
                                       (map_ts[-1] - map_ts[0], 2 * scale),
                                       corner_radius=0,
                                       color=color,
                                       sharpness=1.)
 
-                color = RGBA(1., 1., 1., .5)
+                color = cygl_utils.RGBA(1., 1., 1., .5)
                 if s['calibration_method'] == "natural_features":
-                    draw_x([(m['timestamp'], 0) for m in self.manual_ref_positions],
+                    cygl_utils.draw_x([(m['timestamp'], 0) for m in self.manual_ref_positions],
                            height=12 * scale, width=3 * pixel_to_time_fac / scale, thickness=scale, color=color)
                 else:
-                    draw_bars([(m['timestamp'], 0) for m in self.circle_marker_positions],
+                    cygl_utils.draw_bars([(m['timestamp'], 0) for m in self.circle_marker_positions],
                               height=12 * scale, thickness=scale, color=color)
 
                 gl.glTranslatef(0, scale * self.timeline_line_height, 0)
 
     def draw_labels(self, width, height, scale):
         self.glfont.set_size(self.timeline_line_height * scale)
-        for idx, s in enumerate(self.sections):
+        for s in self.sections:
             self.glfont.draw_text(width, 0, s['label'])
             gl.glTranslatef(0, self.timeline_line_height * scale, 0)
 
@@ -591,7 +604,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def cancel_marker_detection(self):
         if self.process_pipe:
-            self.process_pipe.send(topic='terminate', payload={})
+            self.process_pipe.send({'topic': 'terminate'})
             self.process_pipe.socket.close()
             self.process_pipe = None
 
@@ -601,20 +614,21 @@ class Offline_Calibration(Gaze_Producer_Base):
 
     def cleanup(self):
         for sec in self.sections:
-            if sec['bg_task']:
+            if 'bg_task' in sec:
                 sec['bg_task'].cancel()
-            sec['bg_task'] = None
-            sec['gaze_positions'] = []
+                del sec['bg_task']
+            sec['gaze'].clear()
+            sec['gaze_ts'].clear()
         self.save_offline_data()
 
     def save_offline_data(self):
         session_data = {}
         session_data['sections'] = []
         for s in self.sections:
-            # we need a shallow copy with bg_task=None and gaze_positions=[]
             sec = s.copy()
-            sec['bg_task'] = None
-            sec['gaze_positions'] = []
+            for key in ('bg_task', 'gaze', 'gaze_ts'):
+                if key in sec:
+                    del sec[key]
             session_data['sections'].append(sec)
         session_data['version'] = self.session_data_version
         session_data['manual_ref_positions'] = self.manual_ref_positions
@@ -623,5 +637,5 @@ class Offline_Calibration(Gaze_Producer_Base):
         else:
             session_data['circle_marker_positions'] = []
         cache_path = os.path.join(self.result_dir, 'offline_calibration_gaze')
-        save_object(session_data, cache_path)
+        fm.save_object(session_data, cache_path)
         logger.info('Cached offline calibration data to {}'.format(cache_path))

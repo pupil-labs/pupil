@@ -132,5 +132,5 @@ if __name__ == '__main__':
         sleep(1.)
 
     logger.debug('Canceling task')
-    task.cancel(wait=True)
+    task.cancel(timeout=1)
     logger.debug('Task done')

@@ -260,7 +260,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 self.ref_list.append(ref)
 
             # Always save pupil positions
-            self.pupil_list.extend(events['pupil_positions'])
+            self.pupil_list.extend(events['pupil'])
 
             if on_position and len(self.markers) and events.get('fixations', []):
                 fixation_boost = 5

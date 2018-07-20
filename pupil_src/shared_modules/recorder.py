@@ -9,77 +9,35 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-import os, errno
-# import sys, platform, getpass
-import csv_utils
-from pyglui import ui
-import numpy as np
-# from scipy.interpolate import UnivariateSpline
-from plugin import System_Plugin_Base
-from time import strftime, localtime, time, gmtime
-from shutil import copy2
-from file_methods import save_object, load_object
-from methods import get_system_info, timer
-from av_writer import JPEG_Writer, AV_Writer
-from ndsi import H264Writer
+import errno
 # logging
 import logging
+import os
+import platform
+from shutil import copy2
+from time import gmtime, localtime, strftime, time
+
+import numpy as np
+import psutil
+from ndsi import H264Writer
+from pyglui import ui
+
+import csv_utils
+from av_writer import AV_Writer, JPEG_Writer
+from file_methods import PLData_Writer, load_object
+from methods import get_system_info, timer
+# from scipy.interpolate import UnivariateSpline
+from plugin import System_Plugin_Base
+
 logger = logging.getLogger(__name__)
 
 
 def get_auto_name():
     return strftime("%Y_%m_%d", localtime())
 
-# def sanitize_timestamps(ts):
-#     logger.debug("Checking %s timestamps for monotony in direction and smoothness"%ts.shape[0])
-#     avg_frame_time = (ts[-1] - ts[0])/ts.shape[0]
-#     logger.debug('average_frame_time: %s'%(1./avg_frame_time))
-
-#     raw_ts = ts #only needed for visualization
-#     runs = 0
-#     while True:
-#         #forward check for non monotonic increasing behaviour
-#         clean = np.ones((ts.shape[0]),dtype=np.bool)
-#         damper  = 0
-#         for idx in range(ts.shape[0]-1):
-#             if ts[idx] >= ts[idx+1]: #not monotonically increasing timestamp
-#                 damper = 50
-#             clean[idx] = damper <= 0
-#             damper -=1
-
-#         #backward check to smooth timejumps forward
-#         damper  = 0
-#         for idx in range(ts.shape[0]-1)[::-1]:
-#             if ts[idx+1]-ts[idx]>1: #more than one second forward jump
-#                 damper = 50
-#             clean[idx] &= damper <= 0
-#             damper -=1
-
-#         if clean.all() == True:
-#             if runs >0:
-#                 logger.debug("Timestamps were bad but are ok now. Correction runs: %s"%runs)
-#                 # from matplotlib import pyplot as plt
-#                 # plt.plot(frames,raw_ts)
-#                 # plt.plot(frames,ts)
-#                 # # plt.scatter(frames[~clean],ts[~clean])
-#                 # plt.show()
-#             else:
-#                 logger.debug("Timestamps are clean.")
-#             return ts
-
-#         runs +=1
-#         if runs > 4:
-#             logger.error("Timestamps could not be fixed!")
-#             return ts
-
-#         logger.warning("Timestamps are not sane. We detected non monotitc or jumpy timestamps. Fixing them now")
-#         frames = np.arange(len(ts))
-#         s = UnivariateSpline(frames[clean],ts[clean],s=0)
-#         ts = s(frames)
 
 def available_gb(path):
-    stats = os.statvfs(path)
-    num_avail_gb = stats.f_bsize * stats.f_bavail / 1e9
+    num_avail_gb = psutil.disk_usage(path).free / 1e9
     logger.debug('{} has {:.2f} GB available'.format(path, num_avail_gb))
     return num_avail_gb
 
@@ -88,11 +46,10 @@ class Recorder(System_Plugin_Base):
     """Capture Recorder"""
     icon_chr = chr(0xe04b)
     icon_font = 'pupil_icons'
-
     warning_low_disk_space_th = 5.0  # threshold in GB
     stop_rec_low_disk_space_th = 1.0  # threshold in GB
 
-    def __init__(self, g_pool, session_name=get_auto_name(), rec_dir=None,
+    def __init__(self, g_pool, session_name=get_auto_name(), rec_root_dir=None,
                  user_info={'name': '', 'additional_field': 'change_me'},
                  info_menu_conf={}, show_info_menu=False, record_eye=True,
                  raw_jpeg=True):
@@ -102,20 +59,20 @@ class Recorder(System_Plugin_Base):
             session_name = get_auto_name()
 
         base_dir = self.g_pool.user_dir.rsplit(os.path.sep, 1)[0]
-        default_rec_dir = os.path.join(base_dir, 'recordings')
+        default_rec_root_dir = os.path.join(base_dir, 'recordings')
 
-        if rec_dir and rec_dir != default_rec_dir and self.verify_path(rec_dir):
-            self.rec_dir = rec_dir
+        if rec_root_dir and rec_root_dir != default_rec_root_dir and self.verify_path(rec_root_dir):
+            self.rec_root_dir = rec_root_dir
         else:
             try:
-                os.makedirs(default_rec_dir)
+                os.makedirs(default_rec_root_dir)
             except OSError as e:
                 if e.errno != errno.EEXIST:
                     logger.error("Could not create Rec dir")
                     raise e
             else:
-                logger.info('Created standard Rec dir at "{}"'.format(default_rec_dir))
-            self.rec_dir = default_rec_dir
+                logger.info('Created standard Rec dir at "{}"'.format(default_rec_root_dir))
+            self.rec_root_dir = default_rec_root_dir
 
         self.raw_jpeg = raw_jpeg
         self.order = .9
@@ -141,7 +98,7 @@ class Recorder(System_Plugin_Base):
         d['user_info'] = self.user_info
         d['info_menu_conf'] = self.info_menu_conf
         d['show_info_menu'] = self.show_info_menu
-        d['rec_dir'] = self.rec_dir
+        d['rec_root_dir'] = self.rec_root_dir
         d['raw_jpeg'] = self.raw_jpeg
         return d
 
@@ -152,7 +109,7 @@ class Recorder(System_Plugin_Base):
 
         self.menu.append(ui.Info_Text('Pupil recordings are saved like this: "path_to_recordings/recording_session_name/nnn" where "nnn" is an increasing number to avoid overwrites. You can use "/" in your session name to create subdirectories.'))
         self.menu.append(ui.Info_Text('Recordings are saved to "~/pupil_recordings". You can change the path here but note that invalid input will be ignored.'))
-        self.menu.append(ui.Text_Input('rec_dir', self, setter=self.set_rec_dir, label='Path to recordings'))
+        self.menu.append(ui.Text_Input('rec_root_dir', self, setter=self.set_rec_root_dir, label='Path to recordings'))
         self.menu.append(ui.Text_Input('session_name', self, setter=self.set_session_name, label='Recording session name'))
         self.menu.append(ui.Switch('show_info_menu', self, on_val=True, off_val=False, label='Request additional user info'))
         self.menu.append(ui.Selector('raw_jpeg', self, selection=[True, False], labels=["bigger file, less CPU", "smaller file, more CPU"], label='Compression'))
@@ -204,7 +161,14 @@ class Recorder(System_Plugin_Base):
             if 'timestamp' not in notification:
                 logger.error("Notification without timestamp will not be saved.")
             else:
-                self.data['notifications'].append(notification)
+                notification['topic'] = 'notify.' + notification['subject']
+                try:
+                    writer = self.pldata_writers['notify']
+                except KeyError:
+                    writer = PLData_Writer(self.rec_path, 'notify')
+                    self.pldata_writers['notify'] = writer
+                writer.append(notification)
+
         elif notification['subject'] == 'recording.should_start':
             if self.running:
                 logger.info('Recording already running!')
@@ -225,7 +189,7 @@ class Recorder(System_Plugin_Base):
         return strftime("%H:%M:%S", rec_time)
 
     def start(self):
-        session = os.path.join(self.rec_dir, self.session_name)
+        session = os.path.join(self.rec_root_dir, self.session_name)
         try:
             os.makedirs(session, exist_ok=True)
             logger.debug("Created new recordings session dir {}".format(session))
@@ -233,7 +197,7 @@ class Recorder(System_Plugin_Base):
             logger.error("Could not start recording. Session dir {} not writable.".format(session))
             return
 
-        self.data = {'pupil_positions': [], 'gaze_positions': [], 'notifications': []}
+        self.pldata_writers = {}
         self.frame_count = 0
         self.running = True
         self.menu.read_only = True
@@ -279,8 +243,12 @@ class Recorder(System_Plugin_Base):
             cal_data = load_object(cal_pt_path)
             notification = {'subject': 'calibration.calibration_data', 'record': True}
             notification.update(cal_data)
-            self.data['notifications'].append(notification)
-        except:
+            notification['topic'] = 'notify.' + notification['subject']
+
+            writer = PLData_Writer(self.rec_path, 'notify')
+            writer.append(notification)
+            self.pldata_writers['notify'] = writer
+        except FileNotFoundError:
             pass
 
         if self.show_info_menu:
@@ -317,7 +285,7 @@ class Recorder(System_Plugin_Base):
     def recent_events(self, events):
 
         if self.check_space():
-            disk_space = available_gb(self.rec_dir)
+            disk_space = available_gb(self.rec_root_dir)
             if disk_space < self.warning_low_disk_space_th and self.low_disk_space_thumb not in self.g_pool.quickbar:
                 self.g_pool.quickbar.append(self.low_disk_space_thumb)
             elif disk_space >= self.warning_low_disk_space_th and self.low_disk_space_thumb in self.g_pool.quickbar:
@@ -331,11 +299,11 @@ class Recorder(System_Plugin_Base):
             for key, data in events.items():
                 if key not in ('dt', 'frame', 'depth_frame'):
                     try:
-                        self.data[key] += data
+                        writer = self.pldata_writers[key]
                     except KeyError:
-                        self.data[key] = []
-                        self.data[key] += data
-
+                        writer = PLData_Writer(self.rec_path, key)
+                        self.pldata_writers[key] = writer
+                    writer.extend(data)
             if 'frame' in events:
                 frame = events['frame']
                 self.writer.write_video_frame(frame)
@@ -357,7 +325,11 @@ class Recorder(System_Plugin_Base):
         finally:
             self.writer = None
 
-        save_object(self.data, os.path.join(self.rec_path, "pupil_data"))
+        # save_object(self.data, os.path.join(self.rec_path, "pupil_data"))
+        for writer in self.pldata_writers.values():
+            writer.close()
+
+        del self.pldata_writers
 
         try:
             copy2(os.path.join(self.g_pool.user_dir, "surface_definitions"),
@@ -391,10 +363,6 @@ class Recorder(System_Plugin_Base):
             self.menu.read_only = False
             self.button.status_text = ''
 
-        self.data = {'pupil_positions': [], 'gaze_positions': []}
-        self.pupil_pos_list = []
-        self.gaze_pos_list = []
-
         logger.info("Saved Recording.")
         self.notify_all({'subject': 'recording.stopped', 'rec_path': self.rec_path})
 
@@ -424,10 +392,10 @@ class Recorder(System_Plugin_Base):
         else:
             return n_path
 
-    def set_rec_dir(self, val):
+    def set_rec_root_dir(self, val):
         n_path = self.verify_path(val)
         if n_path:
-            self.rec_dir = n_path
+            self.rec_root_dir = n_path
 
     def set_session_name(self, val):
         if not val:

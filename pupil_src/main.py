@@ -117,16 +117,19 @@ def launcher():
         poller.register(sub.socket, zmq.POLLIN)
         waiting_notifications = {}
 
+        TOPIC_CUTOFF = len('delayed_')
+
         while True:
             if poller.poll(timeout=250):
                 #Recv new delayed notification and store it.
-                topic,n = sub.recv()
-                n['_notify_time_'] = time()+n['delay']
+                topic, n = sub.recv()
+                n['__notify_time__'] = time() + n['delay']
                 waiting_notifications[n['subject']] = n
             #When a notifications time has come, pop from dict and send it as notification
             for s,n in list(waiting_notifications.items()):
-                if n['_notify_time_'] < time():
-                    del n['_notify_time_']
+                if n['__notify_time__'] < time():
+                    n['topic'] = n['topic'][TOPIC_CUTOFF:]
+                    del n['__notify_time__']
                     del n['delay']
                     del waiting_notifications[s]
                     pub.notify(n)

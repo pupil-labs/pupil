@@ -98,7 +98,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
                     self.ref_list.append(ref)
 
             # Always save pupil positions
-            self.pupil_list.extend(events['pupil_positions'])
+            self.pupil_list.extend(events['pupil'])
 
             if self.count:
                 self.button.status_text = 'Sampling Gaze Data'

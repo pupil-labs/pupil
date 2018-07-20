@@ -35,13 +35,14 @@ class ZMQ_handler(logging.Handler):
         self.socket = Msg_Dispatcher(ctx, ipc_pub_url)
 
     def emit(self, record):
+        record_dict = record.__dict__
+        record_dict['topic'] = 'logging.' + record.levelname.lower()
         try:
-            self.socket.send('logging.{0}'.format(record.levelname.lower()), record.__dict__)
+            self.socket.send(record_dict)
         except TypeError:
-            record_dict = record.__dict__
             # stringify `exc_info` since it includes unserializable objects
             record_dict['exc_info'] = str(record_dict['exc_info'])
-            self.socket.send('logging.{0}'.format(record.levelname.lower()), record_dict)
+            self.socket.send(record_dict)
 
 
 class ZMQ_Socket(object):
@@ -93,18 +94,27 @@ class Msg_Receiver(ZMQ_Socket):
         Any addional message frames will be added as a list
         in the payload dict with key: '__raw_data__' .
         '''
-        topic = self.socket.recv_string()
-        payload = serializer.loads(self.socket.recv(), encoding='utf-8')
-        extra_frames = []
+        topic = self.recv_topic()
+        remaining_frames = self.recv_remaining_frames()
+        payload = self.deserialize_payload(*remaining_frames)
+        return topic, payload
+
+    def recv_topic(self):
+        return self.socket.recv_string()
+
+    def recv_remaining_frames(self):
         while self.socket.get(zmq.RCVMORE):
-            extra_frames.append(self.socket.recv())
+            yield self.socket.recv()
+
+    def deserialize_payload(self, payload_serialized, *extra_frames):
+        payload = serializer.loads(payload_serialized, encoding='utf-8')
         if extra_frames:
             payload['__raw_data__'] = extra_frames
-        return topic, payload
+        return payload
 
     @property
     def new_data(self):
-        return self.socket.get(zmq.EVENTS)
+        return self.socket.get(zmq.EVENTS) & zmq.POLLIN
 
 
 class Msg_Streamer(ZMQ_Socket):
@@ -116,7 +126,7 @@ class Msg_Streamer(ZMQ_Socket):
         self.socket = zmq.Socket(ctx, zmq.PUB)
         self.socket.connect(url)
 
-    def send(self, topic, payload):
+    def send(self, payload, deprecated=()):
         '''Send a message with topic, payload
 `
         Topic is a unicode string. It will be sent as utf-8 encoded byte array.
@@ -128,15 +138,17 @@ class Msg_Streamer(ZMQ_Socket):
         the contents of the iterable in '__raw_data__'
         require exposing the pyhton memoryview interface.
         '''
+        assert deprecated is (), 'Depracted use of send()'
+        assert 'topic' in payload, '`topic` field required in {}'.format(payload)
+
+        serialized_payload = serializer.packb(payload, use_bin_type=True)
         if '__raw_data__' not in payload:
-            serialized_payload = serializer.dumps(payload, use_bin_type=True)
-            self.socket.send_string(topic, flags=zmq.SNDMORE)
+            self.socket.send_string(payload['topic'], flags=zmq.SNDMORE)
             self.socket.send(serialized_payload)
         else:
             extra_frames = payload.pop('__raw_data__')
             assert(isinstance(extra_frames, (list, tuple)))
-            serialized_payload = serializer.dumps(payload, use_bin_type=True)
-            self.socket.send_string(topic, flags=zmq.SNDMORE)
+            self.socket.send_string(payload['topic'], flags=zmq.SNDMORE)
             self.socket.send(serialized_payload, flags=zmq.SNDMORE)
             for frame in extra_frames[:-1]:
                 self.socket.send(frame, flags=zmq.SNDMORE, copy=True)
@@ -158,15 +170,13 @@ class Msg_Dispatcher(Msg_Streamer):
         see plugin.notify_all for documentation on notifications.
         '''
         if notification.get('remote_notify'):
-            self.send("remote_notify.{}".format(notification['subject']),
-                      notification)
+            prefix = "remote_notify."
         elif notification.get('delay', 0):
-            self.send("delayed_notify.{}".format(notification['subject']),
-                      notification)
+            prefix = "delayed_notify."
         else:
-            self.send("notify.{}".format(notification['subject']),
-                      notification)
-
+            prefix = "notify."
+        notification['topic'] = prefix + notification['subject']
+        self.send(notification)
 
 class Msg_Pair_Base(Msg_Streamer,Msg_Receiver):
 

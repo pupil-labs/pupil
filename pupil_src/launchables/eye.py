@@ -546,14 +546,13 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                             logger.warning('{}s are not compatible with format "{}"'.format(type(frame), frame_publish_format))
                     else:
                         frame_publish_format_recent_warning = False
-                        pupil_socket.send('frame.eye.%s'%eye_id,{
-                            'width': frame.width,
-                            'height': frame.height,
-                            'index': frame.index,
-                            'timestamp': frame.timestamp,
-                            'format': frame_publish_format,
-                            '__raw_data__': [data]
-                        })
+                        pupil_socket.send({'topic': 'frame.eye.{}'.format(eye_id),
+                                           'width': frame.width,
+                                           'height': frame.height,
+                                           'index': frame.index,
+                                           'timestamp': frame.timestamp,
+                                           'format': frame_publish_format,
+                                           '__raw_data__': [data]})
 
                 t = frame.timestamp
                 dt, ts = t - ts, t
@@ -569,9 +568,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                 result = g_pool.pupil_detector.detect(frame, g_pool.u_r, g_pool.display_mode == 'algorithm')
                 if result is not None:
                     result['id'] = eye_id
-
-                    # stream the result
-                    pupil_socket.send('pupil.%s'%eye_id,result)
+                    result['topic'] = 'pupil.{}'.format(eye_id)
+                    pupil_socket.send(result)
 
             cpu_graph.update()
 
