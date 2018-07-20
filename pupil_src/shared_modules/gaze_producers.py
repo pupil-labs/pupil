@@ -126,31 +126,31 @@ class Gaze_From_Recording(Gaze_Producer_Base):
         self.notify_all({'subject': 'gaze_positions_changed'})
         logger.debug('gaze positions changed')
 
-    def _set_offset_x(self, offset_x):
-        self.x_offset = offset_x
-        self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': 1.})
+    # def _set_offset_x(self, offset_x):
+    #     self.x_offset = offset_x
+    #     self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': 1.})
 
-    def _set_offset_y(self, offset_y):
-        self.y_offset = offset_y
-        self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': 1.})
+    # def _set_offset_y(self, offset_y):
+    #     self.y_offset = offset_y
+    #     self.notify_all({'subject': 'manual_gaze_correction.offset_changed', 'delay': 1.})
 
-    def on_notify(self, notification):
-        if notification['subject'] == 'manual_gaze_correction.offset_changed':
-            self.load_data_with_offset()
+    # def on_notify(self, notification):
+    #     if notification['subject'] == 'manual_gaze_correction.offset_changed':
+    #         self.load_data_with_offset()
 
     def init_ui(self):
         super().init_ui()
         self.menu.label = "Gaze Data  From Recording"
         self.menu.append(ui.Info_Text('Currently, gaze positions are loaded from the recording.'))
-        offset_menu = ui.Growing_Menu('Manual Correction')
-        offset_menu.append(ui.Info_Text('The manual correction feature allows you to apply' +
-                                        ' a fixed offset to your gaze data.'))
-        offset_menu.append(ui.Slider('x_offset', self, min=-.5, step=0.01,
-                                     max=.5, setter=self._set_offset_x))
-        offset_menu.append(ui.Slider('y_offset', self, min=-.5, step=0.01,
-                                     max=.5, setter=self._set_offset_y))
-        offset_menu.collapsed = True
-        self.menu.append(offset_menu)
+        # offset_menu = ui.Growing_Menu('Manual Correction')
+        # offset_menu.append(ui.Info_Text('The manual correction feature allows you to apply' +
+        #                                 ' a fixed offset to your gaze data.'))
+        # offset_menu.append(ui.Slider('x_offset', self, min=-.5, step=0.01,
+        #                              max=.5, setter=self._set_offset_x))
+        # offset_menu.append(ui.Slider('y_offset', self, min=-.5, step=0.01,
+        #                              max=.5, setter=self._set_offset_y))
+        # offset_menu.collapsed = True
+        # self.menu.append(offset_menu)
 
     def deinit_ui(self):
         super().deinit_ui()
