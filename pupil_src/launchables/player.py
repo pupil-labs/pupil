@@ -86,7 +86,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from vis_light_points import Vis_Light_Points
         from vis_watermark import Vis_Watermark
         from vis_fixation import Vis_Fixation
-        from vis_scan_path import Vis_Scan_Path
+        # from vis_scan_path import Vis_Scan_Path
         from vis_eye_video_overlay import Vis_Eye_Video_Overlay
         from seek_control import Seek_Control
         from video_export_launcher import Video_Export_Launcher
@@ -117,7 +117,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                         Vis_Cross,
                         Vis_Watermark,
                         Vis_Eye_Video_Overlay,
-                        Vis_Scan_Path,
+                        # Vis_Scan_Path,
                         Offline_Fixation_Detector,
                         Offline_Blink_Detection,
                         Batch_Exporter,
