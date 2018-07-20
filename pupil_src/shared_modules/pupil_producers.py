@@ -101,9 +101,10 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
             events['pupil'] = self.g_pool.pupil_positions.by_ts_window(window)
 
     def cache_pupil_timeline_data(self, key):
+        world_start_stop_ts = [self.g_pool.timestamps[0], self.g_pool.timestamps[-1]]
         if not self.g_pool.pupil_positions:
             self.cache[key] = {'left': [], 'right': [],
-                               'xlim': [t0, t1], 'ylim': [0, 1]}
+                               'xlim': world_start_stop_ts, 'ylim': [0, 1]}
         else:
             ts_data_pairs_right_left = [],[]
             for eye_id in (0, 1):
@@ -126,8 +127,7 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
 
             self.cache[key] = {'right': ts_data_pairs_right_left[0],
                                'left': ts_data_pairs_right_left[1],
-                               'xlim': [self.g_pool.timestamps[0],
-                                        self.g_pool.timestamps[-1]],
+                               'xlim': world_start_stop_ts,
                                'ylim': [0, max_val]}
 
     def draw_pupil_diameter(self, width, height, scale):
