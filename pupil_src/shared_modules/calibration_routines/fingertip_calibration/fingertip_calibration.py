@@ -30,7 +30,7 @@ class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
        Move your head for example horizontally and vertically while gazing at your fingertip
        to quickly sample a wide range gaze angles.
     """
-    def __init__(self, g_pool):
+    def __init__(self, g_pool,visualize=True):
         super().__init__(g_pool)
         self.menu = None
 
@@ -61,9 +61,12 @@ class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
         self.fingertip_detector.eval().to(self.device)
 
         self.collect_tips = False
-        self.visualize = True
+        self.visualize = visualize
         self.hand_viz = []
         self.finger_viz = []
+
+    def get_init_dict(self):
+        return {"visualize":self.visualize}
 
     def init_ui(self):
         super().init_ui()
@@ -78,7 +81,7 @@ class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
         else:
             self.menu.append(ui.Info_Text('* GPUs utilized for fingertip detection network'))
 
-        self.vis_toggle = ui.Thumb('visualize', self, setter=self.toggle_vis, label='V', hotkey='v')
+        self.vis_toggle = ui.Thumb('visualize', self, label='V', hotkey='v')
         self.g_pool.quickbar.append(self.vis_toggle)
 
     def start(self):
@@ -180,7 +183,7 @@ class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
 
             if self.active:
                 # always save pupil positions
-                self.pupil_list.extend(events['pupil_positions'])
+                self.pupil_list.extend(events['pupil'])
 
     def gl_display(self):
         """
@@ -218,8 +221,6 @@ class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
         self.vis_toggle = None
         super().deinit_ui()
 
-    def toggle_vis(self, _=None):
-        self.visualize = not self.visualize
 
 
 class BaseTransform:
