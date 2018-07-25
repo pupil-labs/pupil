@@ -55,7 +55,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
+    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 60,invert_image=False,robust_detection=True):
         super().__init__(g_pool,mode,min_marker_perimeter,invert_image,robust_detection,)
         self.order = .2
         self.marker_cache_version = 2
@@ -143,7 +143,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
         self.menu.elements[:] = []
         self.menu.append(ui.Switch('invert_image',self,setter=set_invert_image,label='Use inverted markers'))
-        self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=500,step=1,setter=set_min_marker_perimeter))
+        self.menu.append(ui.Slider('min_marker_perimeter',self,min=30,max=100,step=1,setter=set_min_marker_perimeter))
         self.menu.append(ui.Info_Text('The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Surfaces","Show marker IDs","Show Heatmaps","Show Metrics"] ))
