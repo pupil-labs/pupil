@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 
 import torch
-import os
+import os,sys
 import cv2
 import numpy as np
 import logging
@@ -24,6 +24,10 @@ import audio
 from calibration_routines import calibration_plugin_base, finish_calibration
 from calibration_routines.fingertip_calibration.models import ssd_lite, unet
 
+if getattr(sys, 'frozen', False):
+    weights_path =  os.path.join(sys._MEIPASS, "weights")
+else:
+    weights_path =  os.path.join(os.path.split(__file__)[0], "weights")
 
 class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
     """Calibrate gaze parameters using your fingertip.
@@ -37,13 +41,14 @@ class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
         # Initialize CNN pipeline
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+
         # Hand Detector
         self.hand_detector_cfg = {
             'input_size': 225,
             'confidence_thresh': 0.9,
             'max_num_detection': 1,
             'nms_thresh': 0.45,
-            'weights_path': os.path.join(os.path.split(__file__)[0], "weights", 'hand_detector_model.pkl'),
+            'weights_path': os.path.join(weights_path,'hand_detector_model.pkl'),
         }
         self.hand_transform = BaseTransform(self.hand_detector_cfg['input_size'], (117.77, 115.42, 107.29), (72.03, 69.83, 71.43))
         self.hand_detector = ssd_lite.build_ssd_lite(self.hand_detector_cfg)
@@ -53,7 +58,7 @@ class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
         # Fingertip Detector
         self.fingertip_detector_cfg = {
             'confidence_thresh': 0.6,
-            'weights_path': os.path.join(os.path.split(__file__)[0], "weights", "fingertip_detector_model.pkl"),
+            'weights_path': os.path.join(weights_path, "fingertip_detector_model.pkl"),
         }
         self.fingertip_transform = BaseTransform(64, (121.97, 119.65, 111.42), (67.58, 65.17, 67.72))
         self.fingertip_detector = unet.UNet(num_classes=10, in_channels=3, depth=4, start_filts=32, up_mode='transpose')
