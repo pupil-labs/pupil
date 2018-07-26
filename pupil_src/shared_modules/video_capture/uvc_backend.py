@@ -194,6 +194,16 @@ class UVC_Source(Base_Source):
             if self.check_stripes:
                 self.checkframestripes = Check_Frame_Stripes()
 
+
+            try: controls_dict['Auto Exposure Priority'].value = 0
+            except KeyError: pass
+
+            try: controls_dict['Auto Exposure Mode'].value = 1
+            except KeyError: pass
+
+            try:controls_dict['Saturation'].value = 0
+            except KeyError: pass
+
             try:controls_dict['Saturation'].value = 0
             except KeyError: pass
 
@@ -436,6 +446,7 @@ class UVC_Source(Base_Source):
 
         def frame_rate_getter():
             return (self.uvc_capture.frame_rates, [str(fr) for fr in self.uvc_capture.frame_rates])
+
         sensor_control.append(ui.Selector('frame_rate', self, selection_getter=frame_rate_getter, setter=set_frame_rate, label='Frame rate'))
 
         if ("Pupil Cam2" in self.uvc_capture.name):
