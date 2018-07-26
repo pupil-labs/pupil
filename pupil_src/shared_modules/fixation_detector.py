@@ -154,6 +154,10 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration,
     yield "Detecting fixations...", ()
     gaze_data = [fm.Serialized_Dict(msgpack_bytes=serialized)
                  for serialized in gaze_data]
+    if not gaze_data:
+        logger.warning('No data available to find fixations')
+        return "Fixation detection complete", ()
+
     use_pupil = 'gaze_normal_3d' in gaze_data[0]
     logger.info('Starting fixation detection using {} data...'.format('3d' if use_pupil else '2d'))
     fixation_result = Fixation_Result_Factory()
@@ -355,10 +359,6 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             self.bg_task.cancel()
 
         gaze_data = [gp.serialized for gp in self.g_pool.gaze_positions]
-        if not gaze_data:
-            logger.error('No gaze data available to find fixations')
-            self.status = 'Fixation detection failed'
-            return
 
         cap = Empty()
         cap.frame_size = self.g_pool.capture.frame_size
