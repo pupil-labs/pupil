@@ -239,11 +239,12 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.manual_ref_positions = session_data['manual_ref_positions']
         if self.circle_marker_positions:
             self.detection_progress = 100.0
-            for s in self.sections:
-                self.calibrate_section(s)
-            self.correlate_and_publish()
         else:
             self.detection_progress = 0.0
+
+        for s in self.sections:
+            self.calibrate_section(s)
+            self.correlate_and_publish()
 
     def append_section(self):
         max_idx = len(self.g_pool.timestamps) - 1
@@ -473,7 +474,6 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         calibration_pupil_pos = self.g_pool.pupil_positions.by_ts_window(calibration_window)
         mapping_pupil_pos = self.g_pool.pupil_positions.by_ts_window(mapping_window)
-
         if sec['calibration_method'] == 'circle_marker':
             ref_list = self.circle_marker_positions
         elif sec['calibration_method'] == 'natural_features':
@@ -555,7 +555,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                 cal_ts = self.g_pool.timestamps[cal_slc]
                 map_ts = self.g_pool.timestamps[map_slc]
 
-                color = cygl_utils.RGBA(*s['color'][:3], 1.)
+                color = cygl_utils.RGBA(*s['color'][:3], .5)
                 if len(cal_ts):
                     cygl_utils.draw_rounded_rect((cal_ts[0], -4 * scale),
                                       (cal_ts[-1] - cal_ts[0], 8 * scale),
@@ -617,8 +617,6 @@ class Offline_Calibration(Gaze_Producer_Base):
             if 'bg_task' in sec:
                 sec['bg_task'].cancel()
                 del sec['bg_task']
-            sec['gaze'].clear()
-            sec['gaze_ts'].clear()
         self.save_offline_data()
 
     def save_offline_data(self):
