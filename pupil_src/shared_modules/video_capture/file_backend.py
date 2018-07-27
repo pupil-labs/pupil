@@ -217,7 +217,6 @@ class File_Source(Playback_Source, Base_Source):
             for frame in packet.decode():
                 if frame:
                     yield frame
-        raise StopIteration()
 
     @ensure_initialisation()
     def pts_to_idx(self, pts):

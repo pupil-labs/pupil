@@ -217,7 +217,6 @@ class Audio_Playback(System_Plugin_Base):
             for frame in packet.decode():
                 if frame:
                     yield frame
-        raise StopIteration()
 
     def audio_idx_to_pts(self, idx):
         return idx * self.audio_pts_rate
