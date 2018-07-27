@@ -78,7 +78,6 @@ class Audio_Viz_Transform():
             for frame in packet.decode():
                 if frame:
                     yield frame
-        raise StopIteration()
 
     def sec_to_frames(self, sec):
         return int(np.ceil(sec * self.audio_stream.rate / self.audio_stream.frame_size))
