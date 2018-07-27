@@ -38,7 +38,7 @@ def get_auto_name():
 
 def available_gb(path):
     num_avail_gb = psutil.disk_usage(path).free / 1e9
-    logger.debug('{} has {:.2f} GB available'.format(path, num_avail_gb))
+    # logger.debug('{} has {:.2f} GB available'.format(path, num_avail_gb))
     return num_avail_gb
 
 
