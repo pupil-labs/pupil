@@ -590,7 +590,7 @@ def update_recording_v14_v18(rec_dir):
                         datum['topic'] = 'notify.' + datum['subject']
                     elif new_topic == 'pupil':
                         datum['topic'] += '.{}'.format(datum['id'])
-                    elif new_topic == 'surface':
+                    elif new_topic.startswith('surface'):
                         datum['topic'] = 'surfaces.' + datum['name']
                     elif new_topic == 'blinks' or new_topic == 'fixations':
                         datum['topic'] += 's'
