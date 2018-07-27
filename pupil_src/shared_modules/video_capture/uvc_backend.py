@@ -97,7 +97,11 @@ class UVC_Source(Base_Source):
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
             controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
-            self.exposure_time_backup = controls_dict['Absolute Exposure Time'].value
+            try:
+                self.exposure_time_backup = controls_dict['Absolute Exposure Time'].value
+            except KeyError:
+                self.exposure_time_backup = None
+
         self.backup_uvc_controls = {}
 
     def verify_drivers(self):
@@ -194,14 +198,10 @@ class UVC_Source(Base_Source):
             if self.check_stripes:
                 self.checkframestripes = Check_Frame_Stripes()
 
-
             try: controls_dict['Auto Exposure Priority'].value = 0
             except KeyError: pass
 
             try: controls_dict['Auto Exposure Mode'].value = 1
-            except KeyError: pass
-
-            try:controls_dict['Saturation'].value = 0
             except KeyError: pass
 
             try:controls_dict['Saturation'].value = 0
@@ -369,7 +369,8 @@ class UVC_Source(Base_Source):
             if self.exposure_mode == "auto":
                 self.preferred_exposure_time = Exposure_Time(max_ET=special_settings.get(new_rate, 32), frame_rate=new_rate, mode=self.exposure_mode)
             else:
-                self.exposure_time = min(self.exposure_time, special_settings.get(new_rate, 32))
+                if self.exposure_time is not None:
+                    self.exposure_time = min(self.exposure_time, special_settings.get(new_rate, 32))
 
             if self.check_stripes:
                 self.checkframestripes = Check_Frame_Stripes()
@@ -377,8 +378,11 @@ class UVC_Source(Base_Source):
     @property
     def exposure_time(self):
         if self.uvc_capture:
-            controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
-            return controls_dict['Absolute Exposure Time'].value
+            try:
+                controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
+                return controls_dict['Absolute Exposure Time'].value
+            except KeyError:
+                return None
         else:
             return self.exposure_time_backup
 
@@ -515,7 +519,6 @@ class UVC_Source(Base_Source):
         if image_processing.elements:
             ui_elements.append(image_processing)
         ui_elements.append(ui.Button("refresh",gui_update_from_device))
-        ui_elements.append(ui.Button("load defaults",gui_load_defaults))
 
         if ("Pupil Cam2" in self.uvc_capture.name):
             def set_check_stripes(check_stripes):
