@@ -244,7 +244,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         for s in self.sections:
             self.calibrate_section(s)
-            self.correlate_and_publish()
+        self.correlate_and_publish()
 
     def append_section(self):
         max_idx = len(self.g_pool.timestamps) - 1
