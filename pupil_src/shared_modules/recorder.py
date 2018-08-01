@@ -147,6 +147,7 @@ class Recorder(System_Plugin_Base):
                 - 'session_name' change session name
                     start with `/` to ingore the rec base dir and start from root instead.
                 - `record_eye` boolean that indicates recording of the eyes, defaults to current setting
+                - `rec_root_dir` full path to recording directory root, defaults to current setting
             ``recording.should_stop``: Stops current recording session
 
         Emits notifications:
@@ -176,6 +177,8 @@ class Recorder(System_Plugin_Base):
                 self.record_eye = notification.get('record_eye', self.record_eye)
                 if notification.get("session_name", ""):
                     self.set_session_name(notification["session_name"])
+                if notifcation.get("rec_root_dir", ""):
+                    self.set_rec_root_dir(notification["rec_root_dir"])
                 self.start()
 
         elif notification['subject'] == 'recording.should_stop':
