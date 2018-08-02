@@ -141,14 +141,15 @@ class Msg_Streamer(ZMQ_Socket):
         assert deprecated is (), 'Depracted use of send()'
         assert 'topic' in payload, '`topic` field required in {}'.format(payload)
 
-        serialized_payload = serializer.packb(payload, use_bin_type=True)
         if '__raw_data__' not in payload:
             self.socket.send_string(payload['topic'], flags=zmq.SNDMORE)
+            serialized_payload = serializer.packb(payload, use_bin_type=True)
             self.socket.send(serialized_payload)
         else:
             extra_frames = payload.pop('__raw_data__')
             assert(isinstance(extra_frames, (list, tuple)))
             self.socket.send_string(payload['topic'], flags=zmq.SNDMORE)
+            serialized_payload = serializer.packb(payload, use_bin_type=True)
             self.socket.send(serialized_payload, flags=zmq.SNDMORE)
             for frame in extra_frames[:-1]:
                 self.socket.send(frame, flags=zmq.SNDMORE, copy=True)
