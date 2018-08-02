@@ -264,12 +264,12 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         if not existing_locs:
             continue
         else:
-            video_loc = existing_locs[0]
+            media_loc = existing_locs[0]
 
         if time_name in ('Pupil Cam1 ID0', 'Pupil Cam1 ID1', 'Pupil Cam2 ID0', 'Pupil Cam2 ID1'):
             time_name = 'eye'+time_name[-1]  # rename eye files
         elif time_name in ('Pupil Cam1 ID2', 'Logitech Webcam C930e'):
-            video = av.open(video_loc, 'r')
+            video = av.open(media_loc, 'r')
             frame_size = video.streams.video[0].format.width, video.streams.video[0].format.height
             del video
             intrinsics = load_intrinsics(rec_dir, time_name, frame_size)
@@ -285,13 +285,17 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         np.save(timestamp_loc, timestamps)
 
         if time_name == 'audio':
-            video_dst = os.path.join(rec_dir, time_name) + '.mp4'
-            logger.info('Renaming "{}" to "{}"'.format(os.path.split(video_loc)[1], os.path.split(video_dst)[1]))
-            os.rename(video_loc, video_dst)
+            media_dst = os.path.join(rec_dir, time_name) + '.mp4'
         else:
-            video_dst = os.path.join(rec_dir, time_name) + os.path.splitext(video_loc)[1]
-            logger.info('Renaming "{}" to "{}"'.format(os.path.split(video_loc)[1], os.path.split(video_dst)[1]))
-            os.rename(video_loc, video_dst)
+            media_dst = os.path.join(rec_dir, time_name) + os.path.splitext(media_loc)[1]
+        logger.info('Renaming "{}" to "{}"'.format(os.path.split(media_loc)[1], os.path.split(media_dst)[1]))
+        try:
+            os.rename(media_loc, media_dst)
+        except FileExistsError:
+            # Only happens on Windows. Behavior on Unix is to overwrite the existing file.
+            # To mirror this behaviour we need to delete the old file and try renaming the new one again.
+            os.remove(media_dst)
+            os.rename(media_loc, media_dst)
 
     pupil_data_loc = os.path.join(rec_dir, 'pupil_data')
     if not os.path.exists(pupil_data_loc):
