@@ -30,7 +30,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
     keys:
         timestamp - timestamp of the source image frame
         index - associated_frame: closest world video frame
-        id - 0 or 1 for left/right eye
+        id - 0 or 1 for right and left eye (from wearer's POV)
         confidence - is an assessment by the pupil detector on how sure we can be on this measurement. A value of `0` indicates no confidence. `1` indicates perfect confidence. In our experience usefull data carries a confidence value greater than ~0.6. A `confidence` of exactly `0` means that we don't know anything. So you should ignore the position data.        norm_pos_x - x position in the eye image frame in normalized coordinates
         norm_pos_x - x position in the eye image frame in normalized coordinates
         norm_pos_y - y position in the eye image frame in normalized coordinates

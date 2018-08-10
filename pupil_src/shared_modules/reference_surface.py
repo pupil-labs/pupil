@@ -12,6 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 from platform import system
 from time import time
 from collections import deque
+import random
 
 import numpy as np
 import cv2
@@ -84,7 +85,7 @@ class Reference_Surface(object):
         self.camera_pose_3d = None
         self.use_distortion = True
 
-        self.uid = str(time())
+        self.uid = "{:04}".format(random.randint(0,9999))
         self.real_world_size = {'x': 1., 'y': 1.}
 
         self.heatmap = np.ones(0)

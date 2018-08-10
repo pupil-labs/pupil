@@ -471,9 +471,9 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
             surface_name = '_'+s.name.replace('/','')+'_'+s.uid
 
             #save surface_positions as csv
-            with open(os.path.join(metrics_dir,'srf_positons'+surface_name+'.csv'),'w',encoding='utf-8',newline='') as csvfile:
+            with open(os.path.join(metrics_dir,'surface_positons'+surface_name+'.csv'),'w',encoding='utf-8',newline='') as csvfile:
                 csv_writer =csv.writer(csvfile, delimiter=',')
-                csv_writer.writerow(('frame_idx','timestamp','m_to_screen','m_from_screen','detected_markers'))
+                csv_writer.writerow(('frame_idx','timestamp','m_to_surface','m_from_surface','detected_markers'))
                 for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
                     if in_mark <= idx < out_mark:
                         if ref_srf_data is not None and ref_srf_data is not False:
