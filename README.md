@@ -1,4 +1,7 @@
 # Pupil
+
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+
 Open source eye tracking software platform that started as a thesis project at MIT. Pupil is a project in active, community driven development. Pupil mobile eye tracking hardware is accessible, hackable, and affordable. The software is open source and written in `Python` and `C++` when speed is an issue.
 
 Our vision is to create tools for a diverse group of people interested in learning about eye tracking and conducting their eye tracking projects.
@@ -29,7 +32,7 @@ For an intro to the Pupil mobile eye tracking platform have a look at the [Pupil
 	<td valign="top">Get up and running and learn the basic Pupil workflow</td>
 	<td valign="top">Learn more about Pupil Capture and Pupil Player software settings and workflows here</td>
 	<td valign="top">Want to write code? Read the developer docs here</td>
-	<td valign="top">Connect with the Pupil community. Chat with us on <a href="https://pupil-labs.com/chat" title="#pupil channel on DiscordApp">Discord</a></td>		
+	<td valign="top">Connect with the Pupil community. Chat with us on <a href="https://pupil-labs.com/chat" title="#pupil channel on DiscordApp">Discord</a></td>
 </tr>
 </table>
 
