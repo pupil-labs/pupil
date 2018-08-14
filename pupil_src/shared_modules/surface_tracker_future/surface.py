@@ -22,17 +22,17 @@ import OpenGL.GL as gl
 import gl_utils
 
 import pyglui
-import pyglui.cygl.utils as pyglui_utils
+# import pyglui.cygl.utils as pyglui_utils
 # from pyglui.pyfontstash import fontstash
 # from pyglui.ui import get_opensans_font_path
-# from pyglui.cygl.utils import (
-#     RGBA,
-#     draw_polyline_norm,
-#     draw_polyline,
-#     draw_points_norm,
-#     draw_points,
-#     Named_Texture,
-# )
+from pyglui.cygl.utils import (
+    RGBA,
+    draw_polyline_norm,
+    draw_polyline,
+    draw_points_norm,
+    draw_points,
+    Named_Texture,
+)
 
 import methods
 
@@ -99,7 +99,7 @@ class Reference_Surface(object):
 
         self.heatmap = np.ones(0)
         self.heatmap_detail = .2
-        self.heatmap_texture = pyglui_utils.Named_Texture()
+        self.heatmap_texture = Named_Texture()
         self.gaze_history = collections.deque()
         self.gaze_history_length = 1.0  # unit: seconds
 
@@ -595,27 +595,27 @@ class Reference_Surface(object):
             frame = self.camera_model.distortPoints(frame)
             alpha = min(1, self.build_up_status / self.required_build_up)
             if highlight:
-                pyglui_utils.draw_polyline_norm(
+                draw_polyline_norm(
                     frame.reshape((5, 2)),
                     1,
-                    pyglui_utils.RGBA(r, g, b, a * .1),
+                    RGBA(r, g, b, a * .1),
                     line_type=gl.GL_POLYGON,
                 )
-                pyglui_utils.draw_polyline(frame.reshape((5, 2)), 1, pyglui_utils.RGBA(r, g, b, a * alpha))
-                pyglui_utils.draw_polyline(hat.reshape((4, 2)), 1, pyglui_utils.RGBA(r, g, b, a * alpha))
+            draw_polyline(frame.reshape((5, 2)), 1, RGBA(r, g, b, a * alpha))
+            draw_polyline(hat.reshape((4, 2)), 1, RGBA(r, g, b, a * alpha))
             text_anchor = frame.reshape((5, -1))[2]
             text_anchor = text_anchor[0], text_anchor[1] - 75
             surface_edit_anchor = text_anchor[0], text_anchor[1] + 25
             marker_edit_anchor = text_anchor[0], text_anchor[1] + 50
             if self.defined:
                 if marker_mode:
-                    pyglui_utils.draw_points([marker_edit_anchor], color=pyglui_utils.RGBA(0, .8, .7))
+                    draw_points([marker_edit_anchor], color=RGBA(0, .8, .7))
                 else:
-                    pyglui_utils.draw_points([marker_edit_anchor])
+                    draw_points([marker_edit_anchor])
                 if surface_mode:
-                    pyglui_utils.draw_points([surface_edit_anchor], color=pyglui_utils.RGBA(0, .8, .7))
+                    draw_points([surface_edit_anchor], color=RGBA(0, .8, .7))
                 else:
-                    pyglui_utils.draw_points([surface_edit_anchor])
+                    draw_points([surface_edit_anchor])
 
                 self.glfont.set_blur(3.9)
                 self.glfont.set_color_float((0, 0, 0, .8))
@@ -686,7 +686,7 @@ class Reference_Surface(object):
                 surface_corners_norm.reshape(-1, 1, 2), self.m_surface_to_img
             )
             frame = self.camera_model.distortPoints(frame)
-            pyglui_utils.draw_points(frame.reshape((4, 2)), 20, pyglui_utils.RGBA(1.0, 0.2, 0.6, .5))
+            draw_points(frame.reshape((4, 2)), 20, RGBA(1.0, 0.2, 0.6, .5))
 
     #### fns to draw surface in seperate window
     def gl_display_in_window(self, world_tex):
@@ -720,8 +720,8 @@ class Reference_Surface(object):
 
             # now lets get recent pupil positions on this surface:
             for gp in self.gaze_on_srf:
-                pyglui_utils.draw_points_norm(
-                    [gp["norm_pos"]], color=pyglui_utils.RGBA(0.0, 0.8, 0.5, 0.8), size=80
+                draw_points_norm(
+                    [gp["norm_pos"]], color=RGBA(0.0, 0.8, 0.5, 0.8), size=80
                 )
 
             glfw.glfwSwapBuffers(self._window)
@@ -753,9 +753,9 @@ class Reference_Surface(object):
             draw_coordinate_system(l=self.real_world_size["x"])
             gl.glPushMatrix()
             gl.glScalef(self.real_world_size["x"], self.real_world_size["y"], 1)
-            pyglui_utils.draw_polyline(
+            draw_polyline(
                 [[0, 0], [0, 1], [1, 1], [1, 0]],
-                color=pyglui_utils.RGBA(.5, .3, .1, .5),
+                color=RGBA(.5, .3, .1, .5),
                 thickness=3,
             )
             gl.glPopMatrix()
@@ -767,9 +767,9 @@ class Reference_Surface(object):
             gl.glMultMatrixf(m)
             gl.glTranslatef(0, 0, -.01)
             world_tex.draw()
-            pyglui_utils.draw_polyline(
+            draw_polyline(
                 [[0, 0], [0, 1], [1, 1], [1, 0]],
-                color=pyglui_utils.RGBA(.5, .3, .6, .5),
+                color=RGBA(.5, .3, .6, .5),
                 thickness=3,
             )
             gl.glPopMatrix()
