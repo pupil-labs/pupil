@@ -80,7 +80,7 @@ class Surface_Tracker(Plugin):
             self.save_surface_definitions_to_file()
 
     def on_pos(self,pos):
-        self._last_mouse_pos = normalize(pos,self.g_pool.capture.frame_size,flip_y=True)
+        self._last_mouse_pos = pos
 
     def on_click(self,pos,button,action):
         if self.mode == 'Show Markers and Surfaces':
@@ -109,8 +109,7 @@ class Surface_Tracker(Plugin):
                 x,y = pos
                 for s in self.edit_surfaces:
                     if s.detected and s.defined:
-                        for (vx,vy),i in zip(s.ref_surface_to_img(np.array(surf_verts)),range(4)):
-                            vx,vy = denormalize((vx,vy),(self.img_shape[1],self.img_shape[0]),flip_y=True)
+                        for (vx,vy),i in zip(s.surface_to_img(np.array(surf_verts)), range(4)):
                             if sqrt((x-vx)**2 + (y-vy)**2) <15: #img pixels
                                 self.edit_surf_verts.append((s,i))
                                 return
@@ -218,8 +217,8 @@ class Surface_Tracker(Plugin):
         for s in self.surfaces:
             s.locate(self.markers,self.min_marker_perimeter,self.min_id_confidence, self.locate_3d)
             if s.detected:
-                s.gaze_on_srf = s.map_data_to_surface(events.get('gaze', []), s.m_from_screen)
-                s.fixations_on_srf = s.map_data_to_surface(events.get('fixations', []), s.m_from_screen)
+                s.gaze_on_srf = s.map_gaze_to_surface(events.get('gaze', []))
+                s.fixations_on_srf = s.map_gaze_to_surface(events.get('fixations', []))
                 s.update_gaze_history()
             else:
                 s.gaze_on_srf = []
@@ -230,8 +229,8 @@ class Surface_Tracker(Plugin):
             if s.detected:
                 datum = {'topic': 'surfaces.{}'.format(s.name),
                          'name':s.name, 'uid':s.uid,
-                         'm_to_screen': s.m_to_screen.tolist(),
-                         'm_from_screen': s.m_from_screen.tolist(),
+                         'm_to_screen': s.m_surface_to_img.tolist(),
+                         'm_from_screen': s.m_img_to_surface.tolist(),
                          'gaze_on_srf': s.gaze_on_srf,
                          'fixations_on_srf': s.fixations_on_srf,
                          'timestamp': frame.timestamp,
@@ -250,8 +249,7 @@ class Surface_Tracker(Plugin):
                 pos = self._last_mouse_pos
                 for s,v_idx in self.edit_surf_verts:
                     if s.detected:
-                        new_pos = s.img_to_ref_surface(np.array(pos))
-                        s.move_vertex(v_idx,new_pos)
+                        s.move_vertex(v_idx,np.array(pos))
 
     def get_init_dict(self):
         return {'mode':self.mode,'min_marker_perimeter':self.min_marker_perimeter,'invert_image':self.invert_image,'robust_detection':self.robust_detection}

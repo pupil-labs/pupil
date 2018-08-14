@@ -88,6 +88,7 @@ class Reference_Surface(object):
 
     def __init__(self, g_pool, name="unnamed", saved_definition=None):
         self.g_pool = g_pool
+        self.camera_model = g_pool.capture.intrinsics
         self.name = name
         self.markers = {}
         self.detected_markers = 0
@@ -95,8 +96,10 @@ class Reference_Surface(object):
         self.build_up_status = 0
         self.required_build_up = 90.
         self.detected = False
-        self.m_to_screen = None
-        self.m_from_screen = None
+        self.m_surface_to_img = None
+        self.m_img_to_surface = None
+        self.m_surface_to_img_distorted = None
+        self.m_img_to_surface_distorted = None
         self.camera_pose_3d = None
         self.use_distortion = True
 
@@ -317,12 +320,13 @@ class Reference_Surface(object):
 
     def gl_display_heatmap(self):
         if self.detected:
-            m = cvmat_to_glmat(self.m_to_screen)
+            m = cvmat_to_glmat(self.m_surface_to_img_distorted)
 
             glMatrixMode(GL_PROJECTION)
             glPushMatrix()
             glLoadIdentity()
-            glOrtho(0, 1, 0, 1, -1, 1)  # gl coord convention
+            glOrtho(0, self.camera_model.resolution[0],
+                    self.camera_model.resolution[1], 0, -1, 1)
 
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
@@ -352,11 +356,6 @@ class Reference_Surface(object):
         res = self._get_location(
             visible_markers, min_marker_perimeter, min_id_confidence, locate_3d
         )
-        self.detected = res["detected"]
-        self.detected_markers = res["detected_markers"]
-        self.m_to_screen = res["m_to_screen"]
-        self.m_from_screen = res["m_from_screen"]
-        self.camera_pose_3d = res["camera_pose_3d"]
 
     def _get_location(
         self, visible_markers, min_marker_perimeter, min_id_confidence, locate_3d=False
@@ -365,7 +364,8 @@ class Reference_Surface(object):
         visible_markers_filtered = self._filter_markers(
             visible_markers, min_id_confidence, min_marker_perimeter
         )
-        visible_registered_markers = set(visible_markers_filtered.keys()) & set(self.markers.keys()
+        visible_registered_markers = set(visible_markers_filtered.keys()) & set(
+            self.markers.keys()
         )
 
         if not visible_registered_markers or len(visible_registered_markers) < min(
@@ -383,141 +383,40 @@ class Reference_Surface(object):
                 [self.markers[i].uv_coords for i in visible_registered_markers]
             )
 
-            visible_verts.shape = (-1, 1, 2)  # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
+            # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
+            visible_verts.shape = (-1, 1, 2)
             registered_verts.shape = (-1, 1, 2)
-            visible_verts_undistorted = self.g_pool.capture.intrinsics.unprojectPoints(
-                visible_verts
+
+            m_img_to_surface_distorted, m_surface_to_img_distorted = \
+                self._findHomographies(
+                registered_verts, visible_verts
             )
-            visible_verts_undistorted = self.g_pool.capture.intrinsics.projectPoints(
-                visible_verts_undistorted,
-                use_distortion=False
-            )
+
+            visible_verts_undistorted = self.camera_model.undistortPoints(visible_verts)
+            # visible_verts_undistorted = visible_verts
 
             m_img_to_surface, m_surface_to_img = self._findHomographies(
                 registered_verts, visible_verts_undistorted
             )
 
-            # import matplotlib.pyplot as plt
-            # fig, ax = plt.subplots(ncols=2)
-            # for vert in visible_verts:
-            #     ax[0].scatter(vert[0,0], vert[0,1])
-            # for vert in registered_verts:
-            #     ax[1].scatter(vert[0,0], vert[0,1])
-            # plt.show()
 
             detected = not m_img_to_surface is None
 
-            # surface_corners = cv2.perspectiveTransform(
-            #     surface_corners_norm.reshape(-1, 1, 2), registered_to_visible
-            # )
-            #
-            # if (
-            #     self.old_corners_robust is not None
-            #     and np.mean(np.abs(surface_corners - self.old_corners_robust)) < 0.02
-            # ):
-            #     smooth_corners_robust = self.old_corners_robust
-            #     smooth_corners_robust += .5 * (surface_corners - self.old_corners_robust)
-            #
-            #     surface_corners = smooth_corners_robust
-            #     self.old_corners_robust = smooth_corners_robust
-            # else:
-            #     self.old_corners_robust = surface_corners
-            #
-            # if locate_3d:
-            #     raise NotImplementedError()
-            #     # 3d marker support pose estimation:
-            #     # scale normalized object points to world space units (think m,cm,mm)
-            #     registered_verts.shape = -1, 2
-            #     registered_verts *= [
-            #         self.real_world_size["x"],
-            #         self.real_world_size["y"],
-            #     ]
-            #     # convert object points to lie on z==0 plane in 3d space
-            #     uv3d = np.zeros(
-            #         (registered_verts.shape[0], registered_verts.shape[1] + 1)
-            #     )
-            #     uv3d[:, :-1] = registered_verts
-            #     visible_verts.shape = -1, 1, 2
-            #     # compute pose of object relative to camera center
-            #     is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = self.g_pool.capture.intrinsics.solvePnP(
-            #         uv3d, visible_verts
-            #     )
-            #     print(
-            #         "{} \t {} \t {}".format(
-            #             translate3d_cam_to_object[0],
-            #             translate3d_cam_to_object[1],
-            #             translate3d_cam_to_object[2],
-            #         )
-            #     )
-            #
-            #     if is3dPoseAvailable:
-            #
-            #         # not verifed, potentially usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions
-            #
-            #         ###marker posed estimation from virtually projected points.
-            #         # object_pts = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
-            #         # projected_pts = cv2.perspectiveTransform(object_pts,self.m_to_screen)
-            #         # projected_pts.shape = -1,2
-            #         # projected_pts *= img_size
-            #         # projected_pts.shape = -1, 1, 2
-            #         # # scale object points to world space units (think m,cm,mm)
-            #         # object_pts.shape = -1,2
-            #         # object_pts *= self.real_world_size
-            #         # # convert object points to lie on z==0 plane in 3d space
-            #         # object_pts_3d = np.zeros((4,3))
-            #         # object_pts_3d[:,:-1] = object_pts
-            #         # self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(object_pts_3d, projected_pts, K, dist_coef,flags=cv2.CV_EPNP)
-            #
-            #         # transformation from Camera Optical Center:
-            #         #   first: translate from Camera center to object origin.
-            #         #   second: rotate x,y,z
-            #         #   coordinate system is x,y,z where z goes out from the camera into the viewed volume.
-            #         # print rot3d_cam_to_object[0],rot3d_cam_to_object[1],rot3d_cam_to_object[2], translate3d_cam_to_object[0],translate3d_cam_to_object[1],translate3d_cam_to_object[2]
-            #
-            #         # turn translation vectors into 3x3 rot mat.
-            #         rot3d_cam_to_object_mat, _ = cv2.Rodrigues(rot3d_cam_to_object)
-            #
-            #         # to get the transformation from object to camera we need to reverse rotation and translation
-            #         translate3d_object_to_cam = -translate3d_cam_to_object
-            #         # rotation matrix inverse == transpose
-            #         rot3d_object_to_cam_mat = rot3d_cam_to_object_mat.T
-            #
-            #         # we assume that the volume of the object grows out of the marker surface and not into it. We thus have to flip the z-Axis:
-            #         flip_z_axix_hm = np.eye(4, dtype=np.float32)
-            #         flip_z_axix_hm[2, 2] = -1
-            #         # create a homogenous tranformation matrix from the rotation mat
-            #         rot3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
-            #         rot3d_object_to_cam_hm[:-1, :-1] = rot3d_object_to_cam_mat
-            #         # create a homogenous tranformation matrix from the translation vect
-            #         translate3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
-            #         translate3d_object_to_cam_hm[
-            #             :-1, -1
-            #         ] = translate3d_object_to_cam.reshape(3)
-            #
-            #         # combine all tranformations into transformation matrix that decribes the move from object origin and orientation to camera origin and orientation
-            #         tranform3d_object_to_cam = (
-            #             np.matrix(flip_z_axix_hm)
-            #             * np.matrix(rot3d_object_to_cam_hm)
-            #             * np.matrix(translate3d_object_to_cam_hm)
-            #         )
-            #         camera_pose_3d = tranform3d_object_to_cam
 
         if detected == False:
-            camera_pose_3d = None
-            m_from_screen = None
-            m_to_screen = None
             m_img_to_surface = None
             m_surface_to_img = None
+            m_img_to_surface_distorted = None
+            m_surface_to_img_distorted = None
 
-        return {
-            "detected": detected,
-            "detected_markers": len(visible_registered_markers),
-            # "m_from_undistored_norm_space": registered_to_visible,
-            # "m_to_undistored_norm_space": visible_to_registered,
-            "m_from_screen": m_img_to_surface,
-            "m_to_screen": m_surface_to_img,
-            "camera_pose_3d": None,
-        }
+        self.detected = detected
+        self.detected_markers = len(visible_registered_markers),
+        self.m_surface_to_img = m_surface_to_img
+        self.m_img_to_surface = m_img_to_surface
+        self.m_surface_to_img_distorted = m_surface_to_img_distorted
+        self.m_img_to_surface_distorted = m_img_to_surface_distorted
+        self.camera_pose_3d = None
+
 
     def _filter_markers(self, visible_markers, min_id_confidence, min_marker_perimeter):
         filtered_markers = [
@@ -552,41 +451,51 @@ class Reference_Surface(object):
         A_to_B, mask = cv2.findHomography(points_B, points_A)
         return A_to_B, B_to_A
 
-    def img_to_ref_surface(self, pos):
-        # convenience lines to allow 'simple' vectors (x,y) to be used
-        shape = pos.shape
-        pos.shape = (-1, 1, 2)
-        new_pos = cv2.perspectiveTransform(pos, self.m_from_screen)
+    def img_to_surface(self, points):
+        shape = points.shape
+        points = self.camera_model.undistortPoints(points)
+        points.shape = (-1, 1, 2)
+        new_pos = cv2.perspectiveTransform(points, self.m_img_to_surface)
         new_pos.shape = shape
+
         return new_pos
 
-    def ref_surface_to_img(self, pos):
-        # convenience lines to allow 'simple' vectors (x,y) to be used
-        shape = pos.shape
-        pos.shape = (-1, 1, 2)
-        new_pos = cv2.perspectiveTransform(pos, self.m_to_screen)
+    def surface_to_img(self, points):
+        shape = points.shape
+        points.shape = (-1, 1, 2)
+        new_pos = cv2.perspectiveTransform(points, self.m_surface_to_img)
+        new_pos = self.camera_model.distortPoints(new_pos)
         new_pos.shape = shape
+
         return new_pos
 
-    @staticmethod
-    def map_datum_to_surface(d, m_from_screen):
-        pos = np.array([d["norm_pos"]]).reshape(1, 1, 2)
-        mapped_pos = cv2.perspectiveTransform(pos, m_from_screen)
-        mapped_pos.shape = 2
-        on_srf = bool((0 <= mapped_pos[0] <= 1) and (0 <= mapped_pos[1] <= 1))
-        return {
-            "topic": d["topic"] + "_on_surface",
-            "norm_pos": (mapped_pos[0], mapped_pos[1]),
-            "confidence": d["confidence"],
-            "on_srf": on_srf,
-            "base_data": d,
-            "timestamp": d["timestamp"],
-        }
+    def map_gaze_to_surface(self, gaze_data):
+        if not gaze_data:
+            return gaze_data
+
+        gaze_points = np.array([denormalize(g["norm_pos"],
+                                            self.g_pool.capture.intrinsics.resolution, flip_y=True)
+        for g in
+                                gaze_data])
+        gaze_on_surface = self.img_to_surface(gaze_points)
+
+        result = []
+        for sample, gof in zip(gaze_data, gaze_on_surface):
+            on_srf = bool((0 <= gof[0] <= 1) and (0 <= gof[1] <= 1))
+            result.append({
+                "topic": sample["topic"] + "_on_surface",
+                "norm_pos": gof.tolist(),
+                "confidence": sample["confidence"],
+                "on_srf": on_srf,
+                "base_data": sample,
+                "timestamp": sample["timestamp"],
+            })
+        return result
 
     def map_data_to_surface(self, data, m_from_screen):
         return [self.map_datum_to_surface(d, m_from_screen) for d in data]
 
-    def move_vertex(self, vert_idx, new_pos):
+    def move_vertex(self, vert_idx, new_pos_img):
         """
         this fn is used to manipulate the surface boundary (coordinate system)
         new_pos is in uv-space coords
@@ -594,9 +503,12 @@ class Reference_Surface(object):
         the tranformation from old quadrangle to new quardangle
         and apply that transformation to our marker uv-coords
         """
+
+        # new_pos_img = self.camera_model.undistortPoints([new_pos_img])
+        new_pos_surface = self.img_to_surface(new_pos_img)
         before = surface_corners_norm
         after = before.copy()
-        after[vert_idx] = new_pos
+        after[vert_idx] = new_pos_surface
         transform = cv2.getPerspectiveTransform(after, before)
         for m in self.markers.values():
             m.uv_coords = cv2.perspectiveTransform(m.uv_coords, transform)
@@ -642,10 +554,10 @@ class Reference_Surface(object):
             frame = np.array(
                 [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]], dtype=np.float32
             )
-            frame = cv2.perspectiveTransform(frame, self.m_to_screen)
+            frame = cv2.perspectiveTransform(frame, self.m_surface_to_img)
+            frame = self.camera_model.distortPoints(frame)
+
             text_anchor = frame.reshape((5, -1))[2]
-            text_anchor[1] = 1 - text_anchor[1]
-            text_anchor *= img_shape[1], img_shape[0]
             text_anchor = text_anchor[0], text_anchor[1] - 75
             surface_edit_anchor = text_anchor[0], text_anchor[1] + 25
             marker_edit_anchor = text_anchor[0], text_anchor[1] + 50
@@ -686,8 +598,10 @@ class Reference_Surface(object):
                 [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]], dtype=np.float32
             )
             hat = np.array([[[.3, .7], [.7, .7], [.5, .9], [.3, .7]]], dtype=np.float32)
-            hat = cv2.perspectiveTransform(hat, self.m_to_screen)
-            frame = cv2.perspectiveTransform(frame, self.m_to_screen)
+            hat = cv2.perspectiveTransform(hat, self.m_surface_to_img)
+            hat = self.camera_model.distortPoints(hat)
+            frame = cv2.perspectiveTransform(frame, self.m_surface_to_img)
+            frame = self.camera_model.distortPoints(frame)
             alpha = min(1, self.build_up_status / self.required_build_up)
             if highlight:
                 draw_polyline_norm(
@@ -699,8 +613,6 @@ class Reference_Surface(object):
             draw_polyline(frame.reshape((5, 2)), 1, RGBA(r, g, b, a * alpha))
             draw_polyline(hat.reshape((4, 2)), 1, RGBA(r, g, b, a * alpha))
             text_anchor = frame.reshape((5, -1))[2]
-            text_anchor[1] = 1 - text_anchor[1]
-            text_anchor *= img_size[1], img_size[0]
             text_anchor = text_anchor[0], text_anchor[1] - 75
             surface_edit_anchor = text_anchor[0], text_anchor[1] + 25
             marker_edit_anchor = text_anchor[0], text_anchor[1] + 50
@@ -780,9 +692,10 @@ class Reference_Surface(object):
         """
         if self.detected:
             frame = cv2.perspectiveTransform(
-                surface_corners_norm.reshape(-1, 1, 2), self.m_to_screen
+                surface_corners_norm.reshape(-1, 1, 2), self.m_surface_to_img
             )
-            draw_points_norm(frame.reshape((4, 2)), 20, RGBA(1.0, 0.2, 0.6, .5))
+            frame = self.camera_model.distortPoints(frame)
+            draw_points(frame.reshape((4, 2)), 20, RGBA(1.0, 0.2, 0.6, .5))
 
     #### fns to draw surface in seperate window
     def gl_display_in_window(self, world_tex):
@@ -795,7 +708,7 @@ class Reference_Surface(object):
             clear_gl_screen()
 
             # cv uses 3x3 gl uses 4x4 tranformation matricies
-            m = cvmat_to_glmat(self.m_from_screen)
+            m = cvmat_to_glmat(self.m_img_to_surface)
 
             glMatrixMode(GL_PROJECTION)
             glPushMatrix()
@@ -859,7 +772,7 @@ class Reference_Surface(object):
             glPushMatrix()
             glScalef(self.real_world_size["x"], self.real_world_size["y"], 1)
             # cv uses 3x3 gl uses 4x4 tranformation matricies
-            m = cvmat_to_glmat(self.m_from_screen)
+            m = cvmat_to_glmat(self.m_img_to_surface)
             glMultMatrixf(m)
             glTranslatef(0, 0, -.01)
             world_tex.draw()

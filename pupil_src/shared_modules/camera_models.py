@@ -252,6 +252,16 @@ class Fisheye_Dist_Camera(object):
             image_points.shape = (-1, 1, 2)
         return image_points
 
+    def undistortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=True)
+        points = self.projectPoints(points, use_distortion=False)
+        return points
+
+    def distortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=False)
+        points = self.projectPoints(points, use_distortion=True)
+        return points
+
     def solvePnP(self, uv3d, xy):
         # xy_undist = self.unprojectPoints(xy)
         # f = np.array((self.K[0, 0], self.K[1, 1])).reshape(1, 2)
@@ -379,6 +389,16 @@ class Radial_Dist_Camera(object):
         elif input_dim == 3:
             image_points.shape = (-1, 1, 2)
         return image_points
+
+    def undistortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=True)
+        points = self.projectPoints(points, use_distortion=False)
+        return points
+
+    def distortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=False)
+        points = self.projectPoints(points, use_distortion=True)
+        return points
 
     def solvePnP(self, uv3d, xy):
         res = cv2.solvePnP(uv3d, xy, self.K, self.D, flags=cv2.SOLVEPNP_ITERATIVE)

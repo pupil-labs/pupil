@@ -262,7 +262,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                 pos = normalize(pos, self.g_pool.camera_render_size, flip_y=True)
                 for s,v_idx in self.edit_surf_verts:
                     if s.detected:
-                        new_pos =  s.img_to_ref_surface(np.array(pos))
+                        new_pos =  s.img_to_surface(np.array(pos))
                         s.move_vertex(v_idx,new_pos)
             else:
                 # update srf with no or invald cache:
