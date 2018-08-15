@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pupil",
-    version="2.0",
+    version="2.0a1",
     author="pupil labs",
     author_email="info@pupil-labs.com",
     description="Open source eye tracking ",
