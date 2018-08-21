@@ -365,7 +365,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             def remove():
                 del self.menu[self.sections.index(sec) - len(self.sections)]
                 del self.sections[self.sections.index(sec)]
-                self.correlate_publish(token=time())
+                self.correlate_publish_cache(token=time())
 
             return remove
 
@@ -456,10 +456,10 @@ class Offline_Calibration(Gaze_Producer_Base):
                 return
             self.recent_pupil_token = notification["token"]
             self.calibrate_all_sections()
-            self.correlate_publish(token=time())  # reset gaze data
+            self.correlate_publish_cache(token=time())  # reset gaze data
 
         elif subject == "offline_calibration.mapping_done":
-            self.correlate_publish(token=time())
+            self.correlate_publish_cache(token=time())
 
     def on_click(self, pos, button, action):
         if action == glfw.GLFW_PRESS and self.manual_ref_edit_mode:
@@ -538,12 +538,11 @@ class Offline_Calibration(Gaze_Producer_Base):
                     )
                     del sec["bg_task"]
 
-    def correlate_publish(self, token, should_cache=True):
+    def correlate_publish_cache(self, token):
         self.recent_gaze_token = token
         self._correlate()
         self._publish()
-        if should_cache:
-            self.save_offline_data()
+        self.save_offline_data()
 
     def _correlate(self):
         gaze_data = list(chain.from_iterable((s["gaze"] for s in self.sections)))
