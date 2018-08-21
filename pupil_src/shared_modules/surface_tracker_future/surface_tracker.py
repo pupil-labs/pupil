@@ -1,4 +1,7 @@
+import os
 import collections
+import logging
+logger = logging.getLogger(__name__)
 
 import numpy as np
 import pyglui
@@ -6,9 +9,9 @@ import pyglui
 from plugin import Plugin
 import square_marker_detect as marker_det
 import methods
+import file_methods
 from .surface import Surface
 from . import gui
-
 # TODO save surface definitions somewhere!
 
 class Surface_Tracker_Future(Plugin):
@@ -18,83 +21,40 @@ class Surface_Tracker_Future(Plugin):
     def __init__(
         self,
         g_pool,
-        min_marker_perimeter=60,
-        invert_image=False,
+        marker_min_perimeter=60,
+        marker_min_confidence=0.6,
+        invert_markers=False,
     ):
         super().__init__(g_pool)
         self.surfaces = []
         self.markers = []
         self.markers_dict = []
-        self.camera_model = g_pool.capture.intrinsics
-        self.marker_min_perimeter = min_marker_perimeter
-        self.marker_min_confidence = 0.0  # TODO is this set anywhere?
         self._edit_surf_verts = []
         self._last_mouse_pos = (0., 0.)
         self.gui = gui.GUI(self)
 
-        # TODO Is anything need beyond here?
-
-
-        self.order = .2
-
-
-        # self.load_surface_definitions_from_file()
-
-        # plugin state
-        self.running = True
-
-        self.robust_detection = True
-        self.aperture = 11
-
-        self.invert_image = invert_image
-
-        self.img_shape = None
-
-        self.locate_3d = False
+        self.marker_min_perimeter = marker_min_perimeter
+        self.marker_min_confidence = marker_min_confidence
+        self.inverted_markers = invert_markers
 
         self.menu = None
         self.button = None
         self.add_button = None
 
-    def load_surface_definitions_from_file(self):
-        pass
-        # TODO Revamp
-        # # all registered surfaces
-        # self.surface_definitions = Persistent_Dict(
-        #     os.path.join(self.g_pool.user_dir, "surface_definitions")
-        # )
-        # self.surfaces = [
-        #     Reference_Surface(self.g_pool, saved_definition=d)
-        #     for d in self.surface_definitions.get("realtime_square_marker_surfaces", [])
-        # ]
+        self.load_surface_definitions_from_file()
 
-    def on_notify(self, notification):
-        # TODO revamp
-        pass
-        # if notification["subject"] == "surfaces_changed":
-        #     logger.info("Surfaces changed. Saving to file.")
-        #     self.save_surface_definitions_to_file()
+        # TODO Is anything need beyond here?
 
-    def add_surface(self, _):
-        surf = Surface(self.g_pool.capture.intrinsics, self.marker_min_perimeter,
-                       self.marker_min_confidence)
-        self.surfaces.append(surf)
-        self.update_gui_markers()
+        self.robust_detection = True # TODO would you ever want non robust detection?
+        # plugin state
+        self.running = True
+        self.locate_3d = False # TODO Support 3D localization?
 
-    def remove_surface(self, i):
-        remove_surface = self.surfaces[i]
-        if remove_surface == self.marker_edit_surface:
-            self.marker_edit_surface = None
-        if remove_surface in self.edit_surfaces:
-            self.edit_surfaces.remove(remove_surface)
-
-        self.surfaces[i].cleanup()
-        del self.surfaces[i]
-        self.update_gui_markers()
-        self.notify_all({"subject": "surfaces_changed"})
+    @property
+    def camera_model(self):
+        return self.g_pool.capture.intrinsics
 
     def init_ui(self):
-        # TODO revamp
         self.add_menu()
         self.menu.label = "Surface Tracker"
 
@@ -109,27 +69,39 @@ class Surface_Tracker_Future(Plugin):
             hotkey="a",
         )
         self.g_pool.quickbar.append(self.add_button)
-        self.update_gui_markers()
+        self.update_ui()
 
-    def deinit_ui(self):
-        self.g_pool.quickbar.remove(self.button)
-        self.button = None
-        self.g_pool.quickbar.remove(self.add_button)
-        self.add_button = None
-        self.remove_menu()
+    def load_surface_definitions_from_file(self):
+        self.surface_definitions = file_methods.Persistent_Dict(
+            os.path.join(self.g_pool.user_dir, "surface_definitions")
+        )
+        self.surfaces = [
+            Surface(self.camera_model, self.marker_min_perimeter,
+                    self.marker_min_confidence, init_dict=d) # TODO Surfaces do not notice a changing camera!
+            for d in self.surface_definitions.get("surfaces", [])
+        ]
 
-    def update_gui_markers(self):
-        # TODO revamp
+    def save_surface_definitions_to_file(self):
+        self.surface_definitions["surfaces"] = [surface.save_to_dict() for surface in self.surfaces if surface.defined]
+        self.surface_definitions.save()
+        print("SAVED!")
+
+    def update_ui(self):
         self.menu.elements[:] = []
         self.menu.append(
             pyglui.ui.Info_Text(
                 "This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*."
             )
         )
-        self.menu.append(pyglui.ui.Switch("robust_detection", self, label="Robust detection"))
-        self.menu.append(pyglui.ui.Switch("invert_image", self, label="Use inverted markers"))
+        self.menu.append(pyglui.ui.Switch("robust_detection", self, label="Robust detection")) # TODO Would you ever want non robust?
+        self.menu.append(pyglui.ui.Switch("inverted_markers", self, label="Use "
+                                                                          "inverted "
+                                                                       "markers"))
         self.menu.append(
             pyglui.ui.Slider("marker_min_perimeter", self, step=1, min=30, max=100)
+        )
+        self.menu.append(
+            pyglui.ui.Slider("marker_min_confidence", self, step=0.01, min=0, max=1)
         )
         self.menu.append(pyglui.ui.Switch("locate_3d", self, label="3D localization"))
         self.menu.append(
@@ -137,16 +109,8 @@ class Surface_Tracker_Future(Plugin):
                 "state",
                 self.gui,
                 label="Mode",
-                labels=[
-                    "Show Markers and Surfaces",
-                    "Show marker IDs",
-                    "Show Heatmaps",
-                ],
-                selection=[
-                    gui.State.SHOW_SURF,
-                    gui.State.SHOW_IDS,
-                    gui.State.SHOW_HEATMAP
-                ],
+                labels=[e.value for e in gui.State],
+                selection=[e for e in gui.State],
             )
         )
         self.menu.append(pyglui.ui.Button("Add surface", lambda: self.add_surface("_")))
@@ -158,12 +122,13 @@ class Surface_Tracker_Future(Plugin):
             s_menu.append(pyglui.ui.Text_Input("name", s))
             s_menu.append(pyglui.ui.Text_Input("x", s.real_world_size, label="X size"))
             s_menu.append(pyglui.ui.Text_Input("y", s.real_world_size, label="Y size"))
-            # s_menu.append(
-            #     pyglui.ui.Text_Input(
-            #         "gaze_history_length", s, label="Gaze History Length [seconds]"
-            #     )
-            # )
-            # s_menu.append(pyglui.ui.Button("Open Debug Window", s.open_close_window))
+            s_menu.append(
+                pyglui.ui.Text_Input(
+                    "gaze_history_length", s, label="Gaze History Length [seconds]"
+                )
+            )
+            # s_menu.append(pyglui.ui.Button("Open Debug Window",
+            # s.open_close_window)) # TODO add surface windows
             # closure to encapsulate idx
             def make_remove_s(i):
                 return lambda: self.remove_surface(i)
@@ -176,7 +141,6 @@ class Surface_Tracker_Future(Plugin):
         frame = events.get("frame")
         if not frame:
             return
-        self.img_shape = frame.height, frame.width, 3
 
         if self.running:
             self._detect_markers(frame)
@@ -188,12 +152,29 @@ class Surface_Tracker_Future(Plugin):
 
         # TODO what exactly is turned off when not running?
         events["surfaces"] = []
+        gaze_events = events.get("gaze", [])
         for surface in self.surfaces:
             surface.update(self.markers)
 
+            # Clean up gaze history
+            while surface.gaze_history and gaze_events[-1]['timestamp'] - \
+                    surface.gaze_history[0][
+                'timestamp'] > surface.gaze_history_length:
+                surface.gaze_history.popleft()
+
             if surface.detected:
-                gaze_events = events.get("gaze", [])
                 gaze_on_srf = self._gaze_to_surf(surface, gaze_events)
+
+                # Update gaze history
+                for gaze, event in zip(gaze_on_srf, gaze_events):
+                    if event['confidence'] < 0.6: # TODO is this a good threshold?
+                        continue
+                    surface.gaze_history.append({'timestamp': event['timestamp'],
+                                                 'gaze': gaze})
+
+                if self.g_pool.app != "player":
+                    surface._generate_heatmap()
+
                 fixation_events = events.get("fixations", [])
                 fixations_on_srf = self._gaze_to_surf(surface, fixation_events)
 
@@ -210,6 +191,21 @@ class Surface_Tracker_Future(Plugin):
                 }
                 events["surfaces"].append(surface_event)
 
+    def add_surface(self, _):
+        surface = Surface(self.g_pool.capture.intrinsics, self.marker_min_perimeter,
+                       self.marker_min_confidence)
+        self.surfaces.append(surface)
+        self.update_ui()
+        self.gui.add_surface(surface)
+        self.notify_all({"subject": "surfaces_changed"})
+
+    def remove_surface(self, i):
+        self.gui.add_surface(self.surfaces[i])
+        self.surfaces[i].cleanup()
+        del self.surfaces[i]
+        self.update_ui()
+        self.notify_all({"subject": "surfaces_changed"})
+
     def _gaze_to_surf(self, surf, gaze_events):
         result = []
         for event in gaze_events:
@@ -224,19 +220,26 @@ class Surface_Tracker_Future(Plugin):
 
     def _detect_markers(self, frame):
         gray = frame.gray
-        if self.invert_image:
+        if self.inverted_markers:
             gray = 255 - gray
 
         if self.robust_detection:
             markers = marker_det.detect_markers_robust(
-                gray, grid_size=5, aperture=self.aperture,
+                gray,
+                grid_size=5,
+                aperture=11,
                 prev_markers=self.markers_dict,
                 true_detect_every_frame=3,
-                min_marker_perimeter=self.marker_min_perimeter)
+                min_marker_perimeter=self.marker_min_perimeter,
+                invert_image=self.inverted_markers
+            )
         else:
             markers = marker_det.detect_markers(
-                gray, grid_size=5, aperture=self.aperture,
-                min_marker_perimeter=self.marker_min_perimeter)
+                gray,
+                grid_size=5,
+                aperture=11,
+                min_marker_perimeter=self.marker_min_perimeter,
+            )
 
         # TODO rewrite marker detection to already output marker objects
         self.markers_dict = markers
@@ -244,28 +247,35 @@ class Surface_Tracker_Future(Plugin):
             m["id"], m["id_confidence"], m["verts"],
             m["perimeter"]) for m in markers]
 
-    def get_init_dict(self):
-        return {
-            "mode": self.mode,
-            "min_marker_perimeter": self.marker_min_perimeter,
-            "invert_image": self.invert_image,
-            "robust_detection": self.robust_detection,
-        }
-
     def gl_display(self):
         self.gui.update()
 
     def on_pos(self, pos):
-        self.gui.on_pos(pos)
+        self._last_mouse_pos = np.array(pos, dtype=np.float32)
 
     def on_click(self, pos, button, action):
         self.gui.on_click(pos, button, action)
 
+    def on_notify(self, notification):
+        if notification["subject"] == "surfaces_changed":
+            logger.info("Surfaces changed. Saving to file.")
+            self.save_surface_definitions_to_file()
+
+    def get_init_dict(self):
+        return {
+            "marker_min_perimeter": self.marker_min_perimeter,
+            "marker_min_confidence": self.marker_min_confidence,
+            "inverted_markers": self.inverted_markers,
+        }
+
+    def deinit_ui(self):
+        self.g_pool.quickbar.remove(self.button)
+        self.button = None
+        self.g_pool.quickbar.remove(self.add_button)
+        self.add_button = None
+        self.remove_menu()
+
     def cleanup(self):
-        """ called when the plugin gets terminated.
-        This happens either voluntarily or forced.
-        if you have a GUI or glfw window destroy it here.
-        """
         self.save_surface_definitions_to_file()
 
         for s in self.surfaces:

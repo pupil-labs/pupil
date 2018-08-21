@@ -12,12 +12,14 @@ See COPYING and COPYING.LESSER for license details.
 import numpy as np
 import cv2
 import random
+import collections
 
 import methods
 
 
 class Surface:
-    def __init__(self, camera_model, marker_min_perimeter, marker_min_confidence):
+    def __init__(self, camera_model, marker_min_perimeter, marker_min_confidence,
+                 init_dict=None):
         self.uid = random.randint(0, 1e6)
 
         self.camera_model = camera_model
@@ -36,9 +38,17 @@ class Surface:
         self.num_detected_markers = []
 
         self.defined = False
-        self._required_obs_per_marker = 90.
+        self._required_obs_per_marker = 30
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
+
+        self.gaze_history_length = 1
+        self.gaze_history = collections.deque()
+        self.heatmap = np.ones((1,1), dtype=np.uint8)
+        self.heatmap_detail = .2
+
+        if not init_dict is None:
+            self.load_from_dict(init_dict)
 
     def __hash__(self):
         return self.uid
@@ -48,7 +58,6 @@ class Surface:
             return self.uid == other.uid
         else:
             return False
-
 
     def map_to_surf(self, points):
         """Map points from image space to normalized surface space.
@@ -89,7 +98,6 @@ class Surface:
         return img_points
 
     def move_corner(self, idx, pos):
-        print(pos)
         new_corner_pos = self.map_to_surf(pos)
         old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
 
@@ -97,15 +105,9 @@ class Surface:
         new_corners[idx] = new_corner_pos
 
         transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        weired = False
         for m in self.reg_markers.values():
-            new_vert = cv2.perspectiveTransform(m.verts.reshape((-1, 1, 2)),
+            m.verts = cv2.perspectiveTransform(m.verts.reshape((-1, 1, 2)),
                                                transform).reshape((-1, 2))
-            if np.linalg.norm(new_vert - m.verts) > 0.2:
-                weired = True
-            m.verts = new_vert
-        if weired:
-            print("wtf")
 
     def update(self, vis_markers):
         vis_markers = self._filter_markers(vis_markers)
@@ -196,9 +198,7 @@ class Surface:
         return cv2.getPerspectiveTransform(verts, norm_corners)
 
     def _update_location(self, vis_markers):
-        active_marker_ids = [id for id in self.reg_markers.keys() if
-                             self.reg_markers[id].active]
-        vis_reg_marker_ids = set(vis_markers.keys()) & set(active_marker_ids)
+        vis_reg_marker_ids = set(vis_markers.keys()) & set(self.reg_markers.keys())
         self.num_detected_markers = len(vis_reg_marker_ids)
 
         if not vis_reg_marker_ids or len(vis_reg_marker_ids) < min(
@@ -264,6 +264,54 @@ class Surface:
         A_to_B, mask = cv2.findHomography(points_B, points_A)
         return A_to_B, B_to_A
 
+    def _generate_heatmap(self):
+        if not self.gaze_history:
+            return
+
+        data = [x['gaze'] for x in self.gaze_history]
+
+        grid = int(self.real_world_size["y"]), int(self.real_world_size["x"])
+
+        xvals, yvals = zip(*((x, 1. - y) for x, y in data))
+        hist, *edges = np.histogram2d(
+            yvals, xvals, bins=grid, range=[[0, 1.], [0, 1.]], normed=False
+        )
+        filter_h = int(self.heatmap_detail * grid[0]) // 2 * 2 + 1
+        filter_w = int(self.heatmap_detail * grid[1]) // 2 * 2 + 1
+        hist = cv2.GaussianBlur(hist, (filter_h, filter_w), 0)
+
+        hist_max = hist.max()
+        hist *= (255. / hist_max) if hist_max else 0.
+        hist = hist.astype(np.uint8)
+        c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
+        # reuse allocated memory if possible
+        if self.heatmap.shape != (*grid, 4):
+            self.heatmap = np.ones((*grid, 4), dtype=np.uint8)
+            self.heatmap[:, :, 3] = 125
+        self.heatmap[:, :, :3] = c_map
+
+    def save_to_dict(self):
+        return {
+            'name': self.name,
+            'real_world_size': self.real_world_size,
+            'reg_markers': [marker.save_to_dict() for marker in
+                            self.reg_markers.values()],
+            'build_up_status': self.build_up_status
+        }
+
+    def load_from_dict(self, init_dict):
+        self.name = init_dict['name']
+        self.real_world_size = init_dict['real_world_size']
+        self.reg_markers = [_Surface_Marker(marker['id'], verts=marker['verts']) for
+                            marker in init_dict['reg_markers']]
+        self.reg_markers = {m.id: m for m in self.reg_markers}
+        self.build_up_status = init_dict['build_up_status']
+        self.defined = True
+
+    def cleanup(self):
+        pass # TODO implement
+        # if self._window:
+        #     self.close_window()
 
 class _Surface_Marker(object):
     """
@@ -272,11 +320,13 @@ class _Surface_Marker(object):
     obersvations.
     """
 
-    def __init__(self, id):
+    def __init__(self, id, verts=None):
         self.id = id
         self.verts = None
         self.observations = []
-        self.active = True
+
+        if not verts is None:
+            self.verts = np.array(verts)
 
     def load_uv_coords(self, uv_coords): # TODO Where is this used?
         self.verts = uv_coords
@@ -296,3 +346,9 @@ class _Surface_Marker(object):
         uv_subset = uv[distance <= cut_off]
         final_mean = np.mean(uv_subset, axis=0)
         self.verts = final_mean
+
+    def save_to_dict(self):
+        return {
+            'id': self.id,
+            'verts': [v.tolist() for v in self.verts]
+        }
