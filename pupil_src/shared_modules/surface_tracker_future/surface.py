@@ -11,12 +11,15 @@ See COPYING and COPYING.LESSER for license details.
 
 import numpy as np
 import cv2
+import random
 
 import methods
 
 
 class Surface:
     def __init__(self, camera_model, marker_min_perimeter, marker_min_confidence):
+        self.uid = random.randint(0, 1e6)
+
         self.camera_model = camera_model
         self.marker_min_perimeter = marker_min_perimeter
         self.marker_min_confidence = marker_min_confidence
@@ -30,12 +33,22 @@ class Surface:
         self._surf_to_dist_img_trans = None
 
         self.detected = False
-        self.detected_markers = []
+        self.num_detected_markers = []
 
-        self._defined = False
+        self.defined = False
         self._required_obs_per_marker = 90.
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
+
+    def __hash__(self):
+        return self.uid
+
+    def __eq__(self, other):
+        if isinstance(Surface, other):
+            return self.uid == other.uid
+        else:
+            return False
+
 
     def map_to_surf(self, points):
         """Map points from image space to normalized surface space.
@@ -75,10 +88,29 @@ class Surface:
         img_points.shape = orig_shape
         return img_points
 
+    def move_corner(self, idx, pos):
+        print(pos)
+        new_corner_pos = self.map_to_surf(pos)
+        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+
+        new_corners = old_corners.copy()
+        new_corners[idx] = new_corner_pos
+
+        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
+        weired = False
+        for m in self.reg_markers.values():
+            new_vert = cv2.perspectiveTransform(m.verts.reshape((-1, 1, 2)),
+                                               transform).reshape((-1, 2))
+            if np.linalg.norm(new_vert - m.verts) > 0.2:
+                weired = True
+            m.verts = new_vert
+        if weired:
+            print("wtf")
+
     def update(self, vis_markers):
         vis_markers = self._filter_markers(vis_markers)
 
-        if not self._defined:
+        if not self.defined:
             self._add_observation(vis_markers)
 
         self._update_location(vis_markers)
@@ -130,7 +162,7 @@ class Surface:
             if len(m.observations) > self._required_obs_per_marker * .5:
                 persistent_markers[k] = m
         self.reg_markers = persistent_markers
-        self._defined = True
+        self.defined = True
 
     def _bounding_quadrangle(self, verts):
         hull = cv2.convexHull(verts, clockwise=False)
@@ -164,7 +196,10 @@ class Surface:
         return cv2.getPerspectiveTransform(verts, norm_corners)
 
     def _update_location(self, vis_markers):
-        vis_reg_marker_ids = set(vis_markers.keys()) & set(self.reg_markers.keys())
+        active_marker_ids = [id for id in self.reg_markers.keys() if
+                             self.reg_markers[id].active]
+        vis_reg_marker_ids = set(vis_markers.keys()) & set(active_marker_ids)
+        self.num_detected_markers = len(vis_reg_marker_ids)
 
         if not vis_reg_marker_ids or len(vis_reg_marker_ids) < min(
             2, len(self.reg_markers)
@@ -189,7 +224,15 @@ class Surface:
         self._dist_img_to_surf_trans, self._surf_to_dist_img_trans = self._findHomographies(
             reg_verts, vis_verts
         )
-        self.detected = True
+
+        if self.img_to_surf_trans is None or self._dist_img_to_surf_trans is None:
+            self.img_to_surf_trans = None  # TODO Do these need to be public?
+            self.surf_to_img_trans = None
+            self._dist_img_to_surf_trans = None
+            self._surf_to_dist_img_trans = None
+            self.detected = False
+        else:
+            self.detected = True
 
     def _filter_markers(self, visible_markers):
         filtered_markers = [
@@ -233,6 +276,7 @@ class _Surface_Marker(object):
         self.id = id
         self.verts = None
         self.observations = []
+        self.active = True
 
     def load_uv_coords(self, uv_coords): # TODO Where is this used?
         self.verts = uv_coords
