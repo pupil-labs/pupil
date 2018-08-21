@@ -96,6 +96,8 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
             self.cache_pupil_timeline_data("confidence")
             self.dia_timeline.refresh()
             self.conf_timeline.refresh()
+        elif notification["subject"] == "producers.should_refresh":
+            self._publish()
 
     def deinit_ui(self):
         self.remove_menu()

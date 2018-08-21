@@ -114,12 +114,13 @@ class Gaze_Producer_Base(Producer_Plugin_Base):
             window = pm.enclosing_window(self.g_pool.timestamps, frm_idx)
             events["gaze"] = self.g_pool.gaze_positions.by_ts_window(window)
 
+    def on_notify(self, notification):
+        if notification["subject"] == "producers.should_refresh":
+            self._publish()
+
     def _publish(self):
         self.notify_all(
-            {
-                "subject": "gaze_positions_changed",
-                "token": self.recent_gaze_token,
-            }
+            {"subject": "gaze_positions_changed", "token": self.recent_gaze_token}
         )
         logger.debug("gaze positions changed")
 
@@ -189,12 +190,16 @@ def calibrate_and_map(g_pool, ref_list, calib_list, map_list, x_offset, y_offset
                 gaze_norm_pos[0] += x_offset
                 gaze_datum["norm_pos"] = gaze_norm_pos
                 serialized = msgpack.packb(gaze_datum, use_bin_type=True)
-                mapped_gaze[idx_outgoing] = gaze_datum["timestamp"], serialized
+                mapped_gaze[idx_outgoing] = (
+                    gaze_datum["topic"],
+                    gaze_datum["timestamp"],
+                    serialized,
+                )
 
             if mapped_gaze:
                 progress = 100 * (idx_incoming + 1) / len(map_list)
                 progress = "Mapping..{}%".format(int(progress))
-                yield progress, mapped_gaze["topic"], mapped_gaze
+                yield progress, mapped_gaze
         progress = "Mapping complete."
         yield progress, []
     else:
@@ -206,7 +211,7 @@ def calibrate_and_map(g_pool, ref_list, calib_list, map_list, x_offset, y_offset
 
 def make_section_dict(calib_range, map_range):
     return {
-        "uid": np.random.rand(),  # ensures unique entry in self.sections
+        "uid": np.random.randint(10_000),  # ensures unique entry in self.sections
         "label": "Unnamed section",
         "calibration_range": calib_range,
         "mapping_range": map_range,
@@ -232,32 +237,10 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         self.cache_dir = os.path.join(g_pool.rec_dir, "offline_data")
         os.makedirs(self.cache_dir, exist_ok=True)
-        try:
-            session_data = fm.load_object(
-                os.path.join(self.cache_dir, self.session_data_name + ".meta")
-            )
-            if session_data["version"] != self.session_data_version:
-                logger.warning("Session data from old version. Will not use this.")
-                assert False
-        except (AssertionError, FileNotFoundError):
-            session_data = {}
-            max_idx = len(self.g_pool.timestamps) - 1
-            session_data["sections"] = [make_section_dict((0, max_idx), (0, max_idx))]
-            session_data["circle_marker_positions"] = []
-            session_data["manual_ref_positions"] = []
-            session_data["pupil_token"] = time()
-            session_data["gaze_token"] = time()
-        self.sections = session_data["sections"]
-        self.circle_marker_positions = session_data["circle_marker_positions"]
-        self.manual_ref_positions = session_data["manual_ref_positions"]
-        if self.circle_marker_positions:
-            self.detection_progress = 100.0
-        else:
-            self.detection_progress = 0.0
 
-        for s in self.sections:
-            self.calibrate_section(s)
-        self.correlate_publish_cache(session_data["gaze_token"])
+        self.load_offline_data()
+        self._correlate()
+        self.notify_all({"subject": "producers.should_refresh", "delay": 1.0})
 
     def append_section(self):
         max_idx = len(self.g_pool.timestamps) - 1
@@ -382,7 +365,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             def remove():
                 del self.menu[self.sections.index(sec) - len(self.sections)]
                 del self.sections[self.sections.index(sec)]
-                self.correlate_publish_cache(token=time())
+                self.correlate_publish(token=time())
 
             return remove
 
@@ -465,16 +448,18 @@ class Offline_Calibration(Gaze_Producer_Base):
         return {"manual_ref_edit_mode": self.manual_ref_edit_mode}
 
     def on_notify(self, notification):
+        super().on_notify(notification)
         subject = notification["subject"]
         if subject == "pupil_positions_changed":
             if self.recent_pupil_token == notification["token"]:
-                logger.warning('Duplicated pupil changed notification')
+                logger.debug("Duplicated pupil changed notification")
                 return
             self.recent_pupil_token = notification["token"]
-            for s in self.sections:
-                self.calibrate_section(s)
+            self.calibrate_all_sections()
+            self.correlate_publish(token=time())  # reset gaze data
+
         elif subject == "offline_calibration.mapping_done":
-            self.correlate_publish_cache(token=time())
+            self.correlate_publish(token=time())
 
     def on_click(self, pos, button, action):
         if action == glfw.GLFW_PRESS and self.manual_ref_edit_mode:
@@ -522,8 +507,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             elif topic == "finished":
                 self.detection_progress = 100.
                 self.process_pipe = None
-                for s in self.sections:
-                    self.calibrate_section(s)
+                self.calibrate_all_sections()
             elif topic == "exception":
                 logger.warning(
                     "Calibration marker detection raised exception:\n{}".format(
@@ -538,12 +522,12 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         for sec in self.sections:
             if "bg_task" in sec:
-                for progress, gaze_topic, gaze_data in sec["bg_task"].fetch():
-                    for timestamp, serialized in gaze_data:
+                for progress, gaze_data in sec["bg_task"].fetch():
+                    for topic, timestamp, serialized in gaze_data:
                         gaze_datum = fm.Serialized_Dict(msgpack_bytes=serialized)
                         sec["gaze"].append(gaze_datum)
                         sec["gaze_ts"].append(timestamp)
-                        sec["gaze_topics"].append(gaze_topic)
+                        sec["gaze_topics"].append(topic)
                     sec["status"] = progress
                 if sec["bg_task"].completed:
                     self.notify_all(
@@ -554,16 +538,21 @@ class Offline_Calibration(Gaze_Producer_Base):
                     )
                     del sec["bg_task"]
 
-    def correlate_publish_cache(self, token):
+    def correlate_publish(self, token, should_cache=True):
         self.recent_gaze_token = token
         self._correlate()
         self._publish()
-        self.save_offline_data()
+        if should_cache:
+            self.save_offline_data()
 
     def _correlate(self):
         gaze_data = list(chain.from_iterable((s["gaze"] for s in self.sections)))
         gaze_ts = list(chain.from_iterable((s["gaze_ts"] for s in self.sections)))
         self.g_pool.gaze_positions = pm.Bisector(gaze_data, gaze_ts)
+
+    def calibrate_all_sections(self):
+        for sec in self.sections:
+            self.calibrate_section(sec)
 
     def calibrate_section(self, sec):
         if "bg_task" in sec:
@@ -571,14 +560,9 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         sec["status"] = "Starting calibration"  # This will be overwritten on success
 
-        try:
-            sec["gaze"].clear()
-            sec["gaze_ts"].clear()
-            sec["gaze_topics"].clear()
-        except KeyError:
-            sec["gaze"] = collections.deque()
-            sec["gaze_ts"] = collections.deque()
-            sec["gaze_topics"] = collections.deque()
+        sec["gaze"] = []
+        sec["gaze_ts"] = []
+        sec["gaze_topics"] = []
 
         calibration_window = pm.exact_window(
             self.g_pool.timestamps, sec["calibration_range"]
@@ -811,14 +795,14 @@ class Offline_Calibration(Gaze_Producer_Base):
         self.save_offline_data()
 
     def save_offline_data(self):
-        gaze_data = chain.from_iterable((s["gaze"] for s in self.sections))
-        gaze_ts = chain.from_iterable((s["gaze_ts"] for s in self.sections))
-        gaze_topics = chain.from_iterable((s["gaze_topics"] for s in self.sections))
-        ts_topic_data_zip = zip(gaze_ts, gaze_topics, gaze_data)
+        for sec in self.sections:
+            ts_topic_data_zip = zip(sec["gaze_ts"], sec["gaze_topics"], sec["gaze"])
 
-        with fm.PLData_Writer(self.cache_dir, self.session_data_name) as writer:
-            for timestamp, topic, datum in ts_topic_data_zip:
-                writer.append_serialized(timestamp, topic, datum.serialized)
+            with fm.PLData_Writer(
+                self.cache_dir, self.section_cache_name(sec)
+            ) as writer:
+                for timestamp, topic, datum in ts_topic_data_zip:
+                    writer.append_serialized(timestamp, topic, datum.serialized)
 
         session_data = {}
         session_data["sections"] = []
@@ -837,6 +821,56 @@ class Offline_Calibration(Gaze_Producer_Base):
         else:
             session_data["circle_marker_positions"] = []
 
-        cache_path = os.path.join(self.cache_dir, self.session_data_name + ".meta")
+        cache_path = os.path.join(self.cache_dir, self.meta_cache_name())
         fm.save_object(session_data, cache_path)
         logger.info("Cached offline calibration data to {}".format(cache_path))
+
+    def load_offline_data(self):
+        cache_path = os.path.join(self.cache_dir, self.meta_cache_name())
+        try:
+            session_data = fm.load_object(cache_path)
+            if session_data["version"] != self.session_data_version:
+                logger.warning(
+                    "Session data of deprecated version found. Loading defaults."
+                )
+                raise TypeError
+        except (FileNotFoundError, TypeError):
+            session_data = self.default_session_data()
+
+        self.sections = session_data["sections"]
+        self.circle_marker_positions = session_data["circle_marker_positions"]
+        self.manual_ref_positions = session_data["manual_ref_positions"]
+        self.recent_pupil_token = session_data["pupil_token"]
+        self.recent_gaze_token = session_data["gaze_token"]
+        if self.circle_marker_positions:
+            self.detection_progress = 100.0
+        else:
+            self.detection_progress = 0.0
+
+        for section in self.sections:
+            try:
+                cache_name = self.section_cache_name(section)
+                gaze = fm.load_pldata_file(self.cache_dir, cache_name)
+                section["gaze"] = gaze.data
+                section["gaze_ts"] = gaze.timestamps
+                section["gaze_topics"] = gaze.topics
+            except FileNotFoundError:
+                section["gaze"] = []
+                section["gaze_ts"] = []
+                section["gaze_topics"] = []
+
+    def default_session_data(self):
+        session_data = {}
+        max_idx = len(self.g_pool.timestamps) - 1
+        session_data["sections"] = [make_section_dict((0, max_idx), (0, max_idx))]
+        session_data["circle_marker_positions"] = []
+        session_data["manual_ref_positions"] = []
+        session_data["pupil_token"] = time()
+        session_data["gaze_token"] = time()
+        return session_data
+
+    def section_cache_name(self, sec):
+        return "{}_{}-{:04d}".format(self.session_data_name, sec["label"], sec["uid"])
+
+    def meta_cache_name(self):
+        return self.session_data_name + ".meta"
