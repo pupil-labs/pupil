@@ -235,10 +235,11 @@ class GUI:
             *self.color_primary, .5))
 
     def on_pos(self, pos):
-        pos = np.array(pos, dtype=np.float32)
-        for surface, idx in self._edit_surf_verts:
-            if surface.detected:
-                surface.move_corner(idx, pos)
+        self.tracker._last_mouse_pos = np.array(pos, dtype=np.float32)
+        # pos = np.array(pos, dtype=np.float32)
+        # for surface, idx in self._edit_surf_verts:
+        #     if surface.detected:
+        #         surface.move_corner(idx, pos)
 
     def on_click(self, pos, button, action):
         pos = np.array(pos, dtype=np.float32)
@@ -275,13 +276,13 @@ class GUI:
                     for surface in self._edit_surf_corners:
                         if surface.detected and surface.defined:
                             img_corners = surface.map_from_surf(norm_corners)
-                            for corner, i in zip(img_corners, range(4)):
+                            for corner, idx in zip(img_corners, range(4)):
                                 dist = np.linalg.norm(corner - pos)
                                 if dist < 15:
-                                    self._edit_surf_verts.append((surface, i))
+                                    self.tracker._edit_surf_verts.append((surface, idx))
                                     break
                 elif action == glfw.GLFW_RELEASE:
-                    self._edit_surf_verts = []
+                    self.tracker._edit_surf_verts = []
                 # TODO Surface changed, save new definition
 
 

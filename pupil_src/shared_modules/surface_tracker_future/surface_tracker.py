@@ -28,7 +28,8 @@ class Surface_Tracker_Future(Plugin):
         self.camera_model = g_pool.capture.intrinsics
         self.marker_min_perimeter = min_marker_perimeter
         self.marker_min_confidence = 0.0  # TODO is this set anywhere?
-
+        self._edit_surf_verts = []
+        self._last_mouse_pos = (0., 0.)
         self.gui = gui.GUI(self)
 
         # TODO Is anything need beyond here?
@@ -179,6 +180,11 @@ class Surface_Tracker_Future(Plugin):
 
         if self.running:
             self._detect_markers(frame)
+
+        # Update surfaces whose verticies have been changes through the GUI
+        for surface, idx in self._edit_surf_verts:
+            if surface.detected:
+                surface.move_corner(idx, self._last_mouse_pos)
 
         # TODO what exactly is turned off when not running?
         events["surfaces"] = []
