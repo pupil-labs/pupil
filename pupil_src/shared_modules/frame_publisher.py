@@ -79,7 +79,7 @@ class Frame_Publisher(Plugin):
 
             events["frame.world"] = [
                 {
-                    "topic": "frame",
+                    "topic": "frame.world",
                     "width": frame.width,
                     "height": frame.height,
                     "index": frame.index,
