@@ -820,12 +820,12 @@ class Offline_Calibration(Gaze_Producer_Base):
         else:
             session_data["circle_marker_positions"] = []
 
-        cache_path = os.path.join(self.cache_dir, self.meta_cache_name())
+        cache_path = os.path.join(self.cache_dir, self.meta_cache_name)
         fm.save_object(session_data, cache_path)
         logger.info("Cached offline calibration data to {}".format(cache_path))
 
     def load_offline_data(self):
-        cache_path = os.path.join(self.cache_dir, self.meta_cache_name())
+        cache_path = os.path.join(self.cache_dir, self.meta_cache_name)
         try:
             session_data = fm.load_object(cache_path)
             if session_data["version"] != self.session_data_version:
@@ -871,5 +871,6 @@ class Offline_Calibration(Gaze_Producer_Base):
     def section_cache_name(self, sec):
         return "{}_{}-{:04d}".format(self.session_data_name, sec["label"], sec["uid"])
 
+    @property
     def meta_cache_name(self):
         return self.session_data_name + ".meta"
