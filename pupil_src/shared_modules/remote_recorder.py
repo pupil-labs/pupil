@@ -47,6 +47,17 @@ class Remote_Recording_State:
     def is_recording(self, should_be_recording):
         self.sensor.set_control_value("local_capture", should_be_recording)
 
+    @property
+    def session_name(self):
+        try:
+            return self.sensor.controls["capture_session_name"]["value"]
+        except KeyError:
+            return "Unknown"
+
+    @session_name.setter
+    def session_name(self, session_name):
+        self.sensor.set_control_value("capture_session_name", session_name)
+
     def poll_updates(self):
         while self.sensor.has_notifications:
             self.sensor.handle_notification()
@@ -93,6 +104,10 @@ class Remote_Recorder_Core:
         self._attached_rec_states[event["sensor_uuid"]].detach()
         del self._attached_rec_states[event["sensor_uuid"]]
 
+    def broadcast_preferred_session_name(self, preferred_session_name):
+        for rec_state in self._attached_rec_states.values():
+            rec_state.session_name = preferred_session_name
+
     def cleanup(self):
         for state in self._attached_rec_states.values():
             state.detach()
@@ -110,9 +125,10 @@ class Remote_Recorder(Plugin):
     icon_chr = chr(0xec16)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, preferred_session_name="local_recording"):
         super().__init__(g_pool)
         self._core = Remote_Recorder_Core(num_states_changed_callback=self.refresh_menu)
+        self.preferred_session_name = preferred_session_name
 
     def recent_events(self, events):
         self._core.poll_network_events()
@@ -130,11 +146,40 @@ class Remote_Recorder(Plugin):
                 " on available Pupil Mobile hosts."
             )
         )
-        for rec_state in self._core.rec_states_sorted():
-            self.add_state_ui_switch(rec_state)
 
-    def add_state_ui_switch(self, rec_state):
+        self.append_preferred_session_name_setter()
+        self.menu.append(ui.Separator())
+
+        for rec_state in self._core.rec_states_sorted():
+            self.append_rec_state_switch(rec_state)
+            self.append_session_name_view(rec_state)
+
+    def append_preferred_session_name_setter(self):
+        self.menu.append(
+            ui.Text_Input(
+                "preferred_session_name", self, label="Preferred session name"
+            )
+        )
+        self.menu.append(
+            ui.Button(
+                "Broadcast preferred session name",
+                self.broadcast_preferred_session_name,
+            )
+        )
+
+    def append_rec_state_switch(self, rec_state):
         self.menu.append(ui.Switch("is_recording", rec_state, label=rec_state.label))
+
+    def append_session_name_view(self, rec_state):
+        view = ui.Text_Input("session_name", rec_state, label="Session name")
+        view.read_only = True
+        self.menu.append(view)
+
+    def broadcast_preferred_session_name(self):
+        self._core.broadcast_preferred_session_name(self.preferred_session_name)
+
+    def get_init_dict(self):
+        return {"preferred_session_name": self.preferred_session_name}
 
     def deinit_ui(self):
         self.remove_menu()
