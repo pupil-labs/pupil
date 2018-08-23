@@ -178,23 +178,12 @@ class Base_Manager(Plugin):
 
         self.menu_icon.order = 0.1
 
-        def replace_backend_manager(manager_class):
-            if self.g_pool.process.startswith("eye"):
-                self.g_pool.capture_manager.deinit_ui()
-                self.g_pool.capture_manager.cleanup()
-                self.g_pool.capture_manager = manager_class(self.g_pool)
-                self.g_pool.capture_manager.init_ui()
-            else:
-                self.notify_all(
-                    {"subject": "start_plugin", "name": manager_class.__name__}
-                )
-
         # We add the capture selection menu
         manager_classes.sort(key=lambda x: x.gui_name)
         self.menu.append(
             ui.Selector(
                 "capture_manager",
-                setter=replace_backend_manager,
+                setter=self.replace_backend_manager,
                 getter=lambda: self.__class__,
                 selection=manager_classes,
                 labels=[b.gui_name for b in manager_classes],
@@ -204,6 +193,15 @@ class Base_Manager(Plugin):
 
         # here is where you add all your menu entries.
         self.menu.label = "Backend Manager"
+
+    def replace_backend_manager(self, manager_class):
+        if self.g_pool.process.startswith("eye"):
+            self.g_pool.capture_manager.deinit_ui()
+            self.g_pool.capture_manager.cleanup()
+            self.g_pool.capture_manager = manager_class(self.g_pool)
+            self.g_pool.capture_manager.init_ui()
+        else:
+            self.notify_all({"subject": "start_plugin", "name": manager_class.__name__})
 
 
 class Playback_Source(Base_Source):
