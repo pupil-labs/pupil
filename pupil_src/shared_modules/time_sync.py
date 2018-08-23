@@ -76,6 +76,8 @@ class Time_Sync(Plugin):
         self.tie_breaker = random.random()
         self.base_bias = base_bias
 
+        self.sync_group_members = {}
+
         self.master_service = Clock_Sync_Master(self.g_pool.get_timestamp)
         self.follower_service = None  # only set if there is a better server than us
 
@@ -141,6 +143,8 @@ class Time_Sync(Plugin):
         self.menu.append(
             ui.Text_Input("leaderboard", self, label="Master Nodes in Group")
         )
+        self.sync_group_members_menu = ui.Growing_Menu("Sync Group Members")
+        self.menu.append(self.sync_group_members_menu)
 
     def recent_events(self, events):
         should_announce = False
@@ -161,6 +165,7 @@ class Time_Sync(Plugin):
             ) or evt.type == "EXIT":
                 self.remove_from_leaderboard(evt.peer_uuid)
                 self.evaluate_leaderboard()
+                self.remove_sync_group_member(evt.peer_uuid)
 
         if should_announce:
             self.announce_clock_master_info()
@@ -233,6 +238,21 @@ class Time_Sync(Plugin):
             logger.debug("Become clock master with rank {}".format(self.rank))
             self.announce_clock_master_info()
 
+    def insert_sync_group_member(self, uuid, name):
+        member_text = ui.Info_Text(name)
+        self.sync_group_members[uuid] = member_text
+        self.sync_group_members_menu.append(member_text)
+        self.sync_group_members_menu.elements.sort(
+            key=lambda text_field: text_field.text
+        )
+
+    def remove_sync_group_member(self, uuid):
+        try:
+            self.sync_group_members_menu.remove(self.sync_group_members[uuid])
+            del self.sync_group_members[uuid]
+        except KeyError:
+            logger.debug("Peer has already been removed from members list.")
+
     def announce_clock_master_info(self):
         self.discovery.shout(
             self.sync_group,
@@ -303,6 +323,8 @@ class Time_Sync(Plugin):
             self.announce_clock_master_info()
 
     def deinit_ui(self):
+        for uuid in list(self.sync_group_members.keys()):
+            self.remove_sync_group_member(uuid)
         self.remove_menu()
 
     def get_init_dict(self):
