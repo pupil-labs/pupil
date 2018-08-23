@@ -246,6 +246,15 @@ class Time_Sync(Plugin):
             key=lambda text_field: text_field.text
         )
 
+    def insert_all_sync_group_members_from_group(self, group):
+        for uuid in self.discovery.peers_by_group(group):
+            name = self.discovery.get_peer_name(uuid)
+            self.insert_sync_group_member(uuid, name)
+
+    def remove_all_sync_group_members(self):
+        for uuid in list(self.sync_group_members.keys()):
+            self.remove_sync_group_member(uuid)
+
     def remove_sync_group_member(self, uuid):
         try:
             self.sync_group_members_menu.remove(self.sync_group_members[uuid])
@@ -300,6 +309,7 @@ class Time_Sync(Plugin):
             if self.discovery.name() == name:
                 return
             else:
+                self.remove_all_sync_group_members()
                 self.discovery.leave(self.sync_group)
                 self.discovery.stop()
                 self.leaderboard = []
@@ -313,6 +323,7 @@ class Time_Sync(Plugin):
 
     def change_sync_group(self, new_group_prefix):
         if new_group_prefix != self.sync_group_prefix:
+            self.remove_all_sync_group_members()
             self.discovery.leave(self.sync_group)
             self.leaderboard = []
             if self.follower_service:
@@ -320,6 +331,7 @@ class Time_Sync(Plugin):
                 self.follower = None
             self.sync_group_prefix = new_group_prefix
             self.discovery.join(self.sync_group)
+            self.insert_all_sync_group_members_from_group(self.sync_group)
             self.announce_clock_master_info()
 
     def deinit_ui(self):
