@@ -1,4 +1,5 @@
 from enum import Enum
+import platform
 
 import numpy as np
 import cv2
@@ -20,6 +21,8 @@ class GUI:
         self.state = State.SHOW_SURF
         self._edit_surf_corners = set()
         self._edit_surf_markers = set()
+        self.heatmap_textures = {}
+        self.surface_windows = {}
 
         self.color_primary = (1.0, 0.2, 0.6)
         self.color_secondary = (0.1, 1., 1.)
@@ -29,8 +32,6 @@ class GUI:
         self.glfont.add_font("opensans", pyglui.ui.get_opensans_font_path())
         self.glfont.set_size(22)
         self.glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
-
-        self.heatmap_textures = {}
 
     def update(self):
         self._draw_markers()
@@ -53,28 +54,9 @@ class GUI:
                     self._draw_surface_corner_handles(surface)
 
             elif self.state == State.SHOW_HEATMAP:
-                self.heatmap_textures[surface].update_from_ndarray(surface.heatmap)
+                self._draw_heatmap(surface)
 
-                m = gl_utils.cvmat_to_glmat(surface._surf_to_dist_img_trans)
-
-                gl.glMatrixMode(gl.GL_PROJECTION)
-                gl.glPushMatrix()
-                gl.glLoadIdentity()
-                gl.glOrtho(
-                    0, self.tracker.camera_model.resolution[0], self.tracker.camera_model.resolution[1], 0, -1, 1
-                )
-
-                gl.glMatrixMode(gl.GL_MODELVIEW)
-                gl.glPushMatrix()
-                # apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
-                gl.glLoadMatrixf(m)
-
-                self.heatmap_textures[surface_idx].draw()
-
-                gl.glMatrixMode(gl.GL_PROJECTION)
-                gl.glPopMatrix()
-                gl.glMatrixMode(gl.GL_MODELVIEW)
-                gl.glPopMatrix()
+            self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
 
             #
             # for s in self.surfaces:
@@ -148,10 +130,10 @@ class GUI:
 
     def _get_surface_anchor_points(self, surface):
         frame = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]], dtype=np.float32)
-        frame = surface.map_from_surf(frame)
+        frame = surface.map_from_surf(frame, self.tracker.camera_model)
 
         hat = np.array([[.3, .7], [.7, .7], [.5, .9], [.3, .7]], dtype=np.float32)
-        hat = surface.map_from_surf(hat)
+        hat = surface.map_from_surf(hat, self.tracker.camera_model)
 
         text_anchor = frame.reshape((5, -1))[2]
         text_anchor = text_anchor[0], text_anchor[1] - 75
@@ -254,11 +236,31 @@ class GUI:
 
     def _draw_surface_corner_handles(self, surface):
         norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-        img_corners = surface.map_from_surf(norm_corners)
+        img_corners = surface.map_from_surf(norm_corners, self.tracker.camera_model)
 
         pyglui_utils.draw_points(
             img_corners, 20, pyglui_utils.RGBA(*self.color_primary, .5)
         )
+
+    def _draw_heatmap(self, surface):
+        self.heatmap_textures[surface].update_from_ndarray(surface.heatmap)
+        m = gl_utils.cvmat_to_glmat(surface._surf_to_dist_img_trans)
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+        gl.glOrtho(
+            0, self.tracker.camera_model.resolution[0],
+            self.tracker.camera_model.resolution[1], 0, -1, 1
+        )
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPushMatrix()
+        # apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
+        gl.glLoadMatrixf(m)
+        self.heatmap_textures[surface].draw()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPopMatrix()
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPopMatrix()
 
     def on_click(self, pos, button, action):
         pos = np.array(pos, dtype=np.float32)
@@ -296,7 +298,8 @@ class GUI:
 
                 for surface in self._edit_surf_corners:
                     if surface.detected and surface.defined:
-                        img_corners = surface.map_from_surf(norm_corners)
+                        img_corners = surface.map_from_surf(norm_corners,
+                                                            self.tracker.camera_model)
                         for idx, corner in enumerate(img_corners):
                             dist = np.linalg.norm(corner - pos)
                             if dist < 15:
@@ -318,7 +321,8 @@ class GUI:
                             if not marker.id in surface.reg_markers.keys():
                                 surface_marker = _Surface_Marker(marker.id)
                                 marker_verts = np.array(marker.verts).reshape((4, 2))
-                                uv_coords = surface.map_to_surf(marker_verts)
+                                uv_coords = surface.map_to_surf(marker_verts,
+                                                                self.tracker.camera_model)
                                 surface_marker.add_observation(uv_coords)
                                 surface.reg_markers[marker.id] = surface_marker
                             else:
@@ -343,13 +347,233 @@ class GUI:
 
     def add_surface(self, surface):
         self.heatmap_textures[surface] = pyglui_utils.Named_Texture()
+        self.surface_windows[surface] = Surface_Window(surface)
 
     def remove_surface(self, surface):
         self.heatmap_textures.pop(surface)
-        self._edit_surf_markers.remove(surface)
-        self._edit_surf_corners.remove(surface)
+        self._edit_surf_markers.discard(surface)
+        self._edit_surf_corners.discard(surface)
+        self.surface_windows.pop(surface)
 
 class State(Enum):
     SHOW_SURF = "Show Markers and Surfaces"
     SHOW_IDS = "Show marker IDs"
     SHOW_HEATMAP = "Show Heatmaps"
+
+
+class Surface_Window:
+    def __init__(self, surface):
+        self.surface = surface
+        self._window = None
+        self.window_should_open = False
+        self.window_should_close = False
+
+        # UI Platform tweaks
+        if platform.system() == "Linux":
+            self.window_position_default = (0, 0)
+        elif platform.system() == "Windows":
+            self.window_position_default = (8, 90)
+        else:
+            self.window_position_default = (0, 0)
+
+    def open_close_window(self):
+        if self._window:
+            self.close_window()
+        else:
+            self.open_window()
+
+    def open_window(self):
+        if not self._window:
+
+            monitor = None
+            height, width = (
+                640,
+                int(640. / (self.surface.real_world_size["x"] /
+                            self.surface.real_world_size["y"])),
+            )  # open with same aspect ratio as surface
+
+            self._window = glfw.glfwCreateWindow(
+                height,
+                width,
+                "Reference Surface: " + self.surface.name,
+                monitor=monitor,
+                share=glfw.glfwGetCurrentContext(),
+            )
+
+            glfw.glfwSetWindowPos(
+                self._window,
+                self.window_position_default[0],
+                self.window_position_default[1],
+            )
+
+            self.trackball = gl_utils.trackball.Trackball()
+            self.input = {"down": False, "mouse": (0, 0)}
+
+            # Register callbacks
+            glfw.glfwSetFramebufferSizeCallback(self._window, self.on_resize)
+            glfw.glfwSetKeyCallback(self._window, self.on_window_key)
+            glfw.glfwSetWindowCloseCallback(self._window, self.on_close)
+            glfw.glfwSetMouseButtonCallback(self._window, self.on_window_mouse_button)
+            glfw.glfwSetCursorPosCallback(self._window, self.on_pos)
+            glfw.glfwSetScrollCallback(self._window, self.on_scroll)
+
+            self.on_resize(self._window, *glfw.glfwGetFramebufferSize(self._window))
+
+            # gl_state settings
+            active_window = glfw.glfwGetCurrentContext()
+            glfw.glfwMakeContextCurrent(self._window)
+            gl_utils.basic_gl_setup()
+            gl_utils.make_coord_system_norm_based()
+
+            # refresh speed settings
+            glfw.glfwSwapInterval(0)
+
+            glfw.glfwMakeContextCurrent(active_window)
+
+    def close_window(self):
+        if self._window:
+            glfw.glfwDestroyWindow(self._window)
+            self._window = None
+            self.window_should_close = False
+
+    def update(self, tex):
+        self.gl_display_in_window(tex)
+
+    def gl_display_in_window(self, world_tex):
+        """
+        here we map a selected surface onto a seperate window.
+        """
+        if self._window and self.surface.detected:
+            active_window = glfw.glfwGetCurrentContext()
+            glfw.glfwMakeContextCurrent(self._window)
+            gl_utils.clear_gl_screen()
+
+            # cv uses 3x3 gl uses 4x4 tranformation matricies
+            m = gl_utils.cvmat_to_glmat(self.surface._dist_img_to_surf_trans)
+            # m = gl_utils.cvmat_to_glmat(self.surface._surf_to_dist_img_trans)
+
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glPushMatrix()
+            gl.glLoadIdentity()
+            # gl.glOrtho(0, 1, 0, 1, -1, 1)  # gl coord convention
+            # gl.glOrtho(0, 640, 0, 640, -1, 1)  # gl coord convention
+            gl.glOrtho(
+                0, self.surface.camera_model.resolution[0],
+                self.surface.camera_model.resolution[1], 0, -1, 1
+            )
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+            gl.glPushMatrix()
+            # apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
+            gl.glLoadMatrixf(m)
+
+            world_tex.draw()
+
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glPopMatrix()
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+            gl.glPopMatrix()
+
+            # now lets get recent pupil positions on this surface:
+            for gp in self.surface.gaze_history:
+                pyglui_utils.draw_points_norm(
+                    [gp['gaze']], color=pyglui_utils.RGBA(0.0, 0.8, 0.5, 0.8), size=80
+                )
+
+            glfw.glfwSwapBuffers(self._window)
+            glfw.glfwMakeContextCurrent(active_window)
+
+    #### fns to draw surface in separate window
+    def gl_display_in_window_3d(self, world_tex):
+        """
+        here we map a selected surface onto a seperate window.
+        """
+        K, img_size = (
+            self.g_pool.capture.intrinsics.K,
+            self.g_pool.capture.intrinsics.resolution,
+        )
+
+        if self._window and self.camera_pose_3d is not None:
+            active_window = glfw.glfwGetCurrentContext()
+            glfw.glfwMakeContextCurrent(self._window)
+            gl.glClearColor(.8, .8, .8, 1.)
+
+            gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+            gl.glClearDepth(1.0)
+            gl.glDepthFunc(gl.GL_LESS)
+            gl.glEnable(gl.GL_DEPTH_TEST)
+            self.trackball.push()
+
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+
+            draw_coordinate_system(l=self.real_world_size["x"])
+            gl.glPushMatrix()
+            gl.glScalef(self.real_world_size["x"], self.real_world_size["y"], 1)
+            pyglui_utils.draw_polyline(
+                [[0, 0], [0, 1], [1, 1], [1, 0]],
+                color=pyglui_utils.RGBA(.5, .3, .1, .5),
+                thickness=3,
+            )
+            gl.glPopMatrix()
+            # Draw the world window as projected onto the plane using the homography mapping
+            gl.glPushMatrix()
+            gl.glScalef(self.real_world_size["x"], self.real_world_size["y"], 1)
+            # cv uses 3x3 gl uses 4x4 tranformation matricies
+            m = gl_utils.cvmat_to_glmat(self.m_img_to_surface)
+            gl.glMultMatrixf(m)
+            gl.glTranslatef(0, 0, -.01)
+            world_tex.draw()
+            pyglui_utils.draw_polyline(
+                [[0, 0], [0, 1], [1, 1], [1, 0]],
+                color=pyglui_utils.RGBA(.5, .3, .6, .5),
+                thickness=3,
+            )
+            gl.glPopMatrix()
+
+            # Draw the camera frustum and origin using the 3d tranformation obtained from solvepnp
+            gl.glPushMatrix()
+            gl.glMultMatrixf(self.camera_pose_3d.T.flatten())
+            draw_frustum(img_size, K, 150)
+            gl.glLineWidth(1)
+            draw_frustum(img_size, K, .1)
+            draw_coordinate_system(l=5)
+            gl.glPopMatrix()
+
+            self.trackball.pop()
+
+            glfw.glfwSwapBuffers(self._window)
+            glfw.glfwMakeContextCurrent(active_window)
+
+
+
+
+    # window calbacks
+    def on_resize(self, window, w, h):
+        self.trackball.set_window_size(w, h)
+        active_window = glfw.glfwGetCurrentContext()
+        glfw.glfwMakeContextCurrent(window)
+        gl_utils.adjust_gl_view(w, h)
+        glfw.glfwMakeContextCurrent(active_window)
+
+    def on_window_key(self, window, key, scancode, action, mods):
+        if action == glfw.GLFW_PRESS:
+            if key == glfw.GLFW_KEY_ESCAPE:
+                self.on_close()
+
+    def on_close(self, window=None):
+        self.close_window()
+
+    def on_window_mouse_button(self, window, button, action, mods):
+        if action == glfw.GLFW_PRESS:
+            self.input["down"] = True
+            self.input["mouse"] = glfw.glfwGetCursorPos(window)
+        if action == glfw.GLFW_RELEASE:
+            self.input["down"] = False
+
+    def on_pos(self, window, x, y):
+        if self.input["down"]:
+            old_x, old_y = self.input["mouse"]
+            self.trackball.drag_to(x - old_x, y - old_y)
+            self.input["mouse"] = x, y
+
+    def on_scroll(self, window, x, y):
+        self.trackball.zoom_to(y)

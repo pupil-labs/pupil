@@ -18,11 +18,10 @@ import methods
 
 
 class Surface:
-    def __init__(self, camera_model, marker_min_perimeter, marker_min_confidence,
+    def __init__(self, marker_min_perimeter, marker_min_confidence,
                  init_dict=None):
         self.uid = random.randint(0, 1e6)
 
-        self.camera_model = camera_model
         self.marker_min_perimeter = marker_min_perimeter
         self.marker_min_confidence = marker_min_confidence
         self.name = "unknown"
@@ -54,12 +53,12 @@ class Surface:
         return self.uid
 
     def __eq__(self, other):
-        if isinstance(Surface, other):
+        if isinstance(other, Surface):
             return self.uid == other.uid
         else:
             return False
 
-    def map_to_surf(self, points):
+    def map_to_surf(self, points, camera_model):
         """Map points from image space to normalized surface space.
 
         Args:
@@ -72,13 +71,13 @@ class Surface:
 
         """
         orig_shape = points.shape
-        points = self.camera_model.undistortPoints(points)
+        points = camera_model.undistortPoints(points)
         points.shape = (-1, 1, 2)
         point_on_surf = cv2.perspectiveTransform(points, self.img_to_surf_trans)
         point_on_surf.shape = orig_shape
         return point_on_surf
 
-    def map_from_surf(self, points):
+    def map_from_surf(self, points, camera_model):
         """Map points from normalized surface space to image space.
 
         Args:
@@ -93,12 +92,12 @@ class Surface:
         orig_shape = points.shape
         points.shape = (-1, 1, 2)
         img_points = cv2.perspectiveTransform(points, self.surf_to_img_trans)
-        img_points = self.camera_model.distortPoints(img_points)
+        img_points = camera_model.distortPoints(img_points)
         img_points.shape = orig_shape
         return img_points
 
-    def move_corner(self, idx, pos):
-        new_corner_pos = self.map_to_surf(pos)
+    def move_corner(self, idx, pos, camera_model):
+        new_corner_pos = self.map_to_surf(pos, camera_model)
         old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
 
         new_corners = old_corners.copy()
@@ -109,21 +108,21 @@ class Surface:
             m.verts = cv2.perspectiveTransform(m.verts.reshape((-1, 1, 2)),
                                                transform).reshape((-1, 2))
 
-    def update(self, vis_markers):
+    def update(self, vis_markers, camera_model):
         vis_markers = self._filter_markers(vis_markers)
 
         if not self.defined:
-            self._add_observation(vis_markers)
+            self._add_observation(vis_markers, camera_model)
 
-        self._update_location(vis_markers)
+        self._update_location(vis_markers, camera_model)
 
-    def _add_observation(self, vis_markers):
+    def _add_observation(self, vis_markers, camera_model):
         if not vis_markers:
             return
 
         all_verts = np.array([m.verts for m in vis_markers.values()], dtype=np.float32)
         all_verts.shape = (-1, 2)
-        all_verts_undist = self.camera_model.undistortPoints(all_verts)
+        all_verts_undist = camera_model.undistortPoints(all_verts)
         hull = self._bounding_quadrangle(all_verts_undist)
 
         img_to_surf_trans_candidate = self._get_trans_to_norm(hull)
@@ -197,7 +196,7 @@ class Surface:
         norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
         return cv2.getPerspectiveTransform(verts, norm_corners)
 
-    def _update_location(self, vis_markers):
+    def _update_location(self, vis_markers, camera_model):
         vis_reg_marker_ids = set(vis_markers.keys()) & set(self.reg_markers.keys())
         self.num_detected_markers = len(vis_reg_marker_ids)
 
@@ -217,7 +216,7 @@ class Surface:
         vis_verts.shape = (-1, 2)
         reg_verts.shape = (-1, 2)
 
-        vis_verts_undist = self.camera_model.undistortPoints(vis_verts)
+        vis_verts_undist = camera_model.undistortPoints(vis_verts)
         self.img_to_surf_trans, self.surf_to_img_trans = self._findHomographies(
             reg_verts, vis_verts_undist
         )
