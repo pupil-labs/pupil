@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -17,33 +17,28 @@ if __name__ == '__main__':
     syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
     del syspath, ospath
 
-import os
-from time import time
-from glob import glob
-import numpy as np
-from video_capture import File_Source, EndofVideoFileError
-from player_methods import update_recording_to_recent, load_meta_info
-from av_writer import AV_Writer
-from file_methods import load_object
-from player_methods import correlate_data, update_recording_to_recent
-
-
 # logging
 import logging
+import os
+from glob import glob
+from time import time
 
-# Plug-ins
-from plugin import Plugin_List, import_runtime_plugins
-from vis_circle import Vis_Circle
-from vis_cross import Vis_Cross
-from vis_polyline import Vis_Polyline
-from vis_light_points import Vis_Light_Points
-from vis_watermark import Vis_Watermark
-from vis_scan_path import Vis_Scan_Path
-from vis_eye_video_overlay import Vis_Eye_Video_Overlay
-
+import file_methods as fm
+import player_methods as pm
+from av_writer import AV_Writer
 # we are not importing manual gaze corrction. In Player corrections have already been applied.
 # in batch exporter this plugin makes little sense.
 from fixation_detector import Offline_Fixation_Detector
+# Plug-ins
+from plugin import Plugin_List, import_runtime_plugins
+from video_capture import EndofVideoError, init_playback_source
+from vis_circle import Vis_Circle
+from vis_cross import Vis_Cross
+from vis_eye_video_overlay import Vis_Eye_Video_Overlay
+from vis_light_points import Vis_Light_Points
+from vis_polyline import Vis_Polyline
+from vis_scan_path import Vis_Scan_Path
+from vis_watermark import Vis_Watermark
 
 
 class Global_Container(object):
@@ -60,7 +55,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
     yield start_status, 0
 
     try:
-        update_recording_to_recent(rec_dir)
+        pm.update_recording_to_recent(rec_dir)
 
         vis_plugins = sorted([Vis_Circle, Vis_Cross, Vis_Polyline, Vis_Light_Points,
                               Vis_Watermark, Vis_Scan_Path, Vis_Eye_Video_Overlay],
@@ -72,19 +67,21 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         name_by_index = [p.__name__ for p in available_plugins]
         plugin_by_name = dict(zip(name_by_index, available_plugins))
 
-        update_recording_to_recent(rec_dir)
+        pm.update_recording_to_recent(rec_dir)
 
-        video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
-                      if os.path.splitext(f)[-1] in ('.mp4', '.mkv', '.avi', '.mjpeg')][0]
-        pupil_data_path = os.path.join(rec_dir, "pupil_data")
         audio_path = os.path.join(rec_dir, "audio.mp4")
 
-        meta_info = load_meta_info(rec_dir)
+        meta_info = pm.load_meta_info(rec_dir)
 
         g_pool = Global_Container()
         g_pool.app = 'exporter'
         g_pool.min_data_confidence = min_data_confidence
-        cap = File_Source(g_pool, video_path)
+
+        valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
+        video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
+                      if os.path.splitext(f)[1] in valid_ext][0]
+        cap = init_playback_source(g_pool, source_path=video_path, timing=None)
+
         timestamps = cap.timestamps
 
         # Out file path verification, we do this before but if one uses a separate tool, this will kick in.
@@ -138,16 +135,14 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         g_pool.timestamps = timestamps
         g_pool.delayed_notifications = {}
         g_pool.notifications = []
-        # load pupil_positions, gaze_positions
-        pupil_data = pre_computed.get("pupil_data") or load_object(pupil_data_path)
-        g_pool.pupil_data = pupil_data
-        g_pool.pupil_positions = pre_computed.get("pupil_positions") or pupil_data['pupil_positions']
-        g_pool.gaze_positions = pre_computed.get("gaze_positions") or pupil_data['gaze_positions']
-        g_pool.fixations = pre_computed.get("fixations", [])
 
-        g_pool.pupil_positions_by_frame = correlate_data(g_pool.pupil_positions, g_pool.timestamps)
-        g_pool.gaze_positions_by_frame = correlate_data(g_pool.gaze_positions, g_pool.timestamps)
-        g_pool.fixations_by_frame = correlate_data(g_pool.fixations, g_pool.timestamps)
+        for initializers in pre_computed.values():
+            initializers['data'] = [fm.Serialized_Dict(msgpack_bytes=serialized)
+                                    for serialized in initializers['data']]
+
+        g_pool.pupil_positions = pm.Bisector(**pre_computed["pupil"])
+        g_pool.gaze_positions = pm.Bisector(**pre_computed["gaze"])
+        g_pool.fixations = pm.Affiliator(**pre_computed["fixations"])
 
         # add plugins
         g_pool.plugins = Plugin_List(g_pool, plugin_initializers)
@@ -155,13 +150,14 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         while frames_to_export > current_frame:
             try:
                 frame = cap.get_frame()
-            except EndofVideoFileError:
+            except EndofVideoError:
                 break
 
             events = {'frame': frame}
             # new positons and events
-            events['gaze_positions'] = g_pool.gaze_positions_by_frame[frame.index]
-            events['pupil_positions'] = g_pool.pupil_positions_by_frame[frame.index]
+            frame_window = pm.enclosing_window(g_pool.timestamps, frame.index)
+            events['gaze'] = g_pool.gaze_positions.by_ts_window(frame_window)
+            events['pupil'] = g_pool.pupil_positions.by_ts_window(frame_window)
 
             # publish delayed notifiactions when their time has come.
             for n in list(g_pool.delayed_notifications.values()):

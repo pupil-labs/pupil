@@ -1,5 +1,3 @@
-
-
 #ifndef singleeyefitter_CircleDeviationVariance3D_h__
 #define singleeyefitter_CircleDeviationVariance3D_h__
 

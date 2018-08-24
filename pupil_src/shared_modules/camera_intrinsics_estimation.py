@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -42,7 +42,10 @@ class Camera_Intrinsics_Estimation(Plugin):
         This method is not a gaze calibration.
         This method is used to calculate camera intrinsics.
     """
-    def __init__(self, g_pool, fullscreen=False):
+    icon_chr = chr(0xec06)
+    icon_font = 'pupil_icons'
+
+    def __init__(self, g_pool, fullscreen=False, monitor_idx=0):
         super().__init__(g_pool)
         self.collect_new = False
         self.calculated = False
@@ -58,8 +61,8 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.button = None
         self.clicks_to_close = 5
         self.window_should_close = False
+        self.monitor_idx = monitor_idx
         self.fullscreen = fullscreen
-        self.monitor_idx = 0
         self.dist_mode = "Fisheye"
 
         self.glfont = fontstash.Context()
@@ -82,13 +85,19 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.add_menu()
         self.menu.label = 'Camera Intrinsics Estimation'
 
-        monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
-        # primary_monitor = glfwGetPrimaryMonitor()
-        self.menu.append(ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern."))
+        def get_monitors_idx_list():
+            monitors = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+            return range(len(monitors)),monitors
+
+        if self.monitor_idx not in get_monitors_idx_list()[0]:
+            logger.warning("Monitor at index %s no longer availalbe using default"%idx)
+            self.monitor_idx = 0
+
+
+        self.menu.append(ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'i' to capture a pattern."))
 
         self.menu.append(ui.Button('show Pattern', self.open_window))
-        self.menu.append(ui.Selector('monitor_idx', self, selection=range(len(monitor_names)),
-                                     labels=monitor_names, label='Monitor'))
+        self.menu.append(ui.Selector('monitor_idx',self,selection_getter = get_monitors_idx_list,label='Monitor'))
         dist_modes = ["Fisheye", "Radial"]
         self.menu.append(ui.Selector('dist_mode', self, selection=dist_modes, label='Distortion Model'))
         self.menu.append(ui.Switch('fullscreen', self, label='Use Fullscreen'))
@@ -126,7 +135,12 @@ class Camera_Intrinsics_Estimation(Plugin):
     def open_window(self):
         if not self._window:
             if self.fullscreen:
-                monitor = glfwGetMonitors()[self.monitor_idx]
+                try:
+                    monitor = glfwGetMonitors()[self.monitor_idx]
+                except:
+                    logger.warning("Monitor at index %s no longer availalbe using default"%idx)
+                    self.monitor_idx = 0
+                    monitor = glfwGetMonitors()[self.monitor_idx]
                 mode = glfwGetVideoMode(monitor)
                 height, width = mode[0], mode[1]
             else:
@@ -301,7 +315,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         glfwMakeContextCurrent(active_window)
 
     def get_init_dict(self):
-        return {}
+        return {'monitor_idx': self.monitor_idx}
 
     def cleanup(self):
         """gets called when the plugin get terminated.

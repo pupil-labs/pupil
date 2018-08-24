@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -17,6 +17,7 @@ from OpenGL.GL import *
 from pyglui.cygl.utils import Named_Texture
 from cache_list import Cache_List
 from reference_surface import Reference_Surface
+import player_methods as pm
 
 import logging
 logger = logging.getLogger(__name__)
@@ -113,10 +114,12 @@ class Offline_Reference_Surface(Reference_Surface):
         self.cache = None
 
     def gaze_on_srf_by_frame_idx(self, frame_index, m_from_screen):
-        return self.map_data_to_surface(self.g_pool.gaze_positions_by_frame[frame_index], m_from_screen)
+        frame_window = pm.enclosing_window(self.g_pool.timestamps, frame_index)
+        return self.map_data_to_surface(self.g_pool.gaze_positions.by_ts_window(frame_window), m_from_screen)
 
     def fixations_on_srf_by_frame_idx(self, frame_index, m_from_screen):
-        return self.map_data_to_surface(self.g_pool.fixations_by_frame[frame_index], m_from_screen)
+        frame_window = pm.enclosing_window(self.g_pool.timestamps, frame_index)
+        return self.map_data_to_surface(self.g_pool.fixations.by_ts_window(frame_window), m_from_screen)
 
     def gl_display_metrics(self):
         if self.metrics_texture and self.detected:

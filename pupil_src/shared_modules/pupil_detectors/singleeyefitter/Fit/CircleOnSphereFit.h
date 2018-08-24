@@ -1,4 +1,3 @@
-
 #ifndef CIRCLEFIT_H__
 #define CIRCLEFIT_H__
 

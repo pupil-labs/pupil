@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -34,7 +34,7 @@ class Surface_Tracker(Plugin):
     icon_chr = chr(0xec07)
     icon_font = 'pupil_icons'
 
-    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
+    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter =60,invert_image=False,robust_detection=True):
         super().__init__(g_pool)
         self.order = .2
 
@@ -168,7 +168,7 @@ class Surface_Tracker(Plugin):
         self.menu.append(ui.Info_Text('This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*.'))
         self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
         self.menu.append(ui.Switch('invert_image',self,label='Use inverted markers'))
-        self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=10,max=100))
+        self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=30,max=100))
         self.menu.append(ui.Switch('locate_3d',self,label='3D localization'))
         self.menu.append(ui.Selector('mode', self, label="Mode", selection=['Show Markers and Surfaces', 'Show marker IDs', 'Show Heatmaps']))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
@@ -218,15 +218,25 @@ class Surface_Tracker(Plugin):
         for s in self.surfaces:
             s.locate(self.markers,self.min_marker_perimeter,self.min_id_confidence, self.locate_3d)
             if s.detected:
-                s.gaze_on_srf = s.map_data_to_surface(events.get('gaze_positions',[]),s.m_from_screen)
+                s.gaze_on_srf = s.map_data_to_surface(events.get('gaze', []), s.m_from_screen)
+                s.fixations_on_srf = s.map_data_to_surface(events.get('fixations', []), s.m_from_screen)
                 s.update_gaze_history()
             else:
-                s.gaze_on_srf =[]
+                s.gaze_on_srf = []
+                s.fixations_on_srf = []
 
         events['surfaces'] = []
         for s in self.surfaces:
             if s.detected:
-                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
+                datum = {'topic': 'surfaces.{}'.format(s.name),
+                         'name':s.name, 'uid':s.uid,
+                         'm_to_screen': s.m_to_screen.tolist(),
+                         'm_from_screen': s.m_from_screen.tolist(),
+                         'gaze_on_srf': s.gaze_on_srf,
+                         'fixations_on_srf': s.fixations_on_srf,
+                         'timestamp': frame.timestamp,
+                         'camera_pose_3d': s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None}
+                events['surfaces'].append(datum)
 
 
         if self.running:

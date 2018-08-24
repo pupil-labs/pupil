@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -38,8 +38,8 @@ class Vis_Polyline(Visualizer_Plugin_Base):
         frame = events.get('frame')
         if not frame:
             return
-        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[]) if pt['confidence']>=self.g_pool.min_data_confidence]
-        bgra = (self.b*255,self.g*255,self.r*255,self.a*255)
+        pts = [denormalize(pt['norm_pos'], frame.img.shape[:-1][::-1], flip_y=True) for pt in events.get('gaze', []) if pt['confidence'] >= self.g_pool.min_data_confidence]
+        bgra = (self.b*255, self.g*255, self.r*255, self.a*255)
         if pts:
             pts = np.array([pts],dtype=np.int32)
             cv2.polylines(frame.img, pts, isClosed=False, color=bgra, thickness=self.thickness, lineType=cv2.LINE_AA)

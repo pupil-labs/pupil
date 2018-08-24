@@ -1,13 +1,14 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
+
 import os
 import sys
 import importlib
@@ -258,6 +259,8 @@ class Plugin(object):
         toggle_menu(False)
 
     def remove_menu(self):
+        if not self.menu.collapsed:
+            self.g_pool.menubar.collapsed = True
         self.g_pool.menubar.remove(self.menu)
         self.g_pool.iconbar.remove(self.menu_icon)
         self.menu = None
@@ -330,7 +333,7 @@ class Plugin_List(object):
         '''
         plugins may flag themselves as dead or are flagged as dead. We need to remove them.
         '''
-        for p in self._plugins[:]:
+        for p in self._plugins[::-1]:
             if not p.alive:
                 if self.g_pool.app in ("capture", "player"):
                     p.deinit_ui()
@@ -401,4 +404,8 @@ class Producer_Plugin_Base(Plugin):
 
 
 class System_Plugin_Base(Plugin):
+    pass
+
+
+class Experimental_Plugin_Base(Plugin):
     pass

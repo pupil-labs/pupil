@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -464,6 +464,45 @@ def get_nested_clusters(contours, hierarchy, min_nested_count):
             clusters[cluster[1]] = cluster
     return clusters.values()
 
+def getEllipsePts(e, num_pts=10):
+    c1 = e[0][0]
+    c2 = e[0][1]
+    a = e[1][0]
+    b = e[1][1]
+    angle = e[2]
+
+    steps = np.linspace(0, 2 * np.pi, num=num_pts, endpoint=False)
+    rot = cv2.getRotationMatrix2D((0, 0), -angle, 1)
+
+    pts1 = a / 2.0 * np.cos(steps)
+    pts2 = b / 2.0 * np.sin(steps)
+    pts = np.column_stack((pts1, pts2, np.ones(pts1.shape[0])))
+
+    pts_rot = np.matmul(rot, pts.T)
+    pts_rot = pts_rot.T
+
+    pts_rot[:, 0] += c1
+    pts_rot[:, 1] += c2
+
+    return pts_rot
+
+def marker_3d_pose(marker, cam_model, marker_diameter=7.6):
+
+    target_circle = [[0, 0], [marker_diameter, marker_diameter], 0]
+    target_pts = getEllipsePts(target_circle)
+    target_pts3D = np.zeros((target_pts.shape[0], target_pts.shape[1] + 1), dtype=np.float32)
+    target_pts3D[:, :-1] = target_pts
+    target_pts3D.shape = -1, 1, 3
+
+    e = marker['ellipses'][-1]
+
+    pts = getEllipsePts(e)
+    pts.shape = -1, 1, 2
+    pts = pts.astype('float32')
+
+    _, rot, trans = cam_model.solvePnP(target_pts3D, pts.astype('float32'))
+
+    return trans, rot
 
 if __name__ == '__main__':
     def bench():

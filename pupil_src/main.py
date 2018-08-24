@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -117,16 +117,19 @@ def launcher():
         poller.register(sub.socket, zmq.POLLIN)
         waiting_notifications = {}
 
+        TOPIC_CUTOFF = len('delayed_')
+
         while True:
             if poller.poll(timeout=250):
                 #Recv new delayed notification and store it.
-                topic,n = sub.recv()
-                n['_notify_time_'] = time()+n['delay']
+                topic, n = sub.recv()
+                n['__notify_time__'] = time() + n['delay']
                 waiting_notifications[n['subject']] = n
             #When a notifications time has come, pop from dict and send it as notification
             for s,n in list(waiting_notifications.items()):
-                if n['_notify_time_'] < time():
-                    del n['_notify_time_']
+                if n['__notify_time__'] < time():
+                    n['topic'] = n['topic'][TOPIC_CUTOFF:]
+                    del n['__notify_time__']
                     del n['delay']
                     del waiting_notifications[s]
                     pub.notify(n)
@@ -138,17 +141,18 @@ def launcher():
         #Get the root logger
         logger = logging.getLogger()
         #set log level
-        if log_level_debug:
-            logger.setLevel(logging.DEBUG)
-        else:
-            logger.setLevel(logging.INFO)
+        logger.setLevel(logging.NOTSET)
         #Stream to file
-        fh = logging.FileHandler(os.path.join(user_dir,'{}.log'.format(app)),mode='w')
+        fh = logging.FileHandler(os.path.join(user_dir,'{}.log'.format(app)),mode='w', encoding='utf-8')
         fh.setFormatter(logging.Formatter('%(asctime)s - %(processName)s - [%(levelname)s] %(name)s: %(message)s'))
         logger.addHandler(fh)
         #Stream to console.
         ch = logging.StreamHandler()
         ch.setFormatter(logging.Formatter('%(processName)s - [%(levelname)s] %(name)s: %(message)s'))
+        if log_level_debug:
+            ch.setLevel(logging.DEBUG)
+        else:
+            ch.setLevel(logging.INFO)
         logger.addHandler(ch)
         # IPC setup to receive log messages. Use zmq_tools.ZMQ_handler to send messages to here.
         sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=("logging",))
@@ -230,12 +234,8 @@ def launcher():
     elif  app == 'capture':
        cmd_push.notify({'subject':'world_process.should_start'})
     elif app == 'player':
-        if len(sys.argv) > 2:
-            rec_dir = os.path.expanduser(sys.argv[-1])
-        else:
-            rec_dir = None
+        rec_dir = os.path.expanduser(sys.argv[-1])
         cmd_push.notify({'subject':'player_drop_process.should_start','rec_dir':rec_dir})
-
 
     with Prevent_Idle_Sleep():
         while True:

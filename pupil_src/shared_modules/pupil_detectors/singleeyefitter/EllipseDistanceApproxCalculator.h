@@ -1,4 +1,3 @@
-
 #ifndef singleeyefitter_ellipsedistanceapproxcalculator_h__
 #define singleeyefitter_ellipsedistanceapproxcalculator_h__
 

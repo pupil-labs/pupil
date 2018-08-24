@@ -19,7 +19,8 @@ A class for fast computing image contours and updating them.
 
 From https://github.com/arnaud-ramey/voronoi
 
- */
+*/
+
 #ifndef IMAGECONTOUR_H__
 #define IMAGECONTOUR_H__
 

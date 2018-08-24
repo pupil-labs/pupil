@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -91,7 +91,10 @@ class HMD_Calibration(Calibration_Plugin):
         self.ref_list = []
         self.hmd_video_frame_size = hmd_video_frame_size
         self.outlier_threshold = outlier_threshold
-        self.g_pool.quickbar.insert(0, self.calib_button)
+        try:
+            self.g_pool.quickbar.insert(0, self.calib_button)
+        except AttributeError:
+            pass  # quickbar and calib_button are not defined in Service
         self.notify_all({'subject': 'calibration.started'})
 
     def stop(self):
@@ -99,7 +102,10 @@ class HMD_Calibration(Calibration_Plugin):
         logger.info("Stopping Calibration")
         self.active = False
         self.finish_calibration()
-        self.g_pool.quickbar.remove(self.calib_button)
+        try:
+            self.g_pool.quickbar.remove(self.calib_button)
+        except AttributeError:
+            pass  # quickbar and calib_button are not defined in Service
         self.notify_all({'subject': 'calibration.stopped'})
 
     def finish_calibration(self):
@@ -167,9 +173,7 @@ class HMD_Calibration(Calibration_Plugin):
 
     def recent_events(self, events):
         if self.active:
-            for p_pt in events['pupil_positions']:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
+            self.pupil_list.extend(events['pupil'])
 
     def get_init_dict(self):
         d = {}

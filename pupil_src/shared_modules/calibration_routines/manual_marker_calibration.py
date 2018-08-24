@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -68,6 +68,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         logger.info('Stopping  {}'.format(self.mode_pretty))
         self.screen_marker_state = 0
         self.active = False
+        self.smooth_pos = 0.,0.
         # self.close_window()
         self.button.status_text = ''
         if self.mode == 'calibration':
@@ -100,8 +101,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         """
         frame = events.get('frame')
         if self.active and frame:
-            recent_pupil_positions = events['pupil_positions']
-
             gray_img = frame.gray
 
             # Update the marker
@@ -179,9 +178,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                             self.notify_all({'subject':'calibration.marker_sample_completed','timestamp':self.g_pool.get_timestamp(),'record':True})
 
             # Always save pupil positions
-            for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
+            self.pupil_list.extend(events['pupil'])
 
             if self.counter:
                 if len(self.markers):

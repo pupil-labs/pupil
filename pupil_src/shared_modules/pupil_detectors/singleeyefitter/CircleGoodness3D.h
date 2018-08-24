@@ -1,5 +1,3 @@
-
-
 #ifndef singleeyefitter_CircleGoodness3D_h__
 #define singleeyefitter_CircleGoodness3D_h__
 

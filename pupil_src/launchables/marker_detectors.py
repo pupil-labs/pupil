@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -14,8 +14,7 @@ class Empty(object):
         pass
 
 
-def circle_detector(ipc_push_url, pair_url,
-                    source_path, batch_size=20):
+def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
 
     # ipc setup
     import zmq
@@ -34,60 +33,40 @@ def circle_detector(ipc_push_url, pair_url,
     logger = logging.getLogger(__name__)
 
     # imports
-    import cv2
     from time import sleep
-    from circle_detector import find_concetric_circles
-    from video_capture import File_Source, EndofVideoFileError
-    from methods import normalize
+    from video_capture import init_playback_source, EndofVideoError
+    from circle_detector import CircleTracker
 
     try:
-        src = File_Source(Empty(), source_path, timed_playback=False)
+        src = init_playback_source(Empty(), source_path, timing=None)
+
         frame = src.get_frame()
         logger.info('Starting calibration marker detection...')
         frame_count = src.get_frame_count()
 
         queue = []
+        circle_tracker = CircleTracker()
 
         while True:
             while process_pipe.new_data:
                 topic, n = process_pipe.recv()
                 if topic == 'terminate':
-                    process_pipe.send(topic='exception', payload={"reason": "User terminated."})
+                    process_pipe.send({'topic': 'exception',
+                                       "reason": "User terminated."})
                     logger.debug("Process terminated")
                     sleep(1.0)
                     return
 
             progress = 100.*frame.index/frame_count
 
-            markers = find_concetric_circles(frame.gray, min_ring_count=3)
-            if len(markers) > 0:
-                detected = True
-                marker_pos = markers[0][0][0]  # first marker innermost ellipse, pos
-                pos = normalize(marker_pos, (frame.width, frame.height), flip_y=True)
+            markers = [m for m in circle_tracker.update(frame.gray) if m['marker_type'] == 'Ref']
 
-            else:
-                detected = False
-                pos = None
-
-            if detected:
-                second_ellipse = markers[0][1]
-                col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2), int(second_ellipse[0][0]+second_ellipse[1][0]/2)
-                row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2), int(second_ellipse[0][1]+second_ellipse[1][1]/2)
-                marker_gray = frame.gray[slice(*row_slice), slice(*col_slice)]
-                avg = cv2.mean(marker_gray)[0]
-                center = marker_gray[int(second_ellipse[1][1])//2, int(second_ellipse[1][0])//2]
-                rel_shade = center-avg
-
-                ref = {}
-                ref["norm_pos"] = pos
-                ref["screen_pos"] = marker_pos
-                ref["timestamp"] = frame.timestamp
-                ref['index'] = frame.index
-                if rel_shade > 30:
-                    ref['type'] = 'stop_marker'
-                else:
-                    ref['type'] = 'calibration_marker'
-
+            if len(markers):
+                ref = {"norm_pos": markers[0]['norm_pos'],
+                       "screen_pos": markers[0]['img_pos'],
+                       "timestamp": frame.timestamp,
+                       'index_range': tuple(range(frame.index - 5, frame.index + 5)),
+                       'index': frame.index}
                 queue.append((progress, ref))
             else:
                 queue.append((progress, None))
@@ -96,18 +75,18 @@ def circle_detector(ipc_push_url, pair_url,
                 # dequeue batch
                 data = queue[:batch_size]
                 del queue[:batch_size]
-                process_pipe.send(topic='progress', payload={'data': data})
+                process_pipe.send({'topic': 'progress', 'data': data})
 
             frame = src.get_frame()
 
-    except EndofVideoFileError:
-        process_pipe.send(topic='progress', payload={'data': queue})
-        process_pipe.send(topic='finished', payload={})
+    except EndofVideoError:
+        process_pipe.send({'topic': 'progress', 'data': queue})
+        process_pipe.send({'topic': 'finished'})
         logger.debug("Process finished")
 
-    except:
+    except Exception:
         import traceback
-        process_pipe.send(topic='exception', payload={'reason': traceback.format_exc()})
+        process_pipe.send({'topic': 'exception', 'reason': traceback.format_exc()})
         logger.debug("Process raised Exception")
 
     sleep(1.0)

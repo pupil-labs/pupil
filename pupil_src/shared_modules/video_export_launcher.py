@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,15 +9,17 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Analysis_Plugin_Base
+import logging
 import os
 import time
 
 from pyglui import ui
-from exporter import export
-import background_helper as bh
 
-import logging
+import background_helper as bh
+import player_methods as pm
+from exporter import export
+from plugin import Analysis_Plugin_Base
+
 logger = logging.getLogger(__name__)
 
 
@@ -77,7 +79,6 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         self.menu.append(ui.Info_Text('Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.'))
         self.menu.append(ui.Text_Input('rec_name',self,label='Export name'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
-        self.menu.append(ui.Text_Input('in_mark',getter=self.g_pool.seek_control.get_trim_range_string,setter=self.g_pool.seek_control.set_trim_range_string,label='Frame range to export'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
 
         for job in self.exports[::-1]:
@@ -97,23 +98,19 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
             self.add_export(notification['range'], notification['export_dir'])
 
     def add_export(self, export_range, export_dir):
-        export_range = slice(*export_range)
         logger.warning("Adding new video export process.")
 
         rec_dir = self.g_pool.rec_dir
         user_dir = self.g_pool.user_dir
-        start_frame = export_range.start
-        end_frame = export_range.stop + 1  # end_frame is exclusive
+        # export_range.stop is exclusive
+        start_frame, end_frame = export_range
 
         # Here we make clones of every plugin that supports it.
         # So it runs in the current config when we lauch the exporter.
         plugins = self.g_pool.plugins.get_initializers()
 
         out_file_path = verify_out_file_path(self.rec_name, export_dir)
-        pre_computed = {'gaze_positions': self.g_pool.gaze_positions,
-                        'pupil_positions': self.g_pool.pupil_positions,
-                        'pupil_data': self.g_pool.pupil_data,
-                        'fixations': self.g_pool.fixations}
+        pre_computed = self.precomputed_for_range(export_range)
 
         args = (rec_dir, user_dir, self.g_pool.min_data_confidence, start_frame,
                 end_frame, plugins, out_file_path, pre_computed)
@@ -145,3 +142,17 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         """
         for e in self.exports:
             e.cancel()
+
+    def precomputed_for_range(self, export_range):
+        export_window = pm.exact_window(self.g_pool.timestamps, export_range)
+        pre_computed = {'gaze': self.g_pool.gaze_positions,
+                        'pupil': self.g_pool.pupil_positions,
+                        'fixations': self.g_pool.fixations}
+
+        for key, bisector in pre_computed.items():
+            init_dict = bisector.init_dict_for_window(export_window)
+            init_dict['data'] = [datum.serialized for datum in init_dict['data']]
+            pre_computed[key] = init_dict
+
+        return pre_computed
+

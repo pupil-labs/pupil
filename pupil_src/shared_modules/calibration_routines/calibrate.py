@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -236,21 +236,18 @@ def make_map_function(cx,cy,n):
     return fn
 
 
-def closest_matches_binocular(ref_pts, pupil_pts,max_dispersion=1/15.):
+def closest_matches_binocular(ref_pts, pupil_pts, max_dispersion=1/15.):
     '''
     get pupil positions closest in time to ref points.
     return list of dict with matching ref, pupil0 and pupil1 data triplets.
     '''
-    ref = ref_pts
-
-    pupil0 = [p for p in pupil_pts if p['id']==0]
-    pupil1 = [p for p in pupil_pts if p['id']==1]
+    pupil0 = [p for p in pupil_pts if p['id'] == 0]
+    pupil1 = [p for p in pupil_pts if p['id'] == 1]
 
     pupil0_ts = np.array([p['timestamp'] for p in pupil0])
     pupil1_ts = np.array([p['timestamp'] for p in pupil1])
 
-
-    def find_nearest_idx(array,value):
+    def find_nearest_idx(array, value):
         idx = np.searchsorted(array, value, side="left")
         try:
             if abs(value - array[idx-1]) < abs(value - array[idx]):
@@ -264,20 +261,20 @@ def closest_matches_binocular(ref_pts, pupil_pts,max_dispersion=1/15.):
 
     if pupil0 and pupil1:
         for r in ref_pts:
-            closest_p0_idx = find_nearest_idx(pupil0_ts,r['timestamp'])
+            closest_p0_idx = find_nearest_idx(pupil0_ts, r['timestamp'])
             closest_p0 = pupil0[closest_p0_idx]
-            closest_p1_idx = find_nearest_idx(pupil1_ts,r['timestamp'])
+            closest_p1_idx = find_nearest_idx(pupil1_ts, r['timestamp'])
             closest_p1 = pupil1[closest_p1_idx]
 
-            dispersion = max(closest_p0['timestamp'],closest_p1['timestamp'],r['timestamp']) - min(closest_p0['timestamp'],closest_p1['timestamp'],r['timestamp'])
+            dispersion = max(closest_p0['timestamp'], closest_p1['timestamp'], r['timestamp']) - min(closest_p0['timestamp'], closest_p1['timestamp'], r['timestamp'])
             if dispersion < max_dispersion:
-                matched.append({'ref':r,'pupil':closest_p0, 'pupil1':closest_p1})
+                matched.append({'ref': r, 'pupil': closest_p0, 'pupil1': closest_p1})
             else:
-                print("to far.")
+                logger.debug("Binocular match rejected due to time dispersion criterion")
     return matched
 
 
-def closest_matches_monocular(ref_pts, pupil_pts,max_dispersion=1/15.):
+def closest_matches_monocular(ref_pts, pupil_pts, max_dispersion=1/15.):
     '''
     get pupil positions closest in time to ref points.
     return list of dict with matching ref and pupil datum.
@@ -316,89 +313,59 @@ def closest_matches_monocular(ref_pts, pupil_pts,max_dispersion=1/15.):
 
 
 def preprocess_2d_data_monocular(matched_data):
-    cal_data = []
-    for pair in matched_data:
-        ref,pupil = pair['ref'],pair['pupil']
-        cal_data.append( (pupil["norm_pos"][0], pupil["norm_pos"][1],ref['norm_pos'][0],ref['norm_pos'][1]) )
+    cal_data = [(*pair['pupil']["norm_pos"],
+                 *pair['ref']["norm_pos"])
+                for pair in matched_data]
     return cal_data
+
 
 def preprocess_2d_data_binocular(matched_data):
-    cal_data = []
-    for triplet in matched_data:
-        ref,p0,p1 = triplet['ref'],triplet['pupil'],triplet['pupil1']
-        data_pt = p0["norm_pos"][0], p0["norm_pos"][1],p1["norm_pos"][0], p1["norm_pos"][1],ref['norm_pos'][0],ref['norm_pos'][1]
-        cal_data.append( data_pt )
+    cal_data = [(*triplet['pupil']["norm_pos"],
+                 *triplet['pupil1']["norm_pos"],
+                 *triplet['ref']["norm_pos"])
+                for triplet in matched_data]
     return cal_data
 
+
 def preprocess_3d_data(matched_data, g_pool):
-    ref_processed = []
-    pupil0_processed = []
-    pupil1_processed = []
+    pupil0_processed = [dp['pupil']['circle_3d']['normal'] for dp in matched_data if 'circle_3d' in dp['pupil']]
 
-    is_binocular = len(matched_data[0] ) == 3
-    for data_point in matched_data:
-        try:
-            # taking the pupil normal as line of sight vector
-            pupil0 = data_point['pupil']
-            gaze_vector0 = np.array(pupil0['circle_3d']['normal'])
-            pupil0_processed.append( gaze_vector0 )
+    pupil1_processed = [dp['pupil1']['circle_3d']['normal'] for dp in matched_data if 'pupil1' in dp and 'circle_3d' in dp['pupil1']]
 
-            if is_binocular: # we have binocular data
-                pupil1 = data_point['pupil1']
-                gaze_vector1 = np.array(pupil1['circle_3d']['normal'])
-                pupil1_processed.append( gaze_vector1 )
+    ref = np.array([dp['ref']['screen_pos'] for dp in matched_data])
+    ref_processed = g_pool.capture.intrinsics.unprojectPoints(ref, normalize=True)
 
-            # projected point uv to normal ray vector of camera
-            ref = data_point['ref']['screen_pos']
-            ref_vector = np.array(ref).reshape(-1,1,2)
-            ref_vector = g_pool.capture.intrinsics.undistortPoints(ref_vector)
-            ref_vector = cv2.convertPointsToHomogeneous(np.float32(ref_vector))
-            ref_vector.shape = (-1, 3)
-            ref_vector = ref_vector.tolist()[0]
-
-            ref_vector = ref_vector / np.linalg.norm(ref_vector)
-            # assuming a fixed (assumed) distance we get a 3d point in world camera 3d coords.
-            ref_processed.append(ref_vector)
-
-        except KeyError as e:
-            # this pupil data point did not have 3d detected data.
-            pass
-
-    return ref_processed,pupil0_processed,pupil1_processed
+    return ref_processed, pupil0_processed, pupil1_processed
 
 
 def find_rigid_transform(A, B):
-    A = np.matrix(A)
-    B = np.matrix(B)
-    assert len(A) == len(B)
-
-    N = A.shape[0]; # total points
+    # we expect the shape to be of length 2
+    assert len(A.shape) == len(B.shape) == 2
+    assert A.shape[0] == B.shape[0]
 
     centroid_A = np.mean(A, axis=0)
     centroid_B = np.mean(B, axis=0)
 
     # centre the points
-    AA = A - np.tile(centroid_A, (N, 1))
-    BB = B - np.tile(centroid_B, (N, 1))
+    A -= centroid_A
+    B -= centroid_B
 
     # dot is matrix multiplication for array
-    H = np.transpose(AA) * BB
-
+    H = A.T @ B
     U, S, Vt = np.linalg.svd(H)
-
-    R = Vt.T * U.T
-
+    R = Vt.T @ U.T
     # special reflection case
     if np.linalg.det(R) < 0:
-       print("Reflection detected")
-       Vt[2,:] *= -1
-       R = Vt.T * U.T
+        logger.info("Reflection detected")
+        Vt[2, :] *= -1
+        R = Vt.T * U.T
 
-    t = -R*centroid_A.T + centroid_B.T
+    t = -R @ centroid_A.T + centroid_B.T
 
-    return np.array(R), np.array(t).reshape(3)
+    return R, t.reshape(3)
 
-def calculate_residual_3D_Points( ref_points, gaze_points, eye_to_world_matrix ):
+
+def calculate_residual_3D_Points(ref_points, gaze_points, eye_to_world_matrix):
 
     average_distance = 0.0
     distance_variance = 0.0

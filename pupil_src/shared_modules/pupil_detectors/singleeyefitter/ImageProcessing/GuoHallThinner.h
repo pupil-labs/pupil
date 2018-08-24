@@ -26,7 +26,7 @@ More info: http://en.wikipedia.org/wiki/Thinning_(morphology)
 This class is derived from https://github.com/arnaud-ramey/voronoi,
 and contains the fast Guo Hall thinner algorithm
 
- */
+*/
 
 #ifndef GUOHALLTHINNER_H__
 #define GUOHALLTHINNER_H__

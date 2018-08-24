@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -72,7 +72,7 @@ cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    )
     py_result['sphere'] = sphere
 
     if str(result.projectedSphere.center[0]) == 'nan':
-        projectedSphere = {'axes': (0,0), 'angle': 90.0, 'center': (0,0)}
+        projectedSphere = {'axes': (0.,0.), 'angle': 90.0, 'center': (0.,0.)}
     else:
         projectedSphere = {}
         projectedSphere['center'] = (result.projectedSphere.center[0] + frame.width / 2.0 ,frame.height / 2.0  -  result.projectedSphere.center[1])

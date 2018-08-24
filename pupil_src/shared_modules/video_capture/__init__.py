@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -18,17 +18,22 @@ source provides the stream of image frames.
 These backends are available:
 - UVC: Local USB sources
 - NDSI: Remote Pupil Mobile sources
-- Fake: Fallback, static random image
+- Fake: Fallback, static grid image
 - File: Loads video from file
 '''
+
+import os
+import numpy as np
+from glob import glob
+from camera_models import load_intrinsics
 
 import logging
 logger = logging.getLogger(__name__)
 
-from .base_backend import InitialisationError, StreamError
+from .base_backend import InitialisationError, StreamError, EndofVideoError
 from .base_backend import Base_Source, Base_Manager
 from .fake_backend import Fake_Source, Fake_Manager
-from .file_backend import FileCaptureError, EndofVideoFileError, FileSeekError
+from .file_backend import FileSeekError
 from .file_backend import File_Source, File_Manager
 from .uvc_backend import UVC_Source,  UVC_Manager
 
@@ -50,3 +55,10 @@ except ImportError:
 else:
     source_classes.append(Realsense_Source)
     manager_classes.append(Realsense_Manager)
+
+
+def init_playback_source(g_pool, source_path=None, *args, **kwargs):
+    if source_path is None or os.path.splitext(source_path)[1] == '.fake':
+        return Fake_Source(g_pool, source_path=source_path, *args, **kwargs)
+    else:
+        return File_Source(g_pool, source_path=source_path, *args, **kwargs)

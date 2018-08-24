@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -23,6 +23,7 @@ from time import time
 
 import platform
 import logging
+import re
 
 assert(av.__version__ >= '0.3.0')
 logger = logging.getLogger(__name__)
@@ -64,7 +65,14 @@ class Audio_Capture(Plugin):
 
         def audio_dev_getter():
             # fetch list of currently available
+            audio_src_val = None
+            if self.audio_devices_dict is not None:
+                if self.audio_src in self.audio_devices_dict.keys():
+                    audio_src_val = self.audio_devices_dict[self.audio_src]
             self.audio_devices_dict = Audio_Input_Dict()
+            if audio_src_val is not None:
+                self.audio_devices_dict[self.audio_src] = audio_src_val
+
             devices = list(self.audio_devices_dict.keys())
             return devices, devices
 
@@ -151,7 +159,11 @@ class Audio_Capture(Plugin):
             if platform.system() == "Darwin":
                 in_container = av.open('none:{}'.format(audio_src), format="avfoundation")
             elif platform.system() == "Linux":
-                in_container = av.open('hw:{}'.format(audio_src), format="alsa")
+                print("audio src = {}".format(audio_src))
+                dev_str = re.search("(hw:\s*\d+,\s*\d+)", audio_src)
+                in_container = av.open(dev_str.group(0), format="alsa")
+            elif platform.system() == "Windows":
+                in_container = av.open('audio={}'.format(audio_src), format="dshow", options={'audio_buffer_size':'23'})
             else:
                 raise av.AVError('Platform does not support audio capture.')
         except av.AVError as err:
@@ -172,7 +184,6 @@ class Audio_Capture(Plugin):
         out_container = None
         out_stream = None
         timestamps = None
-        out_frame_num = 0
         in_frame_size = 0
 
         stream_epoch = in_stream.start_time * in_stream.time_base
@@ -196,22 +207,29 @@ class Audio_Capture(Plugin):
             # Bind nonlocal variables, https://www.python.org/dev/peps/pep-3104/
             nonlocal out_container, out_stream, in_stream, in_frame_size, timestamps, out_frame_num
             if out_container is not None:
-                packet = out_stream.encode(audio_frame)
-                while packet is not None:
-                    out_frame_num += 1
-                    out_container.mux(packet)
-                    packet = out_stream.encode(audio_frame)
+                timestamps.append(timestamp)
+                audio_frame.pts = None
+                out_packets = [out_stream.encode(audio_frame)]
+                while out_packets[-1]:
+                    out_packets.append(out_stream.encode(None))
+                for out_packet in out_packets:
+                    if out_packet is not None:
+                        out_container.mux(out_packet)
                 out_container.close()
 
+                out_frame_num = out_stream.frames
                 in_frame_rate = in_stream.rate
                 # in_stream.frame_size does not return the correct value.
                 out_frame_size = out_stream.frame_size
                 out_frame_rate = out_stream.rate
 
-                old_ts_idx = np.arange(0, len(timestamps) * in_frame_size, in_frame_size) / in_frame_rate
                 new_ts_idx = np.arange(0, out_frame_num * out_frame_size, out_frame_size) / out_frame_rate
-                interpolate = interp1d(old_ts_idx, timestamps, bounds_error=False, fill_value='extrapolate')
-                new_ts = interpolate(new_ts_idx)
+                if in_frame_rate != out_frame_rate:
+                    old_ts_idx = np.arange(0, len(timestamps) * in_frame_size, in_frame_size) / in_frame_rate
+                    interpolate = interp1d(old_ts_idx, timestamps, bounds_error=False, fill_value='extrapolate')
+                    new_ts = interpolate(new_ts_idx)
+                else:
+                    new_ts = timestamps[0] + new_ts_idx
 
                 ts_loc = os.path.join(self.rec_dir, 'audio_timestamps.npy')
                 np.save(ts_loc, new_ts)
@@ -226,20 +244,23 @@ class Audio_Capture(Plugin):
             # finally add pupil timebase offset to adjust for settable timebase.
             for audio_frame in packet.decode():
                 timestamp = audio_frame.pts * in_stream.time_base + clock_differences - self.g_pool.timebase.value
+
                 if recording.is_set():
                     if out_container is None:
                         rec_file = os.path.join(self.rec_dir, 'audio.mp4')
                         out_container = av.open(rec_file, 'w')
-                        out_stream = out_container.add_stream('aac')
+                        out_stream = out_container.add_stream('aac', rate=in_stream.rate)
                         out_frame_num = 0
                         in_frame_size = audio_frame.samples  # set here to make sure full packet size is used
                         timestamps = []
 
                     timestamps.append(timestamp)
-                    packet = out_stream.encode(audio_frame)
-                    if packet is not None:
-                        out_frame_num += 1
-                        out_container.mux(packet)
+                    audio_frame.pts = None
+                    out_packets = [out_stream.encode(audio_frame)]
+                    for out_packet in out_packets:
+                        if out_packet is not None:
+                            out_container.mux(out_packet)
+
                 elif out_container is not None:
                     # recording stopped
                     close_recording()

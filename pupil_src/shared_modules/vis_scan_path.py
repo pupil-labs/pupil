@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -16,7 +16,7 @@ from pyglui import ui
 from methods import denormalize,normalize
 import logging
 logger = logging.getLogger(__name__)
-
+from copy import deepcopy
 
 class Vis_Scan_Path(Analysis_Plugin_Base):
     """docstring
@@ -86,23 +86,23 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
         if same_frame and not self.gaze_changed:
             # paused
             # re-use last result
-            events['gaze_positions'] = self.past_gaze_positions[:]
+            events['gaze'] = self.past_gaze_positions[:]
         else:
             # trim gaze that is too old
-            if events['gaze_positions']:
-                now = events['gaze_positions'][0]['timestamp']
+            if events['gaze']:
+                now = events['gaze'][0]['timestamp']
                 cutoff = now-self.timeframe
                 updated_past_gaze = [g for g in updated_past_gaze if g['timestamp']>cutoff]
 
             #inject the scan path gaze points into recent_gaze_positions
-            events['gaze_positions'] = updated_past_gaze + events['gaze_positions']
-            events['gaze_positions'].sort(key=lambda x: x['timestamp']) #this may be redundant...
+            events['gaze'] = updated_past_gaze + events['gaze']
+            events['gaze'].sort(key=lambda x: x['timestamp']) #this may be redundant...
 
         #update info for next frame.
         self.gaze_changed = False
         self.prev_gray = gray_img
         self.prev_frame_idx = frame.index
-        self.past_gaze_positions = events['gaze_positions']
+        self.past_gaze_positions = deepcopy(events['gaze'])
 
     def init_ui(self):
         self.add_menu()

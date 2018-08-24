@@ -1,13 +1,14 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
+
 from plugin import System_Plugin_Base
 from pyglui.cygl.utils import Render_Target,push_ortho,pop_ortho
 import logging
@@ -17,17 +18,10 @@ from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 import glfw
 
-from time import time
-
-class Log_to_Callback(logging.Handler):
-    def __init__(self,cb):
-        super().__init__()
-        self.cb = cb
-    def emit(self,record):
-        self.cb(record)
 
 def color_from_level(lvl):
     return {"CRITICAL":(.8,0,0,1),"ERROR":(1,0,0,1),"WARNING":(1.0,.8,0,1),"INFO":(1,1,1,1),"DEBUG":(1,1,1,.5),"NOTSET":(.5,.5,.5,.2)}[lvl]
+
 
 def duration_from_level(lvl):
     return {"CRITICAL":3,"ERROR":2,"WARNING":1.5,"INFO":1,"DEBUG":1,"NOTSET":1}[lvl]
@@ -35,6 +29,8 @@ def duration_from_level(lvl):
 
 class Log_Display(System_Plugin_Base):
     """docstring for Log_Display"""
+    subscriptions = ('logging.info', 'logging.warning', 'logging.error', 'logging.critical')
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.rendered_log = []
@@ -52,8 +48,10 @@ class Log_Display(System_Plugin_Base):
 
         self.window_size = glfwGetFramebufferSize(glfwGetCurrentContext())
         self.tex = Render_Target(*self.window_size)
-        self._socket = zmq_tools.Msg_Receiver(self.g_pool.zmq_ctx,self.g_pool.ipc_sub_url,('logging',))
 
+        self._socket = zmq_tools.Msg_Receiver(self.g_pool.zmq_ctx,
+                                              self.g_pool.ipc_sub_url,
+                                              self.subscriptions)
 
     def on_log(self,record):
         if self.alpha < 1.0:
@@ -66,7 +64,7 @@ class Log_Display(System_Plugin_Base):
         self.alpha = min(self.alpha, 6.)
 
     def on_window_resize(self, window, w, h):
-        self.window_scale = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+        self.window_scale = glfw.getHDPIFactor(window)
         self.glfont.set_size(32*self.window_scale)
         self.window_size = w, h
         self.tex.resize(*self.window_size)

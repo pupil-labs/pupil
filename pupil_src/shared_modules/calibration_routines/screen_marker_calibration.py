@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -69,12 +69,13 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     Points are collected at sites - not between
 
     """
-    def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
+    def __init__(self, g_pool, fullscreen=True, marker_scale=1.0,
+                 sample_duration=40, monitor_idx=0):
         super().__init__(g_pool)
         self.screen_marker_state = 0.
-        self.sample_duration =  sample_duration # number of frames to sample per site
-        self.lead_in = 25 #frames of marker shown before starting to sample
-        self.lead_out = 5 #frames of markers shown after sampling is donw
+        self.sample_duration = sample_duration  # number of frames to sample per site
+        self.lead_in = 25  # frames of marker shown before starting to sample
+        self.lead_out = 5  # frames of markers shown after sampling is donw
 
         self.active_site = None
         self.sites = []
@@ -88,6 +89,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         self.menu = None
 
+        self.monitor_idx = monitor_idx
         self.fullscreen = fullscreen
         self.clicks_to_close = 5
 
@@ -101,7 +103,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if system() == 'Linux':
             self.window_position_default = (0, 0)
         elif system() == 'Windows':
-            self.window_position_default = (8, 31)
+            self.window_position_default = (8, 90)
         else:
             self.window_position_default = (0, 0)
 
@@ -111,20 +113,24 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def init_ui(self):
         super().init_ui()
         self.menu.label = "Screen Marker Calibration"
-        self.monitor_idx = 0
-        self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
-        #primary_monitor = glfwGetPrimaryMonitor()
+
+        def get_monitors_idx_list():
+            monitors = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+            return range(len(monitors)),monitors
+
+        if self.monitor_idx not in get_monitors_idx_list()[0]:
+            logger.warning("Monitor at index %s no longer availalbe using default"%self.monitor_idx)
+            self.monitor_idx = 0
 
         self.menu.append(ui.Info_Text("Calibrate gaze parameters using a screen based animation."))
-
-        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
+        self.menu.append(ui.Selector('monitor_idx',self,selection_getter = get_monitors_idx_list,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
         self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
         self.menu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
 
     def start(self):
         if not self.g_pool.capture.online:
-            logger.error("{} requireds world capture video input.".format(self.mode_pretty))
+            logger.error("{} requiers world capture video input.".format(self.mode_pretty))
             return
         super().start()
         audio.say("Starting {}".format(self.mode_pretty))
@@ -152,7 +158,12 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def open_window(self, title='new_window'):
         if not self._window:
             if self.fullscreen:
-                monitor = glfwGetMonitors()[self.monitor_idx]
+                try:
+                    monitor = glfwGetMonitors()[self.monitor_idx]
+                except:
+                    logger.warning("Monitor at index %s no longer availalbe using default"%self.monitor_idx)
+                    self.monitor_idx = 0
+                    monitor = glfwGetMonitors()[self.monitor_idx]
                 width, height, redBits, blueBits, greenBits, refreshRate = glfwGetVideoMode(monitor)
             else:
                 monitor = None
@@ -215,7 +226,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def recent_events(self, events):
         frame = events.get('frame')
         if self.active and frame:
-            recent_pupil_positions = events['pupil_positions']
             gray_img = frame.gray
 
             if self.clicks_to_close <=0:
@@ -250,9 +260,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 self.ref_list.append(ref)
 
             # Always save pupil positions
-            for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
+            self.pupil_list.extend(events['pupil'])
 
             if on_position and len(self.markers) and events.get('fixations', []):
                 fixation_boost = 5
@@ -275,7 +283,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             # use np.arrays for per element wise math
             self.display_pos = np.array(self.active_site)
             self.on_position = on_position
-            self.button.status_text = '{} / {}'.format(self.active_site, 9)
+            self.button.status_text = '{}'.format(self.active_site)
 
         if self._window:
             self.gl_display_in_window()
@@ -310,7 +318,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         clear_gl_screen()
 
-        hdpi_factor = glfwGetFramebufferSize(self._window)[0]/glfwGetWindowSize(self._window)[0]
+        hdpi_factor = getHDPIFactor(self._window)
         r = self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
@@ -348,6 +356,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         d = {}
         d['fullscreen'] = self.fullscreen
         d['marker_scale'] = self.marker_scale
+        d['monitor_idx'] = self.monitor_idx
         return d
 
     def deinit_ui(self):

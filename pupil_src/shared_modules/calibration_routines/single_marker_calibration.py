@@ -1,7 +1,7 @@
 '''
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2017  Pupil Labs
+Copyright (C) 2012-2018 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -46,7 +46,8 @@ class Single_Marker_Calibration(Calibration_Plugin):
        at the marker to quickly sample a wide range gaze angles.
     """
 
-    def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
+    def __init__(self, g_pool, marker_mode='Full screen', marker_scale=1.0,
+                 sample_duration=40, monitor_idx=0):
         super().__init__(g_pool)
         self.screen_marker_state = 0.
         self.lead_in = 25  # frames of marker shown before starting to sample
@@ -61,7 +62,12 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
         self.menu = None
 
-        self.fullscreen = fullscreen
+        self.stop_marker_found = False
+        self.auto_stop = 0
+        self.auto_stop_max = 30
+
+        self.monitor_idx = monitor_idx
+        self.marker_mode = marker_mode
         self.clicks_to_close = 5
 
         self.glfont = fontstash.Context()
@@ -74,7 +80,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
         if system() == 'Linux':
             self.window_position_default = (0, 0)
         elif system() == 'Windows':
-            self.window_position_default = (8, 31)
+            self.window_position_default = (8, 90)
         else:
             self.window_position_default = (0, 0)
 
@@ -83,18 +89,24 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def init_ui(self):
         super().init_ui()
-        self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
-        #primary_monitor = glfwGetPrimaryMonitor()
-        self.menu.append(ui.Info_Text("Calibrate gaze parameters using a single gae targets and active head movements."))
-        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
-        self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
+        def get_monitors_idx_list():
+            monitors = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+            return range(len(monitors)),monitors
+
+        if self.monitor_idx not in get_monitors_idx_list()[0]:
+            logger.warning("Monitor at index %s no longer availalbe using default"%idx)
+            self.monitor_idx = 0
+
+        self.menu.append(ui.Info_Text("Calibrate using a single marker. Gaze at the center of the marker and move your head (e.g. in a slow spiral movement). This calibration method enables you to quickly sample a wide range of gaze angles and cover a large range of your FOV."))
+        self.menu.append(ui.Selector('marker_mode', self, selection=['Full screen', 'Window', 'Manual'], label='Marker display mode'))
+        self.menu.append(ui.Selector('monitor_idx',self,selection_getter = get_monitors_idx_list,label='Monitor'))
         self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
 
     def start(self):
         if not self.g_pool.capture.online:
-            logger.error("Calibration required world capture video input.")
+            logger.error("This calibration requires world capture video input.")
             return
         super().start()
         audio.say("Starting {}".format(self.mode_pretty))
@@ -104,19 +116,26 @@ class Single_Marker_Calibration(Calibration_Plugin):
         self.ref_list = []
         self.pupil_list = []
         self.clicks_to_close = 5
-        self.open_window(self.mode_pretty)
+
+        if self.marker_mode != 'Manual':
+            self.open_window(self.mode_pretty)
 
     def open_window(self, title='new_window'):
         if not self._window:
-            if self.fullscreen:
-                monitor = glfwGetMonitors()[self.monitor_idx]
+            if self.marker_mode == 'Full screen':
+                try:
+                    monitor = glfwGetMonitors()[self.monitor_idx]
+                except:
+                    logger.warning("Monitor at index %s no longer availalbe using default"%idx)
+                    self.monitor_idx = 0
+                    monitor = glfwGetMonitors()[self.monitor_idx]
                 width, height, redBits, blueBits, greenBits, refreshRate = glfwGetVideoMode(monitor)
             else:
                 monitor = None
-                width,height= 640,360
+                width, height= 640, 360
 
             self._window = glfwCreateWindow(width, height, title, monitor=monitor, share=glfwGetCurrentContext())
-            if not self.fullscreen:
+            if self.marker_mode == 'Window':
                 glfwSetWindowPos(self._window, self.window_position_default[0], self.window_position_default[1])
 
             glfwSetInputMode(self._window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN)
@@ -180,24 +199,31 @@ class Single_Marker_Calibration(Calibration_Plugin):
     def recent_events(self, events):
         frame = events.get('frame')
         if self.active and frame:
-            recent_pupil_positions = events['pupil_positions']
             gray_img = frame.gray
 
-            if self.clicks_to_close <=0:
+            if self.clicks_to_close <= 0:
                 self.stop()
                 return
 
             # Update the marker
             self.markers = self.circle_tracker.update(gray_img)
-            # Screen marker takes only Ref marker
-            self.markers = [marker for marker in self.markers if marker['marker_type'] == 'Ref']
 
+            self.stop_marker_found = False
             if len(self.markers):
                 # Set the pos to be the center of the first detected marker
                 marker_pos = self.markers[0]['img_pos']
                 self.pos = self.markers[0]['norm_pos']
+                # Check if there are stop markers
+                for marker in self.markers:
+                    if marker['marker_type'] == 'Stop':
+                        self.auto_stop += 1
+                        self.stop_marker_found = True
+                        break
             else:
                 self.pos = None  # indicate that no reference is detected
+
+            if self.stop_marker_found is False:
+                self.auto_stop = 0
 
             # Check if there are more than one markers
             if len(self.markers) > 1:
@@ -207,7 +233,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
             # only save a valid ref position if within sample window of calibraiton routine
             on_position = self.lead_in < self.screen_marker_state
 
-            if on_position and len(self.markers):
+            if on_position and len(self.markers) and not self.stop_marker_found:
                 ref = {}
                 ref["norm_pos"] = self.pos
                 ref["screen_pos"] = marker_pos
@@ -215,15 +241,16 @@ class Single_Marker_Calibration(Calibration_Plugin):
                 self.ref_list.append(ref)
 
             # always save pupil positions
-            for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
-
+            self.pupil_list.extend(events['pupil'])
 
             # Animate the screen marker
             if len(self.markers) or not on_position:
                 self.screen_marker_state += 1
 
+            # Stop if autostop condition is satisfied:
+            if self.auto_stop >= self.auto_stop_max:
+                self.auto_stop = 0
+                self.stop()
 
             # use np.arrays for per element wise math
             self.on_position = on_position
@@ -239,16 +266,27 @@ class Single_Marker_Calibration(Calibration_Plugin):
             show the detected postion even if not published
         """
 
-        # debug mode within world will show green ellipses around detected ellipses
         if self.active:
+            # draw the largest ellipse of all detected markers
             for marker in self.markers:
-                e = marker['ellipses'][-1]  # outermost ellipse
-                pts = cv2.ellipse2Poly((int(e[0][0]), int(e[0][1])),
-                                       (int(e[1][0]/2), int(e[1][1]/2)),
-                                       int(e[-1]), 0, 360, 15)
-                draw_polyline(pts, 1, RGBA(0.,1.,0.,1.))
+                e = marker['ellipses'][-1]
+                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                    (int(e[1][0]/2),int(e[1][1]/2)),
+                                    int(e[-1]),0,360,15)
+                draw_polyline(pts,color=RGBA(0.,1.,0,1.))
                 if len(self.markers) > 1:
                     draw_polyline(pts, 1, RGBA(1., 0., 0., .5), line_type=gl.GL_POLYGON)
+
+            # draw indicator on the stop marker(s)
+            if self.auto_stop:
+                for marker in self.markers:
+                    if marker['marker_type'] == 'Stop':
+                        e = marker['ellipses'][-1]
+                        pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                            (int(e[1][0]/2),int(e[1][1]/2)),
+                                            int(e[-1]),0,360,360//self.auto_stop_max)
+                        indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
+                        draw_polyline(indicator,color=RGBA(8.,0.1,0.1,.8),line_type=gl.GL_POLYGON)
 
     def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()
@@ -260,7 +298,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
         clear_gl_screen()
 
-        hdpi_factor = glfwGetFramebufferSize(self._window)[0]/glfwGetWindowSize(self._window)[0]
+        hdpi_factor = getHDPIFactor(self._window)
         r = self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
@@ -296,8 +334,9 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
     def get_init_dict(self):
         d = {}
-        d['fullscreen'] = self.fullscreen
+        d['marker_mode'] = self.marker_mode
         d['marker_scale'] = self.marker_scale
+        d['monitor_idx'] = self.monitor_idx
         return d
 
     def deinit_ui(self):
