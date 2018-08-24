@@ -53,7 +53,8 @@ class GUI:
                 if surface in self._edit_surf_corners:
                     self._draw_surface_corner_handles(surface)
 
-            elif self.state == State.SHOW_HEATMAP:
+            # TODO delete alternative condition and make elif
+            if self.state == State.SHOW_HEATMAP or self.state == State.SHOW_SURF:
                 self._draw_heatmap(surface)
 
             self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
@@ -248,10 +249,7 @@ class GUI:
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glPushMatrix()
         gl.glLoadIdentity()
-        gl.glOrtho(
-            0, self.tracker.camera_model.resolution[0],
-            self.tracker.camera_model.resolution[1], 0, -1, 1
-        )
+        gl.glOrtho(0, 1, 1, 0, -1, 1)
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glPushMatrix()
         # apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
@@ -457,10 +455,7 @@ class Surface_Window:
             gl.glLoadIdentity()
             # gl.glOrtho(0, 1, 0, 1, -1, 1)  # gl coord convention
             # gl.glOrtho(0, 640, 0, 640, -1, 1)  # gl coord convention
-            gl.glOrtho(
-                0, self.surface.camera_model.resolution[0],
-                self.surface.camera_model.resolution[1], 0, -1, 1
-            )
+            gl.glOrtho(0, 1, 1, 0, -1, 1)
             gl.glMatrixMode(gl.GL_MODELVIEW)
             gl.glPushMatrix()
             # apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends

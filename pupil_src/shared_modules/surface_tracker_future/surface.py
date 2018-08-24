@@ -72,6 +72,7 @@ class Surface:
         """
         orig_shape = points.shape
         points = camera_model.undistortPoints(points)
+        points /= camera_model.resolution
         points.shape = (-1, 1, 2)
         point_on_surf = cv2.perspectiveTransform(points, self.img_to_surf_trans)
         point_on_surf.shape = orig_shape
@@ -217,6 +218,8 @@ class Surface:
         reg_verts.shape = (-1, 2)
 
         vis_verts_undist = camera_model.undistortPoints(vis_verts)
+        vis_verts /= camera_model.resolution
+        vis_verts_undist /= camera_model.resolution
         self.img_to_surf_trans, self.surf_to_img_trans = self._findHomographies(
             reg_verts, vis_verts_undist
         )
