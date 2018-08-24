@@ -104,7 +104,8 @@ class Seek_Control(System_Plugin_Base):
         elif not new_state:
             self.start_ts = self.g_pool.capture.get_frame_index_ts()[1]
 
-        self.start_time = time.monotonic()
+        if not self.was_seeking:
+            self.start_time = time.monotonic()
         self.g_pool.capture.play = new_state
         self.time_slew = 0
 
@@ -112,8 +113,9 @@ class Seek_Control(System_Plugin_Base):
     def current_playback_time(self):
         playback_time = self.start_ts - self.time_slew
 
-        if self.g_pool.capture.play:
+        if self.g_pool.capture.play and not self.was_seeking:
             playback_time += (time.monotonic() - self.start_time) * self._playback_speed
+
         return playback_time
 
     def on_notify(self, notification):
@@ -163,6 +165,14 @@ class Seek_Control(System_Plugin_Base):
                 "new_range": (self.trim_left, self.trim_right),
             }
         )
+        self.notify_all({'subject': 'seek_control.was_seeking'})
+
+    def end_of_seek(self):
+        '''Signal end of seeking by file backend'''
+        if self.was_seeking and self.play:
+            print("End of seek - starting clock")
+            self.start_time = time.monotonic()
+            self.was_seeking = False
 
     @property
     def trim_left_ts(self):
@@ -321,7 +331,7 @@ class Seek_Control(System_Plugin_Base):
                 time.sleep(time_diff)
         else:
             time.sleep(1 / 60)
-            self.was_seeking = False
+            #self.was_seeking = False
 
     def get_init_dict(self):
         return {"playback_speed": self._playback_speed}
