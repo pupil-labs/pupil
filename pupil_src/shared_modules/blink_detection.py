@@ -109,7 +109,7 @@ class Blink_Detection(Analysis_Plugin_Base):
     def recent_events(self, events={}):
         events["blinks"] = []
         self._recent_blink = None
-        self.history.extend(events.get("pupil_positions", []))
+        self.history.extend(events.get("pupil", []))
 
         try:  # use newest gaze point to determine age threshold
             age_threshold = self.history[-1]["timestamp"] - self.history_length
