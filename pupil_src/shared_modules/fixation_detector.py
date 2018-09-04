@@ -22,13 +22,12 @@ Terms
 """
 
 import csv
-
-# logging
 import logging
 import os
 from bisect import bisect_left, bisect_right
 from collections import deque
 from itertools import chain
+from time import time
 
 import msgpack
 import numpy as np
@@ -261,6 +260,9 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
     fixations will have their method field set to "gaze".
     """
 
+    session_data_version = 1
+    session_data_name = "offline_fixations"
+
     def __init__(
         self,
         g_pool,
@@ -276,13 +278,16 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.max_duration = max_duration
         self.show_fixations = show_fixations
         self.current_fixation_details = None
-        self.fixation_data = deque()
         self.prev_index = -1
         self.bg_task = None
         self.status = ""
-        self.notify_all(
-            {"subject": "fixation_detector.should_recalculate", "delay": .5}
-        )
+
+        self.cache_dir = os.path.join(g_pool.rec_dir, "offline_data")
+        os.makedirs(self.cache_dir, exist_ok=True)
+
+        self.load_offline_data()
+        self._correlate()
+        self.notify_all({"subject": "producers.should_refresh", "delay": 1.0})
 
     def init_ui(self):
         self.add_menu()
@@ -430,8 +435,14 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
 
     def on_notify(self, notification):
         if notification["subject"] == "gaze_positions_changed":
+            if self.recent_gaze_token == notification["token"]:
+                logger.debug("Duplicated gaze changed notification")
+                return
             logger.info("Gaze postions changed. Recalculating.")
+            self.recent_gaze_token = notification["token"]
             self._classify()
+            self.correlate_publish_cache(token=time())  # reset fixation data
+
         if notification["subject"] == "min_data_confidence_changed":
             logger.info("Minimal data confidence changed. Recalculating.")
             self._classify()
@@ -439,6 +450,8 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             self._classify()
         elif notification["subject"] == "should_export":
             self.export_fixations(notification["range"], notification["export_dir"])
+        elif notification["subject"] == "producers.should_refresh":
+            self._publish()
 
     def _classify(self):
         """
@@ -465,9 +478,9 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             self.g_pool.min_data_confidence,
         )
 
-        self.fixation_data = deque()
-        self.fixation_start_ts = deque()
-        self.fixation_stop_ts = deque()
+        self.fixation_data = []
+        self.fixation_start_ts = []
+        self.fixation_stop_ts = []
         self.bg_task = bh.Task_Proxy(
             "Fixation detection", detect_fixations, args=generator_args
         )
@@ -492,7 +505,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                     self.menu_icon.indicator_stop = progress
             if self.bg_task.completed:
                 self.status = "{} fixations detected".format(len(self.fixation_data))
-                self.correlate_and_publish()
+                self.correlate_publish_cache(token=time())
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.
 
@@ -564,11 +577,76 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             self.current_fixation_details.text = info
             self.prev_index = frame.index
 
-    def correlate_and_publish(self):
+    def correlate_publish_cache(self, token):
+        self.recent_fixation_token = token
+        self._correlate()
+        self._publish()
+        self.save_offline_data()
+
+    def _correlate(self):
         self.g_pool.fixations = pm.Affiliator(
             self.fixation_data, self.fixation_start_ts, self.fixation_stop_ts
         )
-        self.notify_all({"subject": "fixations_changed", "delay": 1})
+
+    def _publish(self):
+        self.notify_all(
+            {"subject": "fixations_changed", "token": self.recent_fixation_token}
+        )
+
+    def save_offline_data(self):
+        ts_data_zip = zip(self.fixation_start_ts, self.fixation_data)
+        with fm.PLData_Writer(self.cache_dir, self.session_data_name) as writer:
+            for timestamp, datum in ts_data_zip:
+                writer.append_serialized(timestamp, "fixations", datum.serialized)
+            stop_ts_path = os.path.join(self.cache_dir, self.stop_ts_name)
+            np.save(stop_ts_path, self.fixation_stop_ts)
+
+        session_data = {
+            "version": self.session_data_version,
+            "gaze_token": self.recent_gaze_token,
+            "fixation_token": self.recent_fixation_token,
+        }
+        cache_path = os.path.join(self.cache_dir, self.meta_cache_name)
+        fm.save_object(session_data, cache_path)
+        logger.info("Cached offline fixation data to {}".format(cache_path))
+
+    def load_offline_data(self):
+        cache_path = os.path.join(self.cache_dir, self.meta_cache_name)
+        try:
+            session_data = fm.load_object(cache_path)
+            if session_data["version"] != self.session_data_version:
+                logger.warning(
+                    "Session data of deprecated version found. Loading defaults."
+                )
+                raise TypeError
+        except (FileNotFoundError, TypeError):
+            session_data = self.default_session_data()
+
+        self.recent_gaze_token = session_data["gaze_token"]
+        self.recent_fixation_token = session_data["fixation_token"]
+
+        try:
+            stop_ts_path = os.path.join(self.cache_dir, self.stop_ts_name)
+            self.fixation_stop_ts = np.load(stop_ts_path)
+            fixations = fm.load_pldata_file(self.cache_dir, self.session_data_name)
+            self.fixation_start_ts = fixations.timestamps
+            self.fixation_data = fixations.data
+        except FileNotFoundError:
+            self.fixation_data = []
+            self.fixation_start_ts = []
+            self.fixation_stop_ts = []
+        self.status = "{} fixations detected".format(len(self.fixation_data))
+
+    def default_session_data(self):
+        return {"gaze_token": time(), "fixation_token": time()}
+
+    @property
+    def meta_cache_name(self):
+        return self.session_data_name + ".meta"
+
+    @property
+    def stop_ts_name(self):
+        return self.session_data_name + "_stop_timestamps.npy"
 
     @classmethod
     def csv_representation_keys(self):
@@ -799,4 +877,3 @@ class Fixation_Detector(Fixation_Detector_Base):
             "min_duration": self.min_duration,
             "confidence_threshold": self.confidence_threshold,
         }
-

@@ -86,11 +86,13 @@ class Bisector(object):
         return {'data': self.data[start_idx:stop_idx],
                 'data_ts': self.data_ts[start_idx:stop_idx]}
 
+
 class Mutable_Bisector(Bisector):
     def insert(self, timestamp, datum):
         insert_idx = np.searchsorted(self.data_ts, timestamp)
         self.data_ts = np.insert(self.data_ts, insert_idx, timestamp)
         self.data.insert(insert_idx, datum)
+
 
 class Affiliator(Bisector):
     """docstring for ClassName"""
