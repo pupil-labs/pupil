@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,18 +7,19 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 import os
 import sys
 import importlib
 from time import time
 import logging
+
 logger = logging.getLogger(__name__)
-'''
+"""
 A simple example Plugin: 'display_recent_gaze.py'
 It is a good starting point to build your own plugin.
-'''
+"""
 
 
 class Plugin(object):
@@ -29,8 +30,9 @@ class Plugin(object):
     this list will have its members called with all methods invoked.
 
     """
+
     # if you have a plugin that can exist multiple times make this false in your derived class
-    uniqueness = 'by_class'
+    uniqueness = "by_class"
     # uniqueness = 'not_unique'
     # uniqueness = 'by_base_class'
 
@@ -45,25 +47,25 @@ class Plugin(object):
 
     # menu icon font, possible values `roboto`, `opensans`, `pupil_icons`,
     # or custom loaded font name
-    icon_font = 'roboto'
-    icon_chr = '?'  # character shown in menu icon
+    icon_font = "roboto"
+    icon_chr = "?"  # character shown in menu icon
 
     def __init__(self, g_pool):
         self.g_pool = g_pool
 
     def init_ui(self):
-        '''
+        """
         Called when the context will have a gl window with us. You can do your init for that here.
-        '''
+        """
         pass
 
     def recent_events(self, events):
-        '''
+        """
         Called in Player and Capture.
         Gets called once every frame.
         If you plan to update data inplace, note that this will affect all plugins executed after you.
         Use self.order to deal with this appropriately
-        '''
+        """
         pass
 
     def gl_display(self):
@@ -113,10 +115,10 @@ class Plugin(object):
         pass
 
     def on_window_resize(self, window, w, h):
-        '''
+        """
         gets called when user resizes window.
         window is the glfw window handle of the resized window.
-        '''
+        """
         pass
 
     def on_notify(self, notification):
@@ -139,9 +141,9 @@ class Plugin(object):
         return d
 
     def deinit_ui(self):
-        '''
+        """
         Called when the context will have a ui with window. You can do your deinit for that here.
-        '''
+        """
         pass
 
     def cleanup(self):
@@ -184,10 +186,12 @@ class Plugin(object):
         All notifications must be serializable by msgpack.
 
         """
-        if self.g_pool.app == 'exporter':
-            if notification.get('delay', 0):
-                notification['_notify_time_'] = time()+notification['delay']
-                self.g_pool.delayed_notifications[notification['subject']] = notification
+        if self.g_pool.app == "exporter":
+            if notification.get("delay", 0):
+                notification["_notify_time_"] = time() + notification["delay"]
+                self.g_pool.delayed_notifications[
+                    notification["subject"]
+                ] = notification
             else:
                 self.g_pool.notifications.append(notification)
         else:
@@ -195,41 +199,41 @@ class Plugin(object):
 
     @property
     def this_class(self):
-        '''
+        """
         this instance's class
-        '''
+        """
         return self.__class__
 
     @property
     def class_name(self):
-        '''
+        """
         name of this instance's class
-        '''
+        """
         return self.__class__.__name__
 
     @property
     def base_class(self):
-        '''
+        """
         rightmost base class of this instance's class
         this way you can inherit from muliple classes and use the rightmost as your plugin group classifier
-        '''
+        """
         return self.__class__.__bases__[-1]
 
     @property
     def base_class_name(self):
-        '''
+        """
         base class name of this instance's class
-        '''
+        """
         return self.base_class.__name__
 
     @property
     def pretty_class_name(self):
-        return self.class_name.replace('_', ' ')
+        return self.class_name.replace("_", " ")
 
     def add_menu(self):
-        '''
+        """
         This fn is called when the plugin ui is initialized. Do not change!
-        '''
+        """
         from pyglui import ui
 
         def toggle_menu(collapsed):
@@ -246,12 +250,18 @@ class Plugin(object):
             self.alive = False
 
         # Here we make a menu and icon
-        self.menu = ui.Growing_Menu('Unnamed Menu', header_pos='headline')
-        if self.uniqueness == 'not_unique':
-            self.menu.append(ui.Button('Close', close))
-        self.menu_icon = ui.Icon('collapsed', self.menu, label=self.icon_chr,
-                                 label_font=self.icon_font, on_val=False, off_val=True,
-                                 setter=toggle_menu)
+        self.menu = ui.Growing_Menu("Unnamed Menu", header_pos="headline")
+        if self.uniqueness == "not_unique":
+            self.menu.append(ui.Button("Close", close))
+        self.menu_icon = ui.Icon(
+            "collapsed",
+            self.menu,
+            label=self.icon_chr,
+            label_font=self.icon_font,
+            on_val=False,
+            off_val=True,
+            setter=toggle_menu,
+        )
         self.menu_icon.order = 0.5
         self.menu_icon.tooltip = self.pretty_class_name
         self.g_pool.menubar.append(self.menu)
@@ -273,6 +283,7 @@ class Plugin_List(object):
         It is a self sorting list with a few functions to manage adding and
         removing Plugins and lacking most other list methods.
     """
+
     def __init__(self, g_pool, plugin_initializers):
         self._plugins = []
         self.g_pool = g_pool
@@ -289,7 +300,9 @@ class Plugin_List(object):
             try:
                 plugin_by_name[name]
             except KeyError:
-                logger.debug("Plugin '{}' failed to load. Not available for import." .format(name))
+                logger.debug(
+                    "Plugin '{}' failed to load. Not available for import.".format(name)
+                )
             else:
                 self.add(plugin_by_name[name], args)
 
@@ -298,24 +311,30 @@ class Plugin_List(object):
             yield p
 
     def __str__(self):
-        return 'Plugin List: {}'.format(self._plugins)
+        return "Plugin List: {}".format(self._plugins)
 
     def add(self, new_plugin, args={}):
-        '''
+        """
         add a plugin instance to the list.
-        '''
-        if new_plugin.uniqueness == 'by_base_class':
+        """
+        if new_plugin.uniqueness == "by_base_class":
             for p in self._plugins:
                 if p.base_class == new_plugin.__bases__[-1]:
                     replc_str = "Plugin {} of base class {} will be replaced by {}."
-                    logger.debug(replc_str.format(p, p.base_class_name, new_plugin.__name__))
+                    logger.debug(
+                        replc_str.format(p, p.base_class_name, new_plugin.__name__)
+                    )
                     p.alive = False
                     self.clean()
 
-        elif new_plugin.uniqueness == 'by_class':
+        elif new_plugin.uniqueness == "by_class":
             for p in self._plugins:
                 if p.this_class == new_plugin:
-                    logger.warning("Plugin '{}' is already loaded . Did not add it.".format(new_plugin.__name__))
+                    logger.warning(
+                        "Plugin '{}' is already loaded . Did not add it.".format(
+                            new_plugin.__name__
+                        )
+                    )
                     return
 
         plugin_instance = new_plugin(self.g_pool, **args)
@@ -330,9 +349,9 @@ class Plugin_List(object):
             plugin_instance.init_ui()
 
     def clean(self):
-        '''
+        """
         plugins may flag themselves as dead or are flagged as dead. We need to remove them.
-        '''
+        """
         for p in self._plugins[::-1]:
             if not p.alive:
                 if self.g_pool.app in ("capture", "player"):
@@ -372,18 +391,22 @@ def import_runtime_plugins(plugin_dir):
         # over other modules with identical name.
         sys.path.insert(0, plugin_dir)
         for d in os.listdir(plugin_dir):
-            logger.debug('Scanning: {}'.format(d))
+            logger.debug("Scanning: {}".format(d))
             try:
                 if os.path.isfile(os.path.join(plugin_dir, d)):
                     d, ext = d.rsplit(".", 1)
-                    if ext not in ('py', 'so', 'dylib'):
+                    if ext not in ("py", "so", "dylib"):
                         continue
                 module = importlib.import_module(d)
-                logger.debug('Imported: {}'.format(module))
+                logger.debug("Imported: {}".format(module))
                 for name in dir(module):
                     member = getattr(module, name)
-                    if isinstance(member, type) and issubclass(member, Plugin) and member.__name__ != 'Plugin':
-                        logger.info('Added: {}'.format(member))
+                    if (
+                        isinstance(member, type)
+                        and issubclass(member, Plugin)
+                        and member.__name__ != "Plugin"
+                    ):
+                        logger.info("Added: {}".format(member))
                         runtime_plugins.append(member)
             except Exception as e:
                 logger.warning("Failed to load '{}'. Reason: '{}' ".format(d, e))
@@ -400,7 +423,14 @@ class Analysis_Plugin_Base(Plugin):
 
 
 class Producer_Plugin_Base(Plugin):
-    pass
+    def save_cache(self):
+        pass
+
+    def load_cache(self):
+        pass
+
+    def announce_change(self):
+        pass
 
 
 class System_Plugin_Base(Plugin):
