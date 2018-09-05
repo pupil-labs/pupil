@@ -158,7 +158,7 @@ def detect_fixations(capture, gaze_data, max_dispersion, min_duration,
         logger.warning('No data available to find fixations')
         return "Fixation detection complete", ()
 
-    use_pupil = 'gaze_normal_3d' in gaze_data[0]
+    use_pupil = 'gaze_normal_3d' in gaze_data[0] or 'gaze_normals_3d' in gaze_data[0]
     logger.info('Starting fixation detection using {} data...'.format('3d' if use_pupil else '2d'))
     fixation_result = Fixation_Result_Factory()
 
