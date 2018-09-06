@@ -161,16 +161,6 @@ class NDSI_Source(Base_Source):
                               or event['changes'].get('dtype') == "intmapping"):
             self.update_control_menu()
 
-        if event.get('control_id') == 'local_capture':
-            if event['subject'] == 'update':
-                remote_event = 'started' if event['changes'].get('value', False) else 'stopped'
-            else:
-                remote_event = 'stopped'
-
-            self.notify_all({
-                'subject': 'ndsi.host_recording.{}'.format(remote_event),
-                'source': self.name,
-                'process': self.g_pool.process})
 
     # local notifications
     def on_notify(self, notification):
