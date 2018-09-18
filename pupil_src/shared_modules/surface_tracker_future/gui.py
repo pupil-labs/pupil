@@ -131,7 +131,11 @@ class GUI:
 
     def _get_surface_anchor_points(self, surface):
         frame = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]], dtype=np.float32)
-        frame = surface.map_from_surf(frame, self.tracker.camera_model)
+        # frame = surface.map_from_surf(frame, self.tracker.camera_model)
+        frame = cv2.perspectiveTransform(frame.reshape((-1, 1, 2)),
+            surface._surf_to_dist_img_trans).reshape((-1, 2))
+        frame[:, 1] = 1 - frame[:, 1]
+        frame *= self.tracker.camera_model.resolution
 
         hat = np.array([[.3, .7], [.7, .7], [.5, .9], [.3, .7]], dtype=np.float32)
         hat = surface.map_from_surf(hat, self.tracker.camera_model)
@@ -249,7 +253,7 @@ class GUI:
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glPushMatrix()
         gl.glLoadIdentity()
-        gl.glOrtho(0, 1, 1, 0, -1, 1)
+        gl.glOrtho(0, 1, 0, 1, -1, 1)
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glPushMatrix()
         # apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
@@ -455,7 +459,7 @@ class Surface_Window:
             gl.glLoadIdentity()
             # gl.glOrtho(0, 1, 0, 1, -1, 1)  # gl coord convention
             # gl.glOrtho(0, 640, 0, 640, -1, 1)  # gl coord convention
-            gl.glOrtho(0, 1, 1, 0, -1, 1)
+            gl.glOrtho(0, 1, 0, 1, -1, 1)
             gl.glMatrixMode(gl.GL_MODELVIEW)
             gl.glPushMatrix()
             # apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends

@@ -177,8 +177,8 @@ class Surface_Tracker_Future(Plugin):
                     "name": surface.name,
                     # "uid": s.id, # TODO correctly fix issue when saving surfaces with
                     #  the same name!
-                    "m_to_screen": surface.surf_to_img_trans.tolist(),
-                    "m_from_screen": surface.img_to_surf_trans.tolist(),
+                    "m_to_screen": surface._surf_to_dist_img_trans.tolist(),
+                    "m_from_screen": surface._dist_img_to_surf_trans.tolist(),
                     "gaze_on_srf": gaze_on_srf,
                     "fixations_on_srf": fixations_on_srf,
                     "timestamp": frame.timestamp,

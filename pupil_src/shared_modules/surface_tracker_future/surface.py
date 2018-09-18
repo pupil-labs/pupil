@@ -63,16 +63,21 @@ class Surface:
 
         Args:
             points (ndarray): An array of points in one of the following shapes: (2,
-            ), (N, 2), (N, 1, 2)
+            ), (N, 2)
 
         Returns:
             ndarray: Points mapped into normalized surface space. Has the same shape
             as the input.
 
         """
+        assert len(points.shape) in [1, 2] # TODO remove assertion
         orig_shape = points.shape
         points = camera_model.undistortPoints(points)
         points /= camera_model.resolution
+        if len(points.shape) == 1:
+            points[1] = 1 - points[1]
+        else:
+            points[:, 1] = 1 - points[:, 1]
         points.shape = (-1, 1, 2)
         point_on_surf = cv2.perspectiveTransform(points, self.img_to_surf_trans)
         point_on_surf.shape = orig_shape
@@ -83,18 +88,25 @@ class Surface:
 
         Args:
             points (ndarray): An array of points in one of the following shapes: (2,
-            ), (N, 2), (N, 1, 2)
+            ), (N, 2)
 
         Returns:
             ndarray: Points mapped into image space. Has the same shape
             as the input.
 
         """
+        assert len(points.shape) in [1,2] # TODO remove assertion
         orig_shape = points.shape
         points.shape = (-1, 1, 2)
         img_points = cv2.perspectiveTransform(points, self.surf_to_img_trans)
-        img_points = camera_model.distortPoints(img_points)
         img_points.shape = orig_shape
+        if len(img_points.shape) == 1:
+            img_points[1] = 1 - img_points[1]
+        else:
+            img_points[:, 1] = 1 - img_points[:, 1]
+        img_points *= camera_model.resolution
+        img_points = camera_model.distortPoints(img_points)
+
         return img_points
 
     def move_corner(self, idx, pos, camera_model):
@@ -218,14 +230,37 @@ class Surface:
         reg_verts.shape = (-1, 2)
 
         vis_verts_undist = camera_model.undistortPoints(vis_verts)
-        vis_verts /= camera_model.resolution
+
+        pixel_img_to_surf_trans, surf_to_pixel_img_trans = self._findHomographies(
+            reg_verts, vis_verts_undist
+        )
+        norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+        surf_corners = cv2.perspectiveTransform(norm_corners.reshape((-1,1,2)),
+                                                surf_to_pixel_img_trans).reshape((-1,2))
+        surf_corners = camera_model.distortPoints(surf_corners)
+        surf_corners /= camera_model.resolution
+        surf_corners[:, 1] = 1 - surf_corners[:, 1]
+        self._dist_img_to_surf_trans = cv2.getPerspectiveTransform(surf_corners,
+                                                                   norm_corners)
+        self._surf_to_dist_img_trans = cv2.getPerspectiveTransform(norm_corners,
+                                                                   surf_corners)
+
+
         vis_verts_undist /= camera_model.resolution
+        vis_verts_undist[:, 1] = 1 - vis_verts_undist[:, 1]
+
         self.img_to_surf_trans, self.surf_to_img_trans = self._findHomographies(
             reg_verts, vis_verts_undist
         )
-        self._dist_img_to_surf_trans, self._surf_to_dist_img_trans = self._findHomographies(
-            reg_verts, vis_verts
-        )
+
+        # norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+        # surf_corners = self.map_from_surf(norm_corners, camera_model)
+        # # surf_corners_undist = cv2.perspectiveTransform(norm_corners,
+        # #                                                self.surf_to_img_trans)
+        # # surf_corners = camera_model.distortPoints(surf_corners_undist)
+        # self._dist_img_to_surf_trans = cv2.getPerspectiveTransform(surf_corners, norm_corners)
+        # self._surf_to_dist_img_trans = cv2.getPerspectiveTransform(norm_corners, surf_corners)
+
 
         if self.img_to_surf_trans is None or self._dist_img_to_surf_trans is None:
             self.img_to_surf_trans = None  # TODO Do these need to be public?
@@ -253,8 +288,8 @@ class Surface:
         return marker_by_id
 
     def _findHomographies(self, points_A, points_B):
-        points_B.shape = -1, 1, 2
-        points_A.shape = -1, 1, 2
+        points_A = points_A.reshape((-1, 1, 2))
+        points_B = points_B.reshape((-1, 1, 2))
 
         B_to_A, mask = cv2.findHomography(
             points_A, points_B, method=cv2.RANSAC, ransacReprojThreshold=100
