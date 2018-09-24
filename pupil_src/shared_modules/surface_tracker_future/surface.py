@@ -28,6 +28,7 @@ class Surface:
         self.real_world_size = {"x": 1., "y": 1.}
 
         self.reg_markers = {}
+        self.reg_markers_dist = {}
         self.img_to_surf_trans = None # TODO Do these need to be public?
         self.surf_to_img_trans = None
         self._dist_img_to_surf_trans = None
@@ -58,32 +59,44 @@ class Surface:
         else:
             return False
 
-    def map_to_surf(self, points, camera_model):
+    def map_to_surf(self, points, camera_model, compensate_distortion=True): # TODO
+        # Update docstring
+        # TODO How to handle points outside of the image when compensate_distortion
+        # is True?
         """Map points from image space to normalized surface space.
 
         Args:
-            points (ndarray): An array of points in one of the following shapes: (2,
-            ), (N, 2)
+            points (ndarray): An array of points in one of the following shapes: (2,) or (N, 2)
 
         Returns:
             ndarray: Points mapped into normalized surface space. Has the same shape
             as the input.
 
         """
+        if not len(points.shape) in [1, 2]:
+            print("alskd")
         assert len(points.shape) in [1, 2] # TODO remove assertion
         orig_shape = points.shape
-        points = camera_model.undistortPoints(points)
+
+        if compensate_distortion:
+            points = camera_model.undistortPoints(points)
+
         points /= camera_model.resolution
         if len(points.shape) == 1:
             points[1] = 1 - points[1]
         else:
             points[:, 1] = 1 - points[:, 1]
         points.shape = (-1, 1, 2)
-        point_on_surf = cv2.perspectiveTransform(points, self.img_to_surf_trans)
+
+        if compensate_distortion:
+            point_on_surf = cv2.perspectiveTransform(points, self.img_to_surf_trans)
+        else:
+            point_on_surf = cv2.perspectiveTransform(points,
+                                                     self._dist_img_to_surf_trans)
         point_on_surf.shape = orig_shape
         return point_on_surf
 
-    def map_from_surf(self, points, camera_model):
+    def map_from_surf(self, points, camera_model, compensate_distortion=True):
         """Map points from normalized surface space to image space.
 
         Args:
@@ -98,19 +111,25 @@ class Surface:
         assert len(points.shape) in [1,2] # TODO remove assertion
         orig_shape = points.shape
         points.shape = (-1, 1, 2)
-        img_points = cv2.perspectiveTransform(points, self.surf_to_img_trans)
+        if compensate_distortion:
+            img_points = cv2.perspectiveTransform(points, self.surf_to_img_trans)
+        else:
+            img_points = cv2.perspectiveTransform(points, self._surf_to_dist_img_trans)
         img_points.shape = orig_shape
         if len(img_points.shape) == 1:
             img_points[1] = 1 - img_points[1]
         else:
             img_points[:, 1] = 1 - img_points[:, 1]
         img_points *= camera_model.resolution
-        img_points = camera_model.distortPoints(img_points)
 
+        if compensate_distortion:
+            img_points = camera_model.distortPoints(img_points)
         return img_points
 
     def move_corner(self, idx, pos, camera_model):
-        new_corner_pos = self.map_to_surf(pos, camera_model)
+
+        # Markers undistorted
+        new_corner_pos = self.map_to_surf(pos, camera_model, compensate_distortion=True)
         old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
 
         new_corners = old_corners.copy()
@@ -118,6 +137,19 @@ class Surface:
 
         transform = cv2.getPerspectiveTransform(new_corners, old_corners)
         for m in self.reg_markers.values():
+            m.verts = cv2.perspectiveTransform(m.verts.reshape((-1, 1, 2)),
+                                               transform).reshape((-1, 2))
+
+        # Markers distorted
+        new_corner_pos = self.map_to_surf(pos, camera_model,
+                                          compensate_distortion=False)
+        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+
+        new_corners = old_corners.copy()
+        new_corners[idx] = new_corner_pos
+
+        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
+        for m in self.reg_markers_dist.values():
             m.verts = cv2.perspectiveTransform(m.verts.reshape((-1, 1, 2)),
                                                transform).reshape((-1, 2))
 
@@ -136,25 +168,36 @@ class Surface:
         all_verts = np.array([m.verts for m in vis_markers.values()], dtype=np.float32)
         all_verts.shape = (-1, 2)
         all_verts_undist = camera_model.undistortPoints(all_verts)
-        hull = self._bounding_quadrangle(all_verts_undist)
 
+        hull = self._bounding_quadrangle(all_verts_undist)
         img_to_surf_trans_candidate = self._get_trans_to_norm(hull)
         all_verts_undist.shape = (-1, 1, 2)
         marker_surf_coords = cv2.perspectiveTransform(
             all_verts_undist, img_to_surf_trans_candidate
         )
 
+        hull_dist = self._bounding_quadrangle(all_verts)
+        dist_img_to_surf_trans_candidate = self._get_trans_to_norm(hull_dist)
+        all_verts.shape = (-1, 1, 2)
+        marker_surf_coords_dist = cv2.perspectiveTransform(
+            all_verts, dist_img_to_surf_trans_candidate
+        )
+
         # Reshape to [marker, marker...]
         # where marker = [[u1, v1], [u2, v2], [u3, v3], [u4, v4]]
         marker_surf_coords.shape = (-1, 4, 2)
+        marker_surf_coords_dist.shape = (-1, 4, 2)
 
         # Add observations to library
-        for m, uv in zip(vis_markers.values(), marker_surf_coords):
+        for m, uv, uv_dist in zip(vis_markers.values(), marker_surf_coords, marker_surf_coords_dist):
             try:
                 self.reg_markers[m.id].add_observation(uv)
+                self.reg_markers_dist[m.id].add_observation(uv_dist)
             except KeyError:
                 self.reg_markers[m.id] = _Surface_Marker(m.id)
                 self.reg_markers[m.id].add_observation(uv)
+                self.reg_markers_dist[m.id] = _Surface_Marker(m.id)
+                self.reg_markers_dist[m.id].add_observation(uv_dist)
 
         num_observations = sum(
             [len(m.observations) for m in self.reg_markers.values()]
@@ -172,10 +215,13 @@ class Surface:
         - this mean value will be used from now on to estable surface transform
         """
         persistent_markers = {}
-        for k, m in self.reg_markers.items():
+        persistent_markers_dist = {}
+        for (k, m), m_dist in zip(self.reg_markers.items(), self.reg_markers_dist.values()):
             if len(m.observations) > self._required_obs_per_marker * .5:
                 persistent_markers[k] = m
+                persistent_markers_dist[k] = m_dist
         self.reg_markers = persistent_markers
+        self.reg_markers_dist = persistent_markers_dist
         self.defined = True
 
     def _bounding_quadrangle(self, verts):
@@ -225,42 +271,30 @@ class Surface:
         reg_verts = np.array(
             [self.reg_markers[id].verts for id in vis_reg_marker_ids]
         )
+        reg_verts_dist = np.array(
+            [self.reg_markers_dist[id].verts for id in vis_reg_marker_ids]
+        )
 
         vis_verts.shape = (-1, 2)
         reg_verts.shape = (-1, 2)
+        reg_verts_dist.shape = (-1, 2)
+
+        # TODO move normalization into method or use methods normalization
+        vis_verts_norm = vis_verts / camera_model.resolution
+        vis_verts_norm[:, 1] = 1 - vis_verts_norm[:, 1]
+
+        self._dist_img_to_surf_trans, self._surf_to_dist_img_trans = \
+            self._findHomographies(
+            reg_verts_dist, vis_verts_norm
+        )
 
         vis_verts_undist = camera_model.undistortPoints(vis_verts)
-
-        pixel_img_to_surf_trans, surf_to_pixel_img_trans = self._findHomographies(
-            reg_verts, vis_verts_undist
-        )
-        norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-        surf_corners = cv2.perspectiveTransform(norm_corners.reshape((-1,1,2)),
-                                                surf_to_pixel_img_trans).reshape((-1,2))
-        surf_corners = camera_model.distortPoints(surf_corners)
-        surf_corners /= camera_model.resolution
-        surf_corners[:, 1] = 1 - surf_corners[:, 1]
-        self._dist_img_to_surf_trans = cv2.getPerspectiveTransform(surf_corners,
-                                                                   norm_corners)
-        self._surf_to_dist_img_trans = cv2.getPerspectiveTransform(norm_corners,
-                                                                   surf_corners)
-
-
-        vis_verts_undist /= camera_model.resolution
-        vis_verts_undist[:, 1] = 1 - vis_verts_undist[:, 1]
+        vis_verts_undist_norm = vis_verts_undist / camera_model.resolution
+        vis_verts_undist_norm[:, 1] = 1 - vis_verts_undist_norm[:, 1]
 
         self.img_to_surf_trans, self.surf_to_img_trans = self._findHomographies(
-            reg_verts, vis_verts_undist
+            reg_verts, vis_verts_undist_norm
         )
-
-        # norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-        # surf_corners = self.map_from_surf(norm_corners, camera_model)
-        # # surf_corners_undist = cv2.perspectiveTransform(norm_corners,
-        # #                                                self.surf_to_img_trans)
-        # # surf_corners = camera_model.distortPoints(surf_corners_undist)
-        # self._dist_img_to_surf_trans = cv2.getPerspectiveTransform(surf_corners, norm_corners)
-        # self._surf_to_dist_img_trans = cv2.getPerspectiveTransform(norm_corners, surf_corners)
-
 
         if self.img_to_surf_trans is None or self._dist_img_to_surf_trans is None:
             self.img_to_surf_trans = None  # TODO Do these need to be public?
@@ -333,6 +367,8 @@ class Surface:
             'real_world_size': self.real_world_size,
             'reg_markers': [marker.save_to_dict() for marker in
                             self.reg_markers.values()],
+            'reg_markers_dist': [marker.save_to_dict() for marker in
+                            self.reg_markers_dist.values()],
             'build_up_status': self.build_up_status
         }
 
@@ -342,6 +378,10 @@ class Surface:
         self.reg_markers = [_Surface_Marker(marker['id'], verts=marker['verts']) for
                             marker in init_dict['reg_markers']]
         self.reg_markers = {m.id: m for m in self.reg_markers}
+        self.reg_markers_dist = [_Surface_Marker(marker['id'], verts=marker['verts'])
+                                 for
+                            marker in init_dict['reg_markers_dist']]
+        self.reg_markers_dist = {m.id: m for m in self.reg_markers_dist}
         self.build_up_status = init_dict['build_up_status']
         self.defined = True
 

@@ -142,16 +142,18 @@ class Surface_Tracker_Future(Plugin):
         # Update surfaces whose verticies have been changes through the GUI
         for surface, idx in self._edit_surf_verts:
             if surface.detected:
-                surface.move_corner(idx, self._last_mouse_pos, self.camera_model)
+                surface.move_corner(idx, self._last_mouse_pos.copy(), self.camera_model)
 
         # TODO what exactly is turned off when not running?
+        # Update surfaces and gaze on surfaces
         events["surfaces"] = []
         gaze_events = events.get("gaze", [])
         for surface in self.surfaces:
             surface.update(self.markers, self.camera_model)
 
             # Clean up gaze history
-            while surface.gaze_history and gaze_events[-1]['timestamp'] - \
+            while surface.gaze_history and gaze_events and gaze_events[-1]['timestamp']\
+                    - \
                     surface.gaze_history[0][
                 'timestamp'] > surface.gaze_history_length:
                 surface.gaze_history.popleft()

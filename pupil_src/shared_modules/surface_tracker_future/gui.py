@@ -53,8 +53,7 @@ class GUI:
                 if surface in self._edit_surf_corners:
                     self._draw_surface_corner_handles(surface)
 
-            # TODO delete alternative condition and make elif
-            if self.state == State.SHOW_HEATMAP or self.state == State.SHOW_SURF:
+            elif self.state == State.SHOW_HEATMAP:
                 self._draw_heatmap(surface)
 
             self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
@@ -131,14 +130,12 @@ class GUI:
 
     def _get_surface_anchor_points(self, surface):
         frame = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]], dtype=np.float32)
-        # frame = surface.map_from_surf(frame, self.tracker.camera_model)
-        frame = cv2.perspectiveTransform(frame.reshape((-1, 1, 2)),
-            surface._surf_to_dist_img_trans).reshape((-1, 2))
-        frame[:, 1] = 1 - frame[:, 1]
-        frame *= self.tracker.camera_model.resolution
+        frame = surface.map_from_surf(frame, self.tracker.camera_model,
+                                      compensate_distortion=False)
 
         hat = np.array([[.3, .7], [.7, .7], [.5, .9], [.3, .7]], dtype=np.float32)
-        hat = surface.map_from_surf(hat, self.tracker.camera_model)
+        hat = surface.map_from_surf(hat, self.tracker.camera_model,
+                                    compensate_distortion=False)
 
         text_anchor = frame.reshape((5, -1))[2]
         text_anchor = text_anchor[0], text_anchor[1] - 75
@@ -241,7 +238,8 @@ class GUI:
 
     def _draw_surface_corner_handles(self, surface):
         norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-        img_corners = surface.map_from_surf(norm_corners, self.tracker.camera_model)
+        img_corners = surface.map_from_surf(norm_corners, self.tracker.camera_model,
+                                            compensate_distortion=False)
 
         pyglui_utils.draw_points(
             img_corners, 20, pyglui_utils.RGBA(*self.color_primary, .5)
@@ -301,7 +299,7 @@ class GUI:
                 for surface in self._edit_surf_corners:
                     if surface.detected and surface.defined:
                         img_corners = surface.map_from_surf(norm_corners,
-                                                            self.tracker.camera_model)
+                                                            self.tracker.camera_model, compensate_distortion=False)
                         for idx, corner in enumerate(img_corners):
                             dist = np.linalg.norm(corner - pos)
                             if dist < 15:
