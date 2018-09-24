@@ -43,6 +43,8 @@ class Surface_Tracker_Future(Plugin):
         self.button = None
         self.add_button = None
 
+        self.locate_3d = False # TODO currently not supported. Is this ok?
+
     @property
     def camera_model(self):
         return self.g_pool.capture.intrinsics
@@ -171,8 +173,9 @@ class Surface_Tracker_Future(Plugin):
                 surface_event = {
                     "topic": "surfaces.{}".format(surface.name),
                     "name": surface.name,
-                    "uid": surface.id,
+                    "uid": surface.uid,
                     "m_to_screen": surface._surf_to_dist_img_trans.tolist(),
+                    # TODO Change naming of API?
                     "m_from_screen": surface._dist_img_to_surf_trans.tolist(),
                     "gaze_on_srf": gaze_on_srf,
                     "fixations_on_srf": fixations_on_srf,
