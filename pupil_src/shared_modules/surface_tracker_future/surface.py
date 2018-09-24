@@ -27,10 +27,16 @@ class Surface:
         self.name = "unknown"
         self.real_world_size = {"x": 1., "y": 1.}
 
+        # We store the surface state in two versions: undistorted and distorted. The
+        # undistorted state is used to map gaze onto the surface, the distorted one
+        # is used for visualization. This is necessary because surface corners
+        # outside of the image can not be re-distorted for visualization correctly.
+        # Instead the slightly wrong but correct looking distorted version is used
+        # for visualization.
         self.reg_markers = {}
         self.reg_markers_dist = {}
-        self.img_to_surf_trans = None # TODO Do these need to be public?
-        self.surf_to_img_trans = None
+        self._img_to_surf_trans = None
+        self._surf_to_img_trans = None
         self._dist_img_to_surf_trans = None
         self._surf_to_dist_img_trans = None
 
@@ -59,37 +65,33 @@ class Surface:
         else:
             return False
 
-    def map_to_surf(self, points, camera_model, compensate_distortion=True): # TODO
-        # Update docstring
-        # TODO How to handle points outside of the image when compensate_distortion
-        # is True?
+    def map_to_surf(self, points, camera_model, compensate_distortion=True):
         """Map points from image space to normalized surface space.
 
         Args:
-            points (ndarray): An array of points in one of the following shapes: (2,) or (N, 2)
+            points (ndarray): An array of points in one of the following shapes: (2,
+            ) or (N, 2).
+            camera_model: Camera Model object.
+            compensate_distortion: If `True` camera distortion will be correctly
+            compensated using the `camera_model`. Note that points that lie outside
+            of the image can not be undistorted correctly and the attempt may
+            introduce a large error.
 
         Returns:
             ndarray: Points mapped into normalized surface space. Has the same shape
             as the input.
 
         """
-        if not len(points.shape) in [1, 2]:
-            print("alskd")
-        assert len(points.shape) in [1, 2] # TODO remove assertion
         orig_shape = points.shape
 
         if compensate_distortion:
             points = camera_model.undistortPoints(points)
 
-        points /= camera_model.resolution
-        if len(points.shape) == 1:
-            points[1] = 1 - points[1]
-        else:
-            points[:, 1] = 1 - points[:, 1]
+        points = self._normalize(points, camera_model)
         points.shape = (-1, 1, 2)
 
         if compensate_distortion:
-            point_on_surf = cv2.perspectiveTransform(points, self.img_to_surf_trans)
+            point_on_surf = cv2.perspectiveTransform(points, self._img_to_surf_trans)
         else:
             point_on_surf = cv2.perspectiveTransform(points,
                                                      self._dist_img_to_surf_trans)
@@ -102,25 +104,26 @@ class Surface:
         Args:
             points (ndarray): An array of points in one of the following shapes: (2,
             ), (N, 2)
+            camera_model: Camera Model object.
+            compensate_distortion: If `True` camera distortion will be correctly
+            compensated using the `camera_model`. Note that points that lie outside
+            of the image can not be undistorted correctly and the attempt may
+            introduce a large error.
 
         Returns:
             ndarray: Points mapped into image space. Has the same shape
             as the input.
 
         """
-        assert len(points.shape) in [1,2] # TODO remove assertion
         orig_shape = points.shape
         points.shape = (-1, 1, 2)
         if compensate_distortion:
-            img_points = cv2.perspectiveTransform(points, self.surf_to_img_trans)
+            img_points = cv2.perspectiveTransform(points, self._surf_to_img_trans)
         else:
             img_points = cv2.perspectiveTransform(points, self._surf_to_dist_img_trans)
         img_points.shape = orig_shape
-        if len(img_points.shape) == 1:
-            img_points[1] = 1 - img_points[1]
-        else:
-            img_points[:, 1] = 1 - img_points[:, 1]
-        img_points *= camera_model.resolution
+
+        img_points = self._denormalize(img_points, camera_model)
 
         if compensate_distortion:
             img_points = camera_model.distortPoints(img_points)
@@ -263,8 +266,8 @@ class Surface:
             2, len(self.reg_markers)
         ):
             self.detected = False
-            self.img_to_surf_trans = None
-            self.surf_to_img_trans = None
+            self._img_to_surf_trans = None
+            self._surf_to_img_trans = None
             return
 
         vis_verts = np.array([vis_markers[id].verts for id in vis_reg_marker_ids])
@@ -279,9 +282,7 @@ class Surface:
         reg_verts.shape = (-1, 2)
         reg_verts_dist.shape = (-1, 2)
 
-        # TODO move normalization into method or use methods normalization
-        vis_verts_norm = vis_verts / camera_model.resolution
-        vis_verts_norm[:, 1] = 1 - vis_verts_norm[:, 1]
+        vis_verts_norm = self._normalize(vis_verts, camera_model)
 
         self._dist_img_to_surf_trans, self._surf_to_dist_img_trans = \
             self._findHomographies(
@@ -289,16 +290,15 @@ class Surface:
         )
 
         vis_verts_undist = camera_model.undistortPoints(vis_verts)
-        vis_verts_undist_norm = vis_verts_undist / camera_model.resolution
-        vis_verts_undist_norm[:, 1] = 1 - vis_verts_undist_norm[:, 1]
+        vis_verts_undist_norm = self._normalize(vis_verts_undist, camera_model)
 
-        self.img_to_surf_trans, self.surf_to_img_trans = self._findHomographies(
+        self._img_to_surf_trans, self._surf_to_img_trans = self._findHomographies(
             reg_verts, vis_verts_undist_norm
         )
 
-        if self.img_to_surf_trans is None or self._dist_img_to_surf_trans is None:
-            self.img_to_surf_trans = None  # TODO Do these need to be public?
-            self.surf_to_img_trans = None
+        if self._img_to_surf_trans is None or self._dist_img_to_surf_trans is None:
+            self._img_to_surf_trans = None
+            self._surf_to_img_trans = None
             self._dist_img_to_surf_trans = None
             self._surf_to_dist_img_trans = None
             self.detected = False
@@ -361,6 +361,22 @@ class Surface:
             self.heatmap[:, :, 3] = 125
         self.heatmap[:, :, :3] = c_map
 
+    def _normalize(self, points, camera_model):
+        points /= camera_model.resolution
+        if len(points.shape) == 1:
+            points[1] = 1 - points[1]
+        else:
+            points[:, 1] = 1 - points[:, 1]
+        return points
+
+    def _denormalize(self, points, camera_model):
+        if len(points.shape) == 1:
+            points[1] = 1 - points[1]
+        else:
+            points[:, 1] = 1 - points[:, 1]
+        points *= camera_model.resolution
+        return points
+
     def save_to_dict(self):
         return {
             'name': self.name,
@@ -385,11 +401,6 @@ class Surface:
         self.build_up_status = init_dict['build_up_status']
         self.defined = True
 
-    def cleanup(self):
-        pass # TODO implement
-        # if self._window:
-        #     self.close_window()
-
 class _Surface_Marker(object):
     """
     A Surface Marker is located in normalized surface space, unlike regular Markers which are
@@ -404,9 +415,6 @@ class _Surface_Marker(object):
 
         if not verts is None:
             self.verts = np.array(verts)
-
-    def load_uv_coords(self, uv_coords): # TODO Where is this used?
-        self.verts = uv_coords
 
     def add_observation(self, uv_coords):
         self.observations.append(uv_coords)

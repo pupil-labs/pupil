@@ -68,8 +68,6 @@ class GUI:
     def _draw_markers(self):
         color = pyglui_utils.RGBA(*self.color_secondary, .5)
         for m in self.tracker.markers:
-            # TODO Update to new marker class
-            # TODO Marker.verts has shape (N,1,2), change to (N,2)
             hat = np.array(
                 [[[0, 0], [0, 1], [.5, 1.3], [1, 1], [1, 0], [0, 0]]], dtype=np.float32
             )

@@ -12,7 +12,6 @@ import methods
 import file_methods
 from .surface import Surface
 from . import gui
-# TODO save surface definitions somewhere!
 
 class Surface_Tracker_Future(Plugin):
     icon_chr = chr(0xec07)
@@ -23,7 +22,7 @@ class Surface_Tracker_Future(Plugin):
         g_pool,
         marker_min_perimeter=60,
         marker_min_confidence=0.6,
-        invert_markers=False,
+        inverted_markers=False,
     ):
         super().__init__(g_pool)
         self.surfaces = []
@@ -35,18 +34,14 @@ class Surface_Tracker_Future(Plugin):
 
         self.marker_min_perimeter = marker_min_perimeter
         self.marker_min_confidence = marker_min_confidence
-        self.inverted_markers = invert_markers
+        self.inverted_markers = inverted_markers
+
+        self.robust_detection = True
+        self.running = True
 
         self.menu = None
         self.button = None
         self.add_button = None
-
-        # TODO Is anything need beyond here?
-
-        self.robust_detection = True
-        # plugin state
-        self.running = True
-        self.locate_3d = False # TODO Support 3D localization?
 
     @property
     def camera_model(self):
@@ -144,7 +139,6 @@ class Surface_Tracker_Future(Plugin):
             if surface.detected:
                 surface.move_corner(idx, self._last_mouse_pos.copy(), self.camera_model)
 
-        # TODO what exactly is turned off when not running?
         # Update surfaces and gaze on surfaces
         events["surfaces"] = []
         gaze_events = events.get("gaze", [])
@@ -163,7 +157,7 @@ class Surface_Tracker_Future(Plugin):
 
                 # Update gaze history
                 for gaze, event in zip(gaze_on_srf, gaze_events):
-                    if event['confidence'] < 0.6: # TODO is this a good threshold?
+                    if event['confidence'] < 0.6:
                         continue
                     surface.gaze_history.append({'timestamp': event['timestamp'],
                                                  'gaze': gaze})
@@ -177,8 +171,7 @@ class Surface_Tracker_Future(Plugin):
                 surface_event = {
                     "topic": "surfaces.{}".format(surface.name),
                     "name": surface.name,
-                    # "uid": s.id, # TODO correctly fix issue when saving surfaces with
-                    #  the same name!
+                    "uid": surface.id,
                     "m_to_screen": surface._surf_to_dist_img_trans.tolist(),
                     "m_from_screen": surface._dist_img_to_surf_trans.tolist(),
                     "gaze_on_srf": gaze_on_srf,
@@ -197,7 +190,6 @@ class Surface_Tracker_Future(Plugin):
 
     def remove_surface(self, i):
         self.gui.remove_surface(self.surfaces[i])
-        self.surfaces[i].cleanup()
         del self.surfaces[i]
         self.update_ui()
         self.notify_all({"subject": "surfaces_changed"})
@@ -207,7 +199,7 @@ class Surface_Tracker_Future(Plugin):
         for event in gaze_events:
             norm_pos = event["norm_pos"]
             img_point = methods.denormalize(norm_pos, self.camera_model.resolution,
-                                            flip_y=True) # TODO Do not denormalize?
+                                            flip_y=True)
             img_point = np.array(img_point)
             surf_point = surf.map_to_surf(img_point, self.camera_model)
             surf_point = surf_point.tolist()
@@ -237,7 +229,6 @@ class Surface_Tracker_Future(Plugin):
                 min_marker_perimeter=self.marker_min_perimeter,
             )
 
-        # TODO rewrite marker detection to already output marker objects
         self.markers_dict = markers
         self.markers = [Marker(
             m["id"], m["id_confidence"], m["verts"],
@@ -277,8 +268,5 @@ class Surface_Tracker_Future(Plugin):
 
     def cleanup(self):
         self.save_surface_definitions_to_file()
-
-        for s in self.surfaces: # TODO Is this needed?
-            s.cleanup()
 
 Marker = collections.namedtuple("Marker", ["id", "id_confidence", "verts", "perimeter"])
