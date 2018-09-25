@@ -128,12 +128,14 @@ class GUI:
 
     def _get_surface_anchor_points(self, surface):
         frame = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]], dtype=np.float32)
-        frame = surface.map_from_surf(frame, self.tracker.camera_model,
-                                      compensate_distortion=False)
+        frame = surface.map_from_surf(
+            frame, self.tracker.camera_model, compensate_distortion=False
+        )
 
         hat = np.array([[.3, .7], [.7, .7], [.5, .9], [.3, .7]], dtype=np.float32)
-        hat = surface.map_from_surf(hat, self.tracker.camera_model,
-                                    compensate_distortion=False)
+        hat = surface.map_from_surf(
+            hat, self.tracker.camera_model, compensate_distortion=False
+        )
 
         text_anchor = frame.reshape((5, -1))[2]
         text_anchor = text_anchor[0], text_anchor[1] - 75
@@ -236,8 +238,9 @@ class GUI:
 
     def _draw_surface_corner_handles(self, surface):
         norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-        img_corners = surface.map_from_surf(norm_corners, self.tracker.camera_model,
-                                            compensate_distortion=False)
+        img_corners = surface.map_from_surf(
+            norm_corners, self.tracker.camera_model, compensate_distortion=False
+        )
 
         pyglui_utils.draw_points(
             img_corners, 20, pyglui_utils.RGBA(*self.color_primary, .5)
@@ -296,8 +299,11 @@ class GUI:
 
                 for surface in self._edit_surf_corners:
                     if surface.detected and surface.defined:
-                        img_corners = surface.map_from_surf(norm_corners,
-                                                            self.tracker.camera_model, compensate_distortion=False)
+                        img_corners = surface.map_from_surf(
+                            norm_corners,
+                            self.tracker.camera_model,
+                            compensate_distortion=False,
+                        )
                         for idx, corner in enumerate(img_corners):
                             dist = np.linalg.norm(corner - pos)
                             if dist < 15:
@@ -306,8 +312,6 @@ class GUI:
                 if self.tracker._edit_surf_verts:
                     self.tracker.notify_all({"subject": "surfaces_changed"})
                 self.tracker._edit_surf_verts = []
-
-
 
             # Marker Toggles
             if action == glfw.GLFW_PRESS:
@@ -319,8 +323,9 @@ class GUI:
                             if not marker.id in surface.reg_markers.keys():
                                 surface_marker = _Surface_Marker(marker.id)
                                 marker_verts = np.array(marker.verts).reshape((4, 2))
-                                uv_coords = surface.map_to_surf(marker_verts,
-                                                                self.tracker.camera_model)
+                                uv_coords = surface.map_to_surf(
+                                    marker_verts, self.tracker.camera_model
+                                )
                                 surface_marker.add_observation(uv_coords)
                                 surface.reg_markers[marker.id] = surface_marker
                             else:
@@ -352,6 +357,7 @@ class GUI:
         self._edit_surf_markers.discard(surface)
         self._edit_surf_corners.discard(surface)
         self.surface_windows.pop(surface)
+
 
 class State(Enum):
     SHOW_SURF = "Show Markers and Surfaces"
@@ -386,8 +392,13 @@ class Surface_Window:
             monitor = None
             height, width = (
                 640,
-                int(640. / (self.surface.real_world_size["x"] /
-                            self.surface.real_world_size["y"])),
+                int(
+                    640.
+                    / (
+                        self.surface.real_world_size["x"]
+                        / self.surface.real_world_size["y"]
+                    )
+                ),
             )  # open with same aspect ratio as surface
 
             self._window = glfw.glfwCreateWindow(
@@ -471,7 +482,7 @@ class Surface_Window:
             # now lets get recent pupil positions on this surface:
             for gp in self.surface.gaze_history:
                 pyglui_utils.draw_points_norm(
-                    [gp['gaze']], color=pyglui_utils.RGBA(0.0, 0.8, 0.5, 0.8), size=80
+                    [gp["gaze"]], color=pyglui_utils.RGBA(0.0, 0.8, 0.5, 0.8), size=80
                 )
 
             glfw.glfwSwapBuffers(self._window)
@@ -537,9 +548,6 @@ class Surface_Window:
 
             glfw.glfwSwapBuffers(self._window)
             glfw.glfwMakeContextCurrent(active_window)
-
-
-
 
     # window calbacks
     def on_resize(self, window, w, h):

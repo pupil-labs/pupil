@@ -1,6 +1,7 @@
 import os
 import collections
 import logging
+
 logger = logging.getLogger(__name__)
 
 import numpy as np
@@ -12,6 +13,7 @@ import methods
 import file_methods
 from .surface import Surface
 from . import gui
+
 
 class Surface_Tracker_Future(Plugin):
     icon_chr = chr(0xec07)
@@ -43,7 +45,7 @@ class Surface_Tracker_Future(Plugin):
         self.button = None
         self.add_button = None
 
-        self.locate_3d = False # TODO currently not supported. Is this ok?
+        self.locate_3d = False  # TODO currently not supported. Is this ok?
 
     @property
     def camera_model(self):
@@ -75,10 +77,14 @@ class Surface_Tracker_Future(Plugin):
                 "This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*."
             )
         )
-        self.menu.append(pyglui.ui.Switch("robust_detection", self, label="Robust detection"))
-        self.menu.append(pyglui.ui.Switch("inverted_markers", self, label="Use "
-                                                                          "inverted "
-                                                                       "markers"))
+        self.menu.append(
+            pyglui.ui.Switch("robust_detection", self, label="Robust detection")
+        )
+        self.menu.append(
+            pyglui.ui.Switch(
+                "inverted_markers", self, label="Use " "inverted " "markers"
+            )
+        )
         self.menu.append(
             pyglui.ui.Slider("marker_min_perimeter", self, step=1, min=30, max=100)
         )
@@ -109,9 +115,11 @@ class Surface_Tracker_Future(Plugin):
                     "gaze_history_length", s, label="Gaze History Length [seconds]"
                 )
             )
-            s_menu.append(pyglui.ui.Button("Open Debug Window",
-                                           self.gui.surface_windows[
-                                               s].open_close_window))
+            s_menu.append(
+                pyglui.ui.Button(
+                    "Open Debug Window", self.gui.surface_windows[s].open_close_window
+                )
+            )
 
             def make_remove_s(i):
                 return lambda: self.remove_surface(i)
@@ -148,10 +156,12 @@ class Surface_Tracker_Future(Plugin):
             surface.update(self.markers, self.camera_model)
 
             # Clean up gaze history
-            while surface.gaze_history and gaze_events and gaze_events[-1]['timestamp']\
-                    - \
-                    surface.gaze_history[0][
-                'timestamp'] > surface.gaze_history_length:
+            while (
+                surface.gaze_history
+                and gaze_events
+                and gaze_events[-1]["timestamp"] - surface.gaze_history[0]["timestamp"]
+                > surface.gaze_history_length
+            ):
                 surface.gaze_history.popleft()
 
             if surface.detected:
@@ -159,10 +169,11 @@ class Surface_Tracker_Future(Plugin):
 
                 # Update gaze history
                 for gaze, event in zip(gaze_on_srf, gaze_events):
-                    if event['confidence'] < 0.6:
+                    if event["confidence"] < 0.6:
                         continue
-                    surface.gaze_history.append({'timestamp': event['timestamp'],
-                                                 'gaze': gaze})
+                    surface.gaze_history.append(
+                        {"timestamp": event["timestamp"], "gaze": gaze}
+                    )
 
                 if self.g_pool.app != "player":
                     surface._generate_heatmap()
@@ -184,8 +195,9 @@ class Surface_Tracker_Future(Plugin):
                 events["surfaces"].append(surface_event)
 
     def add_surface(self, _, init_dict=None):
-        surface = Surface(self.marker_min_perimeter,
-                       self.marker_min_confidence, init_dict=init_dict)
+        surface = Surface(
+            self.marker_min_perimeter, self.marker_min_confidence, init_dict=init_dict
+        )
         self.surfaces.append(surface)
         self.gui.add_surface(surface)
         self.update_ui()
@@ -201,8 +213,9 @@ class Surface_Tracker_Future(Plugin):
         result = []
         for event in gaze_events:
             norm_pos = event["norm_pos"]
-            img_point = methods.denormalize(norm_pos, self.camera_model.resolution,
-                                            flip_y=True)
+            img_point = methods.denormalize(
+                norm_pos, self.camera_model.resolution, flip_y=True
+            )
             img_point = np.array(img_point)
             surf_point = surf.map_to_surf(img_point, self.camera_model)
             surf_point = surf_point.tolist()
@@ -222,7 +235,7 @@ class Surface_Tracker_Future(Plugin):
                 prev_markers=self.markers_dict,
                 true_detect_every_frame=3,
                 min_marker_perimeter=self.marker_min_perimeter,
-                invert_image=self.inverted_markers
+                invert_image=self.inverted_markers,
             )
         else:
             markers = marker_det.detect_markers(
@@ -233,9 +246,10 @@ class Surface_Tracker_Future(Plugin):
             )
 
         self.markers_dict = markers
-        self.markers = [Marker(
-            m["id"], m["id_confidence"], m["verts"],
-            m["perimeter"]) for m in markers]
+        self.markers = [
+            Marker(m["id"], m["id_confidence"], m["verts"], m["perimeter"])
+            for m in markers
+        ]
 
     def gl_display(self):
         self.gui.update()
@@ -259,7 +273,9 @@ class Surface_Tracker_Future(Plugin):
         }
 
     def save_surface_definitions_to_file(self):
-        self.surface_definitions["surfaces"] = [surface.save_to_dict() for surface in self.surfaces if surface.defined]
+        self.surface_definitions["surfaces"] = [
+            surface.save_to_dict() for surface in self.surfaces if surface.defined
+        ]
         self.surface_definitions.save()
 
     def deinit_ui(self):
@@ -271,5 +287,6 @@ class Surface_Tracker_Future(Plugin):
 
     def cleanup(self):
         self.save_surface_definitions_to_file()
+
 
 Marker = collections.namedtuple("Marker", ["id", "id_confidence", "verts", "perimeter"])
