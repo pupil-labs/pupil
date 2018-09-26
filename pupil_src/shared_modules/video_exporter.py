@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
-import logging  # TODO: logging is somewhat redundant here
+import logging
 import multiprocessing as mp
 import os
 from fractions import Fraction
@@ -27,7 +27,7 @@ from video_capture import File_Source, EndofVideoError
 
 logger = logging.getLogger(__name__)
 
-
+# TODO: what to do with the version?
 __version__ = 2
 
 
@@ -52,7 +52,6 @@ def export_processed_h264(
     (export_from_index, export_to_index) = pm.find_closest(
         capture.timestamps, export_window
     )
-    print(export_range, export_from_index, export_to_index)
 
     update_rate = 10
     start_time = None
@@ -94,7 +93,7 @@ def export_processed_h264(
             progress = (
                 (capture.current_frame_idx - export_from_index)
                 / (export_to_index - export_from_index)
-            ) * .9 + .1
+            ) * .98 + .02
             yield "Converting video", progress * 100.
             next_update_idx += update_rate
 
@@ -111,6 +110,7 @@ def export_processed_h264(
 
 
 class VideoExporter(Analysis_Plugin_Base):
+    # TODO: update comment
     """iMotions Gaze and Video Exporter
 
     All files exported by this plugin are saved to a subdirectory within
@@ -141,7 +141,7 @@ class VideoExporter(Analysis_Plugin_Base):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.export_tasks = []  # TODO: a task name is probably not required here
+        self.export_tasks = []
         self.status = "Not exporting"
         self.progress = 0.
         self.output = "Not set yet"
@@ -170,7 +170,7 @@ class VideoExporter(Analysis_Plugin_Base):
         self.menu.append(ui.Button("Cancel export", self.cancel))
 
     def cancel(self):
-        for task_name, task in self.export_tasks:
+        for task in self.export_tasks:
             task.cancel()
         self.export_tasks = []
 
@@ -195,11 +195,14 @@ class VideoExporter(Analysis_Plugin_Base):
         self.output = im_dir
         logger.info("Exporting to {}".format(im_dir))
 
-        distorted_video_loc = [
-            f
-            for f in glob(os.path.join(self.g_pool.rec_dir, input_name + ".*"))
-            if os.path.splitext(f)[-1] in (".mp4", ".mkv", ".avi", ".mjpeg")
-        ][0]
+        try:
+            distorted_video_loc = [
+                f
+                for f in glob(os.path.join(self.g_pool.rec_dir, input_name + ".*"))
+                if os.path.splitext(f)[-1] in (".mp4", ".mkv", ".avi", ".mjpeg")
+            ][0]
+        except IndexError:
+            raise FileNotFoundError("No Video " + input_name + " found")
         target_video_loc = os.path.join(im_dir, output_name + ".mp4")
         generator_args = (
             self.g_pool.timestamps,
@@ -211,7 +214,7 @@ class VideoExporter(Analysis_Plugin_Base):
         task = bh.Task_Proxy(
             plugin_name + " Video Export", export_processed_h264, args=generator_args
         )
-        self.export_tasks.append(("taskname", task))
+        self.export_tasks.append(task)
         return {"export_folder": im_dir}
 
     @abc.abstractmethod
@@ -219,7 +222,7 @@ class VideoExporter(Analysis_Plugin_Base):
         pass
 
     def recent_events(self, events):
-        for task_name, task in self.export_tasks:
+        for task in self.export_tasks:
             recent = [d for d in task.fetch()]
             if recent:
                 self.status, self.progress = recent[-1]
