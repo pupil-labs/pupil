@@ -26,30 +26,21 @@ logger = logging.getLogger(__name__)
 def verify_out_file_path(out_file_path, rec_dir):
     # Out file path verification
     if not out_file_path:
-        out_file_path = os.path.join(rec_dir, "world_viz.mp4")
+        out_file_path = os.path.join(rec_dir, "world.mp4")
     else:
         file_name = os.path.basename(out_file_path)
         dir_name = os.path.dirname(out_file_path)
         if not dir_name:
             dir_name = rec_dir
         if not file_name:
-            file_name = "world_viz.mp4"
+            file_name = "world.mp4"
         out_file_path = os.path.expanduser(os.path.join(dir_name, file_name))
 
-    out_file_path = avoid_overwrite(out_file_path)
     if os.path.isfile(out_file_path):
         logger.warning("Video out file already exsists. I will overwrite!")
         os.remove(out_file_path)
     logger.debug("Saving Video to {}".format(out_file_path))
 
-    return out_file_path
-
-
-def avoid_overwrite(out_file_path):
-    if os.path.isfile(out_file_path):
-        # append something unique to avoid overwriting
-        out_file_path, ext = os.path.splitext(out_file_path)
-        out_file_path += str(int(time.time())) + ".mp4"
     return out_file_path
 
 
@@ -65,9 +56,7 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         super().__init__(g_pool)
         # initialize empty menu
         self.exports = []
-        # default_path = verify_out_file_path("world_viz.mp4",rec_dir)
-        default_path = "world_viz.mp4"
-        self.rec_name = default_path
+        self.rec_name = "world.mp4"
 
     def init_ui(self):
         self.add_menu()
@@ -77,12 +66,9 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
 
     def _update_ui(self):
         del self.menu.elements[:]
-        self.menu.append(
-            ui.Info_Text(
-                "Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead."
-            )
-        )
-        self.menu.append(ui.Text_Input("rec_name", self, label="Export name"))
+        # self.menu.append(ui.Info_Text('The export can be found in the exports folder, under the recording directory.'))
+        # self.menu.append(ui.Info_Text('The world video file will be named as {}'.format(self.rec_name)))
+        # self.menu.append(ui.Text_Input('rec_name',self,label='Export name', setter=lambda x: None))
         self.menu.append(
             ui.Info_Text(
                 "Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins."
