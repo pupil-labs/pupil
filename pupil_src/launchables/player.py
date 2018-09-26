@@ -105,6 +105,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from blink_detection import Offline_Blink_Detection
         from audio_playback import Audio_Playback
         from imotions_exporter import iMotions_Exporter
+        from eye_video_exporter import Eye_Video_Exporter
 
         assert VersionFormat(pyglui_version) >= VersionFormat('1.23'), 'pyglui out of date, please upgrade to newest version'
 
@@ -130,6 +131,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                         Offline_Pupil_Detection,
                         Gaze_From_Recording,
                         iMotions_Exporter,
+                        Eye_Video_Exporter,
                         Offline_Calibration
                         ] + runtime_plugins
 
