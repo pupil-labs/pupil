@@ -32,7 +32,7 @@ class Surface:
         # outside of the image can not be re-distorted for visualization correctly.
         # Instead the slightly wrong but correct looking distorted version is used
         # for visualization.
-        self.reg_markers = {}
+        self.reg_markers_undist = {}
         self.reg_markers_dist = {}
         self._img_to_surf_trans = None
         self._surf_to_img_trans = None
@@ -85,8 +85,6 @@ class Surface:
 
         if compensate_distortion:
             points = camera_model.undistortPoints(points)
-
-        points = self._normalize(points, camera_model)
         points.shape = (-1, 1, 2)
 
         if compensate_distortion:
@@ -123,8 +121,6 @@ class Surface:
             img_points = cv2.perspectiveTransform(points, self._surf_to_dist_img_trans)
         img_points.shape = orig_shape
 
-        img_points = self._denormalize(img_points, camera_model)
-
         if compensate_distortion:
             img_points = camera_model.distortPoints(img_points)
         return img_points
@@ -139,7 +135,7 @@ class Surface:
         new_corners[idx] = new_corner_pos
 
         transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for m in self.reg_markers.values():
+        for m in self.reg_markers_undist.values():
             m.verts = cv2.perspectiveTransform(
                 m.verts.reshape((-1, 1, 2)), transform
             ).reshape((-1, 2))
@@ -171,44 +167,44 @@ class Surface:
         if not vis_markers:
             return
 
-        all_verts = np.array([m.verts for m in vis_markers.values()], dtype=np.float32)
-        all_verts.shape = (-1, 2)
-        all_verts_undist = camera_model.undistortPoints(all_verts)
+        all_verts_dist = np.array([m.verts for m in vis_markers.values()], dtype=np.float32)
+        all_verts_dist.shape = (-1, 2)
+        all_verts_undist = camera_model.undistortPoints(all_verts_dist)
 
-        hull = self._bounding_quadrangle(all_verts_undist)
-        img_to_surf_trans_candidate = self._get_trans_to_norm(hull)
+        hull_undist = self._bounding_quadrangle(all_verts_undist)
+        undist_img_to_surf_trans_candidate = self._get_trans_to_norm(hull_undist)
         all_verts_undist.shape = (-1, 1, 2)
-        marker_surf_coords = cv2.perspectiveTransform(
-            all_verts_undist, img_to_surf_trans_candidate
+        marker_surf_coords_undist = cv2.perspectiveTransform(
+            all_verts_undist, undist_img_to_surf_trans_candidate
         )
 
-        hull_dist = self._bounding_quadrangle(all_verts)
+        hull_dist = self._bounding_quadrangle(all_verts_dist)
         dist_img_to_surf_trans_candidate = self._get_trans_to_norm(hull_dist)
-        all_verts.shape = (-1, 1, 2)
+        all_verts_dist.shape = (-1, 1, 2)
         marker_surf_coords_dist = cv2.perspectiveTransform(
-            all_verts, dist_img_to_surf_trans_candidate
+            all_verts_dist, dist_img_to_surf_trans_candidate
         )
 
         # Reshape to [marker, marker...]
         # where marker = [[u1, v1], [u2, v2], [u3, v3], [u4, v4]]
-        marker_surf_coords.shape = (-1, 4, 2)
+        marker_surf_coords_undist.shape = (-1, 4, 2)
         marker_surf_coords_dist.shape = (-1, 4, 2)
 
         # Add observations to library
-        for m, uv, uv_dist in zip(
-            vis_markers.values(), marker_surf_coords, marker_surf_coords_dist
+        for m, uv_undist, uv_dist in zip(
+            vis_markers.values(), marker_surf_coords_undist, marker_surf_coords_dist
         ):
             try:
-                self.reg_markers[m.id].add_observation(uv)
+                self.reg_markers_undist[m.id].add_observation(uv_undist)
                 self.reg_markers_dist[m.id].add_observation(uv_dist)
             except KeyError:
-                self.reg_markers[m.id] = _Surface_Marker(m.id)
-                self.reg_markers[m.id].add_observation(uv)
+                self.reg_markers_undist[m.id] = _Surface_Marker(m.id)
+                self.reg_markers_undist[m.id].add_observation(uv_undist)
                 self.reg_markers_dist[m.id] = _Surface_Marker(m.id)
                 self.reg_markers_dist[m.id].add_observation(uv_dist)
 
-        num_observations = sum([len(m.observations) for m in self.reg_markers.values()])
-        self._avg_obs_per_marker = num_observations / len(self.reg_markers)
+        num_observations = sum([len(m.observations) for m in self.reg_markers_undist.values()])
+        self._avg_obs_per_marker = num_observations / len(self.reg_markers_undist)
         self.build_up_status = self._avg_obs_per_marker / self._required_obs_per_marker
 
         if self.build_up_status >= 1:
@@ -223,12 +219,12 @@ class Surface:
         persistent_markers = {}
         persistent_markers_dist = {}
         for (k, m), m_dist in zip(
-            self.reg_markers.items(), self.reg_markers_dist.values()
+            self.reg_markers_undist.items(), self.reg_markers_dist.values()
         ):
             if len(m.observations) > self._required_obs_per_marker * .5:
                 persistent_markers[k] = m
                 persistent_markers_dist[k] = m_dist
-        self.reg_markers = persistent_markers
+        self.reg_markers_undist = persistent_markers
         self.reg_markers_dist = persistent_markers_dist
         self.defined = True
 
@@ -264,38 +260,34 @@ class Surface:
         return cv2.getPerspectiveTransform(verts, norm_corners)
 
     def _update_location(self, vis_markers, camera_model):
-        vis_reg_marker_ids = set(vis_markers.keys()) & set(self.reg_markers.keys())
+        vis_reg_marker_ids = set(vis_markers.keys()) & set(self.reg_markers_undist.keys())
         self.num_detected_markers = len(vis_reg_marker_ids)
 
         if not vis_reg_marker_ids or len(vis_reg_marker_ids) < min(
-            2, len(self.reg_markers)
+            2, len(self.reg_markers_undist)
         ):
             self.detected = False
             self._img_to_surf_trans = None
             self._surf_to_img_trans = None
             return
 
-        vis_verts = np.array([vis_markers[id].verts for id in vis_reg_marker_ids])
-        reg_verts = np.array([self.reg_markers[id].verts for id in vis_reg_marker_ids])
+        vis_verts_dist = np.array([vis_markers[id].verts for id in vis_reg_marker_ids])
+        reg_verts_undist = np.array([self.reg_markers_undist[id].verts for id in vis_reg_marker_ids])
         reg_verts_dist = np.array(
             [self.reg_markers_dist[id].verts for id in vis_reg_marker_ids]
         )
 
-        vis_verts.shape = (-1, 2)
-        reg_verts.shape = (-1, 2)
+        vis_verts_dist.shape = (-1, 2)
+        reg_verts_undist.shape = (-1, 2)
         reg_verts_dist.shape = (-1, 2)
 
-        vis_verts_norm = self._normalize(vis_verts, camera_model)
-
         self._dist_img_to_surf_trans, self._surf_to_dist_img_trans = self._findHomographies(
-            reg_verts_dist, vis_verts_norm
+            reg_verts_dist, vis_verts_dist
         )
 
-        vis_verts_undist = camera_model.undistortPoints(vis_verts)
-        vis_verts_undist_norm = self._normalize(vis_verts_undist, camera_model)
-
+        vis_verts_undist = camera_model.undistortPoints(vis_verts_dist)
         self._img_to_surf_trans, self._surf_to_img_trans = self._findHomographies(
-            reg_verts, vis_verts_undist_norm
+            reg_verts_undist, vis_verts_undist
         )
 
         if self._img_to_surf_trans is None or self._dist_img_to_surf_trans is None:
@@ -363,14 +355,6 @@ class Surface:
             self.heatmap[:, :, 3] = 125
         self.heatmap[:, :, :3] = c_map
 
-    def _normalize(self, points, camera_model):
-        points /= camera_model.resolution
-        if len(points.shape) == 1:
-            points[1] = 1 - points[1]
-        else:
-            points[:, 1] = 1 - points[:, 1]
-        return points
-
     def _denormalize(self, points, camera_model):
         if len(points.shape) == 1:
             points[1] = 1 - points[1]
@@ -384,7 +368,7 @@ class Surface:
             "name": self.name,
             "real_world_size": self.real_world_size,
             "reg_markers": [
-                marker.save_to_dict() for marker in self.reg_markers.values()
+                marker.save_to_dict() for marker in self.reg_markers_undist.values()
             ],
             "reg_markers_dist": [
                 marker.save_to_dict() for marker in self.reg_markers_dist.values()
@@ -395,11 +379,11 @@ class Surface:
     def load_from_dict(self, init_dict):
         self.name = init_dict["name"]
         self.real_world_size = init_dict["real_world_size"]
-        self.reg_markers = [
+        self.reg_markers_undist = [
             _Surface_Marker(marker["id"], verts=marker["verts"])
             for marker in init_dict["reg_markers"]
         ]
-        self.reg_markers = {m.id: m for m in self.reg_markers}
+        self.reg_markers_undist = {m.id: m for m in self.reg_markers_undist}
         self.reg_markers_dist = [
             _Surface_Marker(marker["id"], verts=marker["verts"])
             for marker in init_dict["reg_markers_dist"]

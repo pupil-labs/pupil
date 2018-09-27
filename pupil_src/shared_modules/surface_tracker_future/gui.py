@@ -71,7 +71,7 @@ class GUI:
             hat = np.array(
                 [[[0, 0], [0, 1], [.5, 1.3], [1, 1], [1, 0], [0, 0]]], dtype=np.float32
             )
-            hat = cv2.perspectiveTransform(hat, self._get_marker_to_img_trans(m))
+            hat = cv2.perspectiveTransform(hat, _get_norm_to_points_trans(m.verts))
 
             if (
                 m.perimeter >= self.tracker.marker_min_perimeter
@@ -97,12 +97,6 @@ class GUI:
         text = "conf: {:.3f}".format(marker.id_confidence)
         loc = anchor + (0, line_height * 2)
         self._draw_text(loc, text, self.color_secondary)
-
-    def _get_marker_to_img_trans(self, marker):
-        norm_corners = np.array(((0, 0), (1, 0), (1, 1), (0, 1)), dtype=np.float32)
-        return cv2.getPerspectiveTransform(
-            norm_corners, np.array(marker.verts, dtype=np.float32)
-        )
 
     def _draw_surface_frames(self, surface):
         if not surface.detected:
@@ -149,7 +143,7 @@ class GUI:
         self, surface, text_anchor, surface_edit_anchor, marker_edit_anchor
     ):
         marker_detection_status = "{}   {}/{}".format(
-            surface.name, surface.num_detected_markers, len(surface.reg_markers)
+            surface.name, surface.num_detected_markers, len(surface.reg_markers_dist)
         )
         self._draw_text(
             (text_anchor[0] + 15, text_anchor[1] + 6),
@@ -224,7 +218,7 @@ class GUI:
 
             centroid = np.mean(marker.verts, axis=0)
             centroid = (centroid[0, 0], centroid[0, 1])
-            if marker.id in surface.reg_markers.keys():
+            if marker.id in surface.reg_markers_dist.keys():
                 active_markers.append(centroid)
             else:
                 inactive_markers.append(centroid)
@@ -248,7 +242,15 @@ class GUI:
 
     def _draw_heatmap(self, surface):
         self.heatmap_textures[surface].update_from_ndarray(surface.heatmap)
-        m = gl_utils.cvmat_to_glmat(surface._surf_to_dist_img_trans)
+        width, height = self.tracker.camera_model.resolution
+        img_corners = np.array(
+            [(0, height), (width, height), (width, 0), (0, 0)], dtype=np.float32
+        )
+        norm_trans = _get_points_to_norm_trans(img_corners)
+
+        m = norm_trans @ surface._surf_to_dist_img_trans
+        m = gl_utils.cvmat_to_glmat(m)
+
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glPushMatrix()
         gl.glLoadIdentity()
@@ -320,16 +322,37 @@ class GUI:
                         centroid = np.mean(marker.verts, axis=0)
                         dist = np.linalg.norm(centroid - pos)
                         if dist < 15:
-                            if not marker.id in surface.reg_markers.keys():
-                                surface_marker = _Surface_Marker(marker.id)
-                                marker_verts = np.array(marker.verts).reshape((4, 2))
-                                uv_coords = surface.map_to_surf(
-                                    marker_verts, self.tracker.camera_model
+                            if not marker.id in surface.reg_markers_dist.keys():
+                                surface_marker_dist = _Surface_Marker(marker.id)
+                                marker_verts_dist = np.array(marker.verts).reshape(
+                                    (4, 2)
                                 )
-                                surface_marker.add_observation(uv_coords)
-                                surface.reg_markers[marker.id] = surface_marker
+                                uv_coords_dist = surface.map_to_surf(
+                                    marker_verts_dist,
+                                    self.tracker.camera_model,
+                                    compensate_distortion=False,
+                                )
+                                surface_marker_dist.add_observation(uv_coords_dist)
+                                surface.reg_markers_dist[
+                                    marker.id
+                                ] = surface_marker_dist
+
+                                surface_marker_undist = _Surface_Marker(marker.id)
+                                marker_verts_undist = np.array(marker.verts).reshape(
+                                    (4, 2)
+                                )
+                                uv_coords_undist = surface.map_to_surf(
+                                    marker_verts_undist,
+                                    self.tracker.camera_model,
+                                    compensate_distortion=False,
+                                )
+                                surface_marker_undist.add_observation(uv_coords_undist)
+                                surface.reg_markers_undist[
+                                    marker.id
+                                ] = surface_marker_undist
                             else:
-                                surface.reg_markers.pop(marker.id)
+                                surface.reg_markers_dist.pop(marker.id)
+                                surface.reg_markers_undist.pop(marker.id)
                             self.tracker.notify_all({"subject": "surfaces_changed"})
 
     def _check_surface_button_pressed(self, surface, pos):
@@ -350,7 +373,7 @@ class GUI:
 
     def add_surface(self, surface):
         self.heatmap_textures[surface] = pyglui_utils.Named_Texture()
-        self.surface_windows[surface] = Surface_Window(surface)
+        self.surface_windows[surface] = Surface_Window(surface, self.tracker)
 
     def remove_surface(self, surface):
         self.heatmap_textures.pop(surface)
@@ -358,6 +381,17 @@ class GUI:
         self._edit_surf_corners.discard(surface)
         self.surface_windows.pop(surface)
 
+def _get_norm_to_points_trans(points):
+    norm_corners = np.array(((0, 0), (1, 0), (1, 1), (0, 1)), dtype=np.float32)
+    return cv2.getPerspectiveTransform(
+        norm_corners, np.array(points, dtype=np.float32)
+    )
+
+def _get_points_to_norm_trans(points):
+    norm_corners = np.array(((0, 0), (1, 0), (1, 1), (0, 1)), dtype=np.float32)
+    return cv2.getPerspectiveTransform(
+        np.array(points, dtype=np.float32), norm_corners
+    )
 
 class State(Enum):
     SHOW_SURF = "Show Markers and Surfaces"
@@ -366,11 +400,12 @@ class State(Enum):
 
 
 class Surface_Window:
-    def __init__(self, surface):
+    def __init__(self, surface, tracker):
         self.surface = surface
         self._window = None
         self.window_should_open = False
         self.window_should_close = False
+        self.tracker = tracker
 
         # UI Platform tweaks
         if platform.system() == "Linux":
@@ -458,14 +493,18 @@ class Surface_Window:
             gl_utils.clear_gl_screen()
 
             # cv uses 3x3 gl uses 4x4 tranformation matricies
-            m = gl_utils.cvmat_to_glmat(self.surface._dist_img_to_surf_trans)
-            # m = gl_utils.cvmat_to_glmat(self.surface._surf_to_dist_img_trans)
+            width, height = self.tracker.camera_model.resolution
+            img_corners = np.array(
+                [(0, height), (width, height), (width, 0), (0, 0)], dtype=np.float32
+            )
+            denorm_trans = _get_norm_to_points_trans(img_corners)
+
+            m = self.surface._dist_img_to_surf_trans @ denorm_trans
+            m = gl_utils.cvmat_to_glmat(m)
 
             gl.glMatrixMode(gl.GL_PROJECTION)
             gl.glPushMatrix()
             gl.glLoadIdentity()
-            # gl.glOrtho(0, 1, 0, 1, -1, 1)  # gl coord convention
-            # gl.glOrtho(0, 640, 0, 640, -1, 1)  # gl coord convention
             gl.glOrtho(0, 1, 0, 1, -1, 1)
             gl.glMatrixMode(gl.GL_MODELVIEW)
             gl.glPushMatrix()
@@ -481,75 +520,13 @@ class Surface_Window:
 
             # now lets get recent pupil positions on this surface:
             for gp in self.surface.gaze_history:
-                pyglui_utils.draw_points_norm(
+                pyglui_utils.draw_points(
                     [gp["gaze"]], color=pyglui_utils.RGBA(0.0, 0.8, 0.5, 0.8), size=80
                 )
 
             glfw.glfwSwapBuffers(self._window)
             glfw.glfwMakeContextCurrent(active_window)
 
-    #### fns to draw surface in separate window
-    def gl_display_in_window_3d(self, world_tex):
-        """
-        here we map a selected surface onto a seperate window.
-        """
-        K, img_size = (
-            self.g_pool.capture.intrinsics.K,
-            self.g_pool.capture.intrinsics.resolution,
-        )
-
-        if self._window and self.camera_pose_3d is not None:
-            active_window = glfw.glfwGetCurrentContext()
-            glfw.glfwMakeContextCurrent(self._window)
-            gl.glClearColor(.8, .8, .8, 1.)
-
-            gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-            gl.glClearDepth(1.0)
-            gl.glDepthFunc(gl.GL_LESS)
-            gl.glEnable(gl.GL_DEPTH_TEST)
-            self.trackball.push()
-
-            gl.glMatrixMode(gl.GL_MODELVIEW)
-
-            draw_coordinate_system(l=self.real_world_size["x"])
-            gl.glPushMatrix()
-            gl.glScalef(self.real_world_size["x"], self.real_world_size["y"], 1)
-            pyglui_utils.draw_polyline(
-                [[0, 0], [0, 1], [1, 1], [1, 0]],
-                color=pyglui_utils.RGBA(.5, .3, .1, .5),
-                thickness=3,
-            )
-            gl.glPopMatrix()
-            # Draw the world window as projected onto the plane using the homography mapping
-            gl.glPushMatrix()
-            gl.glScalef(self.real_world_size["x"], self.real_world_size["y"], 1)
-            # cv uses 3x3 gl uses 4x4 tranformation matricies
-            m = gl_utils.cvmat_to_glmat(self.m_img_to_surface)
-            gl.glMultMatrixf(m)
-            gl.glTranslatef(0, 0, -.01)
-            world_tex.draw()
-            pyglui_utils.draw_polyline(
-                [[0, 0], [0, 1], [1, 1], [1, 0]],
-                color=pyglui_utils.RGBA(.5, .3, .6, .5),
-                thickness=3,
-            )
-            gl.glPopMatrix()
-
-            # Draw the camera frustum and origin using the 3d tranformation obtained from solvepnp
-            gl.glPushMatrix()
-            gl.glMultMatrixf(self.camera_pose_3d.T.flatten())
-            draw_frustum(img_size, K, 150)
-            gl.glLineWidth(1)
-            draw_frustum(img_size, K, .1)
-            draw_coordinate_system(l=5)
-            gl.glPopMatrix()
-
-            self.trackball.pop()
-
-            glfw.glfwSwapBuffers(self._window)
-            glfw.glfwMakeContextCurrent(active_window)
-
-    # window calbacks
     def on_resize(self, window, w, h):
         self.trackball.set_window_size(w, h)
         active_window = glfw.glfwGetCurrentContext()
