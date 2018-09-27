@@ -66,9 +66,11 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
 
     def _update_ui(self):
         del self.menu.elements[:]
-        # self.menu.append(ui.Info_Text('The export can be found in the exports folder, under the recording directory.'))
-        # self.menu.append(ui.Info_Text('The world video file will be named as {}'.format(self.rec_name)))
-        # self.menu.append(ui.Text_Input('rec_name',self,label='Export name', setter=lambda x: None))
+        self.menu.append(
+            ui.Info_Text(
+                "The export can be found in the exports folder, under the recording directory."
+            )
+        )
         self.menu.append(
             ui.Info_Text(
                 "Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins."
