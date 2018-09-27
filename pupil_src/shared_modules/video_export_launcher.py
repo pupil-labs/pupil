@@ -72,11 +72,6 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
             )
         )
         self.menu.append(
-            ui.Info_Text(
-                "Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins."
-            )
-        )
-        self.menu.append(
             ui.Info_Text("Press the export button or type 'e' to start the export.")
         )
 
