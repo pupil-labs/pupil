@@ -23,27 +23,6 @@ from plugin import Analysis_Plugin_Base
 logger = logging.getLogger(__name__)
 
 
-def verify_out_file_path(out_file_path, rec_dir):
-    # Out file path verification
-    if not out_file_path:
-        out_file_path = os.path.join(rec_dir, "world.mp4")
-    else:
-        file_name = os.path.basename(out_file_path)
-        dir_name = os.path.dirname(out_file_path)
-        if not dir_name:
-            dir_name = rec_dir
-        if not file_name:
-            file_name = "world.mp4"
-        out_file_path = os.path.expanduser(os.path.join(dir_name, file_name))
-
-    if os.path.isfile(out_file_path):
-        logger.warning("Video out file already exsists. I will overwrite!")
-        os.remove(out_file_path)
-    logger.debug("Saving Video to {}".format(out_file_path))
-
-    return out_file_path
-
-
 class Video_Export_Launcher(Analysis_Plugin_Base):
     """docstring for Video_Export_Launcher
     this plugin can export the video in a seperate process using exporter
@@ -107,7 +86,7 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
         # So it runs in the current config when we lauch the exporter.
         plugins = self.g_pool.plugins.get_initializers()
 
-        out_file_path = verify_out_file_path(self.rec_name, export_dir)
+        out_file_path = os.path.join(export_dir, self.rec_name)
         pre_computed = self.precomputed_for_range(export_range)
 
         args = (
