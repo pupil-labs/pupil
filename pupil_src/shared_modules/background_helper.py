@@ -39,7 +39,9 @@ class Task_Proxy(object):
 
     def _wrapper(self, pipe, _should_terminate_flag, generator, *args, **kwargs):
         '''Executed in background, pipes generator results to foreground'''
+        self._fix_background_logger()
         logger.debug('Entering _wrapper')
+
         try:
             for datum in generator(*args, **kwargs):
                 if _should_terminate_flag.value:
@@ -55,6 +57,14 @@ class Task_Proxy(object):
         finally:
             pipe.close()
             logger.debug('Exiting _wrapper')
+
+    def _fix_background_logger(self):
+        del logger.root.handlers[0]
+        ch = logging.StreamHandler()
+        ch.setFormatter(logging.Formatter(
+            '%(processName)s - [%(levelname)s] %(name)s: %(message)s'))
+        ch.setLevel(logger.root.level)
+        logger.addHandler(ch)
 
     def fetch(self):
         '''Fetches progress and available results from background'''
