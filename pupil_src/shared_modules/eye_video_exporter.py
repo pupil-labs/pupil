@@ -11,80 +11,46 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 
-import cv2
-import numpy as np
 from pyglui import ui
 
 from video_exporter import VideoExporter
+from vis_eye_video_overlay import draw_pupil_on_image
 
 logger = logging.getLogger(__name__)
-
-
-def getEllipsePts(e, num_pts=10):
-    c1 = e[0][0]
-    c2 = e[0][1]
-    a = e[1][0]
-    b = e[1][1]
-    angle = e[2]
-
-    steps = np.linspace(0, 2 * np.pi, num=num_pts, endpoint=False)
-    rot = cv2.getRotationMatrix2D((0, 0), -angle, 1)
-
-    pts1 = a / 2.0 * np.cos(steps)
-    pts2 = b / 2.0 * np.sin(steps)
-    pts = np.column_stack((pts1, pts2, np.ones(pts1.shape[0])))
-
-    pts_rot = np.matmul(rot, pts.T)
-    pts_rot = pts_rot.T
-
-    pts_rot[:, 0] += c1
-    pts_rot[:, 1] += c2
-
-    return pts_rot
 
 
 def _no_change(capture, frame):
     return frame.img
 
 
-def _add_pupil_ellipse(eyeid, pupil_positions):
+def _add_pupil_ellipse(eye_id, pupil_positions):
+    pupil_positions = [pp for pp in pupil_positions if pp["id"] == eye_id]
+
     def add_pupil_ellipse(capture, frame):
+        eye_image = frame.img
         try:
-            pp = next(
-                (
-                    pp
-                    for pp in pupil_positions
-                    if pp["id"] == eyeid and pp["timestamp"] == frame.timestamp
-                )
+            i, pupil_position = next(
+                (i, pp)
+                for i, pp in enumerate(pupil_positions)
+                if pp["timestamp"] == frame.timestamp
             )
         except StopIteration:
-            return frame.img
+            return eye_image
         else:
-            eye_image = frame.img
-            el = pp["ellipse"]
-            conf = int(pp.get("model_confidence", pp.get("confidence", 0.1)) * 255)
-            el_points = getEllipsePts((el["center"], el["axes"], el["angle"]))
-            cv2.polylines(
-                eye_image,
-                [np.asarray(el_points, dtype="i")],
-                True,
-                (0, 0, 255, conf),
-                thickness=1,
-            )
-            cv2.circle(
-                eye_image,
-                (int(el["center"][0]), int(el["center"][1])),
-                5,
-                (0, 0, 255, conf),
-                thickness=-1,
-            )
+            draw_pupil_on_image(eye_image, pupil_position)
+            del pupil_positions[:i]
             return eye_image
 
     return add_pupil_ellipse
 
 
 class Eye_Video_Exporter(VideoExporter):
-    # TODO: docstring
+    """Eye Video Exporter
+
+    All files exported by this plugin are saved to a subdirectory within
+    the export directory called "EyeVideo".
+    """
+
     icon_chr = "EV"
 
     def __init__(self, g_pool, render_pupil=True):
@@ -94,7 +60,7 @@ class Eye_Video_Exporter(VideoExporter):
 
     def customize_menu(self):
         self.menu.label = "Eye Video Exporter"
-        self.menu.append(ui.Switch('render_pupil', self, label='Render detected pupil'))
+        self.menu.append(ui.Switch("render_pupil", self, label="Render detected pupil"))
 
     def _export_eye_video(self, export_range, export_dir, eye_id):
         if self.render_pupil:
@@ -104,7 +70,12 @@ class Eye_Video_Exporter(VideoExporter):
         eye_name = "eye" + str(eye_id)
         try:
             self.add_export_job(
-                export_range, export_dir, "EyeVideo", eye_name, eye_name, process_frame
+                export_range,
+                export_dir,
+                plugin_name="EyeVideo",
+                input_name=eye_name,
+                output_name=eye_name,
+                process_frame=process_frame,
             )
         except FileNotFoundError:
             # happens if there is no such eye video

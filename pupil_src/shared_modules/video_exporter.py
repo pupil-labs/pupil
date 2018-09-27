@@ -27,9 +27,6 @@ from video_capture import File_Source, EndofVideoError
 
 logger = logging.getLogger(__name__)
 
-# TODO: what to do with the version?
-__version__ = 2
-
 
 class Empty(object):
     pass
@@ -93,7 +90,7 @@ def export_processed_h264(
             progress = (
                 (capture.current_frame_idx - export_from_index)
                 / (export_to_index - export_from_index)
-            ) * .98 + .02
+            ) * .9 + .1
             yield "Converting video", progress * 100.
             next_update_idx += update_rate
 
@@ -110,31 +107,11 @@ def export_processed_h264(
 
 
 class VideoExporter(Analysis_Plugin_Base):
-    # TODO: update comment
-    """iMotions Gaze and Video Exporter
+    """Base class for the iMotions and Eye Video Export plugins.
 
-    All files exported by this plugin are saved to a subdirectory within
-    the export directory called "iMotions". The gaze data will be written
-    into a file called "gaze.tlv" and the undistored scene video will be
-    saved in a file called "scene.mp4".
-
-    The gaze.tlv file is a tab-separated CSV file with the following fields:
-        GazeTimeStamp: Timestamp of the gaze point, unit: seconds
-        MediaTimeStamp: Timestamp of the scene frame to which the gaze point
-                        was correlated to, unit: seconds
-        MediaFrameIndex: Index of the scene frame to which the gaze point was
-                         correlated to
-        Gaze3dX: X position of the 3d gaze point (the point the subject looks
-                 at) in the scene camera coordinate system
-        Gaze3dY: Y position of the 3d gaze point
-        Gaze3dZ: Z position of the 3d gaze point
-        Gaze2dX: undistorted gaze pixel postion, X coordinate, unit: pixels
-        Gaze2dX: undistorted gaze pixel postion, Y coordinate, unit: pixels
-        PupilDiaLeft: Left pupil diameter, 0.0 if not available, unit: millimeters
-        PupilDiaRight: Right pupil diameter, 0.0 if not available, unit: millimeters
-        Confidence: Value between 0 and 1 indicating the quality of the gaze
-                    datum. It depends on the confidence of the pupil detection
-                    and the confidence of the 3d model. Higher values are good.
+    Supports the export of one or more videos.
+    You need to override customize_menu() and export_data().
+    Call add_export_job() to create a new video export task.
     """
 
     __metaclass__ = abc.ABCMeta
@@ -145,15 +122,6 @@ class VideoExporter(Analysis_Plugin_Base):
         self.status = "Not exporting"
         self.progress = 0.
         self.output = "Not set yet"
-
-    def on_notify(self, notification):
-        if notification["subject"] == "should_export":
-            self.cancel()
-            self.export_data(notification["range"], notification["export_dir"])
-
-    @abc.abstractmethod
-    def customize_menu(self):
-        pass
 
     def init_ui(self):
         self.add_menu()
@@ -169,16 +137,53 @@ class VideoExporter(Analysis_Plugin_Base):
         self.menu[-1].display_format = "%.0f%%"
         self.menu.append(ui.Button("Cancel export", self.cancel))
 
-    def cancel(self):
-        for task in self.export_tasks:
-            task.cancel()
-        self.export_tasks = []
+    @abc.abstractmethod
+    def customize_menu(self):
+        pass
 
     def deinit_ui(self):
         self.remove_menu()
 
     def cleanup(self):
         self.cancel()
+
+    def on_notify(self, notification):
+        if notification["subject"] == "should_export":
+            self.cancel()
+            self._start_export(notification["range"], notification["export_dir"])
+
+    def recent_events(self, events):
+        self._update_task_progress()
+
+    def _update_task_progress(self):
+        num_considered_tasks = 0
+        total_progress = 0.0
+        for task in self.export_tasks:
+            recent = [d for d in task.fetch()]
+            if recent:
+                status, progress = recent[-1]
+                # even with multiple tasks, each status is currently "Export video"
+                # so we don't need to merge the different status values (for now)
+                self.status = status
+                total_progress += progress
+                num_considered_tasks += 1
+        if num_considered_tasks > 0:
+            progress = total_progress / num_considered_tasks
+            # with multiple tasks the progress usually jumps because we often
+            # don't get a progress from each task
+            if progress > self.progress:
+                self.progress = progress
+
+    def gl_display(self):
+        self.menu_icon.indicator_stop = self.progress / 100.
+
+    def _start_export(self, export_range, export_dir):
+        self.progress = 0.0
+        self.export_data(export_range, export_dir)
+
+    @abc.abstractmethod
+    def export_data(self, export_range, export_dir):
+        pass
 
     def add_export_job(
         self,
@@ -189,7 +194,7 @@ class VideoExporter(Analysis_Plugin_Base):
         output_name,
         process_frame,
     ):
-        rec_start = self.get_recording_start_date()
+        rec_start = self._get_recording_start_date()
         im_dir = os.path.join(export_dir, plugin_name + "_{}".format(rec_start))
         os.makedirs(im_dir, exist_ok=True)
         self.output = im_dir
@@ -217,24 +222,14 @@ class VideoExporter(Analysis_Plugin_Base):
         self.export_tasks.append(task)
         return {"export_folder": im_dir}
 
-    @abc.abstractmethod
-    def export_data(self, export_range, export_dir):
-        pass
-
-    def recent_events(self, events):
+    def cancel(self):
         for task in self.export_tasks:
-            recent = [d for d in task.fetch()]
-            if recent:
-                self.status, self.progress = recent[-1]
-            if task.canceled:
-                # TODO: in case of multiple tasks make sure that all are canceled?!
-                self.status = "Export has been canceled"
-                self.progress = 0.
+            task.cancel()
+        self.export_tasks = []
+        self.status = "Export has been canceled"
+        self.progress = 0.0
 
-    def gl_display(self):
-        self.menu_icon.indicator_stop = self.progress / 100.
-
-    def get_recording_start_date(self):
+    def _get_recording_start_date(self):
         csv_loc = os.path.join(self.g_pool.rec_dir, "info.csv")
         with open(csv_loc, "r", encoding="utf-8") as csvfile:
             rec_info = csv_utils.read_key_value_file(csvfile)

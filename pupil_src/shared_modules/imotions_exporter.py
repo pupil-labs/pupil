@@ -26,7 +26,6 @@ def _process_frame(capture, frame):
 
 
 class iMotions_Exporter(VideoExporter):
-    # TODO: update docstring
     """iMotions Gaze and Video Exporter
 
     All files exported by this plugin are saved to a subdirectory within
@@ -66,7 +65,12 @@ class iMotions_Exporter(VideoExporter):
         user_warned_3d_only = False
 
         export_info = self.add_export_job(
-            export_range, export_dir, "iMotions", "world", "scene", _process_frame
+            export_range,
+            export_dir,
+            plugin_name="iMotions",
+            input_name="world",
+            output_name="scene",
+            process_frame=_process_frame,
         )
 
         info_src = os.path.join(self.g_pool.rec_dir, "info.csv")

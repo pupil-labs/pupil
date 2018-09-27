@@ -157,7 +157,7 @@ class Eye_Wrapper(object):
             min(frame.img.shape[0] - video_size[1], max(self.pos[1], 0)),
         )
 
-        # 4. vflipping images, converting to greyscale
+        # 4. flipping images, converting to greyscale
         eyeimage = self.current_eye_frame.gray
         eyeimage = cv2.cvtColor(eyeimage, cv2.COLOR_GRAY2BGR)
 
@@ -174,23 +174,7 @@ class Eye_Wrapper(object):
             except StopIteration:
                 pass
             else:
-                el = pp["ellipse"]
-                conf = int(pp.get("model_confidence", pp.get("confidence", 0.1)) * 255)
-                el_points = getEllipsePts((el["center"], el["axes"], el["angle"]))
-                cv2.polylines(
-                    eyeimage,
-                    [np.asarray(el_points, dtype="i")],
-                    True,
-                    (0, 0, 255, conf),
-                    thickness=1,
-                )
-                cv2.circle(
-                    eyeimage,
-                    (int(el["center"][0]), int(el["center"][1])),
-                    5,
-                    (0, 0, 255, conf),
-                    thickness=-1,
-                )
+                draw_pupil_on_image(eyeimage, pp)
 
         # flip and scale
         eyeimage = cv2.resize(eyeimage, (0, 0), fx=scale, fy=scale)
@@ -222,7 +206,30 @@ class Eye_Wrapper(object):
             return False
 
 
-def getEllipsePts(e, num_pts=10):
+def draw_pupil_on_image(eye_image, pupil_position):
+    el = pupil_position["ellipse"]
+    conf = int(
+        pupil_position.get("model_confidence", pupil_position.get("confidence", 0.1))
+        * 255
+    )
+    el_points = get_ellipse_points((el["center"], el["axes"], el["angle"]))
+    cv2.polylines(
+        eye_image,
+        [np.asarray(el_points, dtype="i")],
+        True,
+        (0, 0, 255, conf),
+        thickness=1,
+    )
+    cv2.circle(
+        eye_image,
+        (int(el["center"][0]), int(el["center"][1])),
+        5,
+        (0, 0, 255, conf),
+        thickness=-1,
+    )
+
+
+def get_ellipse_points(e, num_pts=10):
     c1 = e[0][0]
     c2 = e[0][1]
     a = e[1][0]
