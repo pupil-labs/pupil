@@ -1,3 +1,14 @@
+'''
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2018 Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+'''
+
 import os
 import collections
 import logging
@@ -165,10 +176,10 @@ class Surface_Tracker_Future(Plugin):
                 surface.gaze_history.popleft()
 
             if surface.detected:
-                gaze_on_srf = self._gaze_to_surf(surface, gaze_events)
+                gaze_on_surf = self._gaze_to_surf(surface, gaze_events)
 
                 # Update gaze history
-                for gaze, event in zip(gaze_on_srf, gaze_events):
+                for gaze, event in zip(gaze_on_surf, gaze_events):
                     if event["confidence"] < 0.6:
                         continue
                     surface.gaze_history.append(
@@ -179,17 +190,16 @@ class Surface_Tracker_Future(Plugin):
                     surface._generate_heatmap()
 
                 fixation_events = events.get("fixations", [])
-                fixations_on_srf = self._gaze_to_surf(surface, fixation_events)
+                fixations_on_surf = self._gaze_to_surf(surface, fixation_events)
 
                 surface_event = {
                     "topic": "surfaces.{}".format(surface.name),
                     "name": surface.name,
                     "uid": surface.uid,
-                    "m_to_screen": surface._surf_to_dist_img_trans.tolist(),
-                    # TODO Change naming of API?
-                    "m_from_screen": surface._dist_img_to_surf_trans.tolist(),
-                    "gaze_on_srf": gaze_on_srf,
-                    "fixations_on_srf": fixations_on_srf,
+                    "surf_to_img_trans": surface._surf_to_img_trans.tolist(),
+                    "img_to_surf_trans": surface._img_to_surf_trans.tolist(),
+                    "gaze_on_surf": gaze_on_surf,
+                    "fixations_on_surf": fixations_on_surf,
                     "timestamp": frame.timestamp,
                 }
                 events["surfaces"].append(surface_event)
