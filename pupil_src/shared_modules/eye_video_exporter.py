@@ -19,27 +19,17 @@ from vis_eye_video_overlay import draw_pupil_on_image
 logger = logging.getLogger(__name__)
 
 
-def _no_change(capture, frame):
+def _no_change(_, frame):
     return frame.img
 
 
-def _add_pupil_ellipse(eye_id, pupil_positions):
-    pupil_positions = [pp for pp in pupil_positions if pp["id"] == eye_id]
-
-    def add_pupil_ellipse(capture, frame):
+def _add_pupil_ellipse(pupil_positions_of_eye):
+    def add_pupil_ellipse(_, frame):
         eye_image = frame.img
-        try:
-            i, pupil_position = next(
-                (i, pp)
-                for i, pp in enumerate(pupil_positions)
-                if pp["timestamp"] == frame.timestamp
-            )
-        except StopIteration:
-            return eye_image
-        else:
-            draw_pupil_on_image(eye_image, pupil_position)
-            del pupil_positions[:i]
-            return eye_image
+        pupil_datum = pupil_positions_of_eye.by_ts(frame.timestamp)
+        if pupil_datum is not None:
+            draw_pupil_on_image(eye_image, pupil_datum)
+        return eye_image
 
     return add_pupil_ellipse
 
@@ -64,7 +54,9 @@ class Eye_Video_Exporter(VideoExporter):
 
     def _export_eye_video(self, export_range, export_dir, eye_id):
         if self.render_pupil:
-            process_frame = _add_pupil_ellipse(eye_id, self.g_pool.pupil_positions)
+            process_frame = _add_pupil_ellipse(
+                self.g_pool.pupil_positions_by_id[eye_id]
+            )
         else:
             process_frame = _no_change
         eye_name = "eye" + str(eye_id)
