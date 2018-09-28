@@ -60,11 +60,11 @@ class Task_Proxy(object):
 
     def _fix_background_logger(self):
         del logger.root.handlers[0]
-        ch = logging.StreamHandler()
-        ch.setFormatter(logging.Formatter(
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(
             '%(processName)s - [%(levelname)s] %(name)s: %(message)s'))
-        ch.setLevel(logger.root.level)
-        logger.addHandler(ch)
+        handler.setLevel(logger.root.level)
+        logger.addHandler(handler)
 
     def fetch(self):
         '''Fetches progress and available results from background'''
