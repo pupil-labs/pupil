@@ -99,8 +99,11 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
             out_file_path,
             pre_computed,
         )
-        process = bh.Task_Proxy(
-            "Pupil Export {}".format(out_file_path), export, args=args
+        process = bh.IPC_Logging_Task_Proxy(
+            self.g_pool.ipc_push_url,
+            "Pupil Export {}".format(out_file_path),
+            export,
+            args=args,
         )
         process.out_file_path = out_file_path
         process.frames_to_export = end_frame - start_frame
