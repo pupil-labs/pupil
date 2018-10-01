@@ -187,8 +187,11 @@ class iMotions_Exporter(Analysis_Plugin_Base):
         ][0]
         target_video_loc = os.path.join(im_dir, "scene.mp4")
         generator_args = (distorted_video_loc, target_video_loc, export_range)
-        self.export_task = bh.Task_Proxy(
-            "iMotions Video Export", export_undistorted_h264, args=generator_args
+        self.export_task = bh.IPC_Logging_Task_Proxy(
+            self.g_pool.ipc_push_url,
+            "iMotions Video Export",
+            export_undistorted_h264,
+            args=generator_args,
         )
 
         info_src = os.path.join(self.g_pool.rec_dir, "info.csv")
