@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2017  Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 import os
 import csv
@@ -27,6 +27,7 @@ import background_helper as bh
 import csv_utils
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,7 +35,7 @@ __version__ = 2
 
 
 class Empty(object):
-        pass
+    pass
 
 
 def export_undistorted_h264(distorted_video_loc, target_video_loc, export_range):
@@ -47,16 +48,18 @@ def export_undistorted_h264(distorted_video_loc, target_video_loc, export_range)
     update_rate = 10
     start_time = None
     time_base = Fraction(1, 65535)
-    average_fps = int(len(capture.timestamps) / (capture.timestamps[-1] - capture.timestamps[0]))
+    average_fps = int(
+        len(capture.timestamps) / (capture.timestamps[-1] - capture.timestamps[0])
+    )
 
-    target_container = av.open(target_video_loc, 'w')
-    video_stream = target_container.add_stream('mpeg4', 1/time_base)
+    target_container = av.open(target_video_loc, "w")
+    video_stream = target_container.add_stream("mpeg4", 1 / time_base)
     video_stream.bit_rate = 150e6
     video_stream.bit_rate_tolerance = video_stream.bit_rate / 20
     video_stream.thread_count = max(1, mp.cpu_count() - 1)
     video_stream.width, video_stream.height = capture.frame_size
 
-    av_frame = av.VideoFrame(*capture.frame_size, 'bgr24')
+    av_frame = av.VideoFrame(*capture.frame_size, "bgr24")
     av_frame.time_base = time_base
 
     capture.seek_to_frame(export_range[0])
@@ -82,8 +85,10 @@ def export_undistorted_h264(distorted_video_loc, target_video_loc, export_range)
             target_container.mux(packet)
 
         if capture.current_frame_idx >= next_update_idx:
-            progress = ((capture.current_frame_idx - export_range[0]) /
-                        (export_range[1] - export_range[0])) * .9 + .1
+            progress = (
+                (capture.current_frame_idx - export_range[0])
+                / (export_range[1] - export_range[0])
+            ) * .9 + .1
             yield "Converting scene video", progress * 100.
             next_update_idx += update_rate
 
@@ -100,7 +105,7 @@ def export_undistorted_h264(distorted_video_loc, target_video_loc, export_range)
 
 
 class iMotions_Exporter(Analysis_Plugin_Base):
-    '''iMotions Gaze and Video Exporter
+    """iMotions Gaze and Video Exporter
 
     All files exported by this plugin are saved to a subdirectory within
     the export directory called "iMotions". The gaze data will be written
@@ -124,30 +129,35 @@ class iMotions_Exporter(Analysis_Plugin_Base):
         Confidence: Value between 0 and 1 indicating the quality of the gaze
                     datum. It depends on the confidence of the pupil detection
                     and the confidence of the 3d model. Higher values are good.
-    '''
-    icon_chr = 'iM'
+    """
+
+    icon_chr = "iM"
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.export_task = None
-        self.status = 'Not exporting'
+        self.status = "Not exporting"
         self.progress = 0.
-        self.output = 'Not set yet'
-        logger.info('iMotions Exporter has been launched.')
+        self.output = "Not set yet"
+        logger.info("iMotions Exporter has been launched.")
 
     def on_notify(self, notification):
-        if notification['subject'] == "should_export":
-            self.export_data(notification['range'], notification['export_dir'])
+        if notification["subject"] == "should_export":
+            self.export_data(notification["range"], notification["export_dir"])
 
     def init_ui(self):
         self.add_menu()
-        self.menu.label = 'iMotions Exporter'
-        self.menu.append(ui.Text_Input('status', self, label='Status', setter=lambda _: None))
-        self.menu.append(ui.Text_Input('output', self, label='Last export', setter=lambda _: None))
-        self.menu.append(ui.Slider('progress', self, label='Progress'))
+        self.menu.label = "iMotions Exporter"
+        self.menu.append(
+            ui.Text_Input("status", self, label="Status", setter=lambda _: None)
+        )
+        self.menu.append(
+            ui.Text_Input("output", self, label="Last export", setter=lambda _: None)
+        )
+        self.menu.append(ui.Slider("progress", self, label="Progress"))
         self.menu[-1].read_only = True
-        self.menu[-1].display_format = '%.0f%%'
-        self.menu.append(ui.Button('Cancel export', self.cancel))
+        self.menu[-1].display_format = "%.0f%%"
+        self.menu.append(ui.Button("Cancel export", self.cancel))
 
     def cancel(self):
         if self.export_task:
@@ -161,40 +171,50 @@ class iMotions_Exporter(Analysis_Plugin_Base):
 
     def export_data(self, export_range, export_dir):
         rec_start = self.get_recording_start_date()
-        im_dir = os.path.join(export_dir, 'iMotions_{}'.format(rec_start))
+        im_dir = os.path.join(export_dir, "iMotions_{}".format(rec_start))
         os.makedirs(im_dir, exist_ok=True)
         user_warned_3d_only = False
         self.output = im_dir
-        logger.info('Exporting to {}'.format(im_dir))
+        logger.info("Exporting to {}".format(im_dir))
 
         if self.export_task:
             self.export_task.cancel()
 
-        distorted_video_loc = [f for f in glob(os.path.join(self.g_pool.rec_dir, "world.*"))
-                               if os.path.splitext(f)[-1] in ('.mp4', '.mkv', '.avi', '.mjpeg')][0]
-        target_video_loc = os.path.join(im_dir, 'scene.mp4')
+        distorted_video_loc = [
+            f
+            for f in glob(os.path.join(self.g_pool.rec_dir, "world.*"))
+            if os.path.splitext(f)[-1] in (".mp4", ".mkv", ".avi", ".mjpeg")
+        ][0]
+        target_video_loc = os.path.join(im_dir, "scene.mp4")
         generator_args = (distorted_video_loc, target_video_loc, export_range)
-        self.export_task = bh.Task_Proxy('iMotions Video Export', export_undistorted_h264,
-                                         args=generator_args)
+        self.export_task = bh.Task_Proxy(
+            "iMotions Video Export", export_undistorted_h264, args=generator_args
+        )
 
-        info_src = os.path.join(self.g_pool.rec_dir, 'info.csv')
-        info_dest = os.path.join(im_dir, 'iMotions_info.csv')
+        info_src = os.path.join(self.g_pool.rec_dir, "info.csv")
+        info_dest = os.path.join(im_dir, "iMotions_info.csv")
         copy2(info_src, info_dest)  # copy info.csv file
 
-        with open(os.path.join(im_dir, 'gaze.tlv'), 'w', encoding='utf-8', newline='') as csvfile:
-            csv_writer = csv.writer(csvfile, delimiter='\t')
+        with open(
+            os.path.join(im_dir, "gaze.tlv"), "w", encoding="utf-8", newline=""
+        ) as csvfile:
+            csv_writer = csv.writer(csvfile, delimiter="\t")
 
-            csv_writer.writerow(('GazeTimeStamp',
-                                 'MediaTimeStamp',
-                                 'MediaFrameIndex',
-                                 'Gaze3dX',
-                                 'Gaze3dY',
-                                 'Gaze3dZ',
-                                 'Gaze2dX',
-                                 'Gaze2dY',
-                                 'PupilDiaLeft',
-                                 'PupilDiaRight',
-                                 'Confidence'))
+            csv_writer.writerow(
+                (
+                    "GazeTimeStamp",
+                    "MediaTimeStamp",
+                    "MediaFrameIndex",
+                    "Gaze3dX",
+                    "Gaze3dY",
+                    "Gaze3dZ",
+                    "Gaze2dX",
+                    "Gaze2dY",
+                    "PupilDiaLeft",
+                    "PupilDiaRight",
+                    "Confidence",
+                )
+            )
 
             for media_idx in range(*export_range):
                 media_timestamp = self.g_pool.timestamps[media_idx]
@@ -202,24 +222,34 @@ class iMotions_Exporter(Analysis_Plugin_Base):
                 for g in self.g_pool.gaze_positions.by_ts_window(media_window):
                     try:
                         pupil_dia = {}
-                        for p in g['base_data']:
-                            pupil_dia[p['id']] = p['diameter_3d']
+                        for p in g["base_data"]:
+                            pupil_dia[p["id"]] = p["diameter_3d"]
 
-                        pixel_pos = denormalize(g['norm_pos'], self.g_pool.capture.frame_size, flip_y=True)
-                        undistorted3d = self.g_pool.capture.intrinsics.unprojectPoints(pixel_pos)
-                        undistorted2d = self.g_pool.capture.intrinsics.projectPoints(undistorted3d, use_distortion=False)
+                        pixel_pos = denormalize(
+                            g["norm_pos"], self.g_pool.capture.frame_size, flip_y=True
+                        )
+                        undistorted3d = self.g_pool.capture.intrinsics.unprojectPoints(
+                            pixel_pos
+                        )
+                        undistorted2d = self.g_pool.capture.intrinsics.projectPoints(
+                            undistorted3d, use_distortion=False
+                        )
 
-                        data = (g['timestamp'],
-                                media_timestamp,
-                                media_idx - export_range[0],
-                                *g['gaze_point_3d'],  # Gaze3dX/Y/Z
-                                *undistorted2d.flat,  # Gaze2dX/Y
-                                pupil_dia.get(1, 0.),  # PupilDiaLeft
-                                pupil_dia.get(0, 0.),  # PupilDiaRight
-                                g['confidence'])  # Confidence
+                        data = (
+                            g["timestamp"],
+                            media_timestamp,
+                            media_idx - export_range[0],
+                            *g["gaze_point_3d"],  # Gaze3dX/Y/Z
+                            *undistorted2d.flat,  # Gaze2dX/Y
+                            pupil_dia.get(1, 0.),  # PupilDiaLeft
+                            pupil_dia.get(0, 0.),  # PupilDiaRight
+                            g["confidence"],
+                        )  # Confidence
                     except KeyError:
                         if not user_warned_3d_only:
-                            logger.error('Currently, the iMotions export only supports 3d gaze data')
+                            logger.error(
+                                "Currently, the iMotions export only supports 3d gaze data"
+                            )
                             user_warned_3d_only = True
                         continue
                     csv_writer.writerow(data)
@@ -230,16 +260,17 @@ class iMotions_Exporter(Analysis_Plugin_Base):
             if recent:
                 self.status, self.progress = recent[-1]
             if self.export_task.canceled:
-                self.status = 'Export has been canceled'
+                self.status = "Export has been canceled"
                 self.progress = 0.
 
     def gl_display(self):
         self.menu_icon.indicator_stop = self.progress / 100.
 
     def get_recording_start_date(self):
-        csv_loc = os.path.join(self.g_pool.rec_dir, 'info.csv')
-        with open(csv_loc, 'r', encoding='utf-8') as csvfile:
+        csv_loc = os.path.join(self.g_pool.rec_dir, "info.csv")
+        with open(csv_loc, "r", encoding="utf-8") as csvfile:
             rec_info = csv_utils.read_key_value_file(csvfile)
-            date = rec_info['Start Date'].replace('.', '_').replace(':', '_')
-            time = rec_info['Start Time'].replace(':', '_')
-        return '{}_{}'.format(date, time)
+            date = rec_info["Start Date"].replace(".", "_").replace(":", "_")
+            time = rec_info["Start Time"].replace(":", "_")
+        return "{}_{}".format(date, time)
+
