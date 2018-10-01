@@ -18,26 +18,33 @@ import methods
 
 
 class Surface:
-    def __init__(self, marker_min_perimeter, marker_min_confidence, init_dict=None):
+    def __init__(self, init_dict=None):
+        """
+        # TODO create docstring
+        Args:
+            marker_min_perimeter:
+            marker_min_confidence:
+            init_dict:
+        """
         self.uid = random.randint(0, 1e6)
 
-        self.marker_min_perimeter = marker_min_perimeter
-        self.marker_min_confidence = marker_min_confidence
         self.name = "unknown"
         self.real_world_size = {"x": 1., "y": 1.}
 
-        # We store the surface state in two versions: undistorted and distorted. The
+        # TODO move this into class docstring
+        # We store the surface state in two versions: once computed with the
+        # undistorted scene image and once with the still distorted scene image. The
         # undistorted state is used to map gaze onto the surface, the distorted one
         # is used for visualization. This is necessary because surface corners
         # outside of the image can not be re-distorted for visualization correctly.
-        # Instead the slightly wrong but correct looking distorted version is used
-        # for visualization.
+        # Instead the slightly wrong but correct looking distorted version is
+        # used for visualization.
         self.reg_markers_undist = {}
         self.reg_markers_dist = {}
-        self._img_to_surf_trans = None
-        self._surf_to_img_trans = None
-        self._dist_img_to_surf_trans = None
-        self._surf_to_dist_img_trans = None
+        self.img_to_surf_trans = None
+        self.surf_to_img_trans = None
+        self.dist_img_to_surf_trans = None
+        self.surf_to_dist_img_trans = None
 
         self.detected = False
         self.num_detected_markers = []
@@ -88,10 +95,10 @@ class Surface:
         points.shape = (-1, 1, 2)
 
         if compensate_distortion:
-            point_on_surf = cv2.perspectiveTransform(points, self._img_to_surf_trans)
+            point_on_surf = cv2.perspectiveTransform(points, self.img_to_surf_trans)
         else:
             point_on_surf = cv2.perspectiveTransform(
-                points, self._dist_img_to_surf_trans
+                points, self.dist_img_to_surf_trans
             )
         point_on_surf.shape = orig_shape
         return point_on_surf
@@ -116,9 +123,9 @@ class Surface:
         orig_shape = points.shape
         points.shape = (-1, 1, 2)
         if compensate_distortion:
-            img_points = cv2.perspectiveTransform(points, self._surf_to_img_trans)
+            img_points = cv2.perspectiveTransform(points, self.surf_to_img_trans)
         else:
-            img_points = cv2.perspectiveTransform(points, self._surf_to_dist_img_trans)
+            img_points = cv2.perspectiveTransform(points, self.surf_to_dist_img_trans)
         img_points.shape = orig_shape
 
         if compensate_distortion:
@@ -155,19 +162,44 @@ class Surface:
                 m.verts.reshape((-1, 1, 2)), transform
             ).reshape((-1, 2))
 
+    def add_marker(self, id, verts, camera_model):
+        surface_marker_dist = _Surface_Marker(id)
+        marker_verts_dist = np.array(verts).reshape((4, 2))
+        uv_coords_dist = self.map_to_surf(
+            marker_verts_dist, camera_model, compensate_distortion=False
+        )
+        surface_marker_dist.add_observation(uv_coords_dist)
+        self.reg_markers_dist[id] = surface_marker_dist
+
+        surface_marker_undist = _Surface_Marker(id)
+        marker_verts_undist = np.array(verts).reshape((4, 2))
+        uv_coords_undist = self.map_to_surf(
+            marker_verts_undist, camera_model, compensate_distortion=False
+        )
+        surface_marker_undist.add_observation(uv_coords_undist)
+        self.reg_markers_undist[id] = surface_marker_undist
+
+    def pop_marker(self, id):
+        self.reg_markers_dist.pop(id)
+        self.reg_markers_undist.pop(id)
+
     def update(self, vis_markers, camera_model):
-        vis_markers = self._filter_markers(vis_markers)
+        vis_markers_dict = {m.id: m for m in vis_markers}
 
         if not self.defined:
-            self._add_observation(vis_markers, camera_model)
+            self._add_observation(vis_markers_dict, camera_model)
 
-        self._update_location(vis_markers, camera_model)
+        # Get dict of current transformations
+        transformations = self._locate(vis_markers_dict, camera_model)
+        self.__dict__.update(transformations)
 
     def _add_observation(self, vis_markers, camera_model):
         if not vis_markers:
             return
 
-        all_verts_dist = np.array([m.verts for m in vis_markers.values()], dtype=np.float32)
+        all_verts_dist = np.array(
+            [m.verts for m in vis_markers.values()], dtype=np.float32
+        )
         all_verts_dist.shape = (-1, 2)
         all_verts_undist = camera_model.undistortPoints(all_verts_dist)
 
@@ -203,7 +235,9 @@ class Surface:
                 self.reg_markers_dist[m.id] = _Surface_Marker(m.id)
                 self.reg_markers_dist[m.id].add_observation(uv_dist)
 
-        num_observations = sum([len(m.observations) for m in self.reg_markers_undist.values()])
+        num_observations = sum(
+            [len(m.observations) for m in self.reg_markers_undist.values()]
+        )
         self._avg_obs_per_marker = num_observations / len(self.reg_markers_undist)
         self.build_up_status = self._avg_obs_per_marker / self._required_obs_per_marker
 
@@ -212,6 +246,7 @@ class Surface:
 
     def _finalize_surf_def(self):
         """
+        # TODO improve docstring
         - prune markers that have been visible in less than x percent of frames.
         - of those markers select a good subset of uv coords and compute mean.
         - this mean value will be used from now on to estable surface transform
@@ -259,20 +294,29 @@ class Surface:
         norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
         return cv2.getPerspectiveTransform(verts, norm_corners)
 
-    def _update_location(self, vis_markers, camera_model):
-        vis_reg_marker_ids = set(vis_markers.keys()) & set(self.reg_markers_undist.keys())
+    def _locate(self, vis_markers, camera_model):
+        result = {
+            'detected': False,
+            'dist_img_to_surf_trans': None,
+            'surf_to_dist_img_trans': None,
+            'img_to_surf_trans': None,
+            'surf_to_img_trans': None,
+        }
+
+        vis_reg_marker_ids = set(vis_markers.keys()) & set(
+            self.reg_markers_undist.keys()
+        )
         self.num_detected_markers = len(vis_reg_marker_ids)
 
         if not vis_reg_marker_ids or len(vis_reg_marker_ids) < min(
             2, len(self.reg_markers_undist)
         ):
-            self.detected = False
-            self._img_to_surf_trans = None
-            self._surf_to_img_trans = None
-            return
+            return result
 
         vis_verts_dist = np.array([vis_markers[id].verts for id in vis_reg_marker_ids])
-        reg_verts_undist = np.array([self.reg_markers_undist[id].verts for id in vis_reg_marker_ids])
+        reg_verts_undist = np.array(
+            [self.reg_markers_undist[id].verts for id in vis_reg_marker_ids]
+        )
         reg_verts_dist = np.array(
             [self.reg_markers_dist[id].verts for id in vis_reg_marker_ids]
         )
@@ -281,39 +325,24 @@ class Surface:
         reg_verts_undist.shape = (-1, 2)
         reg_verts_dist.shape = (-1, 2)
 
-        self._dist_img_to_surf_trans, self._surf_to_dist_img_trans = self._findHomographies(
+        dist_img_to_surf_trans, surf_to_dist_img_trans = self._findHomographies(
             reg_verts_dist, vis_verts_dist
         )
 
         vis_verts_undist = camera_model.undistortPoints(vis_verts_dist)
-        self._img_to_surf_trans, self._surf_to_img_trans = self._findHomographies(
+        img_to_surf_trans, surf_to_img_trans = self._findHomographies(
             reg_verts_undist, vis_verts_undist
         )
 
-        if self._img_to_surf_trans is None or self._dist_img_to_surf_trans is None:
-            self._img_to_surf_trans = None
-            self._surf_to_img_trans = None
-            self._dist_img_to_surf_trans = None
-            self._surf_to_dist_img_trans = None
-            self.detected = False
+        if img_to_surf_trans is None or dist_img_to_surf_trans is None:
+            return result
         else:
-            self.detected = True
-
-    def _filter_markers(self, visible_markers):
-        filtered_markers = [
-            m
-            for m in visible_markers
-            if m.perimeter >= self.marker_min_perimeter
-            and m.id_confidence > self.marker_min_confidence
-        ]
-
-        # if an id shows twice use the bigger marker (usually this is a screen camera echo artifact.)
-        marker_by_id = {}
-        for m in filtered_markers:
-            if not m.id in marker_by_id or m.perimeter > marker_by_id[m.id].perimeter:
-                marker_by_id[m.id] = m
-
-        return marker_by_id
+            result['detected'] = True
+            result['dist_img_to_surf_trans'] = dist_img_to_surf_trans
+            result['surf_to_dist_img_trans'] = surf_to_dist_img_trans
+            result['img_to_surf_trans'] = img_to_surf_trans
+            result['surf_to_img_trans'] = surf_to_img_trans
+            return result
 
     def _findHomographies(self, points_A, points_B):
         points_A = points_A.reshape((-1, 1, 2))

@@ -259,7 +259,7 @@ class GUI:
         )
         norm_trans = _get_points_to_norm_trans(img_corners)
 
-        m = norm_trans @ surface._surf_to_dist_img_trans
+        m = norm_trans @ surface.surf_to_dist_img_trans
         m = gl_utils.cvmat_to_glmat(m)
 
         gl.glMatrixMode(gl.GL_PROJECTION)
@@ -334,36 +334,10 @@ class GUI:
                         dist = np.linalg.norm(centroid - pos)
                         if dist < 15:
                             if not marker.id in surface.reg_markers_dist.keys():
-                                surface_marker_dist = _Surface_Marker(marker.id)
-                                marker_verts_dist = np.array(marker.verts).reshape(
-                                    (4, 2)
-                                )
-                                uv_coords_dist = surface.map_to_surf(
-                                    marker_verts_dist,
-                                    self.tracker.camera_model,
-                                    compensate_distortion=False,
-                                )
-                                surface_marker_dist.add_observation(uv_coords_dist)
-                                surface.reg_markers_dist[
-                                    marker.id
-                                ] = surface_marker_dist
-
-                                surface_marker_undist = _Surface_Marker(marker.id)
-                                marker_verts_undist = np.array(marker.verts).reshape(
-                                    (4, 2)
-                                )
-                                uv_coords_undist = surface.map_to_surf(
-                                    marker_verts_undist,
-                                    self.tracker.camera_model,
-                                    compensate_distortion=False,
-                                )
-                                surface_marker_undist.add_observation(uv_coords_undist)
-                                surface.reg_markers_undist[
-                                    marker.id
-                                ] = surface_marker_undist
+                                surface.add_marker(marker.id, marker.verts,
+                                                   self.tracker.camera_model)
                             else:
-                                surface.reg_markers_dist.pop(marker.id)
-                                surface.reg_markers_undist.pop(marker.id)
+                                surface.pop_marker(marker.id)
                             self.tracker.notify_all({"subject": "surfaces_changed"})
 
     def _check_surface_button_pressed(self, surface, pos):
@@ -510,7 +484,7 @@ class Surface_Window:
             )
             denorm_trans = _get_norm_to_points_trans(img_corners)
 
-            m = self.surface._dist_img_to_surf_trans @ denorm_trans
+            m = self.surface.dist_img_to_surf_trans @ denorm_trans
             m = gl_utils.cvmat_to_glmat(m)
 
             gl.glMatrixMode(gl.GL_PROJECTION)

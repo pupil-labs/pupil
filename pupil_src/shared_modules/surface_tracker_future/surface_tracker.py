@@ -12,7 +12,6 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import collections
 import logging
-
 logger = logging.getLogger(__name__)
 
 import numpy as np
@@ -155,6 +154,14 @@ class Surface_Tracker_Future(Plugin):
         if self.running:
             self._detect_markers(frame)
 
+        self._localize_surfaces()
+        self._surface_interaction(events, frame)
+
+    def _localize_surfaces(self):
+        for surface in self.surfaces:
+            surface.update(self.markers, self.camera_model)
+
+    def _surface_interaction(self, events, frame):
         # Update surfaces whose verticies have been changes through the GUI
         for surface, idx in self._edit_surf_verts:
             if surface.detected:
@@ -164,14 +171,14 @@ class Surface_Tracker_Future(Plugin):
         events["surfaces"] = []
         gaze_events = events.get("gaze", [])
         for surface in self.surfaces:
-            surface.update(self.markers, self.camera_model)
 
             # Clean up gaze history
             while (
-                surface.gaze_history
-                and gaze_events
-                and gaze_events[-1]["timestamp"] - surface.gaze_history[0]["timestamp"]
-                > surface.gaze_history_length
+                    surface.gaze_history
+                    and gaze_events
+                    and gaze_events[-1]["timestamp"] - surface.gaze_history[0][
+                        "timestamp"]
+                    > surface.gaze_history_length
             ):
                 surface.gaze_history.popleft()
 
@@ -196,8 +203,8 @@ class Surface_Tracker_Future(Plugin):
                     "topic": "surfaces.{}".format(surface.name),
                     "name": surface.name,
                     "uid": surface.uid,
-                    "surf_to_img_trans": surface._surf_to_img_trans.tolist(),
-                    "img_to_surf_trans": surface._img_to_surf_trans.tolist(),
+                    "surf_to_img_trans": surface.surf_to_img_trans.tolist(),
+                    "img_to_surf_trans": surface.img_to_surf_trans.tolist(),
                     "gaze_on_surf": gaze_on_surf,
                     "fixations_on_surf": fixations_on_surf,
                     "timestamp": frame.timestamp,
@@ -205,9 +212,7 @@ class Surface_Tracker_Future(Plugin):
                 events["surfaces"].append(surface_event)
 
     def add_surface(self, _, init_dict=None):
-        surface = Surface(
-            self.marker_min_perimeter, self.marker_min_confidence, init_dict=init_dict
-        )
+        surface = Surface(init_dict=init_dict)
         self.surfaces.append(surface)
         self.gui.add_surface(surface)
         self.update_ui()
@@ -255,11 +260,30 @@ class Surface_Tracker_Future(Plugin):
                 min_marker_perimeter=self.marker_min_perimeter,
             )
 
+        # Robust marker detection requires previous markers to be in a different format than the surface tracker.
         self.markers_dict = markers
-        self.markers = [
+        markers = [
             Marker(m["id"], m["id_confidence"], m["verts"], m["perimeter"])
             for m in markers
         ]
+        self.markers = self._filter_markers(markers)
+
+    def _filter_markers(self, markers):
+        # TODO move this filter into tracker since it is global for all surfaces
+        filtered_markers = [
+            m
+            for m in markers
+            if m.perimeter >= self.marker_min_perimeter
+            and m.id_confidence > self.marker_min_confidence
+        ]
+
+        # if an id shows twice use the bigger marker (usually this is a screen camera echo artifact.)
+        marker_by_id = {}
+        for m in filtered_markers:
+            if not m.id in marker_by_id or m.perimeter > marker_by_id[m.id].perimeter:
+                marker_by_id[m.id] = m
+
+        return marker_by_id.values()
 
     def gl_display(self):
         self.gui.update()
