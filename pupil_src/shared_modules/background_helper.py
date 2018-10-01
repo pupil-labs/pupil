@@ -9,11 +9,12 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from ctypes import c_bool
-import multiprocessing as mp
-
-# mp = mp.get_context('fork')
 import logging
+import multiprocessing as mp
+import zmq
+from ctypes import c_bool
+
+import zmq_tools
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class Task_Proxy(object):
 
     def _wrapper(self, pipe, _should_terminate_flag, generator, *args, **kwargs):
         """Executed in background, pipes generator results to foreground"""
-        self._fix_background_logger()
+        self._fix_background_zmq_logger()
         logger.debug("Entering _wrapper")
 
         try:
@@ -57,21 +58,25 @@ class Task_Proxy(object):
             if not isinstance(e, EarlyCancellationError):
                 import traceback
 
-                print(traceback.format_exc())
+                logger.info(traceback.format_exc())
         else:
             pipe.send(StopIteration())
         finally:
             pipe.close()
             logger.debug("Exiting _wrapper")
 
-    def _fix_background_logger(self):
-        del logger.root.handlers[0]
-        handler = logging.StreamHandler()
-        handler.setFormatter(
-            logging.Formatter("%(processName)s - [%(levelname)s] %(name)s: %(message)s")
-        )
-        handler.setLevel(logger.root.level)
-        logger.addHandler(handler)
+    def _fix_background_zmq_logger(self):
+        """
+        ZMQ_handler sockets from the foreground thread are broken in the background.
+        Solution: Reinitialize sockets
+        """
+        zmq_ctx = zmq.Context()
+        print(f"LOGGER: {logger, logger.handlers}")
+        print(f"ROOT: {logger.root, logger.root.handlers}")
+        for handler in logger.root.handlers:
+            print(f"HANDLER: {handler}")
+            if isinstance(handler, zmq_tools.ZMQ_handler):
+                handler._init_socket(zmq_ctx)
 
     def fetch(self):
         """Fetches progress and available results from background"""

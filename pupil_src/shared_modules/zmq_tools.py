@@ -34,7 +34,11 @@ class ZMQ_handler(logging.Handler):
 
     def __init__(self, ctx, ipc_pub_url):
         super().__init__()
-        self.socket = Msg_Dispatcher(ctx, ipc_pub_url)
+        self.ipc_pub_url = ipc_pub_url  # keep for later reinitialization
+        self._init_socket(ctx)
+
+    def _init_socket(self, ctx):
+        self.socket = Msg_Dispatcher(ctx, self.ipc_pub_url)
 
     def emit(self, record):
         record_dict = record.__dict__
@@ -167,6 +171,7 @@ class Msg_Dispatcher(Msg_Streamer):
     """
 
     def __init__(self, ctx, url):
+        print(f"------- init({url})")
         self.socket = zmq.Socket(ctx, zmq.PUSH)
         self.socket.connect(url)
 
