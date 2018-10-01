@@ -644,7 +644,8 @@ class Offline_Calibration(Gaze_Producer_Base):
                 self.sections.index(sec) + 1, sec["label"], sec["mapping_method"]
             )
         )
-        sec["bg_task"] = bh.Task_Proxy(
+        sec["bg_task"] = bh.IPC_Logging_Task_Proxy(
+            self.g_pool.ipc_push_url,
             "{}".format(self.sections.index(sec) + 1),
             calibrate_and_map,
             args=generator_args,
