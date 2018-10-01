@@ -32,13 +32,9 @@ class ZMQ_handler(logging.Handler):
     A handler that sends log records as serialized strings via zmq
     """
 
-    def __init__(self, ctx, ipc_pub_url):
+    def __init__(self, ctx, ipc_push_url):
         super().__init__()
-        self.ipc_pub_url = ipc_pub_url  # keep for later reinitialization
-        self._init_socket(ctx)
-
-    def _init_socket(self, ctx):
-        self.socket = Msg_Dispatcher(ctx, self.ipc_pub_url)
+        self.socket = Msg_Dispatcher(ctx, ipc_push_url)
 
     def emit(self, record):
         record_dict = record.__dict__
@@ -171,7 +167,6 @@ class Msg_Dispatcher(Msg_Streamer):
     """
 
     def __init__(self, ctx, url):
-        print(f"------- init({url})")
         self.socket = zmq.Socket(ctx, zmq.PUSH)
         self.socket.connect(url)
 

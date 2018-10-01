@@ -45,7 +45,6 @@ class Task_Proxy(object):
 
     def _wrapper(self, pipe, _should_terminate_flag, generator, *args, **kwargs):
         """Executed in background, pipes generator results to foreground"""
-        self._fix_background_zmq_logger()
         logger.debug("Entering _wrapper")
 
         try:
@@ -64,19 +63,6 @@ class Task_Proxy(object):
         finally:
             pipe.close()
             logger.debug("Exiting _wrapper")
-
-    def _fix_background_zmq_logger(self):
-        """
-        ZMQ_handler sockets from the foreground thread are broken in the background.
-        Solution: Reinitialize sockets
-        """
-        zmq_ctx = zmq.Context()
-        print(f"LOGGER: {logger, logger.handlers}")
-        print(f"ROOT: {logger.root, logger.root.handlers}")
-        for handler in logger.root.handlers:
-            print(f"HANDLER: {handler}")
-            if isinstance(handler, zmq_tools.ZMQ_handler):
-                handler._init_socket(zmq_ctx)
 
     def fetch(self):
         """Fetches progress and available results from background"""
@@ -123,6 +109,31 @@ class Task_Proxy(object):
     def __del__(self):
         self.cancel(timeout=.1)
         self.process = None
+
+
+class IPC_Logging_Task_Proxy(Task_Proxy):
+    def __init__(self, ipc_push_url, name, generator, args=(), kwargs={}):
+        extended_args = [ipc_push_url]
+        extended_args.extend(args)
+        super().__init__(name, generator, args=extended_args, kwargs=kwargs)
+
+    def _wrapper(
+        self, pipe, _should_terminate_flag, generator, ipc_push_url, *args, **kwargs
+    ):
+        self._enforce_IPC_logging(ipc_push_url)
+        super()._wrapper(pipe, _should_terminate_flag, generator, *args, **kwargs)
+
+    def _enforce_IPC_logging(self, ipc_push_url):
+        """
+        ZMQ_handler sockets from the foreground thread are broken in the background.
+        Solution: Remove all potential broken handlers and replace by new oneself.
+
+        Caveat: If a broken handler is present is incosistent across environments.
+        """
+        del logger.root.handlers[:]
+        zmq_ctx = zmq.Context()
+        handler = zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url)
+        logger.root.addHandler(handler)
 
 
 if __name__ == "__main__":
