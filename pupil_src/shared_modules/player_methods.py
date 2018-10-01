@@ -60,7 +60,7 @@ class Bisector(object):
 
     def by_ts(self, ts):
         '''
-        :param ts: matching or closest timestamp to extract.
+        :param ts: timestamp to extract.
         :return: datum that is matching or None if none is found
         '''
         found_i = np.searchsorted(self.data_ts, ts)
