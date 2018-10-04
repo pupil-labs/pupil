@@ -26,9 +26,11 @@ def _no_change(_, frame):
 def _add_pupil_ellipse(pupil_positions_of_eye):
     def add_pupil_ellipse(_, frame):
         eye_image = frame.img
-        pupil_datum = pupil_positions_of_eye.by_ts(frame.timestamp)
-        if pupil_datum is not None:
+        try:
+            pupil_datum = pupil_positions_of_eye.by_ts(frame.timestamp)
             draw_pupil_on_image(eye_image, pupil_datum)
+        except ValueError:
+            logger.warning("Inconsistent timestamps found in pupil data")
         return eye_image
 
     return add_pupil_ellipse
