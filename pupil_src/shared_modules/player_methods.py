@@ -63,15 +63,17 @@ class Bisector(object):
         :param ts: timestamp to extract.
         :return: datum that is matching or None if none is found
         '''
-        found_i = np.searchsorted(self.data_ts, ts)
-        # searchsorted returns len(array) if the query is bigger than all elements
-        in_range = found_i < len(self.data_ts)
-        if not in_range:
-            return None
-        found = self.data_ts[found_i] == ts
+        found_index = np.searchsorted(self.data_ts, ts)
+        try:
+            found_data = self.data[found_index]
+            found_ts = self.data_ts[found_index]
+        except IndexError:
+            raise ValueError
+        found = found_ts == ts
         if not found:
-            return None
-        return self.data[found_i]
+            raise ValueError
+        else:
+            return found_data
 
     def by_ts_window(self, ts_window):
         start_idx, stop_idx = self._start_stop_idc_for_window(ts_window)
