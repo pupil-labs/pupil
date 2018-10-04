@@ -49,7 +49,6 @@ class Surface:
         self.detected = False
         self.num_detected_markers = []
 
-        self.defined = False
         self._required_obs_per_marker = 30
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
@@ -70,6 +69,10 @@ class Surface:
             return self.uid == other.uid
         else:
             return False
+
+    @property
+    def defined(self):
+        return self.build_up_status >= 1.0
 
     def map_to_surf(self, points, camera_model, compensate_distortion=True):
         """Map points from image space to normalized surface space.
@@ -132,14 +135,14 @@ class Surface:
             img_points = camera_model.distortPoints(img_points)
         return img_points
 
-    def move_corner(self, idx, pos, camera_model):
+    def move_corner(self, corner_idx, pos, camera_model):
 
         # Markers undistorted
         new_corner_pos = self.map_to_surf(pos, camera_model, compensate_distortion=True)
         old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
 
         new_corners = old_corners.copy()
-        new_corners[idx] = new_corner_pos
+        new_corners[corner_idx] = new_corner_pos
 
         transform = cv2.getPerspectiveTransform(new_corners, old_corners)
         for m in self.reg_markers_undist.values():
@@ -154,7 +157,7 @@ class Surface:
         old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
 
         new_corners = old_corners.copy()
-        new_corners[idx] = new_corner_pos
+        new_corners[corner_idx] = new_corner_pos
 
         transform = cv2.getPerspectiveTransform(new_corners, old_corners)
         for m in self.reg_markers_dist.values():
@@ -183,17 +186,17 @@ class Surface:
         self.reg_markers_dist.pop(id)
         self.reg_markers_undist.pop(id)
 
-    def update(self, vis_markers, camera_model):
+    def update_location(self, idx, vis_markers, camera_model):
         vis_markers_dict = {m.id: m for m in vis_markers}
 
         if not self.defined:
-            self._add_observation(vis_markers_dict, camera_model)
+            self.update_def(idx, vis_markers_dict, camera_model)
 
         # Get dict of current transformations
-        transformations = self._locate(vis_markers_dict, camera_model)
+        transformations = self.locate(vis_markers_dict, camera_model, self.reg_markers_undist, self.reg_markers_dist)
         self.__dict__.update(transformations)
 
-    def _add_observation(self, vis_markers, camera_model):
+    def update_def(self, idx, vis_markers, camera_model):
         if not vis_markers:
             return
 
@@ -242,9 +245,9 @@ class Surface:
         self.build_up_status = self._avg_obs_per_marker / self._required_obs_per_marker
 
         if self.build_up_status >= 1:
-            self._finalize_surf_def()
+            self._finalize_def()
 
-    def _finalize_surf_def(self):
+    def _finalize_def(self):
         """
         # TODO improve docstring
         - prune markers that have been visible in less than x percent of frames.
@@ -261,7 +264,6 @@ class Surface:
                 persistent_markers_dist[k] = m_dist
         self.reg_markers_undist = persistent_markers
         self.reg_markers_dist = persistent_markers_dist
-        self.defined = True
 
     def _bounding_quadrangle(self, verts):
         hull = cv2.convexHull(verts, clockwise=False)
@@ -294,43 +296,45 @@ class Surface:
         norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
         return cv2.getPerspectiveTransform(verts, norm_corners)
 
-    def _locate(self, vis_markers, camera_model):
+    @staticmethod
+    def locate(vis_markers, camera_model, reg_markers_undist, reg_markers_dist):
         result = {
             'detected': False,
             'dist_img_to_surf_trans': None,
             'surf_to_dist_img_trans': None,
             'img_to_surf_trans': None,
             'surf_to_img_trans': None,
+            'num_detected_markers': 0,
         }
 
         vis_reg_marker_ids = set(vis_markers.keys()) & set(
-            self.reg_markers_undist.keys()
+            reg_markers_undist.keys()
         )
-        self.num_detected_markers = len(vis_reg_marker_ids)
+
 
         if not vis_reg_marker_ids or len(vis_reg_marker_ids) < min(
-            2, len(self.reg_markers_undist)
+            2, len(reg_markers_undist)
         ):
             return result
 
         vis_verts_dist = np.array([vis_markers[id].verts for id in vis_reg_marker_ids])
         reg_verts_undist = np.array(
-            [self.reg_markers_undist[id].verts for id in vis_reg_marker_ids]
+            [reg_markers_undist[id].verts for id in vis_reg_marker_ids]
         )
         reg_verts_dist = np.array(
-            [self.reg_markers_dist[id].verts for id in vis_reg_marker_ids]
+            [reg_markers_dist[id].verts for id in vis_reg_marker_ids]
         )
 
         vis_verts_dist.shape = (-1, 2)
         reg_verts_undist.shape = (-1, 2)
         reg_verts_dist.shape = (-1, 2)
 
-        dist_img_to_surf_trans, surf_to_dist_img_trans = self._findHomographies(
+        dist_img_to_surf_trans, surf_to_dist_img_trans = Surface._findHomographies(
             reg_verts_dist, vis_verts_dist
         )
 
         vis_verts_undist = camera_model.undistortPoints(vis_verts_dist)
-        img_to_surf_trans, surf_to_img_trans = self._findHomographies(
+        img_to_surf_trans, surf_to_img_trans = Surface._findHomographies(
             reg_verts_undist, vis_verts_undist
         )
 
@@ -342,9 +346,11 @@ class Surface:
             result['surf_to_dist_img_trans'] = surf_to_dist_img_trans
             result['img_to_surf_trans'] = img_to_surf_trans
             result['surf_to_img_trans'] = surf_to_img_trans
+            result['num_detected_markers'] =  len(vis_reg_marker_ids),
             return result
 
-    def _findHomographies(self, points_A, points_B):
+    @staticmethod
+    def _findHomographies(points_A, points_B):
         points_A = points_A.reshape((-1, 1, 2))
         points_B = points_B.reshape((-1, 1, 2))
 
@@ -419,7 +425,6 @@ class Surface:
         ]
         self.reg_markers_dist = {m.id: m for m in self.reg_markers_dist}
         self.build_up_status = init_dict["build_up_status"]
-        self.defined = True
 
 
 class _Surface_Marker(object):

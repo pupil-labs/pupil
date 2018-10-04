@@ -91,6 +91,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from seek_control import Seek_Control
         from video_export_launcher import Video_Export_Launcher
         from offline_surface_tracker import Offline_Surface_Tracker
+        from surface_tracker_future import Offline_Surface_Tracker_Future
         # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
         from fixation_detector import Offline_Fixation_Detector
         from batch_exporter import Batch_Exporter, Batch_Export
@@ -123,6 +124,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
                         Batch_Exporter,
                         Video_Export_Launcher,
                         Offline_Surface_Tracker,
+                        Offline_Surface_Tracker_Future,
                         Raw_Data_Exporter,
                         Annotation_Player,
                         Log_History,

@@ -10,3 +10,4 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from .surface_tracker import Surface_Tracker_Future
+from .offline_surface_tracker import Offline_Surface_Tracker_Future

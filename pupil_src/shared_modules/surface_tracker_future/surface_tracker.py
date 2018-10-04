@@ -37,6 +37,7 @@ class Surface_Tracker_Future(Plugin):
         inverted_markers=False,
     ):
         super().__init__(g_pool)
+        self.current_frame_idx = None
         self.surfaces = []
         self.markers = []
         self.markers_dict = []
@@ -56,10 +57,15 @@ class Surface_Tracker_Future(Plugin):
         self.add_button = None
 
         self.locate_3d = False  # TODO currently not supported. Is this ok?
+        self.load_surface_definitions_from_file()
 
     @property
     def camera_model(self):
         return self.g_pool.capture.intrinsics
+
+    @property
+    def Surface_Class(self):
+        return Surface
 
     def init_ui(self):
         self.add_menu()
@@ -76,12 +82,14 @@ class Surface_Tracker_Future(Plugin):
             hotkey="a",
         )
         self.g_pool.quickbar.append(self.add_button)
-
-        self.load_surface_definitions_from_file()
         self.update_ui()
 
+
     def update_ui(self):
-        self.menu.elements[:] = []
+        try:
+            self.menu.elements[:] = []
+        except AttributeError:
+            return
         self.menu.append(
             pyglui.ui.Info_Text(
                 "This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*."
@@ -139,6 +147,7 @@ class Surface_Tracker_Future(Plugin):
             self.menu.append(s_menu)
 
     def load_surface_definitions_from_file(self):
+        # TODO any reason to keep surface_definitions as class attribute?
         self.surface_definitions = file_methods.Persistent_Dict(
             os.path.join(self.g_pool.user_dir, "surface_definitions")
         )
@@ -151,18 +160,20 @@ class Surface_Tracker_Future(Plugin):
         if not frame:
             return
 
+        self.current_frame_idx = frame.index
+
         if self.running:
             self._detect_markers(frame)
 
-        self._localize_surfaces()
-        self._surface_interaction(events, frame)
+        self._update_surfaces(frame.index)
+        self._surface_interactions(events, frame)
 
-    def _localize_surfaces(self):
+    def _update_surfaces(self, idx):
         for surface in self.surfaces:
-            surface.update(self.markers, self.camera_model)
+            surface.update_location(idx, self.markers, self.camera_model)
 
-    def _surface_interaction(self, events, frame):
-        # Update surfaces whose verticies have been changes through the GUI
+    def _surface_interactions(self, events, frame):
+        # Update surfaces whose verticies have been changed through the GUI
         for surface, idx in self._edit_surf_verts:
             if surface.detected:
                 surface.move_corner(idx, self._last_mouse_pos.copy(), self.camera_model)
@@ -212,11 +223,14 @@ class Surface_Tracker_Future(Plugin):
                 events["surfaces"].append(surface_event)
 
     def add_surface(self, _, init_dict=None):
-        surface = Surface(init_dict=init_dict)
-        self.surfaces.append(surface)
-        self.gui.add_surface(surface)
-        self.update_ui()
-        self.notify_all({"subject": "surfaces_changed"})
+        if self.markers:
+            surface = self.Surface_Class(init_dict=init_dict)
+            self.surfaces.append(surface)
+            self.gui.add_surface(surface)
+            self.update_ui()
+            self.notify_all({"subject": "surfaces_changed"})
+        else:
+            logger.warning("Can not add a new surface: No markers found in the image!")
 
     def remove_surface(self, i):
         self.gui.remove_surface(self.surfaces[i])
@@ -237,6 +251,7 @@ class Surface_Tracker_Future(Plugin):
             result.append(surf_point)
         return result
 
+    # TODO make this a static method so it can be reused to define the background task?
     def _detect_markers(self, frame):
         gray = frame.gray
         if self.inverted_markers:
@@ -283,7 +298,7 @@ class Surface_Tracker_Future(Plugin):
             if not m.id in marker_by_id or m.perimeter > marker_by_id[m.id].perimeter:
                 marker_by_id[m.id] = m
 
-        return marker_by_id.values()
+        return list(marker_by_id.values())
 
     def gl_display(self):
         self.gui.update()
