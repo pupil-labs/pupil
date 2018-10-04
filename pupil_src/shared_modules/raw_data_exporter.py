@@ -106,22 +106,22 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
     icon_chr = chr(0xe873)
     icon_font = 'pupil_icons'
     
-    def __init__(self, g_pool, export_pupil_positions=True, export_pupil_gaze_positions_info=True, export_gaze_positions=True):
+    def __init__(self, g_pool, should_export_pupil_positions=True, should_export_field_info=True, should_export_gaze_positions=True):
         super().__init__(g_pool)
-        self.export_pupil_positions = export_pupil_positions
-        self.export_pupil_gaze_positions_info = export_pupil_gaze_positions_info
-        self.export_gaze_positions = export_gaze_positions
+        self.should_export_pupil_positions = should_export_pupil_positions
+        self.should_export_field_info = should_export_pupil_field_info
+        self.should_export_gaze_positions = should_export_gaze_positions
 
     def init_ui(self):
         self.add_menu()
         self.menu.label = 'Raw Data Exporter'
         self.menu.append(ui.Info_Text('Export Raw Pupil Capture data into .csv files.'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
-        self.menu.append(ui.Switch('export_pupil_positions', self,
+        self.menu.append(ui.Switch('should_export_pupil_positions', self,
                                    label='Export Pupil Positions'))
-        self.menu.append(ui.Switch('export_pupil_gaze_positions_info', self,
+        self.menu.append(ui.Switch('should_export_field_info', self,
                                    label='Export Pupil Gaze Positions Info'))
-        self.menu.append(ui.Switch('export_gaze_positions', self,
+        self.menu.append(ui.Switch('should_export_gaze_positions', self,
                                    label='Export Gaze Positions'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
 
@@ -134,7 +134,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
 
     def export_data(self, export_range, export_dir):
         export_window = pm.exact_window(self.g_pool.timestamps, export_range)
-        if self.export_pupil_positions == True:
+        if self.should_export_pupil_positions == True:
             with open(os.path.join(export_dir, 'pupil_positions.csv'), 'w', encoding='utf-8', newline='') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter=',')
 
@@ -220,7 +220,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                     csv_writer.writerow(row)
                 logger.info("Created 'pupil_positions.csv' file.")
 
-        if self.export_gaze_positions == True:
+        if self.should_export_gaze_positions == True:
             with open(os.path.join(export_dir, 'gaze_positions.csv'), 'w', encoding='utf-8', newline='') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter=',')
                 csv_writer.writerow(("timestamp",
@@ -272,6 +272,6 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                     data += data_3d
                     csv_writer.writerow(data)
                 logger.info("Created 'gaze_positions.csv' file.")
-        if self.export_pupil_gaze_positions_info == True:
+        if self.should_export_field_info == True:
             with open(os.path.join(export_dir, 'pupil_gaze_positions_info.txt'), 'w', encoding='utf-8', newline='') as info_file:
                 info_file.write(self.__doc__)
