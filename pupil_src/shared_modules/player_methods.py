@@ -40,7 +40,7 @@ def exact_window(timestamps, index_range):
     return (timestamps[index_range[0]], timestamps[end_index])
 
 class Bisector(object):
-    """docstring for ClassName"""
+    """Stores data with associated timestamps, both sorted by the timestamp."""
     def __init__(self, data=(), data_ts=()):
         if len(data) != len(data_ts):
             raise ValueError(('Each element in `data` requires a corresponding'
@@ -57,6 +57,24 @@ class Bisector(object):
             self.sorted_idc = np.argsort(self.data_ts)
             self.data_ts = self.data_ts[self.sorted_idc]
             self.data = self.data[self.sorted_idc].tolist()
+
+    def by_ts(self, ts):
+        '''
+        :param ts: timestamp to extract.
+        :return: datum that is matching
+        :raises: ValueError if no matching datum is found
+        '''
+        found_index = np.searchsorted(self.data_ts, ts)
+        try:
+            found_data = self.data[found_index]
+            found_ts = self.data_ts[found_index]
+        except IndexError:
+            raise ValueError
+        found = found_ts == ts
+        if not found:
+            raise ValueError
+        else:
+            return found_data
 
     def by_ts_window(self, ts_window):
         start_idx, stop_idx = self._start_stop_idc_for_window(ts_window)
