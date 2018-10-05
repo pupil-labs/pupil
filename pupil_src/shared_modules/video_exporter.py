@@ -214,8 +214,11 @@ class VideoExporter(Analysis_Plugin_Base, metaclass=abc.ABCMeta):
             export_range,
             process_frame,
         )
-        task = bh.Task_Proxy(
-            plugin_name + " Video Export", export_processed_h264, args=generator_args
+        task = bh.IPC_Logging_Task_Proxy(
+            self.g_pool.ipc_push_url,
+            plugin_name + " Video Export",
+            export_processed_h264,
+            args=generator_args,
         )
         self.export_tasks.append(task)
         return {"export_folder": im_dir}
