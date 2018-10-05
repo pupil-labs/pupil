@@ -116,7 +116,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
     ):
         super().__init__(g_pool)
         self.should_export_pupil_positions = should_export_pupil_positions
-        self.should_export_field_info = should_export_pupil_field_info
+        self.should_export_field_info = should_export_field_info
         self.should_export_gaze_positions = should_export_gaze_positions
 
     def init_ui(self):
