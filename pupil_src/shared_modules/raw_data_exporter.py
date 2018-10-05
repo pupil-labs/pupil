@@ -158,7 +158,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
 
     def export_data(self, export_range, export_dir):
         export_window = pm.exact_window(self.g_pool.timestamps, export_range)
-        if self.should_export_pupil_positions == True:
+        if self.should_export_pupil_positions:
             with open(
                 os.path.join(export_dir, "pupil_positions.csv"),
                 "w",
@@ -265,7 +265,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                     csv_writer.writerow(row)
                 logger.info("Created 'pupil_positions.csv' file.")
 
-        if self.should_export_gaze_positions == True:
+        if self.should_export_gaze_positions:
             with open(
                 os.path.join(export_dir, "gaze_positions.csv"),
                 "w",
@@ -345,7 +345,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                     data += data_3d
                     csv_writer.writerow(data)
                 logger.info("Created 'gaze_positions.csv' file.")
-        if self.should_export_field_info == True:
+        if self.should_export_field_info:
             with open(
                 os.path.join(export_dir, "pupil_gaze_positions_info.txt"),
                 "w",
