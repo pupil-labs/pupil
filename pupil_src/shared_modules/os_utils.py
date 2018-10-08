@@ -45,7 +45,7 @@ else:
             self.caffeine_process = None
 
         def __enter__(self):
-            logger.info('Disabling idle sleep not supported on this OS version.')
+            logger.debug('Disabling idle sleep not supported on this OS version.')
 
         def __exit__(self, type, value, traceback):
             if type is not None:
