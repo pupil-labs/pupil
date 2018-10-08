@@ -160,8 +160,6 @@ class Surface_Tracker_Future(Plugin):
         if not frame:
             return
 
-        self.current_frame_idx = frame.index
-
         if self.running:
             self._detect_markers(frame)
 
@@ -173,12 +171,10 @@ class Surface_Tracker_Future(Plugin):
             surface.update_location(idx, self.markers, self.camera_model)
 
     def _surface_interactions(self, events, frame):
-        # Update surfaces whose verticies have been changed through the GUI
-        for surface, idx in self._edit_surf_verts:
-            if surface.detected:
-                surface.move_corner(idx, self._last_mouse_pos.copy(), self.camera_model)
 
-        # Update surfaces and gaze on surfaces
+        self._move_surface_corners()
+
+        # Update gaze on surfaces
         events["surfaces"] = []
         gaze_events = events.get("gaze", [])
         for surface in self.surfaces:
@@ -221,6 +217,11 @@ class Surface_Tracker_Future(Plugin):
                     "timestamp": frame.timestamp,
                 }
                 events["surfaces"].append(surface_event)
+
+    def _move_surface_corners(self):
+        for surface, corner_idx in self._edit_surf_verts:
+            if surface.detected:
+                surface.move_corner(corner_idx, self._last_mouse_pos.copy(), self.camera_model)
 
     def add_surface(self, _, init_dict=None):
         if self.markers:

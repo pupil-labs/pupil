@@ -9,25 +9,18 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import multiprocessing as mp
-from .surface import Surface
-from . import offline_utils
-
-import numpy as np
-import cv2
-from gl_utils import cvmat_to_glmat
-from glfw import *
-from OpenGL.GL import *
-from pyglui.cygl.utils import Named_Texture
-from cache_list import Cache_List
-from reference_surface import Reference_Surface
-import player_methods as pm
-
 import logging
-
 logger = logging.getLogger(__name__)
 
-# TODO clean up imports
-from .background_tasks import background_data_processor
+from gl_utils import cvmat_to_glmat
+from OpenGL.GL import *
+
+from cache_list import Cache_List
+import player_methods as pm
+
+from .surface import Surface
+from . import offline_utils
+from . import background_tasks
 
 
 class Offline_Surface(Surface):
@@ -37,24 +30,30 @@ class Offline_Surface(Surface):
         self.cache = None
         self.cache_filler = None
         self.observations_frame_idxs = []
+        self.current_frame_idx = None
 
-    def recalculate_cache(self, marker_cache, camera_model):
+    def recalculate_cache(self, frame_idx, marker_cache, camera_model):
+        logging.debug("Recaclulate Surface Cache!")
         if self.cache_filler is not None:
             self.cache_filler.cancel()
 
-        # Reset cache and recalculate all entriesfor which marker detections exist.
-        visited_list = [not e for e in marker_cache]
-        self.cache = Cache_List([False] * len(marker_cache))
-        self.cache_filler = background_data_processor(
+        # Reset cache and recalculate all entries for which previous marker detections existed.
+        visited_list = [e is False for e in marker_cache]
+        self.cache_seek_idx.value = frame_idx
+        self.cache = Cache_List([False] * len(marker_cache), positive_eval_fn=lambda x: (x is not False) and x['detected'])
+        self.cache_filler = background_tasks.background_data_processor(
             marker_cache,
             offline_utils.surface_locater_callable(camera_model, self.reg_markers_undist, self.reg_markers_dist),
             visited_list,
             self.cache_seek_idx,
         )
 
-    def move_corner(self, corner_idx, pos, camera_model):
+    def move_corner(self, frame_idx, marker_cache, corner_idx, pos, camera_model):
         super().move_corner(corner_idx, pos, camera_model)
-        self.cache = None
+
+        # Soft reset of marker cache. This does not invoke a recalculation in the background. Full recalculation will happen once the surface corner was released.
+        self.cache = Cache_List([False] * len(marker_cache), positive_eval_fn=lambda x: (x is not False) and x['detected'])
+        self.update_cache(frame_idx, marker_cache, camera_model)
 
     def add_marker(self, id, verts, camera_model):
         super().add_marker(id, verts, camera_model)
@@ -64,34 +63,33 @@ class Offline_Surface(Surface):
         super().pop_marker(id)
         self.cache = None
 
-    def update_location(self, idx, marker_cache, camera_model):
-
+    def update_location(self, frame_idx, marker_cache, camera_model):
         if not self.defined:
             try:
-                frame_idx = self.start_idx
+                def_idx = self.start_idx
             except AttributeError:
-                frame_idx = self.start_idx = idx
+                def_idx = self.start_idx = frame_idx
 
             while not self.defined:
                 # End of the video, start from the beginning!
-                if frame_idx == len(marker_cache) and idx > 0:
-                    frame_idx = 0
+                if def_idx == len(marker_cache) and frame_idx > 0:
+                    def_idx = 0
 
-                if marker_cache[frame_idx] is False:
+                if marker_cache[def_idx] is False:
                     break
 
-                if not frame_idx in self.observations_frame_idxs:
-                    markers = marker_cache[frame_idx]
+                if not def_idx in self.observations_frame_idxs:
+                    markers = marker_cache[def_idx]
                     markers = {m.id: m for m in markers}
-                    self.update_def(frame_idx, markers, camera_model)
+                    self.update_def(def_idx, markers, camera_model)
 
                 # Stop searching if we looped once through the entire recording
-                if frame_idx == idx - 1:
+                if def_idx == frame_idx - 1:
                     self.build_up_status = 1.0
                     self._finalize_def()
                     break
 
-                frame_idx += 1
+                def_idx += 1
 
             if self.defined:
                 # All previous detections were preliminary, devalidate them.
@@ -99,26 +97,32 @@ class Offline_Surface(Surface):
 
         try:
             if self.cache_filler is not None:
-                for idx, location in self.cache_filler.fetch():
-                    self.cache.update(idx, location)
-            location = self.cache[idx]
+                for cache_idx, location in self.cache_filler.fetch():
+                    self.cache.update(cache_idx, location)
+            location = self.cache[frame_idx]
         except (TypeError, AttributeError):
             location = False
-            self.cache_seek_idx.value = idx
-            self.recalculate_cache(marker_cache, camera_model)
+            self.recalculate_cache(frame_idx, marker_cache, camera_model)
 
-        if not location:
-            location = {}
-            location["detected"] = False
-            location["dist_img_to_surf_trans"] = None
-            location["surf_to_dist_img_trans"] = None
-            location["img_to_surf_trans"] = None
-            location["surf_to_img_trans"] = None
-            location["num_detected_markers"] = 0
+        if location is False:
+            if not marker_cache[frame_idx] is False:
+                logging.debug("On demand surface cache update!")
+                self.update_cache(frame_idx, marker_cache, camera_model)
+                self.update_location(frame_idx, marker_cache, camera_model)
+                return
+            else:
+                logging.debug("Markers not computed yet!")
+                location = {}
+                location["detected"] = False
+                location["dist_img_to_surf_trans"] = None
+                location["surf_to_dist_img_trans"] = None
+                location["img_to_surf_trans"] = None
+                location["surf_to_img_trans"] = None
+                location["num_detected_markers"] = 0
 
         self.__dict__.update(location)
 
-    def update_cache(self, idx, marker_cache, camera_model):
+    def update_cache(self, frame_idx, marker_cache, camera_model):
         """
         Use cached marker data to update the surface cache.
         The surface cache contains the following values:
@@ -130,10 +134,7 @@ class Offline_Surface(Surface):
         """
 
         try:
-            if self.cache[idx] is None:
-                raise Exception("Should never be reached!")  # TODO delete this case
-                return
-            elif not marker_cache[idx]:
+            if not marker_cache[frame_idx]:
                 location = {}
                 location["detected"] = False
                 location["dist_img_to_surf_trans"] = None
@@ -142,7 +143,7 @@ class Offline_Surface(Surface):
                 location["surf_to_img_trans"] = None
                 location["num_detected_markers"] = 0
             else:
-                markers = marker_cache[idx]
+                markers = marker_cache[frame_idx]
                 markers = {m.id: m for m in markers}
                 location = Surface.locate(
                     markers,
@@ -150,13 +151,16 @@ class Offline_Surface(Surface):
                     self.reg_markers_undist,
                     self.reg_markers_dist,
                 )
-            self.cache.update(idx, location)
+            self.cache.update(frame_idx, location)
         except TypeError:
-            self.recalculate_cache(marker_cache, camera_model)
+            self.recalculate_cache(frame_idx, marker_cache, camera_model)
 
     def update_def(self, idx, vis_markers, camera_model):
         self.observations_frame_idxs.append(idx)
         super().update_def(idx, vis_markers, camera_model)
+
+    def on_change(self):
+        self.cache = None
 
     # TODO Why?
     def gaze_on_srf_by_frame_idx(self, frame_index, m_from_screen):

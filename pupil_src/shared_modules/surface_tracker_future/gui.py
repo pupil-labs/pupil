@@ -305,23 +305,25 @@ class GUI:
                             self._edit_surf_markers.add(surface)
 
             # Surface Corner Handles
-            if action == glfw.GLFW_PRESS:
-                norm_corners = np.array(
-                    [(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32
-                )
-
-                for surface in self._edit_surf_corners:
-                    if surface.detected and surface.defined:
-                        img_corners = surface.map_from_surf(
-                            norm_corners,
-                            self.tracker.camera_model,
-                            compensate_distortion=False,
-                        )
-                        for idx, corner in enumerate(img_corners):
-                            dist = np.linalg.norm(corner - pos)
-                            if dist < 15:
+            norm_corners = np.array(
+                [(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32
+            )
+            for surface in self._edit_surf_corners:
+                if surface.detected and surface.defined:
+                    img_corners = surface.map_from_surf(
+                        norm_corners,
+                        self.tracker.camera_model,
+                        compensate_distortion=False,
+                    )
+                    for idx, corner in enumerate(img_corners):
+                        dist = np.linalg.norm(corner - pos)
+                        if dist < 15:
+                            if action == glfw.GLFW_PRESS:
                                 self.tracker._edit_surf_verts.append((surface, idx))
-            elif action == glfw.GLFW_RELEASE:
+                            elif action == glfw.GLFW_RELEASE:
+                                surface.on_change()
+
+            if action == glfw.GLFW_RELEASE:
                 if self.tracker._edit_surf_verts:
                     self.tracker.notify_all({"subject": "surfaces_changed"})
                 self.tracker._edit_surf_verts = []
@@ -336,8 +338,10 @@ class GUI:
                             if not marker.id in surface.reg_markers_dist.keys():
                                 surface.add_marker(marker.id, marker.verts,
                                                    self.tracker.camera_model)
+                                surface.on_change()
                             else:
                                 surface.pop_marker(marker.id)
+                                surface.on_change()
                             self.tracker.notify_all({"subject": "surfaces_changed"})
 
     def _check_surface_button_pressed(self, surface, pos):

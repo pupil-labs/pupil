@@ -11,12 +11,9 @@ See COPYING and COPYING.LESSER for license details.
 
 import os
 import logging
-
 logger = logging.getLogger(__name__)
-# TODO What is this for?
 import platform
 import multiprocessing
-
 if platform.system() == "Darwin":
     mp = multiprocessing.get_context("fork")
 else:
@@ -27,17 +24,16 @@ import gl_utils
 import pyglui.cygl.utils as pyglui_utils
 import OpenGL.GL as gl
 
-# TODO improve imports
 from plugin import Analysis_Plugin_Base
 import file_methods
 from cache_list import Cache_List
-import background_helper
 
 from .surface_tracker import Surface_Tracker_Future
 from . import offline_utils
 from . import gui
-from .background_tasks import background_video_processor
+from . import background_tasks
 from .offline_surface import Offline_Surface
+
 
 class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Base):
     """
@@ -88,7 +84,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             # TODO recompute marker_cache when filtering parameters change
             self.marker_cache_unfiltered = Cache_List([False for _ in self.g_pool.timestamps])
             self.marker_cache = Cache_List([False for _ in self.g_pool.timestamps])
-            self.cache_filler = background_video_processor(
+            self.cache_filler = background_tasks.background_video_processor(
                 self.g_pool.capture.source_path,
                 offline_utils.marker_detection_callable(
                     self.cache_min_marker_perimeter, self.inverted_markers
@@ -307,9 +303,6 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             ), "Filling the square marker cache terminated " "before completion!"
             self.cache_filler = None
 
-        if self.timeline:
-            self.timeline.refresh()
-
         # TODO anything needed?
         # while not self.cache_queue.empty():
         #     idx, c_m = self.cache_queue.get()
@@ -327,13 +320,28 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         for surface in self.surfaces:
             surface.update_location(idx, self.marker_cache, self.camera_model)
 
+    def _move_surface_corners(self):
+        for surface, corner_idx in self._edit_surf_verts:
+            if surface.detected:
+                surface.move_corner(self.current_frame_idx, self.marker_cache, corner_idx, self._last_mouse_pos.copy(), self.camera_model)
+
+    def add_surface(self, _, init_dict=None):
+        super().add_surface(_, init_dict=init_dict)
+        self.timeline.content_height += self.timeline_line_height
+
+    def remove_surface(self, _):
+        super().remove_surface(_,)
+        self.timeline.content_height -= self.timeline_line_height
+
     def gl_display(self):
+        if self.timeline:
+            self.timeline.refresh()
         super().gl_display()
         # if self.mode == "Show Metrics":
         #     #todo: draw a backdrop to represent the gaze that is not on any surface
         #     for s in self.surfaces:
         #         #draw a quad on surface with false color of value.
-        #         s.gl_display_metrics()
+        #         s.gl_display_metrics() # todo add support for metrics
 
     def gl_display_cache_bars(self, width, height, scale):
         TS = self.g_pool.timestamps

@@ -49,7 +49,7 @@ class Surface:
         self.detected = False
         self.num_detected_markers = []
 
-        self._required_obs_per_marker = 30
+        self._required_obs_per_marker = 5
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
 
@@ -164,6 +164,7 @@ class Surface:
             m.verts = cv2.perspectiveTransform(
                 m.verts.reshape((-1, 1, 2)), transform
             ).reshape((-1, 2))
+        print(pos) # TODO delete
 
     def add_marker(self, id, verts, camera_model):
         surface_marker_dist = _Surface_Marker(id)
@@ -397,6 +398,9 @@ class Surface:
             points[:, 1] = 1 - points[:, 1]
         points *= camera_model.resolution
         return points
+
+    def on_change(self):
+        pass
 
     def save_to_dict(self):
         return {
