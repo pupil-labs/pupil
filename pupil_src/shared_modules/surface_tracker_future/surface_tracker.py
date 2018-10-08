@@ -147,12 +147,11 @@ class Surface_Tracker_Future(Plugin):
             self.menu.append(s_menu)
 
     def load_surface_definitions_from_file(self):
-        # TODO any reason to keep surface_definitions as class attribute?
-        self.surface_definitions = file_methods.Persistent_Dict(
+        surface_definitions = file_methods.Persistent_Dict(
             os.path.join(self.g_pool.user_dir, "surface_definitions")
         )
 
-        for init_dict in self.surface_definitions.get("surfaces", []):
+        for init_dict in surface_definitions.get("surfaces", []):
             self.add_surface(None, init_dict=init_dict)
 
     def recent_events(self, events):
@@ -224,7 +223,7 @@ class Surface_Tracker_Future(Plugin):
                 surface.move_corner(corner_idx, self._last_mouse_pos.copy(), self.camera_model)
 
     def add_surface(self, _, init_dict=None):
-        if self.markers:
+        if self.markers or init_dict is not None:
             surface = self.Surface_Class(init_dict=init_dict)
             self.surfaces.append(surface)
             self.gui.add_surface(surface)
@@ -322,10 +321,13 @@ class Surface_Tracker_Future(Plugin):
         }
 
     def save_surface_definitions_to_file(self):
-        self.surface_definitions["surfaces"] = [
+        surface_definitions = file_methods.Persistent_Dict(
+            os.path.join(self.g_pool.user_dir, "surface_definitions")
+        )
+        surface_definitions["surfaces"] = [
             surface.save_to_dict() for surface in self.surfaces if surface.defined
         ]
-        self.surface_definitions.save()
+        surface_definitions.save()
 
     def deinit_ui(self):
         self.g_pool.quickbar.remove(self.button)

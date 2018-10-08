@@ -28,7 +28,7 @@ from plugin import Analysis_Plugin_Base
 import file_methods
 from cache_list import Cache_List
 
-from .surface_tracker import Surface_Tracker_Future
+from .surface_tracker import Surface_Tracker_Future, Marker
 from . import offline_utils
 from . import gui
 from . import background_tasks
@@ -55,14 +55,14 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         marker_min_confidence=0.6,
         inverted_markers=False,
     ):
+        self.timeline_line_height = 16
         super().__init__(
             g_pool, marker_min_perimeter, marker_min_confidence, inverted_markers
         )
         self.order = .2
-        self.timeline_line_height = 16
 
         # Caches
-        self.marker_cache_version = 2
+        self.marker_cache_version = 3
         self.cache_min_marker_perimeter = 20  # find even super small markers. The
         # surface locater will filter using min_marker_perimeter
         self.cache_seek_idx = mp.Value("i", 0)
@@ -78,7 +78,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             os.path.join(self.g_pool.rec_dir, "square_marker_cache")
         )
         version = previous_cache.get("version", 0)
-        cache = previous_cache.get("marker_cache", None)
+        cache = previous_cache.get("marker_cache_unfiltered", None)
 
         if cache is None:
             # TODO recompute marker_cache when filtering parameters change
@@ -97,7 +97,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             self.inverted_markers = previous_cache.get("inverted_markers", False)
             self.marker_cache_unfiltered = Cache_List([False for _ in self.g_pool.timestamps])
             self.marker_cache = Cache_List([False for _ in self.g_pool.timestamps])
-            self.cache_filler = background_video_processor(
+            self.cache_filler = background_tasks.background_video_processor(
                 self.g_pool.capture.source_path,
                 offline_utils.marker_detection_callable(
                     self.cache_min_marker_perimeter, self.inverted_markers
@@ -106,12 +106,26 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                 self.cache_seek_idx,
             )
         else:
-            self.marker_cache_unfiltered = Cache_List(cache)
-            # TODO recompute filtered cache
+            self.marker_cache_unfiltered = []
+            for markers in cache:
+                if markers:
+                    markers = [Marker(*args) if args else None for args in markers]
+                    self.marker_cache_unfiltered.append(markers)
+                else:
+                    self.marker_cache_unfiltered.append([])
+            self.marker_cache_unfiltered = Cache_List(self.marker_cache_unfiltered)
             self.marker_cache = None
             self.inverted_markers = previous_cache.get("inverted_markers", False)
             self.cache_filler = None
+            self._update_filtered_markers()
             logger.debug("Restored previous marker cache.")
+
+    def _update_filtered_markers(self):
+        marker_cache = []
+        for markers in self.marker_cache_unfiltered:
+            markers = [m for m in markers if m.perimeter >= self.marker_min_perimeter and m.id_confidence >= self.marker_min_confidence]
+            marker_cache.append(markers)
+        self.marker_cache = Cache_List(marker_cache)
 
     def init_ui(self):
         self.add_menu()
@@ -137,6 +151,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             self.timeline_line_height * (len(self.surfaces) + 1),
         )
         self.g_pool.user_timelines.append(self.timeline)
+        self.timeline.content_height = (len(self.surfaces) + 1) * self.timeline_line_height
 
         self.update_ui()
 
@@ -233,6 +248,14 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             s_menu.append(pyglui.ui.Button("remove", remove_s))
             self.menu.append(s_menu)
 
+    def load_surface_definitions_from_file(self):
+        surface_definitions = file_methods.Persistent_Dict(
+            os.path.join(self.g_pool.rec_dir, "surface_definitions")
+        )
+
+        for init_dict in surface_definitions.get("surfaces", []):
+            self.add_surface(None, init_dict=init_dict)
+
     def recalculate(self):
         pass  # TODO implement
         # in_mark = self.g_pool.seek_control.trim_left
@@ -327,7 +350,11 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
 
     def add_surface(self, _, init_dict=None):
         super().add_surface(_, init_dict=init_dict)
-        self.timeline.content_height += self.timeline_line_height
+        # Plugin initialization loads surface definitions before UI is initialized. Changing timeline height will fail in this case.
+        try:
+            self.timeline.content_height += self.timeline_line_height
+        except AttributeError:
+            pass
 
     def remove_surface(self, _):
         super().remove_surface(_,)
@@ -388,7 +415,13 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             self.glfont.draw_text(width, 0, s.name)
 
     def save_surface_definitions_to_file(self):
-        pass  # TODO implement
+        surface_definitions = file_methods.Persistent_Dict(
+            os.path.join(self.g_pool.rec_dir, "surface_definitions")
+        )
+        surface_definitions["surfaces"] = [
+            surface.save_to_dict() for surface in self.surfaces if surface.defined
+        ]
+        surface_definitions.save()
 
     def deinit_ui(self):
         self.g_pool.user_timelines.remove(self.timeline)
@@ -398,3 +431,14 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         if self.add_button:
             self.g_pool.quickbar.remove(self.add_button)
             self.add_button = None
+
+    def cleanup(self):
+        super().cleanup()
+
+        marker_cache_file = file_methods.Persistent_Dict(
+            os.path.join(self.g_pool.rec_dir, "square_marker_cache")
+        )
+        marker_cache_file["marker_cache_unfiltered"] = list(self.marker_cache_unfiltered)
+        marker_cache_file["version"] = self.marker_cache_version
+        marker_cache_file["inverted_markers"] = self.inverted_markers
+        marker_cache_file.save()

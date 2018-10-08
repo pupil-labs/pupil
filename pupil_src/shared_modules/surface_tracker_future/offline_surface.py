@@ -12,6 +12,7 @@ import multiprocessing as mp
 import logging
 logger = logging.getLogger(__name__)
 
+import numpy as np
 from gl_utils import cvmat_to_glmat
 from OpenGL.GL import *
 
@@ -25,12 +26,12 @@ from . import background_tasks
 
 class Offline_Surface(Surface):
     def __init__(self, init_dict=None):
-        super().__init__(init_dict=init_dict)
         self.cache_seek_idx = mp.Value("i", 0)
         self.cache = None
         self.cache_filler = None
         self.observations_frame_idxs = []
         self.current_frame_idx = None
+        super().__init__(init_dict=init_dict)
 
     def recalculate_cache(self, frame_idx, marker_cache, camera_model):
         logging.debug("Recaclulate Surface Cache!")
@@ -152,7 +153,7 @@ class Offline_Surface(Surface):
                     self.reg_markers_dist,
                 )
             self.cache.update(frame_idx, location)
-        except TypeError:
+        except (TypeError, AttributeError):
             self.recalculate_cache(frame_idx, marker_cache, camera_model)
 
     def update_def(self, idx, vis_markers, camera_model):
@@ -198,3 +199,42 @@ class Offline_Surface(Surface):
             glPopMatrix()
             glMatrixMode(GL_MODELVIEW)
             glPopMatrix()
+
+    def save_to_dict(self):
+        save_dict = super().save_to_dict()
+        try:
+            cache_to_file = []
+            for location in self.cache:
+                if location["dist_img_to_surf_trans"] is not None:
+                    location = location.copy()
+                    location["dist_img_to_surf_trans"] = location["dist_img_to_surf_trans"].tolist()
+                    location["surf_to_dist_img_trans"] = location["surf_to_dist_img_trans"].tolist()
+                    location["img_to_surf_trans"] = location["img_to_surf_trans"].tolist()
+                    location["surf_to_img_trans"] = location["surf_to_img_trans"].tolist()
+                cache_to_file.append(location)
+            save_dict['cache'] = cache_to_file
+        except TypeError:
+            save_dict['cache'] = None
+        save_dict['start_idx'] = self.start_idx
+        save_dict['observations_frame_idxs'] = self.observations_frame_idxs
+        return save_dict
+
+    def load_from_dict(self, init_dict):
+        super().load_from_dict(init_dict)
+        try:
+            cache = init_dict['cache']
+            for location in cache:
+                if location["dist_img_to_surf_trans"] is not None:
+                    location["dist_img_to_surf_trans"] = np.asarray(location["dist_img_to_surf_trans"])
+                    location["surf_to_dist_img_trans"] = np.asarray(location["surf_to_dist_img_trans"])
+                    location["img_to_surf_trans"] = np.asarray(location["img_to_surf_trans"])
+                    location["surf_to_img_trans"] = np.asarray(location["surf_to_img_trans"])
+            self.cache = Cache_List(cache, positive_eval_fn=lambda x: (x is not False) and x['detected'])
+        except AttributeError:
+            self.cache = None
+
+        try:
+            self.observations_frame_idxs= init_dict['observations_frame_idxs']
+            self.start_idx = init_dict['start_idx']
+        except AttributeError:
+            self.observations_frame_idxs = []
