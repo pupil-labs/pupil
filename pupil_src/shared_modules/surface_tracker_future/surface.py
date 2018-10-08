@@ -164,7 +164,6 @@ class Surface:
             m.verts = cv2.perspectiveTransform(
                 m.verts.reshape((-1, 1, 2)), transform
             ).reshape((-1, 2))
-        print(pos) # TODO delete
 
     def add_marker(self, id, verts, camera_model):
         surface_marker_dist = _Surface_Marker(id)

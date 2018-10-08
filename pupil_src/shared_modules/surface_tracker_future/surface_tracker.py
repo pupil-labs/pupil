@@ -285,7 +285,6 @@ class Surface_Tracker_Future(Plugin):
         self.markers = self._filter_markers(markers)
 
     def _filter_markers(self, markers):
-        # TODO move this filter into tracker since it is global for all surfaces
         filtered_markers = [
             m
             for m in markers
