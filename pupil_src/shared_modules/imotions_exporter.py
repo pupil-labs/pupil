@@ -64,9 +64,12 @@ class iMotions_Exporter(VideoExporter):
     def export_data(self, export_range, export_dir):
         user_warned_3d_only = False
 
+        rec_start = self._get_recording_start_date()
+        im_dir = os.path.join(export_dir, "iMotions_{}".format(rec_start))
+
         export_info = self.add_export_job(
             export_range,
-            export_dir,
+            im_dir,
             plugin_name="iMotions",
             input_name="world",
             output_name="scene",

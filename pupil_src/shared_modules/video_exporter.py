@@ -194,11 +194,8 @@ class VideoExporter(Analysis_Plugin_Base):
         output_name,
         process_frame,
     ):
-        rec_start = self._get_recording_start_date()
-        im_dir = os.path.join(export_dir, plugin_name + "_{}".format(rec_start))
-        os.makedirs(im_dir, exist_ok=True)
-        self.output = im_dir
-        logger.info("Exporting to {}".format(im_dir))
+        os.makedirs(export_dir, exist_ok=True)
+        logger.info("Exporting to {}".format(export_dir))
 
         try:
             distorted_video_loc = [
@@ -208,7 +205,7 @@ class VideoExporter(Analysis_Plugin_Base):
             ][0]
         except IndexError:
             raise FileNotFoundError("No Video " + input_name + " found")
-        target_video_loc = os.path.join(im_dir, output_name + ".mp4")
+        target_video_loc = os.path.join(export_dir, output_name + ".mp4")
         generator_args = (
             self.g_pool.timestamps,
             distorted_video_loc,
@@ -220,7 +217,7 @@ class VideoExporter(Analysis_Plugin_Base):
             plugin_name + " Video Export", export_processed_h264, args=generator_args
         )
         self.export_tasks.append(task)
-        return {"export_folder": im_dir}
+        return {"export_folder": export_dir}
 
     def cancel(self):
         for task in self.export_tasks:
