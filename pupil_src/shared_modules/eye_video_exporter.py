@@ -70,6 +70,7 @@ class Eye_Video_Exporter(VideoExporter):
                 input_name=eye_name,
                 output_name=eye_name,
                 process_frame=process_frame,
+                export_timestamps=True,
             )
         except FileNotFoundError:
             # happens if there is no such eye video
