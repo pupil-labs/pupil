@@ -67,25 +67,25 @@ class iMotions_Exporter(VideoExporter):
         rec_start = self._get_recording_start_date()
         im_dir = os.path.join(export_dir, "iMotions_{}".format(rec_start))
 
-        export_info = self.add_export_job(
-            export_range,
-            im_dir,
-            plugin_name="iMotions",
-            input_name="world",
-            output_name="scene",
-            process_frame=_process_frame,
-            export_timestamps=False,
-        )
+        try:
+            self.add_export_job(
+                export_range,
+                im_dir,
+                plugin_name="iMotions",
+                input_name="world",
+                output_name="scene",
+                process_frame=_process_frame,
+                export_timestamps=False,
+            )
+        except FileNotFoundError:
+            logger.info("'world' video not found. Export continues with gaze data.")
 
         info_src = os.path.join(self.g_pool.rec_dir, "info.csv")
-        info_dest = os.path.join(export_info["export_folder"], "iMotions_info.csv")
+        info_dest = os.path.join(im_dir, "iMotions_info.csv")
         copy2(info_src, info_dest)  # copy info.csv file
 
         with open(
-            os.path.join(export_info["export_folder"], "gaze.tlv"),
-            "w",
-            encoding="utf-8",
-            newline="",
+            os.path.join(im_dir, "gaze.tlv"), "w", encoding="utf-8", newline=""
         ) as csvfile:
             csv_writer = csv.writer(csvfile, delimiter="\t")
 
