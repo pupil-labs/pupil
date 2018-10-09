@@ -74,6 +74,7 @@ class iMotions_Exporter(VideoExporter):
             input_name="world",
             output_name="scene",
             process_frame=_process_frame,
+            export_timestamps=False,
         )
 
         info_src = os.path.join(self.g_pool.rec_dir, "info.csv")
