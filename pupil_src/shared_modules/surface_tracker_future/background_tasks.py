@@ -130,7 +130,7 @@ def background_data_processor(data, callable, visited_list, seek_idx=-1):
     return background_helper.Task_Proxy(
         "Background Data Processor",  # TODO What are names used for? Do they need to
         #  be unique?
-        data_processing_generator_simple,
+        data_processing_generator,
         (data, callable, seek_idx, visited_list),
     )
 
@@ -186,6 +186,7 @@ def data_processing_generator(data, callable, seek_idx, visited_list):
             yield next_sample_idx, res
             next_sample_idx += 1
 
+# TODO delete simple version
 def data_processing_generator_simple(data, callable, seek_idx, visited_list):
     for i in range(len(visited_list)):
         if visited_list[i]:

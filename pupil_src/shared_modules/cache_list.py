@@ -64,9 +64,10 @@ class Cache_List(list):
         raise Exception("Read only")
 
 
-    def update(self,key,item):
+    def update(self, key, item, force=False):
         if self[key] != False:
-            logger.warning("You are overwriting a precached result.")
+            if not force:
+                logger.warning("You are overwriting a precached result!")
             self[key] = item
             self._visited_ranges = init_ranges(l = self,eval_fn = self.visited_eval_fn )
             self._positive_ranges = init_ranges(l = self,eval_fn = self.positive_eval_fn )

@@ -18,7 +18,7 @@ import methods
 
 
 class Surface:
-    def __init__(self, init_dict=None):
+    def __init__(self, on_surface_changed=None, init_dict=None):
         """
         # TODO create docstring
         Args:
@@ -26,6 +26,7 @@ class Surface:
             marker_min_confidence:
             init_dict:
         """
+        self.on_surface_change = on_surface_changed
         self.uid = random.randint(0, 1e6)
 
         self.name = "unknown"
@@ -58,7 +59,7 @@ class Surface:
         self.heatmap = np.ones((1, 1), dtype=np.uint8)
         self.heatmap_detail = .2
 
-        if not init_dict is None:
+        if init_dict is not None:
             self.load_from_dict(init_dict)
 
     def __hash__(self):

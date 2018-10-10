@@ -224,11 +224,10 @@ class Surface_Tracker_Future(Plugin):
 
     def add_surface(self, _, init_dict=None):
         if self.markers or init_dict is not None:
-            surface = self.Surface_Class(init_dict=init_dict)
+            surface = self.Surface_Class(on_surface_changed=self.save_surface_definitions_to_file, init_dict=init_dict)
             self.surfaces.append(surface)
             self.gui.add_surface(surface)
             self.update_ui()
-            self.notify_all({"subject": "surfaces_changed"})
         else:
             logger.warning("Can not add a new surface: No markers found in the image!")
 
@@ -236,7 +235,7 @@ class Surface_Tracker_Future(Plugin):
         self.gui.remove_surface(self.surfaces[i])
         del self.surfaces[i]
         self.update_ui()
-        self.notify_all({"subject": "surfaces_changed"})
+        self.save_surface_definitions_to_file()
 
     def _gaze_to_surf(self, surf, gaze_events):
         result = []
@@ -307,11 +306,6 @@ class Surface_Tracker_Future(Plugin):
 
     def on_click(self, pos, button, action):
         self.gui.on_click(pos, button, action)
-
-    def on_notify(self, notification):
-        if notification["subject"] == "surfaces_changed":
-            logger.info("Surfaces changed. Saving to file.")
-            self.save_surface_definitions_to_file()
 
     def get_init_dict(self):
         return {

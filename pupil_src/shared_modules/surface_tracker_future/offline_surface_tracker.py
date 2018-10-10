@@ -11,13 +11,16 @@ See COPYING and COPYING.LESSER for license details.
 
 import os
 import logging
+
 logger = logging.getLogger(__name__)
 import platform
 import multiprocessing
+
 if platform.system() == "Darwin":
     mp = multiprocessing.get_context("fork")
 else:
     mp = multiprocessing.get_context()
+import time
 
 import pyglui
 import gl_utils
@@ -48,6 +51,9 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
     See marker_tracker.py for more info on this marker tracker.
     """
 
+    # TODO make surfaces are saved on creation
+    # TODO make sure square_marker_cache is saved continuously during creation.
+    # TODO Make methods private appropriatly
     def __init__(
         self,
         g_pool,
@@ -67,6 +73,8 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         # surface locater will filter using min_marker_perimeter
         self.cache_seek_idx = mp.Value("i", 0)
         self._init_marker_cache()
+        self.last_cache_update_ts = time.time()
+        self.cache_update_interval = 2
         # self.recalculate() # What does this do?
 
     @property
@@ -81,30 +89,11 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         cache = previous_cache.get("marker_cache_unfiltered", None)
 
         if cache is None:
-            # TODO recompute marker_cache when filtering parameters change
-            self.marker_cache_unfiltered = Cache_List([False for _ in self.g_pool.timestamps])
-            self.marker_cache = Cache_List([False for _ in self.g_pool.timestamps])
-            self.cache_filler = background_tasks.background_video_processor(
-                self.g_pool.capture.source_path,
-                offline_utils.marker_detection_callable(
-                    self.cache_min_marker_perimeter, self.inverted_markers
-                ),
-                list(self.marker_cache),
-                self.cache_seek_idx,
-            )
+            self.recalculate_marker_cache()
         elif version != self.marker_cache_version:
             logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
             self.inverted_markers = previous_cache.get("inverted_markers", False)
-            self.marker_cache_unfiltered = Cache_List([False for _ in self.g_pool.timestamps])
-            self.marker_cache = Cache_List([False for _ in self.g_pool.timestamps])
-            self.cache_filler = background_tasks.background_video_processor(
-                self.g_pool.capture.source_path,
-                offline_utils.marker_detection_callable(
-                    self.cache_min_marker_perimeter, self.inverted_markers
-                ),
-                list(self.marker_cache),
-                self.cache_seek_idx,
-            )
+            self.recalculate_marker_cache()
         else:
             self.marker_cache_unfiltered = []
             for markers in cache:
@@ -112,18 +101,46 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                     markers = [Marker(*args) if args else None for args in markers]
                     self.marker_cache_unfiltered.append(markers)
                 else:
-                    self.marker_cache_unfiltered.append([])
-            self.marker_cache_unfiltered = Cache_List(self.marker_cache_unfiltered)
-            self.marker_cache = None
+                    self.marker_cache_unfiltered.append(markers)
+            marker_cache_unfiltered = Cache_List(self.marker_cache_unfiltered)
+            self.recalculate_marker_cache(previous_state=marker_cache_unfiltered)
             self.inverted_markers = previous_cache.get("inverted_markers", False)
-            self.cache_filler = None
-            self._update_filtered_markers()
             logger.debug("Restored previous marker cache.")
+
+    def recalculate_marker_cache(self, previous_state=None):
+        # TODO recompute marker_cache when filtering parameters change
+        if previous_state is None:
+            previous_state = [False for _ in self.g_pool.timestamps]
+
+            # If we had a previous_state argument, surface objects had just been
+            # initialized with their previous state, which we do not want to overwrite.
+            # Therefore resetting the marker cache is only done when no previous_state
+            # is defined.
+            for surface in self.surfaces:
+                surface.cache = None
+
+        self.marker_cache_unfiltered = Cache_List(previous_state)
+        self._update_filtered_markers()
+
+        self.cache_filler = background_tasks.background_video_processor(
+            self.g_pool.capture.source_path,
+            offline_utils.marker_detection_callable(
+                self.cache_min_marker_perimeter, self.inverted_markers
+            ),
+            list(self.marker_cache),
+            self.cache_seek_idx,
+        )
 
     def _update_filtered_markers(self):
         marker_cache = []
         for markers in self.marker_cache_unfiltered:
-            markers = [m for m in markers if m.perimeter >= self.marker_min_perimeter and m.id_confidence >= self.marker_min_confidence]
+            if markers:
+                markers = [
+                    m
+                    for m in markers
+                    if m.perimeter >= self.marker_min_perimeter
+                    and m.id_confidence >= self.marker_min_confidence
+                ]
             marker_cache.append(markers)
         self.marker_cache = Cache_List(marker_cache)
 
@@ -151,20 +168,28 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             self.timeline_line_height * (len(self.surfaces) + 1),
         )
         self.g_pool.user_timelines.append(self.timeline)
-        self.timeline.content_height = (len(self.surfaces) + 1) * self.timeline_line_height
+        self.timeline.content_height = (
+            len(self.surfaces) + 1
+        ) * self.timeline_line_height
 
         self.update_ui()
 
     def update_ui(self):
         def set_marker_min_perimeter(val):
             self.marker_min_perimeter = val
-            self.notify_all({"subject": "min_marker_perimeter_changed", "delay": 1})
+            self.notify_all({"subject": "marker_filtering_params_changed", "delay": 1})
+
+        def set_marker_min_confidence(val):
+            self.marker_min_confidence = val
+            self.notify_all({"subject": "marker_filtering_params_changed", "delay": 1})
 
         def set_invert_image(val):
-            self.invert_image = val
-            self.invalidate_marker_cache()
-            self.invalidate_surface_caches()
+            self.inverted_markers = val
+            self.recalculate_marker_cache()
 
+        def set_robust_detection(val):
+            self.robust_detection = val
+            self.recalculate_marker_cache()
 
         try:
             self.menu.elements[:] = []
@@ -181,8 +206,13 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             )
         )
         self.menu.append(
-            pyglui.ui.Switch("robust_detection", self, label="Robust detection")
-        )
+            pyglui.ui.Switch(
+                "robust_detection",
+                self,
+                setter=set_robust_detection,
+                label="Robust detection",
+            )
+        )  # TODO is robust_detection atually used?
         self.menu.append(
             pyglui.ui.Switch(
                 "inverted_markers",
@@ -202,7 +232,14 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             )
         )
         self.menu.append(
-            pyglui.ui.Slider("marker_min_confidence", self, step=0.01, min=0, max=1)
+            pyglui.ui.Slider(
+                "marker_min_confidence",
+                self,
+                setter=set_marker_min_confidence,
+                step=0.01,
+                min=0,
+                max=1,
+            )
         )
         self.menu.append(
             pyglui.ui.Selector(
@@ -321,10 +358,12 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                 surf.update_cache(idx, self.marker_cache, self.camera_model)
 
         if self.cache_filler.completed:
-            assert (
-                self.marker_cache.complete
-            ), "Filling the square marker cache terminated " "before completion!"
             self.cache_filler = None
+
+        now = time.time()
+        if now - self.last_cache_update_ts > self.cache_update_interval:
+            self._save_marker_cache()
+            self.last_cache_update_ts = now
 
         # TODO anything needed?
         # while not self.cache_queue.empty():
@@ -346,20 +385,28 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
     def _move_surface_corners(self):
         for surface, corner_idx in self._edit_surf_verts:
             if surface.detected:
-                surface.move_corner(self.current_frame_idx, self.marker_cache, corner_idx, self._last_mouse_pos.copy(), self.camera_model)
+                surface.move_corner(
+                    self.current_frame_idx,
+                    self.marker_cache,
+                    corner_idx,
+                    self._last_mouse_pos.copy(),
+                    self.camera_model,
+                )
 
     def add_surface(self, _, init_dict=None):
         super().add_surface(_, init_dict=init_dict)
         # Plugin initialization loads surface definitions before UI is initialized. Changing timeline height will fail in this case.
-        try:
-            self.timeline.content_height += self.timeline_line_height
-        except AttributeError:
-            pass
+        if self.markers or init_dict is not None:
+            try:
+                self.timeline.content_height += self.timeline_line_height
+            except AttributeError:
+                pass
 
     def remove_surface(self, _):
-        super().remove_surface(_,)
+        super().remove_surface(_)
         self.timeline.content_height -= self.timeline_line_height
 
+    # TODO does it make sense to move timeline stuff into gui class?
     def gl_display(self):
         if self.timeline:
             self.timeline.refresh()
@@ -407,6 +454,13 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                     s, color=color, line_type=gl.GL_LINES, thickness=scale * 2
                 )
 
+    def on_notify(self, notification):
+        super().on_notify(notification)
+        if notification["subject"] == "marker_filtering_params_changed":
+            self._update_filtered_markers()
+            for surface in self.surfaces:
+                surface.cache = None
+
     def draw_labels(self, width, height, scale):
         self.glfont.set_size(self.timeline_line_height * .8 * scale)
         self.glfont.draw_text(width, 0, "Marker Cache")
@@ -415,6 +469,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             self.glfont.draw_text(width, 0, s.name)
 
     def save_surface_definitions_to_file(self):
+        logger.info("Save updated surfaces!")  # TODO remove
         surface_definitions = file_methods.Persistent_Dict(
             os.path.join(self.g_pool.rec_dir, "surface_definitions")
         )
@@ -435,10 +490,15 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
     def cleanup(self):
         super().cleanup()
 
+        self._save_marker_cache()
+
+    def _save_marker_cache(self):
         marker_cache_file = file_methods.Persistent_Dict(
             os.path.join(self.g_pool.rec_dir, "square_marker_cache")
         )
-        marker_cache_file["marker_cache_unfiltered"] = list(self.marker_cache_unfiltered)
+        marker_cache_file["marker_cache_unfiltered"] = list(
+            self.marker_cache_unfiltered
+        )
         marker_cache_file["version"] = self.marker_cache_version
         marker_cache_file["inverted_markers"] = self.inverted_markers
         marker_cache_file.save()

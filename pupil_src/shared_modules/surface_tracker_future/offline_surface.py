@@ -25,13 +25,13 @@ from . import background_tasks
 
 
 class Offline_Surface(Surface):
-    def __init__(self, init_dict=None):
+    def __init__(self, on_surface_changed=None, init_dict=None):
         self.cache_seek_idx = mp.Value("i", 0)
         self.cache = None
         self.cache_filler = None
         self.observations_frame_idxs = []
         self.current_frame_idx = None
-        super().__init__(init_dict=init_dict)
+        super().__init__(on_surface_changed=on_surface_changed, init_dict=init_dict)
 
     def recalculate_cache(self, frame_idx, marker_cache, camera_model):
         logging.debug("Recaclulate Surface Cache!")
@@ -95,11 +95,18 @@ class Offline_Surface(Surface):
             if self.defined:
                 # All previous detections were preliminary, devalidate them.
                 self.cache = None
+                if self.on_surface_change is not None:
+                    self.on_surface_change()
 
         try:
             if self.cache_filler is not None:
                 for cache_idx, location in self.cache_filler.fetch():
-                    self.cache.update(cache_idx, location)
+                    self.cache.update(cache_idx, location, force=True)
+
+                if self.cache_filler.completed:
+                    self.cache_filler = None
+                    self.on_surface_change()
+
             location = self.cache[frame_idx]
         except (TypeError, AttributeError):
             location = False
@@ -152,7 +159,7 @@ class Offline_Surface(Surface):
                     self.reg_markers_undist,
                     self.reg_markers_dist,
                 )
-            self.cache.update(frame_idx, location)
+            self.cache.update(frame_idx, location, force=True)
         except (TypeError, AttributeError):
             self.recalculate_cache(frame_idx, marker_cache, camera_model)
 
@@ -161,6 +168,7 @@ class Offline_Surface(Surface):
         super().update_def(idx, vis_markers, camera_model)
 
     def on_change(self):
+        # TODO is it nicer to call recalculate_cache directly?
         self.cache = None
 
     # TODO Why?
@@ -230,7 +238,7 @@ class Offline_Surface(Surface):
                     location["img_to_surf_trans"] = np.asarray(location["img_to_surf_trans"])
                     location["surf_to_img_trans"] = np.asarray(location["surf_to_img_trans"])
             self.cache = Cache_List(cache, positive_eval_fn=lambda x: (x is not False) and x['detected'])
-        except AttributeError:
+        except (TypeError, AttributeError):
             self.cache = None
 
         try:
