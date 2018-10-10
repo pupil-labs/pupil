@@ -40,7 +40,6 @@ from .offline_surface import Offline_Surface
 
 class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Base):
     """
-    # TODO if you add a surface while no markers are visible, the next frame containing markers will be used
     # TODO Improve docstring
     - Mostly extends the Surface Tracker with a cache
     Special version of surface tracker for use with videofile source.
@@ -51,8 +50,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    # TODO make surfaces are saved on creation
-    # TODO make sure square_marker_cache is saved continuously during creation.
+    # TODO add surfaces export
     # TODO Make methods private appropriatly
     def __init__(
         self,
@@ -108,7 +106,6 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             logger.debug("Restored previous marker cache.")
 
     def recalculate_marker_cache(self, previous_state=None):
-        # TODO recompute marker_cache when filtering parameters change
         if previous_state is None:
             previous_state = [False for _ in self.g_pool.timestamps]
 
@@ -415,7 +412,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         #     #todo: draw a backdrop to represent the gaze that is not on any surface
         #     for s in self.surfaces:
         #         #draw a quad on surface with false color of value.
-        #         s.gl_display_metrics() # todo add support for metrics
+        #         s.gl_display_metrics()
 
     def gl_display_cache_bars(self, width, height, scale):
         TS = self.g_pool.timestamps
@@ -469,7 +466,6 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             self.glfont.draw_text(width, 0, s.name)
 
     def save_surface_definitions_to_file(self):
-        logger.info("Save updated surfaces!")  # TODO remove
         surface_definitions = file_methods.Persistent_Dict(
             os.path.join(self.g_pool.rec_dir, "surface_definitions")
         )

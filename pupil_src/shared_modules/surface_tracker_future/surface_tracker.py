@@ -250,7 +250,6 @@ class Surface_Tracker_Future(Plugin):
             result.append(surf_point)
         return result
 
-    # TODO make this a static method so it can be reused to define the background task?
     def _detect_markers(self, frame):
         gray = frame.gray
         if self.inverted_markers:

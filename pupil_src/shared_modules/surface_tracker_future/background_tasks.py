@@ -16,7 +16,7 @@ def background_video_processor(video_file_path, callable, visited_list, seek_idx
 
     """
     return background_helper.Task_Proxy(
-        "Background Video Processor",  # TODO What are names used for? Do they need to
+        "Background Video Processor",
         #  be unique?
         video_processing_generator,
         (video_file_path, callable, seek_idx, visited_list),
@@ -128,7 +128,7 @@ def background_data_processor(data, callable, visited_list, seek_idx=-1):
 
     """
     return background_helper.Task_Proxy(
-        "Background Data Processor",  # TODO What are names used for? Do they need to
+        "Background Data Processor",
         #  be unique?
         data_processing_generator,
         (data, callable, seek_idx, visited_list),
@@ -185,24 +185,3 @@ def data_processing_generator(data, callable, seek_idx, visited_list):
             visited_list[next_sample_idx] = True
             yield next_sample_idx, res
             next_sample_idx += 1
-
-# TODO delete simple version
-def data_processing_generator_simple(data, callable, seek_idx, visited_list):
-    for i in range(len(visited_list)):
-        if visited_list[i]:
-            continue
-
-        markers = data[i]
-        if markers is False:
-            continue # TODO should never be reached
-        elif len(markers) == 0:
-            location = {}
-            location["detected"] = False
-            location["dist_img_to_surf_trans"] = None
-            location["surf_to_dist_img_trans"] = None
-            location["img_to_surf_trans"] = None
-            location["surf_to_img_trans"] = None
-            location["num_detected_markers"] = 0
-        else:
-            location = callable(markers)
-        yield i, location

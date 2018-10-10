@@ -168,24 +168,9 @@ class Offline_Surface(Surface):
         super().update_def(idx, vis_markers, camera_model)
 
     def on_change(self):
-        # TODO is it nicer to call recalculate_cache directly?
         self.cache = None
 
-    # TODO Why?
-    def gaze_on_srf_by_frame_idx(self, frame_index, m_from_screen):
-        frame_window = pm.enclosing_window(self.g_pool.timestamps, frame_index)
-        return self.map_data_to_surface(
-            self.g_pool.gaze_positions.by_ts_window(frame_window), m_from_screen
-        )
-
-    # TODO Why?
-    def fixations_on_srf_by_frame_idx(self, frame_index, m_from_screen):
-        frame_window = pm.enclosing_window(self.g_pool.timestamps, frame_index)
-        return self.map_data_to_surface(
-            self.g_pool.fixations.by_ts_window(frame_window), m_from_screen
-        )
-
-    # TODO check
+    # TODO What is the difference between metrics and Heatmap? Are both needed?
     def gl_display_metrics(self):
         if self.metrics_texture and self.detected:
             # cv uses 3x3 gl uses 4x4 tranformation matricies
