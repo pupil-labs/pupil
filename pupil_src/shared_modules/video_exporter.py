@@ -224,6 +224,7 @@ class VideoExporter(Analysis_Plugin_Base):
             ][0]
         except IndexError:
             raise FileNotFoundError("No Video " + input_name + " found")
+
         target_video_loc = os.path.join(export_dir, output_name + ".mp4")
         generator_args = (
             self.g_pool.timestamps,
