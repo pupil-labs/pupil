@@ -112,11 +112,16 @@ class Blink_Detection(Analysis_Plugin_Base):
         self.history.extend(events.get("pupil", []))
 
         try:  # use newest gaze point to determine age threshold
+            assert self.history[-1]["timestamp"] > self.history[0]["timestamp"]
             age_threshold = self.history[-1]["timestamp"] - self.history_length
             while self.history[1]["timestamp"] < age_threshold:
                 self.history.popleft()  # remove outdated gaze points
         except IndexError:
             pass
+        except AssertionError:
+            # negative time jump detected, reset history
+            del self.history[:]
+            return
 
         filter_size = len(self.history)
         if (
