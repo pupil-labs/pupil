@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 import platform
 
@@ -19,7 +19,6 @@ import OpenGL.GL as gl
 import glfw
 import gl_utils
 
-from .surface import _Surface_Marker
 from .surface_tracker import Heatmap_Mode
 
 
@@ -175,8 +174,7 @@ class GUI:
 
             if surface in self._edit_surf_corners:
                 pyglui_utils.draw_points(
-                    [surface_edit_anchor],
-                    color=pyglui_utils.RGBA(*self.color_tertiary),
+                    [surface_edit_anchor], color=pyglui_utils.RGBA(*self.color_tertiary)
                 )
             else:
                 pyglui_utils.draw_points(
@@ -300,15 +298,11 @@ class GUI:
                         self._edit_surf_markers.add(surface)
 
         # Surface Corner Handles
-        norm_corners = np.array(
-            [(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32
-        )
+        norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
         for surface in self._edit_surf_corners:
             if surface.detected and surface.defined:
                 img_corners = surface.map_from_surf(
-                    norm_corners,
-                    self.tracker.camera_model,
-                    compensate_distortion=False,
+                    norm_corners, self.tracker.camera_model, compensate_distortion=False
                 )
                 for idx, corner in enumerate(img_corners):
                     dist = np.linalg.norm(corner - pos)
@@ -331,8 +325,9 @@ class GUI:
                     dist = np.linalg.norm(centroid - pos)
                     if dist < 15:
                         if not marker.id in surface.reg_markers_dist.keys():
-                            surface.add_marker(marker.id, marker.verts,
-                                               self.tracker.camera_model)
+                            surface.add_marker(
+                                marker.id, marker.verts, self.tracker.camera_model
+                            )
                             surface.on_change()
                         else:
                             surface.pop_marker(marker.id)
@@ -365,17 +360,16 @@ class GUI:
         self._edit_surf_corners.discard(surface)
         self.surface_windows.pop(surface)
 
+
 def _get_norm_to_points_trans(points):
     norm_corners = np.array(((0, 0), (1, 0), (1, 1), (0, 1)), dtype=np.float32)
-    return cv2.getPerspectiveTransform(
-        norm_corners, np.array(points, dtype=np.float32)
-    )
+    return cv2.getPerspectiveTransform(norm_corners, np.array(points, dtype=np.float32))
+
 
 def _get_points_to_norm_trans(points):
     norm_corners = np.array(((0, 0), (1, 0), (1, 1), (0, 1)), dtype=np.float32)
-    return cv2.getPerspectiveTransform(
-        np.array(points, dtype=np.float32), norm_corners
-    )
+    return cv2.getPerspectiveTransform(np.array(points, dtype=np.float32), norm_corners)
+
 
 # TODO Delete
 # class State(Enum):

@@ -10,18 +10,22 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 import pyglui
 
 from .surface import Surface
-from . import gui
 from .surface_tracker import Surface_Tracker_Future, Heatmap_Mode
 
-class Surface_Tracker_Online_Future(Surface_Tracker_Future):
 
+class Surface_Tracker_Online_Future(Surface_Tracker_Future):
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
-        super().__init__(g_pool, marker_min_perimeter=marker_min_perimeter, inverted_markers=inverted_markers)
+        super().__init__(
+            g_pool,
+            marker_min_perimeter=marker_min_perimeter,
+            inverted_markers=inverted_markers,
+        )
         self.ui_info_text = "This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*."
         self.supported_heatmap_modes = [Heatmap_Mode.WITHIN_SURFACE]
         self.running = True
@@ -52,8 +56,12 @@ class Surface_Tracker_Online_Future(Surface_Tracker_Future):
         s_menu = pyglui.ui.Growing_Menu("Surface {}".format(idx))
         s_menu.collapsed = True
         s_menu.append(pyglui.ui.Text_Input("name", surface))
-        s_menu.append(pyglui.ui.Text_Input("x", surface.real_world_size, label="X size"))
-        s_menu.append(pyglui.ui.Text_Input("y", surface.real_world_size, label="Y size"))
+        s_menu.append(
+            pyglui.ui.Text_Input("x", surface.real_world_size, label="X size")
+        )
+        s_menu.append(
+            pyglui.ui.Text_Input("y", surface.real_world_size, label="Y size")
+        )
         s_menu.append(
             pyglui.ui.Text_Input(
                 "gaze_history_length", surface, label="Gaze History Length [seconds]"

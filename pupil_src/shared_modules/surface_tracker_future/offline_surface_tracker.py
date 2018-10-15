@@ -39,6 +39,8 @@ from .offline_surface import Offline_Surface
 
 
 # TODO Improve all docstrings, make methods privat appropriately
+# TODO Prepend all notifications with "surface_tracker.<notification>[.surface_name]"
+
 
 class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Base):
     """
@@ -57,7 +59,10 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         self.timeline_line_height = 16
         super().__init__(g_pool, marker_min_perimeter, inverted_markers)
         self.ui_info_text = "The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here. \n \n Press the export button or type 'e' to start the export."
-        self.supported_heatmap_modes= [Heatmap_Mode.WITHIN_SURFACE, Heatmap_Mode.ACROSS_SURFACES]
+        self.supported_heatmap_modes = [
+            Heatmap_Mode.WITHIN_SURFACE,
+            Heatmap_Mode.ACROSS_SURFACES,
+        ]
 
         self.order = .2
 
@@ -162,23 +167,32 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
 
     def per_surface_ui(self, surface):
         def set_x(val):
-            surface.real_world_size['x'] = val
-            self.notify_all({'subject': 'heatmap_params_changed', 'delay': 0,
-                             "surface_uid": surface.uid})
+            surface.real_world_size["x"] = val
+            # TODO change naming to "uid
+            self.notify_all(
+                {"subject": "heatmap_params_changed", "surface_uid": surface.uid}
+            )
 
         def set_y(val):
-            surface.real_world_size['y'] = val
-            self.notify_all({'subject': 'heatmap_params_changed', 'delay': 0,
-                             "surface_uid": surface.uid})
+            surface.real_world_size["y"] = val
+            self.notify_all(
+                {"subject": "heatmap_params_changed", "surface_uid": surface.uid}
+            )
 
         idx = self.surfaces.index(surface)
         s_menu = pyglui.ui.Growing_Menu("Surface {}".format(idx))
         s_menu.collapsed = True
         s_menu.append(pyglui.ui.Text_Input("name", surface))
-        s_menu.append(pyglui.ui.Text_Input("x", surface.real_world_size, label="X size",
-                                           setter=set_x))
-        s_menu.append(pyglui.ui.Text_Input("y", surface.real_world_size, label="Y size",
-                                           setter=set_y))
+        s_menu.append(
+            pyglui.ui.Text_Input(
+                "x", surface.real_world_size, label="X size", setter=set_x
+            )
+        )
+        s_menu.append(
+            pyglui.ui.Text_Input(
+                "y", surface.real_world_size, label="Y size", setter=set_y
+            )
+        )
         s_menu.append(
             pyglui.ui.Button(
                 "Open Debug Window", self.gui.surface_windows[surface].open_close_window
@@ -288,7 +302,9 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         all_gaze_timestamps = self.g_pool.timestamps
         all_gaze_positions = self.g_pool.gaze_positions
 
-        surface.update_heatmap(section, all_gaze_timestamps, all_gaze_positions, self.camera_model)
+        surface.update_heatmap(
+            section, all_gaze_timestamps, all_gaze_positions, self.camera_model
+        )
 
     def add_surface(self, _, init_dict=None):
         super().add_surface(_, init_dict=init_dict)
@@ -365,15 +381,15 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         super().on_notify(notification)
         # TODO Update heatmaps on trim marker change
 
-        if notification['subject'] == 'marker_detection_params_changed':
+        if notification["subject"] == "marker_detection_params_changed":
             self.recalculate_marker_cache()
-        elif notification['subject'] == 'marker_min_perimeter_changed':
+        elif notification["subject"] == "marker_min_perimeter_changed":
             self._update_filtered_markers()
             for surface in self.surfaces:
                 surface.cache = None
-        elif notification['subject'] == 'heatmap_params_changed':
+        elif notification["subject"] == "heatmap_params_changed":
             for surface in self.surfaces:
-                if surface.uid == notification['surface_uid']:
+                if surface.uid == notification["surface_uid"]:
                     self._update_surface_heatmap(surface)
                     break
 

@@ -13,6 +13,7 @@ import os
 import collections
 from enum import Enum
 import logging
+
 logger = logging.getLogger(__name__)
 
 import numpy as np
@@ -107,36 +108,26 @@ class Surface_Tracker_Future(Plugin):
     def update_ui(self):
         def set_marker_min_perimeter(val):
             self.marker_min_perimeter = val
-            self.notify_all({'subject': 'marker_min_perimeter_changed', 'delay': 2})
+            self.notify_all({"subject": "marker_min_perimeter_changed", "delay": 2})
 
         def set_invert_image(val):
             self.inverted_markers = val
-            self.notify_all({'subject': 'marker_detection_params_changed', 'delay': 0})
+            self.notify_all({"subject": "marker_detection_params_changed", "delay": 0})
 
         def set_robust_detection(val):
             self.robust_detection = val
-            self.notify_all({'subject': 'marker_detection_params_changed', 'delay': 0})
+            self.notify_all({"subject": "marker_detection_params_changed", "delay": 0})
 
         try:
             self.menu.elements[:] = []
         except AttributeError:
             return
+        self.menu.append(pyglui.ui.Info_Text(self.ui_info_text))
         self.menu.append(
-            pyglui.ui.Info_Text(self.ui_info_text)
+            pyglui.ui.Switch("show_marker_ids", self.gui, label="Show Marker IDs")
         )
         self.menu.append(
-            pyglui.ui.Switch(
-                "show_marker_ids",
-                self.gui,
-                label="Show Marker IDs",
-            )
-        )
-        self.menu.append(
-            pyglui.ui.Switch(
-                "show_heatmap",
-                self.gui,
-                label="Show Heatmap",
-            )
+            pyglui.ui.Switch("show_heatmap", self.gui, label="Show Heatmap")
         )
         self.menu.append(
             pyglui.ui.Selector(
@@ -311,9 +302,9 @@ class Surface_Tracker_Future(Plugin):
     def gl_display(self):
         self.gui.update()
 
-    def on_notify(self,notification):
-        if notification['subject'] == 'surfaces_changed':
-            logger.info('Surfaces changed. Saving to file.')
+    def on_notify(self, notification):
+        if notification["subject"] == "surfaces_changed":
+            logger.info("Surfaces changed. Saving to file.")
             self.save_surface_definitions_to_file()
 
     def on_pos(self, pos):
@@ -350,6 +341,7 @@ class Surface_Tracker_Future(Plugin):
 
 
 Marker = collections.namedtuple("Marker", ["id", "id_confidence", "verts", "perimeter"])
+
 
 class Heatmap_Mode(Enum):
     WITHIN_SURFACE = "Gaze within each surface"

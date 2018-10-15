@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import multiprocessing as mp
 import logging
+
 logger = logging.getLogger(__name__)
 
 import numpy as np
@@ -41,10 +42,15 @@ class Offline_Surface(Surface):
         # Reset cache and recalculate all entries for which previous marker detections existed.
         visited_list = [e is False for e in marker_cache]
         self.cache_seek_idx.value = frame_idx
-        self.location_cache = Cache_List([False] * len(marker_cache), positive_eval_fn=lambda x: (x is not False) and x['detected'])
+        self.location_cache = Cache_List(
+            [False] * len(marker_cache),
+            positive_eval_fn=lambda x: (x is not False) and x["detected"],
+        )
         self.location_cache_filler = background_tasks.background_data_processor(
             marker_cache,
-            offline_utils.surface_locater_callable(camera_model, self.reg_markers_undist, self.reg_markers_dist),
+            offline_utils.surface_locater_callable(
+                camera_model, self.reg_markers_undist, self.reg_markers_dist
+            ),
             visited_list,
             self.cache_seek_idx,
         )
@@ -53,7 +59,10 @@ class Offline_Surface(Surface):
         super().move_corner(corner_idx, pos, camera_model)
 
         # Soft reset of marker cache. This does not invoke a recalculation in the background. Full recalculation will happen once the surface corner was released.
-        self.location_cache = Cache_List([False] * len(marker_cache), positive_eval_fn=lambda x: (x is not False) and x['detected'])
+        self.location_cache = Cache_List(
+            [False] * len(marker_cache),
+            positive_eval_fn=lambda x: (x is not False) and x["detected"],
+        )
         self.update_cache(frame_idx, marker_cache, camera_model)
 
     def add_marker(self, id, verts, camera_model):
@@ -167,7 +176,9 @@ class Offline_Surface(Surface):
         self.observations_frame_idxs.append(idx)
         super().update_def(idx, vis_markers, camera_model)
 
-    def update_heatmap(self, section, all_gaze_timestamps, all_gaze_events, camera_model):
+    def update_heatmap(
+        self, section, all_gaze_timestamps, all_gaze_events, camera_model
+    ):
         # TODO move into background process
         # TODO devalidate heatmap texture when beginning computation
         try:
@@ -180,16 +191,24 @@ class Offline_Surface(Surface):
         for frame_idx, location in enumerate(location_cache):
             frame_idx += section.start
 
-            if location and location['detected']:
+            if location and location["detected"]:
 
                 frame_window = player_methods.enclosing_window(
                     all_gaze_timestamps, frame_idx
                 )
                 gaze_events = all_gaze_events.by_ts_window(frame_window)
-                gaze_events = [g for g in gaze_events if g['confidence'] >= self.heatmap_min_data_confidence]
+                gaze_events = [
+                    g
+                    for g in gaze_events
+                    if g["confidence"] >= self.heatmap_min_data_confidence
+                ]
 
-                gaze_on_surf = self.map_events(gaze_events, camera_model, trans_matrix=location['img_to_surf_trans'])
-                data = [g['norm_pos'] for g in gaze_on_surf]
+                gaze_on_surf = self.map_events(
+                    gaze_events,
+                    camera_model,
+                    trans_matrix=location["img_to_surf_trans"],
+                )
+                data = [g["norm_pos"] for g in gaze_on_surf]
                 heatmap_data += data
         self._generate_heatmap(heatmap_data)
 
@@ -226,34 +245,52 @@ class Offline_Surface(Surface):
             for location in self.location_cache:
                 if location["dist_img_to_surf_trans"] is not None:
                     location = location.copy()
-                    location["dist_img_to_surf_trans"] = location["dist_img_to_surf_trans"].tolist()
-                    location["surf_to_dist_img_trans"] = location["surf_to_dist_img_trans"].tolist()
-                    location["img_to_surf_trans"] = location["img_to_surf_trans"].tolist()
-                    location["surf_to_img_trans"] = location["surf_to_img_trans"].tolist()
+                    location["dist_img_to_surf_trans"] = location[
+                        "dist_img_to_surf_trans"
+                    ].tolist()
+                    location["surf_to_dist_img_trans"] = location[
+                        "surf_to_dist_img_trans"
+                    ].tolist()
+                    location["img_to_surf_trans"] = location[
+                        "img_to_surf_trans"
+                    ].tolist()
+                    location["surf_to_img_trans"] = location[
+                        "surf_to_img_trans"
+                    ].tolist()
                 cache_to_file.append(location)
-            save_dict['cache'] = cache_to_file
+            save_dict["cache"] = cache_to_file
         except TypeError:
-            save_dict['cache'] = None
-        save_dict['start_idx'] = self.start_idx
-        save_dict['observations_frame_idxs'] = self.observations_frame_idxs
+            save_dict["cache"] = None
+        save_dict["start_idx"] = self.start_idx
+        save_dict["observations_frame_idxs"] = self.observations_frame_idxs
         return save_dict
 
     def load_from_dict(self, init_dict):
         super().load_from_dict(init_dict)
         try:
-            cache = init_dict['cache']
+            cache = init_dict["cache"]
             for location in cache:
                 if location["dist_img_to_surf_trans"] is not None:
-                    location["dist_img_to_surf_trans"] = np.asarray(location["dist_img_to_surf_trans"])
-                    location["surf_to_dist_img_trans"] = np.asarray(location["surf_to_dist_img_trans"])
-                    location["img_to_surf_trans"] = np.asarray(location["img_to_surf_trans"])
-                    location["surf_to_img_trans"] = np.asarray(location["surf_to_img_trans"])
-            self.location_cache = Cache_List(cache, positive_eval_fn=lambda x: (x is not False) and x['detected'])
+                    location["dist_img_to_surf_trans"] = np.asarray(
+                        location["dist_img_to_surf_trans"]
+                    )
+                    location["surf_to_dist_img_trans"] = np.asarray(
+                        location["surf_to_dist_img_trans"]
+                    )
+                    location["img_to_surf_trans"] = np.asarray(
+                        location["img_to_surf_trans"]
+                    )
+                    location["surf_to_img_trans"] = np.asarray(
+                        location["surf_to_img_trans"]
+                    )
+            self.location_cache = Cache_List(
+                cache, positive_eval_fn=lambda x: (x is not False) and x["detected"]
+            )
         except (TypeError, AttributeError):
             self.location_cache = None
 
         try:
-            self.observations_frame_idxs= init_dict['observations_frame_idxs']
-            self.start_idx = init_dict['start_idx']
+            self.observations_frame_idxs = init_dict["observations_frame_idxs"]
+            self.start_idx = init_dict["start_idx"]
         except AttributeError:
             self.observations_frame_idxs = []
