@@ -2,6 +2,7 @@ import square_marker_detect
 from .surface_tracker import Marker
 from .surface import Surface
 
+
 def marker_detection_callable(min_marker_perimeter, inverted_markers):
     def callable(frame):
         markers = square_marker_detect.detect_markers_robust(
@@ -26,5 +27,8 @@ def marker_detection_callable(min_marker_perimeter, inverted_markers):
 def surface_locater_callable(camera_model, reg_markers_undist, reg_markers_dist):
     def callable(markers):
         markers = {m.id: m for m in markers}
-        return Surface.locate(markers, camera_model, reg_markers_undist, reg_markers_dist)
+        return Surface.locate(
+            markers, camera_model, reg_markers_undist, reg_markers_dist
+        )
+
     return callable

@@ -108,15 +108,21 @@ class Surface_Tracker_Future(Plugin):
     def update_ui(self):
         def set_marker_min_perimeter(val):
             self.marker_min_perimeter = val
-            self.notify_all({"subject": "marker_min_perimeter_changed", "delay": 2})
+            self.notify_all(
+                {"subject": "surface_tracker.marker_min_perimeter_changed", "delay": 2}
+            )
 
         def set_invert_image(val):
             self.inverted_markers = val
-            self.notify_all({"subject": "marker_detection_params_changed", "delay": 0})
+            self.notify_all(
+                {"subject": "surface_tracker.marker_detection_params_changed"}
+            )
 
         def set_robust_detection(val):
             self.robust_detection = val
-            self.notify_all({"subject": "marker_detection_params_changed", "delay": 0})
+            self.notify_all(
+                {"subject": "surface_tracker.marker_detection_params_changed"}
+            )
 
         try:
             self.menu.elements[:] = []
@@ -303,7 +309,7 @@ class Surface_Tracker_Future(Plugin):
         self.gui.update()
 
     def on_notify(self, notification):
-        if notification["subject"] == "surfaces_changed":
+        if notification["subject"] == "surface_tracker.surfaces_changed":
             logger.info("Surfaces changed. Saving to file.")
             self.save_surface_definitions_to_file()
 

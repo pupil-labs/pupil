@@ -77,7 +77,9 @@ class Surface:
     def defined(self):
         return self.build_up_status >= 1.0
 
-    def map_to_surf(self, points, camera_model, compensate_distortion=True, trans_matrix=None):
+    def map_to_surf(
+        self, points, camera_model, compensate_distortion=True, trans_matrix=None
+    ):
         """Map points from image space to normalized surface space.
 
         Args:
@@ -110,7 +112,9 @@ class Surface:
         point_on_surf.shape = orig_shape
         return point_on_surf
 
-    def map_from_surf(self, points, camera_model, compensate_distortion=True, trans_matrix=None):
+    def map_from_surf(
+        self, points, camera_model, compensate_distortion=True, trans_matrix=None
+    ):
         """Map points from normalized surface space to image space.
 
         Args:
@@ -200,7 +204,12 @@ class Surface:
             self.update_def(idx, vis_markers_dict, camera_model)
 
         # Get dict of current transformations
-        transformations = self.locate(vis_markers_dict, camera_model, self.reg_markers_undist, self.reg_markers_dist)
+        transformations = self.locate(
+            vis_markers_dict,
+            camera_model,
+            self.reg_markers_undist,
+            self.reg_markers_dist,
+        )
         self.__dict__.update(transformations)
 
     def update_def(self, idx, vis_markers, camera_model):
@@ -305,18 +314,15 @@ class Surface:
     @staticmethod
     def locate(vis_markers, camera_model, reg_markers_undist, reg_markers_dist):
         result = {
-            'detected': False,
-            'dist_img_to_surf_trans': None,
-            'surf_to_dist_img_trans': None,
-            'img_to_surf_trans': None,
-            'surf_to_img_trans': None,
-            'num_detected_markers': 0,
+            "detected": False,
+            "dist_img_to_surf_trans": None,
+            "surf_to_dist_img_trans": None,
+            "img_to_surf_trans": None,
+            "surf_to_img_trans": None,
+            "num_detected_markers": 0,
         }
 
-        vis_reg_marker_ids = set(vis_markers.keys()) & set(
-            reg_markers_undist.keys()
-        )
-
+        vis_reg_marker_ids = set(vis_markers.keys()) & set(reg_markers_undist.keys())
 
         if not vis_reg_marker_ids or len(vis_reg_marker_ids) < min(
             2, len(reg_markers_undist)
@@ -347,12 +353,12 @@ class Surface:
         if img_to_surf_trans is None or dist_img_to_surf_trans is None:
             return result
         else:
-            result['detected'] = True
-            result['dist_img_to_surf_trans'] = dist_img_to_surf_trans
-            result['surf_to_dist_img_trans'] = surf_to_dist_img_trans
-            result['img_to_surf_trans'] = img_to_surf_trans
-            result['surf_to_img_trans'] = surf_to_img_trans
-            result['num_detected_markers'] =  len(vis_reg_marker_ids),
+            result["detected"] = True
+            result["dist_img_to_surf_trans"] = dist_img_to_surf_trans
+            result["surf_to_dist_img_trans"] = surf_to_dist_img_trans
+            result["img_to_surf_trans"] = img_to_surf_trans
+            result["surf_to_img_trans"] = surf_to_img_trans
+            result["num_detected_markers"] = (len(vis_reg_marker_ids),)
             return result
 
     @staticmethod
@@ -378,34 +384,45 @@ class Surface:
                 gaze_norm_pos, camera_model.resolution, flip_y=True
             )
             gaze_img_point = np.array(gaze_img_point)
-            surf_norm_pos = self.map_to_surf(gaze_img_point, camera_model, compensate_distortion=True, trans_matrix=trans_matrix)
+            surf_norm_pos = self.map_to_surf(
+                gaze_img_point,
+                camera_model,
+                compensate_distortion=True,
+                trans_matrix=trans_matrix,
+            )
             on_srf = bool((0 <= surf_norm_pos[0] <= 1) and (0 <= surf_norm_pos[1] <= 1))
 
-            results.append({
-                "topic": event["topic"] + "_on_surface",
-                "norm_pos": surf_norm_pos.tolist(),
-                "confidence": event["confidence"],
-                "on_surf": on_srf,
-                "base_data": event,
-                "timestamp": event["timestamp"],
-            })
+            results.append(
+                {
+                    "topic": event["topic"] + "_on_surface",
+                    "norm_pos": surf_norm_pos.tolist(),
+                    "confidence": event["confidence"],
+                    "on_surf": on_srf,
+                    "base_data": event,
+                    "timestamp": event["timestamp"],
+                }
+            )
         return results
 
     # TODO Online specific
     def update_gaze_history(self, gaze_on_surf, world_timestamp):
         # Remove old entries
         while (
-                self.gaze_history
-                and world_timestamp - self.gaze_history[0]["timestamp"] > self.gaze_history_length
+            self.gaze_history
+            and world_timestamp - self.gaze_history[0]["timestamp"]
+            > self.gaze_history_length
         ):
             self.gaze_history.popleft()
 
         # Add new entries
         for event in gaze_on_surf:
-            if event["confidence"] < self.heatmap_min_data_confidence and event['on_surf']:
+            if (
+                event["confidence"] < self.heatmap_min_data_confidence
+                and event["on_surf"]
+            ):
                 continue
             self.gaze_history.append(
-                {"timestamp": event["timestamp"], "gaze": event['norm_pos']}
+                {"timestamp": event["timestamp"], "gaze": event["norm_pos"]}
             )
 
     def update_heatmap(self):
@@ -426,7 +443,10 @@ class Surface:
             hist *= (255. / hist_max) if hist_max else 0.
             hist = hist.astype(np.uint8)
         else:
-            hist = np.zeros((int(self.real_world_size["y"]), int(self.real_world_size["x"])), dtype=np.uint8)
+            hist = np.zeros(
+                (int(self.real_world_size["y"]), int(self.real_world_size["x"])),
+                dtype=np.uint8,
+            )
 
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
         # reuse allocated memory if possible

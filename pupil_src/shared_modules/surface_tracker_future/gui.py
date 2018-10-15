@@ -314,7 +314,8 @@ class GUI:
 
         if action == glfw.GLFW_RELEASE:
             if self.tracker._edit_surf_verts:
-                self.tracker.notify_all({"subject": "surfaces_changed"})
+                self.tracker.notify_all({"subject": "surface_tracker.surfaces_changed"})
+                self.tracker.notify_all({"subject": "surface_tracker.surfaces_changed"})
             self.tracker._edit_surf_verts = []
 
         # Marker Toggles
@@ -332,7 +333,9 @@ class GUI:
                         else:
                             surface.pop_marker(marker.id)
                             surface.on_change()
-                        self.tracker.notify_all({"subject": "surfaces_changed"})
+                        self.tracker.notify_all(
+                            {"subject": "surface_tracker.surfaces_changed"}
+                        )
 
     def _check_surface_button_pressed(self, surface, pos):
         frame, hat, text_anchor, surface_edit_anchor, marker_edit_anchor = self._get_surface_anchor_points(

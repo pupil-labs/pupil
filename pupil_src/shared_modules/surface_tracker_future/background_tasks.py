@@ -21,6 +21,7 @@ def background_video_processor(video_file_path, callable, visited_list, seek_idx
         (video_file_path, callable, seek_idx, visited_list),
     )
 
+
 def video_processing_generator(video_file_path, callable, seek_idx, visited_list):
     import os
     import logging
@@ -112,6 +113,7 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
             visited_list[next_frame_idx] = True
             yield next_frame_idx, res
 
+
 def background_data_processor(data, callable, visited_list, seek_idx=-1):
     """
     The number of frames available in the video must be equal to the length of
@@ -132,8 +134,8 @@ def background_data_processor(data, callable, visited_list, seek_idx=-1):
         (data, callable, seek_idx, visited_list),
     )
 
-def data_processing_generator(data, callable, seek_idx, visited_list):
 
+def data_processing_generator(data, callable, seek_idx, visited_list):
     def next_unvisited_idx(sample_idx):
         """
         Starting from the given index, find the next sample that has not been

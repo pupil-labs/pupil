@@ -170,13 +170,23 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             surface.real_world_size["x"] = val
             # TODO change naming to "uid
             self.notify_all(
-                {"subject": "heatmap_params_changed", "surface_uid": surface.uid}
+                {
+                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
+                        surface.name
+                    ),
+                    "surface_uid": surface.uid,
+                }
             )
 
         def set_y(val):
             surface.real_world_size["y"] = val
             self.notify_all(
-                {"subject": "heatmap_params_changed", "surface_uid": surface.uid}
+                {
+                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
+                        surface.name
+                    ),
+                    "surface_uid": surface.uid,
+                }
             )
 
         idx = self.surfaces.index(surface)
@@ -367,9 +377,6 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                     surface, color=color, line_type=gl.GL_LINES, thickness=scale * 2
                 )
 
-    def on_notify(self, notification):
-        super().on_notify(notification)
-
     def draw_labels(self, width, height, scale):
         self.glfont.set_size(self.timeline_line_height * .8 * scale)
         self.glfont.draw_text(width, 0, "Marker Cache")
@@ -381,13 +388,15 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         super().on_notify(notification)
         # TODO Update heatmaps on trim marker change
 
-        if notification["subject"] == "marker_detection_params_changed":
+        if notification["subject"] == "surface_tracker.marker_detection_params_changed":
             self.recalculate_marker_cache()
-        elif notification["subject"] == "marker_min_perimeter_changed":
+        elif notification["subject"] == "surface_tracker.marker_min_perimeter_changed":
             self._update_filtered_markers()
             for surface in self.surfaces:
                 surface.cache = None
-        elif notification["subject"] == "heatmap_params_changed":
+        elif notification["subject"].startswith(
+            "surface_tracker.heatmap_params_changed"
+        ):
             for surface in self.surfaces:
                 if surface.uid == notification["surface_uid"]:
                     self._update_surface_heatmap(surface)
