@@ -3,7 +3,6 @@ import background_helper
 
 def background_video_processor(video_file_path, callable, visited_list, seek_idx=-1):
     """
-    TODO Complete
     The number of frames available in the video must be equal to the length of
     visited_list.
     Args:
@@ -115,7 +114,6 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
 
 def background_data_processor(data, callable, visited_list, seek_idx=-1):
     """
-    TODO Complete
     The number of frames available in the video must be equal to the length of
     visited_list.
     Args:

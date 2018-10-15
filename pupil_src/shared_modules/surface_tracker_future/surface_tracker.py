@@ -24,8 +24,32 @@ import file_methods
 from .surface import Surface
 from . import gui
 
+# TODO fo heatmap updates and exports in background
+
+# TODO Improve marker coloring, marker toggle is barely visible
+# TODO Would it be nice to have heatmap and ids be toggles rather then different modes?
 
 class Surface_Tracker_Future(Plugin):
+    """
+
+    What happens on camera_model update?
+
+    Marker cache is saved
+    - While the marker bg process is running every 5 seconds
+    - When the marker bg process is finishing
+
+    Surfaces are saved when
+    - They are added
+    - The definition is completed
+    - A surface bg process finished
+    - The marker bg process finished
+
+    Heatmaps are updated when
+    - A surface bg process finished
+    - Trim markers change # TODO Update heatmaps on trim marker change
+    - Surface parameters have changed
+
+    """
     icon_chr = chr(0xec07)
     icon_font = "pupil_icons"
 
@@ -33,7 +57,6 @@ class Surface_Tracker_Future(Plugin):
         self,
         g_pool,
         marker_min_perimeter=60,
-        marker_min_confidence=0.6,
         inverted_markers=False,
     ):
         super().__init__(g_pool)
@@ -46,7 +69,7 @@ class Surface_Tracker_Future(Plugin):
         self.gui = gui.GUI(self)
 
         self.marker_min_perimeter = marker_min_perimeter
-        self.marker_min_confidence = marker_min_confidence
+        self.marker_min_confidence = 0.6
         self.inverted_markers = inverted_markers
 
         self.robust_detection = True
@@ -106,9 +129,6 @@ class Surface_Tracker_Future(Plugin):
         self.menu.append(
             pyglui.ui.Slider("marker_min_perimeter", self, step=1, min=30, max=100)
         )
-        self.menu.append(
-            pyglui.ui.Slider("marker_min_confidence", self, step=0.01, min=0, max=1)
-        )
         self.menu.append(pyglui.ui.Switch("locate_3d", self, label="3D localization"))
         self.menu.append(
             pyglui.ui.Selector(
@@ -154,6 +174,7 @@ class Surface_Tracker_Future(Plugin):
         for init_dict in surface_definitions.get("surfaces", []):
             self.add_surface(None, init_dict=init_dict)
 
+    # TODO online specific
     def recent_events(self, events):
         frame = events.get("frame")
         if not frame:
@@ -162,48 +183,26 @@ class Surface_Tracker_Future(Plugin):
         if self.running:
             self._detect_markers(frame)
 
-        self._update_surfaces(frame.index)
-        self._surface_interactions(events, frame)
+        self._update_surface_locations(frame.index)
+        self._update_surface_corners()
+        self._add_surface_events(events, frame)
+        self._update_surface_gaze_history(events, frame.timestamp)
 
-    def _update_surfaces(self, idx):
+        if self.gui.state == gui.State.SHOW_HEATMAP:
+            self._update_surface_heatmaps()
+
+    def _update_surface_locations(self, idx):
         for surface in self.surfaces:
             surface.update_location(idx, self.markers, self.camera_model)
 
-    def _surface_interactions(self, events, frame):
-
-        self._move_surface_corners()
-
-        # Update gaze on surfaces
+    def _add_surface_events(self, events, frame):
         events["surfaces"] = []
-        gaze_events = events.get("gaze", [])
         for surface in self.surfaces:
-
-            # Clean up gaze history
-            while (
-                    surface.gaze_history
-                    and gaze_events
-                    and gaze_events[-1]["timestamp"] - surface.gaze_history[0][
-                        "timestamp"]
-                    > surface.gaze_history_length
-            ):
-                surface.gaze_history.popleft()
-
             if surface.detected:
-                gaze_on_surf = self._gaze_to_surf(surface, gaze_events)
-
-                # Update gaze history
-                for gaze, event in zip(gaze_on_surf, gaze_events):
-                    if event["confidence"] < 0.6:
-                        continue
-                    surface.gaze_history.append(
-                        {"timestamp": event["timestamp"], "gaze": gaze}
-                    )
-
-                if self.g_pool.app != "player":
-                    surface._generate_heatmap()
-
+                gaze_events = events.get("gaze", [])
+                gaze_on_surf = surface.map_events(gaze_events, self.camera_model)
                 fixation_events = events.get("fixations", [])
-                fixations_on_surf = self._gaze_to_surf(surface, fixation_events)
+                fixations_on_surf = surface.map_events(fixation_events, self.camera_model)
 
                 surface_event = {
                     "topic": "surfaces.{}".format(surface.name),
@@ -217,14 +216,28 @@ class Surface_Tracker_Future(Plugin):
                 }
                 events["surfaces"].append(surface_event)
 
-    def _move_surface_corners(self):
+    def _update_surface_gaze_history(self, events, world_timestamp):
+        surfaces_gaze_dict = {e['uid']: e['gaze_on_surf'] for e in events["surfaces"]}
+
+        for surface in self.surfaces:
+            try:
+                surface.update_gaze_history(surfaces_gaze_dict[surface.uid], world_timestamp)
+            except KeyError:
+                pass
+
+    def _update_surface_corners(self):
         for surface, corner_idx in self._edit_surf_verts:
             if surface.detected:
                 surface.move_corner(corner_idx, self._last_mouse_pos.copy(), self.camera_model)
 
+    # TODO Online specific
+    def _update_surface_heatmaps(self):
+        for surface in self.surfaces:
+            surface.update_heatmap()
+
     def add_surface(self, _, init_dict=None):
         if self.markers or init_dict is not None:
-            surface = self.Surface_Class(on_surface_changed=self.save_surface_definitions_to_file, init_dict=init_dict)
+            surface = self.Surface_Class(on_surface_changed=self.on_surface_change, init_dict=init_dict)
             self.surfaces.append(surface)
             self.gui.add_surface(surface)
             self.update_ui()
@@ -236,19 +249,6 @@ class Surface_Tracker_Future(Plugin):
         del self.surfaces[i]
         self.update_ui()
         self.save_surface_definitions_to_file()
-
-    def _gaze_to_surf(self, surf, gaze_events):
-        result = []
-        for event in gaze_events:
-            norm_pos = event["norm_pos"]
-            img_point = methods.denormalize(
-                norm_pos, self.camera_model.resolution, flip_y=True
-            )
-            img_point = np.array(img_point)
-            surf_point = surf.map_to_surf(img_point, self.camera_model)
-            surf_point = surf_point.tolist()
-            result.append(surf_point)
-        return result
 
     def _detect_markers(self, frame):
         gray = frame.gray
@@ -309,7 +309,6 @@ class Surface_Tracker_Future(Plugin):
     def get_init_dict(self):
         return {
             "marker_min_perimeter": self.marker_min_perimeter,
-            "marker_min_confidence": self.marker_min_confidence,
             "inverted_markers": self.inverted_markers,
         }
 
@@ -321,6 +320,9 @@ class Surface_Tracker_Future(Plugin):
             surface.save_to_dict() for surface in self.surfaces if surface.defined
         ]
         surface_definitions.save()
+
+    def on_surface_change(self, surface):
+        self.save_surface_definitions_to_file()
 
     def deinit_ui(self):
         self.g_pool.quickbar.remove(self.button)

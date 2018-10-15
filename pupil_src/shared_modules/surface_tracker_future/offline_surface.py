@@ -17,7 +17,7 @@ from gl_utils import cvmat_to_glmat
 from OpenGL.GL import *
 
 from cache_list import Cache_List
-import player_methods as pm
+import player_methods
 
 from .surface import Surface
 from . import offline_utils
@@ -27,22 +27,22 @@ from . import background_tasks
 class Offline_Surface(Surface):
     def __init__(self, on_surface_changed=None, init_dict=None):
         self.cache_seek_idx = mp.Value("i", 0)
-        self.cache = None
-        self.cache_filler = None
+        self.location_cache = None
+        self.location_cache_filler = None
         self.observations_frame_idxs = []
         self.current_frame_idx = None
         super().__init__(on_surface_changed=on_surface_changed, init_dict=init_dict)
 
-    def recalculate_cache(self, frame_idx, marker_cache, camera_model):
+    def recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
         logging.debug("Recaclulate Surface Cache!")
-        if self.cache_filler is not None:
-            self.cache_filler.cancel()
+        if self.location_cache_filler is not None:
+            self.location_cache_filler.cancel()
 
         # Reset cache and recalculate all entries for which previous marker detections existed.
         visited_list = [e is False for e in marker_cache]
         self.cache_seek_idx.value = frame_idx
-        self.cache = Cache_List([False] * len(marker_cache), positive_eval_fn=lambda x: (x is not False) and x['detected'])
-        self.cache_filler = background_tasks.background_data_processor(
+        self.location_cache = Cache_List([False] * len(marker_cache), positive_eval_fn=lambda x: (x is not False) and x['detected'])
+        self.location_cache_filler = background_tasks.background_data_processor(
             marker_cache,
             offline_utils.surface_locater_callable(camera_model, self.reg_markers_undist, self.reg_markers_dist),
             visited_list,
@@ -53,16 +53,16 @@ class Offline_Surface(Surface):
         super().move_corner(corner_idx, pos, camera_model)
 
         # Soft reset of marker cache. This does not invoke a recalculation in the background. Full recalculation will happen once the surface corner was released.
-        self.cache = Cache_List([False] * len(marker_cache), positive_eval_fn=lambda x: (x is not False) and x['detected'])
+        self.location_cache = Cache_List([False] * len(marker_cache), positive_eval_fn=lambda x: (x is not False) and x['detected'])
         self.update_cache(frame_idx, marker_cache, camera_model)
 
     def add_marker(self, id, verts, camera_model):
         super().add_marker(id, verts, camera_model)
-        self.cache = None
+        self.location_cache = None
 
     def pop_marker(self, id):
         super().pop_marker(id)
-        self.cache = None
+        self.location_cache = None
 
     def update_location(self, frame_idx, marker_cache, camera_model):
         if not self.defined:
@@ -94,23 +94,23 @@ class Offline_Surface(Surface):
 
             if self.defined:
                 # All previous detections were preliminary, devalidate them.
-                self.cache = None
+                self.location_cache = None
                 if self.on_surface_change is not None:
-                    self.on_surface_change()
+                    self.on_surface_change(self)
 
         try:
-            if self.cache_filler is not None:
-                for cache_idx, location in self.cache_filler.fetch():
-                    self.cache.update(cache_idx, location, force=True)
+            if self.location_cache_filler is not None:
+                for cache_idx, location in self.location_cache_filler.fetch():
+                    self.location_cache.update(cache_idx, location, force=True)
 
-                if self.cache_filler.completed:
-                    self.cache_filler = None
-                    self.on_surface_change()
+                if self.location_cache_filler.completed:
+                    self.location_cache_filler = None
+                    self.on_surface_change(self)
 
-            location = self.cache[frame_idx]
+            location = self.location_cache[frame_idx]
         except (TypeError, AttributeError):
             location = False
-            self.recalculate_cache(frame_idx, marker_cache, camera_model)
+            self.recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
         if location is False:
             if not marker_cache[frame_idx] is False:
@@ -159,18 +159,38 @@ class Offline_Surface(Surface):
                     self.reg_markers_undist,
                     self.reg_markers_dist,
                 )
-            self.cache.update(frame_idx, location, force=True)
+            self.location_cache.update(frame_idx, location, force=True)
         except (TypeError, AttributeError):
-            self.recalculate_cache(frame_idx, marker_cache, camera_model)
+            self.recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
     def update_def(self, idx, vis_markers, camera_model):
         self.observations_frame_idxs.append(idx)
         super().update_def(idx, vis_markers, camera_model)
 
-    def on_change(self):
-        self.cache = None
+    def update_heatmap(self, section, all_gaze_timestamps, all_gaze_events, camera_model):
+        # TODO move into background process
+        # TODO devalidate heatmap texture when beginning computation
+        heatmap_data = []
+        for frame_idx, location in enumerate(self.location_cache[section]):
+            frame_idx += section.start
 
-    # TODO What is the difference between metrics and Heatmap? Are both needed?
+            if location and location['detected']:
+
+                frame_window = player_methods.enclosing_window(
+                    all_gaze_timestamps, frame_idx
+                )
+                gaze_events = all_gaze_events.by_ts_window(frame_window)
+                gaze_events = [g for g in gaze_events if g['confidence'] >= self.heatmap_min_data_confidence]
+
+                gaze_on_surf = self.map_events(gaze_events, camera_model, trans_matrix=location['img_to_surf_trans'])
+                data = [g['norm_pos'] for g in gaze_on_surf]
+                heatmap_data += data
+        self._generate_heatmap(heatmap_data)
+
+    def on_change(self):
+        self.location_cache = None
+
+    # TODO Implement Metrics. ALso improve naming.
     def gl_display_metrics(self):
         if self.metrics_texture and self.detected:
             # cv uses 3x3 gl uses 4x4 tranformation matricies
@@ -197,7 +217,7 @@ class Offline_Surface(Surface):
         save_dict = super().save_to_dict()
         try:
             cache_to_file = []
-            for location in self.cache:
+            for location in self.location_cache:
                 if location["dist_img_to_surf_trans"] is not None:
                     location = location.copy()
                     location["dist_img_to_surf_trans"] = location["dist_img_to_surf_trans"].tolist()
@@ -222,9 +242,9 @@ class Offline_Surface(Surface):
                     location["surf_to_dist_img_trans"] = np.asarray(location["surf_to_dist_img_trans"])
                     location["img_to_surf_trans"] = np.asarray(location["img_to_surf_trans"])
                     location["surf_to_img_trans"] = np.asarray(location["surf_to_img_trans"])
-            self.cache = Cache_List(cache, positive_eval_fn=lambda x: (x is not False) and x['detected'])
+            self.location_cache = Cache_List(cache, positive_eval_fn=lambda x: (x is not False) and x['detected'])
         except (TypeError, AttributeError):
-            self.cache = None
+            self.location_cache = None
 
         try:
             self.observations_frame_idxs= init_dict['observations_frame_idxs']

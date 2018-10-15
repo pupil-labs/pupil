@@ -38,9 +38,10 @@ from . import background_tasks
 from .offline_surface import Offline_Surface
 
 
+# TODO Improve all docstrings, make methods privat appropriately
+
 class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Base):
     """
-    # TODO Improve docstring
     - Mostly extends the Surface Tracker with a cache
     Special version of surface tracker for use with videofile source.
     It uses a seperate process to search all frames in the world video file for markers.
@@ -51,18 +52,10 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
     """
 
     # TODO add surfaces export
-    # TODO Make methods private appropriatly
-    def __init__(
-        self,
-        g_pool,
-        marker_min_perimeter=60,
-        marker_min_confidence=0.6,
-        inverted_markers=False,
-    ):
+
+    def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         self.timeline_line_height = 16
-        super().__init__(
-            g_pool, marker_min_perimeter, marker_min_confidence, inverted_markers
-        )
+        super().__init__(g_pool, marker_min_perimeter, inverted_markers)
         self.order = .2
 
         # Caches
@@ -72,7 +65,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         self.cache_seek_idx = mp.Value("i", 0)
         self._init_marker_cache()
         self.last_cache_update_ts = time.time()
-        self.cache_update_interval = 2
+        self.cache_update_interval = 5
         # self.recalculate() # What does this do?
 
     @property
@@ -174,11 +167,10 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
     def update_ui(self):
         def set_marker_min_perimeter(val):
             self.marker_min_perimeter = val
-            self.notify_all({"subject": "marker_filtering_params_changed", "delay": 1})
 
-        def set_marker_min_confidence(val):
-            self.marker_min_confidence = val
-            self.notify_all({"subject": "marker_filtering_params_changed", "delay": 1})
+            self._update_filtered_markers()
+            for surface in self.surfaces:
+                surface.cache = None
 
         def set_invert_image(val):
             self.inverted_markers = val
@@ -209,7 +201,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                 setter=set_robust_detection,
                 label="Robust detection",
             )
-        )  # TODO is robust_detection atually used?
+        )
         self.menu.append(
             pyglui.ui.Switch(
                 "inverted_markers",
@@ -226,16 +218,6 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                 step=1,
                 min=30,
                 max=100,
-            )
-        )
-        self.menu.append(
-            pyglui.ui.Slider(
-                "marker_min_confidence",
-                self,
-                setter=set_marker_min_confidence,
-                step=0.01,
-                min=0,
-                max=1,
             )
         )
         self.menu.append(
@@ -257,21 +239,24 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         )
         self.menu.append(pyglui.ui.Button("Add surface", lambda: self.add_surface("_")))
 
-        for s in self.surfaces:
-            idx = self.surfaces.index(s)
+        for surface in self.surfaces:
+            def set_x(val):
+                surface.real_world_size['x'] = val
+                self._update_surface_heatmap(surface)
+
+            def set_y(val):
+                surface.real_world_size['y'] = val
+                self._update_surface_heatmap(surface)
+
+            idx = self.surfaces.index(surface)
             s_menu = pyglui.ui.Growing_Menu("Surface {}".format(idx))
             s_menu.collapsed = True
-            s_menu.append(pyglui.ui.Text_Input("name", s))
-            s_menu.append(pyglui.ui.Text_Input("x", s.real_world_size, label="X size"))
-            s_menu.append(pyglui.ui.Text_Input("y", s.real_world_size, label="Y size"))
-            s_menu.append(
-                pyglui.ui.Text_Input(
-                    "gaze_history_length", s, label="Gaze History Length [seconds]"
-                )
-            )
+            s_menu.append(pyglui.ui.Text_Input("name", surface))
+            s_menu.append(pyglui.ui.Text_Input("x", surface.real_world_size, label="X size", setter=set_x))
+            s_menu.append(pyglui.ui.Text_Input("y", surface.real_world_size, label="Y size", setter=set_y))
             s_menu.append(
                 pyglui.ui.Button(
-                    "Open Debug Window", self.gui.surface_windows[s].open_close_window
+                    "Open Debug Window", self.gui.surface_windows[surface].open_close_window
                 )
             )
 
@@ -291,7 +276,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             self.add_surface(None, init_dict=init_dict)
 
     def recalculate(self):
-        pass  # TODO implement
+        pass  # TODO Remove?
         # in_mark = self.g_pool.seek_control.trim_left
         # out_mark = self.g_pool.seek_control.trim_right
         # section = slice(in_mark,out_mark)
@@ -326,6 +311,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         #     s.metrics_texture = Named_Texture()
         #     s.metrics_texture.update_from_ndarray(heatmap)
 
+    # TODO Offline specific
     def recent_events(self, events):
         frame = events.get("frame")
         if not frame:
@@ -342,8 +328,9 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             self.markers = []
             self.cache_seek_idx.value = frame.index
 
-        self._update_surfaces(frame.index)
-        self._surface_interactions(events, frame)
+        self._update_surface_locations(frame.index)
+        self._update_surface_corners()
+        self._add_surface_events(events, frame)
 
     def _update_marker_and_surface_caches(self):
         for idx, markers in self.cache_filler.fetch():
@@ -356,6 +343,8 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
 
         if self.cache_filler.completed:
             self.cache_filler = None
+            self._save_marker_cache()
+            self.save_surface_definitions_to_file()
 
         now = time.time()
         if now - self.last_cache_update_ts > self.cache_update_interval:
@@ -375,11 +364,11 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         #     if self.timeline:
         #         self.timeline.refresh()
 
-    def _update_surfaces(self, idx):
+    def _update_surface_locations(self, idx):
         for surface in self.surfaces:
             surface.update_location(idx, self.marker_cache, self.camera_model)
 
-    def _move_surface_corners(self):
+    def _update_surface_corners(self):
         for surface, corner_idx in self._edit_surf_verts:
             if surface.detected:
                 surface.move_corner(
@@ -390,6 +379,16 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                     self.camera_model,
                 )
 
+    def _update_surface_heatmap(self, surface):
+        in_mark = self.g_pool.seek_control.trim_left
+        out_mark = self.g_pool.seek_control.trim_right
+        section = slice(in_mark, out_mark)
+
+        all_gaze_timestamps = self.g_pool.timestamps
+        all_gaze_positions = self.g_pool.gaze_positions
+
+        surface.update_heatmap(section, all_gaze_timestamps, all_gaze_positions, self.camera_model)
+
     def add_surface(self, _, init_dict=None):
         super().add_surface(_, init_dict=init_dict)
         # Plugin initialization loads surface definitions before UI is initialized. Changing timeline height will fail in this case.
@@ -398,6 +397,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                 self.timeline.content_height += self.timeline_line_height
             except AttributeError:
                 pass
+        self._update_surface_heatmap(self.surfaces[-1])
 
     def remove_surface(self, _):
         super().remove_surface(_)
@@ -433,10 +433,10 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
 
             # Lines where surfaces have been found in video
             cached_surfaces = []
-            for s in self.surfaces:
+            for surface in self.surfaces:
                 found_at = []
-                if s.cache is not None:
-                    for r in s.cache.positive_ranges:  # [[0,1],[3,4]]
+                if surface.location_cache is not None:
+                    for r in surface.location_cache.positive_ranges:  # [[0,1],[3,4]]
                         found_at += (
                             (TS[r[0]], 0),
                             (TS[r[1]], 0),
@@ -445,18 +445,14 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
 
             color = pyglui_utils.RGBA(0, .7, .3, .8)
 
-            for s in cached_surfaces:
+            for surface in cached_surfaces:
                 gl.glTranslatef(0, scale * self.timeline_line_height, 0)
                 pyglui_utils.draw_polyline(
-                    s, color=color, line_type=gl.GL_LINES, thickness=scale * 2
+                    surface, color=color, line_type=gl.GL_LINES, thickness=scale * 2
                 )
 
     def on_notify(self, notification):
         super().on_notify(notification)
-        if notification["subject"] == "marker_filtering_params_changed":
-            self._update_filtered_markers()
-            for surface in self.surfaces:
-                surface.cache = None
 
     def draw_labels(self, width, height, scale):
         self.glfont.set_size(self.timeline_line_height * .8 * scale)
@@ -473,6 +469,10 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             surface.save_to_dict() for surface in self.surfaces if surface.defined
         ]
         surface_definitions.save()
+
+    def on_surface_change(self, surface):
+        self.save_surface_definitions_to_file()
+        self._update_surface_heatmap(surface)
 
     def deinit_ui(self):
         self.g_pool.user_timelines.remove(self.timeline)

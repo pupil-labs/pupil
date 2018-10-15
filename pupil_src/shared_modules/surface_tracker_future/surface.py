@@ -20,19 +20,19 @@ import methods
 class Surface:
     def __init__(self, on_surface_changed=None, init_dict=None):
         """
-        # TODO create docstring
+        # TODO what to do on camera_model change?
         Args:
             marker_min_perimeter:
             marker_min_confidence:
             init_dict:
         """
+        # TODO offline specific
         self.on_surface_change = on_surface_changed
         self.uid = random.randint(0, 1e6)
 
         self.name = "unknown"
         self.real_world_size = {"x": 1., "y": 1.}
 
-        # TODO move this into class docstring
         # We store the surface state in two versions: once computed with the
         # undistorted scene image and once with the still distorted scene image. The
         # undistorted state is used to map gaze onto the surface, the distorted one
@@ -54,10 +54,12 @@ class Surface:
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
 
+        # TODO online specific
         self.gaze_history_length = 1
         self.gaze_history = collections.deque()
         self.heatmap = np.ones((1, 1), dtype=np.uint8)
         self.heatmap_detail = .2
+        self.heatmap_min_data_confidence = 0.6
 
         if init_dict is not None:
             self.load_from_dict(init_dict)
@@ -75,7 +77,7 @@ class Surface:
     def defined(self):
         return self.build_up_status >= 1.0
 
-    def map_to_surf(self, points, camera_model, compensate_distortion=True):
+    def map_to_surf(self, points, camera_model, compensate_distortion=True, trans_matrix=None):
         """Map points from image space to normalized surface space.
 
         Args:
@@ -92,22 +94,23 @@ class Surface:
             as the input.
 
         """
+        if trans_matrix is None:
+            if compensate_distortion:
+                trans_matrix = self.img_to_surf_trans
+            else:
+                trans_matrix = self.dist_img_to_surf_trans
+
         orig_shape = points.shape
 
         if compensate_distortion:
             points = camera_model.undistortPoints(points)
         points.shape = (-1, 1, 2)
 
-        if compensate_distortion:
-            point_on_surf = cv2.perspectiveTransform(points, self.img_to_surf_trans)
-        else:
-            point_on_surf = cv2.perspectiveTransform(
-                points, self.dist_img_to_surf_trans
-            )
+        point_on_surf = cv2.perspectiveTransform(points, trans_matrix)
         point_on_surf.shape = orig_shape
         return point_on_surf
 
-    def map_from_surf(self, points, camera_model, compensate_distortion=True):
+    def map_from_surf(self, points, camera_model, compensate_distortion=True, trans_matrix=None):
         """Map points from normalized surface space to image space.
 
         Args:
@@ -124,12 +127,15 @@ class Surface:
             as the input.
 
         """
+        if trans_matrix is None:
+            if compensate_distortion:
+                trans_matrix = self.surf_to_img_trans
+            else:
+                trans_matrix = self.surf_to_dist_img_trans
+
         orig_shape = points.shape
         points.shape = (-1, 1, 2)
-        if compensate_distortion:
-            img_points = cv2.perspectiveTransform(points, self.surf_to_img_trans)
-        else:
-            img_points = cv2.perspectiveTransform(points, self.surf_to_dist_img_trans)
+        img_points = cv2.perspectiveTransform(points, trans_matrix)
         img_points.shape = orig_shape
 
         if compensate_distortion:
@@ -250,7 +256,6 @@ class Surface:
 
     def _finalize_def(self):
         """
-        # TODO improve docstring
         - prune markers that have been visible in less than x percent of frames.
         - of those markers select a good subset of uv coords and compute mean.
         - this mean value will be used from now on to estable surface transform
@@ -365,25 +370,64 @@ class Surface:
         A_to_B, mask = cv2.findHomography(points_B, points_A)
         return A_to_B, B_to_A
 
-    def _generate_heatmap(self):
-        if not self.gaze_history:
-            return
+    def map_events(self, events, camera_model, trans_matrix=None):
+        results = []
+        for event in events:
+            gaze_norm_pos = event["norm_pos"]
+            gaze_img_point = methods.denormalize(
+                gaze_norm_pos, camera_model.resolution, flip_y=True
+            )
+            gaze_img_point = np.array(gaze_img_point)
+            surf_norm_pos = self.map_to_surf(gaze_img_point, camera_model, compensate_distortion=True, trans_matrix=trans_matrix)
+            on_srf = bool((0 <= surf_norm_pos[0] <= 1) and (0 <= surf_norm_pos[1] <= 1))
 
+            results.append({
+                "topic": event["topic"] + "_on_surface",
+                "norm_pos": surf_norm_pos.tolist(),
+                "confidence": event["confidence"],
+                "on_surf": on_srf,
+                "base_data": event,
+                "timestamp": event["timestamp"],
+            })
+        return results
+
+    # TODO Online specific
+    def update_gaze_history(self, gaze_on_surf, world_timestamp):
+        # Remove old entries
+        while (
+                self.gaze_history
+                and world_timestamp - self.gaze_history[0]["timestamp"] > self.gaze_history_length
+        ):
+            self.gaze_history.popleft()
+
+        # Add new entries
+        for event in gaze_on_surf:
+            if event["confidence"] < self.heatmap_min_data_confidence and event['on_surf']:
+                continue
+            self.gaze_history.append(
+                {"timestamp": event["timestamp"], "gaze": event['norm_pos']}
+            )
+
+    def update_heatmap(self):
         data = [x["gaze"] for x in self.gaze_history]
+        self._generate_heatmap(data)
 
+    def _generate_heatmap(self, data):
         grid = int(self.real_world_size["y"]), int(self.real_world_size["x"])
+        if data:
+            xvals, yvals = zip(*((x, 1. - y) for x, y in data))
+            hist, *edges = np.histogram2d(
+                yvals, xvals, bins=grid, range=[[0, 1.], [0, 1.]], normed=False
+            )
+            filter_h = int(self.heatmap_detail * grid[0]) // 2 * 2 + 1
+            filter_w = int(self.heatmap_detail * grid[1]) // 2 * 2 + 1
+            hist = cv2.GaussianBlur(hist, (filter_h, filter_w), 0)
+            hist_max = hist.max()
+            hist *= (255. / hist_max) if hist_max else 0.
+            hist = hist.astype(np.uint8)
+        else:
+            hist = np.zeros((int(self.real_world_size["y"]), int(self.real_world_size["x"])), dtype=np.uint8)
 
-        xvals, yvals = zip(*((x, 1. - y) for x, y in data))
-        hist, *edges = np.histogram2d(
-            yvals, xvals, bins=grid, range=[[0, 1.], [0, 1.]], normed=False
-        )
-        filter_h = int(self.heatmap_detail * grid[0]) // 2 * 2 + 1
-        filter_w = int(self.heatmap_detail * grid[1]) // 2 * 2 + 1
-        hist = cv2.GaussianBlur(hist, (filter_h, filter_w), 0)
-
-        hist_max = hist.max()
-        hist *= (255. / hist_max) if hist_max else 0.
-        hist = hist.astype(np.uint8)
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
         # reuse allocated memory if possible
         if self.heatmap.shape != (*grid, 4):
