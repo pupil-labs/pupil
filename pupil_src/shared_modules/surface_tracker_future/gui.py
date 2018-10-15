@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from enum import Enum
 import platform
 
 import numpy as np
@@ -21,6 +20,7 @@ import glfw
 import gl_utils
 
 from .surface import _Surface_Marker
+from .surface_tracker import Heatmap_Mode
 
 
 class GUI:
@@ -29,7 +29,10 @@ class GUI:
     def __init__(self, tracker):
         self.tracker = tracker
 
-        self.state = State.SHOW_SURF
+        self.heatmap_mode = Heatmap_Mode.WITHIN_SURFACE
+        self.show_heatmap = False
+        self.show_marker_ids = False
+
         self._edit_surf_corners = set()
         self._edit_surf_markers = set()
         self.heatmap_textures = {}
@@ -45,9 +48,14 @@ class GUI:
         self.glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
 
     def update(self):
+        if self.show_heatmap:
+            for surface in self.tracker.surfaces:
+                if surface.detected:
+                    self._draw_heatmap(surface)
+
         self._draw_markers()
 
-        if self.state == State.SHOW_IDS:
+        if self.show_marker_ids:
             for marker in self.tracker.markers:
                 self._draw_marker_id(marker)
 
@@ -55,26 +63,15 @@ class GUI:
             if not surface.detected:
                 continue
 
-            if self.state == State.SHOW_SURF:
-                self._draw_surface_frames(surface)
+            self._draw_surface_frames(surface)
 
-                if surface in self._edit_surf_markers:
-                    self._draw_marker_toggles(surface)
+            if surface in self._edit_surf_markers:
+                self._draw_marker_toggles(surface)
 
-                if surface in self._edit_surf_corners:
-                    self._draw_surface_corner_handles(surface)
-
-            elif self.state == State.SHOW_HEATMAP:
-                self._draw_heatmap(surface)
+            if surface in self._edit_surf_corners:
+                self._draw_surface_corner_handles(surface)
 
             self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
-
-            #
-            # for s in self.surfaces:
-            #     if self.locate_3d:
-            #         s.gl_display_in_window_3d(self.g_pool.image_tex)
-            #     else:
-            #         s.gl_display_in_window(self.g_pool.image_tex)
 
     def _draw_markers(self):
         color = pyglui_utils.RGBA(*self.color_secondary, .5)
@@ -105,7 +102,7 @@ class GUI:
         loc = anchor + (0, line_height * 1)
         self._draw_text(loc, text, self.color_secondary)
 
-        text = "conf: {:.3f}".format(marker.id_confidence)
+        text = "conf: {:.2f}".format(marker.id_confidence)
         loc = anchor + (0, line_height * 2)
         self._draw_text(loc, text, self.color_secondary)
 
@@ -279,70 +276,68 @@ class GUI:
     def on_click(self, pos, button, action):
         pos = np.array(pos, dtype=np.float32)
 
-        if self.state == State.SHOW_SURF:
+        # Menu Buttons
+        if action == glfw.GLFW_PRESS:
+            for surface in self.tracker.surfaces:
 
-            # Menu Buttons
-            if action == glfw.GLFW_PRESS:
-                for surface in self.tracker.surfaces:
+                if not surface.detected:
+                    continue
 
-                    if not surface.detected:
-                        continue
+                surface_edit_pressed, marker_edit_pressed = self._check_surface_button_pressed(
+                    surface, pos
+                )
 
-                    surface_edit_pressed, marker_edit_pressed = self._check_surface_button_pressed(
-                        surface, pos
-                    )
+                if surface_edit_pressed:
+                    if surface in self._edit_surf_corners:
+                        self._edit_surf_corners.remove(surface)
+                    else:
+                        self._edit_surf_corners.add(surface)
 
-                    if surface_edit_pressed:
-                        if surface in self._edit_surf_corners:
-                            self._edit_surf_corners.remove(surface)
+                if marker_edit_pressed:
+                    if surface in self._edit_surf_markers:
+                        self._edit_surf_markers.remove(surface)
+                    else:
+                        self._edit_surf_markers.add(surface)
+
+        # Surface Corner Handles
+        norm_corners = np.array(
+            [(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32
+        )
+        for surface in self._edit_surf_corners:
+            if surface.detected and surface.defined:
+                img_corners = surface.map_from_surf(
+                    norm_corners,
+                    self.tracker.camera_model,
+                    compensate_distortion=False,
+                )
+                for idx, corner in enumerate(img_corners):
+                    dist = np.linalg.norm(corner - pos)
+                    if dist < 15:
+                        if action == glfw.GLFW_PRESS:
+                            self.tracker._edit_surf_verts.append((surface, idx))
+                        elif action == glfw.GLFW_RELEASE:
+                            surface.on_change()
+
+        if action == glfw.GLFW_RELEASE:
+            if self.tracker._edit_surf_verts:
+                self.tracker.notify_all({"subject": "surfaces_changed"})
+            self.tracker._edit_surf_verts = []
+
+        # Marker Toggles
+        if action == glfw.GLFW_PRESS:
+            for surface in self._edit_surf_markers:
+                for marker in self.tracker.markers:
+                    centroid = np.mean(marker.verts, axis=0)
+                    dist = np.linalg.norm(centroid - pos)
+                    if dist < 15:
+                        if not marker.id in surface.reg_markers_dist.keys():
+                            surface.add_marker(marker.id, marker.verts,
+                                               self.tracker.camera_model)
+                            surface.on_change()
                         else:
-                            self._edit_surf_corners.add(surface)
-
-                    if marker_edit_pressed:
-                        if surface in self._edit_surf_markers:
-                            self._edit_surf_markers.remove(surface)
-                        else:
-                            self._edit_surf_markers.add(surface)
-
-            # Surface Corner Handles
-            norm_corners = np.array(
-                [(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32
-            )
-            for surface in self._edit_surf_corners:
-                if surface.detected and surface.defined:
-                    img_corners = surface.map_from_surf(
-                        norm_corners,
-                        self.tracker.camera_model,
-                        compensate_distortion=False,
-                    )
-                    for idx, corner in enumerate(img_corners):
-                        dist = np.linalg.norm(corner - pos)
-                        if dist < 15:
-                            if action == glfw.GLFW_PRESS:
-                                self.tracker._edit_surf_verts.append((surface, idx))
-                            elif action == glfw.GLFW_RELEASE:
-                                surface.on_change()
-
-            if action == glfw.GLFW_RELEASE:
-                if self.tracker._edit_surf_verts:
-                    self.tracker.notify_all({"subject": "surfaces_changed"})
-                self.tracker._edit_surf_verts = []
-
-            # Marker Toggles
-            if action == glfw.GLFW_PRESS:
-                for surface in self._edit_surf_markers:
-                    for marker in self.tracker.markers:
-                        centroid = np.mean(marker.verts, axis=0)
-                        dist = np.linalg.norm(centroid - pos)
-                        if dist < 15:
-                            if not marker.id in surface.reg_markers_dist.keys():
-                                surface.add_marker(marker.id, marker.verts,
-                                                   self.tracker.camera_model)
-                                surface.on_change()
-                            else:
-                                surface.pop_marker(marker.id)
-                                surface.on_change()
-                            self.tracker.notify_all({"subject": "surfaces_changed"})
+                            surface.pop_marker(marker.id)
+                            surface.on_change()
+                        self.tracker.notify_all({"subject": "surfaces_changed"})
 
     def _check_surface_button_pressed(self, surface, pos):
         frame, hat, text_anchor, surface_edit_anchor, marker_edit_anchor = self._get_surface_anchor_points(
@@ -382,10 +377,11 @@ def _get_points_to_norm_trans(points):
         np.array(points, dtype=np.float32), norm_corners
     )
 
-class State(Enum):
-    SHOW_SURF = "Show Markers and Surfaces"
-    SHOW_IDS = "Show marker IDs"
-    SHOW_HEATMAP = "Show Heatmaps"
+# TODO Delete
+# class State(Enum):
+#     SHOW_SURF = "Show Markers and Surfaces"
+#     SHOW_IDS = "Show marker IDs"
+#     SHOW_HEATMAP = "Show Heatmaps"
 
 
 class Surface_Window:

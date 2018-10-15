@@ -31,7 +31,7 @@ from plugin import Analysis_Plugin_Base
 import file_methods
 from cache_list import Cache_List
 
-from .surface_tracker import Surface_Tracker_Future, Marker
+from .surface_tracker import Surface_Tracker_Future, Marker, Heatmap_Mode
 from . import offline_utils
 from . import gui
 from . import background_tasks
@@ -56,6 +56,9 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         self.timeline_line_height = 16
         super().__init__(g_pool, marker_min_perimeter, inverted_markers)
+        self.ui_info_text = "The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here. \n \n Press the export button or type 'e' to start the export."
+        self.supported_heatmap_modes= [Heatmap_Mode.WITHIN_SURFACE, Heatmap_Mode.ACROSS_SURFACES]
+
         self.order = .2
 
         # Caches
@@ -71,6 +74,10 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
     @property
     def Surface_Class(self):
         return Offline_Surface
+
+    @property
+    def save_dir(self):
+        return self.g_pool.rec_dir
 
     def _init_marker_cache(self):
         previous_cache = file_methods.Persistent_Dict(
@@ -135,16 +142,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         self.marker_cache = Cache_List(marker_cache)
 
     def init_ui(self):
-        self.add_menu()
-        self.menu.label = "Offline Surface Tracker"
-        self.add_button = pyglui.ui.Thumb(
-            "add_surface",
-            setter=lambda x: self.add_surface(),
-            getter=lambda: False,
-            label="A",
-            hotkey="a",
-        )
-        self.g_pool.quickbar.append(self.add_button)
+        super().init_ui()
 
         self.glfont = pyglui.pyfontstash.fontstash.Context()
         self.glfont.add_font("opensans", pyglui.ui.get_opensans_font_path())
@@ -162,118 +160,33 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             len(self.surfaces) + 1
         ) * self.timeline_line_height
 
-        self.update_ui()
+    def per_surface_ui(self, surface):
+        def set_x(val):
+            surface.real_world_size['x'] = val
+            self.notify_all({'subject': 'heatmap_params_changed', 'delay': 0,
+                             "surface_uid": surface.uid})
 
-    def update_ui(self):
-        def set_marker_min_perimeter(val):
-            self.marker_min_perimeter = val
+        def set_y(val):
+            surface.real_world_size['y'] = val
+            self.notify_all({'subject': 'heatmap_params_changed', 'delay': 0,
+                             "surface_uid": surface.uid})
 
-            self._update_filtered_markers()
-            for surface in self.surfaces:
-                surface.cache = None
-
-        def set_invert_image(val):
-            self.inverted_markers = val
-            self.recalculate_marker_cache()
-
-        def set_robust_detection(val):
-            self.robust_detection = val
-            self.recalculate_marker_cache()
-
-        try:
-            self.menu.elements[:] = []
-        except AttributeError:
-            return
-        self.menu.append(
-            pyglui.ui.Info_Text(
-                "The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here."
+        idx = self.surfaces.index(surface)
+        s_menu = pyglui.ui.Growing_Menu("Surface {}".format(idx))
+        s_menu.collapsed = True
+        s_menu.append(pyglui.ui.Text_Input("name", surface))
+        s_menu.append(pyglui.ui.Text_Input("x", surface.real_world_size, label="X size",
+                                           setter=set_x))
+        s_menu.append(pyglui.ui.Text_Input("y", surface.real_world_size, label="Y size",
+                                           setter=set_y))
+        s_menu.append(
+            pyglui.ui.Button(
+                "Open Debug Window", self.gui.surface_windows[surface].open_close_window
             )
         )
-        self.menu.append(
-            pyglui.ui.Info_Text(
-                "Press the export button or type 'e' to start the export."
-            )
-        )
-        self.menu.append(
-            pyglui.ui.Switch(
-                "robust_detection",
-                self,
-                setter=set_robust_detection,
-                label="Robust detection",
-            )
-        )
-        self.menu.append(
-            pyglui.ui.Switch(
-                "inverted_markers",
-                self,
-                setter=set_invert_image,
-                label="Use inverted markers",
-            )
-        )
-        self.menu.append(
-            pyglui.ui.Slider(
-                "marker_min_perimeter",
-                self,
-                setter=set_marker_min_perimeter,
-                step=1,
-                min=30,
-                max=100,
-            )
-        )
-        self.menu.append(
-            pyglui.ui.Selector(
-                "state",
-                self.gui,
-                label="Mode",
-                labels=[e.value for e in gui.State],
-                selection=[e for e in gui.State],
-            )
-        )
-        self.menu.append(
-            pyglui.ui.Info_Text(
-                'To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'
-            )
-        )
-        self.menu.append(
-            pyglui.ui.Button("(Re)-calculate gaze distributions", self.recalculate)
-        )
-        self.menu.append(pyglui.ui.Button("Add surface", lambda: self.add_surface("_")))
-
-        for surface in self.surfaces:
-            def set_x(val):
-                surface.real_world_size['x'] = val
-                self._update_surface_heatmap(surface)
-
-            def set_y(val):
-                surface.real_world_size['y'] = val
-                self._update_surface_heatmap(surface)
-
-            idx = self.surfaces.index(surface)
-            s_menu = pyglui.ui.Growing_Menu("Surface {}".format(idx))
-            s_menu.collapsed = True
-            s_menu.append(pyglui.ui.Text_Input("name", surface))
-            s_menu.append(pyglui.ui.Text_Input("x", surface.real_world_size, label="X size", setter=set_x))
-            s_menu.append(pyglui.ui.Text_Input("y", surface.real_world_size, label="Y size", setter=set_y))
-            s_menu.append(
-                pyglui.ui.Button(
-                    "Open Debug Window", self.gui.surface_windows[surface].open_close_window
-                )
-            )
-
-            def make_remove_s(i):
-                return lambda: self.remove_surface(i)
-
-            remove_s = make_remove_s(idx)
-            s_menu.append(pyglui.ui.Button("remove", remove_s))
-            self.menu.append(s_menu)
-
-    def load_surface_definitions_from_file(self):
-        surface_definitions = file_methods.Persistent_Dict(
-            os.path.join(self.g_pool.rec_dir, "surface_definitions")
-        )
-
-        for init_dict in surface_definitions.get("surfaces", []):
-            self.add_surface(None, init_dict=init_dict)
+        remove_surf = lambda: self.remove_surface(idx)
+        s_menu.append(pyglui.ui.Button("remove", remove_surf))
+        self.menu.append(s_menu)
 
     def recalculate(self):
         pass  # TODO Remove?
@@ -311,7 +224,6 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         #     s.metrics_texture = Named_Texture()
         #     s.metrics_texture.update_from_ndarray(heatmap)
 
-    # TODO Offline specific
     def recent_events(self, events):
         frame = events.get("frame")
         if not frame:
@@ -461,27 +373,30 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             gl.glTranslatef(0, self.timeline_line_height * scale, 0)
             self.glfont.draw_text(width, 0, s.name)
 
-    def save_surface_definitions_to_file(self):
-        surface_definitions = file_methods.Persistent_Dict(
-            os.path.join(self.g_pool.rec_dir, "surface_definitions")
-        )
-        surface_definitions["surfaces"] = [
-            surface.save_to_dict() for surface in self.surfaces if surface.defined
-        ]
-        surface_definitions.save()
+    def on_notify(self, notification):
+        super().on_notify(notification)
+
+        if notification['subject'] == 'marker_detection_params_changed':
+            self.recalculate_marker_cache()
+        elif notification['subject'] == 'marker_min_perimeter_changed':
+            self._update_filtered_markers()
+            for surface in self.surfaces:
+                surface.cache = None
+        elif notification['subject'] == 'heatmap_params_changed':
+            for surface in self.surfaces:
+                if surface.uid == notification['surface_uid']:
+                    self._update_surface_heatmap(surface)
+                    break
 
     def on_surface_change(self, surface):
         self.save_surface_definitions_to_file()
         self._update_surface_heatmap(surface)
 
     def deinit_ui(self):
+        super().deinit_ui()
         self.g_pool.user_timelines.remove(self.timeline)
         self.timeline = None
         self.glfont = None
-        self.remove_menu()
-        if self.add_button:
-            self.g_pool.quickbar.remove(self.add_button)
-            self.add_button = None
 
     def cleanup(self):
         super().cleanup()

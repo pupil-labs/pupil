@@ -170,8 +170,14 @@ class Offline_Surface(Surface):
     def update_heatmap(self, section, all_gaze_timestamps, all_gaze_events, camera_model):
         # TODO move into background process
         # TODO devalidate heatmap texture when beginning computation
+        try:
+            location_cache = self.location_cache[section]
+        except TypeError:
+            # Wait for the next call to update_heatmap after the location_cache is completed.
+            return
+
         heatmap_data = []
-        for frame_idx, location in enumerate(self.location_cache[section]):
+        for frame_idx, location in enumerate(location_cache):
             frame_idx += section.start
 
             if location and location['detected']:
