@@ -224,25 +224,14 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         #     s.metrics_texture = Named_Texture()
         #     s.metrics_texture.update_from_ndarray(heatmap)
 
-    def recent_events(self, events):
-        frame = events.get("frame")
-        if not frame:
-            return
-
-        self.current_frame_idx = frame.index
-
+    def update_markers(self, frame):
         if not self.cache_filler is None:
             self._update_marker_and_surface_caches()
-
         # Move seek index to current frame if caches do not contain data for it
         self.markers = self.marker_cache[frame.index]
         if self.markers is False:
             self.markers = []
             self.cache_seek_idx.value = frame.index
-
-        self._update_surface_locations(frame.index)
-        self._update_surface_corners()
-        self._add_surface_events(events, frame)
 
     def _update_marker_and_surface_caches(self):
         for idx, markers in self.cache_filler.fetch():
@@ -284,7 +273,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         for surface, corner_idx in self._edit_surf_verts:
             if surface.detected:
                 surface.move_corner(
-                    self.current_frame_idx,
+                    self.current_frame.index,
                     self.marker_cache,
                     corner_idx,
                     self._last_mouse_pos.copy(),
@@ -315,7 +304,6 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         super().remove_surface(_)
         self.timeline.content_height -= self.timeline_line_height
 
-    # TODO does it make sense to move timeline stuff into gui class?
     def gl_display(self):
         if self.timeline:
             self.timeline.refresh()
@@ -375,6 +363,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
 
     def on_notify(self, notification):
         super().on_notify(notification)
+        # TODO Update heatmaps on trim marker change
 
         if notification['subject'] == 'marker_detection_params_changed':
             self.recalculate_marker_cache()

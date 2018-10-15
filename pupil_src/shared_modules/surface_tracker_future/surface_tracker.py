@@ -23,10 +23,7 @@ import square_marker_detect as marker_det
 import file_methods
 from . import gui
 
-# TODO do heatmap updates and exports in background
-
 # TODO Improve marker coloring, marker toggle is barely visible
-# TODO Would it be nice to have heatmap and ids be toggles rather then different modes?
 
 
 class Surface_Tracker_Future(Plugin):
@@ -46,7 +43,7 @@ class Surface_Tracker_Future(Plugin):
 
     Heatmaps are updated when
     - A surface bg process finished
-    - Trim markers change # TODO Update heatmaps on trim marker change
+    - Trim markers change
     - Surface parameters have changed
 
     """
@@ -92,7 +89,7 @@ class Surface_Tracker_Future(Plugin):
         Returns:
 
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def init_ui(self):
         self.add_menu()
@@ -182,7 +179,7 @@ class Surface_Tracker_Future(Plugin):
             self.per_surface_ui(surface)
 
     def per_surface_ui(self, surface):
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def load_surface_definitions_from_file(self):
         surface_definitions = file_methods.Persistent_Dict(
@@ -193,10 +190,22 @@ class Surface_Tracker_Future(Plugin):
             self.add_surface(None, init_dict=init_dict)
 
     def recent_events(self, events):
-        raise NotImplementedError()
+        frame = events.get("frame")
+        if not frame:
+            return
+
+        self.current_frame = frame
+
+        self.update_markers(frame)
+        self._update_surface_locations(frame.index)
+        self._update_surface_corners()
+        self._add_surface_events(events, frame)
+
+    def update_markers(self, frame):
+        raise NotImplementedError
 
     def _update_surface_locations(self, idx):
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def _add_surface_events(self, events, frame):
         """
@@ -229,10 +238,10 @@ class Surface_Tracker_Future(Plugin):
                 events["surfaces"].append(surface_event)
 
     def _update_surface_corners(self):
-        raise not NotImplementedError()
+        raise NotImplementedError
 
     def _update_surface_heatmaps(self):
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def add_surface(self, _, init_dict=None):
         if self.markers or init_dict is not None:
@@ -251,6 +260,7 @@ class Surface_Tracker_Future(Plugin):
         self.update_ui()
         self.save_surface_definitions_to_file()
 
+    # TODO change so offline surface tracker also uses this
     def _detect_markers(self, frame):
         gray = frame.gray
         if self.inverted_markers:

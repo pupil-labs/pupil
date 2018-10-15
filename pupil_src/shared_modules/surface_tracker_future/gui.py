@@ -40,7 +40,7 @@ class GUI:
 
         self.color_primary = (1.0, 0.2, 0.6)
         self.color_secondary = (0.1, 1., 1.)
-        self.color_highlight = (0, 0.8, 0.7)
+        self.color_tertiary = (0, 0.8, 0.7)
 
         self.glfont = pyglui.pyfontstash.fontstash.Context()
         self.glfont.add_font("opensans", pyglui.ui.get_opensans_font_path())
@@ -166,7 +166,7 @@ class GUI:
             # Buttons
             if surface in self._edit_surf_markers:
                 pyglui_utils.draw_points(
-                    [marker_edit_anchor], color=pyglui_utils.RGBA(*self.color_highlight)
+                    [marker_edit_anchor], color=pyglui_utils.RGBA(*self.color_tertiary)
                 )
             else:
                 pyglui_utils.draw_points(
@@ -176,7 +176,7 @@ class GUI:
             if surface in self._edit_surf_corners:
                 pyglui_utils.draw_points(
                     [surface_edit_anchor],
-                    color=pyglui_utils.RGBA(*self.color_highlight),
+                    color=pyglui_utils.RGBA(*self.color_tertiary),
                 )
             else:
                 pyglui_utils.draw_points(
@@ -235,7 +235,7 @@ class GUI:
             inactive_markers, size=20, color=pyglui_utils.RGBA(*self.color_primary, .8)
         )
         pyglui_utils.draw_points(
-            active_markers, size=20, color=pyglui_utils.RGBA(*self.color_highlight, .8)
+            active_markers, size=20, color=pyglui_utils.RGBA(*self.color_tertiary, .8)
         )
 
     def _draw_surface_corner_handles(self, surface):

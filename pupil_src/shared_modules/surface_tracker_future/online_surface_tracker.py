@@ -19,13 +19,6 @@ from . import gui
 from .surface_tracker import Surface_Tracker_Future, Heatmap_Mode
 
 class Surface_Tracker_Online_Future(Surface_Tracker_Future):
-    """
-
-    """
-
-    # WHere should this be used?
-    icon_chr = chr(0xec07)
-    icon_font = "pupil_icons"
 
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         super().__init__(g_pool, marker_min_perimeter=marker_min_perimeter, inverted_markers=inverted_markers)
@@ -76,20 +69,15 @@ class Surface_Tracker_Online_Future(Surface_Tracker_Future):
         self.menu.append(s_menu)
 
     def recent_events(self, events):
-        frame = events.get("frame")
-        if not frame:
-            return
-
-        if self.running:
-            self._detect_markers(frame)
-
-        self._update_surface_locations(frame.index)
-        self._update_surface_corners()
-        self._add_surface_events(events, frame)
-        self._update_surface_gaze_history(events, frame.timestamp)
+        super().recent_events(events)
+        self._update_surface_gaze_history(events, self.current_frame.timestamp)
 
         if self.gui.show_heatmap:
             self._update_surface_heatmaps()
+
+    def update_markers(self, frame):
+        if self.running:
+            self._detect_markers(frame)
 
     def _update_surface_locations(self, idx):
         for surface in self.surfaces:
