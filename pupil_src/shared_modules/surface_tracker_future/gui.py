@@ -19,7 +19,7 @@ import OpenGL.GL as gl
 import glfw
 import gl_utils
 
-from .surface_tracker import Heatmap_Mode
+from surface_tracker_future import Heatmap_Mode
 
 
 class GUI:
@@ -372,13 +372,6 @@ def _get_norm_to_points_trans(points):
 def _get_points_to_norm_trans(points):
     norm_corners = np.array(((0, 0), (1, 0), (1, 1), (0, 1)), dtype=np.float32)
     return cv2.getPerspectiveTransform(np.array(points, dtype=np.float32), norm_corners)
-
-
-# TODO Delete
-# class State(Enum):
-#     SHOW_SURF = "Show Markers and Surfaces"
-#     SHOW_IDS = "Show marker IDs"
-#     SHOW_HEATMAP = "Show Heatmaps"
 
 
 class Surface_Window:

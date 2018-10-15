@@ -20,19 +20,19 @@ from OpenGL.GL import *
 from cache_list import Cache_List
 import player_methods
 
-from .surface import Surface
-from . import offline_utils
-from . import background_tasks
+from surface_tracker_future.surface import Surface
+from surface_tracker_future import offline_utils
+from surface_tracker_future import background_tasks
 
 
-class Offline_Surface(Surface):
-    def __init__(self, on_surface_changed=None, init_dict=None):
+class Surface_Offline(Surface):
+    def __init__(self, init_dict=None):
         self.cache_seek_idx = mp.Value("i", 0)
         self.location_cache = None
         self.location_cache_filler = None
         self.observations_frame_idxs = []
         self.current_frame_idx = None
-        super().__init__(on_surface_changed=on_surface_changed, init_dict=init_dict)
+        super().__init__(init_dict=init_dict)
 
     def recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
         logging.debug("Recaclulate Surface Cache!")

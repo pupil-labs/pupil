@@ -10,8 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import os
-import collections
-from enum import Enum
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,9 +20,11 @@ import pyglui
 from plugin import Plugin
 import square_marker_detect as marker_det
 import file_methods
-from . import gui
+
+from surface_tracker_future import gui, Marker
 
 # TODO Improve marker coloring, marker toggle is barely visible
+# TODO make internal imports absolute
 
 
 class Surface_Tracker_Future(Plugin):
@@ -78,10 +78,6 @@ class Surface_Tracker_Future(Plugin):
     def camera_model(self):
         # TODO Is it better to handle changes in camera model through a notification?
         return self.g_pool.capture.intrinsics
-
-    @property
-    def Surface_Class(self):
-        raise NotImplementedError()
 
     @property
     def save_dir(self):
@@ -242,9 +238,7 @@ class Surface_Tracker_Future(Plugin):
 
     def add_surface(self, _, init_dict=None):
         if self.markers or init_dict is not None:
-            surface = self.Surface_Class(
-                on_surface_changed=self.on_surface_change, init_dict=init_dict
-            )
+            surface = self.Surface_Class(init_dict=init_dict)
             self.surfaces.append(surface)
             self.gui.add_surface(surface)
             self.update_ui()
@@ -334,9 +328,6 @@ class Surface_Tracker_Future(Plugin):
         ]
         surface_definitions.save()
 
-    def on_surface_change(self, surface):
-        self.save_surface_definitions_to_file()
-
     def deinit_ui(self):
         self.g_pool.quickbar.remove(self.add_button)
         self.add_button = None
@@ -344,11 +335,3 @@ class Surface_Tracker_Future(Plugin):
 
     def cleanup(self):
         self.save_surface_definitions_to_file()
-
-
-Marker = collections.namedtuple("Marker", ["id", "id_confidence", "verts", "perimeter"])
-
-
-class Heatmap_Mode(Enum):
-    WITHIN_SURFACE = "Gaze within each surface"
-    ACROSS_SURFACES = "Gaze across different surfaces"

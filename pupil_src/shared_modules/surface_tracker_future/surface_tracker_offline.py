@@ -11,16 +11,15 @@ See COPYING and COPYING.LESSER for license details.
 
 import os
 import logging
-
-logger = logging.getLogger(__name__)
+import time
 import platform
 import multiprocessing
 
+logger = logging.getLogger(__name__)
 if platform.system() == "Darwin":
     mp = multiprocessing.get_context("fork")
 else:
     mp = multiprocessing.get_context()
-import time
 
 import pyglui
 import gl_utils
@@ -31,18 +30,16 @@ from plugin import Analysis_Plugin_Base
 import file_methods
 from cache_list import Cache_List
 
-from .surface_tracker import Surface_Tracker_Future, Marker, Heatmap_Mode
-from . import offline_utils
-from . import gui
-from . import background_tasks
-from .offline_surface import Offline_Surface
+from surface_tracker_future.surface_tracker import Surface_Tracker_Future
+from surface_tracker_future import offline_utils, background_tasks, Marker, Heatmap_Mode
+from surface_tracker_future.surface_offline import Surface_Offline
 
 
 # TODO Improve all docstrings, make methods privat appropriately
 # TODO Prepend all notifications with "surface_tracker.<notification>[.surface_name]"
 
 
-class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Base):
+class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Base):
     """
     - Mostly extends the Surface Tracker with a cache
     Special version of surface tracker for use with videofile source.
@@ -57,6 +54,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
 
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         self.timeline_line_height = 16
+        self.Surface_Class = Surface_Offline
         super().__init__(g_pool, marker_min_perimeter, inverted_markers)
         self.ui_info_text = "The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here. \n \n Press the export button or type 'e' to start the export."
         self.supported_heatmap_modes = [
@@ -75,10 +73,6 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         self.last_cache_update_ts = time.time()
         self.cache_update_interval = 5
         # self.recalculate() # What does this do?
-
-    @property
-    def Surface_Class(self):
-        return Offline_Surface
 
     @property
     def save_dir(self):
@@ -324,6 +318,7 @@ class Offline_Surface_Tracker_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                 self.timeline.content_height += self.timeline_line_height
             except AttributeError:
                 pass
+        self.surfaces[-1].on_surface_changed = self.on_surface_change
         self._update_surface_heatmap(self.surfaces[-1])
 
     def remove_surface(self, _):

@@ -18,16 +18,7 @@ import methods
 
 
 class Surface:
-    def __init__(self, on_surface_changed=None, init_dict=None):
-        """
-        # TODO what to do on camera_model change?
-        Args:
-            marker_min_perimeter:
-            marker_min_confidence:
-            init_dict:
-        """
-        # TODO offline specific
-        self.on_surface_change = on_surface_changed
+    def __init__(self, init_dict=None):
         self.uid = random.randint(0, 1e6)
 
         self.name = "unknown"

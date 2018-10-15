@@ -15,12 +15,15 @@ logger = logging.getLogger(__name__)
 
 import pyglui
 
-from .surface import Surface
-from .surface_tracker import Surface_Tracker_Future, Heatmap_Mode
+
+from surface_tracker_future import Heatmap_Mode
+from surface_tracker_future.surface_tracker import Surface_Tracker_Future
+from surface_tracker_future.surface_online import Surface_Online
 
 
 class Surface_Tracker_Online_Future(Surface_Tracker_Future):
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
+        self.Surface_Class = Surface_Online
         super().__init__(
             g_pool,
             marker_min_perimeter=marker_min_perimeter,
@@ -35,10 +38,6 @@ class Surface_Tracker_Online_Future(Surface_Tracker_Future):
         self.add_button = None
 
         self.locate_3d = False  # TODO currently not supported. Is this ok?
-
-    @property
-    def Surface_Class(self):
-        return Surface
 
     @property
     def save_dir(self):
