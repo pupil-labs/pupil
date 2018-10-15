@@ -134,6 +134,35 @@ class Seek_Control(System_Plugin_Base):
         self.was_seeking = True
         self.notify_all({"subject": "seek_control.was_seeking"})
 
+    @property
+    def trim_left(self):
+        return self._trim_left
+
+    @trim_left.setter
+    def trim_left(self, val):
+        self._trim_left = val
+        self.notify_all(
+            {
+                "subject": "seek_control.trim_indeces_changed",
+                "delay": 0.5,
+                "new_range": (self.trim_left, self.trim_right),
+            }
+        )
+
+    @property
+    def trim_right(self):
+        return self._trim_right
+
+    @trim_right.setter
+    def trim_right(self, val):
+        self._trim_right = val
+        self.notify_all(
+            {
+                "subject": "seek_control.trim_indeces_changed",
+                "delay": 0.5,
+                "new_range": (self.trim_left, self.trim_right),
+            }
+        )
 
     @property
     def trim_left_ts(self):
