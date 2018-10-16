@@ -33,8 +33,8 @@ class Seek_Control(System_Plugin_Base):
         super().__init__(g_pool)
         g_pool.seek_control = self
         self._playback_speed = playback_speed
-        self.trim_left = 0
-        self.trim_right = len(self.g_pool.timestamps) - 1
+        self._trim_left = 0
+        self._trim_right = len(self.g_pool.timestamps) - 1
         self.was_playing = True
         self.was_seeking = False
         self.start_time = 0.
