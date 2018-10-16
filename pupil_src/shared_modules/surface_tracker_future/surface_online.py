@@ -10,8 +10,8 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import collections
-import random
 
+import cv2
 import numpy as np
 
 from surface_tracker_future.surface import Surface
@@ -20,38 +20,74 @@ from surface_tracker_future.surface import Surface
 class Surface_Online(Surface):
     def __init__(self, init_dict=None):
         super().__init__(init_dict=init_dict)
-        self.uid = random.randint(0, 1e6)
 
-        self.name = "unknown"
-        self.real_world_size = {"x": 1., "y": 1.}
-
-        # We store the surface state in two versions: once computed with the
-        # undistorted scene image and once with the still distorted scene image. The
-        # undistorted state is used to map gaze onto the surface, the distorted one
-        # is used for visualization. This is necessary because surface corners
-        # outside of the image can not be re-distorted for visualization correctly.
-        # Instead the slightly wrong but correct looking distorted version is
-        # used for visualization.
-        self.reg_markers_undist = {}
-        self.reg_markers_dist = {}
-        self.img_to_surf_trans = None
-        self.surf_to_img_trans = None
-        self.dist_img_to_surf_trans = None
-        self.surf_to_dist_img_trans = None
-
-        self.detected = False
-        self.num_detected_markers = []
-
-        self._required_obs_per_marker = 5
-        self._avg_obs_per_marker = 0
-        self.build_up_status = 0
-
-        # TODO online specific
         self.gaze_history_length = 1
         self.gaze_history = collections.deque()
-        self.heatmap = np.ones((1, 1), dtype=np.uint8)
-        self.heatmap_detail = .2
-        self.heatmap_min_data_confidence = 0.6
 
-        if init_dict is not None:
-            self.load_from_dict(init_dict)
+    def move_corner(self, corner_idx, pos, camera_model):
+        # Markers undistorted
+        new_corner_pos = self.map_to_surf(pos, camera_model, compensate_distortion=True)
+        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+
+        new_corners = old_corners.copy()
+        new_corners[corner_idx] = new_corner_pos
+
+        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
+        for m in self.reg_markers_undist.values():
+            m.verts = cv2.perspectiveTransform(
+                m.verts.reshape((-1, 1, 2)), transform
+            ).reshape((-1, 2))
+
+        # Markers distorted
+        new_corner_pos = self.map_to_surf(
+            pos, camera_model, compensate_distortion=False
+        )
+        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+
+        new_corners = old_corners.copy()
+        new_corners[corner_idx] = new_corner_pos
+
+        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
+        for m in self.reg_markers_dist.values():
+            m.verts = cv2.perspectiveTransform(
+                m.verts.reshape((-1, 1, 2)), transform
+            ).reshape((-1, 2))
+
+    def update_location(self, idx, vis_markers, camera_model):
+        vis_markers_dict = {m.id: m for m in vis_markers}
+
+        if not self.defined:
+            self.update_def(idx, vis_markers_dict, camera_model)
+
+        # Get dict of current transformations
+        transformations = self.locate(
+            vis_markers_dict,
+            camera_model,
+            self.reg_markers_undist,
+            self.reg_markers_dist,
+        )
+        self.__dict__.update(transformations)
+
+    def update_gaze_history(self, gaze_on_surf, world_timestamp):
+        # Remove old entries
+        while (
+            self.gaze_history
+            and world_timestamp - self.gaze_history[0]["timestamp"]
+            > self.gaze_history_length
+        ):
+            self.gaze_history.popleft()
+
+        # Add new entries
+        for event in gaze_on_surf:
+            if (
+                event["confidence"] < self.heatmap_min_data_confidence
+                and event["on_surf"]
+            ):
+                continue
+            self.gaze_history.append(
+                {"timestamp": event["timestamp"], "gaze": event["norm_pos"]}
+            )
+
+    def update_heatmap(self):
+        data = [x["gaze"] for x in self.gaze_history]
+        self._generate_heatmap(data)

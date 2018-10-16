@@ -27,12 +27,12 @@ from surface_tracker_future import background_tasks
 
 class Surface_Offline(Surface):
     def __init__(self, init_dict=None):
+        super().__init__(init_dict=init_dict)
         self.cache_seek_idx = mp.Value("i", 0)
         self.location_cache = None
         self.location_cache_filler = None
         self.observations_frame_idxs = []
-        self.current_frame_idx = None
-        super().__init__(init_dict=init_dict)
+        self.on_surface_changed = None
 
     def recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
         logging.debug("Recaclulate Surface Cache!")
@@ -104,8 +104,8 @@ class Surface_Offline(Surface):
             if self.defined:
                 # All previous detections were preliminary, devalidate them.
                 self.location_cache = None
-                if self.on_surface_change is not None:
-                    self.on_surface_change(self)
+                if self.on_surface_changed is not None:
+                    self.on_surface_changed(self)
 
         try:
             if self.location_cache_filler is not None:
@@ -114,7 +114,7 @@ class Surface_Offline(Surface):
 
                 if self.location_cache_filler.completed:
                     self.location_cache_filler = None
-                    self.on_surface_change(self)
+                    self.on_surface_changed(self)
 
             location = self.location_cache[frame_idx]
         except (TypeError, AttributeError):
@@ -212,6 +212,7 @@ class Surface_Offline(Surface):
                 heatmap_data += data
         self._generate_heatmap(heatmap_data)
 
+    # TODO can this be merged with on_surface_change?
     def on_change(self):
         self.location_cache = None
 

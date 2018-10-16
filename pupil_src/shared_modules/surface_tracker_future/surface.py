@@ -12,15 +12,15 @@ See COPYING and COPYING.LESSER for license details.
 import numpy as np
 import cv2
 import random
-import collections
 
 import methods
+
+from surface_tracker_future import _Surface_Marker
 
 
 class Surface:
     def __init__(self, init_dict=None):
         self.uid = random.randint(0, 1e6)
-
         self.name = "unknown"
         self.real_world_size = {"x": 1., "y": 1.}
 
@@ -33,21 +33,16 @@ class Surface:
         # used for visualization.
         self.reg_markers_undist = {}
         self.reg_markers_dist = {}
+        self.detected = False
         self.img_to_surf_trans = None
         self.surf_to_img_trans = None
         self.dist_img_to_surf_trans = None
         self.surf_to_dist_img_trans = None
 
-        self.detected = False
-        self.num_detected_markers = []
-
         self._required_obs_per_marker = 5
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
 
-        # TODO online specific
-        self.gaze_history_length = 1
-        self.gaze_history = collections.deque()
         self.heatmap = np.ones((1, 1), dtype=np.uint8)
         self.heatmap_detail = .2
         self.heatmap_min_data_confidence = 0.6
@@ -138,34 +133,7 @@ class Surface:
         return img_points
 
     def move_corner(self, corner_idx, pos, camera_model):
-
-        # Markers undistorted
-        new_corner_pos = self.map_to_surf(pos, camera_model, compensate_distortion=True)
-        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-
-        new_corners = old_corners.copy()
-        new_corners[corner_idx] = new_corner_pos
-
-        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for m in self.reg_markers_undist.values():
-            m.verts = cv2.perspectiveTransform(
-                m.verts.reshape((-1, 1, 2)), transform
-            ).reshape((-1, 2))
-
-        # Markers distorted
-        new_corner_pos = self.map_to_surf(
-            pos, camera_model, compensate_distortion=False
-        )
-        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-
-        new_corners = old_corners.copy()
-        new_corners[corner_idx] = new_corner_pos
-
-        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for m in self.reg_markers_dist.values():
-            m.verts = cv2.perspectiveTransform(
-                m.verts.reshape((-1, 1, 2)), transform
-            ).reshape((-1, 2))
+        raise NotImplementedError
 
     def add_marker(self, id, verts, camera_model):
         surface_marker_dist = _Surface_Marker(id)
@@ -189,19 +157,7 @@ class Surface:
         self.reg_markers_undist.pop(id)
 
     def update_location(self, idx, vis_markers, camera_model):
-        vis_markers_dict = {m.id: m for m in vis_markers}
-
-        if not self.defined:
-            self.update_def(idx, vis_markers_dict, camera_model)
-
-        # Get dict of current transformations
-        transformations = self.locate(
-            vis_markers_dict,
-            camera_model,
-            self.reg_markers_undist,
-            self.reg_markers_dist,
-        )
-        self.__dict__.update(transformations)
+        raise NotImplementedError
 
     def update_def(self, idx, vis_markers, camera_model):
         if not vis_markers:
@@ -395,30 +351,8 @@ class Surface:
             )
         return results
 
-    # TODO Online specific
-    def update_gaze_history(self, gaze_on_surf, world_timestamp):
-        # Remove old entries
-        while (
-            self.gaze_history
-            and world_timestamp - self.gaze_history[0]["timestamp"]
-            > self.gaze_history_length
-        ):
-            self.gaze_history.popleft()
-
-        # Add new entries
-        for event in gaze_on_surf:
-            if (
-                event["confidence"] < self.heatmap_min_data_confidence
-                and event["on_surf"]
-            ):
-                continue
-            self.gaze_history.append(
-                {"timestamp": event["timestamp"], "gaze": event["norm_pos"]}
-            )
-
     def update_heatmap(self):
-        data = [x["gaze"] for x in self.gaze_history]
-        self._generate_heatmap(data)
+        raise NotImplementedError
 
     def _generate_heatmap(self, data):
         grid = int(self.real_world_size["y"]), int(self.real_world_size["x"])
@@ -454,6 +388,7 @@ class Surface:
         points *= camera_model.resolution
         return points
 
+    # TODO manage this through a notification
     def on_change(self):
         pass
 
@@ -484,38 +419,3 @@ class Surface:
         ]
         self.reg_markers_dist = {m.id: m for m in self.reg_markers_dist}
         self.build_up_status = init_dict["build_up_status"]
-
-
-class _Surface_Marker(object):
-    """
-    A Surface Marker is located in normalized surface space, unlike regular Markers which are
-    located in image space. It's location on the surface is aggregated over a list of
-    obersvations.
-    """
-
-    def __init__(self, id, verts=None):
-        self.id = id
-        self.verts = None
-        self.observations = []
-
-        if not verts is None:
-            self.verts = np.array(verts)
-
-    def add_observation(self, uv_coords):
-        self.observations.append(uv_coords)
-        self._compute_robust_mean()
-
-    def _compute_robust_mean(self):
-        # uv is of shape (N, 4, 2) where N is the number of collected observations
-        uv = np.array(self.observations)
-        base_line_mean = np.mean(uv, axis=0)
-        distance = np.linalg.norm(uv - base_line_mean, axis=(1, 2))
-
-        # Estimate the mean again using the 50% closest samples
-        cut_off = sorted(distance)[len(distance) // 2]
-        uv_subset = uv[distance <= cut_off]
-        final_mean = np.mean(uv_subset, axis=0)
-        self.verts = final_mean
-
-    def save_to_dict(self):
-        return {"id": self.id, "verts": [v.tolist() for v in self.verts]}

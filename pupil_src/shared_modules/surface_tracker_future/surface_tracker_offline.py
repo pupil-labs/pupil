@@ -36,7 +36,7 @@ from surface_tracker_future.surface_offline import Surface_Offline
 
 
 # TODO Improve all docstrings, make methods privat appropriately
-# TODO Prepend all notifications with "surface_tracker.<notification>[.surface_name]"
+# Two colors in timeline to indicate detected markrs vs frames without markers
 
 
 class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Base):
@@ -162,7 +162,6 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
     def per_surface_ui(self, surface):
         def set_x(val):
             surface.real_world_size["x"] = val
-            # TODO change naming to "uid
             self.notify_all(
                 {
                     "subject": "surface_tracker.heatmap_params_changed.{}".format(

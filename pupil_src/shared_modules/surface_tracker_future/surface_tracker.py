@@ -24,7 +24,6 @@ import file_methods
 from surface_tracker_future import gui, Marker
 
 # TODO Improve marker coloring, marker toggle is barely visible
-# TODO make internal imports absolute
 
 
 class Surface_Tracker_Future(Plugin):
@@ -76,7 +75,6 @@ class Surface_Tracker_Future(Plugin):
 
     @property
     def camera_model(self):
-        # TODO Is it better to handle changes in camera model through a notification?
         return self.g_pool.capture.intrinsics
 
     @property
