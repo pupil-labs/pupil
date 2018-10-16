@@ -378,7 +378,7 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                 if surface.uid == notification["uid"]:
                     self._update_surface_heatmap(surface)
                     break
-        elif notification["subject"].startswith("seek_control.trim_indeces_changed"):
+        elif notification["subject"].startswith("seek_control.trim_indices_changed"):
             for surface in self.surfaces:
                 self._update_surface_heatmap(surface)
         elif notification["subject"].startswith("surface_tracker.surface_name_changed"):
