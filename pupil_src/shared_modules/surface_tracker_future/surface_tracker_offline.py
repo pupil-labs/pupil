@@ -115,7 +115,7 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             # Therefore resetting the marker cache is only done when no previous_state
             # is defined.
             for surface in self.surfaces:
-                surface.cache = None
+                surface.location_cache = None
 
         self.marker_cache_unfiltered = Cache_List(previous_state)
         self._update_filtered_markers()
@@ -359,7 +359,7 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         elif notification["subject"] == "surface_tracker.marker_min_perimeter_changed":
             self._update_filtered_markers()
             for surface in self.surfaces:
-                surface.cache = None
+                surface.location_cache = None
         elif notification["subject"].startswith(
             "surface_tracker.heatmap_params_changed"
         ):

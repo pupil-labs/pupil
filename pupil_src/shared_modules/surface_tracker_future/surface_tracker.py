@@ -103,7 +103,10 @@ class Surface_Tracker_Future(Plugin):
         def set_marker_min_perimeter(val):
             self.marker_min_perimeter = val
             self.notify_all(
-                {"subject": "surface_tracker.marker_min_perimeter_changed", "delay": 2}
+                {
+                    "subject": "surface_tracker.marker_min_perimeter_changed",
+                    "delay": 0.5,
+                }
             )
 
         def set_invert_image(val):
