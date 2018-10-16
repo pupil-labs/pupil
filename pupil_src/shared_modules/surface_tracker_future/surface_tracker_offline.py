@@ -207,23 +207,11 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         s_menu.append(pyglui.ui.Button("remove", remove_surf))
         self.menu.append(s_menu)
 
-    def _compute_across_surfaces_heatmap(
-        self, section, all_gaze_timestamps, all_gaze_events
-    ):
-        results = []
-        for s in self.surfaces:
-            gaze_on_surf = s.map_section(
-                section, all_gaze_timestamps, all_gaze_events, self.camera_model
-            )
-            results.append(len(gaze_on_surf))
-            # self.metrics_gazecount = len(gaze_on_surf)
+    def _compute_across_surfaces_heatmap(self, gaze_on_surfaces):
+        gaze_on_surfaces = [len(g) for g in gaze_on_surfaces]
 
-        if results == []:
-            logger.warning("No surfaces defined.")
-            return
-
-        max_res = max(results)
-        results = np.array(results, dtype=np.float32)
+        max_res = max(gaze_on_surfaces)
+        results = np.array(gaze_on_surfaces, dtype=np.float32)
         if max_res > 0:
             results *= 255. / max_res
         results = np.uint8(results)
@@ -262,19 +250,6 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             self._save_marker_cache()
             self.last_cache_update_ts = now
 
-        # TODO anything needed?
-        # while not self.cache_queue.empty():
-        #     idx, c_m = self.cache_queue.get()
-        #     self.cache.update(idx, c_m)
-        #
-        #     for s in self.surfaces:
-        #         s.update_cache(self.cache, min_marker_perimeter=self.min_marker_perimeter,
-        #                        min_id_confidence=self.min_id_confidence, idx=idx)
-        #     if self.cacher_run.value is False:
-        #         self.recalculate()
-        #     if self.timeline:
-        #         self.timeline.refresh()
-
     def _update_surface_locations(self, idx):
         for surface in self.surfaces:
             surface.update_location(idx, self.marker_cache, self.camera_model)
@@ -296,15 +271,21 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         section = slice(in_mark, out_mark)
 
         all_gaze_timestamps = self.g_pool.timestamps
-        all_gaze_positions = self.g_pool.gaze_positions
+        all_gaze_events = self.g_pool.gaze_positions
 
-        self._compute_across_surfaces_heatmap(
-            section, all_gaze_timestamps, all_gaze_positions
-        )
+        # TODO move into background process
+        gaze_on_surfaces = []
+        for s in self.surfaces:
+            gaze_on_surf = s.map_section(
+                section, all_gaze_timestamps, all_gaze_events, self.camera_model
+            )
+            gaze_on_surf = [g for g in gaze_on_surf if g["on_surf"]]
+            gaze_on_surfaces.append(gaze_on_surf)
 
-        surface.update_heatmap(
-            section, all_gaze_timestamps, all_gaze_positions, self.camera_model
-        )
+        self._compute_across_surfaces_heatmap(gaze_on_surfaces)
+
+        surf_idx = self.surfaces.index(surface)
+        surface.update_heatmap(gaze_on_surfaces[surf_idx])
 
     def add_surface(self, _, init_dict=None):
         super().add_surface(_, init_dict=init_dict)
@@ -325,11 +306,6 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         if self.timeline:
             self.timeline.refresh()
         super().gl_display()
-        # if self.mode == "Show Metrics":
-        #     #todo: draw a backdrop to represent the gaze that is not on any surface
-        #     for s in self.surfaces:
-        #         #draw a quad on surface with false color of value.
-        #         s.gl_display_metrics()
 
     def gl_display_cache_bars(self, width, height, scale):
         TS = self.g_pool.timestamps

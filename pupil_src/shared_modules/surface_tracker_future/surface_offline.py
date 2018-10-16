@@ -176,15 +176,8 @@ class Surface_Offline(Surface):
         self.observations_frame_idxs.append(idx)
         super().update_def(idx, vis_markers, camera_model)
 
-    def update_heatmap(
-        self, section, all_gaze_timestamps, all_gaze_events, camera_model
-    ):
-        # TODO move into background process
+    def update_heatmap(self, section_gaze_on_surf):
         # TODO devalidate heatmap texture when beginning computation
-        section_gaze_on_surf = self.map_section(
-            section, all_gaze_timestamps, all_gaze_events, camera_model
-        )
-
         heatmap_data = [g["norm_pos"] for g in section_gaze_on_surf]
         self._generate_within_surface_heatmap(heatmap_data)
 
@@ -214,7 +207,6 @@ class Surface_Offline(Surface):
                 section_gaze_on_surf += gaze_on_surf
         return section_gaze_on_surf
 
-    # TODO Implement Metrics. ALso improve naming.
     def gl_display_metrics(self):
         if self.metrics_texture and self.detected:
             # cv uses 3x3 gl uses 4x4 tranformation matricies
