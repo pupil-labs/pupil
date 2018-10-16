@@ -247,7 +247,14 @@ class GUI:
         )
 
     def _draw_heatmap(self, surface):
-        self.heatmap_textures[surface].update_from_ndarray(surface.heatmap)
+        if self.heatmap_mode == Heatmap_Mode.WITHIN_SURFACE:
+            self.heatmap_textures[surface].update_from_ndarray(
+                surface.within_surface_heatmap
+            )
+        else:
+            self.heatmap_textures[surface].update_from_ndarray(
+                surface.across_surface_heatmap
+            )
         width, height = self.tracker.camera_model.resolution
         img_corners = np.array(
             [(0, height), (width, height), (width, 0), (0, 0)], dtype=np.float32

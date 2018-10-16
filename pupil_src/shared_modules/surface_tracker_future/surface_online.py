@@ -61,4 +61,4 @@ class Surface_Online(Surface):
 
     def update_heatmap(self):
         data = [x["gaze"] for x in self.gaze_history]
-        self._generate_heatmap(data)
+        self._generate_within_surface_heatmap(data)

@@ -43,7 +43,7 @@ class Surface:
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
 
-        self.heatmap = np.ones((1, 1), dtype=np.uint8)
+        self.within_surface_heatmap = np.ones((1, 1), dtype=np.uint8)
         self.heatmap_detail = .2
         self.heatmap_min_data_confidence = 0.6
 
@@ -380,7 +380,7 @@ class Surface:
     def update_heatmap(self):
         raise NotImplementedError
 
-    def _generate_heatmap(self, data):
+    def _generate_within_surface_heatmap(self, data):
         grid = int(self.real_world_size["y"]), int(self.real_world_size["x"])
         if data:
             xvals, yvals = zip(*((x, 1. - y) for x, y in data))
@@ -401,10 +401,10 @@ class Surface:
 
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
         # reuse allocated memory if possible
-        if self.heatmap.shape != (*grid, 4):
-            self.heatmap = np.ones((*grid, 4), dtype=np.uint8)
-            self.heatmap[:, :, 3] = 125
-        self.heatmap[:, :, :3] = c_map
+        if self.within_surface_heatmap.shape != (*grid, 4):
+            self.within_surface_heatmap = np.ones((*grid, 4), dtype=np.uint8)
+            self.within_surface_heatmap[:, :, 3] = 125
+        self.within_surface_heatmap[:, :, :3] = c_map
 
     def _denormalize(self, points, camera_model):
         if len(points.shape) == 1:

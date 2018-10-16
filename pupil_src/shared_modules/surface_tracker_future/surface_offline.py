@@ -181,13 +181,20 @@ class Surface_Offline(Surface):
     ):
         # TODO move into background process
         # TODO devalidate heatmap texture when beginning computation
+        section_gaze_on_surf = self.map_section(
+            section, all_gaze_timestamps, all_gaze_events, camera_model
+        )
+
+        heatmap_data = [g["norm_pos"] for g in section_gaze_on_surf]
+        self._generate_within_surface_heatmap(heatmap_data)
+
+    def map_section(self, section, all_gaze_timestamps, all_gaze_events, camera_model):
         try:
             location_cache = self.location_cache[section]
         except TypeError:
-            # Wait for the next call to update_heatmap after the location_cache is completed.
-            return
+            return []
 
-        heatmap_data = []
+        section_gaze_on_surf = []
         for frame_idx, location in enumerate(location_cache):
             frame_idx += section.start
 
@@ -197,20 +204,15 @@ class Surface_Offline(Surface):
                     all_gaze_timestamps, frame_idx
                 )
                 gaze_events = all_gaze_events.by_ts_window(frame_window)
-                gaze_events = [
-                    g
-                    for g in gaze_events
-                    if g["confidence"] >= self.heatmap_min_data_confidence
-                ]
 
                 gaze_on_surf = self.map_events(
                     gaze_events,
                     camera_model,
                     trans_matrix=location["img_to_surf_trans"],
                 )
-                data = [g["norm_pos"] for g in gaze_on_surf]
-                heatmap_data += data
-        self._generate_heatmap(heatmap_data)
+
+                section_gaze_on_surf += gaze_on_surf
+        return section_gaze_on_surf
 
     # TODO Implement Metrics. ALso improve naming.
     def gl_display_metrics(self):
