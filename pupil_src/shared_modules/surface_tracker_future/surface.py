@@ -414,10 +414,6 @@ class Surface:
         points *= camera_model.resolution
         return points
 
-    # TODO manage this through a notification
-    def on_change(self):
-        pass
-
     def save_to_dict(self):
         return {
             "name": self.name,

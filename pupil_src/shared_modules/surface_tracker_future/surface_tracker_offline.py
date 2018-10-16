@@ -380,7 +380,6 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
 
     def on_notify(self, notification):
         super().on_notify(notification)
-        # TODO Update heatmaps on trim marker change
 
         if notification["subject"] == "surface_tracker.marker_detection_params_changed":
             self.recalculate_marker_cache()
@@ -395,6 +394,9 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                 if surface.uid == notification["uid"]:
                     self._update_surface_heatmap(surface)
                     break
+        elif notification["subject"].startswith("seek_control.trim_indeces_changed"):
+            for surface in self.surfaces:
+                self._update_surface_heatmap(surface)
         elif notification["subject"] == "surface_tracker.surfaces_changed":
             for surface in self.surfaces:
                 if surface.uid == notification["uid"]:
