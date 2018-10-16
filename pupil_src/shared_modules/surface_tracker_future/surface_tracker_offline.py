@@ -184,10 +184,21 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                 }
             )
 
+        def set_name(val):
+            surface.name = val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.surface_name_changed.{}".format(
+                        surface.name
+                    ),
+                    "uid": surface.uid,
+                }
+            )
+
         idx = self.surfaces.index(surface)
         s_menu = pyglui.ui.Growing_Menu("Surface {}".format(idx))
         s_menu.collapsed = True
-        s_menu.append(pyglui.ui.Text_Input("name", surface))
+        s_menu.append(pyglui.ui.Text_Input("name", surface, setter=set_name))
         s_menu.append(
             pyglui.ui.Text_Input(
                 "x", surface.real_world_size, label="X size", setter=set_x
@@ -370,6 +381,8 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
         elif notification["subject"].startswith("seek_control.trim_indeces_changed"):
             for surface in self.surfaces:
                 self._update_surface_heatmap(surface)
+        elif notification["subject"].startswith("surface_tracker.surface_name_changed"):
+            self.save_surface_definitions_to_file()
         elif notification["subject"] == "surface_tracker.surfaces_changed":
             for surface in self.surfaces:
                 if surface.uid == notification["uid"]:
