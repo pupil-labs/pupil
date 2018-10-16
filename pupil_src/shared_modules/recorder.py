@@ -297,7 +297,7 @@ class Recorder(System_Plugin_Base):
 
         if self.running:
             for key, data in events.items():
-                if key not in ('dt', 'frame', 'depth_frame'):
+                if key not in ('dt', 'depth_frame') and not key.startswith('frame'):
                     try:
                         writer = self.pldata_writers[key]
                     except KeyError:

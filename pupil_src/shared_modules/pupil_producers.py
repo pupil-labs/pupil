@@ -174,12 +174,11 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
                                  line_type=gl.GL_LINES,
                                  thickness=4.*scale)
 
-    def split_by_topic(self, topics):
+    def create_pupil_positions_by_id(self, topics, data, timestamps):
         id0_id1_data = collections.deque(), collections.deque()
         id0_id1_time = collections.deque(), collections.deque()
 
-        pupil_data = self.g_pool.pupil_positions
-        topic_data_ts = zip(topics, pupil_data, pupil_data.timestamps)
+        topic_data_ts = zip(topics, data, timestamps)
         for topic, datum, timestamp in topic_data_ts:
             eye_id = int(topic[-1])  # use topic to identify eye
             id0_id1_data[eye_id].append(datum)
@@ -194,9 +193,9 @@ class Pupil_From_Recording(Pupil_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
-        pupil = fm.load_pldata_file(g_pool.rec_dir, 'pupil')
-        g_pool.pupil_positions = pm.Bisector(pupil.data, pupil.timestamps)
-        g_pool.pupil_positions_by_id = self.split_by_topic(pupil.topics)
+        pupil_data_file = fm.load_pldata_file(g_pool.rec_dir, 'pupil')
+        g_pool.pupil_positions = pm.Bisector(pupil_data_file.data, pupil_data_file.timestamps)
+        g_pool.pupil_positions_by_id = self.create_pupil_positions_by_id(pupil_data_file.topics, pupil_data_file.data, pupil_data_file.timestamps)
 
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')
@@ -314,7 +313,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         data = tuple(self.pupil_positions.values())
         topics = tuple(self.id_topics.values())
         self.g_pool.pupil_positions = pm.Bisector(data, time)
-        self.g_pool.pupil_positions_by_id = self.split_by_topic(topics)
+        self.g_pool.pupil_positions_by_id = self.create_pupil_positions_by_id(topics, data, time)
 
         self.notify_all({'subject': 'pupil_positions_changed'})
         logger.debug('pupil positions changed')

@@ -257,9 +257,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         elif self.mode == "Show Markers and Surfaces":
             # edit surfaces by user
             if self.edit_surf_verts:
-                window = glfwGetCurrentContext()
-                pos = glfwGetCursorPos(window)
-                pos = normalize(pos, self.g_pool.camera_render_size, flip_y=True)
+                pos = self._last_mouse_pos  # inherited from Surface_Tracker
                 for s,v_idx in self.edit_surf_verts:
                     if s.detected:
                         new_pos =  s.img_to_surface(np.array(pos))

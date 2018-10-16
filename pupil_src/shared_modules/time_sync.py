@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 from plugin import Plugin
 from pyglui import ui
@@ -19,21 +19,24 @@ from network_time_sync import Clock_Sync_Master, Clock_Sync_Follower
 import random
 
 import logging
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 try:
     from pyre import __version__
-    assert __version__ >= '0.3.1'
+
+    assert __version__ >= "0.3.1"
 except (ImportError, AssertionError):
     raise Exception("Pyre version is to old. Please upgrade")
 
 
-__protocol_version__ = 'v1'
+__protocol_version__ = "v1"
 
 
 class Clock_Service(object):
     """Represents a remote clock service and is sortable by rank."""
+
     def __init__(self, uuid, name, rank, port):
         super(Clock_Service, self).__init__()
         self.uuid = uuid
@@ -42,7 +45,7 @@ class Clock_Service(object):
         self.name = name
 
     def __repr__(self):
-        return '{:.2f}:{}'.format(self.rank, self.name)
+        return "{:.2f}:{}".format(self.rank, self.name)
 
     def __lt__(self, other):
         # "smallest" object has highest rank
@@ -56,10 +59,13 @@ class Time_Sync(Plugin):
     Acts as clock service and as follower if required.
     See `time_sync_spec.md` for details.
     """
-    icon_chr = chr(0xec15)
-    icon_font = 'pupil_icons'
 
-    def __init__(self, g_pool, node_name=None, sync_group_prefix='default', base_bias=1.):
+    icon_chr = chr(0xec15)
+    icon_font = "pupil_icons"
+
+    def __init__(
+        self, g_pool, node_name=None, sync_group_prefix="default", base_bias=1.
+    ):
         super().__init__(g_pool)
         self.sync_group_prefix = sync_group_prefix
         self.discovery = None
@@ -70,6 +76,8 @@ class Time_Sync(Plugin):
         self.tie_breaker = random.random()
         self.base_bias = base_bias
 
+        self.sync_group_members = {}
+
         self.master_service = Clock_Sync_Master(self.g_pool.get_timestamp)
         self.follower_service = None  # only set if there is a better server than us
 
@@ -77,30 +85,48 @@ class Time_Sync(Plugin):
 
     @property
     def sync_group(self):
-        return self.sync_group_prefix + '-time_sync-' + __protocol_version__
+        return self.sync_group_prefix + "-time_sync-" + __protocol_version__
 
     @sync_group.setter
     def sync_group(self, full_name):
-        self.sync_group_prefix = full_name.rsplit('-time_sync-' + __protocol_version__, maxsplit=1)[0]
+        self.sync_group_prefix = full_name.rsplit(
+            "-time_sync-" + __protocol_version__, maxsplit=1
+        )[0]
 
     def init_ui(self):
         self.add_menu()
-        self.menu.label = 'Network Time Sync'
+        self.menu.label = "Network Time Sync"
         help_str = "Synchonize time of Pupil Captures across the local network."
-        self.menu.append(ui.Info_Text('Protocol version: ' + __protocol_version__))
+        self.menu.append(ui.Info_Text("Protocol version: " + __protocol_version__))
 
         self.menu.append(ui.Info_Text(help_str))
         help_str = "All pupil nodes of one group share a Master clock."
         self.menu.append(ui.Info_Text(help_str))
-        self.menu.append(ui.Text_Input('node_name', self, label='Node Name', setter=self.restart_discovery))
-        self.menu.append(ui.Text_Input('sync_group_prefix', self, label='Sync Group', setter=self.change_sync_group))
+        self.menu.append(
+            ui.Text_Input(
+                "node_name", self, label="Node Name", setter=self.restart_discovery
+            )
+        )
+        self.menu.append(
+            ui.Text_Input(
+                "sync_group_prefix",
+                self,
+                label="Sync Group",
+                setter=self.change_sync_group,
+            )
+        )
 
         def sync_status():
             if self.follower_service:
                 return str(self.follower_service)
             else:
-                return 'Clock Master'
-        self.menu.append(ui.Text_Input('sync status', getter=sync_status, setter=lambda _: _, label='Status'))
+                return "Clock Master"
+
+        self.menu.append(
+            ui.Text_Input(
+                "sync status", getter=sync_status, setter=lambda _: _, label="Status"
+            )
+        )
 
         def set_bias(bias):
             if bias < 0:
@@ -111,28 +137,44 @@ class Time_Sync(Plugin):
 
         help_str = "The clock service with the highest bias becomes clock master."
         self.menu.append(ui.Info_Text(help_str))
-        self.menu.append(ui.Text_Input('base_bias', self, label='Master Bias', setter=set_bias))
-        self.menu.append(ui.Text_Input('leaderboard', self, label='Master Nodes in Group'))
+        self.menu.append(
+            ui.Text_Input("base_bias", self, label="Master Bias", setter=set_bias)
+        )
+        self.menu.append(
+            ui.Text_Input("leaderboard", self, label="Master Nodes in Group")
+        )
+        self.sync_group_members_menu = ui.Growing_Menu("Sync Group Members")
+        self.menu.append(self.sync_group_members_menu)
 
     def recent_events(self, events):
         should_announce = False
         for evt in self.discovery.recent_events():
-            if evt.type == 'SHOUT':
+            if evt.type == "SHOUT":
                 try:
-                    self.update_leaderboard(evt.peer_uuid, evt.peer_name, float(evt.msg[0]), int(evt.msg[1]))
+                    self.update_leaderboard(
+                        evt.peer_uuid, evt.peer_name, float(evt.msg[0]), int(evt.msg[1])
+                    )
                 except Exception as e:
-                    logger.debug('Garbage raised `{}` -- dropping.'.format(e))
+                    logger.debug("Garbage raised `{}` -- dropping.".format(e))
                 self.evaluate_leaderboard()
-            elif evt.type == 'JOIN' and evt.group == self.sync_group:
+            elif evt.type == "JOIN" and evt.group == self.sync_group:
                 should_announce = True
-            elif (evt.type == 'LEAVE' and evt.group == self.sync_group) or evt.type == 'EXIT':
+                self.insert_sync_group_member(evt.peer_uuid, evt.peer_name)
+            elif (
+                evt.type == "LEAVE" and evt.group == self.sync_group
+            ) or evt.type == "EXIT":
                 self.remove_from_leaderboard(evt.peer_uuid)
                 self.evaluate_leaderboard()
+                self.remove_sync_group_member(evt.peer_uuid)
 
         if should_announce:
             self.announce_clock_master_info()
 
-        if not self.has_been_synced and self.follower_service and self.follower_service.in_sync:
+        if (
+            not self.has_been_synced
+            and self.follower_service
+            and self.follower_service.in_sync
+        ):
             self.has_been_synced = 1.
             self.announce_clock_master_info()
             self.evaluate_leaderboard()
@@ -150,13 +192,13 @@ class Time_Sync(Plugin):
         # clock service was not encountered before or has changed adding it to leaderboard
         cs = Clock_Service(uuid, name, rank, port)
         heappush(self.leaderboard, cs)
-        logger.debug('{} added'.format(cs))
+        logger.debug("{} added".format(cs))
 
     def remove_from_leaderboard(self, uuid):
         for cs in self.leaderboard:
             if cs.uuid == uuid:
                 self.leaderboard.remove(cs)
-                logger.debug('{} removed'.format(cs))
+                logger.debug("{} removed".format(cs))
                 break
 
     def evaluate_leaderboard(self):
@@ -168,15 +210,17 @@ class Time_Sync(Plugin):
         if self.discovery.uuid() != current_leader.uuid:
             # we are not the leader!
             leader_ep = self.discovery.peer_address(current_leader.uuid)
-            leader_addr = urlparse(leader_ep).netloc.split(':')[0]
+            leader_addr = urlparse(leader_ep).netloc.split(":")[0]
             if self.follower_service is None:
                 # make new follower
-                self.follower_service = Clock_Sync_Follower(leader_addr,
-                                                            port=current_leader.port,
-                                                            interval=10,
-                                                            time_fn=self.get_time,
-                                                            jump_fn=self.jump_time,
-                                                            slew_fn=self.slew_time)
+                self.follower_service = Clock_Sync_Follower(
+                    leader_addr,
+                    port=current_leader.port,
+                    interval=10,
+                    time_fn=self.get_time,
+                    jump_fn=self.jump_time,
+                    slew_fn=self.slew_time,
+                )
             else:
                 # update follower_service
                 self.follower_service.host = leader_addr
@@ -191,17 +235,50 @@ class Time_Sync(Plugin):
 
         if not self.has_been_master:
             self.has_been_master = 1.
-            logger.debug('Become clock master with rank {}'.format(self.rank))
+            logger.debug("Become clock master with rank {}".format(self.rank))
             self.announce_clock_master_info()
 
+    def insert_sync_group_member(self, uuid, name):
+        member_text = ui.Info_Text(name)
+        self.sync_group_members[uuid] = member_text
+        self.sync_group_members_menu.append(member_text)
+        self.sync_group_members_menu.elements.sort(
+            key=lambda text_field: text_field.text
+        )
+
+    def insert_all_sync_group_members_from_group(self, group):
+        for uuid in self.discovery.peers_by_group(group):
+            name = self.discovery.get_peer_name(uuid)
+            self.insert_sync_group_member(uuid, name)
+
+    def remove_all_sync_group_members(self):
+        for uuid in list(self.sync_group_members.keys()):
+            self.remove_sync_group_member(uuid)
+
+    def remove_sync_group_member(self, uuid):
+        try:
+            self.sync_group_members_menu.remove(self.sync_group_members[uuid])
+            del self.sync_group_members[uuid]
+        except KeyError:
+            logger.debug("Peer has already been removed from members list.")
+
     def announce_clock_master_info(self):
-        self.discovery.shout(self.sync_group, [repr(self.rank).encode(),
-                                               repr(self.master_service.port).encode()])
-        self.update_leaderboard(self.discovery.uuid(), self.node_name, self.rank, self.master_service.port)
+        self.discovery.shout(
+            self.sync_group,
+            [repr(self.rank).encode(), repr(self.master_service.port).encode()],
+        )
+        self.update_leaderboard(
+            self.discovery.uuid(), self.node_name, self.rank, self.master_service.port
+        )
 
     @property
     def rank(self):
-        return 4*self.base_bias + 2*self.has_been_master + self.has_been_synced + self.tie_breaker
+        return (
+            4 * self.base_bias
+            + 2 * self.has_been_master
+            + self.has_been_synced
+            + self.tie_breaker
+        )
 
     def get_time(self):
         return self.g_pool.get_timestamp()
@@ -212,10 +289,12 @@ class Time_Sync(Plugin):
     def jump_time(self, offset):
         ok_to_change = True
         for p in self.g_pool.plugins:
-            if p.class_name == 'Recorder':
+            if p.class_name == "Recorder":
                 if p.running:
                     ok_to_change = False
-                    logger.error("Request to change timebase during recording ignored. Turn off recording first.")
+                    logger.error(
+                        "Request to change timebase during recording ignored. Turn off recording first."
+                    )
                     break
         if ok_to_change:
             self.slew_time(offset)
@@ -230,6 +309,7 @@ class Time_Sync(Plugin):
             if self.discovery.name() == name:
                 return
             else:
+                self.remove_all_sync_group_members()
                 self.discovery.leave(self.sync_group)
                 self.discovery.stop()
                 self.leaderboard = []
@@ -243,6 +323,7 @@ class Time_Sync(Plugin):
 
     def change_sync_group(self, new_group_prefix):
         if new_group_prefix != self.sync_group_prefix:
+            self.remove_all_sync_group_members()
             self.discovery.leave(self.sync_group)
             self.leaderboard = []
             if self.follower_service:
@@ -250,15 +331,20 @@ class Time_Sync(Plugin):
                 self.follower = None
             self.sync_group_prefix = new_group_prefix
             self.discovery.join(self.sync_group)
+            self.insert_all_sync_group_members_from_group(self.sync_group)
             self.announce_clock_master_info()
 
     def deinit_ui(self):
+        for uuid in list(self.sync_group_members.keys()):
+            self.remove_sync_group_member(uuid)
         self.remove_menu()
 
     def get_init_dict(self):
-        return {'node_name': self.node_name,
-                'sync_group_prefix': self.sync_group_prefix,
-                'base_bias': self.base_bias}
+        return {
+            "node_name": self.node_name,
+            "sync_group_prefix": self.sync_group_prefix,
+            "base_bias": self.base_bias,
+        }
 
     def cleanup(self):
         self.discovery.leave(self.sync_group)

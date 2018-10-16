@@ -411,8 +411,8 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
         normal_3d = self.rotation_matricies[p_id] @ np.array(p['circle_3d']['normal'])
 
         g = {'topic': 'gaze.3d.{}.'.format(p_id),
-             'eye_centers_3d': {p['id']: eye_center.tolist()},
-             'gaze_normals_3d': {p['id']: normal_3d.tolist()},
+             'eye_center_3d': eye_center.tolist(),
+             'gaze_normal_3d': normal_3d.tolist(),
              'gaze_point_3d': gaze_3d.tolist(),
              'confidence': p['confidence'],
              'timestamp': p['timestamp'],
