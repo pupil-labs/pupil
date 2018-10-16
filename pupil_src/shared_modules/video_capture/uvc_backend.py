@@ -332,7 +332,7 @@ class UVC_Source(Base_Source):
     @frame_size.setter
     def frame_size(self, new_size):
         # closest match for size
-        sizes = [abs(r[0]-new_size[0]) for r in self.uvc_capture.frame_sizes]
+        sizes = [abs(r[0]-new_size[0])+abs(r[1]-new_size[1]) for r in self.uvc_capture.frame_sizes]
         best_size_idx = sizes.index(min(sizes))
         size = self.uvc_capture.frame_sizes[best_size_idx]
         if tuple(size) != tuple(new_size):
