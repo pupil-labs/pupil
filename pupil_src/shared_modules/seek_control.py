@@ -143,7 +143,7 @@ class Seek_Control(System_Plugin_Base):
         self._trim_left = val
         self.notify_all(
             {
-                "subject": "seek_control.trim_indeces_changed",
+                "subject": "seek_control.trim_indices_changed",
                 "delay": 0.5,
                 "new_range": (self.trim_left, self.trim_right),
             }
@@ -158,7 +158,7 @@ class Seek_Control(System_Plugin_Base):
         self._trim_right = val
         self.notify_all(
             {
-                "subject": "seek_control.trim_indeces_changed",
+                "subject": "seek_control.trim_indices_changed",
                 "delay": 0.5,
                 "new_range": (self.trim_left, self.trim_right),
             }
