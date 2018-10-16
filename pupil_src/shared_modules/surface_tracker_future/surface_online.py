@@ -24,35 +24,6 @@ class Surface_Online(Surface):
         self.gaze_history_length = 1
         self.gaze_history = collections.deque()
 
-    def move_corner(self, corner_idx, pos, camera_model):
-        # Markers undistorted
-        new_corner_pos = self.map_to_surf(pos, camera_model, compensate_distortion=True)
-        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-
-        new_corners = old_corners.copy()
-        new_corners[corner_idx] = new_corner_pos
-
-        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for m in self.reg_markers_undist.values():
-            m.verts = cv2.perspectiveTransform(
-                m.verts.reshape((-1, 1, 2)), transform
-            ).reshape((-1, 2))
-
-        # Markers distorted
-        new_corner_pos = self.map_to_surf(
-            pos, camera_model, compensate_distortion=False
-        )
-        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-
-        new_corners = old_corners.copy()
-        new_corners[corner_idx] = new_corner_pos
-
-        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for m in self.reg_markers_dist.values():
-            m.verts = cv2.perspectiveTransform(
-                m.verts.reshape((-1, 1, 2)), transform
-            ).reshape((-1, 2))
-
     def update_location(self, idx, vis_markers, camera_model):
         vis_markers_dict = {m.id: m for m in vis_markers}
 

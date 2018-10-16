@@ -310,13 +310,14 @@ class GUI:
                         if action == glfw.GLFW_PRESS:
                             self.tracker._edit_surf_verts.append((surface, idx))
                         elif action == glfw.GLFW_RELEASE:
-                            surface.on_change()
-
-        if action == glfw.GLFW_RELEASE:
-            if self.tracker._edit_surf_verts:
-                self.tracker.notify_all({"subject": "surface_tracker.surfaces_changed"})
-                self.tracker.notify_all({"subject": "surface_tracker.surfaces_changed"})
-            self.tracker._edit_surf_verts = []
+                            # surface.on_change()
+                            self.tracker.notify_all(
+                                {
+                                    "subject": "surface_tracker.surfaces_changed",
+                                    "uid": surface.uid,
+                                }
+                            )
+                            self.tracker._edit_surf_verts = []
 
         # Marker Toggles
         if action == glfw.GLFW_PRESS:

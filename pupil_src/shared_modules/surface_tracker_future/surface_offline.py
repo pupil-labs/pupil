@@ -212,10 +212,6 @@ class Surface_Offline(Surface):
                 heatmap_data += data
         self._generate_heatmap(heatmap_data)
 
-    # TODO can this be merged with on_surface_change?
-    def on_change(self):
-        self.location_cache = None
-
     # TODO Implement Metrics. ALso improve naming.
     def gl_display_metrics(self):
         if self.metrics_texture and self.detected:

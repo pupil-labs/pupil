@@ -167,7 +167,7 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                     "subject": "surface_tracker.heatmap_params_changed.{}".format(
                         surface.name
                     ),
-                    "surface_uid": surface.uid,
+                    "uid": surface.uid,
                 }
             )
 
@@ -178,7 +178,7 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
                     "subject": "surface_tracker.heatmap_params_changed.{}".format(
                         surface.name
                     ),
-                    "surface_uid": surface.uid,
+                    "uid": surface.uid,
                 }
             )
 
@@ -392,8 +392,13 @@ class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Bas
             "surface_tracker.heatmap_params_changed"
         ):
             for surface in self.surfaces:
-                if surface.uid == notification["surface_uid"]:
+                if surface.uid == notification["uid"]:
                     self._update_surface_heatmap(surface)
+                    break
+        elif notification["subject"] == "surface_tracker.surfaces_changed":
+            for surface in self.surfaces:
+                if surface.uid == notification["uid"]:
+                    surface.location_cache = None
                     break
 
     def on_surface_change(self, surface):
