@@ -68,7 +68,8 @@ class Surface_Tracker_Online(Surface_Tracker):
         )
         s_menu.append(
             pyglui.ui.Button(
-                "Open Debug Window", self.gui.surface_windows[surface].open_close_window
+                "Open Surface in Window",
+                self.gui.surface_windows[surface].open_close_window,
             )
         )
         remove_surf = lambda: self.remove_surface(idx)
