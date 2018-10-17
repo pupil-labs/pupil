@@ -19,7 +19,7 @@ import OpenGL.GL as gl
 import glfw
 import gl_utils
 
-from surface_tracker_future import Heatmap_Mode
+from surface_tracker import Heatmap_Mode
 
 
 class GUI:
@@ -408,6 +408,7 @@ class Surface_Window:
         if not self._window:
 
             monitor = None
+            # open with same aspect ratio as surface
             height, width = (
                 640,
                 int(
@@ -417,7 +418,7 @@ class Surface_Window:
                         / self.surface.real_world_size["y"]
                     )
                 ),
-            )  # open with same aspect ratio as surface
+            )
 
             self._window = glfw.glfwCreateWindow(
                 height,
@@ -501,11 +502,19 @@ class Surface_Window:
             gl.glMatrixMode(gl.GL_MODELVIEW)
             gl.glPopMatrix()
 
-            # now lets get recent pupil positions on this surface:
-            for gp in self.surface.gaze_history:
-                pyglui_utils.draw_points(
-                    [gp["gaze"]], color=pyglui_utils.RGBA(0.0, 0.8, 0.5, 0.8), size=80
-                )
+            # # Draw recent pupil positions onto the surface:
+            try:
+                for gp in self.surface.gaze_history:
+                    pyglui_utils.draw_points(
+                        [gp["gaze"]],
+                        color=pyglui_utils.RGBA(0.0, 0.8, 0.5, 0.8),
+                        size=80,
+                    )
+            except AttributeError:
+                # If gaze_history does not exist, we are in the Surface_Tracker_Offline.
+                # In this case gaze visualizations will be drawn directly onto the scene
+                # image and thus propagate to the surface crop automatically.
+                pass
 
             glfw.glfwSwapBuffers(self._window)
             glfw.glfwMakeContextCurrent(active_window)

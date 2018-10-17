@@ -276,7 +276,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     self.camera_model,
                 )
 
-    def _update_surface_heatmap(self, surface):
+    def _update_surface_heatmaps(self, surface):
         in_mark = self.g_pool.seek_control.trim_left
         out_mark = self.g_pool.seek_control.trim_right
         section = slice(in_mark, out_mark)
@@ -307,7 +307,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             except AttributeError:
                 pass
         self.surfaces[-1].on_surface_changed = self.on_surface_change
-        self._update_surface_heatmap(self.surfaces[-1])
+        self._update_surface_heatmaps(self.surfaces[-1])
 
     def remove_surface(self, _):
         super().remove_surface(_)
@@ -376,11 +376,11 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         ):
             for surface in self.surfaces:
                 if surface.uid == notification["uid"]:
-                    self._update_surface_heatmap(surface)
+                    self._update_surface_heatmaps(surface)
                     break
         elif notification["subject"].startswith("seek_control.trim_indices_changed"):
             for surface in self.surfaces:
-                self._update_surface_heatmap(surface)
+                self._update_surface_heatmaps(surface)
         elif notification["subject"].startswith("surface_tracker.surface_name_changed"):
             self.save_surface_definitions_to_file()
         elif notification["subject"] == "surface_tracker.surfaces_changed":
@@ -391,7 +391,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def on_surface_change(self, surface):
         self.save_surface_definitions_to_file()
-        self._update_surface_heatmap(surface)
+        self._update_surface_heatmaps(surface)
 
     def deinit_ui(self):
         super().deinit_ui()
