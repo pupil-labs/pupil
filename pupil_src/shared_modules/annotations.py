@@ -10,32 +10,24 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import csv
-
-# logging
 import logging
 import os
-from itertools import chain
 
-import numpy as np
-from OpenGL.GL import *
 from pyglui import ui
-from pyglui.cygl.utils import RGBA, draw_polyline
-from pyglui.pyfontstash import fontstash
-from pyglui.ui import get_opensans_font_path
 
-import player_methods as pm
 import file_methods as fm
-from glfw import glfwGetCurrentContext, glfwGetWindowSize
+import player_methods as pm
 from plugin import Analysis_Plugin_Base, Plugin
 
 logger = logging.getLogger(__name__)
 
 
 class Annotation_Capture(Plugin):
-    """Describe your plugin here
+    """
+    Pupil Player plugin to view, edit, and add annotations.
     """
 
-    icon_chr = chr(0xE866)
+    icon_chr = chr(0xe866)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, annotation_definitions=(("My annotation", "E"),)):
@@ -47,7 +39,7 @@ class Annotation_Capture(Plugin):
         self.annotation_definitions = list(annotation_definitions)
 
         self.new_annotation_name = "new annotation name"
-        self.new_annotation_hotkey = "e"
+        self.new_annotation_hotkey = "E"
 
         self.current_frame = -1
 
@@ -113,7 +105,7 @@ class Annotation_Capture(Plugin):
     def fire_annotation(self, annotation_label):
         t = self.g_pool.get_timestamp()
         logger.info('"{}"@{}'.format(annotation_label, t))
-        # you may add more field to this dictionary if you want.
+        # you may add more fields to this dictionary if you want.
         notification = {
             "subject": "annotation",
             "label": annotation_label,
@@ -132,8 +124,8 @@ class Annotation_Capture(Plugin):
 
 
 class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
-    """Describe your plugin here
-    View,edit and add Annotations.
+    """
+    Pupil Player plugin to view, edit, and add annotations.
     """
 
     def __init__(self, g_pool, *args, **kwargs):
@@ -144,6 +136,7 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
             self.load_cached_annotations()
         else:
             self.extract_annotations_from_recorded_notifications()
+        self.last_frame_ts = None
 
     def load_cached_annotations(self):
         annotations = fm.load_pldata_file(self.cache_dir, "annotations")
@@ -186,9 +179,11 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
         self.update_buttons()
 
     def fire_annotation(self, annotation_label):
+        if self.last_frame_ts is None:
+            return
         t = self.last_frame_ts
         logger.info('"{}"@{}'.format(annotation_label, t))
-        # you may add more field to this dictionary if you want.
+        # you may add more fields to this dictionary if you want.
         annotation_new = {
             "subject": "annotation",
             "topic": "notify.annotation",
@@ -201,8 +196,8 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
             annotation_new["timestamp"], fm.Serialized_Dict(python_dict=annotation_new)
         )
 
-    @classmethod
-    def parse_csv_keys(self, annotations):
+    @staticmethod
+    def parse_csv_keys(annotations):
         csv_keys = ("index", "timestamp", "label", "duration")
         system_keys = set(csv_keys)
         user_keys = set()
@@ -272,10 +267,6 @@ class Annotation_Player(Annotation_Capture, Analysis_Plugin_Base):
             self.export_annotations(notification["range"], notification["export_dir"])
 
     def cleanup(self):
-        """called when the plugin gets terminated.
-        This happens either voluntarily or forced.
-        if you have a GUI or glfw window destroy it here.
-        """
         with fm.PLData_Writer(self.cache_dir, "annotations") as writer:
             for ts, annotation in zip(self.annotations.timestamps, self.annotations):
                 writer.append_serialized(ts, "notify.annotation", annotation.serialized)
