@@ -169,6 +169,7 @@ def world(
         from hololens_relay import Hololens_Relay
 
         from background_helper import IPC_Logging_Task_Proxy
+
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
         # UI Platform tweaks
@@ -598,9 +599,13 @@ def world(
             # check if a plugin need to be destroyed
             g_pool.plugins.clean()
 
+            # "blacklisted" events that were already sent
+            del events["pupil"]
+            del events["gaze"]
+            # delete if exists. More expensive than del, so only use it when key might not exist
+            events.pop("annotation", None)
+
             # send new events to ipc:
-            del events["pupil"]  # already on the wire
-            del events["gaze"]  # sent earlier
             if "frame" in events:
                 del events["frame"]  # send explicitly with frame publisher
             if "depth_frame" in events:
