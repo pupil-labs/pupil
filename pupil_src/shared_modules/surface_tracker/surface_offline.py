@@ -20,9 +20,9 @@ from OpenGL.GL import *
 from cache_list import Cache_List
 import player_methods
 
-from surface_tracker_future.surface import Surface
-from surface_tracker_future import offline_utils
-from surface_tracker_future import background_tasks
+from surface_tracker.surface import Surface
+from surface_tracker import offline_utils
+from surface_tracker import background_tasks
 
 
 class Surface_Offline(Surface):

@@ -57,7 +57,5 @@ class _Surface_Marker(object):
         return {"id": self.id, "verts": [v.tolist() for v in self.verts]}
 
 
-from surface_tracker_future.surface_tracker_online import Surface_Tracker_Online_Future
-from surface_tracker_future.surface_tracker_offline import (
-    Surface_Tracker_Offline_Future
-)
+from surface_tracker.surface_tracker_online import Surface_Tracker_Online
+from surface_tracker.surface_tracker_offline import Surface_Tracker_Offline

@@ -32,16 +32,16 @@ from plugin import Analysis_Plugin_Base
 import file_methods
 from cache_list import Cache_List
 
-from surface_tracker_future.surface_tracker import Surface_Tracker_Future
-from surface_tracker_future import offline_utils, background_tasks, Marker, Heatmap_Mode
-from surface_tracker_future.surface_offline import Surface_Offline
+from surface_tracker.surface_tracker import Surface_Tracker
+from surface_tracker import offline_utils, background_tasks, Marker, Heatmap_Mode
+from surface_tracker.surface_offline import Surface_Offline
 
 
 # TODO Improve all docstrings, make methods privat appropriately
 # Two colors in timeline to indicate detected markrs vs frames without markers
 
 
-class Surface_Tracker_Offline_Future(Surface_Tracker_Future, Analysis_Plugin_Base):
+class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     """
     - Mostly extends the Surface Tracker with a cache
     Special version of surface tracker for use with videofile source.

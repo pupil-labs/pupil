@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 import pyglui
 
 
-from surface_tracker_future import Heatmap_Mode
-from surface_tracker_future.surface_tracker import Surface_Tracker_Future
-from surface_tracker_future.surface_online import Surface_Online
+from surface_tracker import Heatmap_Mode
+from surface_tracker.surface_tracker import Surface_Tracker
+from surface_tracker.surface_online import Surface_Online
 
 
-class Surface_Tracker_Online_Future(Surface_Tracker_Future):
+class Surface_Tracker_Online(Surface_Tracker):
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         self.Surface_Class = Surface_Online
         super().__init__(

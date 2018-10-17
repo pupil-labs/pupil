@@ -21,12 +21,12 @@ from plugin import Plugin
 import square_marker_detect as marker_det
 import file_methods
 
-from surface_tracker_future import gui, Marker
+from surface_tracker import gui, Marker
 
 # TODO Improve marker coloring, marker toggle is barely visible
 
 
-class Surface_Tracker_Future(Plugin):
+class Surface_Tracker(Plugin):
     """
 
     What happens on camera_model update?
