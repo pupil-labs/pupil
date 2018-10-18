@@ -91,7 +91,7 @@ class Surface_Tracker(Plugin):
         self.menu.label = self.pretty_class_name
         self.add_button = pyglui.ui.Thumb(
             "add_surface",
-            setter=lambda x: self.add_surface(),
+            setter=self.add_surface,
             getter=lambda: False,
             label="A",
             hotkey="a",
@@ -167,7 +167,7 @@ class Surface_Tracker(Plugin):
                 max=100,
             )
         )
-        self.menu.append(pyglui.ui.Button("Add surface", lambda: self.add_surface("_")))
+        self.menu.append(pyglui.ui.Button("Add surface", self.add_surface))
 
         for surface in self.surfaces:
             self.per_surface_ui(surface)
@@ -181,9 +181,7 @@ class Surface_Tracker(Plugin):
         )
 
         for init_dict in surface_definitions.get("surfaces", []):
-            self.add_surface(
-                None, init_dict=init_dict
-            )  # TODO what is the None argument needed for?
+            self.add_surface(init_dict=init_dict)
 
     def recent_events(self, events):
         frame = events.get("frame")
@@ -239,7 +237,7 @@ class Surface_Tracker(Plugin):
     def _update_surface_heatmaps(self):
         raise NotImplementedError
 
-    def add_surface(self, _, init_dict=None):
+    def add_surface(self, init_dict=None):
         if self.markers or init_dict is not None:
             surface = self.Surface_Class(init_dict=init_dict)
             self.surfaces.append(surface)

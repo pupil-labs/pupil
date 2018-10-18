@@ -332,8 +332,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.camera_model,
         )
 
-    def add_surface(self, _, init_dict=None):
-        super().add_surface(_, init_dict=init_dict)
+    def add_surface(self, init_dict=None):
+        super().add_surface(init_dict=init_dict)
         # Plugin initialization loads surface definitions before UI is initialized. Changing timeline height will fail in this case.
         if self.markers or init_dict is not None:
             try:
