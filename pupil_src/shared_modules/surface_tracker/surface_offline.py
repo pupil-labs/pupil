@@ -206,6 +206,12 @@ class Surface_Offline(Surface):
                 section_gaze_on_surf += gaze_on_surf
         return section_gaze_on_surf
 
+    def visible_count_in_section(self, section):
+        if self.location_cache is None:
+            return 0
+        section_cache = self.location_cache[section]
+        return sum(map(bool, section_cache))
+
     def gl_display_metrics(self):
         if self.metrics_texture and self.detected:
             # cv uses 3x3 gl uses 4x4 tranformation matricies

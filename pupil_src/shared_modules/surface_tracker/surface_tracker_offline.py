@@ -151,8 +151,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             if self.gaze_on_surf_buffer_filler.completed:
                 self.gaze_on_surf_buffer_filler = None
                 self._update_surface_heatmaps()
-                # if self.make_export:
-                #     self.save_surface_statsics_to_file() #
+                if self.make_export:
+                    self.save_surface_statsics_to_file()
                 self.gaze_on_surf_buffer = None
 
     def _update_filtered_markers(self):
@@ -435,10 +435,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.fill_gaze_on_surf_buffer()
 
         elif notification["subject"] == "should_export":
+            self.make_export = True
+            self.export_params = (notification["range"], notification["export_dir"])
             self.fill_gaze_on_surf_buffer()
-            self.save_surface_statsics_to_file(
-                notification["range"], notification["export_dir"]
-            )
 
     def on_surface_change(self, surface):
         self.save_surface_definitions_to_file()
@@ -684,64 +683,64 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                                         gp["confidence"],
                                     )
                                 )
-
-            # save fixation on surf as csv.
-            with open(
-                os.path.join(
-                    metrics_dir, "fixations_on_surface" + surface_name + ".csv"
-                ),
-                "w",
-                encoding="utf-8",
-                newline="",
-            ) as csvfile:
-                csv_writer = csv.writer(csvfile, delimiter=",")
-                csv_writer.writerow(
-                    (
-                        "id",
-                        "start_timestamp",
-                        "duration",
-                        "start_frame",
-                        "end_frame",
-                        "norm_pos_x",
-                        "norm_pos_y",
-                        "x_scaled",
-                        "y_scaled",
-                        "on_surf",
-                    )
-                )
-                fixations_on_surface = []
-                for idx, ref_surf_data in zip(
-                    range(len(self.g_pool.timestamps)), s.cache
-                ):
-                    if in_mark <= idx < out_mark:
-                        if ref_surf_data is not None and ref_surf_data is not False:
-                            for f in s.fixations_on_surf_by_frame_idx(
-                                idx, ref_surf_data["surf_to_img_trans"]
-                            ):
-                                fixations_on_surface.append(f)
-
-                removed_duplicates = dict(
-                    [(f["base_data"]["id"], f) for f in fixations_on_surface]
-                ).values()
-                for f_on_s in removed_duplicates:
-                    f = f_on_s["base_data"]
-                    f_x, f_y = f_on_s["norm_pos"]
-                    f_on_surf = f_on_s["on_surf"]
-                    csv_writer.writerow(
-                        (
-                            f["id"],
-                            f["timestamp"],
-                            f["duration"],
-                            f["start_frame_index"],
-                            f["end_frame_index"],
-                            f_x,
-                            f_y,
-                            f_x * s.real_world_size["x"],
-                            f_y * s.real_world_size["y"],
-                            f_on_surf,
-                        )
-                    )
-
+            #
+            #     # save fixation on surf as csv.
+            #     with open(
+            #         os.path.join(
+            #             metrics_dir, "fixations_on_surface" + surface_name + ".csv"
+            #         ),
+            #         "w",
+            #         encoding="utf-8",
+            #         newline="",
+            #     ) as csvfile:
+            #         csv_writer = csv.writer(csvfile, delimiter=",")
+            #         csv_writer.writerow(
+            #             (
+            #                 "id",
+            #                 "start_timestamp",
+            #                 "duration",
+            #                 "start_frame",
+            #                 "end_frame",
+            #                 "norm_pos_x",
+            #                 "norm_pos_y",
+            #                 "x_scaled",
+            #                 "y_scaled",
+            #                 "on_surf",
+            #             )
+            #         )
+            #         fixations_on_surface = []
+            #         for idx, ref_surf_data in zip(
+            #             range(len(self.g_pool.timestamps)), s.cache
+            #         ):
+            #             if in_mark <= idx < out_mark:
+            #                 if ref_surf_data is not None and ref_surf_data is not False:
+            #                     for f in s.fixations_on_surf_by_frame_idx(
+            #                         idx, ref_surf_data["surf_to_img_trans"]
+            #                     ):
+            #                         fixations_on_surface.append(f)
+            #
+            #         removed_duplicates = dict(
+            #             [(f["base_data"]["id"], f) for f in fixations_on_surface]
+            #         ).values()
+            #         for f_on_s in removed_duplicates:
+            #             f = f_on_s["base_data"]
+            #             f_x, f_y = f_on_s["norm_pos"]
+            #             f_on_surf = f_on_s["on_surf"]
+            #             csv_writer.writerow(
+            #                 (
+            #                     f["id"],
+            #                     f["timestamp"],
+            #                     f["duration"],
+            #                     f["start_frame_index"],
+            #                     f["end_frame_index"],
+            #                     f_x,
+            #                     f_y,
+            #                     f_x * s.real_world_size["x"],
+            #                     f_y * s.real_world_size["y"],
+            #                     f_on_surf,
+            #                 )
+            #             )
+            #
             logger.info(
                 "Saved surface positon gaze and fixation data for '{}' with uid:'{}'".format(
                     surface.name, surface.uid
@@ -777,6 +776,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         #     logger.info("Saved current image as .png file.")
         # else:
         #     logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
+
+        self.make_export = False
 
     def deinit_ui(self):
         super().deinit_ui()
