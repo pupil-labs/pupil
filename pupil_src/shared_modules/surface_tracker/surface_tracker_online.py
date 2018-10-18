@@ -51,15 +51,52 @@ class Surface_Tracker_Online(Surface_Tracker):
         self.g_pool.quickbar.append(self.button)
 
     def per_surface_ui(self, surface):
+        def set_x(val):
+            surface.real_world_size["x"] = val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
+                        surface.name
+                    ),
+                    "uid": surface.uid,
+                }
+            )
+
+        def set_y(val):
+            surface.real_world_size["y"] = val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
+                        surface.name
+                    ),
+                    "uid": surface.uid,
+                }
+            )
+
+        def set_name(val):
+            surface.name = val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.surface_name_changed.{}".format(
+                        surface.name
+                    ),
+                    "uid": surface.uid,
+                }
+            )
+
         idx = self.surfaces.index(surface)
         s_menu = pyglui.ui.Growing_Menu("Surface {}".format(idx))
         s_menu.collapsed = True
-        s_menu.append(pyglui.ui.Text_Input("name", surface))
+        s_menu.append(pyglui.ui.Text_Input("name", surface, setter=set_name))
         s_menu.append(
-            pyglui.ui.Text_Input("x", surface.real_world_size, label="X size")
+            pyglui.ui.Text_Input(
+                "x", surface.real_world_size, label="X size", setter=set_x
+            )
         )
         s_menu.append(
-            pyglui.ui.Text_Input("y", surface.real_world_size, label="Y size")
+            pyglui.ui.Text_Input(
+                "y", surface.real_world_size, label="Y size", setter=set_y
+            )
         )
         s_menu.append(
             pyglui.ui.Text_Input(
