@@ -13,7 +13,7 @@ import collections
 import glob
 import logging
 import os
-from itertools import chain
+from shutil import copy2
 
 import av
 import numpy as np
@@ -264,6 +264,8 @@ def update_recording_to_recent(rec_dir):
 
     if rec_version < VersionFormat("1.8"):
         update_recording_v14_v18(rec_dir)
+    if rec_version < VersionFormat('1.9'):
+        update_recording_v18_v19(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -673,6 +675,40 @@ def update_recording_v14_v18(rec_dir):
     with open(meta_info_path, "r", encoding="utf-8") as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info["Data Format Version"] = "v1.8"
+    update_meta_info(rec_dir, meta_info)
+
+
+def update_recording_v18_v19(rec_dir):
+    logger.info("Updating recording from v1.8 to v1.9")
+
+    def copy_cached_annotations():
+        cache_dir = os.path.join(rec_dir, 'offline_data')
+        cache_file = os.path.join(cache_dir, 'annotations.pldata')
+        cache_ts_file = os.path.join(cache_dir, 'annotations_timestamps.npy')
+        annotation_file = os.path.join(rec_dir, 'annotation_player.pldata')
+        annotation_ts_file = os.path.join(rec_dir, 'annotation_player_timestamps.npy')
+        if os.path.exists(cache_file):
+            logger.info("Version update: Copy annotations edited in Player.")
+            copy2(cache_file, annotation_file)
+            copy2(cache_ts_file, annotation_ts_file)
+
+    def copy_recorded_annotations():
+        logger.info("Version update: Copy recorded annotations.")
+        notifications = fm.load_pldata_file(rec_dir, 'notify')
+        with fm.PLData_Writer(rec_dir, "annotation") as writer:
+            for idx, topic in enumerate(notifications.topics):
+                if topic == 'notify.annotation':
+                    annotation = notifications.data[idx]
+                    ts = notifications.timestamps[idx]
+                    writer.append_serialized(ts, "annotation", annotation.serialized)
+
+    copy_cached_annotations()
+    copy_recorded_annotations()
+
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v1.9'
     update_meta_info(rec_dir, meta_info)
 
 
