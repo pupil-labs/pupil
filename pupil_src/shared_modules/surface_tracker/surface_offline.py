@@ -180,7 +180,7 @@ class Surface_Offline(Surface):
         heatmap_data = [g["norm_pos"] for g in section_gaze_on_surf if g["on_surf"]]
         self._generate_within_surface_heatmap(heatmap_data)
 
-    def map_section(self, section, all_gaze_timestamps, all_gaze_events, camera_model):
+    def map_section(self, section, all_world_timestamps, all_gaze_events, camera_model):
         try:
             location_cache = self.location_cache[section]
         except TypeError:
@@ -193,7 +193,7 @@ class Surface_Offline(Surface):
             if location and location["detected"]:
 
                 frame_window = player_methods.enclosing_window(
-                    all_gaze_timestamps, frame_idx
+                    all_world_timestamps, frame_idx
                 )
                 gaze_events = all_gaze_events.by_ts_window(frame_window)
 

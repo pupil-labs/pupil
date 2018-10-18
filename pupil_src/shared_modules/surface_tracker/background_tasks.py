@@ -162,11 +162,11 @@ def data_processing_generator(data, callable, seek_idx, visited_list):
 
 
 def gaze_on_surface_generator(
-    surfaces, section, all_gaze_timestamps, all_gaze_events, camera_model
+    surfaces, section, all_world_timestamps, all_gaze_events, camera_model
 ):
     for surface in surfaces:
         gaze_on_surf = surface.map_section(
-            section, all_gaze_timestamps, all_gaze_events, camera_model
+            section, all_world_timestamps, all_gaze_events, camera_model
         )
         yield gaze_on_surf
 
