@@ -24,7 +24,8 @@ from surface_tracker.surface import Surface
 from surface_tracker import offline_utils
 from surface_tracker import background_tasks
 
-
+# TODO make sure surface size edits are saved on change
+# TODO when dragging a corner it does not end up where the mouse is
 class Surface_Offline(Surface):
     def __init__(self, init_dict=None):
         super().__init__(init_dict=init_dict)
@@ -177,8 +178,7 @@ class Surface_Offline(Surface):
         super().update_def(idx, vis_markers, camera_model)
 
     def update_heatmap(self, section_gaze_on_surf):
-        # TODO devalidate heatmap texture when beginning computation
-        heatmap_data = [g["norm_pos"] for g in section_gaze_on_surf]
+        heatmap_data = [g["norm_pos"] for g in section_gaze_on_surf if g["on_surf"]]
         self._generate_within_surface_heatmap(heatmap_data)
 
     def map_section(self, section, all_gaze_timestamps, all_gaze_events, camera_model):

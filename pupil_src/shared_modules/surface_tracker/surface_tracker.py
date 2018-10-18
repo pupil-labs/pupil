@@ -181,7 +181,9 @@ class Surface_Tracker(Plugin):
         )
 
         for init_dict in surface_definitions.get("surfaces", []):
-            self.add_surface(None, init_dict=init_dict)
+            self.add_surface(
+                None, init_dict=init_dict
+            )  # TODO what is the None argument needed for?
 
     def recent_events(self, events):
         frame = events.get("frame")

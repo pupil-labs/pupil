@@ -43,7 +43,7 @@ class Surface:
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
 
-        self.within_surface_heatmap = np.ones((1, 1), dtype=np.uint8)
+        self.within_surface_heatmap = np.zeros((1, 1), dtype=np.uint8)
         self.heatmap_detail = .2
         self.heatmap_min_data_confidence = 0.6
 
@@ -367,11 +367,11 @@ class Surface:
 
             results.append(
                 {
-                    "topic": event["topic"] + "_on_surface",
+                    "topic": event["topic"] + "on_surface",
                     "norm_pos": surf_norm_pos.tolist(),
                     "confidence": event["confidence"],
                     "on_surf": on_srf,
-                    "base_data": event,
+                    "base_data": (event["topic"], event["timestamp"]),
                     "timestamp": event["timestamp"],
                 }
             )

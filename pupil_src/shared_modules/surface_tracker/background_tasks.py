@@ -2,21 +2,8 @@ import background_helper
 
 
 def background_video_processor(video_file_path, callable, visited_list, seek_idx=-1):
-    """
-    The number of frames available in the video must be equal to the length of
-    visited_list.
-    Args:
-        video_file_path:
-        callable:
-        visited_list:
-        seek_idx:
-
-    Returns:
-
-    """
     return background_helper.Task_Proxy(
         "Background Video Processor",
-        #  be unique?
         video_processing_generator,
         (video_file_path, callable, seek_idx, visited_list),
     )
@@ -115,21 +102,8 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
 
 
 def background_data_processor(data, callable, visited_list, seek_idx=-1):
-    """
-    The number of frames available in the video must be equal to the length of
-    visited_list.
-    Args:
-        video_file_path:
-        callable:
-        visited_list:
-        seek_idx:
-
-    Returns:
-
-    """
     return background_helper.Task_Proxy(
         "Background Data Processor",
-        #  be unique?
         data_processing_generator,
         (data, callable, seek_idx, visited_list),
     )
@@ -185,3 +159,23 @@ def data_processing_generator(data, callable, seek_idx, visited_list):
             visited_list[next_sample_idx] = True
             yield next_sample_idx, res
             next_sample_idx += 1
+
+
+def gaze_on_surface_generator(
+    surfaces, section, all_gaze_timestamps, all_gaze_events, camera_model
+):
+    for surface in surfaces:
+        gaze_on_surf = surface.map_section(
+            section, all_gaze_timestamps, all_gaze_events, camera_model
+        )
+        yield gaze_on_surf
+
+
+def background_gaze_on_surface(
+    surfaces, section, all_gaze_timestamps, all_gaze_events, camera_model
+):
+    return background_helper.Task_Proxy(
+        "Background Data Processor",
+        gaze_on_surface_generator,
+        (surfaces, section, all_gaze_timestamps, all_gaze_events, camera_model),
+    )
