@@ -416,6 +416,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     surface.within_surface_heatmap = np.zeros((1, 1), dtype=np.uint8)
                     break
             self.fill_gaze_on_surf_buffer()
+            self.save_surface_definitions_to_file()
 
         elif notification["subject"].startswith("seek_control.trim_indices_changed"):
             for surface in self.surfaces:

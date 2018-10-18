@@ -24,7 +24,6 @@ from surface_tracker.surface import Surface
 from surface_tracker import offline_utils
 from surface_tracker import background_tasks
 
-# TODO make sure surface size edits are saved on change
 # TODO when dragging a corner it does not end up where the mouse is
 class Surface_Offline(Surface):
     def __init__(self, init_dict=None):
