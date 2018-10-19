@@ -188,9 +188,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def recent_events(self, events):
         frame = events.get("frame")
+        self.current_frame = frame
         if not frame:
             return
-        self.current_frame = frame
 
         self.update_markers(frame)
         self._update_surface_locations(frame.index)

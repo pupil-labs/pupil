@@ -115,6 +115,10 @@ class Surface_Tracker_Online(Surface_Tracker):
 
     def recent_events(self, events):
         super().recent_events(events)
+
+        if not self.current_frame:
+            return
+
         self._update_surface_gaze_history(events, self.current_frame.timestamp)
 
         if self.gui.show_heatmap:

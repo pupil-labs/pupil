@@ -317,7 +317,6 @@ class GUI:
                         if action == glfw.GLFW_PRESS:
                             self.tracker._edit_surf_verts.append((surface, idx))
                         elif action == glfw.GLFW_RELEASE:
-                            # surface.on_change()
                             self.tracker.notify_all(
                                 {
                                     "subject": "surface_tracker.surfaces_changed",
@@ -337,10 +336,8 @@ class GUI:
                             surface.add_marker(
                                 marker.id, marker.verts, self.tracker.camera_model
                             )
-                            surface.on_change()
                         else:
                             surface.pop_marker(marker.id)
-                            surface.on_change()
                         self.tracker.notify_all(
                             {"subject": "surface_tracker.surfaces_changed"}
                         )
