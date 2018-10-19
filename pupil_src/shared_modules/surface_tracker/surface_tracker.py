@@ -64,7 +64,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.gui = gui.GUI(self)
 
         self.marker_min_perimeter = marker_min_perimeter
-        self.marker_min_confidence = 0.6
+        self.marker_min_confidence = 0.1
         self.inverted_markers = inverted_markers
 
         self.robust_detection = True

@@ -328,6 +328,8 @@ class GUI:
         # Marker Toggles
         if action == glfw.GLFW_PRESS:
             for surface in self._edit_surf_markers:
+                if not surface.detected:
+                    continue
                 for marker in self.tracker.markers:
                     centroid = np.mean(marker.verts, axis=0)
                     dist = np.linalg.norm(centroid - pos)
