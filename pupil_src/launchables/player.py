@@ -531,7 +531,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
             p.alive = False
         g_pool.plugins.clean()
 
-        g_pool.capture.cleanup()
         g_pool.gui.terminate()
         glfw.glfwDestroyWindow(main_window)
 
