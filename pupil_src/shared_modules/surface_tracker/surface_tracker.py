@@ -55,7 +55,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         super().__init__(g_pool)
 
-        self.current_frame_idx = None
+        self.current_frame = None
         self.surfaces = []
         self.markers = []
         self.markers_dict = []
