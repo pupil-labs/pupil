@@ -170,7 +170,6 @@ class Seek_Control(System_Plugin_Base):
     def end_of_seek(self):
         '''Signal end of seeking by file backend'''
         if self.was_seeking and self.play:
-            print("End of seek - starting clock")
             self.start_time = time.monotonic()
             self.was_seeking = False
 
