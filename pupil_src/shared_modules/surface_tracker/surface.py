@@ -12,13 +12,14 @@ See COPYING and COPYING.LESSER for license details.
 import numpy as np
 import cv2
 import random
+from abc import ABCMeta, abstractmethod
 
 import methods
 
 from surface_tracker import _Surface_Marker
 
 
-class Surface:
+class Surface(metaclass=ABCMeta):
     def __init__(self, init_dict=None):
         self.uid = random.randint(0, 1e6)
         self.name = "unknown"
@@ -182,8 +183,9 @@ class Surface:
         self.reg_markers_dist.pop(id)
         self.reg_markers_undist.pop(id)
 
+    @abstractmethod
     def update_location(self, idx, vis_markers, camera_model):
-        raise NotImplementedError
+        pass
 
     def update_def(self, idx, vis_markers, camera_model):
         if not vis_markers:
@@ -377,8 +379,9 @@ class Surface:
             )
         return results
 
+    @abstractmethod
     def update_heatmap(self):
-        raise NotImplementedError
+        pass
 
     def _generate_within_surface_heatmap(self, data):
         grid = int(self.real_world_size["y"]), int(self.real_world_size["x"])

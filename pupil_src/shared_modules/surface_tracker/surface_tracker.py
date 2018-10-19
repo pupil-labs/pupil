@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import os
+from abc import ABCMeta, abstractmethod
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ from surface_tracker import gui, Marker
 # TODO Improve marker coloring, marker toggle is barely visible
 
 
-class Surface_Tracker(Plugin):
+class Surface_Tracker(Plugin, metaclass=ABCMeta):
     """
 
     What happens on camera_model update?
@@ -78,13 +79,14 @@ class Surface_Tracker(Plugin):
         return self.g_pool.capture.intrinsics
 
     @property
+    @abstractmethod
     def save_dir(self):
         """
         The directory that contains all files related to the Surface Tracker.
         Returns:
 
         """
-        raise NotImplementedError
+        pass
 
     def init_ui(self):
         self.add_menu()
@@ -172,8 +174,9 @@ class Surface_Tracker(Plugin):
         for surface in self.surfaces:
             self.per_surface_ui(surface)
 
+    @abstractmethod
     def per_surface_ui(self, surface):
-        raise NotImplementedError
+        pass
 
     def load_surface_definitions_from_file(self):
         surface_definitions = file_methods.Persistent_Dict(
@@ -187,7 +190,6 @@ class Surface_Tracker(Plugin):
         frame = events.get("frame")
         if not frame:
             return
-
         self.current_frame = frame
 
         self.update_markers(frame)
@@ -195,11 +197,13 @@ class Surface_Tracker(Plugin):
         self._update_surface_corners()
         self._add_surface_events(events, frame)
 
+    @abstractmethod
     def update_markers(self, frame):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _update_surface_locations(self, idx):
-        raise NotImplementedError
+        pass
 
     def _add_surface_events(self, events, frame):
         """
@@ -231,11 +235,13 @@ class Surface_Tracker(Plugin):
                 }
                 events["surfaces"].append(surface_event)
 
+    @abstractmethod
     def _update_surface_corners(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _update_surface_heatmaps(self):
-        raise NotImplementedError
+        pass
 
     def add_surface(self, init_dict=None):
         if self.markers or init_dict is not None:
