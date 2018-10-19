@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import multiprocessing as mp
+import itertools
 import logging
 
 logger = logging.getLogger(__name__)
@@ -177,6 +178,7 @@ class Surface_Offline(Surface):
         super().update_def(idx, vis_markers, camera_model)
 
     def update_heatmap(self, section_gaze_on_surf):
+        section_gaze_on_surf = list(itertools.chain.from_iterable(section_gaze_on_surf))
         heatmap_data = [g["norm_pos"] for g in section_gaze_on_surf if g["on_surf"]]
         self._generate_within_surface_heatmap(heatmap_data)
 
@@ -202,8 +204,9 @@ class Surface_Offline(Surface):
                     camera_model,
                     trans_matrix=location["img_to_surf_trans"],
                 )
-
-                section_gaze_on_surf += gaze_on_surf
+            else:
+                gaze_on_surf = []
+            section_gaze_on_surf.append(gaze_on_surf)
         return section_gaze_on_surf
 
     def visible_count_in_section(self, section):
@@ -282,7 +285,7 @@ class Surface_Offline(Surface):
             self.location_cache = Cache_List(
                 cache, positive_eval_fn=lambda x: (x is not False) and x["detected"]
             )
-        except KeyError:
+        except (KeyError, TypeError):
             self.location_cache = None
 
         try:

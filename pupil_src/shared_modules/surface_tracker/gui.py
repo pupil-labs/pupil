@@ -341,7 +341,10 @@ class GUI:
                         else:
                             surface.pop_marker(marker.id)
                         self.tracker.notify_all(
-                            {"subject": "surface_tracker.surfaces_changed"}
+                            {
+                                "subject": "surface_tracker.surfaces_changed",
+                                "uid": surface.uid,
+                            }
                         )
 
     def _check_surface_button_pressed(self, surface, pos):
