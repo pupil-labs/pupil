@@ -375,17 +375,6 @@ class File_Source(Playback_Source, Base_Source):
                                        setter=lambda x: None,
                                        getter=lambda: self.get_frame_count()))
 
-        def toggle_buffering(val):
-            if val and not self.buffering:
-                self.buffered_decoder = self.container.get_buffered_decoder(self.video_stream, dec_batch=50,
-                                                                            dec_buffer_size=200)
-                self.next_frame = self.buffered_decoder.get_frame()
-                self.buffering = True
-            elif not val and self.buffering:
-                self.next_frame = self._next_frame()
-                self.buffering = False
-
-        self.menu.append(ui.Switch('buffering', self, label='Decoder Buffering', setter=toggle_buffering))
     def deinit_ui(self):
         self.remove_menu()
 
