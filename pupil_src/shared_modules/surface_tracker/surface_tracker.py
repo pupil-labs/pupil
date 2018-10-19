@@ -261,8 +261,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     # TODO change so offline surface tracker also uses this
     def _detect_markers(self, frame):
         gray = frame.gray
-        if self.inverted_markers:
-            gray = 255 - gray
 
         if self.robust_detection:
             markers = marker_det.detect_markers_robust(

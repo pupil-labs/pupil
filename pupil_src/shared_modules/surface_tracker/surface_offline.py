@@ -282,11 +282,14 @@ class Surface_Offline(Surface):
             self.location_cache = Cache_List(
                 cache, positive_eval_fn=lambda x: (x is not False) and x["detected"]
             )
-        except (TypeError, AttributeError):
+        except KeyError:
             self.location_cache = None
 
         try:
             self.observations_frame_idxs = init_dict["observations_frame_idxs"]
             self.start_idx = init_dict["start_idx"]
-        except AttributeError:
+        except KeyError:
+            # If surface was created in Capture, we just accept it as is
             self.observations_frame_idxs = []
+            self.start_idx = 0
+            self.build_up_status = 1.0
