@@ -143,8 +143,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 selection=[e for e in self.supported_heatmap_modes],
             )
         )
-        self.menu.append(pyglui.ui.Separator())
-        self.menu.append(
+        advanced_menu = pyglui.ui.Growing_Menu("Marker Detection Parameters")
+        advanced_menu.collapsed = True
+        advanced_menu.append(
             pyglui.ui.Switch(
                 "robust_detection",
                 self,
@@ -152,7 +153,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 label="Robust detection",
             )
         )
-        self.menu.append(
+        advanced_menu.append(
             pyglui.ui.Switch(
                 "inverted_markers",
                 self,
@@ -160,7 +161,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 label="Use inverted markers",
             )
         )
-        self.menu.append(
+        advanced_menu.append(
             pyglui.ui.Slider(
                 "marker_min_perimeter",
                 self,
@@ -171,7 +172,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 max=100,
             )
         )
-        self.menu.append(pyglui.ui.Separator())
+        self.menu.append(advanced_menu)
         self.menu.append(pyglui.ui.Button("Add surface", self.add_surface))
         for surface in self.surfaces:
             self.per_surface_ui(surface)
