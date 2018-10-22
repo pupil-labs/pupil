@@ -70,7 +70,10 @@ class GUI:
             if surface in self._edit_surf_corners:
                 self._draw_surface_corner_handles(surface)
 
-            self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
+            if self.tracker.freeze_scene:
+                self.surface_windows[surface].update(self.tracker.frozen_scene_tex)
+            else:
+                self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
 
     def _draw_markers(self):
         color = pyglui_utils.RGBA(*self.color_secondary, .5)

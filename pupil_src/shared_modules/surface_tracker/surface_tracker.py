@@ -25,6 +25,7 @@ import file_methods
 from surface_tracker import gui, Square_Marker_Detection
 
 # TODO Improve marker coloring, marker toggle is barely visible
+# TODO Make Heatmap scale from 1 to 10^3 while displaying 0-1
 
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
@@ -143,6 +144,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 selection=[e for e in self.supported_heatmap_modes],
             )
         )
+        self.update_ui_custom()
         advanced_menu = pyglui.ui.Growing_Menu("Marker Detection Parameters")
         advanced_menu.collapsed = True
         advanced_menu.append(
@@ -177,8 +179,104 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         for surface in self.surfaces:
             self.per_surface_ui(surface)
 
-    @abstractmethod
+    def update_ui_custom(self):
+        pass
+
     def per_surface_ui(self, surface):
+        def set_name(val):
+
+            names = [x.name for x in self.surfaces]
+            if val in names and val != surface.name:
+                logger.warning("The name '{}' is already in use!".format(val))
+                return
+
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.surface_name_changed",
+                    "old_name": surface.name,
+                    "new_name": val,
+                }
+            )
+            surface.name = val
+
+        def set_x(val):
+            if val <= 0:
+                logger.warning("Surface size must be positive!")
+                return
+
+            surface.real_world_size["x"] = val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.heatmap_params_changed",
+                    "name": surface.name,
+                }
+            )
+
+        def set_y(val):
+            if val <= 0:
+                logger.warning("Surface size must be positive!")
+                return
+            surface.real_world_size["y"] = val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.heatmap_params_changed",
+                    "name": surface.name,
+                }
+            )
+
+        def set_hm_smooth(val):
+            if val < 1:
+                logger.warning("Heatmap Smoothness must be in (1,200)!")
+                return
+            surface._heatmap_scale_inv = val
+            surface.heatmap_scale = 201 - val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.heatmap_params_changed",
+                    "name": surface.name,
+                    "delay": 0.5,
+                }
+            )
+
+        idx = self.surfaces.index(surface)
+        s_menu = pyglui.ui.Growing_Menu("{}".format(self.surfaces[idx].name))
+        s_menu.collapsed = True
+        s_menu.append(pyglui.ui.Text_Input("name", surface, setter=set_name))
+        s_menu.append(
+            pyglui.ui.Text_Input(
+                "x", surface.real_world_size, label="Width", setter=set_x
+            )
+        )
+        s_menu.append(
+            pyglui.ui.Text_Input(
+                "y", surface.real_world_size, label="Height", setter=set_y
+            )
+        )
+
+        self.per_surface_ui_custom(surface, s_menu)
+
+        s_menu.append(
+            pyglui.ui.Slider(
+                "_heatmap_scale_inv",
+                surface,
+                label="Heatmap Smoothness",
+                setter=set_hm_smooth,
+                step=1,
+                min=1,
+                max=200,
+            )
+        )
+        s_menu.append(
+            pyglui.ui.Button(
+                "Open Surface in Window",
+                self.gui.surface_windows[surface].open_close_window,
+            )
+        )
+        remove_surf = lambda: self.remove_surface(idx)
+        s_menu.append(pyglui.ui.Button("remove", remove_surf))
+        self.menu.append(s_menu)
+
+    def per_surface_ui_custom(self, surface, s_menu):
         pass
 
     def load_surface_definitions_from_file(self):

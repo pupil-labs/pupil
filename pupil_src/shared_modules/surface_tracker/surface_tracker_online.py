@@ -14,6 +14,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 import pyglui
+import pyglui.cygl.utils as pyglui_utils
+import OpenGL.GL as gl
+import glfw
+import gl_utils
 
 
 from surface_tracker import Heatmap_Mode
@@ -24,6 +28,10 @@ from surface_tracker.surface_online import Surface_Online
 class Surface_Tracker_Online(Surface_Tracker):
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         self.Surface_Class = Surface_Online
+        self.freeze_scene = False
+        self.frozen_scene_frame = None
+        self.frozen_scene_tex = None
+
         super().__init__(
             g_pool,
             marker_min_perimeter=marker_min_perimeter,
@@ -37,8 +45,6 @@ class Surface_Tracker_Online(Surface_Tracker):
         self.button = None
         self.add_button = None
 
-        self.locate_3d = False  # TODO currently not supported. Is this ok?
-
     @property
     def save_dir(self):
         return self.g_pool.user_dir
@@ -50,82 +56,28 @@ class Surface_Tracker_Online(Surface_Tracker):
         self.button.on_color[:] = (.1, .2, 1., .8)
         self.g_pool.quickbar.append(self.button)
 
-    def per_surface_ui(self, surface):
-        def set_name(val):
+    def update_ui_custom(self):
+        def set_freeze_scene(val):
+            self.freeze_scene = val
+            if val:
+                self.frozen_scene_tex = pyglui_utils.Named_Texture()
+                self.frozen_scene_tex.update_from_ndarray(self.current_frame.img)
+            else:
+                self.frozen_scene_tex = None
 
-            names = [x.name for x in self.surfaces]
-            if val in names and val != surface.name:
-                logger.warning("The name '{}' is already in use!".format(val))
-                return
-            self.notify_all(
-                {
-                    "subject": "surface_tracker.surface_name_changed",
-                    "old_name": surface.name,
-                    "new_name": val,
-                }
+        self.menu.append(
+            pyglui.ui.Switch(
+                "freeze_scene", self, label="Freeze Scene", setter=set_freeze_scene
             )
-            surface.name = val
+        )
 
-        def set_x(val):
-            if val <= 0:
-                logger.warning("Surface size must be positive!")
-                return
-
-            surface.real_world_size["x"] = val
-            self.notify_all(
-                {
-                    "subject": "surface_tracker.heatmap_params_changed",
-                    "name": surface.name,
-                }
-            )
-
-        def set_y(val):
-            if val <= 0:
-                logger.warning("Surface size must be positive!")
-                return
-
-            surface.real_world_size["y"] = val
-            self.notify_all(
-                {
-                    "subject": "surface_tracker.heatmap_params_changed",
-                    "name": surface.name,
-                }
-            )
-
+    def per_surface_ui_custom(self, surface, s_menu):
         def set_gaze_hist_len(val):
             if val <= 0:
                 logger.warning("Gaze history length must be a positive number!")
                 return
             surface.gaze_history_length = val
 
-        def set_hm_smooth(val):
-            if val < 1:
-                logger.warning("Heatmap Smoothness must be in (1,200)!")
-                return
-            surface._heatmap_scale_inv = val
-            surface.heatmap_scale = 201 - val
-            self.notify_all(
-                {
-                    "subject": "surface_tracker.heatmap_params_changed",
-                    "name": surface.name,
-                    "delay": 0.5,
-                }
-            )
-
-        idx = self.surfaces.index(surface)
-        s_menu = pyglui.ui.Growing_Menu("{}".format(self.surfaces[idx].name))
-        s_menu.collapsed = True
-        s_menu.append(pyglui.ui.Text_Input("name", surface, setter=set_name))
-        s_menu.append(
-            pyglui.ui.Text_Input(
-                "x", surface.real_world_size, label="X size", setter=set_x
-            )
-        )
-        s_menu.append(
-            pyglui.ui.Text_Input(
-                "y", surface.real_world_size, label="Y size", setter=set_y
-            )
-        )
         s_menu.append(
             pyglui.ui.Text_Input(
                 "gaze_history_length",
@@ -134,28 +86,12 @@ class Surface_Tracker_Online(Surface_Tracker):
                 setter=set_gaze_hist_len,
             )
         )
-        s_menu.append(
-            pyglui.ui.Slider(
-                "_heatmap_scale_inv",
-                surface,
-                label="Heatmap Smoothness",
-                setter=set_hm_smooth,
-                step=1,
-                min=1,
-                max=200,
-            )
-        )
-        s_menu.append(
-            pyglui.ui.Button(
-                "Open Surface in Window",
-                self.gui.surface_windows[surface].open_close_window,
-            )
-        )
-        remove_surf = lambda: self.remove_surface(idx)
-        s_menu.append(pyglui.ui.Button("remove", remove_surf))
-        self.menu.append(s_menu)
 
     def recent_events(self, events):
+        if self.freeze_scene:
+            current_frame = events.get("frame")
+            events["frame"] = self.current_frame
+
         super().recent_events(events)
 
         if not self.current_frame:
@@ -165,6 +101,9 @@ class Surface_Tracker_Online(Surface_Tracker):
 
         if self.gui.show_heatmap:
             self._update_surface_heatmaps()
+
+        if self.freeze_scene:
+            events["frame"] = current_frame
 
     def update_markers(self, frame):
         if self.running:
@@ -195,6 +134,28 @@ class Surface_Tracker_Online(Surface_Tracker):
     def _update_surface_heatmaps(self):
         for surface in self.surfaces:
             surface.update_heatmap()
+
+    def add_surface(self, _=None, init_dict=None):
+        if self.freeze_scene:
+            logger.warning("Surfaces cannot be added while the scene is frozen!")
+        else:
+            super().add_surface(init_dict=init_dict)
+
+    def gl_display(self):
+        if self.freeze_scene:
+            self.gl_display_frozen_scene()
+        super().gl_display()
+
+    def gl_display_frozen_scene(self):
+        gl_utils.clear_gl_screen()
+
+        gl_utils.make_coord_system_norm_based()
+
+        self.frozen_scene_tex.draw()
+
+        gl_utils.make_coord_system_pixel_based(
+            (self.g_pool.capture.frame_size[1], self.g_pool.capture.frame_size[0], 3)
+        )
 
     def deinit_ui(self):
         super().deinit_ui()
