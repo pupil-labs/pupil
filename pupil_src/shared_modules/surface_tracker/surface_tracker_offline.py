@@ -427,7 +427,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 self.camera_model,
             )
 
-    def add_surface(self, init_dict=None):
+    def add_surface(self, _=None, init_dict=None):
         super().add_surface(init_dict=init_dict)
         # Plugin initialization loads surface definitions before UI is initialized. Changing timeline height will fail in this case.
         if self.markers or init_dict is not None:
@@ -436,7 +436,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 self.fill_gaze_on_surf_buffer()
             except AttributeError:
                 pass
-        self.surfaces[-1].on_surface_changed = self.on_surface_change
+            self.surfaces[-1].on_surface_changed = self.on_surface_change
 
     def remove_surface(self, _):
         super().remove_surface(_)

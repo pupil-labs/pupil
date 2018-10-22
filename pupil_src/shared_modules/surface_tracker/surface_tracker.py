@@ -245,7 +245,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def _update_surface_heatmaps(self):
         pass
 
-    def add_surface(self, init_dict=None):
+    def add_surface(self, _=None, init_dict=None):
         if self.markers or init_dict is not None:
             surface = self.Surface_Class(
                 name="Surface {:}".format(len(self.surfaces) + 1), init_dict=init_dict
