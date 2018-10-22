@@ -39,7 +39,6 @@ class Surface_Tracker_Online(Surface_Tracker):
         )
         self.ui_info_text = "This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*."
         self.supported_heatmap_modes = [Heatmap_Mode.WITHIN_SURFACE]
-        self.running = True
 
         self.menu = None
         self.button = None
@@ -48,13 +47,6 @@ class Surface_Tracker_Online(Surface_Tracker):
     @property
     def save_dir(self):
         return self.g_pool.user_dir
-
-    def init_ui(self):
-        super().init_ui()
-
-        self.button = pyglui.ui.Thumb("running", self, label="S", hotkey="s")
-        self.button.on_color[:] = (.1, .2, 1., .8)
-        self.g_pool.quickbar.append(self.button)
 
     def update_ui_custom(self):
         def set_freeze_scene(val):
@@ -106,8 +98,7 @@ class Surface_Tracker_Online(Surface_Tracker):
             events["frame"] = current_frame
 
     def update_markers(self, frame):
-        if self.running:
-            self._detect_markers(frame)
+        self._detect_markers(frame)
 
     def _update_surface_locations(self, idx):
         for surface in self.surfaces:
