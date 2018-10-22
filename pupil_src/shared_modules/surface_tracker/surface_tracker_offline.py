@@ -244,7 +244,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             )
 
         idx = self.surfaces.index(surface)
-        s_menu = pyglui.ui.Growing_Menu("Surface {}".format(idx))
+        s_menu = pyglui.ui.Growing_Menu("{}".format(self.surfaces[idx].name))
         s_menu.collapsed = True
         s_menu.append(pyglui.ui.Text_Input("name", surface, setter=set_name))
         s_menu.append(
