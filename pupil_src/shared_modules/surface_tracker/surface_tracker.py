@@ -228,7 +228,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 surface_event = {
                     "topic": "surfaces.{}".format(surface.name),
                     "name": surface.name,
-                    "uid": surface.uid,
                     "surf_to_img_trans": surface.surf_to_img_trans.tolist(),
                     "img_to_surf_trans": surface.img_to_surf_trans.tolist(),
                     "gaze_on_surf": gaze_on_surf,

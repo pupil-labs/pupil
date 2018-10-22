@@ -221,40 +221,39 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             names = [x.name for x in self.surfaces]
             if val in names and val != surface.name:
                 logger.warning("The names '{}' is already in use!".format(val))
+                return
 
-            surface.name = val
             self.notify_all(
                 {
-                    "subject": "surface_tracker.surface_name_changed.{}".format(
-                        surface.name
-                    ),
-                    "uid": surface.uid,
+                    "subject": "surface_tracker.surface_name_changed",
+                    "old_name": surface.name,
+                    "new_name": val,
                 }
             )
+            surface.name = val
 
         def set_x(val):
             if val <= 0:
                 logger.warning("Surface size must be positive!")
+                return
+
             surface.real_world_size["x"] = val
             self.notify_all(
                 {
-                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
-                        surface.name
-                    ),
-                    "uid": surface.uid,
+                    "subject": "surface_tracker.heatmap_params_changed",
+                    "name": surface.name,
                 }
             )
 
         def set_y(val):
             if val <= 0:
                 logger.warning("Surface size must be positive!")
+                return
             surface.real_world_size["y"] = val
             self.notify_all(
                 {
-                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
-                        surface.name
-                    ),
-                    "uid": surface.uid,
+                    "subject": "surface_tracker.heatmap_params_changed",
+                    "name": surface.name,
                 }
             )
 
@@ -266,10 +265,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             surface.heatmap_scale = 201 - val
             self.notify_all(
                 {
-                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
-                        surface.name
-                    ),
-                    "uid": surface.uid,
+                    "subject": "surface_tracker.heatmap_params_changed",
+                    "name": surface.name,
                     "delay": 0.5,
                 }
             )
@@ -311,7 +308,11 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def _compute_across_surfaces_heatmap(self):
 
-        gazes_all = list(itertools.chain.from_iterable(self.gaze_on_surf_buffer))
+        if self.gaze_on_surf_buffer is None:
+            gazes_all = []
+        else:
+            gazes_all = list(itertools.chain.from_iterable(self.gaze_on_surf_buffer))
+
         gazes_on_surf = []
         for gof in gazes_all:
             gof = [g for g in gof if g["on_surf"]]
@@ -496,11 +497,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for surface in self.surfaces:
                 surface.location_cache = None
 
-        elif notification["subject"].startswith(
-            "surface_tracker.heatmap_params_changed"
-        ):
+        elif notification["subject"] == "surface_tracker.heatmap_params_changed":
             for surface in self.surfaces:
-                if surface.uid == notification["uid"]:
+                if surface.name == notification["name"]:
                     self._heatmap_update_requests.add(surface)
                     surface.within_surface_heatmap = surface._get_dummy_heatmap()
                     break
@@ -514,7 +513,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         elif notification["subject"] == "surface_tracker.surfaces_changed":
             for surface in self.surfaces:
-                if surface.uid == notification["uid"]:
+                if surface.name == notification["name"]:
                     surface.location_cache = None
                     surface.within_surface_heatmap = surface._get_dummy_heatmap()
                     self._heatmap_update_requests.add(surface)
@@ -636,13 +635,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
             # surface events report
             csv_writer.writerow(
-                (
-                    "world_idx",
-                    "world_timestamp",
-                    "surface_name",
-                    "surface_uid",
-                    "event_type",
-                )
+                ("world_idx", "world_timestamp", "surface_name", "event_type")
             )
 
             events = []
@@ -655,7 +648,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                         {
                             "frame_id": enter_frame_id,
                             "surf_name": surface.name,
-                            "surf_uid": surface.uid,
                             "event": "enter",
                         }
                     )
@@ -663,7 +655,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                         {
                             "frame_id": exit_frame_id,
                             "surf_name": surface.name,
-                            "surf_uid": surface.uid,
                             "event": "exit",
                         }
                     )
@@ -675,7 +666,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                         e["frame_id"],
                         self.g_pool.timestamps[e["frame_id"]],
                         e["surf_name"],
-                        e["surf_uid"],
                         e["event"],
                     )
                 )
@@ -683,7 +673,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         for surf_idx, surface in enumerate(self.surfaces):
             # per surface names:
-            surface_name = "_" + surface.name.replace("/", "") + "_" + str(surface.uid)
+            surface_name = "_" + surface.name.replace("/", "")
 
             # save surface_positions as csv
             with open(
@@ -807,8 +797,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                             )
 
             logger.info(
-                "Saved surface positon gaze and fixation data for '{}' with uid:'{}'".format(
-                    surface.name, surface.uid
+                "Saved surface positon gaze and fixation data for '{}'".format(
+                    surface.name
                 )
             )
 

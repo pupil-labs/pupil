@@ -13,6 +13,7 @@ import numpy as np
 import cv2
 import random
 from abc import ABCMeta, abstractmethod
+import uuid
 
 import methods
 
@@ -21,7 +22,6 @@ from surface_tracker import _Surface_Marker_Aggregate
 
 class Surface(metaclass=ABCMeta):
     def __init__(self, name="unknown", init_dict=None):
-        self.uid = random.randint(0, 1e6)
         self.name = name
         self.real_world_size = {"x": 1., "y": 1.}
 
@@ -51,11 +51,14 @@ class Surface(metaclass=ABCMeta):
         self._heatmap_scale_inv = 100
         self.heatmap_scale = 100
 
+        # The uid is only used to implement __hash__ and __eq__ !
+        self.uid = uuid.uuid4()
+
         if init_dict is not None:
             self.load_from_dict(init_dict)
 
     def __hash__(self):
-        return self.uid
+        return int(self.uid)
 
     def __eq__(self, other):
         if isinstance(other, Surface):
@@ -401,7 +404,7 @@ class Surface(metaclass=ABCMeta):
             hist *= (255. / hist_max) if hist_max else 0.
             hist = hist.astype(np.uint8)
         else:
-            self.within_surface_heatmap = self._get_dummy_heatmap()
+            self.within_surface_heatmap = self._get_dummy_heatmap(empty=True)
             return
 
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
@@ -411,9 +414,15 @@ class Surface(metaclass=ABCMeta):
             self.within_surface_heatmap[:, :, 3] = 125
         self.within_surface_heatmap[:, :, :3] = c_map
 
-    def _get_dummy_heatmap(self):
+    def _get_dummy_heatmap(self, empty=False):
         hm = np.zeros((1, 1, 4), dtype=np.uint8)
-        hm[:, :, 3] = 175
+
+        if empty:
+            hm[:, :, :3] = cv2.applyColorMap(hm[:, :, :3], cv2.COLORMAP_JET)
+            hm[:, :, 3] = 125
+        else:
+            hm[:, :, 3] = 175
+
         return hm
 
     def _denormalize(self, points, camera_model):

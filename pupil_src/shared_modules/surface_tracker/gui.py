@@ -320,7 +320,7 @@ class GUI:
                             self.tracker.notify_all(
                                 {
                                     "subject": "surface_tracker.surfaces_changed",
-                                    "uid": surface.uid,
+                                    "name": surface.name,
                                 }
                             )
                             self.tracker._edit_surf_verts = []
@@ -343,7 +343,7 @@ class GUI:
                         self.tracker.notify_all(
                             {
                                 "subject": "surface_tracker.surfaces_changed",
-                                "uid": surface.uid,
+                                "name": surface.name,
                             }
                         )
 

@@ -56,40 +56,39 @@ class Surface_Tracker_Online(Surface_Tracker):
             names = [x.name for x in self.surfaces]
             if val in names and val != surface.name:
                 logger.warning("The names '{}' is already in use!".format(val))
-
-            surface.name = val
+                return
             self.notify_all(
                 {
-                    "subject": "surface_tracker.surface_name_changed.{}".format(
-                        surface.name
-                    ),
-                    "uid": surface.uid,
+                    "subject": "surface_tracker.surface_name_changed",
+                    "old_name": surface.name,
+                    "new_name": val,
                 }
             )
+            surface.name = val
 
         def set_x(val):
             if val <= 0:
                 logger.warning("Surface size must be positive!")
+                return
+
             surface.real_world_size["x"] = val
             self.notify_all(
                 {
-                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
-                        surface.name
-                    ),
-                    "uid": surface.uid,
+                    "subject": "surface_tracker.heatmap_params_changed",
+                    "name": surface.name,
                 }
             )
 
         def set_y(val):
             if val <= 0:
                 logger.warning("Surface size must be positive!")
+                return
+
             surface.real_world_size["y"] = val
             self.notify_all(
                 {
-                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
-                        surface.name
-                    ),
-                    "uid": surface.uid,
+                    "subject": "surface_tracker.heatmap_params_changed",
+                    "name": surface.name,
                 }
             )
 
@@ -107,10 +106,8 @@ class Surface_Tracker_Online(Surface_Tracker):
             surface.heatmap_scale = 201 - val
             self.notify_all(
                 {
-                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
-                        surface.name
-                    ),
-                    "uid": surface.uid,
+                    "subject": "surface_tracker.heatmap_params_changed",
+                    "name": surface.name,
                     "delay": 0.5,
                 }
             )
@@ -178,12 +175,12 @@ class Surface_Tracker_Online(Surface_Tracker):
             surface.update_location(idx, self.markers, self.camera_model)
 
     def _update_surface_gaze_history(self, events, world_timestamp):
-        surfaces_gaze_dict = {e["uid"]: e["gaze_on_surf"] for e in events["surfaces"]}
+        surfaces_gaze_dict = {e["name"]: e["gaze_on_surf"] for e in events["surfaces"]}
 
         for surface in self.surfaces:
             try:
                 surface.update_gaze_history(
-                    surfaces_gaze_dict[surface.uid], world_timestamp
+                    surfaces_gaze_dict[surface.name], world_timestamp
                 )
             except KeyError:
                 pass
