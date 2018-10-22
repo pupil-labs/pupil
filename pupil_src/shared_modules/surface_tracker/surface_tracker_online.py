@@ -55,7 +55,7 @@ class Surface_Tracker_Online(Surface_Tracker):
 
             names = [x.name for x in self.surfaces]
             if val in names and val != surface.name:
-                logger.warning("The names '{}' is already in use!".format(val))
+                logger.warning("The name '{}' is already in use!".format(val))
                 return
             self.notify_all(
                 {
@@ -100,7 +100,7 @@ class Surface_Tracker_Online(Surface_Tracker):
 
         def set_hm_smooth(val):
             if val < 1:
-                logger.warning("Heatmap SMoothness must be in (1,200)!")
+                logger.warning("Heatmap Smoothness must be in (1,200)!")
                 return
             surface._heatmap_scale_inv = val
             surface.heatmap_scale = 201 - val
