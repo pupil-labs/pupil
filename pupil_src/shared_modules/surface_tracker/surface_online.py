@@ -18,8 +18,8 @@ from surface_tracker.surface import Surface
 
 
 class Surface_Online(Surface):
-    def __init__(self, init_dict=None):
-        super().__init__(init_dict=init_dict)
+    def __init__(self, name="unknown", init_dict=None):
+        super().__init__(name=name, init_dict=init_dict)
 
         self.gaze_history_length = 1
         self.gaze_history = collections.deque()

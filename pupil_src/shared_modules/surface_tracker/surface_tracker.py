@@ -25,7 +25,6 @@ import file_methods
 from surface_tracker import gui, Marker
 
 # TODO Improve marker coloring, marker toggle is barely visible
-# TODO use incremental names as default for surfaces
 # TODO collapsable surface menu should be named with surface name
 
 
@@ -247,7 +246,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def add_surface(self, init_dict=None):
         if self.markers or init_dict is not None:
-            surface = self.Surface_Class(init_dict=init_dict)
+            surface = self.Surface_Class(
+                name="Surface {:}".format(len(self.surfaces) + 1), init_dict=init_dict
+            )
             self.surfaces.append(surface)
             self.gui.add_surface(surface)
             self.update_ui()

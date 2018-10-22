@@ -41,7 +41,7 @@ from surface_tracker.surface_offline import Surface_Offline
 
 
 # TODO Improve all docstrings, make methods privat appropriately
-# Two colors in timeline to indicate detected markrs vs frames without markers
+# TODO Two colors in timeline to indicate detected markrs vs frames without markers
 
 
 class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
@@ -55,7 +55,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    # TODO add surfaces export
     # TODO sanitize size inputs etc
     # TODO Define surface size and heatmap resolution/scale independently + have reasonable default values
     # TODO Implement freeze feature

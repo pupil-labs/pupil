@@ -20,9 +20,9 @@ from surface_tracker import _Surface_Marker
 
 
 class Surface(metaclass=ABCMeta):
-    def __init__(self, init_dict=None):
+    def __init__(self, name="unknown", init_dict=None):
         self.uid = random.randint(0, 1e6)
-        self.name = "unknown"
+        self.name = name
         self.real_world_size = {"x": 1., "y": 1.}
 
         # We store the surface state in two versions: once computed with the

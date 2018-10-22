@@ -27,8 +27,8 @@ from surface_tracker import background_tasks
 
 # TODO when dragging a corner it does not end up where the mouse is
 class Surface_Offline(Surface):
-    def __init__(self, init_dict=None):
-        super().__init__(init_dict=init_dict)
+    def __init__(self, name="unknown", init_dict=None):
+        super().__init__(name=name, init_dict=init_dict)
         self.cache_seek_idx = mp.Value("i", 0)
         self.location_cache = None
         self.location_cache_filler = None
