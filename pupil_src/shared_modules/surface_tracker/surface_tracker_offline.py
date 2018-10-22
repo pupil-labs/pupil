@@ -60,8 +60,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    # TODO sanitize size inputs etc
-    # TODO Define surface size and heatmap resolution/scale independently + have reasonable default values
     # TODO Implement freeze feature
     # TODO test opening old recordings/surface definitions with new version
     # TODO fix a bug where changing a surface corner while heatmap is recomputet does not yield the correct heatmap
@@ -218,28 +216,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         ) * self.timeline_line_height
 
     def per_surface_ui(self, surface):
-        def set_x(val):
-            surface.real_world_size["x"] = val
-            self.notify_all(
-                {
-                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
-                        surface.name
-                    ),
-                    "uid": surface.uid,
-                }
-            )
-
-        def set_y(val):
-            surface.real_world_size["y"] = val
-            self.notify_all(
-                {
-                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
-                        surface.name
-                    ),
-                    "uid": surface.uid,
-                }
-            )
-
         def set_name(val):
             surface.name = val
             self.notify_all(
@@ -251,18 +227,71 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 }
             )
 
+        def set_x(val):
+            if val <= 0:
+                logger.warning("Surface size must be positive!")
+            surface.real_world_size["x"] = val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
+                        surface.name
+                    ),
+                    "uid": surface.uid,
+                }
+            )
+
+        def set_y(val):
+            if val <= 0:
+                logger.warning("Surface size must be positive!")
+            surface.real_world_size["y"] = val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
+                        surface.name
+                    ),
+                    "uid": surface.uid,
+                }
+            )
+
+        def set_hm_smooth(val):
+            if val < 1:
+                logger.warning("Heatmap SMoothness must be in (1,200)!")
+                return
+            surface._heatmap_scale_inv = val
+            surface.heatmap_scale = 201 - val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
+                        surface.name
+                    ),
+                    "uid": surface.uid,
+                    "delay": 0.5,
+                }
+            )
+
         idx = self.surfaces.index(surface)
         s_menu = pyglui.ui.Growing_Menu("{}".format(self.surfaces[idx].name))
         s_menu.collapsed = True
         s_menu.append(pyglui.ui.Text_Input("name", surface, setter=set_name))
         s_menu.append(
             pyglui.ui.Text_Input(
-                "x", surface.real_world_size, label="X size", setter=set_x
+                "x", surface.real_world_size, label="Width", setter=set_x
             )
         )
         s_menu.append(
             pyglui.ui.Text_Input(
-                "y", surface.real_world_size, label="Y size", setter=set_y
+                "y", surface.real_world_size, label="Height", setter=set_y
+            )
+        )
+        s_menu.append(
+            pyglui.ui.Slider(
+                "_heatmap_scale_inv",
+                surface,
+                label="Heatmap Smoothness",
+                setter=set_hm_smooth,
+                step=1,
+                min=1,
+                max=200,
             )
         )
         s_menu.append(
@@ -468,7 +497,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for surface in self.surfaces:
                 if surface.uid == notification["uid"]:
                     self._heatmap_update_requests.add(surface)
-                    surface.within_surface_heatmap = np.zeros((1, 1), dtype=np.uint8)
+                    surface.within_surface_heatmap = surface._get_dummy_heatmap()
                     break
             self.fill_gaze_on_surf_buffer()
 
@@ -482,7 +511,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for surface in self.surfaces:
                 if surface.uid == notification["uid"]:
                     surface.location_cache = None
-                    surface.within_surface_heatmap = np.zeros((1, 1), dtype=np.uint8)
+                    surface.within_surface_heatmap = surface._get_dummy_heatmap()
                     self._heatmap_update_requests.add(surface)
                     break
             self.fill_gaze_on_surf_buffer()

@@ -51,7 +51,20 @@ class Surface_Tracker_Online(Surface_Tracker):
         self.g_pool.quickbar.append(self.button)
 
     def per_surface_ui(self, surface):
+        def set_name(val):
+            surface.name = val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.surface_name_changed.{}".format(
+                        surface.name
+                    ),
+                    "uid": surface.uid,
+                }
+            )
+
         def set_x(val):
+            if val <= 0:
+                logger.warning("Surface size must be positive!")
             surface.real_world_size["x"] = val
             self.notify_all(
                 {
@@ -63,6 +76,8 @@ class Surface_Tracker_Online(Surface_Tracker):
             )
 
         def set_y(val):
+            if val <= 0:
+                logger.warning("Surface size must be positive!")
             surface.real_world_size["y"] = val
             self.notify_all(
                 {
@@ -73,14 +88,25 @@ class Surface_Tracker_Online(Surface_Tracker):
                 }
             )
 
-        def set_name(val):
-            surface.name = val
+        def set_gaze_hist_len(val):
+            if val <= 0:
+                logger.warning("Gaze history length must be a positive number!")
+                return
+            surface.gaze_history_length = val
+
+        def set_hm_smooth(val):
+            if val < 1:
+                logger.warning("Heatmap SMoothness must be in (1,200)!")
+                return
+            surface._heatmap_scale_inv = val
+            surface.heatmap_scale = 201 - val
             self.notify_all(
                 {
-                    "subject": "surface_tracker.surface_name_changed.{}".format(
+                    "subject": "surface_tracker.heatmap_params_changed.{}".format(
                         surface.name
                     ),
                     "uid": surface.uid,
+                    "delay": 0.5,
                 }
             )
 
@@ -100,7 +126,21 @@ class Surface_Tracker_Online(Surface_Tracker):
         )
         s_menu.append(
             pyglui.ui.Text_Input(
-                "gaze_history_length", surface, label="Gaze History Length [seconds]"
+                "gaze_history_length",
+                surface,
+                label="Gaze History Length [seconds]",
+                setter=set_gaze_hist_len,
+            )
+        )
+        s_menu.append(
+            pyglui.ui.Slider(
+                "_heatmap_scale_inv",
+                surface,
+                label="Heatmap Smoothness",
+                setter=set_hm_smooth,
+                step=1,
+                min=1,
+                max=200,
             )
         )
         s_menu.append(
