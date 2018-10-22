@@ -62,7 +62,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     # TODO Implement freeze feature
     # TODO test opening old recordings/surface definitions with new version
-    # TODO fix a bug where changing a surface corner while heatmap is recomputet does not yield the correct heatmap
     # TODO recompute gaze on gaze change notification
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         self.timeline_line_height = 16
@@ -122,7 +121,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     self.marker_cache_unfiltered.append(markers)
                 else:
                     self.marker_cache_unfiltered.append(markers)
-            marker_cache_unfiltered = Cache_List(self.marker_cache_unfiltered)
+            marker_cache_unfiltered = Cache_List(
+                self.marker_cache_unfiltered, positive_eval_fn=_cache_pos_eval_fn
+            )
             self.recalculate_marker_cache(previous_state=marker_cache_unfiltered)
             self.inverted_markers = previous_cache.get("inverted_markers", False)
             logger.debug("Restored previous marker cache.")
@@ -138,7 +139,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for surface in self.surfaces:
                 surface.location_cache = None
 
-        self.marker_cache_unfiltered = Cache_List(previous_state)
+        self.marker_cache_unfiltered = Cache_List(
+            previous_state, positive_eval_fn=_cache_pos_eval_fn
+        )
         self._update_filtered_markers()
 
         self.cache_filler = background_tasks.background_video_processor(
@@ -194,7 +197,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     and m.id_confidence >= self.marker_min_confidence
                 ]
             marker_cache.append(markers)
-        self.marker_cache = Cache_List(marker_cache)
+        self.marker_cache = Cache_List(
+            marker_cache, positive_eval_fn=_cache_pos_eval_fn
+        )
 
     def init_ui(self):
         super().init_ui()
@@ -447,14 +452,19 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         with gl_utils.Coord_System(TS[0], TS[-1], height, 0):
             # Lines for areas that have been cached
             cached_ranges = []
-            for r in self.marker_cache.visited_ranges:  # [[0,1],[3,4]]
-                cached_ranges += (
-                    (TS[r[0]], 0),
-                    (TS[r[1]], 0),
-                )  # [(0,0),(1,0),(3,0),(4,0)]
+            for r in self.marker_cache.visited_ranges:
+                cached_ranges += ((TS[r[0]], 0), (TS[r[1]], 0))
 
             gl.glTranslatef(0, scale * self.timeline_line_height / 2, 0)
-            color = pyglui_utils.RGBA(.8, .6, .2, .8)
+            color = pyglui_utils.RGBA(.8, .2, .2, .8)
+            pyglui_utils.draw_polyline(
+                cached_ranges, color=color, line_type=gl.GL_LINES, thickness=scale * 4
+            )
+            cached_ranges = []
+            for r in self.marker_cache.positive_ranges:
+                cached_ranges += ((TS[r[0]], 0), (TS[r[1]], 0))
+
+            color = pyglui_utils.RGBA(0, .7, .3, .8)
             pyglui_utils.draw_polyline(
                 cached_ranges, color=color, line_type=gl.GL_LINES, thickness=scale * 4
             )
@@ -465,10 +475,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 found_at = []
                 if surface.location_cache is not None:
                     for r in surface.location_cache.positive_ranges:  # [[0,1],[3,4]]
-                        found_at += (
-                            (TS[r[0]], 0),
-                            (TS[r[1]], 0),
-                        )  # [(0,0),(1,0),(3,0),(4,0)]
+                        found_at += ((TS[r[0]], 0), (TS[r[1]], 0))
                     cached_surfaces.append(found_at)
 
             color = pyglui_utils.RGBA(0, .7, .3, .8)
@@ -855,3 +862,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         marker_cache_file["version"] = self.marker_cache_version
         marker_cache_file["inverted_markers"] = self.inverted_markers
         marker_cache_file.save()
+
+
+_cache_pos_eval_fn = lambda x: (x is not False) and len(x) > 0
