@@ -14,7 +14,10 @@ from enum import Enum
 
 import numpy as np
 
-Marker = collections.namedtuple("Marker", ["id", "id_confidence", "verts", "perimeter"])
+# TODO rename verts to verts_px and verts_uv
+Square_Marker_Detection = collections.namedtuple(
+    "Square_Marker_Detection", ["id", "id_confidence", "verts", "perimeter"]
+)
 
 
 class Heatmap_Mode(Enum):
@@ -22,13 +25,14 @@ class Heatmap_Mode(Enum):
     ACROSS_SURFACES = "Gaze across different surfaces"
 
 
-class _Surface_Marker(object):
+class _Surface_Marker_Aggregate(object):
     """
-    A Surface Marker is located in normalized surface space, unlike regular Markers which are
+    A Surface Marker Aggregate is located in normalized surface space, unlike regular Markers which are
     located in image space. It's location on the surface is aggregated over a list of
-    obersvations.
+    observations.
     """
 
+    # TODO is verts argument ever used?
     def __init__(self, id, verts=None):
         self.id = id
         self.verts = None

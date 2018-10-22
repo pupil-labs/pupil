@@ -36,7 +36,12 @@ from cache_list import Cache_List
 import player_methods
 
 from surface_tracker.surface_tracker import Surface_Tracker
-from surface_tracker import offline_utils, background_tasks, Marker, Heatmap_Mode
+from surface_tracker import (
+    offline_utils,
+    background_tasks,
+    Square_Marker_Detection,
+    Heatmap_Mode,
+)
 from surface_tracker.surface_offline import Surface_Offline
 
 
@@ -112,7 +117,10 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.marker_cache_unfiltered = []
             for markers in cache:
                 if markers:
-                    markers = [Marker(*args) if args else None for args in markers]
+                    markers = [
+                        Square_Marker_Detection(*args) if args else None
+                        for args in markers
+                    ]
                     self.marker_cache_unfiltered.append(markers)
                 else:
                     self.marker_cache_unfiltered.append(markers)
@@ -275,17 +283,21 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             gof = [g for g in gof if g["on_surf"]]
             gazes_on_surf.append(len(gof))
 
-        max_res = max(gazes_on_surf)
-        results = np.array(gazes_on_surf, dtype=np.float32)
-        if max_res > 0:
-            results *= 255. / max_res
-        results = np.uint8(results)
-        results_c_maps = cv2.applyColorMap(results, cv2.COLORMAP_JET)
+        if gazes_on_surf:
+            max_res = max(gazes_on_surf)
+            results = np.array(gazes_on_surf, dtype=np.float32)
+            if max_res > 0:
+                results *= 255. / max_res
+            results = np.uint8(results)
+            results_c_maps = cv2.applyColorMap(results, cv2.COLORMAP_JET)
 
-        for s, c_map in zip(self.surfaces, results_c_maps):
-            heatmap = np.ones((1, 1, 4), dtype=np.uint8) * 125
-            heatmap[:, :, :3] = c_map
-            s.across_surface_heatmap = heatmap
+            for s, c_map in zip(self.surfaces, results_c_maps):
+                heatmap = np.ones((1, 1, 4), dtype=np.uint8) * 125
+                heatmap[:, :, :3] = c_map
+                s.across_surface_heatmap = heatmap
+        else:
+            for s in self.surfaces:
+                s.across_surface_heatmap = s._get_dummy_heatmap()
 
     def update_markers(self, frame):
         if not self.cache_filler is None:
@@ -307,6 +319,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         if self.cache_filler.completed:
             self.cache_filler = None
+            for surf in self.surfaces:
+                self._heatmap_update_requests.add(surf)
+            self.fill_gaze_on_surf_buffer()
             self._save_marker_cache()
             self.save_surface_definitions_to_file()
 
@@ -459,7 +474,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         elif notification["subject"].startswith("seek_control.trim_indices_changed"):
             for surface in self.surfaces:
-                surface.within_surface_heatmap = np.zeros((1, 1), dtype=np.uint8)
+                surface.within_surface_heatmap = surface._get_dummy_heatmap()
                 self._heatmap_update_requests.add(surface)
             self.fill_gaze_on_surf_buffer()
 

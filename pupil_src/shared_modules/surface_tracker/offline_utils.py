@@ -1,5 +1,5 @@
 import square_marker_detect
-from .surface_tracker import Marker
+from .surface_tracker import Square_Marker_Detection
 from .surface import Surface
 
 
@@ -16,7 +16,9 @@ def marker_detection_callable(min_marker_perimeter, inverted_markers):
             invert_image=inverted_markers,
         )
         markers = [
-            Marker(m["id"], m["id_confidence"], m["verts"], m["perimeter"])
+            Square_Marker_Detection(
+                m["id"], m["id_confidence"], m["verts"], m["perimeter"]
+            )
             for m in markers
         ]
         return markers

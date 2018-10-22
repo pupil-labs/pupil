@@ -16,7 +16,7 @@ from abc import ABCMeta, abstractmethod
 
 import methods
 
-from surface_tracker import _Surface_Marker
+from surface_tracker import _Surface_Marker_Aggregate
 
 
 class Surface(metaclass=ABCMeta):
@@ -44,7 +44,8 @@ class Surface(metaclass=ABCMeta):
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
 
-        self.within_surface_heatmap = np.zeros((1, 1), dtype=np.uint8)
+        self.within_surface_heatmap = self._get_dummy_heatmap()
+        self.across_surface_heatmap = self._get_dummy_heatmap()
         self.heatmap_detail = .2
         self.heatmap_min_data_confidence = 0.6
 
@@ -163,7 +164,7 @@ class Surface(metaclass=ABCMeta):
             ).reshape((-1, 2))
 
     def add_marker(self, id, verts, camera_model):
-        surface_marker_dist = _Surface_Marker(id)
+        surface_marker_dist = _Surface_Marker_Aggregate(id)
         marker_verts_dist = np.array(verts).reshape((4, 2))
         uv_coords_dist = self.map_to_surf(
             marker_verts_dist, camera_model, compensate_distortion=False
@@ -171,7 +172,7 @@ class Surface(metaclass=ABCMeta):
         surface_marker_dist.add_observation(uv_coords_dist)
         self.reg_markers_dist[id] = surface_marker_dist
 
-        surface_marker_undist = _Surface_Marker(id)
+        surface_marker_undist = _Surface_Marker_Aggregate(id)
         marker_verts_undist = np.array(verts).reshape((4, 2))
         uv_coords_undist = self.map_to_surf(
             marker_verts_undist, camera_model, compensate_distortion=False
@@ -224,9 +225,9 @@ class Surface(metaclass=ABCMeta):
                 self.reg_markers_undist[m.id].add_observation(uv_undist)
                 self.reg_markers_dist[m.id].add_observation(uv_dist)
             except KeyError:
-                self.reg_markers_undist[m.id] = _Surface_Marker(m.id)
+                self.reg_markers_undist[m.id] = _Surface_Marker_Aggregate(m.id)
                 self.reg_markers_undist[m.id].add_observation(uv_undist)
-                self.reg_markers_dist[m.id] = _Surface_Marker(m.id)
+                self.reg_markers_dist[m.id] = _Surface_Marker_Aggregate(m.id)
                 self.reg_markers_dist[m.id].add_observation(uv_dist)
 
         num_observations = sum(
@@ -397,10 +398,8 @@ class Surface(metaclass=ABCMeta):
             hist *= (255. / hist_max) if hist_max else 0.
             hist = hist.astype(np.uint8)
         else:
-            hist = np.zeros(
-                (int(self.real_world_size["y"]), int(self.real_world_size["x"])),
-                dtype=np.uint8,
-            )
+            self.within_surface_heatmap = self._get_dummy_heatmap()
+            return
 
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
         # reuse allocated memory if possible
@@ -408,6 +407,11 @@ class Surface(metaclass=ABCMeta):
             self.within_surface_heatmap = np.ones((*grid, 4), dtype=np.uint8)
             self.within_surface_heatmap[:, :, 3] = 125
         self.within_surface_heatmap[:, :, :3] = c_map
+
+    def _get_dummy_heatmap(self):
+        hm = np.zeros((1, 1, 4), dtype=np.uint8)
+        hm[:, :, 3] = 175
+        return hm
 
     def _denormalize(self, points, camera_model):
         if len(points.shape) == 1:
@@ -434,12 +438,12 @@ class Surface(metaclass=ABCMeta):
         self.name = init_dict["name"]
         self.real_world_size = init_dict["real_world_size"]
         self.reg_markers_undist = [
-            _Surface_Marker(marker["id"], verts=marker["verts"])
+            _Surface_Marker_Aggregate(marker["id"], verts=marker["verts"])
             for marker in init_dict["reg_markers"]
         ]
         self.reg_markers_undist = {m.id: m for m in self.reg_markers_undist}
         self.reg_markers_dist = [
-            _Surface_Marker(marker["id"], verts=marker["verts"])
+            _Surface_Marker_Aggregate(marker["id"], verts=marker["verts"])
             for marker in init_dict["reg_markers_dist"]
         ]
         self.reg_markers_dist = {m.id: m for m in self.reg_markers_dist}

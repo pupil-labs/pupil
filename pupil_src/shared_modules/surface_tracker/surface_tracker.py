@@ -22,10 +22,9 @@ from plugin import Plugin
 import square_marker_detect as marker_det
 import file_methods
 
-from surface_tracker import gui, Marker
+from surface_tracker import gui, Square_Marker_Detection
 
 # TODO Improve marker coloring, marker toggle is barely visible
-# TODO collapsable surface menu should be named with surface name
 
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
@@ -144,6 +143,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 selection=[e for e in self.supported_heatmap_modes],
             )
         )
+        self.menu.append(pyglui.ui.Separator())
         self.menu.append(
             pyglui.ui.Switch(
                 "robust_detection",
@@ -164,14 +164,15 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             pyglui.ui.Slider(
                 "marker_min_perimeter",
                 self,
+                label="Min Marker Perimeter",
                 setter=set_marker_min_perimeter,
                 step=1,
                 min=30,
                 max=100,
             )
         )
+        self.menu.append(pyglui.ui.Separator())
         self.menu.append(pyglui.ui.Button("Add surface", self.add_surface))
-
         for surface in self.surfaces:
             self.per_surface_ui(surface)
 
@@ -286,7 +287,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         # Robust marker detection requires previous markers to be in a different format than the surface tracker.
         self.markers_dict = markers
         markers = [
-            Marker(m["id"], m["id_confidence"], m["verts"], m["perimeter"])
+            Square_Marker_Detection(
+                m["id"], m["id_confidence"], m["verts"], m["perimeter"]
+            )
             for m in markers
         ]
         self.markers = self._filter_markers(markers)
