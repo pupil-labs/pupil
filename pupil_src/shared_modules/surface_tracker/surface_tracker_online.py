@@ -52,6 +52,11 @@ class Surface_Tracker_Online(Surface_Tracker):
 
     def per_surface_ui(self, surface):
         def set_name(val):
+
+            names = [x.name for x in self.surfaces]
+            if val in names and val != surface.name:
+                logger.warning("The names '{}' is already in use!".format(val))
+
             surface.name = val
             self.notify_all(
                 {

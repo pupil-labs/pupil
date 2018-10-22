@@ -323,6 +323,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             self.save_surface_definitions_to_file()
         elif notification["subject"].startswith("surface_tracker.surface_name_changed"):
             self.save_surface_definitions_to_file()
+            self.update_ui()
 
     def on_pos(self, pos):
         self._last_mouse_pos = np.array(pos, dtype=np.float32)
