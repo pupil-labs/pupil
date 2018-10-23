@@ -149,8 +149,8 @@ class Surface(metaclass=ABCMeta):
 
         transform = cv2.getPerspectiveTransform(new_corners, old_corners)
         for m in self.reg_markers_undist.values():
-            m.verts = cv2.perspectiveTransform(
-                m.verts.reshape((-1, 1, 2)), transform
+            m.verts_uv = cv2.perspectiveTransform(
+                m.verts_uv.reshape((-1, 1, 2)), transform
             ).reshape((-1, 2))
 
         # Markers distorted
@@ -164,13 +164,13 @@ class Surface(metaclass=ABCMeta):
 
         transform = cv2.getPerspectiveTransform(new_corners, old_corners)
         for m in self.reg_markers_dist.values():
-            m.verts = cv2.perspectiveTransform(
-                m.verts.reshape((-1, 1, 2)), transform
+            m.verts_uv = cv2.perspectiveTransform(
+                m.verts_uv.reshape((-1, 1, 2)), transform
             ).reshape((-1, 2))
 
-    def add_marker(self, id, verts, camera_model):
+    def add_marker(self, id, verts_px, camera_model):
         surface_marker_dist = _Surface_Marker_Aggregate(id)
-        marker_verts_dist = np.array(verts).reshape((4, 2))
+        marker_verts_dist = np.array(verts_px).reshape((4, 2))
         uv_coords_dist = self.map_to_surf(
             marker_verts_dist, camera_model, compensate_distortion=False
         )
@@ -178,7 +178,7 @@ class Surface(metaclass=ABCMeta):
         self.reg_markers_dist[id] = surface_marker_dist
 
         surface_marker_undist = _Surface_Marker_Aggregate(id)
-        marker_verts_undist = np.array(verts).reshape((4, 2))
+        marker_verts_undist = np.array(verts_px).reshape((4, 2))
         uv_coords_undist = self.map_to_surf(
             marker_verts_undist, camera_model, compensate_distortion=False
         )
@@ -198,7 +198,7 @@ class Surface(metaclass=ABCMeta):
             return
 
         all_verts_dist = np.array(
-            [m.verts for m in vis_markers.values()], dtype=np.float32
+            [m.verts_px for m in vis_markers.values()], dtype=np.float32
         )
         all_verts_dist.shape = (-1, 2)
         all_verts_undist = camera_model.undistortPoints(all_verts_dist)
@@ -310,12 +310,14 @@ class Surface(metaclass=ABCMeta):
         ):
             return result
 
-        vis_verts_dist = np.array([vis_markers[id].verts for id in vis_reg_marker_ids])
+        vis_verts_dist = np.array(
+            [vis_markers[id].verts_px for id in vis_reg_marker_ids]
+        )
         reg_verts_undist = np.array(
-            [reg_markers_undist[id].verts for id in vis_reg_marker_ids]
+            [reg_markers_undist[id].verts_uv for id in vis_reg_marker_ids]
         )
         reg_verts_dist = np.array(
-            [reg_markers_dist[id].verts for id in vis_reg_marker_ids]
+            [reg_markers_dist[id].verts_uv for id in vis_reg_marker_ids]
         )
 
         vis_verts_dist.shape = (-1, 2)
@@ -453,12 +455,12 @@ class Surface(metaclass=ABCMeta):
         self.name = init_dict["name"]
         self.real_world_size = init_dict["real_world_size"]
         self.reg_markers_undist = [
-            _Surface_Marker_Aggregate(marker["id"], verts=marker["verts"])
+            _Surface_Marker_Aggregate(marker["id"], verts_uv=marker["verts_uv"])
             for marker in init_dict["reg_markers"]
         ]
         self.reg_markers_undist = {m.id: m for m in self.reg_markers_undist}
         self.reg_markers_dist = [
-            _Surface_Marker_Aggregate(marker["id"], verts=marker["verts"])
+            _Surface_Marker_Aggregate(marker["id"], verts_uv=marker["verts_uv"])
             for marker in init_dict["reg_markers_dist"]
         ]
         self.reg_markers_dist = {m.id: m for m in self.reg_markers_dist}

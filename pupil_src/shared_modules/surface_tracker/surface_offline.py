@@ -66,8 +66,8 @@ class Surface_Offline(Surface):
         )
         self.update_cache(frame_idx, marker_cache, camera_model)
 
-    def add_marker(self, id, verts, camera_model):
-        super().add_marker(id, verts, camera_model)
+    def add_marker(self, id, verts_px, camera_model):
+        super().add_marker(id, verts_px, camera_model)
         self.location_cache = None
 
     def pop_marker(self, id):

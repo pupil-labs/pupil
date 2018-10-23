@@ -44,7 +44,7 @@ from surface_tracker import (
 )
 from surface_tracker.surface_offline import Surface_Offline
 
-
+# TODO use pycharm inspection feature
 # TODO Improve all docstrings, make methods privat appropriately
 
 
@@ -59,7 +59,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    # TODO test opening old recordings/surface definitions with new version
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         self.timeline_line_height = 16
         self.Surface_Class = Surface_Offline

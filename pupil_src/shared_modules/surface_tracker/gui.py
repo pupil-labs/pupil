@@ -70,9 +70,14 @@ class GUI:
             if surface in self._edit_surf_corners:
                 self._draw_surface_corner_handles(surface)
 
-            if self.tracker.freeze_scene:
-                self.surface_windows[surface].update(self.tracker.frozen_scene_tex)
-            else:
+            # The offline surface tracker does not have the freeze feature and thus
+            # never uses the frozen_scene_tex
+            try:
+                if self.tracker.freeze_scene:
+                    self.surface_windows[surface].update(self.tracker.frozen_scene_tex)
+                else:
+                    self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
+            except AttributeError:
                 self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
 
     def _draw_markers(self):
@@ -81,7 +86,7 @@ class GUI:
             hat = np.array(
                 [[[0, 0], [0, 1], [.5, 1.3], [1, 1], [1, 0], [0, 0]]], dtype=np.float32
             )
-            hat = cv2.perspectiveTransform(hat, _get_norm_to_points_trans(m.verts))
+            hat = cv2.perspectiveTransform(hat, _get_norm_to_points_trans(m.verts_px))
 
             if (
                 m.perimeter >= self.tracker.marker_min_perimeter
@@ -95,9 +100,9 @@ class GUI:
                 pyglui_utils.draw_polyline(hat.reshape((6, 2)), color=color)
 
     def _draw_marker_id(self, marker):
-        verts = np.array(marker.verts, dtype=np.float32)
-        verts.shape = (4, 2)
-        anchor = np.array([np.min(verts[:, 0]), np.max(verts[:, 1])])
+        verts_px = np.array(marker.verts_px, dtype=np.float32)
+        verts_px.shape = (4, 2)
+        anchor = np.array([np.min(verts_px[:, 0]), np.max(verts_px[:, 1])])
         line_height = 16
 
         text = "id: {:d}".format(marker.id)
@@ -227,7 +232,7 @@ class GUI:
             if marker.perimeter < self.tracker.marker_min_perimeter:
                 continue
 
-            centroid = np.mean(marker.verts, axis=0)
+            centroid = np.mean(marker.verts_px, axis=0)
             centroid = (centroid[0, 0], centroid[0, 1])
             if marker.id in surface.reg_markers_dist.keys():
                 active_markers.append(centroid)
@@ -338,12 +343,12 @@ class GUI:
                 if not surface.detected:
                     continue
                 for marker in self.tracker.markers:
-                    centroid = np.mean(marker.verts, axis=0)
+                    centroid = np.mean(marker.verts_px, axis=0)
                     dist = np.linalg.norm(centroid - pos)
                     if dist < 15:
                         if not marker.id in surface.reg_markers_dist.keys():
                             surface.add_marker(
-                                marker.id, marker.verts, self.tracker.camera_model
+                                marker.id, marker.verts_px, self.tracker.camera_model
                             )
                         else:
                             surface.pop_marker(marker.id)

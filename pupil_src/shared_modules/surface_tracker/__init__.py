@@ -16,7 +16,7 @@ import numpy as np
 
 # TODO rename verts to verts_px and verts_uv
 Square_Marker_Detection = collections.namedtuple(
-    "Square_Marker_Detection", ["id", "id_confidence", "verts", "perimeter"]
+    "Square_Marker_Detection", ["id", "id_confidence", "verts_px", "perimeter"]
 )
 
 
@@ -33,13 +33,13 @@ class _Surface_Marker_Aggregate(object):
     """
 
     # TODO is verts argument ever used?
-    def __init__(self, id, verts=None):
+    def __init__(self, id, verts_uv=None):
         self.id = id
-        self.verts = None
+        self.verts_uv = None
         self.observations = []
 
-        if not verts is None:
-            self.verts = np.array(verts)
+        if not verts_uv is None:
+            self.verts_uv = np.array(verts_uv)
 
     def add_observation(self, uv_coords):
         self.observations.append(uv_coords)
@@ -55,10 +55,10 @@ class _Surface_Marker_Aggregate(object):
         cut_off = sorted(distance)[len(distance) // 2]
         uv_subset = uv[distance <= cut_off]
         final_mean = np.mean(uv_subset, axis=0)
-        self.verts = final_mean
+        self.verts_uv = final_mean
 
     def save_to_dict(self):
-        return {"id": self.id, "verts": [v.tolist() for v in self.verts]}
+        return {"id": self.id, "verts_uv": [v.tolist() for v in self.verts_uv]}
 
 
 from surface_tracker.surface_tracker_online import Surface_Tracker_Online

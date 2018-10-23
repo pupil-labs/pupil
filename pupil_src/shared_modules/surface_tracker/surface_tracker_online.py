@@ -150,5 +150,3 @@ class Surface_Tracker_Online(Surface_Tracker):
 
     def deinit_ui(self):
         super().deinit_ui()
-        self.g_pool.quickbar.remove(self.button)
-        self.button = None
