@@ -46,10 +46,10 @@ class Surface(metaclass=ABCMeta):
 
         self.within_surface_heatmap = self._get_dummy_heatmap()
         self.across_surface_heatmap = self._get_dummy_heatmap()
-        self.heatmap_detail = .2
         self.heatmap_min_data_confidence = 0.6
-        self._heatmap_scale_inv = 100
-        self.heatmap_scale = 100
+        self._heatmap_scale = 0.5
+        self.heatmap_resolution = 31
+        self.heatmap_blur_factor = 0.
 
         # The uid is only used to implement __hash__ and __eq__ !
         self.uid = uuid.uuid4()
@@ -391,14 +391,17 @@ class Surface(metaclass=ABCMeta):
 
     def _generate_within_surface_heatmap(self, data):
         aspect_ratio = self.real_world_size["y"] / self.real_world_size["x"]
-        grid = int(self.heatmap_scale), int(self.heatmap_scale * aspect_ratio)
+        grid = int(self.heatmap_resolution), int(self.heatmap_resolution * aspect_ratio)
         if data:
             xvals, yvals = zip(*((x, 1. - y) for x, y in data))
             hist, *edges = np.histogram2d(
                 yvals, xvals, bins=grid, range=[[0, 1.], [0, 1.]], normed=False
             )
-            filter_h = 13
-            filter_w = int(filter_h * aspect_ratio) // 2 * 2 + 1
+            filter_h = 19 + self.heatmap_blur_factor * 15
+            filter_w = filter_h * aspect_ratio
+            filter_h = int(filter_h) // 2 * 2 + 1
+            filter_w = int(filter_w) // 2 * 2 + 1
+
             hist = cv2.GaussianBlur(hist, (filter_h, filter_w), 0)
             hist_max = hist.max()
             hist *= (255. / hist_max) if hist_max else 0.

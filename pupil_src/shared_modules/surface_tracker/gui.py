@@ -250,6 +250,8 @@ class GUI:
         )
 
     def _draw_heatmap(self, surface):
+        # TODO The heatmap is computed in undistorted space. For the visualization to
+        # be precisely correct we would have to distort the heatmap accordingly.
         if self.heatmap_mode == Heatmap_Mode.WITHIN_SURFACE:
             self.heatmap_textures[surface].update_from_ndarray(
                 surface.within_surface_heatmap

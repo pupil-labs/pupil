@@ -25,7 +25,6 @@ import file_methods
 from surface_tracker import gui, Square_Marker_Detection
 
 # TODO Improve marker coloring, marker toggle is barely visible
-# TODO Make Heatmap scale from 1 to 10^3 while displaying 0-1
 
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
@@ -225,11 +224,12 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
 
         def set_hm_smooth(val):
-            if val < 1:
-                logger.warning("Heatmap Smoothness must be in (1,200)!")
-                return
-            surface._heatmap_scale_inv = val
-            surface.heatmap_scale = 201 - val
+            surface._heatmap_scale = val
+            val = 1 - val
+            val *= 3
+            surface.heatmap_blur_factor = max((1 - val), 0)
+            res_exponent = max(val, 0.35)
+            surface.heatmap_resolution = int(10 ** res_exponent)
             self.notify_all(
                 {
                     "subject": "surface_tracker.heatmap_params_changed",
@@ -257,13 +257,13 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
         s_menu.append(
             pyglui.ui.Slider(
-                "_heatmap_scale_inv",
+                "_heatmap_scale",
                 surface,
                 label="Heatmap Smoothness",
                 setter=set_hm_smooth,
-                step=1,
-                min=1,
-                max=200,
+                step=0.01,
+                min=0,
+                max=1,
             )
         )
         s_menu.append(
