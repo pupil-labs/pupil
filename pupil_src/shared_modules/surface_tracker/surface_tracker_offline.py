@@ -44,7 +44,6 @@ from surface_tracker import (
 )
 from surface_tracker.surface_offline import Surface_Offline
 
-# TODO use pycharm inspection feature
 # TODO Improve all docstrings, make methods privat appropriately
 
 
