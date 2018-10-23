@@ -346,7 +346,7 @@ class GUI:
                     centroid = np.mean(marker.verts_px, axis=0)
                     dist = np.linalg.norm(centroid - pos)
                     if dist < 15:
-                        if not marker.id in surface.reg_markers_dist.keys():
+                        if marker.id not in surface.reg_markers_dist.keys():
                             surface.add_marker(
                                 marker.id, marker.verts_px, self.tracker.camera_model
                             )
@@ -403,6 +403,9 @@ class Surface_Window:
         self.window_should_open = False
         self.window_should_close = False
         self.tracker = tracker
+
+        self.trackball = None
+        self.input = None
 
         # UI Platform tweaks
         if platform.system() == "Linux":
@@ -483,14 +486,14 @@ class Surface_Window:
 
     def gl_display_in_window(self, world_tex):
         """
-        here we map a selected surface onto a seperate window.
+        here we map a selected surface onto a separate window.
         """
         if self._window and self.surface.detected:
             active_window = glfw.glfwGetCurrentContext()
             glfw.glfwMakeContextCurrent(self._window)
             gl_utils.clear_gl_screen()
 
-            # cv uses 3x3 gl uses 4x4 tranformation matricies
+            # cv uses 3x3 gl uses 4x4 transformation matricies
             width, height = self.tracker.camera_model.resolution
             img_corners = np.array(
                 [(0, height), (width, height), (width, 0), (0, 0)], dtype=np.float32
@@ -506,7 +509,7 @@ class Surface_Window:
             gl.glOrtho(0, 1, 0, 1, -1, 1)
             gl.glMatrixMode(gl.GL_MODELVIEW)
             gl.glPushMatrix()
-            # apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
+            # apply m  to our quad - this will stretch the quad such that the ref surface will span the window extends
             gl.glLoadMatrixf(m)
 
             world_tex.draw()

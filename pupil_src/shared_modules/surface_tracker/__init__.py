@@ -36,7 +36,7 @@ class _Surface_Marker_Aggregate(object):
         self.verts_uv = None
         self.observations = []
 
-        if not verts_uv is None:
+        if verts_uv is not None:
             self.verts_uv = np.array(verts_uv)
 
     def add_observation(self, uv_coords):

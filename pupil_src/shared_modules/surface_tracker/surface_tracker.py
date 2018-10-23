@@ -400,7 +400,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         # if an id shows twice use the bigger marker (usually this is a screen camera echo artifact.)
         marker_by_id = {}
         for m in filtered_markers:
-            if not m.id in marker_by_id or m.perimeter > marker_by_id[m.id].perimeter:
+            if m.id not in marker_by_id or m.perimeter > marker_by_id[m.id].perimeter:
                 marker_by_id[m.id] = m
 
         return list(marker_by_id.values())

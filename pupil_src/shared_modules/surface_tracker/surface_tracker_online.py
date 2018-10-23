@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 import pyglui
 import pyglui.cygl.utils as pyglui_utils
-import OpenGL.GL as gl
-import glfw
 import gl_utils
 
 

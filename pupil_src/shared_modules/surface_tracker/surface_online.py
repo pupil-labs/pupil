@@ -11,9 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 import collections
 
-import cv2
-import numpy as np
-
 from surface_tracker.surface import Surface
 
 

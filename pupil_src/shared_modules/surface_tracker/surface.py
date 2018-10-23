@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 import numpy as np
 import cv2
-import random
 from abc import ABCMeta, abstractmethod
 import uuid
 
@@ -324,12 +323,12 @@ class Surface(metaclass=ABCMeta):
         reg_verts_undist.shape = (-1, 2)
         reg_verts_dist.shape = (-1, 2)
 
-        dist_img_to_surf_trans, surf_to_dist_img_trans = Surface._findHomographies(
+        dist_img_to_surf_trans, surf_to_dist_img_trans = Surface._find_homographies(
             reg_verts_dist, vis_verts_dist
         )
 
         vis_verts_undist = camera_model.undistortPoints(vis_verts_dist)
-        img_to_surf_trans, surf_to_img_trans = Surface._findHomographies(
+        img_to_surf_trans, surf_to_img_trans = Surface._find_homographies(
             reg_verts_undist, vis_verts_undist
         )
 
@@ -345,7 +344,7 @@ class Surface(metaclass=ABCMeta):
             return result
 
     @staticmethod
-    def _findHomographies(points_A, points_B):
+    def _find_homographies(points_A, points_B):
         points_A = points_A.reshape((-1, 1, 2))
         points_B = points_B.reshape((-1, 1, 2))
 

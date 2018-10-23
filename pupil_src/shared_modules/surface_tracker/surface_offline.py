@@ -15,8 +15,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 import numpy as np
-from gl_utils import cvmat_to_glmat
-from OpenGL.GL import *
+import gl_utils
+import OpenGL.GL as gl
 
 from cache_list import Cache_List
 import player_methods
@@ -34,9 +34,10 @@ class Surface_Offline(Surface):
         self.location_cache_filler = None
         self.observations_frame_idxs = []
         self.on_surface_changed = None
+        self.start_idx = None
 
     def recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
-        logging.debug("Recaclulate Surface Cache!")
+        logging.debug("Recalculate Surface Cache!")
         if self.location_cache_filler is not None:
             self.location_cache_filler.cancel()
 
@@ -89,7 +90,7 @@ class Surface_Offline(Surface):
                 if marker_cache[def_idx] is False:
                     break
 
-                if not def_idx in self.observations_frame_idxs:
+                if def_idx not in self.observations_frame_idxs:
                     markers = marker_cache[def_idx]
                     markers = {m.id: m for m in markers}
                     self.update_def(def_idx, markers, camera_model)
@@ -130,13 +131,14 @@ class Surface_Offline(Surface):
                 return
             else:
                 logging.debug("Markers not computed yet!")
-                location = {}
-                location["detected"] = False
-                location["dist_img_to_surf_trans"] = None
-                location["surf_to_dist_img_trans"] = None
-                location["img_to_surf_trans"] = None
-                location["surf_to_img_trans"] = None
-                location["num_detected_markers"] = 0
+                location = {
+                    "detected": False,
+                    "dist_img_to_surf_trans": None,
+                    "surf_to_dist_img_trans": None,
+                    "img_to_surf_trans": None,
+                    "surf_to_img_trans": None,
+                    "num_detected_markers": 0,
+                }
 
         self.__dict__.update(location)
 
@@ -153,13 +155,14 @@ class Surface_Offline(Surface):
 
         try:
             if not marker_cache[frame_idx]:
-                location = {}
-                location["detected"] = False
-                location["dist_img_to_surf_trans"] = None
-                location["surf_to_dist_img_trans"] = None
-                location["img_to_surf_trans"] = None
-                location["surf_to_img_trans"] = None
-                location["num_detected_markers"] = 0
+                location = {
+                    "detected": False,
+                    "dist_img_to_surf_trans": None,
+                    "surf_to_dist_img_trans": None,
+                    "img_to_surf_trans": None,
+                    "surf_to_img_trans": None,
+                    "num_detected_markers": 0,
+                }
             else:
                 markers = marker_cache[frame_idx]
                 markers = {m.id: m for m in markers}
@@ -214,28 +217,6 @@ class Surface_Offline(Surface):
             return 0
         section_cache = self.location_cache[section]
         return sum(map(bool, section_cache))
-
-    def gl_display_metrics(self):
-        if self.metrics_texture and self.detected:
-            # cv uses 3x3 gl uses 4x4 tranformation matricies
-            m = cvmat_to_glmat(self.m_to_screen)
-
-            glMatrixMode(GL_PROJECTION)
-            glPushMatrix()
-            glLoadIdentity()
-            glOrtho(0, 1, 0, 1, -1, 1)  # gl coord convention
-
-            glMatrixMode(GL_MODELVIEW)
-            glPushMatrix()
-            # apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
-            glLoadMatrixf(m)
-
-            self.metrics_texture.draw()
-
-            glMatrixMode(GL_PROJECTION)
-            glPopMatrix()
-            glMatrixMode(GL_MODELVIEW)
-            glPopMatrix()
 
     def save_to_dict(self):
         save_dict = super().save_to_dict()

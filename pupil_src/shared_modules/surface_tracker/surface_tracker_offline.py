@@ -76,6 +76,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         # Also add very small detected markers to cache and filter cache afterwards
         self.cache_min_marker_perimeter = 20
         self.cache_seek_idx = mp.Value("i", 0)
+        self.marker_cache = None
+        self.marker_cache_unfiltered = None
+        self.cache_filler = None
         self._init_marker_cache()
         self.last_cache_update_ts = time.time()
         self.cache_update_interval = 5
@@ -245,7 +248,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 s.across_surface_heatmap = s._get_dummy_heatmap()
 
     def update_markers(self, frame):
-        if not self.cache_filler is None:
+        if self.cache_filler is not None:
             self._update_marker_and_surface_caches()
         # Move seek index to current frame if caches do not contain data for it
         self.markers = self.marker_cache[frame.index]
@@ -353,12 +356,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         super().gl_display()
 
     def gl_display_cache_bars(self, width, height, scale):
-        TS = self.g_pool.timestamps
-        with gl_utils.Coord_System(TS[0], TS[-1], height, 0):
+        ts = self.g_pool.timestamps
+        with gl_utils.Coord_System(ts[0], ts[-1], height, 0):
             # Lines for areas that have been cached
             cached_ranges = []
             for r in self.marker_cache.visited_ranges:
-                cached_ranges += ((TS[r[0]], 0), (TS[r[1]], 0))
+                cached_ranges += ((ts[r[0]], 0), (ts[r[1]], 0))
 
             gl.glTranslatef(0, scale * self.timeline_line_height / 2, 0)
             color = pyglui_utils.RGBA(.8, .2, .2, .8)
@@ -367,7 +370,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             )
             cached_ranges = []
             for r in self.marker_cache.positive_ranges:
-                cached_ranges += ((TS[r[0]], 0), (TS[r[1]], 0))
+                cached_ranges += ((ts[r[0]], 0), (ts[r[1]], 0))
 
             color = pyglui_utils.RGBA(0, .7, .3, .8)
             pyglui_utils.draw_polyline(
@@ -380,7 +383,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 found_at = []
                 if surface.location_cache is not None:
                     for r in surface.location_cache.positive_ranges:  # [[0,1],[3,4]]
-                        found_at += ((TS[r[0]], 0), (TS[r[1]], 0))
+                        found_at += ((ts[r[0]], 0), (ts[r[1]], 0))
                     cached_surfaces.append(found_at)
 
             color = pyglui_utils.RGBA(0, .7, .3, .8)
@@ -484,7 +487,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         else:
             try:
                 os.mkdir(metrics_dir)
-            except:
+            except OSError:
                 logger.warning("Could not make metrics dir {}".format(metrics_dir))
                 return
 
@@ -500,10 +503,10 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             frame_count = len(self.g_pool.timestamps[section])
 
             csv_writer.writerow(("frame_count", frame_count))
-            csv_writer.writerow((""))
+            csv_writer.writerow("")
             csv_writer.writerow(("surface_name", "visible_frame_count"))
             for surface in self.surfaces:
-                if surface.location_cache == None:
+                if surface.location_cache is None:
                     logger.warning(
                         "The surface is not cached. Please wait for the cacher to collect data."
                     )
@@ -528,7 +531,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             not_on_any_surf_ts = set([gp["timestamp"] for gp in gaze_in_section])
 
             csv_writer.writerow(("total_gaze_point_count", len(gaze_in_section)))
-            csv_writer.writerow((""))
+            csv_writer.writerow("")
             csv_writer.writerow(("surface_name", "gaze_count"))
 
             for surf_idx, surface in enumerate(self.surfaces):
@@ -595,7 +598,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
             # save surface_positions as csv
             with open(
-                os.path.join(metrics_dir, "surf_positons" + surface_name + ".csv"),
+                os.path.join(metrics_dir, "surf_positions" + surface_name + ".csv"),
                 "w",
                 encoding="utf-8",
                 newline="",
@@ -715,9 +718,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                             )
 
             logger.info(
-                "Saved surface positon gaze and fixation data for '{}'".format(
-                    surface.name
-                )
+                "Saved surface gaze and fixation data for '{}'".format(surface.name)
             )
 
             if surface.within_surface_heatmap is not None:
@@ -743,7 +744,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         #     #no we need to flip vertically again by setting the mapped_space verts accordingly.
         #     mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
         #     M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
-        #     #here we do the actual perspactive transform of the image.
+        #     #here we do the actual perspective transform of the image.
         #     surf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size['x']),int(s.real_world_size['y'])) )
         #     cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),surf_in_video)
         #     logger.info("Saved current image as .png file.")
