@@ -14,7 +14,6 @@ from enum import Enum
 
 import numpy as np
 
-# TODO rename verts to verts_px and verts_uv
 Square_Marker_Detection = collections.namedtuple(
     "Square_Marker_Detection", ["id", "id_confidence", "verts_px", "perimeter"]
 )
@@ -32,7 +31,6 @@ class _Surface_Marker_Aggregate(object):
     observations.
     """
 
-    # TODO is verts argument ever used?
     def __init__(self, id, verts_uv=None):
         self.id = id
         self.verts_uv = None

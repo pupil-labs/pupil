@@ -1,5 +1,7 @@
 import background_helper
 
+# TODO clean this up!
+
 
 def background_video_processor(video_file_path, callable, visited_list, seek_idx=-1):
     return background_helper.Task_Proxy(

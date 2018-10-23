@@ -358,7 +358,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.update_ui()
         self.save_surface_definitions_to_file()
 
-    # TODO change so offline surface tracker also uses this
     def _detect_markers(self, frame):
         gray = frame.gray
 
