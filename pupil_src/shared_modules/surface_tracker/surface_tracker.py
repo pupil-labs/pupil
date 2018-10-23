@@ -24,8 +24,6 @@ import file_methods
 
 from surface_tracker import gui, Square_Marker_Detection
 
-# TODO Improve marker coloring, marker toggle is barely visible
-
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
     """
