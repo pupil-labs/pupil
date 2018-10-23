@@ -38,7 +38,7 @@ class GUI:
         self.surface_windows = {}
 
         self.color_primary = (1.0, 0.2, 0.6)
-        self.color_secondary = (0., 0.85, 1.0)
+        self.color_secondary = (0.1, 0.85, 1.0)
         self.color_tertiary = (0, 0.82, 0.4)
 
         self.glfont = pyglui.pyfontstash.fontstash.Context()
