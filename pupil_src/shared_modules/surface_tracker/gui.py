@@ -166,22 +166,24 @@ class GUI:
         if surface.defined:
 
             # Buttons
+            pyglui_utils.draw_points(
+                [marker_edit_anchor], color=pyglui_utils.RGBA(*self.color_primary)
+            )
             if surface in self._edit_surf_markers:
                 pyglui_utils.draw_points(
-                    [marker_edit_anchor], color=pyglui_utils.RGBA(*self.color_tertiary)
-                )
-            else:
-                pyglui_utils.draw_points(
-                    [marker_edit_anchor], color=pyglui_utils.RGBA(*self.color_primary)
+                    [marker_edit_anchor],
+                    size=13,
+                    color=pyglui_utils.RGBA(*self.color_secondary),
                 )
 
+            pyglui_utils.draw_points(
+                [surface_edit_anchor], color=pyglui_utils.RGBA(*self.color_primary)
+            )
             if surface in self._edit_surf_corners:
                 pyglui_utils.draw_points(
-                    [surface_edit_anchor], color=pyglui_utils.RGBA(*self.color_tertiary)
-                )
-            else:
-                pyglui_utils.draw_points(
-                    [surface_edit_anchor], color=pyglui_utils.RGBA(*self.color_primary)
+                    [surface_edit_anchor],
+                    size=13,
+                    color=pyglui_utils.RGBA(*self.color_secondary),
                 )
 
             # Text
