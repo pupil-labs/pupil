@@ -124,15 +124,13 @@ def export_processed_h264(
     yield "Converting video completed", 1. * 100.
 
 
-class VideoExporter(Analysis_Plugin_Base):
+class VideoExporter(Analysis_Plugin_Base, metaclass=abc.ABCMeta):
     """Base class for the iMotions and Eye Video Export plugins.
 
     Supports the export of one or more videos.
     You need to override customize_menu() and export_data().
     Call add_export_job() to create a new video export task.
     """
-
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -234,8 +232,11 @@ class VideoExporter(Analysis_Plugin_Base):
             process_frame,
             export_timestamps,
         )
-        task = bh.Task_Proxy(
-            plugin_name + " Video Export", export_processed_h264, args=generator_args
+        task = bh.IPC_Logging_Task_Proxy(
+            self.g_pool.ipc_push_url,
+            plugin_name + " Video Export",
+            export_processed_h264,
+            args=generator_args,
         )
         self.export_tasks.append(task)
         return {"export_folder": export_dir}

@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 from time import localtime, strftime
-from typing import Callable, Dict
 
 import ndsi
 from pyglui import ui
@@ -23,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 class Remote_Recording_State:
     __slots__ = ["sensor"]
-    sensor: ndsi.Sensor
 
     def __init__(self, network, attach_event):
         self.sensor = network.sensor(attach_event["sensor_uuid"])
@@ -65,9 +63,6 @@ class Remote_Recording_State:
 
 class Remote_Recorder_Core:
     __slots__ = ["_attached_rec_states", "_network", "num_states_changed"]
-    _attached_rec_states: Dict[str, Remote_Recording_State]
-    _network: ndsi.Network
-    num_states_changed: Callable[[], None]
 
     def __init__(self, num_states_changed_callback):
         assert callable(num_states_changed_callback)
