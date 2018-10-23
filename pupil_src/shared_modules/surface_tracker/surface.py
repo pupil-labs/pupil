@@ -339,7 +339,7 @@ class Surface(metaclass=ABCMeta):
             result["surf_to_dist_img_trans"] = surf_to_dist_img_trans
             result["img_to_surf_trans"] = img_to_surf_trans
             result["surf_to_img_trans"] = surf_to_img_trans
-            result["num_detected_markers"] = (len(vis_reg_marker_ids),)
+            result["num_detected_markers"] = len(vis_reg_marker_ids)
             return result
 
     @staticmethod

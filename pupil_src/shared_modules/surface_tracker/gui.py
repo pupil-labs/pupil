@@ -43,7 +43,7 @@ class GUI:
 
         self.glfont = pyglui.pyfontstash.fontstash.Context()
         self.glfont.add_font("opensans", pyglui.ui.get_opensans_font_path())
-        self.glfont.set_size(22)
+        self.glfont.set_size(23)
         self.glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
 
     def update(self):
