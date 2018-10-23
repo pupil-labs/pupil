@@ -61,7 +61,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     """
 
     # TODO test opening old recordings/surface definitions with new version
-    # TODO recompute gaze on gaze change notification
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         self.timeline_line_height = 16
         self.Surface_Class = Surface_Offline
@@ -438,6 +437,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         elif notification["subject"] == "should_export":
             self.make_export = True
             self.export_params = (notification["range"], notification["export_dir"])
+            self.fill_gaze_on_surf_buffer()
+
+        elif notification["subject"] == "gaze_positions_changed":
+            for surface in self.surfaces:
+                self._heatmap_update_requests.add(surface)
+                surface.within_surface_heatmap = surface._get_dummy_heatmap()
             self.fill_gaze_on_surf_buffer()
 
     def on_surface_change(self, surface):
