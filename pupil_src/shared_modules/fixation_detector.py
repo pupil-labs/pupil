@@ -681,7 +681,7 @@ class Fixation_Detector(Fixation_Detector_Base):
         self, g_pool, max_dispersion=3.0, min_duration=300, confidence_threshold=0.75
     ):
         super().__init__(g_pool)
-        self.queue = deque()
+        self.history = deque()
         self.min_duration = min_duration
         self.max_dispersion = max_dispersion
         self.confidence_threshold = confidence_threshold
@@ -691,26 +691,32 @@ class Fixation_Detector(Fixation_Detector_Base):
         events["fixations"] = []
         gaze = events["gaze"]
 
-        self.queue.extend(
+        self.history.extend(
             (gp for gp in gaze if gp["confidence"] >= self.confidence_threshold)
         )
 
-        try:  # use newest gaze point to determine age threshold
-            assert self.queue[-1]["timestamp"] > self.queue[0]["timestamp"]
-            age_threshold = self.queue[-1]["timestamp"] - self.min_duration / 1000.
-            while self.queue[1]["timestamp"] < age_threshold:
-                self.queue.popleft()  # remove outdated gaze points
+        try:
+            ts_oldest = self.history[0]["timestamp"]
+            ts_newest = self.history[-1]["timestamp"]
+            inconsistent_timestamps = ts_newest < ts_oldest
+            if inconsistent_timestamps:
+                self.reset_history()
+                return
+            # use newest gaze point to determine age threshold
+            age_threshold = ts_newest - self.min_duration / 1000.
+            while self.history[1]["timestamp"] < age_threshold:
+                self.history.popleft()  # remove outdated gaze points
         except IndexError:
             pass
         except AssertionError:
             # negative time jump detected, reset history
-            del self.queue[:]
+            del self.history[:]
             return
 
-        gaze_3d = [gp for gp in self.queue if "3d" in gp["base_data"][0]["method"]]
-        use_pupil = len(gaze_3d) > 0.8 * len(self.queue)
+        gaze_3d = [gp for gp in self.history if "3d" in gp["base_data"][0]["method"]]
+        use_pupil = len(gaze_3d) > 0.8 * len(self.history)
 
-        base_data = gaze_3d if use_pupil else self.queue
+        base_data = gaze_3d if use_pupil else self.history
 
         if (
             len(base_data) <= 2
@@ -737,6 +743,10 @@ class Fixation_Detector(Fixation_Detector_Base):
             self.recent_fixation = new_fixation
         else:
             self.recent_fixation = None
+
+    def reset_history(self):
+        logger.debug("Resetting history")
+        del self.history[:]
 
     def replace_basedata_with_references(self, fixation):
         fixation["base_data"] = [

@@ -111,24 +111,22 @@ class Blink_Detection(Analysis_Plugin_Base):
         self._recent_blink = None
         self.history.extend(events.get("pupil", []))
 
-        try:  # use newest gaze point to determine age threshold
-            assert self.history[-1]["timestamp"] > self.history[0]["timestamp"]
-            age_threshold = self.history[-1]["timestamp"] - self.history_length
+        try:
+            ts_oldest = self.history[0]["timestamp"]
+            ts_newest = self.history[-1]["timestamp"]
+            inconsistent_timestamps = ts_newest < ts_oldest
+            if inconsistent_timestamps:
+                self.reset_history()
+                return
+            # use newest gaze point to determine age threshold
+            age_threshold = ts_newest - self.history_length
             while self.history[1]["timestamp"] < age_threshold:
                 self.history.popleft()  # remove outdated gaze points
         except IndexError:
             pass
-        except AssertionError:
-            # negative time jump detected, reset history
-            del self.history[:]
-            return
 
         filter_size = len(self.history)
-        if (
-            filter_size < 2
-            or self.history[-1]["timestamp"] - self.history[0]["timestamp"]
-            < self.history_length
-        ):
+        if filter_size < 2 or ts_newest - ts_oldest < self.history_length:
             return
 
         activity = np.fromiter((pp["confidence"] for pp in self.history), dtype=float)
@@ -168,6 +166,10 @@ class Blink_Detection(Analysis_Plugin_Base):
         }
         events["blinks"].append(blink_entry)
         self._recent_blink = blink_entry
+
+    def reset_history(self):
+        logger.debug("Resetting history")
+        del self.history[:]
 
     def gl_display(self):
         if self._recent_blink and self.visualize:
