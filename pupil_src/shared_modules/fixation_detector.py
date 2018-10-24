@@ -468,8 +468,11 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.fixation_data = deque()
         self.fixation_start_ts = deque()
         self.fixation_stop_ts = deque()
-        self.bg_task = bh.Task_Proxy(
-            "Fixation detection", detect_fixations, args=generator_args
+        self.bg_task = bh.IPC_Logging_Task_Proxy(
+            self.g_pool.ipc_push_url,
+            "Fixation detection",
+            detect_fixations,
+            args=generator_args,
         )
 
     def recent_events(self, events):
