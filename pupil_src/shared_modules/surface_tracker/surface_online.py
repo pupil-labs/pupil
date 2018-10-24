@@ -46,16 +46,4 @@ class Surface_Online(Surface):
             self.gaze_history.popleft()
 
         # Add new entries
-        for event in gaze_on_surf:
-            if (
-                event["confidence"] < self._heatmap_min_data_confidence
-                and event["on_surf"]
-            ):
-                continue
-            self.gaze_history.append(
-                {"timestamp": event["timestamp"], "gaze": event["norm_pos"]}
-            )
-
-    def _update_heatmap(self):
-        data = [x["gaze"] for x in self.gaze_history]
-        self._generate_within_surface_heatmap(data)
+        self.gaze_history += gaze_on_surf

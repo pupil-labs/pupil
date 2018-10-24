@@ -122,7 +122,7 @@ class Surface_Tracker_Online(Surface_Tracker):
 
     def _update_surface_heatmaps(self):
         for surface in self.surfaces:
-            surface._update_heatmap()
+            surface.update_heatmap(surface.gaze_history)
 
     def add_surface(self, _=None, init_dict=None):
         if self.freeze_scene:

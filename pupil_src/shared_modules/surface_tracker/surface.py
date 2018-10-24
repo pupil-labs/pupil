@@ -436,18 +436,21 @@ class Surface(metaclass=ABCMeta):
         self.reg_markers_dist.pop(id)
         self.reg_markers_undist.pop(id)
 
-    @abstractmethod
-    def _update_heatmap(self):
-        pass
+    def update_heatmap(self, gaze_on_surf):
+        """Compute the gaze distribution heatmap based on given gaze events."""
 
-    def _generate_within_surface_heatmap(self, data):
+        heatmap_data = [
+            g["norm_pos"]
+            for g in gaze_on_surf
+            if g["on_surf"] and g["confidence"] >= self._heatmap_min_data_confidence
+        ]
         aspect_ratio = self.real_world_size["y"] / self.real_world_size["x"]
         grid = (
             int(self._heatmap_resolution),
             int(self._heatmap_resolution * aspect_ratio),
         )
-        if data:
-            xvals, yvals = zip(*((x, 1. - y) for x, y in data))
+        if heatmap_data:
+            xvals, yvals = zip(*((x, 1. - y) for x, y in heatmap_data))
             hist, *edges = np.histogram2d(
                 yvals, xvals, bins=grid, range=[[0, 1.], [0, 1.]], normed=False
             )

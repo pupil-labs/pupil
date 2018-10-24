@@ -27,7 +27,7 @@ from surface_tracker import background_tasks
 class Surface_Offline(Surface):
     """Surface_Offline uses a cache to reuse previously computed surface locations.
 
-    The cache is filled in the background.
+    The cache is filled in the background. Heatmaps are computed over
     """
 
     def __init__(self, name="unknown", init_dict=None):
@@ -201,11 +201,6 @@ class Surface_Offline(Surface):
     def pop_marker(self, id):
         super().pop_marker(id)
         self.location_cache = None
-
-    def _update_heatmap(self, section_gaze_on_surf):
-        section_gaze_on_surf = list(itertools.chain.from_iterable(section_gaze_on_surf))
-        heatmap_data = [g["norm_pos"] for g in section_gaze_on_surf if g["on_surf"]]
-        self._generate_within_surface_heatmap(heatmap_data)
 
     def save_to_dict(self):
         save_dict = super().save_to_dict()
