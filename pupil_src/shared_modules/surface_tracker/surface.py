@@ -429,7 +429,6 @@ class Surface(metaclass=ABCMeta):
         )
         surface_marker_undist.add_observation(uv_coords_undist)
         self.reg_markers_undist[marker_id] = surface_marker_undist
-        # TODO reset surface to not defined?
 
     def pop_marker(self, id):
         """Remove a marker from the surface definition."""

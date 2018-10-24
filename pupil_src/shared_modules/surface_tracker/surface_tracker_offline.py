@@ -44,8 +44,6 @@ from surface_tracker import (
 )
 from surface_tracker.surface_offline import Surface_Offline
 
-# TODO Improve all docstrings, make methods privat appropriately
-
 
 class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     """
