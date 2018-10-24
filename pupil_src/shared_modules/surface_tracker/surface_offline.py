@@ -27,7 +27,7 @@ from surface_tracker import background_tasks
 class Surface_Offline(Surface):
     """Surface_Offline uses a cache to reuse previously computed surface locations.
 
-    The cache is filled in the background. Heatmaps are computed over
+    The cache is filled in the background.
     """
 
     def __init__(self, name="unknown", init_dict=None):

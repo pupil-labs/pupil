@@ -15,6 +15,8 @@ from surface_tracker.surface import Surface
 
 
 class Surface_Online(Surface):
+    """Surface_Online recalculates it's location on demand."""
+
     def __init__(self, name="unknown", init_dict=None):
         super().__init__(name=name, init_dict=init_dict)
 
