@@ -696,11 +696,16 @@ class Fixation_Detector(Fixation_Detector_Base):
         )
 
         try:  # use newest gaze point to determine age threshold
+            assert self.queue[-1]["timestamp"] > self.queue[0]["timestamp"]
             age_threshold = self.queue[-1]["timestamp"] - self.min_duration / 1000.
             while self.queue[1]["timestamp"] < age_threshold:
                 self.queue.popleft()  # remove outdated gaze points
         except IndexError:
             pass
+        except AssertionError:
+            # negative time jump detected, reset history
+            del self.queue[:]
+            return
 
         gaze_3d = [gp for gp in self.queue if "3d" in gp["base_data"][0]["method"]]
         use_pupil = len(gaze_3d) > 0.8 * len(self.queue)
