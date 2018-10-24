@@ -746,7 +746,7 @@ class Fixation_Detector(Fixation_Detector_Base):
 
     def reset_history(self):
         logger.debug("Resetting history")
-        del self.history[:]
+        self.history.clear()
 
     def replace_basedata_with_references(self, fixation):
         fixation["base_data"] = [

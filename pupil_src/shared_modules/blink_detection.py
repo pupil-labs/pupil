@@ -169,7 +169,7 @@ class Blink_Detection(Analysis_Plugin_Base):
 
     def reset_history(self):
         logger.debug("Resetting history")
-        del self.history[:]
+        self.history.clear()
 
     def gl_display(self):
         if self._recent_blink and self.visualize:
