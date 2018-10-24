@@ -246,7 +246,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for s in self.surfaces:
                 s.across_surface_heatmap = s._get_dummy_heatmap()
 
-    def update_markers(self, frame):
+    def _update_markers(self, frame):
         if self.cache_filler is not None:
             self._update_marker_and_surface_caches()
         # Move seek index to current frame if caches do not contain data for it

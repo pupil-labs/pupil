@@ -66,11 +66,19 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.inverted_markers = inverted_markers
 
         self.robust_detection = True
-        self.load_surface_definitions_from_file()
+        self._load_surface_definitions_from_file()
 
         # The following values need to be overwritten by child classes
         self.ui_info_text = None
         self.supported_heatmap_modes = None
+
+    def _load_surface_definitions_from_file(self):
+        surface_definitions = file_methods.Persistent_Dict(
+            os.path.join(self.save_dir, "surface_definitions")
+        )
+
+        for init_dict in surface_definitions.get("surfaces", []):
+            self.add_surface(init_dict=init_dict)
 
     @property
     def camera_model(self):
@@ -97,9 +105,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             hotkey="a",
         )
         self.g_pool.quickbar.append(self.add_button)
-        self.update_ui()
+        self._update_ui()
 
-    def update_ui(self):
+    def _update_ui(self):
         def set_marker_min_perimeter(val):
             self.marker_min_perimeter = val
             self.notify_all(
@@ -141,7 +149,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 selection=[e for e in self.supported_heatmap_modes],
             )
         )
-        self.update_ui_custom()
+        self._update_ui_custom()
         advanced_menu = pyglui.ui.Growing_Menu("Marker Detection Parameters")
         advanced_menu.collapsed = True
         advanced_menu.append(
@@ -174,12 +182,12 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.menu.append(advanced_menu)
         self.menu.append(pyglui.ui.Button("Add surface", self.add_surface))
         for surface in self.surfaces:
-            self.per_surface_ui(surface)
+            self._per_surface_ui(surface)
 
-    def update_ui_custom(self):
+    def _update_ui_custom(self):
         pass
 
-    def per_surface_ui(self, surface):
+    def _per_surface_ui(self, surface):
         def set_name(val):
 
             names = [x.name for x in self.surfaces]
@@ -251,7 +259,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
         )
 
-        self.per_surface_ui_custom(surface, s_menu)
+        self._per_surface_ui_custom(surface, s_menu)
 
         s_menu.append(
             pyglui.ui.Slider(
@@ -274,16 +282,8 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         s_menu.append(pyglui.ui.Button("remove", remove_surf))
         self.menu.append(s_menu)
 
-    def per_surface_ui_custom(self, surface, s_menu):
+    def _per_surface_ui_custom(self, surface, s_menu):
         pass
-
-    def load_surface_definitions_from_file(self):
-        surface_definitions = file_methods.Persistent_Dict(
-            os.path.join(self.save_dir, "surface_definitions")
-        )
-
-        for init_dict in surface_definitions.get("surfaces", []):
-            self.add_surface(init_dict=init_dict)
 
     def recent_events(self, events):
         frame = events.get("frame")
@@ -291,72 +291,14 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         if not frame:
             return
 
-        self.update_markers(frame)
+        self._update_markers(frame)
         self._update_surface_locations(frame.index)
         self._update_surface_corners()
         self._add_surface_events(events, frame)
 
     @abstractmethod
-    def update_markers(self, frame):
+    def _update_markers(self, frame):
         pass
-
-    @abstractmethod
-    def _update_surface_locations(self, idx):
-        pass
-
-    def _add_surface_events(self, events, frame):
-        """
-        Adds surface events to the current list of events.
-
-        Args:
-            events: Current list of events.
-            frame: The according world camera frame
-        """
-        events["surfaces"] = []
-        for surface in self.surfaces:
-            if surface.detected:
-                gaze_events = events.get("gaze", [])
-                gaze_on_surf = surface.map_events(gaze_events, self.camera_model)
-                fixation_events = events.get("fixations", [])
-                fixations_on_surf = surface.map_events(
-                    fixation_events, self.camera_model
-                )
-
-                surface_event = {
-                    "topic": "surfaces.{}".format(surface.name),
-                    "name": surface.name,
-                    "surf_to_img_trans": surface.surf_to_img_trans.tolist(),
-                    "img_to_surf_trans": surface.img_to_surf_trans.tolist(),
-                    "gaze_on_surf": gaze_on_surf,
-                    "fixations_on_surf": fixations_on_surf,
-                    "timestamp": frame.timestamp,
-                }
-                events["surfaces"].append(surface_event)
-
-    @abstractmethod
-    def _update_surface_corners(self):
-        pass
-
-    @abstractmethod
-    def _update_surface_heatmaps(self):
-        pass
-
-    def add_surface(self, _=None, init_dict=None):
-        if self.markers or init_dict is not None:
-            surface = self.Surface_Class(
-                name="Surface {:}".format(len(self.surfaces) + 1), init_dict=init_dict
-            )
-            self.surfaces.append(surface)
-            self.gui.add_surface(surface)
-            self.update_ui()
-        else:
-            logger.warning("Can not add a new surface: No markers found in the image!")
-
-    def remove_surface(self, i):
-        self.gui.remove_surface(self.surfaces[i])
-        del self.surfaces[i]
-        self.update_ui()
-        self.save_surface_definitions_to_file()
 
     def _detect_markers(self, frame):
         gray = frame.gray
@@ -405,8 +347,66 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
         return list(marker_by_id.values())
 
+    @abstractmethod
+    def _update_surface_locations(self, idx):
+        pass
+
+    @abstractmethod
+    def _update_surface_corners(self):
+        pass
+
+    def _add_surface_events(self, events, frame):
+        """
+        Adds surface events to the current list of events.
+
+        Args:
+            events: Current list of events.
+            frame: The according world camera frame
+        """
+        events["surfaces"] = []
+        for surface in self.surfaces:
+            if surface.detected:
+                gaze_events = events.get("gaze", [])
+                gaze_on_surf = surface.map_events(gaze_events, self.camera_model)
+                fixation_events = events.get("fixations", [])
+                fixations_on_surf = surface.map_events(
+                    fixation_events, self.camera_model
+                )
+
+                surface_event = {
+                    "topic": "surfaces.{}".format(surface.name),
+                    "name": surface.name,
+                    "surf_to_img_trans": surface.surf_to_img_trans.tolist(),
+                    "img_to_surf_trans": surface.img_to_surf_trans.tolist(),
+                    "gaze_on_surf": gaze_on_surf,
+                    "fixations_on_surf": fixations_on_surf,
+                    "timestamp": frame.timestamp,
+                }
+                events["surfaces"].append(surface_event)
+
+    @abstractmethod
+    def _update_surface_heatmaps(self):
+        pass
+
     def gl_display(self):
         self.gui.update()
+
+    def add_surface(self, _=None, init_dict=None):
+        if self.markers or init_dict is not None:
+            surface = self.Surface_Class(
+                name="Surface {:}".format(len(self.surfaces) + 1), init_dict=init_dict
+            )
+            self.surfaces.append(surface)
+            self.gui.add_surface(surface)
+            self._update_ui()
+        else:
+            logger.warning("Can not add a new surface: No markers found in the image!")
+
+    def remove_surface(self, i):
+        self.gui.remove_surface(self.surfaces[i])
+        del self.surfaces[i]
+        self._update_ui()
+        self.save_surface_definitions_to_file()
 
     def on_notify(self, notification):
         if notification["subject"] == "surface_tracker.surfaces_changed":
@@ -418,7 +418,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             self.save_surface_definitions_to_file()
         elif notification["subject"].startswith("surface_tracker.surface_name_changed"):
             self.save_surface_definitions_to_file()
-            self.update_ui()
+            self._update_ui()
 
     def on_pos(self, pos):
         self._last_mouse_pos = np.array(pos, dtype=np.float32)

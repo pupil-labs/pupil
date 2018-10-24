@@ -46,7 +46,7 @@ class Surface_Tracker_Online(Surface_Tracker):
     def save_dir(self):
         return self.g_pool.user_dir
 
-    def update_ui_custom(self):
+    def _update_ui_custom(self):
         def set_freeze_scene(val):
             self.freeze_scene = val
             if val:
@@ -61,7 +61,7 @@ class Surface_Tracker_Online(Surface_Tracker):
             )
         )
 
-    def per_surface_ui_custom(self, surface, s_menu):
+    def _per_surface_ui_custom(self, surface, s_menu):
         def set_gaze_hist_len(val):
             if val <= 0:
                 logger.warning("Gaze history length must be a positive number!")
@@ -95,7 +95,7 @@ class Surface_Tracker_Online(Surface_Tracker):
         if self.freeze_scene:
             events["frame"] = current_frame
 
-    def update_markers(self, frame):
+    def _update_markers(self, frame):
         self._detect_markers(frame)
 
     def _update_surface_locations(self, idx):
