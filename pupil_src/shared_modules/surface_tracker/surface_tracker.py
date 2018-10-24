@@ -189,7 +189,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def _per_surface_ui(self, surface):
         def set_name(val):
-
             names = [x.name for x in self.surfaces]
             if val in names and val != surface.name:
                 logger.warning("The name '{}' is already in use!".format(val))
@@ -278,7 +277,10 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 self.gui.surface_windows[surface].open_close_window,
             )
         )
-        remove_surf = lambda: self.remove_surface(idx)
+
+        def remove_surf():
+            self.remove_surface(idx)
+
         s_menu.append(pyglui.ui.Button("remove", remove_surf))
         self.menu.append(s_menu)
 
