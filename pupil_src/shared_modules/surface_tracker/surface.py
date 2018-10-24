@@ -76,10 +76,10 @@ class Surface(metaclass=ABCMeta):
     def map_to_surf(
         self, points, camera_model, compensate_distortion=True, trans_matrix=None
     ):
-        """Map points from image space to normalized surface space.
+        """Map points from image pixel space to normalized surface space.
 
         Args:
-            points (ndarray): An array of points with shape (2,) or (N, 2).
+            points (ndarray): An array of 2D points with shape (2,) or (N, 2).
             camera_model: Camera Model object.
             compensate_distortion: If `True` camera distortion will be correctly
             compensated using the `camera_model`. Note that points that lie outside
@@ -113,10 +113,10 @@ class Surface(metaclass=ABCMeta):
     def map_from_surf(
         self, points, camera_model, compensate_distortion=True, trans_matrix=None
     ):
-        """Map points from normalized surface space to image space.
+        """Map points from normalized surface space to image pixel space.
 
         Args:
-            points (ndarray): An array of points with shape (2,) or (N, 2).
+            points (ndarray): An array of 2D points with shape (2,) or (N, 2).
             camera_model: Camera Model object.
             compensate_distortion: If `True` camera distortion will be correctly
             compensated using the `camera_model`. Note that points that lie outside
@@ -147,6 +147,21 @@ class Surface(metaclass=ABCMeta):
         return img_points
 
     def map_events(self, events, camera_model, trans_matrix=None):
+        """
+        Map a list of gaze or fixation events onto the surface and return the
+        corresponding list of gaze/fixation on surface events.
+
+        Args:
+            events: List of gaze or fixation events.
+            camera_model: Camera Model object.
+            trans_matrix: The transformation matrix defining the location of
+            the surface. If `None`, the current transformation matrix saved in the
+            Surface object will be used.
+
+        Returns:
+            List of gaze or fixation on surface events.
+
+        """
         results = []
         for event in events:
             gaze_norm_pos = event["norm_pos"]
@@ -175,11 +190,14 @@ class Surface(metaclass=ABCMeta):
         return results
 
     @abstractmethod
-    def update_location(self, idx, vis_markers, camera_model):
+    def update_location(self, frame_idx, visible_markers, camera_model):
+        """Update surface location based on marker detections in the current frame."""
         pass
 
     @staticmethod
-    def locate(vis_markers, camera_model, reg_markers_undist, reg_markers_dist):
+    def locate(visible_markers, camera_model, reg_markers_undist, reg_markers_dist):
+        """Computes homographys mapping the surface from and to image pixel space."""
+
         result = {
             "detected": False,
             "dist_img_to_surf_trans": None,
@@ -189,7 +207,9 @@ class Surface(metaclass=ABCMeta):
             "num_detected_markers": 0,
         }
 
-        vis_reg_marker_ids = set(vis_markers.keys()) & set(reg_markers_undist.keys())
+        vis_reg_marker_ids = set(visible_markers.keys()) & set(
+            reg_markers_undist.keys()
+        )
 
         if not vis_reg_marker_ids or len(vis_reg_marker_ids) < min(
             2, len(reg_markers_undist)
@@ -197,7 +217,7 @@ class Surface(metaclass=ABCMeta):
             return result
 
         vis_verts_dist = np.array(
-            [vis_markers[id].verts_px for id in vis_reg_marker_ids]
+            [visible_markers[id].verts_px for id in vis_reg_marker_ids]
         )
         reg_verts_undist = np.array(
             [reg_markers_undist[id].verts_uv for id in vis_reg_marker_ids]
@@ -245,12 +265,12 @@ class Surface(metaclass=ABCMeta):
         A_to_B, mask = cv2.findHomography(points_B, points_A)
         return A_to_B, B_to_A
 
-    def _update_definition(self, idx, vis_markers, camera_model):
-        if not vis_markers:
+    def _update_definition(self, idx, visible_markers, camera_model):
+        if not visible_markers:
             return
 
         all_verts_dist = np.array(
-            [m.verts_px for m in vis_markers.values()], dtype=np.float32
+            [m.verts_px for m in visible_markers.values()], dtype=np.float32
         )
         all_verts_dist.shape = (-1, 2)
         all_verts_undist = camera_model.undistortPoints(all_verts_dist)
@@ -276,7 +296,7 @@ class Surface(metaclass=ABCMeta):
 
         # Add observations to library
         for m, uv_undist, uv_dist in zip(
-            vis_markers.values(), marker_surf_coords_undist, marker_surf_coords_dist
+            visible_markers.values(), marker_surf_coords_undist, marker_surf_coords_dist
         ):
             try:
                 self.reg_markers_undist[m.id].add_observation(uv_undist)
@@ -352,9 +372,20 @@ class Surface(metaclass=ABCMeta):
         self.reg_markers_undist = persistent_markers
         self.reg_markers_dist = persistent_markers_dist
 
-    def move_corner(self, corner_idx, pos, camera_model):
+    def move_corner(self, corner_idx, new_pos, camera_model):
+        """Update surface definition by moving one of the corners to a new position.
+
+        Args:
+            corner_idx: Identifier of the corner to be moved. The order of corners is
+            `[(0, 0), (1, 0), (1, 1), (0, 1)]`
+            new_pos: The updated position of the corner in image pixel coordinates.
+            camera_model: Camera Model object.
+
+        """
         # Markers undistorted
-        new_corner_pos = self.map_to_surf(pos, camera_model, compensate_distortion=True)
+        new_corner_pos = self.map_to_surf(
+            new_pos, camera_model, compensate_distortion=True
+        )
         old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
 
         new_corners = old_corners.copy()
@@ -368,7 +399,7 @@ class Surface(metaclass=ABCMeta):
 
         # Markers distorted
         new_corner_pos = self.map_to_surf(
-            pos, camera_model, compensate_distortion=False
+            new_pos, camera_model, compensate_distortion=False
         )
         old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
 
@@ -381,24 +412,27 @@ class Surface(metaclass=ABCMeta):
                 m.verts_uv.reshape((-1, 1, 2)), transform
             ).reshape((-1, 2))
 
-    def add_marker(self, id, verts_px, camera_model):
-        surface_marker_dist = _Surface_Marker_Aggregate(id)
+    def add_marker(self, marker_id, verts_px, camera_model):
+        """Add a marker to the surface definition."""
+        surface_marker_dist = _Surface_Marker_Aggregate(marker_id)
         marker_verts_dist = np.array(verts_px).reshape((4, 2))
         uv_coords_dist = self.map_to_surf(
             marker_verts_dist, camera_model, compensate_distortion=False
         )
         surface_marker_dist.add_observation(uv_coords_dist)
-        self.reg_markers_dist[id] = surface_marker_dist
+        self.reg_markers_dist[marker_id] = surface_marker_dist
 
-        surface_marker_undist = _Surface_Marker_Aggregate(id)
+        surface_marker_undist = _Surface_Marker_Aggregate(marker_id)
         marker_verts_undist = np.array(verts_px).reshape((4, 2))
         uv_coords_undist = self.map_to_surf(
             marker_verts_undist, camera_model, compensate_distortion=False
         )
         surface_marker_undist.add_observation(uv_coords_undist)
-        self.reg_markers_undist[id] = surface_marker_undist
+        self.reg_markers_undist[marker_id] = surface_marker_undist
+        # TODO reset surface to not defined?
 
     def pop_marker(self, id):
+        """Remove a marker from the surface definition."""
         self.reg_markers_dist.pop(id)
         self.reg_markers_undist.pop(id)
 

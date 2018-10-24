@@ -25,6 +25,11 @@ from surface_tracker import background_tasks
 
 
 class Surface_Offline(Surface):
+    """Surface_Offline uses a cache to reuse previously computed surface locations.
+
+    The cache is filled in the background.
+    """
+
     def __init__(self, name="unknown", init_dict=None):
         super().__init__(name=name, init_dict=init_dict)
         self.cache_seek_idx = mp.Value("i", 0)
@@ -107,12 +112,12 @@ class Surface_Offline(Surface):
             location = self.location_cache[frame_idx]
         except (TypeError, AttributeError):
             location = False
-            self.recalculate_location_cache(frame_idx, marker_cache, camera_model)
+            self._recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
         if location is False:
             if not marker_cache[frame_idx] is False:
                 logging.debug("On demand surface cache update!")
-                self.update_cache(frame_idx, marker_cache, camera_model)
+                self.update_location_cache(frame_idx, marker_cache, camera_model)
                 self.update_location(frame_idx, marker_cache, camera_model)
                 return
             else:
@@ -128,16 +133,8 @@ class Surface_Offline(Surface):
 
         self.__dict__.update(location)
 
-    def update_cache(self, frame_idx, marker_cache, camera_model):
-        """
-        Use cached marker data to update the surface cache.
-        The surface cache contains the following values:
-            - False: if the corresponding marker cache entry is False (not yet
-            searched).
-            - None: if the surface was not found.
-            - Dict containing all image-surface transformations and gaze on surface
-            values: otherwise
-        """
+    def update_location_cache(self, frame_idx, marker_cache, camera_model):
+        """ Update a single entry in the location cache."""
 
         try:
             if not marker_cache[frame_idx]:
@@ -160,9 +157,9 @@ class Surface_Offline(Surface):
                 )
             self.location_cache.update(frame_idx, location, force=True)
         except (TypeError, AttributeError):
-            self.recalculate_location_cache(frame_idx, marker_cache, camera_model)
+            self._recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
-    def recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
+    def _recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
         logging.debug("Recalculate Surface Cache!")
         if self.location_cache_filler is not None:
             self.location_cache_filler.cancel()
@@ -183,22 +180,22 @@ class Surface_Offline(Surface):
             self.cache_seek_idx,
         )
 
-    def _update_definition(self, idx, vis_markers, camera_model):
+    def _update_definition(self, idx, visible_markers, camera_model):
         self.observations_frame_idxs.append(idx)
-        super()._update_definition(idx, vis_markers, camera_model)
+        super()._update_definition(idx, visible_markers, camera_model)
 
-    def move_corner(self, frame_idx, marker_cache, corner_idx, pos, camera_model):
-        super().move_corner(corner_idx, pos, camera_model)
+    def move_corner(self, frame_idx, marker_cache, corner_idx, new_pos, camera_model):
+        super().move_corner(corner_idx, new_pos, camera_model)
 
         # Soft reset of marker cache. This does not invoke a recalculation in the background. Full recalculation will happen once the surface corner was released.
         self.location_cache = Cache_List(
             [False] * len(marker_cache),
             positive_eval_fn=lambda x: (x is not False) and x["detected"],
         )
-        self.update_cache(frame_idx, marker_cache, camera_model)
+        self.update_location_cache(frame_idx, marker_cache, camera_model)
 
-    def add_marker(self, id, verts_px, camera_model):
-        super().add_marker(id, verts_px, camera_model)
+    def add_marker(self, marker_id, verts_px, camera_model):
+        super().add_marker(marker_id, verts_px, camera_model)
         self.location_cache = None
 
     def pop_marker(self, id):
@@ -271,6 +268,7 @@ class Surface_Offline(Surface):
             self.build_up_status = 1.0
 
     def visible_count_in_section(self, section):
+        """Count in how many frames the surface was visible in a section."""
         if self.location_cache is None:
             return 0
         section_cache = self.location_cache[section]

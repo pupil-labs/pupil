@@ -21,11 +21,11 @@ class Surface_Online(Surface):
         self.gaze_history_length = 1
         self.gaze_history = collections.deque()
 
-    def update_location(self, idx, vis_markers, camera_model):
-        vis_markers_dict = {m.id: m for m in vis_markers}
+    def update_location(self, frame_idx, visible_markers, camera_model):
+        vis_markers_dict = {m.id: m for m in visible_markers}
 
         if not self.defined:
-            self._update_definition(idx, vis_markers_dict, camera_model)
+            self._update_definition(frame_idx, vis_markers_dict, camera_model)
 
         # Get dict of current transformations
         transformations = self.locate(

@@ -261,13 +261,13 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             markers_filtered = self._filter_markers(markers)
             self.marker_cache.update(idx, markers_filtered)
 
-            for surf in self.surfaces:
-                surf.update_cache(idx, self.marker_cache, self.camera_model)
+            for surface in self.surfaces:
+                surface.update_location_cache(idx, self.marker_cache, self.camera_model)
 
         if self.cache_filler.completed:
             self.cache_filler = None
-            for surf in self.surfaces:
-                self._heatmap_update_requests.add(surf)
+            for surface in self.surfaces:
+                self._heatmap_update_requests.add(surface)
             self.fill_gaze_on_surf_buffer()
             self._save_marker_cache()
             self.save_surface_definitions_to_file()
