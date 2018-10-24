@@ -103,11 +103,11 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         cache = previous_cache.get("marker_cache_unfiltered", None)
 
         if cache is None:
-            self.recalculate_marker_cache()
+            self._recalculate_marker_cache()
         elif version != self.marker_cache_version:
             logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
             self.inverted_markers = previous_cache.get("inverted_markers", False)
-            self.recalculate_marker_cache()
+            self._recalculate_marker_cache()
         else:
             self.marker_cache_unfiltered = []
             for markers in cache:
@@ -122,11 +122,11 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             marker_cache_unfiltered = Cache_List(
                 self.marker_cache_unfiltered, positive_eval_fn=_cache_pos_eval_fn
             )
-            self.recalculate_marker_cache(previous_state=marker_cache_unfiltered)
+            self._recalculate_marker_cache(previous_state=marker_cache_unfiltered)
             self.inverted_markers = previous_cache.get("inverted_markers", False)
             logger.debug("Restored previous marker cache.")
 
-    def recalculate_marker_cache(self, previous_state=None):
+    def _recalculate_marker_cache(self, previous_state=None):
         if previous_state is None:
             previous_state = [False for _ in self.g_pool.timestamps]
 
@@ -150,6 +150,40 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             list(self.marker_cache),
             self.cache_seek_idx,
         )
+
+    def _update_filtered_markers(self):
+        marker_cache = []
+        for markers in self.marker_cache_unfiltered:
+            if markers:
+                markers = [
+                    m
+                    for m in markers
+                    if m.perimeter >= self.marker_min_perimeter
+                    and m.id_confidence >= self.marker_min_confidence
+                ]
+            marker_cache.append(markers)
+        self.marker_cache = Cache_List(
+            marker_cache, positive_eval_fn=_cache_pos_eval_fn
+        )
+
+    def init_ui(self):
+        super().init_ui()
+
+        self.glfont = pyglui.pyfontstash.fontstash.Context()
+        self.glfont.add_font("opensans", pyglui.ui.get_opensans_font_path())
+        self.glfont.set_color_float((1., 1., 1., .8))
+        self.glfont.set_align_string(v_align="right", h_align="top")
+
+        self.timeline = pyglui.ui.Timeline(
+            "Surface Tracker",
+            self._gl_display_cache_bars,
+            self._draw_labels,
+            self.timeline_line_height * (len(self.surfaces) + 1),
+        )
+        self.g_pool.user_timelines.append(self.timeline)
+        self.timeline.content_height = (
+            len(self.surfaces) + 1
+        ) * self.timeline_line_height
 
     def recent_events(self, events):
         super().recent_events(events)
@@ -184,68 +218,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 self.gaze_on_surf_buffer = None
                 self.fixations_on_surf_buffer = None
 
-    def _update_filtered_markers(self):
-        marker_cache = []
-        for markers in self.marker_cache_unfiltered:
-            if markers:
-                markers = [
-                    m
-                    for m in markers
-                    if m.perimeter >= self.marker_min_perimeter
-                    and m.id_confidence >= self.marker_min_confidence
-                ]
-            marker_cache.append(markers)
-        self.marker_cache = Cache_List(
-            marker_cache, positive_eval_fn=_cache_pos_eval_fn
-        )
-
-    def init_ui(self):
-        super().init_ui()
-
-        self.glfont = pyglui.pyfontstash.fontstash.Context()
-        self.glfont.add_font("opensans", pyglui.ui.get_opensans_font_path())
-        self.glfont.set_color_float((1., 1., 1., .8))
-        self.glfont.set_align_string(v_align="right", h_align="top")
-
-        self.timeline = pyglui.ui.Timeline(
-            "Surface Tracker",
-            self.gl_display_cache_bars,
-            self.draw_labels,
-            self.timeline_line_height * (len(self.surfaces) + 1),
-        )
-        self.g_pool.user_timelines.append(self.timeline)
-        self.timeline.content_height = (
-            len(self.surfaces) + 1
-        ) * self.timeline_line_height
-
-    def _compute_across_surfaces_heatmap(self):
-
-        if self.gaze_on_surf_buffer is None:
-            gazes_all = []
-        else:
-            gazes_all = list(itertools.chain.from_iterable(self.gaze_on_surf_buffer))
-
-        gazes_on_surf = []
-        for gof in gazes_all:
-            gof = [g for g in gof if g["on_surf"]]
-            gazes_on_surf.append(len(gof))
-
-        if gazes_on_surf:
-            max_res = max(gazes_on_surf)
-            results = np.array(gazes_on_surf, dtype=np.float32)
-            if max_res > 0:
-                results *= 255. / max_res
-            results = np.uint8(results)
-            results_c_maps = cv2.applyColorMap(results, cv2.COLORMAP_JET)
-
-            for s, c_map in zip(self.surfaces, results_c_maps):
-                heatmap = np.ones((1, 1, 4), dtype=np.uint8) * 125
-                heatmap[:, :, :3] = c_map
-                s.across_surface_heatmap = heatmap
-        else:
-            for s in self.surfaces:
-                s.across_surface_heatmap = s._get_dummy_heatmap()
-
     def _update_markers(self, frame):
         if self.cache_filler is not None:
             self._update_marker_and_surface_caches()
@@ -268,7 +240,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.cache_filler = None
             for surface in self.surfaces:
                 self._heatmap_update_requests.add(surface)
-            self.fill_gaze_on_surf_buffer()
+            self._fill_gaze_on_surf_buffer()
             self._save_marker_cache()
             self.save_surface_definitions_to_file()
 
@@ -303,7 +275,35 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         self._heatmap_update_requests = set()
 
-    def fill_gaze_on_surf_buffer(self):
+    def _compute_across_surfaces_heatmap(self):
+
+        if self.gaze_on_surf_buffer is None:
+            gazes_all = []
+        else:
+            gazes_all = list(itertools.chain.from_iterable(self.gaze_on_surf_buffer))
+
+        gazes_on_surf = []
+        for gof in gazes_all:
+            gof = [g for g in gof if g["on_surf"]]
+            gazes_on_surf.append(len(gof))
+
+        if gazes_on_surf:
+            max_res = max(gazes_on_surf)
+            results = np.array(gazes_on_surf, dtype=np.float32)
+            if max_res > 0:
+                results *= 255. / max_res
+            results = np.uint8(results)
+            results_c_maps = cv2.applyColorMap(results, cv2.COLORMAP_JET)
+
+            for s, c_map in zip(self.surfaces, results_c_maps):
+                heatmap = np.ones((1, 1, 4), dtype=np.uint8) * 125
+                heatmap[:, :, :3] = c_map
+                s.across_surface_heatmap = heatmap
+        else:
+            for s in self.surfaces:
+                s.across_surface_heatmap = s._get_dummy_heatmap()
+
+    def _fill_gaze_on_surf_buffer(self):
         if self.gaze_on_surf_buffer_filler is not None:
             self.gaze_on_surf_buffer_filler.cancel()
 
@@ -336,27 +336,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 self.camera_model,
             )
 
-    def add_surface(self, _=None, init_dict=None):
-        super().add_surface(init_dict=init_dict)
-        # Plugin initialization loads surface definitions before UI is initialized. Changing timeline height will fail in this case.
-        if self.markers or init_dict is not None:
-            try:
-                self.timeline.content_height += self.timeline_line_height
-                self.fill_gaze_on_surf_buffer()
-            except AttributeError:
-                pass
-            self.surfaces[-1].on_surface_changed = self.on_surface_change
-
-    def remove_surface(self, _):
-        super().remove_surface(_)
-        self.timeline.content_height -= self.timeline_line_height
-
     def gl_display(self):
         if self.timeline:
             self.timeline.refresh()
         super().gl_display()
 
-    def gl_display_cache_bars(self, width, height, scale):
+    def _gl_display_cache_bars(self, width, height, scale):
         ts = self.g_pool.timestamps
         with gl_utils.Coord_System(ts[0], ts[-1], height, 0):
             # Lines for areas that have been cached
@@ -395,18 +380,33 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     surface, color=color, line_type=gl.GL_LINES, thickness=scale * 2
                 )
 
-    def draw_labels(self, width, height, scale):
+    def _draw_labels(self, width, height, scale):
         self.glfont.set_size(self.timeline_line_height * .8 * scale)
         self.glfont.draw_text(width, 0, "Marker Cache")
         for idx, s in enumerate(self.surfaces):
             gl.glTranslatef(0, self.timeline_line_height * scale, 0)
             self.glfont.draw_text(width, 0, s.name)
 
+    def add_surface(self, _=None, init_dict=None):
+        super().add_surface(init_dict=init_dict)
+        # Plugin initialization loads surface definitions before UI is initialized. Changing timeline height will fail in this case.
+        if self.markers or init_dict is not None:
+            try:
+                self.timeline.content_height += self.timeline_line_height
+                self._fill_gaze_on_surf_buffer()
+            except AttributeError:
+                pass
+            self.surfaces[-1].on_surface_changed = self.on_surface_change
+
+    def remove_surface(self, _):
+        super().remove_surface(_)
+        self.timeline.content_height -= self.timeline_line_height
+
     def on_notify(self, notification):
         super().on_notify(notification)
 
         if notification["subject"] == "surface_tracker.marker_detection_params_changed":
-            self.recalculate_marker_cache()
+            self._recalculate_marker_cache()
 
         elif notification["subject"] == "surface_tracker.marker_min_perimeter_changed":
             self._update_filtered_markers()
@@ -419,13 +419,13 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     self._heatmap_update_requests.add(surface)
                     surface.within_surface_heatmap = surface._get_dummy_heatmap()
                     break
-            self.fill_gaze_on_surf_buffer()
+            self._fill_gaze_on_surf_buffer()
 
         elif notification["subject"].startswith("seek_control.trim_indices_changed"):
             for surface in self.surfaces:
                 surface.within_surface_heatmap = surface._get_dummy_heatmap()
                 self._heatmap_update_requests.add(surface)
-            self.fill_gaze_on_surf_buffer()
+            self._fill_gaze_on_surf_buffer()
 
         elif notification["subject"] == "surface_tracker.surfaces_changed":
             for surface in self.surfaces:
@@ -434,23 +434,23 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     surface.within_surface_heatmap = surface._get_dummy_heatmap()
                     self._heatmap_update_requests.add(surface)
                     break
-            self.fill_gaze_on_surf_buffer()
+            self._fill_gaze_on_surf_buffer()
 
         elif notification["subject"] == "should_export":
             self.make_export = True
             self.export_params = (notification["range"], notification["export_dir"])
-            self.fill_gaze_on_surf_buffer()
+            self._fill_gaze_on_surf_buffer()
 
         elif notification["subject"] == "gaze_positions_changed":
             for surface in self.surfaces:
                 self._heatmap_update_requests.add(surface)
                 surface.within_surface_heatmap = surface._get_dummy_heatmap()
-            self.fill_gaze_on_surf_buffer()
+            self._fill_gaze_on_surf_buffer()
 
     def on_surface_change(self, surface):
         self.save_surface_definitions_to_file()
         self._heatmap_update_requests.add(surface)
-        self.fill_gaze_on_surf_buffer()
+        self._fill_gaze_on_surf_buffer()
 
     # TODO dow we want to export dist_img transformations as well?
     # Make naming in raw data exporter consistent with this exporter
