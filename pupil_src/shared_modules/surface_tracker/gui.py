@@ -523,7 +523,7 @@ class Surface_Window:
             try:
                 for gp in self.surface.gaze_history:
                     pyglui_utils.draw_points(
-                        [gp["gaze"]],
+                        [gp["norm_pos"]],
                         color=pyglui_utils.RGBA(0.0, 0.8, 0.5, 0.8),
                         size=80,
                     )

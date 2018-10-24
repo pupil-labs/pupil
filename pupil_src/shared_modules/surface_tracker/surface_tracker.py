@@ -74,7 +74,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def _load_surface_definitions_from_file(self):
         surface_definitions = file_methods.Persistent_Dict(
-            os.path.join(self.save_dir, "surface_definitions")
+            os.path.join(self._save_dir, "surface_definitions")
         )
 
         for init_dict in surface_definitions.get("surfaces", []):
@@ -86,7 +86,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def save_dir(self):
+    def _save_dir(self):
         """
         The directory that contains all files related to the Surface Tracker.
         Returns:
@@ -434,7 +434,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def save_surface_definitions_to_file(self):
         surface_definitions = file_methods.Persistent_Dict(
-            os.path.join(self.save_dir, "surface_definitions")
+            os.path.join(self._save_dir, "surface_definitions")
         )
         surface_definitions["surfaces"] = [
             surface.save_to_dict() for surface in self.surfaces if surface.defined

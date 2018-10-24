@@ -92,7 +92,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.export_params = None
 
     @property
-    def save_dir(self):
+    def _save_dir(self):
         return self.g_pool.rec_dir
 
     def _init_marker_cache(self):

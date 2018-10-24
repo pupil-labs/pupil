@@ -43,7 +43,7 @@ class Surface_Tracker_Online(Surface_Tracker):
         self.add_button = None
 
     @property
-    def save_dir(self):
+    def _save_dir(self):
         return self.g_pool.user_dir
 
     def _update_ui_custom(self):
