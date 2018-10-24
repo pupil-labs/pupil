@@ -25,7 +25,7 @@ class Surface_Online(Surface):
         vis_markers_dict = {m.id: m for m in vis_markers}
 
         if not self.defined:
-            self.update_def(idx, vis_markers_dict, camera_model)
+            self.update_definition(idx, vis_markers_dict, camera_model)
 
         # Get dict of current transformations
         transformations = self.locate(

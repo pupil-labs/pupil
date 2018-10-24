@@ -15,8 +15,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 import numpy as np
-import gl_utils
-import OpenGL.GL as gl
 
 from cache_list import Cache_List
 import player_methods
@@ -93,7 +91,7 @@ class Surface_Offline(Surface):
                 if def_idx not in self.observations_frame_idxs:
                     markers = marker_cache[def_idx]
                     markers = {m.id: m for m in markers}
-                    self.update_def(def_idx, markers, camera_model)
+                    self.update_definition(def_idx, markers, camera_model)
 
                 # Stop searching if we looped once through the entire recording
                 if def_idx == frame_idx - 1:
@@ -176,9 +174,9 @@ class Surface_Offline(Surface):
         except (TypeError, AttributeError):
             self.recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
-    def update_def(self, idx, vis_markers, camera_model):
+    def update_definition(self, idx, vis_markers, camera_model):
         self.observations_frame_idxs.append(idx)
-        super().update_def(idx, vis_markers, camera_model)
+        super().update_definition(idx, vis_markers, camera_model)
 
     def update_heatmap(self, section_gaze_on_surf):
         section_gaze_on_surf = list(itertools.chain.from_iterable(section_gaze_on_surf))

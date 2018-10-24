@@ -50,7 +50,7 @@ class Surface(metaclass=ABCMeta):
         self.heatmap_resolution = 31
         self.heatmap_blur_factor = 0.
 
-        # The uid is only used to implement __hash__ and __eq__ !
+        # The uid is only used to implement __hash__ and __eq__
         self.uid = uuid.uuid4()
 
         if init_dict is not None:
@@ -75,13 +75,15 @@ class Surface(metaclass=ABCMeta):
         """Map points from image space to normalized surface space.
 
         Args:
-            points (ndarray): An array of points in one of the following shapes: (2,
-            ) or (N, 2).
+            points (ndarray): An array of points with shape (2,) or (N, 2).
             camera_model: Camera Model object.
             compensate_distortion: If `True` camera distortion will be correctly
             compensated using the `camera_model`. Note that points that lie outside
             of the image can not be undistorted correctly and the attempt may
             introduce a large error.
+            trans_matrix: The transformation matrix defining the location of
+            the surface. If `None`, the current transformation matrix saved in the
+            Surface object will be used.
 
         Returns:
             ndarray: Points mapped into normalized surface space. Has the same shape
@@ -110,13 +112,15 @@ class Surface(metaclass=ABCMeta):
         """Map points from normalized surface space to image space.
 
         Args:
-            points (ndarray): An array of points in one of the following shapes: (2,
-            ), (N, 2)
+            points (ndarray): An array of points with shape (2,) or (N, 2).
             camera_model: Camera Model object.
             compensate_distortion: If `True` camera distortion will be correctly
             compensated using the `camera_model`. Note that points that lie outside
             of the image can not be undistorted correctly and the attempt may
             introduce a large error.
+            trans_matrix: The transformation matrix defining the location of
+            the surface. If `None`, the current transformation matrix saved in the
+            Surface object will be used.
 
         Returns:
             ndarray: Points mapped into image space. Has the same shape
@@ -138,158 +142,37 @@ class Surface(metaclass=ABCMeta):
             img_points = camera_model.distortPoints(img_points)
         return img_points
 
-    def move_corner(self, corner_idx, pos, camera_model):
-        # Markers undistorted
-        new_corner_pos = self.map_to_surf(pos, camera_model, compensate_distortion=True)
-        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+    def map_events(self, events, camera_model, trans_matrix=None):
+        results = []
+        for event in events:
+            gaze_norm_pos = event["norm_pos"]
+            gaze_img_point = methods.denormalize(
+                gaze_norm_pos, camera_model.resolution, flip_y=True
+            )
+            gaze_img_point = np.array(gaze_img_point)
+            surf_norm_pos = self.map_to_surf(
+                gaze_img_point,
+                camera_model,
+                compensate_distortion=True,
+                trans_matrix=trans_matrix,
+            )
+            on_srf = bool((0 <= surf_norm_pos[0] <= 1) and (0 <= surf_norm_pos[1] <= 1))
 
-        new_corners = old_corners.copy()
-        new_corners[corner_idx] = new_corner_pos
-
-        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for m in self.reg_markers_undist.values():
-            m.verts_uv = cv2.perspectiveTransform(
-                m.verts_uv.reshape((-1, 1, 2)), transform
-            ).reshape((-1, 2))
-
-        # Markers distorted
-        new_corner_pos = self.map_to_surf(
-            pos, camera_model, compensate_distortion=False
-        )
-        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-
-        new_corners = old_corners.copy()
-        new_corners[corner_idx] = new_corner_pos
-
-        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for m in self.reg_markers_dist.values():
-            m.verts_uv = cv2.perspectiveTransform(
-                m.verts_uv.reshape((-1, 1, 2)), transform
-            ).reshape((-1, 2))
-
-    def add_marker(self, id, verts_px, camera_model):
-        surface_marker_dist = _Surface_Marker_Aggregate(id)
-        marker_verts_dist = np.array(verts_px).reshape((4, 2))
-        uv_coords_dist = self.map_to_surf(
-            marker_verts_dist, camera_model, compensate_distortion=False
-        )
-        surface_marker_dist.add_observation(uv_coords_dist)
-        self.reg_markers_dist[id] = surface_marker_dist
-
-        surface_marker_undist = _Surface_Marker_Aggregate(id)
-        marker_verts_undist = np.array(verts_px).reshape((4, 2))
-        uv_coords_undist = self.map_to_surf(
-            marker_verts_undist, camera_model, compensate_distortion=False
-        )
-        surface_marker_undist.add_observation(uv_coords_undist)
-        self.reg_markers_undist[id] = surface_marker_undist
-
-    def pop_marker(self, id):
-        self.reg_markers_dist.pop(id)
-        self.reg_markers_undist.pop(id)
+            results.append(
+                {
+                    "topic": event["topic"] + "on_surface",
+                    "norm_pos": surf_norm_pos.tolist(),
+                    "confidence": event["confidence"],
+                    "on_surf": on_srf,
+                    "base_data": (event["topic"], event["timestamp"]),
+                    "timestamp": event["timestamp"],
+                }
+            )
+        return results
 
     @abstractmethod
     def update_location(self, idx, vis_markers, camera_model):
         pass
-
-    def update_def(self, idx, vis_markers, camera_model):
-        if not vis_markers:
-            return
-
-        all_verts_dist = np.array(
-            [m.verts_px for m in vis_markers.values()], dtype=np.float32
-        )
-        all_verts_dist.shape = (-1, 2)
-        all_verts_undist = camera_model.undistortPoints(all_verts_dist)
-
-        hull_undist = self._bounding_quadrangle(all_verts_undist)
-        undist_img_to_surf_trans_candidate = self._get_trans_to_norm(hull_undist)
-        all_verts_undist.shape = (-1, 1, 2)
-        marker_surf_coords_undist = cv2.perspectiveTransform(
-            all_verts_undist, undist_img_to_surf_trans_candidate
-        )
-
-        hull_dist = self._bounding_quadrangle(all_verts_dist)
-        dist_img_to_surf_trans_candidate = self._get_trans_to_norm(hull_dist)
-        all_verts_dist.shape = (-1, 1, 2)
-        marker_surf_coords_dist = cv2.perspectiveTransform(
-            all_verts_dist, dist_img_to_surf_trans_candidate
-        )
-
-        # Reshape to [marker, marker...]
-        # where marker = [[u1, v1], [u2, v2], [u3, v3], [u4, v4]]
-        marker_surf_coords_undist.shape = (-1, 4, 2)
-        marker_surf_coords_dist.shape = (-1, 4, 2)
-
-        # Add observations to library
-        for m, uv_undist, uv_dist in zip(
-            vis_markers.values(), marker_surf_coords_undist, marker_surf_coords_dist
-        ):
-            try:
-                self.reg_markers_undist[m.id].add_observation(uv_undist)
-                self.reg_markers_dist[m.id].add_observation(uv_dist)
-            except KeyError:
-                self.reg_markers_undist[m.id] = _Surface_Marker_Aggregate(m.id)
-                self.reg_markers_undist[m.id].add_observation(uv_undist)
-                self.reg_markers_dist[m.id] = _Surface_Marker_Aggregate(m.id)
-                self.reg_markers_dist[m.id].add_observation(uv_dist)
-
-        num_observations = sum(
-            [len(m.observations) for m in self.reg_markers_undist.values()]
-        )
-        self._avg_obs_per_marker = num_observations / len(self.reg_markers_undist)
-        self.build_up_status = self._avg_obs_per_marker / self._required_obs_per_marker
-
-        if self.build_up_status >= 1:
-            self._finalize_def()
-
-    def _finalize_def(self):
-        """
-        - prune markers that have been visible in less than x percent of frames.
-        - of those markers select a good subset of uv coords and compute mean.
-        - this mean value will be used from now on to estable surface transform
-        """
-        persistent_markers = {}
-        persistent_markers_dist = {}
-        for (k, m), m_dist in zip(
-            self.reg_markers_undist.items(), self.reg_markers_dist.values()
-        ):
-            if len(m.observations) > self._required_obs_per_marker * .5:
-                persistent_markers[k] = m
-                persistent_markers_dist[k] = m_dist
-        self.reg_markers_undist = persistent_markers
-        self.reg_markers_dist = persistent_markers_dist
-
-    def _bounding_quadrangle(self, verts):
-        hull = cv2.convexHull(verts, clockwise=False)
-
-        if hull.shape[0] > 4:
-            new_hull = cv2.approxPolyDP(hull, epsilon=1, closed=True)
-            if new_hull.shape[0] >= 4:
-                hull = new_hull
-
-        if hull.shape[0] > 4:
-            curvature = abs(methods.GetAnglesPolyline(hull, closed=True))
-            most_acute_4_threshold = sorted(curvature)[3]
-            hull = hull[curvature <= most_acute_4_threshold]
-
-        # verts space is flipped in y.
-        # we need to change the order of the hull vertecies
-        hull = hull[[1, 0, 3, 2], :, :]
-
-        # now we need to roll the hull verts until we have the right orientation:
-        # verts space has its origin at the image center.
-        # adding 1 to the coordinates puts the origin at the top left.
-        distance_to_top_left = np.sqrt(
-            (hull[:, :, 0] + 1) ** 2 + (hull[:, :, 1] + 1) ** 2
-        )
-        bot_left_idx = np.argmin(distance_to_top_left) + 1
-        hull = np.roll(hull, -bot_left_idx, axis=0)
-        return hull
-
-    def _get_trans_to_norm(self, verts):
-        norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-        return cv2.getPerspectiveTransform(verts, norm_corners)
 
     @staticmethod
     def locate(vis_markers, camera_model, reg_markers_undist, reg_markers_dist):
@@ -358,33 +241,162 @@ class Surface(metaclass=ABCMeta):
         A_to_B, mask = cv2.findHomography(points_B, points_A)
         return A_to_B, B_to_A
 
-    def map_events(self, events, camera_model, trans_matrix=None):
-        results = []
-        for event in events:
-            gaze_norm_pos = event["norm_pos"]
-            gaze_img_point = methods.denormalize(
-                gaze_norm_pos, camera_model.resolution, flip_y=True
-            )
-            gaze_img_point = np.array(gaze_img_point)
-            surf_norm_pos = self.map_to_surf(
-                gaze_img_point,
-                camera_model,
-                compensate_distortion=True,
-                trans_matrix=trans_matrix,
-            )
-            on_srf = bool((0 <= surf_norm_pos[0] <= 1) and (0 <= surf_norm_pos[1] <= 1))
+    def update_definition(self, idx, vis_markers, camera_model):
+        if not vis_markers:
+            return
 
-            results.append(
-                {
-                    "topic": event["topic"] + "on_surface",
-                    "norm_pos": surf_norm_pos.tolist(),
-                    "confidence": event["confidence"],
-                    "on_surf": on_srf,
-                    "base_data": (event["topic"], event["timestamp"]),
-                    "timestamp": event["timestamp"],
-                }
-            )
-        return results
+        all_verts_dist = np.array(
+            [m.verts_px for m in vis_markers.values()], dtype=np.float32
+        )
+        all_verts_dist.shape = (-1, 2)
+        all_verts_undist = camera_model.undistortPoints(all_verts_dist)
+
+        hull_undist = self._bounding_quadrangle(all_verts_undist)
+        undist_img_to_surf_trans_candidate = self._get_trans_to_norm(hull_undist)
+        all_verts_undist.shape = (-1, 1, 2)
+        marker_surf_coords_undist = cv2.perspectiveTransform(
+            all_verts_undist, undist_img_to_surf_trans_candidate
+        )
+
+        hull_dist = self._bounding_quadrangle(all_verts_dist)
+        dist_img_to_surf_trans_candidate = self._get_trans_to_norm(hull_dist)
+        all_verts_dist.shape = (-1, 1, 2)
+        marker_surf_coords_dist = cv2.perspectiveTransform(
+            all_verts_dist, dist_img_to_surf_trans_candidate
+        )
+
+        # Reshape to [marker, marker...]
+        # where marker = [[u1, v1], [u2, v2], [u3, v3], [u4, v4]]
+        marker_surf_coords_undist.shape = (-1, 4, 2)
+        marker_surf_coords_dist.shape = (-1, 4, 2)
+
+        # Add observations to library
+        for m, uv_undist, uv_dist in zip(
+            vis_markers.values(), marker_surf_coords_undist, marker_surf_coords_dist
+        ):
+            try:
+                self.reg_markers_undist[m.id].add_observation(uv_undist)
+                self.reg_markers_dist[m.id].add_observation(uv_dist)
+            except KeyError:
+                self.reg_markers_undist[m.id] = _Surface_Marker_Aggregate(m.id)
+                self.reg_markers_undist[m.id].add_observation(uv_undist)
+                self.reg_markers_dist[m.id] = _Surface_Marker_Aggregate(m.id)
+                self.reg_markers_dist[m.id].add_observation(uv_dist)
+
+        num_observations = sum(
+            [len(m.observations) for m in self.reg_markers_undist.values()]
+        )
+        self._avg_obs_per_marker = num_observations / len(self.reg_markers_undist)
+        self.build_up_status = self._avg_obs_per_marker / self._required_obs_per_marker
+
+        if self.build_up_status >= 1:
+            self._finalize_def()
+
+    def _bounding_quadrangle(self, verts):
+        hull = cv2.convexHull(verts, clockwise=False)
+
+        if hull.shape[0] > 4:
+            new_hull = cv2.approxPolyDP(hull, epsilon=1, closed=True)
+            if new_hull.shape[0] >= 4:
+                hull = new_hull
+
+        if hull.shape[0] > 4:
+            curvature = abs(methods.GetAnglesPolyline(hull, closed=True))
+            most_acute_4_threshold = sorted(curvature)[3]
+            hull = hull[curvature <= most_acute_4_threshold]
+
+        # verts space is flipped in y.
+        # we need to change the order of the hull vertecies
+        hull = hull[[1, 0, 3, 2], :, :]
+
+        # now we need to roll the hull verts until we have the right orientation:
+        # verts space has its origin at the image center.
+        # adding 1 to the coordinates puts the origin at the top left.
+        distance_to_top_left = np.sqrt(
+            (hull[:, :, 0] + 1) ** 2 + (hull[:, :, 1] + 1) ** 2
+        )
+        bot_left_idx = np.argmin(distance_to_top_left) + 1
+        hull = np.roll(hull, -bot_left_idx, axis=0)
+        return hull
+
+    def _get_trans_to_norm(self, verts):
+        norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+        return cv2.getPerspectiveTransform(verts, norm_corners)
+
+    def _denormalize(self, points, camera_model):
+        if len(points.shape) == 1:
+            points[1] = 1 - points[1]
+        else:
+            points[:, 1] = 1 - points[:, 1]
+        points *= camera_model.resolution
+        return points
+
+    def _finalize_def(self):
+        """
+        - prune markers that have been visible in less than x percent of frames.
+        - of those markers select a good subset of uv coords and compute mean.
+        - this mean value will be used from now on to estable surface transform
+        """
+        persistent_markers = {}
+        persistent_markers_dist = {}
+        for (k, m), m_dist in zip(
+            self.reg_markers_undist.items(), self.reg_markers_dist.values()
+        ):
+            if len(m.observations) > self._required_obs_per_marker * .5:
+                persistent_markers[k] = m
+                persistent_markers_dist[k] = m_dist
+        self.reg_markers_undist = persistent_markers
+        self.reg_markers_dist = persistent_markers_dist
+
+    def move_corner(self, corner_idx, pos, camera_model):
+        # Markers undistorted
+        new_corner_pos = self.map_to_surf(pos, camera_model, compensate_distortion=True)
+        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+
+        new_corners = old_corners.copy()
+        new_corners[corner_idx] = new_corner_pos
+
+        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
+        for m in self.reg_markers_undist.values():
+            m.verts_uv = cv2.perspectiveTransform(
+                m.verts_uv.reshape((-1, 1, 2)), transform
+            ).reshape((-1, 2))
+
+        # Markers distorted
+        new_corner_pos = self.map_to_surf(
+            pos, camera_model, compensate_distortion=False
+        )
+        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+
+        new_corners = old_corners.copy()
+        new_corners[corner_idx] = new_corner_pos
+
+        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
+        for m in self.reg_markers_dist.values():
+            m.verts_uv = cv2.perspectiveTransform(
+                m.verts_uv.reshape((-1, 1, 2)), transform
+            ).reshape((-1, 2))
+
+    def add_marker(self, id, verts_px, camera_model):
+        surface_marker_dist = _Surface_Marker_Aggregate(id)
+        marker_verts_dist = np.array(verts_px).reshape((4, 2))
+        uv_coords_dist = self.map_to_surf(
+            marker_verts_dist, camera_model, compensate_distortion=False
+        )
+        surface_marker_dist.add_observation(uv_coords_dist)
+        self.reg_markers_dist[id] = surface_marker_dist
+
+        surface_marker_undist = _Surface_Marker_Aggregate(id)
+        marker_verts_undist = np.array(verts_px).reshape((4, 2))
+        uv_coords_undist = self.map_to_surf(
+            marker_verts_undist, camera_model, compensate_distortion=False
+        )
+        surface_marker_undist.add_observation(uv_coords_undist)
+        self.reg_markers_undist[id] = surface_marker_undist
+
+    def pop_marker(self, id):
+        self.reg_markers_dist.pop(id)
+        self.reg_markers_undist.pop(id)
 
     @abstractmethod
     def update_heatmap(self):
@@ -428,14 +440,6 @@ class Surface(metaclass=ABCMeta):
             hm[:, :, 3] = 175
 
         return hm
-
-    def _denormalize(self, points, camera_model):
-        if len(points.shape) == 1:
-            points[1] = 1 - points[1]
-        else:
-            points[:, 1] = 1 - points[:, 1]
-        points *= camera_model.resolution
-        return points
 
     def save_to_dict(self):
         return {
