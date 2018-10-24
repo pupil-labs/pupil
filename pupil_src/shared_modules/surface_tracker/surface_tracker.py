@@ -225,9 +225,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             surface._heatmap_scale = val
             val = 1 - val
             val *= 3
-            surface.heatmap_blur_factor = max((1 - val), 0)
+            surface._heatmap_blur_factor = max((1 - val), 0)
             res_exponent = max(val, 0.35)
-            surface.heatmap_resolution = int(10 ** res_exponent)
+            surface._heatmap_resolution = int(10 ** res_exponent)
             self.notify_all(
                 {
                     "subject": "surface_tracker.heatmap_params_changed",

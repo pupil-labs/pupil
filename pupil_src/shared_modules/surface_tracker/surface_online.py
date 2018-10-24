@@ -25,7 +25,7 @@ class Surface_Online(Surface):
         vis_markers_dict = {m.id: m for m in vis_markers}
 
         if not self.defined:
-            self.update_definition(idx, vis_markers_dict, camera_model)
+            self._update_definition(idx, vis_markers_dict, camera_model)
 
         # Get dict of current transformations
         transformations = self.locate(
@@ -48,7 +48,7 @@ class Surface_Online(Surface):
         # Add new entries
         for event in gaze_on_surf:
             if (
-                event["confidence"] < self.heatmap_min_data_confidence
+                event["confidence"] < self._heatmap_min_data_confidence
                 and event["on_surf"]
             ):
                 continue
@@ -56,6 +56,6 @@ class Surface_Online(Surface):
                 {"timestamp": event["timestamp"], "gaze": event["norm_pos"]}
             )
 
-    def update_heatmap(self):
+    def _update_heatmap(self):
         data = [x["gaze"] for x in self.gaze_history]
         self._generate_within_surface_heatmap(data)

@@ -297,7 +297,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         for surface in self._heatmap_update_requests:
             surf_idx = self.surfaces.index(surface)
-            surface.update_heatmap(self.gaze_on_surf_buffer[surf_idx])
+            surface._update_heatmap(self.gaze_on_surf_buffer[surf_idx])
 
         self._heatmap_update_requests = set()
 

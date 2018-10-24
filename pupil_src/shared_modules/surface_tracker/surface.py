@@ -20,6 +20,10 @@ from surface_tracker import _Surface_Marker_Aggregate
 
 
 class Surface(metaclass=ABCMeta):
+    """A Surface is a quadrangel whose position is defined in relation to a set of
+    square markers in the real world. The markers are assumed to be in a fixed spatial
+    relationship and to be in plane with one another as well as the surface."""
+
     def __init__(self, name="unknown", init_dict=None):
         self.name = name
         self.real_world_size = {"x": 1., "y": 1.}
@@ -45,23 +49,23 @@ class Surface(metaclass=ABCMeta):
 
         self.within_surface_heatmap = self._get_dummy_heatmap()
         self.across_surface_heatmap = self._get_dummy_heatmap()
-        self.heatmap_min_data_confidence = 0.6
+        self._heatmap_min_data_confidence = 0.6
         self._heatmap_scale = 0.5
-        self.heatmap_resolution = 31
-        self.heatmap_blur_factor = 0.
+        self._heatmap_resolution = 31
+        self._heatmap_blur_factor = 0.
 
         # The uid is only used to implement __hash__ and __eq__
-        self.uid = uuid.uuid4()
+        self._uid = uuid.uuid4()
 
         if init_dict is not None:
-            self.load_from_dict(init_dict)
+            self._load_from_dict(init_dict)
 
     def __hash__(self):
-        return int(self.uid)
+        return int(self._uid)
 
     def __eq__(self, other):
         if isinstance(other, Surface):
-            return self.uid == other.uid
+            return self._uid == other._uid
         else:
             return False
 
@@ -241,7 +245,7 @@ class Surface(metaclass=ABCMeta):
         A_to_B, mask = cv2.findHomography(points_B, points_A)
         return A_to_B, B_to_A
 
-    def update_definition(self, idx, vis_markers, camera_model):
+    def _update_definition(self, idx, vis_markers, camera_model):
         if not vis_markers:
             return
 
@@ -399,18 +403,21 @@ class Surface(metaclass=ABCMeta):
         self.reg_markers_undist.pop(id)
 
     @abstractmethod
-    def update_heatmap(self):
+    def _update_heatmap(self):
         pass
 
     def _generate_within_surface_heatmap(self, data):
         aspect_ratio = self.real_world_size["y"] / self.real_world_size["x"]
-        grid = int(self.heatmap_resolution), int(self.heatmap_resolution * aspect_ratio)
+        grid = (
+            int(self._heatmap_resolution),
+            int(self._heatmap_resolution * aspect_ratio),
+        )
         if data:
             xvals, yvals = zip(*((x, 1. - y) for x, y in data))
             hist, *edges = np.histogram2d(
                 yvals, xvals, bins=grid, range=[[0, 1.], [0, 1.]], normed=False
             )
-            filter_h = 19 + self.heatmap_blur_factor * 15
+            filter_h = 19 + self._heatmap_blur_factor * 15
             filter_w = filter_h * aspect_ratio
             filter_h = int(filter_h) // 2 * 2 + 1
             filter_w = int(filter_w) // 2 * 2 + 1
@@ -454,7 +461,7 @@ class Surface(metaclass=ABCMeta):
             "build_up_status": self.build_up_status,
         }
 
-    def load_from_dict(self, init_dict):
+    def _load_from_dict(self, init_dict):
         self.name = init_dict["name"]
         self.real_world_size = init_dict["real_world_size"]
         self.reg_markers_undist = [

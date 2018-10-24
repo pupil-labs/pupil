@@ -34,44 +34,32 @@ class Surface_Offline(Surface):
         self.on_surface_changed = None
         self.start_idx = None
 
-    def recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
-        logging.debug("Recalculate Surface Cache!")
-        if self.location_cache_filler is not None:
-            self.location_cache_filler.cancel()
+    def map_section(self, section, all_world_timestamps, all_gaze_events, camera_model):
+        try:
+            location_cache = self.location_cache[section]
+        except TypeError:
+            return []
 
-        # Reset cache and recalculate all entries for which previous marker detections existed.
-        visited_list = [e is False for e in marker_cache]
-        self.cache_seek_idx.value = frame_idx
-        self.location_cache = Cache_List(
-            [False] * len(marker_cache),
-            positive_eval_fn=lambda x: (x is not False) and x["detected"],
-        )
-        self.location_cache_filler = background_tasks.background_data_processor(
-            marker_cache,
-            offline_utils.surface_locater_callable(
-                camera_model, self.reg_markers_undist, self.reg_markers_dist
-            ),
-            visited_list,
-            self.cache_seek_idx,
-        )
+        section_gaze_on_surf = []
+        for frame_idx, location in enumerate(location_cache):
+            frame_idx += section.start
 
-    def move_corner(self, frame_idx, marker_cache, corner_idx, pos, camera_model):
-        super().move_corner(corner_idx, pos, camera_model)
+            if location and location["detected"]:
 
-        # Soft reset of marker cache. This does not invoke a recalculation in the background. Full recalculation will happen once the surface corner was released.
-        self.location_cache = Cache_List(
-            [False] * len(marker_cache),
-            positive_eval_fn=lambda x: (x is not False) and x["detected"],
-        )
-        self.update_cache(frame_idx, marker_cache, camera_model)
+                frame_window = player_methods.enclosing_window(
+                    all_world_timestamps, frame_idx
+                )
+                gaze_events = all_gaze_events.by_ts_window(frame_window)
 
-    def add_marker(self, id, verts_px, camera_model):
-        super().add_marker(id, verts_px, camera_model)
-        self.location_cache = None
-
-    def pop_marker(self, id):
-        super().pop_marker(id)
-        self.location_cache = None
+                gaze_on_surf = self.map_events(
+                    gaze_events,
+                    camera_model,
+                    trans_matrix=location["img_to_surf_trans"],
+                )
+            else:
+                gaze_on_surf = []
+            section_gaze_on_surf.append(gaze_on_surf)
+        return section_gaze_on_surf
 
     def update_location(self, frame_idx, marker_cache, camera_model):
         if not self.defined:
@@ -91,7 +79,7 @@ class Surface_Offline(Surface):
                 if def_idx not in self.observations_frame_idxs:
                     markers = marker_cache[def_idx]
                     markers = {m.id: m for m in markers}
-                    self.update_definition(def_idx, markers, camera_model)
+                    self._update_definition(def_idx, markers, camera_model)
 
                 # Stop searching if we looped once through the entire recording
                 if def_idx == frame_idx - 1:
@@ -174,47 +162,53 @@ class Surface_Offline(Surface):
         except (TypeError, AttributeError):
             self.recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
-    def update_definition(self, idx, vis_markers, camera_model):
-        self.observations_frame_idxs.append(idx)
-        super().update_definition(idx, vis_markers, camera_model)
+    def recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
+        logging.debug("Recalculate Surface Cache!")
+        if self.location_cache_filler is not None:
+            self.location_cache_filler.cancel()
 
-    def update_heatmap(self, section_gaze_on_surf):
+        # Reset cache and recalculate all entries for which previous marker detections existed.
+        visited_list = [e is False for e in marker_cache]
+        self.cache_seek_idx.value = frame_idx
+        self.location_cache = Cache_List(
+            [False] * len(marker_cache),
+            positive_eval_fn=lambda x: (x is not False) and x["detected"],
+        )
+        self.location_cache_filler = background_tasks.background_data_processor(
+            marker_cache,
+            offline_utils.surface_locater_callable(
+                camera_model, self.reg_markers_undist, self.reg_markers_dist
+            ),
+            visited_list,
+            self.cache_seek_idx,
+        )
+
+    def _update_definition(self, idx, vis_markers, camera_model):
+        self.observations_frame_idxs.append(idx)
+        super()._update_definition(idx, vis_markers, camera_model)
+
+    def move_corner(self, frame_idx, marker_cache, corner_idx, pos, camera_model):
+        super().move_corner(corner_idx, pos, camera_model)
+
+        # Soft reset of marker cache. This does not invoke a recalculation in the background. Full recalculation will happen once the surface corner was released.
+        self.location_cache = Cache_List(
+            [False] * len(marker_cache),
+            positive_eval_fn=lambda x: (x is not False) and x["detected"],
+        )
+        self.update_cache(frame_idx, marker_cache, camera_model)
+
+    def add_marker(self, id, verts_px, camera_model):
+        super().add_marker(id, verts_px, camera_model)
+        self.location_cache = None
+
+    def pop_marker(self, id):
+        super().pop_marker(id)
+        self.location_cache = None
+
+    def _update_heatmap(self, section_gaze_on_surf):
         section_gaze_on_surf = list(itertools.chain.from_iterable(section_gaze_on_surf))
         heatmap_data = [g["norm_pos"] for g in section_gaze_on_surf if g["on_surf"]]
         self._generate_within_surface_heatmap(heatmap_data)
-
-    def map_section(self, section, all_world_timestamps, all_gaze_events, camera_model):
-        try:
-            location_cache = self.location_cache[section]
-        except TypeError:
-            return []
-
-        section_gaze_on_surf = []
-        for frame_idx, location in enumerate(location_cache):
-            frame_idx += section.start
-
-            if location and location["detected"]:
-
-                frame_window = player_methods.enclosing_window(
-                    all_world_timestamps, frame_idx
-                )
-                gaze_events = all_gaze_events.by_ts_window(frame_window)
-
-                gaze_on_surf = self.map_events(
-                    gaze_events,
-                    camera_model,
-                    trans_matrix=location["img_to_surf_trans"],
-                )
-            else:
-                gaze_on_surf = []
-            section_gaze_on_surf.append(gaze_on_surf)
-        return section_gaze_on_surf
-
-    def visible_count_in_section(self, section):
-        if self.location_cache is None:
-            return 0
-        section_cache = self.location_cache[section]
-        return sum(map(bool, section_cache))
 
     def save_to_dict(self):
         save_dict = super().save_to_dict()
@@ -243,8 +237,8 @@ class Surface_Offline(Surface):
         save_dict["observations_frame_idxs"] = self.observations_frame_idxs
         return save_dict
 
-    def load_from_dict(self, init_dict):
-        super().load_from_dict(init_dict)
+    def _load_from_dict(self, init_dict):
+        super()._load_from_dict(init_dict)
         try:
             cache = init_dict["cache"]
             for location in cache:
@@ -275,3 +269,9 @@ class Surface_Offline(Surface):
             self.observations_frame_idxs = []
             self.start_idx = 0
             self.build_up_status = 1.0
+
+    def visible_count_in_section(self, section):
+        if self.location_cache is None:
+            return 0
+        section_cache = self.location_cache[section]
+        return sum(map(bool, section_cache))
