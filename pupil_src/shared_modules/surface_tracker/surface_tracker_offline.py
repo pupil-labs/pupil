@@ -452,8 +452,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self._heatmap_update_requests.add(surface)
         self._fill_gaze_on_surf_buffer()
 
-    # TODO dow we want to export dist_img transformations as well?
-    # Make naming in raw data exporter consistent with this exporter
     def save_surface_statsics_to_file(self):
         """
         between in and out mark
@@ -477,6 +475,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 positions_of_name_id.csv
 
         """
+        # TODO Make naming in raw data exporter consistent with this exporter, e.g. idx vs world_idx
         export_range, export_dir = self.export_params
         metrics_dir = os.path.join(export_dir, "surfaces")
         section = slice(*export_range)

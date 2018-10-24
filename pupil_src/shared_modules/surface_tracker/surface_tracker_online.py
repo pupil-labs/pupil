@@ -102,17 +102,6 @@ class Surface_Tracker_Online(Surface_Tracker):
         for surface in self.surfaces:
             surface.update_location(idx, self.markers, self.camera_model)
 
-    def _update_surface_gaze_history(self, events, world_timestamp):
-        surfaces_gaze_dict = {e["name"]: e["gaze_on_surf"] for e in events["surfaces"]}
-
-        for surface in self.surfaces:
-            try:
-                surface.update_gaze_history(
-                    surfaces_gaze_dict[surface.name], world_timestamp
-                )
-            except KeyError:
-                pass
-
     def _update_surface_corners(self):
         for surface, corner_idx in self._edit_surf_verts:
             if surface.detected:
@@ -123,6 +112,17 @@ class Surface_Tracker_Online(Surface_Tracker):
     def _update_surface_heatmaps(self):
         for surface in self.surfaces:
             surface.update_heatmap(surface.gaze_history)
+
+    def _update_surface_gaze_history(self, events, world_timestamp):
+        surfaces_gaze_dict = {e["name"]: e["gaze_on_surf"] for e in events["surfaces"]}
+
+        for surface in self.surfaces:
+            try:
+                surface.update_gaze_history(
+                    surfaces_gaze_dict[surface.name], world_timestamp
+                )
+            except KeyError:
+                pass
 
     def add_surface(self, _=None, init_dict=None):
         if self.freeze_scene:
