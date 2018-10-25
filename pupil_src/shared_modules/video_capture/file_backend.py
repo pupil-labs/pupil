@@ -80,7 +80,7 @@ class File_Source(Playback_Source, Base_Source):
         timestamps (str): Path to timestamps file
     """
 
-    def __init__(self, g_pool, source_path=None, loop=False, *args, **kwargs):
+    def __init__(self, g_pool, source_path=None, loop=False, buffered_decoding=False, *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
         if self.timing == 'external':
             self.recent_events = self.recent_events_external_timing
@@ -92,6 +92,7 @@ class File_Source(Playback_Source, Base_Source):
         self.source_path = source_path
         self.timestamps = None
         self.loop = loop
+        self.buffering = buffered_decoding
 
         if not source_path or not os.path.isfile(source_path):
             logger.error('Init failed. Source file could not be found at `%s`'%source_path)
@@ -99,6 +100,7 @@ class File_Source(Playback_Source, Base_Source):
             return
 
         self.container = av.open(str(source_path))
+
 
         try:
             self.video_stream = next(s for s in self.container.streams if s.type=="video")# looking for the first videostream
@@ -149,7 +151,11 @@ class File_Source(Playback_Source, Base_Source):
         self.timestamps = self.timestamps
 
         # set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
-        self.next_frame = self._next_frame()
+        if self.buffering:
+            self.buffered_decoder = self.container.get_buffered_decoder(self.video_stream, dec_batch=50, dec_buffer_size=200)
+            self.next_frame = self.buffered_decoder.get_frame()
+        else:
+            self.next_frame = self._next_frame()
         f0, f1 = next(self.next_frame), next(self.next_frame)
         self.pts_rate = f1.pts
         self.seek_to_frame(0)
@@ -232,6 +238,7 @@ class File_Source(Playback_Source, Base_Source):
     @ensure_initialisation()
     def get_frame(self):
         frame = None
+        logged = False
         for frame in self.next_frame:
             index = self.pts_to_idx(frame.pts)
             if index == self.target_frame_idx:
@@ -259,6 +266,7 @@ class File_Source(Playback_Source, Base_Source):
 
         self.target_frame_idx = index+1
         self.current_frame_idx = index
+
         return Frame(timestamp, frame, index=index)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
@@ -283,6 +291,7 @@ class File_Source(Playback_Source, Base_Source):
             self.seek_to_frame(ts_idx)
 
         # Only call get_frame() if the next frame is actually needed
+        from time import  monotonic
         try:
             frame = frame or self.get_frame()
         except EndofVideoError:
@@ -290,6 +299,7 @@ class File_Source(Playback_Source, Base_Source):
             self.g_pool.seek_control.play = False
             frame = frame or self._recent_frame.copy()
 
+        self.g_pool.seek_control.end_of_seek()
         events['frame'] = frame
         self._recent_frame = frame
 
@@ -312,11 +322,15 @@ class File_Source(Playback_Source, Base_Source):
     def seek_to_frame(self, seek_pos):
         # frame accurate seeking
         try:
-            self.video_stream.seek(int(self.idx_to_pts(seek_pos)))
+            if self.buffering:
+                self.buffered_decoder.seek(int(self.idx_to_pts(seek_pos)))
+            else:
+                self.video_stream.seek(int(self.idx_to_pts(seek_pos)))
         except av.AVError as e:
             raise FileSeekError()
         else:
-            self.next_frame = self._next_frame()
+            if not self.buffering:
+                self.next_frame = self._next_frame()
             self.finished_sleep = 0
             self.target_frame_idx = seek_pos
 
@@ -360,8 +374,16 @@ class File_Source(Playback_Source, Base_Source):
         self.menu.append(ui.Text_Input('frame_num', label='Number of frames',
                                        setter=lambda x: None,
                                        getter=lambda: self.get_frame_count()))
+
     def deinit_ui(self):
         self.remove_menu()
+
+    def cleanup(self):
+        try:
+            self.buffered_decoder.stop_buffer_thread()
+        except AttributeError:
+            pass
+        super().cleanup()
 
     @property
     def jpeg_support(self):
