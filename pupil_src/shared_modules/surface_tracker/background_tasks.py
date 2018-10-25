@@ -1,6 +1,7 @@
 import background_helper
 
 # TODO clean this up!
+# TODO update Task_Proxy to use version with logging fixed
 
 
 def background_video_processor(video_file_path, callable, visited_list, seek_idx=-1):
