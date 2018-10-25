@@ -705,8 +705,9 @@ class Fixation_Detector(Fixation_Detector_Base):
             if inconsistent_timestamps:
                 self.reset_history()
                 return
-            # use newest gaze point to determine age threshold
+
             age_threshold = ts_newest - self.min_duration / 1000.
+            # pop elements until only one element below the age threshold remains:
             while self.history[1]["timestamp"] < age_threshold:
                 self.history.popleft()  # remove outdated gaze points
 

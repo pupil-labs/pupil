@@ -118,8 +118,9 @@ class Blink_Detection(Analysis_Plugin_Base):
             if inconsistent_timestamps:
                 self.reset_history()
                 return
-            # use newest gaze point to determine age threshold
+
             age_threshold = ts_newest - self.history_length
+            # pop elements until only one element below the age threshold remains:
             while self.history[1]["timestamp"] < age_threshold:
                 self.history.popleft()  # remove outdated gaze points
         except IndexError:
