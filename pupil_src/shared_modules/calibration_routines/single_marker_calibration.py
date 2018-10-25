@@ -56,10 +56,10 @@ class Single_Marker_Calibration(Calibration_Plugin):
         monitor_idx=0,
     ):
         super().__init__(g_pool)
-        self.screen_marker_state = 0.
+        self.screen_marker_state = 0.0
         self.lead_in = 25  # frames of marker shown before starting to sample
 
-        self.display_pos = (.5, .5)
+        self.display_pos = (0.5, 0.5)
         self.on_position = False
         self.pos = None
 
@@ -319,9 +319,11 @@ class Single_Marker_Calibration(Calibration_Plugin):
                     360,
                     15,
                 )
-                draw_polyline(pts, color=RGBA(0., 1., 0, 1.))
+                draw_polyline(pts, color=RGBA(0.0, 1.0, 0, 1.0))
                 if len(self.markers) > 1:
-                    draw_polyline(pts, 1, RGBA(1., 0., 0., .5), line_type=gl.GL_POLYGON)
+                    draw_polyline(
+                        pts, 1, RGBA(1.0, 0.0, 0.0, 0.5), line_type=gl.GL_POLYGON
+                    )
 
             # draw indicator on the stop marker(s)
             if self.auto_stop:
@@ -339,7 +341,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
                         indicator = [e[0]] + pts[self.auto_stop :].tolist() + [e[0]]
                         draw_polyline(
                             indicator,
-                            color=RGBA(8., 0.1, 0.1, .8),
+                            color=RGBA(8.0, 0.1, 0.1, 0.8),
                             line_type=gl.GL_POLYGON,
                         )
 
@@ -378,28 +380,28 @@ class Single_Marker_Calibration(Calibration_Plugin):
 
         r2 = 2 * r
         draw_points(
-            [screen_pos], size=60 * r2, color=RGBA(0., 0., 0., alpha), sharpness=0.9
+            [screen_pos], size=60 * r2, color=RGBA(0.0, 0.0, 0.0, alpha), sharpness=0.9
         )
         draw_points(
-            [screen_pos], size=38 * r2, color=RGBA(1., 1., 1., alpha), sharpness=0.8
+            [screen_pos], size=38 * r2, color=RGBA(1.0, 1.0, 1.0, alpha), sharpness=0.8
         )
         draw_points(
-            [screen_pos], size=19 * r2, color=RGBA(0., 0., 0., alpha), sharpness=0.55
+            [screen_pos], size=19 * r2, color=RGBA(0.0, 0.0, 0.0, alpha), sharpness=0.55
         )
 
         # some feedback on the detection state
         color = (
-            RGBA(0., .8, 0., alpha)
+            RGBA(0.0, 0.8, 0.0, alpha)
             if len(self.markers) and self.on_position
-            else RGBA(0.8, 0., 0., alpha)
+            else RGBA(0.8, 0.0, 0.0, alpha)
         )
         draw_points([screen_pos], size=3 * r2, color=color, sharpness=0.5)
 
         if self.clicks_to_close < 5:
-            self.glfont.set_size(int(p_window_size[0] / 30.))
+            self.glfont.set_size(int(p_window_size[0] / 30.0))
             self.glfont.draw_text(
-                p_window_size[0] / 2.,
-                p_window_size[1] / 4.,
+                p_window_size[0] / 2.0,
+                p_window_size[1] / 4.0,
                 "Touch {} more times to cancel calibration.".format(
                     self.clicks_to_close
                 ),

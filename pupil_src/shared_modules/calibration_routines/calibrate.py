@@ -100,8 +100,8 @@ def fit_poly_surface(cal_pt_cloud, n=7):
 
 def fit_error_screen(err_x, err_y, screen_pos):
     screen_x, screen_y = screen_pos
-    err_x *= screen_x / 2.
-    err_y *= screen_y / 2.
+    err_x *= screen_x / 2.0
+    err_y *= screen_y / 2.0
     err_dist = np.sqrt(err_x * err_x + err_y * err_y)
     err_mean = np.sum(err_dist) / len(err_dist)
     err_rms = np.sqrt(np.sum(err_dist * err_dist) / len(err_dist))
@@ -109,8 +109,8 @@ def fit_error_screen(err_x, err_y, screen_pos):
 
 
 def fit_error_angle(err_x, err_y):
-    err_x *= 2. * np.pi
-    err_y *= 2. * np.pi
+    err_x *= 2.0 * np.pi
+    err_y *= 2.0 * np.pi
     err_dist = np.sqrt(err_x * err_x + err_y * err_y)
     err_mean = np.sum(err_dist) / len(err_dist)
     err_rms = np.sqrt(np.sum(err_dist * err_dist) / len(err_dist))
@@ -398,7 +398,7 @@ def make_map_function(cx, cy, n):
     return fn
 
 
-def closest_matches_binocular(ref_pts, pupil_pts, max_dispersion=1 / 15.):
+def closest_matches_binocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
     """
     get pupil positions closest in time to ref points.
     return list of dict with matching ref, pupil0 and pupil1 data triplets.
@@ -440,7 +440,7 @@ def closest_matches_binocular(ref_pts, pupil_pts, max_dispersion=1 / 15.):
     return matched
 
 
-def closest_matches_monocular(ref_pts, pupil_pts, max_dispersion=1 / 15.):
+def closest_matches_monocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
     """
     get pupil positions closest in time to ref points.
     return list of dict with matching ref and pupil datum.

@@ -30,8 +30,8 @@ from plugin import Producer_Plugin_Base
 
 logger = logging.getLogger(__name__)
 
-COLOR_LEGEND_EYE_RIGHT = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.)
-COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.)
+COLOR_LEGEND_EYE_RIGHT = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.0)
+COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.0)
 NUMBER_SAMPLES_TIMELINE = 4000
 
 
@@ -42,7 +42,7 @@ class Empty(object):
 class Pupil_Producer_Base(Producer_Plugin_Base):
     uniqueness = "by_base_class"
     order = 0.01
-    icon_chr = chr(0xec12)
+    icon_chr = chr(0xEC12)
     icon_font = "pupil_icons"
 
     def init_ui(self):
@@ -162,8 +162,10 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
         left = self.cache[key]["left"]
 
         with gl_utils.Coord_System(*self.cache[key]["xlim"], *self.cache[key]["ylim"]):
-            cygl_utils.draw_points(right, size=2. * scale, color=COLOR_LEGEND_EYE_RIGHT)
-            cygl_utils.draw_points(left, size=2. * scale, color=COLOR_LEGEND_EYE_LEFT)
+            cygl_utils.draw_points(
+                right, size=2.0 * scale, color=COLOR_LEGEND_EYE_RIGHT
+            )
+            cygl_utils.draw_points(left, size=2.0 * scale, color=COLOR_LEGEND_EYE_LEFT)
 
     def draw_dia_legend(self, width, height, scale):
         self.draw_legend(self.dia_timeline.label, width, height, scale)
@@ -174,10 +176,10 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
     def draw_legend(self, label, width, height, scale):
         self.glfont.push_state()
         self.glfont.set_align_string(v_align="right", h_align="top")
-        self.glfont.set_size(15. * scale)
+        self.glfont.set_size(15.0 * scale)
         self.glfont.draw_text(width, 0, label)
 
-        legend_height = 13. * scale
+        legend_height = 13.0 * scale
         pad = 10 * scale
         self.glfont.draw_text(width / 2, legend_height, "left")
         self.glfont.draw_text(width, legend_height, "right")
@@ -188,7 +190,7 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
             [(pad, 1.5 * legend_height), (width / 4, 1.5 * legend_height)],
             color=COLOR_LEGEND_EYE_LEFT,
             line_type=gl.GL_LINES,
-            thickness=4. * scale,
+            thickness=4.0 * scale,
         )
         cygl_utils.draw_polyline(
             [
@@ -197,7 +199,7 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
             ],
             color=COLOR_LEGEND_EYE_RIGHT,
             line_type=gl.GL_LINES,
-            thickness=4. * scale,
+            thickness=4.0 * scale,
         )
 
     def create_pupil_positions_by_id(self, topics, data, timestamps):
@@ -355,7 +357,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                         self.correlate_publish()
         total = sum(self.eye_frame_num)
         self.menu_icon.indicator_stop = (
-            len(self.pupil_positions) / total if total else 0.
+            len(self.pupil_positions) / total if total else 0.0
         )
 
     def correlate_publish(self):
@@ -462,7 +464,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
         def detection_progress():
             total = sum(self.eye_frame_num)
-            return 100 * len(self.pupil_positions) / total if total else 0.
+            return 100 * len(self.pupil_positions) / total if total else 0.0
 
         progress_slider = ui.Slider(
             "detection_progress",

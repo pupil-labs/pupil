@@ -28,15 +28,15 @@ def _clamp_norm_point(pos):
         Grossly bigger or smaller numbers are results bad exrapolation
         and can cause overflow erorr when denormalized and cast as int32.
     """
-    return min(100., max(-100., pos[0])), min(100., max(-100., pos[1]))
+    return min(100.0, max(-100.0, pos[0])), min(100.0, max(-100.0, pos[1]))
 
 
 class Gaze_Mapping_Plugin(Plugin):
     """base class for all gaze mapping routines"""
 
     uniqueness = "by_base_class"
-    order = .1
-    icon_chr = chr(0xec20)
+    order = 0.1
+    icon_chr = chr(0xEC20)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool):
@@ -241,11 +241,11 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
             gaze_point_eye0 = self.map_fn_fallback[0](p0["norm_pos"])
             gaze_point_eye1 = self.map_fn_fallback[1](p1["norm_pos"])
             gaze_point = (
-                (gaze_point_eye0[0] + gaze_point_eye1[0]) / 2.,
-                (gaze_point_eye0[1] + gaze_point_eye1[1]) / 2.,
+                (gaze_point_eye0[0] + gaze_point_eye1[0]) / 2.0,
+                (gaze_point_eye0[1] + gaze_point_eye1[1]) / 2.0,
             )
-        confidence = (p0["confidence"] + p1["confidence"]) / 2.
-        ts = (p0["timestamp"] + p1["timestamp"]) / 2.
+        confidence = (p0["confidence"] + p1["confidence"]) / 2.0
+        ts = (p0["timestamp"] + p1["timestamp"]) / 2.0
         return {
             "topic": "gaze.2d.01.",
             "norm_pos": gaze_point,
@@ -432,7 +432,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plug
         self.intersection_points_debug = []
         self.sphere0 = {}
         self.sphere1 = {}
-        self.last_gaze_distance = 500.
+        self.last_gaze_distance = 500.0
 
     def eye0_to_World(self, p):
         point = np.ones(4)
@@ -552,8 +552,8 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plug
         # Chapter: 7.4.2 Cyclopean gaze estimate
 
         # the cyclop is the avg of both lines of sight
-        cyclop_normal = (s0_normal + s1_normal) / 2.
-        cyclop_center = (s0_center + s1_center) / 2.
+        cyclop_normal = (s0_normal + s1_normal) / 2.0
+        cyclop_center = (s0_center + s1_center) / 2.0
 
         # We use it to define a viewing plane.
         gaze_plane = np.cross(cyclop_normal, s1_center - s0_center)
@@ -600,7 +600,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plug
             return None
 
         confidence = min(p0["confidence"], p1["confidence"])
-        ts = (p0["timestamp"] + p1["timestamp"]) / 2.
+        ts = (p0["timestamp"] + p1["timestamp"]) / 2.0
         g = {
             "topic": "gaze.3d.01.",
             "eye_centers_3d": {0: s0_center.tolist(), 1: s1_center.tolist()},

@@ -87,7 +87,7 @@ class Audio_Viz_Transform:
     def sec_to_frames(self, sec):
         return int(np.ceil(sec * self.audio_stream.rate / self.audio_stream.frame_size))
 
-    def get_data(self, seconds=30., height=210, log_scale=False):
+    def get_data(self, seconds=30.0, height=210, log_scale=False):
         import itertools
 
         finished = self.finished
@@ -140,11 +140,11 @@ class Audio_Viz_Transform:
 
                 scaled_samples_log = self.log_scale(abs_samples)
 
-                if abs_samples.max() - abs_samples.min() > 0.:
+                if abs_samples.max() - abs_samples.min() > 0.0:
                     scaled_samples = (abs_samples - abs_samples.min()) / (
                         abs_samples.max() - abs_samples.min()
                     )
-                elif abs_samples.max() > 0.:
+                elif abs_samples.max() > 0.0:
                     scaled_samples = abs_samples / abs_samples.max()
                 else:
                     scaled_samples = abs_samples
@@ -157,15 +157,15 @@ class Audio_Viz_Transform:
                 new_ts += self.audio_timestamps[0]
 
                 # self.all_abs_samples = np.log10(self.all_abs_samples)
-                self.all_abs_samples[-1] = 0.
+                self.all_abs_samples[-1] = 0.0
 
                 scaled_samples_log = self.log_scale(self.all_abs_samples)
 
-                if self.all_abs_samples.max() - self.all_abs_samples.min() > 0.:
+                if self.all_abs_samples.max() - self.all_abs_samples.min() > 0.0:
                     scaled_samples = (
                         self.all_abs_samples - self.all_abs_samples.min()
                     ) / (self.all_abs_samples.max() - self.all_abs_samples.min())
-                elif self.all_abs_samples.max() > 0.:
+                elif self.all_abs_samples.max() > 0.0:
                     scaled_samples = self.all_abs_samples / self.all_abs_samples.max()
                 else:
                     scaled_samples = self.all_abs_samples
@@ -217,7 +217,7 @@ class Audio_Viz_Transform:
         return a_levels
 
     def log_scale(self, abs_samples):
-        scaled_samples = abs_samples / abs_samples.max() + .0001
+        scaled_samples = abs_samples / abs_samples.max() + 0.0001
         scaled_samples_log = 10 * np.log10(scaled_samples)
         sc_min = scaled_samples_log.min()
         scaled_samples_log += -sc_min

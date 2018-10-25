@@ -69,7 +69,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         super().__init__(
             g_pool, mode, min_marker_perimeter, invert_image, robust_detection
         )
-        self.order = .2
+        self.order = 0.2
         self.marker_cache_version = 2
         self.min_marker_perimeter_cacher = (
             20
@@ -152,7 +152,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
         self.glfont = fontstash.Context()
         self.glfont.add_font("opensans", ui.get_opensans_font_path())
-        self.glfont.set_color_float((1., 1., 1., .8))
+        self.glfont.set_color_float((1.0, 1.0, 1.0, 0.8))
         self.glfont.set_align_string(v_align="right", h_align="top")
 
         self.timeline = ui.Timeline(
@@ -302,7 +302,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
         if not max_res:
             logger.warning("No gaze on any surface for this section!")
         else:
-            results *= 255. / max_res
+            results *= 255.0 / max_res
         results = np.uint8(results)
         results_c_maps = cv2.applyColorMap(results, cv2.COLORMAP_JET)
 
@@ -460,7 +460,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                 )  # [(0,0),(1,0),(3,0),(4,0)]
 
             glTranslatef(0, scale * self.timeline_line_height / 2, 0)
-            color = RGBA(.8, .6, .2, .8)
+            color = RGBA(0.8, 0.6, 0.2, 0.8)
             draw_polyline(
                 cached_ranges, color=color, line_type=GL_LINES, thickness=scale * 4
             )
@@ -477,14 +477,14 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
                         )  # [(0,0),(1,0),(3,0),(4,0)]
                     cached_surfaces.append(found_at)
 
-            color = RGBA(0, .7, .3, .8)
+            color = RGBA(0, 0.7, 0.3, 0.8)
 
             for s in cached_surfaces:
                 glTranslatef(0, scale * self.timeline_line_height, 0)
                 draw_polyline(s, color=color, line_type=GL_LINES, thickness=scale * 2)
 
     def draw_labels(self, width, height, scale):
-        self.glfont.set_size(self.timeline_line_height * .8 * scale)
+        self.glfont.set_size(self.timeline_line_height * 0.8 * scale)
         self.glfont.draw_text(width, 0, "Marker Cache")
         for idx, s in enumerate(self.surfaces):
             glTranslatef(0, self.timeline_line_height * scale, 0)

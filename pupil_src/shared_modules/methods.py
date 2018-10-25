@@ -284,7 +284,7 @@ def GetAnglesPolyline(polyline, closed=False):
 
     # float alpha = atan2(cross, dot);
     alpha = np.arctan2(cros, dot)
-    return alpha * (180. / np.pi)  # degrees
+    return alpha * (180.0 / np.pi)  # degrees
     # return alpha #radians
 
 
@@ -414,7 +414,7 @@ def find_slope_disc_test(curvature, angle=15):
     for anchor1, anchor2, candidate in zip(
         curvature[::-1], curvature[:-1:][::-1], curvature[:-2:][::-1]
     ):
-        avg = (anchor1 + anchor2) / 2.
+        avg = (anchor1 + anchor2) / 2.0
         dif = abs(avg - candidate)
         if dif >= angle:
             split_idx.add(i)
@@ -467,7 +467,7 @@ def convexity_defect(contour, curvature):
     return kinks, kink_index
 
 
-def is_round(ellipse, ratio, tolerance=.8):
+def is_round(ellipse, ratio, tolerance=0.8):
     center, (axis1, axis2), angle = ellipse
 
     if (
@@ -554,8 +554,8 @@ def dist_pts_ellipse(ellipse, points):
     ex, ey = pos
     dx, dy = size
     pts = np.float64(points)
-    rx, ry = dx / 2., dy / 2.
-    angle = (angle / 180.) * np.pi
+    rx, ry = dx / 2.0, dy / 2.0
+    angle = (angle / 180.0) * np.pi
     # ex,ey =ex+0.000000001,ey-0.000000001 #hack to make 0 divisions possible this is UGLY!!!
     pts = pts - np.array(
         (ex, ey)
@@ -601,8 +601,8 @@ if ne:
         dx, dy = size
         pts = np.float64(points)
         pts.shape = (-1, 2)
-        rx, ry = dx / 2., dy / 2.
-        angle = (angle / 180.) * np.pi
+        rx, ry = dx / 2.0, dy / 2.0
+        angle = (angle / 180.0) * np.pi
         # ex,ey = ex+0.000000001 , ey-0.000000001 #hack to make 0 divisions possible this is UGLY!!!
         x = pts[:, 0]
         y = pts[:, 1]

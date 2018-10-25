@@ -143,12 +143,12 @@ class Hololens_Relay(Plugin):
     S:      0i
     """
 
-    icon_chr = chr(0xec21)
+    icon_chr = chr(0xEC21)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, port="50021", host="", use_primary_interface=True):
         super().__init__(g_pool)
-        self.order = .01  # excecute first
+        self.order = 0.01  # excecute first
         self.context = g_pool.zmq_ctx
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
 
@@ -179,7 +179,7 @@ class Hololens_Relay(Plugin):
     def stop_server(self):
         self.thread_pipe.send_string("Exit")
         while self.thread_pipe:
-            sleep(.1)
+            sleep(0.1)
 
     def init_ui(self):
         self.add_menu()
@@ -400,14 +400,14 @@ class Hololens_Relay(Plugin):
                 {
                     "subject": "eye_process.should_start.{}".format(0),
                     "eye_id": 0,
-                    "delay": .4,
+                    "delay": 0.4,
                 }
             )
             ipc_pub.notify(
                 {
                     "subject": "eye_process.should_start.{}".format(1),
                     "eye_id": 1,
-                    "delay": .2,
+                    "delay": 0.2,
                 }
             )
             response = b"0I"
@@ -426,8 +426,8 @@ class Hololens_Relay(Plugin):
                     "subject": "calibration.should_start",
                     "hmd_video_frame_size": (width, height),
                     "outlier_threshold": outlier_threshold,
-                    "translation_eye0": [27.84765, 0., 0.],
-                    "translation_eye1": [-27.84765, 0., 0.],
+                    "translation_eye0": [27.84765, 0.0, 0.0],
+                    "translation_eye1": [-27.84765, 0.0, 0.0],
                 }
             )
             response = b"0C"

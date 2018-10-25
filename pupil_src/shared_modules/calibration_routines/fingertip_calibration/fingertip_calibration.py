@@ -253,25 +253,25 @@ class Fingertip_Calibration(calibration_plugin_base.Calibration_Plugin):
                 cygl_utils.draw_polyline(
                     pts,
                     thickness=3 * self.g_pool.gui_user_scale,
-                    color=cygl_utils.RGBA(0., 1., 0., 1.),
+                    color=cygl_utils.RGBA(0.0, 1.0, 0.0, 1.0),
                 )
                 for tip in fingertips:
                     if tip is not None:
                         y, x = tip
                         cygl_utils.draw_progress(
                             (x, y),
-                            0.,
-                            1.,
+                            0.0,
+                            1.0,
                             inner_radius=25 * self.g_pool.gui_user_scale,
                             outer_radius=35 * self.g_pool.gui_user_scale,
-                            color=cygl_utils.RGBA(1., 1., 1., 1.),
+                            color=cygl_utils.RGBA(1.0, 1.0, 1.0, 1.0),
                             sharpness=0.9,
                         )
 
                         cygl_utils.draw_points(
                             [(x, y)],
                             size=10 * self.g_pool.gui_user_scale,
-                            color=cygl_utils.RGBA(1., 1., 1., 1.),
+                            color=cygl_utils.RGBA(1.0, 1.0, 1.0, 1.0),
                             sharpness=0.9,
                         )
 

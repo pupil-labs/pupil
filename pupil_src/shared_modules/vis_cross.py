@@ -19,14 +19,14 @@ from methods import denormalize
 
 class Vis_Cross(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
-    icon_chr = chr(0xec13)
+    icon_chr = chr(0xEC13)
     icon_font = "pupil_icons"
 
     def __init__(
-        self, g_pool, inner=20, outer=100, color=(1., 0.0, 0.0, 1.0), thickness=1
+        self, g_pool, inner=20, outer=100, color=(1.0, 0.0, 0.0, 1.0), thickness=1
     ):
         super().__init__(g_pool)
-        self.order = .9
+        self.order = 0.9
         self.menu = None
 
         self.r = color[0]

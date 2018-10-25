@@ -72,12 +72,12 @@ class Pupil_Remote(Plugin):
         thread_pipe (zmq.Socket): Pipe for background communication
     """
 
-    icon_chr = chr(0xe307)
+    icon_chr = chr(0xE307)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, port="50020", host="*", use_primary_interface=True):
         super().__init__(g_pool)
-        self.order = .01  # excecute first
+        self.order = 0.01  # excecute first
         self.context = g_pool.zmq_ctx
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
 
@@ -127,7 +127,7 @@ class Pupil_Remote(Plugin):
     def stop_server(self):
         self.thread_pipe.send_string("Exit")
         while self.thread_pipe:
-            sleep(.1)
+            sleep(0.1)
 
     def init_ui(self):
         self.add_menu()

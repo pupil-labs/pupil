@@ -112,7 +112,11 @@ class Visualizer(object):
         glEnd()
 
     def draw_sphere(
-        self, sphere_position, sphere_radius, contours=45, color=RGBA(.2, .5, 0.5, .5)
+        self,
+        sphere_position,
+        sphere_radius,
+        contours=45,
+        color=RGBA(0.2, 0.5, 0.5, 0.5),
     ):
 
         glPushMatrix()
@@ -126,7 +130,7 @@ class Visualizer(object):
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)  # overwrite pointsize
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable(GL_BLEND)
-        glClearColor(.8, .8, .8, 1.)
+        glClearColor(0.8, 0.8, 0.8, 1.0)
         glEnable(GL_LINE_SMOOTH)
         # glEnable(GL_POINT_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
@@ -146,7 +150,7 @@ class Visualizer(object):
         glLoadIdentity()
 
     def clear_gl_screen(self):
-        glClearColor(0.9, 0.9, 0.9, 1.)
+        glClearColor(0.9, 0.9, 0.9, 1.0)
         glClear(GL_COLOR_BUFFER_BIT)
 
     def close_window(self):

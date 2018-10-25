@@ -73,7 +73,7 @@ except ImportError:
 # Model
 
 
-MULTIPLICATION_SIGN = unichr(0xd7)
+MULTIPLICATION_SIGN = unichr(0xD7)
 
 
 def times(x):

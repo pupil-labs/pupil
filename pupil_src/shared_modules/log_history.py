@@ -32,7 +32,7 @@ class Log_to_Callback(logging.Handler):
 class Log_History(Plugin):
     """Simple logging GUI that displays the last N messages from the logger"""
 
-    icon_chr = chr(0xec10)
+    icon_chr = chr(0xEC10)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool):

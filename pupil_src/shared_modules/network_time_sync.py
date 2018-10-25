@@ -128,7 +128,7 @@ class Clock_Sync_Follower(threading.Thread):
     A class that uses jump and slew to adjust a local clock to a remote clock.
     """
 
-    ms = 1 / 1000.
+    ms = 1 / 1000.0
     us = ms * ms
     tolerance = 0.1 * ms
     max_slew = 500 * us
@@ -150,7 +150,7 @@ class Clock_Sync_Follower(threading.Thread):
 
         # the avg variance of time probes from the last sample run (offset jitter)
         # this error can come from application_runtime jitter, network_jitter,master_clock_jitter and slave_clock_jitter
-        self.sync_jitter = 1000000.
+        self.sync_jitter = 1000000.0
 
         # slave was not able to set the clock at current
         self.offset_remains = True
@@ -212,7 +212,7 @@ class Clock_Sync_Follower(threading.Thread):
     def _get_offset(self):
         try:
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server_socket.settimeout(1.)
+            server_socket.settimeout(1.0)
             server_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             server_socket.connect((self.host, self.port))
             times = []

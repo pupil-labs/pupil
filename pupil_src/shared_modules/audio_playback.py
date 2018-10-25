@@ -36,7 +36,7 @@ logger.setLevel(logger.DEBUG)
 # av.logging.set_level(av.logging.DEBUG)
 # logging.getLogger('libav').setLevel(logging.DEBUG)
 
-viz_color = RGBA(0.9844, 0.5938, 0.4023, 1.)
+viz_color = RGBA(0.9844, 0.5938, 0.4023, 1.0)
 
 
 class FileSeekError(Exception):
@@ -49,7 +49,7 @@ class Audio_Playback(System_Plugin_Base):
     Points are collected at sites not between
     """
 
-    icon_chr = chr(0xe050)
+    icon_chr = chr(0xE050)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool):
@@ -57,16 +57,16 @@ class Audio_Playback(System_Plugin_Base):
 
         self.play = False
         self.pa_stream = None
-        self.audio_sync = 0.
-        self.audio_delay = 0.
+        self.audio_sync = 0.0
+        self.audio_delay = 0.0
         self.audio_container = None
         self.audio_stream = None
         self.next_audio_frame = None
         self.audio_start_pts = 0
         self.check_ts_consistency = False
-        self.req_audio_volume = 1.
-        self.current_audio_volume = 1.
-        self.req_buffer_size_secs = .5
+        self.req_audio_volume = 1.0
+        self.current_audio_volume = 1.0
+        self.req_buffer_size_secs = 0.5
         self.audio_viz_trans = None
         audio_file = os.path.join(self.g_pool.rec_dir, "audio.mp4")
         if os.path.isfile(audio_file):
@@ -144,7 +144,7 @@ class Audio_Playback(System_Plugin_Base):
                 )
             )
             self.audio_start_time = 0
-            self.audio_measured_latency = -1.
+            self.audio_measured_latency = -1.0
             self.last_dac_time = 0
             self.filter_graph = None
             self.filter_graph_list = None
@@ -196,7 +196,7 @@ class Audio_Playback(System_Plugin_Base):
                 "req_audio_volume",
                 self,
                 # setter=set_volume,
-                step=.05,
+                step=0.05,
                 min=0.0,
                 max=1.0,
                 label="Volume",
@@ -207,7 +207,7 @@ class Audio_Playback(System_Plugin_Base):
                 "req_buffer_size_secs",
                 self,
                 # setter=set_volume,
-                step=.05,
+                step=0.05,
                 min=0.0,
                 max=1.0,
                 label="Buffer size (s)",
@@ -333,7 +333,10 @@ class Audio_Playback(System_Plugin_Base):
                     self.pa_stream = None
         start_stream = False
 
-        if self.g_pool.seek_control.playback_speed == 1. and self.pa_stream is not None:
+        if (
+            self.g_pool.seek_control.playback_speed == 1.0
+            and self.pa_stream is not None
+        ):
             self.play = True
 
             # if self.filter_graph_list is None or self.req_audio_volume != self.current_audio_volume:

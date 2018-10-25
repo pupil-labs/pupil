@@ -60,19 +60,19 @@ class Time_Sync(Plugin):
     See `time_sync_spec.md` for details.
     """
 
-    icon_chr = chr(0xec15)
+    icon_chr = chr(0xEC15)
     icon_font = "pupil_icons"
 
     def __init__(
-        self, g_pool, node_name=None, sync_group_prefix="default", base_bias=1.
+        self, g_pool, node_name=None, sync_group_prefix="default", base_bias=1.0
     ):
         super().__init__(g_pool)
         self.sync_group_prefix = sync_group_prefix
         self.discovery = None
 
         self.leaderboard = []
-        self.has_been_master = 0.
-        self.has_been_synced = 0.
+        self.has_been_master = 0.0
+        self.has_been_synced = 0.0
         self.tie_breaker = random.random()
         self.base_bias = base_bias
 
@@ -130,7 +130,7 @@ class Time_Sync(Plugin):
 
         def set_bias(bias):
             if bias < 0:
-                bias = 0.
+                bias = 0.0
             self.base_bias = bias
             self.announce_clock_master_info()
             self.evaluate_leaderboard()
@@ -175,7 +175,7 @@ class Time_Sync(Plugin):
             and self.follower_service
             and self.follower_service.in_sync
         ):
-            self.has_been_synced = 1.
+            self.has_been_synced = 1.0
             self.announce_clock_master_info()
             self.evaluate_leaderboard()
 
@@ -234,7 +234,7 @@ class Time_Sync(Plugin):
             self.follower_service = None
 
         if not self.has_been_master:
-            self.has_been_master = 1.
+            self.has_been_master = 1.0
             logger.debug("Become clock master with rank {}".format(self.rank))
             self.announce_clock_master_info()
 

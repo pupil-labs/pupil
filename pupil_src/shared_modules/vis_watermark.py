@@ -26,12 +26,12 @@ logger = logging.getLogger(__name__)
 
 class Vis_Watermark(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
-    icon_chr = chr(0xec04)
+    icon_chr = chr(0xEC04)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, selected_watermark_path=None, pos=(20, 20)):
         super().__init__(g_pool)
-        self.order = .9
+        self.order = 0.9
         self.menu = None
 
         available_files = glob(

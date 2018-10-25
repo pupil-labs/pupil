@@ -26,13 +26,13 @@ class Vis_Scan_Path(Analysis_Plugin_Base):
     lock recent gaze points onto pixels.
     """
 
-    icon_chr = chr(0xe422)
+    icon_chr = chr(0xE422)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool, timeframe=.5):
+    def __init__(self, g_pool, timeframe=0.5):
         super().__init__(g_pool)
         # let the plugin work after most other plugins.
-        self.order = .1
+        self.order = 0.1
         self.menu = None
 
         # user settings

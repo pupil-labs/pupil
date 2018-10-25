@@ -44,7 +44,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
         self.ref_list = []
         self.pupil_list = []
         self.menu = None
-        self.order = .5
+        self.order = 0.5
 
     def init_ui(self):
         super().init_ui()
@@ -117,7 +117,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
     def gl_display(self):
         if self.detected:
-            draw_points_norm([self.pos], size=self.r, color=RGBA(0., 1., 0., .5))
+            draw_points_norm([self.pos], size=self.r, color=RGBA(0.0, 1.0, 0.0, 0.5))
 
     def on_click(self, pos, button, action):
         if action == GLFW_PRESS and self.active:

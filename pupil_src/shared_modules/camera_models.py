@@ -274,7 +274,7 @@ class Fisheye_Dist_Camera(object):
             k = self.D.ravel().astype(np.float32)
         else:
             k = np.asarray(
-                [1. / 3., 2. / 15., 17. / 315., 62. / 2835.], dtype=np.float32
+                [1.0 / 3.0, 2.0 / 15.0, 17.0 / 315.0, 62.0 / 2835.0], dtype=np.float32
             )
 
         pi = pts_2d.astype(np.float32)
@@ -330,7 +330,7 @@ class Fisheye_Dist_Camera(object):
         if use_distortion:
             _D = self.D
         else:
-            _D = np.asarray([[1. / 3., 2. / 15., 17. / 315., 62. / 2835.]])
+            _D = np.asarray([[1.0 / 3.0, 2.0 / 15.0, 17.0 / 315.0, 62.0 / 2835.0]])
 
         image_points, jacobian = cv2.fisheye.projectPoints(
             object_points, rvec, tvec, self.K, _D, alpha=skew
@@ -421,7 +421,7 @@ class Radial_Dist_Camera(object):
         if use_distortion:
             _D = self.D
         else:
-            _D = np.asarray([[0., 0., 0., 0., 0.]])
+            _D = np.asarray([[0.0, 0.0, 0.0, 0.0, 0.0]])
 
         pts_2d_undist = cv2.undistortPoints(pts_2d, self.K, _D)
 
@@ -458,7 +458,7 @@ class Radial_Dist_Camera(object):
         if use_distortion:
             _D = self.D
         else:
-            _D = np.asarray([[0., 0., 0., 0., 0.]])
+            _D = np.asarray([[0.0, 0.0, 0.0, 0.0, 0.0]])
 
         image_points, jacobian = cv2.projectPoints(
             object_points, rvec, tvec, self.K, _D
@@ -498,11 +498,11 @@ class Dummy_Camera(Radial_Dist_Camera):
 
     def __init__(self, resolution, name):
         camera_matrix = [
-            [1000, 0., resolution[0] / 2.],
-            [0., 1000, resolution[1] / 2.],
-            [0., 0., 1.],
+            [1000, 0.0, resolution[0] / 2.0],
+            [0.0, 1000, resolution[1] / 2.0],
+            [0.0, 0.0, 1.0],
         ]
-        dist_coefs = [[0., 0., 0., 0., 0.]]
+        dist_coefs = [[0.0, 0.0, 0.0, 0.0, 0.0]]
         super().__init__(camera_matrix, dist_coefs, resolution, name)
 
     def save(self, directory, custom_name=None):

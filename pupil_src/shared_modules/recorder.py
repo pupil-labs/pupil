@@ -47,7 +47,7 @@ def available_gb(path):
 class Recorder(System_Plugin_Base):
     """Capture Recorder"""
 
-    icon_chr = chr(0xe04b)
+    icon_chr = chr(0xE04B)
     icon_font = "pupil_icons"
     warning_low_disk_space_th = 5.0  # threshold in GB
     stop_rec_low_disk_space_th = 1.0  # threshold in GB
@@ -91,7 +91,7 @@ class Recorder(System_Plugin_Base):
             self.rec_root_dir = default_rec_root_dir
 
         self.raw_jpeg = raw_jpeg
-        self.order = .9
+        self.order = 0.9
         self.record_eye = record_eye
         self.session_name = session_name
         self.running = False
@@ -104,7 +104,7 @@ class Recorder(System_Plugin_Base):
         self.info_menu_conf = info_menu_conf
 
         self.low_disk_space_thumb = None
-        check_timer = timer(1.)
+        check_timer = timer(1.0)
         self.check_space = lambda: next(check_timer)
 
     def get_init_dict(self):
@@ -180,13 +180,13 @@ class Recorder(System_Plugin_Base):
         self.button = ui.Thumb(
             "running", self, setter=self.toggle, label="R", hotkey="r"
         )
-        self.button.on_color[:] = (1, .0, .0, .8)
+        self.button.on_color[:] = (1, 0.0, 0.0, 0.8)
         self.g_pool.quickbar.insert(2, self.button)
 
         self.low_disk_space_thumb = ui.Thumb(
             "low_disk_warn", label="!", getter=lambda: True, setter=lambda x: None
         )
-        self.low_disk_space_thumb.on_color[:] = (1, .0, .0, .8)
+        self.low_disk_space_thumb.on_color[:] = (1, 0.0, 0.0, 0.8)
         self.low_disk_space_thumb.status_text = "Low disk space"
 
     def deinit_ui(self):

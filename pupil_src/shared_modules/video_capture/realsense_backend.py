@@ -425,7 +425,7 @@ class Realsense_Source(Base_Source):
             self.restart_device()
             time.sleep(0.05)
         elif not self.online:
-            time.sleep(.05)
+            time.sleep(0.05)
             return
 
         try:

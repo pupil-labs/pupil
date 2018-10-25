@@ -37,9 +37,9 @@ class UIRoi(Roi):
         self.handle_size = 35
         self.active_edit_pt = False
         self.active_pt_idx = None
-        self.handle_color = cygl_rgba(.5, .5, .9, .9)
-        self.handle_color_selected = cygl_rgba(.5, .9, .9, .9)
-        self.handle_color_shadow = cygl_rgba(.0, .0, .0, .5)
+        self.handle_color = cygl_rgba(0.5, 0.5, 0.9, 0.9)
+        self.handle_color_selected = cygl_rgba(0.5, 0.9, 0.9, 0.9)
+        self.handle_color_shadow = cygl_rgba(0.0, 0.0, 0.0, 0.5)
 
     @property
     def rect(self):
@@ -89,7 +89,7 @@ class UIRoi(Roi):
     def draw(self, ui_scale=1):
         cygl_draw_polyline(
             self.rect,
-            color=cygl_rgba(.8, .8, .8, 0.9),
+            color=cygl_rgba(0.8, 0.8, 0.8, 0.9),
             thickness=1,
             line_type=GL_LINE_LOOP,
         )

@@ -10,5 +10,5 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 from calibration_routines.fingertip_calibration.fingertip_calibration import (
-    Fingertip_Calibration
+    Fingertip_Calibration,
 )

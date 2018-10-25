@@ -21,7 +21,7 @@ class Calibration_Plugin(Plugin):
     """base class for all calibration routines"""
 
     uniqueness = "by_base_class"
-    icon_chr = chr(0xec14)
+    icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool):
@@ -70,7 +70,7 @@ class Calibration_Plugin(Plugin):
             ui.Slider(
                 "min_calibration_confidence",
                 self.g_pool,
-                step=.01,
+                step=0.01,
                 min=0.0,
                 max=1.0,
                 label="Minimum calibration confidence",
@@ -129,7 +129,7 @@ class Calibration_Plugin(Plugin):
             "active", self, label="T", setter=self.toggle_accuracy_test, hotkey="t"
         )
 
-        on_color = (.3, .2, 1., .9)
+        on_color = (0.3, 0.2, 1.0, 0.9)
         self.calib_button.on_color[:] = on_color
         self.test_button.on_color[:] = on_color
 
