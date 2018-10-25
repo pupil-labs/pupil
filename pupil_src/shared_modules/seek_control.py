@@ -330,7 +330,6 @@ class Seek_Control(System_Plugin_Base):
                 time.sleep(time_diff)
         else:
             time.sleep(1 / 60)
-            #self.was_seeking = False
 
     def get_init_dict(self):
         return {"playback_speed": self._playback_speed}

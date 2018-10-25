@@ -80,7 +80,7 @@ class File_Source(Playback_Source, Base_Source):
         timestamps (str): Path to timestamps file
     """
 
-    def __init__(self, g_pool, source_path=None, loop=False, *args, **kwargs):
+    def __init__(self, g_pool, source_path=None, loop=False, buffered_decoding=False, *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
         if self.timing == 'external':
             self.recent_events = self.recent_events_external_timing
@@ -92,6 +92,7 @@ class File_Source(Playback_Source, Base_Source):
         self.source_path = source_path
         self.timestamps = None
         self.loop = loop
+        self.buffering = buffered_decoding
 
         if not source_path or not os.path.isfile(source_path):
             logger.error('Init failed. Source file could not be found at `%s`'%source_path)
@@ -150,8 +151,11 @@ class File_Source(Playback_Source, Base_Source):
         self.timestamps = self.timestamps
 
         # set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
-        self.buffered_decoder = self.container.get_buffered_decoder(self.video_stream, dec_batch=50, dec_buffer_size=200)
-        self.next_frame = self.buffered_decoder.get_frame()
+        if self.buffering:
+            self.buffered_decoder = self.container.get_buffered_decoder(self.video_stream, dec_batch=50, dec_buffer_size=200)
+            self.next_frame = self.buffered_decoder.get_frame()
+        else:
+            self.next_frame = self._next_frame()
         f0, f1 = next(self.next_frame), next(self.next_frame)
         self.pts_rate = f1.pts
         self.seek_to_frame(0)
@@ -318,10 +322,15 @@ class File_Source(Playback_Source, Base_Source):
     def seek_to_frame(self, seek_pos):
         # frame accurate seeking
         try:
-            self.buffered_decoder.seek(int(self.idx_to_pts(seek_pos)))
+            if self.buffering:
+                self.buffered_decoder.seek(int(self.idx_to_pts(seek_pos)))
+            else:
+                self.video_stream.seek(int(self.idx_to_pts(seek_pos)))
         except av.AVError as e:
             raise FileSeekError()
         else:
+            if not self.buffering:
+                self.next_frame = self._next_frame()
             self.finished_sleep = 0
             self.target_frame_idx = seek_pos
 
