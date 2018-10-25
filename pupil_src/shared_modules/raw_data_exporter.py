@@ -12,9 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import csv
 import logging
 import os
-from itertools import chain
 
-import numpy as np
 from pyglui import ui
 
 import player_methods as pm

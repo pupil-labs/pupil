@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 import csv
 
@@ -23,16 +23,16 @@ def read_key_value_file(csvfile):
     """
     kvstore = {}  # init key value store
     first_line = csvfile.readline()
-    if 'key' not in first_line or 'value' not in first_line:
+    if "key" not in first_line or "value" not in first_line:
         csvfile.seek(0)  # Seek to start if first_line is not an header
-    dialect = csv.Sniffer().sniff(first_line, delimiters=',\t')
+    dialect = csv.Sniffer().sniff(first_line, delimiters=",\t")
     reader = csv.reader(csvfile, dialect)  # create reader
     for row in reader:
         kvstore[row[0]] = row[1]
     return kvstore
 
 
-def write_key_value_file(csvfile,dictionary,append=False):
+def write_key_value_file(csvfile, dictionary, append=False):
     """Writes a dictionary to a writable file in a CSV format
 
     Args:
@@ -43,44 +43,45 @@ def write_key_value_file(csvfile,dictionary,append=False):
     Returns:
         None: No return
     """
-    writer = csv.writer(csvfile, delimiter=',')
+    writer = csv.writer(csvfile, delimiter=",")
     if not append:
-        writer.writerow(['key', 'value'])
+        writer.writerow(["key", "value"])
     for key, val in dictionary.items():
         writer.writerow([key, val])
 
 
-if __name__ == '__main__':
-    test = {'foo': 'bar', 'oh': 'rl"abc"y', 'it was': 'not 🚨'}
-    test_append = {'jo': 'ho'}
+if __name__ == "__main__":
+    test = {"foo": "bar", "oh": 'rl"abc"y', "it was": "not 🚨"}
+    test_append = {"jo": "ho"}
     test_updated = test.copy()
     test_updated.update(test_append)
 
-    testfile = '.test.csv'
+    testfile = ".test.csv"
 
     # Test write+read
-    with open(testfile, 'w', encoding='utf-8') as csvfile:
+    with open(testfile, "w", encoding="utf-8") as csvfile:
         write_key_value_file(csvfile, test)
-    with open(testfile, 'r', encoding='utf-8') as csvfile:
+    with open(testfile, "r", encoding="utf-8") as csvfile:
         result = read_key_value_file(csvfile)
     assert test == result, (test, result)
 
     # Test write+append (same keys)+read
-    with open(testfile, 'w', encoding='utf-8') as csvfile:
+    with open(testfile, "w", encoding="utf-8") as csvfile:
         write_key_value_file(csvfile, test)
         write_key_value_file(csvfile, test, append=True)
-    with open(testfile, 'r', encoding='utf-8') as csvfile:
+    with open(testfile, "r", encoding="utf-8") as csvfile:
         result = read_key_value_file(csvfile)
     assert test == result
 
     # Test write+append (different keys)+read
-    with open(testfile, 'w', encoding='utf-8') as csvfile:
+    with open(testfile, "w", encoding="utf-8") as csvfile:
         write_key_value_file(csvfile, test)
         write_key_value_file(csvfile, test_append, append=True)
-    with open(testfile, 'r', encoding='utf-8') as csvfile:
+    with open(testfile, "r", encoding="utf-8") as csvfile:
         result = read_key_value_file(csvfile)
     assert test_updated == result
 
     import os
+
     os.remove(testfile)
-    print('CSV Test: successful')
+    print("CSV Test: successful")
