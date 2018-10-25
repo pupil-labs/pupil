@@ -38,8 +38,8 @@ class Manual_Marker_Calibration(Calibration_Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.pos = None
-        self.smooth_pos = 0., 0.
-        self.smooth_vel = 0.
+        self.smooth_pos = 0.0, 0.0
+        self.smooth_vel = 0.0
         self.sample_site = (-2, -2)
         self.counter = 0
         self.counter_max = 30
@@ -73,7 +73,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         logger.info("Stopping  {}".format(self.mode_pretty))
         self.screen_marker_state = 0
         self.active = False
-        self.smooth_pos = 0., 0.
+        self.smooth_pos = 0.0, 0.0
         # self.close_window()
         self.button.status_text = ""
         if self.mode == "calibration":
@@ -247,7 +247,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         """
 
         if self.active:
-            draw_points_norm([self.smooth_pos], size=15, color=RGBA(1., 1., 0., .5))
+            draw_points_norm([self.smooth_pos], size=15, color=RGBA(1.0, 1.0, 0.0, 0.5))
 
         if self.active and len(self.markers):
             # draw the largest ellipse of all detected markers
@@ -261,9 +261,11 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                     360,
                     15,
                 )
-                draw_polyline(pts, color=RGBA(0., 1., 0, 1.))
+                draw_polyline(pts, color=RGBA(0.0, 1.0, 0, 1.0))
                 if len(self.markers) > 1:
-                    draw_polyline(pts, 1, RGBA(1., 0., 0., .5), line_type=GL_POLYGON)
+                    draw_polyline(
+                        pts, 1, RGBA(1.0, 0.0, 0.0, 0.5), line_type=GL_POLYGON
+                    )
 
             # draw indicator on the first detected marker
             if self.counter and self.markers[0]["marker_type"] == "Ref":
@@ -278,7 +280,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 )
                 indicator = [e[0]] + pts[self.counter :].tolist()[::-1] + [e[0]]
                 draw_polyline(
-                    indicator, color=RGBA(0.1, .5, .7, .8), line_type=GL_POLYGON
+                    indicator, color=RGBA(0.1, 0.5, 0.7, 0.8), line_type=GL_POLYGON
                 )
 
             # draw indicator on the stop marker(s)
@@ -297,7 +299,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                         indicator = [e[0]] + pts[self.auto_stop :].tolist() + [e[0]]
                         draw_polyline(
                             indicator,
-                            color=RGBA(8., 0.1, 0.1, .8),
+                            color=RGBA(8.0, 0.1, 0.1, 0.8),
                             line_type=GL_POLYGON,
                         )
         else:

@@ -19,7 +19,7 @@ class Pupil_Data_Relay(System_Plugin_Base):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.order = .01
+        self.order = 0.01
         self.gaze_pub = zmq_tools.Msg_Streamer(
             self.g_pool.zmq_ctx, self.g_pool.ipc_pub_url
         )

@@ -71,7 +71,7 @@ class Eye_Visualizer(Visualizer):
         temp[3, 3] *= scale
         return temp
 
-    def get_image_space_matrix(self, scale=1.):
+    def get_image_space_matrix(self, scale=1.0):
         temp = self.get_adjusted_pixel_space_matrix(scale)
         temp[1, 1] *= -1  # image origin is top left
         temp[0, 3] = -self.image_width / 2.0
@@ -177,7 +177,7 @@ class Eye_Visualizer(Visualizer):
         circle_center,
         circle_normal,
         circle_radius,
-        color=RGBA(1.1, 0.2, .8),
+        color=RGBA(1.1, 0.2, 0.8),
         num_segments=20,
     ):
         vertices = []
@@ -242,8 +242,8 @@ class Eye_Visualizer(Visualizer):
 
         glLoadMatrixf(self.get_anthropomorphic_matrix())
         model_count = 0
-        sphere_color = RGBA(0, 147 / 255., 147 / 255., 0.2)
-        initial_sphere_color = RGBA(0, 147 / 255., 147 / 255., 0.2)
+        sphere_color = RGBA(0, 147 / 255.0, 147 / 255.0, 0.2)
+        initial_sphere_color = RGBA(0, 147 / 255.0, 147 / 255.0, 0.2)
 
         alternative_sphere_color = RGBA(1, 0.5, 0.5, 0.05)
         alternative_initial_sphere_color = RGBA(1, 0.5, 0.5, 0.05)

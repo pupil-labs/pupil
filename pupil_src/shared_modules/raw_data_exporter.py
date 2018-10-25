@@ -102,7 +102,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
         gaze_normal1_z - z normal of the visual axis for eye 1
         """
 
-    icon_chr = chr(0xe873)
+    icon_chr = chr(0xE873)
     icon_font = "pupil_icons"
 
     def __init__(

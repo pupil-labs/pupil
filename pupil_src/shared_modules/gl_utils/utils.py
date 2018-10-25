@@ -61,7 +61,7 @@ def basic_gl_setup():
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)  # overwrite pointsize
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     glEnable(GL_BLEND)
-    glClearColor(1., 1., 1., 0.)
+    glClearColor(1.0, 1.0, 1.0, 0.0)
     glEnable(GL_LINE_SMOOTH)
     # glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
     # glEnable(GL_POLYGON_SMOOTH)

@@ -20,7 +20,7 @@ class Trackball(object):
         self.distance = [0, 0, 0.1]
         self.pitch = 0
         self.roll = 0
-        self.aspect = 1.
+        self.aspect = 1.0
         self.fov = fov
         self.window = 1, 1
 
@@ -43,12 +43,12 @@ class Trackball(object):
         glPopMatrix()
 
     def drag_to(self, dx, dy):
-        self.pitch += dy * (360. / self.window[1])
-        self.roll -= dx * (360. / self.window[0])
+        self.pitch += dy * (360.0 / self.window[1])
+        self.roll -= dx * (360.0 / self.window[0])
 
     def pan_to(self, dx, dy):
-        self.distance[0] += dx / 10.
-        self.distance[1] -= dy / 10.
+        self.distance[0] += dx / 10.0
+        self.distance[1] -= dy / 10.0
 
     def zoom_to(self, dy):
         self.distance[2] += dy

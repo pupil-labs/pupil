@@ -42,7 +42,7 @@ class Plugin(object):
     # == .5 is the default.
     # >.5 are things that depend on other plugins work like display , saving and streaming
     # you can change this in __init__ for your instance or in the class definition
-    order = .5
+    order = 0.5
     alive = True
 
     # menu icon font, possible values `roboto`, `opensans`, `pupil_icons`,

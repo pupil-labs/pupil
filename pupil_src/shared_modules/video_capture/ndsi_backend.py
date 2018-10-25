@@ -290,7 +290,7 @@ class NDSI_Source(Base_Source):
                         label=ctrl_dict["caption"],
                         min=convert_fn(ctrl_dict.get("min", 0)),
                         max=convert_fn(ctrl_dict.get("max", 100)),
-                        step=convert_fn(ctrl_dict.get("res", 0.)),
+                        step=convert_fn(ctrl_dict.get("res", 0.0)),
                         setter=make_value_change_fn(ctrl_id),
                     )
                 elif dtype == "bool":

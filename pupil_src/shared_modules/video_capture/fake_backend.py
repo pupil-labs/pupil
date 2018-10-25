@@ -195,7 +195,7 @@ class Fake_Source(Playback_Source, Base_Source):
         frame = Frame(timestamp, self._img.copy(), self.target_frame_idx)
 
         frame_txt_font_name = cv2.FONT_HERSHEY_SIMPLEX
-        frame_txt_font_scale = 1.
+        frame_txt_font_scale = 1.0
         frame_txt_thickness = 1
 
         # first line: frame index

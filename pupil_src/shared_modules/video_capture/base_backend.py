@@ -56,8 +56,8 @@ class Base_Source(Plugin):
     """
 
     uniqueness = "by_base_class"
-    order = .0
-    icon_chr = chr(0xe412)
+    order = 0.0
+    icon_chr = chr(0xE412)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool):
@@ -165,7 +165,7 @@ class Base_Manager(Plugin):
 
     uniqueness = "by_base_class"
     gui_name = "Base Manager"
-    icon_chr = chr(0xec01)
+    icon_chr = chr(0xEC01)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool):
@@ -223,7 +223,7 @@ class Playback_Source(Base_Source):
             None,
         ), "invalid timing argument: {}".format(timing)
         self.timing = timing
-        self.finished_sleep = 0.
+        self.finished_sleep = 0.0
         self._recent_wait_ts = -1
         self.play = True
 

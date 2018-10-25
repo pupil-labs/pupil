@@ -89,7 +89,7 @@ from launchables.marker_detectors import circle_detector
 def clear_settings(user_dir):
     import glob, os, time
 
-    time.sleep(1.)
+    time.sleep(1.0)
     for f in glob.glob(os.path.join(user_dir, "user_settings_*")):
         print("Clearing {}...".format(f))
         os.remove(f)

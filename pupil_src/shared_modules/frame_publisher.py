@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class Frame_Publisher(Plugin):
-    icon_chr = chr(0xec17)
+    icon_chr = chr(0xEC17)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, format="jpeg"):

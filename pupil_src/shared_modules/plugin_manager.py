@@ -16,7 +16,7 @@ from video_capture import Base_Manager, Base_Source
 
 
 class Plugin_Manager(System_Plugin_Base):
-    icon_chr = chr(0xe8c0)
+    icon_chr = chr(0xE8C0)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool):
@@ -40,7 +40,7 @@ class Plugin_Manager(System_Plugin_Base):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Plugin Manager"
-        self.menu_icon.order = .0
+        self.menu_icon.order = 0.0
 
         def plugin_toggle_entry(p):
             def setter(turn_on):

@@ -18,7 +18,7 @@ from plugin import System_Plugin_Base
 
 
 class System_Graphs(System_Plugin_Base):
-    icon_chr = chr(0xe01d)
+    icon_chr = chr(0xE01D)
     icon_font = "pupil_icons"
 
     def __init__(
@@ -30,8 +30,8 @@ class System_Graphs(System_Plugin_Base):
         show_conf1=True,
         show_dia0=False,
         show_dia1=False,
-        dia_min=0.,
-        dia_max=8.,
+        dia_min=0.0,
+        dia_max=8.0,
     ):
         super().__init__(g_pool)
         self.show_cpu = show_cpu
@@ -42,7 +42,7 @@ class System_Graphs(System_Plugin_Base):
         self.show_dia1 = show_dia1
         self.dia_min = dia_min
         self.dia_max = dia_max
-        self.conf_grad_limits = .0, 1.
+        self.conf_grad_limits = 0.0, 1.0
         self.ts = None
         self.idx = None
 
@@ -100,7 +100,7 @@ class System_Graphs(System_Plugin_Base):
         self.dia1_graph.label = "id1 dia: %0.2f"
 
         self.conf_grad = (
-            RGBA(1., .0, .0, self.conf0_graph.color[3]),
+            RGBA(1.0, 0.0, 0.0, self.conf0_graph.color[3]),
             self.conf0_graph.color,
         )
 
@@ -118,8 +118,8 @@ class System_Graphs(System_Plugin_Base):
                 self.dia0_graph,
                 label="Minimum pupil diameter",
                 setter=set_dia_min,
-                min=0.,
-                max=15.,
+                min=0.0,
+                max=15.0,
                 step=0.1,
             )
         )
@@ -129,8 +129,8 @@ class System_Graphs(System_Plugin_Base):
                 self.dia0_graph,
                 label="Maximum pupil diameter",
                 setter=set_dia_max,
-                min=1.,
-                max=15.,
+                min=1.0,
+                max=15.0,
                 step=0.1,
             )
         )
@@ -195,7 +195,7 @@ class System_Graphs(System_Plugin_Base):
                 cg.add(p["confidence"])
                 # update diameter graph
                 dg = self.dia0_graph if p["id"] == 0 else self.dia1_graph
-                dg.add(p.get("diameter_3d", 0.))
+                dg.add(p.get("diameter_3d", 0.0))
 
         # update wprld fps graph
         if "frame" in events:
@@ -203,7 +203,7 @@ class System_Graphs(System_Plugin_Base):
             if self.ts and t != self.ts:
                 dt, self.ts = t - self.ts, t
                 try:
-                    self.fps_graph.add(1. / dt)
+                    self.fps_graph.add(1.0 / dt)
                 except ZeroDivisionError:
                     pass
             else:

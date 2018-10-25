@@ -39,14 +39,14 @@ class Accuracy_Visualizer(Plugin):
     Points are collected at sites not between
     """
 
-    order = .8
-    icon_chr = chr(0xec11)
+    order = 0.8
+    icon_chr = chr(0xEC11)
     icon_font = "pupil_icons"
 
     def __init__(
         self,
         g_pool,
-        outlier_threshold=5.,
+        outlier_threshold=5.0,
         vis_mapping_error=True,
         vis_calibration_area=True,
     ):
@@ -60,7 +60,7 @@ class Accuracy_Visualizer(Plugin):
         self.recent_input = None
         self.recent_labels = None
         # .5 degrees, used to remove outliers from precision calculation
-        self.succession_threshold = np.cos(np.deg2rad(.5))
+        self.succession_threshold = np.cos(np.deg2rad(0.5))
         self._outlier_threshold = outlier_threshold  # in degrees
 
     def init_ui(self):
@@ -168,7 +168,7 @@ class Accuracy_Visualizer(Plugin):
     def outlier_threshold(self, value):
         self._outlier_threshold = value
         self.notify_all(
-            {"subject": "accuracy_visualizer.outlier_threshold_changed", "delay": .5}
+            {"subject": "accuracy_visualizer.outlier_threshold_changed", "delay": 0.5}
         )
 
     def on_notify(self, notification):
@@ -223,7 +223,7 @@ class Accuracy_Visualizer(Plugin):
         )
         error_lines = locations.copy()  # n x 4
         locations[:, ::2] *= width
-        locations[:, 1::2] = (1. - locations[:, 1::2]) * height
+        locations[:, 1::2] = (1.0 - locations[:, 1::2]) * height
         locations.shape = -1, 2
 
         # Accuracy is calculated as the average angular
@@ -248,7 +248,7 @@ class Accuracy_Visualizer(Plugin):
         error_lines = error_lines[selected_indices].reshape(
             -1, 2
         )  # shape: num_used x 2
-        accuracy = np.rad2deg(np.arccos(selected_samples.clip(-1., 1.).mean()))
+        accuracy = np.rad2deg(np.arccos(selected_samples.clip(-1.0, 1.0).mean()))
         accuracy_result = Calculation_Result(accuracy, num_used, num_total)
 
         # lets calculate precision:  (RMS of distance of succesive samples.)
@@ -278,7 +278,7 @@ class Accuracy_Visualizer(Plugin):
             succesive_distances_gaze.shape[0],
         )
         precision = np.sqrt(
-            np.mean(np.rad2deg(np.arccos(succesive_distances.clip(-1., 1.))) ** 2)
+            np.mean(np.rad2deg(np.arccos(succesive_distances.clip(-1.0, 1.0))) ** 2)
         )
         precision_result = Calculation_Result(precision, num_used, num_total)
 
@@ -287,19 +287,19 @@ class Accuracy_Visualizer(Plugin):
     def gl_display(self):
         if self.vis_mapping_error and self.error_lines is not None:
             draw_polyline_norm(
-                self.error_lines, color=RGBA(1., 0.5, 0., .5), line_type=gl.GL_LINES
+                self.error_lines, color=RGBA(1.0, 0.5, 0.0, 0.5), line_type=gl.GL_LINES
             )
             draw_points_norm(
-                self.error_lines[1::2], size=3, color=RGBA(.0, 0.5, 0.5, .5)
+                self.error_lines[1::2], size=3, color=RGBA(0.0, 0.5, 0.5, 0.5)
             )
             draw_points_norm(
-                self.error_lines[0::2], size=3, color=RGBA(.5, 0.0, 0.0, .5)
+                self.error_lines[0::2], size=3, color=RGBA(0.5, 0.0, 0.0, 0.5)
             )
         if self.vis_calibration_area and self.calibration_area is not None:
             draw_polyline_norm(
                 self.calibration_area,
-                thickness=2.,
-                color=RGBA(.663, .863, .463, .8),
+                thickness=2.0,
+                color=RGBA(0.663, 0.863, 0.463, 0.8),
                 line_type=gl.GL_LINE_LOOP,
             )
 

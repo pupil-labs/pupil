@@ -41,7 +41,7 @@ class Service_UI(System_Plugin_Base):
         g_pool,
         window_size=window_size_default,
         window_position=window_position_default,
-        gui_scale=1.,
+        gui_scale=1.0,
         ui_config={},
     ):
         super().__init__(g_pool)
@@ -97,14 +97,14 @@ class Service_UI(System_Plugin_Base):
             logger.warning("Resetting all settings and restarting Capture.")
             glfw.glfwSetWindowShouldClose(main_window, True)
             self.notify_all({"subject": "clear_settings_process.should_start"})
-            self.notify_all({"subject": "service_process.should_start", "delay": 2.})
+            self.notify_all({"subject": "service_process.should_start", "delay": 2.0})
 
         g_pool.menubar.append(
             ui.Selector(
                 "gui_user_scale",
                 g_pool,
                 setter=set_scale,
-                selection=[.6, .8, 1., 1.2, 1.4],
+                selection=[0.6, 0.8, 1.0, 1.2, 1.4],
                 label="Interface size",
             )
         )

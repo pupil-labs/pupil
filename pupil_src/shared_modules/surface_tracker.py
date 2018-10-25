@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 class Surface_Tracker(Plugin):
-    icon_chr = chr(0xec07)
+    icon_chr = chr(0xEC07)
     icon_font = "pupil_icons"
 
     def __init__(
@@ -49,7 +49,7 @@ class Surface_Tracker(Plugin):
         robust_detection=True,
     ):
         super().__init__(g_pool)
-        self.order = .2
+        self.order = 0.2
 
         # all markers that are detected in the most recent frame
         self.markers = []
@@ -127,7 +127,7 @@ class Surface_Tracker(Plugin):
                 self.edit_surf_verts = []
 
             elif action == GLFW_PRESS:
-                surf_verts = ((0., 0.), (1., 0.), (1., 1.), (0., 1.))
+                surf_verts = ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
                 x, y = pos
                 for s in self.edit_surfaces:
                     if s.detected and s.defined:
@@ -187,7 +187,7 @@ class Surface_Tracker(Plugin):
         self.menu.label = "Surface Tracker"
 
         self.button = ui.Thumb("running", self, label="S", hotkey="s")
-        self.button.on_color[:] = (.1, .2, 1., .8)
+        self.button.on_color[:] = (0.1, 0.2, 1.0, 0.8)
         self.g_pool.quickbar.append(self.button)
         self.add_button = ui.Thumb(
             "add_surface",
@@ -353,7 +353,7 @@ class Surface_Tracker(Plugin):
         if self.mode == "Show Markers and Surfaces":
             for m in self.markers:
                 hat = np.array(
-                    [[[0, 0], [0, 1], [.5, 1.3], [1, 1], [1, 0], [0, 0]]],
+                    [[[0, 0], [0, 1], [0.5, 1.3], [1, 1], [1, 0], [0, 0]]],
                     dtype=np.float32,
                 )
                 hat = cv2.perspectiveTransform(hat, m_marker_to_screen(m))
@@ -361,14 +361,14 @@ class Surface_Tracker(Plugin):
                     m["perimeter"] >= self.min_marker_perimeter
                     and m["id_confidence"] > self.min_id_confidence
                 ):
-                    draw_polyline(hat.reshape((6, 2)), color=RGBA(0.1, 1., 1., .5))
+                    draw_polyline(hat.reshape((6, 2)), color=RGBA(0.1, 1.0, 1.0, 0.5))
                     draw_polyline(
                         hat.reshape((6, 2)),
-                        color=RGBA(0.1, 1., 1., .3),
+                        color=RGBA(0.1, 1.0, 1.0, 0.3),
                         line_type=GL_POLYGON,
                     )
                 else:
-                    draw_polyline(hat.reshape((6, 2)), color=RGBA(0.1, 1., 1., .5))
+                    draw_polyline(hat.reshape((6, 2)), color=RGBA(0.1, 1.0, 1.0, 0.5))
 
             for s in self.surfaces:
                 if s not in self.edit_surfaces and s is not self.marker_edit_surface:
@@ -387,8 +387,8 @@ class Surface_Tracker(Plugin):
                             inc.append(m["centroid"])
                         else:
                             exc.append(m["centroid"])
-                draw_points(exc, size=20, color=RGBA(1., 0.5, 0.5, .8))
-                draw_points(inc, size=20, color=RGBA(0.5, 1., 0.5, .8))
+                draw_points(exc, size=20, color=RGBA(1.0, 0.5, 0.5, 0.8))
+                draw_points(inc, size=20, color=RGBA(0.5, 1.0, 0.5, 0.8))
                 self.marker_edit_surface.gl_draw_frame(
                     self.img_shape,
                     color=(0.0, 0.9, 0.6, 1.0),

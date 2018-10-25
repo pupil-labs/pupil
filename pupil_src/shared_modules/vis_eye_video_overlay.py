@@ -51,7 +51,7 @@ def correlate_eye_world(eye_timestamps, world_timestamps):
 
 
 class Eye_Wrapper(object):
-    def __init__(self, g_pool, eyeid, pos, hdpi_fac=1., hflip=False, vflip=False):
+    def __init__(self, g_pool, eyeid, pos, hdpi_fac=1.0, hflip=False, vflip=False):
         super().__init__()
         self.g_pool = g_pool
         self.eyeid = eyeid
@@ -253,20 +253,20 @@ def get_ellipse_points(e, num_pts=10):
 
 
 class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
-    icon_chr = chr(0xec02)
+    icon_chr = chr(0xEC02)
     icon_font = "pupil_icons"
 
     def __init__(
         self,
         g_pool,
         alpha=0.6,
-        eye_scale_factor=.5,
+        eye_scale_factor=0.5,
         show_ellipses=True,
         eye0_config={"pos": (640, 10)},
         eye1_config={"pos": (10, 10)},
     ):
         super().__init__(g_pool)
-        self.order = .6
+        self.order = 0.6
         self.menu = None
         self.alpha = alpha
         self.eye_scale_factor = eye_scale_factor
@@ -277,7 +277,7 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
             window = g_pool.main_window
             self.hdpi_factor = getHDPIFactor(window)
         else:
-            self.hdpi_factor = 1.
+            self.hdpi_factor = 1.0
 
         self.eye0 = Eye_Wrapper(g_pool, 0, hdpi_fac=self.hdpi_factor, **eye0_config)
         self.eye1 = Eye_Wrapper(g_pool, 1, hdpi_fac=self.hdpi_factor, **eye1_config)

@@ -133,7 +133,7 @@ def decode(square_img, grid):
     del msg[-1][0]
     del msg[-1][-1]
 
-    soft_msg = [item / 255. for sublist in msg for item in sublist] + [float(msb)]
+    soft_msg = [item / 255.0 for sublist in msg for item in sublist] + [float(msb)]
     return angle, msg_int, soft_msg, msg_img
 
 
@@ -143,7 +143,7 @@ def correct_gradient(gray_img, r):
     # we check two pixels one outside, one inside both close to the border
     p1, _, p2, _ = r.reshape(4, 2).tolist()
     vector_across = p2[0] - p1[0], p2[1] - p1[1]
-    ratio = 5. / sqrt(
+    ratio = 5.0 / sqrt(
         vector_across[0] ** 2 + vector_across[1] ** 2
     )  # we want to measure 5px away from the border
     vector_across = int(vector_across[0] * ratio), int(vector_across[1] * ratio)
@@ -233,7 +233,7 @@ def detect_markers(
             if marker is not None:
                 angle, msg, soft_msg, msg_img = marker
 
-                centroid = r.sum(axis=0) / 4.
+                centroid = r.sum(axis=0) / 4.0
                 centroid.shape = 2
                 # angle is number of 90deg rotations
                 # roll points such that the marker points correspond with oriented marker
@@ -244,7 +244,7 @@ def detect_markers(
                 )  # np.roll is not the fastest when using these tiny arrays...
 
                 # id_confidence = 2*np.mean (np.abs(np.array(soft_msg)-.5 ))
-                id_confidence = 2 * min(np.abs(np.array(soft_msg) - .5))
+                id_confidence = 2 * min(np.abs(np.array(soft_msg) - 0.5))
 
                 marker = {
                     "id": msg,
@@ -273,9 +273,11 @@ def draw_markers(img, markers):
     for m in markers:
         centroid = np.array(m["centroid"], dtype=np.float32)
         origin = np.array(m["verts"][0], dtype=np.float32)
-        hat = np.array([[[0, 0], [0, 1], [.5, 1.25], [1, 1], [1, 0]]], dtype=np.float32)
+        hat = np.array(
+            [[[0, 0], [0, 1], [0.5, 1.25], [1, 1], [1, 0]]], dtype=np.float32
+        )
         hat = cv2.perspectiveTransform(hat, m_marker_to_screen(m))
-        if m["id_confidence"] > .9:
+        if m["id_confidence"] > 0.9:
             cv2.polylines(img, np.int0(hat), color=(0, 0, 255), isClosed=True)
         else:
             cv2.polylines(img, np.int0(hat), color=(0, 255, 0), isClosed=True)
@@ -415,7 +417,7 @@ def detect_markers_robust(
             )
             prev_pts = np.vstack(prev_pts)
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(
-                prev_img, gray_img, prev_pts, None, minEigThreshold=.01, **lk_params
+                prev_img, gray_img, prev_pts, None, minEigThreshold=0.01, **lk_params
             )
             for marker_idx in range(flow_found.shape[0] // 4):
                 m = not_found[marker_idx]
@@ -439,7 +441,7 @@ def detect_markers_robust(
                         # apply mean dif
                         proj_verts = prev_pts[m_slc] + mean_dif
                         m["verts"] = new_verts.tolist()
-                        m["centroid"] = new_verts.sum(axis=0) / 4.
+                        m["centroid"] = new_verts.sum(axis=0) / 4.0
                         m["centroid"].shape = 2
                         m["centroid"] = m["centroid"].tolist()
                         m["frames_since_true_detection"] += 1
@@ -452,7 +454,7 @@ def detect_markers_robust(
             m for m in not_found if m["frames_since_true_detection"] < 5
         ] + new_markers
         if markers:  # del double detected markers
-            min_distace = min([m["perimeter"] for m in markers]) / 4.
+            min_distace = min([m["perimeter"] for m in markers]) / 4.0
             # min_distace = 50
             if len(markers) > 1:
                 remove = set()

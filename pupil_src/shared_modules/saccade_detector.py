@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class Saccade_Detector(Plugin):
-    icon_chr = chr(0xe8f5)
+    icon_chr = chr(0xE8F5)
     icon_font = "pupil_icons"
 
     def __init__(
@@ -79,7 +79,7 @@ class Saccade_Detector(Plugin):
         self.menu.label = "Saccade Detector"
         self.menu.append(
             ui.Slider(
-                "dispersion_3d", self, label="Dispersion 3D [deg]", min=0.5, max=10.
+                "dispersion_3d", self, label="Dispersion 3D [deg]", min=0.5, max=10.0
             )
         )
 

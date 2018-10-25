@@ -50,10 +50,10 @@ def export_processed_h264(
     process_frame,
     export_timestamps,
 ):
-    yield "Converting video", .1
+    yield "Converting video", 0.1
     capture = File_Source(Empty(), unprocessed_video_loc)
     if not capture.initialised:
-        yield "Converting scene video failed", 0.
+        yield "Converting scene video failed", 0.0
         return
 
     export_window = pm.exact_window(world_timestamps, export_range)
@@ -105,8 +105,8 @@ def export_processed_h264(
             progress = (
                 (capture.current_frame_idx - export_from_index)
                 / (export_to_index - export_from_index)
-            ) * .9 + .1
-            yield "Converting video", progress * 100.
+            ) * 0.9 + 0.1
+            yield "Converting video", progress * 100.0
             next_update_idx += update_rate
 
     while True:  # flush encoder
@@ -121,7 +121,7 @@ def export_processed_h264(
 
     target_container.close()
     capture.cleanup()
-    yield "Converting video completed", 1. * 100.
+    yield "Converting video completed", 1.0 * 100.0
 
 
 class VideoExporter(Analysis_Plugin_Base, metaclass=abc.ABCMeta):
@@ -136,7 +136,7 @@ class VideoExporter(Analysis_Plugin_Base, metaclass=abc.ABCMeta):
         super().__init__(g_pool)
         self.export_tasks = []
         self.status = "Not exporting"
-        self.progress = 0.
+        self.progress = 0.0
         self.output = "Not set yet"
 
     def init_ui(self):
@@ -191,7 +191,7 @@ class VideoExporter(Analysis_Plugin_Base, metaclass=abc.ABCMeta):
                 self.progress = progress
 
     def gl_display(self):
-        self.menu_icon.indicator_stop = self.progress / 100.
+        self.menu_icon.indicator_stop = self.progress / 100.0
 
     def _start_export(self, export_range, export_dir):
         self.progress = 0.0

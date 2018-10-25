@@ -17,9 +17,9 @@ from pyglui.pyfontstash import fontstash as fs
 import gl_utils
 from plugin import System_Plugin_Base
 
-COLOR_LEGEND_WORLD = cygl_utils.RGBA(0.66, 0.86, 0.461, 1.)
-COLOR_LEGEND_EYE_RIGHT = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.)
-COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.)
+COLOR_LEGEND_WORLD = cygl_utils.RGBA(0.66, 0.86, 0.461, 1.0)
+COLOR_LEGEND_EYE_RIGHT = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.0)
+COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.0)
 NUMBER_SAMPLES_TIMELINE = 4000
 
 
@@ -60,7 +60,7 @@ class System_Timelines(System_Plugin_Base):
 
     def calculate_fps(self, timestamps):
         if len(timestamps) > 1:
-            fps = 1. / np.diff(timestamps)
+            fps = 1.0 / np.diff(timestamps)
             return tuple(zip(timestamps, fps))
         return ()
 
@@ -81,10 +81,10 @@ class System_Timelines(System_Plugin_Base):
     def draw_fps_legend(self, width, height, scale):
         self.glfont.push_state()
         self.glfont.set_align_string(v_align="right", h_align="top")
-        self.glfont.set_size(15. * scale)
+        self.glfont.set_size(15.0 * scale)
         self.glfont.draw_text(width, 0, self.fps_timeline.label)
 
-        legend_height = 13. * scale
+        legend_height = 13.0 * scale
         pad = 10 * scale
 
         if self.show_world_fps:
@@ -96,7 +96,7 @@ class System_Timelines(System_Plugin_Base):
                 ],
                 color=COLOR_LEGEND_WORLD,
                 line_type=gl.GL_LINES,
-                thickness=4. * scale,
+                thickness=4.0 * scale,
             )
             legend_height += 1.5 * pad
 
@@ -109,7 +109,7 @@ class System_Timelines(System_Plugin_Base):
                 ],
                 color=COLOR_LEGEND_EYE_LEFT,
                 line_type=gl.GL_LINES,
-                thickness=4. * scale,
+                thickness=4.0 * scale,
             )
             legend_height += 1.5 * pad
 
@@ -121,7 +121,7 @@ class System_Timelines(System_Plugin_Base):
                 ],
                 color=COLOR_LEGEND_EYE_RIGHT,
                 line_type=gl.GL_LINES,
-                thickness=4. * scale,
+                thickness=4.0 * scale,
             )
 
         self.glfont.pop_state()

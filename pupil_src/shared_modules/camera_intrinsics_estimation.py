@@ -49,7 +49,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         This method is used to calculate camera intrinsics.
     """
 
-    icon_chr = chr(0xec06)
+    icon_chr = chr(0xEC06)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, fullscreen=False, monitor_idx=0):
@@ -145,7 +145,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.button = ui.Thumb(
             "collect_new", self, setter=self.advance, label="I", hotkey="i"
         )
-        self.button.on_color[:] = (.3, .2, 1., .9)
+        self.button.on_color[:] = (0.3, 0.2, 1.0, 0.9)
         self.g_pool.quickbar.insert(0, self.button)
 
     def deinit_ui(self):
@@ -338,7 +338,7 @@ class Camera_Intrinsics_Estimation(Plugin):
             # we dont need that extra encapsulation that opencv likes so much
             calib_bounds = cv2.convexHull(grid_points)[:, 0]
             draw_polyline(
-                calib_bounds, 1, RGBA(0., 0., 1., .5), line_type=gl.GL_LINE_LOOP
+                calib_bounds, 1, RGBA(0.0, 0.0, 1.0, 0.5), line_type=gl.GL_LINE_LOOP
             )
 
         if self._window:
@@ -359,25 +359,25 @@ class Camera_Intrinsics_Estimation(Plugin):
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetWindowSize(self._window)
-        r = p_window_size[0] / 15.
+        r = p_window_size[0] / 15.0
         # compensate for radius of marker
         gl.glOrtho(-r, p_window_size[0] + r, p_window_size[1] + r, -r, -1, 1)
         # Switch back to Model View Matrix
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
         # hacky way of scaling and fitting in different window rations/sizes
-        grid = _make_grid() * min((p_window_size[0], p_window_size[1] * 5.5 / 4.))
+        grid = _make_grid() * min((p_window_size[0], p_window_size[1] * 5.5 / 4.0))
         # center the pattern
         grid -= np.mean(grid)
         grid += (p_window_size[0] / 2 - r, p_window_size[1] / 2 + r)
 
-        draw_points(grid, size=r, color=RGBA(0., 0., 0., 1), sharpness=0.95)
+        draw_points(grid, size=r, color=RGBA(0.0, 0.0, 0.0, 1), sharpness=0.95)
 
         if self.clicks_to_close < 5:
-            self.glfont.set_size(int(p_window_size[0] / 30.))
+            self.glfont.set_size(int(p_window_size[0] / 30.0))
             self.glfont.draw_text(
-                p_window_size[0] / 2.,
-                p_window_size[1] / 4.,
+                p_window_size[0] / 2.0,
+                p_window_size[1] / 4.0,
                 "Touch {} more times to close window.".format(self.clicks_to_close),
             )
 
@@ -415,9 +415,9 @@ def _make_grid(dim=(11, 4)):
     p = np.reshape(p, (-1, 2), "F")
 
     # scale height = 1
-    x_scale = 1. / (np.amax(p[:, 0]) - np.amin(p[:, 0]))
-    y_scale = 1. / (np.amax(p[:, 1]) - np.amin(p[:, 1]))
+    x_scale = 1.0 / (np.amax(p[:, 0]) - np.amin(p[:, 0]))
+    y_scale = 1.0 / (np.amax(p[:, 1]) - np.amin(p[:, 1]))
 
-    p *= x_scale, x_scale / .5
+    p *= x_scale, x_scale / 0.5
 
     return p
