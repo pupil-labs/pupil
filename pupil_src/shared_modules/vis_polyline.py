@@ -20,12 +20,12 @@ from methods import denormalize
 
 class Vis_Polyline(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
-    icon_chr = chr(0xe922)
+    icon_chr = chr(0xE922)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, color=(1.0, 0.0, 0.4, 1.0), thickness=2):
         super().__init__(g_pool)
-        self.order = .9
+        self.order = 0.9
         self.menu = None
 
         self.r = color[0]

@@ -32,7 +32,7 @@ def enclosing_window(timestamps, idx):
     before = timestamps[idx - 1] if idx > 0 else -np.inf
     now = timestamps[idx]
     after = timestamps[idx + 1] if idx < len(timestamps) - 1 else np.inf
-    return (now + before) / 2., (after + now) / 2.
+    return (now + before) / 2.0, (after + now) / 2.0
 
 
 def exact_window(timestamps, index_range):
@@ -184,7 +184,7 @@ def correlate_data(data, timestamps):
         try:
             datum = data[data_index]
             # we can take the midpoint between two frames in time: More appropriate for SW timestamps
-            ts = (timestamps[frame_idx] + timestamps[frame_idx + 1]) / 2.
+            ts = (timestamps[frame_idx] + timestamps[frame_idx + 1]) / 2.0
             # or the time of the next frame: More appropriate for Sart Of Exposure Timestamps (HW timestamps).
             # ts = timestamps[frame_idx+1]
         except IndexError:
@@ -409,7 +409,7 @@ def update_recording_v086_to_v087(rec_dir):
             Grossly bigger or smaller numbers are results bad exrapolation
             and can cause overflow erorr when denormalized and cast as int32.
         """
-        return min(100., max(-100., pos[0])), min(100., max(-100., pos[1]))
+        return min(100.0, max(-100.0, pos[0])), min(100.0, max(-100.0, pos[1]))
 
     for g in pupil_data.get("gaze_positions", []):
         if "topic" not in g:
@@ -903,7 +903,7 @@ def transparent_circle(img, center, radius, color, thickness):
             src1=img[roi],
             alpha=opacity,
             src2=overlay,
-            beta=1. - opacity,
+            beta=1.0 - opacity,
             gamma=0,
             dst=img[roi],
         )
@@ -928,7 +928,7 @@ def transparent_image_overlay(pos, overlay_img, img, alpha):
         slice(pos[0], pos[0] + overlay_img.shape[1]),
     )
     try:
-        cv2.addWeighted(overlay_img, alpha, img[roi], 1. - alpha, 0, img[roi])
+        cv2.addWeighted(overlay_img, alpha, img[roi], 1.0 - alpha, 0, img[roi])
     except:
         logger.debug(
             "transparent_image_overlay was outside of the world image and was not drawn"

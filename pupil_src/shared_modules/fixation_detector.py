@@ -52,7 +52,7 @@ class Empty(object):
 
 
 class Fixation_Detector_Base(Analysis_Plugin_Base):
-    icon_chr = chr(0xec03)
+    icon_chr = chr(0xEC03)
     icon_font = "pupil_icons"
 
 
@@ -116,7 +116,7 @@ def vector_dispersion(vectors):
     # https://github.com/pupil-labs/pupil/issues/1133#issuecomment-382412175
     distances.sort()  # sort by distance
     cut_off = np.max([distances.shape[0] // 5, 4])
-    return np.arccos(1. - distances[-cut_off:].mean())
+    return np.arccos(1.0 - distances[-cut_off:].mean())
 
 
 def gaze_dispersion(capture, gaze_subset, use_pupil=True):
@@ -152,7 +152,7 @@ def gaze_dispersion(capture, gaze_subset, use_pupil=True):
         # denormalize
         width, height = capture.frame_size
         locations[:, 0] *= width
-        locations[:, 1] = (1. - locations[:, 1]) * height
+        locations[:, 1] = (1.0 - locations[:, 1]) * height
 
         # undistort onto 3d plane
         vectors = capture.intrinsics.unprojectPoints(locations)
@@ -281,7 +281,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.bg_task = None
         self.status = ""
         self.notify_all(
-            {"subject": "fixation_detector.should_recalculate", "delay": .5}
+            {"subject": "fixation_detector.should_recalculate", "delay": 0.5}
         )
 
     def init_ui(self):
@@ -291,19 +291,19 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         def set_max_dispersion(new_value):
             self.max_dispersion = new_value
             self.notify_all(
-                {"subject": "fixation_detector.should_recalculate", "delay": 1.}
+                {"subject": "fixation_detector.should_recalculate", "delay": 1.0}
             )
 
         def set_min_duration(new_value):
             self.min_duration = min(new_value, self.max_duration)
             self.notify_all(
-                {"subject": "fixation_detector.should_recalculate", "delay": 1.}
+                {"subject": "fixation_detector.should_recalculate", "delay": 1.0}
             )
 
         def set_max_duration(new_value):
             self.max_duration = max(new_value, self.min_duration)
             self.notify_all(
-                {"subject": "fixation_detector.should_recalculate", "delay": 1.}
+                {"subject": "fixation_detector.should_recalculate", "delay": 1.0}
             )
 
         def jump_next_fixation(_):
@@ -349,7 +349,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                 self,
                 min=0.01,
                 step=0.1,
-                max=5.,
+                max=5.0,
                 label="Maximum Dispersion [degrees]",
                 setter=set_max_dispersion,
             )
@@ -389,7 +389,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             "jump_next_fixation",
             setter=jump_next_fixation,
             getter=lambda: False,
-            label=chr(0xe044),
+            label=chr(0xE044),
             hotkey="f",
             label_font="pupil_icons",
         )
@@ -400,7 +400,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             "jump_prev_fixation",
             setter=jump_prev_fixation,
             getter=lambda: False,
-            label=chr(0xe045),
+            label=chr(0xE045),
             hotkey="F",
             label_font="pupil_icons",
         )
@@ -497,7 +497,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
                 self.status = "{} fixations detected".format(len(self.fixation_data))
                 self.correlate_and_publish()
                 self.bg_task = None
-                self.menu_icon.indicator_stop = 0.
+                self.menu_icon.indicator_stop = 0.0
 
         frame = events.get("frame")
         if not frame:
@@ -510,9 +510,13 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         if self.show_fixations:
             for f in fixations:
                 x = int(f["norm_pos"][0] * frame.width)
-                y = int((1. - f["norm_pos"][1]) * frame.height)
+                y = int((1.0 - f["norm_pos"][1]) * frame.height)
                 pm.transparent_circle(
-                    frame.img, (x, y), radius=25., color=(0., 1., 1., 1.), thickness=3
+                    frame.img,
+                    (x, y),
+                    radius=25.0,
+                    color=(0.0, 1.0, 1.0, 1.0),
+                    thickness=3,
                 )
                 cv2.putText(
                     frame.img,
@@ -678,7 +682,7 @@ class Fixation_Detector(Fixation_Detector_Base):
     The Offline Fixation Detector yields fixations that do not overlap.
     """
 
-    order = .19
+    order = 0.19
 
     def __init__(
         self, g_pool, max_dispersion=3.0, min_duration=300, confidence_threshold=0.75
@@ -726,7 +730,7 @@ class Fixation_Detector(Fixation_Detector_Base):
         if (
             len(base_data) <= 2
             or base_data[-1]["timestamp"] - base_data[0]["timestamp"]
-            < self.min_duration / 1000.
+            < self.min_duration / 1000.0
         ):
             self.recent_fixation = None
             return
@@ -762,8 +766,10 @@ class Fixation_Detector(Fixation_Detector_Base):
         if self.recent_fixation:
             fs = self.g_pool.capture.frame_size  # frame height
             pt = denormalize(self.recent_fixation["norm_pos"], fs, flip_y=True)
-            draw_circle(pt, radius=48., stroke_width=10., color=RGBA(1., 1., 0., 1.))
-            self.glfont.draw_text(pt[0] + 48., pt[1], str(self.recent_fixation["id"]))
+            draw_circle(
+                pt, radius=48.0, stroke_width=10.0, color=RGBA(1.0, 1.0, 0.0, 1.0)
+            )
+            self.glfont.draw_text(pt[0] + 48.0, pt[1], str(self.recent_fixation["id"]))
 
     def init_ui(self):
         self.add_menu()
@@ -779,7 +785,7 @@ class Fixation_Detector(Fixation_Detector_Base):
                 self,
                 min=0.01,
                 step=0.1,
-                max=5.,
+                max=5.0,
                 label="Maximum Dispersion [degrees]",
             )
         )

@@ -458,18 +458,18 @@ def find_concentric_circles(
                                 < found_size[k] + min(e[1])
                             ]
                             if len(duplicates) > 0:
-                                ellipses[i] = e, 100.
+                                ellipses[i] = e, 100.0
                                 break
                             fit = 0
                         else:
-                            fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0.
+                            fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0.0
                         e = e if min(e[1]) else (e[0], (0.1, 0.1), e[2])
                     else:
                         e_center = (
                             float(c[len(c) // 2][0][0]),
                             float(c[len(c) // 2][0][1]),
                         )
-                        e = (e_center, (0.1, 0.1), 0.)
+                        e = (e_center, (0.1, 0.1), 0.0)
                         # Discard duplicates
                         if first_ellipse:
                             duplicates = [
@@ -478,7 +478,7 @@ def find_concentric_circles(
                                 if LA.norm(e_center - found_pos[k]) < found_size[k] + 1
                             ]
                             if len(duplicates) > 0:
-                                ellipses[i] = e, 100.
+                                ellipses[i] = e, 100.0
                                 break
                         fit = 0
 
@@ -554,9 +554,9 @@ def find_concentric_circles(
                 else:
                     if len(c) >= 5:
                         e = cv2.fitEllipse(c)
-                        fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0.
+                        fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0.0
                         if min(e[1]) == 0:
-                            e = (e[0], (e[1][0] + 1., e[1][1] + 1.), e[2])
+                            e = (e[0], (e[1][0] + 1.0, e[1][1] + 1.0), e[2])
                     else:
                         fit = 0
                         e_center = (

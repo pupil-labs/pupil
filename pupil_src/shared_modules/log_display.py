@@ -21,12 +21,12 @@ import glfw
 
 def color_from_level(lvl):
     return {
-        "CRITICAL": (.8, 0, 0, 1),
+        "CRITICAL": (0.8, 0, 0, 1),
         "ERROR": (1, 0, 0, 1),
-        "WARNING": (1.0, .8, 0, 1),
+        "WARNING": (1.0, 0.8, 0, 1),
         "INFO": (1, 1, 1, 1),
-        "DEBUG": (1, 1, 1, .5),
-        "NOTSET": (.5, .5, .5, .2),
+        "DEBUG": (1, 1, 1, 0.5),
+        "NOTSET": (0.5, 0.5, 0.5, 0.2),
     }[lvl]
 
 
@@ -80,10 +80,10 @@ class Log_Display(System_Plugin_Base):
         self.should_redraw = True
         self.rendered_log.append(record)
         self.alpha += (
-            duration_from_level(record.levelname) + len(str(record.msg)) / 100.
+            duration_from_level(record.levelname) + len(str(record.msg)) / 100.0
         )
         self.rendered_log = self.rendered_log[-10:]
-        self.alpha = min(self.alpha, 6.)
+        self.alpha = min(self.alpha, 6.0)
 
     def on_window_resize(self, window, w, h):
         self.window_scale = glfw.getHDPIFactor(window)
@@ -96,7 +96,7 @@ class Log_Display(System_Plugin_Base):
         if self._socket and self._socket.new_data:
             t, s = self._socket.recv()
             self.on_log(logging.makeLogRecord(s))
-        self.alpha -= min(.2, events["dt"])
+        self.alpha -= min(0.2, events["dt"])
 
     def gl_display(self):
         if self.should_redraw:
@@ -106,10 +106,10 @@ class Log_Display(System_Plugin_Base):
             _, _, lineh = self.glfont.vertical_metrics()
             y = self.window_size[1] / 3 - 0.5 * lineh * len(self.rendered_log)
             for record in self.rendered_log:
-                self.glfont.set_color_float((0., 0., 0., 1.))
+                self.glfont.set_color_float((0.0, 0.0, 0.0, 1.0))
                 self.glfont.set_blur(10.5)
                 self.glfont.draw_limited_text(
-                    self.window_size[0] / 2.,
+                    self.window_size[0] / 2.0,
                     y,
                     str(record.processName.upper()) + ": " + str(record.msg),
                     self.window_size[0] * 0.8,
@@ -117,7 +117,7 @@ class Log_Display(System_Plugin_Base):
                 self.glfont.set_blur(0.96)
                 self.glfont.set_color_float(color_from_level(record.levelname))
                 self.glfont.draw_limited_text(
-                    self.window_size[0] / 2.,
+                    self.window_size[0] / 2.0,
                     y,
                     str(record.processName.upper()) + ": " + str(record.msg),
                     self.window_size[0] * 0.8,

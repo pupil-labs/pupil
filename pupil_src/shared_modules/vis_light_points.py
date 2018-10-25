@@ -27,12 +27,12 @@ class Vis_Light_Points(Visualizer_Plugin_Base):
     """
 
     uniqueness = "not_unique"
-    icon_chr = chr(0xe3a5)
+    icon_chr = chr(0xE3A5)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, falloff=20):
         super().__init__(g_pool)
-        self.order = .8
+        self.order = 0.8
         self.menu = None
 
         self.falloff = falloff

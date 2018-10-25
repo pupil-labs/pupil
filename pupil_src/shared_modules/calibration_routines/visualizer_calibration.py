@@ -60,7 +60,7 @@ class Calibration_Visualizer(Visualizer):
             2.0 * math.atan(self.window_size[0] / (2.0 * self.focal_length))
         )
         self.trackball = Trackball(camera_fov)
-        self.trackball.distance = [0, 0, -80.]
+        self.trackball.distance = [0, 0, -80.0]
         self.trackball.pitch = 210
         self.trackball.roll = 0
 
@@ -127,7 +127,7 @@ class Calibration_Visualizer(Visualizer):
             self.draw_frustum(
                 self.image_width / 10.0,
                 self.image_height / 10.0,
-                self.focal_length / 10.,
+                self.focal_length / 10.0,
             )
             glPopMatrix()
 
@@ -175,7 +175,7 @@ class Calibration_Visualizer(Visualizer):
             self.draw_frustum(
                 self.image_width / 10.0,
                 self.image_height / 10.0,
-                self.focal_length / 10.,
+                self.focal_length / 10.0,
             )
             glPopMatrix()
 

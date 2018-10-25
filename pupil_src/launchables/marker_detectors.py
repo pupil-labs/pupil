@@ -60,7 +60,7 @@ def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
                     sleep(1.0)
                     return
 
-            progress = 100. * frame.index / frame_count
+            progress = 100.0 * frame.index / frame_count
 
             markers = [
                 m

@@ -27,9 +27,9 @@ class Seek_Control(System_Plugin_Base):
     """
 
     order = 0.01
-    available_speeds = [.25, .5, 1., 1.5, 2., 4.]
+    available_speeds = [0.25, 0.5, 1.0, 1.5, 2.0, 4.0]
 
-    def __init__(self, g_pool, playback_speed=1.):
+    def __init__(self, g_pool, playback_speed=1.0):
         super().__init__(g_pool)
         g_pool.seek_control = self
         self._playback_speed = playback_speed
@@ -37,9 +37,9 @@ class Seek_Control(System_Plugin_Base):
         self._trim_right = len(self.g_pool.timestamps) - 1
         self.was_playing = True
         self.was_seeking = False
-        self.start_time = 0.
+        self.start_time = 0.0
         self.start_ts = self.g_pool.timestamps[0]
-        self.time_slew = 0.
+        self.time_slew = 0.0
         g_pool.capture.play = False
         self._recent_playback_time = self.current_playback_time
 
@@ -165,10 +165,10 @@ class Seek_Control(System_Plugin_Base):
                 "new_range": (self.trim_left, self.trim_right),
             }
         )
-        self.notify_all({'subject': 'seek_control.was_seeking'})
+        self.notify_all({"subject": "seek_control.was_seeking"})
 
     def end_of_seek(self):
-        '''Signal end of seeking by file backend'''
+        """Signal end of seeking by file backend"""
         if self.was_seeking and self.play:
             self.start_time = time.monotonic()
             self.was_seeking = False
@@ -245,7 +245,7 @@ class Seek_Control(System_Plugin_Base):
 
     @property
     def playback_speed(self):
-        return self._playback_speed if self.play else 0.
+        return self._playback_speed if self.play else 0.0
 
     def set_trim_range(self, mark_range):
         self.trim_left, self.trim_right = mark_range
@@ -256,7 +256,7 @@ class Seek_Control(System_Plugin_Base):
         for ts in (self.trim_left_ts, self.trim_right_ts):
             ts -= min_ts
             minutes = ts // 60
-            seconds = ts - (minutes * 60.)
+            seconds = ts - (minutes * 60.0)
             micro_seconds_e1 = int((seconds - int(seconds)) * 1e3)
             time_fmt += "{:02.0f}:{:02d}.{:03d} - ".format(
                 abs(minutes), int(seconds), micro_seconds_e1
@@ -315,7 +315,7 @@ class Seek_Control(System_Plugin_Base):
         for ts in (self.trim_left_ts, self.trim_right_ts):
             ts -= min_ts
             minutes = ts // 60
-            seconds = ts - (minutes * 60.)
+            seconds = ts - (minutes * 60.0)
             micro_seconds_e1 = int((seconds - int(seconds)) * 1e3)
             time_fmt += "{:02.0f}_{:02d}_{:03d}-".format(
                 abs(minutes), int(seconds), micro_seconds_e1
@@ -326,7 +326,7 @@ class Seek_Control(System_Plugin_Base):
         if self.play and not self.was_seeking:
             playback_now = self.current_playback_time
             time_diff = (ts - playback_now) / self._playback_speed
-            if time_diff > .005:
+            if time_diff > 0.005:
                 time.sleep(time_diff)
         else:
             time.sleep(1 / 60)

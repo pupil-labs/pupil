@@ -27,7 +27,7 @@ class Pupil_Groups(Plugin):
     Uses Pyre for local group member discovery.
     """
 
-    icon_chr = chr(0xe886)
+    icon_chr = chr(0xE886)
     icon_font = "pupil_icons"
 
     def __init__(
@@ -65,7 +65,7 @@ class Pupil_Groups(Plugin):
         logging.debug("Stopping Pupil Groups...")
         self.thread_pipe.send_string("$TERM")
         while self.thread_pipe:
-            time.sleep(.1)
+            time.sleep(0.1)
         logger.info("Pupil Groups stopped.")
 
     def on_notify(self, notification):

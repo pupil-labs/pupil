@@ -44,7 +44,7 @@ class FingertipTracker(object):
     def _initParam(self, img_size):
         self._contourwidthThres = img_size[0] // 128
         self._contourheightThres = img_size[1] // 24
-        self._epsilon = img_size[0] / 256.
+        self._epsilon = img_size[0] / 256.0
         self._margin = img_size[0] // 128
         kernel_size = img_size[0] // 256
         self._kernel_OPEN = cv2.getStructuringElement(
@@ -272,8 +272,8 @@ class FingertipTracker(object):
         best_rect = self._finger_rects[int(np.argmax(self._finger_area_ratios))]
         (rect_x, rect_y), (rect_size_1, rect_size_2), rect_angle = best_rect
         rect_angle = -rect_angle
-        rect_angle_cos = np.cos(rect_angle * np.pi / 180.)
-        rect_angle_sin = np.sin(rect_angle * np.pi / 180.)
+        rect_angle_cos = np.cos(rect_angle * np.pi / 180.0)
+        rect_angle_sin = np.sin(rect_angle * np.pi / 180.0)
         if rect_size_2 >= rect_size_1 and rect_angle <= 45:
             rect_x = rect_x - (rect_size_2 - rect_size_1) / 2 * rect_angle_sin
             rect_y = rect_y - (rect_size_2 - rect_size_1) / 2 * rect_angle_cos
@@ -314,8 +314,8 @@ class FingertipTracker(object):
             new_contour
         )
         rect_angle = -rect_angle
-        rect_angle_cos = np.cos(rect_angle * np.pi / 180.)
-        rect_angle_sin = np.sin(rect_angle * np.pi / 180.)
+        rect_angle_cos = np.cos(rect_angle * np.pi / 180.0)
+        rect_angle_sin = np.sin(rect_angle * np.pi / 180.0)
         if rect_size_2 >= rect_size_1 and rect_angle <= 45:
             rect_x = rect_x - (rect_size_2 - rect_size_1) / 2 * rect_angle_sin
             rect_y = rect_y - (rect_size_2 - rect_size_1) / 2 * rect_angle_cos

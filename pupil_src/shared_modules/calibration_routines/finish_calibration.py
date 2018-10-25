@@ -439,7 +439,7 @@ def select_calibration_method(g_pool, pupil_list, ref_list):
     ]
     len_post_filter = len(pupil_list)
     try:
-        dismissed_percentage = 100 * (1. - len_post_filter / len_pre_filter)
+        dismissed_percentage = 100 * (1.0 - len_post_filter / len_pre_filter)
     except ZeroDivisionError:
         pass  # empty pupil_list, is being handled in match_data
     else:

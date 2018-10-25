@@ -35,7 +35,7 @@ class Annotation_Capture(Plugin):
     """Describe your plugin here
     """
 
-    icon_chr = chr(0xe866)
+    icon_chr = chr(0xE866)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, annotation_definitions=(("My annotation", "E"),)):

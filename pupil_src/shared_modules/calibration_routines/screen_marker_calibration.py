@@ -56,7 +56,7 @@ def easeInOutQuad(t, b, c, d):
     return -c / 2 * (t * (t - 2) - 1) + b
 
 
-def interp_fn(t, b, c, d, start_sample=15., stop_sample=55.):
+def interp_fn(t, b, c, d, start_sample=15.0, stop_sample=55.0):
     # ease in, sample, ease out
     if t < start_sample:
         return easeInOutQuad(t, b, c, start_sample)
@@ -82,14 +82,14 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         monitor_idx=0,
     ):
         super().__init__(g_pool)
-        self.screen_marker_state = 0.
+        self.screen_marker_state = 0.0
         self.sample_duration = sample_duration  # number of frames to sample per site
         self.lead_in = 25  # frames of marker shown before starting to sample
         self.lead_out = 5  # frames of markers shown after sampling is donw
 
         self.active_site = None
         self.sites = []
-        self.display_pos = -1., -1.
+        self.display_pos = -1.0, -1.0
         self.on_position = False
         self.pos = None
 
@@ -175,25 +175,37 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         if self.g_pool.detection_mapping_mode == "3d":
             if self.mode == "calibration":
-                self.sites = [(.5, .5), (0., 1.), (1., 1.), (1., 0.), (0., 0.)]
+                self.sites = [
+                    (0.5, 0.5),
+                    (0.0, 1.0),
+                    (1.0, 1.0),
+                    (1.0, 0.0),
+                    (0.0, 0.0),
+                ]
             else:
-                self.sites = [(.25, .5), (.5, .25), (.75, .5), (.5, .75)]
+                self.sites = [(0.25, 0.5), (0.5, 0.25), (0.75, 0.5), (0.5, 0.75)]
         else:
             if self.mode == "calibration":
                 self.sites = [
-                    (.25, .5),
-                    (0, .5),
-                    (0., 1.),
-                    (.5, 1.),
-                    (1., 1.),
-                    (1., .5),
-                    (1., 0.),
-                    (.5, 0.),
-                    (0., 0.),
-                    (.75, .5),
+                    (0.25, 0.5),
+                    (0, 0.5),
+                    (0.0, 1.0),
+                    (0.5, 1.0),
+                    (1.0, 1.0),
+                    (1.0, 0.5),
+                    (1.0, 0.0),
+                    (0.5, 0.0),
+                    (0.0, 0.0),
+                    (0.75, 0.5),
                 ]
             else:
-                self.sites = [(.5, .5), (.25, .25), (.25, .75), (.75, .75), (.75, .25)]
+                self.sites = [
+                    (0.5, 0.5),
+                    (0.25, 0.25),
+                    (0.25, 0.75),
+                    (0.75, 0.75),
+                    (0.75, 0.25),
+                ]
 
         self.active_site = self.sites.pop(0)
         self.active = True
@@ -383,9 +395,11 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     360,
                     15,
                 )
-                draw_polyline(pts, 1, RGBA(0., 1., 0., 1.))
+                draw_polyline(pts, 1, RGBA(0.0, 1.0, 0.0, 1.0))
                 if len(self.markers) > 1:
-                    draw_polyline(pts, 1, RGBA(1., 0., 0., .5), line_type=gl.GL_POLYGON)
+                    draw_polyline(
+                        pts, 1, RGBA(1.0, 0.0, 0.0, 0.5), line_type=gl.GL_POLYGON
+                    )
 
     def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()
@@ -418,8 +432,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         )
         alpha = interp_fn(
             self.screen_marker_state,
-            0.,
-            1.,
+            0.0,
+            1.0,
             float(self.sample_duration + self.lead_in + self.lead_out),
             float(self.lead_in),
             float(self.sample_duration + self.lead_in),
@@ -427,28 +441,28 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         r2 = 2 * r
         draw_points(
-            [screen_pos], size=60 * r2, color=RGBA(0., 0., 0., alpha), sharpness=0.9
+            [screen_pos], size=60 * r2, color=RGBA(0.0, 0.0, 0.0, alpha), sharpness=0.9
         )
         draw_points(
-            [screen_pos], size=38 * r2, color=RGBA(1., 1., 1., alpha), sharpness=0.8
+            [screen_pos], size=38 * r2, color=RGBA(1.0, 1.0, 1.0, alpha), sharpness=0.8
         )
         draw_points(
-            [screen_pos], size=19 * r2, color=RGBA(0., 0., 0., alpha), sharpness=0.55
+            [screen_pos], size=19 * r2, color=RGBA(0.0, 0.0, 0.0, alpha), sharpness=0.55
         )
 
         # some feedback on the detection state
         color = (
-            RGBA(0., .8, 0., alpha)
+            RGBA(0.0, 0.8, 0.0, alpha)
             if len(self.markers) and self.on_position
-            else RGBA(0.8, 0., 0., alpha)
+            else RGBA(0.8, 0.0, 0.0, alpha)
         )
         draw_points([screen_pos], size=3 * r2, color=color, sharpness=0.5)
 
         if self.clicks_to_close < 5:
-            self.glfont.set_size(int(p_window_size[0] / 30.))
+            self.glfont.set_size(int(p_window_size[0] / 30.0))
             self.glfont.draw_text(
-                p_window_size[0] / 2.,
-                p_window_size[1] / 4.,
+                p_window_size[0] / 2.0,
+                p_window_size[1] / 4.0,
                 "Touch {} more times to cancel {}.".format(
                     self.clicks_to_close, self.mode_pretty
                 ),

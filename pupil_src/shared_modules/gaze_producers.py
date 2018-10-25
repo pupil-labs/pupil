@@ -74,8 +74,8 @@ colors = cycle(
 
 class Gaze_Producer_Base(Producer_Plugin_Base):
     uniqueness = "by_base_class"
-    order = .02
-    icon_chr = chr(0xec14)
+    order = 0.02
+    icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"
 
     def init_ui(self):
@@ -125,7 +125,7 @@ class Gaze_From_Recording(Gaze_Producer_Base):
                 os.path.join(self.result_dir, "manual_gaze_correction")
             )
         except OSError:
-            session_data = {"dx": 0., "dy": 0.}
+            session_data = {"dx": 0.0, "dy": 0.0}
         self.x_offset = session_data["dx"]
         self.y_offset = session_data["dy"]
         self.load_data_with_offset()
@@ -231,8 +231,8 @@ def make_section_dict(calib_range, map_range):
         "calibration_method": "circle_marker",
         "status": "unmapped",
         "color": next(colors),
-        "x_offset": 0.,
-        "y_offset": 0.,
+        "x_offset": 0.0,
+        "y_offset": 0.0,
     }
 
 
@@ -286,7 +286,7 @@ class Offline_Calibration(Gaze_Producer_Base):
 
         self.glfont = fontstash.Context()
         self.glfont.add_font("opensans", ui.get_opensans_font_path())
-        self.glfont.set_color_float((1., 1., 1., 1.))
+        self.glfont.set_color_float((1.0, 1.0, 1.0, 1.0))
         self.glfont.set_align_string(v_align="right", h_align="top")
 
         def use_as_natural_features():
@@ -351,7 +351,7 @@ class Offline_Calibration(Gaze_Producer_Base):
             ui.Slider(
                 "min_calibration_confidence",
                 self.g_pool,
-                step=.01,
+                step=0.01,
                 min=0.0,
                 max=1.0,
                 label="Minimum calibration confidence",
@@ -413,7 +413,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                 for idx in (left_idx, right_idx):
                     ts = self.g_pool.timestamps[idx] - min_ts
                     minutes = ts // 60
-                    seconds = ts - (minutes * 60.)
+                    seconds = ts - (minutes * 60.0)
                     time_fmt += " {:02.0f}:{:02.0f} -".format(abs(minutes), seconds)
                 button.outer_label = time_fmt[:-2]  # remove final ' -'
 
@@ -465,8 +465,8 @@ class Offline_Calibration(Gaze_Producer_Base):
                 + " a fixed offset to your gaze data."
             )
         )
-        offset_menu.append(ui.Slider("x_offset", sec, min=-.5, step=0.01, max=.5))
-        offset_menu.append(ui.Slider("y_offset", sec, min=-.5, step=0.01, max=.5))
+        offset_menu.append(ui.Slider("x_offset", sec, min=-0.5, step=0.01, max=0.5))
+        offset_menu.append(ui.Slider("y_offset", sec, min=-0.5, step=0.01, max=0.5))
         offset_menu.collapsed = True
         section_menu.append(offset_menu)
         self.menu.append(section_menu)
@@ -526,7 +526,7 @@ class Offline_Calibration(Gaze_Producer_Base):
                 self.circle_marker_positions.extend([d for d in data if d])
                 self.detection_progress = progress[-1]
             elif topic == "finished":
-                self.detection_progress = 100.
+                self.detection_progress = 100.0
                 self.process_pipe = None
                 for s in self.sections:
                     self.calibrate_section(s)
@@ -537,10 +537,10 @@ class Offline_Calibration(Gaze_Producer_Base):
                     )
                 )
                 self.process_pipe = None
-                self.detection_progress = 0.
+                self.detection_progress = 0.0
                 logger.info("Marker detection was interrupted")
                 logger.debug("Reason: {}".format(msg.get("reason", "n/a")))
-            self.menu_icon.indicator_stop = self.detection_progress / 100.
+            self.menu_icon.indicator_stop = self.detection_progress / 100.0
 
         for sec in self.sections:
             if "bg_task" in sec:
@@ -660,10 +660,10 @@ class Offline_Calibration(Gaze_Producer_Base):
                 if self.g_pool.capture.get_frame_index() == r["index"]
             ]
             cygl_utils.draw_points(
-                ref_point_norm, size=35, color=cygl_utils.RGBA(0, .5, 0.5, .7)
+                ref_point_norm, size=35, color=cygl_utils.RGBA(0, 0.5, 0.5, 0.7)
             )
             cygl_utils.draw_points(
-                ref_point_norm, size=5, color=cygl_utils.RGBA(.0, .9, 0.0, 1.0)
+                ref_point_norm, size=5, color=cygl_utils.RGBA(0.0, 0.9, 0.0, 1.0)
             )
 
             manual_refs_in_frame = [
@@ -677,33 +677,33 @@ class Offline_Calibration(Gaze_Producer_Base):
                     cygl_utils.draw_points(
                         [mr["norm_pos"]],
                         size=35,
-                        color=cygl_utils.RGBA(.0, .0, 0.9, .8),
+                        color=cygl_utils.RGBA(0.0, 0.0, 0.9, 0.8),
                     )
                     cygl_utils.draw_points(
                         [mr["norm_pos"]],
                         size=5,
-                        color=cygl_utils.RGBA(.0, .9, 0.0, 1.0),
+                        color=cygl_utils.RGBA(0.0, 0.9, 0.0, 1.0),
                     )
                 else:
                     distance = abs(current - mr["index"])
                     range_radius = (mr["index_range"][-1] - mr["index_range"][0]) // 2
                     # scale alpha [.1, .9] depending on distance to current frame
                     alpha = distance / range_radius
-                    alpha = 0.1 * alpha + 0.9 * (1. - alpha)
+                    alpha = 0.1 * alpha + 0.9 * (1.0 - alpha)
                     # Use draw_progress instead of draw_circle. draw_circle breaks
                     # because of the normalized coord-system.
                     cygl_utils.draw_progress(
                         mr["norm_pos"],
-                        0.,
+                        0.0,
                         0.999,
-                        inner_radius=20.,
-                        outer_radius=35.,
-                        color=cygl_utils.RGBA(.0, .0, 0.9, alpha),
+                        inner_radius=20.0,
+                        outer_radius=35.0,
+                        color=cygl_utils.RGBA(0.0, 0.0, 0.9, alpha),
                     )
                     cygl_utils.draw_points(
                         [mr["norm_pos"]],
                         size=5,
-                        color=cygl_utils.RGBA(.0, .9, 0.0, alpha),
+                        color=cygl_utils.RGBA(0.0, 0.9, 0.0, alpha),
                     )
 
         # calculate correct timeline height. Triggers timeline redraw only if changed
@@ -722,14 +722,14 @@ class Offline_Calibration(Gaze_Producer_Base):
                 cal_ts = self.g_pool.timestamps[cal_slc]
                 map_ts = self.g_pool.timestamps[map_slc]
 
-                color = cygl_utils.RGBA(*s["color"][:3], .5)
+                color = cygl_utils.RGBA(*s["color"][:3], 0.5)
                 if len(cal_ts):
                     cygl_utils.draw_rounded_rect(
                         (cal_ts[0], -4 * scale),
                         (cal_ts[-1] - cal_ts[0], 8 * scale),
                         corner_radius=0,
                         color=color,
-                        sharpness=1.,
+                        sharpness=1.0,
                     )
                 if len(map_ts):
                     cygl_utils.draw_rounded_rect(
@@ -737,10 +737,10 @@ class Offline_Calibration(Gaze_Producer_Base):
                         (map_ts[-1] - map_ts[0], 2 * scale),
                         corner_radius=0,
                         color=color,
-                        sharpness=1.,
+                        sharpness=1.0,
                     )
 
-                color = cygl_utils.RGBA(1., 1., 1., .5)
+                color = cygl_utils.RGBA(1.0, 1.0, 1.0, 0.5)
                 if s["calibration_method"] == "natural_features":
                     cygl_utils.draw_x(
                         [(m["timestamp"], 0) for m in self.manual_ref_positions],
@@ -783,8 +783,8 @@ class Offline_Calibration(Gaze_Producer_Base):
             }
         )
 
-        self.detection_progress = 0.
-        self.menu_icon.indicator_stop = 0.
+        self.detection_progress = 0.0
+        self.menu_icon.indicator_stop = 0.0
         self.toggle_detection_button.label = "Cancel circle marker detection"
 
     def cancel_marker_detection(self):
@@ -793,8 +793,8 @@ class Offline_Calibration(Gaze_Producer_Base):
             self.process_pipe.socket.close()
             self.process_pipe = None
 
-            self.detection_progress = 0.
-            self.menu_icon.indicator_stop = 0.
+            self.detection_progress = 0.0
+            self.menu_icon.indicator_stop = 0.0
             self.toggle_detection_button.label = "Start circle marker detection"
 
     def cleanup(self):

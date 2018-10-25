@@ -42,7 +42,7 @@ class Marker_Auto_Trim_Marks(Plugin):
 
     """
 
-    icon_chr = chr(0xe41f)
+    icon_chr = chr(0xE41F)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, man_in_marks=[], man_out_marks=[]):
@@ -179,7 +179,7 @@ class Marker_Auto_Trim_Marks(Plugin):
 
                 # make a smooth signal
                 in_out_smooth = np.convolve(
-                    in_out_signal, [2. / 30] * 30, mode="same"
+                    in_out_signal, [2.0 / 30] * 30, mode="same"
                 )  # mean filter with sum 2 and len 60,
                 # Mode 'same' returns output of length max(signal, filter).
 
@@ -313,7 +313,7 @@ class Marker_Auto_Trim_Marks(Plugin):
     def gl_display_cache_bars(self):
         """
         """
-        padding = 20.
+        padding = 20.0
         frame_max = len(
             self.g_pool.timestamps
         )  # last marker is garanteed to be frame max.
@@ -323,7 +323,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         glLoadIdentity()
         width, height = self.g_pool.camera_render_size
         h_pad = padding * (frame_max - 2) / float(width)
-        v_pad = padding * 1. / (height - 2)
+        v_pad = padding * 1.0 / (height - 2)
         gluOrtho(
             -h_pad, (frame_max - 1) + h_pad, -v_pad, 1 + v_pad, -1, 1
         )  # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
@@ -331,10 +331,13 @@ class Marker_Auto_Trim_Marks(Plugin):
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
         glLoadIdentity()
-        glTranslatef(0, -.02, 0)
-        color = (7., .1, .2, 8.)
+        glTranslatef(0, -0.02, 0)
+        color = (7.0, 0.1, 0.2, 8.0)
         draw_polyline(
-            self.gl_display_ranges, color=RGBA(*color), line_type=GL_LINES, thickness=2.
+            self.gl_display_ranges,
+            color=RGBA(*color),
+            line_type=GL_LINES,
+            thickness=2.0,
         )
 
         glMatrixMode(GL_PROJECTION)

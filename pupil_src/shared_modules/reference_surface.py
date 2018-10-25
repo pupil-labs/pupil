@@ -92,7 +92,7 @@ class Reference_Surface(object):
         self.detected_markers = 0
         self.defined = False
         self.build_up_status = 0
-        self.required_build_up = 90.
+        self.required_build_up = 90.0
         self.detected = False
         self.m_to_screen = None
         self.m_from_screen = None
@@ -100,10 +100,10 @@ class Reference_Surface(object):
         self.use_distortion = True
 
         self.uid = str(time())
-        self.real_world_size = {"x": 1., "y": 1.}
+        self.real_world_size = {"x": 1.0, "y": 1.0}
 
         self.heatmap = np.ones(0)
-        self.heatmap_detail = .2
+        self.heatmap_detail = 0.2
         self.heatmap_texture = Named_Texture()
         self.gaze_history = deque()
         self.gaze_history_length = 1.0  # unit: seconds
@@ -158,7 +158,7 @@ class Reference_Surface(object):
         self.gaze_history_length = d.get(
             "gaze_history_length", self.gaze_history_length
         )
-        self.real_world_size = d.get("real_world_size", {"x": 1., "y": 1.})
+        self.real_world_size = d.get("real_world_size", {"x": 1.0, "y": 1.0})
 
         marker_dict = d["markers"]
         for m_id, uv_coords in marker_dict.items():
@@ -263,7 +263,7 @@ class Reference_Surface(object):
         """
         persistent_markers = {}
         for k, m in self.markers.items():
-            if len(m.collected_uv_coords) > self.required_build_up * .5:
+            if len(m.collected_uv_coords) > self.required_build_up * 0.5:
                 persistent_markers[k] = m
         self.markers = persistent_markers
         for m in self.markers.values():
@@ -295,16 +295,16 @@ class Reference_Surface(object):
 
         grid = int(self.real_world_size["y"]), int(self.real_world_size["x"])
 
-        xvals, yvals = zip(*((x, 1. - y) for x, y in data))
+        xvals, yvals = zip(*((x, 1.0 - y) for x, y in data))
         hist, *edges = np.histogram2d(
-            yvals, xvals, bins=grid, range=[[0, 1.], [0, 1.]], normed=False
+            yvals, xvals, bins=grid, range=[[0, 1.0], [0, 1.0]], normed=False
         )
         filter_h = int(self.heatmap_detail * grid[0]) // 2 * 2 + 1
         filter_w = int(self.heatmap_detail * grid[1]) // 2 * 2 + 1
         hist = cv2.GaussianBlur(hist, (filter_h, filter_w), 0)
 
         hist_max = hist.max()
-        hist *= (255. / hist_max) if hist_max else 0.
+        hist *= (255.0 / hist_max) if hist_max else 0.0
         hist = hist.astype(np.uint8)
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
         # reuse allocated memory if possible
@@ -443,7 +443,7 @@ class Reference_Surface(object):
 
             corners_robust = []
             for nulldist, redist in zip(corners_nulldistorted, corners_redistorted):
-                if -.4 < nulldist[0] < 1.4 and -.4 < nulldist[1] < 1.4:
+                if -0.4 < nulldist[0] < 1.4 and -0.4 < nulldist[1] < 1.4:
                     corners_robust.append(redist)
                 else:
                     corners_robust.append(nulldist)
@@ -455,7 +455,9 @@ class Reference_Surface(object):
                 and np.mean(np.abs(corners_robust - self.old_corners_robust)) < 0.02
             ):
                 smooth_corners_robust = self.old_corners_robust
-                smooth_corners_robust += .5 * (corners_robust - self.old_corners_robust)
+                smooth_corners_robust += 0.5 * (
+                    corners_robust - self.old_corners_robust
+                )
 
                 corners_robust = smooth_corners_robust
                 self.old_corners_robust = smooth_corners_robust
@@ -699,7 +701,9 @@ class Reference_Surface(object):
             frame = np.array(
                 [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]], dtype=np.float32
             )
-            hat = np.array([[[.3, .7], [.7, .7], [.5, .9], [.3, .7]]], dtype=np.float32)
+            hat = np.array(
+                [[[0.3, 0.7], [0.7, 0.7], [0.5, 0.9], [0.3, 0.7]]], dtype=np.float32
+            )
             hat = cv2.perspectiveTransform(hat, self.m_to_screen)
             frame = cv2.perspectiveTransform(frame, self.m_to_screen)
             alpha = min(1, self.build_up_status / self.required_build_up)
@@ -707,7 +711,7 @@ class Reference_Surface(object):
                 draw_polyline_norm(
                     frame.reshape((5, 2)),
                     1,
-                    RGBA(r, g, b, a * .1),
+                    RGBA(r, g, b, a * 0.1),
                     line_type=GL_POLYGON,
                 )
             draw_polyline_norm(frame.reshape((5, 2)), 1, RGBA(r, g, b, a * alpha))
@@ -720,16 +724,16 @@ class Reference_Surface(object):
             marker_edit_anchor = text_anchor[0], text_anchor[1] + 50
             if self.defined:
                 if marker_mode:
-                    draw_points([marker_edit_anchor], color=RGBA(0, .8, .7))
+                    draw_points([marker_edit_anchor], color=RGBA(0, 0.8, 0.7))
                 else:
                     draw_points([marker_edit_anchor])
                 if surface_mode:
-                    draw_points([surface_edit_anchor], color=RGBA(0, .8, .7))
+                    draw_points([surface_edit_anchor], color=RGBA(0, 0.8, 0.7))
                 else:
                     draw_points([surface_edit_anchor])
 
                 self.glfont.set_blur(3.9)
-                self.glfont.set_color_float((0, 0, 0, .8))
+                self.glfont.set_color_float((0, 0, 0, 0.8))
                 self.glfont.draw_text(
                     text_anchor[0] + 15, text_anchor[1] + 6, self.marker_status()
                 )
@@ -744,7 +748,7 @@ class Reference_Surface(object):
                     "add/remove markers",
                 )
                 self.glfont.set_blur(0.0)
-                self.glfont.set_color_float((0.1, 8., 8., .9))
+                self.glfont.set_color_float((0.1, 8.0, 8.0, 0.9))
                 self.glfont.draw_text(
                     text_anchor[0] + 15, text_anchor[1] + 6, self.marker_status()
                 )
@@ -762,7 +766,7 @@ class Reference_Surface(object):
                 progress = (self.build_up_status / float(self.required_build_up)) * 100
                 progress_text = "%.0f%%" % progress
                 self.glfont.set_blur(3.9)
-                self.glfont.set_color_float((0, 0, 0, .8))
+                self.glfont.set_color_float((0, 0, 0, 0.8))
                 self.glfont.draw_text(
                     text_anchor[0] + 15, text_anchor[1] + 6, self.marker_status()
                 )
@@ -775,7 +779,7 @@ class Reference_Surface(object):
                     marker_edit_anchor[0] + 15, marker_edit_anchor[1] + 6, progress_text
                 )
                 self.glfont.set_blur(0.0)
-                self.glfont.set_color_float((0.1, 8., 8., .9))
+                self.glfont.set_color_float((0.1, 8.0, 8.0, 0.9))
                 self.glfont.draw_text(
                     text_anchor[0] + 15, text_anchor[1] + 6, self.marker_status()
                 )
@@ -796,7 +800,7 @@ class Reference_Surface(object):
             frame = cv2.perspectiveTransform(
                 marker_corners_norm.reshape(-1, 1, 2), self.m_to_screen
             )
-            draw_points_norm(frame.reshape((4, 2)), 20, RGBA(1.0, 0.2, 0.6, .5))
+            draw_points_norm(frame.reshape((4, 2)), 20, RGBA(1.0, 0.2, 0.6, 0.5))
 
     #### fns to draw surface in seperate window
     def gl_display_in_window(self, world_tex):
@@ -850,7 +854,7 @@ class Reference_Surface(object):
         if self._window and self.camera_pose_3d is not None:
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
-            glClearColor(.8, .8, .8, 1.)
+            glClearColor(0.8, 0.8, 0.8, 1.0)
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             glClearDepth(1.0)
@@ -865,7 +869,7 @@ class Reference_Surface(object):
             glScalef(self.real_world_size["x"], self.real_world_size["y"], 1)
             draw_polyline(
                 [[0, 0], [0, 1], [1, 1], [1, 0]],
-                color=RGBA(.5, .3, .1, .5),
+                color=RGBA(0.5, 0.3, 0.1, 0.5),
                 thickness=3,
             )
             glPopMatrix()
@@ -875,11 +879,11 @@ class Reference_Surface(object):
             # cv uses 3x3 gl uses 4x4 tranformation matricies
             m = cvmat_to_glmat(self.m_from_screen)
             glMultMatrixf(m)
-            glTranslatef(0, 0, -.01)
+            glTranslatef(0, 0, -0.01)
             world_tex.draw()
             draw_polyline(
                 [[0, 0], [0, 1], [1, 1], [1, 0]],
-                color=RGBA(.5, .3, .6, .5),
+                color=RGBA(0.5, 0.3, 0.6, 0.5),
                 thickness=3,
             )
             glPopMatrix()
@@ -889,7 +893,7 @@ class Reference_Surface(object):
             glMultMatrixf(self.camera_pose_3d.T.flatten())
             draw_frustum(img_size, K, 150)
             glLineWidth(1)
-            draw_frustum(img_size, K, .1)
+            draw_frustum(img_size, K, 0.1)
             draw_coordinate_system(l=5)
             glPopMatrix()
 
@@ -908,7 +912,9 @@ class Reference_Surface(object):
                 monitor = None
                 height, width = (
                     640,
-                    int(640. / (self.real_world_size["x"] / self.real_world_size["y"])),
+                    int(
+                        640.0 / (self.real_world_size["x"] / self.real_world_size["y"])
+                    ),
                 )  # open with same aspect ratio as surface
 
             self._window = glfwCreateWindow(
@@ -1018,7 +1024,7 @@ class Support_Marker(object):
         self.collected_uv_coords.append(uv_coords)
         self.uv_coords = uv_coords
 
-    def compute_robust_mean(self, threshhold=.1):
+    def compute_robust_mean(self, threshhold=0.1):
         """
         treat 50% as outliers. Assume majory is right.
         """

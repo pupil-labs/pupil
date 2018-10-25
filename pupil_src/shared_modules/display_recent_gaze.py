@@ -21,7 +21,7 @@ class Display_Recent_Gaze(System_Plugin_Base):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.order = .8
+        self.order = 0.8
         self.pupil_display_list = []
 
     def recent_events(self, events):
@@ -32,7 +32,7 @@ class Display_Recent_Gaze(System_Plugin_Base):
     def gl_display(self):
         for pt, a in self.pupil_display_list:
             # This could be faster if there would be a method to also add multiple colors per point
-            draw_points_norm([pt], size=35, color=RGBA(1., .2, .4, a))
+            draw_points_norm([pt], size=35, color=RGBA(1.0, 0.2, 0.4, a))
 
     def get_init_dict(self):
         return {}

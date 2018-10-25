@@ -134,7 +134,7 @@ def export(
         if len(trimmed_timestamps) == 0:
             warn = "Start and end frames are set such that no video will be exported."
             logger.warning(warn)
-            yield warn, 0.
+            yield warn, 0.0
             return
 
         if start_frame is None:
