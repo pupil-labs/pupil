@@ -100,7 +100,6 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
             pre_computed,
         )
         process = bh.IPC_Logging_Task_Proxy(
-            self.g_pool.ipc_push_url,
             "Pupil Export {}".format(out_file_path),
             export,
             args=args,

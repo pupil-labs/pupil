@@ -97,6 +97,9 @@ def service(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, us
         from blink_detection import Blink_Detection
         from service_ui import Service_UI
 
+        from background_helper import IPC_Logging_Task_Proxy
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
         logger.info('Application Version: {}'.format(version))
         logger.info('System Info: {}'.format(get_system_info()))
 

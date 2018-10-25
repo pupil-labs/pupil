@@ -139,6 +139,9 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
         from hololens_relay import Hololens_Relay
 
+        from background_helper import IPC_Logging_Task_Proxy
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
         # UI Platform tweaks
         if platform.system() == 'Linux':
             scroll_factor = 10.0

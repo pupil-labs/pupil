@@ -107,6 +107,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
         from imotions_exporter import iMotions_Exporter
         from eye_video_exporter import Eye_Video_Exporter
 
+        from background_helper import IPC_Logging_Task_Proxy
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
         assert VersionFormat(pyglui_version) >= VersionFormat('1.23'), 'pyglui out of date, please upgrade to newest version'
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, 'plugins'))

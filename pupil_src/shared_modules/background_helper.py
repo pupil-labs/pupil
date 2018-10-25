@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import abc
 import logging
 import multiprocessing as mp
 import zmq
@@ -45,6 +46,7 @@ class Task_Proxy(object):
 
     def _wrapper(self, pipe, _should_terminate_flag, generator, *args, **kwargs):
         """Executed in background, pipes generator results to foreground"""
+        self._change_logging_behavior()
         logger.debug("Entering _wrapper")
 
         try:
@@ -63,6 +65,10 @@ class Task_Proxy(object):
         finally:
             pipe.close()
             logger.debug("Exiting _wrapper")
+
+    @abc.abstract_method
+    def _change_logging_behavior(self):
+        pass
 
     def fetch(self):
         """Fetches progress and available results from background"""
@@ -112,27 +118,19 @@ class Task_Proxy(object):
 
 
 class IPC_Logging_Task_Proxy(Task_Proxy):
-    def __init__(self, ipc_push_url, name, generator, args=(), kwargs={}):
-        extended_args = [ipc_push_url]
-        extended_args.extend(args)
-        super().__init__(name, generator, args=extended_args, kwargs=kwargs)
+    push_url = None
 
-    def _wrapper(
-        self, pipe, _should_terminate_flag, generator, ipc_push_url, *args, **kwargs
-    ):
-        self._enforce_IPC_logging(ipc_push_url)
-        super()._wrapper(pipe, _should_terminate_flag, generator, *args, **kwargs)
-
-    def _enforce_IPC_logging(self, ipc_push_url):
+    def _change_logging_behavior(self):
         """
         ZMQ_handler sockets from the foreground thread are broken in the background.
         Solution: Remove all potential broken handlers and replace by new oneself.
 
         Caveat: If a broken handler is present is incosistent across environments.
         """
+        assert self.push_url, "`push_url` was not set by foreground process"
         del logger.root.handlers[:]
         zmq_ctx = zmq.Context()
-        handler = zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url)
+        handler = zmq_tools.ZMQ_handler(zmq_ctx, self.push_url)
         logger.root.addHandler(handler)
 
 
