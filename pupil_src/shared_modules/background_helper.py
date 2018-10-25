@@ -136,7 +136,7 @@ class IPC_Logging_Task_Proxy(Task_Proxy):
         ZMQ_handler sockets from the foreground thread are broken in the background.
         Solution: Remove all potential broken handlers and replace by new oneself.
 
-        Caveat: If a broken handler is present is incosistent across environments.
+        Caveat: If a broken handler is present it is incosistent across environments.
         """
         assert self.push_url, "`push_url` was not set by foreground process"
         del logger.root.handlers[:]
