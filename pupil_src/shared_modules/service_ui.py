@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2017  Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 import platform
 import logging
@@ -21,10 +21,10 @@ from pyglui import ui, cygl
 from plugin import System_Plugin_Base
 
 # UI Platform tweaks
-if platform.system() == 'Linux':
+if platform.system() == "Linux":
     scroll_factor = 10.0
     window_position_default = (30, 30)
-elif platform.system() == 'Windows':
+elif platform.system() == "Windows":
     scroll_factor = 10.0
     window_position_default = (8, 90)
 else:
@@ -36,9 +36,14 @@ logger = logging.getLogger(__name__)
 
 
 class Service_UI(System_Plugin_Base):
-    def __init__(self, g_pool, window_size=window_size_default,
-                 window_position=window_position_default,
-                 gui_scale=1., ui_config={}):
+    def __init__(
+        self,
+        g_pool,
+        window_size=window_size_default,
+        window_position=window_position_default,
+        gui_scale=1.,
+        ui_config={},
+    ):
         super().__init__(g_pool)
 
         self.texture = np.zeros((1, 1, 3), dtype=np.uint8) + 128
@@ -52,8 +57,9 @@ class Service_UI(System_Plugin_Base):
 
         g_pool.gui = ui.UI()
         g_pool.gui_user_scale = gui_scale
-        g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(0, 0), size=(0, 0),
-                                           header_pos='headline')
+        g_pool.menubar = ui.Scrolling_Menu(
+            "Settings", pos=(0, 0), size=(0, 0), header_pos="headline"
+        )
         g_pool.gui.append(g_pool.menubar)
 
         # Callback functions
@@ -90,39 +96,64 @@ class Service_UI(System_Plugin_Base):
         def reset_restart():
             logger.warning("Resetting all settings and restarting Capture.")
             glfw.glfwSetWindowShouldClose(main_window, True)
-            self.notify_all({'subject': 'clear_settings_process.should_start'})
-            self.notify_all({'subject': 'service_process.should_start', 'delay': 2.})
+            self.notify_all({"subject": "clear_settings_process.should_start"})
+            self.notify_all({"subject": "service_process.should_start", "delay": 2.})
 
-        g_pool.menubar.append(ui.Selector('gui_user_scale', g_pool,
-                                          setter=set_scale,
-                                          selection=[.6, .8, 1., 1.2, 1.4],
-                                          label='Interface size'))
+        g_pool.menubar.append(
+            ui.Selector(
+                "gui_user_scale",
+                g_pool,
+                setter=set_scale,
+                selection=[.6, .8, 1., 1.2, 1.4],
+                label="Interface size",
+            )
+        )
 
-        g_pool.menubar.append(ui.Button('Reset window size', set_window_size))
+        g_pool.menubar.append(ui.Button("Reset window size", set_window_size))
 
-        pupil_remote_addr = '{}:50020'.format(socket.gethostbyname(socket.gethostname()))
-        g_pool.menubar.append(ui.Text_Input('pupil_remote_addr',
-                                            getter=lambda: pupil_remote_addr,
-                                            setter=lambda x: None,
-                                            label='Pupil Remote address'))
+        pupil_remote_addr = "{}:50020".format(
+            socket.gethostbyname(socket.gethostname())
+        )
+        g_pool.menubar.append(
+            ui.Text_Input(
+                "pupil_remote_addr",
+                getter=lambda: pupil_remote_addr,
+                setter=lambda x: None,
+                label="Pupil Remote address",
+            )
+        )
 
-        g_pool.menubar.append(ui.Selector('detection_mapping_mode',
-                                          g_pool,
-                                          label='Detection & mapping mode',
-                                          setter=self.set_detection_mapping_mode,
-                                          selection=['disabled', '2d', '3d']))
-        g_pool.menubar.append(ui.Switch('eye0_process',
-                                        label='Detect eye 0',
-                                        setter=lambda alive: self.start_stop_eye(0, alive),
-                                        getter=lambda: g_pool.eyes_are_alive[0].value))
-        g_pool.menubar.append(ui.Switch('eye1_process',
-                                        label='Detect eye 1',
-                                        setter=lambda alive: self.start_stop_eye(1, alive),
-                                        getter=lambda: g_pool.eyes_are_alive[1].value))
+        g_pool.menubar.append(
+            ui.Selector(
+                "detection_mapping_mode",
+                g_pool,
+                label="Detection & mapping mode",
+                setter=self.set_detection_mapping_mode,
+                selection=["disabled", "2d", "3d"],
+            )
+        )
+        g_pool.menubar.append(
+            ui.Switch(
+                "eye0_process",
+                label="Detect eye 0",
+                setter=lambda alive: self.start_stop_eye(0, alive),
+                getter=lambda: g_pool.eyes_are_alive[0].value,
+            )
+        )
+        g_pool.menubar.append(
+            ui.Switch(
+                "eye1_process",
+                label="Detect eye 1",
+                setter=lambda alive: self.start_stop_eye(1, alive),
+                getter=lambda: g_pool.eyes_are_alive[1].value,
+            )
+        )
 
-        g_pool.menubar.append(ui.Info_Text('Service Version: {}'.format(g_pool.version)))
+        g_pool.menubar.append(
+            ui.Info_Text("Service Version: {}".format(g_pool.version))
+        )
 
-        g_pool.menubar.append(ui.Button('Restart with default settings', reset_restart))
+        g_pool.menubar.append(ui.Button("Restart with default settings", reset_restart))
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -137,9 +168,9 @@ class Service_UI(System_Plugin_Base):
         on_resize(g_pool.main_window, *glfw.glfwGetFramebufferSize(main_window))
 
     def on_notify(self, notification):
-        if notification['subject'] == 'service_process.ui.should_update':
+        if notification["subject"] == "service_process.ui.should_update":
             # resend delayed notification, keep ui loop running:
-            notification['delay'] = notification['initial_delay']
+            notification["delay"] = notification["initial_delay"]
             self.notify_all(notification)
             self.update_ui()
 
@@ -148,24 +179,30 @@ class Service_UI(System_Plugin_Base):
             gl_utils.glViewport(0, 0, *self.window_size)
             self.gl_display()
             try:
-                clipboard = glfw.glfwGetClipboardString(self.g_pool.main_window).decode()
+                clipboard = glfw.glfwGetClipboardString(
+                    self.g_pool.main_window
+                ).decode()
             except AttributeError:  # clipbaord is None, might happen on startup
-                clipboard = ''
+                clipboard = ""
             self.g_pool.gui.update_clipboard(clipboard)
             user_input = self.g_pool.gui.update()
             if user_input.clipboard and user_input.clipboard != clipboard:
                 # only write to clipboard if content changed
-                glfw.glfwSetClipboardString(self.g_pool.main_window, user_input.clipboard.encode())
+                glfw.glfwSetClipboardString(
+                    self.g_pool.main_window, user_input.clipboard.encode()
+                )
 
             glfw.glfwSwapBuffers(self.g_pool.main_window)
             glfw.glfwPollEvents()
         else:
-            self.notify_all({'subject': 'service_process.should_stop'})
+            self.notify_all({"subject": "service_process.should_stop"})
 
     def gl_display(self):
         gl_utils.make_coord_system_norm_based()
         cygl.utils.draw_gl_texture(self.texture)
-        gl_utils.make_coord_system_pixel_based((self.window_size[1], self.window_size[0], 3))
+        gl_utils.make_coord_system_pixel_based(
+            (self.window_size[1], self.window_size[0], 3)
+        )
 
     def cleanup(self):
         glfw.glfwRestoreWindow(self.g_pool.main_window)
@@ -182,22 +219,31 @@ class Service_UI(System_Plugin_Base):
         del self.texture
 
     def get_init_dict(self):
-        sess = {'window_position': glfw.glfwGetWindowPos(self.g_pool.main_window),
-                'gui_scale': self.g_pool.gui_user_scale,
-                'ui_config': self.g_pool.gui.configuration}
+        sess = {
+            "window_position": glfw.glfwGetWindowPos(self.g_pool.main_window),
+            "gui_scale": self.g_pool.gui_user_scale,
+            "ui_config": self.g_pool.gui.configuration,
+        }
 
         session_window_size = glfw.glfwGetWindowSize(self.g_pool.main_window)
         if 0 not in session_window_size:
-            sess['window_size'] = session_window_size
+            sess["window_size"] = session_window_size
 
         return sess
 
     def start_stop_eye(self, eye_id, make_alive):
         if make_alive:
-            n = {'subject': 'eye_process.should_start.{}'.format(eye_id), 'eye_id': eye_id}
+            n = {
+                "subject": "eye_process.should_start.{}".format(eye_id),
+                "eye_id": eye_id,
+            }
         else:
-            n = {'subject': 'eye_process.should_stop.{}'.format(eye_id), 'eye_id': eye_id, 'delay': 0.2}
+            n = {
+                "subject": "eye_process.should_stop.{}".format(eye_id),
+                "eye_id": eye_id,
+                "delay": 0.2,
+            }
         self.notify_all(n)
 
     def set_detection_mapping_mode(self, new_mode):
-        self.notify_all({'subject': 'set_detection_mapping_mode', 'mode': new_mode})
+        self.notify_all({"subject": "set_detection_mapping_mode", "mode": new_mode})

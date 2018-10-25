@@ -709,6 +709,7 @@ class Fixation_Detector(Fixation_Detector_Base):
             age_threshold = ts_newest - self.min_duration / 1000.
             while self.history[1]["timestamp"] < age_threshold:
                 self.history.popleft()  # remove outdated gaze points
+
         except IndexError:
             pass
         except AssertionError:
@@ -817,4 +818,3 @@ class Fixation_Detector(Fixation_Detector_Base):
             "min_duration": self.min_duration,
             "confidence_threshold": self.confidence_threshold,
         }
-

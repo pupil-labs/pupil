@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 import collections
 import logging
@@ -20,25 +20,37 @@ from glob import iglob
 import msgpack
 import numpy as np
 
-assert msgpack.version[1] == 5, 'msgpack out of date, please upgrade to version (0, 5, 6 ) or later.'
+assert (
+    msgpack.version[1] == 5
+), "msgpack out of date, please upgrade to version (0, 5, 6 ) or later."
 
 
 logger = logging.getLogger(__name__)
 UnpicklingError = pickle.UnpicklingError
 
-PLData = collections.namedtuple('PLData', ['data', 'timestamps', 'topics'])
+PLData = collections.namedtuple("PLData", ["data", "timestamps", "topics"])
+
 
 class Persistent_Dict(dict):
     """a dict class that uses pickle to save inself to file"""
+
     def __init__(self, file_path, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.file_path = os.path.expanduser(file_path)
         try:
-            self.update(**load_object(self.file_path,allow_legacy=False))
+            self.update(**load_object(self.file_path, allow_legacy=False))
         except IOError:
-            logger.debug("Session settings file '{}' not found. Will make new one on exit.".format(self.file_path))
+            logger.debug(
+                "Session settings file '{}' not found. Will make new one on exit.".format(
+                    self.file_path
+                )
+            )
         except:  # KeyError, EOFError
-            logger.warning("Session settings file '{}'could not be read. Will overwrite on exit.".format(self.file_path))
+            logger.warning(
+                "Session settings file '{}'could not be read. Will overwrite on exit.".format(
+                    self.file_path
+                )
+            )
             logger.debug(tb.format_exc())
 
     def save(self):
@@ -52,15 +64,16 @@ class Persistent_Dict(dict):
 
 def _load_object_legacy(file_path):
     file_path = os.path.expanduser(file_path)
-    with open(file_path, 'rb') as fh:
-        data = pickle.load(fh, encoding='bytes')
+    with open(file_path, "rb") as fh:
+        data = pickle.load(fh, encoding="bytes")
     return data
 
 
-def load_object(file_path,allow_legacy=True):
+def load_object(file_path, allow_legacy=True):
     import gc
+
     file_path = os.path.expanduser(file_path)
-    with open(file_path, 'rb') as fh:
+    with open(file_path, "rb") as fh:
         try:
             gc.disable()  # speeds deserialization up.
             data = msgpack.unpack(fh, raw=False)
@@ -68,7 +81,11 @@ def load_object(file_path,allow_legacy=True):
             if not allow_legacy:
                 raise e
             else:
-                logger.info('{} has a deprecated format: Will be updated on save'.format(file_path))
+                logger.info(
+                    "{} has a deprecated format: Will be updated on save".format(
+                        file_path
+                    )
+                )
                 data = _load_object_legacy(file_path)
         finally:
             gc.enable()
@@ -76,25 +93,30 @@ def load_object(file_path,allow_legacy=True):
 
 
 def save_object(object_, file_path):
-
-    def ndarrray_to_list(o, _warned=[False]): # Use a mutlable default arg to hold a fn interal temp var.
+    def ndarrray_to_list(
+        o, _warned=[False]
+    ):  # Use a mutlable default arg to hold a fn interal temp var.
         if isinstance(o, np.ndarray):
             if not _warned[0]:
-                logger.warning("numpy array will be serialized as list. Invoked at:\n"+''.join(tb.format_stack()))
+                logger.warning(
+                    "numpy array will be serialized as list. Invoked at:\n"
+                    + "".join(tb.format_stack())
+                )
                 _warned[0] = True
             return o.tolist()
         return o
 
     file_path = os.path.expanduser(file_path)
-    with open(file_path, 'wb') as fh:
-        msgpack.pack(object_, fh, use_bin_type=True,default=ndarrray_to_list)
+    with open(file_path, "wb") as fh:
+        msgpack.pack(object_, fh, use_bin_type=True, default=ndarrray_to_list)
+
 
 class Incremental_Legacy_Pupil_Data_Loader(object):
-    def __init__(self, directory=''):
-        self.file_loc = os.path.join(directory, 'pupil_data')
+    def __init__(self, directory=""):
+        self.file_loc = os.path.join(directory, "pupil_data")
 
     def __enter__(self):
-        self.file_handle = open(self.file_loc, 'rb')
+        self.file_handle = open(self.file_loc, "rb")
         self.unpacker = msgpack.Unpacker(self.file_handle, raw=False, use_list=False)
         self.num_key_value_pairs = self.unpacker.read_map_header()
         self._skipped = True
@@ -111,9 +133,10 @@ class Incremental_Legacy_Pupil_Data_Loader(object):
         for _ in range(self.unpacker.read_array_header()):
             yield self.unpacker.unpack()
 
+
 def load_pldata_file(directory, topic):
-    ts_file = os.path.join(directory, topic + '_timestamps.npy')
-    msgpack_file = os.path.join(directory, topic + '.pldata')
+    ts_file = os.path.join(directory, topic + "_timestamps.npy")
+    msgpack_file = os.path.join(directory, topic + ".pldata")
     try:
         data = collections.deque()
         topics = collections.deque()
@@ -132,19 +155,18 @@ def load_pldata_file(directory, topic):
 
 class PLData_Writer(object):
     """docstring for PLData_Writer"""
+
     def __init__(self, directory, name):
         super().__init__()
         self.directory = directory
         self.name = name
         self.ts_queue = collections.deque()
-        file_name = name + '.pldata'
-        self.file_handle = open(os.path.join(directory, file_name), 'wb')
+        file_name = name + ".pldata"
+        self.file_handle = open(os.path.join(directory, file_name), "wb")
 
     def append(self, datum):
         datum_serialized = msgpack.packb(datum, use_bin_type=True)
-        self.append_serialized(datum['timestamp'],
-                               datum['topic'],
-                               datum_serialized)
+        self.append_serialized(datum["timestamp"], datum["topic"], datum_serialized)
 
     def append_serialized(self, timestamp, topic, datum_serialized):
         self.ts_queue.append(timestamp)
@@ -159,7 +181,7 @@ class PLData_Writer(object):
         self.file_handle.close()
         self.file_handle = None
 
-        ts_file = self.name + '_timestamps.npy'
+        ts_file = self.name + "_timestamps.npy"
         ts_path = os.path.join(self.directory, ts_file)
         np.save(ts_path, self.ts_queue)
         self.ts_queue = None
@@ -173,13 +195,13 @@ class PLData_Writer(object):
 
 def next_export_sub_dir(root_export_dir):
     # match any sub directories or files a three digit pattern
-    pattern = os.path.join(root_export_dir, '[0-9][0-9][0-9]')
+    pattern = os.path.join(root_export_dir, "[0-9][0-9][0-9]")
     existing_subs = sorted(iglob(pattern))
     try:
         latest = os.path.split(existing_subs[-1])[-1]
-        next_sub_dir = '{:03d}'.format(int(latest) + 1)
+        next_sub_dir = "{:03d}".format(int(latest) + 1)
     except IndexError:
-        next_sub_dir = '000'
+        next_sub_dir = "000"
 
     return os.path.join(root_export_dir, next_sub_dir)
 
@@ -192,7 +214,7 @@ class _Empty(object):
 # an Immutable dict for dics nested inside this dict.
 class _FrozenDict(dict):
     def __setitem__(self, key, value):
-        raise NotImplementedError('Invalid operation')
+        raise NotImplementedError("Invalid operation")
 
     def clear(self):
         raise NotImplementedError()
@@ -202,15 +224,16 @@ class _FrozenDict(dict):
 
 
 class Serialized_Dict(object):
-    __slots__ = ['_ser_data', '_data']
+    __slots__ = ["_ser_data", "_data"]
     cache_len = 100
     _cache_ref = [_Empty()] * cache_len
     MSGPACK_EXT_CODE = 13
 
     def __init__(self, python_dict=None, msgpack_bytes=None):
         if type(python_dict) is dict:
-            self._ser_data = msgpack.packb(python_dict, use_bin_type=True,
-                                           default=self.packing_hook)
+            self._ser_data = msgpack.packb(
+                python_dict, use_bin_type=True, default=self.packing_hook
+            )
         elif type(msgpack_bytes) is bytes:
             self._ser_data = msgpack_bytes
         else:
@@ -219,14 +242,18 @@ class Serialized_Dict(object):
 
     def _deser(self):
         if not self._data:
-            self._data = msgpack.unpackb(self._ser_data, raw=False, use_list=False,
-                                         object_hook=self.unpacking_object_hook,
-                                         ext_hook=self.unpacking_ext_hook)
+            self._data = msgpack.unpackb(
+                self._ser_data,
+                raw=False,
+                use_list=False,
+                object_hook=self.unpacking_object_hook,
+                ext_hook=self.unpacking_ext_hook,
+            )
             self._cache_ref.pop(0).purge_cache()
             self._cache_ref.append(self)
 
     @classmethod
-    def unpacking_object_hook(self,obj):
+    def unpacking_object_hook(self, obj):
         if type(obj) is dict:
             return _FrozenDict(obj)
 
@@ -258,22 +285,22 @@ class Serialized_Dict(object):
 
     def __repr__(self):
         self._deser()
-        return 'Serialized_Dict({})'.format(repr(self._data))
+        return "Serialized_Dict({})".format(repr(self._data))
 
     @property
     def len(self):
-        '''Replacement implementation for __len__
+        """Replacement implementation for __len__
 
         If __len__ is defined numpy will recognize this as nested structure and
         start deserializing everything instead of using this object as it is.
-        '''
+        """
         self._deser()
         return len(self._data)
 
     def __delitem__(self, key):
         raise NotImplementedError()
 
-    def get(self,key,default):
+    def get(self, key, default):
         try:
             return self[key]
         except KeyError:
@@ -323,37 +350,69 @@ class Serialized_Dict(object):
 
 def bench_save():
     import time
+
     # in recorder
     start = time.time()
     data = []
-    inters= 200*60*60 # 1h recording
-    dummy_datum = {'topic': 'pupil', 'circle_3d': {'center': [0.0, -0.0, 0.0], 'normal': [0.0, -0.0, 0.0], 'radius': 0.0}, 'confidence': 0.0, 'timestamp': 0.9351908409998941, 'diameter_3d': 0.0, 'ellipse': {'center': [96.0, 96.0], 'axes': [0.0, 0.0], 'angle': 90.0}, 'norm_pos': [0.5, 0.5], 'diameter': 0.0, 'sphere': {'center': [-2.2063483765091934, 0.0836648916925231, 48.13110450930929], 'radius': 12.0}, 'projected_sphere': {'center': [67.57896110256269, 97.07772787219814], 'axes': [309.15558975219403, 309.15558975219403], 'angle': 90.0}, 'model_confidence': 1.0, 'model_id': 1, 'model_birth_timestamp': 640.773183, 'theta': 0, 'phi': 0, 'method': '3d c++', 'id': 0}
+    inters = 200 * 60 * 60  # 1h recording
+    dummy_datum = {
+        "topic": "pupil",
+        "circle_3d": {
+            "center": [0.0, -0.0, 0.0],
+            "normal": [0.0, -0.0, 0.0],
+            "radius": 0.0,
+        },
+        "confidence": 0.0,
+        "timestamp": 0.9351908409998941,
+        "diameter_3d": 0.0,
+        "ellipse": {"center": [96.0, 96.0], "axes": [0.0, 0.0], "angle": 90.0},
+        "norm_pos": [0.5, 0.5],
+        "diameter": 0.0,
+        "sphere": {
+            "center": [-2.2063483765091934, 0.0836648916925231, 48.13110450930929],
+            "radius": 12.0,
+        },
+        "projected_sphere": {
+            "center": [67.57896110256269, 97.07772787219814],
+            "axes": [309.15558975219403, 309.15558975219403],
+            "angle": 90.0,
+        },
+        "model_confidence": 1.0,
+        "model_id": 1,
+        "model_birth_timestamp": 640.773183,
+        "theta": 0,
+        "phi": 0,
+        "method": "3d c++",
+        "id": 0,
+    }
 
-    with open("test","wb") as fb:
+    with open("test", "wb") as fb:
         packer = msgpack.Packer(use_bin_type=True)
         for x in range(inters):
-            a = "pupil",msgpack.packb(dummy_datum,use_bin_type=True)
-            b = "pupil",msgpack.packb(dummy_datum,use_bin_type=True)
-            c = "gaze",msgpack.packb(dummy_datum,use_bin_type=True)
-            aa = "aa",msgpack.packb({"test":{"nested":True}},use_bin_type=True)
+            a = "pupil", msgpack.packb(dummy_datum, use_bin_type=True)
+            b = "pupil", msgpack.packb(dummy_datum, use_bin_type=True)
+            c = "gaze", msgpack.packb(dummy_datum, use_bin_type=True)
+            aa = "aa", msgpack.packb({"test": {"nested": True}}, use_bin_type=True)
             fb.write(packer.pack(a))
             fb.write(packer.pack(b))
             fb.write(packer.pack(c))
             fb.write(packer.pack(aa))
-    print("generated and saved in %s"%(time.time()-start))
+    print("generated and saved in %s" % (time.time() - start))
 
 
 def bench_load():
 
     import time
+
     start = time.time()
     pupil_data = load_pupil_data_file("test")
     print(pupil_data.keys())
-    print("loaded in %s"%(time.time()-start))
+    print("loaded in %s" % (time.time() - start))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
+
     # d = load_object("/Users/mkassner/Downloads/000/pupil_data")["gaze_positions"]
     # size = len(d)
     # print(size)
@@ -369,5 +428,6 @@ if __name__ == '__main__':
     # sleep(10)
     bench_save()
     from time import sleep
+
     # sleep(3)
     bench_load()

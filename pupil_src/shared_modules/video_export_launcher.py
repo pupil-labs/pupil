@@ -147,4 +147,3 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
             pre_computed[key] = init_dict
 
         return pre_computed
-

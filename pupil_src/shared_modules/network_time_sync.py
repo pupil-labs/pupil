@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 from time import sleep
 from uvc import get_time_monotonic
@@ -18,10 +18,11 @@ import struct
 from random import random
 
 import logging
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-'''
+"""
 A Master/Follower scheme for sychronizing clock in a network.
 Accuracy is bounded by network latency and clock jitter.
 
@@ -32,14 +33,14 @@ Time synchonization scheme:
     Do this many times. And be smart about what measurments to take and combine.
     node sets timebase to target time.
     apply offset to local time
-'''
+"""
 
 
 class Time_Echo(asyncore.dispatcher_with_send):
-    '''
+    """
     Subclass do not use directly!
     reply to request with timestamp
-    '''
+    """
 
     def __init__(self, sock, time_fn):
         self.time_fn = time_fn
@@ -49,7 +50,7 @@ class Time_Echo(asyncore.dispatcher_with_send):
         # expecting `sync` message
         data = self.recv(4)
         if data:
-            self.send(struct.pack('<d', self.time_fn()))
+            self.send(struct.pack("<d", self.time_fn()))
 
     def __del__(self):
         pass
@@ -57,10 +58,10 @@ class Time_Echo(asyncore.dispatcher_with_send):
 
 
 class Time_Echo_Server(asyncore.dispatcher):
-    '''
+    """
     Subclass do not use directly!
     bind at next open port and listen for time sync requests.
-    '''
+    """
 
     def __init__(self, time_fn, socket_map, host=""):
         asyncore.dispatcher.__init__(self, socket_map)
@@ -70,13 +71,13 @@ class Time_Echo_Server(asyncore.dispatcher):
         self.bind((host, 0))
         self.port = self.socket.getsockname()[1]
         self.listen(5)
-        logger.debug('Timer Server ready on port: {}'.format(self.port))
+        logger.debug("Timer Server ready on port: {}".format(self.port))
 
     def handle_accept(self):
         pair = self.accept()
         if pair is not None:
             sock, addr = pair
-            logger.debug("syching with %s"%str(addr))
+            logger.debug("syching with %s" % str(addr))
             Time_Echo(sock, self.time_fn)
 
     def __del__(self):
@@ -84,10 +85,11 @@ class Time_Echo_Server(asyncore.dispatcher):
 
 
 class Clock_Sync_Master(threading.Thread):
-    '''
+    """
     A class that serves clock info to nodes in a local
     network so the can sync their clocks with the Masters one.
-    '''
+    """
+
     def __init__(self, time_fn):
         threading.Thread.__init__(self)
         self.socket_map = {}
@@ -122,15 +124,16 @@ class Clock_Sync_Master(threading.Thread):
 
 
 class Clock_Sync_Follower(threading.Thread):
-    '''
+    """
     A class that uses jump and slew to adjust a local clock to a remote clock.
-    '''
-    ms = 1/1000.
-    us = ms*ms
-    tolerance = 0.1*ms
-    max_slew = 500*us
-    min_jump = 10*ms
-    slew_iterations = int(min_jump/max_slew)
+    """
+
+    ms = 1 / 1000.
+    us = ms * ms
+    tolerance = 0.1 * ms
+    max_slew = 500 * us
+    min_jump = 10 * ms
+    slew_iterations = int(min_jump / max_slew)
     retry_interval = 1.0
     slew_interval = 0.1
 
@@ -168,7 +171,9 @@ class Clock_Sync_Follower(threading.Thread):
                         if self.jump_time(offset):
                             self.in_sync = True
                             self.offset_remains = False
-                            logger.debug('Time adjusted by {}ms.'.format(offset/self.ms))
+                            logger.debug(
+                                "Time adjusted by {}ms.".format(offset / self.ms)
+                            )
                         else:
                             self.in_sync = True
                             self.offset_remains = True
@@ -181,7 +186,9 @@ class Clock_Sync_Follower(threading.Thread):
                             # print offset/self.ms,slew_time/self.ms
                             self.slew_time(slew_time)
                             offset -= slew_time
-                            logger.debug('Time slewed by: {}ms'.format(slew_time/self.ms))
+                            logger.debug(
+                                "Time slewed by: {}ms".format(slew_time / self.ms)
+                            )
 
                             self.in_sync = not bool(offset)
                             self.offset_remains = not self.in_sync
@@ -190,13 +197,13 @@ class Clock_Sync_Follower(threading.Thread):
                             else:
                                 break
                 else:
-                    logger.debug('No clock adjustent.')
+                    logger.debug("No clock adjustent.")
                     self.in_sync = True
                     self.offset_remains = False
                     # print 'no adjustement'
                 sleep(self.interval)
             else:
-                logger.debug('Failed to connect. Retrying')
+                logger.debug("Failed to connect. Retrying")
                 self.in_sync = False
                 sleep(self.retry_interval)
 
@@ -211,20 +218,20 @@ class Clock_Sync_Follower(threading.Thread):
             times = []
             for request in range(60):
                 t0 = self.get_time()
-                server_socket.send(b'sync')
+                server_socket.send(b"sync")
                 message = server_socket.recv(8)
                 t2 = self.get_time()
-                t1 = struct.unpack('<d', message)[0]
+                t1 = struct.unpack("<d", message)[0]
                 times.append((t0, t1, t2))
 
             server_socket.close()
 
-            times.sort(key=lambda t: t[2]-t[0])
-            times = times[:int(len(times)*0.69)]
+            times.sort(key=lambda t: t[2] - t[0])
+            times = times[: int(len(times) * 0.69)]
             # delays = [t2-t0 for t0, t1, t2 in times]
-            offsets = [t0-((t1+(t2-t0)/2)) for t0, t1, t2 in times]
-            mean_offset = sum(offsets)/len(offsets)
-            offset_jitter = sum([abs(mean_offset-o)for o in offsets])/len(offsets)
+            offsets = [t0 - ((t1 + (t2 - t0) / 2)) for t0, t1, t2 in times]
+            mean_offset = sum(offsets) / len(offsets)
+            offset_jitter = sum([abs(mean_offset - o) for o in offsets]) / len(offsets)
             # mean_delay = sum(delays)/len(delays)
             # delay_jitter = sum([abs(mean_delay-o)for o in delays])/len(delays)
 
@@ -232,7 +239,7 @@ class Clock_Sync_Follower(threading.Thread):
             return mean_offset, offset_jitter
 
         except socket.error as e:
-            logger.debug('{} for {}:{}'.format(e, self.host, self.port))
+            logger.debug("{} for {}:{}".format(e, self.host, self.port))
             return None
         # except Exception as e:
         #     logger.error(str(e))
@@ -250,13 +257,17 @@ class Clock_Sync_Follower(threading.Thread):
             if self.offset_remains:
                 return "NOT in sync with {}".format(self.host)
             else:
-                return 'Synced with {}:{} with  {:.2f}ms jitter'.format(self.host,self.port,self.sync_jitter/self.ms)
+                return "Synced with {}:{} with  {:.2f}ms jitter".format(
+                    self.host, self.port, self.sync_jitter / self.ms
+                )
         else:
             return "Connecting to {}".format(self.host)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     from uvc import get_time_monotonic
+
     # from time import time as get_time_monotonic
     #### A Note on system clock jitter
     # during tests using a Mac and Linux machine on a 3ms latency network with network jitter of ~50us
@@ -272,7 +283,7 @@ if __name__ == '__main__':
     # master.stop()
 
     def get_time():
-        return get_time_monotonic()+epoch
+        return get_time_monotonic() + epoch
 
     def jump_time(offset):
         global epoch
@@ -289,7 +300,14 @@ if __name__ == '__main__':
     def slew_time_dummy(offset):
         pass
 
-    slave = Clock_Sync_Follower(host,port=port,interval=10,time_fn=get_time,jump_fn=jump_time,slew_fn=slew_time)
+    slave = Clock_Sync_Follower(
+        host,
+        port=port,
+        interval=10,
+        time_fn=get_time,
+        jump_fn=jump_time,
+        slew_fn=slew_time,
+    )
     # slave1 = Clock_Sync_Follower(host,port=port,interval=10,time_fn=get_time,jump_fn=jump_time_dummy,slew_fn=slew_time_dummy)
     # slave2 = Clock_Sync_Follower(host,port=port,interval=10,time_fn=get_time,jump_fn=jump_time_dummy,slew_fn=slew_time_dummy)
     # slave3 = Clock_Sync_Follower(host,port=port,interval=10,time_fn=get_time,jump_fn=jump_time_dummy,slew_fn=slew_time_dummy)
@@ -297,7 +315,7 @@ if __name__ == '__main__':
         sleep(4)
         print(slave)
         # print "offset:%f, jitter: %f"%(epoch,slave.sync_jitter)
-    print('shutting down')
+    print("shutting down")
     slave.stop()
     master.stop()
-    print('good bye')
+    print("good bye")
