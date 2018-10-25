@@ -325,4 +325,3 @@ class Seek_Control(System_Plugin_Base):
 
     def get_init_dict(self):
         return {"playback_speed": self._playback_speed}
-

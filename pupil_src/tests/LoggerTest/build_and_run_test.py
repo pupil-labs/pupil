@@ -19,6 +19,6 @@ if __name__ == '__main__':
     s = "g++ -std=c++11 " + shared_cpp_include_path + python_includes + python_ldflags +boost_ldflags + " loggerTest.cpp -o loggerTest"
     sp.call(s,shell=True)
 
-    print "BUILD COMPLETE ______________________"
+    print("BUILD COMPLETE ______________________")
     sp.call("./loggerTest",shell=True)
     sp.call("rm loggerTest",shell=True)

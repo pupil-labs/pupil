@@ -822,4 +822,3 @@ class Offline_Calibration(Gaze_Producer_Base):
         cache_path = os.path.join(self.result_dir, "offline_calibration_gaze")
         fm.save_object(session_data, cache_path)
         logger.info("Cached offline calibration data to {}".format(cache_path))
-

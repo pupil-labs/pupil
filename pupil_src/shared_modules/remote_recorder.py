@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-from time import localtime, strftime
 
 import ndsi
 from pyglui import ui
