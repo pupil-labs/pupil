@@ -54,7 +54,7 @@ class Batch_Export(System_Plugin_Base):
 
     uniqueness = "not_unique"
     icon_font = "pupil_icons"
-    icon_chr = chr(0xe2c4)  # character shown in menu icon
+    icon_chr = chr(0xE2C4)  # character shown in menu icon
 
     def __init__(self, g_pool, rec_dir, out_file_path, frames_to_export):
         super().__init__(g_pool)
@@ -78,7 +78,7 @@ class Batch_Export(System_Plugin_Base):
         export_name = os.path.split(self.out_file_path)[-1]
         self.menu.label = "Batch Export {}".format(export_name)
         self.menu[0].label = "Cancel"
-        self.menu_icon.indicator_start = 0.
+        self.menu_icon.indicator_start = 0.0
         self.menu_icon.indicator_stop = 0.1
         self.menu_icon.tooltip = export_name
         self.menu.append(
@@ -135,12 +135,12 @@ class Batch_Export(System_Plugin_Base):
                 self.menu_icon.indicator_start += 0.02
                 self.menu_icon.indicator_stop += 0.01
             d = abs(self.menu_icon.indicator_start - self.menu_icon.indicator_stop)
-            if self._accelerate and d > .5:
+            if self._accelerate and d > 0.5:
                 self._accelerate = False
-            elif not self._accelerate and d < .1:
+            elif not self._accelerate and d < 0.1:
                 self._accelerate = True
         else:
-            self.menu_icon.indicator_start = 0.
+            self.menu_icon.indicator_start = 0.0
             self.menu_icon.indicator_stop = self.progress / self.frames_to_export
 
     def on_notify(self, n):
@@ -202,7 +202,7 @@ class Batch_Export(System_Plugin_Base):
 class Batch_Exporter(Analysis_Plugin_Base):
     """The Batch_Exporter searches for available recordings and exports them to a common location"""
 
-    icon_chr = chr(0xec05)
+    icon_chr = chr(0xEC05)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, source_dir="~/", destination_dir="~/"):
@@ -581,7 +581,7 @@ def main():
                     workers[i].start()
                     working = True
         show_progess(jobs)
-        time.sleep(.25)
+        time.sleep(0.25)
     print("\n")
 
 

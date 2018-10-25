@@ -28,7 +28,7 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
     this plugin can export the video in a seperate process using exporter
     """
 
-    icon_chr = chr(0xec09)
+    icon_chr = chr(0xEC09)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool):
@@ -146,4 +146,3 @@ class Video_Export_Launcher(Analysis_Plugin_Base):
             pre_computed[key] = init_dict
 
         return pre_computed
-

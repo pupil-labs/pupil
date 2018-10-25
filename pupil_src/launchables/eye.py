@@ -692,7 +692,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         logger.info("Process shutting down.")
 
 
-def eye_profiled(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings=None):
+def eye_profiled(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
+                 user_dir, version, eye_id, overwrite_cap_settings=None):
     import cProfile
     import subprocess
     import os

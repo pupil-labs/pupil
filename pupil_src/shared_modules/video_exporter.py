@@ -19,6 +19,7 @@ from glob import glob
 import av
 from pyglui import ui
 
+import numpy as np
 import background_helper as bh
 import csv_utils
 import player_methods as pm
@@ -32,17 +33,27 @@ class Empty(object):
     pass
 
 
+def write_timestamps(file_loc, timestamps):
+    directory, video_file = os.path.split(file_loc)
+    name, ext = os.path.splitext(video_file)
+    ts_file = "{}_timestamps.npy".format(name)
+    ts_loc = os.path.join(directory, ts_file)
+    ts = np.array(timestamps)
+    np.save(ts_loc, ts)
+
+
 def export_processed_h264(
     world_timestamps,
     unprocessed_video_loc,
     target_video_loc,
     export_range,
     process_frame,
+    export_timestamps,
 ):
-    yield "Converting video", .1
+    yield "Converting video", 0.1
     capture = File_Source(Empty(), unprocessed_video_loc)
     if not capture.initialised:
-        yield "Converting scene video failed", 0.
+        yield "Converting scene video failed", 0.0
         return
 
     export_window = pm.exact_window(world_timestamps, export_range)
@@ -66,6 +77,7 @@ def export_processed_h264(
 
     capture.seek_to_frame(export_from_index)
     next_update_idx = export_from_index + update_rate
+    timestamps = []
     while True:
         try:
             frame = capture.get_frame()
@@ -82,6 +94,9 @@ def export_processed_h264(
         av_frame.planes[0].update(undistorted_img)
         av_frame.pts = int((frame.timestamp - start_time) / time_base)
 
+        if export_timestamps:
+            timestamps.append(frame.timestamp)
+
         packet = video_stream.encode(av_frame)
         if packet:
             target_container.mux(packet)
@@ -90,8 +105,8 @@ def export_processed_h264(
             progress = (
                 (capture.current_frame_idx - export_from_index)
                 / (export_to_index - export_from_index)
-            ) * .9 + .1
-            yield "Converting video", progress * 100.
+            ) * 0.9 + 0.1
+            yield "Converting video", progress * 100.0
             next_update_idx += update_rate
 
     while True:  # flush encoder
@@ -101,9 +116,12 @@ def export_processed_h264(
         else:
             break
 
+    if export_timestamps:
+        write_timestamps(target_video_loc, timestamps)
+
     target_container.close()
     capture.cleanup()
-    yield "Converting video completed", 1. * 100.
+    yield "Converting video completed", 1.0 * 100.0
 
 
 class VideoExporter(Analysis_Plugin_Base, metaclass=abc.ABCMeta):
@@ -118,7 +136,7 @@ class VideoExporter(Analysis_Plugin_Base, metaclass=abc.ABCMeta):
         super().__init__(g_pool)
         self.export_tasks = []
         self.status = "Not exporting"
-        self.progress = 0.
+        self.progress = 0.0
         self.output = "Not set yet"
 
     def init_ui(self):
@@ -173,7 +191,7 @@ class VideoExporter(Analysis_Plugin_Base, metaclass=abc.ABCMeta):
                 self.progress = progress
 
     def gl_display(self):
-        self.menu_icon.indicator_stop = self.progress / 100.
+        self.menu_icon.indicator_stop = self.progress / 100.0
 
     def _start_export(self, export_range, export_dir):
         self.progress = 0.0
@@ -191,12 +209,10 @@ class VideoExporter(Analysis_Plugin_Base, metaclass=abc.ABCMeta):
         input_name,
         output_name,
         process_frame,
+        export_timestamps,
     ):
-        rec_start = self._get_recording_start_date()
-        im_dir = os.path.join(export_dir, plugin_name + "_{}".format(rec_start))
-        os.makedirs(im_dir, exist_ok=True)
-        self.output = im_dir
-        logger.info("Exporting to {}".format(im_dir))
+        os.makedirs(export_dir, exist_ok=True)
+        logger.info("Exporting to {}".format(export_dir))
 
         try:
             distorted_video_loc = [
@@ -206,13 +222,15 @@ class VideoExporter(Analysis_Plugin_Base, metaclass=abc.ABCMeta):
             ][0]
         except IndexError:
             raise FileNotFoundError("No Video " + input_name + " found")
-        target_video_loc = os.path.join(im_dir, output_name + ".mp4")
+
+        target_video_loc = os.path.join(export_dir, output_name + ".mp4")
         generator_args = (
             self.g_pool.timestamps,
             distorted_video_loc,
             target_video_loc,
             export_range,
             process_frame,
+            export_timestamps,
         )
         task = bh.IPC_Logging_Task_Proxy(
             plugin_name + " Video Export",
@@ -220,7 +238,7 @@ class VideoExporter(Analysis_Plugin_Base, metaclass=abc.ABCMeta):
             args=generator_args,
         )
         self.export_tasks.append(task)
-        return {"export_folder": im_dir}
+        return {"export_folder": export_dir}
 
     def cancel(self):
         for task in self.export_tasks:

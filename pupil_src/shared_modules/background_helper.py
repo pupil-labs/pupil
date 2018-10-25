@@ -117,7 +117,7 @@ class Task_Proxy(metaclass=abc.ABCMeta):
         return self._canceled
 
     def __del__(self):
-        self.cancel(timeout=.1)
+        self.cancel(timeout=0.1)
         self.process = None
 
 
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         format="%(asctime)s - %(processName)s - [%(levelname)s] %(name)s: %(message)s",
     )
 
-    def example_generator(mu=0., sigma=1., steps=100):
+    def example_generator(mu=0.0, sigma=1.0, steps=100):
         """samples `N(\mu, \sigma^2)`"""
         import numpy as np
         from time import sleep
@@ -160,17 +160,17 @@ if __name__ == "__main__":
         for i in range(steps):
             # yield progress, datum
             yield (i + 1) / steps, sigma * np.random.randn() + mu
-            sleep(np.random.rand() * .1)
+            sleep(np.random.rand() * 0.1)
 
     # initialize task proxy
     task = Task_Proxy(
-        "Background", example_generator, args=(5., 3.), kwargs={"steps": 100}
+        "Background", example_generator, args=(5.0, 3.0), kwargs={"steps": 100}
     )
 
     from time import time, sleep
 
     start = time()
-    maximal_duration = 2.
+    maximal_duration = 2.0
     while time() - start < maximal_duration:
         # fetch all available results
         for progress, random_number in task.fetch():
@@ -179,7 +179,7 @@ if __name__ == "__main__":
         # test if task is completed
         if task.completed:
             break
-        sleep(1.)
+        sleep(1.0)
 
     logger.debug("Canceling task")
     task.cancel(timeout=1)

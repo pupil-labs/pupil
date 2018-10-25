@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,14 +7,15 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # make shared modules available across pupil_src
     from sys import path as syspath
     from os import path as ospath
-    loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
-    syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
+
+    loc = ospath.abspath(__file__).rsplit("pupil_src", 1)
+    syspath.append(ospath.join(loc[0], "pupil_src", "shared_modules"))
     del syspath, ospath
 
 # logging
@@ -26,9 +27,11 @@ from time import time
 import file_methods as fm
 import player_methods as pm
 from av_writer import AV_Writer
+
 # we are not importing manual gaze corrction. In Player corrections have already been applied.
 # in batch exporter this plugin makes little sense.
 from fixation_detector import Offline_Fixation_Detector
+
 # Plug-ins
 from plugin import Plugin_List, import_runtime_plugins
 from video_capture import EndofVideoError, init_playback_source
@@ -45,23 +48,43 @@ class Global_Container(object):
     pass
 
 
-def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=None,
-           plugin_initializers=(), out_file_path=None, pre_computed={}):
+def export(
+    rec_dir,
+    user_dir,
+    min_data_confidence,
+    start_frame=None,
+    end_frame=None,
+    plugin_initializers=(),
+    out_file_path=None,
+    pre_computed={},
+):
 
     PID = str(os.getpid())
-    logger = logging.getLogger(__name__+' with pid: '+PID)
-    start_status = 'Starting video export with pid: {}'.format(PID)
+    logger = logging.getLogger(__name__ + " with pid: " + PID)
+    start_status = "Starting video export with pid: {}".format(PID)
     print(start_status)
     yield start_status, 0
 
     try:
         pm.update_recording_to_recent(rec_dir)
 
-        vis_plugins = sorted([Vis_Circle, Vis_Cross, Vis_Polyline, Vis_Light_Points,
-                              Vis_Watermark, Vis_Scan_Path, Vis_Eye_Video_Overlay],
-                             key=lambda x: x.__name__)
+        vis_plugins = sorted(
+            [
+                Vis_Circle,
+                Vis_Cross,
+                Vis_Polyline,
+                Vis_Light_Points,
+                Vis_Watermark,
+                Vis_Scan_Path,
+                Vis_Eye_Video_Overlay,
+            ],
+            key=lambda x: x.__name__,
+        )
         analysis_plugins = [Offline_Fixation_Detector]
-        user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
+        user_plugins = sorted(
+            import_runtime_plugins(os.path.join(user_dir, "plugins")),
+            key=lambda x: x.__name__,
+        )
 
         available_plugins = vis_plugins + analysis_plugins + user_plugins
         name_by_index = [p.__name__ for p in available_plugins]
@@ -74,12 +97,15 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         meta_info = pm.load_meta_info(rec_dir)
 
         g_pool = Global_Container()
-        g_pool.app = 'exporter'
+        g_pool.app = "exporter"
         g_pool.min_data_confidence = min_data_confidence
 
-        valid_ext = ('.mp4', '.mkv', '.avi', '.h264', '.mjpeg', '.fake')
-        video_path = [f for f in glob(os.path.join(rec_dir, "world.*"))
-                      if os.path.splitext(f)[1] in valid_ext][0]
+        valid_ext = (".mp4", ".mkv", ".avi", ".h264", ".mjpeg", ".fake")
+        video_path = [
+            f
+            for f in glob(os.path.join(rec_dir, "world.*"))
+            if os.path.splitext(f)[1] in valid_ext
+        ][0]
         cap = init_playback_source(g_pool, source_path=video_path, timing=None)
 
         timestamps = cap.timestamps
@@ -93,7 +119,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
             if not dir_name:
                 dir_name = rec_dir
             if not file_name:
-                file_name = 'world_viz.mp4'
+                file_name = "world_viz.mp4"
             out_file_path = os.path.expanduser(os.path.join(dir_name, file_name))
 
         if os.path.isfile(out_file_path):
@@ -108,7 +134,7 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         if len(trimmed_timestamps) == 0:
             warn = "Start and end frames are set such that no video will be exported."
             logger.warning(warn)
-            yield warn, 0.
+            yield warn, 0.0
             return
 
         if start_frame is None:
@@ -117,11 +143,19 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         # these two vars are shared with the lauching process and give a job length and progress report.
         frames_to_export = len(trimmed_timestamps)
         current_frame = 0
-        exp_info = "Will export from frame {} to frame {}. This means I will export {} frames."
-        logger.debug(exp_info.format(start_frame, start_frame + frames_to_export, frames_to_export))
+        exp_info = (
+            "Will export from frame {} to frame {}. This means I will export {} frames."
+        )
+        logger.debug(
+            exp_info.format(
+                start_frame, start_frame + frames_to_export, frames_to_export
+            )
+        )
 
         # setup of writer
-        writer = AV_Writer(out_file_path, fps=cap.frame_rate, audio_loc=audio_path, use_timestamps=True)
+        writer = AV_Writer(
+            out_file_path, fps=cap.frame_rate, audio_loc=audio_path, use_timestamps=True
+        )
 
         cap.seek_to_frame(start_frame)
 
@@ -137,8 +171,10 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
         g_pool.notifications = []
 
         for initializers in pre_computed.values():
-            initializers['data'] = [fm.Serialized_Dict(msgpack_bytes=serialized)
-                                    for serialized in initializers['data']]
+            initializers["data"] = [
+                fm.Serialized_Dict(msgpack_bytes=serialized)
+                for serialized in initializers["data"]
+            ]
 
         g_pool.pupil_positions = pm.Bisector(**pre_computed["pupil"])
         g_pool.gaze_positions = pm.Bisector(**pre_computed["gaze"])
@@ -153,17 +189,17 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
             except EndofVideoError:
                 break
 
-            events = {'frame': frame}
+            events = {"frame": frame}
             # new positons and events
             frame_window = pm.enclosing_window(g_pool.timestamps, frame.index)
-            events['gaze'] = g_pool.gaze_positions.by_ts_window(frame_window)
-            events['pupil'] = g_pool.pupil_positions.by_ts_window(frame_window)
+            events["gaze"] = g_pool.gaze_positions.by_ts_window(frame_window)
+            events["pupil"] = g_pool.pupil_positions.by_ts_window(frame_window)
 
             # publish delayed notifiactions when their time has come.
             for n in list(g_pool.delayed_notifications.values()):
-                if n['_notify_time_'] < time():
-                    del n['_notify_time_']
-                    del g_pool.delayed_notifications[n['subject']]
+                if n["_notify_time_"] < time():
+                    del n["_notify_time_"]
+                    del g_pool.delayed_notifications[n["subject"]]
                     g_pool.notifications.append(n)
 
             # notify each plugin if there are new notifactions:
@@ -178,24 +214,29 @@ def export(rec_dir, user_dir, min_data_confidence, start_frame=None, end_frame=N
 
             writer.write_video_frame(frame)
             current_frame += 1
-            yield 'Exporting with pid {}'.format(PID), current_frame
+            yield "Exporting with pid {}".format(PID), current_frame
 
         writer.close()
         writer = None
 
-        duration = time()-start_time
-        effective_fps = float(current_frame)/duration
+        duration = time() - start_time
+        effective_fps = float(current_frame) / duration
 
         result = "Export done: Exported {} frames to {}. This took {} seconds. Exporter ran at {} frames per second."
         print(result.format(current_frame, out_file_path, duration, effective_fps))
-        yield 'Export done. This took {:.0f} seconds.'.format(duration), current_frame
+        yield "Export done. This took {:.0f} seconds.".format(duration), current_frame
 
     except GeneratorExit:
-        print('Video export with pid {} was canceled.'.format(os.getpid()))
+        print("Video export with pid {} was canceled.".format(os.getpid()))
     except Exception as e:
         from time import sleep
         import traceback
+
         trace = traceback.format_exc()
-        print('Process Export (pid: {}) crashed with trace:\n{}'.format(os.getpid(), trace))
+        print(
+            "Process Export (pid: {}) crashed with trace:\n{}".format(
+                os.getpid(), trace
+            )
+        )
         yield e
         sleep(1.0)

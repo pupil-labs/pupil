@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 import numpy as np
 from numpy import linalg as LA
@@ -64,7 +64,10 @@ class CircleTracker(object):
                     self._flag_check_roi = True
                     self._roi_wait_count -= 1
                     for i in range(len(self._previous_markers)):
-                        predict_motion.append(np.array(markers[i]['img_pos']) - np.array(self._previous_markers[i]['img_pos']))
+                        predict_motion.append(
+                            np.array(markers[i]["img_pos"])
+                            - np.array(self._previous_markers[i]["img_pos"])
+                        )
             else:
                 if self._flag_check_roi:
                     self._flag_check = True
@@ -97,25 +100,49 @@ class CircleTracker(object):
 
             # Save the markers in dictionaries
             for ellipses_ in ellipses_list:
-                ellipses = ellipses_['ellipses']
+                ellipses = ellipses_["ellipses"]
                 img_pos = ellipses[0][0]
                 norm_pos = normalize(img_pos, img_size, flip_y=True)
-                marker_list.append({'ellipses': ellipses, 'img_pos': img_pos, 'norm_pos': norm_pos,
-                                    'marker_type': ellipses_['marker_type']})
+                marker_list.append(
+                    {
+                        "ellipses": ellipses,
+                        "img_pos": img_pos,
+                        "norm_pos": norm_pos,
+                        "marker_type": ellipses_["marker_type"],
+                    }
+                )
 
         # Check roi
         else:
             for i in range(len(self._previous_markers)):
-                largest_ellipse = self._previous_markers[i]['ellipses'][-1]
+                largest_ellipse = self._previous_markers[i]["ellipses"][-1]
 
                 # Set up the boundary of the roi
                 if self._predict_motion:
-                    predict_center = (largest_ellipse[0][0] + self._predict_motion[i][0],
-                                      largest_ellipse[0][1] + self._predict_motion[i][1])
-                    b0 = predict_center[0] - largest_ellipse[1][1] - abs(self._predict_motion[i][0]) * 2
-                    b1 = predict_center[0] + largest_ellipse[1][1] + abs(self._predict_motion[i][0]) * 2
-                    b2 = predict_center[1] - largest_ellipse[1][0] - abs(self._predict_motion[i][1]) * 2
-                    b3 = predict_center[1] + largest_ellipse[1][0] + abs(self._predict_motion[i][1]) * 2
+                    predict_center = (
+                        largest_ellipse[0][0] + self._predict_motion[i][0],
+                        largest_ellipse[0][1] + self._predict_motion[i][1],
+                    )
+                    b0 = (
+                        predict_center[0]
+                        - largest_ellipse[1][1]
+                        - abs(self._predict_motion[i][0]) * 2
+                    )
+                    b1 = (
+                        predict_center[0]
+                        + largest_ellipse[1][1]
+                        + abs(self._predict_motion[i][0]) * 2
+                    )
+                    b2 = (
+                        predict_center[1]
+                        - largest_ellipse[1][0]
+                        - abs(self._predict_motion[i][1]) * 2
+                    )
+                    b3 = (
+                        predict_center[1]
+                        + largest_ellipse[1][0]
+                        + abs(self._predict_motion[i][1]) * 2
+                    )
                 else:
                     predict_center = largest_ellipse[0]
                     b0 = predict_center[0] - largest_ellipse[1][1]
@@ -130,7 +157,9 @@ class CircleTracker(object):
                 col_slice = b0, b1
                 row_slice = b2, b3
 
-                ellipses_list = find_pupil_circle_marker(img[slice(*row_slice), slice(*col_slice)], scale)
+                ellipses_list = find_pupil_circle_marker(
+                    img[slice(*row_slice), slice(*col_slice)], scale
+                )
 
                 # Track the marker which was detected last frame;
                 # To avoid more than one markers are detected in one ROI
@@ -138,15 +167,32 @@ class CircleTracker(object):
                     if len(ellipses_list) == 1:
                         right_ellipses = ellipses_list[0]
                     else:
-                        pre_pos = np.array((self._previous_markers[i]['img_pos'][0]-b0, self._previous_markers[i]['img_pos'][1]-b2))
-                        temp_dist = [LA.norm(e['ellipses'][0][0] - pre_pos) for e in ellipses_list]
+                        pre_pos = np.array(
+                            (
+                                self._previous_markers[i]["img_pos"][0] - b0,
+                                self._previous_markers[i]["img_pos"][1] - b2,
+                            )
+                        )
+                        temp_dist = [
+                            LA.norm(e["ellipses"][0][0] - pre_pos)
+                            for e in ellipses_list
+                        ]
                         right_ellipses = ellipses_list[temp_dist.index(min(temp_dist))]
-                    ellipses = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in right_ellipses['ellipses']]
+                    ellipses = [
+                        ((e[0][0] + b0, e[0][1] + b2), e[1], e[2])
+                        for e in right_ellipses["ellipses"]
+                    ]
                     img_pos = ellipses[0][0]
                     norm_pos = normalize(img_pos, img_size, flip_y=True)
                     # Save the marker in dictionary
-                    marker_list.append({'ellipses': ellipses, 'img_pos': img_pos, 'norm_pos': norm_pos,
-                                        'marker_type': right_ellipses['marker_type']})
+                    marker_list.append(
+                        {
+                            "ellipses": ellipses,
+                            "img_pos": img_pos,
+                            "norm_pos": norm_pos,
+                            "marker_type": right_ellipses["marker_type"],
+                        }
+                    )
 
         return marker_list
 
@@ -161,22 +207,57 @@ def find_pupil_circle_marker(img, scale):
     # The Second one is for normal scene
     # The last one is for marker in low contrast
     img_resize_blur = cv2.GaussianBlur(img_resize, (3, 3), 0.25)
-    edges = [cv2.adaptiveThreshold(img_resize_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 29, 36),
-             cv2.adaptiveThreshold(img_resize_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 29, 18),
-             cv2.adaptiveThreshold(img_resize_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 29, 3)]
+    edges = [
+        cv2.adaptiveThreshold(
+            img_resize_blur,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV,
+            29,
+            36,
+        ),
+        cv2.adaptiveThreshold(
+            img_resize_blur,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV,
+            29,
+            18,
+        ),
+        cv2.adaptiveThreshold(
+            img_resize_blur,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV,
+            29,
+            3,
+        ),
+    ]
 
     ellipses_list = []
     found_pos = []
     found_size = []
     for i in range(len(edges)):
         edge = edges[i]
-        circle_clusters = find_concentric_circles(edge, None, None, found_pos, found_size, first_check=True, min_ellipses_num=2)
+        circle_clusters = find_concentric_circles(
+            edge,
+            None,
+            None,
+            found_pos,
+            found_size,
+            first_check=True,
+            min_ellipses_num=2,
+        )
 
         for ellipses, boundary in circle_clusters:
             ellipse_pos = np.array(ellipses[0][0])
             ellipse_size = min(ellipses[-1][1])
             # Discard duplicates
-            duplicates = [k for k in range(len(found_pos)) if LA.norm(ellipse_pos - found_pos[k]) < found_size[k]]
+            duplicates = [
+                k
+                for k in range(len(found_pos))
+                if LA.norm(ellipse_pos - found_pos[k]) < found_size[k]
+            ]
             if len(duplicates) > 0:
                 continue
 
@@ -197,8 +278,12 @@ def find_pupil_circle_marker(img, scale):
                 continue
             # Calculate the brightness within and outside the ring
             img_median = np.median(img_ellipse)
-            darker_peak = np.ma.median(np.ma.array(img_ellipse, mask=img_ellipse > img_median))
-            brighter_peak = np.ma.median(np.ma.array(img_ellipse, mask=img_ellipse < img_median))
+            darker_peak = np.ma.median(
+                np.ma.array(img_ellipse, mask=img_ellipse > img_median)
+            )
+            brighter_peak = np.ma.median(
+                np.ma.array(img_ellipse, mask=img_ellipse < img_median)
+            )
             img_contrast = brighter_peak - darker_peak
 
             # Calculate the kernel_size for edge extraction
@@ -207,13 +292,31 @@ def find_pupil_circle_marker(img, scale):
 
             # Extract the edges of the candidate marker again with more appropriate kernel_size
             img_ellipse_blur = cv2.GaussianBlur(img_ellipse, (3, 3), 1)
-            mask_edge = cv2.adaptiveThreshold(img_ellipse_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, block_size, c)
-            temp = find_concentric_circles(mask_edge, scale, img_contrast, None, None, first_check=False, min_ellipses_num=3)
+            mask_edge = cv2.adaptiveThreshold(
+                img_ellipse_blur,
+                255,
+                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY_INV,
+                block_size,
+                c,
+            )
+            temp = find_concentric_circles(
+                mask_edge,
+                scale,
+                img_contrast,
+                None,
+                None,
+                first_check=False,
+                min_ellipses_num=3,
+            )
 
             if len(temp) == 0:
                 continue
             single_marker = temp[0][0]
-            if len(single_marker) > 3 and sum(single_marker[2][1]) / sum(single_marker[0][1]) < 9:
+            if (
+                len(single_marker) > 3
+                and sum(single_marker[2][1]) / sum(single_marker[0][1]) < 9
+            ):
                 single_marker = [single_marker[0], single_marker[1], single_marker[2]]
 
             # Get the ellipses of the dot and the ring
@@ -247,8 +350,12 @@ def find_pupil_circle_marker(img, scale):
 
                 mask_middle = np.ones_like(img_ellipse) * 255
                 cv2.ellipse(mask_middle, inner_ellipse, color=(0, 0, 0), thickness=-1)
-                cv2.ellipse(mask_middle, inner_ellipse, color=(255, 255, 255), thickness=2)
-                cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
+                cv2.ellipse(
+                    mask_middle, inner_ellipse, color=(255, 255, 255), thickness=2
+                )
+                cv2.ellipse(
+                    mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1
+                )
                 mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
                 middle_median = np.ma.median(mask_middle_value)
                 # The gray scale of the part between the ring and the dot should be brighter than the gray scale of the ring
@@ -261,8 +368,10 @@ def find_pupil_circle_marker(img, scale):
                     if middle_std > img_contrast / 2:
                         continue
 
-                single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
-                ellipses_list.append({'ellipses': single_marker, 'marker_type': 'Ref'})
+                single_marker = [
+                    ((e[0][0] + b0, e[0][1] + b2), e[1], e[2]) for e in single_marker
+                ]
+                ellipses_list.append({"ellipses": single_marker, "marker_type": "Ref"})
                 found_pos.append(ellipse_pos)
                 found_size.append(ellipse_size)
 
@@ -276,10 +385,14 @@ def find_pupil_circle_marker(img, scale):
                 if ring_median - outer_mean < 0:
                     continue
 
-                mask_middle = np.ones_like(img_ellipse)*255
+                mask_middle = np.ones_like(img_ellipse) * 255
                 cv2.ellipse(mask_middle, inner_ellipse, color=(0, 0, 0), thickness=-1)
-                cv2.ellipse(mask_middle, inner_ellipse, color=(255, 255, 255), thickness=1)
-                cv2.ellipse(mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1)
+                cv2.ellipse(
+                    mask_middle, inner_ellipse, color=(255, 255, 255), thickness=1
+                )
+                cv2.ellipse(
+                    mask_middle, dot_ellipse, color=(255, 255, 255), thickness=-1
+                )
                 mask_middle_value = np.ma.array(img_ellipse, mask=mask_middle)
                 middle_median = np.ma.median(mask_middle_value)
                 # The gray scale of the part between the ring and the dot should be darker than the gray scale of the ring
@@ -292,19 +405,31 @@ def find_pupil_circle_marker(img, scale):
                     if middle_std > img_contrast / 2:
                         continue
 
-                single_marker = [((e[0][0]+b0, e[0][1]+b2), e[1], e[2]) for e in single_marker]
-                ellipses_list.append({'ellipses': single_marker, 'marker_type': 'Stop'})
+                single_marker = [
+                    ((e[0][0] + b0, e[0][1] + b2), e[1], e[2]) for e in single_marker
+                ]
+                ellipses_list.append({"ellipses": single_marker, "marker_type": "Stop"})
                 found_pos.append(ellipse_pos)
                 found_size.append(ellipse_size)
 
     return ellipses_list
 
 
-def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, first_check=True, min_ellipses_num=2):
+def find_concentric_circles(
+    edge,
+    scale,
+    img_contrast,
+    found_pos,
+    found_size,
+    first_check=True,
+    min_ellipses_num=2,
+):
     if first_check:
         concentric_circle_clusters = []
         # CHAIN_APPROX_TC89_KCOS does not store absolutely all the contour points
-        _, contours, hierarchy = cv2.findContours(edge, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_TC89_KCOS)
+        _, contours, hierarchy = cv2.findContours(
+            edge, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_TC89_KCOS
+        )
 
         if contours is None or hierarchy is None:
             return []
@@ -326,22 +451,34 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
                         e = cv2.fitEllipse(c)
                         # Discard duplicates
                         if first_ellipse:
-                            duplicates = [k for k in range(len(found_pos)) if LA.norm(e[0] - found_pos[k]) < found_size[k] + min(e[1])]
+                            duplicates = [
+                                k
+                                for k in range(len(found_pos))
+                                if LA.norm(e[0] - found_pos[k])
+                                < found_size[k] + min(e[1])
+                            ]
                             if len(duplicates) > 0:
-                                ellipses[i] = e, 100.
+                                ellipses[i] = e, 100.0
                                 break
                             fit = 0
                         else:
-                            fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0.
+                            fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0.0
                         e = e if min(e[1]) else (e[0], (0.1, 0.1), e[2])
                     else:
-                        e_center = float(c[len(c)//2][0][0]), float(c[len(c)//2][0][1])
-                        e = (e_center, (0.1, 0.1), 0.)
+                        e_center = (
+                            float(c[len(c) // 2][0][0]),
+                            float(c[len(c) // 2][0][1]),
+                        )
+                        e = (e_center, (0.1, 0.1), 0.0)
                         # Discard duplicates
                         if first_ellipse:
-                            duplicates = [k for k in range(len(found_pos)) if LA.norm(e_center - found_pos[k]) < found_size[k] + 1]
+                            duplicates = [
+                                k
+                                for k in range(len(found_pos))
+                                if LA.norm(e_center - found_pos[k]) < found_size[k] + 1
+                            ]
                             if len(duplicates) > 0:
-                                ellipses[i] = e, 100.
+                                ellipses[i] = e, 100.0
                                 break
                         fit = 0
 
@@ -360,27 +497,46 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
             # Discard the ellipses whose center is far away from the center of the second innermost ellipse
             cluster_center = np.array(candidate_ellipses[1][0])
             if max(candidate_ellipses[-1][1]) > 200:
-                candidate_ellipses = [e for e in candidate_ellipses if LA.norm(e[0] - cluster_center) < max(e[1]) / 5]
+                candidate_ellipses = [
+                    e
+                    for e in candidate_ellipses
+                    if LA.norm(e[0] - cluster_center) < max(e[1]) / 5
+                ]
             elif max(candidate_ellipses[-1][1]) > 100:
-                candidate_ellipses = [e for e in candidate_ellipses if LA.norm(e[0] - cluster_center) < max(e[1]) / 10]
+                candidate_ellipses = [
+                    e
+                    for e in candidate_ellipses
+                    if LA.norm(e[0] - cluster_center) < max(e[1]) / 10
+                ]
             else:
-                candidate_ellipses = [e for e in candidate_ellipses if LA.norm(e[0] - cluster_center) < max(max(e[1]) / 20, 3)]
+                candidate_ellipses = [
+                    e
+                    for e in candidate_ellipses
+                    if LA.norm(e[0] - cluster_center) < max(max(e[1]) / 20, 3)
+                ]
 
             # Discard false positives
             if len(candidate_ellipses) < min_ellipses_num:
                 continue
 
             c = contours[candidate_ellipses[-1][3]]
-            boundary = (np.amin(c, axis=0)[0][0], np.amax(c, axis=0)[0][0]), (np.amin(c, axis=0)[0][1], np.amax(c, axis=0)[0][1])
+            boundary = (
+                (np.amin(c, axis=0)[0][0], np.amax(c, axis=0)[0][0]),
+                (np.amin(c, axis=0)[0][1], np.amax(c, axis=0)[0][1]),
+            )
 
             candidate_ellipses = [(e[0], e[1], e[2]) for e in candidate_ellipses]
             concentric_circle_clusters.append((candidate_ellipses, boundary))
 
         # Return clusters sorted by the number of ellipses and the size of largest ellipse
-        return sorted(concentric_circle_clusters, key=lambda x: (-len(x[0]), -max(x[0][-1][1])))
+        return sorted(
+            concentric_circle_clusters, key=lambda x: (-len(x[0]), -max(x[0][-1][1]))
+        )
 
     else:
-        _, contours, hierarchy = cv2.findContours(edge, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE)
+        _, contours, hierarchy = cv2.findContours(
+            edge, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE
+        )
 
         if contours is None or hierarchy is None:
             return []
@@ -398,21 +554,27 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
                 else:
                     if len(c) >= 5:
                         e = cv2.fitEllipse(c)
-                        fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0.
+                        fit = max(dist_pts_ellipse(e, c)) if min(e[1]) else 0.0
                         if min(e[1]) == 0:
-                            e = (e[0], (e[1][0]+1., e[1][1]+1.), e[2])
+                            e = (e[0], (e[1][0] + 1.0, e[1][1] + 1.0), e[2])
                     else:
                         fit = 0
-                        e_center = float(c[len(c) // 2][0][0]), float(c[len(c) // 2][0][1])
-                        e_size = float(abs(c[-1][0][0]-c[0][0][0])+1), float(abs(c[-1][0][1]-c[0][0][1])+1)
+                        e_center = (
+                            float(c[len(c) // 2][0][0]),
+                            float(c[len(c) // 2][0][1]),
+                        )
+                        e_size = (
+                            float(abs(c[-1][0][0] - c[0][0][0]) + 1),
+                            float(abs(c[-1][0][1] - c[0][0][1]) + 1),
+                        )
                         e = (e_center, e_size, 0)
                     ellipses[i] = e, fit
                 # Discard the contour which does not fit the ellipse so well
                 if first_ellipse:
-                    fit_thres = 0.5 + (256-img_contrast) / 256
+                    fit_thres = 0.5 + (256 - img_contrast) / 256
                 else:
                     if img_contrast <= 96:
-                        fit_thres = max(e[1]) * scale / 10 + (256-img_contrast)/256
+                        fit_thres = max(e[1]) * scale / 10 + (256 - img_contrast) / 256
                     else:
                         fit_thres = max(0.5, max(e[1]) * scale / 10)
 
@@ -428,12 +590,24 @@ def find_concentric_circles(edge, scale, img_contrast, found_pos, found_size, fi
 
             # Discard the ellipses whose center is far away from the center of the innermost ellipse
             cluster_center = np.array(candidate_ellipses[0][0])
-            if max(candidate_ellipses[-1][1])*scale > 200:
-                candidate_ellipses = [e for e in candidate_ellipses if LA.norm(e[0] - cluster_center) < max(e[1]) / 5]
-            elif max(candidate_ellipses[-1][1])*scale > 100:
-                candidate_ellipses = [e for e in candidate_ellipses if LA.norm(e[0] - cluster_center) < max(e[1]) / 10]
+            if max(candidate_ellipses[-1][1]) * scale > 200:
+                candidate_ellipses = [
+                    e
+                    for e in candidate_ellipses
+                    if LA.norm(e[0] - cluster_center) < max(e[1]) / 5
+                ]
+            elif max(candidate_ellipses[-1][1]) * scale > 100:
+                candidate_ellipses = [
+                    e
+                    for e in candidate_ellipses
+                    if LA.norm(e[0] - cluster_center) < max(e[1]) / 10
+                ]
             else:
-                candidate_ellipses = [e for e in candidate_ellipses if LA.norm(e[0] - cluster_center) < max(max(e[1]) / 20, 2)]
+                candidate_ellipses = [
+                    e
+                    for e in candidate_ellipses
+                    if LA.norm(e[0] - cluster_center) < max(max(e[1]) / 20, 2)
+                ]
 
             # Discard false positives
             if len(candidate_ellipses) < min_ellipses_num:
@@ -464,6 +638,7 @@ def get_nested_clusters(contours, hierarchy, min_nested_count):
             clusters[cluster[1]] = cluster
     return clusters.values()
 
+
 def getEllipsePts(e, num_pts=10):
     c1 = e[0][0]
     c2 = e[0][1]
@@ -486,43 +661,56 @@ def getEllipsePts(e, num_pts=10):
 
     return pts_rot
 
+
 def marker_3d_pose(marker, cam_model, marker_diameter=7.6):
 
     target_circle = [[0, 0], [marker_diameter, marker_diameter], 0]
     target_pts = getEllipsePts(target_circle)
-    target_pts3D = np.zeros((target_pts.shape[0], target_pts.shape[1] + 1), dtype=np.float32)
+    target_pts3D = np.zeros(
+        (target_pts.shape[0], target_pts.shape[1] + 1), dtype=np.float32
+    )
     target_pts3D[:, :-1] = target_pts
     target_pts3D.shape = -1, 1, 3
 
-    e = marker['ellipses'][-1]
+    e = marker["ellipses"][-1]
 
     pts = getEllipsePts(e)
     pts.shape = -1, 1, 2
-    pts = pts.astype('float32')
+    pts = pts.astype("float32")
 
-    _, rot, trans = cam_model.solvePnP(target_pts3D, pts.astype('float32'))
+    _, rot, trans = cam_model.solvePnP(target_pts3D, pts.astype("float32"))
 
     return trans, rot
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
+
     def bench():
         import cv2
+
         cap = cv2.VideoCapture(0)
-        cap.set(3,1280)
-        cap.set(4,720)
+        cap.set(3, 1280)
+        cap.set(4, 720)
         for x in range(100):
-            sts,img = cap.read()
+            sts, img = cap.read()
             # img = cv2.imread('/Users/mkassner/Desktop/manual_calibration_marker-01.png')
-            gray  = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            print(len(find_concetric_circles(gray,visual_debug=img)))
-            cv2.imshow('img',img)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            print(len(find_concetric_circles(gray, visual_debug=img)))
+            cv2.imshow("img", img)
             cv2.waitKey(1)
             # return
 
+    import cProfile, subprocess, os
 
-    import cProfile,subprocess,os
-    cProfile.runctx("bench()",{},locals(),"world.pstats")
-    loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
-    gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-    subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
-    print("created  time graph for  process. Please check out the png next to this file")
+    cProfile.runctx("bench()", {}, locals(), "world.pstats")
+    loc = os.path.abspath(__file__).rsplit("pupil_src", 1)
+    gprof2dot_loc = os.path.join(loc[0], "pupil_src", "shared_modules", "gprof2dot.py")
+    subprocess.call(
+        "python "
+        + gprof2dot_loc
+        + " -f pstats world.pstats | dot -Tpng -o world_cpu_time.png",
+        shell=True,
+    )
+    print(
+        "created  time graph for  process. Please check out the png next to this file"
+    )

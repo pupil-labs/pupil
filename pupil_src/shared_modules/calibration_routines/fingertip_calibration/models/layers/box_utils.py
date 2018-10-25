@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 # Adapted from https://github.com/amdegroot/ssd.pytorch/blob/master/layers/box_utils.py
 
 
@@ -28,9 +28,13 @@ def decode(loc, priors, variances):
         decoded bounding box predictions
     """
 
-    boxes = torch.cat((
-        priors[:, :2] + loc[:, :2] * variances[0] * priors[:, 2:],
-        priors[:, 2:] * torch.exp(loc[:, 2:] * variances[1])), 1)
+    boxes = torch.cat(
+        (
+            priors[:, :2] + loc[:, :2] * variances[0] * priors[:, 2:],
+            priors[:, 2:] * torch.exp(loc[:, 2:] * variances[1]),
+        ),
+        1,
+    )
     boxes[:, :2] -= boxes[:, 2:] / 2
     boxes[:, 2:] += boxes[:, :2]
     return boxes
@@ -97,11 +101,11 @@ def nms(boxes, scores, overlap=0.5, top_k=10):
         # check sizes of xx1 and xx2.. after each iteration
         w = torch.clamp(w, min=0.0)
         h = torch.clamp(h, min=0.0)
-        inter = w*h
+        inter = w * h
         # IoU = i / (area(a) + area(b) - i)
         rem_areas = torch.index_select(area, 0, idx)  # load remaining areas)
         union = (rem_areas - inter) + area[i]
-        IoU = inter/union  # store result in iou
+        IoU = inter / union  # store result in iou
         # keep only elements with an IoU <= overlap
         idx = idx[IoU.le(overlap)]
     return keep, count
