@@ -336,6 +336,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
             for m in markers
         ]
+        self.markers_unfiltered = markers
         self.markers = self._filter_markers(markers)
 
     def _filter_markers(self, markers):

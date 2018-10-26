@@ -82,22 +82,22 @@ class GUI:
 
     def _draw_markers(self):
         color = pyglui_utils.RGBA(*self.color_secondary, 0.5)
-        for m in self.tracker.markers:
+        for marker in self.tracker.markers_unfiltered:
             hat = np.array(
                 [[[0, 0], [0, 1], [0.5, 1.3], [1, 1], [1, 0], [0, 0]]], dtype=np.float32
             )
-            hat = cv2.perspectiveTransform(hat, _get_norm_to_points_trans(m.verts_px))
+            hat = cv2.perspectiveTransform(
+                hat, _get_norm_to_points_trans(marker.verts_px)
+            )
 
+            pyglui_utils.draw_polyline(hat.reshape((6, 2)), color=color)
             if (
-                m.perimeter >= self.tracker.marker_min_perimeter
-                and m.id_confidence > self.tracker.marker_min_confidence
+                marker.perimeter >= self.tracker.marker_min_perimeter
+                and marker.id_confidence > self.tracker.marker_min_confidence
             ):
-                pyglui_utils.draw_polyline(hat.reshape((6, 2)), color=color)
                 pyglui_utils.draw_polyline(
                     hat.reshape((6, 2)), color=color, line_type=gl.GL_POLYGON
                 )
-            else:
-                pyglui_utils.draw_polyline(hat.reshape((6, 2)), color=color)
 
     def _draw_marker_id(self, marker):
         verts_px = np.array(marker.verts_px, dtype=np.float32)
