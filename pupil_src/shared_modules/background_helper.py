@@ -44,7 +44,12 @@ class Task_Proxy:
         self.pipe = pipe_recv
 
     def _wrapper(self, pipe, _should_terminate_flag, generator, *args, **kwargs):
-        """Executed in background, pipes generator results to foreground"""
+        """Executed in background, pipes generator results to foreground
+
+        All exceptions are caught, forwarded to the foreground, and raised in
+        `Task_Proxy.fetch()`. This allows users to handle failure gracefully
+        as well as raising their own exceptions in the background task.
+        """
         try:
             self._change_logging_behavior()
             logger.debug("Entering _wrapper")
