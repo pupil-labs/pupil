@@ -26,7 +26,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-assert av.__version__ >= "0.2.5"
+assert av.__version__ >= "0.4.2", "pyav is out-of-date, please update"
 av.logging.set_level(av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
 
