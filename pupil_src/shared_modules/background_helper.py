@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import abc
 import logging
 import multiprocessing as mp
 import zmq
@@ -24,7 +23,7 @@ class EarlyCancellationError(Exception):
     pass
 
 
-class Task_Proxy(metaclass=abc.ABCMeta):
+class Task_Proxy:
     """Future like object that runs a given generator in the background and returns is able to return the results incrementally"""
 
     def __init__(self, name, generator, args=(), kwargs={}):
@@ -66,11 +65,9 @@ class Task_Proxy(metaclass=abc.ABCMeta):
             pipe.close()
             logger.debug("Exiting _wrapper")
 
-    @abc.abstractmethod
     def _prepare_wrapper_args(self, *args):
         return args
 
-    @abc.abstractmethod
     def _change_logging_behavior(self):
         pass
 
