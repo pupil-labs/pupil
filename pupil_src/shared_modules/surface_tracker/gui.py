@@ -177,51 +177,62 @@ class GUI:
         # progress.
         if surface.defined:
 
-            # Buttons
-            pyglui_utils.draw_points(
-                [marker_edit_anchor], color=pyglui_utils.RGBA(*self.color_primary)
-            )
-            if surface in self._edit_surf_markers:
-                pyglui_utils.draw_points(
-                    [marker_edit_anchor],
-                    size=13,
-                    color=pyglui_utils.RGBA(*self.color_secondary),
-                )
-
-            pyglui_utils.draw_points(
-                [surface_edit_anchor], color=pyglui_utils.RGBA(*self.color_primary)
-            )
-            if surface in self._edit_surf_corners:
-                pyglui_utils.draw_points(
-                    [surface_edit_anchor],
-                    size=13,
-                    color=pyglui_utils.RGBA(*self.color_secondary),
-                )
-
-            # Text
-            self._draw_text(
-                (surface_edit_anchor[0] + 15, surface_edit_anchor[1] + 6),
-                "edit surface",
-                self.color_secondary,
-            )
-            self._draw_text(
-                (marker_edit_anchor[0] + 15, marker_edit_anchor[1] + 6),
-                "add/remove markers",
-                self.color_secondary,
+            self._draw_surface_menu_buttons(
+                surface, surface_edit_anchor, marker_edit_anchor
             )
         else:
-            progress_text = "{:.0f} %".format(surface.build_up_status * 100)
+            self._draw_surface_definition_progress(
+                surface, surface_edit_anchor, marker_edit_anchor
+            )
 
-            self._draw_text(
-                (surface_edit_anchor[0] + 15, surface_edit_anchor[1] + 6),
-                "Learning affiliated markers...",
-                self.color_secondary,
+    def _draw_surface_menu_buttons(
+        self, surface, surface_edit_anchor, marker_edit_anchor
+    ):
+        # Buttons
+        pyglui_utils.draw_points(
+            [marker_edit_anchor], color=pyglui_utils.RGBA(*self.color_primary)
+        )
+        if surface in self._edit_surf_markers:
+            pyglui_utils.draw_points(
+                [marker_edit_anchor],
+                size=13,
+                color=pyglui_utils.RGBA(*self.color_secondary),
             )
-            self._draw_text(
-                (marker_edit_anchor[0] + 15, marker_edit_anchor[1] + 6),
-                progress_text,
-                self.color_secondary,
+        pyglui_utils.draw_points(
+            [surface_edit_anchor], color=pyglui_utils.RGBA(*self.color_primary)
+        )
+        if surface in self._edit_surf_corners:
+            pyglui_utils.draw_points(
+                [surface_edit_anchor],
+                size=13,
+                color=pyglui_utils.RGBA(*self.color_secondary),
             )
+        # Text
+        self._draw_text(
+            (surface_edit_anchor[0] + 15, surface_edit_anchor[1] + 6),
+            "edit surface",
+            self.color_secondary,
+        )
+        self._draw_text(
+            (marker_edit_anchor[0] + 15, marker_edit_anchor[1] + 6),
+            "add/remove markers",
+            self.color_secondary,
+        )
+
+    def _draw_surface_definition_progress(
+        self, surface, surface_edit_anchor, marker_edit_anchor
+    ):
+        progress_text = "{:.0f} %".format(surface.build_up_status * 100)
+        self._draw_text(
+            (surface_edit_anchor[0] + 15, surface_edit_anchor[1] + 6),
+            "Learning affiliated markers...",
+            self.color_secondary,
+        )
+        self._draw_text(
+            (marker_edit_anchor[0] + 15, marker_edit_anchor[1] + 6),
+            progress_text,
+            self.color_secondary,
+        )
 
     def _draw_text(self, loc, text, color):
         self.glfont.set_blur(3.9)
@@ -260,7 +271,7 @@ class GUI:
         )
 
         pyglui_utils.draw_points(
-            img_corners, 20, pyglui_utils.RGBA(*self.color_primary, 0.5)
+            img_corners, size=20, pyglui_utils.RGBA(*self.color_primary, 0.5)
         )
 
     def _draw_heatmap(self, surface):
