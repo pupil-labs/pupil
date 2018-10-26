@@ -717,10 +717,6 @@ class Fixation_Detector(Fixation_Detector_Base):
 
         except IndexError:
             pass
-        except AssertionError:
-            # negative time jump detected, reset history
-            del self.history[:]
-            return
 
         gaze_3d = [gp for gp in self.history if "3d" in gp["base_data"][0]["method"]]
         use_pupil = len(gaze_3d) > 0.8 * len(self.history)
