@@ -117,53 +117,58 @@ class GUI:
         if not surface.detected:
             return
 
-        frame, hat, text_anchor, surface_edit_anchor, marker_edit_anchor = self._get_surface_anchor_points(
+        corners, top_indicator, title_anchor, surface_edit_anchor, marker_edit_anchor = self._get_surface_anchor_points(
             surface
         )
         alpha = min(1, surface.build_up_status)
 
         pyglui_utils.draw_polyline(
-            frame.reshape((5, 2)),
-            1,
-            color=pyglui_utils.RGBA(*self.color_primary, alpha),
+            corners.reshape((5, 2)), color=pyglui_utils.RGBA(*self.color_primary, alpha)
         )
         pyglui_utils.draw_polyline(
-            hat.reshape((4, 2)), 1, color=pyglui_utils.RGBA(*self.color_primary, alpha)
+            top_indicator.reshape((4, 2)),
+            color=pyglui_utils.RGBA(*self.color_primary, alpha),
         )
 
         self._draw_surf_menu(
-            surface, text_anchor, surface_edit_anchor, marker_edit_anchor
+            surface, title_anchor, surface_edit_anchor, marker_edit_anchor
         )
 
     def _get_surface_anchor_points(self, surface):
-        frame = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]], dtype=np.float32)
-        frame = surface.map_from_surf(
-            frame, self.tracker.camera_model, compensate_distortion=False
+        corners = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]], dtype=np.float32)
+        corners = surface.map_from_surf(
+            corners, self.tracker.camera_model, compensate_distortion=False
         )
 
-        hat = np.array(
+        top_indicator = np.array(
             [[0.3, 0.7], [0.7, 0.7], [0.5, 0.9], [0.3, 0.7]], dtype=np.float32
         )
-        hat = surface.map_from_surf(
-            hat, self.tracker.camera_model, compensate_distortion=False
+        top_indicator = surface.map_from_surf(
+            top_indicator, self.tracker.camera_model, compensate_distortion=False
         )
 
-        text_anchor = frame.reshape((5, -1))[2]
-        text_anchor = text_anchor[0], text_anchor[1] - 75
+        title_anchor = corners.reshape((5, -1))[2]
+        title_anchor = title_anchor[0], title_anchor[1] - 75
 
-        surface_edit_anchor = text_anchor[0], text_anchor[1] + 25
-        marker_edit_anchor = text_anchor[0], text_anchor[1] + 50
+        surface_edit_anchor = title_anchor[0], title_anchor[1] + 25
+        marker_edit_anchor = title_anchor[0], title_anchor[1] + 50
 
-        return frame, hat, text_anchor, surface_edit_anchor, marker_edit_anchor
+        return (
+            corners,
+            top_indicator,
+            title_anchor,
+            surface_edit_anchor,
+            marker_edit_anchor,
+        )
 
     def _draw_surf_menu(
-        self, surface, text_anchor, surface_edit_anchor, marker_edit_anchor
+        self, surface, title_anchor, surface_edit_anchor, marker_edit_anchor
     ):
         marker_detection_status = "{}   {}/{}".format(
             surface.name, surface.num_detected_markers, len(surface.reg_markers_dist)
         )
         self._draw_text(
-            (text_anchor[0] + 15, text_anchor[1] + 6),
+            (title_anchor[0] + 15, title_anchor[1] + 6),
             marker_detection_status,
             self.color_secondary,
         )
@@ -362,7 +367,7 @@ class GUI:
                         )
 
     def _check_surface_button_pressed(self, surface, pos):
-        frame, hat, text_anchor, surface_edit_anchor, marker_edit_anchor = self._get_surface_anchor_points(
+        corners, top_indicator, title_anchor, surface_edit_anchor, marker_edit_anchor = self._get_surface_anchor_points(
             surface
         )
 
