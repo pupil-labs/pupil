@@ -27,6 +27,7 @@ class GUI:
 
     def __init__(self, tracker):
         self.tracker = tracker
+        self.button_click_radius = 15
 
         self.heatmap_mode = Heatmap_Mode.WITHIN_SURFACE
         self.show_heatmap = False
@@ -271,7 +272,7 @@ class GUI:
         )
 
         pyglui_utils.draw_points(
-            img_corners, size=20, pyglui_utils.RGBA(*self.color_primary, 0.5)
+            img_corners, size=20, color=pyglui_utils.RGBA(*self.color_primary, 0.5)
         )
 
     def _draw_heatmap(self, surface):
@@ -346,7 +347,7 @@ class GUI:
                 )
                 for idx, corner in enumerate(img_corners):
                     dist = np.linalg.norm(corner - pos)
-                    if dist < 15:
+                    if dist < self.button_click_radius:
                         if action == glfw.GLFW_PRESS:
                             self.tracker._edit_surf_verts.append((surface, idx))
                         elif action == glfw.GLFW_RELEASE:
@@ -366,7 +367,7 @@ class GUI:
                 for marker in self.tracker.markers:
                     centroid = np.mean(marker.verts_px, axis=0)
                     dist = np.linalg.norm(centroid - pos)
-                    if dist < 15:
+                    if dist < self.button_click_radius:
                         if marker.id not in surface.reg_markers_dist.keys():
                             surface.add_marker(
                                 marker.id, marker.verts_px, self.tracker.camera_model
@@ -389,10 +390,10 @@ class GUI:
         marker_edit_anchor = np.array(marker_edit_anchor)
 
         dist_surface_edit = np.linalg.norm(pos - surface_edit_anchor)
-        surface_edit_pressed = dist_surface_edit < 15
+        surface_edit_pressed = dist_surface_edit < self.button_click_radius
 
         dist_marker_edit = np.linalg.norm(pos - marker_edit_anchor)
-        marker_edit_pressed = dist_marker_edit < 15
+        marker_edit_pressed = dist_marker_edit < self.button_click_radius
 
         return surface_edit_pressed, marker_edit_pressed
 

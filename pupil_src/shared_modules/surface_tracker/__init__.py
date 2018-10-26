@@ -14,6 +14,9 @@ from enum import Enum
 
 import numpy as np
 
+# TODO The square marker detection should return an object like this already. Also
+# this object should offer a mean/centroid function to be used when drawing the
+# marker toggle buttons
 Square_Marker_Detection = collections.namedtuple(
     "Square_Marker_Detection", ["id", "id_confidence", "verts_px", "perimeter"]
 )
