@@ -1,0 +1,26 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Capture (Integrated Terminal)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/pupil_src/main.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Player (Integrated Terminal)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/pupil_src/main.py",
+            "args": [
+                "player"
+            ],
+            "console": "integratedTerminal"
+        },
+        
+    ]
+}
