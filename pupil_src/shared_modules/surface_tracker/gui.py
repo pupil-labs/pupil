@@ -448,20 +448,15 @@ class Surface_Window:
 
             monitor = None
             # open with same aspect ratio as surface
-            height, width = (
-                640,
-                int(
-                    640.0
-                    / (
-                        self.surface.real_world_size["x"]
-                        / self.surface.real_world_size["y"]
-                    )
-                ),
+            surface_aspect_ratio = (
+                self.surface.real_world_size["x"] / self.surface.real_world_size["y"]
             )
+            win_h = 640
+            win_w = int(win_h / surface_aspect_ratio)
 
             self._window = glfw.glfwCreateWindow(
-                height,
-                width,
+                win_h,
+                win_w,
                 "Reference Surface: " + self.surface.name,
                 monitor=monitor,
                 share=glfw.glfwGetCurrentContext(),
@@ -515,7 +510,7 @@ class Surface_Window:
             glfw.glfwMakeContextCurrent(self._window)
             gl_utils.clear_gl_screen()
 
-            # cv uses 3x3 gl uses 4x4 transformation matricies
+            # cv uses 3x3 gl uses 4x4 transformation matrices
             width, height = self.tracker.camera_model.resolution
             img_corners = np.array(
                 [(0, height), (width, height), (width, 0), (0, 0)], dtype=np.float32
@@ -531,7 +526,8 @@ class Surface_Window:
             gl.glOrtho(0, 1, 0, 1, -1, 1)
             gl.glMatrixMode(gl.GL_MODELVIEW)
             gl.glPushMatrix()
-            # apply trans_mat  to our quad - this will stretch the quad such that the ref surface will span the window extends
+            # apply trans_mat to our quad - this will stretch the quad such that the
+            # surface will span the window extends
             gl.glLoadMatrixf(trans_mat)
 
             world_tex.draw()
@@ -541,22 +537,24 @@ class Surface_Window:
             gl.glMatrixMode(gl.GL_MODELVIEW)
             gl.glPopMatrix()
 
-            # # Draw recent pupil positions onto the surface:
-            try:
-                for gp in self.surface.gaze_history:
-                    pyglui_utils.draw_points(
-                        [gp["norm_pos"]],
-                        color=pyglui_utils.RGBA(0.0, 0.8, 0.5, 0.8),
-                        size=80,
-                    )
-            except AttributeError:
-                # If gaze_history does not exist, we are in the Surface_Tracker_Offline.
-                # In this case gaze visualizations will be drawn directly onto the scene
-                # image and thus propagate to the surface crop automatically.
-                pass
+            self.draw_recent_pupil_positions()
 
             glfw.glfwSwapBuffers(self._window)
             glfw.glfwMakeContextCurrent(active_window)
+
+    def draw_recent_pupil_positions(self):
+        try:
+            for gp in self.surface.gaze_history:
+                pyglui_utils.draw_points(
+                    [gp["norm_pos"]],
+                    color=pyglui_utils.RGBA(0.0, 0.8, 0.5, 0.8),
+                    size=80,
+                )
+        except AttributeError:
+            # If gaze_history does not exist, we are in the Surface_Tracker_Offline.
+            # In this case gaze visualizations will be drawn directly onto the scene
+            # image and thus propagate to the surface crop automatically.
+            pass
 
     def on_resize(self, window, w, h):
         self.trackball.set_window_size(w, h)
