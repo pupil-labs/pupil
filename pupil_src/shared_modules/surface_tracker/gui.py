@@ -291,8 +291,8 @@ class GUI:
         )
         norm_trans = _get_points_to_norm_trans(img_corners)
 
-        m = norm_trans @ surface.surf_to_dist_img_trans
-        m = gl_utils.cvmat_to_glmat(m)
+        trans_mat = norm_trans @ surface.surf_to_dist_img_trans
+        trans_mat = gl_utils.cvmat_to_glmat(trans_mat)
 
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glPushMatrix()
@@ -300,8 +300,8 @@ class GUI:
         gl.glOrtho(0, 1, 0, 1, -1, 1)
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glPushMatrix()
-        # apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
-        gl.glLoadMatrixf(m)
+        # apply trans_mat  to our quad - this will stretch the quad such that the ref suface will span the window extends
+        gl.glLoadMatrixf(trans_mat)
         self.heatmap_textures[surface].draw()
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glPopMatrix()
@@ -310,8 +310,11 @@ class GUI:
 
     def on_click(self, pos, button, action):
         pos = np.array(pos, dtype=np.float32)
+        self._on_click_menu_buttons(action, pos)
+        self._on_click_corner_handles(action, pos)
+        self._on_click_marker_toggles(action, pos)
 
-        # Menu Buttons
+    def _on_click_menu_buttons(self, action, pos):
         if action == glfw.GLFW_PRESS:
             for surface in self.tracker.surfaces:
 
@@ -334,7 +337,7 @@ class GUI:
                     else:
                         self._edit_surf_markers.add(surface)
 
-        # Surface Corner Handles
+    def _on_click_corner_handles(self, action, pos):
         norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
         for surface in self._edit_surf_corners:
             if surface.detected and surface.defined:
@@ -355,7 +358,7 @@ class GUI:
                             )
                             self.tracker._edit_surf_verts = []
 
-        # Marker Toggles
+    def _on_click_marker_toggles(self, action, pos):
         if action == glfw.GLFW_PRESS:
             for surface in self._edit_surf_markers:
                 if not surface.detected:
@@ -518,8 +521,8 @@ class Surface_Window:
             )
             denorm_trans = _get_norm_to_points_trans(img_corners)
 
-            m = self.surface.dist_img_to_surf_trans @ denorm_trans
-            m = gl_utils.cvmat_to_glmat(m)
+            trans_mat = self.surface.dist_img_to_surf_trans @ denorm_trans
+            trans_mat = gl_utils.cvmat_to_glmat(trans_mat)
 
             gl.glMatrixMode(gl.GL_PROJECTION)
             gl.glPushMatrix()
@@ -527,8 +530,8 @@ class Surface_Window:
             gl.glOrtho(0, 1, 0, 1, -1, 1)
             gl.glMatrixMode(gl.GL_MODELVIEW)
             gl.glPushMatrix()
-            # apply m  to our quad - this will stretch the quad such that the ref surface will span the window extends
-            gl.glLoadMatrixf(m)
+            # apply trans_mat  to our quad - this will stretch the quad such that the ref surface will span the window extends
+            gl.glLoadMatrixf(trans_mat)
 
             world_tex.draw()
 
