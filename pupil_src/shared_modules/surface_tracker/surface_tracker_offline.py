@@ -66,7 +66,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             Heatmap_Mode.ACROSS_SURFACES,
         ]
 
-        self.order = .2
+        self.order = 0.2
 
         # Caches
         self.marker_cache_version = 3
@@ -92,6 +92,10 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     @property
     def _save_dir(self):
         return self.g_pool.rec_dir
+
+    @property
+    def has_freeze_feature(self):
+        return False
 
     def _init_marker_cache(self):
         previous_cache = file_methods.Persistent_Dict(
@@ -169,7 +173,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         self.glfont = pyglui.pyfontstash.fontstash.Context()
         self.glfont.add_font("opensans", pyglui.ui.get_opensans_font_path())
-        self.glfont.set_color_float((1., 1., 1., .8))
+        self.glfont.set_color_float((1.0, 1.0, 1.0, 0.8))
         self.glfont.set_align_string(v_align="right", h_align="top")
 
         self.timeline = pyglui.ui.Timeline(
@@ -289,7 +293,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             max_res = max(gazes_on_surf)
             results = np.array(gazes_on_surf, dtype=np.float32)
             if max_res > 0:
-                results *= 255. / max_res
+                results *= 255.0 / max_res
             results = np.uint8(results)
             results_c_maps = cv2.applyColorMap(results, cv2.COLORMAP_JET)
 
@@ -348,7 +352,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 cached_ranges += ((ts[r[0]], 0), (ts[r[1]], 0))
 
             gl.glTranslatef(0, scale * self.timeline_line_height / 2, 0)
-            color = pyglui_utils.RGBA(.8, .2, .2, .8)
+            color = pyglui_utils.RGBA(0.8, 0.2, 0.2, 0.8)
             pyglui_utils.draw_polyline(
                 cached_ranges, color=color, line_type=gl.GL_LINES, thickness=scale * 4
             )
@@ -356,7 +360,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for r in self.marker_cache.positive_ranges:
                 cached_ranges += ((ts[r[0]], 0), (ts[r[1]], 0))
 
-            color = pyglui_utils.RGBA(0, .7, .3, .8)
+            color = pyglui_utils.RGBA(0, 0.7, 0.3, 0.8)
             pyglui_utils.draw_polyline(
                 cached_ranges, color=color, line_type=gl.GL_LINES, thickness=scale * 4
             )
@@ -370,7 +374,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                         found_at += ((ts[r[0]], 0), (ts[r[1]], 0))
                     cached_surfaces.append(found_at)
 
-            color = pyglui_utils.RGBA(0, .7, .3, .8)
+            color = pyglui_utils.RGBA(0, 0.7, 0.3, 0.8)
 
             for surface in cached_surfaces:
                 gl.glTranslatef(0, scale * self.timeline_line_height, 0)
@@ -379,7 +383,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 )
 
     def _draw_labels(self, width, height, scale):
-        self.glfont.set_size(self.timeline_line_height * .8 * scale)
+        self.glfont.set_size(self.timeline_line_height * 0.8 * scale)
         self.glfont.draw_text(width, 0, "Marker Cache")
         for idx, s in enumerate(self.surfaces):
             gl.glTranslatef(0, self.timeline_line_height * scale, 0)

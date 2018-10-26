@@ -29,12 +29,12 @@ class Surface_Tracker_Online(Surface_Tracker):
         self.freeze_scene = False
         self.frozen_scene_frame = None
         self.frozen_scene_tex = None
-
         super().__init__(
             g_pool,
             marker_min_perimeter=marker_min_perimeter,
             inverted_markers=inverted_markers,
         )
+
         self.ui_info_text = "This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*."
         self.supported_heatmap_modes = [Heatmap_Mode.WITHIN_SURFACE]
 
@@ -45,6 +45,10 @@ class Surface_Tracker_Online(Surface_Tracker):
     @property
     def _save_dir(self):
         return self.g_pool.user_dir
+
+    @property
+    def has_freeze_feature(self):
+        return True
 
     def _update_ui_custom(self):
         def set_freeze_scene(val):

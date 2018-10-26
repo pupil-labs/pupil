@@ -47,7 +47,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     """
 
-    icon_chr = chr(0xec07)
+    icon_chr = chr(0xEC07)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
@@ -58,7 +58,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.markers = []
         self.markers_dict = []
         self._edit_surf_verts = []
-        self._last_mouse_pos = (0., 0.)
+        self._last_mouse_pos = (0.0, 0.0)
         self.gui = gui.GUI(self)
 
         self.marker_min_perimeter = marker_min_perimeter
@@ -92,6 +92,11 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         Returns:
 
         """
+        pass
+
+    @property
+    @abstractmethod
+    def has_freeze_feature(self):
         pass
 
     def init_ui(self):

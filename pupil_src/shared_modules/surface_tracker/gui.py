@@ -11,14 +11,14 @@ See COPYING and COPYING.LESSER for license details.
 
 import platform
 
-import numpy as np
+import OpenGL.GL as gl
 import cv2
+import numpy as np
 import pyglui
 import pyglui.cygl.utils as pyglui_utils
-import OpenGL.GL as gl
-import glfw
-import gl_utils
 
+import gl_utils
+import glfw
 from surface_tracker import Heatmap_Mode
 
 
@@ -72,19 +72,19 @@ class GUI:
 
             # The offline surface tracker does not have the freeze feature and thus
             # never uses the frozen_scene_tex
-            try:
+            if self.tracker.has_freeze_feature:
                 if self.tracker.freeze_scene:
                     self.surface_windows[surface].update(self.tracker.frozen_scene_tex)
                 else:
                     self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
-            except AttributeError:
+            else:
                 self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
 
     def _draw_markers(self):
-        color = pyglui_utils.RGBA(*self.color_secondary, .5)
+        color = pyglui_utils.RGBA(*self.color_secondary, 0.5)
         for m in self.tracker.markers:
             hat = np.array(
-                [[[0, 0], [0, 1], [.5, 1.3], [1, 1], [1, 0], [0, 0]]], dtype=np.float32
+                [[[0, 0], [0, 1], [0.5, 1.3], [1, 1], [1, 0], [0, 0]]], dtype=np.float32
             )
             hat = cv2.perspectiveTransform(hat, _get_norm_to_points_trans(m.verts_px))
 
@@ -141,7 +141,9 @@ class GUI:
             frame, self.tracker.camera_model, compensate_distortion=False
         )
 
-        hat = np.array([[.3, .7], [.7, .7], [.5, .9], [.3, .7]], dtype=np.float32)
+        hat = np.array(
+            [[0.3, 0.7], [0.7, 0.7], [0.5, 0.9], [0.3, 0.7]], dtype=np.float32
+        )
         hat = surface.map_from_surf(
             hat, self.tracker.camera_model, compensate_distortion=False
         )
@@ -218,11 +220,11 @@ class GUI:
 
     def _draw_text(self, loc, text, color):
         self.glfont.set_blur(3.9)
-        self.glfont.set_color_float((0, 0, 0, .8))
+        self.glfont.set_color_float((0, 0, 0, 0.8))
         self.glfont.draw_text(loc[0], loc[1], text)
 
         self.glfont.set_blur(0.0)
-        self.glfont.set_color_float(color + (.9,))
+        self.glfont.set_color_float(color + (0.9,))
         self.glfont.draw_text(loc[0], loc[1], text)
 
     def _draw_marker_toggles(self, surface):
@@ -240,10 +242,10 @@ class GUI:
                 inactive_markers.append(centroid)
 
         pyglui_utils.draw_points(
-            inactive_markers, size=20, color=pyglui_utils.RGBA(*self.color_primary, .8)
+            inactive_markers, size=20, color=pyglui_utils.RGBA(*self.color_primary, 0.8)
         )
         pyglui_utils.draw_points(
-            active_markers, size=20, color=pyglui_utils.RGBA(*self.color_tertiary, .8)
+            active_markers, size=20, color=pyglui_utils.RGBA(*self.color_tertiary, 0.8)
         )
 
     def _draw_surface_corner_handles(self, surface):
@@ -253,7 +255,7 @@ class GUI:
         )
 
         pyglui_utils.draw_points(
-            img_corners, 20, pyglui_utils.RGBA(*self.color_primary, .5)
+            img_corners, 20, pyglui_utils.RGBA(*self.color_primary, 0.5)
         )
 
     def _draw_heatmap(self, surface):
@@ -429,7 +431,7 @@ class Surface_Window:
             height, width = (
                 640,
                 int(
-                    640.
+                    640.0
                     / (
                         self.surface.real_world_size["x"]
                         / self.surface.real_world_size["y"]
