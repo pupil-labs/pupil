@@ -279,6 +279,8 @@ class File_Source(Playback_Source, Base_Source):
         frame = None
         logged = False
         for frame in self.next_frame:
+            if not frame:
+                break
             index = self.pts_to_idx(frame.pts)
             if index == self.target_frame_idx:
                 break
