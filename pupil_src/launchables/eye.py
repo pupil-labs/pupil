@@ -126,6 +126,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         from video_capture import source_classes
         from video_capture import manager_classes
 
+        from background_helper import IPC_Logging_Task_Proxy
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
         # Pupil detectors
         from pupil_detectors import Detector_2D, Detector_3D, Detector_Dummy
         pupil_detectors = {Detector_2D.__name__: Detector_2D,

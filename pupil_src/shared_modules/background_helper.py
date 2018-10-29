@@ -23,7 +23,7 @@ class EarlyCancellationError(Exception):
     pass
 
 
-class Task_Proxy(object):
+class Task_Proxy:
     """Future like object that runs a given generator in the background and returns is able to return the results incrementally"""
 
     def __init__(self, name, generator, args=(), kwargs={}):
@@ -34,7 +34,7 @@ class Task_Proxy(object):
         self._canceled = False
 
         pipe_recv, pipe_send = mp.Pipe(False)
-        wrapper_args = [pipe_send, self._should_terminate_flag, generator]
+        wrapper_args = self._prepare_wrapper_args(pipe_send, self._should_terminate_flag, generator)
         wrapper_args.extend(args)
         self.process = mp.Process(
             target=self._wrapper, name=name, args=wrapper_args, kwargs=kwargs
@@ -44,10 +44,16 @@ class Task_Proxy(object):
         self.pipe = pipe_recv
 
     def _wrapper(self, pipe, _should_terminate_flag, generator, *args, **kwargs):
-        """Executed in background, pipes generator results to foreground"""
-        logger.debug("Entering _wrapper")
+        """Executed in background, pipes generator results to foreground
 
+        All exceptions are caught, forwarded to the foreground, and raised in
+        `Task_Proxy.fetch()`. This allows users to handle failure gracefully
+        as well as raising their own exceptions in the background task.
+        """
         try:
+            self._change_logging_behavior()
+            logger.debug("Entering _wrapper")
+
             for datum in generator(*args, **kwargs):
                 if _should_terminate_flag.value:
                     raise EarlyCancellationError("Task was cancelled")
@@ -63,6 +69,12 @@ class Task_Proxy(object):
         finally:
             pipe.close()
             logger.debug("Exiting _wrapper")
+
+    def _prepare_wrapper_args(self, *args):
+        return args
+
+    def _change_logging_behavior(self):
+        pass
 
     def fetch(self):
         """Fetches progress and available results from background"""
@@ -112,28 +124,28 @@ class Task_Proxy(object):
 
 
 class IPC_Logging_Task_Proxy(Task_Proxy):
-    def __init__(self, ipc_push_url, name, generator, args=(), kwargs={}):
-        extended_args = [ipc_push_url]
-        extended_args.extend(args)
-        super().__init__(name, generator, args=extended_args, kwargs=kwargs)
+    push_url = None
 
-    def _wrapper(
-        self, pipe, _should_terminate_flag, generator, ipc_push_url, *args, **kwargs
-    ):
-        self._enforce_IPC_logging(ipc_push_url)
+    def _prepare_wrapper_args(self, *args):
+        return [*args, self.push_url]
+
+    def _wrapper(self, pipe, _should_terminate_flag, generator, push_url, *args, **kwargs):
+        self.push_url = push_url
         super()._wrapper(pipe, _should_terminate_flag, generator, *args, **kwargs)
 
-    def _enforce_IPC_logging(self, ipc_push_url):
+    def _change_logging_behavior(self):
         """
         ZMQ_handler sockets from the foreground thread are broken in the background.
         Solution: Remove all potential broken handlers and replace by new oneself.
 
-        Caveat: If a broken handler is present is incosistent across environments.
+        Caveat: If a broken handler is present it is incosistent across environments.
         """
+        assert self.push_url, "`push_url` was not set by foreground process"
         del logger.root.handlers[:]
         zmq_ctx = zmq.Context()
-        handler = zmq_tools.ZMQ_handler(zmq_ctx, ipc_push_url)
+        handler = zmq_tools.ZMQ_handler(zmq_ctx, self.push_url)
         logger.root.addHandler(handler)
+        logger.root.setLevel(logging.NOTSET)
 
 
 if __name__ == "__main__":

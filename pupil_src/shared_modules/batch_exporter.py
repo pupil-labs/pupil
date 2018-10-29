@@ -170,7 +170,6 @@ class Batch_Export(System_Plugin_Base):
             {},
         )
         self.process = bh.IPC_Logging_Task_Proxy(
-            self.g_pool.ipc_push_url,
             "Pupil Batch Export {}".format(self.out_file_path),
             export_function,
             args=args,
@@ -276,7 +275,6 @@ class Batch_Exporter(Analysis_Plugin_Base):
             self.search_button.outer_label = "Searching..."
             self.search_button.label = "Cancel"
             self.search_task = bh.IPC_Logging_Task_Proxy(
-                self.g_pool.ipc_push_url,
                 "Searching recordings in {}".format(self.source_dir),
                 get_recording_dirs,
                 args=[self.source_dir],
