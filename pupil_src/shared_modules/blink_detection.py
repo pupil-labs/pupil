@@ -41,8 +41,8 @@ class Blink_Detection(Analysis_Plugin_Base):
     pupil detection confidence.
     """
 
-    order = .8
-    icon_chr = chr(0xe81a)
+    order = 0.8
+    icon_chr = chr(0xE81A)
     icon_font = "pupil_icons"
 
     def __init__(
@@ -78,8 +78,8 @@ class Blink_Detection(Analysis_Plugin_Base):
                 self,
                 label="Filter length [seconds]",
                 min=0.1,
-                max=.5,
-                step=.05,
+                max=0.5,
+                step=0.05,
             )
         )
         self.menu.append(
@@ -87,9 +87,9 @@ class Blink_Detection(Analysis_Plugin_Base):
                 "onset_confidence_threshold",
                 self,
                 label="Onset confidence threshold",
-                min=0.,
-                max=1.,
-                step=.05,
+                min=0.0,
+                max=1.0,
+                step=0.05,
             )
         )
         self.menu.append(
@@ -97,9 +97,9 @@ class Blink_Detection(Analysis_Plugin_Base):
                 "offset_confidence_threshold",
                 self,
                 label="Offset confidence threshold",
-                min=0.,
-                max=1.,
-                step=.05,
+                min=0.0,
+                max=1.0,
+                step=0.05,
             )
         )
 
@@ -111,19 +111,23 @@ class Blink_Detection(Analysis_Plugin_Base):
         self._recent_blink = None
         self.history.extend(events.get("pupil", []))
 
-        try:  # use newest gaze point to determine age threshold
-            age_threshold = self.history[-1]["timestamp"] - self.history_length
+        try:
+            ts_oldest = self.history[0]["timestamp"]
+            ts_newest = self.history[-1]["timestamp"]
+            inconsistent_timestamps = ts_newest < ts_oldest
+            if inconsistent_timestamps:
+                self.reset_history()
+                return
+
+            age_threshold = ts_newest - self.history_length
+            # pop elements until only one element below the age threshold remains:
             while self.history[1]["timestamp"] < age_threshold:
                 self.history.popleft()  # remove outdated gaze points
         except IndexError:
             pass
 
         filter_size = len(self.history)
-        if (
-            filter_size < 2
-            or self.history[-1]["timestamp"] - self.history[0]["timestamp"]
-            < self.history_length
-        ):
+        if filter_size < 2 or ts_newest - ts_oldest < self.history_length:
             return
 
         activity = np.fromiter((pp["confidence"] for pp in self.history), dtype=float)
@@ -131,7 +135,7 @@ class Blink_Detection(Analysis_Plugin_Base):
         blink_filter[filter_size // 2 :] *= -1
 
         if filter_size % 2 == 1:  # make filter symmetrical
-            blink_filter[filter_size // 2] = 0.
+            blink_filter[filter_size // 2] = 0.0
 
         # The theoretical response maximum is +-0.5
         # Response of +-0.45 seems sufficient for a confidence of 1.
@@ -148,7 +152,7 @@ class Blink_Detection(Analysis_Plugin_Base):
         else:
             blink_type = "offset"
 
-        confidence = min(abs(filter_response), 1.)  # clamp conf. value at 1.
+        confidence = min(abs(filter_response), 1.0)  # clamp conf. value at 1.
         logger.debug(
             "Blink {} detected with confidence {:0.3f}".format(blink_type, confidence)
         )
@@ -163,6 +167,10 @@ class Blink_Detection(Analysis_Plugin_Base):
         }
         events["blinks"].append(blink_entry)
         self._recent_blink = blink_entry
+
+    def reset_history(self):
+        logger.debug("Resetting history")
+        self.history.clear()
 
     def gl_display(self):
         if self._recent_blink and self.visualize:
@@ -323,7 +331,7 @@ class Offline_Blink_Detection(Blink_Detection):
         conf_iter = (pp["confidence"] for pp in all_pp)
         activity = np.fromiter(conf_iter, dtype=float, count=len(all_pp))
         total_time = all_pp[-1]["timestamp"] - all_pp[0]["timestamp"]
-        filter_size = 2 * round(len(all_pp) * self.history_length / total_time / 2.)
+        filter_size = 2 * round(len(all_pp) * self.history_length / total_time / 2.0)
         blink_filter = np.ones(filter_size) / filter_size
 
         # This is different from the online filter. Convolution will flip
@@ -340,8 +348,8 @@ class Offline_Blink_Detection(Blink_Detection):
         offsets = self.filter_response < -self.offset_confidence_threshold
 
         self.response_classification = np.zeros(self.filter_response.shape)
-        self.response_classification[onsets] = 1.
-        self.response_classification[offsets] = -1.
+        self.response_classification[onsets] = 1.0
+        self.response_classification[offsets] = -1.0
 
         self.consolidate_classifications()
 
@@ -388,7 +396,7 @@ class Offline_Blink_Detection(Blink_Detection):
             # blink confidence is the mean of the absolute filter response
             # during the blink event, clamped at 1.
             blink["confidence"] = min(
-                float(np.abs(blink["filter_response"]).mean()), 1.
+                float(np.abs(blink["filter_response"]).mean()), 1.0
             )
 
             # correlate world indices
@@ -425,7 +433,7 @@ class Offline_Blink_Detection(Blink_Detection):
             blink_finished(idx)  # idx is the last possible idx
 
         self.g_pool.blinks = pm.Affiliator(blink_data, blink_start_ts, blink_stop_ts)
-        self.notify_all({"subject": "blinks_changed", "delay": .2})
+        self.notify_all({"subject": "blinks_changed", "delay": 0.2})
 
     def cache_activation(self):
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
@@ -443,13 +451,13 @@ class Offline_Blink_Detection(Blink_Detection):
             self.cache["class_points"] = ()
             return
 
-        class_points = deque([(t0, -.9)])
+        class_points = deque([(t0, -0.9)])
         for b in self.g_pool.blinks:
-            class_points.append((b["start_timestamp"], -.9))
-            class_points.append((b["start_timestamp"], .9))
-            class_points.append((b["end_timestamp"], .9))
-            class_points.append((b["end_timestamp"], -.9))
-        class_points.append((t1, -.9))
+            class_points.append((b["start_timestamp"], -0.9))
+            class_points.append((b["start_timestamp"], 0.9))
+            class_points.append((b["end_timestamp"], 0.9))
+            class_points.append((b["end_timestamp"], -0.9))
+        class_points.append((t1, -0.9))
         self.cache["class_points"] = tuple(class_points)
 
     def draw_activation(self, width, height, scale):
@@ -477,10 +485,10 @@ class Offline_Blink_Detection(Blink_Detection):
     def draw_legend(self, width, height, scale):
         self.glfont.push_state()
         self.glfont.set_align_string(v_align="right", h_align="top")
-        self.glfont.set_size(15. * scale)
+        self.glfont.set_size(15.0 * scale)
         self.glfont.draw_text(width, 0, self.timeline.label)
 
-        legend_height = 13. * scale
+        legend_height = 13.0 * scale
         pad = 10 * scale
 
         self.glfont.draw_text(width, legend_height, "Activaty")
@@ -491,7 +499,7 @@ class Offline_Blink_Detection(Blink_Detection):
             ],
             color=activity_color,
             line_type=gl.GL_LINES,
-            thickness=4. * scale,
+            thickness=4.0 * scale,
         )
         legend_height += 1.5 * pad
 
@@ -503,7 +511,7 @@ class Offline_Blink_Detection(Blink_Detection):
             ],
             color=threshold_color,
             line_type=gl.GL_LINES,
-            thickness=4. * scale,
+            thickness=4.0 * scale,
         )
         legend_height += 1.5 * pad
 
@@ -515,7 +523,7 @@ class Offline_Blink_Detection(Blink_Detection):
             ],
             color=blink_color,
             line_type=gl.GL_LINES,
-            thickness=4. * scale,
+            thickness=4.0 * scale,
         )
 
     @property
@@ -526,7 +534,7 @@ class Offline_Blink_Detection(Blink_Detection):
     def history_length(self, val):
         if self._history_length != val:
             self.notify_all(
-                {"subject": "blink_detection.should_recalculate", "delay": .2}
+                {"subject": "blink_detection.should_recalculate", "delay": 0.2}
             )
         self._history_length = val
 
@@ -538,7 +546,7 @@ class Offline_Blink_Detection(Blink_Detection):
     def onset_confidence_threshold(self, val):
         if self._onset_confidence_threshold != val:
             self.notify_all(
-                {"subject": "blink_detection.should_recalculate", "delay": .2}
+                {"subject": "blink_detection.should_recalculate", "delay": 0.2}
             )
         self._onset_confidence_threshold = val
 
@@ -550,7 +558,7 @@ class Offline_Blink_Detection(Blink_Detection):
     def offset_confidence_threshold(self, val):
         if self._offset_confidence_threshold != val:
             self.notify_all(
-                {"subject": "blink_detection.should_recalculate", "delay": .2}
+                {"subject": "blink_detection.should_recalculate", "delay": 0.2}
             )
         self._offset_confidence_threshold = val
 
