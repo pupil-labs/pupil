@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 import numpy as np
 import cv2
@@ -21,16 +21,20 @@ class Exposure_Time(object):
 
         self.targetY_thres = 90, 150
 
-        self.AE_Win = np.array([[3, 1, 1, 1, 1, 1, 1, 3],
-                                [3, 1, 1, 1, 1, 1, 1, 3],
-                                [2, 1, 1, 1, 1, 1, 1, 2],
-                                [2, 1, 1, 1, 1, 1, 1, 2],
-                                [2, 1, 1, 1, 1, 1, 1, 2],
-                                [2, 1, 1, 1, 1, 1, 1, 2],
-                                [3, 1, 1, 1, 1, 1, 1, 3],
-                                [3, 1, 1, 1, 1, 1, 1, 3]])
-        self.smooth = 1/3
-        self.check_freq = 0.1/3
+        self.AE_Win = np.array(
+            [
+                [3, 1, 1, 1, 1, 1, 1, 3],
+                [3, 1, 1, 1, 1, 1, 1, 3],
+                [2, 1, 1, 1, 1, 1, 1, 2],
+                [2, 1, 1, 1, 1, 1, 1, 2],
+                [2, 1, 1, 1, 1, 1, 1, 2],
+                [2, 1, 1, 1, 1, 1, 1, 2],
+                [3, 1, 1, 1, 1, 1, 1, 3],
+                [3, 1, 1, 1, 1, 1, 1, 3],
+            ]
+        )
+        self.smooth = 1 / 3
+        self.check_freq = 0.1 / 3
         self.last_check_timestamp = None
 
     def calculate_based_on_frame(self, frame):
@@ -43,7 +47,9 @@ class Exposure_Time(object):
                 return self.ET_thres[1]
             elif self.mode == "auto":
                 image_block = cv2.resize(frame.gray, dsize=self.AE_Win.shape)
-                YTotal = max(np.multiply(self.AE_Win, image_block).sum() / self.AE_Win.sum(), 1)
+                YTotal = max(
+                    np.multiply(self.AE_Win, image_block).sum() / self.AE_Win.sum(), 1
+                )
 
                 if YTotal < self.targetY_thres[0]:
                     targetET = self.last_ET * self.targetY_thres[0] / YTotal
@@ -52,12 +58,23 @@ class Exposure_Time(object):
                 else:
                     targetET = self.last_ET
 
-                next_ET = np.clip(self.last_ET + (targetET - self.last_ET) * self.smooth, self.ET_thres[0], self.ET_thres[1])
+                next_ET = np.clip(
+                    self.last_ET + (targetET - self.last_ET) * self.smooth,
+                    self.ET_thres[0],
+                    self.ET_thres[1],
+                )
                 self.last_ET = next_ET
                 return next_ET
 
+
 class Check_Frame_Stripes(object):
-    def __init__(self, check_freq_init=0.1, check_freq_upperbound=5, check_freq_lowerbound=0.00001, factor=0.8):
+    def __init__(
+        self,
+        check_freq_init=0.1,
+        check_freq_upperbound=5,
+        check_freq_lowerbound=0.00001,
+        factor=0.8,
+    ):
         self.check_freq_init = check_freq_init
         self.check_freq = self.check_freq_init
         self.check_freq_upperbound = check_freq_upperbound
@@ -80,20 +97,28 @@ class Check_Frame_Stripes(object):
             res = self.check_slice(frame.gray)
 
             if res is True:
-                self.check_freq = min(self.check_freq_init, self.check_freq) * self.factor
+                self.check_freq = (
+                    min(self.check_freq_init, self.check_freq) * self.factor
+                )
                 if self.check_freq < self.check_freq_lowerbound:
                     return True
             elif res is False:
                 if self.check_freq < self.check_freq_upperbound:
-                    self.check_freq = min(self.check_freq*self.factor_mul, self.check_freq_upperbound)
+                    self.check_freq = min(
+                        self.check_freq * self.factor_mul, self.check_freq_upperbound
+                    )
 
         return False
 
     def check_slice(self, frame_gray):
         num_local_optimum = [0, 0]
         if self.row_index is None:
-            self.row_index = np.linspace(8, frame_gray.shape[0]-8, num=self.len_row_index, dtype=np.int)
-            self.col_index = np.linspace(8, frame_gray.shape[1]-8, num=self.len_col_index, dtype=np.int)
+            self.row_index = np.linspace(
+                8, frame_gray.shape[0] - 8, num=self.len_row_index, dtype=np.int
+            )
+            self.col_index = np.linspace(
+                8, frame_gray.shape[1] - 8, num=self.len_col_index, dtype=np.int
+            )
         for n in [0, 1]:
             if n == 0:
                 arrs = np.array(frame_gray[self.row_index, :], dtype=np.int)
@@ -104,9 +129,23 @@ class Check_Frame_Stripes(object):
             local_max_union = set()
             local_min_union = set()
             for arr in arrs:
-                local_max = set(np.where(np.r_[False, True, arr[2:] > arr[:-2] + 30] & np.r_[arr[:-2] > arr[2:] + 30, True, False] == True)[0])
-                local_min = set(np.where(np.r_[False, True, arr[2:] + 30 < arr[:-2]] & np.r_[arr[:-2] + 30 < arr[2:], True, False] == True)[0])
-                num_local_optimum[n] += len(local_max_union.intersection(local_max)) + len(local_min_union.intersection(local_min))
+                local_max = set(
+                    np.where(
+                        np.r_[False, True, arr[2:] > arr[:-2] + 30]
+                        & np.r_[arr[:-2] > arr[2:] + 30, True, False]
+                        == True
+                    )[0]
+                )
+                local_min = set(
+                    np.where(
+                        np.r_[False, True, arr[2:] + 30 < arr[:-2]]
+                        & np.r_[arr[:-2] + 30 < arr[2:], True, False]
+                        == True
+                    )[0]
+                )
+                num_local_optimum[n] += len(
+                    local_max_union.intersection(local_max)
+                ) + len(local_min_union.intersection(local_min))
                 if sum(num_local_optimum) >= 3:
                     return True
                 local_max_union = local_max_union.union(local_max)

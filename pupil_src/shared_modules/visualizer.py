@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 from glfw import *
 from OpenGL.GL import *
@@ -20,24 +20,24 @@ from pyglui.ui import get_opensans_font_path
 import math
 import numpy as np
 
-#UI Platform tweaks
-if system() == 'Linux':
+# UI Platform tweaks
+if system() == "Linux":
     window_position_default = (0, 0)
-elif system() == 'Windows':
+elif system() == "Windows":
     window_position_default = (8, 90)
 else:
     window_position_default = (0, 0)
+
 
 class Visualizer(object):
     """docstring for Visualizer
     Visualizer is a base class for all visualizations in new windows
     """
 
-
-    def __init__(self, g_pool, name = "Visualizer", run_independently = False):
+    def __init__(self, g_pool, name="Visualizer", run_independently=False):
 
         self.name = name
-        self.window_size = (640,480)
+        self.window_size = (640, 480)
         self.window = None
         self.input = None
         self.run_independently = run_independently
@@ -45,7 +45,7 @@ class Visualizer(object):
         self.other_window = None
         self.g_pool = g_pool
 
-    def begin_update_window(self ):
+    def begin_update_window(self):
         if self.window:
             if glfwWindowShouldClose(self.window):
                 self.close_window()
@@ -54,79 +54,83 @@ class Visualizer(object):
             self.other_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self.window)
 
-
     def update_window(self):
         pass
 
-    def end_update_window(self ):
+    def end_update_window(self):
         if self.window:
             glfwSwapBuffers(self.window)
             glfwPollEvents()
         glfwMakeContextCurrent(self.other_window)
 
-
     ############## DRAWING FUNCTIONS ##############################
 
-    def draw_frustum(self, width, height , length):
+    def draw_frustum(self, width, height, length):
 
-        W = width/2.0
-        H = height/2.0
+        W = width / 2.0
+        H = height / 2.0
         Z = length
         # draw it
         glLineWidth(1)
-        glColor4f( 1, 0.5, 0, 0.5 )
-        glBegin( GL_LINE_LOOP )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( -W, H, Z )
-        glVertex3f( W, H, Z )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( W, H, Z )
-        glVertex3f( W, -H, Z )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( W, -H, Z )
-        glVertex3f( -W, -H, Z )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( -W, -H, Z )
-        glVertex3f( -W, H, Z )
-        glEnd( )
+        glColor4f(1, 0.5, 0, 0.5)
+        glBegin(GL_LINE_LOOP)
+        glVertex3f(0, 0, 0)
+        glVertex3f(-W, H, Z)
+        glVertex3f(W, H, Z)
+        glVertex3f(0, 0, 0)
+        glVertex3f(W, H, Z)
+        glVertex3f(W, -H, Z)
+        glVertex3f(0, 0, 0)
+        glVertex3f(W, -H, Z)
+        glVertex3f(-W, -H, Z)
+        glVertex3f(0, 0, 0)
+        glVertex3f(-W, -H, Z)
+        glVertex3f(-W, H, Z)
+        glEnd()
 
-    def draw_coordinate_system(self,l=1):
+    def draw_coordinate_system(self, l=1):
         # Draw x-axis line. RED
         glLineWidth(2)
-        glColor3f( 1, 0, 0 )
-        glBegin( GL_LINES )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( l, 0, 0 )
-        glEnd( )
+        glColor3f(1, 0, 0)
+        glBegin(GL_LINES)
+        glVertex3f(0, 0, 0)
+        glVertex3f(l, 0, 0)
+        glEnd()
 
         # Draw y-axis line. GREEN.
-        glColor3f( 0, 1, 0 )
-        glBegin( GL_LINES )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( 0, l, 0 )
-        glEnd( )
+        glColor3f(0, 1, 0)
+        glBegin(GL_LINES)
+        glVertex3f(0, 0, 0)
+        glVertex3f(0, l, 0)
+        glEnd()
 
         # Draw z-axis line. BLUE
-        glColor3f( 0, 0, 1 )
-        glBegin( GL_LINES )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( 0, 0, l )
-        glEnd( )
+        glColor3f(0, 0, 1)
+        glBegin(GL_LINES)
+        glVertex3f(0, 0, 0)
+        glVertex3f(0, 0, l)
+        glEnd()
 
-    def draw_sphere(self,sphere_position, sphere_radius,contours = 45, color =RGBA(.2,.5,0.5,.5) ):
+    def draw_sphere(
+        self,
+        sphere_position,
+        sphere_radius,
+        contours=45,
+        color=RGBA(0.2, 0.5, 0.5, 0.5),
+    ):
 
         glPushMatrix()
-        glTranslatef(sphere_position[0],sphere_position[1],sphere_position[2])
-        glScale(sphere_radius,sphere_radius,sphere_radius)
-        self.sphere.draw(color, primitive_type = GL_LINE_STRIP)
+        glTranslatef(sphere_position[0], sphere_position[1], sphere_position[2])
+        glScale(sphere_radius, sphere_radius, sphere_radius)
+        self.sphere.draw(color, primitive_type=GL_LINE_STRIP)
         glPopMatrix()
 
     def basic_gl_setup(self):
-        glEnable(GL_POINT_SPRITE )
-        glEnable(GL_VERTEX_PROGRAM_POINT_SIZE) # overwrite pointsize
+        glEnable(GL_POINT_SPRITE)
+        glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)  # overwrite pointsize
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable(GL_BLEND)
-        glClearColor(.8,.8,.8,1.)
+        glClearColor(0.8, 0.8, 0.8, 1.0)
         glEnable(GL_LINE_SMOOTH)
         # glEnable(GL_POINT_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
@@ -134,7 +138,7 @@ class Visualizer(object):
         glEnable(GL_POLYGON_SMOOTH)
         glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
 
-    def adjust_gl_view(self,w,h):
+    def adjust_gl_view(self, w, h):
         """
         adjust view onto our scene.
         """
@@ -146,7 +150,7 @@ class Visualizer(object):
         glLoadIdentity()
 
     def clear_gl_screen(self):
-        glClearColor(0.9,0.9,0.9,1.)
+        glClearColor(0.9, 0.9, 0.9, 1.0)
         glClear(GL_COLOR_BUFFER_BIT)
 
     def close_window(self):
@@ -156,29 +160,38 @@ class Visualizer(object):
 
     def open_window(self):
         if not self.window:
-            self.input = {'button':None, 'mouse':(0,0)}
-
+            self.input = {"button": None, "mouse": (0, 0)}
 
             # get glfw started
             if self.run_independently:
                 glfwInit()
-                self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None  )
+                self.window = glfwCreateWindow(
+                    self.window_size[0], self.window_size[1], self.name, None
+                )
             else:
-                self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None, share= glfwGetCurrentContext() )
+                self.window = glfwCreateWindow(
+                    self.window_size[0],
+                    self.window_size[1],
+                    self.name,
+                    None,
+                    share=glfwGetCurrentContext(),
+                )
 
             self.other_window = glfwGetCurrentContext()
 
             glfwMakeContextCurrent(self.window)
             glfwSwapInterval(0)
-            glfwSetWindowPos(self.window,window_position_default[0],window_position_default[1])
+            glfwSetWindowPos(
+                self.window, window_position_default[0], window_position_default[1]
+            )
             # Register callbacks window
-            glfwSetFramebufferSizeCallback(self.window,self.on_resize)
-            glfwSetWindowIconifyCallback(self.window,self.on_iconify)
-            glfwSetKeyCallback(self.window,self.on_window_key)
-            glfwSetCharCallback(self.window,self.on_window_char)
-            glfwSetMouseButtonCallback(self.window,self.on_window_mouse_button)
-            glfwSetCursorPosCallback(self.window,self.on_pos)
-            glfwSetScrollCallback(self.window,self.on_scroll)
+            glfwSetFramebufferSizeCallback(self.window, self.on_resize)
+            glfwSetWindowIconifyCallback(self.window, self.on_iconify)
+            glfwSetKeyCallback(self.window, self.on_window_key)
+            glfwSetCharCallback(self.window, self.on_window_char)
+            glfwSetMouseButtonCallback(self.window, self.on_window_mouse_button)
+            glfwSetCursorPosCallback(self.window, self.on_pos)
+            glfwSetScrollCallback(self.window, self.on_scroll)
 
             # get glfw started
             if self.run_independently:
@@ -187,56 +200,53 @@ class Visualizer(object):
 
             self.sphere = glutils.Sphere(20)
 
-
             self.glfont = fs.Context()
-            self.glfont.add_font('opensans',get_opensans_font_path())
+            self.glfont.add_font("opensans", get_opensans_font_path())
             self.glfont.set_size(18)
-            self.glfont.set_color_float((0.2,0.5,0.9,1.0))
-            self.on_resize(self.window,*glfwGetFramebufferSize(self.window))
+            self.glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
+            self.on_resize(self.window, *glfwGetFramebufferSize(self.window))
             glfwMakeContextCurrent(self.other_window)
 
-
-
     ############ window callbacks #################
-    def on_resize(self,window,w, h):
-        h = max(h,1)
-        w = max(w,1)
+    def on_resize(self, window, w, h):
+        h = max(h, 1)
+        w = max(w, 1)
 
-        self.window_size = (w,h)
+        self.window_size = (w, h)
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        self.adjust_gl_view(w,h)
+        self.adjust_gl_view(w, h)
         glfwMakeContextCurrent(active_window)
 
-    def on_window_mouse_button(self,window,button, action, mods):
+    def on_window_mouse_button(self, window, button, action, mods):
         # self.gui.update_button(button,action,mods)
         if action == GLFW_PRESS:
-            self.input['button'] = button
-            self.input['mouse'] = glfwGetCursorPos(window)
+            self.input["button"] = button
+            self.input["mouse"] = glfwGetCursorPos(window)
         if action == GLFW_RELEASE:
-            self.input['button'] = None
+            self.input["button"] = None
 
-    def on_pos(self,window,x, y):
+    def on_pos(self, window, x, y):
         hdpi_factor = getHDPIFactor(window)
-        x,y = x*hdpi_factor,y*hdpi_factor
+        x, y = x * hdpi_factor, y * hdpi_factor
         # self.gui.update_mouse(x,y)
-        if self.input['button']==GLFW_MOUSE_BUTTON_RIGHT:
-            old_x,old_y = self.input['mouse']
-            self.trackball.drag_to(x-old_x,y-old_y)
-            self.input['mouse'] = x,y
-        if self.input['button']==GLFW_MOUSE_BUTTON_LEFT:
-            old_x,old_y = self.input['mouse']
-            self.trackball.pan_to(x-old_x,y-old_y)
-            self.input['mouse'] = x,y
+        if self.input["button"] == GLFW_MOUSE_BUTTON_RIGHT:
+            old_x, old_y = self.input["mouse"]
+            self.trackball.drag_to(x - old_x, y - old_y)
+            self.input["mouse"] = x, y
+        if self.input["button"] == GLFW_MOUSE_BUTTON_LEFT:
+            old_x, old_y = self.input["mouse"]
+            self.trackball.pan_to(x - old_x, y - old_y)
+            self.input["mouse"] = x, y
 
-    def on_window_char(self,window,char):
+    def on_window_char(self, window, char):
         pass
 
-    def on_scroll(self,window,x,y):
+    def on_scroll(self, window, x, y):
         pass
 
-    def on_iconify(self,window,iconified):
+    def on_iconify(self, window, iconified):
         pass
 
-    def on_window_key(self,window, key, scancode, action, mods):
+    def on_window_key(self, window, key, scancode, action, mods):
         pass
