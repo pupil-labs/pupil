@@ -558,7 +558,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
             # surface events report
             csv_writer.writerow(
-                ("world_idx", "world_timestamp", "surface_name", "event_type")
+                ("world_index", "world_timestamp", "surface_name", "event_type")
             )
 
             events = []
@@ -608,7 +608,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 csv_writer = csv.writer(csvfile, delimiter=",")
                 csv_writer.writerow(
                     (
-                        "world_idx",
+                        "world_index",
                         "world_timestamp",
                         "img_to_surf_trans",
                         "surf_to_img_trans",
@@ -649,7 +649,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 csv_writer.writerow(
                     (
                         "world_timestamp",
-                        "world_idx",
+                        "world_index",
                         "gaze_timestamp",
                         "x_norm",
                         "y_norm",
