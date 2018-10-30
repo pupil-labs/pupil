@@ -25,6 +25,10 @@ from surface_tracker import Heatmap_Mode
 class GUI:
     """Custom GUI functionality for visualizing and editing surfaces"""
 
+    # We often have to reference to the normalized surface corner coordinates,
+    # which are defined to always be as follows:
+    norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+
     def __init__(self, tracker):
         self.tracker = tracker
         self.button_click_radius = 15
@@ -266,9 +270,8 @@ class GUI:
         )
 
     def _draw_surface_corner_handles(self, surface):
-        norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
         img_corners = surface.map_from_surf(
-            norm_corners, self.tracker.camera_model, compensate_distortion=False
+            self.norm_corners, self.tracker.camera_model, compensate_distortion=False
         )
 
         pyglui_utils.draw_points(
@@ -339,11 +342,11 @@ class GUI:
                         self._edit_surf_markers.add(surface)
 
     def _on_click_corner_handles(self, action, pos):
-        norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
         for surface in self._edit_surf_corners:
             if surface.detected and surface.defined:
                 img_corners = surface.map_from_surf(
-                    norm_corners, self.tracker.camera_model, compensate_distortion=False
+                    self.norm_corners, self.tracker.camera_model,
+                    compensate_distortion=False
                 )
                 for idx, corner in enumerate(img_corners):
                     dist = np.linalg.norm(corner - pos)
