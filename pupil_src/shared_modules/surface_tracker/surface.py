@@ -43,13 +43,13 @@ class Surface(metaclass=ABCMeta):
         self.dist_img_to_surf_trans = None
         self.surf_to_dist_img_trans = None
 
-        self._required_obs_per_marker = 5
+        self._REQUIRED_OBS_PER_MARKER = 5
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
 
         self.within_surface_heatmap = self._get_dummy_heatmap()
         self.across_surface_heatmap = self._get_dummy_heatmap()
-        self._heatmap_min_data_confidence = 0.6
+        self._HEATMAP_MIN_DATA_CONFIDENCE = 0.6
         self._heatmap_scale = 0.5
         self._heatmap_resolution = 31
         self._heatmap_blur_factor = 0.
@@ -100,15 +100,15 @@ class Surface(metaclass=ABCMeta):
             else:
                 trans_matrix = self.dist_img_to_surf_trans
 
-        orig_shape = points.shape
-
         if compensate_distortion:
+            orig_shape = points.shape
             points = camera_model.undistortPoints(points)
-        points.shape = (-1, 1, 2)
+            points.shape = orig_shape
 
-        point_on_surf = cv2.perspectiveTransform(points, trans_matrix)
-        point_on_surf.shape = orig_shape
-        return point_on_surf
+        points_on_surf = self._perspective_transform_points(points, trans_matrix)
+
+
+        return points_on_surf
 
     def map_from_surf(
         self, points, camera_model, compensate_distortion=True, trans_matrix=None
@@ -131,19 +131,27 @@ class Surface(metaclass=ABCMeta):
             as the input.
 
         """
+
         if trans_matrix is None:
             if compensate_distortion:
                 trans_matrix = self.surf_to_img_trans
             else:
                 trans_matrix = self.surf_to_dist_img_trans
 
+        img_points = self._perspective_transform_points(points, trans_matrix)
+
+        if compensate_distortion:
+            orig_shape = points.shape
+            img_points = camera_model.distortPoints(img_points)
+            img_points.shape = orig_shape
+
+        return img_points
+
+    def _perspective_transform_points(self, points, trans_matrix):
         orig_shape = points.shape
         points.shape = (-1, 1, 2)
         img_points = cv2.perspectiveTransform(points, trans_matrix)
         img_points.shape = orig_shape
-
-        if compensate_distortion:
-            img_points = camera_model.distortPoints(img_points)
         return img_points
 
     def map_events(self, events, camera_model, trans_matrix=None):
@@ -311,7 +319,7 @@ class Surface(metaclass=ABCMeta):
             [len(m.observations) for m in self.reg_markers_undist.values()]
         )
         self._avg_obs_per_marker = num_observations / len(self.reg_markers_undist)
-        self.build_up_status = self._avg_obs_per_marker / self._required_obs_per_marker
+        self.build_up_status = self._avg_obs_per_marker / self._REQUIRED_OBS_PER_MARKER
 
         if self.build_up_status >= 1:
             self._finalize_def()
@@ -366,7 +374,7 @@ class Surface(metaclass=ABCMeta):
         for (k, m), m_dist in zip(
             self.reg_markers_undist.items(), self.reg_markers_dist.values()
         ):
-            if len(m.observations) > self._required_obs_per_marker * .5:
+            if len(m.observations) > self._REQUIRED_OBS_PER_MARKER * .5:
                 persistent_markers[k] = m
                 persistent_markers_dist[k] = m_dist
         self.reg_markers_undist = persistent_markers
@@ -441,7 +449,7 @@ class Surface(metaclass=ABCMeta):
         heatmap_data = [
             g["norm_pos"]
             for g in gaze_on_surf
-            if g["on_surf"] and g["confidence"] >= self._heatmap_min_data_confidence
+            if g["on_surf"] and g["confidence"] >= self._HEATMAP_MIN_DATA_CONFIDENCE
         ]
         aspect_ratio = self.real_world_size["y"] / self.real_world_size["x"]
         grid = (
