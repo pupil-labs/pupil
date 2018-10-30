@@ -271,7 +271,8 @@ class GUI:
 
     def _draw_surface_corner_handles(self, surface):
         img_corners = surface.map_from_surf(
-            self.norm_corners, self.tracker.camera_model, compensate_distortion=False
+            self.norm_corners.copy(), self.tracker.camera_model,
+            compensate_distortion=False
         )
 
         pyglui_utils.draw_points(
@@ -345,7 +346,7 @@ class GUI:
         for surface in self._edit_surf_corners:
             if surface.detected and surface.defined:
                 img_corners = surface.map_from_surf(
-                    self.norm_corners, self.tracker.camera_model,
+                    self.norm_corners.copy(), self.tracker.camera_model,
                     compensate_distortion=False
                 )
                 for idx, corner in enumerate(img_corners):
