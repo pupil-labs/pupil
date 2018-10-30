@@ -43,155 +43,7 @@ logger.setLevel(logging.DEBUG)
 TIMEOUT = 1000  # ms
 
 
-class ColorFrame(object):
-    def __init__(self, device):
-        # we need to keep this since there is no cv2 conversion for our planar format
-        self._yuv422 = device.color
-        self._shape = self._yuv422.shape[:2]
-        self._yuv = np.empty(self._yuv422.size, dtype=np.uint8)
-        y_plane = self._yuv422.size // 2
-        u_plane = y_plane // 2
-        self._yuv[:y_plane] = self._yuv422[:, :, 0].flatten()
-        self._yuv[y_plane : y_plane + u_plane] = self._yuv422[:, ::2, 1].flatten()
-        self._yuv[y_plane + u_plane :] = self._yuv422[:, 1::2, 1].flatten()
-        self._bgr = None
-        self._gray = None
-
-    @property
-    def height(self):
-        return self._shape[0]
-
-    @property
-    def width(self):
-        return self._shape[1]
-
-    @property
-    def yuv_buffer(self):
-        return self._yuv
-
-    @property
-    def yuv422(self):
-        Y = self._yuv[: self._yuv.size // 2]
-        U = self._yuv[self._yuv.size // 2 : 3 * self._yuv.size // 4]
-        V = self._yuv[3 * self._yuv.size // 4 :]
-
-        Y.shape = self._shape
-        U.shape = self._shape[0], self._shape[1] // 2
-        V.shape = self._shape[0], self._shape[1] // 2
-
-        return Y, U, V
-
-    @property
-    def bgr(self):
-        if self._bgr is None:
-            self._bgr = cv2.cvtColor(self._yuv422, cv2.COLOR_YUV2BGR_YUYV)
-        return self._bgr
-
-    @property
-    def img(self):
-        return self.bgr
-
-    @property
-    def gray(self):
-        if self._gray is None:
-            self._gray = self._yuv[: self._yuv.size // 2]
-            self._gray.shape = self._shape
-        return self._gray
-
-
-class DepthFrame(object):
-    def __init__(self, device):
-        self._bgr = None
-        self._gray = None
-        self.depth = device.depth
-        self.yuv_buffer = None
-
-    @property
-    def height(self):
-        return self.depth.shape[0]
-
-    @property
-    def width(self):
-        return self.depth.shape[1]
-
-    @property
-    def bgr(self):
-        if self._bgr is None:
-            self._bgr = cython_methods.cumhist_color_map16(self.depth)
-        return self._bgr
-
-    @property
-    def img(self):
-        return self.bgr
-
-    @property
-    def gray(self):
-        if self._gray is None:
-            self._gray = cv2.cvtColor(self.bgr, cv2.cv2.COLOR_BGR2GRAY)
-        return self._gray
-
-
-class Control(object):
-    def __init__(self, device, opt_range, value):
-        self._dev = device
-        self._value = value
-        self.range = opt_range
-        self.label = rs_option.name_for_value[opt_range.option]
-        self.label = self.label.replace("RS_OPTION_", "")
-        self.label = self.label.replace("R200_", "")
-        self.label = self.label.replace("_", " ")
-        self.label = self.label.title()
-        self.description = self._dev.get_device_option_description(opt_range.option)
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, val):
-        try:
-            self._dev.set_device_option(self.range.option, val)
-        except pyrs.RealsenseError as err:
-            logger.error('Setting option "{}" failed'.format(self.label))
-            logger.debug("Reason: {}".format(err))
-        else:
-            self._value = val
-
-    def refresh(self):
-        self._value = self._dev.get_device_option(self.range.option)
-
-
-class Realsense2_Controls(dict):
-    def __init__(self, device, presets=()):
-        if not device:
-            super().__init__()
-            return
-        if presets:
-            # presets: list of (option, value)-tuples
-            try:
-                device.set_device_options(*zip(*presets))
-            except pyrs.RealsenseError as err:
-                logger.error("Setting device option presets failed")
-                logger.debug("Reason: {}".format(err))
-        controls = {}
-        for opt_range, value in device.get_available_options():
-            if opt_range.min < opt_range.max:
-                controls[opt_range.option] = Control(device, opt_range, value)
-        super().__init__(controls)
-
-    def export_presets(self):
-        return [(opt, ctrl.value) for opt, ctrl in self.items()]
-
-    def refresh(self):
-        for ctrl in self.values():
-            ctrl.refresh()
-
-
 class Realsense2_Source(Base_Source):
-    """
-    Camera Capture is a class that encapsualtes pyrs.Device:
-    """
-
     def __init__(
         self,
         g_pool,
@@ -224,12 +76,10 @@ class Realsense2_Source(Base_Source):
         self.controls = {}
         self.pitch = 0
         self.yaw = 0
-        # self.mouse_drag = False
         self.last_pos = (0, 0)
         self.depth_window = None
         self._needs_restart = False
         self.stream_preset = stream_preset
-        # FIXME
 
         self._initialize_device(
             device_id,
@@ -243,7 +93,7 @@ class Realsense2_Source(Base_Source):
 
     def _initialize_device(
         self,
-        device_serial,
+        device_id,
         color_frame_size,
         color_fps,
         depth_frame_size,
@@ -251,6 +101,8 @@ class Realsense2_Source(Base_Source):
         device_options=(),
     ):
         devices = self.context.query_devices()  # of type pyrealsense2.device_list
+        print(color_frame_size)
+        print(depth_frame_size)
         color_frame_size = tuple(color_frame_size)
         depth_frame_size = tuple(depth_frame_size)
 
@@ -279,63 +131,14 @@ class Realsense2_Source(Base_Source):
         # use default streams to filter modes by rs_stream and rs_format
         self._available_modes = self._enumerate_formats(self.device_id)
 
-        # make sure that given frame sizes and rates are available
-        # color_modes = self._available_modes[rs_stream.RS_STREAM_COLOR]
-        # if color_frame_size not in color_modes:
-        #     # automatically select highest resolution
-        #     color_frame_size = sorted(color_modes.keys(), reverse=True)[0]
+        # FIXME we use some default settings at the time being
         color_frame_size = (640, 480)
-
-        # if color_fps not in color_modes[color_frame_size]:
-        #     # automatically select highest frame rate
-        #     color_fps = color_modes[color_frame_size][0]
         color_fps = 30
-
-        # depth_modes = self._available_modes[rs_stream.RS_STREAM_DEPTH]
-        # if self.align_streams:
-        #     depth_frame_size = color_frame_size
-        # else:
-        #     if depth_frame_size not in depth_modes:
-        #         # automatically select highest resolution
-        #         depth_frame_size = sorted(depth_modes.keys(), reverse=True)[0]
         depth_frame_size = (640, 480)
-
-        # if depth_fps not in depth_modes[depth_frame_size]:
-        #     # automatically select highest frame rate
-        #     depth_fps = depth_modes[depth_frame_size][0]
         depth_fps = 30
-
         # FIXME shoule be YUV? See class ColorFrame in realsense_backend.py
         color_format = rs.format.bgr8
         depth_format = rs.format.z16
-
-        # colorstream = ColorStream(
-        #     width=color_frame_size[0],
-        #     height=color_frame_size[1],
-        #     fps=color_fps,
-        #     color_format="yuv",
-        #     preset=self.stream_preset,
-        # )
-        # depthstream = DepthStream(
-        #     width=depth_frame_size[0],
-        #     height=depth_frame_size[1],
-        #     fps=depth_fps,
-        #     preset=self.stream_preset,
-        # )
-        # pointstream = PointStream(
-        #     width=depth_frame_size[0], height=depth_frame_size[1], fps=depth_fps
-        # )
-
-        # self.streams = [colorstream, depthstream, pointstream]
-        # if self.align_streams:
-        #     dacstream = DACStream(
-        #         width=depth_frame_size[0], height=depth_frame_size[1], fps=depth_fps
-        #     )
-        #     dacstream.name = "depth"  # rename data accessor
-        #     self.streams.append(dacstream)
-
-        # update with correctly initialized streams
-        # always initiliazes color + depth, adds rectified/aligned versions as necessary
 
         config = rs.config()
         config.enable_stream(
@@ -352,10 +155,7 @@ class Realsense2_Source(Base_Source):
             color_format,
             color_fps,
         )
-        # self.controls = Realsense_Controls(self.device, device_options)
-        # self._intrinsics = load_intrinsics(
-        #     self.g_pool.user_dir, self.name, self.frame_size
-        # )
+
         self.pipeline_profile = self.pipeline.start(config)
         self.streams = self.pipeline_profile.get_streams()
         self.stream_profiles = {
@@ -372,29 +172,6 @@ class Realsense2_Source(Base_Source):
                 framerates
         """
         formats = {}
-        # only lists modes for native streams (RS_STREAM_COLOR/RS_STREAM_DEPTH)
-        # for mode in self.service.get_device_modes(device_id):
-        #     if mode.stream in (rs_stream.RS_STREAM_COLOR, rs_stream.RS_STREAM_DEPTH):
-        #         # check if frame size dict is available
-        #         if mode.stream not in formats:
-        #             formats[mode.stream] = {}
-        #         stream_obj = next((s for s in self.streams if s.stream == mode.stream))
-        #         if mode.format == stream_obj.format:
-        #             size = mode.width, mode.height
-        #             # check if framerate list is already available
-        #             if size not in formats[mode.stream]:
-        #                 formats[mode.stream][size] = []
-        #             formats[mode.stream][size].append(mode.fps)
-
-        # if self.align_streams:
-        #     depth_sizes = formats[rs_stream.RS_STREAM_DEPTH].keys()
-        #     color_sizes = formats[rs_stream.RS_STREAM_COLOR].keys()
-        #     # common_sizes = depth_sizes & color_sizes
-        #     discarded_sizes = depth_sizes ^ color_sizes
-        #     for size in discarded_sizes:
-        #         for sizes in formats.values():
-        #             if size in sizes:
-        #                 del sizes[size]
 
         # FIXME
         formats[rs.stream.color] = {(640, 480): [30]}
@@ -404,89 +181,15 @@ class Realsense2_Source(Base_Source):
 
     def cleanup(self):
         raise NotImplementedError("cleanup requested")
-        # if self.depth_video_writer is not None:
-        #     self.stop_depth_recording()
-        # if self.device is not None:
-        #     self.device.stop()
-        # self.service.stop()
 
     def get_init_dict(self):
         raise NotImplementedError("get_init_dict requested")
-        # return {
-        #     "device_id": self.device.device_id if self.device is not None else 0,
-        #     "frame_size": self.frame_size,
-        #     "frame_rate": self.frame_rate,
-        #     "depth_frame_size": self.depth_frame_size,
-        #     "depth_frame_rate": self.depth_frame_rate,
-        #     "preview_depth": self.preview_depth,
-        #     "record_depth": self.record_depth,
-        #     "align_streams": self.align_streams,
-        #     "device_options": self.controls.export_presets()
-        #     if self.controls is not None
-        #     else (),
-        #     "stream_preset": self.stream_preset,
-        # }
 
     def get_frames(self):
-        print("get_frames()")
-        # if self.device:
-        #     self.device.wait_for_frames()
-        #     current_time = self.g_pool.get_timestamp()
-
-        #     last_color_frame_ts = self.device.get_frame_timestamp(
-        #         self.streams[0].stream
-        #     )
-        #     if self.last_color_frame_ts != last_color_frame_ts:
-        #         self.last_color_frame_ts = last_color_frame_ts
-        #         color = ColorFrame(self.device)
-        #         color.timestamp = current_time
-        #         color.index = self.color_frame_index
-        #         self.color_frame_index += 1
-        #     else:
-        #         color = None
-
-        #     last_depth_frame_ts = self.device.get_frame_timestamp(
-        #         self.streams[1].stream
-        #     )
-        #     if self.last_depth_frame_ts != last_depth_frame_ts:
-        #         self.last_depth_frame_ts = last_depth_frame_ts
-        #         depth = DepthFrame(self.device)
-        #         depth.timestamp = current_time
-        #         depth.index = self.depth_frame_index
-        #         self.depth_frame_index += 1
-        #     else:
-        #         depth = None
-
-        #     return color, depth
-        return None, None
+        raise NotImplementedError("get_frames requested")
 
     def recent_events(self, events):
-        print("recent_events()")
-        # if self._needs_restart:
-        #     self.restart_device()
-        #     time.sleep(0.05)
-        # elif not self.online:
-        #     time.sleep(.05)
-        #     return
-
-        # try:
-        #     color_frame, depth_frame = self.get_frames()
-        # except (pyrs.RealsenseError, TimeoutError) as err:
-        #     logger.warning("Realsense failed to provide frames. Attempting to reinit.")
-        #     self._recent_frame = None
-        #     self._recent_depth_frame = None
-        #     self._needs_restart = True
-        # else:
-        #     if color_frame and depth_frame:
-        #         self._recent_frame = color_frame
-        #         events["frame"] = color_frame
-
-        #     if depth_frame:
-        #         self._recent_depth_frame = depth_frame
-        #         events["depth_frame"] = depth_frame
-
-        #         if self.depth_video_writer is not None:
-        #             self.depth_video_writer.write_video_frame(depth_frame)
+        pass
 
     def deinit_ui(self):
         self.remove_menu()
@@ -520,48 +223,10 @@ class Realsense2_Source(Base_Source):
             )
         )
 
-        def toggle_depth_display():
-            def on_depth_mouse_button(window, button, action, mods):
-                if button == glfw.GLFW_MOUSE_BUTTON_LEFT and action == glfw.GLFW_PRESS:
-                    self.mouse_drag = True
-                if (
-                    button == glfw.GLFW_MOUSE_BUTTON_LEFT
-                    and action == glfw.GLFW_RELEASE
-                ):
-                    self.mouse_drag = False
-
-            if self.depth_window is None:
-                self.pitch = 0
-                self.yaw = 0
-
-                win_size = glfw.glfwGetWindowSize(self.g_pool.main_window)
-                self.depth_window = glfw.glfwCreateWindow(
-                    win_size[0], win_size[1], "3D Point Cloud"
-                )
-                glfw.glfwSetMouseButtonCallback(
-                    self.depth_window, on_depth_mouse_button
-                )
-                active_window = glfw.glfwGetCurrentContext()
-                glfw.glfwMakeContextCurrent(self.depth_window)
-                gl_utils.basic_gl_setup()
-                gl_utils.make_coord_system_norm_based()
-
-                # refresh speed settings
-                glfw.glfwSwapInterval(0)
-
-                glfw.glfwMakeContextCurrent(active_window)
-
-        native_presets = [
-            ("None", None),
-            # ("Best Quality", rs_preset.RS_PRESET_BEST_QUALITY),
-            # ("Largest image", rs_preset.RS_PRESET_LARGEST_IMAGE),
-            # ("Highest framerate", rs_preset.RS_PRESET_HIGHEST_FRAMERATE),
-        ]
+        native_presets = [("None", None)]
 
         def set_stream_preset(val):
-            if self.stream_preset != val:
-                self.stream_preset = val
-                self.restart_device()
+            raise NotImplementedError("set_stream_preset requested")
 
         self.menu.append(
             ui.Selector(
@@ -632,16 +297,8 @@ class Realsense2_Source(Base_Source):
         self.menu.append(selector)
 
         def reset_options():
-            if self.device:
-                try:
-                    self.device.reset_device_options_to_default(self.controls.keys())
-                except pyrs.RealsenseError as err:
-                    logger.info("Resetting some device options failed")
-                    logger.debug("Reason: {}".format(err))
-                finally:
-                    self.controls.refresh()
+            raise NotImplementedError("update_menu::reset_options() requested")
 
-        self.menu.append(ui.Button("Point Cloud Window", toggle_depth_display))
         sensor_control = ui.Growing_Menu(label="Sensor Settings")
         sensor_control.append(
             ui.Button("Reset device options to default", reset_options)
@@ -670,94 +327,7 @@ class Realsense2_Source(Base_Source):
         self.menu.append(sensor_control)
 
     def gl_display(self):
-        raise NotImplementedError("gl_display")
-        # from math import floor
-
-        # if self.depth_window is not None and glfw.glfwWindowShouldClose(
-        #     self.depth_window
-        # ):
-        #     glfw.glfwDestroyWindow(self.depth_window)
-        #     self.depth_window = None
-
-        # if self.depth_window is not None and self._recent_depth_frame is not None:
-        #     active_window = glfw.glfwGetCurrentContext()
-        #     glfw.glfwMakeContextCurrent(self.depth_window)
-
-        #     win_size = glfw.glfwGetFramebufferSize(self.depth_window)
-        #     gl_utils.adjust_gl_view(win_size[0], win_size[1])
-        #     pos = glfw.glfwGetCursorPos(self.depth_window)
-        #     if self.mouse_drag:
-        #         self.pitch = np.clip(self.pitch + (pos[1] - self.last_pos[1]), -80, 80)
-        #         self.yaw = np.clip(self.yaw - (pos[0] - self.last_pos[0]), -120, 120)
-        #     self.last_pos = pos
-
-        #     glClearColor(0, 0, 0, 0)
-        #     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        #     glMatrixMode(GL_PROJECTION)
-        #     glLoadIdentity()
-        #     gluPerspective(60, win_size[0] / win_size[1], 0.01, 20.0)
-        #     glMatrixMode(GL_MODELVIEW)
-        #     glLoadIdentity()
-        #     gluLookAt(0, 0, 0, 0, 0, 1, 0, -1, 0)
-        #     glTranslatef(0, 0, 0.5)
-        #     glRotated(self.pitch, 1, 0, 0)
-        #     glRotated(self.yaw, 0, 1, 0)
-        #     glTranslatef(0, 0, -0.5)
-
-        #     # glPointSize(2)
-        #     glEnable(GL_DEPTH_TEST)
-        #     extrinsics = self.device.get_device_extrinsics(
-        #         rs_stream.RS_STREAM_DEPTH, rs_stream.RS_STREAM_COLOR
-        #     )
-        #     depth_frame = self._recent_depth_frame
-        #     color_frame = self._recent_frame
-        #     depth_scale = self.device.depth_scale
-
-        #     glEnableClientState(GL_VERTEX_ARRAY)
-
-        #     pointcloud = self.device.pointcloud
-        #     glVertexPointer(3, GL_FLOAT, 0, pointcloud)
-        #     glEnableClientState(GL_COLOR_ARRAY)
-        #     depth_to_color = np.zeros(
-        #         depth_frame.height * depth_frame.width * 3, np.uint8
-        #     )
-        #     rsutilwrapper.project_pointcloud_to_pixel(
-        #         depth_to_color,
-        #         self.device.depth_intrinsics,
-        #         self.device.color_intrinsics,
-        #         extrinsics,
-        #         pointcloud,
-        #         self._recent_frame.bgr,
-        #     )
-        #     glColorPointer(3, GL_UNSIGNED_BYTE, 0, depth_to_color)
-        #     glDrawArrays(GL_POINTS, 0, depth_frame.width * depth_frame.height)
-        #     gl_utils.glFlush()
-        #     glDisable(GL_DEPTH_TEST)
-        #     # gl_utils.make_coord_system_norm_based()
-        #     glfw.glfwSwapBuffers(self.depth_window)
-        #     glfw.glfwMakeContextCurrent(active_window)
-
-        # if self.preview_depth and self._recent_depth_frame is not None:
-        #     self.g_pool.image_tex.update_from_ndarray(self._recent_depth_frame.bgr)
-        #     gl_utils.glFlush()
-        #     gl_utils.make_coord_system_norm_based()
-        #     self.g_pool.image_tex.draw()
-        # elif self._recent_frame is not None:
-        #     self.g_pool.image_tex.update_from_yuv_buffer(
-        #         self._recent_frame.yuv_buffer,
-        #         self._recent_frame.width,
-        #         self._recent_frame.height,
-        #     )
-        #     gl_utils.glFlush()
-        #     gl_utils.make_coord_system_norm_based()
-        #     self.g_pool.image_tex.draw()
-
-        # if not self.online:
-        #     super().gl_display()
-
-        # gl_utils.make_coord_system_pixel_based(
-        #     (self.frame_size[1], self.frame_size[0], 3)
-        # )
+        pass
 
     def restart_device(
         self,
@@ -792,8 +362,6 @@ class Realsense2_Source(Base_Source):
                 self.pipeline.stop()
             except RuntimeError:
                 logger.warning("Tried to stop self.pipeline before starting.")
-            finally:
-                del self.pipeline
 
         self.pipeline = rs.pipeline(self.context)
         self.pipeline.start()
@@ -852,7 +420,7 @@ class Realsense2_Source(Base_Source):
             return stream_profile.width(), stream_profile.height()
         except AttributeError as a:
             logger.info("Stream profiles are not yet created (color): {}".format(a))
-            return -1
+            return (-1, -1)
         except KeyError as k:
             logger.error("Color stream is not found: {}".format(k))
 
@@ -886,7 +454,7 @@ class Realsense2_Source(Base_Source):
             return stream_profile.width(), stream_profile.height()
         except AttributeError as a:
             logger.info("Stream profiles are not yet created (depth): {}".format(a))
-            return -1
+            return (-1, -1)
         except KeyError as k:
             logger.error("Depth stream is not found: {}".format(k))
 
@@ -942,7 +510,7 @@ class Realsense2_Manager(Base_Manager):
         check_intervall (float): Intervall in which to look for new UVC devices
     """
 
-    gui_name = "RealSense2 3D"
+    gui_name = "RealSense D400"
 
     def get_init_dict(self):
         return {}
@@ -990,10 +558,6 @@ class Realsense2_Manager(Base_Manager):
             if source_uid is None:
                 return
 
-            # with pyrs.Service() as service:
-            #     if not service.is_device_streaming(source_uid):
-            #         logger.error("The selected camera is already in use or blocked.")
-            #         return
             settings = {
                 "frame_size": self.g_pool.capture.frame_size,
                 "frame_rate": self.g_pool.capture.frame_rate,
