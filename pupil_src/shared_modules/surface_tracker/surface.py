@@ -335,7 +335,7 @@ class Surface(metaclass=ABCMeta):
         self.build_up_status = self._avg_obs_per_marker / self._REQUIRED_OBS_PER_MARKER
 
         if self.build_up_status >= 1:
-            self._finalize_def()
+            self.prune_markers()
 
     def _bounding_quadrangle(self, vertices):
         hull_points = cv2.convexHull(vertices, clockwise=False)
@@ -371,12 +371,8 @@ class Surface(metaclass=ABCMeta):
         norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
         return cv2.getPerspectiveTransform(verts, norm_corners)
 
-    def _finalize_def(self):
-        """
-        - prune markers that have been visible in less than x percent of frames.
-        - of those markers select a good subset of uv coords and compute mean.
-        - this mean value will be used from now on to estable surface transform
-        """
+    def prune_markers(self):
+        """Prune markers that are not support by sufficient observations."""
         persistent_markers = {}
         persistent_markers_dist = {}
         for (k, m), m_dist in zip(

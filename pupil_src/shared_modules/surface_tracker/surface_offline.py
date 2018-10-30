@@ -88,7 +88,7 @@ class Surface_Offline(Surface):
                 # Stop searching if we looped once through the entire recording
                 if def_idx == frame_idx - 1:
                     self.build_up_status = 1.0
-                    self._finalize_def()
+                    self.prune_markers()
                     break
 
                 def_idx += 1
