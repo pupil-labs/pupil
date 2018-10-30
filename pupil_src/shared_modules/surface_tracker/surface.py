@@ -395,9 +395,24 @@ class Surface(metaclass=ABCMeta):
             camera_model: Camera Model object.
 
         """
+        self._move_corner(
+            corner_idx, new_pos, camera_model, self.registered_markers_undist, True
+        )
+
+        self._move_corner(
+            corner_idx,
+            new_pos,
+            camera_model,
+            markers=self.registered_markers_dist,
+            compensate_distortion=False,
+        )
+
+    def _move_corner(
+        self, corner_idx, new_pos, camera_model, markers, compensate_distortion
+    ):
         # Markers undistorted
         new_corner_pos = self.map_to_surf(
-            new_pos, camera_model, compensate_distortion=True
+            new_pos, camera_model, compensate_distortion=compensate_distortion
         )
         old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
 
@@ -405,24 +420,9 @@ class Surface(metaclass=ABCMeta):
         new_corners[corner_idx] = new_corner_pos
 
         transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for m in self.registered_markers_undist.values():
-            m.verts_uv = cv2.perspectiveTransform(
-                m.verts_uv.reshape((-1, 1, 2)), transform
-            ).reshape((-1, 2))
-
-        # Markers distorted
-        new_corner_pos = self.map_to_surf(
-            new_pos, camera_model, compensate_distortion=False
-        )
-        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-
-        new_corners = old_corners.copy()
-        new_corners[corner_idx] = new_corner_pos
-
-        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for m in self.registered_markers_dist.values():
-            m.verts_uv = cv2.perspectiveTransform(
-                m.verts_uv.reshape((-1, 1, 2)), transform
+        for marker in markers.values():
+            marker.verts_uv = cv2.perspectiveTransform(
+                marker.verts_uv.reshape((-1, 1, 2)), transform
             ).reshape((-1, 2))
 
     def add_marker(self, marker_id, verts_px, camera_model):
