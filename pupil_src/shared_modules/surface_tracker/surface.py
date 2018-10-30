@@ -48,8 +48,8 @@ class Surface(metaclass=ABCMeta):
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
 
-        self.within_surface_heatmap = self._get_dummy_heatmap()
-        self.across_surface_heatmap = self._get_dummy_heatmap()
+        self.within_surface_heatmap = self.get_uniform_heatmap()
+        self.across_surface_heatmap = self.get_uniform_heatmap()
         self._HEATMAP_MIN_DATA_CONFIDENCE = 0.6
         self._heatmap_scale = 0.5
         self._heatmap_resolution = 31
@@ -484,24 +484,25 @@ class Surface(metaclass=ABCMeta):
             hist *= (255.0 / hist_max) if hist_max else 0.0
             hist = hist.astype(np.uint8)
         else:
-            self.within_surface_heatmap = self._get_dummy_heatmap(empty=True)
+            self.within_surface_heatmap = self._get_placeholder_heatmap()
             return
 
-        c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
+        color_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
         # reuse allocated memory if possible
         if self.within_surface_heatmap.shape != (*grid, 4):
             self.within_surface_heatmap = np.ones((*grid, 4), dtype=np.uint8)
             self.within_surface_heatmap[:, :, 3] = 125
-        self.within_surface_heatmap[:, :, :3] = c_map
+        self.within_surface_heatmap[:, :, :3] = color_map
 
-    def _get_dummy_heatmap(self, empty=False):
+    def get_uniform_heatmap(self):
         hm = np.zeros((1, 1, 4), dtype=np.uint8)
+        hm[:, :, :3] = cv2.applyColorMap(hm[:, :, :3], cv2.COLORMAP_JET)
+        hm[:, :, 3] = 125
+        return hm
 
-        if empty:
-            hm[:, :, :3] = cv2.applyColorMap(hm[:, :, :3], cv2.COLORMAP_JET)
-            hm[:, :, 3] = 125
-        else:
-            hm[:, :, 3] = 175
+    def _get_placeholder_heatmap(self):
+        hm = np.zeros((1, 1, 4), dtype=np.uint8)
+        hm[:, :, 3] = 175
 
         return hm
 
