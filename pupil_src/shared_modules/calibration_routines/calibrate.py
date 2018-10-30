@@ -17,6 +17,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+not_enough_data_error_msg = (
+    "Not enough ref point or pupil data available for calibration."
+)
 
 def calibrate_2d_polynomial(
     cal_pt_cloud, screen_size=(1, 1), threshold=35, binocular=False
@@ -102,15 +105,6 @@ def fit_error_screen(err_x, err_y, screen_pos):
     screen_x, screen_y = screen_pos
     err_x *= screen_x / 2.0
     err_y *= screen_y / 2.0
-    err_dist = np.sqrt(err_x * err_x + err_y * err_y)
-    err_mean = np.sum(err_dist) / len(err_dist)
-    err_rms = np.sqrt(np.sum(err_dist * err_dist) / len(err_dist))
-    return err_dist, err_mean, err_rms
-
-
-def fit_error_angle(err_x, err_y):
-    err_x *= 2.0 * np.pi
-    err_y *= 2.0 * np.pi
     err_dist = np.sqrt(err_x * err_x + err_y * err_y)
     err_mean = np.sum(err_dist) / len(err_dist)
     err_rms = np.sqrt(np.sum(err_dist * err_dist) / len(err_dist))
@@ -398,6 +392,48 @@ def make_map_function(cx, cy, n):
     return fn
 
 
+def match_data(g_pool, pupil_list, ref_list):
+    if pupil_list and ref_list:
+        pass
+    else:
+        logger.error(not_enough_data_error_msg)
+        return {
+            "subject": "calibration.failed",
+            "reason": not_enough_data_error_msg,
+            "timestamp": g_pool.get_timestamp(),
+            "record": True,
+        }
+
+    # match eye data and check if biocular and or monocular
+    pupil0 = [p for p in pupil_list if p["id"] == 0]
+    pupil1 = [p for p in pupil_list if p["id"] == 1]
+
+    # TODO unify this and don't do both
+    matched_binocular_data = closest_matches_binocular(ref_list, pupil_list)
+    matched_pupil0_data = closest_matches_monocular(ref_list, pupil0)
+    matched_pupil1_data = closest_matches_monocular(ref_list, pupil1)
+
+    if len(matched_pupil0_data) > len(matched_pupil1_data):
+        matched_monocular_data = matched_pupil0_data
+    else:
+        matched_monocular_data = matched_pupil1_data
+
+    logger.info(
+        "Collected {} monocular calibration data.".format(len(matched_monocular_data))
+    )
+    logger.info(
+        "Collected {} binocular calibration data.".format(len(matched_binocular_data))
+    )
+    return (
+        matched_binocular_data,
+        matched_monocular_data,
+        matched_pupil0_data,
+        matched_pupil1_data,
+        pupil0,
+        pupil1,
+    )
+
+
 def closest_matches_binocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
     """
     get pupil positions closest in time to ref points.
@@ -518,6 +554,7 @@ def preprocess_3d_data(matched_data, g_pool):
     return ref_processed, pupil0_processed, pupil1_processed
 
 
+# todo: Move to math_helper?
 def find_rigid_transform(A, B):
     # we expect the shape to be of length 2
     assert len(A.shape) == len(B.shape) == 2
@@ -538,35 +575,9 @@ def find_rigid_transform(A, B):
     if np.linalg.det(R) < 0:
         logger.info("Reflection detected")
         Vt[2, :] *= -1
-        R = Vt.T * U.T
+        R = Vt.T * U.T #todo: Check!
 
     t = -R @ centroid_A.T + centroid_B.T
 
     return R, t.reshape(3)
 
-
-def calculate_residual_3D_Points(ref_points, gaze_points, eye_to_world_matrix):
-
-    average_distance = 0.0
-    distance_variance = 0.0
-    transformed_gaze_points = []
-
-    for p in gaze_points:
-        point = np.zeros(4)
-        point[:3] = p
-        point[3] = 1.0
-        point = eye_to_world_matrix.dot(point)
-        point = np.squeeze(np.asarray(point))
-        transformed_gaze_points.append(point[:3])
-
-    for (a, b) in zip(ref_points, transformed_gaze_points):
-        average_distance += np.linalg.norm(a - b)
-
-    average_distance /= len(ref_points)
-
-    for (a, b) in zip(ref_points, transformed_gaze_points):
-        distance_variance += (np.linalg.norm(a - b) - average_distance) ** 2
-
-    distance_variance /= len(ref_points)
-
-    return average_distance, distance_variance

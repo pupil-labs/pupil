@@ -10,14 +10,12 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import os
-import numpy as np
 
-from . import calibrate
 from math_helper import *
 from file_methods import load_object, save_object
 
 from .optimization_calibration import bundle_adjust_calibration
-from .calibrate import find_rigid_transform
+from .calibrate import find_rigid_transform, match_data
 
 # logging
 import logging
@@ -28,7 +26,7 @@ from .gaze_mappers import *
 not_enough_data_error_msg = (
     "Not enough ref point or pupil data available for calibration."
 )
-solver_failed_to_converge_error_msg = "Paramters could not be estimated from data."
+solver_failed_to_converge_error_msg = "Parameters could not be estimated from data."
 
 
 def calibrate_3d_binocular(g_pool, matched_binocular_data, pupil0, pupil1):
@@ -386,48 +384,6 @@ def calibrate_2d_monocular(g_pool, matched_monocular_data):
             "name": "Monocular_Gaze_Mapper",
             "args": {"params": params},
         },
-    )
-
-
-def match_data(g_pool, pupil_list, ref_list):
-    if pupil_list and ref_list:
-        pass
-    else:
-        logger.error(not_enough_data_error_msg)
-        return {
-            "subject": "calibration.failed",
-            "reason": not_enough_data_error_msg,
-            "timestamp": g_pool.get_timestamp(),
-            "record": True,
-        }
-
-    # match eye data and check if biocular and or monocular
-    pupil0 = [p for p in pupil_list if p["id"] == 0]
-    pupil1 = [p for p in pupil_list if p["id"] == 1]
-
-    # TODO unify this and don't do both
-    matched_binocular_data = calibrate.closest_matches_binocular(ref_list, pupil_list)
-    matched_pupil0_data = calibrate.closest_matches_monocular(ref_list, pupil0)
-    matched_pupil1_data = calibrate.closest_matches_monocular(ref_list, pupil1)
-
-    if len(matched_pupil0_data) > len(matched_pupil1_data):
-        matched_monocular_data = matched_pupil0_data
-    else:
-        matched_monocular_data = matched_pupil1_data
-
-    logger.info(
-        "Collected {} monocular calibration data.".format(len(matched_monocular_data))
-    )
-    logger.info(
-        "Collected {} binocular calibration data.".format(len(matched_binocular_data))
-    )
-    return (
-        matched_binocular_data,
-        matched_monocular_data,
-        matched_pupil0_data,
-        matched_pupil1_data,
-        pupil0,
-        pupil1,
     )
 
 
