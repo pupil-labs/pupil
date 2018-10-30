@@ -337,24 +337,29 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
             for m in markers
         ]
+        markers = self._remove_duplicate_markers(markers)
         self.markers_unfiltered = markers
         self.markers = self._filter_markers(markers)
 
+    def _remove_duplicate_markers(self, markers):
+        # if an id shows twice use the bigger marker (usually this is a screen camera
+        # echo artifact.)
+        marker_by_id = {}
+        for m in markers:
+            if m.id not in marker_by_id or m.perimeter > marker_by_id[m.id].perimeter:
+                marker_by_id[m.id] = m
+
+        return list(marker_by_id.values())
+
     def _filter_markers(self, markers):
-        filtered_markers = [
+        markers = [
             m
             for m in markers
             if m.perimeter >= self.marker_min_perimeter
             and m.id_confidence > self.marker_min_confidence
         ]
 
-        # if an id shows twice use the bigger marker (usually this is a screen camera echo artifact.)
-        marker_by_id = {}
-        for m in filtered_markers:
-            if m.id not in marker_by_id or m.perimeter > marker_by_id[m.id].perimeter:
-                marker_by_id[m.id] = m
-
-        return list(marker_by_id.values())
+        return markers
 
     @abstractmethod
     def _update_surface_locations(self, idx):

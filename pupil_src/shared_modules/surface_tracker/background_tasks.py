@@ -72,14 +72,14 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
             except video_capture.FileSeekError:
                 logger.warning("Could not evaluate frame: {}.".format(frame_idx))
                 visited_list[frame_idx] = True  # this frame is now visited.
-                return None
+                return []
 
         try:
             frame = cap.get_frame()
         except video_capture.EndofVideoError:
             logger.warning("Could not evaluate frame: {}.".format(frame_idx))
             visited_list[frame_idx] = True
-            return None
+            return []
         return callable(frame)
 
     while True:
