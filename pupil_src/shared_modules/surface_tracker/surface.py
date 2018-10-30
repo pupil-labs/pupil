@@ -20,13 +20,13 @@ from surface_tracker import _Surface_Marker_Aggregate
 
 
 class Surface(metaclass=ABCMeta):
-    """A Surface is a quadrangel whose position is defined in relation to a set of
+    """A Surface is a quadrangle whose position is defined in relation to a set of
     square markers in the real world. The markers are assumed to be in a fixed spatial
     relationship and to be in plane with one another as well as the surface."""
 
     def __init__(self, name="unknown", init_dict=None):
         self.name = name
-        self.real_world_size = {"x": 1., "y": 1.}
+        self.real_world_size = {"x": 1.0, "y": 1.0}
 
         # We store the surface state in two versions: once computed with the
         # undistorted scene image and once with the still distorted scene image. The
@@ -42,6 +42,7 @@ class Surface(metaclass=ABCMeta):
         self.surf_to_img_trans = None
         self.dist_img_to_surf_trans = None
         self.surf_to_dist_img_trans = None
+        self.num_detected_markers = 0
 
         self._REQUIRED_OBS_PER_MARKER = 5
         self._avg_obs_per_marker = 0
@@ -52,7 +53,7 @@ class Surface(metaclass=ABCMeta):
         self._HEATMAP_MIN_DATA_CONFIDENCE = 0.6
         self._heatmap_scale = 0.5
         self._heatmap_resolution = 31
-        self._heatmap_blur_factor = 0.
+        self._heatmap_blur_factor = 0.0
 
         # The uid is only used to implement __hash__ and __eq__
         self._uid = uuid.uuid4()
@@ -106,7 +107,6 @@ class Surface(metaclass=ABCMeta):
             points.shape = orig_shape
 
         points_on_surf = self._perspective_transform_points(points, trans_matrix)
-
 
         return points_on_surf
 
@@ -204,16 +204,7 @@ class Surface(metaclass=ABCMeta):
 
     @staticmethod
     def locate(visible_markers, camera_model, reg_markers_undist, reg_markers_dist):
-        """Computes homographys mapping the surface from and to image pixel space."""
-
-        result = {
-            "detected": False,
-            "dist_img_to_surf_trans": None,
-            "surf_to_dist_img_trans": None,
-            "img_to_surf_trans": None,
-            "surf_to_img_trans": None,
-            "num_detected_markers": 0,
-        }
+        """Computes a Surface_Location based on a list of visible markers."""
 
         vis_reg_marker_ids = set(visible_markers.keys()) & set(
             reg_markers_undist.keys()
@@ -222,7 +213,7 @@ class Surface(metaclass=ABCMeta):
         if not vis_reg_marker_ids or len(vis_reg_marker_ids) < min(
             2, len(reg_markers_undist)
         ):
-            return result
+            return Surface_Location(detected=False)
 
         vis_verts_dist = np.array(
             [visible_markers[id].verts_px for id in vis_reg_marker_ids]
@@ -248,15 +239,16 @@ class Surface(metaclass=ABCMeta):
         )
 
         if img_to_surf_trans is None or dist_img_to_surf_trans is None:
-            return result
+            return Surface_Location(detected=False)
         else:
-            result["detected"] = True
-            result["dist_img_to_surf_trans"] = dist_img_to_surf_trans
-            result["surf_to_dist_img_trans"] = surf_to_dist_img_trans
-            result["img_to_surf_trans"] = img_to_surf_trans
-            result["surf_to_img_trans"] = surf_to_img_trans
-            result["num_detected_markers"] = len(vis_reg_marker_ids)
-            return result
+            return Surface_Location(
+                True,
+                dist_img_to_surf_trans,
+                surf_to_dist_img_trans,
+                img_to_surf_trans,
+                surf_to_img_trans,
+                len(vis_reg_marker_ids),
+            )
 
     @staticmethod
     def _find_homographies(points_A, points_B):
@@ -374,7 +366,7 @@ class Surface(metaclass=ABCMeta):
         for (k, m), m_dist in zip(
             self.reg_markers_undist.items(), self.reg_markers_dist.values()
         ):
-            if len(m.observations) > self._REQUIRED_OBS_PER_MARKER * .5:
+            if len(m.observations) > self._REQUIRED_OBS_PER_MARKER * 0.5:
                 persistent_markers[k] = m
                 persistent_markers_dist[k] = m_dist
         self.reg_markers_undist = persistent_markers
@@ -457,9 +449,9 @@ class Surface(metaclass=ABCMeta):
             int(self._heatmap_resolution * aspect_ratio),
         )
         if heatmap_data:
-            xvals, yvals = zip(*((x, 1. - y) for x, y in heatmap_data))
+            xvals, yvals = zip(*((x, 1.0 - y) for x, y in heatmap_data))
             hist, *edges = np.histogram2d(
-                yvals, xvals, bins=grid, range=[[0, 1.], [0, 1.]], normed=False
+                yvals, xvals, bins=grid, range=[[0, 1.0], [0, 1.0]], normed=False
             )
             filter_h = 19 + self._heatmap_blur_factor * 15
             filter_w = filter_h * aspect_ratio
@@ -468,7 +460,7 @@ class Surface(metaclass=ABCMeta):
 
             hist = cv2.GaussianBlur(hist, (filter_h, filter_w), 0)
             hist_max = hist.max()
-            hist *= (255. / hist_max) if hist_max else 0.
+            hist *= (255.0 / hist_max) if hist_max else 0.0
             hist = hist.astype(np.uint8)
         else:
             self.within_surface_heatmap = self._get_dummy_heatmap(empty=True)
@@ -519,3 +511,34 @@ class Surface(metaclass=ABCMeta):
         ]
         self.reg_markers_dist = {m.id: m for m in self.reg_markers_dist}
         self.build_up_status = init_dict["build_up_status"]
+
+
+class Surface_Location:
+    def __init__(
+        self,
+        detected,
+        dist_img_to_surf_trans=None,
+        surf_to_dist_img_trans=None,
+        img_to_surf_trans=None,
+        surf_to_img_trans=None,
+        num_detected_markers=0,
+    ):
+        self.detected = detected
+
+        if self.detected:
+            assert (
+                dist_img_to_surf_trans is not None
+                and surf_to_dist_img_trans is not None
+                and img_to_surf_trans is not None
+                and surf_to_img_trans is not None
+                and num_detected_markers > 0
+            ), (
+                "Surface_Location can not be detected and have None as "
+                "transformations at the same time!"
+            )
+
+        self.dist_img_to_surf_trans = dist_img_to_surf_trans
+        self.surf_to_dist_img_trans = surf_to_dist_img_trans
+        self.img_to_surf_trans = img_to_surf_trans
+        self.surf_to_img_trans = surf_to_img_trans
+        self.num_detected_markers = num_detected_markers

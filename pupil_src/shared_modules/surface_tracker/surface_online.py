@@ -29,14 +29,19 @@ class Surface_Online(Surface):
         if not self.defined:
             self._update_definition(frame_idx, vis_markers_dict, camera_model)
 
-        # Get dict of current transformations
-        transformations = self.locate(
+        location = self.locate(
             vis_markers_dict,
             camera_model,
             self.reg_markers_undist,
             self.reg_markers_dist,
         )
-        self.__dict__.update(transformations)
+
+        self.detected = location.detected
+        self.dist_img_to_surf_trans = location.dist_img_to_surf_trans
+        self.surf_to_dist_img_trans = location.surf_to_dist_img_trans
+        self.img_to_surf_trans = location.img_to_surf_trans
+        self.surf_to_img_trans = location.surf_to_img_trans
+        self.num_detected_markers = location.num_detected_markers
 
     def update_gaze_history(self, gaze_on_surf, world_timestamp):
         # Remove old entries

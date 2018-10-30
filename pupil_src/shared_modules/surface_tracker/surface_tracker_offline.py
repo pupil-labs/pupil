@@ -122,7 +122,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 else:
                     self.marker_cache_unfiltered.append(markers)
             marker_cache_unfiltered = Cache_List(
-                self.marker_cache_unfiltered, positive_eval_fn=_cache_pos_eval_fn
+                self.marker_cache_unfiltered, positive_eval_fn=_cache_positive_eval_fn
             )
             self._recalculate_marker_cache(previous_state=marker_cache_unfiltered)
             self.inverted_markers = previous_cache.get("inverted_markers", False)
@@ -140,7 +140,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 surface.location_cache = None
 
         self.marker_cache_unfiltered = Cache_List(
-            previous_state, positive_eval_fn=_cache_pos_eval_fn
+            previous_state, positive_eval_fn=_cache_positive_eval_fn
         )
         self._update_filtered_markers()
 
@@ -165,7 +165,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 ]
             marker_cache.append(markers)
         self.marker_cache = Cache_List(
-            marker_cache, positive_eval_fn=_cache_pos_eval_fn
+            marker_cache, positive_eval_fn=_cache_positive_eval_fn
         )
 
     def init_ui(self):
@@ -778,4 +778,5 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         marker_cache_file.save()
 
 
-_cache_pos_eval_fn = lambda x: (x is not False) and len(x) > 0
+def _cache_positive_eval_fn(x):
+    return (x is not False) and len(x) > 0

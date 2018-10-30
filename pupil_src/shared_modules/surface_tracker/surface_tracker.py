@@ -56,6 +56,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.current_frame = None
         self.surfaces = []
         self.markers = []
+        self.markers_unfiltered = []
         self.markers_dict = []
         self._edit_surf_verts = []
         self._last_mouse_pos = (0.0, 0.0)
@@ -375,7 +376,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         for surface in self.surfaces:
             if surface.detected:
                 gaze_events = events.get("gaze", [])
-                gaze_on_surf = surface.map_gaze_and_fixation_events(gaze_events, self.camera_model)
+                gaze_on_surf = surface.map_gaze_and_fixation_events(
+                    gaze_events, self.camera_model
+                )
                 fixation_events = events.get("fixations", [])
                 fixations_on_surf = surface.map_gaze_and_fixation_events(
                     fixation_events, self.camera_model

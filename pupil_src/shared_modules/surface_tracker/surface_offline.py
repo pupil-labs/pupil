@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import multiprocessing as mp
-import itertools
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,7 +18,7 @@ import numpy as np
 from cache_list import Cache_List
 import player_methods
 
-from surface_tracker.surface import Surface
+from surface_tracker.surface import Surface, Surface_Location
 from surface_tracker import offline_utils
 from surface_tracker import background_tasks
 
@@ -49,17 +48,15 @@ class Surface_Offline(Surface):
         for frame_idx, location in enumerate(location_cache):
             frame_idx += section.start
 
-            if location and location["detected"]:
+            if location and location.detected:
 
                 frame_window = player_methods.enclosing_window(
                     all_world_timestamps, frame_idx
                 )
                 gaze_events = all_gaze_events.by_ts_window(frame_window)
 
-                gaze_on_surf = self.map_events(
-                    gaze_events,
-                    camera_model,
-                    trans_matrix=location["img_to_surf_trans"],
+                gaze_on_surf = self.map_gaze_and_fixation_events(
+                    gaze_events, camera_model, trans_matrix=location.img_to_surf_trans
                 )
             else:
                 gaze_on_surf = []
@@ -122,30 +119,21 @@ class Surface_Offline(Surface):
                 return
             else:
                 logging.debug("Markers not computed yet!")
-                location = {
-                    "detected": False,
-                    "dist_img_to_surf_trans": None,
-                    "surf_to_dist_img_trans": None,
-                    "img_to_surf_trans": None,
-                    "surf_to_img_trans": None,
-                    "num_detected_markers": 0,
-                }
+                location = Surface_Location(detected=False)
 
-        self.__dict__.update(location)
+        self.detected = location.detected
+        self.dist_img_to_surf_trans = location.dist_img_to_surf_trans
+        self.surf_to_dist_img_trans = location.surf_to_dist_img_trans
+        self.img_to_surf_trans = location.img_to_surf_trans
+        self.surf_to_img_trans = location.surf_to_img_trans
+        self.num_detected_markers = location.num_detected_markers
 
     def update_location_cache(self, frame_idx, marker_cache, camera_model):
         """ Update a single entry in the location cache."""
 
         try:
             if not marker_cache[frame_idx]:
-                location = {
-                    "detected": False,
-                    "dist_img_to_surf_trans": None,
-                    "surf_to_dist_img_trans": None,
-                    "img_to_surf_trans": None,
-                    "surf_to_img_trans": None,
-                    "num_detected_markers": 0,
-                }
+                location = Surface_Location(detected=False)
             else:
                 markers = marker_cache[frame_idx]
                 markers = {m.id: m for m in markers}
@@ -156,7 +144,7 @@ class Surface_Offline(Surface):
                     self.reg_markers_dist,
                 )
             self.location_cache.update(frame_idx, location, force=True)
-        except (TypeError, AttributeError):
+        except (TypeError, AttributeError) as e:
             self._recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
     def _recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
@@ -168,8 +156,7 @@ class Surface_Offline(Surface):
         visited_list = [e is False for e in marker_cache]
         self.cache_seek_idx.value = frame_idx
         self.location_cache = Cache_List(
-            [False] * len(marker_cache),
-            positive_eval_fn=lambda x: (x is not False) and x["detected"],
+            [False] * len(marker_cache), positive_eval_fn=_cache_positive_eval_fn
         )
         self.location_cache_filler = background_tasks.background_data_processor(
             marker_cache,
@@ -189,8 +176,7 @@ class Surface_Offline(Surface):
 
         # Soft reset of marker cache. This does not invoke a recalculation in the background. Full recalculation will happen once the surface corner was released.
         self.location_cache = Cache_List(
-            [False] * len(marker_cache),
-            positive_eval_fn=lambda x: (x is not False) and x["detected"],
+            [False] * len(marker_cache), positive_eval_fn=_cache_positive_eval_fn
         )
         self.update_location_cache(frame_idx, marker_cache, camera_model)
 
@@ -248,7 +234,7 @@ class Surface_Offline(Surface):
                         location["surf_to_img_trans"]
                     )
             self.location_cache = Cache_List(
-                cache, positive_eval_fn=lambda x: (x is not False) and x["detected"]
+                cache, positive_eval_fn=_cache_positive_eval_fn
             )
         except (KeyError, TypeError):
             self.location_cache = None
@@ -268,3 +254,7 @@ class Surface_Offline(Surface):
             return 0
         section_cache = self.location_cache[section]
         return sum(map(bool, section_cache))
+
+
+def _cache_positive_eval_fn(x):
+    return (x is not False) and x.detected
