@@ -58,7 +58,7 @@ class Realsense2_Source(Base_Source):
         record_depth=True,
         stream_preset=None,
     ):
-        logger.info("_init_ started")
+        logger.debug("_init_ started")
         super().__init__(g_pool)
         self._intrinsics = None
         self.color_frame_index = 0
@@ -71,8 +71,6 @@ class Realsense2_Source(Base_Source):
         self.preview_depth = preview_depth
         self.record_depth = record_depth
         self.depth_video_writer = None
-        self.frame_size = frame_size
-        self.depth_frame_size = depth_frame_size
         self.controls = {}
         self.pitch = 0
         self.yaw = 0
@@ -89,7 +87,7 @@ class Realsense2_Source(Base_Source):
             depth_frame_rate,
             device_options,
         )
-        logger.info("_init_ completed")
+        logger.debug("_init_ completed")
 
     def _initialize_device(
         self,
@@ -101,8 +99,8 @@ class Realsense2_Source(Base_Source):
         device_options=(),
     ):
         devices = self.context.query_devices()  # of type pyrealsense2.device_list
-        print(color_frame_size)
-        print(depth_frame_size)
+        logger.debug("color_frame_size " + str(color_frame_size))
+        logger.debug("depth_frame_size " + str(depth_frame_size))
         color_frame_size = tuple(color_frame_size)
         depth_frame_size = tuple(depth_frame_size)
 
@@ -189,7 +187,7 @@ class Realsense2_Source(Base_Source):
         raise NotImplementedError("get_frames requested")
 
     def recent_events(self, events):
-        pass
+        raise NotImplementedError()
 
     def deinit_ui(self):
         self.remove_menu()
@@ -327,7 +325,7 @@ class Realsense2_Source(Base_Source):
         self.menu.append(sensor_control)
 
     def gl_display(self):
-        pass
+        raise NotImplementedError()
 
     def restart_device(
         self,
@@ -338,7 +336,7 @@ class Realsense2_Source(Base_Source):
         depth_fps=None,
         device_options=None,
     ):
-        print("restart_device")
+        logger.debug("restart_device")
         if device_id is None:
             if self.pipeline_profile is not None:
                 dev = self.pipeline_profile.get_device()
@@ -414,18 +412,20 @@ class Realsense2_Source(Base_Source):
 
     @property
     def frame_size(self):
+        logger.debug("get frame_size")
         try:
             stream_profile = self.stream_profiles[rs.stream.color]
             stream_profile = stream_profile.as_video_stream_profile()
             return stream_profile.width(), stream_profile.height()
         except AttributeError as a:
             logger.info("Stream profiles are not yet created (color): {}".format(a))
-            return (-1, -1)
+            return self.frame_size
         except KeyError as k:
             logger.error("Color stream is not found: {}".format(k))
 
     @frame_size.setter
     def frame_size(self, new_size):
+        logger.debug("set frame_size")
         if self.pipeline is not None and new_size != self.frame_size:
             self.restart_device(color_frame_size=new_size)
 
@@ -448,6 +448,7 @@ class Realsense2_Source(Base_Source):
 
     @property
     def depth_frame_size(self):
+        logger.debug("get depth_frame_size")
         try:
             stream_profile = self.stream_profiles[rs.stream.depth]
             stream_profile = stream_profile.as_video_stream_profile()
@@ -460,6 +461,7 @@ class Realsense2_Source(Base_Source):
 
     @depth_frame_size.setter
     def depth_frame_size(self, new_size):
+        logger.debug("set depth_frame_size")
         if self.pipeline is not None and new_size != self.depth_frame_size:
             self.restart_device(depth_frame_size=new_size)
 
