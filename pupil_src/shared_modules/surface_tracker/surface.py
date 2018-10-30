@@ -289,14 +289,16 @@ class Surface(metaclass=ABCMeta):
         all_verts_undist = camera_model.undistortPoints(all_verts_dist)
 
         hull_undist = self._bounding_quadrangle(all_verts_undist)
-        undist_img_to_surf_trans_candidate = self._get_trans_to_norm(hull_undist)
+        undist_img_to_surf_trans_candidate = self._get_trans_to_norm_corners(
+            hull_undist
+        )
         all_verts_undist.shape = (-1, 1, 2)
         marker_surf_coords_undist = cv2.perspectiveTransform(
             all_verts_undist, undist_img_to_surf_trans_candidate
         )
 
         hull_dist = self._bounding_quadrangle(all_verts_dist)
-        dist_img_to_surf_trans_candidate = self._get_trans_to_norm(hull_dist)
+        dist_img_to_surf_trans_candidate = self._get_trans_to_norm_corners(hull_dist)
         all_verts_dist.shape = (-1, 1, 2)
         marker_surf_coords_dist = cv2.perspectiveTransform(
             all_verts_dist, dist_img_to_surf_trans_candidate
@@ -351,13 +353,13 @@ class Surface(metaclass=ABCMeta):
             most_acute_4_threshold = sorted(curvature)[3]
             hull_points = hull_points[curvature <= most_acute_4_threshold]
 
-        # vertices space is flipped in y.
-        # we need to change the order of the hull_points vertecies
+        # Vertices space is flipped in y.  We need to change the order of the
+        # hull_points vertices
         hull_points = hull_points[[1, 0, 3, 2], :, :]
 
-        # now we need to roll the hull_points vertices until we have the right orientation:
-        # vertices space has its origin at the image center.
-        # adding 1 to the coordinates puts the origin at the top left.
+        # Roll the hull_points vertices until we have the right orientation:
+        # vertices space has its origin at the image center. Adding 1 to the
+        # coordinates puts the origin at the top left.
         distance_to_top_left = np.sqrt(
             (hull_points[:, :, 0] + 1) ** 2 + (hull_points[:, :, 1] + 1) ** 2
         )
@@ -365,17 +367,9 @@ class Surface(metaclass=ABCMeta):
         hull_points = np.roll(hull_points, -bot_left_idx, axis=0)
         return hull_points
 
-    def _get_trans_to_norm(self, verts):
+    def _get_trans_to_norm_corners(self, verts):
         norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
         return cv2.getPerspectiveTransform(verts, norm_corners)
-
-    def _denormalize(self, points, camera_model):
-        if len(points.shape) == 1:
-            points[1] = 1 - points[1]
-        else:
-            points[:, 1] = 1 - points[:, 1]
-        points *= camera_model.resolution
-        return points
 
     def _finalize_def(self):
         """
