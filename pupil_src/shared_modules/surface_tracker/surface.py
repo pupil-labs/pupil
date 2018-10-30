@@ -48,8 +48,8 @@ class Surface(metaclass=ABCMeta):
         self._avg_obs_per_marker = 0
         self.build_up_status = 0
 
-        self.within_surface_heatmap = self.get_uniform_heatmap()
-        self.across_surface_heatmap = self.get_uniform_heatmap()
+        self.within_surface_heatmap = self.get_placeholder_heatmap()
+        self.across_surface_heatmap = self.get_placeholder_heatmap()
         self._HEATMAP_MIN_DATA_CONFIDENCE = 0.6
         self._heatmap_scale = 0.5
         self._heatmap_resolution = 31
@@ -484,7 +484,7 @@ class Surface(metaclass=ABCMeta):
             hist *= (255.0 / hist_max) if hist_max else 0.0
             hist = hist.astype(np.uint8)
         else:
-            self.within_surface_heatmap = self._get_placeholder_heatmap()
+            self.within_surface_heatmap = self.get_uniform_heatmap()
             return
 
         color_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
@@ -500,7 +500,7 @@ class Surface(metaclass=ABCMeta):
         hm[:, :, 3] = 125
         return hm
 
-    def _get_placeholder_heatmap(self):
+    def get_placeholder_heatmap(self):
         hm = np.zeros((1, 1, 4), dtype=np.uint8)
         hm[:, :, 3] = 175
 

@@ -422,13 +422,13 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for surface in self.surfaces:
                 if surface.name == notification["name"]:
                     self._heatmap_update_requests.add(surface)
-                    surface.within_surface_heatmap = surface.get_uniform_heatmap()
+                    surface.within_surface_heatmap = surface.get_placeholder_heatmap()
                     break
             self._fill_gaze_on_surf_buffer()
 
         elif notification["subject"].startswith("seek_control.trim_indices_changed"):
             for surface in self.surfaces:
-                surface.within_surface_heatmap = surface.get_uniform_heatmap()
+                surface.within_surface_heatmap = surface.get_placeholder_heatmap()
                 self._heatmap_update_requests.add(surface)
             self._fill_gaze_on_surf_buffer()
 
@@ -436,7 +436,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for surface in self.surfaces:
                 if surface.name == notification["name"]:
                     surface.location_cache = None
-                    surface.within_surface_heatmap = surface.get_uniform_heatmap()
+                    surface.within_surface_heatmap = surface.get_placeholder_heatmap()
                     self._heatmap_update_requests.add(surface)
                     break
             self._fill_gaze_on_surf_buffer()
@@ -449,7 +449,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         elif notification["subject"] == "gaze_positions_changed":
             for surface in self.surfaces:
                 self._heatmap_update_requests.add(surface)
-                surface.within_surface_heatmap = surface.get_uniform_heatmap()
+                surface.within_surface_heatmap = surface.get_placeholder_heatmap()
             self._fill_gaze_on_surf_buffer()
 
     def on_surface_change(self, surface):
