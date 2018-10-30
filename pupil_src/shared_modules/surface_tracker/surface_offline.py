@@ -65,18 +65,20 @@ class Surface_Offline(Surface):
 
     def update_location(self, frame_idx, marker_cache, camera_model):
         if not self.defined:
-            try:
-                def_idx = self.start_idx
-            except AttributeError:
-                def_idx = self.start_idx = frame_idx
 
+            def_idx = self.start_idx
             while not self.defined:
                 # End of the video, start from the beginning!
                 if def_idx == len(marker_cache) and frame_idx > 0:
                     def_idx = 0
 
-                if marker_cache[def_idx] is False:
-                    break
+                try:
+                    if marker_cache[def_idx] is False:
+                        break
+                except TypeError:
+                    # start_idx was not yet defined! Current frame will become first
+                    # frame to define this surface.
+                    def_idx = self.start_idx = frame_idx
 
                 if def_idx not in self.observations_frame_idxs:
                     markers = marker_cache[def_idx]

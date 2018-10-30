@@ -170,7 +170,9 @@ class GUI:
         self, surface, title_anchor, surface_edit_anchor, marker_edit_anchor
     ):
         marker_detection_status = "{}   {}/{}".format(
-            surface.name, surface.num_detected_markers, len(surface.reg_markers_dist)
+            surface.name,
+            surface.num_detected_markers,
+            len(surface.registered_markers_dist),
         )
         self._draw_text(
             (title_anchor[0] + 15, title_anchor[1] + 6),
@@ -257,7 +259,7 @@ class GUI:
 
             centroid = np.mean(marker.verts_px, axis=0)
             centroid = (centroid[0, 0], centroid[0, 1])
-            if marker.id in surface.reg_markers_dist.keys():
+            if marker.id in surface.registered_markers_dist.keys():
                 active_markers.append(centroid)
             else:
                 inactive_markers.append(centroid)
@@ -271,8 +273,9 @@ class GUI:
 
     def _draw_surface_corner_handles(self, surface):
         img_corners = surface.map_from_surf(
-            self.norm_corners.copy(), self.tracker.camera_model,
-            compensate_distortion=False
+            self.norm_corners.copy(),
+            self.tracker.camera_model,
+            compensate_distortion=False,
         )
 
         pyglui_utils.draw_points(
@@ -346,8 +349,9 @@ class GUI:
         for surface in self._edit_surf_corners:
             if surface.detected and surface.defined:
                 img_corners = surface.map_from_surf(
-                    self.norm_corners.copy(), self.tracker.camera_model,
-                    compensate_distortion=False
+                    self.norm_corners.copy(),
+                    self.tracker.camera_model,
+                    compensate_distortion=False,
                 )
                 for idx, corner in enumerate(img_corners):
                     dist = np.linalg.norm(corner - pos)
@@ -372,7 +376,7 @@ class GUI:
                     centroid = np.mean(marker.verts_px, axis=0)
                     dist = np.linalg.norm(centroid - pos)
                     if dist < self.button_click_radius:
-                        if marker.id not in surface.reg_markers_dist.keys():
+                        if marker.id not in surface.registered_markers_dist.keys():
                             surface.add_marker(
                                 marker.id, marker.verts_px, self.tracker.camera_model
                             )

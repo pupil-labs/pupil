@@ -26,11 +26,13 @@ def marker_detection_callable(min_marker_perimeter, inverted_markers):
     return callable
 
 
-def surface_locater_callable(camera_model, reg_markers_undist, reg_markers_dist):
+def surface_locater_callable(
+    camera_model, registered_markers_undist, registered_markers_dist
+):
     def callable(markers):
         markers = {m.id: m for m in markers}
         return Surface.locate(
-            markers, camera_model, reg_markers_undist, reg_markers_dist
+            markers, camera_model, registered_markers_undist, registered_markers_dist
         )
 
     return callable

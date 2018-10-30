@@ -515,7 +515,7 @@ class Surface(metaclass=ABCMeta):
                 marker.save_to_dict()
                 for marker in self.registered_markers_undist.values()
             ],
-            "reg_markers_dist": [
+            "registered_markers_dist": [
                 marker.save_to_dict()
                 for marker in self.registered_markers_dist.values()
             ],
@@ -534,7 +534,7 @@ class Surface(metaclass=ABCMeta):
         }
         self.registered_markers_dist = [
             _Surface_Marker_Aggregate(marker["id"], verts_uv=marker["verts_uv"])
-            for marker in init_dict["reg_markers_dist"]
+            for marker in init_dict["registered_markers_dist"]
         ]
         self.registered_markers_dist = {m.id: m for m in self.registered_markers_dist}
         self.build_up_status = init_dict["build_up_status"]
