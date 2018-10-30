@@ -32,8 +32,8 @@ class Surface_Online(Surface):
         location = self.locate(
             vis_markers_dict,
             camera_model,
-            self.reg_markers_undist,
-            self.reg_markers_dist,
+            self.registered_markers_undist,
+            self.registered_markers_dist,
         )
 
         self.detected = location.detected

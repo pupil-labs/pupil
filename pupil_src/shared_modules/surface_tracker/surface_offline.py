@@ -140,8 +140,8 @@ class Surface_Offline(Surface):
                 location = Surface.locate(
                     markers,
                     camera_model,
-                    self.reg_markers_undist,
-                    self.reg_markers_dist,
+                    self.registered_markers_undist,
+                    self.registered_markers_dist,
                 )
             self.location_cache.update(frame_idx, location, force=True)
         except (TypeError, AttributeError) as e:
@@ -161,7 +161,9 @@ class Surface_Offline(Surface):
         self.location_cache_filler = background_tasks.background_data_processor(
             marker_cache,
             offline_utils.surface_locater_callable(
-                camera_model, self.reg_markers_undist, self.reg_markers_dist
+                camera_model,
+                self.registered_markers_undist,
+                self.registered_markers_dist,
             ),
             visited_list,
             self.cache_seek_idx,

@@ -35,8 +35,8 @@ class Surface(metaclass=ABCMeta):
         # outside of the image can not be re-distorted for visualization correctly.
         # Instead the slightly wrong but correct looking distorted version is
         # used for visualization.
-        self.reg_markers_undist = {}
-        self.reg_markers_dist = {}
+        self.registered_markers_undist = {}
+        self.registered_markers_dist = {}
         self.detected = False
         self.img_to_surf_trans = None
         self.surf_to_img_trans = None
@@ -203,39 +203,50 @@ class Surface(metaclass=ABCMeta):
         pass
 
     @staticmethod
-    def locate(visible_markers, camera_model, reg_markers_undist, reg_markers_dist):
+    def locate(
+        visible_markers,
+        camera_model,
+        registered_markers_undist,
+        registered_markers_dist,
+    ):
         """Computes a Surface_Location based on a list of visible markers."""
 
-        vis_reg_marker_ids = set(visible_markers.keys()) & set(
-            reg_markers_undist.keys()
+        visible_registered_marker_ids = set(visible_markers.keys()) & set(
+            registered_markers_undist.keys()
         )
 
-        if not vis_reg_marker_ids or len(vis_reg_marker_ids) < min(
-            2, len(reg_markers_undist)
-        ):
+        if not visible_registered_marker_ids or len(
+            visible_registered_marker_ids
+        ) < min(2, len(registered_markers_undist)):
             return Surface_Location(detected=False)
 
-        vis_verts_dist = np.array(
-            [visible_markers[id].verts_px for id in vis_reg_marker_ids]
+        visible_verts_dist = np.array(
+            [visible_markers[id].verts_px for id in visible_registered_marker_ids]
         )
-        reg_verts_undist = np.array(
-            [reg_markers_undist[id].verts_uv for id in vis_reg_marker_ids]
+        registered_verts_undist = np.array(
+            [
+                registered_markers_undist[id].verts_uv
+                for id in visible_registered_marker_ids
+            ]
         )
-        reg_verts_dist = np.array(
-            [reg_markers_dist[id].verts_uv for id in vis_reg_marker_ids]
+        registered_verts_dist = np.array(
+            [
+                registered_markers_dist[id].verts_uv
+                for id in visible_registered_marker_ids
+            ]
         )
 
-        vis_verts_dist.shape = (-1, 2)
-        reg_verts_undist.shape = (-1, 2)
-        reg_verts_dist.shape = (-1, 2)
+        visible_verts_dist.shape = (-1, 2)
+        registered_verts_undist.shape = (-1, 2)
+        registered_verts_dist.shape = (-1, 2)
 
         dist_img_to_surf_trans, surf_to_dist_img_trans = Surface._find_homographies(
-            reg_verts_dist, vis_verts_dist
+            registered_verts_dist, visible_verts_dist
         )
 
-        vis_verts_undist = camera_model.undistortPoints(vis_verts_dist)
+        visible_verts_undist = camera_model.undistortPoints(visible_verts_dist)
         img_to_surf_trans, surf_to_img_trans = Surface._find_homographies(
-            reg_verts_undist, vis_verts_undist
+            registered_verts_undist, visible_verts_undist
         )
 
         if img_to_surf_trans is None or dist_img_to_surf_trans is None:
@@ -247,7 +258,7 @@ class Surface(metaclass=ABCMeta):
                 surf_to_dist_img_trans,
                 img_to_surf_trans,
                 surf_to_img_trans,
-                len(vis_reg_marker_ids),
+                len(visible_registered_marker_ids),
             )
 
     @staticmethod
@@ -299,18 +310,20 @@ class Surface(metaclass=ABCMeta):
             visible_markers.values(), marker_surf_coords_undist, marker_surf_coords_dist
         ):
             try:
-                self.reg_markers_undist[m.id].add_observation(uv_undist)
-                self.reg_markers_dist[m.id].add_observation(uv_dist)
+                self.registered_markers_undist[m.id].add_observation(uv_undist)
+                self.registered_markers_dist[m.id].add_observation(uv_dist)
             except KeyError:
-                self.reg_markers_undist[m.id] = _Surface_Marker_Aggregate(m.id)
-                self.reg_markers_undist[m.id].add_observation(uv_undist)
-                self.reg_markers_dist[m.id] = _Surface_Marker_Aggregate(m.id)
-                self.reg_markers_dist[m.id].add_observation(uv_dist)
+                self.registered_markers_undist[m.id] = _Surface_Marker_Aggregate(m.id)
+                self.registered_markers_undist[m.id].add_observation(uv_undist)
+                self.registered_markers_dist[m.id] = _Surface_Marker_Aggregate(m.id)
+                self.registered_markers_dist[m.id].add_observation(uv_dist)
 
         num_observations = sum(
-            [len(m.observations) for m in self.reg_markers_undist.values()]
+            [len(m.observations) for m in self.registered_markers_undist.values()]
         )
-        self._avg_obs_per_marker = num_observations / len(self.reg_markers_undist)
+        self._avg_obs_per_marker = num_observations / len(
+            self.registered_markers_undist
+        )
         self.build_up_status = self._avg_obs_per_marker / self._REQUIRED_OBS_PER_MARKER
 
         if self.build_up_status >= 1:
@@ -364,13 +377,14 @@ class Surface(metaclass=ABCMeta):
         persistent_markers = {}
         persistent_markers_dist = {}
         for (k, m), m_dist in zip(
-            self.reg_markers_undist.items(), self.reg_markers_dist.values()
+            self.registered_markers_undist.items(),
+            self.registered_markers_dist.values(),
         ):
             if len(m.observations) > self._REQUIRED_OBS_PER_MARKER * 0.5:
                 persistent_markers[k] = m
                 persistent_markers_dist[k] = m_dist
-        self.reg_markers_undist = persistent_markers
-        self.reg_markers_dist = persistent_markers_dist
+        self.registered_markers_undist = persistent_markers
+        self.registered_markers_dist = persistent_markers_dist
 
     def move_corner(self, corner_idx, new_pos, camera_model):
         """Update surface definition by moving one of the corners to a new position.
@@ -392,7 +406,7 @@ class Surface(metaclass=ABCMeta):
         new_corners[corner_idx] = new_corner_pos
 
         transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for m in self.reg_markers_undist.values():
+        for m in self.registered_markers_undist.values():
             m.verts_uv = cv2.perspectiveTransform(
                 m.verts_uv.reshape((-1, 1, 2)), transform
             ).reshape((-1, 2))
@@ -407,7 +421,7 @@ class Surface(metaclass=ABCMeta):
         new_corners[corner_idx] = new_corner_pos
 
         transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for m in self.reg_markers_dist.values():
+        for m in self.registered_markers_dist.values():
             m.verts_uv = cv2.perspectiveTransform(
                 m.verts_uv.reshape((-1, 1, 2)), transform
             ).reshape((-1, 2))
@@ -420,7 +434,7 @@ class Surface(metaclass=ABCMeta):
             marker_verts_dist, camera_model, compensate_distortion=False
         )
         surface_marker_dist.add_observation(uv_coords_dist)
-        self.reg_markers_dist[marker_id] = surface_marker_dist
+        self.registered_markers_dist[marker_id] = surface_marker_dist
 
         surface_marker_undist = _Surface_Marker_Aggregate(marker_id)
         marker_verts_undist = np.array(verts_px).reshape((4, 2))
@@ -428,12 +442,12 @@ class Surface(metaclass=ABCMeta):
             marker_verts_undist, camera_model, compensate_distortion=False
         )
         surface_marker_undist.add_observation(uv_coords_undist)
-        self.reg_markers_undist[marker_id] = surface_marker_undist
+        self.registered_markers_undist[marker_id] = surface_marker_undist
 
     def pop_marker(self, id):
         """Remove a marker from the surface definition."""
-        self.reg_markers_dist.pop(id)
-        self.reg_markers_undist.pop(id)
+        self.registered_markers_dist.pop(id)
+        self.registered_markers_undist.pop(id)
 
     def update_heatmap(self, gaze_on_surf):
         """Compute the gaze distribution heatmap based on given gaze events."""
@@ -489,10 +503,12 @@ class Surface(metaclass=ABCMeta):
             "name": self.name,
             "real_world_size": self.real_world_size,
             "reg_markers": [
-                marker.save_to_dict() for marker in self.reg_markers_undist.values()
+                marker.save_to_dict()
+                for marker in self.registered_markers_undist.values()
             ],
             "reg_markers_dist": [
-                marker.save_to_dict() for marker in self.reg_markers_dist.values()
+                marker.save_to_dict()
+                for marker in self.registered_markers_dist.values()
             ],
             "build_up_status": self.build_up_status,
         }
@@ -500,16 +516,18 @@ class Surface(metaclass=ABCMeta):
     def _load_from_dict(self, init_dict):
         self.name = init_dict["name"]
         self.real_world_size = init_dict["real_world_size"]
-        self.reg_markers_undist = [
+        self.registered_markers_undist = [
             _Surface_Marker_Aggregate(marker["id"], verts_uv=marker["verts_uv"])
             for marker in init_dict["reg_markers"]
         ]
-        self.reg_markers_undist = {m.id: m for m in self.reg_markers_undist}
-        self.reg_markers_dist = [
+        self.registered_markers_undist = {
+            m.id: m for m in self.registered_markers_undist
+        }
+        self.registered_markers_dist = [
             _Surface_Marker_Aggregate(marker["id"], verts_uv=marker["verts_uv"])
             for marker in init_dict["reg_markers_dist"]
         ]
-        self.reg_markers_dist = {m.id: m for m in self.reg_markers_dist}
+        self.registered_markers_dist = {m.id: m for m in self.registered_markers_dist}
         self.build_up_status = init_dict["build_up_status"]
 
 
