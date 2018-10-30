@@ -426,25 +426,33 @@ class Surface(metaclass=ABCMeta):
             ).reshape((-1, 2))
 
     def add_marker(self, marker_id, verts_px, camera_model):
-        """Add a marker to the surface definition."""
+        self._add_marker(
+            marker_id,
+            verts_px,
+            camera_model,
+            markers=self.registered_markers_undist,
+            compensate_distortion=True,
+        )
+        self._add_marker(
+            marker_id,
+            verts_px,
+            camera_model,
+            markers=self.registered_markers_dist,
+            compensate_distortion=False,
+        )
+
+    def _add_marker(
+        self, marker_id, verts_px, camera_model, markers, compensate_distortion
+    ):
         surface_marker_dist = _Surface_Marker_Aggregate(marker_id)
         marker_verts_dist = np.array(verts_px).reshape((4, 2))
         uv_coords_dist = self.map_to_surf(
-            marker_verts_dist, camera_model, compensate_distortion=False
+            marker_verts_dist, camera_model, compensate_distortion=compensate_distortion
         )
         surface_marker_dist.add_observation(uv_coords_dist)
-        self.registered_markers_dist[marker_id] = surface_marker_dist
-
-        surface_marker_undist = _Surface_Marker_Aggregate(marker_id)
-        marker_verts_undist = np.array(verts_px).reshape((4, 2))
-        uv_coords_undist = self.map_to_surf(
-            marker_verts_undist, camera_model, compensate_distortion=False
-        )
-        surface_marker_undist.add_observation(uv_coords_undist)
-        self.registered_markers_undist[marker_id] = surface_marker_undist
+        markers[marker_id] = surface_marker_dist
 
     def pop_marker(self, id):
-        """Remove a marker from the surface definition."""
         self.registered_markers_dist.pop(id)
         self.registered_markers_undist.pop(id)
 
