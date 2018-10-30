@@ -375,9 +375,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         for surface in self.surfaces:
             if surface.detected:
                 gaze_events = events.get("gaze", [])
-                gaze_on_surf = surface.map_events(gaze_events, self.camera_model)
+                gaze_on_surf = surface.map_gaze_and_fixation_events(gaze_events, self.camera_model)
                 fixation_events = events.get("fixations", [])
-                fixations_on_surf = surface.map_events(
+                fixations_on_surf = surface.map_gaze_and_fixation_events(
                     fixation_events, self.camera_model
                 )
 

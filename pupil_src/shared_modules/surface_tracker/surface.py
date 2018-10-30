@@ -154,7 +154,7 @@ class Surface(metaclass=ABCMeta):
         img_points.shape = orig_shape
         return img_points
 
-    def map_events(self, events, camera_model, trans_matrix=None):
+    def map_gaze_and_fixation_events(self, events, camera_model, trans_matrix=None):
         """
         Map a list of gaze or fixation events onto the surface and return the
         corresponding list of gaze/fixation on surface events.
