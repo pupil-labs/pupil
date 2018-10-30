@@ -215,6 +215,8 @@ class Surface(metaclass=ABCMeta):
             registered_markers_undist.keys()
         )
 
+        # If the surface is defined by 2+ markers, we require 2+ markers to be detected.
+        # If the surface is defined by 1 marker, we require 1 marker to be detected.
         if not visible_registered_marker_ids or len(
             visible_registered_marker_ids
         ) < min(2, len(registered_markers_undist)):
@@ -306,17 +308,21 @@ class Surface(metaclass=ABCMeta):
         marker_surf_coords_dist.shape = (-1, 4, 2)
 
         # Add observations to library
-        for m, uv_undist, uv_dist in zip(
+        for marker, uv_undist, uv_dist in zip(
             visible_markers.values(), marker_surf_coords_undist, marker_surf_coords_dist
         ):
             try:
-                self.registered_markers_undist[m.id].add_observation(uv_undist)
-                self.registered_markers_dist[m.id].add_observation(uv_dist)
+                self.registered_markers_undist[marker.id].add_observation(uv_undist)
+                self.registered_markers_dist[marker.id].add_observation(uv_dist)
             except KeyError:
-                self.registered_markers_undist[m.id] = _Surface_Marker_Aggregate(m.id)
-                self.registered_markers_undist[m.id].add_observation(uv_undist)
-                self.registered_markers_dist[m.id] = _Surface_Marker_Aggregate(m.id)
-                self.registered_markers_dist[m.id].add_observation(uv_dist)
+                self.registered_markers_undist[marker.id] = _Surface_Marker_Aggregate(
+                    marker.id
+                )
+                self.registered_markers_undist[marker.id].add_observation(uv_undist)
+                self.registered_markers_dist[marker.id] = _Surface_Marker_Aggregate(
+                    marker.id
+                )
+                self.registered_markers_dist[marker.id].add_observation(uv_dist)
 
         num_observations = sum(
             [len(m.observations) for m in self.registered_markers_undist.values()]
@@ -329,32 +335,35 @@ class Surface(metaclass=ABCMeta):
         if self.build_up_status >= 1:
             self._finalize_def()
 
-    def _bounding_quadrangle(self, verts):
-        hull = cv2.convexHull(verts, clockwise=False)
+    def _bounding_quadrangle(self, vertices):
+        hull_points = cv2.convexHull(vertices, clockwise=False)
 
-        if hull.shape[0] > 4:
-            new_hull = cv2.approxPolyDP(hull, epsilon=1, closed=True)
+        # The convex hull of a list of markers must have at least 4 corners, since a
+        # single marker already has 4 corners. If the convex hull has more than 4
+        # corners we reduce that number with approximations of the hull.
+        if len(hull_points) > 4:
+            new_hull = cv2.approxPolyDP(hull_points, epsilon=1, closed=True)
             if new_hull.shape[0] >= 4:
-                hull = new_hull
+                hull_points = new_hull
 
-        if hull.shape[0] > 4:
-            curvature = abs(methods.GetAnglesPolyline(hull, closed=True))
+        if len(hull_points) > 4:
+            curvature = abs(methods.GetAnglesPolyline(hull_points, closed=True))
             most_acute_4_threshold = sorted(curvature)[3]
-            hull = hull[curvature <= most_acute_4_threshold]
+            hull_points = hull_points[curvature <= most_acute_4_threshold]
 
-        # verts space is flipped in y.
-        # we need to change the order of the hull vertecies
-        hull = hull[[1, 0, 3, 2], :, :]
+        # vertices space is flipped in y.
+        # we need to change the order of the hull_points vertecies
+        hull_points = hull_points[[1, 0, 3, 2], :, :]
 
-        # now we need to roll the hull verts until we have the right orientation:
-        # verts space has its origin at the image center.
+        # now we need to roll the hull_points vertices until we have the right orientation:
+        # vertices space has its origin at the image center.
         # adding 1 to the coordinates puts the origin at the top left.
         distance_to_top_left = np.sqrt(
-            (hull[:, :, 0] + 1) ** 2 + (hull[:, :, 1] + 1) ** 2
+            (hull_points[:, :, 0] + 1) ** 2 + (hull_points[:, :, 1] + 1) ** 2
         )
         bot_left_idx = np.argmin(distance_to_top_left) + 1
-        hull = np.roll(hull, -bot_left_idx, axis=0)
-        return hull
+        hull_points = np.roll(hull_points, -bot_left_idx, axis=0)
+        return hull_points
 
     def _get_trans_to_norm(self, verts):
         norm_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
