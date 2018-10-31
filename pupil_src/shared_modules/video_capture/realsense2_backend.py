@@ -48,33 +48,18 @@ class ColorFrame(object):
         self.timestamp = timestamp
         self.index = index
 
-        # data.shape: (480, 640) for yuyv
         logger.debug("ColorFrame data.shape : " + str(data.shape))
-        # data is 480x640 uint16, but we need 480x640x2 uint8 to work
 
-        data = data[:, :, np.newaxis].view(dtype=np.uint8)
-        total_size = data.size
+        self.data = data[:, :, np.newaxis].view(dtype=np.uint8)
+        total_size = self.data.size
         y_plane = total_size // 2
         u_plane = y_plane // 2
-        logger.debug(data.shape)
         self._yuv = np.empty(total_size, dtype=np.uint8)
-        self._yuv[:y_plane] = data[:, :, 0].ravel()
-        self._yuv[y_plane : y_plane + u_plane] = data[:, ::2, 1].ravel()
-        self._yuv[y_plane + u_plane :] = data[:, 1::2, 1].ravel()
-        self._shape = data.shape[:2]  # (480, 640)
+        self._yuv[:y_plane] = self.data[:, :, 0].ravel()
+        self._yuv[y_plane : y_plane + u_plane] = self.data[:, ::2, 1].ravel()
+        self._yuv[y_plane + u_plane :] = self.data[:, 1::2, 1].ravel()
+        self._shape = self.data.shape[:2]
 
-        # channel1 = (data >> 8) & 0xFF
-        # channel2 = data & 0xFF
-
-        # self._yuv422 = np.stack((channel1, channel2), axis=2)
-
-        # logger.debug("ColorFrame self._yuv422.shape : " + str(self._yuv422.shape))
-
-        # self._shape = self._yuv422.shape[:2]  # (480, 640)
-        # logger.debug("ColorFrame self._shape : " + str(self._shape))
-        # self._yuv = np.empty(self._yuv422.size, dtype=np.uint8)
-        # logger.debug("ColorFrame self._yuv.shape : " + str(self._yuv.shape))
-        # (307200,)
         self._bgr = None
         self._gray = None
 
@@ -105,7 +90,7 @@ class ColorFrame(object):
     @property
     def bgr(self):
         if self._bgr is None:
-            self._bgr = cv2.cvtColor(self._yuv422, cv2.COLOR_YUV2BGR_YUYV)
+            self._bgr = cv2.cvtColor(self.data, cv2.COLOR_YUV2BGR_YUYV)
         return self._bgr
 
     @property
