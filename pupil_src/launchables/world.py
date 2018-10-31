@@ -169,6 +169,7 @@ def world(
         from hololens_relay import Hololens_Relay
 
         from background_helper import IPC_Logging_Task_Proxy
+
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
         # UI Platform tweaks
@@ -392,6 +393,8 @@ def world(
                     "mode": g_pool.detection_mapping_mode,
                 }
                 ipc_pub.notify(n)
+            elif subject == "set_min_calibration_confidence":
+                g_pool.min_calibration_confidence = n["value"]
             elif subject.startswith("meta.should_doc"):
                 ipc_pub.notify(
                     {"subject": "meta.doc", "actor": g_pool.app, "doc": world.__doc__}
