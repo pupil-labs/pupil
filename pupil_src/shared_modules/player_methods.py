@@ -13,7 +13,7 @@ import collections
 import glob
 import logging
 import os
-from itertools import chain
+from shutil import copy2
 
 import av
 import numpy as np
@@ -264,6 +264,8 @@ def update_recording_to_recent(rec_dir):
 
     if rec_version < VersionFormat("1.8"):
         update_recording_v14_v18(rec_dir)
+    if rec_version < VersionFormat("1.9"):
+        update_recording_v18_v19(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -282,6 +284,12 @@ def update_meta_info(rec_dir, meta_info):
     meta_info_path = os.path.join(rec_dir, "info.csv")
     with open(meta_info_path, "w", newline="", encoding="utf-8") as csvfile:
         csv_utils.write_key_value_file(csvfile, meta_info)
+
+
+def _update_info_version_to(new_version, rec_dir):
+    meta_info = load_meta_info(rec_dir)
+    meta_info["Data Format Version"] = new_version
+    update_meta_info(rec_dir, meta_info)
 
 
 def convert_pupil_mobile_recording_to_v094(rec_dir):
@@ -356,17 +364,12 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
 
 
 def update_recording_v074_to_v082(rec_dir):
-    meta_info_path = os.path.join(rec_dir, "info.csv")
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info["Data Format Version"] = "v0.8.2"
-    update_meta_info(rec_dir, meta_info)
+    _update_info_version_to("v0.8.2", rec_dir)
 
 
 def update_recording_v082_to_v083(rec_dir):
     logger.info("Updating recording from v0.8.2 format to v0.8.3 format")
     pupil_data = fm.load_object(os.path.join(rec_dir, "pupil_data"))
-    meta_info_path = os.path.join(rec_dir, "info.csv")
 
     for d in pupil_data["gaze_positions"]:
         if "base" in d:
@@ -374,17 +377,12 @@ def update_recording_v082_to_v083(rec_dir):
 
     fm.save_object(pupil_data, os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info["Data Format Version"] = "v0.8.3"
-
-    update_meta_info(rec_dir, meta_info)
+    _update_info_version_to("v0.8.3", rec_dir)
 
 
 def update_recording_v083_to_v086(rec_dir):
     logger.info("Updating recording from v0.8.3 format to v0.8.6 format")
     pupil_data = fm.load_object(os.path.join(rec_dir, "pupil_data"))
-    meta_info_path = os.path.join(rec_dir, "info.csv")
 
     for topic in pupil_data.keys():
         for d in pupil_data[topic]:
@@ -392,17 +390,12 @@ def update_recording_v083_to_v086(rec_dir):
 
     fm.save_object(pupil_data, os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info["Data Format Version"] = "v0.8.6"
-
-    update_meta_info(rec_dir, meta_info)
+    _update_info_version_to("v0.8.6", rec_dir)
 
 
 def update_recording_v086_to_v087(rec_dir):
     logger.info("Updating recording from v0.8.6 format to v0.8.7 format")
     pupil_data = fm.load_object(os.path.join(rec_dir, "pupil_data"))
-    meta_info_path = os.path.join(rec_dir, "info.csv")
 
     def _clamp_norm_point(pos):
         """realisitic numbers for norm pos should be in this range.
@@ -419,27 +412,16 @@ def update_recording_v086_to_v087(rec_dir):
 
     fm.save_object(pupil_data, os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info["Data Format Version"] = "v0.8.7"
-
-    update_meta_info(rec_dir, meta_info)
+    _update_info_version_to("v0.8.7", rec_dir)
 
 
 def update_recording_v087_to_v091(rec_dir):
     logger.info("Updating recording from v0.8.7 format to v0.9.1 format")
-    meta_info_path = os.path.join(rec_dir, "info.csv")
-
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info["Data Format Version"] = "v0.9.1"
-
-    update_meta_info(rec_dir, meta_info)
+    _update_info_version_to("v0.9.1", rec_dir)
 
 
 def update_recording_v091_to_v093(rec_dir):
     logger.info("Updating recording from v0.9.1 format to v0.9.3 format")
-    meta_info_path = os.path.join(rec_dir, "info.csv")
     pupil_data = fm.load_object(os.path.join(rec_dir, "pupil_data"))
     for g in pupil_data.get("gaze_positions", []):
         # fixing recordings made with bug https://github.com/pupil-labs/pupil/issues/598
@@ -447,15 +429,11 @@ def update_recording_v091_to_v093(rec_dir):
 
     fm.save_object(pupil_data, os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info["Data Format Version"] = "v0.9.3"
-    update_meta_info(rec_dir, meta_info)
+    _update_info_version_to("v0.9.3", rec_dir)
 
 
 def update_recording_v093_to_v094(rec_dir):
     logger.info("Updating recording from v0.9.3 to v0.9.4.")
-    meta_info_path = os.path.join(rec_dir, "info.csv")
 
     for file in os.listdir(rec_dir):
         if file.startswith(".") or os.path.splitext(file)[1] in (".mp4", ".avi"):
@@ -473,16 +451,12 @@ def update_recording_v093_to_v094(rec_dir):
             except:
                 logger.warning("did not convert {}".format(rec_file))
 
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info["Data Format Version"] = "v0.9.4"
-    update_meta_info(rec_dir, meta_info)
+    _update_info_version_to("v0.9.4", rec_dir)
 
 
 def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
     try:
         logger.info("Updating recording from v0.9.4 to v0.9.13")
-        meta_info_path = os.path.join(rec_dir, "info.csv")
 
         wav_file_loc = os.path.join(rec_dir, "audio.wav")
         aac_file_loc = os.path.join(rec_dir, "audio.mp4")
@@ -544,10 +518,7 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
             # raise RuntimeError
             np.save(audio_ts_loc, new_ts)
 
-        with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-            meta_info = csv_utils.read_key_value_file(csvfile)
-            meta_info["Data Format Version"] = "v0.9.13"
-        update_meta_info(rec_dir, meta_info)
+        _update_info_version_to("v0.9.13", rec_dir)
     except av.AVError as averr:
         # Try to catch `libav.aac : Input contains (near) NaN/+-Inf` errors
         # Unfortunately, the above error is only logged not raised. Instead
@@ -587,11 +558,7 @@ def update_recording_v0913_to_v0915(rec_dir):
     except IOError:
         pass
 
-    meta_info_path = os.path.join(rec_dir, "info.csv")
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info["Data Format Version"] = "v0.9.15"
-    update_meta_info(rec_dir, meta_info)
+    _update_info_version_to("v0.9.15", rec_dir)
 
 
 def update_recording_v0915_v13(rec_dir):
@@ -629,20 +596,12 @@ def update_recording_v0915_v13(rec_dir):
         )
         os.rename(video_loc, video_dst)
 
-    meta_info_path = os.path.join(rec_dir, "info.csv")
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info["Data Format Version"] = "v1.3"
-    update_meta_info(rec_dir, meta_info)
+    _update_info_version_to("v1.3", rec_dir)
 
 
 def update_recording_v13_v14(rec_dir):
     logger.info("Updating recording from v1.3 to v1.4")
-    meta_info_path = os.path.join(rec_dir, "info.csv")
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info["Data Format Version"] = "v1.4"
-    update_meta_info(rec_dir, meta_info)
+    _update_info_version_to("v1.4", rec_dir)
 
 
 def update_recording_v14_v18(rec_dir):
@@ -669,11 +628,37 @@ def update_recording_v14_v18(rec_dir):
 
                     writer.append(datum)
 
-    meta_info_path = os.path.join(rec_dir, "info.csv")
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info["Data Format Version"] = "v1.8"
-    update_meta_info(rec_dir, meta_info)
+    _update_info_version_to("v1.8", rec_dir)
+
+
+def update_recording_v18_v19(rec_dir):
+    logger.info("Updating recording from v1.8 to v1.9")
+
+    def copy_cached_annotations():
+        cache_dir = os.path.join(rec_dir, "offline_data")
+        cache_file = os.path.join(cache_dir, "annotations.pldata")
+        cache_ts_file = os.path.join(cache_dir, "annotations_timestamps.pldata")
+        annotation_file = os.path.join(rec_dir, "annotation.pldata")
+        annotation_ts_file = os.path.join(rec_dir, "annotation_timestamps.pldata")
+        if os.path.exists(cache_file):
+            logger.info("Version update: Copy annotations edited in Player.")
+            copy2(cache_file, annotation_file)
+            copy2(cache_ts_file, annotation_ts_file)
+
+    def copy_recorded_annotations():
+        logger.info("Version update: Copy recorded annotations.")
+        notifications = fm.load_pldata_file(rec_dir, "notify")
+        with fm.PLData_Writer(rec_dir, "annotation") as writer:
+            for idx, topic in enumerate(notifications.topics):
+                if topic == "notify.annotation":
+                    annotation = notifications.data[idx]
+                    ts = notifications.timestamps[idx]
+                    writer.append_serialized(ts, "annotation", annotation.serialized)
+
+    copy_cached_annotations()
+    copy_recorded_annotations()
+
+    _update_info_version_to("v1.9", rec_dir)
 
 
 def check_for_worldless_recording(rec_dir):
