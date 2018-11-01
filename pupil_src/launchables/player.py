@@ -304,17 +304,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             notification["_notify_time_"] = time() + 0.8
             g_pool.ipc_pub.notify(notification)
 
-        def open_plugin(plugin):
-            if plugin == "Select to load":
-                return
-            g_pool.plugins.add(plugin)
-
-        def purge_plugins():
-            for p in g_pool.plugins:
-                if p.__class__ in user_plugins:
-                    p.alive = False
-            g_pool.plugins.clean()
-
         def do_export(_):
             left_idx = g_pool.seek_control.trim_left
             right_idx = g_pool.seek_control.trim_right
