@@ -367,7 +367,9 @@ class Realsense2_Source(Base_Source):
         return formats
 
     def cleanup(self):
-        if self.pipeline_profile:
+        if self.depth_video_writer is not None:
+            self.stop_depth_recording()
+        if self.pipeline is not None and self.pipeline_profile is not None:
             self.pipeline.stop()
             self.pipeline_profile = None
 
@@ -473,11 +475,7 @@ class Realsense2_Source(Base_Source):
             self.menu.append(ui.Info_Text("Capture initialization failed."))
             return
 
-        # FIXME workaround to temporarily (until next PR) disable depth recording
-        switch_rec_depth = ui.Switch("record_depth", self, label="Record Depth Stream")
-        switch_rec_depth.read_only = True
-        self.menu.append(switch_rec_depth)
-
+        self.menu.append(ui.Switch("record_depth", self, label="Record Depth Stream"))
         self.menu.append(ui.Switch("preview_depth", self, label="Preview Depth"))
 
         color_sizes = sorted(self._available_modes[rs.stream.color], reverse=True)
@@ -607,9 +605,14 @@ class Realsense2_Source(Base_Source):
                 )
             else:
                 # set the first available device
-                device_id = self.context.query_devices()[0].get_info(
-                    rs.camera_info.serial_number
-                )
+                devices = self.context.query_devices()
+                if devices:
+                    device_id = devices[0].get_info(rs.camera_info.serial_number)
+                else:
+                    self.device_id = None
+                    logger.error("Cannot restart device. No device connected.")
+                    return
+
             self.device_id = device_id
 
         if color_frame_size is None:
@@ -629,11 +632,6 @@ class Realsense2_Source(Base_Source):
             except RuntimeError:
                 logger.warning("Tried to stop self.pipeline before starting.")
 
-        # self.pipeline = rs.pipeline(self.context)
-        # config = self._prep_configuration(
-        #     color_frame_size, color_fps, depth_frame_size, depth_fps
-        # )
-        # self.pipeline_profile = self.pipeline.start(config)
         self.notify_all(
             {
                 "subject": "realsense2_source.restart",
@@ -751,7 +749,7 @@ class Realsense2_Source(Base_Source):
 
     @property
     def online(self):
-        try:  # FIXME: this does not necessarily means "streaming"
+        try:
             self.pipeline.start()
             self.pipeline.stop()
             return False
@@ -760,7 +758,6 @@ class Realsense2_Source(Base_Source):
 
     @property
     def name(self):
-        # not the same as `if self.device:`!
         if self.pipeline_profile is not None:
             return self.pipeline_profile.get_device().get_info(rs.camera_info.name)
         else:
