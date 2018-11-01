@@ -92,12 +92,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         # from vis_scan_path import Vis_Scan_Path
         from vis_eye_video_overlay import Vis_Eye_Video_Overlay
         from seek_control import Seek_Control
-        from video_export_launcher import Video_Export_Launcher
         from offline_surface_tracker import Offline_Surface_Tracker
 
         # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
         from fixation_detector import Offline_Fixation_Detector
-        from batch_exporter import Batch_Exporter, Batch_Export
         from log_display import Log_Display
         from annotations import Annotation_Player
         from raw_data_exporter import Raw_Data_Exporter
@@ -108,8 +106,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from system_timelines import System_Timelines
         from blink_detection import Offline_Blink_Detection
         from audio_playback import Audio_Playback
-        from imotions_exporter import iMotions_Exporter
-        from eye_video_exporter import Eye_Video_Exporter
+        from video_export.plugins.imotions_exporter import iMotions_Exporter
+        from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
+        from video_export.plugins.world_video_exporter import World_Video_Exporter
 
         from background_helper import IPC_Logging_Task_Proxy
 
@@ -125,7 +124,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Seek_Control,
             Plugin_Manager,
             System_Graphs,
-            Batch_Export,
             System_Timelines,
             Audio_Playback,
         ]
@@ -140,8 +138,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             # Vis_Scan_Path,
             Offline_Fixation_Detector,
             Offline_Blink_Detection,
-            Batch_Exporter,
-            Video_Export_Launcher,
             Offline_Surface_Tracker,
             Raw_Data_Exporter,
             Annotation_Player,
@@ -149,6 +145,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Pupil_From_Recording,
             Offline_Pupil_Detection,
             Gaze_From_Recording,
+            World_Video_Exporter,
             iMotions_Exporter,
             Eye_Video_Exporter,
             Offline_Calibration,
@@ -482,7 +479,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             ("Vis_Circle", {}),
             ("System_Graphs", {}),
             ("System_Timelines", {}),
-            ("Video_Export_Launcher", {}),
+            ("World_Video_Exporter", {}),
+            ("Eye_Video_Exporter", {}),
             ("Pupil_From_Recording", {}),
             ("Gaze_From_Recording", {}),
             ("Audio_Playback", {}),
