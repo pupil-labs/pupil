@@ -211,14 +211,15 @@ class AV_Writer(object):
                 ):
                     break  # wait for next image
 
-    def close(self):
+    def close(self, export_timestamps=True):
         # only flush encoder if there has been at least one frame
         if self.configured:
             for packet in self.video_stream.encode(None):
                 self.container.mux(packet)
 
         self.container.close()  # throws RuntimeError if no frames were written
-        write_timestamps(self.file_loc, self.timestamps)
+        if export_timestamps:
+            write_timestamps(self.file_loc, self.timestamps)
 
     def release(self):
         self.close()
