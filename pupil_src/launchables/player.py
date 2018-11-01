@@ -480,7 +480,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             ("System_Graphs", {}),
             ("System_Timelines", {}),
             ("World_Video_Exporter", {}),
-            ("Eye_Video_Exporter", {}),
             ("Pupil_From_Recording", {}),
             ("Gaze_From_Recording", {}),
             ("Audio_Playback", {}),
