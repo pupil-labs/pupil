@@ -169,6 +169,7 @@ def world(
         from hololens_relay import Hololens_Relay
 
         from background_helper import IPC_Logging_Task_Proxy
+
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
         # UI Platform tweaks
@@ -364,10 +365,10 @@ def world(
 
         audio.audio_mode = session_settings.get("audio_mode", audio.default_audio_mode)
 
-        def handle_notifications(n):
-            subject = n["subject"]
+        def handle_notifications(noti):
+            subject = noti["subject"]
             if subject == "set_detection_mapping_mode":
-                if n["mode"] == "2d":
+                if noti["mode"] == "2d":
                     if (
                         "Vector_Gaze_Mapper"
                         in g_pool.active_gaze_mapping_plugin.class_name
@@ -376,22 +377,24 @@ def world(
                             "The gaze mapper is not supported in 2d mode. Please recalibrate."
                         )
                         g_pool.plugins.add(g_pool.plugin_by_name["Dummy_Gaze_Mapper"])
-                g_pool.detection_mapping_mode = n["mode"]
+                g_pool.detection_mapping_mode = noti["mode"]
             elif subject == "start_plugin":
                 g_pool.plugins.add(
-                    g_pool.plugin_by_name[n["name"]], args=n.get("args", {})
+                    g_pool.plugin_by_name[noti["name"]], args=noti.get("args", {})
                 )
             elif subject == "stop_plugin":
                 for p in g_pool.plugins:
-                    if p.class_name == n["name"]:
+                    if p.class_name == noti["name"]:
                         p.alive = False
                         g_pool.plugins.clean()
             elif subject == "eye_process.started":
-                n = {
+                noti = {
                     "subject": "set_detection_mapping_mode",
                     "mode": g_pool.detection_mapping_mode,
                 }
-                ipc_pub.notify(n)
+                ipc_pub.notify(noti)
+            elif subject == "set_min_calibration_confidence":
+                g_pool.min_calibration_confidence = noti["value"]
             elif subject.startswith("meta.should_doc"):
                 ipc_pub.notify(
                     {"subject": "meta.doc", "actor": g_pool.app, "doc": world.__doc__}
