@@ -149,7 +149,7 @@ class Realsense2_Source(Base_Source):
         depth_frame_rate=30,
         preview_depth=False,
         device_options=(),
-        record_depth=True,
+        record_depth=False,
     ):
         logger.debug("_init_ started")
         super().__init__(g_pool)
@@ -278,6 +278,9 @@ class Realsense2_Source(Base_Source):
             logger.debug("Pipeline started for device " + device_id)
             logger.debug("Stream profiles: " + str(self.stream_profiles))
 
+            self._intrinsics = load_intrinsics(
+                self.g_pool.user_dir, self.name, self.frame_size
+            )
             self.update_menu()
             self._needs_restart = False
 
@@ -430,8 +433,10 @@ class Realsense2_Source(Base_Source):
 
         try:
             color_frame, depth_frame = self.get_frames()
-        except Error:  # FIXME what kind of error?
-            logger.warning("Realsense failed to provide frames. Attempting to reinit.")
+        except RuntimeError as re:
+            logger.warning(
+                "Realsense failed to provide frames. Attempting to reinit. " + str(re)
+            )
             self._recent_frame = None
             self._recent_depth_frame = None
             self._needs_restart = True
@@ -468,7 +473,11 @@ class Realsense2_Source(Base_Source):
             self.menu.append(ui.Info_Text("Capture initialization failed."))
             return
 
-        self.menu.append(ui.Switch("record_depth", self, label="Record Depth Stream"))
+        # FIXME workaround to temporarily (until next PR) disable depth recording
+        switch_rec_depth = ui.Switch("record_depth", self, label="Record Depth Stream")
+        switch_rec_depth.read_only = True
+        self.menu.append(switch_rec_depth)
+
         self.menu.append(ui.Switch("preview_depth", self, label="Preview Depth"))
 
         color_sizes = sorted(self._available_modes[rs.stream.color], reverse=True)
@@ -753,8 +762,7 @@ class Realsense2_Source(Base_Source):
     def name(self):
         # not the same as `if self.device:`!
         if self.pipeline_profile is not None:
-            dev = self.pipeline_profile.get_device()
-            return dev.get_info(rs.camera_info.name)
+            return self.pipeline_profile.get_device().get_info(rs.camera_info.name)
         else:
             return "Ghost capture"
 
