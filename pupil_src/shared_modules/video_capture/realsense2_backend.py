@@ -338,9 +338,9 @@ class Realsense2_Source(Base_Source):
             if device_id == serial:
                 current_device = d
 
-        logger.debug("Found the current device: " + device_id)
         if current_device is None:
             return formats
+        logger.debug("Found the current device: " + device_id)
 
         sensors = current_device.query_sensors()
         for s in sensors:
@@ -354,14 +354,9 @@ class Realsense2_Source(Base_Source):
                 elif vp.format() not in (rs.format.z16, rs.format.yuyv):
                     continue
 
-                if stream_type not in formats:
-                    formats[stream_type] = {}
-
+                formats.setdefault(stream_type, {})
                 stream_resolution = (vp.width(), vp.height())
-
-                if stream_resolution not in formats[stream_type]:
-                    formats[stream_type][stream_resolution] = []
-                formats[stream_type][stream_resolution].append(vp.fps())
+                formats[stream_type].setdefault(stream_resolution, []).append(vp.fps())
 
         return formats
 
@@ -680,7 +675,6 @@ class Realsense2_Source(Base_Source):
 
     @property
     def frame_size(self):
-        # logger.debug("get frame_size")
         try:
             stream_profile = self.stream_profiles[rs.stream.color]
             return stream_profile.width(), stream_profile.height()
