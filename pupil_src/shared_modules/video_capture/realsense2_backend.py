@@ -210,7 +210,7 @@ class Realsense2_Source(Base_Source):
             self.update_menu()
             return
 
-        if self.pipeline_profile is not None and self.pipeline is not None:
+        if self.online:
             try:
                 self.pipeline.stop()  # only call Device.stop() if its context
             except:
@@ -369,7 +369,7 @@ class Realsense2_Source(Base_Source):
     def cleanup(self):
         if self.depth_video_writer is not None:
             self.stop_depth_recording()
-        if self.pipeline is not None and self.pipeline_profile is not None:
+        if self.online:
             self.pipeline.stop()
             self.pipeline_profile = None
 
@@ -379,7 +379,7 @@ class Realsense2_Source(Base_Source):
     # raise NotImplementedError("get_init_dict requested")
 
     def get_frames(self):
-        if self.pipeline and self.pipeline_profile:
+        if self.online:
             try:
                 frames = self.pipeline.wait_for_frames(TIMEOUT)
             except RuntimeError as e:
@@ -471,7 +471,7 @@ class Realsense2_Source(Base_Source):
 
         from pyglui import ui
 
-        if self.pipeline is None or self.pipeline_profile is None:
+        if not self.online:
             self.menu.append(ui.Info_Text("Capture initialization failed."))
             return
 
@@ -599,7 +599,7 @@ class Realsense2_Source(Base_Source):
     ):
         logger.debug("restart_device")
         if device_id is None:
-            if self.pipeline_profile is not None:  # already running
+            if self.online:  # already running
                 device_id = self.pipeline_profile.get_device().get_info(
                     rs.camera_info.serial_number
                 )
@@ -625,7 +625,7 @@ class Realsense2_Source(Base_Source):
             depth_fps = self.depth_frame_rate
         if device_options is None:
             device_options = []  # FIXME
-        if self.pipeline is not None and self.pipeline_profile is not None:
+        if self.online:
             try:
                 self.pipeline.stop()
                 self.pipeline_profile = None
@@ -749,16 +749,11 @@ class Realsense2_Source(Base_Source):
 
     @property
     def online(self):
-        try:
-            self.pipeline.start()
-            self.pipeline.stop()
-            return False
-        except RuntimeError:
-            return True
+        return self.pipeline_profile is not None and self.pipeline is not None
 
     @property
     def name(self):
-        if self.pipeline_profile is not None:
+        if self.online:
             return self.pipeline_profile.get_device().get_info(rs.camera_info.name)
         else:
             return "Ghost capture"
