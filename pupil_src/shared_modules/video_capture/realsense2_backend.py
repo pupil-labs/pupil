@@ -226,38 +226,13 @@ class Realsense2_Source(Base_Source):
             "_initialize_device: self._available_modes " + str(self._available_modes)
         )
 
-        # verify that requested framesize-fps values are compatible
-        if color_fps not in self._available_modes[rs.stream.color][color_frame_size]:
-            old_fps = color_fps
-            rates = [
-                abs(r - color_fps)
-                for r in self._available_modes[rs.stream.color][color_frame_size]
-            ]
-            best_rate_idx = rates.index(min(rates))
-            color_fps = self._available_modes[rs.stream.color][color_frame_size][
-                best_rate_idx
-            ]
-            logger.warning(
-                "{} fps is not supported for ({}) for Color Stream. Fallback to {} fps".format(
-                    old_fps, color_frame_size, color_fps
-                )
-            )
-
-        if depth_fps not in self._available_modes[rs.stream.depth][depth_frame_size]:
-            old_fps = depth_fps
-            rates = [
-                abs(r - depth_fps)
-                for r in self._available_modes[rs.stream.depth][depth_frame_size]
-            ]
-            best_rate_idx = rates.index(min(rates))
-            depth_fps = self._available_modes[rs.stream.depth][depth_frame_size][
-                best_rate_idx
-            ]
-            logger.warning(
-                "{} fps is not supported for ({}) for Depth Stream. Fallback to {} fps".format(
-                    old_fps, depth_frame_size, depth_fps
-                )
-            )
+        # make sure the frame rates are compatible with the given frame sizes
+        color_fps = self._get_valid_frame_rate(
+            rs.stream.color, color_frame_size, color_fps
+        )
+        depth_fps = self._get_valid_frame_rate(
+            rs.stream.depth, depth_frame_size, depth_fps
+        )
 
         config = self._prep_configuration(
             color_frame_size, color_fps, depth_frame_size, depth_fps
@@ -318,6 +293,30 @@ class Realsense2_Source(Base_Source):
             )
 
         return config
+
+    def _get_valid_frame_rate(self, stream_type, frame_size, fps):
+        assert stream_type == rs.stream.color or stream_type == rs.stream.depth
+
+        if frame_size not in self._available_modes[stream_type]:
+            logger.error(
+                "Frame size not supported for {}: {}".format(stream_type, frame_size)
+            )
+            return None
+
+        if fps not in self._available_modes[stream_type][frame_size]:
+            old_fps = fps
+            rates = [
+                abs(r - fps) for r in self._available_modes[stream_type][frame_size]
+            ]
+            best_rate_idx = rates.index(min(rates))
+            fps = self._available_modes[stream_type][frame_size][best_rate_idx]
+            logger.warning(
+                "{} fps is not supported for ({}) for Color Stream. Fallback to {} fps".format(
+                    old_fps, frame_size, fps
+                )
+            )
+
+        return fps
 
     def _enumerate_formats(self, device_id):
         """Enumerate formats into hierachical structure:
