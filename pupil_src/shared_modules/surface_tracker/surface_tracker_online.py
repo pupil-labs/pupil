@@ -97,6 +97,7 @@ class Surface_Tracker_Online(Surface_Tracker):
 
     def recent_events(self, events):
         if self.freeze_scene:
+            # If frozen, we overwrite the frame event with the last frame we have saved
             current_frame = events.get("frame")
             events["frame"] = self.current_frame
 
@@ -111,6 +112,8 @@ class Surface_Tracker_Online(Surface_Tracker):
             self._update_surface_heatmaps()
 
         if self.freeze_scene:
+            # After we are done, we put the actual current_frame back, so other
+            # plugins can access it.
             events["frame"] = current_frame
 
     def _update_markers(self, frame):
