@@ -71,7 +71,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.cache_filler = None
         self._init_marker_cache()
         self.last_cache_update_ts = time.time()
-        self.CACHE_UPDATE_INTERVAL = 5
+        self.CACHE_UPDATE_INTERVAL_SEC = 5
 
         self.gaze_on_surf_buffer = None
         self.gaze_on_surf_buffer_filler = None
@@ -121,19 +121,18 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.inverted_markers = previous_cache.get("inverted_markers", False)
             self._recalculate_marker_cache()
         else:
-            self.marker_cache_unfiltered = []
+            marker_cache_unfiltered = []
             for markers in cache:
+                # Loaded markers are either False, [] or a list of dictionaries. We
+                # need to convert the dictionaries into Square_Marker_Detection objects.
                 if markers:
+
                     markers = [
                         Square_Marker_Detection(*args) if args else None
                         for args in markers
                     ]
-                    self.marker_cache_unfiltered.append(markers)
-                else:
-                    self.marker_cache_unfiltered.append(markers)
-            marker_cache_unfiltered = Cache_List(
-                self.marker_cache_unfiltered, positive_eval_fn=_cache_positive_eval_fn
-            )
+                marker_cache_unfiltered.append(markers)
+
             self._recalculate_marker_cache(previous_state=marker_cache_unfiltered)
             self.inverted_markers = previous_cache.get("inverted_markers", False)
             logger.debug("Restored previous marker cache.")
@@ -167,12 +166,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         marker_cache = []
         for markers in self.marker_cache_unfiltered:
             if markers:
-                markers = [
-                    m
-                    for m in markers
-                    if m.perimeter >= self.marker_min_perimeter
-                    and m.id_confidence >= self.marker_min_confidence
-                ]
+                markers = self._filter_markers(markers)
             marker_cache.append(markers)
         self.marker_cache = Cache_List(
             marker_cache, positive_eval_fn=_cache_positive_eval_fn
@@ -199,23 +193,25 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def recent_events(self, events):
         super().recent_events(events)
+        self._fetch_data_from_bg_fillers()
 
+    def _fetch_data_from_bg_fillers(self):
         if self.gaze_on_surf_buffer_filler is not None:
-            for gof in self.gaze_on_surf_buffer_filler.fetch():
+            for gaze in self.gaze_on_surf_buffer_filler.fetch():
                 try:
-                    self.gaze_on_surf_buffer.append(gof)
+                    self.gaze_on_surf_buffer.append(gaze)
                 except AttributeError:
                     self.gaze_on_surf_buffer = []
-                    self.gaze_on_surf_buffer.append(gof)
+                    self.gaze_on_surf_buffer.append(gaze)
 
             # fixations will be gathered additionally to gaze if we want to make an export
             if self.fixations_on_surf_buffer_filler is not None:
-                for gof in self.fixations_on_surf_buffer_filler.fetch():
+                for fixation in self.fixations_on_surf_buffer_filler.fetch():
                     try:
-                        self.fixations_on_surf_buffer.append(gof)
+                        self.fixations_on_surf_buffer.append(fixation)
                     except AttributeError:
                         self.fixations_on_surf_buffer = []
-                        self.fixations_on_surf_buffer.append(gof)
+                        self.fixations_on_surf_buffer.append(fixation)
 
             # Once all background processes are completed, update and export!
             if self.gaze_on_surf_buffer_filler.completed and (
@@ -233,23 +229,26 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     def _update_markers(self, frame):
         if self.cache_filler is not None:
             self._update_marker_and_surface_caches()
-        # Move seek index to current frame if caches do not contain data for it
+
         self.markers = self.marker_cache[frame.index]
         self.markers_unfiltered = self.marker_cache_unfiltered[frame.index]
         if self.markers is False:
+            # Move seek index to current frame because caches do not contain data for it
             self.markers = []
             self.markers_unfiltered = []
             self.cache_seek_idx.value = frame.index
 
     def _update_marker_and_surface_caches(self):
-        for idx, markers in self.cache_filler.fetch():
+        for frame_index, markers in self.cache_filler.fetch():
             markers = self._remove_duplicate_markers(markers)
-            self.marker_cache_unfiltered.update(idx, markers)
+            self.marker_cache_unfiltered.update(frame_index, markers)
             markers_filtered = self._filter_markers(markers)
-            self.marker_cache.update(idx, markers_filtered)
+            self.marker_cache.update(frame_index, markers_filtered)
 
             for surface in self.surfaces:
-                surface.update_location_cache(idx, self.marker_cache, self.camera_model)
+                surface.update_location_cache(
+                    frame_index, self.marker_cache, self.camera_model
+                )
 
         if self.cache_filler.completed:
             self.cache_filler = None
@@ -260,7 +259,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.save_surface_definitions_to_file()
 
         now = time.time()
-        if now - self.last_cache_update_ts > self.CACHE_UPDATE_INTERVAL:
+        if now - self.last_cache_update_ts > self.CACHE_UPDATE_INTERVAL_SEC:
             self._save_marker_cache()
             self.last_cache_update_ts = now
 

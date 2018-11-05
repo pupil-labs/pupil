@@ -65,7 +65,7 @@ class Surface_Offline(Surface):
         if not self.defined:
             self._fill_definition_from_cache(camera_model, frame_idx, marker_cache)
 
-        self._update_from_location_cache_filler()
+        self._fetch_from_location_cache_filler()
         try:
             location = self.location_cache[frame_idx]
         except (TypeError, AttributeError):
@@ -124,7 +124,7 @@ class Surface_Offline(Surface):
             if self.on_surface_changed is not None:
                 self.on_surface_changed(self)
 
-    def _update_from_location_cache_filler(self):
+    def _fetch_from_location_cache_filler(self):
         if self.location_cache_filler is not None:
             for cache_idx, location in self.location_cache_filler.fetch():
                 self.location_cache.update(cache_idx, location, force=True)
