@@ -153,8 +153,6 @@ def _export_world_video(
         name_by_index = [p.__name__ for p in available_plugins]
         plugin_by_name = dict(zip(name_by_index, available_plugins))
 
-        pm.update_recording_to_recent(rec_dir)
-
         audio_path = os.path.join(rec_dir, "audio.mp4")
 
         meta_info = pm.load_meta_info(rec_dir)
@@ -280,7 +278,9 @@ def _export_world_video(
         effective_fps = float(current_frame) / duration
 
         result = "Export done: Exported {} frames to {}. This took {} seconds. Exporter ran at {} frames per second."
-        logger.info(result.format(current_frame, out_file_path, duration, effective_fps))
+        logger.info(
+            result.format(current_frame, out_file_path, duration, effective_fps)
+        )
         yield "Export done. This took {:.0f} seconds.".format(duration), current_frame
 
     except GeneratorExit:
