@@ -47,9 +47,7 @@ class Surface_Offline(Surface):
         section_gaze_on_surf = []
         for frame_idx, location in enumerate(location_cache):
             frame_idx += section.start
-
             if location and location.detected:
-
                 frame_window = player_methods.enclosing_window(
                     all_world_timestamps, frame_idx
                 )
@@ -65,54 +63,16 @@ class Surface_Offline(Surface):
 
     def update_location(self, frame_idx, marker_cache, camera_model):
         if not self.defined:
-
-            def_idx = self.start_idx
-            while not self.defined:
-                # End of the video, start from the beginning!
-                if def_idx == len(marker_cache) and frame_idx > 0:
-                    def_idx = 0
-
-                try:
-                    if marker_cache[def_idx] is False:
-                        break
-                except TypeError:
-                    # start_idx was not yet defined! Current frame will become first
-                    # frame to define this surface.
-                    def_idx = self.start_idx = frame_idx
-
-                if def_idx not in self.observations_frame_idxs:
-                    markers = marker_cache[def_idx]
-                    markers = {m.id: m for m in markers}
-                    self._update_definition(def_idx, markers, camera_model)
-
-                # Stop searching if we looped once through the entire recording
-                if def_idx == frame_idx - 1:
-                    self.build_up_status = 1.0
-                    self.prune_markers()
-                    break
-
-                def_idx += 1
-
-            if self.defined:
-                # All previous detections were preliminary, devalidate them.
-                self.location_cache = None
-                if self.on_surface_changed is not None:
-                    self.on_surface_changed(self)
+            self._fill_definition_from_cache(camera_model, frame_idx, marker_cache)
 
         try:
-            if self.location_cache_filler is not None:
-                for cache_idx, location in self.location_cache_filler.fetch():
-                    self.location_cache.update(cache_idx, location, force=True)
-
-                if self.location_cache_filler.completed:
-                    self.location_cache_filler = None
-                    self.on_surface_changed(self)
-
+            self._update_from_location_cache_filler()
             location = self.location_cache[frame_idx]
         except (TypeError, AttributeError):
             location = False
             self._recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
+        # If location is False the cache was not filled at the current position yet.
         if location is False:
             if not marker_cache[frame_idx] is False:
                 logging.debug("On demand surface cache update!")
@@ -129,6 +89,49 @@ class Surface_Offline(Surface):
         self.img_to_surf_trans = location.img_to_surf_trans
         self.surf_to_img_trans = location.surf_to_img_trans
         self.num_detected_markers = location.num_detected_markers
+
+    def _fill_definition_from_cache(self, camera_model, frame_idx, marker_cache):
+        def_idx = self.start_idx
+        while not self.defined:
+            # End of the video, start from the beginning!
+            if def_idx == len(marker_cache) and frame_idx > 0:
+                def_idx = 0
+
+            try:
+                if marker_cache[def_idx] is False:
+                    break
+            except TypeError:
+                # start_idx was not yet defined! Current frame will become first
+                # frame to define this surface.
+                def_idx = self.start_idx = frame_idx
+
+            if def_idx not in self.observations_frame_idxs:
+                markers = marker_cache[def_idx]
+                markers = {m.id: m for m in markers}
+                self._update_definition(def_idx, markers, camera_model)
+
+            # Stop searching if we looped once through the entire recording
+            if def_idx == frame_idx - 1:
+                self.build_up_status = 1.0
+                self.prune_markers()
+                break
+
+            def_idx += 1
+
+        else:
+            # All previous detections were preliminary, devalidate them.
+            self.location_cache = None
+            if self.on_surface_changed is not None:
+                self.on_surface_changed(self)
+
+    def _update_from_location_cache_filler(self):
+        if self.location_cache_filler is not None:
+            for cache_idx, location in self.location_cache_filler.fetch():
+                self.location_cache.update(cache_idx, location, force=True)
+
+            if self.location_cache_filler.completed:
+                self.location_cache_filler = None
+                self.on_surface_changed(self)
 
     def update_location_cache(self, frame_idx, marker_cache, camera_model):
         """ Update a single entry in the location cache."""
