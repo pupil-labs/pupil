@@ -67,9 +67,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.inverted_markers = inverted_markers
 
         self.robust_detection = True
-        self._load_surface_definitions_from_file()
+        self._add_surfaces_from_file()
 
-    def _load_surface_definitions_from_file(self):
+    def _add_surfaces_from_file(self):
         surface_definitions = file_methods.Persistent_Dict(
             os.path.join(self._save_dir, "surface_definitions")
         )
@@ -142,6 +142,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
 
         try:
+            # _update_ui is called when surfaces from a previous session are
+            # restored. This happens before the UI is initialized, so we need to skip
+            #  execution inthis case.
             self.menu.elements[:] = []
         except AttributeError:
             return
