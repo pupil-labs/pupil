@@ -35,7 +35,7 @@ class Surface_Offline(Surface):
         self.cache_seek_idx = mp.Value("i", 0)
         self.location_cache_filler = None
         self.observations_frame_idxs = []
-        self.on_surface_changed = None
+        self.on_surface_change = None
         self.start_idx = None
 
     def map_section(self, section, all_world_timestamps, all_gaze_events, camera_model):
@@ -122,8 +122,8 @@ class Surface_Offline(Surface):
         else:
             # All previous detections were preliminary, devalidate them.
             self.location_cache = None
-            if self.on_surface_changed is not None:
-                self.on_surface_changed(self)
+            if self.on_surface_change is not None:
+                self.on_surface_change(self)
 
     def _fetch_from_location_cache_filler(self):
         if self.location_cache_filler is not None:
@@ -132,7 +132,7 @@ class Surface_Offline(Surface):
 
             if self.location_cache_filler.completed:
                 self.location_cache_filler = None
-                self.on_surface_changed(self)
+                self.on_surface_change(self)
 
     def update_location_cache(self, frame_idx, marker_cache, camera_model):
         """ Update a single entry in the location cache."""
