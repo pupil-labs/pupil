@@ -60,12 +60,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.timeline_line_height = 16
         self.Surface_Class = Surface_Offline
         super().__init__(g_pool, marker_min_perimeter, inverted_markers)
-        self.ui_info_text = "The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here. \n \n Press the export button or type 'e' to start the export."
-        self.supported_heatmap_modes = [
-            Heatmap_Mode.WITHIN_SURFACE,
-            Heatmap_Mode.ACROSS_SURFACES,
-        ]
-
         self.order = 0.2
 
         # Caches
@@ -96,6 +90,19 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     @property
     def has_freeze_feature(self):
         return False
+
+    @property
+    def ui_info_text(self):
+        return (
+            "The offline surface tracker will look for markers in the entire "
+            "video. By default it uses surfaces defined in capture. You can "
+            "change and add more surfaces here. \n \n Press the export button or "
+            "type 'e' to start the export."
+        )
+
+    @property
+    def supported_heatmap_modes(self):
+        return [Heatmap_Mode.WITHIN_SURFACE, Heatmap_Mode.ACROSS_SURFACES]
 
     def _init_marker_cache(self):
         previous_cache = file_methods.Persistent_Dict(

@@ -35,9 +35,6 @@ class Surface_Tracker_Online(Surface_Tracker):
             inverted_markers=inverted_markers,
         )
 
-        self.ui_info_text = "This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*."
-        self.supported_heatmap_modes = [Heatmap_Mode.WITHIN_SURFACE]
-
         self.menu = None
         self.button = None
         self.add_button = None
@@ -49,6 +46,19 @@ class Surface_Tracker_Online(Surface_Tracker):
     @property
     def has_freeze_feature(self):
         return True
+
+    @property
+    def ui_info_text(self):
+        return (
+            "This plugin detects and tracks fiducial markers visible in the "
+            "scene. You can define surfaces using 1 or more marker visible within"
+            " the world view by clicking *add surface*. You can edit defined "
+            "surfaces by selecting *Surface edit mode*."
+        )
+
+    @property
+    def supported_heatmap_modes(self):
+        return [Heatmap_Mode.WITHIN_SURFACE]
 
     def _update_ui_custom(self):
         def set_freeze_scene(val):
@@ -74,7 +84,7 @@ class Surface_Tracker_Online(Surface_Tracker):
 
         s_menu.append(
             pyglui.ui.Text_Input(
-                "gaze_history_length",
+                "GAZE_HISTORY_LENGTH",
                 surface,
                 label="Gaze History Length [seconds]",
                 setter=set_gaze_hist_len,

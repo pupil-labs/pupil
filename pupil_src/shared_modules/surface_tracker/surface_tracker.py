@@ -57,7 +57,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.surfaces = []
         self.markers = []
         self.markers_unfiltered = []
-        self.markers_dict = []
+        self.previous_markers = []
         self._edit_surf_verts = []
         self._last_mouse_pos = (0.0, 0.0)
         self.gui = gui.GUI(self)
@@ -68,10 +68,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
         self.robust_detection = True
         self._load_surface_definitions_from_file()
-
-        # The following values need to be overwritten by child classes
-        self.ui_info_text = None
-        self.supported_heatmap_modes = None
 
     def _load_surface_definitions_from_file(self):
         surface_definitions = file_methods.Persistent_Dict(
@@ -98,6 +94,16 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     @property
     @abstractmethod
     def has_freeze_feature(self):
+        pass
+
+    @property
+    @abstractmethod
+    def ui_info_text(self):
+        pass
+
+    @property
+    @abstractmethod
+    def supported_heatmap_modes(self):
         pass
 
     def init_ui(self):
@@ -316,7 +322,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 gray,
                 grid_size=5,
                 aperture=11,
-                prev_markers=self.markers_dict,
+                prev_markers=self.previous_markers,
                 true_detect_every_frame=3,
                 min_marker_perimeter=self.marker_min_perimeter,
                 invert_image=self.inverted_markers,
@@ -330,7 +336,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
 
         # Robust marker detection requires previous markers to be in a different format than the surface tracker.
-        self.markers_dict = markers
+        self.previous_markers = markers
         markers = [
             Square_Marker_Detection(
                 m["id"], m["id_confidence"], m["verts"], m["perimeter"]
