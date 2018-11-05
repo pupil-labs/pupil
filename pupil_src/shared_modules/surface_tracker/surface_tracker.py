@@ -380,7 +380,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         return markers
 
     @abstractmethod
-    def _update_surface_locations(self, idx):
+    def _update_surface_locations(self, frame_index):
         pass
 
     @abstractmethod

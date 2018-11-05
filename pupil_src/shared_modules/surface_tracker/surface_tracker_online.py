@@ -119,9 +119,9 @@ class Surface_Tracker_Online(Surface_Tracker):
     def _update_markers(self, frame):
         self._detect_markers(frame)
 
-    def _update_surface_locations(self, idx):
+    def _update_surface_locations(self, frame_index):
         for surface in self.surfaces:
-            surface.update_location(idx, self.markers, self.camera_model)
+            surface.update_location(frame_index, self.markers, self.camera_model)
 
     def _update_surface_corners(self):
         for surface, corner_idx in self._edit_surf_verts:
@@ -166,6 +166,3 @@ class Surface_Tracker_Online(Surface_Tracker):
         gl_utils.make_coord_system_pixel_based(
             (self.g_pool.capture.frame_size[1], self.g_pool.capture.frame_size[0], 3)
         )
-
-    def deinit_ui(self):
-        super().deinit_ui()
