@@ -30,9 +30,9 @@ class Surface_Offline(Surface):
     """
 
     def __init__(self, name="unknown", init_dict=None):
+        self.location_cache = None
         super().__init__(name=name, init_dict=init_dict)
         self.cache_seek_idx = mp.Value("i", 0)
-        self.location_cache = None
         self.location_cache_filler = None
         self.observations_frame_idxs = []
         self.on_surface_changed = None
@@ -181,7 +181,8 @@ class Surface_Offline(Surface):
     def move_corner(self, frame_idx, marker_cache, corner_idx, new_pos, camera_model):
         super().move_corner(corner_idx, new_pos, camera_model)
 
-        # Soft reset of marker cache. This does not invoke a recalculation in the background. Full recalculation will happen once the surface corner was released.
+        # Reset of marker cache. This does not invoke a recalculation in the background.
+        # Full recalculation will happen once the surface corner was released.
         self.location_cache = Cache_List(
             [False] * len(marker_cache), positive_eval_fn=_cache_positive_eval_fn
         )
@@ -200,21 +201,13 @@ class Surface_Offline(Surface):
         try:
             cache_to_file = []
             for location in self.location_cache:
-                if location["dist_img_to_surf_trans"] is not None:
-                    location = location.copy()
-                    location["dist_img_to_surf_trans"] = location[
-                        "dist_img_to_surf_trans"
-                    ].tolist()
-                    location["surf_to_dist_img_trans"] = location[
-                        "surf_to_dist_img_trans"
-                    ].tolist()
-                    location["img_to_surf_trans"] = location[
-                        "img_to_surf_trans"
-                    ].tolist()
-                    location["surf_to_img_trans"] = location[
-                        "surf_to_img_trans"
-                    ].tolist()
-                cache_to_file.append(location)
+                if location is False:
+                    # We do not save partial marker caches
+                    cache_to_file = None
+                    break
+                else:
+                    location_searializable = location.get_serializable_copy()
+                cache_to_file.append(location_searializable)
             save_dict["cache"] = cache_to_file
         except TypeError:
             save_dict["cache"] = None
@@ -226,20 +219,12 @@ class Surface_Offline(Surface):
         super()._load_from_dict(init_dict)
         try:
             cache = init_dict["cache"]
-            for location in cache:
-                if location["dist_img_to_surf_trans"] is not None:
-                    location["dist_img_to_surf_trans"] = np.asarray(
-                        location["dist_img_to_surf_trans"]
-                    )
-                    location["surf_to_dist_img_trans"] = np.asarray(
-                        location["surf_to_dist_img_trans"]
-                    )
-                    location["img_to_surf_trans"] = np.asarray(
-                        location["img_to_surf_trans"]
-                    )
-                    location["surf_to_img_trans"] = np.asarray(
-                        location["surf_to_img_trans"]
-                    )
+            for cache_idx in range(len(cache)):
+                location = cache[cache_idx]
+                cache[cache_idx] = Surface_Location.load_from_serializable_copy(
+                    location
+                )
+
             self.location_cache = Cache_List(
                 cache, positive_eval_fn=_cache_positive_eval_fn
             )
