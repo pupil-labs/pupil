@@ -43,7 +43,12 @@ class ZMQ_handler(logging.Handler):
             self.socket.send(record_dict)
         except TypeError:
             # stringify `exc_info` since it includes unserializable objects
-            record_dict["exc_info"] = str(record_dict["exc_info"])
+            if record_dict["exc_info"]:  # do not convert if it is None
+                record_dict["exc_info"] = str(record_dict["exc_info"])
+            if record_dict["args"]:
+                # format message before sending to avoid serialization issues
+                record_dict['msg'] %= record_dict["args"]
+                record_dict["args"] = ()
             self.socket.send(record_dict)
 
 
