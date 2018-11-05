@@ -146,8 +146,10 @@ class Msg_Streamer(ZMQ_Socket):
         assert "topic" in payload, "`topic` field required in {}".format(payload)
 
         if "__raw_data__" not in payload:
-            self.socket.send_string(payload["topic"], flags=zmq.SNDMORE)
+            # IMPORTANT: serialize first! Else if there is an exception
+            # the next message will have an extra prepended frame
             serialized_payload = serializer.packb(payload, use_bin_type=True)
+            self.socket.send_string(payload["topic"], flags=zmq.SNDMORE)
             self.socket.send(serialized_payload)
         else:
             extra_frames = payload.pop("__raw_data__")
