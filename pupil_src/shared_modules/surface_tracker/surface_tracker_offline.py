@@ -471,7 +471,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     - gaze points on surface x
                     - gaze points not on any surface
 
-            report: surface visisbility
+            report: surface visibility
 
                 - total frames
                 - surface x visible framecount
@@ -801,7 +801,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def cleanup(self):
         super().cleanup()
-
         self._save_marker_cache()
 
     def _save_marker_cache(self):
