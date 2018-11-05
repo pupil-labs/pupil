@@ -204,8 +204,11 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def _per_surface_ui(self, surface):
         def set_name(val):
+            if val != surface.name:
+                return
+
             names = [x.name for x in self.surfaces]
-            if val in names and val != surface.name:
+            if val in names:
                 logger.warning("The name '{}' is already in use!".format(val))
                 return
 
@@ -311,7 +314,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self._update_markers(frame)
         self._update_surface_locations(frame.index)
         self._update_surface_corners()
-        self._add_surface_events(events, frame)
+        events["surfaces"] = self._create_surface_events(events, frame.timestamp)
 
     @abstractmethod
     def _update_markers(self, frame):
@@ -378,22 +381,23 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def _update_surface_corners(self):
         pass
 
-    def _add_surface_events(self, events, frame):
+    def _create_surface_events(self, events, timestamp):
         """
         Adds surface events to the current list of events.
 
         Args:
             events: Current list of events.
-            frame: The according world camera frame
+            timestamp: The timestamp of the current world camera frame
         """
-        events["surfaces"] = []
+        gaze_events = events.get("gaze", [])
+        fixation_events = events.get("fixations", [])
+
+        surface_events = []
         for surface in self.surfaces:
             if surface.detected:
-                gaze_events = events.get("gaze", [])
                 gaze_on_surf = surface.map_gaze_and_fixation_events(
                     gaze_events, self.camera_model
                 )
-                fixation_events = events.get("fixations", [])
                 fixations_on_surf = surface.map_gaze_and_fixation_events(
                     fixation_events, self.camera_model
                 )
@@ -405,9 +409,11 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                     "img_to_surf_trans": surface.img_to_surf_trans.tolist(),
                     "gaze_on_surf": gaze_on_surf,
                     "fixations_on_surf": fixations_on_surf,
-                    "timestamp": frame.timestamp,
+                    "timestamp": timestamp,
                 }
-                events["surfaces"].append(surface_event)
+                surface_events.append(surface_event)
+
+        return surface_events
 
     @abstractmethod
     def _update_surface_heatmaps(self):
