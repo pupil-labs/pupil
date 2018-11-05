@@ -63,12 +63,13 @@ class Surface_Offline(Surface):
 
     def update_location(self, frame_idx, marker_cache, camera_model):
         if not self.defined:
-            self._fill_definition_from_cache(camera_model, frame_idx, marker_cache)
+            self._build_definition_from_cache(camera_model, frame_idx, marker_cache)
 
         self._fetch_from_location_cache_filler()
         try:
             location = self.location_cache[frame_idx]
         except (TypeError, AttributeError):
+            # If any event devalidates the location_cache, it will be set to None.
             location = False
             self._recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
@@ -90,7 +91,7 @@ class Surface_Offline(Surface):
         self.surf_to_img_trans = location.surf_to_img_trans
         self.num_detected_markers = location.num_detected_markers
 
-    def _fill_definition_from_cache(self, camera_model, frame_idx, marker_cache):
+    def _build_definition_from_cache(self, camera_model, frame_idx, marker_cache):
         def_idx = self.start_idx
         while not self.defined:
             # End of the video, start from the beginning!

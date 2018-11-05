@@ -263,9 +263,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self._save_marker_cache()
             self.last_cache_update_ts = now
 
-    def _update_surface_locations(self, idx):
+    def _update_surface_locations(self, frame_index):
         for surface in self.surfaces:
-            surface.update_location(idx, self.marker_cache, self.camera_model)
+            surface.update_location(frame_index, self.marker_cache, self.camera_model)
 
     def _update_surface_corners(self):
         for surface, corner_idx in self._edit_surf_verts:
@@ -287,19 +287,18 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             gaze_on_surf = list(itertools.chain.from_iterable(gaze_on_surf))
             surface.update_heatmap(gaze_on_surf)
 
-        self._heatmap_update_requests = set()
+        self._heatmap_update_requests.clear()
 
     def _compute_across_surfaces_heatmap(self):
-
         if self.gaze_on_surf_buffer is None:
             gazes_all = []
         else:
             gazes_all = list(itertools.chain.from_iterable(self.gaze_on_surf_buffer))
 
         gazes_on_surf = []
-        for gof in gazes_all:
-            gof = [g for g in gof if g["on_surf"]]
-            gazes_on_surf.append(len(gof))
+        for gaze in gazes_all:
+            gaze = [g for g in gaze if g["on_surf"]]
+            gazes_on_surf.append(len(gaze))
 
         if gazes_on_surf:
             max_res = max(gazes_on_surf)
@@ -307,15 +306,15 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             if max_res > 0:
                 results *= 255.0 / max_res
             results = np.uint8(results)
-            results_c_maps = cv2.applyColorMap(results, cv2.COLORMAP_JET)
+            results_color_maps = cv2.applyColorMap(results, cv2.COLORMAP_JET)
 
-            for s, c_map in zip(self.surfaces, results_c_maps):
+            for surface, color_map in zip(self.surfaces, results_color_maps):
                 heatmap = np.ones((1, 1, 4), dtype=np.uint8) * 125
-                heatmap[:, :, :3] = c_map
-                s.across_surface_heatmap = heatmap
+                heatmap[:, :, :3] = color_map
+                surface.across_surface_heatmap = heatmap
         else:
-            for s in self.surfaces:
-                s.across_surface_heatmap = s.get_uniform_heatmap()
+            for surface in self.surfaces:
+                surface.across_surface_heatmap = surface.get_uniform_heatmap()
 
     def _fill_gaze_on_surf_buffer(self):
         if self.gaze_on_surf_buffer_filler is not None:
