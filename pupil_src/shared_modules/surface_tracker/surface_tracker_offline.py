@@ -290,13 +290,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self._heatmap_update_requests.clear()
 
     def _compute_across_surfaces_heatmap(self):
-        if self.gaze_on_surf_buffer is None:
-            gazes_all = []
-        else:
-            gazes_all = list(itertools.chain.from_iterable(self.gaze_on_surf_buffer))
-
         gazes_on_surf = []
-        for gaze in gazes_all:
+        for gaze in self.gaze_on_surf_buffer:
+            gaze = list(itertools.chain.from_iterable(gaze))
             gaze = [g for g in gaze if g["on_surf"]]
             gazes_on_surf.append(len(gaze))
 
