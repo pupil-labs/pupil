@@ -47,6 +47,7 @@ from surface_tracker.surface_offline import Surface_Offline
 
 class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     """
+    # TODO update docstring
     - Mostly extends the Surface Tracker with a cache
     Special version of surface tracker for use with videofile source.
     It uses a seperate process to search all frames in the world video file for markers.
@@ -58,21 +59,19 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         self.timeline_line_height = 16
-        self.Surface_Class = Surface_Offline
         super().__init__(g_pool, marker_min_perimeter, inverted_markers)
         self.order = 0.2
 
-        # Caches
-        self.marker_cache_version = 3
+        self.MARKER_CACHE_VERSION = 3
         # Also add very small detected markers to cache and filter cache afterwards
-        self.cache_min_marker_perimeter = 20
+        self.CACHE_MIN_MARKER_PERIMETER = 20
         self.cache_seek_idx = mp.Value("i", 0)
         self.marker_cache = None
         self.marker_cache_unfiltered = None
         self.cache_filler = None
         self._init_marker_cache()
         self.last_cache_update_ts = time.time()
-        self.cache_update_interval = 5
+        self.CACHE_UPDATE_INTERVAL = 5
 
         self.gaze_on_surf_buffer = None
         self.gaze_on_surf_buffer_filler = None
@@ -82,6 +81,10 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self._heatmap_update_requests = set()
         self.make_export = False
         self.export_params = None
+
+    @property
+    def Surface_Class(self):
+        return Surface_Offline
 
     @property
     def _save_dir(self):
@@ -113,7 +116,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         if cache is None:
             self._recalculate_marker_cache()
-        elif version != self.marker_cache_version:
+        elif version != self.MARKER_CACHE_VERSION:
             logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
             self.inverted_markers = previous_cache.get("inverted_markers", False)
             self._recalculate_marker_cache()
@@ -154,7 +157,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.cache_filler = background_tasks.background_video_processor(
             self.g_pool.capture.source_path,
             offline_utils.marker_detection_callable(
-                self.cache_min_marker_perimeter, self.inverted_markers
+                self.CACHE_MIN_MARKER_PERIMETER, self.inverted_markers
             ),
             list(self.marker_cache),
             self.cache_seek_idx,
@@ -257,7 +260,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.save_surface_definitions_to_file()
 
         now = time.time()
-        if now - self.last_cache_update_ts > self.cache_update_interval:
+        if now - self.last_cache_update_ts > self.CACHE_UPDATE_INTERVAL:
             self._save_marker_cache()
             self.last_cache_update_ts = now
 
@@ -783,7 +786,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         marker_cache_file["marker_cache_unfiltered"] = list(
             self.marker_cache_unfiltered
         )
-        marker_cache_file["version"] = self.marker_cache_version
+        marker_cache_file["version"] = self.MARKER_CACHE_VERSION
         marker_cache_file["inverted_markers"] = self.inverted_markers
         marker_cache_file.save()
 

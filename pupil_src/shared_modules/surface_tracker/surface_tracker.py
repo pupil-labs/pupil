@@ -27,7 +27,7 @@ from surface_tracker import gui, Square_Marker_Detection
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
     """
-
+    # TODO update docstring
     What happens on camera_model update?
 
     Marker cache is saved
@@ -80,6 +80,11 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     @property
     def camera_model(self):
         return self.g_pool.capture.intrinsics
+
+    @property
+    @abstractmethod
+    def Surface_Class(self):
+        pass
 
     @property
     @abstractmethod

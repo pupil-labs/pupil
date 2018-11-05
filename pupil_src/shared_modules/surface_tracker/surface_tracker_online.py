@@ -24,8 +24,8 @@ from surface_tracker.surface_online import Surface_Online
 
 
 class Surface_Tracker_Online(Surface_Tracker):
+    # TODO update docstring
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
-        self.Surface_Class = Surface_Online
         self.freeze_scene = False
         self.frozen_scene_frame = None
         self.frozen_scene_tex = None
@@ -38,6 +38,10 @@ class Surface_Tracker_Online(Surface_Tracker):
         self.menu = None
         self.button = None
         self.add_button = None
+
+    @property
+    def Surface_Class(self):
+        return Surface_Online
 
     @property
     def _save_dir(self):
