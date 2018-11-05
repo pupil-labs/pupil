@@ -410,8 +410,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 pass
             self.surfaces[-1].on_surface_changed = self.on_surface_change
 
-    def remove_surface(self, _):
-        super().remove_surface(_)
+    def remove_surface(self, surface):
+        super().remove_surface(surface)
         self.timeline.content_height -= self.timeline_line_height
 
     def on_notify(self, notification):

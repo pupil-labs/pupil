@@ -297,7 +297,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         )
 
         def remove_surf():
-            self.remove_surface(idx)
+            self.remove_surface(surface)
 
         s_menu.append(pyglui.ui.Button("remove", remove_surf))
         self.menu.append(s_menu)
@@ -341,7 +341,8 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 min_marker_perimeter=self.marker_min_perimeter,
             )
 
-        # Robust marker detection requires previous markers to be in a different format than the surface tracker.
+        # Robust marker detection requires previous markers to be in a different
+        # format than the surface tracker.
         self.previous_markers = markers
         markers = [
             Square_Marker_Detection(
@@ -433,9 +434,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         else:
             logger.warning("Can not add a new surface: No markers found in the image!")
 
-    def remove_surface(self, i):
-        self.gui.remove_surface(self.surfaces[i])
-        del self.surfaces[i]
+    def remove_surface(self, surface):
+        self.gui.remove_surface(surface)
+        self.surfaces.remove(surface)
         self._update_ui()
         self.save_surface_definitions_to_file()
 
