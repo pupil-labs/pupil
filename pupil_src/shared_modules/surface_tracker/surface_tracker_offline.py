@@ -290,17 +290,17 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self._heatmap_update_requests.clear()
 
     def _compute_across_surfaces_heatmap(self):
-        gazes_on_surf = []
+        gaze_counts_per_surf = []
         for gaze in self.gaze_on_surf_buffer:
             gaze = list(itertools.chain.from_iterable(gaze))
             gaze = [g for g in gaze if g["on_surf"]]
-            gazes_on_surf.append(len(gaze))
+            gaze_counts_per_surf.append(len(gaze))
 
-        if gazes_on_surf:
-            max_res = max(gazes_on_surf)
-            results = np.array(gazes_on_surf, dtype=np.float32)
-            if max_res > 0:
-                results *= 255.0 / max_res
+        if gaze_counts_per_surf:
+            max_count = max(gaze_counts_per_surf)
+            results = np.array(gaze_counts_per_surf, dtype=np.float32)
+            if max_count > 0:
+                results *= 255.0 / max_count
             results = np.uint8(results)
             results_color_maps = cv2.applyColorMap(results, cv2.COLORMAP_JET)
 
