@@ -58,9 +58,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     """
 
     order = 0.2
+    TIMELINE_LINE_HEIGHT = 16
 
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
-        self.timeline_line_height = 16
         super().__init__(g_pool, marker_min_perimeter, inverted_markers)
 
         self.MARKER_CACHE_VERSION = 3
@@ -185,12 +185,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             "Surface Tracker",
             self._gl_display_cache_bars,
             self._draw_labels,
-            self.timeline_line_height * (len(self.surfaces) + 1),
+            self.TIMELINE_LINE_HEIGHT * (len(self.surfaces) + 1),
         )
         self.g_pool.user_timelines.append(self.timeline)
         self.timeline.content_height = (
             len(self.surfaces) + 1
-        ) * self.timeline_line_height
+        ) * self.TIMELINE_LINE_HEIGHT
 
     def recent_events(self, events):
         super().recent_events(events)
@@ -369,7 +369,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for r in self.marker_cache.visited_ranges:
                 cached_ranges += ((ts[r[0]], 0), (ts[r[1]], 0))
 
-            gl.glTranslatef(0, scale * self.timeline_line_height / 2, 0)
+            gl.glTranslatef(0, scale * self.TIMELINE_LINE_HEIGHT / 2, 0)
             color = pyglui_utils.RGBA(0.8, 0.2, 0.2, 0.8)
             pyglui_utils.draw_polyline(
                 cached_ranges, color=color, line_type=gl.GL_LINES, thickness=scale * 4
@@ -395,23 +395,23 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             color = pyglui_utils.RGBA(0, 0.7, 0.3, 0.8)
 
             for surface in cached_surfaces:
-                gl.glTranslatef(0, scale * self.timeline_line_height, 0)
+                gl.glTranslatef(0, scale * self.TIMELINE_LINE_HEIGHT, 0)
                 pyglui_utils.draw_polyline(
                     surface, color=color, line_type=gl.GL_LINES, thickness=scale * 2
                 )
 
     def _draw_labels(self, width, height, scale):
-        self.glfont.set_size(self.timeline_line_height * 0.8 * scale)
+        self.glfont.set_size(self.TIMELINE_LINE_HEIGHT * 0.8 * scale)
         self.glfont.draw_text(width, 0, "Marker Cache")
         for idx, s in enumerate(self.surfaces):
-            gl.glTranslatef(0, self.timeline_line_height * scale, 0)
+            gl.glTranslatef(0, self.TIMELINE_LINE_HEIGHT * scale, 0)
             self.glfont.draw_text(width, 0, s.name)
 
     def add_surface(self, init_dict=None):
         super().add_surface(init_dict)
 
         try:
-            self.timeline.content_height += self.timeline_line_height
+            self.timeline.content_height += self.TIMELINE_LINE_HEIGHT
             self._fill_gaze_on_surf_buffer()
         except AttributeError:
             pass
@@ -419,7 +419,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def remove_surface(self, surface):
         super().remove_surface(surface)
-        self.timeline.content_height -= self.timeline_line_height
+        self.timeline.content_height -= self.TIMELINE_LINE_HEIGHT
 
     def on_notify(self, notification):
         super().on_notify(notification)
@@ -471,6 +471,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self._heatmap_update_requests.add(surface)
         self._fill_gaze_on_surf_buffer()
 
+    # TODO Do export entirely in the background
     def save_surface_statisics_to_file(self):
         """
         between in and out mark
