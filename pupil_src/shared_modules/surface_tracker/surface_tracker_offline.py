@@ -57,10 +57,11 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     See marker_tracker.py for more info on this marker tracker.
     """
 
+    order = 0.2
+
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         self.timeline_line_height = 16
         super().__init__(g_pool, marker_min_perimeter, inverted_markers)
-        self.order = 0.2
 
         self.MARKER_CACHE_VERSION = 3
         # Also add very small detected markers to cache and filter cache afterwards
@@ -227,8 +228,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 self.fixations_on_surf_buffer = None
 
     def _update_markers(self, frame):
-        if self.cache_filler is not None:
-            self._update_marker_and_surface_caches()
+        self._update_marker_and_surface_caches()
 
         self.markers = self.marker_cache[frame.index]
         self.markers_unfiltered = self.marker_cache_unfiltered[frame.index]
@@ -239,6 +239,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.cache_seek_idx.value = frame.index
 
     def _update_marker_and_surface_caches(self):
+        if self.cache_filler is None:
+            return
+
         for frame_index, markers in self.cache_filler.fetch():
             markers = self._remove_duplicate_markers(markers)
             self.marker_cache_unfiltered.update(frame_index, markers)
@@ -313,9 +316,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 surface.across_surface_heatmap = surface.get_uniform_heatmap()
 
     def _fill_gaze_on_surf_buffer(self):
-        if self.gaze_on_surf_buffer_filler is not None:
-            self.gaze_on_surf_buffer_filler.cancel()
-
         in_mark = self.g_pool.seek_control.trim_left
         out_mark = self.g_pool.seek_control.trim_right
         section = slice(in_mark, out_mark)
@@ -323,6 +323,18 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         all_world_timestamps = self.g_pool.timestamps
         all_gaze_events = self.g_pool.gaze_positions
 
+        self._start_gaze_buffer_filler(all_gaze_events, all_world_timestamps, section)
+
+        if self.make_export:
+            all_fixation_events = self.g_pool.fixations
+
+            self._start_fixation_buffer_filler(
+                all_fixation_events, all_world_timestamps, section
+            )
+
+    def _start_gaze_buffer_filler(self, all_gaze_events, all_world_timestamps, section):
+        if self.gaze_on_surf_buffer_filler is not None:
+            self.gaze_on_surf_buffer_filler.cancel()
         self.gaze_on_surf_buffer_filler = background_tasks.background_gaze_on_surface(
             self.surfaces,
             section,
@@ -331,19 +343,18 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.camera_model,
         )
 
-        if self.make_export:
-            if self.fixations_on_surf_buffer_filler is not None:
-                self.fixations_on_surf_buffer_filler.cancel()
-
-            all_fixation_events = self.g_pool.fixations
-
-            self.fixations_on_surf_buffer_filler = background_tasks.background_gaze_on_surface(
-                self.surfaces,
-                section,
-                all_world_timestamps,
-                all_fixation_events,
-                self.camera_model,
-            )
+    def _start_fixation_buffer_filler(
+        self, all_fixation_events, all_world_timestamps, section
+    ):
+        if self.fixations_on_surf_buffer_filler is not None:
+            self.fixations_on_surf_buffer_filler.cancel()
+        self.fixations_on_surf_buffer_filler = background_tasks.background_gaze_on_surface(
+            self.surfaces,
+            section,
+            all_world_timestamps,
+            all_fixation_events,
+            self.camera_model,
+        )
 
     def gl_display(self):
         if self.timeline:
@@ -397,10 +408,11 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.glfont.draw_text(width, 0, s.name)
 
     def add_surface(self, _=None, init_dict=None):
-        super().add_surface(init_dict=init_dict)
+        successfully_added = super().add_surface(init_dict=init_dict)
+
         # Plugin initialization loads surface definitions before UI is initialized.
         # Changing timeline height will fail in this case.
-        if self.markers or init_dict is not None:
+        if successfully_added:
             try:
                 self.timeline.content_height += self.timeline_line_height
                 self._fill_gaze_on_surf_buffer()

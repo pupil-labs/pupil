@@ -148,8 +148,9 @@ class Surface_Tracker_Online(Surface_Tracker):
     def add_surface(self, _=None, init_dict=None):
         if self.freeze_scene:
             logger.warning("Surfaces cannot be added while the scene is frozen!")
+            return False
         else:
-            super().add_surface(init_dict=init_dict)
+            return super().add_surface(init_dict=init_dict)
 
     def gl_display(self):
         if self.freeze_scene:

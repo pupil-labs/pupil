@@ -436,8 +436,10 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             self.surfaces.append(surface)
             self.gui.add_surface(surface)
             self._update_ui()
+            return True
         else:
             logger.warning("Can not add a new surface: No markers found in the image!")
+            return False
 
     def remove_surface(self, surface):
         self.gui.remove_surface(surface)
