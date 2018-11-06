@@ -73,19 +73,23 @@ def _no_change(_, frame):
     return frame.img
 
 
-def _add_pupil_ellipse(pupil_positions_of_eye):
+class _add_pupil_ellipse:
     """
-    Processing function for IsolatedFrameExporter.
+    Acts as a processing function for IsolatedFrameExporter.
     Renders pupil detection on top of eye images
+
+    This is a class because we need to store all
+    pupil positions for rendering.
     """
 
-    def add_pupil_ellipse(_, frame):
+    def __init__(self, pupil_positions_of_eye):
+        self._pupil_positions_of_eye = pupil_positions_of_eye
+
+    def __call__(self, _, frame):
         eye_image = frame.img
         try:
-            pupil_datum = pupil_positions_of_eye.by_ts(frame.timestamp)
+            pupil_datum = self._pupil_positions_of_eye.by_ts(frame.timestamp)
             draw_pupil_on_image(eye_image, pupil_datum)
         except ValueError:
             logger.warning("Inconsistent timestamps found in pupil data")
         return eye_image
-
-    return add_pupil_ellipse
