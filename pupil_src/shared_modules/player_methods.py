@@ -637,9 +637,9 @@ def update_recording_v18_v19(rec_dir):
     def copy_cached_annotations():
         cache_dir = os.path.join(rec_dir, "offline_data")
         cache_file = os.path.join(cache_dir, "annotations.pldata")
-        cache_ts_file = os.path.join(cache_dir, "annotations_timestamps.pldata")
+        cache_ts_file = os.path.join(cache_dir, "annotations_timestamps.npy")
         annotation_file = os.path.join(rec_dir, "annotation.pldata")
-        annotation_ts_file = os.path.join(rec_dir, "annotation_timestamps.pldata")
+        annotation_ts_file = os.path.join(rec_dir, "annotation_timestamps.npy")
         if os.path.exists(cache_file):
             logger.info("Version update: Copy annotations edited in Player.")
             copy2(cache_file, annotation_file)
