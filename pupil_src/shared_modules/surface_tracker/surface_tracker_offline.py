@@ -407,18 +407,15 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             gl.glTranslatef(0, self.timeline_line_height * scale, 0)
             self.glfont.draw_text(width, 0, s.name)
 
-    def add_surface(self, _=None, init_dict=None):
-        successfully_added = super().add_surface(init_dict=init_dict)
+    def add_surface(self, init_dict=None):
+        super().add_surface(init_dict)
 
-        # Plugin initialization loads surface definitions before UI is initialized.
-        # Changing timeline height will fail in this case.
-        if successfully_added:
-            try:
-                self.timeline.content_height += self.timeline_line_height
-                self._fill_gaze_on_surf_buffer()
-            except AttributeError:
-                pass
-            self.surfaces[-1].on_surface_change = self.on_surface_change
+        try:
+            self.timeline.content_height += self.timeline_line_height
+            self._fill_gaze_on_surf_buffer()
+        except AttributeError:
+            pass
+        self.surfaces[-1].on_surface_change = self.on_surface_change
 
     def remove_surface(self, surface):
         super().remove_surface(surface)

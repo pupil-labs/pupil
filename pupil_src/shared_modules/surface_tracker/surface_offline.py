@@ -232,7 +232,7 @@ class Surface_Offline(Surface):
         except (KeyError, TypeError):
             self.location_cache = None
 
-        try:
+        try:  # TODO add `added_in_player` intemediate dict level
             self.observations_frame_idxs = init_dict["observations_frame_idxs"]
             self.start_idx = init_dict["start_idx"]
         except KeyError:

@@ -75,7 +75,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         )
 
         for init_dict in surface_definitions.get("surfaces", []):
-            self.add_surface(init_dict=init_dict)
+            self.add_surface(init_dict)
 
     @property
     def camera_model(self):
@@ -116,7 +116,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.menu.label = self.pretty_class_name
         self.add_button = pyglui.ui.Thumb(
             "add_surface",
-            setter=self.add_surface,
+            setter=self.on_add_surface_click,
             getter=lambda: False,
             label="A",
             hotkey="a",
@@ -124,7 +124,15 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.g_pool.quickbar.append(self.add_button)
         self._update_ui()
 
-    def _update_ui(self):
+    def _update_ui(self):  # TODO Extract methods
+        try:
+            # _update_ui is called when surfaces from a previous session are
+            # restored. This happens before the UI is initialized, so we need to skip
+            #  execution inthis case.
+            self.menu.elements[:] = []
+        except AttributeError:
+            return
+
         def set_marker_min_perimeter(val):
             self.marker_min_perimeter = val
             self.notify_all(
@@ -146,13 +154,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 {"subject": "surface_tracker.marker_detection_params_changed"}
             )
 
-        try:
-            # _update_ui is called when surfaces from a previous session are
-            # restored. This happens before the UI is initialized, so we need to skip
-            #  execution inthis case.
-            self.menu.elements[:] = []
-        except AttributeError:
-            return
         self.menu.append(pyglui.ui.Info_Text(self.ui_info_text))
         self.menu.append(
             pyglui.ui.Switch("show_marker_ids", self.gui, label="Show Marker IDs")
@@ -169,7 +170,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 selection=[e for e in self.supported_heatmap_modes],
             )
         )
+
         self._update_ui_custom()
+
         advanced_menu = pyglui.ui.Growing_Menu("Marker Detection Parameters")
         advanced_menu.collapsed = True
         advanced_menu.append(
@@ -200,7 +203,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
         )
         self.menu.append(advanced_menu)
-        self.menu.append(pyglui.ui.Button("Add surface", self.add_surface))
+        self.menu.append(pyglui.ui.Button("Add surface", self.on_add_surface_click))
         for surface in self.surfaces:
             self._per_surface_ui(surface)
 
@@ -275,8 +278,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 }
             )
 
-        idx = self.surfaces.index(surface)
-        s_menu = pyglui.ui.Growing_Menu("{}".format(self.surfaces[idx].name))
+        s_menu = pyglui.ui.Growing_Menu("{}".format(surface.name))
         s_menu.collapsed = True
         s_menu.append(pyglui.ui.Text_Input("name", surface, setter=set_name))
         s_menu.append(
@@ -437,18 +439,19 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def gl_display(self):
         self.gui.update()
 
-    def add_surface(self, _=None, init_dict=None):
-        if self.markers or init_dict is not None:
-            surface = self.Surface_Class(
-                name="Surface {:}".format(len(self.surfaces) + 1), init_dict=init_dict
-            )
-            self.surfaces.append(surface)
-            self.gui.add_surface(surface)
-            self._update_ui()
-            return True
+    def on_add_surface_click(self, _=None):
+        if self.markers:
+            self.add_surface(init_dict=None)
         else:
             logger.warning("Can not add a new surface: No markers found in the image!")
-            return False
+
+    def add_surface(self, init_dict):
+        surface = self.Surface_Class(
+            name="Surface {:}".format(len(self.surfaces) + 1), init_dict=init_dict
+        )
+        self.surfaces.append(surface)
+        self.gui.add_surface(surface)
+        self._update_ui()
 
     def remove_surface(self, surface):
         self.gui.remove_surface(surface)
