@@ -79,14 +79,14 @@ class Surface_Tracker_Online(Surface_Tracker):
             )
         )
 
-    def _per_surface_ui_custom(self, surface, s_menu):
+    def _per_surface_ui_custom(self, surface, surf_menu):
         def set_gaze_hist_len(val):
             if val <= 0:
                 logger.warning("Gaze history length must be a positive number!")
                 return
             surface.gaze_history_length = val
 
-        s_menu.append(
+        surf_menu.append(
             pyglui.ui.Text_Input(
                 "GAZE_HISTORY_LENGTH",
                 surface,

@@ -227,6 +227,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             surface.name = val
 
         def set_x(val):
+            if val == surface.real_world_size["x"]:
+                return
+
             if val <= 0:
                 logger.warning("Surface size must be positive!")
                 return
@@ -240,6 +243,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
 
         def set_y(val):
+            if val == surface.real_world_size["y"]:
+                return
+
             if val <= 0:
                 logger.warning("Surface size must be positive!")
                 return
@@ -252,6 +258,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
 
         def set_hm_smooth(val):
+            if val == surface._heatmap_scale:
+                return
+
             surface._heatmap_scale = val
             val = 1 - val
             val *= 3
@@ -451,9 +460,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         if notification["subject"] == "surface_tracker.surfaces_changed":
             logger.info("Surfaces changed. Saving to file.")
             self.save_surface_definitions_to_file()
-        elif notification["subject"].startswith(
-            "surface_tracker.heatmap_params_changed"
-        ):
+        elif notification["subject"] == "surface_tracker.heatmap_params_changed":
             self.save_surface_definitions_to_file()
         elif notification["subject"].startswith("surface_tracker.surface_name_changed"):
             self.save_surface_definitions_to_file()
