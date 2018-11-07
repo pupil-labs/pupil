@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 import numpy as np
 
-from cache_list import Cache_List
+from surface_tracker.cache_list import Cache_List
 import player_methods
 
 from surface_tracker.surface import Surface, Surface_Location
@@ -128,7 +128,12 @@ class Surface_Offline(Surface):
     def _fetch_from_location_cache_filler(self):
         if self.location_cache_filler is not None:
             for cache_idx, location in self.location_cache_filler.fetch():
-                self.location_cache.update(cache_idx, location, force=True)
+                try:
+                    self.location_cache.update(cache_idx, location, force=True)
+                except AttributeError:
+                    self.location_cache_filler.cancel()
+                    self.location_cache_filler = None
+                    break
 
             if self.location_cache_filler.completed:
                 self.location_cache_filler = None
@@ -199,7 +204,9 @@ class Surface_Offline(Surface):
 
     def save_to_dict(self):
         save_dict = super().save_to_dict()
-        try:
+        if self.location_cache is None:
+            cache_to_file = None
+        else:
             cache_to_file = []
             for location in self.location_cache:
                 if location is False:
@@ -209,11 +216,12 @@ class Surface_Offline(Surface):
                 else:
                     location_searializable = location.get_serializable_copy()
                 cache_to_file.append(location_searializable)
-            save_dict["cache"] = cache_to_file
-        except TypeError:
-            save_dict["cache"] = None
-        save_dict["start_idx"] = self.start_idx
-        save_dict["observations_frame_idxs"] = self.observations_frame_idxs
+        save_dict["cache"] = cache_to_file
+
+        save_dict["added_in_player"] = {
+            "start_idx": self.start_idx,
+            "observations_frame_idxs": self.observations_frame_idxs,
+        }
         return save_dict
 
     def _load_from_dict(self, init_dict):
@@ -231,15 +239,18 @@ class Surface_Offline(Surface):
             )
         except (KeyError, TypeError):
             self.location_cache = None
+
         # TODO add `added_in_player` intemediate dict level
         try:
-            self.observations_frame_idxs = init_dict["observations_frame_idxs"]
-            self.start_idx = init_dict["start_idx"]
+            added_in_player = init_dict["added_in_player"]
         except KeyError:
             # If surface was created in Capture, we just accept it as is
             self.observations_frame_idxs = []
             self.start_idx = 0
             self.build_up_status = 1.0
+        else:
+            self.observations_frame_idxs = added_in_player["observations_frame_idxs"]
+            self.start_idx = added_in_player["start_idx"]
 
     def visible_count_in_section(self, section):
         """Count in how many frames the surface was visible in a section."""

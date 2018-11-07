@@ -32,9 +32,9 @@ import OpenGL.GL as gl
 
 from plugin import Analysis_Plugin_Base
 import file_methods
-from cache_list import Cache_List
 import player_methods
 
+from surface_tracker.cache_list import Cache_List
 from surface_tracker.surface_tracker import Surface_Tracker
 from surface_tracker import (
     offline_utils,
@@ -199,20 +199,13 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     def _fetch_data_from_bg_fillers(self):
         if self.gaze_on_surf_buffer_filler is not None:
             for gaze in self.gaze_on_surf_buffer_filler.fetch():
-                try:
-                    self.gaze_on_surf_buffer.append(gaze)
-                except AttributeError:
-                    self.gaze_on_surf_buffer = []
-                    self.gaze_on_surf_buffer.append(gaze)
+                self.gaze_on_surf_buffer.append(gaze)
 
-            # fixations will be gathered additionally to gaze if we want to make an export
+            # fixations will be gathered additionally to gaze if we want to make an
+            # export
             if self.fixations_on_surf_buffer_filler is not None:
                 for fixation in self.fixations_on_surf_buffer_filler.fetch():
-                    try:
-                        self.fixations_on_surf_buffer.append(fixation)
-                    except AttributeError:
-                        self.fixations_on_surf_buffer = []
-                        self.fixations_on_surf_buffer.append(fixation)
+                    self.fixations_on_surf_buffer.append(fixation)
 
             # Once all background processes are completed, update and export!
             if self.gaze_on_surf_buffer_filler.completed and (
@@ -335,6 +328,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     def _start_gaze_buffer_filler(self, all_gaze_events, all_world_timestamps, section):
         if self.gaze_on_surf_buffer_filler is not None:
             self.gaze_on_surf_buffer_filler.cancel()
+        self.gaze_on_surf_buffer = []
         self.gaze_on_surf_buffer_filler = background_tasks.background_gaze_on_surface(
             self.surfaces,
             section,
@@ -348,6 +342,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     ):
         if self.fixations_on_surf_buffer_filler is not None:
             self.fixations_on_surf_buffer_filler.cancel()
+        self.fixations_on_surf_buffer = []
         self.fixations_on_surf_buffer_filler = background_tasks.background_gaze_on_surface(
             self.surfaces,
             section,
@@ -419,6 +414,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def remove_surface(self, surface):
         super().remove_surface(surface)
+        self._heatmap_update_requests.remove(surface)
         self.timeline.content_height -= self.TIMELINE_LINE_HEIGHT
 
     def on_notify(self, notification):
