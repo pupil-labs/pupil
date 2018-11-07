@@ -47,14 +47,9 @@ from surface_tracker.surface_offline import Surface_Offline
 
 class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     """
-    # TODO update docstring
-    - Mostly extends the Surface Tracker with a cache
-    Special version of surface tracker for use with videofile source.
-    It uses a seperate process to search all frames in the world video file for markers.
-     - self.cache is a list containing marker positions for each frame.
-     - self.surfaces[i].cache is a list containing surface positions for each frame
-    Both caches are build up over time. The marker cache is also session persistent.
-    See marker_tracker.py for more info on this marker tracker.
+    The Surface_Tracker_Offline does marker based AOI tracking in a recording. All
+    marker and surface detections are calculated in the background and cached to reduce
+    computation.
     """
 
     order = 0.2

@@ -27,24 +27,8 @@ from surface_tracker import gui, Square_Marker_Detection
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
     """
-    # TODO update docstring
-    What happens on camera_model update?
-
-    Marker cache is saved
-    - While the marker bg process is running every 5 seconds
-    - When the marker bg process is finishing
-
-    Surfaces are saved when
-    - They are added
-    - The definition is completed
-    - A surface bg process finished
-    - The marker bg process finished
-
-    Heatmaps are updated when
-    - A surface bg process finished
-    - Trim markers change
-    - Surface parameters have changed
-
+    The Surface_Tracker provides the base functionality for a plugin that does marker
+    based AOI tracking.
     """
 
     icon_chr = chr(0xEC07)
@@ -124,7 +108,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.g_pool.quickbar.append(self.add_button)
         self._update_ui()
 
-    def _update_ui(self):  # TODO Extract methods
+    def _update_ui(self):
         try:
             # _update_ui is called when surfaces from a previous session are
             # restored. This happens before the UI is initialized, so we need to skip

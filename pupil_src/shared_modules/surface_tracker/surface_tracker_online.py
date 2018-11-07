@@ -24,7 +24,11 @@ from surface_tracker.surface_online import Surface_Online
 
 
 class Surface_Tracker_Online(Surface_Tracker):
-    # TODO update docstring
+    """
+    The Surface_Tracker_Online does marker based AOI tracking in real-time. All
+    necessary computation is done per frame.
+    """
+
     def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
         self.freeze_scene = False
         self.frozen_scene_frame = None
