@@ -529,7 +529,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self._export_surface_heatmap(
                 metrics_dir, surface.within_surface_heatmap, surface_name
             )
-            self._export_surface_image(metrics_dir, surface, surface_name)
             logger.info(
                 "Saved surface gaze and fixation data for '{}'".format(surface.name)
             )
@@ -537,37 +536,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         logger.info("Done exporting reference surface data.")
 
         self.make_export = False
-
-    def _export_surface_image(self, metrics_dir, surface, surface_name):
-        if surface.detected and self.current_frame is not None:
-            aspect_ratio = surface.real_world_size["y"] / surface.real_world_size["x"]
-            output_res = (500, int(500 * aspect_ratio))
-
-            norm_corners = np.array(((0, 0), (1, 0), (1, 1), (0, 1)), dtype=np.float32)
-            img_pixel_corners = surface.map_from_surf(
-                norm_corners, self.camera_model, compensate_distortion=False
-            )
-
-            output_corners = np.array(
-                ((0, output_res[1]), output_res, (output_res[0], 0), (0, 0)),
-                dtype=np.float32,
-            )
-            transformation = cv2.getPerspectiveTransform(
-                img_pixel_corners, output_corners
-            )
-
-            surf_img = cv2.warpPerspective(
-                self.current_frame.img, transformation, output_res
-            )
-            cv2.imwrite(
-                os.path.join(metrics_dir, "surface" + surface_name + ".png"), surf_img
-            )
-            logger.info("Saved current image as .png file.")
-        else:
-            logger.info(
-                "{} is not currently visible. Seek to an appropriate frame and "
-                "repeat to also export an image of the surface.".format(surface.name)
-            )
 
     def _export_surface_visibility(self, metrics_dir, section):
         with open(
