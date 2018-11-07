@@ -133,27 +133,15 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         except AttributeError:
             return
 
-        def set_marker_min_perimeter(val):
-            self.marker_min_perimeter = val
-            self.notify_all(
-                {
-                    "subject": "surface_tracker.marker_min_perimeter_changed",
-                    "delay": 0.5,
-                }
-            )
+        self._update_ui_visualization_menu()
+        self._update_ui_custom()
+        self._update_ui_marker_detection_menu()
 
-        def set_invert_image(val):
-            self.inverted_markers = val
-            self.notify_all(
-                {"subject": "surface_tracker.marker_detection_params_changed"}
-            )
+        self.menu.append(pyglui.ui.Button("Add surface", self.on_add_surface_click))
+        for surface in self.surfaces:
+            self._per_surface_ui(surface)
 
-        def set_robust_detection(val):
-            self.robust_detection = val
-            self.notify_all(
-                {"subject": "surface_tracker.marker_detection_params_changed"}
-            )
-
+    def _update_ui_visualization_menu(self):
         self.menu.append(pyglui.ui.Info_Text(self.ui_info_text))
         self.menu.append(
             pyglui.ui.Switch("show_marker_ids", self.gui, label="Show Marker IDs")
@@ -171,7 +159,30 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
         )
 
-        self._update_ui_custom()
+    def _update_ui_custom(self):
+        pass
+
+    def _update_ui_marker_detection_menu(self):
+        def set_marker_min_perimeter(val):
+            self.marker_min_perimeter = val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.marker_min_perimeter_changed",
+                    "delay": 0.5,
+                }
+            )
+
+        def set_inverted_markers(val):
+            self.inverted_markers = val
+            self.notify_all(
+                {"subject": "surface_tracker.marker_detection_params_changed"}
+            )
+
+        def set_robust_detection(val):
+            self.robust_detection = val
+            self.notify_all(
+                {"subject": "surface_tracker.marker_detection_params_changed"}
+            )
 
         advanced_menu = pyglui.ui.Growing_Menu("Marker Detection Parameters")
         advanced_menu.collapsed = True
@@ -187,7 +198,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             pyglui.ui.Switch(
                 "inverted_markers",
                 self,
-                setter=set_invert_image,
+                setter=set_inverted_markers,
                 label="Use inverted markers",
             )
         )
@@ -203,12 +214,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
         )
         self.menu.append(advanced_menu)
-        self.menu.append(pyglui.ui.Button("Add surface", self.on_add_surface_click))
-        for surface in self.surfaces:
-            self._per_surface_ui(surface)
-
-    def _update_ui_custom(self):
-        pass
 
     def _per_surface_ui(self, surface):
         def set_name(val):

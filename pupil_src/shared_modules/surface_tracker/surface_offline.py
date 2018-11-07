@@ -240,7 +240,6 @@ class Surface_Offline(Surface):
         except (KeyError, TypeError):
             self.location_cache = None
 
-        # TODO add `added_in_player` intemediate dict level
         try:
             added_in_player = init_dict["added_in_player"]
         except KeyError:
