@@ -1,11 +1,10 @@
 import background_helper
 
 # TODO clean this up!
-# TODO update Task_Proxy to use version with logging fixed
 
 
 def background_video_processor(video_file_path, callable, visited_list, seek_idx=-1):
-    return background_helper.Task_Proxy(
+    return background_helper.IPC_Logging_Task_Proxy(
         "Background Video Processor",
         video_processing_generator,
         (video_file_path, callable, seek_idx, visited_list),
@@ -105,7 +104,7 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
 
 
 def background_data_processor(data, callable, visited_list, seek_idx=-1):
-    return background_helper.Task_Proxy(
+    return background_helper.IPC_Logging_Task_Proxy(
         "Background Data Processor",
         data_processing_generator,
         (data, callable, seek_idx, visited_list),
@@ -177,7 +176,7 @@ def gaze_on_surface_generator(
 def background_gaze_on_surface(
     surfaces, section, all_gaze_timestamps, all_gaze_events, camera_model
 ):
-    return background_helper.Task_Proxy(
+    return background_helper.IPC_Logging_Task_Proxy(
         "Background Data Processor",
         gaze_on_surface_generator,
         (surfaces, section, all_gaze_timestamps, all_gaze_events, camera_model),

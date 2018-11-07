@@ -92,7 +92,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         # from vis_scan_path import Vis_Scan_Path
         from vis_eye_video_overlay import Vis_Eye_Video_Overlay
         from seek_control import Seek_Control
-        from video_export_launcher import Video_Export_Launcher
         from surface_tracker import Surface_Tracker_Offline
 
         # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
