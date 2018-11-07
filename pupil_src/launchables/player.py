@@ -97,7 +97,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
 
         # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
         from fixation_detector import Offline_Fixation_Detector
-        from batch_exporter import Batch_Exporter, Batch_Export
         from log_display import Log_Display
         from annotations import Annotation_Player
         from raw_data_exporter import Raw_Data_Exporter
@@ -108,8 +107,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from system_timelines import System_Timelines
         from blink_detection import Offline_Blink_Detection
         from audio_playback import Audio_Playback
-        from imotions_exporter import iMotions_Exporter
-        from eye_video_exporter import Eye_Video_Exporter
+        from video_export.plugins.imotions_exporter import iMotions_Exporter
+        from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
+        from video_export.plugins.world_video_exporter import World_Video_Exporter
+
+        from background_helper import IPC_Logging_Task_Proxy
+
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
             "1.23"
@@ -121,7 +125,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Seek_Control,
             Plugin_Manager,
             System_Graphs,
-            Batch_Export,
             System_Timelines,
             Audio_Playback,
         ]
@@ -136,8 +139,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             # Vis_Scan_Path,
             Offline_Fixation_Detector,
             Offline_Blink_Detection,
-            Batch_Exporter,
-            Video_Export_Launcher,
             Surface_Tracker_Offline,
             Raw_Data_Exporter,
             Annotation_Player,
@@ -145,6 +146,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Pupil_From_Recording,
             Offline_Pupil_Detection,
             Gaze_From_Recording,
+            World_Video_Exporter,
             iMotions_Exporter,
             Eye_Video_Exporter,
             Offline_Calibration,
@@ -238,7 +240,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             for f in glob(os.path.join(rec_dir, "world.*"))
             if os.path.splitext(f)[1] in valid_ext
         ][0]
-        init_playback_source(g_pool, timing="external", source_path=video_path)
+        init_playback_source(
+            g_pool, timing="external", source_path=video_path, buffered_decoding=True
+        )
 
         # load session persistent settings
         session_settings = Persistent_Dict(
@@ -280,7 +284,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.binocular = meta_info.get("Eye Mode", "monocular") == "binocular"
         g_pool.version = app_version
         g_pool.timestamps = g_pool.capture.timestamps
-        g_pool.get_timestamp = lambda: 0.
+        g_pool.get_timestamp = lambda: 0.0
         g_pool.user_dir = user_dir
         g_pool.rec_dir = rec_dir
         g_pool.meta_info = meta_info
@@ -298,19 +302,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence
             notification = {"subject": "min_data_confidence_changed"}
-            notification["_notify_time_"] = time() + .8
+            notification["_notify_time_"] = time() + 0.8
             g_pool.ipc_pub.notify(notification)
-
-        def open_plugin(plugin):
-            if plugin == "Select to load":
-                return
-            g_pool.plugins.add(plugin)
-
-        def purge_plugins():
-            for p in g_pool.plugins:
-                if p.__class__ in user_plugins:
-                    p.alive = False
-            g_pool.plugins.clean()
 
         def do_export(_):
             left_idx = g_pool.seek_control.trim_left
@@ -350,7 +343,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                 {
                     "subject": "player_process.should_start",
                     "rec_dir": rec_dir,
-                    "delay": 2.,
+                    "delay": 2.0,
                 }
             )
 
@@ -364,7 +357,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             general_settings.collapsed = collapsed
 
         g_pool.gui = ui.UI()
-        g_pool.gui_user_scale = session_settings.get("gui_scale", 1.)
+        g_pool.gui_user_scale = session_settings.get("gui_scale", 1.0)
         g_pool.menubar = ui.Scrolling_Menu(
             "Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos="left"
         )
@@ -374,12 +367,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.timelines = ui.Container((0, 0), (0, 0), (0, 0))
         g_pool.timelines.horizontal_constraint = g_pool.menubar
         g_pool.user_timelines = ui.Timeline_Menu(
-            "User Timelines", pos=(0., -150.), size=(0., 0.), header_pos="headline"
+            "User Timelines", pos=(0.0, -150.0), size=(0.0, 0.0), header_pos="headline"
         )
-        g_pool.user_timelines.color = RGBA(a=0.)
+        g_pool.user_timelines.color = RGBA(a=0.0)
         g_pool.user_timelines.collapsed = True
         # add container that constaints itself to the seekbar height
-        vert_constr = ui.Container((0, 0), (0, -50.), (0, 0))
+        vert_constr = ui.Container((0, 0), (0, -50.0), (0, 0))
         vert_constr.append(g_pool.user_timelines)
         g_pool.timelines.append(vert_constr)
 
@@ -395,7 +388,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                 "gui_user_scale",
                 g_pool,
                 setter=set_scale,
-                selection=[.8, .9, 1., 1.1, 1.2] + list(np.arange(1.5, 5.1, .5)),
+                selection=[0.8, 0.9, 1.0, 1.1, 1.2] + list(np.arange(1.5, 5.1, 0.5)),
                 label="Interface Size",
             )
         )
@@ -423,7 +416,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                 "min_data_confidence",
                 g_pool,
                 setter=set_data_confidence,
-                step=.05,
+                step=0.05,
                 min=0.0,
                 max=1.0,
                 label="Minimum data confidence",
@@ -438,7 +431,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         icon = ui.Icon(
             "collapsed",
             general_settings,
-            label=chr(0xe8b8),
+            label=chr(0xE8B8),
             on_val=False,
             off_val=True,
             setter=toggle_general_settings,
@@ -454,7 +447,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.quickbar = ui.Stretching_Menu("Quick Bar", (0, 100), (100, -100))
         g_pool.export_button = ui.Thumb(
             "export",
-            label=chr(0xe2c5),
+            label=chr(0xE2C5),
             getter=lambda: False,
             setter=do_export,
             hotkey="e",
@@ -476,7 +469,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             ("Vis_Circle", {}),
             ("System_Graphs", {}),
             ("System_Timelines", {}),
-            ("Video_Export_Launcher", {}),
+            ("World_Video_Exporter", {}),
             ("Pupil_From_Recording", {}),
             ("Gaze_From_Recording", {}),
             ("Audio_Playback", {}),
@@ -649,7 +642,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             p.alive = False
         g_pool.plugins.clean()
 
-        g_pool.capture.cleanup()
         g_pool.gui.terminate()
         glfw.glfwDestroyWindow(main_window)
 
@@ -730,7 +722,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
         glfont.set_align_string(v_align="center", h_align="middle")
         glfont.set_color_float((0.2, 0.2, 0.2, 0.9))
         gl_utils.basic_gl_setup()
-        glClearColor(0.5, .5, 0.5, 0.0)
+        glClearColor(0.5, 0.5, 0.5, 0.0)
         text = "Drop a recording directory onto this window."
         tip = "(Tip: You can drop a recording directory onto the app icon.)"
         # text = "Please supply a Pupil recording directory as first arg when calling Pupil Player."
@@ -752,17 +744,17 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
 
             gl_utils.clear_gl_screen()
             glfont.set_blur(10.5)
-            glfont.set_color_float((0.0, 0.0, 0.0, 1.))
-            glfont.set_size(w / 25. * hdpi_factor)
-            glfont.draw_text(w / 2 * hdpi_factor, .3 * h * hdpi_factor, text)
-            glfont.set_size(w / 30. * hdpi_factor)
-            glfont.draw_text(w / 2 * hdpi_factor, .4 * h * hdpi_factor, tip)
+            glfont.set_color_float((0.0, 0.0, 0.0, 1.0))
+            glfont.set_size(w / 25.0 * hdpi_factor)
+            glfont.draw_text(w / 2 * hdpi_factor, 0.3 * h * hdpi_factor, text)
+            glfont.set_size(w / 30.0 * hdpi_factor)
+            glfont.draw_text(w / 2 * hdpi_factor, 0.4 * h * hdpi_factor, tip)
             glfont.set_blur(0.96)
-            glfont.set_color_float((1., 1., 1., 1.))
-            glfont.set_size(w / 25. * hdpi_factor)
-            glfont.draw_text(w / 2 * hdpi_factor, .3 * h * hdpi_factor, text)
-            glfont.set_size(w / 30. * hdpi_factor)
-            glfont.draw_text(w / 2 * hdpi_factor, .4 * h * hdpi_factor, tip)
+            glfont.set_color_float((1.0, 1.0, 1.0, 1.0))
+            glfont.set_size(w / 25.0 * hdpi_factor)
+            glfont.draw_text(w / 2 * hdpi_factor, 0.3 * h * hdpi_factor, text)
+            glfont.set_size(w / 30.0 * hdpi_factor)
+            glfont.draw_text(w / 2 * hdpi_factor, 0.4 * h * hdpi_factor, tip)
 
             glfw.glfwSwapBuffers(window)
 

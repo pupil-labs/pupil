@@ -169,6 +169,10 @@ def world(
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
         from hololens_relay import Hololens_Relay
 
+        from background_helper import IPC_Logging_Task_Proxy
+
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
         # UI Platform tweaks
         if platform.system() == "Linux":
             scroll_factor = 10.0
@@ -362,10 +366,10 @@ def world(
 
         audio.audio_mode = session_settings.get("audio_mode", audio.default_audio_mode)
 
-        def handle_notifications(n):
-            subject = n["subject"]
+        def handle_notifications(noti):
+            subject = noti["subject"]
             if subject == "set_detection_mapping_mode":
-                if n["mode"] == "2d":
+                if noti["mode"] == "2d":
                     if (
                         "Vector_Gaze_Mapper"
                         in g_pool.active_gaze_mapping_plugin.class_name
@@ -374,22 +378,24 @@ def world(
                             "The gaze mapper is not supported in 2d mode. Please recalibrate."
                         )
                         g_pool.plugins.add(g_pool.plugin_by_name["Dummy_Gaze_Mapper"])
-                g_pool.detection_mapping_mode = n["mode"]
+                g_pool.detection_mapping_mode = noti["mode"]
             elif subject == "start_plugin":
                 g_pool.plugins.add(
-                    g_pool.plugin_by_name[n["name"]], args=n.get("args", {})
+                    g_pool.plugin_by_name[noti["name"]], args=noti.get("args", {})
                 )
             elif subject == "stop_plugin":
                 for p in g_pool.plugins:
-                    if p.class_name == n["name"]:
+                    if p.class_name == noti["name"]:
                         p.alive = False
                         g_pool.plugins.clean()
             elif subject == "eye_process.started":
-                n = {
+                noti = {
                     "subject": "set_detection_mapping_mode",
                     "mode": g_pool.detection_mapping_mode,
                 }
-                ipc_pub.notify(n)
+                ipc_pub.notify(noti)
+            elif subject == "set_min_calibration_confidence":
+                g_pool.min_calibration_confidence = noti["value"]
             elif subject.startswith("meta.should_doc"):
                 ipc_pub.notify(
                     {"subject": "meta.doc", "actor": g_pool.app, "doc": world.__doc__}
@@ -434,7 +440,7 @@ def world(
             logger.warning("Resetting all settings and restarting Capture.")
             glfw.glfwSetWindowShouldClose(main_window, True)
             ipc_pub.notify({"subject": "clear_settings_process.should_start"})
-            ipc_pub.notify({"subject": "world_process.should_start", "delay": 2.})
+            ipc_pub.notify({"subject": "world_process.should_start", "delay": 2.0})
 
         def toggle_general_settings(collapsed):
             # this is the menu toggle logic.
@@ -447,7 +453,7 @@ def world(
 
         # setup GUI
         g_pool.gui = ui.UI()
-        g_pool.gui_user_scale = session_settings.get("gui_scale", 1.)
+        g_pool.gui_user_scale = session_settings.get("gui_scale", 1.0)
         g_pool.menubar = ui.Scrolling_Menu(
             "Settings", pos=(-400, 0), size=(-icon_bar_width, 0), header_pos="left"
         )
@@ -465,7 +471,7 @@ def world(
                 "gui_user_scale",
                 g_pool,
                 setter=set_scale,
-                selection=[.6, .8, 1., 1.2, 1.4],
+                selection=[0.6, 0.8, 1.0, 1.2, 1.4],
                 label="Interface size",
             )
         )
@@ -516,7 +522,7 @@ def world(
         icon = ui.Icon(
             "collapsed",
             general_settings,
-            label=chr(0xe8b8),
+            label=chr(0xE8B8),
             on_val=False,
             off_val=True,
             setter=toggle_general_settings,
@@ -596,9 +602,13 @@ def world(
             # check if a plugin need to be destroyed
             g_pool.plugins.clean()
 
+            # "blacklisted" events that were already sent
+            del events["pupil"]
+            del events["gaze"]
+            # delete if exists. More expensive than del, so only use it when key might not exist
+            events.pop("annotation", None)
+
             # send new events to ipc:
-            del events["pupil"]  # already on the wire
-            del events["gaze"]  # sent earlier
             if "frame" in events:
                 del events["frame"]  # send explicitly with frame publisher
             if "depth_frame" in events:

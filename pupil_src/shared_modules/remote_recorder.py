@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-from time import localtime, strftime
 
 import ndsi
 from pyglui import ui
@@ -115,9 +114,9 @@ class Remote_Recorder_Core:
 
 class Remote_Recorder(Plugin):
 
-    order = .3
+    order = 0.3
     uniqueness = "by_class"
-    icon_chr = chr(0xec16)
+    icon_chr = chr(0xEC16)
     icon_font = "pupil_icons"
 
     def __init__(self, g_pool, preferred_session_name="local_recording"):

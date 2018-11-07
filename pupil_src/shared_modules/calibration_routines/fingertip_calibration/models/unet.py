@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 # Adapted from https://github.com/jaxony/unet-pytorch/blob/master/model.py
 
 
@@ -24,31 +24,24 @@ def conv3x3(in_channels, out_channels, stride=1, padding=1, bias=True, groups=1)
         stride=stride,
         padding=padding,
         bias=bias,
-        groups=groups)
+        groups=groups,
+    )
 
 
-def upconv2x2(in_channels, out_channels, mode='transpose'):
-    if mode == 'transpose':
-        return nn.ConvTranspose2d(
-            in_channels,
-            out_channels,
-            kernel_size=2,
-            stride=2)
+def upconv2x2(in_channels, out_channels, mode="transpose"):
+    if mode == "transpose":
+        return nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2)
     else:
         # out_channels is always going to be the same
         # as in_channels
         return nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-            conv1x1(in_channels, out_channels))
+            nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
+            conv1x1(in_channels, out_channels),
+        )
 
 
 def conv1x1(in_channels, out_channels, groups=1):
-    return nn.Conv2d(
-        in_channels,
-        out_channels,
-        kernel_size=1,
-        groups=groups,
-        stride=1)
+    return nn.Conv2d(in_channels, out_channels, kernel_size=1, groups=groups, stride=1)
 
 
 class DownConv(nn.Module):
@@ -85,7 +78,9 @@ class UpConv(nn.Module):
     A ReLU activation follows each convolution.
     """
 
-    def __init__(self, in_channels, out_channels, merge_mode='concat', up_mode='transpose'):
+    def __init__(
+        self, in_channels, out_channels, merge_mode="concat", up_mode="transpose"
+    ):
         super(UpConv, self).__init__()
 
         self.in_channels = in_channels
@@ -95,7 +90,7 @@ class UpConv(nn.Module):
 
         self.upconv = upconv2x2(self.in_channels, self.out_channels, mode=self.up_mode)
 
-        if self.merge_mode == 'concat':
+        if self.merge_mode == "concat":
             self.conv1 = conv3x3(2 * self.out_channels, self.out_channels)
         else:
             # num of input channels to conv2 is same
@@ -109,7 +104,7 @@ class UpConv(nn.Module):
             from_up: upconv'd tensor from the decoder pathway
         """
         from_up = self.upconv(from_up)
-        if self.merge_mode == 'concat':
+        if self.merge_mode == "concat":
             x = torch.cat((from_up, from_down), 1)
         else:
             x = from_up + from_down
@@ -141,9 +136,15 @@ class UNet(nn.Module):
         the tranpose convolution (specified by upmode='transpose')
     """
 
-    def __init__(self, num_classes, in_channels=3, depth=5,
-                 start_filts=64, up_mode='transpose',
-                 merge_mode='concat'):
+    def __init__(
+        self,
+        num_classes,
+        in_channels=3,
+        depth=5,
+        start_filts=64,
+        up_mode="transpose",
+        merge_mode="concat",
+    ):
         """
         Arguments:
             in_channels: int, number of channels in the input tensor.
@@ -157,28 +158,34 @@ class UNet(nn.Module):
         """
         super(UNet, self).__init__()
 
-        if up_mode in ('transpose', 'upsample'):
+        if up_mode in ("transpose", "upsample"):
             self.up_mode = up_mode
         else:
-            raise ValueError("\"{}\" is not a valid mode for "
-                             "upsampling. Only \"transpose\" and "
-                             "\"upsample\" are allowed.".format(up_mode))
+            raise ValueError(
+                '"{}" is not a valid mode for '
+                'upsampling. Only "transpose" and '
+                '"upsample" are allowed.'.format(up_mode)
+            )
 
-        if merge_mode in ('concat', 'add'):
+        if merge_mode in ("concat", "add"):
             self.merge_mode = merge_mode
         else:
-            raise ValueError("\"{}\" is not a valid mode for"
-                             "merging up and down paths. "
-                             "Only \"concat\" and "
-                             "\"add\" are allowed.".format(up_mode))
+            raise ValueError(
+                '"{}" is not a valid mode for'
+                "merging up and down paths. "
+                'Only "concat" and '
+                '"add" are allowed.'.format(up_mode)
+            )
 
         # NOTE: up_mode 'upsample' is incompatible with merge_mode 'add'
-        if self.up_mode == 'upsample' and self.merge_mode == 'add':
-            raise ValueError("up_mode \"upsample\" is incompatible "
-                             "with merge_mode \"add\" at the moment "
-                             "because it doesn't make sense to use "
-                             "nearest neighbour to reduce "
-                             "depth channels (by half).")
+        if self.up_mode == "upsample" and self.merge_mode == "add":
+            raise ValueError(
+                'up_mode "upsample" is incompatible '
+                'with merge_mode "add" at the moment '
+                "because it doesn't make sense to use "
+                "nearest neighbour to reduce "
+                "depth channels (by half)."
+            )
 
         self.num_classes = num_classes
         self.in_channels = in_channels

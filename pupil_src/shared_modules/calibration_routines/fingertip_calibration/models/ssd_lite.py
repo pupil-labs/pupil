@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 # Adapted from https://github.com/ShuangXieIrene/ssds.pytorch/blob/master/lib/modeling/ssds/ssd_lite.py &
 # https://github.com/amdegroot/ssd.pytorch/blob/master/ssd.py
 
@@ -15,7 +15,10 @@ See COPYING and COPYING.LESSER for license details.
 import torch
 import torch.nn as nn
 
-from calibration_routines.fingertip_calibration.models.layers.functions import prior_box, detection
+from calibration_routines.fingertip_calibration.models.layers.functions import (
+    prior_box,
+    detection,
+)
 from calibration_routines.fingertip_calibration.models import mobilenet
 
 
@@ -32,6 +35,7 @@ class SSDLite(nn.Module):
         extras: extra layers that feed to multibox loc and conf layers
         head: "multibox head" consists of loc and conf conv layers
     """
+
     def __init__(self, cfg, base, extras, head):
         super(SSDLite, self).__init__()
         self.cfg = cfg
@@ -60,7 +64,7 @@ class SSDLite(nn.Module):
         # apply bases layers and cache source layer outputs
         for k in range(len(self.mobilenet)):
             x = self.mobilenet[k](x)
-            if k in self.cfg['feature_maps_layer']:
+            if k in self.cfg["feature_maps_layer"]:
                 sources.append(x)
 
         # apply extra layers and cache source layer outputs
@@ -77,9 +81,11 @@ class SSDLite(nn.Module):
 
         #  get output predictions for confidence score and locations.
         output = self.detect(
-            loc.view(loc.size(0), -1, 4),                                           # loc preds
-            self.softmax(conf.view(conf.size(0), -1, self.cfg['num_classes'])),     # conf preds
-            self.priors.type((x.detach()).type())                                   # default boxes
+            loc.view(loc.size(0), -1, 4),  # loc preds
+            self.softmax(
+                conf.view(conf.size(0), -1, self.cfg["num_classes"])
+            ),  # conf preds
+            self.priors.type((x.detach()).type()),  # default boxes
         )
         return output
 
@@ -87,31 +93,55 @@ class SSDLite(nn.Module):
 def add_extras(cfg):
     extra_layers = []
     in_channels = None
-    for layer, out_channels in zip(cfg['feature_maps_layer'], cfg['feature_maps_channel']):
-        if layer == 'S':
-            extra_layers += [mobilenet.depth_sep_conv(in_channels, out_channels, stride=2) ]
+    for layer, out_channels in zip(
+        cfg["feature_maps_layer"], cfg["feature_maps_channel"]
+    ):
+        if layer == "S":
+            extra_layers += [
+                mobilenet.depth_sep_conv(in_channels, out_channels, stride=2)
+            ]
         in_channels = out_channels
 
     return extra_layers
 
 
 def add_head(cfg):
-    mbox = [len(ar)+2 for ar in cfg['aspect_ratios']]
+    mbox = [len(ar) + 2 for ar in cfg["aspect_ratios"]]
     loc_layers = []
     conf_layers = []
-    for in_channels, num_box in zip(cfg['feature_maps_channel'], mbox):
+    for in_channels, num_box in zip(cfg["feature_maps_channel"], mbox):
         loc_layers += [nn.Conv2d(in_channels, num_box * 4, kernel_size=3, padding=1)]
-        conf_layers += [nn.Conv2d(in_channels, num_box * cfg['num_classes'], kernel_size=3, padding=1)]
+        conf_layers += [
+            nn.Conv2d(
+                in_channels, num_box * cfg["num_classes"], kernel_size=3, padding=1
+            )
+        ]
 
     return loc_layers, conf_layers
 
 
 def build_ssd_lite(cfg):
     width_multiplier = 0.25
-    cfg['num_classes'] = 2
-    cfg['aspect_ratios'] = [[1 / 2, 1 / 3], [1 / 2, 1 / 3], [1 / 2, 1 / 3], [1 / 2, 1 / 3], [1 / 2, 1 / 3], [1 / 2, 1 / 3]]
-    cfg['feature_maps_reso'] = [int(cfg['input_size'] / d + 1) for d in [16, 32, 64, 128, 256, 512]]
-    cfg['feature_maps_channel'] = [int(d * width_multiplier) for d in [512, 1024, 512, 256, 256, 128]]
-    cfg['feature_maps_layer'] = [11, 13, 'S', 'S', 'S', 'S']
+    cfg["num_classes"] = 2
+    cfg["aspect_ratios"] = [
+        [1 / 2, 1 / 3],
+        [1 / 2, 1 / 3],
+        [1 / 2, 1 / 3],
+        [1 / 2, 1 / 3],
+        [1 / 2, 1 / 3],
+        [1 / 2, 1 / 3],
+    ]
+    cfg["feature_maps_reso"] = [
+        int(cfg["input_size"] / d + 1) for d in [16, 32, 64, 128, 256, 512]
+    ]
+    cfg["feature_maps_channel"] = [
+        int(d * width_multiplier) for d in [512, 1024, 512, 256, 256, 128]
+    ]
+    cfg["feature_maps_layer"] = [11, 13, "S", "S", "S", "S"]
 
-    return SSDLite(cfg=cfg, base=mobilenet.mobilenet(width_multiplier), extras=add_extras(cfg), head=add_head(cfg))
+    return SSDLite(
+        cfg=cfg,
+        base=mobilenet.mobilenet(width_multiplier),
+        extras=add_extras(cfg),
+        head=add_head(cfg),
+    )

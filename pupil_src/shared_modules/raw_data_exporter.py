@@ -12,9 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import csv
 import logging
 import os
-from itertools import chain
 
-import numpy as np
 from pyglui import ui
 
 import player_methods as pm
@@ -30,7 +28,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
     keys:
         timestamp - timestamp of the source image frame
         index - associated_frame: closest world video frame
-        id - 0 or 1 for left/right eye
+        id - 0 or 1 for right and left eye (from the wearer's point of view)
         confidence - is an assessment by the pupil detector on how sure we can be on this measurement. A value of `0` indicates no confidence. `1` indicates perfect confidence. In our experience usefull data carries a confidence value greater than ~0.6. A `confidence` of exactly `0` means that we don't know anything. So you should ignore the position data.        norm_pos_x - x position in the eye image frame in normalized coordinates
         norm_pos_x - x position in the eye image frame in normalized coordinates
         norm_pos_y - y position in the eye image frame in normalized coordinates
@@ -104,7 +102,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
         gaze_normal1_z - z normal of the visual axis for eye 1
         """
 
-    icon_chr = chr(0xe873)
+    icon_chr = chr(0xE873)
     icon_font = "pupil_icons"
 
     def __init__(
@@ -169,9 +167,9 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
 
                 csv_writer.writerow(
                     (
-                        "timestamp",
-                        "index",
-                        "id",
+                        "world_timestamp",
+                        "world_index",
+                        "eye_id",
                         "confidence",
                         "norm_pos_x",
                         "norm_pos_y",
@@ -275,8 +273,8 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                 csv_writer = csv.writer(csvfile, delimiter=",")
                 csv_writer.writerow(
                     (
-                        "timestamp",
-                        "index",
+                        "world_timestamp",
+                        "world_index",
                         "confidence",
                         "norm_pos_x",
                         "norm_pos_y",

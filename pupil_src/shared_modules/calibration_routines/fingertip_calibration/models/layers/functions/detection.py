@@ -1,4 +1,4 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
 Copyright (C) 2012-2018 Pupil Labs
@@ -7,7 +7,7 @@ Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 # Adapted from https://github.com/amdegroot/ssd.pytorch/blob/master/layers/functions/detection.py
 
 
@@ -22,12 +22,13 @@ class Detect(Function):
     scores and threshold to a top_k number of output predictions for both
     confidence score and locations.
     """
+
     def __init__(self, cfg):
         super(Detect, self).__init__()
-        self.num_classes = cfg['num_classes']
-        self.top_k = cfg['max_num_detection']
-        self.nms_thresh = cfg['nms_thresh']
-        self.confidence_thresh = cfg['confidence_thresh']
+        self.num_classes = cfg["num_classes"]
+        self.top_k = cfg["max_num_detection"]
+        self.nms_thresh = cfg["nms_thresh"]
+        self.confidence_thresh = cfg["confidence_thresh"]
         self.bkg_label = 0
         self.variance = [0.1, 0.2]
 
@@ -65,7 +66,9 @@ class Detect(Function):
                 res = box_utils.nms(boxes, scores, self.nms_thresh, self.top_k)
                 if res is not None:
                     ids, count = res
-                    output[i, cl, :count] = torch.cat((scores[ids[:count]].unsqueeze(1), boxes[ids[:count]]), 1)
+                    output[i, cl, :count] = torch.cat(
+                        (scores[ids[:count]].unsqueeze(1), boxes[ids[:count]]), 1
+                    )
 
         flt = output.contiguous().view(num, -1, 5)
         _, idx = flt[:, :, 0].sort(1, descending=True)

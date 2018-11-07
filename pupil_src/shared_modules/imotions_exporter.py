@@ -130,8 +130,8 @@ class iMotions_Exporter(VideoExporter):
                             media_idx - export_range[0],
                             *g["gaze_point_3d"],  # Gaze3dX/Y/Z
                             *undistorted2d.flat,  # Gaze2dX/Y
-                            pupil_dia.get(1, 0.),  # PupilDiaLeft
-                            pupil_dia.get(0, 0.),  # PupilDiaRight
+                            pupil_dia.get(1, 0.0),  # PupilDiaLeft
+                            pupil_dia.get(0, 0.0),  # PupilDiaRight
                             g["confidence"],
                         )  # Confidence
                     except KeyError:
