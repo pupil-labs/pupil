@@ -529,34 +529,45 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self._export_surface_heatmap(
                 metrics_dir, surface.within_surface_heatmap, surface_name
             )
+            self._export_surface_image(metrics_dir, surface, surface_name)
             logger.info(
                 "Saved surface gaze and fixation data for '{}'".format(surface.name)
             )
 
         logger.info("Done exporting reference surface data.")
-        # TODO enable export of surface image?
-        # if s.detected and self.img is not None:
-        #     #let save out the current surface image found in video
-
-        #     #here we get the verts of the surface quad in norm_coords
-        #     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32).reshape(-1,1,2)
-        #     screen_space = cv2.perspectiveTransform(mapped_space_one,s.m_to_screen).reshape(-1,2)
-        #     #now we convert to image pixel coods
-        #     screen_space[:,1] = 1-screen_space[:,1]
-        #     screen_space[:,1] *= self.img.shape[0]
-        #     screen_space[:,0] *= self.img.shape[1]
-        #     s_0,s_1 = s.real_world_size
-        #     #no we need to flip vertically again by setting the mapped_space verts accordingly.
-        #     mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
-        #     M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
-        #     #here we do the actual perspective transform of the image.
-        #     surf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size['x']),int(s.real_world_size['y'])) )
-        #     cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),surf_in_video)
-        #     logger.info("Saved current image as .png file.")
-        # else:
-        #     logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
 
         self.make_export = False
+
+    def _export_surface_image(self, metrics_dir, surface, surface_name):
+        if surface.detected and self.current_frame is not None:
+            aspect_ratio = surface.real_world_size["y"] / surface.real_world_size["x"]
+            output_res = (500, int(500 * aspect_ratio))
+
+            norm_corners = np.array(((0, 0), (1, 0), (1, 1), (0, 1)), dtype=np.float32)
+            img_pixel_corners = surface.map_from_surf(
+                norm_corners, self.camera_model, compensate_distortion=False
+            )
+
+            output_corners = np.array(
+                ((0, output_res[1]), output_res, (output_res[0], 0), (0, 0)),
+                dtype=np.float32,
+            )
+            transformation = cv2.getPerspectiveTransform(
+                img_pixel_corners, output_corners
+            )
+
+            surf_img = cv2.warpPerspective(
+                self.current_frame.img, transformation, output_res
+            )
+            cv2.imwrite(
+                os.path.join(metrics_dir, "surface" + surface_name + ".png"), surf_img
+            )
+            logger.info("Saved current image as .png file.")
+        else:
+            logger.info(
+                "{} is not currently visible. Seek to an appropriate frame and "
+                "repeat to also export an image of the surface.".format(surface.name)
+            )
 
     def _export_surface_visibility(self, metrics_dir, section):
         with open(
