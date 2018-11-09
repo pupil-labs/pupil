@@ -202,6 +202,10 @@ class Realsense2_Source(Base_Source):
             device_id = self._get_device_id()
         self.device_id = device_id
 
+        if self.device_id is None:
+            logger.info("No device connected.")
+            return
+
         # use default streams to filter modes by rs_stream and rs_format
         self._available_modes = self._enumerate_formats(device_id)
         logger.debug(
@@ -239,7 +243,6 @@ class Realsense2_Source(Base_Source):
             logger.error("Cannot start pipeline! " + str(re))
             self.pipeline_profile = None
         else:
-            self.streams = self.pipeline_profile.get_streams()
             self.stream_profiles = {
                 s.stream_type(): s.as_video_stream_profile()
                 for s in self.pipeline_profile.get_streams()
@@ -289,7 +292,7 @@ class Realsense2_Source(Base_Source):
             )
         else:
             logger.info(
-                "Negative frame size and frame rate, not (explicitly) enabling the color stream."
+                "No frame size and frame rate provided, not (explicitly) enabling the color stream."
             )
 
         return config
@@ -314,6 +317,12 @@ class Realsense2_Source(Base_Source):
 
     def _get_valid_frame_rate(self, stream_type, frame_size, fps):
         assert stream_type == rs.stream.color or stream_type == rs.stream.depth
+
+        if not self._available_modes:
+            logger.debug(
+                "_get_valid_frame_rate: self._available_modes not set yet. returning None as fps"
+            )
+            return None
 
         if frame_size not in self._available_modes[stream_type]:
             logger.error(
@@ -383,6 +392,7 @@ class Realsense2_Source(Base_Source):
             try:
                 self.pipeline.stop()
                 self.pipeline_profile = None
+                self.stream_profiles = None
                 logger.debug("Pipeline stopped.")
             except RuntimeError as re:
                 logger.error("Cannot stop the pipeline: " + str(re))
@@ -393,7 +403,14 @@ class Realsense2_Source(Base_Source):
         self.stop_pipeline()
 
     def get_init_dict(self):
-        return {"device_id": self.device_id}
+        return {
+            "frame_size": self.frame_size,
+            "frame_rate": self.frame_rate,
+            "depth_frame_size": self.depth_frame_size,
+            "depth_frame_rate": self.depth_frame_rate,
+            "preview_depth": self.preview_depth,
+            "record_depth": self.record_depth,
+        }
 
     def get_frames(self):
         if self.online:
@@ -401,7 +418,8 @@ class Realsense2_Source(Base_Source):
                 frames = self.pipeline.wait_for_frames(TIMEOUT)
             except RuntimeError as e:
                 logger.error("Cannot wait for frames. " + str(e))
-                return None, None
+                raise RuntimeError(e)
+                # return None, None
             else:
                 current_time = self.g_pool.get_timestamp()
 
@@ -574,6 +592,9 @@ class Realsense2_Source(Base_Source):
         self.menu.append(sensor_control)
 
     def gl_display(self):
+        # if not self.online:
+        #     return
+
         if self.depth_window is not None and glfw.glfwWindowShouldClose(
             self.depth_window
         ):
@@ -614,6 +635,7 @@ class Realsense2_Source(Base_Source):
                 logger.info("Setting first device by default.")
                 return devices[0].get_info(rs.camera_info.serial_number)
             else:
+                logger.debug("_get_device_id: No device connected.")
                 return None
 
     def reset_device(self, device_id):
@@ -668,11 +690,15 @@ class Realsense2_Source(Base_Source):
                 "device_options": device_options,
             }
         )
+        logger.debug("self.restart_device --> self.notify_all")
 
     def on_click(self, pos, button, action):
         pass
 
     def on_notify(self, notification):
+        logger.debug(
+            'self.on_notify, notification["subject"]: ' + notification["subject"]
+        )
         if notification["subject"] == "realsense2_source.restart":
             kwargs = notification.copy()
             del kwargs["subject"]
@@ -773,13 +799,20 @@ class Realsense2_Source(Base_Source):
 
     @property
     def online(self):
-        return self.pipeline_profile is not None and self.pipeline is not None
+        return (
+            self.device_id is not None
+            and self.pipeline_profile is not None
+            and self.pipeline is not None
+        )
 
     @property
     def name(self):
         if self.online:
             return self.pipeline_profile.get_device().get_info(rs.camera_info.name)
         else:
+            logger.debug(
+                "self.name: Realsense2 not online. Falling back to Ghost capture"
+            )
             return "Ghost capture"
 
 
