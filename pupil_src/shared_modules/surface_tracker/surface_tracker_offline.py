@@ -71,12 +71,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         self.gaze_on_surf_buffer = None
         self.gaze_on_surf_buffer_filler = None
-        self.fixations_on_surf_buffer = None
-        self.fixations_on_surf_buffer_filler = None
 
         self._heatmap_update_requests = set()
-        self.make_export = False
-        self.export_params = None
+        self.export_proxies = set()
 
     @property
     def Surface_Class(self):
@@ -196,24 +193,18 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for gaze in self.gaze_on_surf_buffer_filler.fetch():
                 self.gaze_on_surf_buffer.append(gaze)
 
-            # fixations will be gathered additionally to gaze if we want to make an
-            # export
-            if self.fixations_on_surf_buffer_filler is not None:
-                for fixation in self.fixations_on_surf_buffer_filler.fetch():
-                    self.fixations_on_surf_buffer.append(fixation)
-
             # Once all background processes are completed, update and export!
-            if self.gaze_on_surf_buffer_filler.completed and (
-                self.fixations_on_surf_buffer_filler is None
-                or self.fixations_on_surf_buffer_filler.completed
-            ):
+            if self.gaze_on_surf_buffer_filler.completed:
                 self.gaze_on_surf_buffer_filler = None
-                self.fixations_on_surf_buffer_filler = None
                 self._update_surface_heatmaps()
-                if self.make_export:
-                    self.save_surface_statisics_to_file()
                 self.gaze_on_surf_buffer = None
-                self.fixations_on_surf_buffer = None
+
+        for proxy in list(self.export_proxies):
+            for _ in proxy.fetch():
+                pass
+
+            if proxy.completed:
+                self.export_proxies.remove(proxy)
 
     def _update_markers(self, frame):
         self._update_marker_and_surface_caches()
@@ -312,13 +303,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         all_gaze_events = self.g_pool.gaze_positions
 
         self._start_gaze_buffer_filler(all_gaze_events, all_world_timestamps, section)
-
-        if self.make_export:
-            all_fixation_events = self.g_pool.fixations
-
-            self._start_fixation_buffer_filler(
-                all_fixation_events, all_world_timestamps, section
-            )
 
     def _start_gaze_buffer_filler(self, all_gaze_events, all_world_timestamps, section):
         if self.gaze_on_surf_buffer_filler is not None:
@@ -447,9 +431,16 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self._fill_gaze_on_surf_buffer()
 
         elif notification["subject"] == "should_export":
-            self.make_export = True
-            self.export_params = (notification["range"], notification["export_dir"])
-            self._fill_gaze_on_surf_buffer()
+            proxy = background_tasks.get_export_proxy(
+                notification["export_dir"],
+                notification["range"],
+                self.surfaces,
+                self.g_pool.timestamps,
+                self.g_pool.gaze_positions,
+                self.g_pool.fixations,
+                self.camera_model,
+            )
+            self.export_proxies.add(proxy)
 
         elif notification["subject"] == "gaze_positions_changed":
             for surface in self.surfaces:
@@ -462,317 +453,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self._heatmap_update_requests.add(surface)
         self._fill_gaze_on_surf_buffer()
 
-    # TODO Do export entirely in the background
-    def save_surface_statisics_to_file(self):
-        """
-        between in and out mark
-
-            report: gaze distribution:
-                    - total gazepoints
-                    - gaze points on surface x
-                    - gaze points not on any surface
-
-            report: surface visibility
-
-                - total frames
-                - surface x visible framecount
-
-            surface events:
-                frame_no, ts, surface "name", "id" enter/exit
-
-            for each surface:
-                fixations_on_name.csv
-                gaze_on_name_id.csv
-                positions_of_name_id.csv
-
-        """
-        export_range, export_dir = self.export_params
-        metrics_dir = os.path.join(export_dir, "surfaces")
-        section = slice(*export_range)
-        in_mark = section.start
-        out_mark = section.stop
-        logger.info("exporting metrics to {}".format(metrics_dir))
-        if os.path.isdir(metrics_dir):
-            logger.info("Will overwrite previous export for this section")
-        else:
-            try:
-                os.mkdir(metrics_dir)
-            except OSError:
-                logger.warning("Could not make metrics dir {}".format(metrics_dir))
-                return
-
-        self._export_surface_visibility(metrics_dir, section)
-        self._export_surface_gaze_distribution(export_range, metrics_dir)
-        self._export_surface_events(metrics_dir)
-
-        for surf_idx, surface in enumerate(self.surfaces):
-            # Sanitize surface name to include it in the filename
-            surface_name = "_" + surface.name.replace("/", "")
-
-            self._export_surface_positions(
-                in_mark, metrics_dir, out_mark, surface, surface_name
-            )
-            self._export_gaze_on_surface(
-                in_mark,
-                metrics_dir,
-                self.gaze_on_surf_buffer[surf_idx],
-                surface,
-                surface_name,
-            )
-            self._export_fixations_on_surface(
-                in_mark,
-                metrics_dir,
-                self.fixations_on_surf_buffer[surf_idx],
-                surface,
-                surface_name,
-            )
-            self._export_surface_heatmap(
-                metrics_dir, surface.within_surface_heatmap, surface_name
-            )
-            logger.info(
-                "Saved surface gaze and fixation data for '{}'".format(surface.name)
-            )
-
-        logger.info("Done exporting reference surface data.")
-
-        self.make_export = False
-
-    def _export_surface_visibility(self, metrics_dir, section):
-        with open(
-            os.path.join(metrics_dir, "surface_visibility.csv"),
-            "w",
-            encoding="utf-8",
-            newline="",
-        ) as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=",")
-
-            # surface visibility report
-            frame_count = len(self.g_pool.timestamps[section])
-
-            csv_writer.writerow(("frame_count", frame_count))
-            csv_writer.writerow("")
-            csv_writer.writerow(("surface_name", "visible_frame_count"))
-            for surface in self.surfaces:
-                if surface.location_cache is None:
-                    logger.warning(
-                        "The surface is not cached. Please wait for the cacher to "
-                        "collect data."
-                    )
-                    return
-                visible_count = surface.visible_count_in_section(section)
-                csv_writer.writerow((surface.name, visible_count))
-            logger.info("Created 'surface_visibility.csv' file")
-
-    def _export_surface_gaze_distribution(self, export_range, metrics_dir):
-        with open(
-            os.path.join(metrics_dir, "surface_gaze_distribution.csv"),
-            "w",
-            encoding="utf-8",
-            newline="",
-        ) as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=",")
-
-            # gaze distribution report
-            export_window = player_methods.exact_window(
-                self.g_pool.timestamps, export_range
-            )
-            gaze_in_section = self.g_pool.gaze_positions.by_ts_window(export_window)
-            not_on_any_surf_ts = set([gp["timestamp"] for gp in gaze_in_section])
-
-            csv_writer.writerow(("total_gaze_point_count", len(gaze_in_section)))
-            csv_writer.writerow("")
-            csv_writer.writerow(("surface_name", "gaze_count"))
-
-            for surf_idx, surface in enumerate(self.surfaces):
-                gaze_on_surf = self.gaze_on_surf_buffer[surf_idx]
-                gaze_on_surf = list(itertools.chain.from_iterable(gaze_on_surf))
-                gaze_on_surf_ts = set(
-                    [gp["base_data"][1] for gp in gaze_on_surf if gp["on_surf"]]
-                )
-                not_on_any_surf_ts -= gaze_on_surf_ts
-                csv_writer.writerow((surface.name, len(gaze_on_surf_ts)))
-
-            csv_writer.writerow(("not_on_any_surface", len(not_on_any_surf_ts)))
-            logger.info("Created 'surface_gaze_distribution.csv' file")
-
-    def _export_surface_events(self, metrics_dir):
-        with open(
-            os.path.join(metrics_dir, "surface_events.csv"),
-            "w",
-            encoding="utf-8",
-            newline="",
-        ) as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=",")
-
-            # surface events report
-            csv_writer.writerow(
-                ("world_index", "world_timestamp", "surface_name", "event_type")
-            )
-
-            events = []
-            for surface in self.surfaces:
-                for (
-                    enter_frame_id,
-                    exit_frame_id,
-                ) in surface.location_cache.positive_ranges:
-                    events.append(
-                        {
-                            "frame_id": enter_frame_id,
-                            "surf_name": surface.name,
-                            "event": "enter",
-                        }
-                    )
-                    events.append(
-                        {
-                            "frame_id": exit_frame_id,
-                            "surf_name": surface.name,
-                            "event": "exit",
-                        }
-                    )
-
-            events.sort(key=lambda x: x["frame_id"])
-            for e in events:
-                csv_writer.writerow(
-                    (
-                        e["frame_id"],
-                        self.g_pool.timestamps[e["frame_id"]],
-                        e["surf_name"],
-                        e["event"],
-                    )
-                )
-            logger.info("Created 'surface_events.csv' file")
-
-    def _export_surface_heatmap(self, metrics_dir, heatmap, surface_name):
-        if heatmap is not None:
-            logger.info("Saved Heatmap as .png file.")
-            cv2.imwrite(
-                os.path.join(metrics_dir, "heatmap" + surface_name + ".png"), heatmap
-            )
-
-    def _export_surface_positions(
-        self, in_mark, metrics_dir, out_mark, surface, surface_name
-    ):
-        with open(
-            os.path.join(metrics_dir, "surf_positions" + surface_name + ".csv"),
-            "w",
-            encoding="utf-8",
-            newline="",
-        ) as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=",")
-            csv_writer.writerow(
-                (
-                    "world_index",
-                    "world_timestamp",
-                    "img_to_surf_trans",
-                    "surf_to_img_trans",
-                    "num_detected_markers",
-                )
-            )
-            for idx, ts, ref_surf_data in zip(
-                range(len(self.g_pool.timestamps)),
-                self.g_pool.timestamps,
-                surface.location_cache,
-            ):
-                if in_mark <= idx < out_mark:
-                    if (
-                        ref_surf_data is not None
-                        and ref_surf_data is not False
-                        and ref_surf_data.detected
-                    ):
-                        csv_writer.writerow(
-                            (
-                                idx,
-                                ts,
-                                ref_surf_data.img_to_surf_trans,
-                                ref_surf_data.surf_to_img_trans,
-                                ref_surf_data.num_detected_markers,
-                            )
-                        )
-
-    def _export_gaze_on_surface(
-        self, in_mark, metrics_dir, gazes_on_surface, surface, surface_name
-    ):
-        with open(
-            os.path.join(
-                metrics_dir, "gaze_positions_on_surface" + surface_name + ".csv"
-            ),
-            "w",
-            encoding="utf-8",
-            newline="",
-        ) as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=",")
-            csv_writer.writerow(
-                (
-                    "world_timestamp",
-                    "world_index",
-                    "gaze_timestamp",
-                    "x_norm",
-                    "y_norm",
-                    "x_scaled",
-                    "y_scaled",
-                    "on_surf",
-                    "confidence",
-                )
-            )
-            for idx, gaze_on_surf in enumerate(gazes_on_surface):
-                idx += in_mark
-                if gaze_on_surf:
-                    for gp in gaze_on_surf:
-                        csv_writer.writerow(
-                            (
-                                self.g_pool.timestamps[idx],
-                                idx,
-                                gp["timestamp"],
-                                gp["norm_pos"][0],
-                                gp["norm_pos"][1],
-                                gp["norm_pos"][0] * surface.real_world_size["x"],
-                                gp["norm_pos"][1] * surface.real_world_size["y"],
-                                gp["on_surf"],
-                                gp["confidence"],
-                            )
-                        )
-
-    def _export_fixations_on_surface(
-        self, in_mark, metrics_dir, fixations_on_surf, surface, surface_name
-    ):
-        with open(
-            os.path.join(metrics_dir, "fixations_on_surface" + surface_name + ".csv"),
-            "w",
-            encoding="utf-8",
-            newline="",
-        ) as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=",")
-            csv_writer.writerow(
-                (
-                    "start_timestamp",
-                    "norm_pos_x",
-                    "norm_pos_y",
-                    "x_scaled",
-                    "y_scaled",
-                    "on_surf",
-                )
-            )
-            for idx, fix_on_surf in enumerate(fixations_on_surf):
-                idx += in_mark
-                if fix_on_surf:
-                    without_duplicates = dict(
-                        [(fix["base_data"][1], fix) for fix in fix_on_surf]
-                    ).values()
-                    for fix in without_duplicates:
-                        csv_writer.writerow(
-                            (
-                                self.g_pool.timestamps[idx],
-                                idx,
-                                fix["timestamp"],
-                                fix["norm_pos"][0],
-                                fix["norm_pos"][1],
-                                fix["norm_pos"][0] * surface.real_world_size["x"],
-                                fix["norm_pos"][1] * surface.real_world_size["y"],
-                                fix["on_surf"],
-                                fix["confidence"],
-                            )
-                        )
-
     def deinit_ui(self):
         super().deinit_ui()
         self.g_pool.user_timelines.remove(self.timeline)
@@ -782,6 +462,10 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     def cleanup(self):
         super().cleanup()
         self._save_marker_cache()
+
+        for proxy in self.export_proxies:
+            proxy.cancel()
+            self.export_proxies.remove(proxy)
 
     def _save_marker_cache(self):
         marker_cache_file = file_methods.Persistent_Dict(

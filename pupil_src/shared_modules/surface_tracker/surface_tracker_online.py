@@ -139,7 +139,9 @@ class Surface_Tracker_Online(Surface_Tracker):
             surface.update_heatmap(surface.gaze_history)
 
     def _update_surface_gaze_history(self, events, world_timestamp):
-        surfaces_gaze_dict = {e["name"]: e["gaze_on_surf"] for e in events["surfaces"]}
+        surfaces_gaze_dict = {
+            e["name"]: e["gaze_on_surfaces"] for e in events["surfaces"]
+        }
 
         for surface in self.surfaces:
             try:
