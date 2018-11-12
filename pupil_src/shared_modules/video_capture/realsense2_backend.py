@@ -149,7 +149,7 @@ class Realsense2_Source(Base_Source):
         depth_frame_rate=30,
         preview_depth=False,
         device_options=(),
-        record_depth=True,
+        record_depth=False,
     ):
         logger.debug("_init_ started")
         super().__init__(g_pool)
@@ -210,7 +210,7 @@ class Realsense2_Source(Base_Source):
             self.update_menu()
             return
 
-        if self.pipeline_profile is not None and self.pipeline is not None:
+        if self.online:
             try:
                 self.pipeline.stop()  # only call Device.stop() if its context
             except:
@@ -226,38 +226,13 @@ class Realsense2_Source(Base_Source):
             "_initialize_device: self._available_modes " + str(self._available_modes)
         )
 
-        # verify that requested framesize-fps values are compatible
-        if color_fps not in self._available_modes[rs.stream.color][color_frame_size]:
-            old_fps = color_fps
-            rates = [
-                abs(r - color_fps)
-                for r in self._available_modes[rs.stream.color][color_frame_size]
-            ]
-            best_rate_idx = rates.index(min(rates))
-            color_fps = self._available_modes[rs.stream.color][color_frame_size][
-                best_rate_idx
-            ]
-            logger.warning(
-                "{} fps is not supported for ({}) for Color Stream. Fallback to {} fps".format(
-                    old_fps, color_frame_size, color_fps
-                )
-            )
-
-        if depth_fps not in self._available_modes[rs.stream.depth][depth_frame_size]:
-            old_fps = depth_fps
-            rates = [
-                abs(r - depth_fps)
-                for r in self._available_modes[rs.stream.depth][depth_frame_size]
-            ]
-            best_rate_idx = rates.index(min(rates))
-            depth_fps = self._available_modes[rs.stream.depth][depth_frame_size][
-                best_rate_idx
-            ]
-            logger.warning(
-                "{} fps is not supported for ({}) for Depth Stream. Fallback to {} fps".format(
-                    old_fps, depth_frame_size, depth_fps
-                )
-            )
+        # make sure the frame rates are compatible with the given frame sizes
+        color_fps = self._get_valid_frame_rate(
+            rs.stream.color, color_frame_size, color_fps
+        )
+        depth_fps = self._get_valid_frame_rate(
+            rs.stream.depth, depth_frame_size, depth_fps
+        )
 
         config = self._prep_configuration(
             color_frame_size, color_fps, depth_frame_size, depth_fps
@@ -278,6 +253,9 @@ class Realsense2_Source(Base_Source):
             logger.debug("Pipeline started for device " + device_id)
             logger.debug("Stream profiles: " + str(self.stream_profiles))
 
+            self._intrinsics = load_intrinsics(
+                self.g_pool.user_dir, self.name, self.frame_size
+            )
             self.update_menu()
             self._needs_restart = False
 
@@ -316,6 +294,30 @@ class Realsense2_Source(Base_Source):
 
         return config
 
+    def _get_valid_frame_rate(self, stream_type, frame_size, fps):
+        assert stream_type == rs.stream.color or stream_type == rs.stream.depth
+
+        if frame_size not in self._available_modes[stream_type]:
+            logger.error(
+                "Frame size not supported for {}: {}".format(stream_type, frame_size)
+            )
+            return None
+
+        if fps not in self._available_modes[stream_type][frame_size]:
+            old_fps = fps
+            rates = [
+                abs(r - fps) for r in self._available_modes[stream_type][frame_size]
+            ]
+            best_rate_idx = rates.index(min(rates))
+            fps = self._available_modes[stream_type][frame_size][best_rate_idx]
+            logger.warning(
+                "{} fps is not supported for ({}) for Color Stream. Fallback to {} fps".format(
+                    old_fps, frame_size, fps
+                )
+            )
+
+        return fps
+
     def _enumerate_formats(self, device_id):
         """Enumerate formats into hierachical structure:
 
@@ -336,9 +338,9 @@ class Realsense2_Source(Base_Source):
             if device_id == serial:
                 current_device = d
 
-        logger.debug("Found the current device: " + device_id)
         if current_device is None:
             return formats
+        logger.debug("Found the current device: " + device_id)
 
         sensors = current_device.query_sensors()
         for s in sensors:
@@ -352,19 +354,16 @@ class Realsense2_Source(Base_Source):
                 elif vp.format() not in (rs.format.z16, rs.format.yuyv):
                     continue
 
-                if stream_type not in formats:
-                    formats[stream_type] = {}
-
+                formats.setdefault(stream_type, {})
                 stream_resolution = (vp.width(), vp.height())
-
-                if stream_resolution not in formats[stream_type]:
-                    formats[stream_type][stream_resolution] = []
-                formats[stream_type][stream_resolution].append(vp.fps())
+                formats[stream_type].setdefault(stream_resolution, []).append(vp.fps())
 
         return formats
 
     def cleanup(self):
-        if self.pipeline_profile:
+        if self.depth_video_writer is not None:
+            self.stop_depth_recording()
+        if self.online:
             self.pipeline.stop()
             self.pipeline_profile = None
 
@@ -374,7 +373,7 @@ class Realsense2_Source(Base_Source):
     # raise NotImplementedError("get_init_dict requested")
 
     def get_frames(self):
-        if self.pipeline and self.pipeline_profile:
+        if self.online:
             try:
                 frames = self.pipeline.wait_for_frames(TIMEOUT)
             except RuntimeError as e:
@@ -430,8 +429,10 @@ class Realsense2_Source(Base_Source):
 
         try:
             color_frame, depth_frame = self.get_frames()
-        except Error:  # FIXME what kind of error?
-            logger.warning("Realsense failed to provide frames. Attempting to reinit.")
+        except RuntimeError as re:
+            logger.warning(
+                "Realsense failed to provide frames. Attempting to reinit. " + str(re)
+            )
             self._recent_frame = None
             self._recent_depth_frame = None
             self._needs_restart = True
@@ -464,7 +465,7 @@ class Realsense2_Source(Base_Source):
 
         from pyglui import ui
 
-        if self.pipeline is None or self.pipeline_profile is None:
+        if not self.online:
             self.menu.append(ui.Info_Text("Capture initialization failed."))
             return
 
@@ -592,15 +593,20 @@ class Realsense2_Source(Base_Source):
     ):
         logger.debug("restart_device")
         if device_id is None:
-            if self.pipeline_profile is not None:  # already running
+            if self.online:  # already running
                 device_id = self.pipeline_profile.get_device().get_info(
                     rs.camera_info.serial_number
                 )
             else:
                 # set the first available device
-                device_id = self.context.query_devices()[0].get_info(
-                    rs.camera_info.serial_number
-                )
+                devices = self.context.query_devices()
+                if devices:
+                    device_id = devices[0].get_info(rs.camera_info.serial_number)
+                else:
+                    self.device_id = None
+                    logger.error("Cannot restart device. No device connected.")
+                    return
+
             self.device_id = device_id
 
         if color_frame_size is None:
@@ -613,18 +619,13 @@ class Realsense2_Source(Base_Source):
             depth_fps = self.depth_frame_rate
         if device_options is None:
             device_options = []  # FIXME
-        if self.pipeline is not None and self.pipeline_profile is not None:
+        if self.online:
             try:
                 self.pipeline.stop()
                 self.pipeline_profile = None
             except RuntimeError:
                 logger.warning("Tried to stop self.pipeline before starting.")
 
-        # self.pipeline = rs.pipeline(self.context)
-        # config = self._prep_configuration(
-        #     color_frame_size, color_fps, depth_frame_size, depth_fps
-        # )
-        # self.pipeline_profile = self.pipeline.start(config)
         self.notify_all(
             {
                 "subject": "realsense2_source.restart",
@@ -674,7 +675,6 @@ class Realsense2_Source(Base_Source):
 
     @property
     def frame_size(self):
-        # logger.debug("get frame_size")
         try:
             stream_profile = self.stream_profiles[rs.stream.color]
             return stream_profile.width(), stream_profile.height()
@@ -742,19 +742,12 @@ class Realsense2_Source(Base_Source):
 
     @property
     def online(self):
-        try:  # FIXME: this does not necessarily means "streaming"
-            self.pipeline.start()
-            self.pipeline.stop()
-            return False
-        except RuntimeError:
-            return True
+        return self.pipeline_profile is not None and self.pipeline is not None
 
     @property
     def name(self):
-        # not the same as `if self.device:`!
-        if self.pipeline_profile is not None:
-            dev = self.pipeline_profile.get_device()
-            return dev.get_info(rs.camera_info.name)
+        if self.online:
+            return self.pipeline_profile.get_device().get_info(rs.camera_info.name)
         else:
             return "Ghost capture"
 
