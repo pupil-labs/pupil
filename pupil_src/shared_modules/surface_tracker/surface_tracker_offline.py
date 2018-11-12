@@ -34,7 +34,7 @@ from plugin import Analysis_Plugin_Base
 import file_methods
 import player_methods
 
-from surface_tracker.cache_list import Cache_List
+from surface_tracker.cache import Cache
 from surface_tracker.surface_tracker import Surface_Tracker
 from surface_tracker import (
     offline_utils,
@@ -132,7 +132,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def _recalculate_marker_cache(self, previous_state=None):
         if previous_state is None:
-            previous_state = [False for _ in self.g_pool.timestamps]
+            previous_state = [None for _ in self.g_pool.timestamps]
 
             # If we had a previous_state argument, surface objects had just been
             # initialized with their previous state, which we do not want to overwrite.
@@ -141,10 +141,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for surface in self.surfaces:
                 surface.location_cache = None
 
-        self.marker_cache_unfiltered = Cache_List(
-            previous_state, positive_eval_fn=_cache_positive_eval_fn
-        )
-        self._update_filtered_markers()
+        self.marker_cache_unfiltered = Cache(previous_state)
+        self.marker_cache = self._filter_marker_cache(self.marker_cache_unfiltered)
 
         self.cache_filler = background_tasks.background_video_processor(
             self.g_pool.capture.source_path,
@@ -155,15 +153,13 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.cache_seek_idx,
         )
 
-    def _update_filtered_markers(self):
+    def _filter_marker_cache(self, cache_to_filter):
         marker_cache = []
-        for markers in self.marker_cache_unfiltered:
+        for markers in cache_to_filter:
             if markers:
                 markers = self._filter_markers(markers)
             marker_cache.append(markers)
-        self.marker_cache = Cache_List(
-            marker_cache, positive_eval_fn=_cache_positive_eval_fn
-        )
+        return Cache(marker_cache)
 
     def init_ui(self):
         super().init_ui()
@@ -193,7 +189,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for gaze in self.gaze_on_surf_buffer_filler.fetch():
                 self.gaze_on_surf_buffer.append(gaze)
 
-            # Once all background processes are completed, update and export!
             if self.gaze_on_surf_buffer_filler.completed:
                 self.gaze_on_surf_buffer_filler = None
                 self._update_surface_heatmaps()
@@ -211,7 +206,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         self.markers = self.marker_cache[frame.index]
         self.markers_unfiltered = self.marker_cache_unfiltered[frame.index]
-        if self.markers is False:
+        if self.markers is None:
             # Move seek index to current frame because caches do not contain data for it
             self.markers = []
             self.markers_unfiltered = []
@@ -393,7 +388,10 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def remove_surface(self, surface):
         super().remove_surface(surface)
-        self._heatmap_update_requests.remove(surface)
+        try:
+            self._heatmap_update_requests.remove(surface)
+        except KeyError:
+            pass
         self.timeline.content_height -= self.TIMELINE_LINE_HEIGHT
 
     def on_notify(self, notification):
@@ -403,7 +401,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self._recalculate_marker_cache()
 
         elif notification["subject"] == "surface_tracker.marker_min_perimeter_changed":
-            self._update_filtered_markers()
+            self.marker_cache = self._filter_marker_cache(self.marker_cache_unfiltered)
             for surface in self.surfaces:
                 surface.location_cache = None
 
@@ -477,7 +475,3 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         marker_cache_file["version"] = self.MARKER_CACHE_VERSION
         marker_cache_file["inverted_markers"] = self.inverted_markers
         marker_cache_file.save()
-
-
-def _cache_positive_eval_fn(x):
-    return (x is not False) and len(x) > 0

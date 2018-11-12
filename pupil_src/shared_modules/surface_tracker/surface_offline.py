@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 import numpy as np
 
-from surface_tracker.cache_list import Cache_List
+from surface_tracker.cache import Cache
 import player_methods
 
 from surface_tracker.surface import Surface, Surface_Location
@@ -69,13 +69,13 @@ class Surface_Offline(Surface):
         try:
             location = self.location_cache[frame_idx]
         except (TypeError, AttributeError):
-            # If any event devalidates the location_cache, it will be set to None.
-            location = False
+            # If any event invalidates the location_cache, it will be set to None.
+            location = None
             self._recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
-        # If location is False the cache was not filled at the current position yet.
-        if location is False:
-            if not marker_cache[frame_idx] is False:
+        # If location is None the cache was not filled at the current position yet.
+        if location is None:
+            if not marker_cache[frame_idx] is None:
                 logging.debug("On demand surface cache update!")
                 self.update_location_cache(frame_idx, marker_cache, camera_model)
                 self.update_location(frame_idx, marker_cache, camera_model)
@@ -155,7 +155,7 @@ class Surface_Offline(Surface):
                     self.registered_markers_dist,
                 )
             self.location_cache.update(frame_idx, location, force=True)
-        except (TypeError, AttributeError) as e:
+        except (TypeError, AttributeError):
             self._recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
     def _recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
@@ -163,12 +163,9 @@ class Surface_Offline(Surface):
         if self.location_cache_filler is not None:
             self.location_cache_filler.cancel()
 
-        # Reset cache and recalculate all entries for which previous marker detections existed.
-        visited_list = [e is False for e in marker_cache]
+        # Reset cache and recalculate.
         self.cache_seek_idx.value = frame_idx
-        self.location_cache = Cache_List(
-            [False] * len(marker_cache), positive_eval_fn=_cache_positive_eval_fn
-        )
+        self.location_cache = Cache([None for _ in marker_cache])
         self.location_cache_filler = background_tasks.background_data_processor(
             marker_cache,
             offline_utils.surface_locater_callable(
@@ -176,7 +173,6 @@ class Surface_Offline(Surface):
                 self.registered_markers_undist,
                 self.registered_markers_dist,
             ),
-            visited_list,
             self.cache_seek_idx,
         )
 
@@ -189,9 +185,7 @@ class Surface_Offline(Surface):
 
         # Reset of marker cache. This does not invoke a recalculation in the background.
         # Full recalculation will happen once the surface corner was released.
-        self.location_cache = Cache_List(
-            [False] * len(marker_cache), positive_eval_fn=_cache_positive_eval_fn
-        )
+        self.location_cache = Cache([None for _ in marker_cache])
         self.update_location_cache(frame_idx, marker_cache, camera_model)
 
     def add_marker(self, marker_id, verts_px, camera_model):
@@ -209,7 +203,7 @@ class Surface_Offline(Surface):
         else:
             cache_to_file = []
             for location in self.location_cache:
-                if location is False:
+                if location is None:
                     # We do not save partial marker caches
                     cache_to_file = None
                     break
@@ -234,9 +228,7 @@ class Surface_Offline(Surface):
                     location
                 )
 
-            self.location_cache = Cache_List(
-                cache, positive_eval_fn=_cache_positive_eval_fn
-            )
+            self.location_cache = Cache(cache)
         except (KeyError, TypeError):
             self.location_cache = None
 
@@ -257,7 +249,3 @@ class Surface_Offline(Surface):
             return 0
         section_cache = self.location_cache[section]
         return sum(map(bool, section_cache))
-
-
-def _cache_positive_eval_fn(x):
-    return (x is not False) and x.detected

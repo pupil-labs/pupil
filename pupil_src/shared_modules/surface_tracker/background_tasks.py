@@ -11,8 +11,6 @@ import player_methods
 
 logger = logging.getLogger(__name__)
 
-# TODO clean this up!
-
 
 def background_video_processor(video_file_path, callable, visited_list, seek_idx=-1):
     return background_helper.IPC_Logging_Task_Proxy(
@@ -37,9 +35,7 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
         Global_Container(), source_path=video_file_path, timing=None
     )
 
-    visited_list = [
-        True if not isinstance(x, bool) or x else False for x in visited_list
-    ]
+    visited_list = [x is not None for x in visited_list]
 
     def next_unvisited_idx(frame_idx):
         """
@@ -114,15 +110,18 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
             yield next_frame_idx, res
 
 
-def background_data_processor(data, callable, visited_list, seek_idx=-1):
+def background_data_processor(data, callable, seek_idx=-1):
     return background_helper.IPC_Logging_Task_Proxy(
         "Background Data Processor",
         data_processing_generator,
-        (data, callable, seek_idx, visited_list),
+        (data, callable, seek_idx),
     )
 
 
-def data_processing_generator(data, callable, seek_idx, visited_list):
+def data_processing_generator(data, callable, seek_idx):
+    # We treat frames without marker detections as already processed from the start.
+    visited_list = [x is None for x in data]
+
     def next_unvisited_idx(sample_idx):
         """
         Starting from the given index, find the next sample that has not been
@@ -139,7 +138,7 @@ def data_processing_generator(data, callable, seek_idx, visited_list):
         except IndexError:
             visited = True  # trigger search from the start
 
-        if not visited:
+        if visited is False:
             next_unvisited = sample_idx
         else:
             # find next unvisited site in the future
