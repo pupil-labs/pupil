@@ -40,8 +40,8 @@ logger.setLevel(logging.DEBUG)
 
 
 TIMEOUT = 500  # ms FIXME
-DEFAULT_COL_SIZE = (1280, 720)
-DEFAULT_COL_FPS = 30
+DEFAULT_COLOR_SIZE = (1280, 720)
+DEFAULT_COLOR_FPS = 30
 DEFAULT_DEPTH_SIZE = (640, 480)
 DEFAULT_DEPTH_FPS = 30
 
@@ -146,8 +146,8 @@ class Realsense2_Source(Base_Source):
         self,
         g_pool,
         device_id=None,
-        frame_size=DEFAULT_COL_SIZE,
-        frame_rate=DEFAULT_COL_FPS,
+        frame_size=DEFAULT_COLOR_SIZE,
+        frame_rate=DEFAULT_COLOR_FPS,
         depth_frame_size=DEFAULT_DEPTH_SIZE,
         depth_frame_rate=DEFAULT_DEPTH_FPS,
         preview_depth=False,
@@ -171,9 +171,9 @@ class Realsense2_Source(Base_Source):
         self.last_pos = (0, 0)
         self.depth_window = None
         self._needs_restart = False
-        self.frame_size_backup = DEFAULT_COL_SIZE
+        self.frame_size_backup = DEFAULT_COLOR_SIZE
         self.depth_frame_size_backup = DEFAULT_DEPTH_SIZE
-        self.frame_rate_backup = DEFAULT_COL_FPS
+        self.frame_rate_backup = DEFAULT_COLOR_FPS
         self.depth_frame_rate_backup = DEFAULT_DEPTH_FPS
 
         self._initialize_device(
@@ -249,9 +249,9 @@ class Realsense2_Source(Base_Source):
             )
         else:
             config = self._get_default_config()
-            self.frame_size_backup = DEFAULT_COL_SIZE
+            self.frame_size_backup = DEFAULT_COLOR_SIZE
             self.depth_frame_size_backup = DEFAULT_DEPTH_SIZE
-            self.frame_rate_backup = DEFAULT_COL_FPS
+            self.frame_rate_backup = DEFAULT_COLOR_FPS
             self.depth_frame_rate_backup = DEFAULT_DEPTH_FPS
 
         try:
@@ -308,10 +308,10 @@ class Realsense2_Source(Base_Source):
         config = rs.config()  # default config is RGB8, we want YUYV
         config.enable_stream(
             rs.stream.color,
-            DEFAULT_COL_SIZE[0],
-            DEFAULT_COL_SIZE[1],
+            DEFAULT_COLOR_SIZE[0],
+            DEFAULT_COLOR_SIZE[1],
             rs.format.yuyv,
-            DEFAULT_COL_FPS,
+            DEFAULT_COLOR_FPS,
         )
         config.enable_stream(
             rs.stream.depth,
@@ -330,7 +330,7 @@ class Realsense2_Source(Base_Source):
                 "_get_valid_frame_rate: self._available_modes not set yet. Returning default fps."
             )
             if stream_type == rs.stream.color:
-                return DEFAULT_COL_FPS
+                return DEFAULT_COLOR_FPS
             elif stream_type == rs.stream.depth:
                 return DEFAULT_DEPTH_FPS
 
@@ -341,7 +341,7 @@ class Realsense2_Source(Base_Source):
                 )
             )
             if stream_type == rs.stream.color:
-                return DEFAULT_COL_FPS
+                return DEFAULT_COLOR_FPS
             elif stream_type == rs.stream.depth:
                 return DEFAULT_DEPTH_FPS
 
@@ -469,14 +469,10 @@ class Realsense2_Source(Base_Source):
         return None, None
 
     def recent_events(self, events):
-        if self._needs_restart:
-            logger.debug("recent_events -> needs restart")
+        if self._needs_restart or not self.online:
+            logger.debug("recent_events -> restarting device")
             self.restart_device()
-            time.sleep(0.05)
-            return
-        elif not self.online:
-            logger.debug("recent_events -> not online!")
-            time.sleep(0.05)
+            time.sleep(0.01)
             return
 
         try:
