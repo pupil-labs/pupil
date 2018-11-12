@@ -165,11 +165,6 @@ class Realsense2_Source(Base_Source):
         self.preview_depth = preview_depth
         self.record_depth = record_depth
         self.depth_video_writer = None
-        self.controls = {}
-        self.pitch = 0
-        self.yaw = 0
-        self.last_pos = (0, 0)
-        self.depth_window = None
         self._needs_restart = False
         self.frame_size_backup = DEFAULT_COLOR_SIZE
         self.depth_frame_size_backup = DEFAULT_DEPTH_SIZE
@@ -586,14 +581,6 @@ class Realsense2_Source(Base_Source):
             logger.debug("update_menu: self._available_modes is None")
 
     def gl_display(self):
-        # if not self.online:
-        #     return
-
-        if self.depth_window is not None and glfw.glfwWindowShouldClose(
-            self.depth_window
-        ):
-            glfw.glfwDestroyWindow(self.depth_window)
-            self.depth_window = None
 
         if self.preview_depth and self._recent_depth_frame is not None:
             self.g_pool.image_tex.update_from_ndarray(self._recent_depth_frame.bgr)
