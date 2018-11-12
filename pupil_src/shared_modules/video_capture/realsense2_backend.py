@@ -34,9 +34,8 @@ from ctypes import *
 # assert VersionFormat(rs.__version__) >= VersionFormat("2.2") # FIXME
 
 # logging
-logging.getLogger("pyrealsense2").setLevel(logging.ERROR + 1)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 TIMEOUT = 500  # ms FIXME
