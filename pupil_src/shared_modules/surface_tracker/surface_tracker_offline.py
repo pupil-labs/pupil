@@ -426,7 +426,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     surface.within_surface_heatmap = surface.get_placeholder_heatmap()
                     self._heatmap_update_requests.add(surface)
                     break
-            self._fill_gaze_on_surf_buffer()
 
         elif notification["subject"] == "should_export":
             proxy = background_tasks.get_export_proxy(
