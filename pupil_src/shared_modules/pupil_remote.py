@@ -39,10 +39,8 @@ class Pupil_Remote(Plugin):
         'PUB_PORT' return the current pub port of the IPC Backbone
         'SUB_PORT' return the current sub port of the IPC Backbone
 
-    Mulitpart messages conforming to pattern:
-        part1: 'notify.' part2: a msgpack serialized dict with at least key 'subject':'my_notification_subject'
-        will be forwared to the Pupil IPC Backbone.
-
+    Mulitpart messages will be forwarded to the Pupil IPC Backbone.For high-frequency
+        messages, it is recommended to use a PUSH socket instead.
 
     A example script for talking with pupil remote below:
         import zmq
