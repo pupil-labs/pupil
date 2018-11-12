@@ -303,6 +303,7 @@ def launcher():
                             ipc_push_url,
                             user_dir,
                             app_version,
+                            parsed_args.port,
                         ),
                     ).start()
                 elif "notify.clear_settings_process.should_start" in topic:
@@ -321,6 +322,7 @@ def launcher():
                             ipc_push_url,
                             user_dir,
                             app_version,
+                            parsed_args.port,
                         ),
                     ).start()
                 elif "notify.player_drop_process.should_start" in topic:

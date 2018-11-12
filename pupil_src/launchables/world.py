@@ -24,6 +24,7 @@ def world(
     ipc_push_url,
     user_dir,
     version,
+    preferred_remote_port,
 ):
     """Reads world video and runs plugins.
 
@@ -721,6 +722,7 @@ def world_profiled(
     ipc_push_url,
     user_dir,
     version,
+    preferred_remote_port,
 ):
     import cProfile
     import subprocess
@@ -737,6 +739,7 @@ def world_profiled(
             "ipc_push_url": ipc_push_url,
             "user_dir": user_dir,
             "version": version,
+            "preferred_remote_port": preferred_remote_port,
         },
         locals(),
         "world.pstats",

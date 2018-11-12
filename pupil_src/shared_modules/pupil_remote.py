@@ -85,9 +85,9 @@ class Pupil_Remote(Plugin):
         assert type(host) == str
         assert type(port) == str
         self.host = host
-        self.port = port
+        self.port = g_pool.preferred_remote_port or port
 
-        self.start_server("tcp://{}:{}".format(host, port))
+        self.start_server("tcp://{}:{}".format(host, self.port))
         self.menu = None
 
     def start_server(self, new_address):

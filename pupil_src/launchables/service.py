@@ -25,6 +25,7 @@ def service(
     ipc_push_url,
     user_dir,
     version,
+    preferred_remote_port,
 ):
     """Maps pupil to gaze data, can run various plug-ins.
 
@@ -127,6 +128,7 @@ def service(
         g_pool.ipc_push_url = ipc_push_url
         g_pool.eyes_are_alive = eyes_are_alive
         g_pool.timebase = timebase
+        g_pool.preferred_remote_port = preferred_remote_port
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value
@@ -315,6 +317,7 @@ def service_profiled(
     ipc_push_url,
     user_dir,
     version,
+    preferred_remote_port,
 ):
     import cProfile, subprocess, os
     from .service import service
@@ -329,6 +332,7 @@ def service_profiled(
             "ipc_push_url": ipc_push_url,
             "user_dir": user_dir,
             "version": version,
+            "preferred_remote_port": preferred_remote_port,
         },
         locals(),
         "service.pstats",
