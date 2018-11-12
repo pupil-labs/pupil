@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-TIMEOUT = 1000  # ms FIXME
+TIMEOUT = 500  # ms FIXME
 DEFAULT_COL_SIZE = (1280, 720)
 DEFAULT_COL_FPS = 30
 DEFAULT_DEPTH_SIZE = (640, 480)
@@ -171,6 +171,10 @@ class Realsense2_Source(Base_Source):
         self.last_pos = (0, 0)
         self.depth_window = None
         self._needs_restart = False
+        self.frame_size_backup = DEFAULT_COL_SIZE
+        self.depth_frame_size_backup = DEFAULT_DEPTH_SIZE
+        self.frame_rate_backup = DEFAULT_COL_FPS
+        self.depth_frame_rate_backup = DEFAULT_DEPTH_FPS
 
         self._initialize_device(
             device_id,
@@ -428,7 +432,7 @@ class Realsense2_Source(Base_Source):
             try:
                 frames = self.pipeline.wait_for_frames(TIMEOUT)
             except RuntimeError as e:
-                logger.error("Cannot wait for frames. " + str(e))
+                logger.error("get_frames: Timeout!")
                 raise RuntimeError(e)
             else:
                 current_time = self.g_pool.get_timestamp()
@@ -478,9 +482,7 @@ class Realsense2_Source(Base_Source):
         try:
             color_frame, depth_frame = self.get_frames()
         except RuntimeError as re:
-            logger.warning(
-                "Realsense failed to provide frames. Attempting to reinit. " + str(re)
-            )
+            logger.warning("Realsense failed to provide frames." + str(re))
             self._recent_frame = None
             self._recent_depth_frame = None
             self._needs_restart = True
@@ -583,6 +585,7 @@ class Realsense2_Source(Base_Source):
             sensor_control.append(
                 ui.Button("Reset device options to default", reset_options)
             )
+            self.menu.append(sensor_control)
         else:
             logger.debug("update_menu: self._available_modes is None")
 
@@ -618,22 +621,6 @@ class Realsense2_Source(Base_Source):
             (self.frame_size[1], self.frame_size[0], 3)
         )
 
-    @property
-    def device_id(self):
-        if self.online:  # already running
-            return self.pipeline_profile.get_device().get_info(
-                rs.camera_info.serial_number
-            )
-        else:
-            # set the first available device
-            devices = self.context.query_devices()
-            if devices:
-                logger.info("device_id: first device by default.")
-                return devices[0].get_info(rs.camera_info.serial_number)
-            else:
-                logger.debug("device_id: No device connected.")
-                return None
-
     def reset_device(self, device_id):
         logger.debug("reset_device")
         if device_id is None:
@@ -659,8 +646,6 @@ class Realsense2_Source(Base_Source):
         depth_fps=None,
         device_options=None,
     ):
-        logger.debug("restart_device")
-
         if color_frame_size is None:
             color_frame_size = self.frame_size
         if color_fps is None:
@@ -722,6 +707,22 @@ class Realsense2_Source(Base_Source):
 
         self.depth_video_writer.close()
         self.depth_video_writer = None
+
+    @property
+    def device_id(self):
+        if self.online:  # already running
+            return self.pipeline_profile.get_device().get_info(
+                rs.camera_info.serial_number
+            )
+        else:
+            # set the first available device
+            devices = self.context.query_devices()
+            if devices:
+                logger.info("device_id: first device by default.")
+                return devices[0].get_info(rs.camera_info.serial_number)
+            else:
+                logger.debug("device_id: No device connected.")
+                return None
 
     @property
     def frame_size(self):
