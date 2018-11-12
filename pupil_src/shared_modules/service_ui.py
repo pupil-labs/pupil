@@ -111,8 +111,8 @@ class Service_UI(System_Plugin_Base):
 
         g_pool.menubar.append(ui.Button("Reset window size", set_window_size))
 
-        pupil_remote_addr = "{}:50020".format(
-            socket.gethostbyname(socket.gethostname())
+        pupil_remote_addr = "{}:{}".format(
+            socket.gethostbyname(socket.gethostname()), g_pool.preferred_remote_port
         )
         g_pool.menubar.append(
             ui.Text_Input(
