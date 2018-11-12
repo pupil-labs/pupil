@@ -42,7 +42,7 @@ def parse(*, running_from_bundle, app="capture", port=None, **kwargs):
 def _setup_source_parsers(main_parser):
     subparsers = main_parser.add_subparsers(
         title="Applications",
-        description="Select which application you want to run",
+        description="Select which application you want to run, by default `capture`",
         dest="app",
     )
     parser_capture = subparsers.add_parser(
