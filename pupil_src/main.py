@@ -10,14 +10,12 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import os, sys, platform
-
-# sys.argv.append('--profile')
-# sys.argv.append('--debug')
-# sys.argv.append('service')
-
 import launchables.args
 
-parsed_args = launchables.args.parse()
+default_args = {"app": "capture", "debug": False, "profile": False}
+parsed_args = launchables.args.parse(
+    running_from_bundle=getattr(sys, "frozen", False), **default_args
+)
 
 if parsed_args.running_from_bundle:
     # Specifiy user dir.

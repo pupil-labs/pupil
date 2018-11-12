@@ -13,18 +13,28 @@ import argparse
 import sys
 
 
-def parse():
+def parse(*, running_from_bundle, app="capture", port=None, **kwargs):
+    """Setup application specific argument parsing.
+
+    Caveat: We need explicit defaults for app+port arguments in order to maintain
+            the convenience to start Capture without having to pass any explicit
+            arguments, e.g. `python3 main.py` instead of `python3 main.py capture`.
+    """
     parser = argparse.ArgumentParser()
 
-    # setup namespace to have app attribute, required for bundled
     target_ns = argparse.Namespace()
-    target_ns.app = "capture"
-    target_ns.running_from_bundle = getattr(sys, "frozen", False)
+    target_ns.app = app
+    target_ns.port = port
+    target_ns.running_from_bundle = running_from_bundle
+
+    if kwargs:
+        target_ns.__dict__.update(kwargs)
 
     if target_ns.running_from_bundle:
         _setup_bundle_parsers(parser, namespace=target_ns)
     else:
         _setup_source_parsers(parser)
+    _add_debug_profile_args(parser)
 
     return parser.parse_args(namespace=target_ns)
 
@@ -39,17 +49,14 @@ def _setup_source_parsers(main_parser):
         "capture", help="Real-time processing and recording"
     )
     _add_remote_port_arg(parser_capture)
-    _add_debug_profile_args(parser_capture)
 
     parser_service = subparsers.add_parser("service", help="VR/AR interface")
     _add_remote_port_arg(parser_service)
-    _add_debug_profile_args(parser_service)
 
     parser_player = subparsers.add_parser(
         "player", help="Process, visualize, and export recordings"
     )
     _add_recording_arg(parser_player)
-    _add_debug_profile_args(parser_player)
 
 
 def _setup_bundle_parsers(main_parser, namespace):
@@ -62,7 +69,6 @@ def _setup_bundle_parsers(main_parser, namespace):
             namespace.app = "capture"
         else:
             namespace.app = "service"
-    _add_debug_profile_args(main_parser)
 
 
 def _add_remote_port_arg(parser):
@@ -83,5 +89,5 @@ def _add_debug_profile_args(parser):
 
 
 if __name__ == "__main__":
-    args = parse()
+    args = parse(running_from_bundle=False)
     print(args)
