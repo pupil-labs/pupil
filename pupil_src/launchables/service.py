@@ -18,7 +18,13 @@ class Global_Container(object):
 
 
 def service(
-    timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, version
+    timebase,
+    eyes_are_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
 ):
     """Maps pupil to gaze data, can run various plug-ins.
 
@@ -102,6 +108,7 @@ def service(
         from service_ui import Service_UI
 
         from background_helper import IPC_Logging_Task_Proxy
+
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
         logger.info("Application Version: {}".format(version))
@@ -301,7 +308,13 @@ def service(
 
 
 def service_profiled(
-    timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, version
+    timebase,
+    eyes_are_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
 ):
     import cProfile, subprocess, os
     from .service import service

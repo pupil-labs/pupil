@@ -11,29 +11,24 @@ See COPYING and COPYING.LESSER for license details.
 
 import os, sys, platform
 
-# sys.argv.append('profiled')
-# sys.argv.append('debug')
+# sys.argv.append('--profile')
+# sys.argv.append('--debug')
 # sys.argv.append('service')
 
-app = "capture"
+import launchables.args
 
-if getattr(sys, "frozen", False):
-    if "pupil_service" in sys.executable:
-        app = "service"
-    elif "pupil_player" in sys.executable:
-        app = "player"
+parsed_args = launchables.args.parse()
+
+if parsed_args.running_from_bundle:
     # Specifiy user dir.
-    user_dir = os.path.expanduser(os.path.join("~", "pupil_{}_settings".format(app)))
+    folder_name = "pupil_{}_settings".format(parsed_args.app)
+    user_dir = os.path.expanduser(os.path.join("~", folder_name))
     version_file = os.path.join(sys._MEIPASS, "_version_string_")
 else:
-    if "service" in sys.argv:
-        app = "service"
-    if "player" in sys.argv:
-        app = "player"
     pupil_base_dir = os.path.abspath(__file__).rsplit("pupil_src", 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, "pupil_src", "shared_modules"))
     # Specifiy user dir.
-    user_dir = os.path.join(pupil_base_dir, "{}_settings".format(app))
+    user_dir = os.path.join(pupil_base_dir, "{}_settings".format(parsed_args.app))
     version_file = None
 
 # create folder for user settings, tmp data
@@ -72,7 +67,7 @@ from time import time
 from os_utils import Prevent_Idle_Sleep
 
 # functions to run in seperate processes
-if "profiled" in sys.argv:
+if parsed_args.profile:
     from launchables.world import world_profiled as world
     from launchables.service import service_profiled as service
     from launchables.eye import eye_profiled as eye
@@ -150,7 +145,9 @@ def launcher():
         logger.setLevel(logging.NOTSET)
         # Stream to file
         fh = logging.FileHandler(
-            os.path.join(user_dir, "{}.log".format(app)), mode="w", encoding="utf-8"
+            os.path.join(user_dir, "{}.log".format(parsed_args.app)),
+            mode="w",
+            encoding="utf-8",
         )
         fh.setFormatter(
             logging.Formatter(
@@ -249,12 +246,12 @@ def launcher():
             cmd_sub.recv()
             break
 
-    if app == "service":
+    if parsed_args.app == "service":
         cmd_push.notify({"subject": "service_process.should_start"})
-    elif app == "capture":
+    elif parsed_args.app == "capture":
         cmd_push.notify({"subject": "world_process.should_start"})
-    elif app == "player":
-        rec_dir = os.path.expanduser(sys.argv[-1])
+    elif parsed_args.app == "player":
+        rec_dir = os.path.expanduser(parsed_args.recording)
         cmd_push.notify(
             {"subject": "player_drop_process.should_start", "rec_dir": rec_dir}
         )

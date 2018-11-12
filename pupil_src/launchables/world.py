@@ -17,7 +17,13 @@ class Global_Container(object):
 
 
 def world(
-    timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, version
+    timebase,
+    eyes_are_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
 ):
     """Reads world video and runs plugins.
 
@@ -201,6 +207,7 @@ def world(
         g_pool.ipc_sub_url = ipc_sub_url
         g_pool.ipc_push_url = ipc_push_url
         g_pool.eyes_are_alive = eyes_are_alive
+        g_pool.preferred_remote_port = preferred_remote_port
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value
@@ -707,7 +714,13 @@ def world(
 
 
 def world_profiled(
-    timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, version
+    timebase,
+    eyes_are_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
 ):
     import cProfile
     import subprocess
