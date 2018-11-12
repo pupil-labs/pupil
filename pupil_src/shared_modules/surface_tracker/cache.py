@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 import itertools
 
 
-class Cache(list):  # TODO make None the not processed yet state
+class Cache(list):
     """Cache list is a list of False
         [False,False,False]
         with update() 'False' can be overwritten with a result (anything not 'False')
