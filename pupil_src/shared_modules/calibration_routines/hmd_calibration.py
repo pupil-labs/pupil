@@ -12,6 +12,8 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import audio
 import numpy as np
+
+import math_helper.transformations
 from file_methods import save_object
 
 
@@ -141,7 +143,7 @@ class HMD_Calibration(Calibration_Plugin):
 
         if matched_pupil0_data:
             cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil0_data)
-            map_fn0, inliers0, params0 = calibrate.calibrate_2d_polynomial(
+            map_fn0, inliers0, params0 = calibrate.calibrate_polynomial(
                 cal_pt_cloud, hmd_video_frame_size, binocular=False
             )
             if not inliers0.any():
@@ -158,7 +160,7 @@ class HMD_Calibration(Calibration_Plugin):
 
         if matched_pupil1_data:
             cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil1_data)
-            map_fn1, inliers1, params1 = calibrate.calibrate_2d_polynomial(
+            map_fn1, inliers1, params1 = calibrate.calibrate_polynomial(
                 cal_pt_cloud, hmd_video_frame_size, binocular=False
             )
             if not inliers1.any():
@@ -330,12 +332,12 @@ class HMD_Calibration_3D(HMD_Calibration, Calibration_Plugin):
             sphere_pos0 = matched_data[-1]["pupil"]["sphere"]["center"]
             sphere_pos1 = matched_data[-1]["pupil1"]["sphere"]["center"]
 
-            initial_R0, initial_t0 = calibrate.find_rigid_transform(
+            initial_R0, initial_t0 = math_helper.transformations.find_rigid_transform(
                 np.array(gaze0_dir) * 500, np.array(ref_points_3d) * 1
             )
             initial_rotation0 = math_helper.quaternion_from_rotation_matrix(initial_R0)
 
-            initial_R1, initial_t1 = calibrate.find_rigid_transform(
+            initial_R1, initial_t1 = math_helper.transformations.find_rigid_transform(
                 np.array(gaze1_dir) * 500, np.array(ref_points_3d) * 1
             )
             initial_rotation1 = math_helper.quaternion_from_rotation_matrix(initial_R1)

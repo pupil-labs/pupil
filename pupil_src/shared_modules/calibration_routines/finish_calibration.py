@@ -12,10 +12,16 @@ See COPYING and COPYING.LESSER for license details.
 import os
 
 from math_helper import *
-from file_methods import load_object, save_object
+from file_methods import save_object
 
 from .optimization_calibration import bundle_adjust_calibration
-from .calibrate import find_rigid_transform, match_data
+from math_helper import find_rigid_transform
+from .data_processing import (
+    match_data,
+    filter_confidence,
+    preprocess_2d_data_binocular,
+    preprocess_2d_data_monocular,
+)
 
 # logging
 import logging
@@ -24,7 +30,7 @@ logger = logging.getLogger(__name__)
 from .gaze_mappers import *
 
 not_enough_data_error_msg = (
-    "Not enough ref point or pupil data available for calibration."
+    "Not enough ref points or pupil data available for calibration."
 )
 solver_failed_to_converge_error_msg = "Parameters could not be estimated from data."
 
@@ -183,7 +189,6 @@ def calibrate_3d_monocular(g_pool, matched_monocular_data):
     hardcoded_translation1 = np.array([-40, 15, -20])
     # TODO model the world as cv2 pinhole camera with distorion and focal in ceres.
     # right now we solve using a few permutations of K
-    smallest_residual = 1000
 
     # TODO do this across different scales?
     ref_dir, gaze_dir, _ = calibrate.preprocess_3d_data(matched_monocular_data, g_pool)
@@ -312,15 +317,15 @@ def calibrate_3d_monocular(g_pool, matched_monocular_data):
 def calibrate_2d_binocular(
     g_pool, matched_binocular_data, matched_pupil0_data, matched_pupil1_data
 ):
-    method = "binocular polynomial regression"
-    cal_pt_cloud_binocular = calibrate.preprocess_2d_data_binocular(
-        matched_binocular_data
-    )
-    cal_pt_cloud0 = calibrate.preprocess_2d_data_monocular(matched_pupil0_data)
-    cal_pt_cloud1 = calibrate.preprocess_2d_data_monocular(matched_pupil1_data)
 
-    map_fn, inliers, params = calibrate.calibrate_2d_polynomial(
-        cal_pt_cloud_binocular, g_pool.capture.frame_size, binocular=True
+    method = "binocular polynomial regression"
+
+    cal_pt_cloud_binocular = preprocess_2d_data_binocular(matched_binocular_data)
+    cal_pt_cloud0 = preprocess_2d_data_monocular(matched_pupil0_data)
+    cal_pt_cloud1 = preprocess_2d_data_monocular(matched_pupil1_data)
+
+    success, params = calibrate.calibrate_polynomial(
+        cal_pt_cloud_binocular, binocular=True
     )
 
     def create_converge_error_msg():
@@ -331,20 +336,36 @@ def calibrate_2d_binocular(
             "record": True,
         }
 
-    if not inliers.any():
+    if not success:
         return method, create_converge_error_msg()
 
-    map_fn, inliers, params_eye0 = calibrate.calibrate_2d_polynomial(
-        cal_pt_cloud0, g_pool.capture.frame_size, binocular=False
+    success, params_eye0 = calibrate.calibrate_polynomial(
+        cal_pt_cloud0, binocular=False
     )
-    if not inliers.any():
+    if not success:
         return method, create_converge_error_msg()
 
-    map_fn, inliers, params_eye1 = calibrate.calibrate_2d_polynomial(
-        cal_pt_cloud1, g_pool.capture.frame_size, binocular=False
+    success, params_eye1 = calibrate.calibrate_polynomial(
+        cal_pt_cloud1, binocular=False
     )
-    if not inliers.any():
+    if not success:
         return method, create_converge_error_msg()
+
+    ############
+    results_dict = {
+        "subject": "start_plugin",
+        "name": "Binocular_Gaze_Mapper",
+        "args": {
+            "params": params,
+            "params_eye0": params_eye0,
+            "params_eye1": params_eye1,
+        },
+    }
+
+    dump_calibration_data(
+        matched_binocular_data, matched_pupil0_data, matched_pupil1_data, results_dict
+    )
+    ############
 
     return (
         method,
@@ -362,11 +383,9 @@ def calibrate_2d_binocular(
 
 def calibrate_2d_monocular(g_pool, matched_monocular_data):
     method = "monocular polynomial regression"
-    cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_monocular_data)
-    map_fn, inliers, params = calibrate.calibrate_2d_polynomial(
-        cal_pt_cloud, g_pool.capture.frame_size, binocular=False
-    )
-    if not inliers.any():
+    cal_pt_cloud = preprocess_2d_data_monocular(matched_monocular_data)
+    success, params = calibrate.calibrate_polynomial(cal_pt_cloud, binocular=False, degree=2)
+    if not success:
         return (
             method,
             {
@@ -389,23 +408,9 @@ def calibrate_2d_monocular(g_pool, matched_monocular_data):
 
 def select_calibration_method(g_pool, pupil_list, ref_list):
 
-    len_pre_filter = len(pupil_list)
-    pupil_list = [
-        p for p in pupil_list if p["confidence"] >= g_pool.min_calibration_confidence
-    ]
-    len_post_filter = len(pupil_list)
-    try:
-        dismissed_percentage = 100 * (1.0 - len_post_filter / len_pre_filter)
-    except ZeroDivisionError:
-        pass  # empty pupil_list, is being handled in match_data
-    else:
-        logger.info(
-            "Dismissing {:.2f}% pupil data due to confidence < {:.2f}".format(
-                dismissed_percentage, g_pool.min_calibration_confidence
-            )
-        )
-
+    pupil_list = filter_confidence(pupil_list, g_pool.min_calibration_confidence)
     matched_data = match_data(g_pool, pupil_list, ref_list)  # calculate matching data
+
     if not isinstance(matched_data, tuple):
         return None, matched_data  # matched_data is an error notification
 
@@ -466,6 +471,40 @@ def select_calibration_method(g_pool, pupil_list, ref_list):
                     "record": True,
                 },
             )
+
+
+def dump_calibration_data(binocular, eye0, eye1, result):
+    import uuid
+    import pickle
+
+    unique_filename = str(uuid.uuid4())
+    pickle.dump(
+        binocular,
+        open(
+            "/home/kd/Desktop/calibration_data/"
+            + unique_filename
+            + "_match_binocular.p",
+            "bw",
+        ),
+    )
+    pickle.dump(
+        eye0,
+        open(
+            "/home/kd/Desktop/calibration_data/" + unique_filename + "_match_0.p", "bw"
+        ),
+    )
+    pickle.dump(
+        eye1,
+        open(
+            "/home/kd/Desktop/calibration_data/" + unique_filename + "_match_1.p", "bw"
+        ),
+    )
+    pickle.dump(
+        result,
+        open(
+            "/home/kd/Desktop/calibration_data/" + unique_filename + "_result.p", "bw"
+        ),
+    )
 
 
 def finish_calibration(g_pool, pupil_list, ref_list):

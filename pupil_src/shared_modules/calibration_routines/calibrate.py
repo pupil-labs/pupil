@@ -10,227 +10,145 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import numpy as np
-import cv2
+import numpy.polynomial.polynomial as poly
+import scipy.optimize
 
 # logging
 import logging
 
 logger = logging.getLogger(__name__)
 
-not_enough_data_error_msg = (
-    "Not enough ref point or pupil data available for calibration."
-)
 
-def calibrate_2d_polynomial(
-    cal_pt_cloud, screen_size=(1, 1), threshold=35, binocular=False
+class PolynomialMonocular:
+    def __init__(self, params, dof=2, degree=2):
+
+        self.dof = dof
+        self.degree_per_dof = np.asarray(self.dof * [degree], dtype=np.int)
+
+        np_polynomial_functions = [poly.polyval, poly.polyval2d, poly.polyval3d]
+        self.func = np_polynomial_functions[self.dof - 1]
+        self.params = np.reshape(params, self.degree_per_dof + 1)
+
+    def __call__(self, x):
+
+        return self.func(*x, self.params)
+
+
+class PolynomialBinocular:
+    def __init__(self, params, dof=2, degree=2):
+
+        self.dof = dof
+        self.degree = degree
+
+        self.mapping_eye_0 = PolynomialMonocular(params[: len(params) // 2], self.dof, self.degree)
+        self.mapping_eye_1 = PolynomialMonocular(params[len(params) // 2 :], self.dof, self.degree)
+
+    def __call__(self, x):
+
+        x0 = x[: self.dof]
+        x1 = x[self.dof :]
+
+        return 1 / 2 * (self.mapping_eye_0(x0) + self.mapping_eye_1(x1))
+
+
+class MappingFunction2D:
+    def __init__(self, params_x, params_y, dof=2, degree=2, binocular=False):
+
+        if binocular:
+            polynomial_type = PolynomialBinocular
+        else:
+            polynomial_type = PolynomialMonocular
+
+        self.map_to_world_cam_x = polynomial_type(params_x, dof, degree)
+        self.map_to_world_cam_y = polynomial_type(params_y, dof, degree)
+
+    def __call__(self, pt):
+
+        return self.map_to_world_cam_x(pt), self.map_to_world_cam_y(pt)
+
+
+def cauchy_loss(residual, scale):
+    return scale ** 2 * np.log(1 + residual / scale ** 2)
+
+
+def calibration_objective(
+    params, x, targets, polynomial_type, dof=2, degree=2, regularization=0.0, loss_scale=0.2
 ):
-    """
-    we do a simple two pass fitting to a pair of bi-variate polynomials
-    return the function to map vector
-    """
-    # fit once using all avaiable data
-    model_n = 7
-    if binocular:
-        model_n = 13
 
-    cal_pt_cloud = np.array(cal_pt_cloud)
+    polynomial_ = polynomial_type(params, dof, degree)
+    squared_residuals = (polynomial_([column for column in x.T]) - targets) ** 2
 
-    cx, cy, err_x, err_y = fit_poly_surface(cal_pt_cloud, model_n)
-    err_dist, err_mean, err_rms = fit_error_screen(err_x, err_y, screen_size)
-    if cal_pt_cloud[err_dist <= threshold].shape[0]:  # did not disregard all points..
-        # fit again disregarding extreme outliers
-        cx, cy, new_err_x, new_err_y = fit_poly_surface(
-            cal_pt_cloud[err_dist <= threshold], model_n
-        )
-        map_fn = make_map_function(cx, cy, model_n)
-        new_err_dist, new_err_mean, new_err_rms = fit_error_screen(
-            new_err_x, new_err_y, screen_size
-        )
-
-        logger.info(
-            "first iteration. root-mean-square residuals: {}, in pixel".format(err_rms)
-        )
-        logger.info(
-            "second iteration: ignoring outliers. root-mean-square residuals: {} in pixel".format(
-                new_err_rms
-            )
-        )
-
-        used_num = cal_pt_cloud[err_dist <= threshold].shape[0]
-        complete_num = cal_pt_cloud.shape[0]
-        logger.info(
-            "used {} data points out of the full dataset {}: subset is {:.2f} percent".format(
-                used_num, complete_num, 100 * float(used_num) / complete_num
-            )
-        )
-
-        return (
-            map_fn,
-            err_dist <= threshold,
-            ([p.tolist() for p in cx], [p.tolist() for p in cy], model_n),
-        )
-
-    else:  # did disregard all points. The data cannot be represented by the model in a meaningful way:
-        map_fn = make_map_function(cx, cy, model_n)
-        logger.error(
-            "First iteration. root-mean-square residuals: {} in pixel, this is bad!".format(
-                err_rms
-            )
-        )
-        logger.error(
-            "The data cannot be represented by the model in a meaningfull way."
-        )
-        return (
-            map_fn,
-            err_dist <= threshold,
-            ([p.tolist() for p in cx], [p.tolist() for p in cy], model_n),
-        )
-
-
-def fit_poly_surface(cal_pt_cloud, n=7):
-    M = make_model(cal_pt_cloud, n)
-    U, w, Vt = np.linalg.svd(M[:, :n], full_matrices=0)
-    V = Vt.transpose()
-    Ut = U.transpose()
-    pseudINV = np.dot(V, np.dot(np.diag(1 / w), Ut))
-    cx = np.dot(pseudINV, M[:, n])
-    cy = np.dot(pseudINV, M[:, n + 1])
-    # compute model error in world screen units if screen_res specified
-    err_x = np.dot(M[:, :n], cx) - M[:, n]
-    err_y = np.dot(M[:, :n], cy) - M[:, n + 1]
-    return cx, cy, err_x, err_y
-
-
-def fit_error_screen(err_x, err_y, screen_pos):
-    screen_x, screen_y = screen_pos
-    err_x *= screen_x / 2.0
-    err_y *= screen_y / 2.0
-    err_dist = np.sqrt(err_x * err_x + err_y * err_y)
-    err_mean = np.sum(err_dist) / len(err_dist)
-    err_rms = np.sqrt(np.sum(err_dist * err_dist) / len(err_dist))
-    return err_dist, err_mean, err_rms
-
-
-def make_model(cal_pt_cloud, n=7):
-    n_points = cal_pt_cloud.shape[0]
-
-    if n == 3:
-        X = cal_pt_cloud[:, 0]
-        Y = cal_pt_cloud[:, 1]
-        Ones = np.ones(n_points)
-        ZX = cal_pt_cloud[:, 2]
-        ZY = cal_pt_cloud[:, 3]
-        M = np.array([X, Y, Ones, ZX, ZY]).transpose()
-
-    elif n == 5:
-        X0 = cal_pt_cloud[:, 0]
-        Y0 = cal_pt_cloud[:, 1]
-        X1 = cal_pt_cloud[:, 2]
-        Y1 = cal_pt_cloud[:, 3]
-        Ones = np.ones(n_points)
-        ZX = cal_pt_cloud[:, 4]
-        ZY = cal_pt_cloud[:, 5]
-        M = np.array([X0, Y0, X1, Y1, Ones, ZX, ZY]).transpose()
-
-    elif n == 7:
-        X = cal_pt_cloud[:, 0]
-        Y = cal_pt_cloud[:, 1]
-        XX = X * X
-        YY = Y * Y
-        XY = X * Y
-        XXYY = XX * YY
-        Ones = np.ones(n_points)
-        ZX = cal_pt_cloud[:, 2]
-        ZY = cal_pt_cloud[:, 3]
-        M = np.array([X, Y, XX, YY, XY, XXYY, Ones, ZX, ZY]).transpose()
-
-    elif n == 9:
-        X = cal_pt_cloud[:, 0]
-        Y = cal_pt_cloud[:, 1]
-        XX = X * X
-        YY = Y * Y
-        XY = X * Y
-        XXYY = XX * YY
-        XXY = XX * Y
-        YYX = YY * X
-        Ones = np.ones(n_points)
-        ZX = cal_pt_cloud[:, 2]
-        ZY = cal_pt_cloud[:, 3]
-        M = np.array([X, Y, XX, YY, XY, XXYY, XXY, YYX, Ones, ZX, ZY]).transpose()
-
-    elif n == 13:
-        X0 = cal_pt_cloud[:, 0]
-        Y0 = cal_pt_cloud[:, 1]
-        X1 = cal_pt_cloud[:, 2]
-        Y1 = cal_pt_cloud[:, 3]
-        XX0 = X0 * X0
-        YY0 = Y0 * Y0
-        XY0 = X0 * Y0
-        XXYY0 = XX0 * YY0
-        XX1 = X1 * X1
-        YY1 = Y1 * Y1
-        XY1 = X1 * Y1
-        XXYY1 = XX1 * YY1
-        Ones = np.ones(n_points)
-        ZX = cal_pt_cloud[:, 4]
-        ZY = cal_pt_cloud[:, 5]
-        M = np.array(
-            [X0, Y0, X1, Y1, XX0, YY0, XY0, XXYY0, XX1, YY1, XY1, XXYY1, Ones, ZX, ZY]
-        ).transpose()
-
-    elif n == 17:
-        X0 = cal_pt_cloud[:, 0]
-        Y0 = cal_pt_cloud[:, 1]
-        X1 = cal_pt_cloud[:, 2]
-        Y1 = cal_pt_cloud[:, 3]
-        XX0 = X0 * X0
-        YY0 = Y0 * Y0
-        XY0 = X0 * Y0
-        XXYY0 = XX0 * YY0
-        XX1 = X1 * X1
-        YY1 = Y1 * Y1
-        XY1 = X1 * Y1
-        XXYY1 = XX1 * YY1
-
-        X0X1 = X0 * X1
-        X0Y1 = X0 * Y1
-        Y0X1 = Y0 * X1
-        Y0Y1 = Y0 * Y1
-
-        Ones = np.ones(n_points)
-
-        ZX = cal_pt_cloud[:, 4]
-        ZY = cal_pt_cloud[:, 5]
-        M = np.array(
-            [
-                X0,
-                Y0,
-                X1,
-                Y1,
-                XX0,
-                YY0,
-                XY0,
-                XXYY0,
-                XX1,
-                YY1,
-                XY1,
-                XXYY1,
-                X0X1,
-                X0Y1,
-                Y0X1,
-                Y0Y1,
-                Ones,
-                ZX,
-                ZY,
-            ]
-        ).transpose()
-
+    if loss_scale > 0:
+        cost = 1 / 2 * np.sum(cauchy_loss(squared_residuals, loss_scale))
     else:
-        raise Exception("ERROR: Model n needs to be 3, 5, 7 or 9")
-    return M
+        cost = 1 / 2 * np.sum(squared_residuals)
+
+    cost += regularization * np.sum(params ** 2)
+
+    return cost
 
 
-def make_map_function(cx, cy, n):
+def calibrate_polynomial(
+    cal_pt_cloud, binocular=False, degree=2, regularization=0.0, loss_scale=0.2
+):
+
+    cal_pt_cloud = np.asarray(cal_pt_cloud)
+
+    if binocular:
+        dof_multiplier = 2
+        polynomial_type = PolynomialBinocular
+    else:
+        dof_multiplier = 1
+        polynomial_type = PolynomialMonocular
+
+    dof = (cal_pt_cloud.shape[1] - 2) // dof_multiplier
+    n_params = dof_multiplier * (degree + 1) ** dof
+    initial_guess = np.zeros(n_params)
+
+    fit_x = scipy.optimize.minimize(
+        calibration_objective,
+        initial_guess,
+        args=(
+            cal_pt_cloud[:, :-2],
+            cal_pt_cloud[:, -2],
+            polynomial_type,
+            dof,
+            degree,
+            regularization,
+            loss_scale,
+        ),
+    )
+    fit_y = scipy.optimize.minimize(
+        calibration_objective,
+        initial_guess,
+        args=(
+            cal_pt_cloud[:, :-2],
+            cal_pt_cloud[:, -1],
+            polynomial_type,
+            dof,
+            degree,
+            regularization,
+            loss_scale,
+        ),
+    )
+    return (
+        (fit_x.success and fit_y.success),
+        (fit_x.x.tolist(), fit_y.x.tolist(), dof, degree, binocular),
+    )
+
+
+# This function will be simpler once we do not have to support old calibration files.
+def build_mapping_function(*args):
+
+    if len(args) == 3:
+        return make_map_function_legacy(*args)
+    else:
+        return MappingFunction2D(*args)
+
+
+# This function will be gone, once we switch to the new version. For the moment it is needed to work
+# with the Pupil standard calibration parameters.
+def make_map_function_legacy(cx, cy, n):
     if n == 3:
 
         def fn(pt):
@@ -390,194 +308,3 @@ def make_map_function(cx, cy, n):
         raise Exception("ERROR: unsopported number of coefficiants.")
 
     return fn
-
-
-def match_data(g_pool, pupil_list, ref_list):
-    if pupil_list and ref_list:
-        pass
-    else:
-        logger.error(not_enough_data_error_msg)
-        return {
-            "subject": "calibration.failed",
-            "reason": not_enough_data_error_msg,
-            "timestamp": g_pool.get_timestamp(),
-            "record": True,
-        }
-
-    # match eye data and check if biocular and or monocular
-    pupil0 = [p for p in pupil_list if p["id"] == 0]
-    pupil1 = [p for p in pupil_list if p["id"] == 1]
-
-    # TODO unify this and don't do both
-    matched_binocular_data = closest_matches_binocular(ref_list, pupil_list)
-    matched_pupil0_data = closest_matches_monocular(ref_list, pupil0)
-    matched_pupil1_data = closest_matches_monocular(ref_list, pupil1)
-
-    if len(matched_pupil0_data) > len(matched_pupil1_data):
-        matched_monocular_data = matched_pupil0_data
-    else:
-        matched_monocular_data = matched_pupil1_data
-
-    logger.info(
-        "Collected {} monocular calibration data.".format(len(matched_monocular_data))
-    )
-    logger.info(
-        "Collected {} binocular calibration data.".format(len(matched_binocular_data))
-    )
-    return (
-        matched_binocular_data,
-        matched_monocular_data,
-        matched_pupil0_data,
-        matched_pupil1_data,
-        pupil0,
-        pupil1,
-    )
-
-
-def closest_matches_binocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
-    """
-    get pupil positions closest in time to ref points.
-    return list of dict with matching ref, pupil0 and pupil1 data triplets.
-    """
-    pupil0 = [p for p in pupil_pts if p["id"] == 0]
-    pupil1 = [p for p in pupil_pts if p["id"] == 1]
-
-    pupil0_ts = np.array([p["timestamp"] for p in pupil0])
-    pupil1_ts = np.array([p["timestamp"] for p in pupil1])
-
-    def find_nearest_idx(array, value):
-        idx = np.searchsorted(array, value, side="left")
-        try:
-            if abs(value - array[idx - 1]) < abs(value - array[idx]):
-                return idx - 1
-            else:
-                return idx
-        except IndexError:
-            return idx - 1
-
-    matched = []
-
-    if pupil0 and pupil1:
-        for r in ref_pts:
-            closest_p0_idx = find_nearest_idx(pupil0_ts, r["timestamp"])
-            closest_p0 = pupil0[closest_p0_idx]
-            closest_p1_idx = find_nearest_idx(pupil1_ts, r["timestamp"])
-            closest_p1 = pupil1[closest_p1_idx]
-
-            dispersion = max(
-                closest_p0["timestamp"], closest_p1["timestamp"], r["timestamp"]
-            ) - min(closest_p0["timestamp"], closest_p1["timestamp"], r["timestamp"])
-            if dispersion < max_dispersion:
-                matched.append({"ref": r, "pupil": closest_p0, "pupil1": closest_p1})
-            else:
-                logger.debug(
-                    "Binocular match rejected due to time dispersion criterion"
-                )
-    return matched
-
-
-def closest_matches_monocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
-    """
-    get pupil positions closest in time to ref points.
-    return list of dict with matching ref and pupil datum.
-
-    if your data is binocular use:
-    pupil0 = [p for p in pupil_pts if p['id']==0]
-    pupil1 = [p for p in pupil_pts if p['id']==1]
-    to get the desired eye and pass it as pupil_pts
-    """
-
-    ref = ref_pts
-    pupil0 = pupil_pts
-    pupil0_ts = np.array([p["timestamp"] for p in pupil0])
-
-    def find_nearest_idx(array, value):
-        idx = np.searchsorted(array, value, side="left")
-        try:
-            if abs(value - array[idx - 1]) < abs(value - array[idx]):
-                return idx - 1
-            else:
-                return idx
-        except IndexError:
-            return idx - 1
-
-    matched = []
-    if pupil0:
-        for r in ref_pts:
-            closest_p0_idx = find_nearest_idx(pupil0_ts, r["timestamp"])
-            closest_p0 = pupil0[closest_p0_idx]
-            dispersion = max(closest_p0["timestamp"], r["timestamp"]) - min(
-                closest_p0["timestamp"], r["timestamp"]
-            )
-            if dispersion < max_dispersion:
-                matched.append({"ref": r, "pupil": closest_p0})
-            else:
-                pass
-    return matched
-
-
-def preprocess_2d_data_monocular(matched_data):
-    cal_data = [
-        (*pair["pupil"]["norm_pos"], *pair["ref"]["norm_pos"]) for pair in matched_data
-    ]
-    return cal_data
-
-
-def preprocess_2d_data_binocular(matched_data):
-    cal_data = [
-        (
-            *triplet["pupil"]["norm_pos"],
-            *triplet["pupil1"]["norm_pos"],
-            *triplet["ref"]["norm_pos"],
-        )
-        for triplet in matched_data
-    ]
-    return cal_data
-
-
-def preprocess_3d_data(matched_data, g_pool):
-    pupil0_processed = [
-        dp["pupil"]["circle_3d"]["normal"]
-        for dp in matched_data
-        if "circle_3d" in dp["pupil"]
-    ]
-
-    pupil1_processed = [
-        dp["pupil1"]["circle_3d"]["normal"]
-        for dp in matched_data
-        if "pupil1" in dp and "circle_3d" in dp["pupil1"]
-    ]
-
-    ref = np.array([dp["ref"]["screen_pos"] for dp in matched_data])
-    ref_processed = g_pool.capture.intrinsics.unprojectPoints(ref, normalize=True)
-
-    return ref_processed, pupil0_processed, pupil1_processed
-
-
-# todo: Move to math_helper?
-def find_rigid_transform(A, B):
-    # we expect the shape to be of length 2
-    assert len(A.shape) == len(B.shape) == 2
-    assert A.shape[0] == B.shape[0]
-
-    centroid_A = np.mean(A, axis=0)
-    centroid_B = np.mean(B, axis=0)
-
-    # centre the points
-    A -= centroid_A
-    B -= centroid_B
-
-    # dot is matrix multiplication for array
-    H = A.T @ B
-    U, S, Vt = np.linalg.svd(H)
-    R = Vt.T @ U.T
-    # special reflection case
-    if np.linalg.det(R) < 0:
-        logger.info("Reflection detected")
-        Vt[2, :] *= -1
-        R = Vt.T * U.T #todo: Check!
-
-    t = -R @ centroid_A.T + centroid_B.T
-
-    return R, t.reshape(3)
-

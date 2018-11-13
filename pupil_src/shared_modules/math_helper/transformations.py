@@ -198,6 +198,9 @@ from __future__ import division, print_function
 import math
 
 import numpy
+import numpy as np
+
+from calibration_routines.calibrate import logger
 
 __version__ = "2015.07.18"
 __docformat__ = "restructuredtext en"
@@ -1988,3 +1991,30 @@ if __name__ == "__main__":
 
     numpy.set_printoptions(suppress=True, precision=5)
     doctest.testmod()
+
+
+def find_rigid_transform(A, B):
+    # we expect the shape to be of length 2
+    assert len(A.shape) == len(B.shape) == 2
+    assert A.shape[0] == B.shape[0]
+
+    centroid_A = np.mean(A, axis=0)
+    centroid_B = np.mean(B, axis=0)
+
+    # centre the points
+    A -= centroid_A
+    B -= centroid_B
+
+    # dot is matrix multiplication for array
+    H = A.T @ B
+    U, S, Vt = np.linalg.svd(H)
+    R = Vt.T @ U.T
+    # special reflection case
+    if np.linalg.det(R) < 0:
+        logger.info("Reflection detected")
+        Vt[2, :] *= -1
+        R = Vt.T * U.T  # todo: Check!
+
+    t = -R @ centroid_A.T + centroid_B.T
+
+    return R, t.reshape(3)

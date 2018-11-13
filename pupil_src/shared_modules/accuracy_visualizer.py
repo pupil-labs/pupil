@@ -19,7 +19,7 @@ from pyglui import ui
 from pyglui.cygl.utils import draw_points_norm, draw_polyline_norm, RGBA
 
 from plugin import Plugin
-from calibration_routines.calibrate import closest_matches_monocular
+from calibration_routines.data_processing import closest_matches_monocular
 
 from collections import namedtuple
 
