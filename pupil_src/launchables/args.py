@@ -47,7 +47,9 @@ def _setup_source_parsers(main_parser):
     )
     _add_remote_port_arg(parser_capture)
 
-    parser_service = subparsers.add_parser("service", help="VR/AR interface")
+    parser_service = subparsers.add_parser(
+        "service", help="Real-time processing with minimal UI"
+    )
     _add_remote_port_arg(parser_service)
 
     parser_player = subparsers.add_parser(
