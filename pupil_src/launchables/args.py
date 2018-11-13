@@ -14,14 +14,11 @@ import sys
 
 
 def parse(*, running_from_bundle, app="capture", port=None, **kwargs):
-    """Setup application specific argument parsing.
-
-    Caveat: We need explicit defaults for app+port arguments in order to maintain
-            the convenience to start Capture without having to pass any explicit
-            arguments, e.g. `python3 main.py` instead of `python3 main.py capture`.
-    """
     parser = argparse.ArgumentParser()
 
+    # Caveat: We need explicit defaults for app+port arguments in order to maintain
+    #         the convenience to start Capture without having to pass any explicit
+    #         arguments, e.g. `python3 main.py` instead of `python3 main.py capture`.
     target_ns = argparse.Namespace()
     target_ns.app = app
     target_ns.port = port
