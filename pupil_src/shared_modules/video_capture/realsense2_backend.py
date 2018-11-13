@@ -319,7 +319,7 @@ class Realsense2_Source(Base_Source):
     def _get_valid_frame_rate(self, stream_type, frame_size, fps):
         assert stream_type == rs.stream.color or stream_type == rs.stream.depth
 
-        if not self._available_modes:
+        if not self._available_modes or stream_type not in self._available_modes:
             logger.warning(
                 "_get_valid_frame_rate: self._available_modes not set yet. Returning default fps."
             )
@@ -327,6 +327,8 @@ class Realsense2_Source(Base_Source):
                 return DEFAULT_COLOR_FPS
             elif stream_type == rs.stream.depth:
                 return DEFAULT_DEPTH_FPS
+            else:
+                raise ValueError("Unexpected `stream_type`: {}".format(stream_type))
 
         if frame_size not in self._available_modes[stream_type]:
             logger.error(
