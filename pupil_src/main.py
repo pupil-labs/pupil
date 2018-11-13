@@ -12,12 +12,13 @@ See COPYING and COPYING.LESSER for license details.
 import os, sys, platform
 import launchables.args
 
+running_from_bundle = getattr(sys, "frozen", False)
 default_args = {"app": "capture", "debug": False, "profile": False}
 parsed_args = launchables.args.parse(
-    running_from_bundle=getattr(sys, "frozen", False), **default_args
+    running_from_bundle=running_from_bundle, **default_args
 )
 
-if parsed_args.running_from_bundle:
+if running_from_bundle:
     # Specifiy user dir.
     folder_name = "pupil_{}_settings".format(parsed_args.app)
     user_dir = os.path.expanduser(os.path.join("~", folder_name))

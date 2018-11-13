@@ -22,12 +22,11 @@ def parse(*, running_from_bundle, app="capture", port=None, **kwargs):
     target_ns = argparse.Namespace()
     target_ns.app = app
     target_ns.port = port
-    target_ns.running_from_bundle = running_from_bundle
 
     if kwargs:
         target_ns.__dict__.update(kwargs)
 
-    if target_ns.running_from_bundle:
+    if running_from_bundle:
         _setup_bundle_parsers(parser, namespace=target_ns)
     else:
         _setup_source_parsers(parser)
