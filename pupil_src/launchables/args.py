@@ -85,8 +85,3 @@ def _add_debug_profile_args(parser):
     parser.add_argument(
         "--profile", action="store_true", help="profile the application's CPU time"
     )
-
-
-if __name__ == "__main__":
-    args = parse(running_from_bundle=False)
-    print(args)
