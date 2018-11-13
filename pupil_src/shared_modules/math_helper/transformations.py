@@ -1983,16 +1983,6 @@ def _import_module(name, package=None, warn=True, prefix="_py_", ignore="_"):
         return True
 
 
-# _import_module('_transformations')
-
-if __name__ == "__main__":
-    import doctest
-    import random  # used in doctests
-
-    numpy.set_printoptions(suppress=True, precision=5)
-    doctest.testmod()
-
-
 def find_rigid_transform(A, B):
     # we expect the shape to be of length 2
     assert len(A.shape) == len(B.shape) == 2
@@ -2018,3 +2008,13 @@ def find_rigid_transform(A, B):
     t = -R @ centroid_A.T + centroid_B.T
 
     return R, t.reshape(3)
+
+
+# _import_module('_transformations')
+
+if __name__ == "__main__":
+    import doctest
+    import random  # used in doctests
+
+    numpy.set_printoptions(suppress=True, precision=5)
+    doctest.testmod()
