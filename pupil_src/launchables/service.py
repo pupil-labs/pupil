@@ -107,7 +107,6 @@ def service(
         from frame_publisher import Frame_Publisher
         from blink_detection import Blink_Detection
         from service_ui import Service_UI
-
         from background_helper import IPC_Logging_Task_Proxy
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
