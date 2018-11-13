@@ -53,11 +53,9 @@ def match_data(g_pool, pupil_list, ref_list):
             "record": True,
         }
 
-    # match eye data and check if biocular and or monocular
     pupil0 = [p for p in pupil_list if p["id"] == 0]
     pupil1 = [p for p in pupil_list if p["id"] == 1]
 
-    # TODO unify this and don't do both
     matched_binocular_data = closest_matches_binocular(ref_list, pupil_list)
     matched_pupil0_data = closest_matches_monocular(ref_list, pupil0)
     matched_pupil1_data = closest_matches_monocular(ref_list, pupil1)
