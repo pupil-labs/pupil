@@ -13,7 +13,7 @@ import argparse
 import sys
 
 
-def parse(*, running_from_bundle, app="capture", port=None, **kwargs):
+def parse(running_from_bundle, app="capture", port=None, **kwargs):
     parser = argparse.ArgumentParser()
 
     # Caveat: We need explicit defaults for app+port arguments in order to maintain

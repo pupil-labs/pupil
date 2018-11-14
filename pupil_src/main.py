@@ -14,9 +14,7 @@ import launchables.args
 
 running_from_bundle = getattr(sys, "frozen", False)
 default_args = {"app": "capture", "debug": False, "profile": False}
-parsed_args = launchables.args.parse(
-    running_from_bundle=running_from_bundle, **default_args
-)
+parsed_args = launchables.args.parse(running_from_bundle, **default_args)
 
 if running_from_bundle:
     # Specifiy user dir.
