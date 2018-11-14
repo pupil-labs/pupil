@@ -19,7 +19,7 @@ class Global_Container(object):
 
 def service(
     timebase,
-    eyes_are_alive,
+    eye_procs_alive,
     ipc_pub_url,
     ipc_sub_url,
     ipc_push_url,
@@ -125,7 +125,7 @@ def service(
         g_pool.ipc_pub_url = ipc_pub_url
         g_pool.ipc_sub_url = ipc_sub_url
         g_pool.ipc_push_url = ipc_push_url
-        g_pool.eyes_are_alive = eyes_are_alive
+        g_pool.eye_procs_alive = eye_procs_alive
         g_pool.timebase = timebase
         g_pool.preferred_remote_port = preferred_remote_port
 
@@ -274,8 +274,8 @@ def service(
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["version"] = str(g_pool.version)
-        session_settings["eye0_process_alive"] = eyes_are_alive[0].value
-        session_settings["eye1_process_alive"] = eyes_are_alive[1].value
+        session_settings["eye0_process_alive"] = eye_procs_alive[0].value
+        session_settings["eye1_process_alive"] = eye_procs_alive[1].value
         session_settings[
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
@@ -310,7 +310,7 @@ def service(
 
 def service_profiled(
     timebase,
-    eyes_are_alive,
+    eye_procs_alive,
     ipc_pub_url,
     ipc_sub_url,
     ipc_push_url,
@@ -322,10 +322,10 @@ def service_profiled(
     from .service import service
 
     cProfile.runctx(
-        "service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
+        "service(timebase,eye_procs_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
         {
             "timebase": timebase,
-            "eyes_are_alive": eyes_are_alive,
+            "eye_procs_alive": eye_procs_alive,
             "ipc_pub_url": ipc_pub_url,
             "ipc_sub_url": ipc_sub_url,
             "ipc_push_url": ipc_push_url,

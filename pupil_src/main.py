@@ -173,7 +173,7 @@ def launcher():
 
     ## IPC
     timebase = Value(c_double, 0)
-    eyes_are_alive = Value(c_bool, 0), Value(c_bool, 0)
+    eye_procs_alive = Value(c_bool, 0), Value(c_bool, 0)
 
     zmq_ctx = zmq.Context()
 
@@ -267,7 +267,7 @@ def launcher():
                         name="eye{}".format(eye_id),
                         args=(
                             timebase,
-                            eyes_are_alive[eye_id],
+                            eye_procs_alive[eye_id],
                             ipc_pub_url,
                             ipc_sub_url,
                             ipc_push_url,
@@ -296,7 +296,7 @@ def launcher():
                         name="world",
                         args=(
                             timebase,
-                            eyes_are_alive,
+                            eye_procs_alive,
                             ipc_pub_url,
                             ipc_sub_url,
                             ipc_push_url,
@@ -315,7 +315,7 @@ def launcher():
                         name="service",
                         args=(
                             timebase,
-                            eyes_are_alive,
+                            eye_procs_alive,
                             ipc_pub_url,
                             ipc_sub_url,
                             ipc_push_url,

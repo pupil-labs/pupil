@@ -137,7 +137,7 @@ class Service_UI(System_Plugin_Base):
                 "eye0_process",
                 label="Detect eye 0",
                 setter=lambda alive: self.start_stop_eye(0, alive),
-                getter=lambda: g_pool.eyes_are_alive[0].value,
+                getter=lambda: g_pool.eye_procs_alive[0].value,
             )
         )
         g_pool.menubar.append(
@@ -145,7 +145,7 @@ class Service_UI(System_Plugin_Base):
                 "eye1_process",
                 label="Detect eye 1",
                 setter=lambda alive: self.start_stop_eye(1, alive),
-                getter=lambda: g_pool.eyes_are_alive[1].value,
+                getter=lambda: g_pool.eye_procs_alive[1].value,
             )
         )
 
