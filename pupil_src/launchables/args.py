@@ -13,18 +13,20 @@ import argparse
 import sys
 
 
-def parse(running_from_bundle, app="capture", port=None, **kwargs):
+class DefaultNamespace(argparse.Namespace):
+    def __init__(self, **defaults):
+        # Caveat: We need explicit default values for app+port arguments in order to
+        # maintain the convenience to start Capture without having to pass any explicit
+        # arguments, e.g. `python3 main.py` instead of `python3 main.py capture`.
+        self.app = "capture"
+        self.port = None
+        for name, value in defaults.items():
+            setattr(self, name, value)
+
+
+def parse(running_from_bundle, **defaults):
     parser = argparse.ArgumentParser()
-
-    # Caveat: We need explicit defaults for app+port arguments in order to maintain
-    #         the convenience to start Capture without having to pass any explicit
-    #         arguments, e.g. `python3 main.py` instead of `python3 main.py capture`.
-    target_ns = argparse.Namespace()
-    target_ns.app = app
-    target_ns.port = port
-
-    if kwargs:
-        target_ns.__dict__.update(kwargs)
+    target_ns = DefaultNamespace(**defaults)
 
     if running_from_bundle:
         _setup_bundle_parsers(parser, namespace=target_ns)
