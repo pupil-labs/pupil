@@ -213,7 +213,7 @@ def launcher():
     pull_pub.setDaemon(True)
     pull_pub.start()
 
-    log_thread = Thread(target=log_loop, args=(ipc_sub_url, "debug" in sys.argv))
+    log_thread = Thread(target=log_loop, args=(ipc_sub_url, parsed_args.debug))
     log_thread.setDaemon(True)
     log_thread.start()
 
