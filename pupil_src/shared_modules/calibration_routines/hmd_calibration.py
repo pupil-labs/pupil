@@ -23,7 +23,7 @@ from .finish_calibration import (
     not_enough_data_error_msg,
     solver_failed_to_converge_error_msg,
 )
-from . import calibrate
+from . import calibrate_2d
 from .gaze_mappers import (
     Monocular_Gaze_Mapper,
     Dual_Monocular_Gaze_Mapper,

@@ -200,7 +200,7 @@ import math
 import numpy
 import numpy as np
 
-from calibration_routines.calibrate import logger
+from calibration_routines.calibrate_2d import logger
 
 __version__ = "2015.07.18"
 __docformat__ = "restructuredtext en"

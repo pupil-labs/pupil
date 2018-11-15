@@ -19,7 +19,7 @@ import math_helper
 from plugin import Plugin
 from methods import normalize
 
-from . import calibrate
+from . import calibrate_2d
 from .visualizer_calibration import Calibration_Visualizer
 
 
@@ -170,7 +170,7 @@ class Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
     def __init__(self, g_pool, params):
         super().__init__(g_pool)
         self.params = params
-        self.map_fn = calibrate.build_mapping_function(*self.params)
+        self.map_fn = calibrate_2d.MappingFunction2D(*self.params)
 
     def _map_monocular(self, p):
         gaze_point = self.map_fn(p["norm_pos"])
@@ -195,8 +195,8 @@ class Dual_Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin
         self.params0 = params0
         self.params1 = params1
         self.map_fns = (
-            calibrate.build_mapping_function(*self.params0),
-            calibrate.build_mapping_function(*self.params1),
+            calibrate_2d.MappingFunction2D(*self.params0),
+            calibrate_2d.MappingFunction2D(*self.params1),
         )
 
     def _map_monocular(self, p):
@@ -221,10 +221,10 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
         self.params_eye0 = params_eye0
         self.params_eye1 = params_eye1
         self.multivariate = True
-        self.map_fn = calibrate.build_mapping_function(*self.params)
+        self.map_fn = calibrate_2d.MappingFunction2D(*self.params)
         self.map_fn_fallback = []
-        self.map_fn_fallback.append(calibrate.build_mapping_function(*self.params_eye0))
-        self.map_fn_fallback.append(calibrate.build_mapping_function(*self.params_eye1))
+        self.map_fn_fallback.append(calibrate_2d.MappingFunction2D(*self.params_eye0))
+        self.map_fn_fallback.append(calibrate_2d.MappingFunction2D(*self.params_eye1))
 
     def init_ui(self):
         self.add_menu()
@@ -236,10 +236,7 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
 
     def _map_binocular(self, p0, p1):
         if self.multivariate:
-            try:
-                gaze_point = self.map_fn([*p0["norm_pos"]]+[*p1["norm_pos"]]) #todo: Change call signature
-            except:
-                gaze_point = self.map_fn(p0["norm_pos"], p1["norm_pos"])  # todo: Change call signature
+            gaze_point = self.map_fn([*p0["norm_pos"]]+[*p1["norm_pos"]])
         else:
             gaze_point_eye0 = self.map_fn_fallback[0](p0["norm_pos"])
             gaze_point_eye1 = self.map_fn_fallback[1](p1["norm_pos"])
