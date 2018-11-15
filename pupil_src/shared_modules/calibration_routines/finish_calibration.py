@@ -32,8 +32,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# from .gaze_mappers import *
-
 not_enough_data_error_msg = (
     "Not enough ref points or pupil data available for calibration."
 )
@@ -332,7 +330,7 @@ def calibrate_2d_binocular(
         binocular=True,
         degree=2,
         ignored_terms=((1, 2), (2, 1)),
-        regularization=0.02,
+        regularization=0.0,
         loss_scale=0.3,
     )
 
@@ -352,7 +350,7 @@ def calibrate_2d_binocular(
         binocular=False,
         degree=2,
         ignored_terms=((1, 2), (2, 1)),
-        regularization=0.02,
+        regularization=0.0,
         loss_scale=0.3,
     )
     if not success:
@@ -363,27 +361,11 @@ def calibrate_2d_binocular(
         binocular=False,
         degree=2,
         ignored_terms=((1, 2), (2, 1)),
-        regularization=0.02,
+        regularization=0.0,
         loss_scale=0.3,
     )
     if not success:
         return method, create_converge_error_msg()
-
-    ############
-    results_dict = {
-        "subject": "start_plugin",
-        "name": "Binocular_Gaze_Mapper",
-        "args": {
-            "params": params,
-            "params_eye0": params_eye0,
-            "params_eye1": params_eye1,
-        },
-    }
-
-    dump_calibration_data(
-        matched_binocular_data, matched_pupil0_data, matched_pupil1_data, results_dict
-    )
-    ############
 
     return (
         method,
@@ -407,7 +389,7 @@ def calibrate_2d_monocular(g_pool, matched_monocular_data):
         binocular=False,
         degree=2,
         ignored_terms=((1, 2), (2, 1)),
-        regularization=0.02,
+        regularization=0.0,
         loss_scale=0.3,
     )
     if not success:
@@ -512,6 +494,18 @@ def finish_calibration(g_pool, pupil_list, ref_list):
             }
         )
 
+        g_pool.active_calibration_plugin.notify_all(
+            {
+                "subject": "calibration.calibration_data",
+                "timestamp": ts,
+                "pupil_list": pupil_list,
+                "ref_list": ref_list,
+                "calibration_method": method,
+                "record": True,
+            }
+        )
+
+        # this is only used by show calibration. TODO: rewrite show calibration.
         user_calibration_data = {
             "timestamp": ts,
             "pupil_list": pupil_list,
@@ -525,44 +519,3 @@ def finish_calibration(g_pool, pupil_list, ref_list):
             user_calibration_data,
             os.path.join(g_pool.user_dir, "user_calibration_data"),
         )
-
-        g_pool.active_calibration_plugin.notify_all(
-            {
-                "subject": "calibration.calibration_data",
-                "record": True,
-                **user_calibration_data,
-            }
-        )
-
-def dump_calibration_data(binocular, eye0, eye1, result):
-    import uuid
-    import pickle
-
-    unique_filename = str(uuid.uuid4())
-    pickle.dump(
-        binocular,
-        open(
-            "/home/kd/Desktop/calibration_data/"
-            + unique_filename
-            + "_match_binocular.p",
-            "bw",
-        ),
-    )
-    pickle.dump(
-        eye0,
-        open(
-            "/home/kd/Desktop/calibration_data/" + unique_filename + "_match_0.p", "bw"
-        ),
-    )
-    pickle.dump(
-        eye1,
-        open(
-            "/home/kd/Desktop/calibration_data/" + unique_filename + "_match_1.p", "bw"
-        ),
-    )
-    pickle.dump(
-        result,
-        open(
-            "/home/kd/Desktop/calibration_data/" + unique_filename + "_result.p", "bw"
-        ),
-    )

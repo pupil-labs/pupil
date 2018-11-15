@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 class PolynomialMonocular:
     """
     A polynomial function class based on the polyval functions from numpy.polynomial.polynomial.
+
+    Currently supports 1d, 2d, and 3d polynomials.
     """
 
     def __init__(self, params, dof=2, degree=2):
@@ -251,7 +253,7 @@ def extend_params(params, degree, ignored_terms=(), fill_value=0, binocular=Fals
         )
         augmented_params = np.hstack((augmented_params_0, augmented_params_1))
     else:
-        ignored_terms.sort(
+        list(ignored_terms).sort(
             key=lambda multi_idx: convert_to_linear_index(multi_idx, degree + 1)
         )
         for entry in ignored_terms:
