@@ -423,7 +423,7 @@ class UVC_Source(Base_Source):
         size = self.uvc_capture.frame_sizes[best_size_idx]
         if tuple(size) != tuple(new_size):
             logger.warning(
-                "%s resolution capture mode not available. Selected {}.".format(
+                "{} resolution capture mode not available. Selected {}.".format(
                     new_size, size
                 )
             )
