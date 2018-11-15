@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 class PolynomialMonocular:
+    """
+    A polynomial function class based on the polyval functions from numpy.polynomial.polynomial.
+    """
+
     def __init__(self, params, dof=2, degree=2):
 
         self.dof = dof
@@ -33,6 +37,10 @@ class PolynomialMonocular:
 
 
 class PolynomialBinocular:
+    """
+    The average of two monocular polynomials with independent parameters.
+    """
+
     def __init__(self, params, dof=2, degree=2):
 
         self.dof = dof
@@ -54,6 +62,10 @@ class PolynomialBinocular:
 
 
 class MappingFunction2D:
+    """
+    Maps 2d pupil positions to 2d screen coordinates, using either monocular or binocular polynomials.
+    """
+
     def __init__(self, params_x, params_y, dof=2, degree=2, binocular=False):
 
         if binocular:
@@ -69,77 +81,6 @@ class MappingFunction2D:
         return self.map_to_world_cam_x(pt), self.map_to_world_cam_y(pt)
 
 
-def convert_to_linear_index(multi_idx, size_per_dim):
-    dims = len(multi_idx)
-    linear_idx = 0
-    for k, idx in enumerate(multi_idx):
-        linear_idx += idx * (size_per_dim ** (dims - 1 - k))
-    return linear_idx
-
-
-def extend_params(
-    params, degree, ignored_terms=[], fill_value=0, binocular=False
-):
-
-    params = list(params)
-
-    if binocular:
-        n_params = len(params)
-        augmented_params_0 = extend_params(
-            list(params[: n_params // 2]), degree, ignored_terms
-        )
-        augmented_params_1 = extend_params(
-            list(params[n_params // 2 :]), degree, ignored_terms
-        )
-        augmented_params = np.hstack((augmented_params_0, augmented_params_1))
-    else:
-        ignored_terms.sort(
-            key=lambda multi_idx: convert_to_linear_index(multi_idx, degree + 1)
-        )
-        for entry in ignored_terms:
-            params.insert(convert_to_linear_index(entry, degree + 1), fill_value)
-        augmented_params = np.asarray(params)
-
-    return augmented_params
-
-
-def cauchy_loss(residuals, loss_scale):
-    return loss_scale ** 2 * np.log(1 + residuals / loss_scale ** 2)
-
-
-def calibration_residuals(
-    params,
-    pupil_positions,
-    targets,
-    binocular,
-    dof=2,
-    degree=2,
-    ignored_terms=(),
-    regularization=0.0,
-    loss_scale=-1,
-):
-
-    augmented_params = extend_params(params, degree, ignored_terms, 0, binocular)
-
-    if binocular:
-        polynomial_ = PolynomialBinocular(augmented_params, dof, degree)
-    else:
-        polynomial_ = PolynomialMonocular(augmented_params, dof, degree)
-
-    squared_residuals = (
-        polynomial_([column for column in pupil_positions.T]) - targets
-    ) ** 2
-
-    if loss_scale > 0:
-        cost = 1 / 2 * np.sum(cauchy_loss(squared_residuals, loss_scale))
-    else:
-        cost = 1 / 2 * np.sum(squared_residuals)
-
-    cost += regularization * np.sum(params ** 2)
-
-    return cost
-
-
 def fit_mapping_polynomials(
     calibration_data,
     binocular,
@@ -148,6 +89,22 @@ def fit_mapping_polynomials(
     regularization=0.0,
     loss_scale=-1,
 ):
+    """
+    Fit two polynomials, one for each of the last two columns of the provided calibration data.
+
+    :param calibration_data: Array of floats. The last two columns correspond to screen coordinates of the
+    calibration targets. The remaining columns can contain any data that we want to fit on. In the binocular case,
+    the number of columns of the array must be divisble by two.
+    :param binocular: Boolean. Indicates whether the data is binocular or not.
+    :param degree: Int. The degree of the polynomials used.
+    :param ignored_terms: List of tuples. Specifies terms of the polynomials which should be ignored in the fit.
+    Example: (1,2) ignores term of the form x*y**2.
+    :param regularization: Float. Scales a weight decay term in the total calibration cost.
+    :param loss_scale: Float. Outliers are taken care of by a Cauchy loss function. Roughly speaking, squared
+    residuals which are larger than the given loss scale are not influencing the outcome of the fit.
+    :return: Tuple. First entry is a Boolean, indicating whether the fit was successful. Second entry is a tuple
+    containing the parameters and signature of the fitted polynomials (to be used to initialize MappingFunction2D).
+    """
 
     calibration_data = np.asarray(calibration_data)
 
@@ -183,10 +140,7 @@ def fit_mapping_polynomials(
         loss_scale=loss_scale,
     )
 
-    return (
-        (success_x and success_y),
-        (params_x, params_y, dof, degree, binocular),
-    )
+    return (success_x and success_y), (params_x, params_y, dof, degree, binocular)
 
 
 def optimize_parameters(
@@ -209,7 +163,7 @@ def optimize_parameters(
         initial_guess[n_params // 2] = initial_guess[0]
 
     fit_result = scipy.optimize.minimize(
-        calibration_residuals,
+        calibration_cost,
         initial_guess,
         args=(
             pupil_positions,
@@ -224,7 +178,85 @@ def optimize_parameters(
     )
 
     final_params = list(
-        extend_params(fit_result.x.tolist(), degree, ignored_terms, 0, binocular)
+        extend_params(fit_result.x, degree, ignored_terms, 0, binocular)
     )
 
     return fit_result.success, final_params
+
+
+def calibration_cost(
+    params,
+    pupil_positions,
+    targets,
+    binocular,
+    dof=2,
+    degree=2,
+    ignored_terms=(),
+    regularization=0.0,
+    loss_scale=-1,
+):
+    extended_params = extend_params(params, degree, ignored_terms, 0, binocular)
+
+    if binocular:
+        polynomial_ = PolynomialBinocular(extended_params, dof, degree)
+    else:
+        polynomial_ = PolynomialMonocular(extended_params, dof, degree)
+
+    squared_residuals = (
+        polynomial_([column for column in pupil_positions.T]) - targets
+    ) ** 2
+
+    if loss_scale > 0:
+        cost = 1 / 2 * np.sum(cauchy_loss(squared_residuals, loss_scale))
+    else:
+        cost = 1 / 2 * np.sum(squared_residuals)
+
+    cost += regularization * np.sum(params ** 2)
+
+    return cost
+
+
+def cauchy_loss(residuals, loss_scale):
+    return loss_scale ** 2 * np.log(1 + residuals / loss_scale ** 2)
+
+
+def convert_to_linear_index(multi_idx, size_per_dim):
+    """
+    Converts the multi-index of a multi-dimensional array to the corresponding linear index of the unraveled array.
+    Assumes the array to have the same size in all dimensions.
+    """
+    dims = len(multi_idx)
+    linear_idx = 0
+    for k, idx in enumerate(multi_idx):
+        linear_idx += idx * (size_per_dim ** (dims - 1 - k))
+    return linear_idx
+
+
+def extend_params(params, degree, ignored_terms=(), fill_value=0, binocular=False):
+    """
+    Insert a given fill value into a parameter list at places specified by ignored terms.
+
+    This is needed to comply with the API of numpy.polynomial.polynomial when polynomials are considered, that do not
+    contain all terms.
+    """
+    params = list(params)
+
+    if binocular:
+        n_params = len(params)
+        augmented_params_0 = extend_params(
+            list(params[: n_params // 2]), degree, ignored_terms
+        )
+        augmented_params_1 = extend_params(
+            list(params[n_params // 2 :]), degree, ignored_terms
+        )
+        augmented_params = np.hstack((augmented_params_0, augmented_params_1))
+    else:
+        ignored_terms.sort(
+            key=lambda multi_idx: convert_to_linear_index(multi_idx, degree + 1)
+        )
+        for entry in ignored_terms:
+            params.insert(convert_to_linear_index(entry, degree + 1), fill_value)
+        augmented_params = np.asarray(params)
+
+    return augmented_params
+

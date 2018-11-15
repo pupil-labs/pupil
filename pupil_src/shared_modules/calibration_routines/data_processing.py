@@ -39,6 +39,10 @@ def find_nearest_idx(array, value):
 
 
 def match_data(g_pool, pupil_list, ref_list):
+    """
+    Returns binocular and monocular matched pupil datums and ref points. Uses a dispersion criterion to
+    dismiss matches which are too far apart.
+    """
     if pupil_list and ref_list:
         pass
     else:
@@ -147,6 +151,10 @@ def closest_matches_monocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
 
 
 def preprocess_2d_data_monocular(matched_data):
+    """"
+    Takes matched pupil data and returns list of tuples, keeping only the positions in normalized screen coordinates
+    for pupil and ref.
+    """
     cal_data = [
         (*pair["pupil"]["norm_pos"], *pair["ref"]["norm_pos"]) for pair in matched_data
     ]
@@ -154,6 +162,10 @@ def preprocess_2d_data_monocular(matched_data):
 
 
 def preprocess_2d_data_binocular(matched_data):
+    """
+    Takes matched pupil data and returns list of tuples, keeping only the positions in normalized
+    coordinates for pupil0, pupil1, and ref positions.
+    """
     cal_data = [
         (
             *triplet["pupil"]["norm_pos"],
@@ -166,6 +178,9 @@ def preprocess_2d_data_binocular(matched_data):
 
 
 def preprocess_3d_data(matched_data, g_pool):
+    """
+    Takes matched data, splits into pupil0, pupil1, ref, keeping only the normals and unprojections, respectively.
+    """
     pupil0_processed = [
         dp["pupil"]["circle_3d"]["normal"]
         for dp in matched_data
