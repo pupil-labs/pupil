@@ -66,7 +66,7 @@ class Surface_Tracker_Online(Surface_Tracker):
 
     @property
     def supported_heatmap_modes(self):
-        return [Heatmap_Mode.WITHIN_SURFACE]
+        return [Heatmap_Mode.WITHIN_SURFACE, Heatmap_Mode.ACROSS_SURFACES]
 
     def _update_ui_custom(self):
         def set_freeze_scene(val):
