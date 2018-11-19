@@ -245,8 +245,11 @@ cdef class Detector_3D:
         if self.debugVisualizer3D.window:
             self.debugVisualizer3D.update_window( self.g_pool, self.pyResult3D)
 
-    def _set_2d_detector_property(self, name, value):
+    def set_2d_detector_property(self, name, value):
         set_detector_property(self.detectProperties2D, name, value)
 
-    def _set_3d_detector_property(self, name, value):
+    def set_3d_detector_property(self, name, value):
         set_detector_property(self.detectProperties3D, name, value)
+
+    def get_detector_properties(self):
+        return {"2d": self.detectProperties2D, "3d": self.detectProperties3D}

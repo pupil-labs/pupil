@@ -281,5 +281,8 @@ cdef class Detector_2D:
         if self._window:
             self.gl_display_in_window(self.debugImage)
 
-    def _set_2d_detector_property(self, name, value):
+    def set_2d_detector_property(self, name, value):
         set_detector_property(self.detectProperties2D, name, value)
+
+    def get_detector_properties(self):
+        return {"2d": self.detectProperties2D}

@@ -600,14 +600,16 @@ def eye(
                             property_name = notification["name"]
                             property_value = notification["value"]
                             if "2d" in notification["subject"]:
-                                g_pool.pupil_detector._set_2d_detector_property(
+                                g_pool.pupil_detector.set_2d_detector_property(
                                     property_name, property_value
                                 )
                             elif "3d" in notification["subject"]:
                                 if not isinstance(g_pool.pupil_detector, Detector_3D):
-                                    raise ValueError("3d properties are only available"
-                                                     " if 3d detector is active")
-                                g_pool.pupil_detector._set_3d_detector_property(
+                                    raise ValueError(
+                                        "3d properties are only available"
+                                        " if 3d detector is active"
+                                    )
+                                g_pool.pupil_detector.set_3d_detector_property(
                                     property_name, property_value
                                 )
                             else:
@@ -626,7 +628,18 @@ def eye(
                         except (ValueError, TypeError):
                             logger.error("Invalid property or value")
                             logger.debug(traceback.format_exc())
-
+                elif notification["subject"].startswith(
+                    "pupil_detector.broadcast_properties"
+                ):
+                    target_process = notification.get("target", g_pool.process)
+                    should_respond = target_process == g_pool.process
+                    if should_respond:
+                        props = g_pool.pupil_detector.get_detector_properties()
+                        properties_broadcast = {
+                            "subject": "pupil_detector.properties.{}".format(eye_id),
+                            **props,  # add properties to broadcast
+                        }
+                        ipc_socket.notify(properties_broadcast)
                 g_pool.capture.on_notify(notification)
 
             # Get an image from the grabber
