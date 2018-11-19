@@ -117,6 +117,7 @@ def eye(
 
     with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id, logger):
         # general imports
+        import traceback
         import numpy as np
         import cv2
 
@@ -590,9 +591,40 @@ def eye(
                     and notification["target"] == g_pool.process
                 ):
                     replace_source(notification["name"], notification["args"])
+                elif notification["subject"].startswith("pupil_detector.set_property"):
+                    target_process = notification.get("target", g_pool.process)
+                    should_apply = target_process == g_pool.process
+
+                    if should_apply:
+                        try:
+                            property_name = notification["name"]
+                            property_value = notification["value"]
+                            if "2d" in notification["subject"]:
+                                g_pool.pupil_detector._set_2d_detector_property(
+                                    property_name, property_value
+                                )
+                            elif "3d" in notification["subject"]:
+                                g_pool.pupil_detector._set_3d_detector_property(
+                                    property_name, property_value
+                                )
+                            else:
+                                raise KeyError(
+                                    "Notification subject does not "
+                                    "specifiy detector type."
+                                )
+                            logger.debug(
+                                "`{}` property set to {}".format(
+                                    property_name, property_value
+                                )
+                            )
+                        except KeyError:
+                            logger.error("Malformed notification received")
+                            logger.debug(traceback.format_exc())
+                        except (ValueError, TypeError):
+                            logger.error("Invalid property or value")
+                            logger.debug(traceback.format_exc())
 
                 g_pool.capture.on_notify(notification)
-                g_pool.pupil_detector.on_notify(notification)
 
             # Get an image from the grabber
             event = {}

@@ -243,7 +243,10 @@ cdef class Detector_3D:
 
     def visualize(self):
         if self.debugVisualizer3D.window:
-            self.debugVisualizer3D.update_window( self.g_pool, self.pyResult3D  )
+            self.debugVisualizer3D.update_window( self.g_pool, self.pyResult3D)
 
-    def on_notify(self, notification):
-        pass
+    def _set_2d_detector_property(self, name, value):
+        set_detector_property(self.detectProperties2D, name, value)
+
+    def _set_3d_detector_property(self, name, value):
+        set_detector_property(self.detectProperties3D, name, value)
