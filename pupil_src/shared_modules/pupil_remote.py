@@ -39,10 +39,8 @@ class Pupil_Remote(Plugin):
         'PUB_PORT' return the current pub port of the IPC Backbone
         'SUB_PORT' return the current sub port of the IPC Backbone
 
-    Mulitpart messages conforming to pattern:
-        part1: 'notify.' part2: a msgpack serialized dict with at least key 'subject':'my_notification_subject'
-        will be forwared to the Pupil IPC Backbone.
-
+    Mulitpart messages will be forwarded to the Pupil IPC Backbone.For high-frequency
+        messages, it is recommended to use a PUSH socket instead.
 
     A example script for talking with pupil remote below:
         import zmq
@@ -237,19 +235,19 @@ class Pupil_Remote(Plugin):
 
         self.thread_pipe = None
 
-    def on_recv(self, socket, ipc_pub):
-        msg = socket.recv_string()
-        if msg.startswith("notify"):
-            try:
-                payload = zmq_tools.serializer.loads(
-                    socket.recv(flags=zmq.NOBLOCK), encoding="utf-8"
-                )
-                payload["subject"]
-            except Exception as e:
-                response = "Notification mal-formatted or missing: {}".format(e)
-            else:
-                ipc_pub.notify(payload)
-                response = "Notification recevied."
+    def on_recv(self, remote, ipc_pub):
+        msg = remote.recv_string()
+        if remote.get(zmq.RCVMORE):
+            ipc_pub.socket.send_string(msg, flags=zmq.SNDMORE)
+            while True:
+                frame = remote.recv(flags=zmq.NOBLOCK)
+                more_frames_coming = remote.get(zmq.RCVMORE)
+                if more_frames_coming:
+                    ipc_pub.socket.send(frame, flags=zmq.SNDMORE)
+                else:
+                    ipc_pub.socket.send(frame)
+                    break
+            response = "Message forwarded."
         elif msg == "SUB_PORT":
             response = self.g_pool.ipc_sub_url.split(":")[-1]
         elif msg == "PUB_PORT":
@@ -286,7 +284,7 @@ class Pupil_Remote(Plugin):
             response = "{}".format(self.g_pool.version)
         else:
             response = "Unknown command."
-        socket.send_string(response)
+        remote.send_string(response)
 
     def on_notify(self, notification):
         """send simple string messages to control application functions.

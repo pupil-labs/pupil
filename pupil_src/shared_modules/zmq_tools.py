@@ -47,7 +47,7 @@ class ZMQ_handler(logging.Handler):
                 record_dict["exc_info"] = str(record_dict["exc_info"])
             if record_dict["args"]:
                 # format message before sending to avoid serialization issues
-                record_dict['msg'] %= record_dict["args"]
+                record_dict["msg"] %= record_dict["args"]
                 record_dict["args"] = ()
             self.socket.send(record_dict)
 
