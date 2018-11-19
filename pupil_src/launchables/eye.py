@@ -604,6 +604,9 @@ def eye(
                                     property_name, property_value
                                 )
                             elif "3d" in notification["subject"]:
+                                if not isinstance(g_pool.pupil_detector, Detector_3D):
+                                    raise ValueError("3d properties are only available"
+                                                     " if 3d detector is active")
                                 g_pool.pupil_detector._set_3d_detector_property(
                                     property_name, property_value
                                 )
