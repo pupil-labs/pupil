@@ -246,3 +246,5 @@ cdef class Detector_3D:
         if self.debugVisualizer3D.window:
             self.debugVisualizer3D.update_window( self.g_pool, self.pyResult3D  )
 
+    def on_notify(self, notification):
+        pass

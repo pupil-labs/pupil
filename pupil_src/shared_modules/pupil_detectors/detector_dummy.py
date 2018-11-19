@@ -27,3 +27,6 @@ class Detector_Dummy(Plugin):
 
     def on_resolution_change(self, *args, **kwargs):
         pass
+
+    def on_notify(self, notification):
+        pass

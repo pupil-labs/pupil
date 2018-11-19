@@ -279,3 +279,6 @@ cdef class Detector_2D:
         #display the debug image in the window
         if self._window:
             self.gl_display_in_window(self.debugImage)
+
+    def on_notify(self, notification):
+        pass

@@ -592,6 +592,7 @@ def eye(
                     replace_source(notification["name"], notification["args"])
 
                 g_pool.capture.on_notify(notification)
+                g_pool.pupil_detector.on_notify(notification)
 
             # Get an image from the grabber
             event = {}
