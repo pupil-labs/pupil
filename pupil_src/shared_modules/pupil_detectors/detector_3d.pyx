@@ -10,24 +10,23 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 # cython: profile=False
-import cv2
-import numpy as np
-from coarse_pupil cimport center_surround
-from methods import Roi, normalize
-from plugin import Plugin
-from pyglui import ui
-import glfw
-from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
-from pyglui.cygl.utils import draw_gl_texture
 import math
-
-from visualizer_3d import Eye_Visualizer
 from collections import namedtuple
 
+import cv2
+import glfw
+import numpy as np
+from cython.operator cimport dereference as deref
+from pyglui import ui
+from pyglui.cygl.utils import draw_gl_texture
+
+from coarse_pupil cimport center_surround
 from detector cimport *
 from detector_utils cimport *
-
-from cython.operator cimport dereference as deref
+from methods import Roi, normalize
+from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
+from plugin import Plugin
+from visualizer_3d import Eye_Visualizer
 
 
 cdef class Detector_3D:
