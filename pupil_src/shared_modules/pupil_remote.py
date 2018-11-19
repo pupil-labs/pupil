@@ -73,7 +73,7 @@ class Pupil_Remote(Plugin):
     icon_chr = chr(0xE307)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool, port="50020", host="*", use_primary_interface=True):
+    def __init__(self, g_pool, port=50020, host="*", use_primary_interface=True):
         super().__init__(g_pool)
         self.order = 0.01  # excecute first
         self.context = g_pool.zmq_ctx
@@ -81,11 +81,11 @@ class Pupil_Remote(Plugin):
 
         self.use_primary_interface = use_primary_interface
         assert type(host) == str
-        assert type(port) == str
+        assert type(port) == int
         self.host = host
-        self.port = port
+        self.port = g_pool.preferred_remote_port or port
 
-        self.start_server("tcp://{}:{}".format(host, port))
+        self.start_server("tcp://{}:{}".format(host, self.port))
         self.menu = None
 
     def start_server(self, new_address):
@@ -96,7 +96,7 @@ class Pupil_Remote(Plugin):
         if response == "Bind OK":
             host, port = msg.split(":")
             self.host = host
-            self.port = port
+            self.port = int(port)
             return
 
         # fail logic
@@ -117,7 +117,7 @@ class Pupil_Remote(Plugin):
             if response == "Bind OK":
                 host, port = msg.split(":")
                 self.host = host
-                self.port = port
+                self.port = int(port)
             else:
                 logger.error(msg)
                 raise Exception("Could not bind to port")
@@ -146,7 +146,7 @@ class Pupil_Remote(Plugin):
         if self.use_primary_interface:
 
             def set_port(new_port):
-                new_address = "tcp://*:" + new_port
+                new_address = "tcp://*:{}".format(new_port)
                 self.start_server(new_address)
                 self.update_menu()
 

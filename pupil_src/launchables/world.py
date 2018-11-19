@@ -17,7 +17,14 @@ class Global_Container(object):
 
 
 def world(
-    timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, version
+    timebase,
+    eye_procs_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
+    preferred_remote_port,
 ):
     """Reads world video and runs plugins.
 
@@ -200,7 +207,8 @@ def world(
         g_pool.ipc_pub_url = ipc_pub_url
         g_pool.ipc_sub_url = ipc_sub_url
         g_pool.ipc_push_url = ipc_push_url
-        g_pool.eyes_are_alive = eyes_are_alive
+        g_pool.eye_procs_alive = eye_procs_alive
+        g_pool.preferred_remote_port = preferred_remote_port
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value
@@ -498,7 +506,7 @@ def world(
                 "eye0_process",
                 label="Detect eye 0",
                 setter=lambda alive: start_stop_eye(0, alive),
-                getter=lambda: eyes_are_alive[0].value,
+                getter=lambda: eye_procs_alive[0].value,
             )
         )
         general_settings.append(
@@ -506,7 +514,7 @@ def world(
                 "eye1_process",
                 label="Detect eye 1",
                 setter=lambda alive: start_stop_eye(1, alive),
-                getter=lambda: eyes_are_alive[1].value,
+                getter=lambda: eye_procs_alive[1].value,
             )
         )
 
@@ -667,8 +675,8 @@ def world(
         session_settings["ui_config"] = g_pool.gui.configuration
         session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
         session_settings["version"] = str(g_pool.version)
-        session_settings["eye0_process_alive"] = eyes_are_alive[0].value
-        session_settings["eye1_process_alive"] = eyes_are_alive[1].value
+        session_settings["eye0_process_alive"] = eye_procs_alive[0].value
+        session_settings["eye1_process_alive"] = eye_procs_alive[1].value
         session_settings[
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
@@ -707,7 +715,14 @@ def world(
 
 
 def world_profiled(
-    timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, version
+    timebase,
+    eye_procs_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
+    preferred_remote_port,
 ):
     import cProfile
     import subprocess
@@ -715,15 +730,16 @@ def world_profiled(
     from .world import world
 
     cProfile.runctx(
-        "world(timebase, eyes_are_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
+        "world(timebase, eye_procs_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
         {
             "timebase": timebase,
-            "eyes_are_alive": eyes_are_alive,
+            "eye_procs_alive": eye_procs_alive,
             "ipc_pub_url": ipc_pub_url,
             "ipc_sub_url": ipc_sub_url,
             "ipc_push_url": ipc_push_url,
             "user_dir": user_dir,
             "version": version,
+            "preferred_remote_port": preferred_remote_port,
         },
         locals(),
         "world.pstats",
