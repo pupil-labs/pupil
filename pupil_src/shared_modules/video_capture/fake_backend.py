@@ -171,6 +171,7 @@ class Fake_Source(Playback_Source, Base_Source):
         frame = frame or self.get_frame()
         self._recent_frame = frame
         events["frame"] = frame
+        self.g_pool.seek_control.end_of_seek()
 
     def recent_events_own_timing(self, events):
         try:
