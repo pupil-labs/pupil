@@ -9,15 +9,16 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os
-import logging
-import time
-import platform
-import multiprocessing
-import csv
 import itertools
+import logging
+import multiprocessing
+import os
+import platform
+import time
 
 logger = logging.getLogger(__name__)
+# On macOS, "spawn" is set as default start method in main.py. This is not required
+# here and we set it back to "fork" to improve performance.
 if platform.system() == "Darwin":
     mp = multiprocessing.get_context("fork")
 else:
@@ -32,7 +33,6 @@ import OpenGL.GL as gl
 
 from plugin import Analysis_Plugin_Base
 import file_methods
-import player_methods
 
 from surface_tracker.cache import Cache
 from surface_tracker.surface_tracker import Surface_Tracker
