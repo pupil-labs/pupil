@@ -35,7 +35,7 @@ from ctypes import *
 
 # logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 TIMEOUT = 500  # ms FIXME
@@ -199,7 +199,6 @@ class Realsense2_Source(Base_Source):
             device_id = self.device_id
 
         if device_id is None:  # FIXME these two if blocks look ugly.
-            logger.info("No device connected.")
             return
 
         # use default streams to filter modes by rs_stream and rs_format
@@ -515,56 +514,85 @@ class Realsense2_Source(Base_Source):
         self.menu.append(ui.Switch("preview_depth", self, label="Preview Depth"))
 
         if self._available_modes is not None:
-            color_sizes = sorted(self._available_modes[rs.stream.color], reverse=True)
+
+            def frame_size_selection_getter():
+                if self.device_id:
+                    frame_size = sorted(
+                        self._available_modes[rs.stream.color], reverse=True
+                    )
+                    labels = ["({}, {})".format(t[0], t[1]) for t in frame_size]
+                    return frame_size, labels
+                else:
+                    return [self.frame_size_backup], [str(self.frame_size_backup)]
+
             selector = ui.Selector(
                 "frame_size",
                 self,
-                # setter=,
-                selection=color_sizes,
+                selection_getter=frame_size_selection_getter,
                 label="Color Resolution",
             )
             self.menu.append(selector)
 
-            def color_fps_getter():
-
-                avail_fps = [
-                    fps
-                    for fps in self._available_modes[rs.stream.color][self.frame_size]
-                ]
-                return avail_fps, [str(fps) for fps in avail_fps]
+            def frame_rate_selection_getter():
+                if self.device_id:
+                    avail_fps = [
+                        fps
+                        for fps in self._available_modes[rs.stream.color][
+                            self.frame_size
+                        ]
+                    ]
+                    return avail_fps, [str(fps) for fps in avail_fps]
+                else:
+                    return [self.frame_rate_backup], [str(self.frame_rate_backup)]
 
             selector = ui.Selector(
                 "frame_rate",
                 self,
-                # setter=,
-                selection_getter=color_fps_getter,
+                selection_getter=frame_rate_selection_getter,
                 label="Color Frame Rate",
             )
             self.menu.append(selector)
 
-            depth_sizes = sorted(self._available_modes[rs.stream.depth], reverse=True)
+            def depth_frame_size_selection_getter():
+                if self.device_id:
+                    depth_sizes = sorted(
+                        self._available_modes[rs.stream.depth], reverse=True
+                    )
+                    labels = ["({}, {})".format(t[0], t[1]) for t in depth_sizes]
+                    return depth_sizes, labels
+                else:
+                    return (
+                        [self.depth_frame_size_backup],
+                        [str(self.depth_frame_size_backup)],
+                    )
+
             selector = ui.Selector(
                 "depth_frame_size",
                 self,
-                # setter=,
-                selection=depth_sizes,
+                selection_getter=depth_frame_size_selection_getter,
                 label="Depth Resolution",
             )
             self.menu.append(selector)
 
-            def depth_fps_getter():
-                avail_fps = [
-                    fps
-                    for fps in self._available_modes[rs.stream.depth][
-                        self.depth_frame_size
+            def depth_frame_rate_selection_getter():
+                if self.device_id:
+                    avail_fps = [
+                        fps
+                        for fps in self._available_modes[rs.stream.depth][
+                            self.depth_frame_size
+                        ]
                     ]
-                ]
-                return avail_fps, [str(fps) for fps in avail_fps]
+                    return avail_fps, [str(fps) for fps in avail_fps]
+                else:
+                    return (
+                        [self.depth_frame_rate_backup],
+                        [str(self.depth_frame_rate_backup)],
+                    )
 
             selector = ui.Selector(
                 "depth_frame_rate",
                 self,
-                selection_getter=depth_fps_getter,
+                selection_getter=depth_frame_rate_selection_getter,
                 label="Depth Frame Rate",
             )
             self.menu.append(selector)
@@ -712,6 +740,7 @@ class Realsense2_Source(Base_Source):
     def frame_size(self):
         try:
             stream_profile = self.stream_profiles[rs.stream.color]
+            # TODO check width & height is in self.available modes
             return stream_profile.width(), stream_profile.height()
         except AttributeError:
             return self.frame_size_backup
@@ -729,6 +758,7 @@ class Realsense2_Source(Base_Source):
     def frame_rate(self):
         try:
             stream_profile = self.stream_profiles[rs.stream.color]
+            # TODO check FPS is in self.available modes
             return stream_profile.fps()
         except AttributeError:
             return self.frame_rate_backup
@@ -746,6 +776,7 @@ class Realsense2_Source(Base_Source):
     def depth_frame_size(self):
         try:
             stream_profile = self.stream_profiles[rs.stream.depth]
+            # TODO check width & height is in self.available modes
             return stream_profile.width(), stream_profile.height()
         except AttributeError:
             return self.depth_frame_size_backup
