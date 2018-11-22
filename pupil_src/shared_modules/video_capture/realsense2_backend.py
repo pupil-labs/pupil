@@ -371,9 +371,13 @@ class Realsense2_Source(Base_Source):
         current_device = None
 
         for d in devices:
-            serial = d.get_info(rs.camera_info.serial_number)
-            if device_id == serial:
-                current_device = d
+            try:
+                serial = d.get_info(rs.camera_info.serial_number)
+            except RuntimeError as re:
+                logger.error("Device no longer available " + str(re))
+            else:
+                if device_id == serial:
+                    current_device = d
 
         if current_device is None:
             return formats
