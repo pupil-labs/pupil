@@ -10,30 +10,22 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import os, sys, platform
+import launchables.args
 
-# sys.argv.append('profiled')
-# sys.argv.append('debug')
-# sys.argv.append('service')
+running_from_bundle = getattr(sys, "frozen", False)
+default_args = {"app": "capture", "debug": False, "profile": False}
+parsed_args = launchables.args.parse(running_from_bundle, **default_args)
 
-app = "capture"
-
-if getattr(sys, "frozen", False):
-    if "pupil_service" in sys.executable:
-        app = "service"
-    elif "pupil_player" in sys.executable:
-        app = "player"
+if running_from_bundle:
     # Specifiy user dir.
-    user_dir = os.path.expanduser(os.path.join("~", "pupil_{}_settings".format(app)))
+    folder_name = "pupil_{}_settings".format(parsed_args.app)
+    user_dir = os.path.expanduser(os.path.join("~", folder_name))
     version_file = os.path.join(sys._MEIPASS, "_version_string_")
 else:
-    if "service" in sys.argv:
-        app = "service"
-    if "player" in sys.argv:
-        app = "player"
     pupil_base_dir = os.path.abspath(__file__).rsplit("pupil_src", 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, "pupil_src", "shared_modules"))
     # Specifiy user dir.
-    user_dir = os.path.join(pupil_base_dir, "{}_settings".format(app))
+    user_dir = os.path.join(pupil_base_dir, "{}_settings".format(parsed_args.app))
     version_file = None
 
 # create folder for user settings, tmp data
@@ -72,7 +64,7 @@ from time import time
 from os_utils import Prevent_Idle_Sleep
 
 # functions to run in seperate processes
-if "profiled" in sys.argv:
+if parsed_args.profile:
     from launchables.world import world_profiled as world
     from launchables.service import service_profiled as service
     from launchables.eye import eye_profiled as eye
@@ -150,7 +142,9 @@ def launcher():
         logger.setLevel(logging.NOTSET)
         # Stream to file
         fh = logging.FileHandler(
-            os.path.join(user_dir, "{}.log".format(app)), mode="w", encoding="utf-8"
+            os.path.join(user_dir, "{}.log".format(parsed_args.app)),
+            mode="w",
+            encoding="utf-8",
         )
         fh.setFormatter(
             logging.Formatter(
@@ -177,7 +171,7 @@ def launcher():
 
     ## IPC
     timebase = Value(c_double, 0)
-    eyes_are_alive = Value(c_bool, 0), Value(c_bool, 0)
+    eye_procs_alive = Value(c_bool, 0), Value(c_bool, 0)
 
     zmq_ctx = zmq.Context()
 
@@ -217,7 +211,7 @@ def launcher():
     pull_pub.setDaemon(True)
     pull_pub.start()
 
-    log_thread = Thread(target=log_loop, args=(ipc_sub_url, "debug" in sys.argv))
+    log_thread = Thread(target=log_loop, args=(ipc_sub_url, parsed_args.debug))
     log_thread.setDaemon(True)
     log_thread.start()
 
@@ -249,12 +243,12 @@ def launcher():
             cmd_sub.recv()
             break
 
-    if app == "service":
+    if parsed_args.app == "service":
         cmd_push.notify({"subject": "service_process.should_start"})
-    elif app == "capture":
+    elif parsed_args.app == "capture":
         cmd_push.notify({"subject": "world_process.should_start"})
-    elif app == "player":
-        rec_dir = os.path.expanduser(sys.argv[-1])
+    elif parsed_args.app == "player":
+        rec_dir = os.path.expanduser(parsed_args.recording)
         cmd_push.notify(
             {"subject": "player_drop_process.should_start", "rec_dir": rec_dir}
         )
@@ -271,7 +265,7 @@ def launcher():
                         name="eye{}".format(eye_id),
                         args=(
                             timebase,
-                            eyes_are_alive[eye_id],
+                            eye_procs_alive[eye_id],
                             ipc_pub_url,
                             ipc_sub_url,
                             ipc_push_url,
@@ -300,12 +294,13 @@ def launcher():
                         name="world",
                         args=(
                             timebase,
-                            eyes_are_alive,
+                            eye_procs_alive,
                             ipc_pub_url,
                             ipc_sub_url,
                             ipc_push_url,
                             user_dir,
                             app_version,
+                            parsed_args.port,
                         ),
                     ).start()
                 elif "notify.clear_settings_process.should_start" in topic:
@@ -318,12 +313,13 @@ def launcher():
                         name="service",
                         args=(
                             timebase,
-                            eyes_are_alive,
+                            eye_procs_alive,
                             ipc_pub_url,
                             ipc_sub_url,
                             ipc_push_url,
                             user_dir,
                             app_version,
+                            parsed_args.port,
                         ),
                     ).start()
                 elif "notify.player_drop_process.should_start" in topic:

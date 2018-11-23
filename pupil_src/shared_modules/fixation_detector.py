@@ -468,7 +468,9 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.fixation_data = deque()
         self.fixation_start_ts = deque()
         self.fixation_stop_ts = deque()
-        self.bg_task = bh.IPC_Logging_Task_Proxy('Fixation detection', detect_fixations, args=generator_args)
+        self.bg_task = bh.IPC_Logging_Task_Proxy(
+            "Fixation detection", detect_fixations, args=generator_args
+        )
 
     def recent_events(self, events):
         if self.bg_task:
@@ -650,9 +652,8 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             csv_writer.writerow(
                 ("max_dispersion", "{:0.3f} deg".format(self.max_dispersion))
             )
-            csv_writer.writerow(
-                ("min_duration", "{:0.3f} sec".format(self.min_duration))
-            )
+            csv_writer.writerow(("min_duration", "{:.0f} ms".format(self.min_duration)))
+            csv_writer.writerow(("max_duration", "{:.0f} ms".format(self.max_duration)))
             csv_writer.writerow((""))
             csv_writer.writerow(("fixation_count", len(fixations_in_section)))
             logger.info("Created 'fixation_report.csv' file.")
@@ -705,7 +706,7 @@ class Fixation_Detector(Fixation_Detector_Base):
                 self.reset_history()
                 return
 
-            age_threshold = ts_newest - self.min_duration / 1000.
+            age_threshold = ts_newest - self.min_duration / 1000.0
             # pop elements until only one element below the age threshold remains:
             while self.history[1]["timestamp"] < age_threshold:
                 self.history.popleft()  # remove outdated gaze points

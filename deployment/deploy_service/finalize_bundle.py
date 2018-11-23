@@ -42,7 +42,7 @@ if platform.system() == "Darwin":
     call("ln -s /Applications/ %s/Applications" % src_dir, shell=True)
     call("rm dist/Pupil\ Service.app/Contents/MacOS/.DS_Store", shell=True)
     call(
-        "hdiutil create -volname '%s' -srcfolder %s -format UDZO '%s.dmg'"
+        "hdiutil create -volname '%s' -srcfolder %s -size 340m -format UDZO '%s.dmg'"
         % (bundle_dmg_name, src_dir, bundle_name),
         shell=True,
     )
