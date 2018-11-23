@@ -34,13 +34,15 @@ from ctypes import *
 # assert VersionFormat(rs.__version__) >= VersionFormat("2.2") # FIXME
 
 # logging
-logging.getLogger("pyrealsense2").setLevel(logging.ERROR + 1)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-# FIXME
-TIMEOUT = 1000  # ms
+TIMEOUT = 500  # ms FIXME
+DEFAULT_COLOR_SIZE = (1280, 720)
+DEFAULT_COLOR_FPS = 30
+DEFAULT_DEPTH_SIZE = (640, 480)
+DEFAULT_DEPTH_FPS = 30
 
 # very thin wrapper for rs.frame objects
 class ColorFrame(object):
@@ -143,32 +145,30 @@ class Realsense2_Source(Base_Source):
         self,
         g_pool,
         device_id=None,
-        frame_size=(640, 480),
-        frame_rate=30,
-        depth_frame_size=(640, 480),
-        depth_frame_rate=30,
+        frame_size=DEFAULT_COLOR_SIZE,
+        frame_rate=DEFAULT_COLOR_FPS,
+        depth_frame_size=DEFAULT_DEPTH_SIZE,
+        depth_frame_rate=DEFAULT_DEPTH_FPS,
         preview_depth=False,
         device_options=(),
-        record_depth=False,
+        record_depth=True,
     ):
         logger.debug("_init_ started")
         super().__init__(g_pool)
         self._intrinsics = None
         self.color_frame_index = 0
         self.depth_frame_index = 0
-        self.device_id = None  # we'll use serial_number for this
         self.context = rs.context()
         self.pipeline = rs.pipeline(self.context)
         self.pipeline_profile = None
         self.preview_depth = preview_depth
         self.record_depth = record_depth
         self.depth_video_writer = None
-        self.controls = {}
-        self.pitch = 0
-        self.yaw = 0
-        self.last_pos = (0, 0)
-        self.depth_window = None
         self._needs_restart = False
+        self.frame_size_backup = DEFAULT_COLOR_SIZE
+        self.depth_frame_size_backup = DEFAULT_DEPTH_SIZE
+        self.frame_rate_backup = DEFAULT_COLOR_FPS
+        self.depth_frame_rate_backup = DEFAULT_DEPTH_FPS
 
         self._initialize_device(
             device_id,
@@ -189,54 +189,63 @@ class Realsense2_Source(Base_Source):
         depth_fps,
         device_options=(),
     ):
-        devices = self.context.query_devices()  # of type pyrealsense2.device_list
-        logger.debug("_initialize_device: color_frame_size " + str(color_frame_size))
-        logger.debug("_initialize_device: depth_frame_size " + str(depth_frame_size))
-        logger.debug("_initialize_device: color_fps " + str(color_fps))
-        logger.debug("_initialize_device: depth_fps " + str(depth_fps))
-        color_frame_size = tuple(color_frame_size)
-        depth_frame_size = tuple(depth_frame_size)
-
+        self.stop_pipeline()
         self.last_color_frame_ts = None
         self.last_depth_frame_ts = None
-
         self._recent_frame = None
         self._recent_depth_frame = None
 
-        if not devices:
-            if not self._needs_restart:
-                logger.error("Camera failed to initialize. No cameras connected.")
-            self.device_id = None
-            self.update_menu()
-            return
+        if device_id is None:
+            device_id = self.device_id
 
-        if self.online:
-            try:
-                self.pipeline.stop()  # only call Device.stop() if its context
-            except:
-                logger.error(
-                    "Device id is set ({}), but pipeline is not running.".format(
-                        self.device_id
-                    )
-                )
+        if device_id is None:  # FIXME these two if blocks look ugly.
+            return
 
         # use default streams to filter modes by rs_stream and rs_format
         self._available_modes = self._enumerate_formats(device_id)
         logger.debug(
-            "_initialize_device: self._available_modes " + str(self._available_modes)
+            "device_id: {} self._available_modes: {}".format(
+                device_id, str(self._available_modes)
+            )
         )
 
-        # make sure the frame rates are compatible with the given frame sizes
-        color_fps = self._get_valid_frame_rate(
-            rs.stream.color, color_frame_size, color_fps
-        )
-        depth_fps = self._get_valid_frame_rate(
-            rs.stream.depth, depth_frame_size, depth_fps
-        )
+        if (
+            color_frame_size is not None
+            and depth_frame_size is not None
+            and color_fps is not None
+            and depth_fps is not None
+        ):
+            color_frame_size = tuple(color_frame_size)
+            depth_frame_size = tuple(depth_frame_size)
 
-        config = self._prep_configuration(
-            color_frame_size, color_fps, depth_frame_size, depth_fps
-        )
+            logger.debug(
+                "Initialize with Color {}@{}\tDepth {}@{}".format(
+                    color_frame_size, color_fps, depth_frame_size, depth_fps
+                )
+            )
+
+            # make sure the frame rates are compatible with the given frame sizes
+            color_fps = self._get_valid_frame_rate(
+                rs.stream.color, color_frame_size, color_fps
+            )
+            depth_fps = self._get_valid_frame_rate(
+                rs.stream.depth, depth_frame_size, depth_fps
+            )
+
+            self.frame_size_backup = color_frame_size
+            self.depth_frame_size_backup = depth_frame_size
+            self.frame_rate_backup = color_fps
+            self.depth_frame_rate_backup = depth_fps
+
+            config = self._prep_configuration(
+                color_frame_size, color_fps, depth_frame_size, depth_fps
+            )
+        else:
+            config = self._get_default_config()
+            self.frame_size_backup = DEFAULT_COLOR_SIZE
+            self.depth_frame_size_backup = DEFAULT_DEPTH_SIZE
+            self.frame_rate_backup = DEFAULT_COLOR_FPS
+            self.depth_frame_rate_backup = DEFAULT_DEPTH_FPS
 
         try:
             self.pipeline_profile = self.pipeline.start(config)
@@ -244,8 +253,6 @@ class Realsense2_Source(Base_Source):
             logger.error("Cannot start pipeline! " + str(re))
             self.pipeline_profile = None
         else:
-            self.device_id = device_id
-            self.streams = self.pipeline_profile.get_streams()
             self.stream_profiles = {
                 s.stream_type(): s.as_video_stream_profile()
                 for s in self.pipeline_profile.get_streams()
@@ -259,13 +266,12 @@ class Realsense2_Source(Base_Source):
             self.update_menu()
             self._needs_restart = False
 
-    # negative values mean "don't enable the stream"
     def _prep_configuration(
         self,
-        color_frame_size=(-1, -1),
-        color_fps=-1,
-        depth_frame_size=(-1, -1),
-        depth_fps=-1,
+        color_frame_size=None,
+        color_fps=None,
+        depth_frame_size=None,
+        depth_fps=None,
     ):
         config = rs.config()
 
@@ -273,35 +279,66 @@ class Realsense2_Source(Base_Source):
         color_format = rs.format.yuyv
         depth_format = rs.format.z16
 
-        # FIXME this looks ugly
-        if depth_frame_size[0] > 0 and depth_frame_size[1] > 0 and depth_fps > 0:
-            config.enable_stream(
-                rs.stream.depth,
-                depth_frame_size[0],
-                depth_frame_size[1],
-                depth_format,
-                depth_fps,
-            )
+        config.enable_stream(
+            rs.stream.depth,
+            depth_frame_size[0],
+            depth_frame_size[1],
+            depth_format,
+            depth_fps,
+        )
 
-        if color_frame_size[0] > 0 and color_frame_size[1] > 0 and color_fps > 0:
-            config.enable_stream(
-                rs.stream.color,
-                color_frame_size[0],
-                color_frame_size[1],
-                color_format,
-                color_fps,
-            )
+        config.enable_stream(
+            rs.stream.color,
+            color_frame_size[0],
+            color_frame_size[1],
+            color_format,
+            color_fps,
+        )
 
+        return config
+
+    def _get_default_config(self):
+        config = rs.config()  # default config is RGB8, we want YUYV
+        config.enable_stream(
+            rs.stream.color,
+            DEFAULT_COLOR_SIZE[0],
+            DEFAULT_COLOR_SIZE[1],
+            rs.format.yuyv,
+            DEFAULT_COLOR_FPS,
+        )
+        config.enable_stream(
+            rs.stream.depth,
+            DEFAULT_DEPTH_SIZE[0],
+            DEFAULT_DEPTH_SIZE[1],
+            rs.format.z16,
+            DEFAULT_DEPTH_FPS,
+        )
         return config
 
     def _get_valid_frame_rate(self, stream_type, frame_size, fps):
         assert stream_type == rs.stream.color or stream_type == rs.stream.depth
 
+        if not self._available_modes or stream_type not in self._available_modes:
+            logger.warning(
+                "_get_valid_frame_rate: self._available_modes not set yet. Returning default fps."
+            )
+            if stream_type == rs.stream.color:
+                return DEFAULT_COLOR_FPS
+            elif stream_type == rs.stream.depth:
+                return DEFAULT_DEPTH_FPS
+            else:
+                raise ValueError("Unexpected `stream_type`: {}".format(stream_type))
+
         if frame_size not in self._available_modes[stream_type]:
             logger.error(
-                "Frame size not supported for {}: {}".format(stream_type, frame_size)
+                "Frame size not supported for {}: {}. Returning default fps".format(
+                    stream_type, frame_size
+                )
             )
-            return None
+            if stream_type == rs.stream.color:
+                return DEFAULT_COLOR_FPS
+            elif stream_type == rs.stream.depth:
+                return DEFAULT_DEPTH_FPS
 
         if fps not in self._available_modes[stream_type][frame_size]:
             old_fps = fps
@@ -334,9 +371,13 @@ class Realsense2_Source(Base_Source):
         current_device = None
 
         for d in devices:
-            serial = d.get_info(rs.camera_info.serial_number)
-            if device_id == serial:
-                current_device = d
+            try:
+                serial = d.get_info(rs.camera_info.serial_number)
+            except RuntimeError as re:
+                logger.error("Device no longer available " + str(re))
+            else:
+                if device_id == serial:
+                    current_device = d
 
         if current_device is None:
             return formats
@@ -360,32 +401,42 @@ class Realsense2_Source(Base_Source):
 
         return formats
 
+    def stop_pipeline(self):
+        if self.online:
+            try:
+                self.pipeline_profile = None
+                self.stream_profiles = None
+                self.pipeline.stop()
+                logger.debug("Pipeline stopped.")
+            except RuntimeError as re:
+                logger.error("Cannot stop the pipeline: " + str(re))
+
     def cleanup(self):
         if self.depth_video_writer is not None:
             self.stop_depth_recording()
-        if self.online:
-            self.pipeline.stop()
-            self.pipeline_profile = None
+        self.stop_pipeline()
 
     def get_init_dict(self):
-        return {"device_id": self.device_id}
-
-    # raise NotImplementedError("get_init_dict requested")
+        return {
+            "frame_size": self.frame_size,
+            "frame_rate": self.frame_rate,
+            "depth_frame_size": self.depth_frame_size,
+            "depth_frame_rate": self.depth_frame_rate,
+            "preview_depth": self.preview_depth,
+            "record_depth": self.record_depth,
+        }
 
     def get_frames(self):
         if self.online:
             try:
                 frames = self.pipeline.wait_for_frames(TIMEOUT)
             except RuntimeError as e:
-                logger.error(
-                    "Cannot wait for frames. Is the pipeline running? " + str(e)
-                )
-                return None, None
+                logger.error("get_frames: Timeout!")
+                raise RuntimeError(e)
             else:
                 current_time = self.g_pool.get_timestamp()
 
                 color = None
-
                 # if we're expecting color frames
                 if rs.stream.color in self.stream_profiles:
                     color_frame = frames.get_color_frame()
@@ -400,7 +451,6 @@ class Realsense2_Source(Base_Source):
                         self.color_frame_index += 1
 
                 depth = None
-
                 # if we're expecting depth frames
                 if rs.stream.depth in self.stream_profiles:
                     depth_frame = frames.get_depth_frame()
@@ -418,21 +468,16 @@ class Realsense2_Source(Base_Source):
         return None, None
 
     def recent_events(self, events):
-        if self._needs_restart:
-            logger.debug("recent_events -> needs restart")
+        if self._needs_restart or not self.online:
+            logger.debug("recent_events -> restarting device")
             self.restart_device()
-            time.sleep(0.05)
-        elif not self.online:
-            logger.debug("recent_events -> not online!")
-            time.sleep(0.05)
+            time.sleep(0.01)
             return
 
         try:
             color_frame, depth_frame = self.get_frames()
         except RuntimeError as re:
-            logger.warning(
-                "Realsense failed to provide frames. Attempting to reinit. " + str(re)
-            )
+            logger.warning("Realsense failed to provide frames." + str(re))
             self._recent_frame = None
             self._recent_depth_frame = None
             self._needs_restart = True
@@ -472,93 +517,103 @@ class Realsense2_Source(Base_Source):
         self.menu.append(ui.Switch("record_depth", self, label="Record Depth Stream"))
         self.menu.append(ui.Switch("preview_depth", self, label="Preview Depth"))
 
-        color_sizes = sorted(self._available_modes[rs.stream.color], reverse=True)
-        selector = ui.Selector(
-            "frame_size",
-            self,
-            # setter=,
-            selection=color_sizes,
-            label="Color Resolution",
-        )
-        self.menu.append(selector)
+        if self._available_modes is not None:
 
-        def color_fps_getter():
-
-            avail_fps = [
-                fps for fps in self._available_modes[rs.stream.color][self.frame_size]
-            ]
-            return avail_fps, [str(fps) for fps in avail_fps]
-
-        selector = ui.Selector(
-            "frame_rate",
-            self,
-            # setter=,
-            selection_getter=color_fps_getter,
-            label="Color Frame Rate",
-        )
-        self.menu.append(selector)
-
-        depth_sizes = sorted(self._available_modes[rs.stream.depth], reverse=True)
-        selector = ui.Selector(
-            "depth_frame_size",
-            self,
-            # setter=,
-            selection=depth_sizes,
-            label="Depth Resolution",
-        )
-        self.menu.append(selector)
-
-        def depth_fps_getter():
-            avail_fps = [
-                fps
-                for fps in self._available_modes[rs.stream.depth][self.depth_frame_size]
-            ]
-            return avail_fps, [str(fps) for fps in avail_fps]
-
-        selector = ui.Selector(
-            "depth_frame_rate",
-            self,
-            selection_getter=depth_fps_getter,
-            label="Depth Frame Rate",
-        )
-        self.menu.append(selector)
-
-        def reset_options():
-            raise NotImplementedError("update_menu::reset_options() requested")
-
-        sensor_control = ui.Growing_Menu(label="Sensor Settings")
-        sensor_control.append(
-            ui.Button("Reset device options to default", reset_options)
-        )
-        for ctrl in sorted(self.controls.values(), key=lambda x: x.range.option):
-            # sensor_control.append(ui.Info_Text(ctrl.description))
-            if (
-                ctrl.range.min == 0.0
-                and ctrl.range.max == 1.0
-                and ctrl.range.step == 1.0
-            ):
-                sensor_control.append(
-                    ui.Switch("value", ctrl, label=ctrl.label, off_val=0.0, on_val=1.0)
-                )
-            else:
-                sensor_control.append(
-                    ui.Slider(
-                        "value",
-                        ctrl,
-                        label=ctrl.label,
-                        min=ctrl.range.min,
-                        max=ctrl.range.max,
-                        step=ctrl.range.step,
+            def frame_size_selection_getter():
+                if self.device_id:
+                    frame_size = sorted(
+                        self._available_modes[rs.stream.color], reverse=True
                     )
-                )
-        self.menu.append(sensor_control)
+                    labels = ["({}, {})".format(t[0], t[1]) for t in frame_size]
+                    return frame_size, labels
+                else:
+                    return [self.frame_size_backup], [str(self.frame_size_backup)]
+
+            selector = ui.Selector(
+                "frame_size",
+                self,
+                selection_getter=frame_size_selection_getter,
+                label="Color Resolution",
+            )
+            self.menu.append(selector)
+
+            def frame_rate_selection_getter():
+                if self.device_id:
+                    avail_fps = [
+                        fps
+                        for fps in self._available_modes[rs.stream.color][
+                            self.frame_size
+                        ]
+                    ]
+                    return avail_fps, [str(fps) for fps in avail_fps]
+                else:
+                    return [self.frame_rate_backup], [str(self.frame_rate_backup)]
+
+            selector = ui.Selector(
+                "frame_rate",
+                self,
+                selection_getter=frame_rate_selection_getter,
+                label="Color Frame Rate",
+            )
+            self.menu.append(selector)
+
+            def depth_frame_size_selection_getter():
+                if self.device_id:
+                    depth_sizes = sorted(
+                        self._available_modes[rs.stream.depth], reverse=True
+                    )
+                    labels = ["({}, {})".format(t[0], t[1]) for t in depth_sizes]
+                    return depth_sizes, labels
+                else:
+                    return (
+                        [self.depth_frame_size_backup],
+                        [str(self.depth_frame_size_backup)],
+                    )
+
+            selector = ui.Selector(
+                "depth_frame_size",
+                self,
+                selection_getter=depth_frame_size_selection_getter,
+                label="Depth Resolution",
+            )
+            self.menu.append(selector)
+
+            def depth_frame_rate_selection_getter():
+                if self.device_id:
+                    avail_fps = [
+                        fps
+                        for fps in self._available_modes[rs.stream.depth][
+                            self.depth_frame_size
+                        ]
+                    ]
+                    return avail_fps, [str(fps) for fps in avail_fps]
+                else:
+                    return (
+                        [self.depth_frame_rate_backup],
+                        [str(self.depth_frame_rate_backup)],
+                    )
+
+            selector = ui.Selector(
+                "depth_frame_rate",
+                self,
+                selection_getter=depth_frame_rate_selection_getter,
+                label="Depth Frame Rate",
+            )
+            self.menu.append(selector)
+
+            def reset_options():
+                logger.debug("reset_options")
+                self.reset_device(self.device_id)
+
+            sensor_control = ui.Growing_Menu(label="Sensor Settings")
+            sensor_control.append(
+                ui.Button("Reset device options to default", reset_options)
+            )
+            self.menu.append(sensor_control)
+        else:
+            logger.debug("update_menu: self._available_modes is None")
 
     def gl_display(self):
-        if self.depth_window is not None and glfw.glfwWindowShouldClose(
-            self.depth_window
-        ):
-            glfw.glfwDestroyWindow(self.depth_window)
-            self.depth_window = None
 
         if self.preview_depth and self._recent_depth_frame is not None:
             self.g_pool.image_tex.update_from_ndarray(self._recent_depth_frame.bgr)
@@ -582,33 +637,31 @@ class Realsense2_Source(Base_Source):
             (self.frame_size[1], self.frame_size[0], 3)
         )
 
+    def reset_device(self, device_id):
+        logger.debug("reset_device")
+        if device_id is None:
+            device_id = self.device_id
+
+        self.notify_all(
+            {
+                "subject": "realsense2_source.restart",
+                "device_id": device_id,
+                "color_frame_size": None,
+                "color_fps": None,
+                "depth_frame_size": None,
+                "depth_fps": None,
+                "device_options": [],  # FIXME
+            }
+        )
+
     def restart_device(
         self,
-        device_id=None,
         color_frame_size=None,
         color_fps=None,
         depth_frame_size=None,
         depth_fps=None,
         device_options=None,
     ):
-        logger.debug("restart_device")
-        if device_id is None:
-            if self.online:  # already running
-                device_id = self.pipeline_profile.get_device().get_info(
-                    rs.camera_info.serial_number
-                )
-            else:
-                # set the first available device
-                devices = self.context.query_devices()
-                if devices:
-                    device_id = devices[0].get_info(rs.camera_info.serial_number)
-                else:
-                    self.device_id = None
-                    logger.error("Cannot restart device. No device connected.")
-                    return
-
-            self.device_id = device_id
-
         if color_frame_size is None:
             color_frame_size = self.frame_size
         if color_fps is None:
@@ -619,17 +672,11 @@ class Realsense2_Source(Base_Source):
             depth_fps = self.depth_frame_rate
         if device_options is None:
             device_options = []  # FIXME
-        if self.online:
-            try:
-                self.pipeline.stop()
-                self.pipeline_profile = None
-            except RuntimeError:
-                logger.warning("Tried to stop self.pipeline before starting.")
 
         self.notify_all(
             {
                 "subject": "realsense2_source.restart",
-                "device_id": device_id,
+                "device_id": None,
                 "color_frame_size": color_frame_size,
                 "color_fps": color_fps,
                 "depth_frame_size": depth_frame_size,
@@ -637,11 +684,15 @@ class Realsense2_Source(Base_Source):
                 "device_options": device_options,
             }
         )
+        logger.debug("self.restart_device --> self.notify_all")
 
     def on_click(self, pos, button, action):
         pass
 
     def on_notify(self, notification):
+        logger.debug(
+            'self.on_notify, notification["subject"]: ' + notification["subject"]
+        )
         if notification["subject"] == "realsense2_source.restart":
             kwargs = notification.copy()
             del kwargs["subject"]
@@ -674,14 +725,33 @@ class Realsense2_Source(Base_Source):
         self.depth_video_writer = None
 
     @property
+    def device_id(self):
+        if self.online:  # already running
+            return self.pipeline_profile.get_device().get_info(
+                rs.camera_info.serial_number
+            )
+        else:
+            # set the first available device
+            devices = self.context.query_devices()
+            if devices:
+                logger.info("device_id: first device by default.")
+                return devices[0].get_info(rs.camera_info.serial_number)
+            else:
+                logger.debug("device_id: No device connected.")
+                return None
+
+    @property
     def frame_size(self):
         try:
             stream_profile = self.stream_profiles[rs.stream.color]
+            # TODO check width & height is in self.available modes
             return stream_profile.width(), stream_profile.height()
-        except AttributeError as a:
-            logger.info("Stream profiles are not yet created (color): {}".format(a))
-        except KeyError as k:
-            logger.error("Color stream is not found: {}".format(k))
+        except AttributeError:
+            return self.frame_size_backup
+        except KeyError:
+            return self.frame_size_backup
+        except TypeError:
+            return self.frame_size_backup
 
     @frame_size.setter
     def frame_size(self, new_size):
@@ -692,12 +762,14 @@ class Realsense2_Source(Base_Source):
     def frame_rate(self):
         try:
             stream_profile = self.stream_profiles[rs.stream.color]
+            # TODO check FPS is in self.available modes
             return stream_profile.fps()
-        except AttributeError as a:
-            logger.info("Stream profiles are not yet created: {}".format(a))
-            return -1
-        except KeyError as k:
-            logger.error("Color stream is not found: {}".format(k))
+        except AttributeError:
+            return self.frame_rate_backup
+        except KeyError:
+            return self.frame_rate_backup
+        except TypeError:
+            return self.frame_rate_backup
 
     @frame_rate.setter
     def frame_rate(self, new_rate):
@@ -708,12 +780,14 @@ class Realsense2_Source(Base_Source):
     def depth_frame_size(self):
         try:
             stream_profile = self.stream_profiles[rs.stream.depth]
+            # TODO check width & height is in self.available modes
             return stream_profile.width(), stream_profile.height()
-        except AttributeError as a:
-            logger.info("Stream profiles are not yet created (depth): {}".format(a))
-            return (-1, -1)
-        except KeyError as k:
-            logger.error("Depth stream is not found: {}".format(k))
+        except AttributeError:
+            return self.depth_frame_size_backup
+        except KeyError:
+            return self.depth_frame_size_backup
+        except TypeError:
+            return self.depth_frame_size_backup
 
     @depth_frame_size.setter
     def depth_frame_size(self, new_size):
@@ -725,11 +799,12 @@ class Realsense2_Source(Base_Source):
         try:
             stream_profile = self.stream_profiles[rs.stream.depth]
             return stream_profile.fps()
-        except AttributeError as a:
-            logger.info("Stream profiles are not yet created: {}".format(a))
-            return -1
-        except KeyError as k:
-            logger.error("Depth stream is not found: {}".format(k))
+        except AttributeError:
+            return self.depth_frame_rate_backup
+        except KeyError:
+            return self.depth_frame_rate_backup
+        except TypeError:
+            return self.depth_frame_rate_backup
 
     @depth_frame_rate.setter
     def depth_frame_rate(self, new_rate):
@@ -749,6 +824,9 @@ class Realsense2_Source(Base_Source):
         if self.online:
             return self.pipeline_profile.get_device().get_info(rs.camera_info.name)
         else:
+            logger.debug(
+                "self.name: Realsense2 not online. Falling back to Ghost capture"
+            )
             return "Ghost capture"
 
 
