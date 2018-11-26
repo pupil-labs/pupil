@@ -36,12 +36,8 @@ import file_methods
 
 from surface_tracker.cache import Cache
 from surface_tracker.surface_tracker import Surface_Tracker
-from surface_tracker import (
-    offline_utils,
-    background_tasks,
-    Square_Marker_Detection,
-    Heatmap_Mode,
-)
+from surface_tracker import offline_utils, background_tasks, Square_Marker_Detection
+from surface_tracker.gui import Heatmap_Mode
 from surface_tracker.surface_offline import Surface_Offline
 
 

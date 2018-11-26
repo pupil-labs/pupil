@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import platform
+from enum import Enum
 
 import OpenGL.GL as gl
 import cv2
@@ -19,7 +20,6 @@ import pyglui.cygl.utils as pyglui_utils
 
 import gl_utils
 import glfw
-from surface_tracker import Heatmap_Mode
 
 
 class GUI:
@@ -594,3 +594,8 @@ class Surface_Window:
 
     def on_scroll(self, window, x, y):
         self.trackball.zoom_to(y)
+
+
+class Heatmap_Mode(Enum):
+    WITHIN_SURFACE = "Gaze within each surface"
+    ACROSS_SURFACES = "Gaze across different surfaces"

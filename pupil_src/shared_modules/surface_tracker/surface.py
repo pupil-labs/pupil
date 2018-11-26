@@ -16,7 +16,7 @@ import uuid
 
 import methods
 
-from surface_tracker import _Surface_Marker_Aggregate
+from surface_tracker.surface_marker_aggregate import Surface_Marker_Aggregate
 
 
 class Surface(metaclass=ABCMeta):
@@ -312,11 +312,11 @@ class Surface(metaclass=ABCMeta):
                 self.registered_markers_undist[marker.id].add_observation(uv_undist)
                 self.registered_markers_dist[marker.id].add_observation(uv_dist)
             except KeyError:
-                self.registered_markers_undist[marker.id] = _Surface_Marker_Aggregate(
+                self.registered_markers_undist[marker.id] = Surface_Marker_Aggregate(
                     marker.id
                 )
                 self.registered_markers_undist[marker.id].add_observation(uv_undist)
-                self.registered_markers_dist[marker.id] = _Surface_Marker_Aggregate(
+                self.registered_markers_dist[marker.id] = Surface_Marker_Aggregate(
                     marker.id
                 )
                 self.registered_markers_dist[marker.id].add_observation(uv_dist)
@@ -439,7 +439,7 @@ class Surface(metaclass=ABCMeta):
     def _add_marker(
         self, marker_id, verts_px, camera_model, markers, compensate_distortion
     ):
-        surface_marker_dist = _Surface_Marker_Aggregate(marker_id)
+        surface_marker_dist = Surface_Marker_Aggregate(marker_id)
         marker_verts_dist = np.array(verts_px).reshape((4, 2))
         uv_coords_dist = self.map_to_surf(
             marker_verts_dist, camera_model, compensate_distortion=compensate_distortion
@@ -520,14 +520,14 @@ class Surface(metaclass=ABCMeta):
         self.name = init_dict["name"]
         self.real_world_size = init_dict["real_world_size"]
         self.registered_markers_undist = [
-            _Surface_Marker_Aggregate(marker["id"], verts_uv=marker["verts_uv"])
+            Surface_Marker_Aggregate(marker["id"], verts_uv=marker["verts_uv"])
             for marker in init_dict["reg_markers"]
         ]
         self.registered_markers_undist = {
             m.id: m for m in self.registered_markers_undist
         }
         self.registered_markers_dist = [
-            _Surface_Marker_Aggregate(marker["id"], verts_uv=marker["verts_uv"])
+            Surface_Marker_Aggregate(marker["id"], verts_uv=marker["verts_uv"])
             for marker in init_dict["registered_markers_dist"]
         ]
         self.registered_markers_dist = {m.id: m for m in self.registered_markers_dist}
