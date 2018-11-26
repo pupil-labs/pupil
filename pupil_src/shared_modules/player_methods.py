@@ -666,6 +666,7 @@ def update_recording_v18_v19(rec_dir):
 
 def update_recording_v19_v110(rec_dir):
     def undistort_vertices(verts, intrinsics):
+        verts = np.asarray(verts)
         verts.shape = (4, 2)
 
         img_width, img_height = intrinsics.resolution
@@ -676,10 +677,17 @@ def update_recording_v19_v110(rec_dir):
         verts /= verts_max
         verts *= (target_width, target_height)
 
+        verts += 100
+
         verts = intrinsics.undistortPoints(verts)
+
+        verts -= 100
 
         verts /= (target_width, target_height)
         verts *= verts_max
+
+        verts.shape = (4, 1, 2)
+        verts = verts.tolist()
 
         return verts
 
@@ -744,11 +752,9 @@ def update_recording_v19_v110(rec_dir):
 
             surfaces_definitions_new.append(surface_def_new)
 
-        surface_definitions_dict_updated = fm.Persistent_Dict()
-        surface_definitions_dict_updated[
-            "surface_definitions"
-        ] = surfaces_definitions_new
-        surfaces_definitions_new.save()
+        surface_definitions_dict_new = fm.Persistent_Dict(surface_definitions_path)
+        surface_definitions_dict_new["surfaces"] = surfaces_definitions_new
+        surface_definitions_dict_new.save()
 
     make_update()
     _update_info_version_to("v1.10", rec_dir)

@@ -251,17 +251,14 @@ class Surface(metaclass=ABCMeta):
             registered_verts_undist, visible_verts_undist
         )
 
-        if img_to_surf_trans is None or dist_img_to_surf_trans is None:
-            return Surface_Location(detected=False)
-        else:
-            return Surface_Location(
-                True,
-                dist_img_to_surf_trans,
-                surf_to_dist_img_trans,
-                img_to_surf_trans,
-                surf_to_img_trans,
-                len(visible_registered_marker_ids),
-            )
+        return Surface_Location(
+            True,
+            dist_img_to_surf_trans,
+            surf_to_dist_img_trans,
+            img_to_surf_trans,
+            surf_to_img_trans,
+            len(visible_registered_marker_ids),
+        )
 
     @staticmethod
     def _find_homographies(points_A, points_B):
@@ -271,9 +268,6 @@ class Surface(metaclass=ABCMeta):
         B_to_A, mask = cv2.findHomography(
             points_A, points_B, method=cv2.RANSAC, ransacReprojThreshold=100
         )
-
-        if not mask.all():
-            return None, None
 
         A_to_B, mask = cv2.findHomography(points_B, points_A)
         return A_to_B, B_to_A
