@@ -16,11 +16,11 @@ import os
 from shutil import copy2
 
 import av
+import cv2
 import numpy as np
 from scipy.interpolate import interp1d
 
 import csv_utils
-import cv2
 import file_methods as fm
 from camera_models import load_intrinsics
 from version_utils import VersionFormat, read_rec_version
@@ -266,6 +266,9 @@ def update_recording_to_recent(rec_dir):
         update_recording_v14_v18(rec_dir)
     if rec_version < VersionFormat("1.9"):
         update_recording_v18_v19(rec_dir)
+
+    if rec_version < VersionFormat("1.10"):
+        update_recording_v19_v110(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -659,6 +662,96 @@ def update_recording_v18_v19(rec_dir):
     copy_recorded_annotations()
 
     _update_info_version_to("v1.9", rec_dir)
+
+
+def update_recording_v19_v110(rec_dir):
+    def undistort_vertices(verts, intrinsics):
+        verts.shape = (4, 2)
+
+        img_width, img_height = intrinsics.resolution
+        target_width = int(0.8 * img_width)
+        target_height = int(0.8 * img_height)
+
+        verts_max = np.max(verts, axis=0)
+        verts /= verts_max
+        verts *= (target_width, target_height)
+
+        verts = intrinsics.undistortPoints(verts)
+
+        verts /= (target_width, target_height)
+        verts *= verts_max
+
+        return verts
+
+    def make_update():
+        surface_definitions_path = os.path.join(rec_dir, "surface_definitions")
+        if not os.path.exists(surface_definitions_path):
+            return
+
+        surface_definitions_dict = fm.Persistent_Dict(surface_definitions_path)
+        surface_definitions_backup_path = os.path.join(
+            rec_dir, "surface_definitions_deprecated"
+        )
+        os.rename(surface_definitions_path, surface_definitions_backup_path)
+
+        intrinsics_path = os.path.join(rec_dir, "world.intrinsics")
+        if not os.path.exists(intrinsics_path):
+            logger.warning(
+                "Loading surface definitions failed: The data format of the "
+                "surface definitions in this recording "
+                "is too old and is no longer supported!"
+            )
+            return
+
+        valid_ext = (".mp4", ".mkv", ".avi", ".h264", ".mjpeg")
+        existing_videos = [
+            f
+            for f in glob.glob(os.path.join(rec_dir, "world.*"))
+            if os.path.splitext(f)[1] in valid_ext
+        ]
+        if not existing_videos:
+            return
+
+        world_video_path = os.path.join(rec_dir, existing_videos[0])
+        world_video = av.open(world_video_path)
+        f = world_video.streams.video[0].format
+        resolution = f.width, f.height
+
+        intrinsics = load_intrinsics(rec_dir, "world", resolution)
+        surfaces_definitions_old = surface_definitions_dict[
+            "realtime_square_marker_surfaces"
+        ]
+
+        surfaces_definitions_new = []
+        for surface_def_old in surfaces_definitions_old:
+            surface_def_new = {}
+            surface_def_new["name"] = surface_def_old["name"]
+            surface_def_new["real_world_size"] = surface_def_old["real_world_size"]
+            surface_def_new["build_up_status"] = 1.0
+
+            reg_markers = []
+            registered_markers_dist = []
+            for id, verts in surface_def_old["markers"].items():
+                reg_marker_dist = {"id": id, "verts_uv": verts}
+                registered_markers_dist.append(reg_marker_dist)
+
+                verts_undist = undistort_vertices(verts, intrinsics)
+                reg_marker = {"id": id, "verts_uv": verts_undist}
+                reg_markers.append(reg_marker)
+
+            surface_def_new["registered_markers_dist"] = registered_markers_dist
+            surface_def_new["reg_markers"] = reg_markers
+
+            surfaces_definitions_new.append(surface_def_new)
+
+        surface_definitions_dict_updated = fm.Persistent_Dict()
+        surface_definitions_dict_updated[
+            "surface_definitions"
+        ] = surfaces_definitions_new
+        surfaces_definitions_new.save()
+
+    make_update()
+    _update_info_version_to("v1.10", rec_dir)
 
 
 def check_for_worldless_recording(rec_dir):
