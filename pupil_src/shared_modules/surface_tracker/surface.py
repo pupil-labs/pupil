@@ -9,11 +9,12 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import numpy as np
-import cv2
-from abc import ABCMeta, abstractmethod
-import uuid
 import logging
+import uuid
+from abc import ABCMeta, abstractmethod
+
+import cv2
+import numpy as np
 
 logger = logging.getLogger(__name__)
 

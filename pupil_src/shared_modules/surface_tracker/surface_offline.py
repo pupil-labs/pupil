@@ -8,12 +8,10 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import multiprocessing as mp
 import logging
+import multiprocessing as mp
 
 logger = logging.getLogger(__name__)
-
-import numpy as np
 
 from surface_tracker.cache import Cache
 import player_methods

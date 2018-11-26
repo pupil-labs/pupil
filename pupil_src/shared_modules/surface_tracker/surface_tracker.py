@@ -9,9 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import logging
 import os
 from abc import ABCMeta, abstractmethod
-import logging
 
 logger = logging.getLogger(__name__)
 

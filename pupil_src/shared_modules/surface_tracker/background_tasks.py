@@ -1,8 +1,7 @@
-import multiprocessing as mp
-import os
-import logging
 import csv
 import itertools
+import logging
+import os
 
 import cv2
 

@@ -1,6 +1,6 @@
 import square_marker_detect
-from .surface_tracker import Square_Marker_Detection
 from .surface import Surface
+from .surface_tracker import Square_Marker_Detection
 
 
 def marker_detection_callable(min_marker_perimeter, inverted_markers):
