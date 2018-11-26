@@ -13,6 +13,9 @@ import numpy as np
 import cv2
 from abc import ABCMeta, abstractmethod
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 import methods
 
@@ -538,6 +541,11 @@ class Surface(metaclass=ABCMeta):
             self.deprecated_definition = init_dict["deprecated"]
         except KeyError:
             pass
+        else:
+            logger.warning(
+                "You have loaded an old and deprecated surface definition! "
+                "Please re-define this surface for increased mapping accuracy!"
+            )
 
 
 class Surface_Location:
