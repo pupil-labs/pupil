@@ -514,6 +514,7 @@ class Surface(metaclass=ABCMeta):
                 for marker in self.registered_markers_dist.values()
             ],
             "build_up_status": self.build_up_status,
+            "deprecated": self.deprecated_definition,
         }
 
     def _load_from_dict(self, init_dict):

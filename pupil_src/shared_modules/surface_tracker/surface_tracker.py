@@ -267,7 +267,12 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 }
             )
 
-        s_menu = pyglui.ui.Growing_Menu("{}".format(surface.name))
+        displayed_name = surface.name
+
+        if surface.deprecated_definition:
+            displayed_name = "Deprecated!! - " + displayed_name
+
+        s_menu = pyglui.ui.Growing_Menu("{}".format(displayed_name))
         s_menu.collapsed = True
 
         if surface.deprecated_definition:
