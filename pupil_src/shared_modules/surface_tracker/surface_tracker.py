@@ -269,6 +269,15 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
         s_menu = pyglui.ui.Growing_Menu("{}".format(surface.name))
         s_menu.collapsed = True
+
+        if surface.deprecated_definition:
+            s_menu.append(
+                pyglui.ui.Info_Text(
+                    "!!! This surface definition is old and deprecated! "
+                    "Please re-define this surface for increased mapping accuracy! !!!"
+                )
+            )
+
         s_menu.append(pyglui.ui.Text_Input("name", surface, setter=set_name))
         s_menu.append(
             pyglui.ui.Text_Input(

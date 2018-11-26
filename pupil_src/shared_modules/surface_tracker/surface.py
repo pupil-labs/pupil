@@ -27,6 +27,7 @@ class Surface(metaclass=ABCMeta):
     def __init__(self, name="unknown", init_dict=None):
         self.name = name
         self.real_world_size = {"x": 1.0, "y": 1.0}
+        self.deprecated_definition = False
 
         # We store the surface state in two versions: once computed with the
         # undistorted scene image and once with the still distorted scene image. The
@@ -531,6 +532,11 @@ class Surface(metaclass=ABCMeta):
         ]
         self.registered_markers_dist = {m.id: m for m in self.registered_markers_dist}
         self.build_up_status = init_dict["build_up_status"]
+
+        try:
+            self.deprecated_definition = init_dict["deprecated"]
+        except KeyError:
+            pass
 
 
 class Surface_Location:

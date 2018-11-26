@@ -733,6 +733,7 @@ def update_recording_v19_v110(rec_dir):
         surfaces_definitions_new = []
         for surface_def_old in surfaces_definitions_old:
             surface_def_new = {}
+            surface_def_new["deprecated"] = True
             surface_def_new["name"] = surface_def_old["name"]
             surface_def_new["real_world_size"] = surface_def_old["real_world_size"]
             surface_def_new["build_up_status"] = 1.0
