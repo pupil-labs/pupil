@@ -109,10 +109,17 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_export.plugins.imotions_exporter import iMotions_Exporter
         from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
         from video_export.plugins.world_video_exporter import World_Video_Exporter
+        from gaze_producer.gaze_from_offline_calibration import (
+            GazeFromOfflineCalibration,
+        )
 
         from background_helper import IPC_Logging_Task_Proxy
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
+        from tasklib.background.patches import IPCLoggingPatch
+
+        IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
             "1.23"
@@ -149,6 +156,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             iMotions_Exporter,
             Eye_Video_Exporter,
             Offline_Calibration,
+            GazeFromOfflineCalibration,
         ] + runtime_plugins
 
         plugins = system_plugins + user_plugins
