@@ -257,7 +257,14 @@ class _ObservableMethodWrapper:
             except _ReferenceNoLongerValidError:
                 self._observers.remove(observer)
             except Exception as e:
-                raise ObserverError("An observer raised an exception.") from e
+                # exceptions by observers are wrapped s.t. they cannot be confused
+                # with exceptions from the original method.
+                # If there is a chain of observers calling other observers, we wrap
+                # the exception only once, making the traceback a bit clearer
+                if isinstance(e, ObserverError):
+                    raise e
+                else:
+                    raise ObserverError("An observer raised an exception.") from e
 
 
 class _ReferenceNoLongerValidError(Exception):
