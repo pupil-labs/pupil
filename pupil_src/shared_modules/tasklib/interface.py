@@ -19,6 +19,9 @@ class TaskInterface(Observable, metaclass=abc.ABCMeta):
         self._completed = False
         self._canceled_or_killed = False
 
+    def on_started(self):
+        pass
+
     def on_yield(self, yield_value):
         """
         Add an observer to this to get notified every time a background task yields a
@@ -119,6 +122,7 @@ class TaskInterface(Observable, metaclass=abc.ABCMeta):
         if self.started:
             raise ValueError("Task already started!")
         self._started = True
+        self.on_started()
 
     @abc.abstractmethod
     def cancel_gracefully(self):
