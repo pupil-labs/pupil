@@ -24,7 +24,13 @@ from coarse_pupil cimport center_surround
 from detector cimport *
 from detector_utils cimport *
 from methods import Roi, normalize
-from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
+from gl_utils import (
+    adjust_gl_view,
+    clear_gl_screen,
+    basic_gl_setup,
+    make_coord_system_norm_based,
+    make_coord_system_pixel_based,
+)
 from plugin import Plugin
 from visualizer_3d import Eye_Visualizer
 
@@ -243,7 +249,7 @@ cdef class Detector_3D:
 
     def visualize(self):
         if self.debugVisualizer3D.window:
-            self.debugVisualizer3D.update_window( self.g_pool, self.pyResult3D)
+            self.debugVisualizer3D.update_window(self.g_pool, self.pyResult3D)
 
     def set_2d_detector_property(self, name, value):
         set_detector_property(self.detectProperties2D, name, value)

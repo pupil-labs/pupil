@@ -24,7 +24,13 @@ cimport detector
 from detector cimport *
 from detector_utils cimport *
 from coarse_pupil cimport center_surround
-from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
+from gl_utils import (
+    adjust_gl_view,
+    clear_gl_screen,
+    basic_gl_setup,
+    make_coord_system_norm_based,
+    make_coord_system_pixel_based,
+)
 from methods import Roi, normalize
 from plugin import Plugin
 
