@@ -860,13 +860,13 @@ class Realsense_Source(Base_Source):
 
 
 class Realsense_Manager(Base_Manager):
-    """Manages Intel RealSense 3D sources
+    """Manages Intel RealSense R200 sources
 
     Attributes:
         check_intervall (float): Intervall in which to look for new UVC devices
     """
 
-    gui_name = "RealSense 3D"
+    gui_name = "RealSense R200"
 
     def get_init_dict(self):
         return {}
@@ -875,7 +875,7 @@ class Realsense_Manager(Base_Manager):
         self.add_menu()
         from pyglui import ui
 
-        self.menu.append(ui.Info_Text("Intel RealSense 3D sources"))
+        self.menu.append(ui.Info_Text("Intel RealSense R200 sources"))
 
         def pair(d):
             fmt = "- " if d["is_streaming"] else ""
