@@ -165,3 +165,12 @@ cdef inline getSphere(const ModelDebugProperties& result ):
 cdef inline getInitialSphere(const ModelDebugProperties& result ):
     sphere = result.initialSphere
     return [ [sphere.center[0],sphere.center[1],sphere.center[2]],sphere.radius]
+
+cdef inline set_detector_property(properties, name, value):
+    if name not in properties:
+        raise ValueError("No property with name `{}` found.".format(name))
+    if not isinstance(value, type(properties[name])):
+        raise TypeError("Value {} was not of expected type `{}` found."
+                        .format(value, type(properties[name]).__name__))
+
+    properties[name] = value

@@ -27,3 +27,9 @@ class Detector_Dummy(Plugin):
 
     def on_resolution_change(self, *args, **kwargs):
         pass
+
+    def set_2d_detector_property(self, *args, **kwargs):
+        pass
+
+    def get_detector_properties(self):
+        return {}
