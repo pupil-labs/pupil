@@ -57,6 +57,17 @@ else:
     source_classes.append(Realsense_Source)
     manager_classes.append(Realsense_Manager)
 
+try:
+    from .realsense2_backend import Realsense2_Source, Realsense2_Manager
+except ImportError as ie:
+    print(ie)
+    logger.info(
+        "Install pyrealsense2 to use the Intel RealSense backend for D400 series cameras"
+    )
+else:
+    source_classes.append(Realsense2_Source)
+    manager_classes.append(Realsense2_Manager)
+
 
 def init_playback_source(g_pool, source_path=None, *args, **kwargs):
     if source_path is None or os.path.splitext(source_path)[1] == ".fake":
