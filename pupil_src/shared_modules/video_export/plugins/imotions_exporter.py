@@ -71,7 +71,7 @@ class iMotions_Exporter(IsolatedFrameExporter):
                 input_name="world",
                 output_name="scene",
                 process_frame=_process_frame,
-                export_timestamps=False,
+                timestamp_export_format=None,
             )
         except FileNotFoundError:
             logger.info("'world' video not found. Export continues with gaze data.")
@@ -160,8 +160,8 @@ def _write_gaze_data(
                         media_idx - export_range[0],
                         *gaze_pos["gaze_point_3d"],  # Gaze3dX/Y/Z
                         *undistorted2d.flat,  # Gaze2dX/Y
-                        pupil_dia.get(1, 0.),  # PupilDiaLeft
-                        pupil_dia.get(0, 0.),  # PupilDiaRight
+                        pupil_dia.get(1, 0.0),  # PupilDiaLeft
+                        pupil_dia.get(0, 0.0),  # PupilDiaRight
                         gaze_pos["confidence"],
                     )  # Confidence
                 except KeyError:
