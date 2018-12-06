@@ -33,7 +33,7 @@ class IsolatedFrameExporter(VideoExporter, metaclass=ABCMeta):
         input_name,
         output_name,
         process_frame,
-        export_timestamps,
+        timestamp_export_format,
     ):
         os.makedirs(export_dir, exist_ok=True)
         self.logger.info("Exporting to {}".format(export_dir))
@@ -46,7 +46,7 @@ class IsolatedFrameExporter(VideoExporter, metaclass=ABCMeta):
             export_range,
             self.g_pool.timestamps,
             process_frame,
-            export_timestamps,
+            timestamp_export_format,
         )
         task = ManagedTask(
             _convert_video_file,
@@ -75,7 +75,7 @@ def _convert_video_file(
     export_range,
     world_timestamps,
     process_frame,
-    export_timestamps,
+    timestamp_export_format,
 ):
     yield "Export video", 0.0
     input_source = File_Source(EmptyGPool(), input_file)
@@ -113,10 +113,10 @@ def _convert_video_file(
             progress = (input_source.current_frame_idx - export_from_index) / (
                 export_to_index - export_from_index
             )
-            yield "Exporting video", progress * 100.
+            yield "Exporting video", progress * 100.0
             next_update_idx += update_rate
 
-    writer.close(export_timestamps)
+    writer.close(timestamp_export_format)
     input_source.cleanup()
     yield "Exporting video completed", 100.0
 

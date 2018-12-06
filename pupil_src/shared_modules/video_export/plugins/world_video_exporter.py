@@ -272,7 +272,7 @@ def _export_world_video(
             current_frame += 1
             yield "Exporting with pid {}".format(PID), current_frame
 
-        writer.close()
+        writer.close(timestamp_export_format="all")
 
         duration = time() - start_time
         effective_fps = float(current_frame) / duration

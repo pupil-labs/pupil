@@ -62,13 +62,25 @@ to be valid and should only now be accesed.
 """
 
 
-def write_timestamps(file_loc, timestamps):
+def write_timestamps(file_loc, timestamps, output_format="npy"):
+    """
+    Attritbutes:
+        output_format (str): Output file format. Available values:
+        - "npy": numpy array format (default)
+        - "csv": csv file export
+        - "all": Exports in all of the above formats
+    """
     directory, video_file = os.path.split(file_loc)
     name, ext = os.path.splitext(video_file)
-    ts_file = "{}_timestamps.npy".format(name)
+    ts_file = "{}_timestamps".format(name)
     ts_loc = os.path.join(directory, ts_file)
     ts = np.array(timestamps)
-    np.save(ts_loc, ts)
+    if output_format not in ("npy", "csv", "all"):
+        raise ValueError("Unknown timestamp output format `{}`".format(output_format))
+    if output_format in ("npy", "all"):
+        np.save(ts_loc + ".npy", ts)
+    if output_format in ("csv", "all"):
+        np.savetxt(ts_loc + ".csv", ts, fmt="%f", header="timestamps [seconds]")
 
 
 class AV_Writer(object):
@@ -211,15 +223,15 @@ class AV_Writer(object):
                 ):
                     break  # wait for next image
 
-    def close(self, export_timestamps=True):
+    def close(self, timestamp_export_format="npy"):
         # only flush encoder if there has been at least one frame
         if self.configured:
             for packet in self.video_stream.encode(None):
                 self.container.mux(packet)
 
         self.container.close()  # throws RuntimeError if no frames were written
-        if export_timestamps:
-            write_timestamps(self.file_loc, self.timestamps)
+        if timestamp_export_format:
+            write_timestamps(self.file_loc, self.timestamps, timestamp_export_format)
 
     def release(self):
         self.close()
