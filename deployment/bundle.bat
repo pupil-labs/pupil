@@ -5,7 +5,7 @@ setlocal enableextensions
 for /F "tokens=* USEBACKQ" %%F IN (`git describe --tags --long`) DO (
 set current_tag=%%F
 )
-set release_dir=pupil_%current_tag%_window_x64
+set release_dir=pupil_%current_tag%_windows_x64
 echo release_dir:  %release_dir%
 if not exist %release_dir% (
 	mkdir %release_dir%
@@ -15,28 +15,26 @@ python ..\pupil_src\shared_modules\pupil_detectors\build.py
 python ..\pupil_src\shared_modules\cython_methods\build.py
 python ..\pupil_src\shared_modules\calibration_routines\optimization_calibration\build.py
 
-cd deploy_capture
-pyinstaller --noconfirm --clean --log-level WARN bundle.spec
-python finalize_bundle.py
-set capture_bundle=pupil_capture_windows_x64_%current_tag%
-echo Finishing %capture_bundle%
-move "dist\Pupil Capture" ..\%release_dir%\%capture_bundle%
-cd ..
-
-cd deploy_service
-pyinstaller --noconfirm --clean --log-level WARN bundle.spec
-python finalize_bundle.py
-set capture_bundle=pupil_capture_windows_x64_%current_tag%
-echo Finishing %capture_bundle%
-move "dist\Pupil Service" ..\%release_dir%\%capture_bundle%
-cd ..
-
-cd deploy_player
-pyinstaller --noconfirm --clean --log-level WARN bundle.spec
-python finalize_bundle.py
-set capture_bundle=pupil_capture_windows_x64_%current_tag%
-echo Finishing %capture_bundle%
-move "dist\Pupil Player" ..\%release_dir%\%capture_bundle%
-cd ..
+call :Bundle capture %current_tag%
+call :Bundle service %current_tag%
+call :Bundle player %current_tag%
 
 7z a -t7z %release_dir%.7z %release_dir%
+
+:Bundle
+setlocal
+set app=%~1
+set version=%~2
+
+echo Bundling pupil_%app% %version%
+
+cd deploy_%app%
+pyinstaller --noconfirm --clean --log-level WARN bundle.spec
+python finalize_bundle.py
+set app_folder=pupil_%app%_windows_x64_%current_tag%
+echo Finishing %app_folder%
+move "dist\Pupil %app%" ..\%release_dir%\%app_folder%
+cd ..
+
+endlocal
+exit /B 0
