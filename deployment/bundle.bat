@@ -39,4 +39,4 @@ echo Finishing %capture_bundle%
 move "dist\Pupil Player" ..\%release_dir%\%capture_bundle%
 cd ..
 
-"C:\Program Files\7-Zip\7z.exe" a -t7z %release_dir%.7z %release_dir%
+7z a -t7z %release_dir%.7z %release_dir%
