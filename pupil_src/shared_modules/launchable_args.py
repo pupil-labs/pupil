@@ -77,7 +77,7 @@ def _add_remote_port_arg(parser):
 
 
 def _add_recording_arg(parser):
-    parser.add_argument("recording", nargs="?", help="path to recording")
+    parser.add_argument("recording", default="", nargs="?", help="path to recording")
 
 
 def _add_debug_profile_args(parser):
