@@ -82,6 +82,8 @@ class _add_pupil_ellipse:
     pupil positions for rendering.
     """
 
+    _warned_once = False
+
     def __init__(self, pupil_positions_of_eye):
         self._pupil_positions_of_eye = pupil_positions_of_eye
 
@@ -91,5 +93,7 @@ class _add_pupil_ellipse:
             pupil_datum = self._pupil_positions_of_eye.by_ts(frame.timestamp)
             draw_pupil_on_image(eye_image, pupil_datum)
         except ValueError:
-            logger.warning("Inconsistent timestamps found in pupil data")
+            if not self._warned_once:
+                logger.warning("Inconsistent timestamps found in pupil data")
+                self._warned_once = True
         return eye_image
