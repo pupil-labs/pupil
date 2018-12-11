@@ -94,6 +94,6 @@ class _add_pupil_ellipse:
             draw_pupil_on_image(eye_image, pupil_datum)
         except ValueError:
             if not self._warned_once_data_not_found:
-                logger.warning("Pupil data for visualization not found")
+                logger.warning("Could not draw pupil visualization. No data found.")
                 self._warned_once_data_not_found = True
         return eye_image
