@@ -82,7 +82,7 @@ class _add_pupil_ellipse:
     pupil positions for rendering.
     """
 
-    _warned_once = False
+    _warned_once_data_not_found = False
 
     def __init__(self, pupil_positions_of_eye):
         self._pupil_positions_of_eye = pupil_positions_of_eye
@@ -93,7 +93,7 @@ class _add_pupil_ellipse:
             pupil_datum = self._pupil_positions_of_eye.by_ts(frame.timestamp)
             draw_pupil_on_image(eye_image, pupil_datum)
         except ValueError:
-            if not self._warned_once:
-                logger.warning("Inconsistent timestamps found in pupil data")
-                self._warned_once = True
+            if not self._warned_once_data_not_found:
+                logger.warning("Pupil data for visualization not found")
+                self._warned_once_data_not_found = True
         return eye_image
