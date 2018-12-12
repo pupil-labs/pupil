@@ -25,7 +25,7 @@ class DefaultNamespace(argparse.Namespace):
 
 
 def parse(running_from_bundle, **defaults):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(allow_abbrev=False)
     target_ns = DefaultNamespace(**defaults)
 
     if running_from_bundle:
@@ -34,7 +34,7 @@ def parse(running_from_bundle, **defaults):
         _setup_source_parsers(parser)
     _add_debug_profile_args(parser)
 
-    return parser.parse_args(namespace=target_ns)
+    return parser.parse_known_args(namespace=target_ns)
 
 
 def _setup_source_parsers(main_parser):
@@ -86,12 +86,4 @@ def _add_debug_profile_args(parser):
     )
     parser.add_argument(
         "--profile", action="store_true", help="profile the application's CPU time"
-    )
-
-
-def _add_multiprocessing_args(parser):
-    parser.add_argument(
-        "--multiprocessing-fork",
-        nargs=2,
-        help="Automatically added when running the Windows bundle.",
     )
