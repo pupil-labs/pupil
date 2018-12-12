@@ -60,7 +60,6 @@ def _setup_source_parsers(main_parser):
 
 
 def _setup_bundle_parsers(main_parser, namespace):
-    _add_multiprocessing_args(main_parser)
     if "pupil_player" in sys.executable:
         _add_recording_arg(main_parser)
         namespace.app = "player"

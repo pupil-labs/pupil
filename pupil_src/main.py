@@ -19,7 +19,7 @@ if not running_from_bundle:
 import launchable_args
 
 default_args = {"app": "capture", "debug": False, "profile": False}
-parsed_args = launchable_args.parse(running_from_bundle, **default_args)
+parsed_args, unknown_args = launchable_args.parse(running_from_bundle, **default_args)
 
 if running_from_bundle:
     # Specifiy user dir.
@@ -245,6 +245,10 @@ def launcher():
         if cmd_sub.socket.poll(timeout=50):
             cmd_sub.recv()
             break
+
+    import logging
+
+    logging.debug("Unknown command-line arguments: {}".format(unknown_args))
 
     if parsed_args.app == "service":
         cmd_push.notify({"subject": "service_process.should_start"})
