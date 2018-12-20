@@ -14,7 +14,8 @@ import glob
 import av
 from time import sleep
 
-from .base_backend import Base_Source, Playback_Source, Base_Manager, EndofVideoError
+from .base_backend import Base_Source, Playback_Source, \
+    Base_Manager, EndofVideoError, NoMoreVideoError
 from camera_models import load_intrinsics
 
 import numpy as np
@@ -26,6 +27,7 @@ from fractions import Fraction
 import logging
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 assert av.__version__ >= "0.4.2", "pyav is out-of-date, please update"
 av.logging.set_level(av.logging.ERROR)
@@ -187,8 +189,7 @@ class File_Source(Playback_Source, Base_Source):
             self.current_container_index += 1
             return self._get_containers(self.current_container_index)
         except IndexError:
-            logger.info("No more container found")
-            raise EndofVideoError("Reached end of video file")
+            raise NoMoreVideoError("No more video found")
         else:
             return container
 
@@ -204,8 +205,10 @@ class File_Source(Playback_Source, Base_Source):
                 "Videofile pts are not evenly spaced, pts to" +
                 "index conversion may fail and be inconsitent."
             )
+        self.timestamps = np.array([])
         try:
-            self.timestamps = np.load(self.timestamps_lst[0])
+            for timestamp in self.timestamps_lst:
+                self.timestamps = np.append(self.timestamps, np.load(timestamp))
         except IOError:
             logger.warning(
                 "did not find timestamps file, making timetamps" +
@@ -222,7 +225,7 @@ class File_Source(Playback_Source, Base_Source):
         else:
             logger.debug(
                 "Auto loaded %s timestamps from %s"
-                % (len(self.timestamps), self.timestamps_lst[0])
+                % (len(self.timestamps), self.timestamps_lst)
             )
         assert isinstance(
             self.timestamps[0], float
@@ -297,7 +300,6 @@ class File_Source(Playback_Source, Base_Source):
         return self.current_frame_idx
 
     def get_frame_count(self):
-        # TODO
         return len(self.timestamps)
 
     @ensure_initialisation()
@@ -318,13 +320,33 @@ class File_Source(Playback_Source, Base_Source):
     def idx_to_pts(self, idx):
         return idx * self.pts_rate
 
+    def get_next_frame(self):
+        while 1:
+            try:
+                frame = self.get_frame()
+                return frame
+            except EndofVideoError:
+                self.current_container_index += 1
+                self.container = self._get_containers(
+                        self.current_container_index)
+                self.video_stream, self.audio_stream = self._get_streams(
+                    self.container)
+                if self.buffering:
+                    self.buffered_decoder = self.container.get_buffered_decoder(
+                        self.video_stream, dec_batch=50, dec_buffer_size=200
+                    )
+                    self.next_frame = self.buffered_decoder.get_frame()
+                else:
+                    self.next_frame = self._next_frame()
+
     @ensure_initialisation()
     def get_frame(self):
         frame = None
-        logged = False
-        for frame in self.next_frame:
-            if not frame:
-                break
+        while 1:
+            try:
+                frame = next(self.next_frame)
+            except StopIteration:
+                raise EndofVideoError("Reached end of video file")
             index = self.pts_to_idx(frame.pts)
             if index == self.target_frame_idx:
                 break
@@ -334,6 +356,7 @@ class File_Source(Playback_Source, Base_Source):
             else:
                 logger.debug("Frame index not consistent.")
                 break
+        # Under buffered mode, frame = next(self.next_frame) may return None
         if not frame:
             if self.loop:
                 logger.info("Looping enabled. Seeking to beginning.")
@@ -351,10 +374,8 @@ class File_Source(Playback_Source, Base_Source):
         except IndexError:
             logger.info("Reached end of timestamps list.")
             raise EndofVideoError("Reached end of timestamps list.")
-
         self.target_frame_idx = index + 1
         self.current_frame_idx = index
-
         return Frame(timestamp, frame, index=index)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
@@ -362,41 +383,27 @@ class File_Source(Playback_Source, Base_Source):
         try:
             last_index = self._recent_frame.index
         except AttributeError:
-            # called once on start when self._recent_frame is None
+            # Get frame at beginnning
+            frame = self.get_frame()
+            self._recent_frame = frame
             last_index = -1
 
-        frame = None
+        # Seek Frame
         pbt = self.g_pool.seek_control.current_playback_time
         ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
-        if ts_idx == last_index:
-            frame = self._recent_frame.copy()
-            if self.play and ts_idx == self.get_frame_count() - 1:
-                logger.info("Video has ended.")
-                self.g_pool.seek_control.play = False
-
-        elif ts_idx < last_index or ts_idx > last_index + 1:
-            # time to seek
+        if ts_idx < last_index or ts_idx > last_index + 1:
             self.seek_to_frame(ts_idx)
-
-        # Only call get_frame() if the next frame is actually needed
-        from time import monotonic
-
-        try:
-            frame = frame or self.get_frame()
-        except EndofVideoError:
-            self.current_container_index += 1
-            self.container = self._get_container(self.current_container_index)
-            if self.buffering:
-                self.buffered_decoder = self.container.get_buffered_decoder(
-                    self.video_stream, dec_batch=50, dec_buffer_size=200
-                )
-                self.next_frame = self.buffered_decoder.get_frame()
-            else:
-                self.next_frame = self._next_frame()
-            self.g_pool.seek_control.play = False
-            frame = frame or self._recent_frame.copy()
-            return self.get_frame()
-
+        # Normla Case get next frame
+        if not self.play:
+            frame = self._recent_frame
+        else:
+            # Only call get_frame() if the next frame is actually needed
+            try:
+                frame = self.get_next_frame()
+            except NoMoreVideoError:
+                logger.info('No more video found')
+                self.g_pool.seek_control.play = False
+                frame = self._recent_frame
         self.g_pool.seek_control.end_of_seek()
         events["frame"] = frame
         self._recent_frame = frame

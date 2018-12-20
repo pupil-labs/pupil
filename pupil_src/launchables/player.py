@@ -240,7 +240,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             if os.path.splitext(f)[1] in valid_ext
         ][0]
         init_playback_source(
-            g_pool, timing="external", source_path=video_path, buffered_decoding=True
+            g_pool, timing="external", source_path=video_path, buffered_decoding=False
         )
 
         # load session persistent settings
