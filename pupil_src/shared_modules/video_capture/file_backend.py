@@ -104,6 +104,7 @@ class File_Source(Playback_Source, Base_Source):
         self._initialised = True
         self.source_path = source_path
         self.timestamps = None
+        self.frame_count = []
         self.loop = loop
         self.buffering = buffered_decoding
 
@@ -208,6 +209,7 @@ class File_Source(Playback_Source, Base_Source):
         self.timestamps = np.array([])
         try:
             for timestamp in self.timestamps_lst:
+                self.frame_count.append(len(np.load(timestamp)))
                 self.timestamps = np.append(self.timestamps, np.load(timestamp))
         except IOError:
             logger.warning(
@@ -300,7 +302,7 @@ class File_Source(Playback_Source, Base_Source):
         return self.current_frame_idx
 
     def get_frame_count(self):
-        return len(self.timestamps)
+        return sum(self.frame_count)
 
     @ensure_initialisation()
     def _next_frame(self):
@@ -308,6 +310,10 @@ class File_Source(Playback_Source, Base_Source):
             for frame in packet.decode():
                 if frame:
                     yield frame
+
+    def _conver_frame_index(self, pts):
+        return sum(
+            self.frame_count[:self.current_container_index]) + self.pts_to_idx(pts)
 
     @ensure_initialisation()
     def pts_to_idx(self, pts):
@@ -347,7 +353,8 @@ class File_Source(Playback_Source, Base_Source):
                 frame = next(self.next_frame)
             except StopIteration:
                 raise EndofVideoError("Reached end of video file")
-            index = self.pts_to_idx(frame.pts)
+            # index = self.pts_to_idx(frame.pts)
+            index = self._conver_frame_index(frame.pts)
             if index == self.target_frame_idx:
                 break
             elif index < self.target_frame_idx:
@@ -384,7 +391,7 @@ class File_Source(Playback_Source, Base_Source):
             last_index = self._recent_frame.index
         except AttributeError:
             # Get frame at beginnning
-            frame = self.get_frame()
+            frame = self.get_next_frame()
             self._recent_frame = frame
             last_index = -1
 
@@ -431,8 +438,16 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
-        # TODO
         # frame accurate seeking
+        container_index = 0
+        for i in range(len(self.frame_count)+1, 0, -1):
+            if seek_pos >= sum(self.frame_count[:i]):
+                    seek_pos = seek_pos - sum(self.frame_count[:i])
+                    container_index = i-1
+                    break
+        self.container = self._get_containers(container_index)
+        self.video_stream, self.audio_stream = self._get_streams(
+            self.container)
         try:
             if self.buffering:
                 self.buffered_decoder.seek(int(self.idx_to_pts(seek_pos)))
