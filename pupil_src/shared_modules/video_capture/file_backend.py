@@ -353,7 +353,6 @@ class File_Source(Playback_Source, Base_Source):
                 frame = next(self.next_frame)
             except StopIteration:
                 raise EndofVideoError("Reached end of video file")
-            # index = self.pts_to_idx(frame.pts)
             index = self._conver_frame_index(frame.pts)
             if index == self.target_frame_idx:
                 break
@@ -400,6 +399,7 @@ class File_Source(Playback_Source, Base_Source):
         ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
         if ts_idx < last_index or ts_idx > last_index + 1:
             self.seek_to_frame(ts_idx)
+            self.g_pool.seek_control.end_of_seek()
         # Normla Case get next frame
         if not self.play:
             frame = self._recent_frame
@@ -411,7 +411,6 @@ class File_Source(Playback_Source, Base_Source):
                 logger.info('No more video found')
                 self.g_pool.seek_control.play = False
                 frame = self._recent_frame
-        self.g_pool.seek_control.end_of_seek()
         events["frame"] = frame
         self._recent_frame = frame
 
@@ -439,12 +438,14 @@ class File_Source(Playback_Source, Base_Source):
     @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
         # frame accurate seeking
+        ori_pos = seek_pos
         container_index = 0
         for i in range(len(self.frame_count)+1, 0, -1):
             if seek_pos >= sum(self.frame_count[:i]):
                     seek_pos = seek_pos - sum(self.frame_count[:i])
                     container_index = i-1
                     break
+        self.current_container_index = container_index
         self.container = self._get_containers(container_index)
         self.video_stream, self.audio_stream = self._get_streams(
             self.container)
@@ -459,7 +460,7 @@ class File_Source(Playback_Source, Base_Source):
             if not self.buffering:
                 self.next_frame = self._next_frame()
             self.finished_sleep = 0
-            self.target_frame_idx = seek_pos
+            self.target_frame_idx = ori_pos
 
     def on_notify(self, notification):
         if (
