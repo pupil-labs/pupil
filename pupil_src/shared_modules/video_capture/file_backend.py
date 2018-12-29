@@ -311,7 +311,7 @@ class File_Source(Playback_Source, Base_Source):
                 if frame:
                     yield frame
 
-    def _conver_frame_index(self, pts):
+    def _convert_frame_index(self, pts):
         return sum(
             self.frame_count[:self.current_container_index]) + self.pts_to_idx(pts)
 
@@ -353,7 +353,7 @@ class File_Source(Playback_Source, Base_Source):
                 frame = next(self.next_frame)
             except StopIteration:
                 raise EndofVideoError("Reached end of video file")
-            index = self._conver_frame_index(frame.pts)
+            index = self._convert_frame_index(frame.pts)
             if index == self.target_frame_idx:
                 break
             elif index < self.target_frame_idx:
@@ -440,10 +440,10 @@ class File_Source(Playback_Source, Base_Source):
         # frame accurate seeking
         ori_pos = seek_pos
         container_index = 0
-        for i in range(len(self.frame_count)+1, 0, -1):
+        for i in range(len(self.frame_count)-1, 0, -1):
             if seek_pos >= sum(self.frame_count[:i]):
                     seek_pos = seek_pos - sum(self.frame_count[:i])
-                    container_index = i-1
+                    container_index = i
                     break
         self.current_container_index = container_index
         self.container = self._get_containers(container_index)
