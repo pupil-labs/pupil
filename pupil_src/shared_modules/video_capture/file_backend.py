@@ -367,7 +367,6 @@ class File_Source(Playback_Source, Base_Source):
             if self.loop:
                 logger.info("Looping enabled. Seeking to beginning.")
                 self.seek_to_frame(0)
-                self.target_frame_idx = 0
                 return self.get_frame()
             else:
                 logger.debug(
