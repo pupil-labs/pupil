@@ -190,7 +190,7 @@ class File_Source(Playback_Source, Base_Source):
             self.current_container_index += 1
             return self._get_containers(self.current_container_index)
         except IndexError:
-            raise NoMoreVideoError("No more video found")
+            raise NoMoreVideoError("No more container found")
         else:
             return container
 
@@ -398,7 +398,6 @@ class File_Source(Playback_Source, Base_Source):
         ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
         if ts_idx < last_index or ts_idx > last_index + 1:
             self.seek_to_frame(ts_idx)
-            self.g_pool.seek_control.end_of_seek()
         # Normla Case get next frame
         if not self.play:
             frame = self._recent_frame
@@ -410,6 +409,7 @@ class File_Source(Playback_Source, Base_Source):
                 logger.info('No more video found')
                 self.g_pool.seek_control.play = False
                 frame = self._recent_frame
+        self.g_pool.seek_control.end_of_seek()
         events["frame"] = frame
         self._recent_frame = frame
 
@@ -460,6 +460,7 @@ class File_Source(Playback_Source, Base_Source):
                 self.next_frame = self._next_frame()
             self.finished_sleep = 0
             self.target_frame_idx = ori_pos
+        self.play = True
 
     def on_notify(self, notification):
         if (
