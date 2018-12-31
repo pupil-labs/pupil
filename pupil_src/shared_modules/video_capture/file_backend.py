@@ -114,12 +114,13 @@ class File_Source(Playback_Source, Base_Source):
             )
             self._initialised = False
             return
-
+        # Play different part of videos depend on current_container_index
         self.containers_path = self._get_conatiners_path(source_path)
         self.current_container_index = 0
         self.container = self._get_containers(self.current_container_index)
         self.video_stream, self.audio_stream = self._get_streams(
             self.container)
+        # Merge multiple timestamp files into one
         self._set_timestamps(source_path)
         self.target_frame_idx = 0
         self.current_frame_idx = 0
@@ -163,14 +164,16 @@ class File_Source(Playback_Source, Base_Source):
 
     def _get_pattern_lst(self, source_path, timestamps=False):
         '''
-        Get an order list follow the name pattern
+        return an order list sort by file name pattern
         '''
         if timestamps:
+            # [world_timestamps.npy, world_001_timestamps.npy, world_002_timestamps.npy]
             pattern, _ = os.path.splitext(source_path)
             suffix = "_timestamps.npy"
             tmp = sorted(glob.glob(pattern + '*' + suffix))
             return tmp[-1:] + tmp[:-1]
         else:
+            # [world.mjpeg, world_001.mjpeg, world_002.mjpeg]
             pattern, suffix = os.path.splitext(source_path)
             return sorted(glob.glob(pattern + '*' + suffix))
 
@@ -179,7 +182,7 @@ class File_Source(Playback_Source, Base_Source):
 
     def _get_containers(self, index):
         '''
-        Get container by index, find the next one if the prev one is broken.
+        Get container by index, get the next one if the prev one is broken.
         '''
         try:
             container = av.open(self.containers_path[index])
@@ -312,6 +315,9 @@ class File_Source(Playback_Source, Base_Source):
                     yield frame
 
     def _convert_frame_index(self, pts):
+        '''
+        Calculate frame index by current_container_index
+        '''
         return sum(
             self.frame_count[:self.current_container_index]) + self.pts_to_idx(pts)
 
@@ -327,6 +333,8 @@ class File_Source(Playback_Source, Base_Source):
         return idx * self.pts_rate
 
     def get_next_frame(self):
+        # We use while 1 here because we need to return frame when
+        # we got EndofVideoError
         while 1:
             try:
                 frame = self.get_frame()
@@ -398,11 +406,10 @@ class File_Source(Playback_Source, Base_Source):
         ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
         if ts_idx < last_index or ts_idx > last_index + 1:
             self.seek_to_frame(ts_idx)
-        # Normla Case get next frame
+        # Normla Case to get next frame
         if not self.play:
             frame = self._recent_frame
         else:
-            # Only call get_frame() if the next frame is actually needed
             try:
                 frame = self.get_next_frame()
             except NoMoreVideoError:
@@ -439,6 +446,10 @@ class File_Source(Playback_Source, Base_Source):
         # frame accurate seeking
         ori_pos = seek_pos
         container_index = 0
+        # self.frame_count contain frame_count from every video
+        # like [50, 100, 150], so when we get a seek_pos 120, we
+        # calculate which video we should play
+
         for i in range(len(self.frame_count)-1, 0, -1):
             if seek_pos >= sum(self.frame_count[:i]):
                     seek_pos = seek_pos - sum(self.frame_count[:i])
