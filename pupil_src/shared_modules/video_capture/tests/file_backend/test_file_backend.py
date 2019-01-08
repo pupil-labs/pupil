@@ -4,7 +4,7 @@ import pytest
 import av
 from multiprocessing import cpu_count
 from video_capture.file_backend import File_Source
-from video_capture.base_backend import EndofVideoError
+from video_capture.base_backend import EndofVideoError, NoMoreVideoError
 from common import broken_data, multiple_data, single_data
 
 
@@ -58,9 +58,9 @@ def test_get_containers(single, broken, caplog):
     assert isinstance(
         single._get_containers(0), av.container.input.InputContainer)
     # No more container found
-    with pytest.raises(EndofVideoError) as excinfo:
+    with pytest.raises(NoMoreVideoError) as excinfo:
         single._get_containers(1)
-    assert "Reached end of video file" in str(excinfo.value)
+    assert "No more container found" in str(excinfo.value)
     # Auto skip broken file
     assert isinstance(
         broken._get_containers(1), av.container.input.InputContainer)
@@ -79,12 +79,12 @@ def test_get_streams(single, broken, caplog):
 
 
 def test_get_timestamps_lst(single, multiple):
-    assert single._get_pattern_lst(
-            single.source_path, timestamps=True) == [
+    assert single._get_timestamps_pattern_lst(
+            single.source_path) == [
         path_helper(single_data, 'eye0_timestamps.npy'),
         ]
-    assert multiple._get_pattern_lst(
-            multiple.source_path, timestamps=True) == [
+    assert multiple._get_timestamps_pattern_lst(
+            multiple.source_path) == [
         path_helper(multiple_data, 'eye0_timestamps.npy'),
         path_helper(multiple_data, 'eye0_001_timestamps.npy'),
         ]
