@@ -12,6 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import glob
 import av
+from bisect import bisect_left
 from time import sleep
 
 from .base_backend import Base_Source, Playback_Source, \
@@ -162,23 +163,27 @@ class File_Source(Playback_Source, Base_Source):
 
         return decorator
 
-    def _get_pattern_lst(self, source_path, timestamps=False):
+    def _get_containers_pattern_lst(self, source_path):
         '''
-        return an order list sort by file name pattern
+        Return an order list sort by file name pattern
         '''
-        if timestamps:
-            # [world_timestamps.npy, world_001_timestamps.npy, world_002_timestamps.npy]
-            pattern, _ = os.path.splitext(source_path)
-            suffix = "_timestamps.npy"
-            tmp = sorted(glob.glob(pattern + '*' + suffix))
-            return tmp[-1:] + tmp[:-1]
-        else:
-            # [world.mjpeg, world_001.mjpeg, world_002.mjpeg]
-            pattern, suffix = os.path.splitext(source_path)
-            return sorted(glob.glob(pattern + '*' + suffix))
+        # [world.mjpeg, world_001.mjpeg, world_002.mjpeg]
+        pattern, suffix = os.path.splitext(source_path)
+        return sorted(glob.glob(pattern + '*' + suffix))
+
+    def _get_timestamps_pattern_lst(self, source_path):
+        # [world_timestamps.npy, world_001_timestamps.npy,
+        # world_002_timestamps.npy]
+        pattern, _ = os.path.splitext(source_path)
+        suffix = "_timestamps.npy"
+        tmp = sorted(glob.glob(pattern + '*' + suffix))
+        # After sorted, tmp will return [world_001_timestamps.npy,
+        # world_002_timestamps.npy, world_timestamps.npy]
+        # So we have to reorder it
+        return tmp[-1:] + tmp[:-1]
 
     def _get_conatiners_path(self, source_path):
-        return self._get_pattern_lst(source_path)
+        return self._get_containers_pattern_lst(source_path)
 
     def _get_containers(self, index):
         '''
@@ -198,8 +203,8 @@ class File_Source(Playback_Source, Base_Source):
             return container
 
     def _set_timestamps(self, source_path):
-        self.timestamps_lst = self._get_pattern_lst(
-            source_path, timestamps=True)
+        self.timestamps_lst = self._get_timestamps_pattern_lst(
+            source_path)
         avg_rate = self.video_stream.average_rate
         if avg_rate is None:
             avg_rate = Fraction(0, 1)
@@ -211,9 +216,10 @@ class File_Source(Playback_Source, Base_Source):
             )
         self.timestamps = np.array([])
         try:
-            for timestamp in self.timestamps_lst:
-                self.frame_count.append(len(np.load(timestamp)))
-                self.timestamps = np.append(self.timestamps, np.load(timestamp))
+            for ts_filename in self.timestamps_lst:
+                self.frame_count = np.append(
+                    self.frame_count, len(np.load(ts_filename)))
+                self.timestamps = np.append(self.timestamps, np.load(ts_filename))
         except IOError:
             logger.warning(
                 "did not find timestamps file, making timetamps" +
@@ -237,7 +243,6 @@ class File_Source(Playback_Source, Base_Source):
         ), "Timestamps need to be instances of python float, got {}".format(
             type(self.timestamps[0])
         )
-        self.timestamps = self.timestamps
 
     def _get_streams(self, container):
         '''
@@ -318,8 +323,8 @@ class File_Source(Playback_Source, Base_Source):
         '''
         Calculate frame index by current_container_index
         '''
-        return sum(
-            self.frame_count[:self.current_container_index]) + self.pts_to_idx(pts)
+        return int(sum(
+            self.frame_count[:self.current_container_index])) + self.pts_to_idx(pts)
 
     @ensure_initialisation()
     def pts_to_idx(self, pts):
@@ -408,14 +413,14 @@ class File_Source(Playback_Source, Base_Source):
             self.seek_to_frame(ts_idx)
         # Normla Case to get next frame
         if not self.play:
-            frame = self._recent_frame
+            frame = self._recent_frame.copy()
         else:
             try:
                 frame = self.get_next_frame()
             except NoMoreVideoError:
                 logger.info('No more video found')
                 self.g_pool.seek_control.play = False
-                frame = self._recent_frame
+                frame = self._recent_frame.copy()
         self.g_pool.seek_control.end_of_seek()
         events["frame"] = frame
         self._recent_frame = frame
@@ -447,14 +452,9 @@ class File_Source(Playback_Source, Base_Source):
         ori_pos = seek_pos
         container_index = 0
         # self.frame_count contain frame_count from every video
-        # like [50, 100, 150], so when we get a seek_pos 120, we
-        # calculate which video we should play
-
-        for i in range(len(self.frame_count)-1, 0, -1):
-            if seek_pos >= sum(self.frame_count[:i]):
-                    seek_pos = seek_pos - sum(self.frame_count[:i])
-                    container_index = i
-                    break
+        # like [50, 70, 60], the cumsum_frame looks like [50, 120, 180]
+        cumsum_frame = np.cumsum(self.frame_count)
+        container_index = max(0, bisect_left(cumsum_frame, seek_pos)-1)
         self.current_container_index = container_index
         self.container = self._get_containers(container_index)
         self.video_stream, self.audio_stream = self._get_streams(
