@@ -30,7 +30,7 @@ class World_Video_Exporter(VideoExporter):
     def __init__(self, g_pool):
         super().__init__(g_pool, max_concurrent_tasks=1)
         self.logger = logging.getLogger(__name__)
-        self.logger.info("iMotions Exporter has been launched.")
+        self.logger.info("World Video Exporter has been launched.")
         self.rec_name = "world.mp4"
 
     def customize_menu(self):
