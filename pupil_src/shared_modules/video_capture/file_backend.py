@@ -78,6 +78,13 @@ class Frame(object):
         return self._gray
 
 
+class StaticFrame(Frame):
+    def __init__(self, timestamp, av_frame, index):
+        super().__init__(timestamp, av_frame, index)
+        self._av_frame = av.video.VideoFrame(
+            self.width, self.height, 'rgb24')
+
+
 class File_Source(Playback_Source, Base_Source):
     """Simple file capture.
 
@@ -111,7 +118,8 @@ class File_Source(Playback_Source, Base_Source):
 
         if not source_path or not os.path.isfile(source_path):
             logger.error(
-                "Init failed. Source file could not be found at `%s`" % source_path
+                "Init failed. Source file could not be found at `%s`" %
+                source_path
             )
             self._initialised = False
             return
@@ -126,7 +134,8 @@ class File_Source(Playback_Source, Base_Source):
         self.target_frame_idx = 0
         self.current_frame_idx = 0
 
-        # set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
+        # set the pts rate to convert pts to frame index.
+        # We use videos with pts writte like indecies.
         if self.buffering:
             self.buffered_decoder = self.container.get_buffered_decoder(
                 self.video_stream, dec_batch=50, dec_buffer_size=200
@@ -203,6 +212,11 @@ class File_Source(Playback_Source, Base_Source):
             return container
 
     def _set_timestamps(self, source_path):
+        '''
+        concatenate timestamp files (actual timestamps)
+        calculate np.diff and find indeces that represent gaps bigger than X
+        interpolate timestamps with frequence F and insert them into each gap
+        '''
         self.timestamps_lst = self._get_timestamps_pattern_lst(
             source_path)
         avg_rate = self.video_stream.average_rate
@@ -219,20 +233,23 @@ class File_Source(Playback_Source, Base_Source):
             for ts_filename in self.timestamps_lst:
                 self.frame_count = np.append(
                     self.frame_count, len(np.load(ts_filename)))
-                self.timestamps = np.append(self.timestamps, np.load(ts_filename))
+                self.timestamps = np.append(
+                    self.timestamps, np.load(ts_filename))
         except IOError:
             logger.warning(
                 "did not find timestamps file, making timetamps" +
                 "up based on fps and frame count. Frame count and" +
                 "timestamps are not accurate!"
             )
+            # TODO: create self.timestamps from sketch
             frame_rate = float(avg_rate)
-            self.timestamps = [
+            self.timestamps = np.array([
                 i / frame_rate
                 for i in range(
-                    int(self.container[0].duration / av.time_base * frame_rate) + 100
+                    int(self.container[0].duration
+                        / av.time_base * frame_rate) + 100
                 )
-            ]  # we are adding some slack.
+            ])  # we are adding some slack.
         else:
             logger.debug(
                 "Auto loaded %s timestamps from %s"
@@ -243,6 +260,21 @@ class File_Source(Playback_Source, Base_Source):
         ), "Timestamps need to be instances of python float, got {}".format(
             type(self.timestamps[0])
         )
+        ori_timestamps = self.timestamps.copy()
+        self.timestamps = self._interpolate_timestamps(self.timestamps)
+        self.timestamps_mask = np.in1d(self.timestamps, ori_timestamps)
+
+    def _interpolate_timestamps(self, timestamps):
+        first = np.load(self.timestamps_lst[0])
+        frame_rate = (first[-1] - first[0]) / len(first)
+        for i, t in np.ndenumerate(timestamps[:-1]):
+            if timestamps[i[0]+1] - timestamps[i[0]] > 0.5:
+                timestamps = np.append(
+                    timestamps, np.linspace(
+                        timestamps[i[0]]+frame_rate,
+                        timestamps[i[0]+1],
+                        (timestamps[i[0]+1]-timestamps[i[0]])/frame_rate))
+        return sorted(timestamps)
 
     def _get_streams(self, container):
         '''
@@ -337,6 +369,14 @@ class File_Source(Playback_Source, Base_Source):
     def idx_to_pts(self, idx):
         return idx * self.pts_rate
 
+    def iter_frame(self, next_frame, index):
+        if self.timestamps_mask[index+1]:
+            return next(next_frame)
+        else:
+            return av.video.VideoFrame(
+            self._recent_frame.width, self._recent_frame.height, 'rgb24')
+            # return StaticFrame(1000, self._recent_frame, 10)
+
     def get_next_frame(self):
         # We use while 1 here because we need to return frame when
         # we got EndofVideoError
@@ -360,10 +400,10 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation()
     def get_frame(self):
-        frame = None
         while 1:
             try:
-                frame = next(self.next_frame)
+                frame = self.iter_frame(
+                    self.next_frame, self.current_frame_idx)
             except StopIteration:
                 raise EndofVideoError("Reached end of video file")
             index = self._convert_frame_index(frame.pts)
