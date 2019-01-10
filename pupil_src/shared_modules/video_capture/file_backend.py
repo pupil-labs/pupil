@@ -12,6 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import glob
 import av
+from av.video.frame import VideoFrame
 from bisect import bisect_left
 from time import sleep
 
@@ -78,13 +79,6 @@ class Frame(object):
         return self._gray
 
 
-class StaticFrame(Frame):
-    def __init__(self, timestamp, av_frame, index):
-        super().__init__(timestamp, av_frame, index)
-        self._av_frame = av.video.VideoFrame(
-            self.width, self.height, 'rgb24')
-
-
 class File_Source(Playback_Source, Base_Source):
     """Simple file capture.
 
@@ -92,7 +86,6 @@ class File_Source(Playback_Source, Base_Source):
         source_path (str): Path to source file
         timestamps (str): Path to timestamps file
     """
-
     def __init__(
         self,
         g_pool,
@@ -215,7 +208,6 @@ class File_Source(Playback_Source, Base_Source):
         '''
         concatenate timestamp files (actual timestamps)
         calculate np.diff and find indeces that represent gaps bigger than X
-        interpolate timestamps with frequence F and insert them into each gap
         '''
         self.timestamps_lst = self._get_timestamps_pattern_lst(
             source_path)
@@ -231,10 +223,11 @@ class File_Source(Playback_Source, Base_Source):
         self.timestamps = np.array([])
         try:
             for ts_filename in self.timestamps_lst:
+                timestamp = np.load(ts_filename)
                 self.frame_count = np.append(
-                    self.frame_count, len(np.load(ts_filename)))
+                    self.frame_count, len(timestamp))
                 self.timestamps = np.append(
-                    self.timestamps, np.load(ts_filename))
+                    self.timestamps, timestamp)
         except IOError:
             logger.warning(
                 "did not find timestamps file, making timetamps" +
@@ -260,21 +253,26 @@ class File_Source(Playback_Source, Base_Source):
         ), "Timestamps need to be instances of python float, got {}".format(
             type(self.timestamps[0])
         )
+        self.avg_frame_diff = (timestamp[-1]-timestamp[0]) / len(timestamp)
         ori_timestamps = self.timestamps.copy()
         self.timestamps = self._interpolate_timestamps(self.timestamps)
         self.timestamps_mask = np.in1d(self.timestamps, ori_timestamps)
 
-    def _interpolate_timestamps(self, timestamps):
-        first = np.load(self.timestamps_lst[0])
-        frame_rate = (first[-1] - first[0]) / len(first)
-        for i, t in np.ndenumerate(timestamps[:-1]):
-            if timestamps[i[0]+1] - timestamps[i[0]] > 0.5:
-                timestamps = np.append(
-                    timestamps, np.linspace(
-                        timestamps[i[0]]+frame_rate,
-                        timestamps[i[0]+1],
-                        (timestamps[i[0]+1]-timestamps[i[0]])/frame_rate))
-        return sorted(timestamps)
+    def _interpolate_timestamps(self, ts):
+        '''
+        Interpolate timestamps with frequence F and insert them into each gap
+        '''
+        different = np.diff(ts)
+        for i, v in np.ndenumerate(different):
+            if v > self.avg_frame_diff:
+                ts = np.append(
+                    ts, np.linspace(
+                        ts[i[0]]+self.avg_frame_diff,
+                        ts[i[0]+1]-self.avg_frame_diff,
+                        (ts[i[0]+1]-ts[i[0]]-2*self.avg_frame_diff) /
+                        self.avg_frame_diff))
+        ts.sort()
+        return ts
 
     def _get_streams(self, container):
         '''
@@ -356,7 +354,8 @@ class File_Source(Playback_Source, Base_Source):
         Calculate frame index by current_container_index
         '''
         return int(sum(
-            self.frame_count[:self.current_container_index])) + self.pts_to_idx(pts)
+            self.frame_count[:self.current_container_index])) + \
+            self.pts_to_idx(pts)
 
     @ensure_initialisation()
     def pts_to_idx(self, pts):
@@ -373,9 +372,12 @@ class File_Source(Playback_Source, Base_Source):
         if self.timestamps_mask[index+1]:
             return next(next_frame)
         else:
-            return av.video.VideoFrame(
-            self._recent_frame.width, self._recent_frame.height, 'rgb24')
-            # return StaticFrame(1000, self._recent_frame, 10)
+            frame = VideoFrame(
+                self._recent_frame.width,
+                self._recent_frame.height,
+                'rgb24')
+            frame.pts = self._recent_frame._av_frame.pts + self.frame_rate
+            return frame
 
     def get_next_frame(self):
         # We use while 1 here because we need to return frame when
@@ -441,11 +443,10 @@ class File_Source(Playback_Source, Base_Source):
         try:
             last_index = self._recent_frame.index
         except AttributeError:
-            # Get frame at beginnning
+            # Get a frame at beginnning
             frame = self.get_next_frame()
             self._recent_frame = frame
             last_index = -1
-
         # Seek Frame
         pbt = self.g_pool.seek_control.current_playback_time
         ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
@@ -490,27 +491,27 @@ class File_Source(Playback_Source, Base_Source):
     def seek_to_frame(self, seek_pos):
         # frame accurate seeking
         ori_pos = seek_pos
-        container_index = 0
-        # self.frame_count contain frame_count from every video
-        # like [50, 70, 60], the cumsum_frame looks like [50, 120, 180]
-        cumsum_frame = np.cumsum(self.frame_count)
-        container_index = max(0, bisect_left(cumsum_frame, seek_pos)-1)
-        self.current_container_index = container_index
-        self.container = self._get_containers(container_index)
-        self.video_stream, self.audio_stream = self._get_streams(
-            self.container)
-        try:
-            if self.buffering:
-                self.buffered_decoder.seek(int(self.idx_to_pts(seek_pos)))
+        if self.timestamps_mask[seek_pos]:
+            # self.frame_count contain frame_count from every video
+            # like [50, 70, 60], the cumsum_frame looks like [50, 120, 180]
+            cumsum_frame = np.cumsum(self.frame_count)
+            container_index = max(0, bisect_left(cumsum_frame, seek_pos)-1)
+            self.current_container_index = container_index
+            self.container = self._get_containers(container_index)
+            self.video_stream, self.audio_stream = self._get_streams(
+                self.container)
+            try:
+                if self.buffering:
+                    self.buffered_decoder.seek(int(self.idx_to_pts(seek_pos)))
+                else:
+                    self.video_stream.seek(int(self.idx_to_pts(seek_pos)))
+            except av.AVError as e:
+                raise FileSeekError()
             else:
-                self.video_stream.seek(int(self.idx_to_pts(seek_pos)))
-        except av.AVError as e:
-            raise FileSeekError()
-        else:
-            if not self.buffering:
-                self.next_frame = self._next_frame()
-            self.finished_sleep = 0
-            self.target_frame_idx = ori_pos
+                if not self.buffering:
+                    self.next_frame = self._next_frame()
+        self.finished_sleep = 0
+        self.target_frame_idx = ori_pos
         self.play = True
 
     def on_notify(self, notification):
