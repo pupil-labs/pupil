@@ -87,10 +87,11 @@ class Frame(object):
 
 
 class FakeFrame:
-    static_img = np.ones((720, 1280))
+    static_img = np.ones((720, 1280), dtype=np.uint8)
 
     def __init__(self, timestamp, index):
-        self.img = self.static_img.copy()
+        self.yuv_buffer = None
+        self.img = self.bgr = self.static_img.copy()
         self.timestamp = timestamp
         self.index = index
 
