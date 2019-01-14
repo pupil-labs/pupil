@@ -9,24 +9,31 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os
 import glob
-import av
-from av.video.frame import VideoFrame
-from bisect import bisect_left
-from time import sleep
-
-from .base_backend import Base_Source, Playback_Source, \
-    Base_Manager, EndofVideoError, NoMoreVideoError
-from camera_models import load_intrinsics
-
-import numpy as np
-from multiprocessing import cpu_count
-import os.path
-from fractions import Fraction
 
 # logging
 import logging
+import os
+import os.path
+from bisect import bisect_left
+from fractions import Fraction
+from multiprocessing import cpu_count
+from time import sleep
+
+import av
+import numpy as np
+from av.video.frame import VideoFrame
+
+from camera_models import load_intrinsics
+
+from .base_backend import (
+    Base_Manager,
+    Base_Source,
+    EndofVideoError,
+    NoMoreVideoError,
+    Playback_Source,
+)
+from .utils import VideoSet
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -79,21 +86,37 @@ class Frame(object):
         return self._gray
 
 
+class FakeFrame:
+    static_img = np.ones((720, 1280))
+
+    def __init__(self, timestamp, index):
+        self.img = self.static_img.copy()
+        self.timestamp = timestamp
+        self.index = index
+
+
 class File_Source(Playback_Source, Base_Source):
     """Simple file capture.
 
-    Attributes:
+    Playback_Source arguments:
+        timing (str): "external", "own" (default), None
+
+    File_Source arguments:
         source_path (str): Path to source file
-        timestamps (str): Path to timestamps file
+        loop (bool): loop video set if timing!="external"
+        buffered_decoding (bool): use buffered decode
+        fill_gaps (bool): fill gaps with static frames
     """
+
     def __init__(
         self,
         g_pool,
         source_path=None,
         loop=False,
         buffered_decoding=False,
+        fill_gaps=False,
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(g_pool, *args, **kwargs)
         if self.timing == "external":
@@ -108,24 +131,43 @@ class File_Source(Playback_Source, Base_Source):
         self.frame_count = []
         self.loop = loop
         self.buffering = buffered_decoding
+        self.fill_gaps = fill_gaps
 
         if not source_path or not os.path.isfile(source_path):
             logger.error(
-                "Init failed. Source file could not be found at `%s`" %
-                source_path
+                "Init failed. Source file could not be found at `%s`" % source_path
             )
             self._initialised = False
             return
-        # Play different part of videos depend on current_container_index
-        self.containers_path = self._get_conatiners_path(source_path)
-        self.current_container_index = 0
-        self.container = self._get_containers(self.current_container_index)
-        self.video_stream, self.audio_stream = self._get_streams(
-            self.container)
-        # Merge multiple timestamp files into one
-        self._set_timestamps(source_path)
+
+        rec, file_ = os.path.split(source_path)
+        set_name = os.path.splitext(file_)[0]
+        self.videoset = VideoSet(rec, set_name)
+        try:
+            self.videoset.load_lookup()
+        except FileNotFoundError:
+            self.videoset.build_lookup()
+
+        if not self.fill_gaps:
+            # filter filled lookup entries
+            cont_idc = self.videoset.lookup.container_idx
+            self.videoset.lookup = self.videoset.lookup[cont_idc > -1]
+
+        self.timestamps = self.videoset.lookup.timestamp
+        self.current_container_index = self.videoset.lookup.container_idx[0]
         self.target_frame_idx = 0
         self.current_frame_idx = 0
+
+        self.setup_video(self.current_container_index)  # load first split
+
+        self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
+
+    def setup_video(self, container_index):
+        print(f"setup video {container_index}")
+        self.current_container_index = container_index
+        video = self.videoset.videos[container_index]
+        self.container = video.load_container()
+        self.video_stream, self.audio_stream = self._get_streams(self.container)
 
         # set the pts rate to convert pts to frame index.
         # We use videos with pts writte like indecies.
@@ -136,15 +178,13 @@ class File_Source(Playback_Source, Base_Source):
             self.next_frame = self.buffered_decoder.get_frame()
         else:
             self.next_frame = self._next_frame()
+
         f0, f1 = next(self.next_frame), next(self.next_frame)
         self.pts_rate = f1.pts
-        self.seek_to_frame(0)
+        self.video_stream.seek(f0.pts)
         self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
             self.timestamps
         )
-
-        loc, name = os.path.split(os.path.splitext(source_path)[0])
-        self._intrinsics = load_intrinsics(loc, name, self.frame_size)
 
     def ensure_initialisation(fallback_func=None, requires_playback=False):
         from functools import wraps
@@ -165,119 +205,10 @@ class File_Source(Playback_Source, Base_Source):
 
         return decorator
 
-    def _get_containers_pattern_lst(self, source_path):
-        '''
-        Return an order list sort by file name pattern
-        '''
-        # [world.mjpeg, world_001.mjpeg, world_002.mjpeg]
-        pattern, suffix = os.path.splitext(source_path)
-        return sorted(glob.glob(pattern + '*' + suffix))
-
-    def _get_timestamps_pattern_lst(self, source_path):
-        # [world_timestamps.npy, world_001_timestamps.npy,
-        # world_002_timestamps.npy]
-        pattern, _ = os.path.splitext(source_path)
-        suffix = "_timestamps.npy"
-        tmp = sorted(glob.glob(pattern + '*' + suffix))
-        # After sorted, tmp will return [world_001_timestamps.npy,
-        # world_002_timestamps.npy, world_timestamps.npy]
-        # So we have to reorder it
-        return tmp[-1:] + tmp[:-1]
-
-    def _get_conatiners_path(self, source_path):
-        return self._get_containers_pattern_lst(source_path)
-
-    def _get_containers(self, index):
-        '''
-        Get container by index, get the next one if the prev one is broken.
-        '''
-        try:
-            container = av.open(self.containers_path[index])
-        except av.AVError:
-            logger.info(
-                "Video at {0} is broken".format(self.containers_path[index]))
-            # return the next container
-            self.current_container_index += 1
-            return self._get_containers(self.current_container_index)
-        except IndexError:
-            raise NoMoreVideoError("No more container found")
-        else:
-            return container
-
-    def _set_timestamps(self, source_path):
-        '''
-        concatenate timestamp files (actual timestamps)
-        calculate np.diff and find indeces that represent gaps bigger than X
-        '''
-        self.timestamps_lst = self._get_timestamps_pattern_lst(
-            source_path)
-        avg_rate = self.video_stream.average_rate
-        if avg_rate is None:
-            avg_rate = Fraction(0, 1)
-
-        if float(avg_rate) % 1 != 0.0:
-            logger.error(
-                "Videofile pts are not evenly spaced, pts to" +
-                "index conversion may fail and be inconsitent."
-            )
-        self.timestamps = np.array([])
-        try:
-            for ts_filename in self.timestamps_lst:
-                timestamp = np.load(ts_filename)
-                self.frame_count = np.append(
-                    self.frame_count, len(timestamp))
-                self.timestamps = np.append(
-                    self.timestamps, timestamp)
-        except IOError:
-            logger.warning(
-                "did not find timestamps file, making timetamps" +
-                "up based on fps and frame count. Frame count and" +
-                "timestamps are not accurate!"
-            )
-            # TODO: create self.timestamps from sketch
-            frame_rate = float(avg_rate)
-            self.timestamps = np.array([
-                i / frame_rate
-                for i in range(
-                    int(self.container[0].duration
-                        / av.time_base * frame_rate) + 100
-                )
-            ])  # we are adding some slack.
-        else:
-            logger.debug(
-                "Auto loaded %s timestamps from %s"
-                % (len(self.timestamps), self.timestamps_lst)
-            )
-        assert isinstance(
-            self.timestamps[0], float
-        ), "Timestamps need to be instances of python float, got {}".format(
-            type(self.timestamps[0])
-        )
-        self.avg_frame_diff = (timestamp[-1]-timestamp[0]) / len(timestamp)
-        ori_timestamps = self.timestamps.copy()
-        self.timestamps = self._interpolate_timestamps(self.timestamps)
-        self.timestamps_mask = np.in1d(self.timestamps, ori_timestamps)
-
-    def _interpolate_timestamps(self, ts):
-        '''
-        Interpolate timestamps with frequence F and insert them into each gap
-        '''
-        different = np.diff(ts)
-        for i, v in np.ndenumerate(different):
-            if v > self.avg_frame_diff:
-                ts = np.append(
-                    ts, np.linspace(
-                        ts[i[0]]+self.avg_frame_diff,
-                        ts[i[0]+1]-self.avg_frame_diff,
-                        (ts[i[0]+1]-ts[i[0]]-2*self.avg_frame_diff) /
-                        self.avg_frame_diff))
-        ts.sort()
-        return ts
-
     def _get_streams(self, container):
-        '''
+        """
         Get Video and Audio stream from containers
-        '''
+        """
         try:
             video_stream = next(
                 s for s in container.streams if s.type == "video"
@@ -298,13 +229,12 @@ class File_Source(Playback_Source, Base_Source):
             logger.debug("No audiostream found in media container")
         if not video_stream and not audio_stream:
             logger.error(
-                "Init failed. Could not find any video or audio" +
-                "stream in the given source file."
+                "Init failed. Could not find any video or audio"
+                + "stream in the given source file."
             )
             self._initialised = False
             return
         return video_stream, audio_stream
-
 
     @property
     def initialised(self):
@@ -340,7 +270,7 @@ class File_Source(Playback_Source, Base_Source):
         return self.current_frame_idx
 
     def get_frame_count(self):
-        return sum(self.frame_count)
+        return self.videoset.lookup.size
 
     @ensure_initialisation()
     def _next_frame(self):
@@ -350,12 +280,19 @@ class File_Source(Playback_Source, Base_Source):
                     yield frame
 
     def _convert_frame_index(self, pts):
-        '''
+        """
         Calculate frame index by current_container_index
-        '''
-        return int(sum(
-            self.frame_count[:self.current_container_index])) + \
-            self.pts_to_idx(pts)
+        """
+        cont_frame_idx = self.pts_to_idx(pts)
+        cont_mask = np.isin(
+            self.videoset.lookup.container_idx, self.current_container_index
+        )
+        frame_mask = np.isin(self.videoset.lookup.container_frame_idx, cont_frame_idx)
+        videoset_idx = np.flatnonzero(cont_mask & frame_mask)[0]
+        print(
+            f"convert {pts}: {self.current_container_index}/{cont_frame_idx} -> {videoset_idx}"
+        )
+        return videoset_idx
 
     @ensure_initialisation()
     def pts_to_idx(self, pts):
@@ -369,15 +306,15 @@ class File_Source(Playback_Source, Base_Source):
         return idx * self.pts_rate
 
     def iter_frame(self, next_frame, index):
-        if self.timestamps_mask[index+1]:
+        if self.timestamps_mask[index + 1]:
             return next(next_frame)
         else:
-            frame = VideoFrame(
-                self._recent_frame.width,
-                self._recent_frame.height,
-                'rgb24')
-            frame.pts = self._recent_frame._av_frame.pts + self.frame_rate
-            return frame
+            # size = self._recent_frame.width, self._recent_frame.height, 3
+            # size = 360, 480, 3
+            # buf = np.ones(size, dtype=np.uint8) * 125
+            # frame = VideoFrame.from_ndarray(buf, "rgb24")
+            # frame.pts = self._recent_frame._av_frame.pts + self.pts_rate
+            return None
 
     def get_next_frame(self):
         # We use while 1 here because we need to return frame when
@@ -388,10 +325,8 @@ class File_Source(Playback_Source, Base_Source):
                 return frame
             except EndofVideoError:
                 self.current_container_index += 1
-                self.container = self._get_containers(
-                        self.current_container_index)
-                self.video_stream, self.audio_stream = self._get_streams(
-                    self.container)
+                self.container = self._get_containers(self.current_container_index)
+                self.video_stream, self.audio_stream = self._get_streams(self.container)
                 if self.buffering:
                     self.buffered_decoder = self.container.get_buffered_decoder(
                         self.video_stream, dec_batch=50, dec_buffer_size=200
@@ -402,41 +337,36 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation()
     def get_frame(self):
-        while 1:
-            try:
-                frame = self.iter_frame(
-                    self.next_frame, self.current_frame_idx)
-            except StopIteration:
-                raise EndofVideoError("Reached end of video file")
-            index = self._convert_frame_index(frame.pts)
-            if index == self.target_frame_idx:
-                break
-            elif index < self.target_frame_idx:
-                pass
-                # logger.info('Frame index not consistent. Skipping forward')
-            else:
-                logger.debug("Frame index not consistent.")
-                break
-        # Under buffered mode, frame = next(self.next_frame) may return None
-        if not frame:
-            if self.loop:
-                logger.info("Looping enabled. Seeking to beginning.")
-                self.seek_to_frame(0)
-                return self.get_frame()
-            else:
-                logger.debug(
-                    "End of videofile %s %s"
-                    % (self.current_frame_idx, len(self.timestamps))
-                )
-                raise EndofVideoError("Reached end of video file")
+        target_entry = self.videoset.lookup[self.target_frame_idx]
+        if target_entry.container_idx == -1:
+            return FakeFrame(target_entry.timestamp, self.target_frame_idx)
+        elif target_entry.container_idx != self.current_container_index:
+            self.setup_video(target_entry.container_idx)
+
         try:
-            timestamp = self.timestamps[index]
-        except IndexError:
-            logger.info("Reached end of timestamps list.")
-            raise EndofVideoError("Reached end of timestamps list.")
+            av_frame = next(self.next_frame)
+            index = self._convert_frame_index(av_frame.pts)
+            if index != self.target_frame_idx:
+                print(
+                    f"!! Inconsistency: index: {index}, pts: {av_frame.pts}, target index: {self.target_frame_idx}"
+                )
+        except StopIteration as stop:
+            raise EndofVideoError from stop
+
+        # if self.loop:
+        #     logger.info("Looping enabled. Seeking to beginning.")
+        #     self.seek_to_frame(0)
+        #     return self.get_frame()
+        # else:
+        #     logger.debug(
+        #         "End of videofile %s %s"
+        #         % (self.current_frame_idx, len(self.timestamps))
+        #     )
+        #     raise EndofVideoError("Reached end of video file")
+
         self.target_frame_idx = index + 1
         self.current_frame_idx = index
-        return Frame(timestamp, frame, index=index)
+        return Frame(target_entry.timestamp, av_frame, index=index)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):
@@ -444,7 +374,7 @@ class File_Source(Playback_Source, Base_Source):
             last_index = self._recent_frame.index
         except AttributeError:
             # Get a frame at beginnning
-            frame = self.get_next_frame()
+            frame = self.get_frame()
             self._recent_frame = frame
             last_index = -1
         # Seek Frame
@@ -452,14 +382,16 @@ class File_Source(Playback_Source, Base_Source):
         ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
         if ts_idx < last_index or ts_idx > last_index + 1:
             self.seek_to_frame(ts_idx)
-        # Normla Case to get next frame
+
+        # Normal Case to get next frame
         if not self.play:
             frame = self._recent_frame.copy()
         else:
             try:
-                frame = self.get_next_frame()
-            except NoMoreVideoError:
-                logger.info('No more video found')
+                frame = self.get_frame()
+                print(f"{self._recent_frame.timestamp} -> {frame.timestamp}")
+            except EndofVideoError:
+                logger.info("No more video found")
                 self.g_pool.seek_control.play = False
                 frame = self._recent_frame.copy()
         self.g_pool.seek_control.end_of_seek()
@@ -489,29 +421,30 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
-        # frame accurate seeking
-        ori_pos = seek_pos
-        if self.timestamps_mask[seek_pos]:
-            # self.frame_count contain frame_count from every video
-            # like [50, 70, 60], the cumsum_frame looks like [50, 120, 180]
-            cumsum_frame = np.cumsum(self.frame_count)
-            container_index = max(0, bisect_left(cumsum_frame, seek_pos)-1)
-            self.current_container_index = container_index
-            self.container = self._get_containers(container_index)
-            self.video_stream, self.audio_stream = self._get_streams(
-                self.container)
+        print(f"seek to {seek_pos}")
+        target_entry = self.videoset.lookup[seek_pos]
+        if target_entry.container_idx > -1:
+            if target_entry.container_idx != self.current_container_index:
+                self.setup_video(target_entry.container_idx)
+
             try:
+                # explicit conversion to python int required, else:
+                # TypeError: ('Container.seek only accepts integer offset.', <class 'numpy.int64'>)
+                target_pts = int(self.idx_to_pts(target_entry.container_frame_idx))
                 if self.buffering:
-                    self.buffered_decoder.seek(int(self.idx_to_pts(seek_pos)))
+                    self.buffered_decoder.seek(target_pts)
                 else:
-                    self.video_stream.seek(int(self.idx_to_pts(seek_pos)))
+                    self.video_stream.seek(target_pts)
             except av.AVError as e:
-                raise FileSeekError()
+                raise FileSeekError() from e
             else:
                 if not self.buffering:
                     self.next_frame = self._next_frame()
+                else:
+                    raise NotImplementedError
+
         self.finished_sleep = 0
-        self.target_frame_idx = ori_pos
+        self.target_frame_idx = seek_pos
         self.play = True
 
     def on_notify(self, notification):
