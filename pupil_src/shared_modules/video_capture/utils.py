@@ -8,9 +8,12 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import logging
 
 import numpy as np
 import cv2
+
+logger = logging.getLogger(__name__)
 
 
 class Exposure_Time(object):
@@ -155,3 +158,153 @@ class Check_Frame_Stripes(object):
             return False
         else:
             return None
+
+
+import glob
+import os
+import time
+from dataclasses import dataclass, field
+from typing import Sequence, Iterator
+
+import numpy as np
+import av
+
+
+@dataclass
+class Video:
+    path: str
+    ts: np.ndarray = field(init=False, default=None)
+
+    def check_container(self):
+        cont = av.open(self.path)
+        cont.streams.video[0]
+
+    def load_container(self):
+        return av.open(self.path)
+
+    def load_ts(self):
+        self.ts = np.load(self.ts_loc)
+
+    @property
+    def name(self) -> str:
+        file_ = os.path.split(self.path)[1]
+        return os.path.splitext(file_)[0]
+
+    @property
+    def ts_loc(self) -> str:
+        return os.path.join(self.base, f"{self.name}_timestamps.npy")
+
+    @property
+    def base(self) -> str:
+        return os.path.split(self.path)[0]
+
+    @property
+    def timestamps(self) -> np.ndarray:
+        if self.ts is None:
+            self.load_ts()
+        return self.ts
+
+
+@dataclass
+class VideoSet:
+    rec: str
+    name: str
+    video_exts: Sequence[str] = ("mp4", "mjpeg", "h264")
+    _videos: Sequence[Video] = field(init=False, default=None)
+
+    @property
+    def videos(self) -> Sequence[Video]:
+        if self._videos is None:
+            self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
+        return self._videos
+
+    @property
+    def videos_container(self) -> Sequence[Video]:
+        return [av.open(video.path) for video in self.videos]
+
+    @property
+    def lookup_loc(self) -> str:
+        return os.path.join(self.rec, f"{self.name}_lookup.npy")
+
+    def fetch_videos(self) -> Iterator[Video]:
+        yield from (
+            Video(loc)
+            for ext in self.video_exts
+            for loc in glob.iglob(os.path.join(self.rec, f"{self.name}*.{ext}"))
+        )
+
+    def build_lookup(self):
+        """
+        The lookup table is a np.recarray containing entries
+        for each (virtual and real) frame.
+
+        Each entry consists of 3 values:
+            - container_idx: Corresponding self.videos index
+            - container_frame_idx: Frame index within the container
+            - timestamp: Recorded or virtual Pupil timestamp
+
+        container_idx entries of value -1 indicate a virtual frame.
+
+        The lookup table can be easiliy filtered for real frames:
+            lookup = lookup[lookup.container_idx > -1]
+
+        Use case:
+        Given a Pupil timestamp, one can use bisect to find the corresponding
+        lookup entry index. From there, one can lookup the corresponding container,
+        load it if necessary, and calculate the target PTS
+        """
+        loaded_ts = self._loaded_ts_sorted()
+        filled_ts = self._fill_gaps(loaded_ts)
+        lookup = self._setup_lookup(filled_ts)
+        lookup.timestamp = filled_ts
+        lookup.container_idx = -1  #
+        for container_idx, vid in enumerate(self.videos):
+            mask = np.isin(lookup.timestamp, vid.timestamps)
+            lookup.container_frame_idx[mask] = np.arange(vid.timestamps.size)
+            try:
+                vid.check_container()  # check if container is corrupt
+                lookup.container_idx[mask] = container_idx
+            except av.AVError:
+                logger.warning(f"{vid.name} is corrupt")
+        self.lookup = lookup
+
+    def save_lookup(self):
+        np.save(self.lookup_loc, self.lookup)
+
+    def load_lookup(self):
+        self.lookup = np.load(self.lookup_loc).view(np.recarray)
+
+    def _loaded_ts_sorted(self) -> np.ndarray:
+        loaded_ts = [vid.timestamps for vid in self.videos]
+        all_ts = np.concatenate(loaded_ts)
+        all_ts.sort()
+        return all_ts
+
+    def _fill_gaps(self, timestamps: np.ndarray) -> np.ndarray:
+        time_diff = np.diff(timestamps)
+        median_time_diff = np.median(time_diff)
+        gap_start_idc = np.flatnonzero(time_diff > 2 * median_time_diff)
+        gap_stop_idc = gap_start_idc + 1
+        gap_fill_starts = timestamps[gap_start_idc] + median_time_diff
+        gap_fill_stops = timestamps[gap_stop_idc] - median_time_diff
+
+        all_ts = [timestamps]
+        for start, stop in zip(gap_fill_starts, gap_fill_stops):
+            all_ts.append(np.arange(start, stop, median_time_diff))
+
+        all_ts = np.concatenate(all_ts)
+        all_ts.sort()
+        return all_ts
+
+    def _setup_lookup(self, timestamps: np.ndarray) -> np.recarray:
+        lookup_entry = np.dtype(
+            [
+                ("container_idx", "<i8"),
+                ("container_frame_idx", "<i8"),
+                ("timestamp", "<f8"),
+            ]
+        )
+        lookup = np.empty(timestamps.size, dtype=lookup_entry).view(np.recarray)
+        lookup.timestamp = timestamps
+        lookup.container_idx = -1  # virtual container by default
+        return lookup
