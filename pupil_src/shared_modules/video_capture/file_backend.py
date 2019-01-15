@@ -119,7 +119,9 @@ class File_Source(Playback_Source, Base_Source):
         # Play different part of videos depend on current_container_index
         self.containers_path = self._get_conatiners_path(source_path)
         self.current_container_index = 0
-        self.container = self._get_containers(self.current_container_index)
+        self.containers_list = [
+            self._get_containers(x) for x in range(len(self.containers_path))]
+        self.container = self.containers_list[self.current_container_index]
         self.video_stream, self.audio_stream = self._get_streams(
             self.container)
         # Merge multiple timestamp files into one
@@ -392,8 +394,8 @@ class File_Source(Playback_Source, Base_Source):
                 return frame
             except EndofVideoError:
                 self.current_container_index += 1
-                self.container = self._get_containers(
-                        self.current_container_index)
+                self.container = self.containers_list[
+                        self.current_container_index]
                 self.video_stream, self.audio_stream = self._get_streams(
                     self.container)
                 if self.buffering:
@@ -495,15 +497,17 @@ class File_Source(Playback_Source, Base_Source):
     def seek_to_frame(self, seek_pos):
         # frame accurate seeking
         ori_pos = seek_pos
+        # self.frame_count contain frame_count from every video
+        # like [50, 70, 60], the cumsum_frame looks like [50, 120, 180]
+        frame_count = [np.where(self.timestamps == self.first_timestamp[i])[0][0] for i in range(len(self.first_timestamp))]
+        cumsum_frame = np.cumsum(frame_count)
+        container_index = max(0, bisect_left(cumsum_frame, seek_pos)-1)
+        self.current_container_index = container_index
+        self.container = self.containers_list[container_index]
+        self.video_stream, self.audio_stream = self._get_streams(
+            self.container)
         if self.timestamps_mask[seek_pos]:
-            # self.frame_count contain frame_count from every video
-            # like [50, 70, 60], the cumsum_frame looks like [50, 120, 180]
-            cumsum_frame = np.cumsum(self.frame_count)
-            container_index = max(0, bisect_left(cumsum_frame, seek_pos)-1)
-            self.current_container_index = container_index
-            self.container = self._get_containers(container_index)
-            self.video_stream, self.audio_stream = self._get_streams(
-                self.container)
+            seek_pos = seek_pos - frame_count[container_index]
             try:
                 if self.buffering:
                     self.buffered_decoder.seek(int(self.idx_to_pts(seek_pos)))
@@ -511,9 +515,8 @@ class File_Source(Playback_Source, Base_Source):
                     self.video_stream.seek(int(self.idx_to_pts(seek_pos)))
             except av.AVError as e:
                 raise FileSeekError()
-            else:
-                if not self.buffering:
-                    self.next_frame = self._next_frame()
+        if not self.buffering:
+            self.next_frame = self._next_frame()
         self.finished_sleep = 0
         self.target_frame_idx = ori_pos
         self.play = True
