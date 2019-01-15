@@ -221,9 +221,11 @@ class File_Source(Playback_Source, Base_Source):
                 "index conversion may fail and be inconsitent."
             )
         self.timestamps = np.array([])
+        self.first_timestamp = np.array([])
         try:
             for ts_filename in self.timestamps_lst:
                 timestamp = np.load(ts_filename)
+                self.first_timestamp = np.append(self.first_timestamp, timestamp[0])
                 self.frame_count = np.append(
                     self.frame_count, len(timestamp))
                 self.timestamps = np.append(
@@ -253,6 +255,7 @@ class File_Source(Playback_Source, Base_Source):
         ), "Timestamps need to be instances of python float, got {}".format(
             type(self.timestamps[0])
         )
+        # Get the avg_frame_diff from the first timestamp file
         self.avg_frame_diff = (timestamp[-1]-timestamp[0]) / len(timestamp)
         ori_timestamps = self.timestamps.copy()
         self.timestamps = self._interpolate_timestamps(self.timestamps)
@@ -353,8 +356,8 @@ class File_Source(Playback_Source, Base_Source):
         '''
         Calculate frame index by current_container_index
         '''
-        return int(sum(
-            self.frame_count[:self.current_container_index])) + \
+        return np.where(
+            self.timestamps == self.first_timestamp[self.current_container_index])[0][0] + \
             self.pts_to_idx(pts)
 
     @ensure_initialisation()
@@ -372,11 +375,12 @@ class File_Source(Playback_Source, Base_Source):
         if self.timestamps_mask[index+1]:
             return next(next_frame)
         else:
-            frame = VideoFrame(
-                self._recent_frame.width,
-                self._recent_frame.height,
-                'rgb24')
-            frame.pts = self._recent_frame._av_frame.pts + self.frame_rate
+            img = np.empty((480, 360, 3)).astype('uint8')
+            frame = VideoFrame.from_ndarray(img, format='rgb24')
+            if not self._recent_frame:
+                frame.pts = 0
+            else:
+                frame.pts = self._recent_frame._av_frame.pts + self.pts_rate
             return frame
 
     def get_next_frame(self):
