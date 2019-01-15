@@ -166,8 +166,7 @@ class File_Source(Playback_Source, Base_Source):
     def setup_video(self, container_index):
         print(f"setup video {container_index}")
         self.current_container_index = container_index
-        video = self.videoset.videos[container_index]
-        self.container = video.load_container()
+        self.container = self.videoset.videos_container[container_index]
         self.video_stream, self.audio_stream = self._get_streams(self.container)
 
         # set the pts rate to convert pts to frame index.
@@ -340,6 +339,8 @@ class File_Source(Playback_Source, Base_Source):
     def get_frame(self):
         target_entry = self.videoset.lookup[self.target_frame_idx]
         if target_entry.container_idx == -1:
+            self.current_frame_idx = self.target_frame_idx
+            self.target_frame_idx += 1
             return FakeFrame(target_entry.timestamp, self.target_frame_idx)
         elif target_entry.container_idx != self.current_container_index:
             self.setup_video(target_entry.container_idx)

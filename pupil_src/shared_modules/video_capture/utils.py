@@ -219,6 +219,10 @@ class VideoSet:
         return self._videos
 
     @property
+    def videos_container(self) -> Sequence[Video]:
+        return [av.open(video.path) for video in self.videos]
+
+    @property
     def lookup_loc(self) -> str:
         return os.path.join(self.rec, f"{self.name}_lookup.npy")
 
@@ -233,17 +237,17 @@ class VideoSet:
         """
         The lookup table is a np.recarray containing entries
         for each (virtual and real) frame.
-        
+
         Each entry consists of 3 values:
-            - container_idx: Corresponding self.videos index 
+            - container_idx: Corresponding self.videos index
             - container_frame_idx: Frame index within the container
             - timestamp: Recorded or virtual Pupil timestamp
-        
+
         container_idx entries of value -1 indicate a virtual frame.
 
         The lookup table can be easiliy filtered for real frames:
             lookup = lookup[lookup.container_idx > -1]
-        
+
         Use case:
         Given a Pupil timestamp, one can use bisect to find the corresponding
         lookup entry index. From there, one can lookup the corresponding container,
