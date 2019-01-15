@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -208,8 +208,10 @@ class Accuracy_Visualizer(Plugin):
         self.precision = results[1].result
         self.error_lines = results[2]
 
-        hull = ConvexHull([loc["norm_pos"] for loc in self.recent_labels])
-        self.calibration_area = hull.points[hull.vertices, :]
+        ref_locations = [loc["norm_pos"] for loc in self.recent_labels]
+        if len(ref_locations) >= 3:
+            hull = ConvexHull(ref_locations)  # requires at least 3 points
+            self.calibration_area = hull.points[hull.vertices, :]
 
     def calc_acc_prec_errlines(self, gaze_pos, ref_pos, intrinsics):
         width, height = intrinsics.resolution

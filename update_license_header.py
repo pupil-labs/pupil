@@ -15,7 +15,7 @@ import re
 license_txt = """\
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -25,7 +25,8 @@ See COPYING and COPYING.LESSER for license details.
 
 
 pattern = re.compile(
-    "('{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n('{3}|[*][/])", re.DOTALL | re.MULTILINE
+    "(\"{3}|'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\"{3}|'{3}|[*][/])",
+    re.DOTALL | re.MULTILINE,
 )
 
 # choose files types to include
@@ -74,7 +75,7 @@ def write_header(file_name, license_txt):
     # find and replace license header
     # or add new header if not existing
     c_comment = ["/*\n", "\n*/\n"]
-    py_comment = ["'''\n", "\n'''\n"]
+    py_comment = ['"""\n', '\n"""\n']
     file_type = os.path.splitext(file_name)[-1]
 
     if file_type in (".py", ".pxd", ".pyx", ".pxi"):

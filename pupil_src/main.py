@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,11 +10,16 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import os, sys, platform
-import launchables.args
 
 running_from_bundle = getattr(sys, "frozen", False)
+if not running_from_bundle:
+    pupil_base_dir = os.path.abspath(__file__).rsplit("pupil_src", 1)[0]
+    sys.path.append(os.path.join(pupil_base_dir, "pupil_src", "shared_modules"))
+
+import launchable_args
+
 default_args = {"app": "capture", "debug": False, "profile": False}
-parsed_args = launchables.args.parse(running_from_bundle, **default_args)
+parsed_args, unknown_args = launchable_args.parse(running_from_bundle, **default_args)
 
 if running_from_bundle:
     # Specifiy user dir.
@@ -22,8 +27,6 @@ if running_from_bundle:
     user_dir = os.path.expanduser(os.path.join("~", folder_name))
     version_file = os.path.join(sys._MEIPASS, "_version_string_")
 else:
-    pupil_base_dir = os.path.abspath(__file__).rsplit("pupil_src", 1)[0]
-    sys.path.append(os.path.join(pupil_base_dir, "pupil_src", "shared_modules"))
     # Specifiy user dir.
     user_dir = os.path.join(pupil_base_dir, "{}_settings".format(parsed_args.app))
     version_file = None
@@ -242,6 +245,10 @@ def launcher():
         if cmd_sub.socket.poll(timeout=50):
             cmd_sub.recv()
             break
+
+    import logging
+
+    logging.debug("Unknown command-line arguments: {}".format(unknown_args))
 
     if parsed_args.app == "service":
         cmd_push.notify({"subject": "service_process.should_start"})
