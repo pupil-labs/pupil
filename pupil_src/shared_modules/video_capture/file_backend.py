@@ -310,9 +310,8 @@ class File_Source(Playback_Source, Base_Source):
         while 1:
             target_entry = self.videoset.lookup[self.target_frame_idx]
             if target_entry.container_idx == -1:
-                self.current_frame_idx = self.target_frame_idx
-                self.target_frame_idx += 1
-                return FakeFrame(target_entry.timestamp, self.target_frame_idx)
+                return self._get_fake_frame_and_advance(target_entry.timestamp)
+
             elif target_entry.container_idx != self.current_container_index:
                 self.setup_video(target_entry.container_idx)
             try:
@@ -323,6 +322,7 @@ class File_Source(Playback_Source, Base_Source):
                 elif index < self.target_frame_idx:
                     pass
             except StopIteration as stop:
+                return self._get_fake_frame_and_advance(target_entry.timestamp)
                 raise EndofVideoError from stop
 
             # if self.loop:
@@ -339,6 +339,11 @@ class File_Source(Playback_Source, Base_Source):
         self.target_frame_idx = index + 1
         self.current_frame_idx = index
         return Frame(target_entry.timestamp, av_frame, index=index)
+
+    def _get_fake_frame_and_advance(self, ts):
+        self.current_frame_idx = self.target_frame_idx
+        self.target_frame_idx += 1
+        return FakeFrame(ts, self.target_frame_idx)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):
