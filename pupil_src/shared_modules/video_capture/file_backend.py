@@ -81,9 +81,20 @@ class FakeFrame:
 
     def __init__(self, timestamp, index):
         self.yuv_buffer = None
-        self.img = self.bgr = self.static_img.copy()
+        self.img = self.bgr = self.gray = self.static_img.copy()
         self.timestamp = timestamp
         self.index = index
+
+    def copy(self):
+        return FakeFrame(self.timestamp, self.index)
+
+    @property
+    def width(self):
+        return self.img.shape[1]
+
+    @property
+    def height(self):
+        return self.img.shape[0]
 
 
 class File_Source(Playback_Source, Base_Source):
