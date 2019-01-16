@@ -22,12 +22,7 @@ from time import sleep
 from camera_models import load_intrinsics
 from .utils import VideoSet
 
-from .base_backend import (
-    Base_Manager,
-    Base_Source,
-    EndofVideoError,
-    Playback_Source,
-)
+from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -35,8 +30,7 @@ av.logging.set_level(av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
 
 assert av.__version__ >= "0.4.2", "pyav is out-of-date, please update"
-assert sys.version_info >= (3, 7), \
-    ("We need python 3.7 or later to run Pupil player")
+assert sys.version_info >= (3, 7), "We need python 3.7 or later to run Pupil player"
 
 
 class FileSeekError(Exception):
@@ -132,8 +126,7 @@ class File_Source(Playback_Source, Base_Source):
 
         if not source_path or not os.path.isfile(source_path):
             logger.error(
-                "Init failed. Source file could not be found at `%s`"
-                % source_path
+                "Init failed. Source file could not be found at `%s`" % source_path
             )
             self._initialised = False
             return
@@ -162,9 +155,7 @@ class File_Source(Playback_Source, Base_Source):
     def setup_video(self, container_index):
         self.current_container_index = container_index
         self.container = self.videoset.videos_container[container_index]
-        self.video_stream, self.audio_stream = self._get_streams(
-            self.container
-        )
+        self.video_stream, self.audio_stream = self._get_streams(self.container)
 
         # set the pts rate to convert pts to frame index.
         # We use videos with pts writte like indecies.
@@ -287,9 +278,7 @@ class File_Source(Playback_Source, Base_Source):
         cont_mask = np.isin(
             self.videoset.lookup.container_idx, self.current_container_index
         )
-        frame_mask = np.isin(
-            self.videoset.lookup.container_frame_idx, cont_frame_idx
-        )
+        frame_mask = np.isin(self.videoset.lookup.container_frame_idx, cont_frame_idx)
         videoset_idx = np.flatnonzero(cont_mask & frame_mask)[0]
         return videoset_idx
 
@@ -399,9 +388,7 @@ class File_Source(Playback_Source, Base_Source):
             try:
                 # explicit conversion to python int required, else:
                 # TypeError: ('Container.seek only accepts integer offset.',
-                target_pts = int(
-                    self.idx_to_pts(target_entry.container_frame_idx)
-                )
+                target_pts = int(self.idx_to_pts(target_entry.container_frame_idx))
                 if self.buffering:
                     self.buffered_decoder.seek(target_pts)
                 else:
@@ -439,15 +426,13 @@ class File_Source(Playback_Source, Base_Source):
 
     def init_ui(self):
         self.add_menu()
-        self.menu.label = "File Source: {}".format(
-            os.path.split(self.source_path)[-1]
-        )
+        self.menu.label = "File Source: {}".format(os.path.split(self.source_path)[-1])
         from pyglui import ui
 
         self.menu.append(
             ui.Info_Text(
-                "The file source plugin loads and " +
-                "displays video from a given file."
+                "The file source plugin loads and "
+                + "displays video from a given file."
             )
         )
 
@@ -461,9 +446,7 @@ class File_Source(Playback_Source, Base_Source):
             self.menu.append(ui.Switch("loop", self, setter=toggle_looping))
 
         self.menu.append(
-            ui.Text_Input(
-                "source_path", self, label="Full path", setter=lambda x: None
-            )
+            ui.Text_Input("source_path", self, label="Full path", setter=lambda x: None)
         )
 
         self.menu.append(
@@ -531,9 +514,9 @@ class File_Manager(Base_Manager):
 
         self.menu.append(
             ui.Info_Text(
-                "Enter a folder to enumerate all eligible video files. " +
-                "Be aware that entering folders with a lot of files can " +
-                "slow down Pupil Capture."
+                "Enter a folder to enumerate all eligible video files. "
+                + "Be aware that entering folders with a lot of files can "
+                + "slow down Pupil Capture."
             )
         )
 
@@ -544,9 +527,7 @@ class File_Manager(Base_Manager):
                 self.root_folder = folder
 
         self.menu.append(
-            ui.Text_Input(
-                "root_folder", self, label="Source Folder", setter=set_root
-            )
+            ui.Text_Input("root_folder", self, label="Source Folder", setter=set_root)
         )
 
         def split_enumeration():
@@ -600,11 +581,7 @@ class File_Manager(Base_Manager):
     def activate_source(self, settings={}):
         if self.g_pool.process == "world":
             self.notify_all(
-                {
-                    "subject": "start_plugin",
-                    "name": "File_Source",
-                    "args": settings,
-                }
+                {"subject": "start_plugin", "name": "File_Source", "args": settings}
             )
         else:
             self.notify_all(
