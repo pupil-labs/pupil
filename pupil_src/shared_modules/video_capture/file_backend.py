@@ -14,6 +14,7 @@ import logging
 import os
 import os.path
 import av
+import sys
 import numpy as np
 
 from multiprocessing import cpu_count
@@ -30,10 +31,12 @@ from .base_backend import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-assert av.__version__ >= "0.4.2", "pyav is out-of-date, please update"
 av.logging.set_level(av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
+
+assert av.__version__ >= "0.4.2", "pyav is out-of-date, please update"
+assert sys.version_info >= (3, 7), \
+    ("We need python 3.7 or later to run Pupil player")
 
 
 class FileSeekError(Exception):
@@ -157,7 +160,6 @@ class File_Source(Playback_Source, Base_Source):
         self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
 
     def setup_video(self, container_index):
-        print(f"setup video {container_index}")
         self.current_container_index = container_index
         self.container = self.videoset.videos_container[container_index]
         self.video_stream, self.audio_stream = self._get_streams(
@@ -305,35 +307,34 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation()
     def get_frame(self):
-        target_entry = self.videoset.lookup[self.target_frame_idx]
-        if target_entry.container_idx == -1:
-            self.current_frame_idx = self.target_frame_idx
-            self.target_frame_idx += 1
-            return FakeFrame(target_entry.timestamp, self.target_frame_idx)
-        elif target_entry.container_idx != self.current_container_index:
-            self.setup_video(target_entry.container_idx)
+        while 1:
+            target_entry = self.videoset.lookup[self.target_frame_idx]
+            if target_entry.container_idx == -1:
+                self.current_frame_idx = self.target_frame_idx
+                self.target_frame_idx += 1
+                return FakeFrame(target_entry.timestamp, self.target_frame_idx)
+            elif target_entry.container_idx != self.current_container_index:
+                self.setup_video(target_entry.container_idx)
+            try:
+                av_frame = next(self.next_frame)
+                index = self._convert_frame_index(av_frame.pts)
+                if index == self.target_frame_idx:
+                    break
+                elif index < self.target_frame_idx:
+                    pass
+            except StopIteration as stop:
+                raise EndofVideoError from stop
 
-        try:
-            av_frame = next(self.next_frame)
-            index = self._convert_frame_index(av_frame.pts)
-            if index != self.target_frame_idx:
-                logger.info(
-                    "Inconsistency: index: {index}, pts: {av_frame.pts}," +
-                    "target index: {self.target_frame_idx}"
-                )
-        except StopIteration as stop:
-            raise EndofVideoError from stop
-
-        # if self.loop:
-        #     logger.info("Looping enabled. Seeking to beginning.")
-        #     self.seek_to_frame(0)
-        #     return self.get_frame()
-        # else:
-        #     logger.debug(
-        #         "End of videofile %s %s"
-        #         % (self.current_frame_idx, len(self.timestamps))
-        #     )
-        #     raise EndofVideoError("Reached end of video file")
+            # if self.loop:
+            #     logger.info("Looping enabled. Seeking to beginning.")
+            #     self.seek_to_frame(0)
+            #     return self.get_frame()
+            # else:
+            #     logger.debug(
+            #         "End of videofile %s %s"
+            #         % (self.current_frame_idx, len(self.timestamps))
+            #     )
+            #     raise EndofVideoError("Reached end of video file")
 
         self.target_frame_idx = index + 1
         self.current_frame_idx = index
@@ -360,7 +361,6 @@ class File_Source(Playback_Source, Base_Source):
         else:
             try:
                 frame = self.get_frame()
-                print(f"{self._recent_frame.timestamp} -> {frame.timestamp}")
             except EndofVideoError:
                 logger.info("No more video found")
                 self.g_pool.seek_control.play = False
@@ -392,7 +392,6 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
-        print(f"seek to {seek_pos}")
         target_entry = self.videoset.lookup[seek_pos]
         if target_entry.container_idx > -1:
             if target_entry.container_idx != self.current_container_index:
