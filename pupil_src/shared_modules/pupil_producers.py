@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -253,6 +253,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             zmq_ctx,
             g_pool.ipc_sub_url,
             topics=("pupil", "notify.file_source.video_finished"),
+            hwm=100_000,
         )
 
         self.data_dir = os.path.join(g_pool.rec_dir, "offline_data")

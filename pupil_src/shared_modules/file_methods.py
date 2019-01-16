@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -251,6 +251,13 @@ class Serialized_Dict(object):
             )
             self._cache_ref.pop(0).purge_cache()
             self._cache_ref.append(self)
+
+    def __getstate__(self):
+        return self._ser_data
+
+    def __setstate__(self, msgpack_bytes):
+        self._ser_data = msgpack_bytes
+        self._data = None
 
     @classmethod
     def unpacking_object_hook(self, obj):
