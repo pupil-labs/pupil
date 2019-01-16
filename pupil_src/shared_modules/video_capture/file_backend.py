@@ -432,9 +432,6 @@ class File_Source(Playback_Source, Base_Source):
         ):
             self.play = False
 
-    def seek_to_prev_frame(self):
-        self.seek_to_frame(max(0, self.current_frame_idx - 1))
-
     def init_ui(self):
         self.add_menu()
         self.menu.label = "File Source: {}".format(os.path.split(self.source_path)[-1])
