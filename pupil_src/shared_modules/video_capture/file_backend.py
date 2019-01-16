@@ -413,7 +413,6 @@ class File_Source(Playback_Source, Base_Source):
                     raise NotImplementedError
         self.finished_sleep = 0
         self.target_frame_idx = seek_pos
-        self.play = True
 
     def on_notify(self, notification):
         if (
