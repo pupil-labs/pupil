@@ -217,7 +217,7 @@ class VideoSet:
         return self._videos
 
     @property
-    def videos_container(self) -> Sequence[Video]:
+    def containers(self) -> Sequence[Video]:
         return [av.open(video.path) for video in self.videos]
 
     @property

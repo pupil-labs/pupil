@@ -165,7 +165,7 @@ class File_Source(Playback_Source, Base_Source):
 
     def setup_video(self, container_index):
         self.current_container_index = container_index
-        self.container = self.videoset.videos_container[container_index]
+        self.container = self.videoset.containers[container_index]
         self.video_stream, self.audio_stream = self._get_streams(self.container)
 
         # set the pts rate to convert pts to frame index.
@@ -180,7 +180,10 @@ class File_Source(Playback_Source, Base_Source):
 
         f0, f1 = next(self.next_frame), next(self.next_frame)
         self.pts_rate = f1.pts
-        self.video_stream.seek(f0.pts)
+        if self.buffering:
+            self.buffered_decoder.seek(f0.pts)
+        else:
+            self.video_stream.seek(f0.pts)
         self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
             self.timestamps
         )
@@ -307,35 +310,30 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation()
     def get_frame(self):
-        while 1:
-            target_entry = self.videoset.lookup[self.target_frame_idx]
-            if target_entry.container_idx == -1:
-                return self._get_fake_frame_and_advance(target_entry.timestamp)
+        target_entry = self.videoset.lookup[self.target_frame_idx]
+        if target_entry.container_idx == -1:
+            return self._get_fake_frame_and_advance(target_entry.timestamp)
 
-            elif target_entry.container_idx != self.current_container_index:
-                self.setup_video(target_entry.container_idx)
-            try:
-                av_frame = next(self.next_frame)
-                index = self._convert_frame_index(av_frame.pts)
-                if index == self.target_frame_idx:
-                    break
-                elif index < self.target_frame_idx:
-                    pass
-            except StopIteration as stop:
-                return self._get_fake_frame_and_advance(target_entry.timestamp)
-                raise EndofVideoError from stop
-
-            # if self.loop:
-            #     logger.info("Looping enabled. Seeking to beginning.")
-            #     self.seek_to_frame(0)
-            #     return self.get_frame()
-            # else:
-            #     logger.debug(
-            #         "End of videofile %s %s"
-            #         % (self.current_frame_idx, len(self.timestamps))
-            #     )
-            #     raise EndofVideoError("Reached end of video file")
-
+        elif target_entry.container_idx != self.current_container_index:
+            self.setup_video(target_entry.container_idx)
+        try:
+            av_frame = next(self.next_frame)
+            if not av_frame:
+                raise EndofVideoError
+            index = self._convert_frame_index(av_frame.pts)
+        except StopIteration as stop:
+            return self._get_fake_frame_and_advance(target_entry.timestamp)
+            raise EndofVideoError from stop
+        # if self.loop:
+        #     logger.info("Looping enabled. Seeking to beginning.")
+        #     self.seek_to_frame(0)
+        #     return self.get_frame()
+        # else:
+        #     logger.debug(
+        #         "End of videofile %s %s"
+        #         % (self.current_frame_idx, len(self.timestamps))
+        #     )
+        #     raise EndofVideoError("Reached end of video file")
         self.target_frame_idx = index + 1
         self.current_frame_idx = index
         return Frame(target_entry.timestamp, av_frame, index=index)
@@ -412,10 +410,10 @@ class File_Source(Playback_Source, Base_Source):
             except av.AVError as e:
                 raise FileSeekError() from e
             else:
-                if not self.buffering:
-                    self.next_frame = self._next_frame()
+                if self.buffering:
+                    self.next_frame = self.buffered_decoder.get_frame()
                 else:
-                    raise NotImplementedError
+                    self.next_frame = self._next_frame()
         self.finished_sleep = 0
         self.target_frame_idx = seek_pos
 

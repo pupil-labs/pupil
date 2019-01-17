@@ -243,7 +243,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             g_pool,
             timing="external",
             source_path=video_path,
-            buffered_decoding=False,
+            buffered_decoding=True,
             fill_gaps=True,
         )
 
