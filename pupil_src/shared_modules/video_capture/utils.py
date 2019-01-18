@@ -15,7 +15,6 @@ import cv2
 import numpy as np
 import av
 
-from dataclasses import dataclass, field
 from typing import Sequence, Iterator
 
 logger = logging.getLogger(__name__)
@@ -168,10 +167,10 @@ class Check_Frame_Stripes(object):
             return None
 
 
-@dataclass
 class Video:
-    path: str
-    ts: np.ndarray = field(init=False, default=None)
+    def __init__(self, path: str) -> None:
+        self.path = path
+        self.ts = None
 
     def check_container(self):
         cont = av.open(self.path)
@@ -203,12 +202,12 @@ class Video:
         return self.ts
 
 
-@dataclass
 class VideoSet:
-    rec: str
-    name: str
-    video_exts: Sequence[str] = ("mp4", "mjpeg", "h264")
-    _videos: Sequence[Video] = field(init=False, default=None)
+    def __init__(self, rec: str, name: str):
+        self.rec = rec
+        self.name = name
+        self.video_exts = ("mp4", "mjpeg", "h264")
+        self._videos = None
 
     @property
     def videos(self) -> Sequence[Video]:
@@ -276,7 +275,6 @@ class VideoSet:
     def _loaded_ts_sorted(self) -> np.ndarray:
         loaded_ts = [vid.timestamps for vid in self.videos]
         all_ts = np.concatenate(loaded_ts)
-        all_ts.sort()
         return all_ts
 
     def _fill_gaps(self, timestamps: np.ndarray) -> np.ndarray:
@@ -285,7 +283,7 @@ class VideoSet:
         gap_start_idc = np.flatnonzero(time_diff > 5 * median_time_diff)
         gap_stop_idc = gap_start_idc + 1
         gap_fill_starts = timestamps[gap_start_idc] + median_time_diff
-        gap_fill_stops = timestamps[gap_stop_idc] - median_time_diff
+        gap_fill_stops = timestamps[gap_stop_idc]
 
         all_ts = [timestamps]
         for start, stop in zip(gap_fill_starts, gap_fill_stops):
