@@ -339,30 +339,28 @@ class File_Source(Playback_Source, Base_Source):
             last_index = self._recent_frame.index
         except AttributeError:
             # Get a frame at beginnning
-            frame = self.get_frame()
-            self._recent_frame = frame
             last_index = -1
         # Seek Frame
+        frame = None
         pbt = self.g_pool.seek_control.current_playback_time
         ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
-        if ts_idx < last_index or ts_idx > last_index + 1:
+        if ts_idx == last_index:
+            frame = self._recent_frame.copy()
+        elif ts_idx < last_index or ts_idx > last_index + 1:
             self.seek_to_frame(ts_idx)
 
         # Normal Case to get next frame
-        if not self.play:
+        try:
+            frame = frame or self.get_frame()
+        except EndofVideoError:
+            if self.loop:
+                logger.info("Looping enabled. Seeking to beginning.")
+                self.setup_video(0)
+                self.target_frame_idx = 0
+                return self.get_frame()
+            logger.info("No more video found")
+            self.g_pool.seek_control.play = False
             frame = self._recent_frame.copy()
-        else:
-            try:
-                frame = self.get_frame()
-            except EndofVideoError:
-                if self.loop:
-                    logger.info("Looping enabled. Seeking to beginning.")
-                    self.setup_video(0)
-                    self.target_frame_idx = 0
-                    return self.get_frame()
-                logger.info("No more video found")
-                self.g_pool.seek_control.play = False
-                frame = self._recent_frame.copy()
         self.g_pool.seek_control.end_of_seek()
         events["frame"] = frame
         self._recent_frame = frame
