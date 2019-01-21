@@ -77,6 +77,10 @@ class Frame(object):
 
 
 class FakeFrame:
+    """
+    Show FakeFrame when the video is broken or there is
+    gap between timestamp.
+    """
     static_img = np.ones((720, 1280), dtype=np.uint8) * 128
 
     def __init__(self, timestamp, index):
@@ -130,7 +134,6 @@ class File_Source(Playback_Source, Base_Source):
         self._initialised = True
         self.source_path = source_path
         self.timestamps = None
-        self.frame_count = []
         self.loop = loop
         self.buffering = buffered_decoding
         self.fill_gaps = fill_gaps
@@ -141,6 +144,7 @@ class File_Source(Playback_Source, Base_Source):
             )
             self._initialised = False
             return
+        # rec -> dir_path_to_file file_ -> eye1.mjpeg, set_name -> eye1
         rec, file_ = os.path.split(source_path)
         set_name = os.path.splitext(file_)[0]
         self.videoset = VideoSet(rec, set_name, self.fill_gaps)
@@ -173,6 +177,8 @@ class File_Source(Playback_Source, Base_Source):
         else:
             self.next_frame = self._next_frame()
 
+        # We get the difference between two pts then seek back to the first frame
+        # But the index of the frame will start at 2
         f0, f1 = next(self.next_frame), next(self.next_frame)
         self.pts_rate = f1.pts
         if self.buffering:
@@ -283,6 +289,13 @@ class File_Source(Playback_Source, Base_Source):
         """
         Calculate frame index by current_container_index
         """
+        # If the current container is 0, the pts is 128 (second frame)
+        # cont_frame_idx -> 1
+        # cont_mask: Return T only if the container=current container -> [T, T, T, F, F, F]
+        # frame_mask: Return T only if the self.videoset.lookup.container_frame_idx=cont_frame_idx
+        # -> [F, T(the second frame of the first container), F,
+        #     F, T(the second frame of the second container), F, F]
+        # videoset_idx: Return index which T in cont_mask and frame_mask
         cont_frame_idx = self.pts_to_idx(pts)
         cont_mask = np.isin(
             self.videoset.lookup.container_idx, self.current_container_index
@@ -311,7 +324,6 @@ class File_Source(Playback_Source, Base_Source):
             raise EndofVideoError
         if target_entry.container_idx == -1:
             return self._get_fake_frame_and_advance(target_entry.timestamp)
-
         elif target_entry.container_idx != self.current_container_index:
             self.setup_video(target_entry.container_idx)
         try:
