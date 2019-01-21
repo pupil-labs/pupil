@@ -203,9 +203,10 @@ class Video:
 
 
 class VideoSet:
-    def __init__(self, rec: str, name: str):
+    def __init__(self, rec: str, name: str, fill_gaps: bool):
         self.rec = rec
         self.name = name
+        self.fill_gaps = fill_gaps
         self.video_exts = ("mp4", "mjpeg", "h264")
         self._videos = None
 
@@ -252,10 +253,9 @@ class VideoSet:
         container, load it if necessary, and calculate the target PTS
         """
         loaded_ts = self._loaded_ts_sorted()
-        filled_ts = self._fill_gaps(loaded_ts)
-        lookup = self._setup_lookup(filled_ts)
-        lookup.timestamp = filled_ts
-        lookup.container_idx = -1  #
+        if self.fill_gaps:
+            loaded_ts = self._fill_gaps(loaded_ts)
+        lookup = self._setup_lookup(loaded_ts)
         for container_idx, vid in enumerate(self.videos):
             mask = np.isin(lookup.timestamp, vid.timestamps)
             lookup.container_frame_idx[mask] = np.arange(vid.timestamps.size)

@@ -143,16 +143,11 @@ class File_Source(Playback_Source, Base_Source):
             return
         rec, file_ = os.path.split(source_path)
         set_name = os.path.splitext(file_)[0]
-        self.videoset = VideoSet(rec, set_name)
+        self.videoset = VideoSet(rec, set_name, self.fill_gaps)
         try:
             self.videoset.load_lookup()
         except FileNotFoundError:
             self.videoset.build_lookup()
-
-        if not self.fill_gaps:
-            # filter filled lookup entries
-            cont_idc = self.videoset.lookup.container_idx
-            self.videoset.lookup = self.videoset.lookup[cont_idc > -1]
 
         self.timestamps = self.videoset.lookup.timestamp
         self.current_container_index = self.videoset.lookup.container_idx[0]
@@ -310,7 +305,10 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation()
     def get_frame(self):
-        target_entry = self.videoset.lookup[self.target_frame_idx]
+        try:
+            target_entry = self.videoset.lookup[self.target_frame_idx]
+        except IndexError:
+            raise EndofVideoError
         if target_entry.container_idx == -1:
             return self._get_fake_frame_and_advance(target_entry.timestamp)
 
@@ -373,6 +371,11 @@ class File_Source(Playback_Source, Base_Source):
             frame = self.get_frame()
         except EndofVideoError:
             logger.info("Video has ended.")
+            if self.loop:
+                logger.info("Looping enabled. Seeking to beginning.")
+                self.setup_video(0)
+                self.target_frame_idx = 0
+                return
             self.notify_all(
                 {
                     "subject": "file_source.video_finished",
