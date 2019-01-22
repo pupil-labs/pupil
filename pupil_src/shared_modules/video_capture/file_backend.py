@@ -329,10 +329,10 @@ class File_Source(Playback_Source, Base_Source):
         try:
             av_frame = next(self.next_frame)
             if not av_frame:
+                # End of video
                 raise EndofVideoError
             index = self._convert_frame_index(av_frame.pts)
         except StopIteration as stop:
-            return self._get_fake_frame_and_advance(target_entry.timestamp)
             raise EndofVideoError from stop
         self.target_frame_idx = index + 1
         self.current_frame_idx = index
@@ -363,11 +363,6 @@ class File_Source(Playback_Source, Base_Source):
         try:
             frame = frame or self.get_frame()
         except EndofVideoError:
-            if self.loop:
-                logger.info("Looping enabled. Seeking to beginning.")
-                self.setup_video(0)
-                self.target_frame_idx = 0
-                return self.get_frame()
             logger.info("No more video found")
             self.g_pool.seek_control.play = False
             frame = self._recent_frame.copy()
