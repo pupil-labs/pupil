@@ -341,7 +341,7 @@ class File_Source(Playback_Source, Base_Source):
     def _get_fake_frame_and_advance(self, ts):
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
-        return FakeFrame(ts, self.target_frame_idx)
+        return FakeFrame(ts, self.current_frame_idx)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):
