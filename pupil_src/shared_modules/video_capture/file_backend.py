@@ -81,7 +81,8 @@ class FakeFrame:
     Show FakeFrame when the video is broken or there is
     gap between timestamp.
     """
-    static_img = np.ones((720, 1280), dtype=np.uint8) * 128
+
+    static_img = np.ones((720, 1280, 3), dtype=np.uint8) * 128
 
     def __init__(self, timestamp, index):
         self.yuv_buffer = None
