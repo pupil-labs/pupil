@@ -42,7 +42,7 @@ class Frame(object):
 
     def __init__(self, timestamp, av_frame, index):
         self._av_frame = av_frame
-        self.timestamp = timestamp
+        self.timestamp = float(timestamp)
         self.index = index
         self._img = None
         self._gray = None
@@ -87,7 +87,7 @@ class FakeFrame:
     def __init__(self, timestamp, index):
         self.yuv_buffer = None
         self.img = self.bgr = self.gray = self.static_img.copy()
-        self.timestamp = timestamp
+        self.timestamp = float(timestamp)
         self.index = index
 
     def copy(self):
