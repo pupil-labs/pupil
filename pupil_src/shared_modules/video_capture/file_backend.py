@@ -14,7 +14,6 @@ import logging
 import os
 import os.path
 import av
-import sys
 import numpy as np
 
 from multiprocessing import cpu_count
@@ -30,7 +29,6 @@ av.logging.set_level(av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
 
 assert av.__version__ >= "0.4.2", "pyav is out-of-date, please update"
-assert sys.version_info >= (3, 7), "We need python 3.7 or later to run Pupil player"
 
 
 class FileSeekError(Exception):
@@ -82,16 +80,16 @@ class FakeFrame:
     gap between timestamp.
     """
 
-    static_img = np.ones((720, 1280, 3), dtype=np.uint8) * 128
-
-    def __init__(self, timestamp, index):
+    def __init__(self, shape, timestamp, index):
+        self.shape = shape
         self.yuv_buffer = None
-        self.img = self.bgr = self.gray = self.static_img.copy()
+        static_img = np.ones(self.shape, dtype=np.uint8) * 128
+        self.img = self.bgr = self.gray = static_img.copy()
         self.timestamp = float(timestamp)
         self.index = index
 
     def copy(self):
-        return FakeFrame(self.timestamp, self.index)
+        return FakeFrame(self.shape, self.timestamp, self.index)
 
     @property
     def width(self):
@@ -182,6 +180,7 @@ class File_Source(Playback_Source, Base_Source):
         # But the index of the frame will start at 2
         f0, f1 = next(self.next_frame), next(self.next_frame)
         self.pts_rate = f1.pts
+        self.shape = f1.to_nd_array(format="bgr24").shape
         if self.buffering:
             self.buffered_decoder.seek(f0.pts)
         else:
@@ -342,7 +341,7 @@ class File_Source(Playback_Source, Base_Source):
     def _get_fake_frame_and_advance(self, ts):
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
-        return FakeFrame(ts, self.current_frame_idx)
+        return FakeFrame(self.shape, ts, self.current_frame_idx)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):

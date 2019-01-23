@@ -78,7 +78,10 @@ def _convert_video_file(
     timestamp_export_format,
 ):
     yield "Export video", 0.0
-    input_source = File_Source(EmptyGPool(), input_file)
+    input_source = File_Source(
+        EmptyGPool(), input_file,
+        buffered_decoding=True,
+        fill_gaps=True)
     if not input_source.initialised:
         yield "Exporting video failed", 0.0
         return
@@ -100,7 +103,6 @@ def _convert_video_file(
             input_frame = input_source.get_frame()
         except EndofVideoError:
             break
-
         if input_frame.index > export_to_index:
             break
 
