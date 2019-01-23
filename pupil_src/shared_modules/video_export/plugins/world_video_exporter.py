@@ -170,7 +170,11 @@ def _export_world_video(
             )
         except StopIteration:
             raise FileNotFoundError("No Video world found")
-        cap = init_playback_source(g_pool, source_path=video_path, timing=None)
+        cap = init_playback_source(
+            g_pool, source_path=video_path,
+            buffered_decoding=True,
+            fill_gaps=True,
+            timing=None)
 
         timestamps = cap.timestamps
 
