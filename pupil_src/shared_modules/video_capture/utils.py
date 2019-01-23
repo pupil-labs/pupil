@@ -174,7 +174,7 @@ class Video:
 
     def check_container(self):
         cont = av.open(self.path)
-        cont.streams.video[0]
+        frame = next(cont.decode(video=0))
 
     def load_container(self):
         return av.open(self.path)
@@ -218,7 +218,15 @@ class VideoSet:
 
     @property
     def containers(self) -> Sequence[Video]:
-        return [av.open(video.path) for video in self.videos]
+        lst = []
+        for video in self.videos:
+            try:
+                cont = av.open(video.path)
+            except av.AVError:
+                lst.append(None)
+            else:
+                lst.append(cont)
+        return lst
 
     @property
     def lookup_loc(self) -> str:
