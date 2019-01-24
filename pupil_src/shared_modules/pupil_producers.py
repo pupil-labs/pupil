@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import os
+import glob
 from itertools import chain
 import collections
 
@@ -301,15 +302,15 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             for ext in (".mjpeg", ".mp4", ".mkv")
         ]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
-        timestamps_path = os.path.join(
-            self.g_pool.rec_dir, "eye{}_timestamps.npy".format(eye_id)
-        )
+        timestamps_path_lst = glob.glob(os.path.join(
+            self.g_pool.rec_dir, "eye{}*_timestamps.npy".format(eye_id)))
+        timestamp_len = sum(len(np.load(t)) for t in timestamps_path_lst)
 
         if not existing_locs:
             logger.error("no eye video for eye '{}' found.".format(eye_id))
             self.detection_status[eye_id] = "No eye video found."
             return
-        if not os.path.exists(timestamps_path):
+        if not timestamps_path_lst:
             logger.error(
                 "no timestamps for eye video for eye '{}' found.".format(eye_id)
             )
@@ -317,7 +318,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             return
 
         video_loc = existing_locs[0]
-        self.eye_frame_num[eye_id] = len(np.load(timestamps_path))
+        self.eye_frame_num[eye_id] = timestamp_len
 
         capure_settings = "File_Source", {"source_path": video_loc, "timing": None}
         self.notify_all(
