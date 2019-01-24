@@ -84,7 +84,7 @@ class FakeFrame:
         self.shape = shape
         self.yuv_buffer = None
         static_img = np.ones(self.shape, dtype=np.uint8) * 128
-        self.img = self.bgr = self.gray = static_img.copy()
+        self.img = self.bgr = static_img.copy()
         self.timestamp = float(timestamp)
         self.index = index
 
@@ -98,6 +98,10 @@ class FakeFrame:
     @property
     def height(self):
         return self.img.shape[0]
+
+    @property
+    def gray(self):
+        return self.img[:, :, 0]  # return first channel
 
 
 class File_Source(Playback_Source, Base_Source):
