@@ -41,7 +41,7 @@ class Frame(object):
     def __init__(self, timestamp, av_frame, index):
         self._av_frame = av_frame
         self.timestamp = float(timestamp)
-        self.index = index
+        self.index = int(index)
         self._img = None
         self._gray = None
         self.jpeg_buffer = None
@@ -86,7 +86,7 @@ class FakeFrame:
         static_img = np.ones(self.shape, dtype=np.uint8) * 128
         self.img = self.bgr = static_img.copy()
         self.timestamp = float(timestamp)
-        self.index = index
+        self.index = int(index)
 
     def copy(self):
         return FakeFrame(self.shape, self.timestamp, self.index)
