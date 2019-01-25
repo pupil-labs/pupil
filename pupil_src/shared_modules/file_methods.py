@@ -237,7 +237,9 @@ class Serialized_Dict(object):
         elif type(msgpack_bytes) is bytes:
             self._ser_data = msgpack_bytes
         else:
-            raise ValueError("Neither mapping nor payload is supplied or wrong format.")
+            raise ValueError(
+                "You did not supply mapping or payload to Serialized_Dict."
+            )
         self._data = None
 
     def _deser(self):
