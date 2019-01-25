@@ -15,6 +15,7 @@ import errno
 import logging
 import os
 import platform
+import uuid
 from shutil import copy2
 from time import gmtime, localtime, strftime, time
 
@@ -283,6 +284,7 @@ class Recorder(System_Plugin_Base):
         self.menu.read_only = True
         self.start_time = time()
         start_time_synced = self.g_pool.get_timestamp()
+        recording_uuid = uuid.uuid4()
 
         # set up self incrementing folder within session folder
         counter = 0
@@ -309,6 +311,7 @@ class Recorder(System_Plugin_Base):
                     "Start Time": strftime("%H:%M:%S", localtime(self.start_time)),
                     "Start Time (System)": self.start_time,
                     "Start Time (Synced)": start_time_synced,
+                    "Recording UUID": recording_uuid,
                 },
             )
 
