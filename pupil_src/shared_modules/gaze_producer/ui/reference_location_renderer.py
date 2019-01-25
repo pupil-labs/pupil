@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -23,11 +23,7 @@ class ReferenceLocationRenderer:
     close_ref_range = 4
 
     def __init__(
-        self,
-        reference_location_storage,
-        plugin,
-        frame_size,
-        get_current_frame_index,
+        self, reference_location_storage, plugin, frame_size, get_current_frame_index
     ):
         self._reference_location_storage = reference_location_storage
 
@@ -37,18 +33,24 @@ class ReferenceLocationRenderer:
         plugin.add_observer("gl_display", self.on_gl_display)
 
     def on_gl_display(self):
+        self._render_reference_locations()
+
+    def _render_reference_locations(self):
         current_index = self._get_current_frame_index()
-        for index in range(
-            current_index - self.close_ref_range,
-            current_index + self.close_ref_range + 1,
-        ):
-            reference_location = self._reference_location_storage.get_or_none(index)
-            if reference_location:
-                diff_to_current = abs(current_index - index)
-                if diff_to_current == 0:
-                    self._draw_current_reference(reference_location)
-                else:
-                    self._draw_close_reference(reference_location, diff_to_current)
+        current_reference = self._reference_location_storage.get_or_none(current_index)
+        if current_reference:
+            self._draw_current_reference(current_reference)
+        else:
+            # first reference before
+            self._draw_first_reference_in_range(
+                range(current_index - 1, current_index - self.close_ref_range - 1, -1),
+                current_index,
+            )
+            # first reference after
+            self._draw_first_reference_in_range(
+                range(current_index + 1, current_index + self.close_ref_range + 1),
+                current_index,
+            )
 
     def _draw_current_reference(self, current_reference):
         with self._frame_coordinate_system:
@@ -58,6 +60,14 @@ class ReferenceLocationRenderer:
                 color=cygl_utils.RGBA(0, 0.5, 0.5, 0.7),
             )
             self._draw_inner_dot(current_reference)
+
+    def _draw_first_reference_in_range(self, range_, current_index):
+        for index in range_:
+            reference_location = self._reference_location_storage.get_or_none(index)
+            if reference_location:
+                diff_to_current = abs(current_index - index)
+                self._draw_close_reference(reference_location, diff_to_current)
+                break
 
     def _draw_close_reference(self, reference_location, diff_to_current):
         with self._frame_coordinate_system:

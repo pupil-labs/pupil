@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,13 +12,23 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 
 import zmq_tools
-from gaze_producer.model.reference_location import ReferenceLocation
+from gaze_producer import model
 from tasklib.interface import TaskInterface
 
 logger = logging.getLogger(__name__)
 
 
 class CircleMarkerDetectionTask(TaskInterface):
+    """
+    The actual marker detection is in launchabeles.marker_detector because OpenCV
+    needs a new and clean process and does not work with forked processes.
+
+    This task requests the start of the launchable via a notification and retrieves
+    results from the background. It does _not_ run in background itself, but does its
+    work in the update() method that is executed in the main process.
+    """
+
+    # plugin injected variables
     zmq_ctx = None
     capture_source_path = None
     notify_all = None
@@ -81,7 +91,7 @@ class CircleMarkerDetectionTask(TaskInterface):
                 for detection in detections_without_None_items:
                     self._yield_detection(detection)
             elif topic == "finished":
-                self.on_completed(return_value_or_none=None)
+                self.on_completed(None)  # return_value_or_none
                 return
             elif topic == "exception":
                 logger.warning(
@@ -98,5 +108,5 @@ class CircleMarkerDetectionTask(TaskInterface):
         screen_pos = tuple(detection["screen_pos"])
         frame_index = detection["index"]
         timestamp = detection["timestamp"]
-        reference_location = ReferenceLocation(screen_pos, frame_index, timestamp)
+        reference_location = model.ReferenceLocation(screen_pos, frame_index, timestamp)
         self.on_yield(reference_location)
