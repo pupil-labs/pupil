@@ -9,10 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import abc
 import csv
 import logging
 import os
-from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
 from pyglui import ui
@@ -46,7 +46,7 @@ def create_annotation(label, timestamp, duration=0.0, **custom_fields):
 AnnotationDefinition = namedtuple("AnnotationDefinition", "label hotkey")
 
 
-class AnnotationPlugin(Plugin, metaclass=ABCMeta):
+class AnnotationPlugin(Plugin, abc.ABC):
     """
     Base for player and capture plugins that support adding and removing
     annotations and the corresponding quickbar buttons
@@ -96,7 +96,7 @@ class AnnotationPlugin(Plugin, metaclass=ABCMeta):
         for label, hotkey in self._initial_annotation_definitions:
             self._add_annotation_definition(label, hotkey)
 
-    @abstractmethod
+    @abc.abstractmethod
     def customize_menu(self):
         pass
 
@@ -109,7 +109,7 @@ class AnnotationPlugin(Plugin, metaclass=ABCMeta):
         for buttons in self._definition_to_buttons.values():
             self._remove_button_quickbar(buttons.quickbar)
 
-    @abstractmethod
+    @abc.abstractmethod
     def fire_annotation(self, annotation_definition):
         pass
 

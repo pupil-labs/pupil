@@ -9,8 +9,8 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import abc
 import os
-from abc import ABCMeta
 from glob import glob
 
 import player_methods as pm
@@ -20,7 +20,7 @@ from video_capture import File_Source, EndofVideoError
 from video_export.plugin_base.video_exporter import VideoExporter
 
 
-class IsolatedFrameExporter(VideoExporter, metaclass=ABCMeta):
+class IsolatedFrameExporter(VideoExporter, abc.ABC):
     """
     A VideoExporter that exports a part or all of some video file and applies
     a function process_frame to every frame.
