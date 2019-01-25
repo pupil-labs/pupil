@@ -1,16 +1,17 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+from gaze_producer import model
 
 
-class ReferenceLocation:
+class ReferenceLocation(model.storage.StorageItem):
     version = 1
 
     def __init__(self, screen_pos, frame_index, timestamp):
@@ -25,3 +26,11 @@ class ReferenceLocation:
     @property
     def screen_y(self):
         return self.screen_pos[1]
+
+    @staticmethod
+    def from_tuple(tuple_):
+        return ReferenceLocation(*tuple_)
+
+    @property
+    def as_tuple(self):
+        return self.screen_pos, self.frame_index, self.timestamp

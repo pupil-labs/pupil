@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,10 +12,10 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 
 import numpy as np
-import glfw
 
+import glfw
 import tasklib
-from gaze_producer.worker.detect_circle_markers import CircleMarkerDetectionTask
+from gaze_producer import model, worker
 from observable import Observable
 
 logger = logging.getLogger(__name__)
@@ -25,40 +25,51 @@ class ReferenceDetectionController(Observable):
     def __init__(self, task_manager, reference_location_storage):
         self._task_manager = task_manager
         self._reference_location_storage = reference_location_storage
-        self.task = None
+        self._detection_task = None
 
     def start_detection(self):
-        self.task = CircleMarkerDetectionTask()
-        self.task.add_observer("on_exception", tasklib.raise_exception)
-        self.task.add_observer("on_yield", self._on_detection_yields)
-        self._task_manager.add_task(self.task)
-        return self.task
+        def on_detection_yields(detection):
+            self._reference_location_storage.add(detection)
 
-    def _on_detection_yields(self, detection):
-        self._reference_location_storage.add(
-            detection.screen_pos, detection.frame_index, detection.timestamp
-        )
+        def on_detection_completed(_):
+            self._reference_location_storage.save_to_disk()
+
+        self._detection_task = worker.detect_circle_markers.CircleMarkerDetectionTask()
+        self._detection_task.add_observer("on_exception", tasklib.raise_exception)
+        self._detection_task.add_observer("on_yield", on_detection_yields)
+        self._detection_task.add_observer("on_completed", on_detection_completed)
+        self._task_manager.add_task(self._detection_task)
+        self.on_detection_started(self._detection_task)
+        return self._detection_task
+
+    def on_detection_started(self, detection_task):
+        """By observing this, other modules can add their own observers to the task"""
+        pass
 
     def cancel_detection(self):
-        if not self.task:
+        if not self._detection_task:
             raise ValueError("No detection task running!")
-        self.task.cancel_gracefully()
+        self._detection_task.cancel_gracefully()
 
     @property
     def is_running_detection(self):
-        return self.task is not None and self.task.running
+        return self._detection_task is not None and self._detection_task.running
+
+    @property
+    def detection_progress(self):
+        return self._detection_task.progress if self._detection_task else 0.0
 
 
 class ReferenceEditController:
     def __init__(
         self,
         reference_location_storage,
-        plugin,
         all_timestamps,
         get_current_frame_index,
         seek_to_frame,
+        plugin,
     ):
-        self.edit_mode_active = True
+        self.edit_mode_active = False
 
         self._reference_location_storage = reference_location_storage
 
@@ -66,7 +77,7 @@ class ReferenceEditController:
         self._get_current_frame_index = get_current_frame_index
         self._seek_to_frame = seek_to_frame
 
-        plugin.add_observer("on_click", self.on_click)
+        plugin.add_observer("on_click", self._on_click)
 
     def jump_to_next_ref(self):
         try:
@@ -86,17 +97,21 @@ class ReferenceEditController:
         else:
             self._seek_to_frame(prev_ref.frame_index)
 
-    def on_click(self, pos, button, action):
+    def _on_click(self, pos, button, action):
+        if action == glfw.GLFW_PRESS:
+            self._add_or_delete_ref_on_click(pos)
+
+    def _add_or_delete_ref_on_click(self, pos):
         if not self.edit_mode_active:
             return
-        if action == glfw.GLFW_PRESS:
-            current_reference = self._get_current_reference()
-            if self._clicked_on_reference(current_reference, pos):
-                self._reference_location_storage.delete(current_reference)
-            else:
-                self._add_reference(pos)
+        current_reference = self._get_reference_for_current_frame()
+        if self._clicked_on_reference(current_reference, pos):
+            self._reference_location_storage.delete(current_reference)
+        else:
+            self._add_reference(pos)
+        self._reference_location_storage.save_to_disk()
 
-    def _get_current_reference(self):
+    def _get_reference_for_current_frame(self):
         current_index = self._get_current_frame_index()
         return self._reference_location_storage.get_or_none(current_index)
 
@@ -116,4 +131,5 @@ class ReferenceEditController:
         screen_pos = tuple(pos)
         frame_index = self._get_current_frame_index()
         timestamp = self._all_timestamps[frame_index]
-        self._reference_location_storage.add(screen_pos, frame_index, timestamp)
+        reference_location = model.ReferenceLocation(screen_pos, frame_index, timestamp)
+        self._reference_location_storage.add(reference_location)

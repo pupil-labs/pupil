@@ -56,6 +56,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
     logger = logging.getLogger(__name__)
 
     try:
+        from background_helper import IPC_Logging_Task_Proxy
+
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
+        from tasklib.background.patches import IPCLoggingPatch
+
+        IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         # imports
         from file_methods import Persistent_Dict, next_export_sub_dir
@@ -101,7 +108,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from raw_data_exporter import Raw_Data_Exporter
         from log_history import Log_History
         from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
-        from gaze_producers import Gaze_From_Recording, Offline_Calibration
+        from gaze_producer.gaze_from_recording import GazeFromRecording
+        from gaze_producer.gaze_from_offline_calibration import GazeFromOfflineCalibration
         from system_graphs import System_Graphs
         from system_timelines import System_Timelines
         from blink_detection import Offline_Blink_Detection
@@ -109,17 +117,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_export.plugins.imotions_exporter import iMotions_Exporter
         from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
         from video_export.plugins.world_video_exporter import World_Video_Exporter
-        from gaze_producer.gaze_from_offline_calibration import (
-            GazeFromOfflineCalibration,
-        )
-
-        from background_helper import IPC_Logging_Task_Proxy
-
-        IPC_Logging_Task_Proxy.push_url = ipc_push_url
-
-        from tasklib.background.patches import IPCLoggingPatch
-
-        IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
             "1.23"
@@ -151,12 +148,11 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Log_History,
             Pupil_From_Recording,
             Offline_Pupil_Detection,
-            Gaze_From_Recording,
+            GazeFromRecording,
+            GazeFromOfflineCalibration,
             World_Video_Exporter,
             iMotions_Exporter,
             Eye_Video_Exporter,
-            Offline_Calibration,
-            GazeFromOfflineCalibration,
         ] + runtime_plugins
 
         plugins = system_plugins + user_plugins
@@ -478,7 +474,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             ("System_Timelines", {}),
             ("World_Video_Exporter", {}),
             ("Pupil_From_Recording", {}),
-            ("Gaze_From_Recording", {}),
+            ("GazeFromRecording", {}),
             ("Audio_Playback", {}),
         ]
 

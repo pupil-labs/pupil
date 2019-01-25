@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,24 +10,20 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-import os
 
-import file_methods as fm
-from gaze_producer.model.reference_location import ReferenceLocation
+from gaze_producer import model
 from observable import Observable
 
 logger = logging.getLogger(__name__)
 
 
-class ReferenceLocationStorage(Observable):
+class ReferenceLocationStorage(model.SingleFileStorage, Observable):
     def __init__(self, rec_dir, plugin):
-        self._rec_dir = rec_dir
+        super().__init__(rec_dir, plugin)
         self._reference_locations = {}
-        self.load_from_disk()
-        plugin.add_observer("cleanup", self._on_cleanup)
+        self._load_from_disk()
 
-    def add(self, screen_pos, frame_index, timestamp):
-        reference_location = ReferenceLocation(screen_pos, frame_index, timestamp)
+    def add(self, reference_location):
         self._reference_locations[reference_location.frame_index] = reference_location
 
     def get_or_none(self, frame_index):
@@ -45,40 +41,26 @@ class ReferenceLocationStorage(Observable):
         )
         return self._reference_locations[found_index]
 
+    def get_in_range(self, frame_index_range):
+        def in_range(ref):
+            return frame_index_range[0] <= ref.frame_index <= frame_index_range[1]
+
+        return [ref for ref in self._reference_locations.values() if in_range(ref)]
+
     def delete(self, reference_location):
         del self._reference_locations[reference_location.frame_index]
 
     def delete_all(self):
-        self._reference_locations = {}
-
-    def __iter__(self):
-        return iter(self._reference_locations.values())
-
-    def _on_cleanup(self):
-        self.save_to_disk()
-
-    def save_to_disk(self):
-        data = [
-            (ref.timestamp, ref.frame_index, ref.screen_pos)
-            for ref in self._reference_locations.values()
-        ]
-        dict_representation = {"version": ReferenceLocation.version, "data": data}
-        fm.save_object(dict_representation, self._reference_locations_file)
-
-    def load_from_disk(self):
-        try:
-            dict_representation = fm.load_object(self._reference_locations_file)
-        except FileNotFoundError:
-            return
-        if dict_representation.get("version", None) != ReferenceLocation.version:
-            logger.warning(
-                "Found reference locations in old file format. Will not load these!"
-            )
-            return
-        for datum in dict_representation["data"]:
-            timestamp, frame_index, screen_pos = datum
-            self.add(screen_pos, frame_index, timestamp)
+        self._reference_locations.clear()
 
     @property
-    def _reference_locations_file(self):
-        return os.path.join(self._rec_dir, "offline_data", "reference_locations")
+    def _storage_file_name(self):
+        return "reference_locations.msgpack"
+
+    @property
+    def _item_class(self):
+        return model.ReferenceLocation
+
+    @property
+    def items(self):
+        return self._reference_locations.values()
