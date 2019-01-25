@@ -180,7 +180,8 @@ class Video:
         except av.AVError:
             return
         else:
-            return av.open(self.path)
+            cont.seek(0)
+            return cont
 
     def load_container(self):
         return av.open(self.path)
@@ -213,7 +214,7 @@ class VideoSet:
         self.rec = rec
         self.name = name
         self.fill_gaps = fill_gaps
-        self.video_exts = ("mp4", "mjpeg", "h264")
+        self.video_exts = ("mp4", "mjpeg", "h264", "mkv", "avi")
         self._videos = None
         self._containers = []
 
@@ -279,6 +280,12 @@ class VideoSet:
 
     def load_lookup(self):
         self.lookup = np.load(self.lookup_loc).view(np.recarray)
+
+    def load_or_build_lookup(self):
+        try:
+            self.load_lookup()
+        except FileNotFoundError:
+            self.build_lookup()
 
     def _loaded_ts_sorted(self) -> np.ndarray:
         loaded_ts = [vid.timestamps for vid in self.videos]

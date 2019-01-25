@@ -308,10 +308,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         rec, file_ = os.path.split(existing_locs[0])
         set_name = os.path.splitext(file_)[0]
         self.videoset = VideoSet(rec, set_name, fill_gaps=False)
-        try:
-            self.videoset.load_lookup()
-        except FileNotFoundError:
-            self.videoset.build_lookup()
+        self.videoset.load_or_build_lookup()
         timestamp_len = (self.videoset.lookup.container_idx > -1).sum()
         if not timestamp_len:
             logger.error(

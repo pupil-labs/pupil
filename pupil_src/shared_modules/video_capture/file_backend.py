@@ -147,15 +147,9 @@ class File_Source(Playback_Source, Base_Source):
             )
             self._initialised = False
             return
-        # rec -> dir_path_to_file file_ -> eye1.mjpeg, set_name -> eye1
-        rec, file_ = os.path.split(source_path)
-        set_name = os.path.splitext(file_)[0]
+        rec, set_name = self.get_rec_set_name(source_path)
         self.videoset = VideoSet(rec, set_name, self.fill_gaps)
-        try:
-            self.videoset.load_lookup()
-        except FileNotFoundError:
-            self.videoset.build_lookup()
-
+        self.videoset.load_or_build_lookup()
         self.timestamps = self.videoset.lookup.timestamp
         self.current_container_index = self.videoset.lookup.container_idx[0]
         self.target_frame_idx = 0
@@ -164,6 +158,14 @@ class File_Source(Playback_Source, Base_Source):
         self.setup_video(self.current_container_index)  # load first split
 
         self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
+
+    def get_rec_set_name(self, source_path):
+        '''
+        Return dir and set name by source_path
+        '''
+        rec, file_ = os.path.split(source_path)
+        set_name = os.path.splitext(file_)[0]
+        return rec, set_name
 
     def setup_video(self, container_index):
         self.current_container_index = container_index
