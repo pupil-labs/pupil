@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import os
-import glob
 from itertools import chain
 import collections
 
@@ -25,9 +24,9 @@ from pyglui.pyfontstash import fontstash as fs
 import file_methods as fm
 import gl_utils
 import player_methods as pm
-import pupil_detectors  # trigger module compilation
 import zmq_tools
 from plugin import Producer_Plugin_Base
+from video_capture.utils import VideoSet
 
 logger = logging.getLogger(__name__)
 
@@ -302,21 +301,24 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             for ext in (".mjpeg", ".mp4", ".mkv")
         ]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
-        timestamps_path_lst = glob.glob(os.path.join(
-            self.g_pool.rec_dir, "eye{}*_timestamps.npy".format(eye_id)))
-        timestamp_len = sum(len(np.load(t)) for t in timestamps_path_lst)
-
         if not existing_locs:
             logger.error("no eye video for eye '{}' found.".format(eye_id))
             self.detection_status[eye_id] = "No eye video found."
             return
-        if not timestamps_path_lst:
+        rec, file_ = os.path.split(existing_locs[0])
+        set_name = os.path.splitext(file_)[0]
+        self.videoset = VideoSet(rec, set_name, fill_gaps=False)
+        try:
+            self.videoset.load_lookup()
+        except FileNotFoundError:
+            self.videoset.build_lookup()
+        timestamp_len = (self.videoset.lookup.container_idx > -1).sum()
+        if not timestamp_len:
             logger.error(
                 "no timestamps for eye video for eye '{}' found.".format(eye_id)
             )
             self.detection_status[eye_id] = "No eye video found."
             return
-
         video_loc = existing_locs[0]
         self.eye_frame_num[eye_id] = timestamp_len
 
