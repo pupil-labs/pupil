@@ -172,7 +172,6 @@ def _export_world_video(
             raise FileNotFoundError("No Video world found")
         cap = init_playback_source(
             g_pool, source_path=video_path,
-            buffered_decoding=True,
             fill_gaps=True,
             timing=None)
 

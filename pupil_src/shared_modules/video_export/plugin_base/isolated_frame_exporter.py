@@ -80,7 +80,6 @@ def _convert_video_file(
     yield "Export video", 0.0
     input_source = File_Source(
         EmptyGPool(), input_file,
-        buffered_decoding=True,
         fill_gaps=True)
     if not input_source.initialised:
         yield "Exporting video failed", 0.0

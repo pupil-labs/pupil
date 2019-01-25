@@ -173,8 +173,14 @@ class Video:
         self.ts = None
 
     def check_container(self):
-        cont = av.open(self.path)
-        frame = next(cont.decode(video=0))
+        try:
+            cont = av.open(self.path)
+            n = cont.decode(video=0)
+            _ = next(n)
+        except av.AVError:
+            return
+        else:
+            return av.open(self.path)
 
     def load_container(self):
         return av.open(self.path)
@@ -209,6 +215,7 @@ class VideoSet:
         self.fill_gaps = fill_gaps
         self.video_exts = ("mp4", "mjpeg", "h264")
         self._videos = None
+        self._containers = []
 
     @property
     def videos(self) -> Sequence[Video]:
@@ -218,15 +225,7 @@ class VideoSet:
 
     @property
     def containers(self) -> Sequence[Video]:
-        lst = []
-        for video in self.videos:
-            try:
-                cont = av.open(video.path)
-            except av.AVError:
-                lst.append(None)
-            else:
-                lst.append(cont)
-        return lst
+        return self._containers
 
     @property
     def lookup_loc(self) -> str:
@@ -267,11 +266,12 @@ class VideoSet:
         for container_idx, vid in enumerate(self.videos):
             mask = np.isin(lookup.timestamp, vid.timestamps)
             lookup.container_frame_idx[mask] = np.arange(vid.timestamps.size)
-            try:
-                vid.check_container()  # check if container is corrupt
+            cont = vid.check_container()  # check if container is corrupt
+            if cont:
                 lookup.container_idx[mask] = container_idx
-            except av.AVError:
+            else:
                 logger.warning(f"{vid.name} is corrupt")
+            self._containers.append(cont)
         self.lookup = lookup
 
     def save_lookup(self):

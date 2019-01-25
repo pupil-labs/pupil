@@ -84,7 +84,7 @@ class FakeFrame:
         self.shape = shape
         self.yuv_buffer = None
         static_img = np.ones(self.shape, dtype=np.uint8) * 128
-        self.img = self.bgr = static_img.copy()
+        self.img = self.bgr = static_img
         self.timestamp = float(timestamp)
         self.index = int(index)
 
