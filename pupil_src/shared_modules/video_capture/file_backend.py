@@ -136,28 +136,30 @@ class File_Source(Playback_Source, Base_Source):
         # minimal attribute set
         self._initialised = True
         self.source_path = source_path
-        self.timestamps = None
         self.loop = loop
         self.buffering = buffered_decoding
         self.fill_gaps = fill_gaps
-
-        if not source_path or not os.path.isfile(source_path):
-            logger.error(
-                "Init failed. Source file could not be found at `%s`" % source_path
-            )
-            self._initialised = False
-            return
-        rec, set_name = self.get_rec_set_name(source_path)
+        assert self.check_source_path(source_path)
+        rec, set_name = self.get_rec_set_name(self.source_path)
         self.videoset = VideoSet(rec, set_name, self.fill_gaps)
+        # Load or build lookup table
         self.videoset.load_or_build_lookup()
         self.timestamps = self.videoset.lookup.timestamp
         self.current_container_index = self.videoset.lookup.container_idx[0]
         self.target_frame_idx = 0
         self.current_frame_idx = 0
-
         self.setup_video(self.current_container_index)  # load first split
-
         self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
+
+    def check_source_path(self, source_path):
+        if not source_path or not os.path.isfile(source_path):
+            logger.error(
+                "Init failed. Source file could not be found at `%s`" %
+                source_path
+            )
+            self._initialised = False
+            return
+        return True
 
     def get_rec_set_name(self, source_path):
         '''
@@ -171,7 +173,6 @@ class File_Source(Playback_Source, Base_Source):
         self.current_container_index = container_index
         self.container = self.videoset.containers[container_index]
         self.video_stream, self.audio_stream = self._get_streams(self.container)
-
         # set the pts rate to convert pts to frame index.
         # We use videos with pts writte like indecies.
         if self.buffering:
@@ -181,7 +182,6 @@ class File_Source(Playback_Source, Base_Source):
             self.next_frame = self.buffered_decoder.get_frame()
         else:
             self.next_frame = self._next_frame()
-
         # We get the difference between two pts then seek back to the first frame
         # But the index of the frame will start at 2
         f0, f1 = next(self.next_frame), next(self.next_frame)
