@@ -124,4 +124,8 @@ class PluginTaskManager:
 
     def _kill_all_running_tasks(self, grace_period_per_task=None):
         for task in self._running_tasks:
-            task.kill(grace_period=grace_period_per_task)
+            # the test is for tasks that terminate between the last update and this
+            # method call, i.e. for tasks that had no chance to get removed from
+            # self._running_tasks
+            if task.running:
+                task.kill(grace_period=grace_period_per_task)
