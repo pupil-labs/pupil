@@ -54,10 +54,18 @@ class CalculateAllController:
 
     def _calculate_all_calibrations(self):
         for calibration in self._calibration_storage:
-            task = self._calibration_controller.calculate(calibration)
-            task.add_observer(
-                "on_completed", self._create_calibration_complete_handler(calibration)
+            calculation_possible = (
+                self._calibration_controller.is_from_same_recording(calibration)
+                and calibration.is_offline_calibration
             )
+            if calculation_possible:
+                task = self._calibration_controller.calculate(calibration)
+                task.add_observer(
+                    "on_completed",
+                    self._create_calibration_complete_handler(calibration),
+                )
+            else:
+                self._calculate_gaze_mappers_based_on_calibration(calibration)
 
     def _create_calibration_complete_handler(self, calibration):
         return lambda _: self._calculate_gaze_mappers_based_on_calibration(calibration)

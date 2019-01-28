@@ -8,10 +8,12 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-
+import copy
 import logging
 import os
 
+import file_methods as fm
+import make_unique
 from gaze_producer import model
 from observable import Observable
 
@@ -37,15 +39,30 @@ class CalibrationStorage(model.storage.Storage, Observable):
     def create_default_calibration(self):
         return model.Calibration(
             unique_id=model.Calibration.create_new_unique_id(),
-            name="Default Calibration",
+            name=make_unique.by_number_at_end("Default Calibration", self.item_names),
             recording_uuid=self._recording_uuid,
-            mapping_method="2d",
+            mapping_method="3d",
             frame_index_range=self._get_recording_index_range(),
             minimum_confidence=0.8,
         )
 
+    def duplicate_calibration(self, calibration):
+        new_calibration = copy.deepcopy(calibration)
+        new_calibration.name = make_unique.by_number_at_end(
+            new_calibration.name + " Copy", self.item_names
+        )
+        new_calibration.unique_id = model.Calibration.create_new_unique_id()
+        return new_calibration
+
     def add(self, calibration):
+        if any(c.unique_id == calibration.unique_id for c in self._calibrations):
+            logger.warning(
+                "Did not add calibration {} because it is already in the "
+                "storage".format(calibration.name)
+            )
+            return
         self._calibrations.append(calibration)
+        self._calibrations.sort(key=lambda c: c.name)
 
     def delete(self, calibration):
         self._calibrations.remove(calibration)
@@ -86,6 +103,7 @@ class CalibrationStorage(model.storage.Storage, Observable):
                     self._load_calibration_from_file(file_name)
         except FileNotFoundError:
             pass
+        self._load_recorded_calibrations()
 
     def _load_calibration_from_file(self, file_name):
         file_path = os.path.join(self._calibration_folder, file_name)
@@ -97,6 +115,40 @@ class CalibrationStorage(model.storage.Storage, Observable):
                 # to confusion if it is rendered somewhere
                 calibration.frame_index_range = [0, 0]
             self.add(calibration)
+
+    def _load_recorded_calibrations(self):
+        notifications = fm.load_pldata_file(self._rec_dir, "notify")
+        for topic, data in zip(notifications.topics, notifications.data):
+            if topic == "notify.calibration.calibration_data":
+                try:
+                    calib_result = model.CalibrationResult(
+                        mapping_plugin_name=data["mapper_name"],
+                        mapper_args=data["mapper_args"],
+                    )
+                except KeyError:
+                    # notifications from old recordings will not have these fields!
+                    continue
+                mapping_method = "2d" if "2d" in data["calibration_method"] else "3d"
+                # the unique id needs to be the same at every start or otherwise the
+                # same calibrations would be added again and again. The timestamp is
+                # the easiest datum that differs between calibrations but is the same
+                # for every start
+                unique_id = model.Calibration.create_unique_id_from_string(
+                    str(data["timestamp"])
+                )
+                calibration = model.Calibration(
+                    unique_id=unique_id,
+                    name=make_unique.by_number_at_end(
+                        "Recorded Calibration", self.item_names
+                    ),
+                    recording_uuid=self._recording_uuid,
+                    mapping_method=mapping_method,
+                    frame_index_range=self._get_recording_index_range(),
+                    minimum_confidence=0.8,
+                    is_offline_calibration=False,
+                    result=calib_result,
+                )
+                self.add(calibration)
 
     def save_to_disk(self):
         os.makedirs(self._calibration_folder, exist_ok=True)
@@ -119,6 +171,10 @@ class CalibrationStorage(model.storage.Storage, Observable):
         return self._calibrations
 
     @property
+    def item_names(self):
+        return [calib.name for calib in self._calibrations]
+
+    @property
     def _item_class(self):
         return model.Calibration
 
@@ -127,9 +183,10 @@ class CalibrationStorage(model.storage.Storage, Observable):
         return os.path.join(self._rec_dir, "calibrations")
 
     def _calibration_file_name(self, calibration):
-        return "{}-{}.{}".format(
+        file_name = "{}-{}.{}".format(
             calibration.name, calibration.unique_id, self._calibration_suffix
         )
+        return self.get_valid_filename(file_name)
 
     def _calibration_file_path(self, calibration):
         return os.path.join(

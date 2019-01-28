@@ -59,7 +59,7 @@ class GazeMapperTimeline:
     def create_rows(self):
         rows = []
         for gaze_mapper in self._gaze_mapper_storage:
-            alpha = 0.9 if gaze_mapper.show_gaze else 0.4
+            alpha = 0.9 if gaze_mapper.activate_gaze else 0.4
             elements = [
                 self._create_mapping_range(gaze_mapper, alpha),
                 self._create_calibration_range(gaze_mapper, alpha),
@@ -72,10 +72,10 @@ class GazeMapperTimeline:
         from_idx, to_idx = gaze_mapper.mapping_index_range
         # TODO: find some final color scheme
         color = (
-            [0.66 * 0.7, 0.86 * 0.7, 0.46 * 0.7, alpha]
+            [0.3, 0.5, 0.5, alpha]
             # [136 / 255, 92 / 255, 197 / 255, alpha*1.0]
             if gaze_mapper.calculate_complete
-            else [0.3, 0.5, 0.5, alpha]
+            else [0.66 * 0.7, 0.86 * 0.7, 0.46 * 0.7, alpha*0.8]
         )
         return RangeElementFrameIdx(from_idx, to_idx, color_rgba=color, height=10)
 
@@ -111,7 +111,7 @@ class GazeMapperTimeline:
         self.render_parent_timeline()
 
     def _on_publish_enabled_mappers(self):
-        """Triggered when show_gaze changes and mapping tasks are complete"""
+        """Triggered when activate_gaze changes and mapping tasks are complete"""
         self.render_parent_timeline()
 
     def _on_calibration_range_changed(self, _):

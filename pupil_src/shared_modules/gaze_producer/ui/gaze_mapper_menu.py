@@ -42,6 +42,8 @@ class GazeMapperMenu(plugin_ui.StorageEditMenu):
         gaze_mapper_controller.add_observer(
             "on_gaze_mapping_calculated", self._on_gaze_mapping_calculated
         )
+        gaze_mapper_controller.add_observer("on_calculation_could_not_be_started",
+                                            self._on_calculation_could_not_be_started)
 
     def _item_label(self, gaze_mapper):
         return gaze_mapper.name
@@ -50,29 +52,34 @@ class GazeMapperMenu(plugin_ui.StorageEditMenu):
         return self._gaze_mapper_storage.create_default_gaze_mapper()
 
     def _duplicate_item(self, gaze_mapper):
-        return gaze_mapper.copy()
+        return self._gaze_mapper_storage.duplicate_gaze_mapper(gaze_mapper)
 
     def _render_custom_ui(self, gaze_mapper, menu):
         menu.extend(
             [
                 self._create_name_input(gaze_mapper),
+                self._create_status_text(gaze_mapper),
+                self._create_calculate_button(gaze_mapper),
                 self._create_calibration_selector(gaze_mapper),
                 self._create_mapping_range_selector(gaze_mapper),
-                self._create_manual_correction_slider("x", gaze_mapper),
-                self._create_manual_correction_slider("y", gaze_mapper),
-                self._create_validation_range_selector(gaze_mapper),
-                self._create_outlier_threshold_selector(gaze_mapper),
-                self._create_status_text(gaze_mapper),
-                self._create_accuracy_output(gaze_mapper),
-                self._create_precision_output(gaze_mapper),
-                self._create_show_gaze_switch(gaze_mapper),
-                self._create_calculate_button(gaze_mapper),
+                self._create_manual_correction_submenu(gaze_mapper),
+                self._create_validation_submenu(gaze_mapper),
+                self._create_activate_gaze_switch(gaze_mapper),
             ]
         )
 
     def _create_name_input(self, gaze_mapper):
         return ui.Text_Input(
             "name", gaze_mapper, label="Name", setter=self._on_name_change
+        )
+
+    def _create_status_text(self, gaze_mapper):
+        return ui.Text_Input("status", gaze_mapper, label="Status", setter=lambda _: _)
+
+    def _create_calculate_button(self, gaze_mapper):
+        return ui.Button(
+            label="Recalculate" if gaze_mapper.calculate_complete else "Calculate",
+            function=self._on_click_calculate,
         )
 
     def _create_calibration_selector(self, gaze_mapper):
@@ -104,6 +111,17 @@ class GazeMapperMenu(plugin_ui.StorageEditMenu):
             function=self._on_set_mapping_range_from_trim_marks,
         )
 
+    def _create_manual_correction_submenu(self, gaze_mapper):
+        manual_correction_submenu = ui.Growing_Menu("Manual Correction")
+        manual_correction_submenu.extend(
+            [
+                self._create_manual_correction_slider("x", gaze_mapper),
+                self._create_manual_correction_slider("y", gaze_mapper),
+            ]
+        )
+        manual_correction_submenu.collapsed = True
+        return manual_correction_submenu
+
     def _create_manual_correction_slider(self, axis, gaze_mapper):
         return ui.Slider(
             "manual_correction_" + axis,
@@ -113,6 +131,19 @@ class GazeMapperMenu(plugin_ui.StorageEditMenu):
             max=0.5,
             label="Manual Correction " + axis.upper(),
         )
+
+    def _create_validation_submenu(self, gaze_mapper):
+        validation_submenu = ui.Growing_Menu("Validation")
+        validation_submenu.extend(
+            [
+                self._create_validation_range_selector(gaze_mapper),
+                self._create_outlier_threshold_selector(gaze_mapper),
+                self._create_accuracy_output(gaze_mapper),
+                self._create_precision_output(gaze_mapper),
+            ]
+        )
+        validation_submenu.collapsed = True
+        return validation_submenu
 
     def _create_validation_range_selector(self, gaze_mapper):
         range_string = "Validate in: " + self._index_range_as_str(
@@ -132,9 +163,6 @@ class GazeMapperMenu(plugin_ui.StorageEditMenu):
             setter=self._on_outlier_threshold_changed,
         )
 
-    def _create_status_text(self, gaze_mapper):
-        return ui.Text_Input("status", gaze_mapper, label="Status", setter=lambda _: _)
-
     def _create_accuracy_output(self, gaze_mapper):
         return ui.Text_Input(
             "accuracy_result", gaze_mapper, label="Accuracy Result", setter=lambda _: _
@@ -148,18 +176,12 @@ class GazeMapperMenu(plugin_ui.StorageEditMenu):
             setter=lambda _: _,
         )
 
-    def _create_show_gaze_switch(self, gaze_mapper):
+    def _create_activate_gaze_switch(self, gaze_mapper):
         return ui.Switch(
-            "show_gaze",
+            "activate_gaze",
             gaze_mapper,
-            label="Show Gaze",
-            setter=self._on_show_gaze_changed,
-        )
-
-    def _create_calculate_button(self, gaze_mapper):
-        return ui.Button(
-            label="Recalculate" if gaze_mapper.calculate_complete else "Calculate",
-            function=self._on_click_calculate,
+            label="Activate Gaze",
+            setter=self._on_activate_gaze_changed,
         )
 
     def _on_calibration_storage_changed(self, *args, **kwargs):
@@ -188,8 +210,8 @@ class GazeMapperMenu(plugin_ui.StorageEditMenu):
         self.current_item.validation_outlier_threshold_deg = new_threshold
         self._gaze_mapper_controller.validate_gaze_mapper(self.current_item)
 
-    def _on_show_gaze_changed(self, new_value):
-        self.current_item.show_gaze = new_value
+    def _on_activate_gaze_changed(self, new_value):
+        self.current_item.activate_gaze = new_value
         self._gaze_mapper_controller.publish_all_enabled_mappers()
 
     def _on_click_calculate(self):
@@ -199,3 +221,6 @@ class GazeMapperMenu(plugin_ui.StorageEditMenu):
         if gaze_mapping == self.current_item:
             # mostly to change button "calculate" -> "recalculate"
             self.render()
+
+    def _on_calculation_could_not_be_started(self):
+        self.render()

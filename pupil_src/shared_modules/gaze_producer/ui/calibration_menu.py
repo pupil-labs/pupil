@@ -23,12 +23,7 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
     new_button_label = "New Calibration"
     duplicate_button_label = "Duplicate Current Calibration"
 
-    def __init__(
-        self,
-        calibration_storage,
-        calibration_controller,
-        index_range_as_str,
-    ):
+    def __init__(self, calibration_storage, calibration_controller, index_range_as_str):
         super().__init__(calibration_storage)
         self._calibration_storage = calibration_storage
         self._calibration_controller = calibration_controller
@@ -47,13 +42,15 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         return self._calibration_storage.create_default_calibration()
 
     def _duplicate_item(self, calibration):
-        return calibration.copy()
+        return self._calibration_storage.duplicate_calibration(calibration)
 
     def _render_custom_ui(self, calibration, menu):
-        if self._calibration_controller.is_from_same_recording(calibration):
-            self._render_ui_normally(calibration, menu)
-        else:
+        if not self._calibration_controller.is_from_same_recording(calibration):
             self._render_ui_calibration_from_other_recording(calibration, menu)
+        elif not calibration.is_offline_calibration:
+            self._render_ui_online_calibration(calibration, menu)
+        else:
+            self._render_ui_normally(calibration, menu)
 
     def _render_ui_normally(self, calibration, menu):
         menu.extend(
@@ -131,6 +128,17 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
                 "back to the original recording, calculate the calibration, "
                 "and copy it again."
             )
+
+    def _render_ui_online_calibration(self, calibration, menu):
+        menu.append(ui.Info_Text(self._info_text_for_online_calibration(calibration)))
+
+    def _info_text_for_online_calibration(self, calibration):
+        return (
+            "This {} calibration was created before or during the recording. "
+            "It is ready to be used in gaze mappers.".format(
+                calibration.mapping_method.upper()
+            )
+        )
 
     def _on_click_duplicate_button(self):
         if self._calibration_controller.is_from_same_recording(self.current_item):

@@ -36,10 +36,12 @@ class ReferenceDetectionController(Observable):
 
         self._detection_task = worker.detect_circle_markers.CircleMarkerDetectionTask()
         self._detection_task.add_observer("on_exception", tasklib.raise_exception)
+        self._detection_task.add_observer(
+            "on_started", lambda: self.on_detection_started(self._detection_task)
+        )
         self._detection_task.add_observer("on_yield", on_detection_yields)
         self._detection_task.add_observer("on_completed", on_detection_completed)
         self._task_manager.add_task(self._detection_task)
-        self.on_detection_started(self._detection_task)
         return self._detection_task
 
     def on_detection_started(self, detection_task):
