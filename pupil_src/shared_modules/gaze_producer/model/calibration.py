@@ -8,7 +8,6 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import copy
 from collections import namedtuple
 
 from gaze_producer import model
@@ -32,6 +31,7 @@ class Calibration(model.storage.StorageItem):
         frame_index_range,
         minimum_confidence,
         status="Not calculated yet",
+        is_offline_calibration=True,
         result=None,
     ):
         self.unique_id = unique_id
@@ -41,6 +41,7 @@ class Calibration(model.storage.StorageItem):
         self.frame_index_range = frame_index_range
         self.minimum_confidence = minimum_confidence
         self.status = status
+        self.is_offline_calibration = is_offline_calibration
         if result is None or isinstance(result, CalibrationResult):
             self.result = result
         else:
@@ -63,11 +64,6 @@ class Calibration(model.storage.StorageItem):
             self.frame_index_range,
             self.minimum_confidence,
             self.status,
+            self.is_offline_calibration,
             self.result,
         )
-
-    def copy(self):
-        new_calibration = copy.deepcopy(self)
-        new_calibration.name += " Copy"
-        new_calibration.unique_id = Calibration.create_new_unique_id()
-        return new_calibration

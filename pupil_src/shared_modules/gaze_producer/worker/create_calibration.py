@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import logging
-
 from time import time
 
 import player_methods as pm

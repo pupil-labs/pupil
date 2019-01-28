@@ -13,6 +13,7 @@ import logging
 import os
 
 import file_methods as fm
+import make_unique
 from gaze_producer import model
 from observable import Observable
 
@@ -40,15 +41,33 @@ class GazeMapperStorage(model.SingleFileStorage, Observable):
             calibration_unique_id = ""
         return model.GazeMapper(
             unique_id=model.GazeMapper.create_new_unique_id(),
-            name="Default Gaze Mapper",
+            name=make_unique.by_number_at_end("Default Gaze Mapper", self.item_names),
             calibration_unique_id=calibration_unique_id,
             mapping_index_range=self._get_recording_index_range(),
             validation_index_range=self._get_recording_index_range(),
             validation_outlier_threshold_deg=5.0,
         )
 
+    def duplicate_gaze_mapper(self, gaze_mapper):
+        return model.GazeMapper(
+            unique_id=gaze_mapper.create_new_unique_id(),
+            name=make_unique.by_number_at_end(
+                gaze_mapper.name + " Copy", self.item_names
+            ),
+            calibration_unique_id=gaze_mapper.calibration_unique_id,
+            mapping_index_range=gaze_mapper.mapping_index_range,
+            validation_index_range=gaze_mapper.validation_index_range,
+            validation_outlier_threshold_deg=gaze_mapper.validation_outlier_threshold_deg,
+            manual_correction_x=gaze_mapper.manual_correction_x,
+            manual_correction_y=gaze_mapper.manual_correction_y,
+            activate_gaze=gaze_mapper.activate_gaze,
+            # We cannot deep copy gaze, so we don't.
+            # All others left at their default.
+        )
+
     def add(self, gaze_mapper):
         self._gaze_mappers.append(gaze_mapper)
+        self._gaze_mappers.sort(key=lambda g: g.name)
 
     def delete(self, gaze_mapper):
         self._gaze_mappers.remove(gaze_mapper)
@@ -124,11 +143,16 @@ class GazeMapperStorage(model.SingleFileStorage, Observable):
         return self._gaze_mappers
 
     @property
+    def item_names(self):
+        return [gaze_mapper.name for gaze_mapper in self._gaze_mappers]
+
+    @property
     def _gaze_mappings_directory(self):
         return os.path.join(self._storage_folder_path, "gaze-mappings")
 
     def _gaze_mapping_file_name(self, gaze_mapper):
-        return gaze_mapper.name + "-" + gaze_mapper.unique_id
+        file_name = gaze_mapper.name + "-" + gaze_mapper.unique_id
+        return self.get_valid_filename(file_name)
 
     def _gaze_mapping_file_path(self, gaze_mapper):
         return os.path.join(

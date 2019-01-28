@@ -9,10 +9,8 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import logging
-
 from itertools import chain
 
-import file_methods as fm
 import player_methods
 import tasklib
 from gaze_producer import worker
@@ -51,24 +49,38 @@ class GazeMapperController(Observable):
         self._reset_gaze_mapper_results(gaze_mapper)
         calibration = self.get_valid_calibration_or_none(gaze_mapper)
         if calibration is None:
-            logger.error(
-                "The calibration for the gaze mapper '{}' was not found, "
-                "please select a different calibration!".format(gaze_mapper.name)
+            self._abort_calculation(
+                gaze_mapper,
+                "The calibration was not found for the gaze mapper '{}', "
+                "please select a different calibration!".format(gaze_mapper.name),
             )
             return None
         if calibration.result is None:
-            logger.warning(
-                "Before calculating the mapper '{}', you first need to calculate "
-                "calibration '{}'".format(gaze_mapper.name, calibration.name)
+            self._abort_calculation(
+                gaze_mapper,
+                "You first need to calculate calibration '{}' before calculating the "
+                "mapper '{}'".format(calibration.name, gaze_mapper.name),
             )
             return None
         task = self._create_mapping_task(gaze_mapper, calibration)
         self._task_manager.add_task(task)
         logger.info("Start gaze mapping for '{}'".format(gaze_mapper.name))
 
+    def _abort_calculation(self, gaze_mapper, error_message):
+        logger.error(error_message)
+        gaze_mapper.status = error_message
+        self.on_calculation_could_not_be_started()
+        # the gaze from this mapper got cleared, so don't show it anymore
+        self.publish_all_enabled_mappers()
+
+    def on_calculation_could_not_be_started(self):
+        pass
+
     def _reset_gaze_mapper_results(self, gaze_mapper):
         gaze_mapper.gaze = []
         gaze_mapper.gaze_ts = []
+        gaze_mapper.accuracy_result = ""
+        gaze_mapper.precision_result = ""
 
     def _create_mapping_task(self, gaze_mapper, calibration):
         task = worker.map_gaze.create_task(gaze_mapper, calibration)
@@ -106,7 +118,7 @@ class GazeMapperController(Observable):
                 (
                     mapper.gaze
                     for mapper in self._gaze_mapper_storage
-                    if mapper.show_gaze
+                    if mapper.activate_gaze
                 )
             )
         )
@@ -115,7 +127,7 @@ class GazeMapperController(Observable):
                 (
                     mapper.gaze_ts
                     for mapper in self._gaze_mapper_storage
-                    if mapper.show_gaze
+                    if mapper.activate_gaze
                 )
             )
         )

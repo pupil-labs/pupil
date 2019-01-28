@@ -8,9 +8,9 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import abc
 import logging
 import os
-import abc
 
 from gaze_producer import model
 

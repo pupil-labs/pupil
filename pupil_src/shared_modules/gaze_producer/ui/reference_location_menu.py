@@ -25,6 +25,10 @@ class ReferenceLocationMenu:
         self.menu = ui.Growing_Menu("Reference Locations")
         self.menu.collapsed = True
 
+        reference_detection_controller.add_observer(
+            "on_detection_started", self._on_started_reference_detection
+        )
+
     def render(self):
         self.menu.elements.clear()
         self.menu.extend(
@@ -59,9 +63,11 @@ class ReferenceLocationMenu:
         )
 
     def _create_edit_mode_explanation(self):
-        return ui.Info_Text("When the edit mode is active, click on the video to set "
-                            "the reference for the current frame. Click on a "
-                            "reference to delete it.")
+        return ui.Info_Text(
+            "When the edit mode is active, click on the video to set "
+            "the reference for the current frame. Click on a "
+            "reference to delete it."
+        )
 
     def _create_next_ref_button(self):
         return ui.Button(
@@ -81,14 +87,13 @@ class ReferenceLocationMenu:
         return ui.Button("Clear All Reference Locations", self._on_clear_all_refs)
 
     def _on_click_start_reference_detection(self):
-        task = self._reference_detection_controller.start_detection()
-        task.add_observer("on_started", self._on_started_reference_detection)
-        task.add_observer("on_ended", self._on_ended_reference_detection)
+        self._reference_detection_controller.start_detection()
 
     def _on_click_cancel_reference_detection(self):
         self._reference_detection_controller.cancel_detection()
 
-    def _on_started_reference_detection(self):
+    def _on_started_reference_detection(self, detection_task):
+        detection_task.add_observer("on_ended", self._on_ended_reference_detection)
         self.render()
 
     def _on_ended_reference_detection(self):

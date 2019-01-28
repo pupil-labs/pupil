@@ -25,7 +25,7 @@ class GazeMapper(model.storage.StorageItem):
         validation_outlier_threshold_deg,
         manual_correction_x=0.0,
         manual_correction_y=0.0,
-        show_gaze=True,
+        activate_gaze=True,
         status="Not calculated yet",
         accuracy_result="",
         precision_result="",
@@ -40,7 +40,7 @@ class GazeMapper(model.storage.StorageItem):
         self.validation_outlier_threshold_deg = validation_outlier_threshold_deg
         self.manual_correction_x = manual_correction_x
         self.manual_correction_y = manual_correction_y
-        self.show_gaze = show_gaze
+        self.activate_gaze = activate_gaze
         self.status = status
         self.accuracy_result = accuracy_result
         self.precision_result = precision_result
@@ -67,23 +67,8 @@ class GazeMapper(model.storage.StorageItem):
             self.validation_outlier_threshold_deg,
             self.manual_correction_x,
             self.manual_correction_y,
-            self.show_gaze,
+            self.activate_gaze,
             self.status,
             self.accuracy_result,
             self.precision_result,
-        )
-
-    def copy(self):
-        return GazeMapper(
-            unique_id=self.create_new_unique_id(),
-            name=self.name + " Copy",
-            calibration_unique_id=self.calibration_unique_id,
-            mapping_index_range=self.mapping_index_range,
-            validation_index_range=self.validation_index_range,
-            validation_outlier_threshold_deg=self.validation_outlier_threshold_deg,
-            manual_correction_x=self.manual_correction_x,
-            manual_correction_y=self.manual_correction_y,
-            show_gaze=self.show_gaze,
-            # We cannot deep copy gaze, so we don't.
-            # All others left at their default.
         )
