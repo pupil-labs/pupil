@@ -232,6 +232,11 @@ class Accuracy_Visualizer(Plugin):
         locations = np.array(
             [(*e["ref"]["norm_pos"], *e["pupil"]["norm_pos"]) for e in correlated]
         )
+        if locations.size == 0:
+            accuracy_result = Calculation_Result(0.0, 0, 0)
+            precision_result = Calculation_Result(0.0, 0, 0)
+            error_lines = np.array([])
+            return accuracy_result, precision_result, error_lines
         error_lines = locations.copy()  # n x 4
         locations[:, ::2] *= width
         locations[:, 1::2] = (1.0 - locations[:, 1::2]) * height
