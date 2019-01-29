@@ -171,20 +171,27 @@ class Video:
     def __init__(self, path: str) -> None:
         self.path = path
         self.ts = None
+        self._is_valid = self.check_valid()
 
-    def check_container(self):
+    @property
+    def is_valid(self):
+        return self._is_valid
+
+    def check_valid(self):
         try:
             cont = av.open(self.path)
             n = cont.decode(video=0)
             _ = next(n)
         except av.AVError:
-            return
+            return False
         else:
             cont.seek(0)
-            return cont
+            self.cont = cont
+            return True
 
     def load_container(self):
-        return av.open(self.path)
+        if self.is_valid:
+            return self.cont
 
     def load_ts(self):
         self.ts = np.load(self.ts_loc)
@@ -233,12 +240,16 @@ class VideoSet:
         return os.path.join(self.rec, f"{self.name}_lookup.npy")
 
     def fetch_videos(self) -> Iterator[Video]:
-        yield from (
+        videos = (
             Video(loc)
             for ext in self.video_exts
             for loc in glob.iglob(
                 os.path.join(self.rec, f"{self.name}*.{ext}"))
         )
+        # If not self.fill_gaps, we skip the broken videos
+        if not self.fill_gaps:
+            return [v for v in videos if v.is_valid]
+        return videos
 
     def build_lookup(self):
         """
@@ -259,6 +270,15 @@ class VideoSet:
         Given a Pupil timestamp, one can use bisect to find the corresponding
         lookup entry index. From there, one can lookup the corresponding
         container, load it if necessary, and calculate the target PTS
+
+        Case 1: all video is_valid and self._fill_gaps
+            base case
+        Case 2: all video is_valid and not self._fill_gaps
+            skip to the next video, use for detection
+        Case 3: some videos is broken and self._fill_gaps
+            return gray frame for the broken video
+        Case 4: some videos is broken and not self._fill_gaps
+            skip to the next valid video, use for detection
         """
         loaded_ts = self._loaded_ts_sorted()
         if self.fill_gaps:
@@ -267,12 +287,8 @@ class VideoSet:
         for container_idx, vid in enumerate(self.videos):
             mask = np.isin(lookup.timestamp, vid.timestamps)
             lookup.container_frame_idx[mask] = np.arange(vid.timestamps.size)
-            cont = vid.check_container()  # check if container is corrupt
-            if cont:
-                lookup.container_idx[mask] = container_idx
-            else:
-                logger.warning(f"{vid.name} is corrupt")
-            self._containers.append(cont)
+            lookup.container_idx[mask] = container_idx
+            self._containers.append(vid.load_container())
         self.lookup = lookup
 
     def save_lookup(self):
