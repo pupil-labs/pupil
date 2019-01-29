@@ -104,6 +104,43 @@ class FakeFrame:
         return self.img[:, :, 0]  # return first channel
 
 
+class Buffering:
+    def __init__(self, buffer, container, video_stream):
+        if buffer:
+            self.state = Buffer(container, video_stream)
+        else:
+            self.state = NotBuffer(container, video_stream)
+
+
+class Buffer:
+    def __init__(self, container, video_stream):
+        self.container = container
+        self.video_stream = video_stream
+        self.buffered_decoder = container.get_buffered_decoder(
+            video_stream, dec_batch=50, dec_buffer_size=200)
+
+    def seek(self, position):
+        self.buffered_decoder.seek(position)
+
+    def next_frame(self):
+        return self.buffered_decoder.get_frame()
+
+
+class NotBuffer:
+    def __init__(self, container, video_stream):
+        self.container = container
+        self.video_stream = video_stream
+
+    def seek(self, position):
+        self.video_stream.seek(position)
+
+    def next_frame(self):
+        for packet in self.container.demux(self.video_stream):
+            for frame in packet.decode():
+                if frame:
+                    yield frame
+
+
 class File_Source(Playback_Source, Base_Source):
     """Simple file capture.
 
@@ -116,7 +153,6 @@ class File_Source(Playback_Source, Base_Source):
         buffered_decoding (bool): use buffered decode
         fill_gaps (bool): fill gaps with static frames
     """
-
     def __init__(
         self,
         g_pool,
@@ -132,12 +168,10 @@ class File_Source(Playback_Source, Base_Source):
             self.recent_events = self.recent_events_external_timing
         else:
             self.recent_events = self.recent_events_own_timing
-
         # minimal attribute set
         self._initialised = True
         self.source_path = source_path
         self.loop = loop
-        self.buffering = buffered_decoding
         self.fill_gaps = fill_gaps
         assert self.check_source_path(source_path)
         rec, set_name = self.get_rec_set_name(self.source_path)
@@ -148,6 +182,7 @@ class File_Source(Playback_Source, Base_Source):
         self.current_container_index = self.videoset.lookup.container_idx[0]
         self.target_frame_idx = 0
         self.current_frame_idx = 0
+        self.buffering = buffered_decoding
         self.setup_video(self.current_container_index)  # load first split
         self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
 
@@ -173,24 +208,17 @@ class File_Source(Playback_Source, Base_Source):
         self.current_container_index = container_index
         self.container = self.videoset.containers[container_index]
         self.video_stream, self.audio_stream = self._get_streams(self.container)
+        self.buffer = Buffering(
+            self.buffering, self.container, self.video_stream).state
         # set the pts rate to convert pts to frame index.
         # We use videos with pts writte like indecies.
-        if self.buffering:
-            self.buffered_decoder = self.container.get_buffered_decoder(
-                self.video_stream, dec_batch=50, dec_buffer_size=200
-            )
-            self.next_frame = self.buffered_decoder.get_frame()
-        else:
-            self.next_frame = self._next_frame()
+        self.next_frame = self.buffer.next_frame()
         # We get the difference between two pts then seek back to the first frame
         # But the index of the frame will start at 2
         f0, f1 = next(self.next_frame), next(self.next_frame)
         self.pts_rate = f1.pts
         self.shape = f1.to_nd_array(format="bgr24").shape
-        if self.buffering:
-            self.buffered_decoder.seek(f0.pts)
-        else:
-            self.video_stream.seek(f0.pts)
+        self.buffer.seek(f0.pts)
         self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
             self.timestamps
         )
@@ -283,13 +311,6 @@ class File_Source(Playback_Source, Base_Source):
 
     def get_frame_count(self):
         return self.videoset.lookup.size
-
-    @ensure_initialisation()
-    def _next_frame(self):
-        for packet in self.container.demux(self.video_stream):
-            for frame in packet.decode():
-                if frame:
-                    yield frame
 
     def _convert_frame_index(self, pts):
         """
@@ -412,17 +433,11 @@ class File_Source(Playback_Source, Base_Source):
                 # explicit conversion to python int required, else:
                 # TypeError: ('Container.seek only accepts integer offset.',
                 target_pts = int(self.idx_to_pts(target_entry.container_frame_idx))
-                if self.buffering:
-                    self.buffered_decoder.seek(target_pts)
-                else:
-                    self.video_stream.seek(target_pts)
+                self.buffer.seek(target_pts)
             except av.AVError as e:
                 raise FileSeekError() from e
             else:
-                if self.buffering:
-                    self.next_frame = self.buffered_decoder.get_frame()
-                else:
-                    self.next_frame = self._next_frame()
+                self.next_frame = self.buffer.next_frame()
         self.finished_sleep = 0
         self.target_frame_idx = seek_pos
 
