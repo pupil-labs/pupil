@@ -337,3 +337,39 @@ class VideoSet:
         lookup.timestamp = timestamps
         lookup.container_idx = -1  # virtual container by default
         return lookup
+
+
+class Rec:
+    def __init__(self, path):
+        self.path = path
+
+    @property
+    def is_exists(self):
+        return os.path.exists(self.path)
+
+    def rename(self):
+        # if self.path macth pattern 1
+        #     rename
+        # if self.path macth pattern 2
+        #     rename
+        # ...
+        pass
+
+
+class RecSet:
+    def __init__(self, rec_dir):
+        self.rec_dir = rec_dir
+        self.time_pattern = os.path.join(rec_dir, "Pupil Cam*.time")
+
+    def rename(self):
+        for r in self.get_exists_files():
+            r.rename()
+
+    def get_exists_files(self):
+        for time_loc in glob.glob(self.time_pattern):
+            time_file_name = os.path.split(time_loc)[1]
+            time_name = os.path.splitext(time_file_name)[0]
+            # Use a Globle variable to replace (".mjpeg", ".mp4", ".m4a") later
+            potential_locs = [
+                os.path.join(self.rec_dir, time_name + ext) for ext in (".mjpeg", ".mp4", ".m4a")]
+        return [loc for loc in potential_locs if os.path.exists(loc)]
