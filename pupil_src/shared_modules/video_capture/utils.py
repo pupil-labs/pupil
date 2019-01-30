@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 import glob
+import re
 import os
 import cv2
 import numpy as np
@@ -18,6 +19,9 @@ import av
 from typing import Sequence, Iterator
 
 logger = logging.getLogger(__name__)
+
+VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi")
+VIDEO_TIME_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi", "time")
 
 
 class Exposure_Time(object):
@@ -221,7 +225,7 @@ class VideoSet:
         self.rec = rec
         self.name = name
         self.fill_gaps = fill_gaps
-        self.video_exts = ("mp4", "mjpeg", "h264", "mkv", "avi")
+        self.video_exts = VIDEO_EXTS
         self._videos = None
         self._containers = []
 
@@ -339,37 +343,59 @@ class VideoSet:
         return lookup
 
 
-class Rec:
-    def __init__(self, path):
-        self.path = path
+class RenameSet:
+    class RenameFile:
+        def __init__(self, path):
+            self.path = path
 
-    @property
-    def is_exists(self):
-        return os.path.exists(self.path)
+        @property
+        def is_exists(self):
+            return os.path.exists(self.path)
 
-    def rename(self):
-        # if self.path macth pattern 1
-        #     rename
-        # if self.path macth pattern 2
-        #     rename
-        # ...
-        pass
+        @property
+        def name(self):
+            file_name = os.path.split(self.path)[1]
+            return os.path.splitext(file_name)[0]
 
+        def rename(self, source_pattern, destination_name):
+            if re.match(source_pattern, self.name):
+                new_path = re.sub(source_pattern, destination_name, self.path)
+                try:
+                    os.rename(self.path, new_path)
+                except FileExistsError:
+                    # Only happens on Windows. Behavior on Unix is to
+                    # overwrite the existing file.To mirror this behaviour
+                    # we need to delete the old file and try renaming the
+                    # new one again.
+                    os.remove(self.path)
+                    os.rename(self.path, new_path)
 
-class RecSet:
-    def __init__(self, rec_dir):
+        def rewrite_time(self, destination_name):
+            timestamps = np.fromfile(self.path, dtype=">f8")
+            timestamp_loc = os.path.join(
+                os.path.dirname(self.path), "{}_timestamps.npy".format(self.name))
+            np.save(timestamp_loc, timestamps)
+
+    def __init__(self, rec_dir, pattern, exts=VIDEO_TIME_EXTS):
         self.rec_dir = rec_dir
-        self.time_pattern = os.path.join(rec_dir, "Pupil Cam*.time")
+        self.pattern = os.path.join(rec_dir, pattern)
+        self.exists_files = self.get_exists_files(self.pattern, exts)
 
-    def rename(self):
-        for r in self.get_exists_files():
-            r.rename()
+    def rename(self, source_pattern, destination_name):
+        for r in self.exists_files:
+            self.RenameFile(r).rename(source_pattern, destination_name)
 
-    def get_exists_files(self):
-        for time_loc in glob.glob(self.time_pattern):
-            time_file_name = os.path.split(time_loc)[1]
-            time_name = os.path.splitext(time_file_name)[0]
-            # Use a Globle variable to replace (".mjpeg", ".mp4", ".m4a") later
+    def rewrite_time(self, destination_name):
+        for r in self.exists_files:
+            self.RenameFile(r).rewrite_time(destination_name)
+
+    def get_exists_files(self, pattern, exts):
+        exist_files = []
+        for loc in glob.glob(pattern):
+            file_name = os.path.split(loc)[1]
+            name = os.path.splitext(file_name)[0]
             potential_locs = [
-                os.path.join(self.rec_dir, time_name + ext) for ext in (".mjpeg", ".mp4", ".m4a")]
-        return [loc for loc in potential_locs if os.path.exists(loc)]
+                os.path.join(self.rec_dir, name + "." + ext) for ext in exts]
+            exist_files.extend(
+                [loc for loc in potential_locs if os.path.exists(loc)])
+        return exist_files
