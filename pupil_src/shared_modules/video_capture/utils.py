@@ -21,7 +21,7 @@ from typing import Sequence, Iterator
 logger = logging.getLogger(__name__)
 
 VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi")
-VIDEO_TIME_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi", "time")
+VIDEO_TIME_EXTS = VIDEO_EXTS + ("time",)
 
 
 class Exposure_Time(object):
@@ -244,16 +244,15 @@ class VideoSet:
         return os.path.join(self.rec, f"{self.name}_lookup.npy")
 
     def fetch_videos(self) -> Iterator[Video]:
-        videos = (
+        # If self.fill_gaps, we return all videos
+        # else we skip the broken videos
+        yield from (
             Video(loc)
             for ext in self.video_exts
             for loc in glob.iglob(
                 os.path.join(self.rec, f"{self.name}*.{ext}"))
-        )
-        # If not self.fill_gaps, we skip the broken videos
-        if not self.fill_gaps:
-            return [v for v in videos if v.is_valid]
-        return videos
+            if (self.fill_gaps or Video(loc).is_valid))
+
 
     def build_lookup(self):
         """
@@ -349,10 +348,6 @@ class RenameSet:
             self.path = path
 
         @property
-        def is_exists(self):
-            return os.path.exists(self.path)
-
-        @property
         def name(self):
             file_name = os.path.split(self.path)[1]
             return os.path.splitext(file_name)[0]
@@ -379,23 +374,23 @@ class RenameSet:
     def __init__(self, rec_dir, pattern, exts=VIDEO_TIME_EXTS):
         self.rec_dir = rec_dir
         self.pattern = os.path.join(rec_dir, pattern)
-        self.exists_files = self.get_exists_files(self.pattern, exts)
+        self.existsting_files = self.get_existsting_files(self.pattern, exts)
 
     def rename(self, source_pattern, destination_name):
-        for r in self.exists_files:
+        for r in self.existsting_files:
             self.RenameFile(r).rename(source_pattern, destination_name)
 
     def rewrite_time(self, destination_name):
-        for r in self.exists_files:
+        for r in self.existsting_files:
             self.RenameFile(r).rewrite_time(destination_name)
 
-    def get_exists_files(self, pattern, exts):
-        exist_files = []
+    def get_existsting_files(self, pattern, exts):
+        existsting_files = []
         for loc in glob.glob(pattern):
             file_name = os.path.split(loc)[1]
             name = os.path.splitext(file_name)[0]
             potential_locs = [
                 os.path.join(self.rec_dir, name + "." + ext) for ext in exts]
-            exist_files.extend(
+            existsting_files.extend(
                 [loc for loc in potential_locs if os.path.exists(loc)])
-        return exist_files
+        return existsting_files

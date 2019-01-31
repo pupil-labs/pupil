@@ -2,7 +2,7 @@ import logging
 import pytest
 import av
 from multiprocessing import cpu_count
-from video_capture.file_backend import File_Source
+from video_capture.file_backend import File_Source, Decoder, OnDemandDecoder
 from video_capture.base_backend import NoMoreVideoError
 from common import broken_data, multiple_data, single_data
 
@@ -66,8 +66,9 @@ def test_get_rec_set_name(single_fill_gaps):
 def test_get_streams(single_fill_gaps, caplog):
     caplog.set_level(logging.INFO)
     # Normal case
-    stream = single_fill_gaps._get_streams(single_fill_gaps.container)
+    stream = single_fill_gaps._get_streams(single_fill_gaps.container, True)
     assert isinstance(
-        stream[0], av.video.stream.VideoStream)
-    assert stream[0].thread_count == cpu_count()
-    assert stream[1] is None
+        stream[0], Decoder)
+    stream = single_fill_gaps._get_streams(single_fill_gaps.container, False)
+    assert isinstance(
+        stream[0], OnDemandDecoder)
