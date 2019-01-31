@@ -285,6 +285,7 @@ class Pupil_Remote(Plugin):
         else:
             response = "Unknown command."
         remote.send_string(response)
+        logger.debug("Request: '{}', Response: '{}'".format(msg, response))
 
     def on_notify(self, notification):
         """send simple string messages to control application functions.
