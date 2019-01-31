@@ -24,6 +24,7 @@ import cv2
 import file_methods as fm
 from camera_models import load_intrinsics
 from version_utils import VersionFormat, read_rec_version
+from video_capture.utils import RenameSet
 
 logger = logging.getLogger(__name__)
 
@@ -295,65 +296,15 @@ def _update_info_version_to(new_version, rec_dir):
 def convert_pupil_mobile_recording_to_v094(rec_dir):
     logger.info("Converting Pupil Mobile recording to v0.9.4 format")
     # convert time files and rename corresponding videos
-    time_pattern = os.path.join(rec_dir, "*.time")
-    for time_loc in glob.glob(time_pattern):
-        time_file_name = os.path.split(time_loc)[1]
-        time_name = os.path.splitext(time_file_name)[0]
-
-        potential_locs = [
-            os.path.join(rec_dir, time_name + ext) for ext in (".mjpeg", ".mp4", ".m4a")
-        ]
-        existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
-        if not existing_locs:
-            continue
-        else:
-            media_loc = existing_locs[0]
-
-        if time_name in (
-            "Pupil Cam1 ID0",
-            "Pupil Cam1 ID1",
-            "Pupil Cam2 ID0",
-            "Pupil Cam2 ID1",
-        ):
-            time_name = "eye" + time_name[-1]  # rename eye files
-        elif time_name in ("Pupil Cam1 ID2", "Logitech Webcam C930e"):
-            video = av.open(media_loc, "r")
-            frame_size = (
-                video.streams.video[0].format.width,
-                video.streams.video[0].format.height,
-            )
-            del video
-            intrinsics = load_intrinsics(rec_dir, time_name, frame_size)
-            intrinsics.save(rec_dir, "world")
-
-            time_name = "world"  # assume world file
-        elif time_name.startswith("audio_"):
-            time_name = "audio"
-
-        timestamps = np.fromfile(time_loc, dtype=">f8")
-        timestamp_loc = os.path.join(rec_dir, "{}_timestamps.npy".format(time_name))
-        logger.info('Creating "{}"'.format(os.path.split(timestamp_loc)[1]))
-        np.save(timestamp_loc, timestamps)
-
-        if time_name == "audio":
-            media_dst = os.path.join(rec_dir, time_name) + ".mp4"
-        else:
-            media_dst = (
-                os.path.join(rec_dir, time_name) + os.path.splitext(media_loc)[1]
-            )
-        logger.info(
-            'Renaming "{}" to "{}"'.format(
-                os.path.split(media_loc)[1], os.path.split(media_dst)[1]
-            )
-        )
-        try:
-            os.rename(media_loc, media_dst)
-        except FileExistsError:
-            # Only happens on Windows. Behavior on Unix is to overwrite the existing file.
-            # To mirror this behaviour we need to delete the old file and try renaming the new one again.
-            os.remove(media_dst)
-            os.rename(media_loc, media_dst)
-
+    match_pattern = "*.time"
+    rename_set = RenameSet(rec_dir, match_pattern)
+    rename_set.load_intrinsics()
+    rename_set.rename("Pupil Cam([0-2]) ID0", "eye0")
+    rename_set.rename("Pupil Cam([0-2]) ID1", "eye1")
+    rename_set.rename("Pupil Cam([0-2]) ID2", "world")
+    # Rewrite .time file to .npy file
+    rewrite_time = RenameSet(rec_dir, match_pattern, ['time'])
+    rewrite_time.rewrite_time("_timestamps.npy")
     pupil_data_loc = os.path.join(rec_dir, "pupil_data")
     if not os.path.exists(pupil_data_loc):
         logger.info('Creating "pupil_data"')

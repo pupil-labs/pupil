@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 import glob
+import fnmatch
 import re
 import os
 import cv2
@@ -17,6 +18,8 @@ import numpy as np
 import av
 
 from typing import Sequence, Iterator
+from camera_models import load_intrinsics
+
 
 logger = logging.getLogger(__name__)
 
@@ -253,7 +256,6 @@ class VideoSet:
                 os.path.join(self.rec, f"{self.name}*.{ext}"))
             if (self.fill_gaps or Video(loc).is_valid))
 
-
     def build_lookup(self):
         """
         The lookup table is a np.recarray containing entries
@@ -353,8 +355,13 @@ class RenameSet:
             return os.path.splitext(file_name)[0]
 
         def rename(self, source_pattern, destination_name):
+            # source_pattern: Pupil Cam(0|1) ID0
+            # destination_name: eye0
             if re.match(source_pattern, self.name):
                 new_path = re.sub(source_pattern, destination_name, self.path)
+                logger.info(
+                    'Renaming "{}" to "{}"'.format(
+                        self.name, os.path.split(new_path)[1]))
                 try:
                     os.rename(self.path, new_path)
                 except FileExistsError:
@@ -367,6 +374,7 @@ class RenameSet:
 
         def rewrite_time(self, destination_name):
             timestamps = np.fromfile(self.path, dtype=">f8")
+            logger.info('Creating "{}_timestamps.npy"'.format(self.name))
             timestamp_loc = os.path.join(
                 os.path.dirname(self.path), "{}_timestamps.npy".format(self.name))
             np.save(timestamp_loc, timestamps)
@@ -383,6 +391,28 @@ class RenameSet:
     def rewrite_time(self, destination_name):
         for r in self.existsting_files:
             self.RenameFile(r).rewrite_time(destination_name)
+
+    def load_intrinsics(self):
+        def _load_intrinsics(file_name, name):
+            try:
+                video = av.open(file_name, "r")
+            except av.AVError:
+                frame_size = (480, 360)
+            else:
+                frame_size = (
+                    video.streams.video[0].format.width,
+                    video.streams.video[0].format.height,
+                )
+                del video
+            intrinsics = load_intrinsics(
+                self.rec_dir, name, frame_size)
+            intrinsics.save(self.rec_dir, "world")
+
+        for fn in self.existsting_files:
+            if fnmatch.fnmatch(fn, "*Pupil Cam1 ID2*"):
+                _load_intrinsics(fn, 'Pupil Cam1 ID2')
+            elif fnmatch.fnmatch(fn, "*Logitech Webcam C930e*"):
+                _load_intrinsics(fn, 'Logitech Webcam C930e')
 
     def get_existsting_files(self, pattern, exts):
         existsting_files = []
