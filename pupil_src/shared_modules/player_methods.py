@@ -22,7 +22,6 @@ from scipy.interpolate import interp1d
 import csv_utils
 import cv2
 import file_methods as fm
-from camera_models import load_intrinsics
 from version_utils import VersionFormat, read_rec_version
 from video_capture.utils import RenameSet
 
@@ -641,11 +640,18 @@ def check_for_worldless_recording(rec_dir):
 
         frame_rate = 30
         timestamps = np.arange(min_ts, max_ts, 1 / frame_rate)
-        np.save(os.path.join(rec_dir, "world_timestamps"), timestamps)
-        fm.save_object(
-            {"frame_rate": frame_rate, "frame_size": (1280, 720), "version": 0},
-            os.path.join(rec_dir, "world.fake"),
+        lookup_entry = np.dtype(
+            [
+                ("container_idx", "<i8"),
+                ("container_frame_idx", "<i8"),
+                ("timestamp", "<f8"),
+            ]
         )
+        lookup = np.empty(
+            timestamps.size, dtype=lookup_entry).view(np.recarray)
+        lookup.timestamp = timestamps
+        lookup.container_idx = -1
+        np.save(os.path.join(rec_dir, "world_lookup.npy"), lookup)
 
 
 def update_recording_bytes_to_unicode(rec_dir):
