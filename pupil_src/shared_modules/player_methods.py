@@ -252,10 +252,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v093_to_v094(rec_dir)
     if rec_version < VersionFormat("0.9.13"):
         update_recording_v094_to_v0913(rec_dir)
-    if rec_version < VersionFormat("0.9.15"):
-        update_recording_v0913_to_v0915(rec_dir)
     if rec_version < VersionFormat("1.3"):
-        update_recording_v0915_v13(rec_dir)
+        update_recording_v0913_to_v13(rec_dir)
     if rec_version < VersionFormat("1.4"):
         update_recording_v13_v14(rec_dir)
 
@@ -483,8 +481,8 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
             raise  # re-raise exception
 
 
-def update_recording_v0913_to_v0915(rec_dir):
-    logger.info("Updating recording from v0.9.13 to v0.9.15")
+def update_recording_v0913_to_v13(rec_dir):
+    logger.info("Updating recording from v0.9.13 to v1.3")
 
     # add notifications entry to pupil_data if missing
     pupil_data_loc = os.path.join(rec_dir, "pupil_data")
@@ -507,44 +505,6 @@ def update_recording_v0913_to_v0915(rec_dir):
         os.rename(old_calib_loc, old_calib_loc + ".deprecated")
     except IOError:
         pass
-
-    _update_info_version_to("v0.9.15", rec_dir)
-
-
-def update_recording_v0915_v13(rec_dir):
-    logger.info("Updating recording from v0.9.15 to v1.3")
-    # Look for unconverted Pupil Cam2 videos
-    time_pattern = os.path.join(rec_dir, "*.time")
-    for time_loc in glob.glob(time_pattern):
-        time_file_name = os.path.split(time_loc)[1]
-        time_name = os.path.splitext(time_file_name)[0]
-
-        potential_locs = [
-            os.path.join(rec_dir, time_name + ext) for ext in (".mjpeg", ".mp4", ".m4a")
-        ]
-        existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
-        if not existing_locs:
-            continue
-        else:
-            video_loc = existing_locs[0]
-
-        if time_name in ("Pupil Cam2 ID0", "Pupil Cam2 ID1"):
-            time_name = "eye" + time_name[-1]  # rename eye files
-        else:
-            continue
-
-        timestamps = np.fromfile(time_loc, dtype=">f8")
-        timestamp_loc = os.path.join(rec_dir, "{}_timestamps.npy".format(time_name))
-        logger.info('Creating "{}"'.format(os.path.split(timestamp_loc)[1]))
-        np.save(timestamp_loc, timestamps)
-
-        video_dst = os.path.join(rec_dir, time_name) + os.path.splitext(video_loc)[1]
-        logger.info(
-            'Renaming "{}" to "{}"'.format(
-                os.path.split(video_loc)[1], os.path.split(video_dst)[1]
-            )
-        )
-        os.rename(video_loc, video_dst)
 
     _update_info_version_to("v1.3", rec_dir)
 
