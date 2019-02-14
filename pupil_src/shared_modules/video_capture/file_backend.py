@@ -366,14 +366,14 @@ class File_Source(Playback_Source, Base_Source):
             return self._get_fake_frame_and_advance(target_entry.timestamp)
         elif target_entry.container_idx != self.current_container_index:
             self.setup_video(target_entry.container_idx)
-        try:
-            av_frame = next(self.next_frame)
+        for av_frame in self.next_frame:
             if not av_frame:
-                # End of video
                 raise EndofVideoError
             index = self._convert_frame_index(av_frame.pts)
-        except StopIteration as stop:
-            raise EndofVideoError from stop
+            if index == self.target_frame_idx:
+                break
+            elif index < self.target_frame_idx:
+                pass
         self.target_frame_idx = index + 1
         self.current_frame_idx = index
         return Frame(target_entry.timestamp, av_frame, index=index)
