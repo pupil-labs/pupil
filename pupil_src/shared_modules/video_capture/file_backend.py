@@ -228,10 +228,10 @@ class File_Source(Playback_Source, Base_Source):
         self.next_frame = self.video_stream.next_frame()
         # We get the difference between two pts then seek back to the first frame
         # But the index of the frame will start at 2
-        f0, f1 = next(self.next_frame), next(self.next_frame)
+        _, f1 = next(self.next_frame), next(self.next_frame)
         self.pts_rate = f1.pts
         self.shape = f1.to_nd_array(format="bgr24").shape
-        self.video_stream.seek(f0.pts)
+        self.video_stream.seek(0)
         self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
             self.timestamps
         )
@@ -449,8 +449,9 @@ class File_Source(Playback_Source, Base_Source):
                 self.video_stream.seek(target_pts)
             except av.AVError as e:
                 raise FileSeekError() from e
-            else:
-                self.next_frame = self.video_stream.next_frame()
+        else:
+            self.video_stream.seek(0)
+        self.next_frame = self.video_stream.next_frame()
         self.finished_sleep = 0
         self.target_frame_idx = seek_pos
 
