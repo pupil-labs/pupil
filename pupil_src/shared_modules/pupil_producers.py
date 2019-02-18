@@ -21,11 +21,13 @@ from pyglui import ui
 import pyglui.cygl.utils as cygl_utils
 from pyglui.pyfontstash import fontstash as fs
 
+import data_changed
 import file_methods as fm
 import gl_utils
 import player_methods as pm
 import pupil_detectors  # trigger module compilation
 import zmq_tools
+from observable import Observable
 from plugin import Producer_Plugin_Base
 
 logger = logging.getLogger(__name__)
@@ -39,11 +41,23 @@ class Empty(object):
     pass
 
 
-class Pupil_Producer_Base(Producer_Plugin_Base):
+class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
     uniqueness = "by_base_class"
     order = 0.01
     icon_chr = chr(0xEC12)
     icon_font = "pupil_icons"
+
+    def __init__(self, g_pool):
+        super().__init__(g_pool)
+        self._pupil_changed_announcer = data_changed.Announcer(
+            "pupil_positions", g_pool.rec_dir, plugin=self
+        )
+        self._pupil_changed_listener = data_changed.Listener(
+            "pupil_positions", g_pool.rec_dir, plugin=self
+        )
+        self._pupil_changed_listener.add_observer(
+            "on_data_changed", self._refresh_timelines
+        )
 
     def init_ui(self):
         self.add_menu()
@@ -89,12 +103,11 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
         self.g_pool.user_timelines.append(self.dia_timeline)
         self.g_pool.user_timelines.append(self.conf_timeline)
 
-    def on_notify(self, notification):
-        if notification["subject"] == "pupil_positions_changed":
-            self.cache_pupil_timeline_data("diameter")
-            self.cache_pupil_timeline_data("confidence")
-            self.dia_timeline.refresh()
-            self.conf_timeline.refresh()
+    def _refresh_timelines(self):
+        self.cache_pupil_timeline_data("diameter")
+        self.cache_pupil_timeline_data("confidence")
+        self.dia_timeline.refresh()
+        self.conf_timeline.refresh()
 
     def deinit_ui(self):
         self.remove_menu()
@@ -229,7 +242,7 @@ class Pupil_From_Recording(Pupil_Producer_Base):
             pupil_data_file.topics, pupil_data_file.data, pupil_data_file.timestamps
         )
 
-        self.notify_all({"subject": "pupil_positions_changed"})
+        self._pupil_changed_announcer.announce_existing()
         logger.debug("pupil positions changed")
 
     def init_ui(self):
@@ -369,7 +382,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             topics, data, time
         )
 
-        self.notify_all({"subject": "pupil_positions_changed"})
+        self._pupil_changed_announcer.announce_new()
         logger.debug("pupil positions changed")
         self.save_offline_data()
 
