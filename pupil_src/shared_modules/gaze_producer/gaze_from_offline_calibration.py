@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import os
 
 import csv_utils
+import data_changed
 from gaze_producer import ui as plugin_ui, controller, model
 from gaze_producer.gaze_producer_base import GazeProducerBase
 from observable import Observable
@@ -38,6 +39,13 @@ class GazeFromOfflineCalibration(Observable, GazeProducerBase):
         self._setup_controllers()
         self._setup_ui()
         self._setup_timelines()
+
+        self._pupil_changed_listener = data_changed.Listener(
+            "pupil_positions", g_pool.rec_dir, plugin=self
+        )
+        self._pupil_changed_listener.add_observer(
+            "on_data_changed", self._calculate_all_controller.calculate_all
+        )
 
     def _setup_storages(self):
         self._reference_location_storage = model.ReferenceLocationStorage(
@@ -170,11 +178,6 @@ class GazeFromOfflineCalibration(Observable, GazeProducerBase):
         self.menu.append(self._calibration_menu.menu)
         self._gaze_mapper_menu.render()
         self.menu.append(self._gaze_mapper_menu.menu)
-
-    def on_notify(self, notification):
-        subject = notification["subject"]
-        if subject == "pupil_positions_changed":
-            self._calculate_all_controller.calculate_all()
 
     def _publish_gaze(self, gaze_bisector):
         self.g_pool.gaze_positions = gaze_bisector
