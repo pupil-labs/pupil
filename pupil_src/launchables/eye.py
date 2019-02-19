@@ -257,7 +257,9 @@ def eye(
         g_pool.iconified = False
         g_pool.capture = None
         g_pool.capture_manager = None
-        g_pool.flip = session_settings.get("flip", False)
+        g_pool.flip = session_settings.get("flip", "Default")
+        if g_pool.flip == "Default" and eye_id == 0:
+            g_pool.flip = True
         g_pool.display_mode = session_settings.get("display_mode", "camera_image")
         g_pool.display_mode_info_text = {
             "camera_image": "Raw eye camera image. This uses the least amount of CPU power",
