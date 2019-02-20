@@ -109,7 +109,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from log_history import Log_History
         from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
         from gaze_producer.gaze_from_recording import GazeFromRecording
-        from gaze_producer.gaze_from_offline_calibration import GazeFromOfflineCalibration
+        from gaze_producer.gaze_from_offline_calibration import (
+            GazeFromOfflineCalibration,
+        )
         from system_graphs import System_Graphs
         from system_timelines import System_Timelines
         from blink_detection import Offline_Blink_Detection
@@ -695,6 +697,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
         import player_methods as pm
+        import update_methods as um
 
         def on_drop(window, count, paths):
             nonlocal rec_dir
@@ -767,7 +770,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
 
             if rec_dir:
                 try:
-                    pm.update_recording_to_recent(rec_dir)
+                    um.update_recording_to_recent(rec_dir)
                 except AssertionError as err:
                     logger.error(str(err))
                     rec_dir = None
