@@ -167,7 +167,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
 
                 csv_writer.writerow(
                     (
-                        "world_timestamp",
+                        "pupil_timestamp",
                         "world_index",
                         "eye_id",
                         "confidence",
@@ -273,7 +273,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                 csv_writer = csv.writer(csvfile, delimiter=",")
                 csv_writer.writerow(
                     (
-                        "world_timestamp",
+                        "gaze_timestamp",
                         "world_index",
                         "confidence",
                         "norm_pos_x",
