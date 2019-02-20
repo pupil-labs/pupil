@@ -127,7 +127,8 @@ class BufferedDecoder(Decoder):
         self.container = container
         self.video_stream = video_stream
         self._buffered_decoder = self.container.get_buffered_decoder(
-            self.video_stream, dec_batch=50, dec_buffer_size=200)
+            self.video_stream, dec_batch=50, dec_buffer_size=200
+        )
 
     @property
     def buffered_decoder(self):
@@ -167,6 +168,7 @@ class File_Source(Playback_Source, Base_Source):
         buffered_decoding (bool): use buffered decode
         fill_gaps (bool): fill gaps with static frames
     """
+
     def __init__(
         self,
         g_pool,
@@ -203,17 +205,16 @@ class File_Source(Playback_Source, Base_Source):
     def check_source_path(self, source_path):
         if not source_path or not os.path.isfile(source_path):
             logger.error(
-                "Init failed. Source file could not be found at `%s`" %
-                source_path
+                "Init failed. Source file could not be found at `%s`" % source_path
             )
             self._initialised = False
             return
         return True
 
     def get_rec_set_name(self, source_path):
-        '''
+        """
         Return dir and set name by source_path
-        '''
+        """
         rec, file_ = os.path.split(source_path)
         set_name = os.path.splitext(file_)[0]
         return rec, set_name
@@ -222,7 +223,8 @@ class File_Source(Playback_Source, Base_Source):
         self.current_container_index = container_index
         self.container = self.videoset.containers[container_index]
         self.video_stream, self.audio_stream = self._get_streams(
-            self.container, self.buffering)
+            self.container, self.buffering
+        )
         # set the pts rate to convert pts to frame index.
         # We use videos with pts writte like indecies.
         self.next_frame = self.video_stream.next_frame()
