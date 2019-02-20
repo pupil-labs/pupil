@@ -12,6 +12,7 @@ import collections
 import glob
 import logging
 import os
+import uuid
 from shutil import copy2
 
 import av
@@ -90,6 +91,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v14_v18(rec_dir)
     if rec_version < VersionFormat("1.9"):
         update_recording_v18_v19(rec_dir)
+    if rec_version < VersionFormat("1.11"):
+        update_recording_v19_v111(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -388,6 +391,15 @@ def update_recording_v18_v19(rec_dir):
     copy_recorded_annotations()
 
     _update_info_version_to("v1.9", rec_dir)
+
+
+def update_recording_v19_v111(rec_dir):
+    logger.info("Updating recording from v1.9 to v1.11")
+
+    meta_info = pm.load_meta_info(rec_dir)
+    meta_info["Data Format Version"] = "v1.4"
+    meta_info["Recording UUID"] = meta_info.get("Recording UUID", uuid.uuid4())
+    update_meta_info(rec_dir, meta_info)
 
 
 def check_for_worldless_recording(rec_dir):
