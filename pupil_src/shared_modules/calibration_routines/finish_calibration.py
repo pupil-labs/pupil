@@ -526,26 +526,24 @@ def finish_calibration(g_pool, pupil_list, ref_list):
             }
         )
 
-        g_pool.active_calibration_plugin.notify_all(
-            {
-                "subject": "calibration.calibration_data",
-                "timestamp": ts,
-                "pupil_list": pupil_list,
-                "ref_list": ref_list,
-                "calibration_method": method,
-                "record": True,
-            }
-        )
-
-        # this is only used by show calibration. TODO: rewrite show calibraiton.
         user_calibration_data = {
             "timestamp": ts,
             "pupil_list": pupil_list,
             "ref_list": ref_list,
             "calibration_method": method,
+            "mapper_name": result["name"],
+            "mapper_args": result["args"],
         }
 
         save_object(
             user_calibration_data,
             os.path.join(g_pool.user_dir, "user_calibration_data"),
+        )
+
+        g_pool.active_calibration_plugin.notify_all(
+            {
+                "subject": "calibration.calibration_data",
+                "record": True,
+                **user_calibration_data,
+            }
         )

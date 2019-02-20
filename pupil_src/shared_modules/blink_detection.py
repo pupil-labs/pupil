@@ -22,9 +22,11 @@ from pyglui.pyfontstash import fontstash as fs
 from scipy.signal import fftconvolve
 
 import csv_utils
+import data_changed
 import file_methods as fm
 import gl_utils
 import player_methods as pm
+from observable import Observable
 from plugin import Analysis_Plugin_Base
 
 logger = logging.getLogger(__name__)
@@ -191,7 +193,7 @@ class Blink_Detection(Analysis_Plugin_Base):
         }
 
 
-class Offline_Blink_Detection(Blink_Detection):
+class Offline_Blink_Detection(Observable, Blink_Detection):
     def __init__(
         self,
         g_pool,
@@ -216,6 +218,13 @@ class Offline_Blink_Detection(Blink_Detection):
         self.timestamps = []
         g_pool.blinks = pm.Affiliator()
         self.cache = {"response_points": (), "class_points": (), "thresholds": ()}
+
+        self.pupil_positions_listener = data_changed.Listener(
+            "pupil_positions", g_pool.rec_dir, plugin=self
+        )
+        self.pupil_positions_listener.add_observer(
+            "on_data_changed", self._on_pupil_positions_changed
+        )
 
     def init_ui(self):
         super().init_ui()
@@ -242,14 +251,15 @@ class Offline_Blink_Detection(Blink_Detection):
     def on_notify(self, notification):
         if notification["subject"] == "blink_detection.should_recalculate":
             self.recalculate()
-        elif notification["subject"] == "pupil_positions_changed":
-            logger.info("Pupil postions changed. Recalculating.")
-            self.recalculate()
         elif notification["subject"] == "blinks_changed":
             self.cache_activation()
             self.timeline.refresh()
         elif notification["subject"] == "should_export":
             self.export(notification["range"], notification["export_dir"])
+
+    def _on_pupil_positions_changed(self):
+        logger.info("Pupil postions changed. Recalculating.")
+        self.recalculate()
 
     def export(self, export_range, export_dir):
         """

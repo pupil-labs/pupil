@@ -200,7 +200,11 @@ class Accuracy_Visualizer(Plugin):
         assert self.recent_input and self.recent_labels
         prediction = self.g_pool.active_gaze_mapping_plugin.map_batch(self.recent_input)
         results = self.calc_acc_prec_errlines(
-            prediction, self.recent_labels, self.g_pool.capture.intrinsics
+            prediction,
+            self.recent_labels,
+            self.g_pool.capture.intrinsics,
+            self.outlier_threshold,
+            self.succession_threshold,
         )
         logger.info("Angular accuracy: {}. Used {} of {} samples.".format(*results[0]))
         logger.info("Angular precision: {}. Used {} of {} samples.".format(*results[1]))
@@ -213,7 +217,14 @@ class Accuracy_Visualizer(Plugin):
             hull = ConvexHull(ref_locations)  # requires at least 3 points
             self.calibration_area = hull.points[hull.vertices, :]
 
-    def calc_acc_prec_errlines(self, gaze_pos, ref_pos, intrinsics):
+    @staticmethod
+    def calc_acc_prec_errlines(
+        gaze_pos,
+        ref_pos,
+        intrinsics,
+        outlier_threshold,
+        succession_threshold=np.cos(np.deg2rad(0.5)),
+    ):
         width, height = intrinsics.resolution
 
         # reuse closest_matches_monocular to correlate one label to each prediction
@@ -223,6 +234,11 @@ class Accuracy_Visualizer(Plugin):
         locations = np.array(
             [(*e["ref"]["norm_pos"], *e["pupil"]["norm_pos"]) for e in correlated]
         )
+        if locations.size == 0:
+            accuracy_result = Calculation_Result(0.0, 0, 0)
+            precision_result = Calculation_Result(0.0, 0, 0)
+            error_lines = np.array([])
+            return accuracy_result, precision_result, error_lines
         error_lines = locations.copy()  # n x 4
         locations[:, ::2] *= width
         locations[:, 1::2] = (1.0 - locations[:, 1::2]) * height
@@ -243,7 +259,7 @@ class Accuracy_Visualizer(Plugin):
 
         # Good values are close to 1. since cos(0) == 1.
         # Therefore we look for values greater than cos(outlier_threshold)
-        selected_indices = angular_err > np.cos(np.deg2rad(self.outlier_threshold))
+        selected_indices = angular_err > np.cos(np.deg2rad(outlier_threshold))
         selected_samples = angular_err[selected_indices]
         num_used, num_total = selected_samples.shape[0], angular_err.shape[0]
 
@@ -271,8 +287,8 @@ class Accuracy_Visualizer(Plugin):
         # if the gaze dis is to big we can assume human error
         # both times gaze data is not valid for this mesurement
         selected_indices = np.logical_and(
-            succesive_distances_gaze > self.succession_threshold,
-            succesive_distances_ref > self.succession_threshold,
+            succesive_distances_gaze > succession_threshold,
+            succesive_distances_ref > succession_threshold,
         )
         succesive_distances = succesive_distances_gaze[selected_indices]
         num_used, num_total = (

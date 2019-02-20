@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-from abc import ABCMeta, abstractmethod
+import abc
 
 from pyglui import ui
 
@@ -20,7 +20,7 @@ from plugin import Plugin
 logger = logging.getLogger(__name__)
 
 
-class TaskManager(Plugin, metaclass=ABCMeta):
+class TaskManager(Plugin, abc.ABC):
     """
     Base for plugins that need to perform 'tasks' (possibly running simultaneously).
 
@@ -64,7 +64,7 @@ class TaskManager(Plugin, metaclass=ABCMeta):
         self._add_manager_buttons_to_menu()
         self.menu.append(self.task_container)
 
-    @abstractmethod
+    @abc.abstractmethod
     def customize_menu(self):
         pass
 
