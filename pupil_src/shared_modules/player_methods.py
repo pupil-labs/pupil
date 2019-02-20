@@ -300,7 +300,7 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
     rename_set.rename("Pupil Cam([0-2]) ID1", "eye1")
     rename_set.rename("Pupil Cam([0-2]) ID2", "world")
     # Rewrite .time file to .npy file
-    rewrite_time = RenameSet(rec_dir, match_pattern, ['time'])
+    rewrite_time = RenameSet(rec_dir, match_pattern, ["time"])
     rewrite_time.rewrite_time("_timestamps.npy")
     pupil_data_loc = os.path.join(rec_dir, "pupil_data")
     if not os.path.exists(pupil_data_loc):
@@ -574,13 +574,22 @@ def update_recording_v18_v19(rec_dir):
 def check_for_worldless_recording(rec_dir):
     logger.info("Checking for world-less recording")
     valid_ext = (".mp4", ".mkv", ".avi", ".h264", ".mjpeg")
-    existing_videos = [
-        f
-        for f in glob.glob(os.path.join(rec_dir, "world.*"))
-        if os.path.splitext(f)[1] in valid_ext
-    ]
 
-    if not existing_videos:
+    world_video_exists = any(
+        (
+            os.path.splitext(f)[1] in valid_ext
+            for f in glob.glob(os.path.join(rec_dir, "world.*"))
+        )
+    )
+
+    if not world_video_exists:
+        fake_world_version = 0
+        fake_world_path = os.path.join(rec_dir, "world.fake")
+        if os.path.exists(fake_world_path):
+            fake_world = fm.load_object(fake_world_path)
+            if fake_world["version"] == fake_world_version:
+                return
+
         min_ts = np.inf
         max_ts = -np.inf
         for f in glob.glob(os.path.join(rec_dir, "eye*_timestamps.npy")):
@@ -600,18 +609,15 @@ def check_for_worldless_recording(rec_dir):
 
         frame_rate = 30
         timestamps = np.arange(min_ts, max_ts, 1 / frame_rate)
-        lookup_entry = np.dtype(
-            [
-                ("container_idx", "<i8"),
-                ("container_frame_idx", "<i8"),
-                ("timestamp", "<f8"),
-            ]
+        np.save(os.path.join(rec_dir, "world_timestamps.npy"), timestamps)
+        fm.save_object(
+            {
+                "frame_rate": frame_rate,
+                "frame_size": (1280, 720),
+                "version": fake_world_version,
+            },
+            os.path.join(rec_dir, "world.fake"),
         )
-        lookup = np.empty(
-            timestamps.size, dtype=lookup_entry).view(np.recarray)
-        lookup.timestamp = timestamps
-        lookup.container_idx = -1
-        np.save(os.path.join(rec_dir, "world_lookup.npy"), lookup)
 
 
 def update_recording_bytes_to_unicode(rec_dir):
