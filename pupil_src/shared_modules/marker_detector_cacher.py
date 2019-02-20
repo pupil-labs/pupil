@@ -8,8 +8,6 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-
-
 class Global_Container(object):
     pass
 
@@ -32,7 +30,8 @@ def fill_cache(
     aperture = 9
     markers = []
     cap = init_playback_source(
-        Global_Container(), source_path=video_file_path, timing=None
+        Global_Container(), source_path=video_file_path,
+        timing=None, fill_gaps=True
     )
 
     def next_unvisited_idx(frame_idx):
@@ -100,7 +99,6 @@ def fill_cache(
         q.put(
             (frame.index, markers[:])
         )  # object passed will only be pickeled when collected from other process! need to make a copy ot avoid overwrite!!!
-
     while run.value:
         next_frame = cap.get_frame_index()
         if seek_idx.value != -1:
@@ -109,6 +107,10 @@ def fill_cache(
             logger.debug(
                 "User required seek. Marker caching at Frame: {}".format(next_frame)
             )
+        # Delete the # to unfill the gap
+        # target_entry = cap.videoset.lookup[next_frame]
+        # if target_entry.container_idx == -1:
+        #     continue
 
         # check the visited list
         next_frame = next_unvisited_idx(next_frame)

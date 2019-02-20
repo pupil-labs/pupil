@@ -34,6 +34,10 @@ class EndofVideoError(Exception):
     pass
 
 
+class NoMoreVideoError(Exception):
+    pass
+
+
 class Base_Source(Plugin):
     """Abstract source class
 

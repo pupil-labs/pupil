@@ -8,9 +8,23 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-
-import numpy as np
+import logging
+import glob
+import fnmatch
+import re
+import os
 import cv2
+import numpy as np
+import av
+
+from typing import Sequence, Iterator
+from camera_models import load_intrinsics
+
+
+logger = logging.getLogger(__name__)
+
+VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi")
+VIDEO_TIME_EXTS = VIDEO_EXTS + ("time",)
 
 
 class Exposure_Time(object):
@@ -48,7 +62,8 @@ class Exposure_Time(object):
             elif self.mode == "auto":
                 image_block = cv2.resize(frame.gray, dsize=self.AE_Win.shape)
                 YTotal = max(
-                    np.multiply(self.AE_Win, image_block).sum() / self.AE_Win.sum(), 1
+                    np.multiply(self.AE_Win, image_block).sum() /
+                    self.AE_Win.sum(), 1
                 )
 
                 if YTotal < self.targetY_thres[0]:
@@ -105,8 +120,8 @@ class Check_Frame_Stripes(object):
             elif res is False:
                 if self.check_freq < self.check_freq_upperbound:
                     self.check_freq = min(
-                        self.check_freq * self.factor_mul, self.check_freq_upperbound
-                    )
+                        self.check_freq * self.factor_mul,
+                        self.check_freq_upperbound)
 
         return False
 
@@ -114,10 +129,12 @@ class Check_Frame_Stripes(object):
         num_local_optimum = [0, 0]
         if self.row_index is None:
             self.row_index = np.linspace(
-                8, frame_gray.shape[0] - 8, num=self.len_row_index, dtype=np.int
+                8, frame_gray.shape[0] - 8,
+                num=self.len_row_index, dtype=np.int
             )
             self.col_index = np.linspace(
-                8, frame_gray.shape[1] - 8, num=self.len_col_index, dtype=np.int
+                8, frame_gray.shape[1] - 8,
+                num=self.len_col_index, dtype=np.int
             )
         for n in [0, 1]:
             if n == 0:
@@ -133,14 +150,14 @@ class Check_Frame_Stripes(object):
                     np.where(
                         np.r_[False, True, arr[2:] > arr[:-2] + 30]
                         & np.r_[arr[:-2] > arr[2:] + 30, True, False]
-                        == True
+                        is True
                     )[0]
                 )
                 local_min = set(
                     np.where(
                         np.r_[False, True, arr[2:] + 30 < arr[:-2]]
                         & np.r_[arr[:-2] + 30 < arr[2:], True, False]
-                        == True
+                        is True
                     )[0]
                 )
                 num_local_optimum[n] += len(
@@ -155,3 +172,255 @@ class Check_Frame_Stripes(object):
             return False
         else:
             return None
+
+
+class Video:
+    def __init__(self, path: str) -> None:
+        self.path = path
+        self.ts = None
+        self._is_valid = self.check_valid()
+
+    @property
+    def is_valid(self):
+        return self._is_valid
+
+    def check_valid(self):
+        try:
+            cont = av.open(self.path)
+            n = cont.decode(video=0)
+            _ = next(n)
+        except av.AVError:
+            return False
+        else:
+            cont.seek(0)
+            self.cont = cont
+            return True
+
+    def load_container(self):
+        if self.is_valid:
+            return self.cont
+
+    def load_ts(self):
+        self.ts = np.load(self.ts_loc)
+
+    @property
+    def name(self) -> str:
+        file_ = os.path.split(self.path)[1]
+        return os.path.splitext(file_)[0]
+
+    @property
+    def ts_loc(self) -> str:
+        return os.path.join(self.base, f"{self.name}_timestamps.npy")
+
+    @property
+    def base(self) -> str:
+        return os.path.split(self.path)[0]
+
+    @property
+    def timestamps(self) -> np.ndarray:
+        if self.ts is None:
+            self.load_ts()
+        return self.ts
+
+
+class VideoSet:
+    def __init__(self, rec: str, name: str, fill_gaps: bool):
+        self.rec = rec
+        self.name = name
+        self.fill_gaps = fill_gaps
+        self.video_exts = VIDEO_EXTS
+        self._videos = None
+        self._containers = []
+
+    @property
+    def videos(self) -> Sequence[Video]:
+        if self._videos is None:
+            self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
+        return self._videos
+
+    @property
+    def containers(self) -> Sequence[Video]:
+        return self._containers
+
+    @property
+    def lookup_loc(self) -> str:
+        return os.path.join(self.rec, f"{self.name}_lookup.npy")
+
+    def fetch_videos(self) -> Iterator[Video]:
+        # If self.fill_gaps, we return all videos
+        # else we skip the broken videos
+        yield from (
+            Video(loc)
+            for ext in self.video_exts
+            for loc in glob.iglob(
+                os.path.join(self.rec, f"{self.name}*.{ext}"))
+            if (self.fill_gaps or Video(loc).is_valid))
+
+    def build_lookup(self):
+        """
+        The lookup table is a np.recarray containing entries
+        for each (virtual and real) frame.
+
+        Each entry consists of 3 values:
+            - container_idx: Corresponding self.videos index
+            - container_frame_idx: Frame index within the container
+            - timestamp: Recorded or virtual Pupil timestamp
+
+        container_idx entries of value -1 indicate a virtual frame.
+
+        The lookup table can be easiliy filtered for real frames:
+            lookup = lookup[lookup.container_idx > -1]
+
+        Use case:
+        Given a Pupil timestamp, one can use bisect to find the corresponding
+        lookup entry index. From there, one can lookup the corresponding
+        container, load it if necessary, and calculate the target PTS
+
+        Case 1: all video is_valid and self._fill_gaps
+            base case
+        Case 2: all video is_valid and not self._fill_gaps
+            skip to the next video, use for detection
+        Case 3: some videos is broken and self._fill_gaps
+            return gray frame for the broken video
+        Case 4: some videos is broken and not self._fill_gaps
+            skip to the next valid video, use for detection
+        """
+        loaded_ts = self._loaded_ts_sorted()
+        if self.fill_gaps:
+            loaded_ts = self._fill_gaps(loaded_ts)
+        lookup = self._setup_lookup(loaded_ts)
+        for container_idx, vid in enumerate(self.videos):
+            mask = np.isin(lookup.timestamp, vid.timestamps)
+            lookup.container_frame_idx[mask] = np.arange(vid.timestamps.size)
+            lookup.container_idx[mask] = container_idx
+            self._containers.append(vid.load_container())
+        self.lookup = lookup
+
+    def save_lookup(self):
+        np.save(self.lookup_loc, self.lookup)
+
+    def load_lookup(self):
+        self.lookup = np.load(self.lookup_loc).view(np.recarray)
+
+    def load_or_build_lookup(self):
+        try:
+            self.load_lookup()
+        except FileNotFoundError:
+            self.build_lookup()
+
+    def _loaded_ts_sorted(self) -> np.ndarray:
+        loaded_ts = [vid.timestamps for vid in self.videos]
+        all_ts = np.concatenate(loaded_ts)
+        return all_ts
+
+    def _fill_gaps(self, timestamps: np.ndarray) -> np.ndarray:
+        time_diff = np.diff(timestamps)
+        median_time_diff = np.median(time_diff)
+        gap_start_idc = np.flatnonzero(time_diff > 5 * median_time_diff)
+        gap_stop_idc = gap_start_idc + 1
+        gap_fill_starts = timestamps[gap_start_idc] + median_time_diff
+        gap_fill_stops = timestamps[gap_stop_idc]
+
+        all_ts = [timestamps]
+        for start, stop in zip(gap_fill_starts, gap_fill_stops):
+            all_ts.append(np.arange(start, stop, median_time_diff))
+
+        all_ts = np.concatenate(all_ts)
+        all_ts.sort()
+        return all_ts
+
+    def _setup_lookup(self, timestamps: np.ndarray) -> np.recarray:
+        lookup_entry = np.dtype(
+            [
+                ("container_idx", "<i8"),
+                ("container_frame_idx", "<i8"),
+                ("timestamp", "<f8"),
+            ]
+        )
+        lookup = np.empty(
+            timestamps.size, dtype=lookup_entry).view(np.recarray)
+        lookup.timestamp = timestamps
+        lookup.container_idx = -1  # virtual container by default
+        return lookup
+
+
+class RenameSet:
+    class RenameFile:
+        def __init__(self, path):
+            self.path = path
+
+        @property
+        def name(self):
+            file_name = os.path.split(self.path)[1]
+            return os.path.splitext(file_name)[0]
+
+        def rename(self, source_pattern, destination_name):
+            # source_pattern: Pupil Cam(0|1) ID0
+            # destination_name: eye0
+            if re.match(source_pattern, self.name):
+                new_path = re.sub(source_pattern, destination_name, self.path)
+                logger.info(
+                    'Renaming "{}" to "{}"'.format(
+                        self.name, os.path.split(new_path)[1]))
+                try:
+                    os.rename(self.path, new_path)
+                except FileExistsError:
+                    # Only happens on Windows. Behavior on Unix is to
+                    # overwrite the existing file.To mirror this behaviour
+                    # we need to delete the old file and try renaming the
+                    # new one again.
+                    os.remove(self.path)
+                    os.rename(self.path, new_path)
+
+        def rewrite_time(self, destination_name):
+            timestamps = np.fromfile(self.path, dtype=">f8")
+            logger.info('Creating "{}_timestamps.npy"'.format(self.name))
+            timestamp_loc = os.path.join(
+                os.path.dirname(self.path), "{}_timestamps.npy".format(self.name))
+            np.save(timestamp_loc, timestamps)
+
+    def __init__(self, rec_dir, pattern, exts=VIDEO_TIME_EXTS):
+        self.rec_dir = rec_dir
+        self.pattern = os.path.join(rec_dir, pattern)
+        self.existsting_files = self.get_existsting_files(self.pattern, exts)
+
+    def rename(self, source_pattern, destination_name):
+        for r in self.existsting_files:
+            self.RenameFile(r).rename(source_pattern, destination_name)
+
+    def rewrite_time(self, destination_name):
+        for r in self.existsting_files:
+            self.RenameFile(r).rewrite_time(destination_name)
+
+    def load_intrinsics(self):
+        def _load_intrinsics(file_name, name):
+            try:
+                video = av.open(file_name, "r")
+            except av.AVError:
+                frame_size = (480, 360)
+            else:
+                frame_size = (
+                    video.streams.video[0].format.width,
+                    video.streams.video[0].format.height,
+                )
+                del video
+            intrinsics = load_intrinsics(
+                self.rec_dir, name, frame_size)
+            intrinsics.save(self.rec_dir, "world")
+
+        for fn in self.existsting_files:
+            if fnmatch.fnmatch(fn, "*Pupil Cam1 ID2*"):
+                _load_intrinsics(fn, 'Pupil Cam1 ID2')
+            elif fnmatch.fnmatch(fn, "*Logitech Webcam C930e*"):
+                _load_intrinsics(fn, 'Logitech Webcam C930e')
+
+    def get_existsting_files(self, pattern, exts):
+        existsting_files = []
+        for loc in glob.glob(pattern):
+            file_name = os.path.split(loc)[1]
+            name = os.path.splitext(file_name)[0]
+            potential_locs = [
+                os.path.join(self.rec_dir, name + "." + ext) for ext in exts]
+            existsting_files.extend(
+                [loc for loc in potential_locs if os.path.exists(loc)])
+        return existsting_files

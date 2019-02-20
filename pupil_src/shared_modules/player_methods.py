@@ -22,8 +22,8 @@ from scipy.interpolate import interp1d
 import csv_utils
 import cv2
 import file_methods as fm
-from camera_models import load_intrinsics
 from version_utils import VersionFormat, read_rec_version
+from video_capture.utils import RenameSet
 
 logger = logging.getLogger(__name__)
 
@@ -252,10 +252,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v093_to_v094(rec_dir)
     if rec_version < VersionFormat("0.9.13"):
         update_recording_v094_to_v0913(rec_dir)
-    if rec_version < VersionFormat("0.9.15"):
-        update_recording_v0913_to_v0915(rec_dir)
     if rec_version < VersionFormat("1.3"):
-        update_recording_v0915_v13(rec_dir)
+        update_recording_v0913_to_v13(rec_dir)
     if rec_version < VersionFormat("1.4"):
         update_recording_v13_v14(rec_dir)
 
@@ -295,65 +293,15 @@ def _update_info_version_to(new_version, rec_dir):
 def convert_pupil_mobile_recording_to_v094(rec_dir):
     logger.info("Converting Pupil Mobile recording to v0.9.4 format")
     # convert time files and rename corresponding videos
-    time_pattern = os.path.join(rec_dir, "*.time")
-    for time_loc in glob.glob(time_pattern):
-        time_file_name = os.path.split(time_loc)[1]
-        time_name = os.path.splitext(time_file_name)[0]
-
-        potential_locs = [
-            os.path.join(rec_dir, time_name + ext) for ext in (".mjpeg", ".mp4", ".m4a")
-        ]
-        existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
-        if not existing_locs:
-            continue
-        else:
-            media_loc = existing_locs[0]
-
-        if time_name in (
-            "Pupil Cam1 ID0",
-            "Pupil Cam1 ID1",
-            "Pupil Cam2 ID0",
-            "Pupil Cam2 ID1",
-        ):
-            time_name = "eye" + time_name[-1]  # rename eye files
-        elif time_name in ("Pupil Cam1 ID2", "Logitech Webcam C930e"):
-            video = av.open(media_loc, "r")
-            frame_size = (
-                video.streams.video[0].format.width,
-                video.streams.video[0].format.height,
-            )
-            del video
-            intrinsics = load_intrinsics(rec_dir, time_name, frame_size)
-            intrinsics.save(rec_dir, "world")
-
-            time_name = "world"  # assume world file
-        elif time_name.startswith("audio_"):
-            time_name = "audio"
-
-        timestamps = np.fromfile(time_loc, dtype=">f8")
-        timestamp_loc = os.path.join(rec_dir, "{}_timestamps.npy".format(time_name))
-        logger.info('Creating "{}"'.format(os.path.split(timestamp_loc)[1]))
-        np.save(timestamp_loc, timestamps)
-
-        if time_name == "audio":
-            media_dst = os.path.join(rec_dir, time_name) + ".mp4"
-        else:
-            media_dst = (
-                os.path.join(rec_dir, time_name) + os.path.splitext(media_loc)[1]
-            )
-        logger.info(
-            'Renaming "{}" to "{}"'.format(
-                os.path.split(media_loc)[1], os.path.split(media_dst)[1]
-            )
-        )
-        try:
-            os.rename(media_loc, media_dst)
-        except FileExistsError:
-            # Only happens on Windows. Behavior on Unix is to overwrite the existing file.
-            # To mirror this behaviour we need to delete the old file and try renaming the new one again.
-            os.remove(media_dst)
-            os.rename(media_loc, media_dst)
-
+    match_pattern = "*.time"
+    rename_set = RenameSet(rec_dir, match_pattern)
+    rename_set.load_intrinsics()
+    rename_set.rename("Pupil Cam([0-2]) ID0", "eye0")
+    rename_set.rename("Pupil Cam([0-2]) ID1", "eye1")
+    rename_set.rename("Pupil Cam([0-2]) ID2", "world")
+    # Rewrite .time file to .npy file
+    rewrite_time = RenameSet(rec_dir, match_pattern, ["time"])
+    rewrite_time.rewrite_time("_timestamps.npy")
     pupil_data_loc = os.path.join(rec_dir, "pupil_data")
     if not os.path.exists(pupil_data_loc):
         logger.info('Creating "pupil_data"')
@@ -533,8 +481,8 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
             raise  # re-raise exception
 
 
-def update_recording_v0913_to_v0915(rec_dir):
-    logger.info("Updating recording from v0.9.13 to v0.9.15")
+def update_recording_v0913_to_v13(rec_dir):
+    logger.info("Updating recording from v0.9.13 to v1.3")
 
     # add notifications entry to pupil_data if missing
     pupil_data_loc = os.path.join(rec_dir, "pupil_data")
@@ -557,44 +505,6 @@ def update_recording_v0913_to_v0915(rec_dir):
         os.rename(old_calib_loc, old_calib_loc + ".deprecated")
     except IOError:
         pass
-
-    _update_info_version_to("v0.9.15", rec_dir)
-
-
-def update_recording_v0915_v13(rec_dir):
-    logger.info("Updating recording from v0.9.15 to v1.3")
-    # Look for unconverted Pupil Cam2 videos
-    time_pattern = os.path.join(rec_dir, "*.time")
-    for time_loc in glob.glob(time_pattern):
-        time_file_name = os.path.split(time_loc)[1]
-        time_name = os.path.splitext(time_file_name)[0]
-
-        potential_locs = [
-            os.path.join(rec_dir, time_name + ext) for ext in (".mjpeg", ".mp4", ".m4a")
-        ]
-        existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
-        if not existing_locs:
-            continue
-        else:
-            video_loc = existing_locs[0]
-
-        if time_name in ("Pupil Cam2 ID0", "Pupil Cam2 ID1"):
-            time_name = "eye" + time_name[-1]  # rename eye files
-        else:
-            continue
-
-        timestamps = np.fromfile(time_loc, dtype=">f8")
-        timestamp_loc = os.path.join(rec_dir, "{}_timestamps.npy".format(time_name))
-        logger.info('Creating "{}"'.format(os.path.split(timestamp_loc)[1]))
-        np.save(timestamp_loc, timestamps)
-
-        video_dst = os.path.join(rec_dir, time_name) + os.path.splitext(video_loc)[1]
-        logger.info(
-            'Renaming "{}" to "{}"'.format(
-                os.path.split(video_loc)[1], os.path.split(video_dst)[1]
-            )
-        )
-        os.rename(video_loc, video_dst)
 
     _update_info_version_to("v1.3", rec_dir)
 
@@ -664,13 +574,22 @@ def update_recording_v18_v19(rec_dir):
 def check_for_worldless_recording(rec_dir):
     logger.info("Checking for world-less recording")
     valid_ext = (".mp4", ".mkv", ".avi", ".h264", ".mjpeg")
-    existing_videos = [
-        f
-        for f in glob.glob(os.path.join(rec_dir, "world.*"))
-        if os.path.splitext(f)[1] in valid_ext
-    ]
 
-    if not existing_videos:
+    world_video_exists = any(
+        (
+            os.path.splitext(f)[1] in valid_ext
+            for f in glob.glob(os.path.join(rec_dir, "world.*"))
+        )
+    )
+
+    if not world_video_exists:
+        fake_world_version = 0
+        fake_world_path = os.path.join(rec_dir, "world.fake")
+        if os.path.exists(fake_world_path):
+            fake_world = fm.load_object(fake_world_path)
+            if fake_world["version"] == fake_world_version:
+                return
+
         min_ts = np.inf
         max_ts = -np.inf
         for f in glob.glob(os.path.join(rec_dir, "eye*_timestamps.npy")):
@@ -690,9 +609,13 @@ def check_for_worldless_recording(rec_dir):
 
         frame_rate = 30
         timestamps = np.arange(min_ts, max_ts, 1 / frame_rate)
-        np.save(os.path.join(rec_dir, "world_timestamps"), timestamps)
+        np.save(os.path.join(rec_dir, "world_timestamps.npy"), timestamps)
         fm.save_object(
-            {"frame_rate": frame_rate, "frame_size": (1280, 720), "version": 0},
+            {
+                "frame_rate": frame_rate,
+                "frame_size": (1280, 720),
+                "version": fake_world_version,
+            },
             os.path.join(rec_dir, "world.fake"),
         )
 

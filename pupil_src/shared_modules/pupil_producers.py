@@ -25,10 +25,10 @@ import data_changed
 import file_methods as fm
 import gl_utils
 import player_methods as pm
-import pupil_detectors  # trigger module compilation
 import zmq_tools
 from observable import Observable
 from plugin import Producer_Plugin_Base
+from video_capture.utils import VideoSet
 
 logger = logging.getLogger(__name__)
 
@@ -314,23 +314,23 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             for ext in (".mjpeg", ".mp4", ".mkv")
         ]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
-        timestamps_path = os.path.join(
-            self.g_pool.rec_dir, "eye{}_timestamps.npy".format(eye_id)
-        )
-
         if not existing_locs:
             logger.error("no eye video for eye '{}' found.".format(eye_id))
             self.detection_status[eye_id] = "No eye video found."
             return
-        if not os.path.exists(timestamps_path):
+        rec, file_ = os.path.split(existing_locs[0])
+        set_name = os.path.splitext(file_)[0]
+        self.videoset = VideoSet(rec, set_name, fill_gaps=False)
+        self.videoset.load_or_build_lookup()
+        timestamp_len = (self.videoset.lookup.container_idx > -1).sum()
+        if not timestamp_len:
             logger.error(
                 "no timestamps for eye video for eye '{}' found.".format(eye_id)
             )
             self.detection_status[eye_id] = "No eye video found."
             return
-
         video_loc = existing_locs[0]
-        self.eye_frame_num[eye_id] = len(np.load(timestamps_path))
+        self.eye_frame_num[eye_id] = timestamp_len
 
         capure_settings = "File_Source", {"source_path": video_loc, "timing": None}
         self.notify_all(
