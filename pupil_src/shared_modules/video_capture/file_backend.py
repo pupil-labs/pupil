@@ -121,6 +121,9 @@ class Decoder(ABC):
             int(self.video_stream.format.height),
         )
 
+    def cleanup(self):
+        pass
+
 
 class BufferedDecoder(Decoder):
     def __init__(self, container, video_stream):
@@ -139,6 +142,9 @@ class BufferedDecoder(Decoder):
 
     def next_frame(self):
         return self.buffered_decoder.get_frame()
+
+    def cleanup(self):
+        self.buffered_decoder.stop_buffer_thread()
 
 
 class OnDemandDecoder(Decoder):
@@ -220,6 +226,10 @@ class File_Source(Playback_Source, Base_Source):
         return rec, set_name
 
     def setup_video(self, container_index):
+        try:
+            self.video_stream.cleanup()
+        except AttributeError:
+            pass
         self.current_container_index = container_index
         self.container = self.videoset.containers[container_index]
         self.video_stream, self.audio_stream = self._get_streams(
@@ -531,7 +541,7 @@ class File_Source(Playback_Source, Base_Source):
 
     def cleanup(self):
         try:
-            self.video_stream.buffered_decoder.stop_buffer_thread()
+            self.video_stream.cleanup()
         except AttributeError:
             pass
         super().cleanup()
