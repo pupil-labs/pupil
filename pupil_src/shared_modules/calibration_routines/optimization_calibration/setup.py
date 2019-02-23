@@ -40,46 +40,30 @@ for dirpath, dirnames, filenames in os.walk("."):
     for filename in [f for f in filenames if f.endswith(".h")]:
         dependencies.append(os.path.join(dirpath, filename))
 
-shared_cpp_include_path = "../../../shared_cpp/include"
-singleeyefitter_include_path = "../../pupil_detectors/singleeyefitter"
+# opencv3 - highgui module has been split into parts: imgcodecs, videoio, and highgui itself
+opencv_libraries = [
+    "opencv_core",
+    "opencv_highgui",
+    "opencv_videoio",
+    "opencv_imgcodecs",
+    "opencv_imgproc",
+    "opencv_video",
+]
 
 if platform.system() == "Windows":
+    import os
+    usr_local = os.path.join(os.environ['CONDA_PREFIX'], 'Library')
+    include_dirs = [os.path.join(usr_local, 'include'),
+                    os.path.join(usr_local, 'include', 'eigen3')]
+    lib_dir = os.path.join(usr_local, 'lib')
+    library_dirs = [lib_dir]
     libs = []
-    library_dirs = ["C:\\work\\boost\\stage\\lib"]
-    lib_spec = [
-        [np.get_include(), ""],
-        [
-            "C:\\work\\opencv\\build\\include",
-            "C:\\work\\opencv\\build\\x64\\vc14\\lib\\opencv_world320.lib",
-        ],
-        ["C:\\work\\ceres-windows\\Eigen", ""],
-        [
-            "C:\\work\\ceres-windows\\ceres-solver\\include",
-            "C:\\work\\ceres-windows\\x64\\Release\\ceres_static.lib",
-        ],
-        [
-            "C:\\work\\ceres-windows\\glog\\src\\windows",
-            "C:\\work\\ceres-windows\\x64\\Release\\libglog_static.lib",
-        ],
-        ["C:\\work\\ceres-windows", ""],
-        ["C:\\work\\boost", ""],
-    ]
-
-    include_dirs = [spec[0] for spec in lib_spec]
-    include_dirs.append(shared_cpp_include_path)
-    include_dirs.append(singleeyefitter_include_path)
-    xtra_obj = [spec[1] for spec in lib_spec]
+    opencv_match = [_ for _ in os.listdir(lib_dir) if _.startswith('opencv_core')][0]
+    opencv_term = opencv_match[11:]
+    xtra_obj = [os.path.join(lib_dir, _ + opencv_term) for _ in opencv_libraries]
+    xtra_obj.extend([os.path.join(lib_dir, 'ceres_static.lib'), os.path.join(lib_dir, 'libglog_static.lib')])
 
 else:
-    # opencv3 - highgui module has been split into parts: imgcodecs, videoio, and highgui itself
-    opencv_libraries = [
-        "opencv_core",
-        "opencv_highgui",
-        "opencv_videoio",
-        "opencv_imgcodecs",
-        "opencv_imgproc",
-        "opencv_video",
-    ]
     opencv_library_dir = "/usr/local/opt/opencv/lib"
     opencv_include_dir = "/usr/local/opt/opencv/include"
     if not os.path.isfile(opencv_library_dir + "/libopencv_core.so"):
@@ -94,11 +78,8 @@ else:
                 opencv_libraries = [lib + "3" for lib in opencv_libraries]
                 break
     include_dirs = [
-        np.get_include(),
         "/usr/local/include/eigen3",
         "/usr/include/eigen3",
-        shared_cpp_include_path,
-        singleeyefitter_include_path,
         opencv_include_dir,
     ]
     python_version = sys.version_info
@@ -110,6 +91,12 @@ else:
     libs = ["ceres", boost_lib] + opencv_libraries
     xtra_obj = []
     library_dirs = [opencv_library_dir]
+
+include_dirs.extend([
+    "../../../shared_cpp/include",
+    "../../pupil_detectors/singleeyefitter",
+    np.get_include()
+])
 
 extensions = [
     Extension(
