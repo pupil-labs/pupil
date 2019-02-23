@@ -39,47 +39,53 @@ for dirpath, dirnames, filenames in os.walk("singleeyefitter"):
     for filename in [f for f in filenames if f.endswith(".h")]:
         dependencies.append(os.path.join(dirpath, filename))
 
-shared_cpp_include_path = "../../shared_cpp/include"
-singleeyefitter_include_path = "singleeyefitter/"
+root_dir = ''
+include_dirs = [os.path.join(root_dir, '..', '..', 'shared_cpp', 'include'),
+                os.path.join(root_dir, 'singleeyefitter'),
+                np.get_include()]
 
+# opencv3 - highgui module has been split into parts: imgcodecs, videoio, and highgui itself
+opencv_libraries = [
+    "opencv_core",
+    "opencv_highgui",
+    "opencv_videoio",
+    "opencv_imgcodecs",
+    "opencv_imgproc",
+    "opencv_video",
+]
 
 if platform.system() == "Windows":
-    libs = []
-    library_dirs = ["C:\\work\\boost\\stage\\lib"]
-    lib_spec = [
-        [np.get_include(), ""],
-        [
-            "C:\\work\\opencv\\build\\include",
-            "C:\\work\\opencv\\build\\x64\\vc14\\lib\\opencv_world320.lib",
-        ],
-        ["C:\\work\\ceres-windows\\Eigen", ""],
-        [
-            "C:\\work\\ceres-windows\\ceres-solver\\include",
-            "C:\\work\\ceres-windows\\x64\\Release\\ceres_static.lib",
-        ],
-        [
-            "C:\\work\\ceres-windows\\glog\\src\\windows",
-            "C:\\work\\ceres-windows\\x64\\Release\\libglog_static.lib",
-        ],
-        ["C:\\work\\ceres-windows", ""],
-        ["C:\\work\\boost", ""],
-    ]
+    # Find the path where dependencies are installed.
+    usr_local = None
+    if 'VCPKG_PREFIX' in os.environ:
+        usr_local = os.environ['VCPKG_PREFIX']
+    elif 'CONDA_PREFIX' in os.environ:
+        usr_local = os.path.join(os.environ['CONDA_PREFIX'], 'Library')
+    else:
+        test_paths = os.environ['PYTHONPATH']
+        for t_p in test_paths.split(';'):
+            if any([_.startswith('opencv_core') for _ in os.listdir(t_p)]):
+                usr_local = os.path.dirname(t_p)
+                break
+    if usr_local is None:
+        raise EnvironmentError("Could not find library directory."
+                               "Set environment variable for VCPKG_PREFIX or use conda.")
 
-    include_dirs = [spec[0] for spec in lib_spec]
-    include_dirs.append(shared_cpp_include_path)
-    include_dirs.append(singleeyefitter_include_path)
-    xtra_obj2d = [spec[1] for spec in lib_spec]
+    usr_local = os.path.abspath(usr_local)
+    include_dirs.append(os.path.join(usr_local, 'include'))
+    lib_dir = os.path.join(usr_local, 'lib')
+    library_dirs = [lib_dir]
+    libs = []
+    # Get a list of OpenCV libraries.
+    opencv_match = [_ for _ in os.listdir(lib_dir) if _.startswith('opencv_core')][0]
+    opencv_term = opencv_match[11:]
+    opencv_libs = [_ + opencv_term for _ in opencv_libraries]
+    # Get a list of required boost libraries (only boost_python?)
+    boost_libs = [_ for _ in os.listdir(lib_dir) if _.startswith('boost_python')]
+    # Collect list of required libraries.
+    xtra_obj2d = opencv_libs + boost_libs + ['ceres.lib', 'glog.lib']
 
 else:
-    # opencv3 - highgui module has been split into parts: imgcodecs, videoio, and highgui itself
-    opencv_libraries = [
-        "opencv_core",
-        "opencv_highgui",
-        "opencv_videoio",
-        "opencv_imgcodecs",
-        "opencv_imgproc",
-        "opencv_video",
-    ]
     opencv_library_dir = "/usr/local/opt/opencv/lib"
     opencv_include_dir = "/usr/local/opt/opencv/include"
     if not os.path.isfile(opencv_library_dir + "/libopencv_core.so"):
@@ -93,14 +99,11 @@ else:
                 )
                 opencv_libraries = [lib + "3" for lib in opencv_libraries]
                 break
-    include_dirs = [
-        np.get_include(),
+    include_dirs.extend([
         "/usr/local/include/eigen3",
         "/usr/include/eigen3",
-        shared_cpp_include_path,
-        singleeyefitter_include_path,
         opencv_include_dir,
-    ]
+    ])
     python_version = sys.version_info
     if platform.system() == "Linux":
         # boost_python-py34
@@ -110,6 +113,7 @@ else:
     libs = ["ceres", boost_lib] + opencv_libraries
     xtra_obj2d = []
     library_dirs = [opencv_library_dir]
+
 
 extensions = [
     Extension(
