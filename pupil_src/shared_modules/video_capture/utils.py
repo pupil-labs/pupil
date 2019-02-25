@@ -62,8 +62,7 @@ class Exposure_Time(object):
             elif self.mode == "auto":
                 image_block = cv2.resize(frame.gray, dsize=self.AE_Win.shape)
                 YTotal = max(
-                    np.multiply(self.AE_Win, image_block).sum() /
-                    self.AE_Win.sum(), 1
+                    np.multiply(self.AE_Win, image_block).sum() / self.AE_Win.sum(), 1
                 )
 
                 if YTotal < self.targetY_thres[0]:
@@ -120,8 +119,8 @@ class Check_Frame_Stripes(object):
             elif res is False:
                 if self.check_freq < self.check_freq_upperbound:
                     self.check_freq = min(
-                        self.check_freq * self.factor_mul,
-                        self.check_freq_upperbound)
+                        self.check_freq * self.factor_mul, self.check_freq_upperbound
+                    )
 
         return False
 
@@ -129,12 +128,10 @@ class Check_Frame_Stripes(object):
         num_local_optimum = [0, 0]
         if self.row_index is None:
             self.row_index = np.linspace(
-                8, frame_gray.shape[0] - 8,
-                num=self.len_row_index, dtype=np.int
+                8, frame_gray.shape[0] - 8, num=self.len_row_index, dtype=np.int
             )
             self.col_index = np.linspace(
-                8, frame_gray.shape[1] - 8,
-                num=self.len_col_index, dtype=np.int
+                8, frame_gray.shape[1] - 8, num=self.len_col_index, dtype=np.int
             )
         for n in [0, 1]:
             if n == 0:
@@ -337,8 +334,7 @@ class VideoSet:
                 ("timestamp", "<f8"),
             ]
         )
-        lookup = np.empty(
-            timestamps.size, dtype=lookup_entry).view(np.recarray)
+        lookup = np.empty(timestamps.size, dtype=lookup_entry).view(np.recarray)
         lookup.timestamp = timestamps
         lookup.container_idx = -1  # virtual container by default
         return lookup
@@ -361,7 +357,9 @@ class RenameSet:
                 new_path = re.sub(source_pattern, destination_name, self.path)
                 logger.info(
                     'Renaming "{}" to "{}"'.format(
-                        self.name, os.path.split(new_path)[1]))
+                        self.name, os.path.split(new_path)[1]
+                    )
+                )
                 try:
                     os.rename(self.path, new_path)
                 except FileExistsError:
@@ -376,7 +374,8 @@ class RenameSet:
             timestamps = np.fromfile(self.path, dtype=">f8")
             logger.info('Creating "{}_timestamps.npy"'.format(self.name))
             timestamp_loc = os.path.join(
-                os.path.dirname(self.path), "{}_timestamps.npy".format(self.name))
+                os.path.dirname(self.path), "{}_timestamps.npy".format(self.name)
+            )
             np.save(timestamp_loc, timestamps)
 
     def __init__(self, rec_dir, pattern, exts=VIDEO_TIME_EXTS):
@@ -404,15 +403,14 @@ class RenameSet:
                     video.streams.video[0].format.height,
                 )
                 del video
-            intrinsics = load_intrinsics(
-                self.rec_dir, name, frame_size)
+            intrinsics = load_intrinsics(self.rec_dir, name, frame_size)
             intrinsics.save(self.rec_dir, "world")
 
         for fn in self.existsting_files:
             if fnmatch.fnmatch(fn, "*Pupil Cam1 ID2*"):
-                _load_intrinsics(fn, 'Pupil Cam1 ID2')
+                _load_intrinsics(fn, "Pupil Cam1 ID2")
             elif fnmatch.fnmatch(fn, "*Logitech Webcam C930e*"):
-                _load_intrinsics(fn, 'Logitech Webcam C930e')
+                _load_intrinsics(fn, "Logitech Webcam C930e")
 
     def get_existsting_files(self, pattern, exts):
         existsting_files = []
@@ -420,7 +418,9 @@ class RenameSet:
             file_name = os.path.split(loc)[1]
             name = os.path.splitext(file_name)[0]
             potential_locs = [
-                os.path.join(self.rec_dir, name + "." + ext) for ext in exts]
+                os.path.join(self.rec_dir, name + "." + ext) for ext in exts
+            ]
             existsting_files.extend(
-                [loc for loc in potential_locs if os.path.exists(loc)])
+                [loc for loc in potential_locs if os.path.exists(loc)]
+            )
         return existsting_files
