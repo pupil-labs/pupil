@@ -320,10 +320,10 @@ class VideoSet:
     def _fill_gaps(self, timestamps: np.ndarray) -> np.ndarray:
         time_diff = np.diff(timestamps)
         median_time_diff = np.median(time_diff)
-        gap_start_idc = np.flatnonzero(time_diff > 5 * median_time_diff)
+        gap_start_idc = np.flatnonzero(time_diff > 4 * median_time_diff)
         gap_stop_idc = gap_start_idc + 1
         gap_fill_starts = timestamps[gap_start_idc] + median_time_diff
-        gap_fill_stops = timestamps[gap_stop_idc]
+        gap_fill_stops = timestamps[gap_stop_idc] - median_time_diff
 
         all_ts = [timestamps]
         for start, stop in zip(gap_fill_starts, gap_fill_stops):
