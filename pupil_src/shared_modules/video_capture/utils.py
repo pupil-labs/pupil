@@ -227,7 +227,7 @@ class VideoSet:
         self.fill_gaps = fill_gaps
         self.video_exts = VIDEO_EXTS
         self._videos = None
-        self._containers = []
+        self._containers = None
 
     @property
     def videos(self) -> Sequence[Video]:
@@ -237,6 +237,8 @@ class VideoSet:
 
     @property
     def containers(self) -> Sequence[Video]:
+        if self._containers is None:
+            self._containers = [vid.load_container() for vid in self.videos]
         return self._containers
 
     @property
@@ -249,9 +251,9 @@ class VideoSet:
         yield from (
             Video(loc)
             for ext in self.video_exts
-            for loc in glob.iglob(
-                os.path.join(self.rec, f"{self.name}*.{ext}"))
-            if (self.fill_gaps or Video(loc).is_valid))
+            for loc in glob.iglob(os.path.join(self.rec, f"{self.name}*.{ext}"))
+            if (self.fill_gaps or Video(loc).is_valid)
+        )
 
     def build_lookup(self):
         """
@@ -283,14 +285,12 @@ class VideoSet:
             skip to the next valid video, use for detection
         """
         loaded_ts = self._loaded_ts_sorted()
-        if self.fill_gaps:
-            loaded_ts = self._fill_gaps(loaded_ts)
+        loaded_ts = self._fill_gaps(loaded_ts)
         lookup = self._setup_lookup(loaded_ts)
         for container_idx, vid in enumerate(self.videos):
             mask = np.isin(lookup.timestamp, vid.timestamps)
             lookup.container_frame_idx[mask] = np.arange(vid.timestamps.size)
             lookup.container_idx[mask] = container_idx
-            self._containers.append(vid.load_container())
         self.lookup = lookup
 
     def save_lookup(self):
@@ -304,11 +304,18 @@ class VideoSet:
             self.load_lookup()
         except FileNotFoundError:
             self.build_lookup()
+            self.save_lookup()
+        if not self.fill_gaps:
+            self._remove_filled_gaps()
 
     def _loaded_ts_sorted(self) -> np.ndarray:
         loaded_ts = [vid.timestamps for vid in self.videos]
         all_ts = np.concatenate(loaded_ts)
         return all_ts
+
+    def _remove_filled_gaps(self):
+        cont_idc = self.lookup.container_idx
+        self.lookup = self.lookup[cont_idc > -1]
 
     def _fill_gaps(self, timestamps: np.ndarray) -> np.ndarray:
         time_diff = np.diff(timestamps)
