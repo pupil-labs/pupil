@@ -386,8 +386,11 @@ class File_Source(Playback_Source, Base_Source):
                 break
             elif index < self.target_frame_idx:
                 pass
-        self.target_frame_idx = index + 1
-        self.current_frame_idx = index
+        try:
+            self.target_frame_idx = index + 1
+            self.current_frame_idx = index
+        except UnboundLocalError:
+            raise EndofVideoError
         return Frame(target_entry.timestamp, av_frame, index=index)
 
     def _get_fake_frame_and_advance(self, ts):
