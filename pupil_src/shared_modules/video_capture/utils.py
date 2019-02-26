@@ -226,19 +226,15 @@ class VideoSet:
         self.name = name
         self.fill_gaps = fill_gaps
         self.video_exts = VIDEO_EXTS
-        self._videos = None
-        self._containers = None
+        self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
+        self._containers = [vid.load_container() for vid in self.videos]
 
     @property
     def videos(self) -> Sequence[Video]:
-        if self._videos is None:
-            self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
         return self._videos
 
     @property
     def containers(self) -> Sequence[Video]:
-        if self._containers is None:
-            self._containers = [vid.load_container() for vid in self.videos]
         return self._containers
 
     @property
