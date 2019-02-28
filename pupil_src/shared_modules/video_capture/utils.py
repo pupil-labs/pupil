@@ -23,7 +23,7 @@ from camera_models import load_intrinsics
 
 logger = logging.getLogger(__name__)
 
-VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi")
+VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi", "fake")
 VIDEO_TIME_EXTS = VIDEO_EXTS + ("time",)
 
 

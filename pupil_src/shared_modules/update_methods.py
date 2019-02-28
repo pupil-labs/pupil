@@ -414,7 +414,7 @@ def check_for_worldless_recording(rec_dir):
     )
 
     if not world_video_exists:
-        fake_world_version = 0
+        fake_world_version = 1
         fake_world_path = os.path.join(rec_dir, "world.fake")
         if os.path.exists(fake_world_path):
             fake_world = fm.load_object(fake_world_path)
@@ -456,8 +456,7 @@ def check_for_worldless_recording(rec_dir):
                 ("timestamp", "<f8"),
             ]
         )
-        lookup = np.empty(
-            timestamps.size, dtype=lookup_entry).view(np.recarray)
+        lookup = np.empty(timestamps.size, dtype=lookup_entry).view(np.recarray)
         lookup.timestamp = timestamps
         lookup.container_idx = -1
         np.save(os.path.join(rec_dir, "world_lookup.npy"), lookup)

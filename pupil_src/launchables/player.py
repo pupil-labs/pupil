@@ -78,7 +78,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         import gl_utils
 
         # capture
-        from video_capture import init_playback_source
+        from video_capture import File_Source
 
         # helpers/utils
         from version_utils import VersionFormat
