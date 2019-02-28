@@ -28,9 +28,10 @@ settings/
 *.npy
 *.png
 *.log
-
+*.pyd
 
 # IDE generated files #
+.idea
 .floo
 .flooignore
 *.sublime-project
