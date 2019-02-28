@@ -23,7 +23,7 @@ from camera_models import load_intrinsics
 
 logger = logging.getLogger(__name__)
 
-VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi")
+VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi", "fake")
 VIDEO_TIME_EXTS = VIDEO_EXTS + ("time",)
 
 
@@ -193,7 +193,7 @@ class Video:
             self.cont = cont
             return True
 
-    def load_container(self):
+    def load_valid_container(self):
         if self.is_valid:
             return self.cont
 
@@ -226,19 +226,15 @@ class VideoSet:
         self.name = name
         self.fill_gaps = fill_gaps
         self.video_exts = VIDEO_EXTS
-        self._videos = None
-        self._containers = None
+        self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
+        self._containers = [vid.load_valid_container() for vid in self.videos]
 
     @property
     def videos(self) -> Sequence[Video]:
-        if self._videos is None:
-            self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
         return self._videos
 
     @property
     def containers(self) -> Sequence[Video]:
-        if self._containers is None:
-            self._containers = [vid.load_container() for vid in self.videos]
         return self._containers
 
     @property
@@ -275,14 +271,18 @@ class VideoSet:
         lookup entry index. From there, one can lookup the corresponding
         container, load it if necessary, and calculate the target PTS
 
-        Case 1: all video is_valid and self._fill_gaps
+        Case 1: all videos are valid and self._fill_gaps is True
             base case
-        Case 2: all video is_valid and not self._fill_gaps
+        Case 2: all videos are valid and self._fill_gaps is False
             skip to the next video, use for detection
-        Case 3: some videos is broken and self._fill_gaps
+        Case 3: some videos are broken and self._fill_gaps is True
             return gray frame for the broken video
-        Case 4: some videos is broken and not self._fill_gaps
+        Case 4: some videos are broken and self._fill_gaps is False
             skip to the next valid video, use for detection
+        Case 5: all videos are broken and self._fill_gaps is True
+            return gray frame for the broken video
+        Case 6: all videos are broken and self._fill_gaps is False
+            return
         """
         loaded_ts = self._loaded_ts_sorted()
         loaded_ts = self._fill_gaps(loaded_ts)
@@ -290,7 +290,8 @@ class VideoSet:
         for container_idx, vid in enumerate(self.videos):
             mask = np.isin(lookup.timestamp, vid.timestamps)
             lookup.container_frame_idx[mask] = np.arange(vid.timestamps.size)
-            lookup.container_idx[mask] = container_idx
+            if vid.is_valid:
+                lookup.container_idx[mask] = container_idx
         self.lookup = lookup
 
     def save_lookup(self):

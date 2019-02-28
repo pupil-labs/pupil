@@ -75,6 +75,17 @@ class Frame(object):
         return self._gray
 
 
+class BrokenStream:
+    def __init__(self):
+        self.frame_size = (720, 1280)
+
+    def seek(self, position):
+        pass
+
+    def next_frame(self):
+        pass
+
+
 class FakeFrame:
     """
     Show FakeFrame when the video is broken or there is
@@ -205,7 +216,17 @@ class File_Source(Playback_Source, Base_Source):
         self.target_frame_idx = 0
         self.current_frame_idx = 0
         self.buffering = buffered_decoding
-        self.setup_video(self.current_container_index)  # load first split
+        # First video file is valid
+        if self.videoset.containers[self.current_container_index]:
+            self.setup_video(self.current_container_index)  # load first split
+        else:
+            self.video_stream = BrokenStream()
+            self.next_frame = self.video_stream.next_frame()
+            self.pts_rate = 48000
+            self.shape = (720, 1280, 3)
+            self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
+                self.timestamps
+            )
         self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
 
     def check_source_path(self, source_path):
@@ -386,8 +407,11 @@ class File_Source(Playback_Source, Base_Source):
                 break
             elif index < self.target_frame_idx:
                 pass
-        self.target_frame_idx = index + 1
-        self.current_frame_idx = index
+        try:
+            self.target_frame_idx = index + 1
+            self.current_frame_idx = index
+        except UnboundLocalError:
+            raise EndofVideoError
         return Frame(target_entry.timestamp, av_frame, index=index)
 
     def _get_fake_frame_and_advance(self, ts):

@@ -8,6 +8,8 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
+
 class Global_Container(object):
     pass
 
@@ -24,14 +26,13 @@ def fill_cache(
 
     logger = logging.getLogger(__name__ + " with pid: " + str(os.getpid()))
     logger.debug("Started cacher process for Marker Detector")
-    from video_capture import init_playback_source, EndofVideoError, FileSeekError
+    from video_capture import File_Source, EndofVideoError, FileSeekError
     from square_marker_detect import detect_markers_robust
 
     aperture = 9
     markers = []
-    cap = init_playback_source(
-        Global_Container(), source_path=video_file_path,
-        timing=None, fill_gaps=True
+    cap = File_Source(
+        Global_Container(), source_path=video_file_path, timing=None, fill_gaps=True
     )
 
     def next_unvisited_idx(frame_idx):
@@ -99,6 +100,7 @@ def fill_cache(
         q.put(
             (frame.index, markers[:])
         )  # object passed will only be pickeled when collected from other process! need to make a copy ot avoid overwrite!!!
+
     while run.value:
         next_frame = cap.get_frame_index()
         if seek_idx.value != -1:

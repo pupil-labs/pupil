@@ -115,7 +115,7 @@ def _export_world_video(
 
     # Plug-ins
     from plugin import Plugin_List, import_runtime_plugins
-    from video_capture import EndofVideoError, init_playback_source
+    from video_capture import EndofVideoError, File_Source
     from vis_circle import Vis_Circle
     from vis_cross import Vis_Cross
     from vis_eye_video_overlay import Vis_Eye_Video_Overlay
@@ -170,10 +170,7 @@ def _export_world_video(
             )
         except StopIteration:
             raise FileNotFoundError("No Video world found")
-        cap = init_playback_source(
-            g_pool, source_path=video_path,
-            fill_gaps=True,
-            timing=None)
+        cap = File_Source(g_pool, source_path=video_path, fill_gaps=True, timing=None)
 
         timestamps = cap.timestamps
 
