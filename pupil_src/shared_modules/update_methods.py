@@ -421,24 +421,29 @@ def check_for_worldless_recording(rec_dir):
             if fake_world["version"] == fake_world_version:
                 return
 
+        logger.warning("No world video found. Constructing an artificial replacement.")
+        eye_ts_files = glob.glob(os.path.join(rec_dir, "eye*_timestamps.npy"))
+
         min_ts = np.inf
         max_ts = -np.inf
-        for f in glob.glob(os.path.join(rec_dir, "eye*_timestamps.npy")):
+        for f in eye_ts_files:
             try:
                 eye_ts = np.load(f)
                 assert len(eye_ts.shape) == 1
                 assert eye_ts.shape[0] > 1
                 min_ts = min(min_ts, eye_ts[0])
                 max_ts = max(max_ts, eye_ts[-1])
-            except FileNotFoundError:
-                error_msg = "Eye timestamps is missing. This is an invalid recording."
             except AssertionError:
-                error_msg = "Could not generate world timestamps from eye timestamps. This is an invalid recording."
-            else:
-                error_msg = "Unknown problem"
-        assert -np.inf < min_ts < max_ts < np.inf, error_msg
-
-        logger.warning("No world video found. Constructing an artificial replacement.")
+                logger.debug(
+                    (
+                        "Ignoring {} since it does not conform with the expected format"
+                        " (one-dimensional list with at least two entries)".format(f)
+                    )
+                )
+        assert -np.inf < min_ts < max_ts < np.inf, (
+            "This recording is invalid because it does not contain any valid eye timestamp"
+            " files from which artifical world timestamps could be generated from."
+        )
 
         frame_rate = 30
         timestamps = np.arange(min_ts, max_ts, 1 / frame_rate)
