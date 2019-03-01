@@ -430,10 +430,12 @@ def check_for_worldless_recording(rec_dir):
                 assert eye_ts.shape[0] > 1
                 min_ts = min(min_ts, eye_ts[0])
                 max_ts = max(max_ts, eye_ts[-1])
-            except (FileNotFoundError, AssertionError):
-                pass
-
-        error_msg = "Could not generate world timestamps from eye timestamps. This is an invalid recording."
+            except FileNotFoundError:
+                error_msg = "Eye timestamps is missing. This is an invalid recording."
+            except AssertionError:
+                error_msg = "Could not generate world timestamps from eye timestamps. This is an invalid recording."
+            else:
+                error_msg = "Unknown problem"
         assert -np.inf < min_ts < max_ts < np.inf, error_msg
 
         logger.warning("No world video found. Constructing an artificial replacement.")
