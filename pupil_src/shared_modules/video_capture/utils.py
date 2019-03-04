@@ -343,9 +343,9 @@ class VideoSet:
         
         median: Median frame timestamp difference in seconds
 
-        return: float [seconds]
+        return: float [seconds], should be >= median
         """
-        return 1.0  # return e.g. 4 * median for dynamic gap filling
+        return max(1.0, median)  # return e.g. 4 * median for dynamic gap filling
 
     def _setup_lookup(self, timestamps: np.ndarray) -> np.recarray:
         lookup_entry = np.dtype(
