@@ -353,10 +353,10 @@ class File_Source(Playback_Source, Base_Source):
             return "File source in ghost mode"
 
     def get_frame_index(self):
-        return self.current_frame_idx
+        return int(self.current_frame_idx)
 
     def get_frame_count(self):
-        return self.videoset.lookup.size
+        return int(self.videoset.lookup.size)
 
     def _convert_frame_index(self, pts):
         """

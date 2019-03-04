@@ -78,9 +78,7 @@ def _convert_video_file(
     timestamp_export_format,
 ):
     yield "Export video", 0.0
-    input_source = File_Source(
-        EmptyGPool(), input_file,
-        fill_gaps=True)
+    input_source = File_Source(EmptyGPool(), input_file, fill_gaps=True)
     if not input_source.initialised:
         yield "Exporting video failed", 0.0
         return
@@ -110,8 +108,8 @@ def _convert_video_file(
         output_frame._img = output_img  # it's ._img because .img has no setter
         writer.write_video_frame(output_frame)
 
-        if input_source.current_frame_idx >= next_update_idx:
-            progress = (input_source.current_frame_idx - export_from_index) / (
+        if input_source.get_frame_index() >= next_update_idx:
+            progress = (input_source.get_frame_index() - export_from_index) / (
                 export_to_index - export_from_index
             )
             yield "Exporting video", progress * 100.0
