@@ -397,7 +397,7 @@ def update_recording_v19_v111(rec_dir):
     logger.info("Updating recording from v1.9 to v1.11")
 
     meta_info = pm.load_meta_info(rec_dir)
-    meta_info["Data Format Version"] = "v1.4"
+    meta_info["Data Format Version"] = "v1.11"
     meta_info["Recording UUID"] = meta_info.get("Recording UUID", uuid.uuid4())
     update_meta_info(rec_dir, meta_info)
 
