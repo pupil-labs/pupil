@@ -321,7 +321,9 @@ class VideoSet:
     def _fill_gaps(self, timestamps: np.ndarray) -> np.ndarray:
         time_diff = np.diff(timestamps)
         median_time_diff = np.median(time_diff)
-        gap_start_idc = np.flatnonzero(time_diff > 4 * median_time_diff)
+        gap_start_idc = np.flatnonzero(
+            time_diff > self._gap_fill_threshold(median_time_diff)
+        )
         gap_stop_idc = gap_start_idc + 1
         gap_fill_starts = timestamps[gap_start_idc] + median_time_diff
         gap_fill_stops = timestamps[gap_stop_idc] - median_time_diff
@@ -333,6 +335,17 @@ class VideoSet:
         all_ts = np.concatenate(all_ts)
         all_ts.sort()
         return all_ts
+
+    def _gap_fill_threshold(self, median=0.03):
+        """
+        Frame timestamp difference [seconds] that needs to be exceeded
+        in order to start filling frames.
+        
+        median: Median frame timestamp difference in seconds
+
+        return: float [seconds]
+        """
+        return 1.0  # return e.g. 4 * median for dynamic gap filling
 
     def _setup_lookup(self, timestamps: np.ndarray) -> np.recarray:
         lookup_entry = np.dtype(
