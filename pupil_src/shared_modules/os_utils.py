@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import platform, sys, os, time
+import platform, sys, os, time, traceback
 from distutils.version import LooseVersion as VersionFormat
 import subprocess as sp
 
@@ -32,9 +32,9 @@ if os_name == "Darwin" and mac_version >= min_version:
             self.caffeine_process = sp.Popen(["caffeinate", "-w", str(os.getpid())])
             logger.info("Disabled idle sleep.")
 
-        def __exit__(self, type, value, traceback):
-            if type is not None:
-                pass  # Exception occurred
+        def __exit__(self, etype, value, tb):
+            if etype is not None:
+                logger.debug("".join(traceback.format_exception(etype, value, tb)))
             self.caffeine_process.terminate()
             self.caffeine_process = None
             logger.info("Re-enabled idle sleep.")
@@ -49,9 +49,9 @@ else:
         def __enter__(self):
             logger.debug("Disabling idle sleep not supported on this OS version.")
 
-        def __exit__(self, type, value, traceback):
-            if type is not None:
-                pass  # Exception occurred
+        def __exit__(self, etype, value, tb):
+            if etype is not None:
+                logger.debug("".join(traceback.format_exception(etype, value, tb)))
             pass
 
 
