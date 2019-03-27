@@ -786,7 +786,6 @@ class UVC_Manager(Base_Manager):
         self.menu.extend(ui_elements)
 
     def activate(self, source_uid):
-        logger.info("Pringting source_id: {}".format(source_uid))
         if not source_uid:
             return
         if not uvc.is_accessible(source_uid):
