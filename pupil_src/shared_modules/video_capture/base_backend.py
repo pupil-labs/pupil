@@ -175,6 +175,44 @@ class Base_Manager(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
+    def on_notify(self, notification):
+        if notification["subject"].startswith("notify.auto_select_manager"):
+            if notification["name"] == "Fake_Manager":
+                from .fake_backend import Fake_Manager
+
+                target_manager_class = Fake_Manager
+            elif notification["name"] == "File_Manager":
+                from .file_backend import File_Manager
+
+                target_manager_class = File_Manager
+            elif notification["name"] == "NDSI_Manager":
+                pass
+            elif notification["name"] == "Realsense_Manager":
+                pass
+            elif notification["name"] == "UVC_Manager":
+                from .uvc_backend import UVC_Manager
+
+                target_manager_class = UVC_Manager
+            elif notification["name"] == "Realsense2_Manager":
+                pass
+            else:
+                raise NotImplementedError(
+                    "Manager auto-selection is not implemented for {}".format(
+                        notification["name"]
+                    )
+                )
+
+            self.replace_backend_manager(target_manager_class)
+
+    def replace_backend_manager(self, manager_class):
+        if self.g_pool.process.startswith("eye"):
+            self.g_pool.capture_manager.deinit_ui()
+            self.g_pool.capture_manager.cleanup()
+            self.g_pool.capture_manager = manager_class(self.g_pool)
+            self.g_pool.capture_manager.init_ui()
+        else:
+            self.notify_all({"subject": "start_plugin", "name": manager_class.__name__})
+
     def add_menu(self):
         super().add_menu()
         from . import manager_classes
@@ -182,29 +220,29 @@ class Base_Manager(Plugin):
 
         self.menu_icon.order = 0.1
 
-        def replace_backend_manager(manager_class):
-            if self.g_pool.process.startswith("eye"):
-                self.g_pool.capture_manager.deinit_ui()
-                self.g_pool.capture_manager.cleanup()
-                self.g_pool.capture_manager = manager_class(self.g_pool)
-                self.g_pool.capture_manager.init_ui()
-            else:
-                self.notify_all(
-                    {"subject": "start_plugin", "name": manager_class.__name__}
-                )
+        def auto_select_manager():
+            self.notify_all(
+                {
+                    "subject": "notify.auto_select_manager",
+                    "name": self.__class__.__name__,
+                }
+            )
 
         # We add the capture selection menu
         manager_classes.sort(key=lambda x: x.gui_name)
         self.menu.append(
             ui.Selector(
                 "capture_manager",
-                setter=replace_backend_manager,
+                setter=self.replace_backend_manager,
                 getter=lambda: self.__class__,
                 selection=manager_classes,
                 labels=[b.gui_name for b in manager_classes],
                 label="Manager",
             )
         )
+
+        # FIXME this button disappears when Pupil Mobile is chosen
+        self.menu.append(ui.Button("Auto Select", auto_select_manager))
 
         # here is where you add all your menu entries.
         self.menu.label = "Backend Manager"
