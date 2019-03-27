@@ -73,7 +73,7 @@ class Task_Proxy:
             logger.debug("Exiting _wrapper")
 
     def _prepare_wrapper_args(self, *args):
-        return args
+        return list(args)
 
     def _change_logging_behavior(self):
         pass
