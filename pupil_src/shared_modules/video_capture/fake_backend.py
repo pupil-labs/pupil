@@ -8,7 +8,6 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-
 from .base_backend import Base_Source, Playback_Source, Base_Manager, EndofVideoError
 
 import os
@@ -346,33 +345,37 @@ class Fake_Manager(Base_Manager):
         self.add_menu()
         from pyglui import ui
 
+        self.menu.append(ui.Button("Auto Select", self.auto_select_manager))
         text = ui.Info_Text("Convenience manager to select a fake source explicitly.")
 
-        def activate():
-            # a capture leaving is a must stop for recording.
-            self.notify_all({"subject": "recording.should_stop"})
-            settings = {}
-            settings["timing"] = "own"
-            settings["frame_rate"] = self.g_pool.capture.frame_rate
-            settings["frame_size"] = self.g_pool.capture.frame_size
-            settings["name"] = "Fake Source"
-            # if the user set fake capture, we dont want it to auto jump back to the old capture.
-            if self.g_pool.process == "world":
-                self.notify_all(
-                    {"subject": "start_plugin", "name": "Fake_Source", "args": settings}
-                )
-            else:
-                self.notify_all(
-                    {
-                        "subject": "start_eye_capture",
-                        "target": self.g_pool.process,
-                        "name": "Fake_Source",
-                        "args": settings,
-                    }
-                )
-
-        activation_button = ui.Button("Activate Fake Capture", activate)
+        activation_button = ui.Button("Activate Fake Capture", self.activate)
         self.menu.extend([text, activation_button])
+
+    def activate(self):
+        # a capture leaving is a must stop for recording.
+        self.notify_all({"subject": "recording.should_stop"})
+        settings = {}
+        settings["timing"] = "own"
+        settings["frame_rate"] = self.g_pool.capture.frame_rate
+        settings["frame_size"] = self.g_pool.capture.frame_size
+        settings["name"] = "Fake Source"
+        # if the user set fake capture, we dont want it to auto jump back to the old capture.
+        if self.g_pool.process == "world":
+            self.notify_all(
+                {"subject": "start_plugin", "name": "Fake_Source", "args": settings}
+            )
+        else:
+            self.notify_all(
+                {
+                    "subject": "start_eye_capture",
+                    "target": self.g_pool.process,
+                    "name": "Fake_Source",
+                    "args": settings,
+                }
+            )
+
+    def auto_activate(self):
+        self.activate()
 
     def deinit_ui(self):
         self.remove_menu()

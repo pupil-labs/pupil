@@ -760,6 +760,7 @@ class UVC_Manager(Base_Manager):
 
         from pyglui import ui
 
+        self.menu.append(ui.Button("Auto Select", self.auto_select_manager))
         ui_elements = []
         ui_elements.append(ui.Info_Text("Local UVC sources"))
 
@@ -773,41 +774,51 @@ class UVC_Manager(Base_Manager):
             ]
             return zip(*dev_pairs)
 
-        def activate(source_uid):
-            if not source_uid:
-                return
-            if not uvc.is_accessible(source_uid):
-                logger.error("The selected camera is already in use or blocked.")
-                return
-            settings = {
-                "frame_size": self.g_pool.capture.frame_size,
-                "frame_rate": self.g_pool.capture.frame_rate,
-                "uid": source_uid,
-            }
-            if self.g_pool.process == "world":
-                self.notify_all(
-                    {"subject": "start_plugin", "name": "UVC_Source", "args": settings}
-                )
-            else:
-                self.notify_all(
-                    {
-                        "subject": "start_eye_capture",
-                        "target": self.g_pool.process,
-                        "name": "UVC_Source",
-                        "args": settings,
-                    }
-                )
-
         ui_elements.append(
             ui.Selector(
                 "selected_source",
                 selection_getter=dev_selection_list,
                 getter=lambda: None,
-                setter=activate,
+                setter=self.activate,
                 label="Activate source",
             )
         )
         self.menu.extend(ui_elements)
+
+    def activate(self, source_uid):
+        logger.info("Pringting source_id: {}".format(source_uid))
+        if not source_uid:
+            return
+        if not uvc.is_accessible(source_uid):
+            logger.error("The selected camera is already in use or blocked.")
+            return
+        settings = {
+            "frame_size": self.g_pool.capture.frame_size,
+            "frame_rate": self.g_pool.capture.frame_rate,
+            "uid": source_uid,
+        }
+        if self.g_pool.process == "world":
+            self.notify_all(
+                {"subject": "start_plugin", "name": "UVC_Source", "args": settings}
+            )
+        else:
+            self.notify_all(
+                {
+                    "subject": "start_eye_capture",
+                    "target": self.g_pool.process,
+                    "name": "UVC_Source",
+                    "args": settings,
+                }
+            )
+
+    def auto_activate(self):
+        cam_selection_lut = {"eye0": "ID0", "eye1": "ID1", "world": "ID2"}
+        cam_id = cam_selection_lut[self.g_pool.process]
+        source_id = [d["uid"] for d in self.devices if cam_id in d["name"]]
+        assert len(source_id) == 1
+        source_id = source_id[0]
+
+        self.activate(source_id)
 
     def deinit_ui(self):
         self.remove_menu()
