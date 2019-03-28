@@ -491,7 +491,7 @@ class NDSI_Manager(Base_Manager):
         cam_id = cam_selection_lut[self.g_pool.process]
 
         src_sel, src_sel_labels = self.source_selection_list()
-        if not src_sel:
+        if src_sel is None or src_sel_labels is None:
             return
 
         source_id = [
@@ -499,6 +499,10 @@ class NDSI_Manager(Base_Manager):
         ]
 
         if len(source_id) != 1:
+            time.sleep(0.25)
+            self.notify_all(
+                {"subject": "notify.auto_activate", "name": self.g_pool.process}
+            )
             return
 
         source_id = source_id[0]
