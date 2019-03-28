@@ -447,7 +447,9 @@ class NDSI_Manager(Base_Manager):
 
         self.menu.extend(ui_elements)
 
-        self.menu.append(ui.Button("Auto Select", self.auto_select_manager))
+        self.menu.append(
+            ui.Button("Auto select in all processes", self.auto_select_manager)
+        )
 
         if not self.selected_host:
             return
@@ -483,7 +485,11 @@ class NDSI_Manager(Base_Manager):
     def auto_select_manager(self):
         super().auto_select_manager()
         self.notify_all(
-            {"subject": "notify.selected_host", "selected_host": self.selected_host}
+            {
+                "subject": "notify.selected_host",
+                "selected_host": self.selected_host,
+                "delay": 0.4,
+            }
         )
 
     def auto_activate(self):
@@ -499,10 +505,6 @@ class NDSI_Manager(Base_Manager):
         ]
 
         if len(source_id) != 1:
-            time.sleep(0.25)
-            self.notify_all(
-                {"subject": "notify.auto_activate", "name": self.g_pool.process}
-            )
             return
 
         source_id = source_id[0]
@@ -592,7 +594,13 @@ class NDSI_Manager(Base_Manager):
         if selected_host in host_sel:
             self.view_host(selected_host)
             self.should_select_host = None
-            self.auto_activate()
+            self.notify_all(
+                {
+                    "subject": "notify.auto_select_manager",
+                    "name": self.__class__.__name__,
+                }
+            )
+            # self.auto_activate()
         else:
             self.should_select_host = selected_host
 
