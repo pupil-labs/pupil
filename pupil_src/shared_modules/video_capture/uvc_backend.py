@@ -814,7 +814,9 @@ class UVC_Manager(Base_Manager):
         cam_selection_lut = {"eye0": "ID0", "eye1": "ID1", "world": "ID2"}
         cam_id = cam_selection_lut[self.g_pool.process]
         source_id = [d["uid"] for d in self.devices if cam_id in d["name"]]
-        assert len(source_id) == 1
+        if len(source_id) != 1:
+            return
+
         source_id = source_id[0]
 
         self.activate(source_id)
