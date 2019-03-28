@@ -596,7 +596,9 @@ class File_Manager(Base_Manager):
         self.add_menu()
         from pyglui import ui
 
-        self.menu.append(ui.Button("Auto Select", self.auto_select_manager))
+        self.menu.append(
+            ui.Button("Auto select in all processes", self.auto_select_manager)
+        )
         self.menu.append(
             ui.Info_Text(
                 "Enter a folder to enumerate all eligible video files. "

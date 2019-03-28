@@ -760,7 +760,9 @@ class UVC_Manager(Base_Manager):
 
         from pyglui import ui
 
-        self.menu.append(ui.Button("Auto Select", self.auto_select_manager))
+        self.menu.append(
+            ui.Button("Auto select in all processes", self.auto_select_manager)
+        )
         ui_elements = []
         ui_elements.append(ui.Info_Text("Local UVC sources"))
 

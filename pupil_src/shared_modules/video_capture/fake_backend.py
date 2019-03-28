@@ -345,7 +345,9 @@ class Fake_Manager(Base_Manager):
         self.add_menu()
         from pyglui import ui
 
-        self.menu.append(ui.Button("Auto Select", self.auto_select_manager))
+        self.menu.append(
+            ui.Button("Auto select in all processes", self.auto_select_manager)
+        )
         text = ui.Info_Text("Convenience manager to select a fake source explicitly.")
 
         activation_button = ui.Button("Activate Fake Capture", self.activate)
