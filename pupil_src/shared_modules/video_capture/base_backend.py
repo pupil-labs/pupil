@@ -176,6 +176,16 @@ class Base_Manager(Plugin):
         super().__init__(g_pool)
 
     def on_notify(self, notification):
+        """
+        Reacts to notification:
+            ``notify.auto_select_manager``: Changes the current Manager to one that's emitted
+            ``notify.auto_activate``: Activates the current source via self.auto_activate()
+
+        Emmits notifications (indirectly):
+            ``start_plugin``: For world thread
+            ``notify.auto_activate``
+        """
+
         def get_class_by_name(name):
             from . import manager_classes
 
@@ -196,12 +206,16 @@ class Base_Manager(Plugin):
 
     def replace_backend_manager(self, manager_class, auto_activate=False):
         if self.g_pool.process.startswith("eye"):
-            self.g_pool.capture_manager.deinit_ui()
-            self.g_pool.capture_manager.cleanup()
-            self.g_pool.capture_manager = manager_class(self.g_pool)
-            self.g_pool.capture_manager.init_ui()
+            if not isinstance(self.g_pool.capture_manager, manager_class):
+                self.g_pool.capture_manager.deinit_ui()
+                self.g_pool.capture_manager.cleanup()
+                self.g_pool.capture_manager = manager_class(self.g_pool)
+                self.g_pool.capture_manager.init_ui()
         else:
-            self.notify_all({"subject": "start_plugin", "name": manager_class.__name__})
+            if not isinstance(self, manager_class):
+                self.notify_all(
+                    {"subject": "start_plugin", "name": manager_class.__name__}
+                )
         if auto_activate:
             self.notify_all(
                 {"subject": "notify.auto_activate", "name": self.g_pool.process}
