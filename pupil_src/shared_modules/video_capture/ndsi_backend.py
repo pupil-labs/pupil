@@ -155,7 +155,7 @@ class NDSI_Source(Base_Source):
             elif (
                 self.g_pool.get_timestamp() - self.last_update > self.ghost_mode_timeout
             ):
-                logger.info("Entering gost mode")
+                logger.info("Entering ghost mode")
                 if self.online:
                     self.sensor.unlink()
                 self.sensor = None
