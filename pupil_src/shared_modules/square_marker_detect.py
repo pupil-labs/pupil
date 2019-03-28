@@ -165,7 +165,7 @@ def detect_markers(
         gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, aperture, 9
     )
 
-    _img, contours, hierarchy = cv2.findContours(
+    *_, contours, hierarchy = cv2.findContours(
         edges, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE, offset=(0, 0)
     )  # TC89_KCOS
 

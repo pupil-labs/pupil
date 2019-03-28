@@ -80,8 +80,8 @@ else:
         "opencv_imgproc",
         "opencv_video",
     ]
-    opencv_library_dir = "/usr/local/opt/opencv/lib"
-    opencv_include_dir = "/usr/local/opt/opencv/include"
+    opencv_library_dir = "/usr/local/lib"
+    opencv_include_dir = "/usr/local/include/opencv4"
     if not os.path.isfile(opencv_library_dir + "/libopencv_core.so"):
         ros_dists = ["kinetic", "jade", "indigo"]
         for ros_dist in ros_dists:
