@@ -167,7 +167,7 @@ def detect_markers(
 
     *_, contours, hierarchy = cv2.findContours(
         edges, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE, offset=(0, 0)
-    )  # TC89_KCOS
+    )
 
     # remove extra encapsulation
     hierarchy = hierarchy[0]

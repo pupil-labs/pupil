@@ -434,7 +434,9 @@ def find_concentric_circles(
         # compatibility by using `*_`
         *_, contours, hierarchy = cv2.findContours(
             edge, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_TC89_KCOS
-        )  # CHAIN_APPROX_TC89_KCOS does not store absolutely all the contour points
+        )
+        # We use CHAIN_APPROX_TC89_KCOS because it is faster than
+        # the default method CV_CHAIN_APPROX_NONE
 
         if contours is None or hierarchy is None:
             return []
