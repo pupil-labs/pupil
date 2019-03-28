@@ -33,6 +33,16 @@ For an intro to the Pupil mobile eye tracking platform have a look at the [Pupil
 </tr>
 </table>
 
+## Technical Support
+Please make sure you provide this information to us when you create an issue or ask technical support at discord:
+
+1. **System Version:** macOS 10.14
+2. **Pupil Version:** 1.11
+3. **Python Version:** 3.5
+4. **Run from source/excusable:** source
+5. **expected behavior**
+6. **current behavior**
+
 
 ## License
 All source code written by Pupil Labs is open for use in compliance with the [GNU Lesser General Public License (LGPL v3.0)](http://www.gnu.org/licenses/lgpl-3.0.en.html). We want you to change and improve the code -- make a fork! Make sure to share your work with the community! See the docs for more info on the [license](http://docs.pupil-labs.com/#license "License"). For support and custom licencing [contact us!](https://docs.pupil-labs.com/#email "email us")
