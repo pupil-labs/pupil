@@ -80,17 +80,30 @@ else:
         "opencv_imgproc",
         "opencv_video",
     ]
-    opencv_library_dir = "/usr/local/lib"
-    opencv_include_dir = "/usr/local/include/opencv4"
-    if not os.path.isfile(opencv_library_dir + "/libopencv_core.so"):
+
+    # explicit lib and include dirs for homebrew installed opencv
+    opencv_library_dirs = [
+        "/usr/local/opt/opencv/lib",  # old opencv brew (v3)
+        "/usr/local/opt/opencv@3/lib",  # new opencv@3 brew
+        "/usr/local/lib",  # new opencv brew (v4)
+    ]
+    opencv_include_dirs = [
+        "/usr/local/opt/opencv/include",  # old opencv brew (v3)
+        "/usr/local/opt/opencv@3/include",  # new opencv@3 brew
+        "/usr/local/include/opencv4",  # new opencv brew (v4)
+    ]
+    opencv_core_found = any(
+        os.path.isfile(path + "/libopencv_core.so") for path in opencv_library_dirs
+    )
+    if not opencv_core_found:
         ros_dists = ["kinetic", "jade", "indigo"]
         for ros_dist in ros_dists:
             ros_candidate_path = "/opt/ros/" + ros_dist + "/lib"
             if os.path.isfile(ros_candidate_path + "/libopencv_core3.so"):
-                opencv_library_dir = ros_candidate_path
-                opencv_include_dir = (
+                opencv_library_dirs = [ros_candidate_path]
+                opencv_include_dirs = [
                     "/opt/ros/" + ros_dist + "/include/opencv-3.1.0-dev"
-                )
+                ]
                 opencv_libraries = [lib + "3" for lib in opencv_libraries]
                 break
     include_dirs = [
@@ -99,8 +112,7 @@ else:
         "/usr/include/eigen3",
         shared_cpp_include_path,
         singleeyefitter_include_path,
-        opencv_include_dir,
-    ]
+    ] + opencv_include_dirs
     python_version = sys.version_info
     if platform.system() == "Linux":
         # boost_python-py34
@@ -109,7 +121,7 @@ else:
         boost_lib = "boost_python" + str(python_version[0]) + str(python_version[1])
     libs = ["ceres", boost_lib] + opencv_libraries
     xtra_obj2d = []
-    library_dirs = [opencv_library_dir]
+    library_dirs = opencv_library_dirs
 
 extensions = [
     Extension(
