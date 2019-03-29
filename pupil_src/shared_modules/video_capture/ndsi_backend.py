@@ -410,9 +410,11 @@ class NDSI_Manager(Base_Manager):
             s["host_uuid"]: s["host_name"]  # removes duplicates
             for s in self.network.sensors.values()
         }
-        devices = [pair for pair in devices.items()]  # create tuples
-        # split tuples into 2 lists
-        return zip(*(devices or [(None, "No hosts found")]))
+
+        if devices:
+            return list(devices.keys()), list(devices.values())
+        else:
+            return [None], ["No hosts found"]
 
     def source_selection_list(self):
         default = (None, "Select to activate")
@@ -549,6 +551,7 @@ class NDSI_Manager(Base_Manager):
             if event["sensor_type"] == "video":
                 logger.debug("attached: {}".format(event))
                 self.notify_all({"subject": "backend.ndsi_source_found"})
+
             if not self.selected_host and not self.should_select_host:
                 self.selected_host = event["host_uuid"]
             elif self.should_select_host:
