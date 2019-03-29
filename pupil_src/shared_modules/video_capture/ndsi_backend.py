@@ -492,23 +492,23 @@ class NDSI_Manager(Base_Manager):
         )
 
     def auto_activate_source(self):
-        cam_id = self.cam_selection_lut[self.g_pool.process]
+        if not self.selected_host:
+            return
 
         src_sel, src_sel_labels = self.source_selection_list()
-        logger.info(src_sel)
-        logger.info(src_sel_labels)
-        if src_sel is None or src_sel_labels is None:
-            logger.warning("here?")
+        if len(src_sel) <= 1 and src_sel[0] is None:
+            logger.warning("No cameras on the host. Check headset connection.")
             return
 
-        source_id = [
-            src_sel[i] for i, lab in enumerate(src_sel_labels) if cam_id in lab
-        ]
+        cam_id = self.cam_selection_lut[self.g_pool.process]
 
-        if len(source_id) != 1:
-            return
-
-        source_id = source_id[0]
+        try:
+            source_id = next(
+                src_sel[i] for i, lab in enumerate(src_sel_labels) if cam_id in lab
+            )
+        except StopIteration:
+            source_id = None
+            logger.warning("No camera found with ID: {}".format(cam_id))
         self.activate(source_id)
 
     def poll_events(self):
@@ -592,7 +592,6 @@ class NDSI_Manager(Base_Manager):
             self.select_host(n["selected_host"])
 
     def select_host(self, selected_host):
-        print("select_host --> {}".format(selected_host))
         host_sel, _ = self.host_selection_list()
         if selected_host in host_sel:
             self.view_host(selected_host)
