@@ -418,7 +418,6 @@ class NDSI_Manager(Base_Manager):
 
     def source_selection_list(self):
         default = (None, "Select to activate")
-        # self.poll_events()
         sources = [default] + [
             (s["sensor_uuid"], s["sensor_name"])
             for s in self.network.sensors.values()
