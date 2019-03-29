@@ -813,10 +813,15 @@ class UVC_Manager(Base_Manager):
             )
 
     def auto_activate(self):
+        if not self.devices or len(self.devices) == 0:
+            logger.warning("No UVC source available.")
+            return
+
         cam_selection_lut = {"eye0": "ID0", "eye1": "ID1", "world": "ID2"}
         cam_id = cam_selection_lut[self.g_pool.process]
         source_id = [d["uid"] for d in self.devices if cam_id in d["name"]]
         if len(source_id) != 1:
+            logger.warning("Unexpected process name / camera ID pair")
             return
 
         source_id = source_id[0]
