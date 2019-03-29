@@ -596,9 +596,7 @@ class File_Manager(Base_Manager):
         self.add_menu()
         from pyglui import ui
 
-        self.menu.append(
-            ui.Button("Auto select in all processes", self.auto_select_manager)
-        )
+        self.add_auto_select_button()
         self.menu.append(
             ui.Info_Text(
                 "Enter a folder to enumerate all eligible video files. "
@@ -641,7 +639,7 @@ class File_Manager(Base_Manager):
         settings = {"source_path": full_path, "timing": "own"}
         self.activate_source(settings)
 
-    def auto_activate(self):
+    def auto_activate_source(self):
         self.activate(None)
 
     def on_drop(self, paths):

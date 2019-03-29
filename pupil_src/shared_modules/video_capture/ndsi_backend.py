@@ -387,6 +387,7 @@ class NDSI_Manager(Base_Manager):
         self._recover_in = 3
         self._rejoin_in = 400
         self.should_select_host = None
+        self.cam_selection_lut = {"eye0": "ID0", "eye1": "ID1", "world": "ID2"}
         logger.warning("Make sure the `time_sync` plugin is loaded!")
 
     def cleanup(self):
@@ -446,10 +447,7 @@ class NDSI_Manager(Base_Manager):
         )
 
         self.menu.extend(ui_elements)
-
-        self.menu.append(
-            ui.Button("Auto select in all processes", self.auto_select_manager)
-        )
+        self.add_auto_select_button()
 
         if not self.selected_host:
             return
@@ -486,18 +484,20 @@ class NDSI_Manager(Base_Manager):
         super().auto_select_manager()
         self.notify_all(
             {
-                "subject": "notify.selected_host",
+                "subject": "backend.ndsi_host_selected",
                 "selected_host": self.selected_host,
                 "delay": 0.4,
             }
         )
 
-    def auto_activate(self):
-        cam_selection_lut = {"eye0": "ID0", "eye1": "ID1", "world": "ID2"}
-        cam_id = cam_selection_lut[self.g_pool.process]
+    def auto_activate_source(self):
+        cam_id = self.cam_selection_lut[self.g_pool.process]
 
         src_sel, src_sel_labels = self.source_selection_list()
+        logger.info(src_sel)
+        logger.info(src_sel_labels)
         if src_sel is None or src_sel_labels is None:
+            logger.warning("here?")
             return
 
         source_id = [
@@ -548,7 +548,7 @@ class NDSI_Manager(Base_Manager):
         elif event["subject"] == "attach":
             if event["sensor_type"] == "video":
                 logger.debug("attached: {}".format(event))
-                self.notify_all({"subject": "capture_manager.source_found"})
+                self.notify_all({"subject": "backend.ndsi_source_found"})
             if not self.selected_host and not self.should_select_host:
                 self.selected_host = event["host_uuid"]
             elif self.should_select_host:
@@ -570,37 +570,37 @@ class NDSI_Manager(Base_Manager):
         """Provides UI for the capture selection
 
         Reacts to notification:
-            ``capture_manager.source_found``: Check if recovery is possible
-            ``notify.selected_host``: Switches to selected host from other process
+            ``backend.ndsi_source_found``: Check if recovery is possible
+            ``backend.ndsi_host_selected``: Switches to selected host from other process
 
         Emmits notifications:
-            ``capture_manager.source_found``
+            ``backend.ndsi_source_found``
         """
 
         super().on_notify(n)
 
         if (
-            n["subject"].startswith("capture_manager.source_found")
+            n["subject"].startswith("backend.ndsi_source_found")
             and isinstance(self.g_pool.capture, NDSI_Source)
             and not self.g_pool.capture.sensor
         ):
             self.recover()
 
-        if n["subject"].startswith("notify.selected_host"):
+        if n["subject"].startswith("backend.ndsi_host_selected"):
             self.select_host(n["selected_host"])
 
     def select_host(self, selected_host):
+        print("select_host --> {}".format(selected_host))
         host_sel, _ = self.host_selection_list()
         if selected_host in host_sel:
             self.view_host(selected_host)
             self.should_select_host = None
             self.notify_all(
                 {
-                    "subject": "notify.auto_select_manager",
+                    "subject": "backend.auto_select_manager",
                     "name": self.__class__.__name__,
                 }
             )
-            # self.auto_activate()
         else:
             self.should_select_host = selected_host
 

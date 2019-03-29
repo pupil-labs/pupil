@@ -760,9 +760,7 @@ class UVC_Manager(Base_Manager):
 
         from pyglui import ui
 
-        self.menu.append(
-            ui.Button("Auto select in all processes", self.auto_select_manager)
-        )
+        self.add_auto_select_button()
         ui_elements = []
         ui_elements.append(ui.Info_Text("Local UVC sources"))
 
@@ -812,7 +810,7 @@ class UVC_Manager(Base_Manager):
                 }
             )
 
-    def auto_activate(self):
+    def auto_activate_source(self):
         if not self.devices or len(self.devices) == 0:
             logger.warning("No UVC source available.")
             return

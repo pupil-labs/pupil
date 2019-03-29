@@ -175,34 +175,29 @@ class Base_Manager(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
+        from . import manager_classes
+
+        self.manager_classes = {m.__name__: m for m in manager_classes}
+
     def on_notify(self, notification):
         """
         Reacts to notification:
-            ``notify.auto_select_manager``: Changes the current Manager to one that's emitted
-            ``notify.auto_activate``: Activates the current source via self.auto_activate()
+            ``backend.auto_select_manager``: Changes the current Manager to one that's emitted
+            ``backend.auto_activate_source``: Activates the current source via self.auto_activate_source()
 
         Emmits notifications (indirectly):
             ``start_plugin``: For world thread
-            ``notify.auto_activate``
+            ``backend.auto_activate_source``
         """
 
-        def get_class_by_name(name):
-            from . import manager_classes
-
-            manager_classes_lut = {}
-            for m in manager_classes:
-                manager_classes_lut[m.__name__] = m
-
-            return manager_classes_lut[name]
-
-        if notification["subject"].startswith("notify.auto_select_manager"):
-            target_manager_class = get_class_by_name(notification["name"])
+        if notification["subject"].startswith("backend.auto_select_manager"):
+            target_manager_class = self.manager_classes[notification["name"]]
             self.replace_backend_manager(target_manager_class, auto_activate=True)
         if (
-            notification["subject"].startswith("notify.auto_activate")
+            notification["subject"].startswith("backend.auto_activate_source")
             and notification["name"] == self.g_pool.process
         ):
-            self.auto_activate()
+            self.auto_activate_source()
 
     def replace_backend_manager(self, manager_class, auto_activate=False):
         if self.g_pool.process.startswith("eye"):
@@ -218,10 +213,10 @@ class Base_Manager(Plugin):
                 )
         if auto_activate:
             self.notify_all(
-                {"subject": "notify.auto_activate", "name": self.g_pool.process}
+                {"subject": "backend.auto_activate_source", "name": self.g_pool.process}
             )
 
-    def auto_activate(self):
+    def auto_activate_source(self):
         """This function should be implemented in *_Manager classes 
             to activate the corresponding source with following preferences:
                 eye0: Pupil Cam1/2 ID0
@@ -234,7 +229,14 @@ class Base_Manager(Plugin):
 
     def auto_select_manager(self):
         self.notify_all(
-            {"subject": "notify.auto_select_manager", "name": self.__class__.__name__}
+            {"subject": "backend.auto_select_manager", "name": self.class_name}
+        )
+
+    def add_auto_select_button(self):
+        from pyglui import ui
+
+        self.menu.append(
+            ui.Button("Auto select in all processes", self.auto_select_manager)
         )
 
     def add_menu(self):
