@@ -823,7 +823,7 @@ class UVC_Manager(Base_Manager):
 
     def auto_activate_source(self):
         if not self.devices or len(self.devices) == 0:
-            logger.warning("No UVC source available.")
+            logger.warning("No default device is available.")
             return
 
         cam_ids = self.cam_selection_lut[self.g_pool.process]
@@ -835,7 +835,7 @@ class UVC_Manager(Base_Manager):
                     self.activate(source_id)
                     break
             else:
-                logger.warning("No camera found with ID: {}".format(cam_id))
+                logger.warning("The default device is not found.")
                 source_id = None
 
     def deinit_ui(self):

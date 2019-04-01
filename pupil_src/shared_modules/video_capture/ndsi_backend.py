@@ -501,7 +501,7 @@ class NDSI_Manager(Base_Manager):
 
         src_sel, src_sel_labels = self.source_selection_list()
         if len(src_sel) <= 1 and src_sel[0] is None:
-            logger.warning("No camera was found on the remote host.")
+            logger.warning("No default device is available on the remote host.")
             return
 
         cam_ids = self.cam_selection_lut[self.g_pool.process]
@@ -514,7 +514,7 @@ class NDSI_Manager(Base_Manager):
                     break
             else:
                 source_id = None
-                logger.warning("No camera was found with ID: {}".format(cam_id))
+                logger.warning("The default device was not found on the remote host.")
 
     def poll_events(self):
         while self.network.has_events:
