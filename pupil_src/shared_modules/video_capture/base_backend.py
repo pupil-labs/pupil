@@ -195,7 +195,7 @@ class Base_Manager(Plugin):
             self.replace_backend_manager(target_manager_class, auto_activate=True)
         if (
             notification["subject"].startswith("backend.auto_activate_source")
-            and notification["name"] == self.g_pool.process
+            and notification["proc_name"] == self.g_pool.process
         ):
             self.auto_activate_source()
 
@@ -213,7 +213,10 @@ class Base_Manager(Plugin):
                 )
         if auto_activate:
             self.notify_all(
-                {"subject": "backend.auto_activate_source", "name": self.g_pool.process}
+                {
+                    "subject": "backend.auto_activate_source",
+                    "proc_name": self.g_pool.process,
+                }
             )
 
     def auto_activate_source(self):
