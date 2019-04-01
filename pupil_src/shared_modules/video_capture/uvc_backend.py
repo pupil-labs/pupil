@@ -751,7 +751,11 @@ class UVC_Manager(Base_Manager):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.devices = uvc.Device_List()
-        self.cam_selection_lut = {"eye0": "ID0", "eye1": "ID1", "world": "ID2"}
+        self.cam_selection_lut = {
+            "eye0": ["ID0"],
+            "eye1": ["ID1"],
+            "world": ["ID2", "Logitech"],
+        }
 
     def get_init_dict(self):
         return {}
@@ -822,15 +826,17 @@ class UVC_Manager(Base_Manager):
             logger.warning("No UVC source available.")
             return
 
-        cam_id = self.cam_selection_lut[self.g_pool.process]
+        cam_ids = self.cam_selection_lut[self.g_pool.process]
 
-        try:
-            source_id = next(d["uid"] for d in self.devices if cam_id in d["name"])
-        except StopIteration:
-            logger.warning("No camera found with ID: {}".format(cam_id))
-            source_id = None
-        else:
-            self.activate(source_id)
+        for cam_id in cam_ids:
+            try:
+                source_id = next(d["uid"] for d in self.devices if cam_id in d["name"])
+            except StopIteration:
+                logger.warning("No camera found with ID: {}".format(cam_id))
+                source_id = None
+            else:
+                self.activate(source_id)
+                break
 
     def deinit_ui(self):
         self.remove_menu()

@@ -387,7 +387,11 @@ class NDSI_Manager(Base_Manager):
         self._recover_in = 3
         self._rejoin_in = 400
         self.should_select_host = None
-        self.cam_selection_lut = {"eye0": "ID0", "eye1": "ID1", "world": "ID2"}
+        self.cam_selection_lut = {
+            "eye0": ["ID0"],
+            "eye1": ["ID1"],
+            "world": ["ID2", "Logitech"],
+        }
         logger.warning("Make sure the `time_sync` plugin is loaded!")
 
     def cleanup(self):
@@ -500,17 +504,19 @@ class NDSI_Manager(Base_Manager):
             logger.warning("No camera was found on the remote host.")
             return
 
-        cam_id = self.cam_selection_lut[self.g_pool.process]
+        cam_ids = self.cam_selection_lut[self.g_pool.process]
 
-        try:
-            source_id = next(
-                src_sel[i] for i, lab in enumerate(src_sel_labels) if cam_id in lab
-            )
-        except StopIteration:
-            source_id = None
-            logger.warning("No camera was found with ID: {}".format(cam_id))
-        else:
-            self.activate(source_id)
+        for cam_id in cam_ids:
+            try:
+                source_id = next(
+                    src_sel[i] for i, lab in enumerate(src_sel_labels) if cam_id in lab
+                )
+            except StopIteration:
+                source_id = None
+                logger.warning("No camera was found with ID: {}".format(cam_id))
+            else:
+                self.activate(source_id)
+                break
 
     def poll_events(self):
         while self.network.has_events:
