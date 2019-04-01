@@ -789,9 +789,15 @@ class UVC_Manager(Base_Manager):
     def activate(self, source_uid):
         if not source_uid:
             return
-        if not uvc.is_accessible(source_uid):
-            logger.error("The selected camera is already in use or blocked.")
+
+        try:
+            if not uvc.is_accessible(source_uid):
+                logger.error("The selected camera is already in use or blocked.")
+                return
+        except ValueError as ve:
+            logger.error(str(ve))
             return
+
         settings = {
             "frame_size": self.g_pool.capture.frame_size,
             "frame_rate": self.g_pool.capture.frame_rate,
@@ -823,7 +829,8 @@ class UVC_Manager(Base_Manager):
         except StopIteration:
             logger.warning("No camera found with ID: {}".format(cam_id))
             source_id = None
-        self.activate(source_id)
+        else:
+            self.activate(source_id)
 
     def deinit_ui(self):
         self.remove_menu()
