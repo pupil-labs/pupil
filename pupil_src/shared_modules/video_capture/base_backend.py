@@ -239,7 +239,7 @@ class Base_Manager(Plugin):
         from pyglui import ui
 
         self.menu.append(
-            ui.Button("Auto select in all processes", self.auto_select_manager)
+            ui.Button("Start with default devices", self.auto_select_manager)
         )
 
     def add_menu(self):
