@@ -509,7 +509,8 @@ class NDSI_Manager(Base_Manager):
         except StopIteration:
             source_id = None
             logger.warning("No camera was found with ID: {}".format(cam_id))
-        self.activate(source_id)
+        else:
+            self.activate(source_id)
 
     def poll_events(self):
         while self.network.has_events:
