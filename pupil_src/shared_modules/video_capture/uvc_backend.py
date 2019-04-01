@@ -829,14 +829,14 @@ class UVC_Manager(Base_Manager):
         cam_ids = self.cam_selection_lut[self.g_pool.process]
 
         for cam_id in cam_ids:
-            try:
-                source_id = next(d["uid"] for d in self.devices if cam_id in d["name"])
-            except StopIteration:
+            for d in self.devices:
+                if cam_id in d["name"]:
+                    source_id = d["uid"]
+                    self.activate(source_id)
+                    break
+            else:
                 logger.warning("No camera found with ID: {}".format(cam_id))
                 source_id = None
-            else:
-                self.activate(source_id)
-                break
 
     def deinit_ui(self):
         self.remove_menu()

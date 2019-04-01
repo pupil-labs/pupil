@@ -507,16 +507,14 @@ class NDSI_Manager(Base_Manager):
         cam_ids = self.cam_selection_lut[self.g_pool.process]
 
         for cam_id in cam_ids:
-            try:
-                source_id = next(
-                    src_sel[i] for i, lab in enumerate(src_sel_labels) if cam_id in lab
-                )
-            except StopIteration:
+            for i, label in enumerate(src_sel_labels):
+                if cam_id in label:
+                    source_id = src_sel[i]
+                    self.activate(source_id)
+                    break
+            else:
                 source_id = None
                 logger.warning("No camera was found with ID: {}".format(cam_id))
-            else:
-                self.activate(source_id)
-                break
 
     def poll_events(self):
         while self.network.has_events:
