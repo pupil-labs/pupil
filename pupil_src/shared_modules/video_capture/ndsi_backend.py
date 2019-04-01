@@ -497,7 +497,7 @@ class NDSI_Manager(Base_Manager):
 
         src_sel, src_sel_labels = self.source_selection_list()
         if len(src_sel) <= 1 and src_sel[0] is None:
-            logger.warning("No cameras on the host. Check headset connection.")
+            logger.warning("No camera was found on the remote host.")
             return
 
         cam_id = self.cam_selection_lut[self.g_pool.process]
@@ -508,7 +508,7 @@ class NDSI_Manager(Base_Manager):
             )
         except StopIteration:
             source_id = None
-            logger.warning("No camera found with ID: {}".format(cam_id))
+            logger.warning("No camera was found with ID: {}".format(cam_id))
         self.activate(source_id)
 
     def poll_events(self):
