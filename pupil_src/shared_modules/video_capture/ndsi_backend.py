@@ -507,14 +507,16 @@ class NDSI_Manager(Base_Manager):
         cam_ids = self.cam_selection_lut[self.g_pool.process]
 
         for cam_id in cam_ids:
-            for i, label in enumerate(src_sel_labels):
-                if cam_id in label:
-                    source_id = src_sel[i]
-                    self.activate(source_id)
-                    break
-            else:
+            try:
+                source_id = next(
+                    src_sel[i] for i, lab in enumerate(src_sel_labels) if cam_id in lab
+                )
+                self.activate(source_id)
+                break
+            except StopIteration:
                 source_id = None
-                logger.warning("The default device was not found on the remote host.")
+        else:
+            logger.warning("The default device was not found on the remote host.")
 
     def poll_events(self):
         while self.network.has_events:

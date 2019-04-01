@@ -829,14 +829,14 @@ class UVC_Manager(Base_Manager):
         cam_ids = self.cam_selection_lut[self.g_pool.process]
 
         for cam_id in cam_ids:
-            for d in self.devices:
-                if cam_id in d["name"]:
-                    source_id = d["uid"]
-                    self.activate(source_id)
-                    break
-            else:
-                logger.warning("The default device is not found.")
+            try:
+                source_id = next(d["uid"] for d in self.devices if cam_id in d["name"])
+                self.activate(source_id)
+                break
+            except StopIteration:
                 source_id = None
+        else:
+            logger.warning("The default device is not found.")
 
     def deinit_ui(self):
         self.remove_menu()
