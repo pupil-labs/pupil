@@ -489,8 +489,8 @@ class NDSI_Manager(Base_Manager):
         super().auto_select_manager()
         self.notify_all(
             {
-                "subject": "backend.ndsi_host_selected",
-                "selected_host": self.selected_host,
+                "subject": "backend.ndsi_do_select_host",
+                "target_host": self.selected_host,
                 "delay": 0.4,
             }
         )
@@ -500,8 +500,10 @@ class NDSI_Manager(Base_Manager):
             return
 
         src_sel, src_sel_labels = self.source_selection_list()
-        if len(src_sel) < 1 or src_sel[0] is None:
-            logger.warning("No default device is available on the remote host.")
+        if len(src_sel) < 2:  # "Select to Activate" is always presenet as first element
+            logger.warning(
+                "No device is available on the remote host.")
+            )
             return
 
         cam_ids = self.cam_selection_lut[self.g_pool.process]
@@ -515,7 +517,7 @@ class NDSI_Manager(Base_Manager):
                 break
             except StopIteration:
                 source_id = None
-        else:
+        else:            
             logger.warning("The default device was not found on the remote host.")
 
     def poll_events(self):
@@ -560,7 +562,7 @@ class NDSI_Manager(Base_Manager):
 
             if not self.selected_host and not self.should_select_host:
                 self.selected_host = event["host_uuid"]
-            elif self.should_select_host:
+            elif self.should_select_host and event["sensor_type"] == "video":
                 self.select_host(self.should_select_host)
 
             self.re_build_ndsi_menu()
@@ -580,10 +582,11 @@ class NDSI_Manager(Base_Manager):
 
         Reacts to notification:
             ``backend.ndsi_source_found``: Check if recovery is possible
-            ``backend.ndsi_host_selected``: Switches to selected host from other process
+            ``backend.ndsi_do_select_host``: Switches to selected host from other process
 
         Emmits notifications:
             ``backend.ndsi_source_found``
+            ``backend.ndsi_do_select_host`
         """
 
         super().on_notify(n)
@@ -595,20 +598,20 @@ class NDSI_Manager(Base_Manager):
         ):
             self.recover()
 
-        if n["subject"].startswith("backend.ndsi_host_selected"):
-            self.select_host(n["selected_host"])
+        if n["subject"].startswith("backend.ndsi_do_select_host"):
+            self.select_host(n["target_host"])
 
     def select_host(self, selected_host):
         host_sel, _ = self.host_selection_list()
         if selected_host in host_sel:
             self.view_host(selected_host)
             self.should_select_host = None
-            self.notify_all(
-                {
-                    "subject": "backend.auto_select_manager",
-                    "name": self.__class__.__name__,
-                }
-            )
+            self.re_build_ndsi_menu()
+            src_sel, _ = self.source_selection_list()
+            # "Select to Activate" is always presenet as first element
+            if len(src_sel) >= 2:
+                self.auto_activate_source()
+
         else:
             self.should_select_host = selected_host
 

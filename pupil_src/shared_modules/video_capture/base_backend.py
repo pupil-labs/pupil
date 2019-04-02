@@ -214,8 +214,11 @@ class Base_Manager(Plugin):
         if auto_activate:
             self.notify_all(
                 {
-                    "subject": "backend.auto_activate_source",
+                    "subject": "backend.auto_activate_source.{}".format(
+                        self.g_pool.process
+                    ),
                     "proc_name": self.g_pool.process,
+                    "delay": 0.5,
                 }
             )
 
