@@ -501,9 +501,7 @@ class NDSI_Manager(Base_Manager):
 
         src_sel, src_sel_labels = self.source_selection_list()
         if len(src_sel) < 2:  # "Select to Activate" is always presenet as first element
-            logger.warning(
-                "No device is available on the remote host.")
-            )
+            logger.warning("No device is available on the remote host.")
             return
 
         cam_ids = self.cam_selection_lut[self.g_pool.process]
@@ -517,7 +515,7 @@ class NDSI_Manager(Base_Manager):
                 break
             except StopIteration:
                 source_id = None
-        else:            
+        else:
             logger.warning("The default device was not found on the remote host.")
 
     def poll_events(self):
