@@ -500,7 +500,7 @@ class NDSI_Manager(Base_Manager):
             return
 
         src_sel, src_sel_labels = self.source_selection_list()
-        if len(src_sel) <= 1 and src_sel[0] is None:
+        if len(src_sel) < 1 or src_sel[0] is None:
             logger.warning("No default device is available on the remote host.")
             return
 
