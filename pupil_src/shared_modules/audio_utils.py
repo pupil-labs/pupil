@@ -18,7 +18,7 @@ import numpy as np
 import av
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logger.DEBUG)
+logger.setLevel(logging.DEBUG)
 
 
 class NoAudioLoadedError(Exception):
