@@ -8,10 +8,14 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import numpy as np
-import av
-import os
+import collections
+import glob
 import logging
+import os
+
+import numpy as np
+
+import av
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logger.DEBUG)

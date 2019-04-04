@@ -9,26 +9,26 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import numpy as np
-from plugin import System_Plugin_Base
-from pyglui import ui
-import gl_utils
-from pyglui.cygl.utils import *
-from audio_utils import Audio_Viz_Transform
-import os
-import av
-
-assert av.__version__ >= "0.4.0"
-import av.filter
-from bisect import bisect_left as bisect
-
-import pyaudio as pa
 import itertools
+import logging
+import os
+from bisect import bisect_left as bisect
 from threading import Timer
 from time import monotonic
 
-# logging
-import logging
+import numpy as np
+import pyaudio as pa
+from pyglui import ui
+from pyglui.cygl.utils import *
+
+import av
+import av.filter
+import gl_utils
+from audio_utils import Audio_Viz_Transform, load_audio, NoAudioLoadedError
+from plugin import System_Plugin_Base
+
+assert av.__version__ >= "0.4.0"
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logger.DEBUG)
