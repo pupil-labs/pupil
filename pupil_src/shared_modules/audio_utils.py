@@ -31,7 +31,7 @@ LoadedAudio = collections.namedtuple(
 
 
 def load_audio(rec_dir):
-    audio_pattern = os.path.join(rec_dir, "audio.mp4")
+    audio_pattern = os.path.join(rec_dir, "audio*.mp4")
     # sort matched files in order to prefer `audio.mp4` over `audio_xxxx.mp4`
     for audio_file in sorted(glob.glob(audio_pattern)):
         try:
