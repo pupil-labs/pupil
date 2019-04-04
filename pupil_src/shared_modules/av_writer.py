@@ -15,23 +15,22 @@ requires:
     -
 """
 
-import os, sys, platform
+# logging
+import logging
+import multiprocessing as mp
+import os
+import platform
+import sys
+from fractions import Fraction
+from threading import Event, Thread
+from time import time
+
+import numpy as np
+
 import av
 from av.packet import Packet
 
-import numpy as np
-from time import time
-from fractions import Fraction
-
-# logging
-import logging
-
 logger = logging.getLogger(__name__)
-
-
-from threading import Thread
-from threading import Event
-import multiprocessing as mp
 
 
 """
