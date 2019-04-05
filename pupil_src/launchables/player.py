@@ -319,6 +319,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             left_idx = g_pool.seek_control.trim_left
             right_idx = g_pool.seek_control.trim_right
             export_range = left_idx, right_idx + 1  # exclusive range.stop
+            export_ts_window = pm.exact_window(g_pool.timestamps, (left_idx, right_idx))
 
             export_dir = os.path.join(g_pool.rec_dir, "exports")
             export_dir = next_export_sub_dir(export_dir)
@@ -341,6 +342,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             notification = {
                 "subject": "should_export",
                 "range": export_range,
+                "ts_window": export_ts_window,
                 "export_dir": export_dir,
             }
             g_pool.ipc_pub.notify(notification)
