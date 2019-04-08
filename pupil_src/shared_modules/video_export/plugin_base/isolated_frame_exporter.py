@@ -91,7 +91,7 @@ def _convert_video_file(
         input_source.timestamps, export_window
     )
     writer = AV_Writer(
-        output_file, fps=input_source.frame_rate, audio_loc=None, use_timestamps=True
+        output_file, fps=input_source.frame_rate, audio_dir=None, use_timestamps=True
     )
     input_source.seek_to_frame(export_from_index)
     next_update_idx = export_from_index + update_rate
