@@ -210,9 +210,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                     )
                     glfw.glfwSetWindowShouldClose(window, True)
                 else:
-                    logger.error(
-                        "'{}' is not a valid pupil recording".format(new_rec_dir)
-                    )
+                    for p in g_pool.plugins:
+                        p.on_drop(paths)
 
         tick = delta_t()
 
