@@ -210,8 +210,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                     )
                     glfw.glfwSetWindowShouldClose(window, True)
                 else:
-                    for p in g_pool.plugins:
-                        p.on_drop(paths)
+                    # call `on_drop` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_drop(paths) for p in g_pool.plugins)
 
         tick = delta_t()
 
@@ -613,16 +614,20 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                     pos = x * hdpi_factor, y * hdpi_factor
                     pos = normalize(pos, g_pool.camera_render_size)
                     pos = denormalize(pos, g_pool.capture.frame_size)
-                    for p in g_pool.plugins:
-                        p.on_click(pos, button, action)
+
+                    # call `on_click` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_click(pos, button, action) for p in g_pool.plugins)
 
                 for key, scancode, action, mods in user_input.keys:
-                    for p in g_pool.plugins:
-                        p.on_key(key, scancode, action, mods)
+                    # call `on_key` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_key(key, scancode, action, mods) for p in g_pool.plugins)
 
                 for char_ in user_input.chars:
-                    for p in g_pool.plugins:
-                        p.on_char(char_)
+                    # call `char_` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_char(char_) for p in g_pool.plugins)
 
                 # present frames at appropriate speed
                 g_pool.seek_control.wait(events["frame"].timestamp)
