@@ -103,6 +103,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
 
         # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
         from fixation_detector import Offline_Fixation_Detector
+        from eye_movement_detector import Offline_Eye_Movement_Detector
         from log_display import Log_Display
         from annotations import Annotation_Player
         from raw_data_exporter import Raw_Data_Exporter
@@ -144,6 +145,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Vis_Eye_Video_Overlay,
             # Vis_Scan_Path,
             Offline_Fixation_Detector,
+            Offline_Eye_Movement_Detector,
             Offline_Blink_Detection,
             Offline_Surface_Tracker,
             Raw_Data_Exporter,
@@ -308,6 +310,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.pupil_positions_by_id = (pm.Bisector(), pm.Bisector())
         g_pool.gaze_positions = pm.Bisector()
         g_pool.fixations = pm.Affiliator()
+        g_pool.eye_movement_segments = pm.Affiliator()
 
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence
