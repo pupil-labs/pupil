@@ -646,7 +646,8 @@ class File_Manager(Base_Manager):
         for p in paths:
             if os.path.splitext(p)[-1] in self.file_exts:
                 self.activate(p)
-                return
+                return True
+        return False
 
     def enumerate_folder(self, path):
         eligible_files = []
