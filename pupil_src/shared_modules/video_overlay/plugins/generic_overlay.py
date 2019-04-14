@@ -5,6 +5,7 @@ from plugin import Plugin
 
 from video_overlay.controllers.overlay import Controller as OverlayController
 from video_overlay.ui.menu import generic_overlay_elements, no_valid_video_elements
+from video_overlay.ui.interactions import Draggable
 
 
 class Vis_Generic_Video_Overlay(Plugin):
@@ -38,8 +39,10 @@ class Vis_Generic_Video_Overlay(Plugin):
         self.add_menu()
         self.refresh_menu()
         self.controller.add_observer("attempt_to_load_video", self.refresh_menu)
+        self._setup_draggable()
 
     def deinit_ui(self):
+        self._tear_down_draggable()
         self.controller.remove_observer("attempt_to_load_video", self.refresh_menu)
         self.remove_menu()
 
@@ -74,6 +77,18 @@ class Vis_Generic_Video_Overlay(Plugin):
             title="Video Overlay: No valid video loaded",
             menu_elements=no_valid_video_elements(),
         )
+
+    def _setup_draggable(self):
+        self.draggable = Draggable(self.controller)
+
+    def _tear_down_draggable(self):
+        del self.draggable
+
+    def on_click(self, *args, **kwargs):
+        return self.draggable.on_click(*args, **kwargs)
+
+    def on_pos(self, *args, **kwargs):
+        return self.draggable.on_pos(*args, **kwargs)
 
 
 UISetup = collections.namedtuple("UISetup", ("icon", "title", "menu_elements"))
