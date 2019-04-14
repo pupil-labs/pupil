@@ -65,3 +65,6 @@ class ConstraintedPosition:
     def __init__(self, x, y):
         self.x = ConstraintedValue(x)
         self.y = ConstraintedValue(y)
+
+    def __str__(self):
+        return "(x={}, y={})".format(self.x.value, self.y.value)
