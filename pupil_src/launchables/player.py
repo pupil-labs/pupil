@@ -120,6 +120,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
         from video_export.plugins.world_video_exporter import World_Video_Exporter
         from video_capture import File_Source
+        from video_overlay.plugins import Vis_Generic_Video_Overlay
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
             "1.23"
@@ -142,6 +143,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Vis_Cross,
             Vis_Watermark,
             Vis_Eye_Video_Overlay,
+            Vis_Generic_Video_Overlay,
             # Vis_Scan_Path,
             Offline_Fixation_Detector,
             Offline_Blink_Detection,

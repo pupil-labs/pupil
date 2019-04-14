@@ -116,6 +116,7 @@ def _export_world_video(
     # Plug-ins
     from plugin import Plugin_List, import_runtime_plugins
     from video_capture import EndofVideoError, File_Source
+    from video_overlay.plugins import Vis_Generic_Video_Overlay
     from vis_circle import Vis_Circle
     from vis_cross import Vis_Cross
     from vis_eye_video_overlay import Vis_Eye_Video_Overlay
@@ -140,6 +141,7 @@ def _export_world_video(
                 Vis_Watermark,
                 Vis_Scan_Path,
                 Vis_Eye_Video_Overlay,
+                Vis_Generic_Video_Overlay,
             ],
             key=lambda x: x.__name__,
         )
