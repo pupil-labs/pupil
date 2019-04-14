@@ -260,8 +260,7 @@ def transparent_image_overlay(pos, overlay_img, img, alpha):
     )
     try:
         cv2.addWeighted(overlay_img, alpha, img[roi], 1.0 - alpha, 0, img[roi])
-    except:
+    except (TypeError, cv2.error):
         logger.debug(
             "transparent_image_overlay was outside of the world image and was not drawn"
         )
-    pass
