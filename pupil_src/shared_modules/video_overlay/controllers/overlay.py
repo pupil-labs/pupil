@@ -45,7 +45,7 @@ class Controller(Observable):
         self._render_overlay(target_frame.img, overlay_image)
 
     def _render_overlay(self, target_image, overlay_image):
-        overlay_origin = (self.config.origin.y.value, self.config.origin.x.value)
+        overlay_origin = (self.config.origin.x.value, self.config.origin.y.value)
         pm.transparent_image_overlay(
             overlay_origin, overlay_image, target_image, self.config.alpha.value
         )
