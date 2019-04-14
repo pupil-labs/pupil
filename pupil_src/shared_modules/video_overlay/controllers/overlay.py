@@ -5,6 +5,7 @@ import player_methods as pm
 from observable import Observable
 
 import video_overlay.utils.image_manipulation as IM
+from video_overlay.utils.constraints import InclusiveConstraint
 from video_overlay.controllers.config import Controller as ConfigController
 from video_overlay.controllers.video import Controller as VideoController
 
@@ -42,7 +43,15 @@ class Controller(Observable):
         overlay_image = overlay_frame.img
         for param, manipulation in self.pipeline.items():
             overlay_image = manipulation.apply_to(overlay_image, param.value)
+
+        self._adjust_origin_constraint(target_frame.img, overlay_image)
         self._render_overlay(target_frame.img, overlay_image)
+
+    def _adjust_origin_constraint(self, target_image, overlay_image):
+        max_x = target_image.shape[1] - overlay_image.shape[1]
+        max_y = target_image.shape[0] - overlay_image.shape[0]
+        self.config.origin.x.constraint = InclusiveConstraint(low=0, high=max_x)
+        self.config.origin.y.constraint = InclusiveConstraint(low=0, high=max_y)
 
     def _render_overlay(self, target_image, overlay_image):
         overlay_origin = (self.config.origin.x.value, self.config.origin.y.value)
