@@ -2,6 +2,7 @@ import logging
 from collections import OrderedDict
 
 import player_methods as pm
+from observable import Observable
 
 import video_overlay.utils.image_manipulation as IM
 from video_overlay.controllers.config import Controller as ConfigController
@@ -10,9 +11,7 @@ from video_overlay.controllers.video import Controller as VideoController
 logger = logging.getLogger(__name__)
 
 
-class Controller:
-    __slots__ = ("valid_video_loaded", "video", "config", "pipeline")
-
+class Controller(Observable):
     def __init__(self, video_path, config):
         self.attempt_to_load_video(video_path)
         self.config = ConfigController.from_updated_defaults(config)
