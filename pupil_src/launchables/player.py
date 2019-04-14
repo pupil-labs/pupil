@@ -198,21 +198,21 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
         def on_drop(window, count, paths):
-            for x in range(count):
-                new_rec_dir = paths[x].decode("utf-8")
-                if pm.is_pupil_rec_dir(new_rec_dir):
-                    logger.debug("Starting new session with '{}'".format(new_rec_dir))
-                    ipc_pub.notify(
-                        {
-                            "subject": "player_drop_process.should_start",
-                            "rec_dir": new_rec_dir,
-                        }
-                    )
-                    glfw.glfwSetWindowShouldClose(window, True)
-                else:
-                    # call `on_drop` callbacks until a plugin indicates
-                    # that it has consumed the event (by returning True)
-                    any(p.on_drop(paths) for p in g_pool.plugins)
+            paths = [paths[x].decode("utf-8") for x in range(count)]
+            for path in paths:
+                if pm.is_pupil_rec_dir(path):
+                    _restart_with_recording(path)
+                    return
+            # call `on_drop` callbacks until a plugin indicates
+            # that it has consumed the event (by returning True)
+            any(p.on_drop(paths) for p in g_pool.plugins)
+
+        def _restart_with_recording(rec_dir):
+            logger.debug("Starting new session with '{}'".format(decoded_path))
+            ipc_pub.notify(
+                {"subject": "player_drop_process.should_start", "rec_dir": decoded_path}
+            )
+            glfw.glfwSetWindowShouldClose(g_pool.main_window, True)
 
         tick = delta_t()
 
