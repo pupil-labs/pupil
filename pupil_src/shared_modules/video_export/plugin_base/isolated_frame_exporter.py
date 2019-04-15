@@ -86,7 +86,8 @@ def _convert_video_file(
     # yield progress results two times per second
     update_rate = int(input_source.frame_rate / 2)
 
-    export_window = pm.exact_window(world_timestamps, export_range)
+    export_start, export_stop = export_range  # export_stop is exclusive
+    export_window = pm.exact_window(world_timestamps, (export_start, export_stop - 1))
     (export_from_index, export_to_index) = pm.find_closest(
         input_source.timestamps, export_window
     )
@@ -100,7 +101,7 @@ def _convert_video_file(
             input_frame = input_source.get_frame()
         except EndofVideoError:
             break
-        if input_frame.index > export_to_index:
+        if input_frame.index >= export_to_index:
             break
 
         output_img = process_frame(input_source, input_frame)
