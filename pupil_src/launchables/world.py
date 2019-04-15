@@ -154,6 +154,7 @@ def world(
         from pupil_remote import Pupil_Remote
         from pupil_groups import Pupil_Groups
         from surface_tracker import Surface_Tracker
+        from head_pose_tracker import Online_Head_Pose_Tracker
         from log_display import Log_Display
         from annotations import Annotation_Capture
         from log_history import Log_History
@@ -227,6 +228,7 @@ def world(
             Pupil_Remote,
             Time_Sync,
             Surface_Tracker,
+            Online_Head_Pose_Tracker,
             Annotation_Capture,
             Log_History,
             Fixation_Detector,
