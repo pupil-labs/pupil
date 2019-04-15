@@ -21,3 +21,5 @@ from head_pose_tracker.worker.optimization_worker import (
     offline_optimization,
     online_optimization,
 )
+
+from head_pose_tracker.worker.export_worker import export_routine

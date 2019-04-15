@@ -97,6 +97,12 @@ class Offline_Head_Pose_Tracker(Plugin, Observable):
             get_current_trim_mark_range=self._current_trim_mark_range,
             all_timestamps=self.g_pool.timestamps,
         )
+        self._export_controller = controller.ExportController(
+            self._optimization_storage,
+            self._localization_storage,
+            task_manager=self._task_manager,
+            plugin=self,
+        )
 
     def _setup_renderers(self):
         self._detection_renderer = plugin_ui.DetectionRenderer(
@@ -111,6 +117,12 @@ class Offline_Head_Pose_Tracker(Plugin, Observable):
             self._optimization_storage,
             self._localization_storage,
             self.g_pool.capture.intrinsics,
+            plugin=self,
+        )
+        self._export_controller = controller.ExportController(
+            self._optimization_storage,
+            self._localization_storage,
+            task_manager=self._task_manager,
             plugin=self,
         )
 
