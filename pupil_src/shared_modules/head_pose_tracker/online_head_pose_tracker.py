@@ -74,16 +74,12 @@ class Online_Head_Pose_Tracker(Plugin, Observable):
         )
 
     def _setup_menus(self):
+        self._visualization_menu = plugin_ui.VisualizationMenu(
+            self._online_settings_storage, self._head_pose_tracker_3d_renderer
+        )
         self._optimization_menu = plugin_ui.OnlineOptimizationMenu(
             self._controller, self._online_settings_storage, self._optimization_storage
         )
-        self._localization_menu = plugin_ui.OnlineLocalizationMenu(
-            self._online_settings_storage, self._localization_storage
-        )
         self._head_pose_tracker_menu = plugin_ui.OnlineHeadPoseTrackerMenu(
-            self._online_settings_storage,
-            self._optimization_menu,
-            self._localization_menu,
-            self._head_pose_tracker_3d_renderer,
-            plugin=self,
+            self._visualization_menu, self._optimization_menu, plugin=self
         )

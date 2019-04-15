@@ -19,7 +19,7 @@ import player_methods as pm
 from observable import Observable
 
 
-class CameraLocalizer:
+class Localization:
     def __init__(self):
         self.set_to_default_values()
 
@@ -39,7 +39,7 @@ class CameraLocalizer:
         }
 
 
-class OfflineCameraLocalizer(CameraLocalizer):
+class OfflineCameraLocalization(Localization):
     def __init__(self, get_current_frame_index, get_current_frame_window):
         super().__init__()
 
@@ -65,7 +65,7 @@ class OfflineCameraLocalizer(CameraLocalizer):
             return pose_data
 
 
-class OfflineLocalizationStorage(Observable, OfflineCameraLocalizer):
+class OfflineLocalizationStorage(Observable, OfflineCameraLocalization):
     def __init__(
         self, rec_dir, plugin, get_current_frame_index, get_current_frame_window
     ):
@@ -113,7 +113,7 @@ class OfflineLocalizationStorage(Observable, OfflineCameraLocalizer):
         return "camera_pose"
 
 
-class OnlineLocalizationStorage(CameraLocalizer):
+class OnlineLocalizationStorage(Localization):
     def __init__(self):
         super().__init__()
 

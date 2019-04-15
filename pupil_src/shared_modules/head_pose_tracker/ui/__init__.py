@@ -13,6 +13,7 @@ from head_pose_tracker.ui import gl_renderer_utils
 from head_pose_tracker.ui.gl_window import GLWindow
 from head_pose_tracker.ui.head_pose_tracker_3d_renderer import HeadPoseTracker3DRenderer
 from head_pose_tracker.ui.detection_renderer import DetectionRenderer
+from head_pose_tracker.ui.visualization_menu import VisualizationMenu
 
 from head_pose_tracker.ui.offline_detection_menu import OfflineDetectionMenu
 from head_pose_tracker.ui.offline_optimization_menu import OfflineOptimizationMenu
@@ -29,5 +30,4 @@ from head_pose_tracker.ui.offline_head_pose_tracker_timeline import (
 from head_pose_tracker.ui.online_head_pose_tracker_menu import (
     OnlineHeadPoseTrackerMenu,
     OnlineOptimizationMenu,
-    OnlineLocalizationMenu,
 )

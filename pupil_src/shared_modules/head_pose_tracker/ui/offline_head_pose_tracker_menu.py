@@ -15,18 +15,16 @@ from pyglui import ui
 class OfflineHeadPoseTrackerMenu:
     def __init__(
         self,
-        general_settings,
+        visualization_menu,
         detection_menu,
         optimization_menu,
         localization_menu,
-        head_pose_tracker_3d_renderer,
         plugin,
     ):
-        self._general_settings = general_settings
+        self._visualization_menu = visualization_menu
         self._detection_menu = detection_menu
         self._optimization_menu = optimization_menu
         self._localization_menu = localization_menu
-        self._head_pose_tracker_3d_renderer = head_pose_tracker_3d_renderer
         self._plugin = plugin
 
         plugin.add_observer("init_ui", self._on_init_ui)
@@ -37,6 +35,9 @@ class OfflineHeadPoseTrackerMenu:
         self._plugin.menu.label = "Offline Head Pose Tracker"
 
         self._plugin.menu.extend(self._render_on_top_menu())
+
+        self._visualization_menu.render()
+        self._plugin.menu.append(self._visualization_menu.menu)
 
         self._detection_menu.render()
         self._plugin.menu.append(self._detection_menu.menu)
@@ -51,10 +52,7 @@ class OfflineHeadPoseTrackerMenu:
         self._plugin.remove_menu()
 
     def _render_on_top_menu(self):
-        menu = [
-            self._create_on_top_text(),
-            self._create_open_visualization_window_switch(),
-        ]
+        menu = [self._create_on_top_text()]
         return menu
 
     def _create_on_top_text(self):
@@ -65,14 +63,3 @@ class OfflineHeadPoseTrackerMenu:
             "Second, based on the detections, markers 3d model is built. "
             "Third, camera localizations is calculated."
         )
-
-    def _create_open_visualization_window_switch(self):
-        return ui.Switch(
-            "open_visualization_window",
-            self._general_settings,
-            label="Open Visualization Window",
-            setter=self._on_open_visualization_window_switched,
-        )
-
-    def _on_open_visualization_window_switched(self, new_value):
-        self._head_pose_tracker_3d_renderer.switch_visualization_window(new_value)

@@ -13,18 +13,9 @@ from pyglui import ui
 
 
 class OnlineHeadPoseTrackerMenu:
-    def __init__(
-        self,
-        general_settings,
-        optimization_menu,
-        localization_menu,
-        head_pose_tracker_3d_renderer,
-        plugin,
-    ):
-        self._general_settings = general_settings
+    def __init__(self, visualization_menu, optimization_menu, plugin):
+        self._visualization_menu = visualization_menu
         self._optimization_menu = optimization_menu
-        self._localization_menu = localization_menu
-        self._head_pose_tracker_3d_renderer = head_pose_tracker_3d_renderer
         self._plugin = plugin
 
         plugin.add_observer("init_ui", self._on_init_ui)
@@ -36,20 +27,17 @@ class OnlineHeadPoseTrackerMenu:
 
         self._plugin.menu.extend(self._render_on_top_menu())
 
+        self._visualization_menu.render()
+        self._plugin.menu.append(self._visualization_menu.menu)
+
         self._optimization_menu.render()
         self._plugin.menu.append(self._optimization_menu.menu)
-
-        self._localization_menu.render()
-        self._plugin.menu.append(self._localization_menu.menu)
 
     def _on_deinit_ui(self):
         self._plugin.remove_menu()
 
     def _render_on_top_menu(self):
-        menu = [
-            self._create_on_top_text(),
-            self._create_open_visualization_window_switch(),
-        ]
+        menu = [self._create_on_top_text()]
         return menu
 
     def _create_on_top_text(self):
@@ -60,17 +48,6 @@ class OnlineHeadPoseTrackerMenu:
             "Second, based on the detections, markers 3d model is built. "
             "Third, camera localizations is calculated."
         )
-
-    def _create_open_visualization_window_switch(self):
-        return ui.Switch(
-            "open_visualization_window",
-            self._general_settings,
-            label="Open Visualization Window",
-            setter=self._on_open_visualization_window_switched,
-        )
-
-    def _on_open_visualization_window_switched(self, new_value):
-        self._head_pose_tracker_3d_renderer.switch_visualization_window(new_value)
 
 
 class OnlineOptimizationMenu:
@@ -86,21 +63,18 @@ class OnlineOptimizationMenu:
 
     def render(self):
         self.menu.elements.clear()
-        self._render_custom_ui()
-
-    def _render_custom_ui(self):
-        self.menu.elements.extend(self._render_ui())
+        self._render_ui()
 
     def _render_ui(self):
-        menu = [
-            self._create_name_input(),
-            self._create_optimize_markers_3d_model_switch(),
-            self._create_optimize_camera_intrinsics_switch(),
-            self._create_origin_marker_id_display(),
-            self._create_show_marker_id_switch(),
-            self._create_reset_markers_3d_model_button(),
-        ]
-        return menu
+        self.menu.elements.extend(
+            [
+                self._create_name_input(),
+                self._create_optimize_markers_3d_model_switch(),
+                self._create_optimize_camera_intrinsics_switch(),
+                self._create_origin_marker_id_display(),
+                self._create_reset_markers_3d_model_button(),
+            ]
+        )
 
     def _create_name_input(self):
         return ui.Text_Input(
@@ -114,7 +88,7 @@ class OnlineOptimizationMenu:
         return ui.Switch(
             "optimize_markers_3d_model",
             self._general_settings,
-            label="Build Markers 3D Model",
+            label="Build markers 3d model",
             setter=self._on_optimize_markers_3d_model_switched,
         )
 
@@ -132,18 +106,13 @@ class OnlineOptimizationMenu:
         return ui.Text_Input(
             "origin_marker_id",
             self._optimization_storage,
-            label="origin marker id",
+            label="Origin marker id",
             getter=self._on_get_origin_marker_id,
             setter=lambda _: _,
         )
 
-    def _create_show_marker_id_switch(self):
-        return ui.Switch(
-            "show_marker_id", self._general_settings, label="Show Marker IDs"
-        )
-
     def _create_reset_markers_3d_model_button(self):
-        return ui.Button("reset", function=self._controller.reset)
+        return ui.Button("Reset", function=self._controller.reset)
 
     def _on_name_change(self, new_name):
         self._optimization_storage.rename(new_name)
@@ -156,26 +125,3 @@ class OnlineOptimizationMenu:
     def _on_optimize_markers_3d_model_switched(self, new_value):
         self._controller.switch_optimize_markers_3d_model(new_value)
         self.render()
-
-
-class OnlineLocalizationMenu:
-    menu_label = "Camera Localizer"
-
-    def __init__(self, general_settings, localization_storage):
-        self._general_settings = general_settings
-        self._localization_storage = localization_storage
-
-        self.menu = ui.Growing_Menu(self.menu_label)
-        self.menu.collapsed = False
-
-    def render(self):
-        self.menu.elements.clear()
-        self._render_custom_ui()
-
-    def _render_custom_ui(self):
-        self.menu.elements.extend([self._create_show_camera_trace_switch()])
-
-    def _create_show_camera_trace_switch(self):
-        return ui.Switch(
-            "show_camera_trace", self._general_settings, label="Show Camera Trace"
-        )

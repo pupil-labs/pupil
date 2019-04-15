@@ -13,7 +13,7 @@ from pyglui import ui
 
 
 class OfflineLocalizationMenu:
-    menu_label = "Camera Localizer"
+    menu_label = "Camera Localization"
 
     def __init__(
         self,
@@ -41,15 +41,14 @@ class OfflineLocalizationMenu:
 
     def render(self):
         self.menu.elements.clear()
-        self._render_custom_ui()
+        self._render_ui()
 
-    def _render_custom_ui(self):
+    def _render_ui(self):
         self.menu.elements.extend(
             [
                 self._create_range_selector(),
                 self._create_calculate_button(),
                 self._create_status_text(),
-                self._create_show_camera_trace_switch(),
             ]
         )
 
@@ -59,7 +58,7 @@ class OfflineLocalizationMenu:
         )
         return ui.Button(
             outer_label=range_string,
-            label="Set From Trim Marks",
+            label="Set from trim marks",
             function=self._on_set_index_range_from_trim_marks,
         )
 
@@ -74,11 +73,6 @@ class OfflineLocalizationMenu:
     def _create_status_text(self):
         return ui.Text_Input(
             "status", self._localization_controller, label="Status", setter=lambda _: _
-        )
-
-    def _create_show_camera_trace_switch(self):
-        return ui.Switch(
-            "show_camera_trace", self._general_settings, label="Show Camera Trace"
         )
 
     def _on_set_index_range_from_trim_marks(self):

@@ -40,9 +40,9 @@ class OfflineOptimizationMenu:
 
     def render(self):
         self.menu.elements.clear()
-        self._render_custom_ui()
+        self._render_ui()
 
-    def _render_custom_ui(self):
+    def _render_ui(self):
         if self._optimization_storage.is_from_same_recording:
             self.menu.elements.extend(
                 self._render_ui_markers_3d_model_from_same_recording()
@@ -51,7 +51,6 @@ class OfflineOptimizationMenu:
             self.menu.elements.extend(
                 self._render_ui_markers_3d_model_from_another_recording()
             )
-        self.menu.elements.extend(self._render_ui_for_both_cases())
 
     def _render_ui_markers_3d_model_from_same_recording(self):
         menu = [
@@ -74,23 +73,19 @@ class OfflineOptimizationMenu:
     def _create_info_text_for_markers_3d_model_from_another_recording(self):
         if self._optimization_storage.calculated:
             text = (
-                "This Markers 3D Model '{}' was copied from another recording. "
+                "This markers 3d model '{}' was copied from another recording. "
                 "It is ready to be used for camera localization.".format(
                     self._optimization_storage.name
                 )
             )
         else:
             text = (
-                "This Markers 3D Model '{}' was copied from another recording, "
+                "This markers 3d model '{}' was copied from another recording, "
                 "but it cannot be used here, since it was not successfully calculated. "
                 "Please go back to the original recording, calculate and copy it here "
                 "again.".format(self._optimization_storage.name)
             )
         return ui.Info_Text(text)
-
-    def _render_ui_for_both_cases(self):
-        menu = [self._create_show_marker_id_switch()]
-        return menu
 
     def _create_name_input(self):
         return ui.Text_Input(
@@ -101,12 +96,12 @@ class OfflineOptimizationMenu:
         )
 
     def _create_range_selector(self):
-        range_string = "Collect Markers in: " + self._index_range_as_str(
+        range_string = "Collect markers in: " + self._index_range_as_str(
             self._general_settings.optimization_frame_index_range
         )
         return ui.Button(
             outer_label=range_string,
-            label="Set From Trim Marks",
+            label="Set from trim marks",
             function=self._on_set_index_range_from_trim_marks,
         )
 
@@ -143,14 +138,9 @@ class OfflineOptimizationMenu:
         return ui.Text_Input(
             "user_defined_origin_marker_id",
             self._general_settings,
-            label="origin marker id",
+            label="Origin marker id",
             getter=self._on_get_origin_marker_id,
             setter=lambda _: _,
-        )
-
-    def _create_show_marker_id_switch(self):
-        return ui.Switch(
-            "show_marker_id", self._general_settings, label="Show Marker IDs"
         )
 
     def _on_name_change(self, new_name):

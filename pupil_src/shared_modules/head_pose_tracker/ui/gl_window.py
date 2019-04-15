@@ -16,12 +16,13 @@ import OpenGL.GL as gl
 
 import gl_utils
 import glfw
+from observable import Observable
 
 # FOR SMOOTH RENDERING
 os.environ["GL_FSAA_MODE"] = "11"
 
 
-class GLWindow(abc.ABC):
+class GLWindow(Observable, abc.ABC):
     def __init__(self, general_settings, plugin):
         self._general_settings = general_settings
 

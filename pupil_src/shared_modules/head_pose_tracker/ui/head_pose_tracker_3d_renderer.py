@@ -64,7 +64,7 @@ class HeadPoseTracker3DRenderer(plugin_ui.GLWindow):
             )
             utils.render_polygon_in_3d_window(points_3d, color)
 
-            if self._general_settings.show_marker_id:
+            if self._general_settings.show_marker_id_in_3d_window:
                 color = (1, 0, 0, 1)
                 utils.render_text_in_3d_window(str(marker_id), points_3d[0], color)
 
@@ -73,11 +73,11 @@ class HeadPoseTracker3DRenderer(plugin_ui.GLWindow):
         camera_trace = pose_data["camera_trace"]
         camera_pose_matrix = pose_data["camera_pose_matrix"]
 
-        # recent_camera_trace is updated no matter show_camera_trace is on or not
+        # recent_camera_trace is updated no matter show_camera_trace_in_3d_window is on or not
         self._localization_storage.add_recent_camera_trace(camera_trace)
 
         color = (0.2, 0.2, 0.2, 0.1)
-        if self._general_settings.show_camera_trace:
+        if self._general_settings.show_camera_trace_in_3d_window:
             utils.render_camera_trace(
                 self._localization_storage.recent_camera_trace, color
             )

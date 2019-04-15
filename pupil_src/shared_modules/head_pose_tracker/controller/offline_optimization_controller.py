@@ -84,7 +84,15 @@ class OfflineOptimizationController(Observable):
                 self.status = "successfully completed"
                 self.on_optimization_completed()
             else:
-                self.status = "failed"
+                if self._general_settings.user_defined_origin_marker_id is not None:
+                    reason = (
+                        "not enough markers with the defined origin marker id "
+                        "were collected"
+                    )
+                else:
+                    reason = "not enough markers were collected"
+
+                self.status = "failed: " + reason
             logger.info("markers 3d model optimization '{}' ".format(self.status))
 
             self._optimization_storage.save_plmodel_to_disk()

@@ -50,6 +50,8 @@ class DetectionRenderer:
         self._render()
 
     def _render(self):
+        if not self._general_settings.render_markers:
+            return
         current_markers = self._detection_storage.current_markers
         marker_id_optimized = self._get_marker_id_optimized()
         self._render_markers(current_markers, marker_id_optimized)
@@ -71,7 +73,7 @@ class DetectionRenderer:
 
             self._draw_hat(hat_points, color)
 
-            if self._general_settings.show_marker_id:
+            if self._general_settings.show_marker_id_in_main_window:
                 self._draw_marker_id(marker_points, marker["id"])
 
     def _calculate_hat_points(self, marker_points):

@@ -115,6 +115,9 @@ class Offline_Head_Pose_Tracker(Plugin, Observable):
         )
 
     def _setup_menus(self):
+        self._visualization_menu = plugin_ui.VisualizationMenu(
+            self._offline_settings_storage, self._head_pose_tracker_3d_renderer
+        )
         self._detection_menu = plugin_ui.OfflineDetectionMenu(
             self._detection_controller,
             self._offline_settings_storage,
@@ -133,11 +136,10 @@ class Offline_Head_Pose_Tracker(Plugin, Observable):
             index_range_as_str=self._index_range_as_str,
         )
         self._head_pose_tracker_menu = plugin_ui.OfflineHeadPoseTrackerMenu(
-            self._offline_settings_storage,
+            self._visualization_menu,
             self._detection_menu,
             self._optimization_menu,
             self._localization_menu,
-            self._head_pose_tracker_3d_renderer,
             plugin=self,
         )
 

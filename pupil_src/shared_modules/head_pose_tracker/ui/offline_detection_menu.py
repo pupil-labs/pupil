@@ -32,30 +32,28 @@ class OfflineDetectionMenu:
 
     def render(self):
         self.menu.elements.clear()
-        self._render_custom_ui()
+        self._render_ui()
 
-    def _render_custom_ui(self):
+    def _render_ui(self):
         self.menu.elements.extend(
             [self._create_range_selector(), self._create_toggle_detection_button()]
         )
 
     def _create_range_selector(self):
-        range_string = "Detect Markers in: " + self._index_range_as_str(
+        range_string = "Detect markers in: " + self._index_range_as_str(
             self._general_settings.detection_frame_index_range
         )
         return ui.Button(
             outer_label=range_string,
-            label="Set From Trim Marks",
+            label="Set from trim marks",
             function=self._on_set_index_range_from_trim_marks,
         )
 
     def _create_toggle_detection_button(self):
         if self._detection_controller.is_running_task:
-            return ui.Button("Cancel Detection", self._on_click_cancel_detection)
+            return ui.Button("Cancel detection", self._on_click_cancel_detection)
         else:
-            return ui.Button(
-                "Detect Apriltags in Recording", self._on_click_start_detection
-            )
+            return ui.Button("Start detection", self._on_click_start_detection)
 
     def _on_set_index_range_from_trim_marks(self):
         self._detection_controller.set_range_from_current_trim_marks()

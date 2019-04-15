@@ -82,8 +82,8 @@ class OfflineLocalizationController(Observable):
     def _check_valid_markers_3d_model(self):
         if not self._optimization_storage.calculated:
             error_message = (
-                "You first need to calculate markers 3d model '{}' before calculating "
-                "camera localization".format(self._optimization_storage.name)
+                "failed: markers 3d model '{}' should be calculated before calculating"
+                " camera localization".format(self._optimization_storage.name)
             )
             self._abort_calculation(error_message)
             return False
