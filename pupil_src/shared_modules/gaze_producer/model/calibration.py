@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 from collections import namedtuple
 
-from gaze_producer import model
+from storage import StorageItem
 
 # this plugin does not care about the content of the result, it just receives it from
 # the calibration routine and handles it to the gaze mapper
@@ -19,7 +19,7 @@ CalibrationResult = namedtuple(
 )
 
 
-class Calibration(model.storage.StorageItem):
+class Calibration(StorageItem):
     version = 1
 
     def __init__(
