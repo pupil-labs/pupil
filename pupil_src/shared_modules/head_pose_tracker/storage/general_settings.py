@@ -126,21 +126,8 @@ class OfflineSettingsStorage(SettingsStorage):
         )
 
 
-class OnlineSettingsStorage(SettingsStorage):
-    def __init__(self, save_dir, plugin):
-        super().__init__(save_dir, plugin)
-
-        self.optimize_markers_3d_model = False
-        self.optimize_camera_intrinsics = False
-        self.open_visualization_window = False
-        self.show_camera_trace_in_3d_window = False
-        self.show_marker_id_in_3d_window = False
-        self.render_markers = True
-        self.show_marker_id_in_main_window = False
-
-        self.load_from_disk()
-
-    def _data_from_tuple(self, settings_tuple):
+class OnlineSettings:
+    def __init__(self, settings_tuple):
         (
             self.optimize_markers_3d_model,
             self.optimize_camera_intrinsics,
@@ -152,13 +139,13 @@ class OnlineSettingsStorage(SettingsStorage):
         ) = settings_tuple
 
     @property
-    def _data_as_tuple(self):
-        return (
-            self.optimize_markers_3d_model,
-            self.optimize_camera_intrinsics,
-            self.open_visualization_window,
-            self.show_camera_trace_in_3d_window,
-            self.show_marker_id_in_3d_window,
-            self.render_markers,
-            self.show_marker_id_in_main_window,
-        )
+    def data_as_dict(self):
+        return {
+            "optimize_markers_3d_model": self.optimize_markers_3d_model,
+            "optimize_camera_intrinsics": self.optimize_camera_intrinsics,
+            "open_visualization_window": self.open_visualization_window,
+            "show_camera_trace_in_3d_window": self.show_camera_trace_in_3d_window,
+            "show_marker_id_in_3d_window": self.show_marker_id_in_3d_window,
+            "render_markers": self.render_markers,
+            "show_marker_id_in_main_window": self.show_marker_id_in_main_window,
+        }

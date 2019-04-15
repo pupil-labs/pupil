@@ -25,20 +25,38 @@ class Online_Head_Pose_Tracker(Plugin, Observable):
     icon_chr = chr(0xEC07)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool):
+    def __init__(
+        self,
+        g_pool,
+        optimize_markers_3d_model=False,
+        optimize_camera_intrinsics=False,
+        open_visualization_window=False,
+        show_camera_trace_in_3d_window=False,
+        show_marker_id_in_3d_window=False,
+        render_markers=True,
+        show_marker_id_in_main_window=False,
+    ):
         super().__init__(g_pool)
 
         self._task_manager = PluginTaskManager(plugin=self)
 
+        self._online_settings = storage.OnlineSettings(
+            (
+                optimize_markers_3d_model,
+                optimize_camera_intrinsics,
+                open_visualization_window,
+                show_camera_trace_in_3d_window,
+                show_marker_id_in_3d_window,
+                render_markers,
+                show_marker_id_in_main_window,
+            )
+        )
         self._setup_storages()
         self._setup_controllers()
         self._setup_renderers()
         self._setup_menus()
 
     def _setup_storages(self):
-        self._online_settings_storage = storage.OnlineSettingsStorage(
-            self.g_pool.user_dir, plugin=self
-        )
         self._detection_storage = storage.OnlineDetectionStorage()
         self._optimization_storage = storage.OptimizationStorage(
             self.g_pool.user_dir, plugin=self
@@ -47,7 +65,7 @@ class Online_Head_Pose_Tracker(Plugin, Observable):
 
     def _setup_controllers(self):
         self._controller = controller.OnlineController(
-            self._online_settings_storage,
+            self._online_settings,
             self._detection_storage,
             self._optimization_storage,
             self._localization_storage,
@@ -59,13 +77,13 @@ class Online_Head_Pose_Tracker(Plugin, Observable):
 
     def _setup_renderers(self):
         self._detection_renderer = plugin_ui.DetectionRenderer(
-            self._online_settings_storage,
+            self._online_settings,
             self._detection_storage,
             self._optimization_storage,
             plugin=self,
         )
         self._head_pose_tracker_3d_renderer = plugin_ui.HeadPoseTracker3DRenderer(
-            self._online_settings_storage,
+            self._online_settings,
             self._detection_storage,
             self._optimization_storage,
             self._localization_storage,
@@ -75,11 +93,14 @@ class Online_Head_Pose_Tracker(Plugin, Observable):
 
     def _setup_menus(self):
         self._visualization_menu = plugin_ui.VisualizationMenu(
-            self._online_settings_storage, self._head_pose_tracker_3d_renderer
+            self._online_settings, self._head_pose_tracker_3d_renderer
         )
         self._optimization_menu = plugin_ui.OnlineOptimizationMenu(
-            self._controller, self._online_settings_storage, self._optimization_storage
+            self._controller, self._online_settings, self._optimization_storage
         )
         self._head_pose_tracker_menu = plugin_ui.OnlineHeadPoseTrackerMenu(
             self._visualization_menu, self._optimization_menu, plugin=self
         )
+
+    def get_init_dict(self):
+        return self._online_settings.data_as_dict

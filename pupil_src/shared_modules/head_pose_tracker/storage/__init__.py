@@ -23,5 +23,5 @@ from head_pose_tracker.storage.optimization_storage import (
 )
 from head_pose_tracker.storage.general_settings import (
     OfflineSettingsStorage,
-    OnlineSettingsStorage,
+    OnlineSettings,
 )
