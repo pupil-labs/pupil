@@ -49,7 +49,7 @@ class GLWindow(Observable, abc.ABC):
         if self._window:
             return
 
-        self._window = self._glfw_init(window_size=(1280, 1335), window_position=(0, 0))
+        self._window = self._glfw_init()
         self._gl_state_settings(self._window)
         self._register_callbacks(self._window)
 
@@ -59,15 +59,14 @@ class GLWindow(Observable, abc.ABC):
         trackball.zoom_to(-100)
         return trackball
 
-    @staticmethod
-    def _glfw_init(window_size, window_position):
+    def _glfw_init(self):
         glfw.glfwInit()
         window = glfw.glfwCreateWindow(
-            *window_size,
+            *self._general_settings.window_size,
             title="Head Poses Visualizer",
             share=glfw.glfwGetCurrentContext()
         )
-        glfw.glfwSetWindowPos(window, *window_position)
+        glfw.glfwSetWindowPos(window, *self._general_settings.window_position)
         return window
 
     @staticmethod
@@ -80,36 +79,44 @@ class GLWindow(Observable, abc.ABC):
         glfw.glfwMakeContextCurrent(active_window)
 
     def _register_callbacks(self, window):
-        glfw.glfwSetFramebufferSizeCallback(window, self._on_resize_window)
-        glfw.glfwSetMouseButtonCallback(window, self._on_window_mouse_button)
-        glfw.glfwSetCursorPosCallback(window, self._on_window_pos)
-        glfw.glfwSetScrollCallback(window, self._on_scroll)
-        glfw.glfwSetWindowCloseCallback(window, self._on_close_window)
+        glfw.glfwSetWindowSizeCallback(window, self._on_set_window_size)
+        glfw.glfwSetWindowPosCallback(window, self._on_set_window_pos)
+        glfw.glfwSetFramebufferSizeCallback(window, self._on_set_frame_buffer_size)
+        glfw.glfwSetMouseButtonCallback(window, self._on_set_mouse_button)
+        glfw.glfwSetCursorPosCallback(window, self._on_set_cursor_pos)
+        glfw.glfwSetScrollCallback(window, self._on_set_scroll)
+        glfw.glfwSetWindowCloseCallback(window, self._on_set_window_close)
 
-    def _on_resize_window(self, window, w, h):
+    def _on_set_window_size(self, window, w, h):
+        self._general_settings.window_size = (w, h)
+
+    def _on_set_window_pos(self, window, x, y):
+        self._general_settings.window_position = (x, y)
+
+    def _on_set_frame_buffer_size(self, window, w, h):
         self._trackball.set_window_size(w, h)
         active_window = glfw.glfwGetCurrentContext()
         glfw.glfwMakeContextCurrent(window)
         gl_utils.adjust_gl_view(w, h)
         glfw.glfwMakeContextCurrent(active_window)
 
-    def _on_window_mouse_button(self, window, button, action, mods):
+    def _on_set_mouse_button(self, window, button, action, mods):
         if action == glfw.GLFW_PRESS:
             self._input["down"] = True
             self._input["mouse"] = glfw.glfwGetCursorPos(window)
         elif action == glfw.GLFW_RELEASE:
             self._input["down"] = False
 
-    def _on_window_pos(self, window, x, y):
+    def _on_set_cursor_pos(self, window, x, y):
         if self._input["down"]:
             old_x, old_y = self._input["mouse"]
             self._trackball.drag_to(x - old_x, y - old_y)
             self._input["mouse"] = x, y
 
-    def _on_scroll(self, window, x, y):
+    def _on_set_scroll(self, window, x, y):
         self._trackball.zoom_to(y)
 
-    def _on_close_window(self, window):
+    def _on_set_window_close(self, window):
         self.switch_visualization_window(False)
 
     def _on_deinit_ui(self):

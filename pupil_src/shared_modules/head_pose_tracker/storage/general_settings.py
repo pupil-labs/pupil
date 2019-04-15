@@ -93,6 +93,8 @@ class OfflineSettingsStorage(SettingsStorage):
         self.show_marker_id_in_3d_window = False
         self.render_markers = True
         self.show_marker_id_in_main_window = False
+        self.window_size = (1280, 720)
+        self.window_position = (0, 0)
 
         self.load_from_disk()
 
@@ -108,6 +110,8 @@ class OfflineSettingsStorage(SettingsStorage):
             self.show_marker_id_in_3d_window,
             self.render_markers,
             self.show_marker_id_in_main_window,
+            self.window_size,
+            self.window_position,
         ) = settings_tuple
 
     @property
@@ -123,6 +127,8 @@ class OfflineSettingsStorage(SettingsStorage):
             self.show_marker_id_in_3d_window,
             self.render_markers,
             self.show_marker_id_in_main_window,
+            self.window_size,
+            self.window_position,
         )
 
 
@@ -136,6 +142,8 @@ class OnlineSettings:
             self.show_marker_id_in_3d_window,
             self.render_markers,
             self.show_marker_id_in_main_window,
+            self.window_size,
+            self.window_position,
         ) = settings_tuple
 
     @property
@@ -148,4 +156,6 @@ class OnlineSettings:
             "show_marker_id_in_3d_window": self.show_marker_id_in_3d_window,
             "render_markers": self.render_markers,
             "show_marker_id_in_main_window": self.show_marker_id_in_main_window,
+            "window_size": self.window_size,
+            "window_position": self.window_position,
         }
