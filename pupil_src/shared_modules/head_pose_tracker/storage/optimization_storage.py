@@ -65,6 +65,12 @@ class Markers3DModel:
             for marker_id, extrinsics in self.marker_id_to_extrinsics.items()
         }
 
+    def tolist(self):
+        return [
+            (marker_id, *extrinsics.tolist())
+            for marker_id, extrinsics in self.marker_id_to_extrinsics.items()
+        ]
+
     def set_origin_marker_id(self):
         if self.origin_marker_id is not None or not self.all_key_markers:
             return

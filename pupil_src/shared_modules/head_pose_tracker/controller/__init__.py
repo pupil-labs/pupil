@@ -18,4 +18,5 @@ from head_pose_tracker.controller.offline_detection_controller import (
 from head_pose_tracker.controller.offline_optimization_controller import (
     OfflineOptimizationController,
 )
+from head_pose_tracker.controller.export_controller import ExportController
 from head_pose_tracker.controller.online_controller import OnlineController
