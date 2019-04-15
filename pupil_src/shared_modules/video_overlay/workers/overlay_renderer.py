@@ -6,24 +6,24 @@ from observable import Observable
 
 import video_overlay.utils.image_manipulation as IM
 from video_overlay.utils.constraints import InclusiveConstraint
-from video_overlay.controllers.config import Controller as ConfigController
-from video_overlay.controllers.video import Controller as VideoController
+from video_overlay.models.config import Configuration
+from video_overlay.workers.frame_fetcher import FrameFetcher
 
 logger = logging.getLogger(__name__)
 
 
-class Controller(Observable):
-    def __init__(self, video_path, config):
-        self.attempt_to_load_video(video_path)
-        self.config = ConfigController.from_updated_defaults(config)
+class OverlayRenderer:
+    def __init__(self, config):
+        self.config = config
+        self.attempt_to_load_video()
         self.pipeline = self.setup_pipeline()
 
-    def attempt_to_load_video(self, video_path):
+    def attempt_to_load_video(self):
         try:
-            self.video = VideoController(video_path)
+            self.video = FrameFetcher(self.config.video_path)
             self.valid_video_loaded = True
         except FileNotFoundError:
-            logger.debug("Could not load overlay: {}".format(video_path))
+            logger.debug("Could not load overlay: {}".format(self.config.video_path))
             self.valid_video_loaded = False
         return self.valid_video_loaded
 
@@ -58,7 +58,3 @@ class Controller(Observable):
         pm.transparent_image_overlay(
             overlay_origin, overlay_image, target_image, self.config.alpha.value
         )
-
-    @property
-    def video_path(self):
-        return self.video.source.source_path if self.valid_video_loaded else None

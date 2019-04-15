@@ -11,7 +11,7 @@ class _Empty:
     """Replacement for actual g_pool object"""
 
 
-class Controller:
+class FrameFetcher:
     __slots__ = ("source", "current_frame")
 
     def __init__(self, video_path):

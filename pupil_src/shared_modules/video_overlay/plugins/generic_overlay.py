@@ -1,94 +1,56 @@
 import collections
 import os
 
+from observable import Observable
 from plugin import Plugin
+from video_capture.utils import VIDEO_EXTS
 
-from video_overlay.controllers.overlay import Controller as OverlayController
-from video_overlay.ui.menu import generic_overlay_elements, no_valid_video_elements
-from video_overlay.ui.interactions import Draggable
+from video_overlay.models.config import Configuration
+from video_overlay.controllers.overlay_manager import OverlayManager
+from video_overlay.ui.management import UIManagement
 
 
-class Vis_Generic_Video_Overlay(Plugin):
-    uniqueness = "not_unique"
+class Vis_Generic_Video_Overlay(Observable, Plugin):
+    icon_chr = "O"
 
-    def __init__(self, g_pool, video_path=None, config=None):
+    def __init__(self, g_pool):
         super().__init__(g_pool)
-        config = config or {"scale": 0.5, "alpha": 0.9, "hflip": False, "vflip": False}
-        self.controller = OverlayController(video_path, config)
-
-    def get_init_dict(self):
-        return {
-            "video_path": self.controller.video_path,
-            "config": self.controller.config.get_init_dict(),
-        }
+        self.manager = OverlayManager(g_pool.rec_dir, self)
 
     def recent_events(self, events):
         if "frame" in events:
             frame = events["frame"]
-            self.controller.draw_on_frame(frame)
+            for overlay in self.manager.overlays:
+                overlay.draw_on_frame(frame)
 
     def on_drop(self, paths):
-        remaining_paths = paths.copy()
-        while remaining_paths and not self.controller.valid_video_loaded:
-            video_path = remaining_paths.pop(0)
-            if self.controller.attempt_to_load_video(video_path):
-                return True  # event consumed
-        return False  # event not consumed
+        valid_paths = [p for p in paths if self.valid_path(p)]
+        for video_path in valid_paths:
+            self._add_overlay_to_storage(video_path)
+        # event only consumed if at least one valid file was present
+        return bool(valid_paths)
+
+    @staticmethod
+    def valid_path(path):
+        # splitext()[1] always starts with `.`
+        ext = os.path.splitext(path)[1][1:]
+        return ext in VIDEO_EXTS
+
+    def _add_overlay_to_storage(self, video_path):
+        config = Configuration(video_path)
+        self.manager.add(config)
+        self.manager.save_to_disk()
+        self._overlay_added_to_storage(self.manager.most_recent)
+
+    def _overlay_added_to_storage(self, overlay):
+        print(type(overlay), overlay)
+        pass  # observed to create menus and draggables
 
     def init_ui(self):
         self.add_menu()
-        self.refresh_menu()
-        self.controller.add_observer("attempt_to_load_video", self.refresh_menu)
-        self._setup_draggable()
+        self.menu.label = "Generic Video Overlays"
+        self.ui = UIManagement(self, self.menu, self.manager.overlays)
 
     def deinit_ui(self):
-        self._tear_down_draggable()
-        self.controller.remove_observer("attempt_to_load_video", self.refresh_menu)
+        self.ui.teardown()
         self.remove_menu()
-
-    def refresh_menu(self, *args, **kwargs):
-        ui_setup = self._ui_setup()
-        # first element corresponds to `Close` button, added in add_menu()
-        self.menu_icon.label = ui_setup.icon
-        self.menu.label = ui_setup.title
-        self.menu[1:] = ui_setup.menu_elements
-
-    def _ui_setup(self):
-        return (
-            self._ui_setup_if_valid()
-            if self.controller.valid_video_loaded
-            else self._ui_setup_if_not_valid()
-        )
-
-    def _ui_setup_if_valid(self):
-        video_basename = os.path.basename(self.controller.video_path)
-        menu_elements = generic_overlay_elements(
-            self.controller.video_path, self.controller.config
-        )
-        return UISetup(
-            icon="O",
-            title="Video Overlay: {}".format(video_basename),
-            menu_elements=menu_elements,
-        )
-
-    def _ui_setup_if_not_valid(self):
-        return UISetup(
-            icon="!",
-            title="Video Overlay: No valid video loaded",
-            menu_elements=no_valid_video_elements(),
-        )
-
-    def _setup_draggable(self):
-        self.draggable = Draggable(self.controller)
-
-    def _tear_down_draggable(self):
-        del self.draggable
-
-    def on_click(self, *args, **kwargs):
-        return self.draggable.on_click(*args, **kwargs)
-
-    def on_pos(self, *args, **kwargs):
-        return self.draggable.on_pos(*args, **kwargs)
-
-
-UISetup = collections.namedtuple("UISetup", ("icon", "title", "menu_elements"))

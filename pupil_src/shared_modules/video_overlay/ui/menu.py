@@ -1,11 +1,12 @@
-import abc
+import os
+import weakref
+
 from pyglui import ui
 
 
-def no_valid_video_elements():
+def not_valid_video_elements(video_path):
     return (
-        ui.Info_Text("No valid overlay video loaded yet."),
-        ui.Info_Text("To load a video, drag and drop it onto Player."),
+        ui.Info_Text("No valid overlay video found at {}".format(video_path)),
         ui.Info_Text(
             "Valid overlay videos conform to the Pupil data format and "
             "their timestamps are in sync with the opened recording."
@@ -13,9 +14,9 @@ def no_valid_video_elements():
     )
 
 
-def generic_overlay_elements(video_path, config):
+def generic_overlay_elements(config):
     return (
-        ui.Info_Text("Loaded video: {}".format(video_path)),
+        ui.Info_Text("Loaded video: {}".format(config.video_path)),
         ui.Slider(
             "value",
             config.scale,
@@ -35,3 +36,18 @@ def generic_overlay_elements(video_path, config):
         ui.Switch("value", config.hflip, label="Flip horizontally"),
         ui.Switch("value", config.vflip, label="Flip vertically"),
     )
+
+
+class GenericOverlayMenu:
+    def __init__(self, overlay):
+        self.overlay = weakref.ref(overlay)
+        video_basename = os.path.basename(self.overlay().config.video_path)
+        self.menu = ui.Growing_Menu(video_basename)
+        self.menu.collapsed = True
+
+    @property
+    def update_menu(self):
+        if self.overlay().valid_video_loaded:
+            self.menu[:] = generic_overlay_elements(self.overlay().config)
+        else:
+            self.menu[:] = not_valid_video_elements(self.overlay().config.video_path)
