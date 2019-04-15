@@ -86,6 +86,7 @@ class OfflineSettingsStorage(SettingsStorage):
         self.detection_frame_index_range = self._get_recording_index_range()
         self.optimization_frame_index_range = self._get_recording_index_range()
         self.localization_frame_index_range = self._get_recording_index_range()
+        self.open_visualization_window = False
         self.user_defined_origin_marker_id = None
         self.optimize_camera_intrinsics = False
         self.show_marker_id = False
@@ -98,6 +99,7 @@ class OfflineSettingsStorage(SettingsStorage):
             self.detection_frame_index_range,
             self.optimization_frame_index_range,
             self.localization_frame_index_range,
+            self.open_visualization_window,
             self.user_defined_origin_marker_id,
             self.optimize_camera_intrinsics,
             self.show_marker_id,
@@ -110,6 +112,7 @@ class OfflineSettingsStorage(SettingsStorage):
             self.detection_frame_index_range,
             self.optimization_frame_index_range,
             self.localization_frame_index_range,
+            self.open_visualization_window,
             self.user_defined_origin_marker_id,
             self.optimize_camera_intrinsics,
             self.show_marker_id,
@@ -121,6 +124,7 @@ class OnlineSettingsStorage(SettingsStorage):
     def __init__(self, save_dir, plugin):
         super().__init__(save_dir, plugin)
 
+        self.open_visualization_window = False
         self.optimize_markers_3d_model = True
         self.optimize_camera_intrinsics = False
         self.show_marker_id = False
@@ -130,6 +134,7 @@ class OnlineSettingsStorage(SettingsStorage):
 
     def _data_from_tuple(self, settings_tuple):
         (
+            self.open_visualization_window,
             self.optimize_markers_3d_model,
             self.optimize_camera_intrinsics,
             self.show_marker_id,
@@ -139,6 +144,7 @@ class OnlineSettingsStorage(SettingsStorage):
     @property
     def _data_as_tuple(self):
         return (
+            self.open_visualization_window,
             self.optimize_markers_3d_model,
             self.optimize_camera_intrinsics,
             self.show_marker_id,

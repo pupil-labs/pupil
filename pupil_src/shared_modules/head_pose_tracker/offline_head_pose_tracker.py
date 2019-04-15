@@ -133,6 +133,7 @@ class Offline_Head_Pose_Tracker(Plugin, Observable):
             index_range_as_str=self._index_range_as_str,
         )
         self._head_pose_tracker_menu = plugin_ui.OfflineHeadPoseTrackerMenu(
+            self._offline_settings_storage,
             self._detection_menu,
             self._optimization_menu,
             self._localization_menu,

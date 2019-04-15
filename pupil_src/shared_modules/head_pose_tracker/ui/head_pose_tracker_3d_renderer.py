@@ -25,14 +25,13 @@ class HeadPoseTracker3DRenderer(plugin_ui.GLWindow):
         camera_intrinsics,
         plugin,
     ):
-        super().__init__(plugin)
+        super().__init__(general_settings, plugin)
 
         self._general_settings = general_settings
         self._detection_storage = detection_storage
         self._optimization_storage = optimization_storage
         self._localization_storage = localization_storage
         self._camera_intrinsics = camera_intrinsics
-        self._plugin = plugin
 
     def _render(self):
         if not self._optimization_storage.calculated:

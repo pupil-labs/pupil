@@ -15,11 +15,13 @@ from pyglui import ui
 class OnlineHeadPoseTrackerMenu:
     def __init__(
         self,
+        general_settings,
         optimization_menu,
         localization_menu,
         head_pose_tracker_3d_renderer,
         plugin,
     ):
+        self._general_settings = general_settings
         self._optimization_menu = optimization_menu
         self._localization_menu = localization_menu
         self._head_pose_tracker_3d_renderer = head_pose_tracker_3d_renderer
@@ -62,7 +64,7 @@ class OnlineHeadPoseTrackerMenu:
     def _create_open_visualization_window_switch(self):
         return ui.Switch(
             "open_visualization_window",
-            self._head_pose_tracker_3d_renderer,
+            self._general_settings,
             label="Open Visualization Window",
             setter=self._on_open_visualization_window_switched,
         )

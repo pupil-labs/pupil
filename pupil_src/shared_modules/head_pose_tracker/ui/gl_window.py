@@ -22,26 +22,27 @@ os.environ["GL_FSAA_MODE"] = "11"
 
 
 class GLWindow(abc.ABC):
-    def __init__(self, plugin):
+    def __init__(self, general_settings, plugin):
+        self._general_settings = general_settings
+
         self._input = {"down": False, "mouse": (0, 0)}
         self._window = None
         self._trackball = self._init_trackball()
-
-        self.open_visualization_window = True
 
         plugin.add_observer("init_ui", self._on_init_ui)
         plugin.add_observer("deinit_ui", self._on_deinit_ui)
         plugin.add_observer("gl_display", self._on_gl_display)
 
     def switch_visualization_window(self, new_value):
-        self.open_visualization_window = new_value
+        self._general_settings.open_visualization_window = new_value
         if new_value:
             self._open()
         else:
             self._close()
 
     def _on_init_ui(self):
-        self.switch_visualization_window(True)
+        if self._general_settings.open_visualization_window:
+            self._open()
 
     def _open(self):
         if self._window:
