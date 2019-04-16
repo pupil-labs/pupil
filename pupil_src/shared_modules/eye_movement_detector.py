@@ -12,12 +12,17 @@ See COPYING and COPYING.LESSER for license details.
 
 # stdlib
 import os
+import abc
 import csv
 import enum
 import typing
 import logging
 import traceback
-from collections import deque
+import operator
+import functools
+import itertools
+import collections
+import bisect
 from typing import _Protocol as Protocol
 
 
@@ -698,7 +703,7 @@ class Offline_Eye_Movement_Detector(Observable, _Eye_Movement_Detector_Base):
         self.eye_movement_task.start()
 
     def on_task_started(self):
-        self.eye_movement_detection_yields = deque()
+        self.eye_movement_detection_yields = collections.deque()
 
     def on_task_yield(self, yield_value):
 
