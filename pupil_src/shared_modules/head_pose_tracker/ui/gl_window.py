@@ -52,6 +52,7 @@ class GLWindow(Observable, abc.ABC):
         self._window = self._glfw_init()
         self._gl_state_settings(self._window)
         self._register_callbacks(self._window)
+        self._set_initial_window_state()
 
     @staticmethod
     def _init_trackball():
@@ -64,8 +65,6 @@ class GLWindow(Observable, abc.ABC):
         window = glfw.glfwCreateWindow(
             title="Head Pose Tracker Visualizer", share=glfw.glfwGetCurrentContext()
         )
-        glfw.glfwSetWindowPos(window, *self._general_settings.window_position)
-        glfw.glfwSetWindowSize(window, *self._general_settings.window_size)
         return window
 
     @staticmethod
@@ -85,6 +84,10 @@ class GLWindow(Observable, abc.ABC):
         glfw.glfwSetCursorPosCallback(window, self._on_set_cursor_pos)
         glfw.glfwSetScrollCallback(window, self._on_set_scroll)
         glfw.glfwSetWindowCloseCallback(window, self._on_set_window_close)
+
+    def _set_initial_window_state(self):
+        glfw.glfwSetWindowPos(self._window, *self._general_settings.window_position)
+        glfw.glfwSetWindowSize(self._window, *self._general_settings.window_size)
 
     def _on_set_window_size(self, window, w, h):
         self._general_settings.window_size = (w, h)
