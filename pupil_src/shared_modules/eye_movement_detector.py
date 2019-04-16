@@ -388,11 +388,46 @@ class Classified_Segment:
     def color_rgba(self) -> Color_RGBA:
         return self.segment_class.color_rgba
 
-    def point_within_world(
+    def mean_2d_point_within_world(
         self, world_frame: typing.Tuple[int, int]
     ) -> typing.Tuple[int, int]:
-        x, y = methods.denormalize(self.norm_pos, world_frame, flip_y=True)
+        x, y = self.norm_pos
+        x, y = methods.denormalize((x, y), world_frame, flip_y=True)
         return int(x), int(y)
+
+    def last_2d_point_within_world(
+        self, world_frame: typing.Tuple[int, int]
+    ) -> typing.Tuple[int, int]:
+        x, y = self.segment_data[-1]["norm_pos"]
+        x, y = methods.denormalize((x, y), world_frame, flip_y=True)
+        return int(x), int(y)
+
+    def draw_on_frame(self, frame):
+        #TODO: Type annotate frame
+        world_frame = (frame.width, frame.height)
+        segment_point = self.mean_2d_point_within_world(world_frame)
+        segment_color = self.color_rgba
+
+        pm.transparent_circle(
+            frame.img, segment_point, radius=25.0, color=segment_color, thickness=3
+        )
+
+        text = str(self.id)
+        text_origin = (segment_point[0] + 30, segment_point[1])
+        text_fg_color = self.color_rgb
+        font_face = cv2.FONT_HERSHEY_DUPLEX
+        font_scale = 0.8
+        font_thickness = 1
+
+        cv2.putText(
+            img=frame.img,
+            text=text,
+            org=text_origin,
+            fontFace=font_face,
+            fontScale=font_scale,
+            color=text_fg_color,
+            thickness=font_thickness,
+        )
 
 
 class Classified_Segment_Factory:
@@ -827,32 +862,8 @@ class Offline_Eye_Movement_Detector(Observable, _Eye_Movement_Detector_Base):
     def _ui_draw_visible_segments(self, frame, visible_segments):
         if not self.show_segmentation:
             return
-
         for segment in visible_segments:
-            world_frame = (frame.width, frame.height)
-            segment_point = segment.point_within_world(world_frame)
-            segment_color = segment.color_rgba
-
-            pm.transparent_circle(
-                frame.img, segment_point, radius=25.0, color=segment_color, thickness=3
-            )
-
-            text = "{}".format(segment.id)
-            text_origin = (segment_point[0] + 30, segment_point[1])
-            text_fg_color = (255, 150, 100)
-            font_face = cv2.FONT_HERSHEY_DUPLEX
-            font_scale = 0.8
-            font_thickness = 1
-
-            cv2.putText(
-                img=frame.img,
-                text=text,
-                org=text_origin,
-                fontFace=font_face,
-                fontScale=font_scale,
-                color=text_fg_color,
-                thickness=font_thickness,
-            )
+            segment.draw_on_frame(frame)
 
     def _ui_update_segment_detail_text(self, index, total_count, focused_segment):
 
