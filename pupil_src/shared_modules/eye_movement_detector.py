@@ -1218,3 +1218,57 @@ class Offline_Eye_Movement_Detector(Observable, _Eye_Movement_Detector_Base):
             for segment in segments_in_section:
                 csv_writer.writerow(type(self).csv_row(segment))
             logger.info("Created '{}' file.".format(segment_export_filename))
+
+
+class Real_Time_Eye_Movement_Detector(Observable, _Eye_Movement_Detector_Base):
+    """Eye movement classification detector based on segmented linear regression.
+    """
+
+    MENU_LABEL_TEXT = "Eye Movement Detector"
+
+    def __init__(self, g_pool):
+        super().__init__(g_pool)
+        self._buffered_detection = Eye_Movement_Buffered_Detection()
+        self._recent_segments = []
+
+    def recent_events(self, events):
+
+        if not self.__profile_is_enabled:
+            self.__profile.enable()
+        self.__profile_is_enabled = True
+
+        gaze_data = events["gaze"]
+        capture = Immutable_Capture(self.g_pool.capture)
+
+        self._buffered_detection.extend_gaze_data(gaze_data=gaze_data, capture=capture)
+
+        frame_timestamp = events['frame'].timestamp
+        self._recent_segments = self._buffered_detection.segments_at_timestamp(frame_timestamp)
+
+        public_segments = [ segment.to_public_dict() for segment in self._recent_segments ]
+        events[EYE_MOVEMENT_EVENT_KEY] = public_segments
+
+    def gl_display(self):
+        frame_size = self.g_pool.capture.frame_size
+        for segment in self._recent_segments:
+            segment.draw_in_gl_context(frame_size, self.glfont)
+
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = type(self).MENU_LABEL_TEXT
+
+        for help_block in self.__doc__.split("\n\n"):
+            help_str = help_block.replace("\n", " ").replace("  ", "").strip()
+            self.menu.append(ui.Info_Text(help_str))
+
+        self.glfont = fontstash.Context()
+        self.glfont.add_font("opensans", ui.get_opensans_font_path())
+
+    def deinit_ui(self):
+        self.remove_menu()
+        self.glfont = None
+
+    def get_init_dict(self):
+        return {
+        }
+
