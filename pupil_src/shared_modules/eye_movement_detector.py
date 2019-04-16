@@ -88,6 +88,11 @@ class Immutable_Capture:
 
 Color_RGBA = typing.Tuple[float, float, float, float]
 
+Color_RGB = typing.Tuple[int, int, int]
+
+def color_rgb_to_rgba(rgb: Color_RGB) -> Color_RGBA:
+    r, g, b = rgb
+    return r/255, g/255, b/255, 1.0
 
 @enum.unique
 class Segment_Method(enum.Enum):
@@ -113,12 +118,16 @@ class Segment_Class(enum.Enum):
 
     @property
     def color_rgba(self) -> Color_RGBA:
+        return color_rgb_to_rgba(self.color_rgb)
+
+    @property
+    def color_rgb(self) -> Color_RGB:
         # https://flatuicolors.com/palette/defo
-        grey = (52 / 255, 73 / 255, 94 / 255, 1.0)  # wet asphalt
-        yellow = (241 / 255, 196 / 255, 15 / 255, 1.0)  # sun flower
-        green = (39 / 255, 174 / 255, 96 / 255, 1.0)  # nephritis
-        blue = (41 / 255, 128 / 255, 185 / 255, 1.0)  # belize hole
-        purple = ((142 / 255, 68 / 255, 173 / 255, 1.0),)  # wisteria
+        grey = (52, 73, 94)  # wet asphalt
+        yellow = (241, 196, 15)  # sun flower
+        green = (39, 174, 96)  # nephritis
+        blue = (41, 128, 185)  # belize hole
+        purple = (142, 68, 173)  # wisteria
         return {
             Segment_Class.FIXATION: yellow,
             Segment_Class.SACCADE: green,
@@ -308,6 +317,10 @@ class Classified_Segment:
     def mid_frame_timestamp(self) -> float:
         """Timestamp of the middle frame, in the frame buffer."""
         return (self.end_frame_timestamp + self.start_frame_timestamp) / 2
+
+    @property
+    def color_rgb(self) -> Color_RGB:
+        return self.segment_class.color_rgb
 
     @property
     def color_rgba(self) -> Color_RGBA:
