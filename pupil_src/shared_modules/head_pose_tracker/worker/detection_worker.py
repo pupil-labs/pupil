@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import file_methods as fm
 import video_capture
-from apriltag.python import apriltag
+import apriltag
 from methods import normalize
 
 apriltag_detector = apriltag.Detector()

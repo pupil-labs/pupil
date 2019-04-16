@@ -73,14 +73,17 @@ class Detector:
     """
 
     def __init__(self, detector_options=DetectorOptions()):
+        self.tag_detector = None
         filename = self._get_filename()
-        self.libc = ctypes.CDLL(filename)
+        try:
+            self.libc = ctypes.CDLL(filename)
+        except OSError as err:
+            raise RuntimeError("apriltag dependencies not found") from err
         if self.libc is None:
             raise RuntimeError("could not find DLL named " + filename)
 
         self._declare_libc_function()
 
-        self.tag_detector = None
         self._create_apriltag_detector_object(detector_options)
         if detector_options.quad_contours:
             self.libc.apriltag_detector_enable_quad_contours(self.tag_detector, 1)
