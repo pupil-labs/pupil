@@ -148,6 +148,7 @@ def world(
             Gaze_Mapping_Plugin,
         )
         from fixation_detector import Fixation_Detector
+        from eye_movement_detector import Real_Time_Eye_Movement_Detector
         from recorder import Recorder
         from display_recent_gaze import Display_Recent_Gaze
         from time_sync import Time_Sync
@@ -176,8 +177,10 @@ def world(
         from hololens_relay import Hololens_Relay
 
         from background_helper import IPC_Logging_Task_Proxy
+        from tasklib.background.patches import IPCLoggingPatch
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
+        IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         # UI Platform tweaks
         if platform.system() == "Linux":
@@ -230,6 +233,7 @@ def world(
             Annotation_Capture,
             Log_History,
             Fixation_Detector,
+            Real_Time_Eye_Movement_Detector,
             Blink_Detection,
             Remote_Recorder,
             Accuracy_Visualizer,
