@@ -499,6 +499,22 @@ class Classified_Segment:
             thickness=font_thickness,
         )
 
+    def draw_in_gl_context(self, frame_size: typing.Tuple[int, int], glfont):
+        #TODO: Type annotate glfont
+        segment_point = self.last_2d_point_within_world(frame_size)
+
+        draw_circle(segment_point, radius=48.0, stroke_width=10.0, color=RGBA(*self.color_rgba))
+
+        font_size = 22
+        text = str(self.id)
+        text_origin_x = segment_point[0] + 48.0
+        text_origin_y = segment_point[1]
+        text_fg_color = self.color_rgba
+
+        glfont.set_size(font_size)
+        glfont.set_color_float(text_fg_color)
+        glfont.draw_text(text_origin_x, text_origin_y, text)
+
 
 class Classified_Segment_Factory:
     __slots__ = "_segment_id"
