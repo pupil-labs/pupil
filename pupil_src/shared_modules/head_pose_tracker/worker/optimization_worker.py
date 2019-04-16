@@ -93,7 +93,7 @@ def offline_optimization(
     for idx, frame_index in enumerate(frame_indices):
         markers_in_frame = find_markers_in_frame(frame_index)
         bg_storage.all_key_markers += pick_key_markers.run(
-            markers_in_frame, bg_storage.all_key_markers
+            markers_in_frame, bg_storage.all_key_markers, select_key_markers_interval=1
         )
 
         if not (idx % 50 == 25 or idx == frame_count - 1):
