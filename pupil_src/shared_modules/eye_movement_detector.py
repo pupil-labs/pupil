@@ -292,6 +292,35 @@ class Classified_Segment:
         assert self.start_frame_timestamp == self.segment_time[0]
         assert self.end_frame_timestamp == self.segment_time[-1]
 
+    # Public Format
+
+    def to_public_dict(self) -> dict:
+        """
+        Returns a dictionary representation of the segment,
+        in the format suitable for sending over ZMQ,
+        and consumption by clients external to this plugin.
+        """
+
+        def serialize_gaze_data(gaze_data: np.ndarray) -> typing.Tuple[dict]:
+            return tuple(map(dict, gaze_data))
+
+        def serialize_gaze_time(gaze_time: np.ndarray) -> typing.Tuple[float]:
+            return tuple(gaze_time)
+
+        public_dict = {
+            "id": self.id,
+            "topic": self.topic,
+            "method": self.method.value,
+            # "segment_data": serialize_gaze_data(self.segment_data),
+            # "segment_time": serialize_gaze_time(self.segment_time),
+            "segment_class": self.segment_class.value,
+            "start_frame_index": self.start_frame_index,
+            "end_frame_index": self.end_frame_index,
+            "start_frame_timestamp": self.start_frame_timestamp,
+            "end_frame_timestamp": self.end_frame_timestamp,
+        }
+        return public_dict
+
     # Serialization
 
     def to_dict(self) -> dict:
