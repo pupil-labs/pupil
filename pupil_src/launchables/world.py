@@ -106,6 +106,13 @@ def world(
         ipc_pub.notify(n)
 
     try:
+        from background_helper import IPC_Logging_Task_Proxy
+
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
+        from tasklib.background.patches import IPCLoggingPatch
+
+        IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         # display
         import glfw
@@ -175,10 +182,6 @@ def world(
         from system_graphs import System_Graphs
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
         from hololens_relay import Hololens_Relay
-
-        from background_helper import IPC_Logging_Task_Proxy
-
-        IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
         # UI Platform tweaks
         if platform.system() == "Linux":
