@@ -50,6 +50,7 @@ from pyglui.pyfontstash import fontstash
 
 logger = logging.getLogger(__name__)
 
+EYE_MOVEMENT_EVENT_KEY = 'eye_movement_segments'
 
 # TODO: This protocol definition can be moved into `camera_models.py`
 class Camera_Model(Protocol):
@@ -829,7 +830,7 @@ class Offline_Eye_Movement_Detector(Observable, _Eye_Movement_Detector_Base):
         visible_segments: typing.Iterable[
             Classified_Segment
         ] = self.g_pool.eye_movement_segments.by_ts_window(frame_window)
-        events["segments"] = visible_segments
+        events[EYE_MOVEMENT_EVENT_KEY] = visible_segments
 
         def _find_focused_segment(visible_segments):
             current_segment = None
