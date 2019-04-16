@@ -148,6 +148,61 @@ Gaze_Time = typing.Iterable[float]
 MsgPack_Serialized_Segment = typing.Type[bytes]
 
 
+
+
+class _Classified_Segment_Abstract_Storage(metaclass=abc.ABCMeta):
+    def __getitem__(self, key):
+        pass
+    def get(self, key, default):
+        pass
+    def to_dict(self) -> dict:
+        pass
+    def to_serialized_dict(self) -> fm.Serialized_Dict:
+        pass
+    def to_msgpack(self) -> MsgPack_Serialized_Segment:
+        pass
+
+
+class _Classified_Segment_Dict_Storage(_Classified_Segment_Abstract_Storage):
+    def __init__(self, python_dict: dict):
+        self._python_dict = python_dict
+    def __getitem__(self, key):
+        return self._python_dict.__getitem__(key)
+    def get(self, key, default):
+        return self._python_dict.get(key, default)
+    def to_dict(self) -> dict:
+        return self._python_dict
+    def to_serialized_dict(self) -> fm.Serialized_Dict:
+        return fm.Serialized_Dict(python_dict=self._python_dict)
+    def to_msgpack(self) -> MsgPack_Serialized_Segment:
+        serialized_dict = fm.Serialized_Dict(python_dict=self._python_dict)
+        return serialized_dict.serialized
+
+
+class _Classified_Segment_Serialized_Dict_Storage(_Classified_Segment_Abstract_Storage):
+    def __init__(self, serialized_dict: fm.Serialized_Dict):
+        self._serialized_dict = serialized_dict
+    def __getitem__(self, key):
+        return self._serialized_dict.__getitem__(key)
+    def get(self, key, default):
+        return self._serialized_dict.get(key, default)
+    def to_dict(self) -> dict:
+        return dict(self._serialized_dict)
+    def to_serialized_dict(self) -> fm.Serialized_Dict:
+        return self._serialized_dict
+    def to_msgpack(self) -> MsgPack_Serialized_Segment:
+        serialized_dict = self._serialized_dict
+        return serialized_dict.serialized
+
+
+class _Classified_Segment_MsgPack_Storage(_Classified_Segment_Serialized_Dict_Storage):
+    def __init__(self, msgpack_bytes: MsgPack_Serialized_Segment):
+        serialized_dict = fm.Serialized_Dict(msgpack_bytes=msgpack_bytes)
+        super().__init__(serialized_dict=serialized_dict)
+
+
+
+
 class Classified_Segment:
     def from_attrs(
         id: int,
@@ -190,9 +245,8 @@ class Classified_Segment:
 
         return Classified_Segment.from_dict(segment_dict)
 
-    def __init__(self, serialized_dict: fm.Serialized_Dict):
-        self.serialized_dict = serialized_dict
-        self.__post_init__()
+    def __init__(self, storage: typing.Type[_Classified_Segment_Abstract_Storage]):
+        self._storage = storage
 
     def __post_init__(self):
         assert self.frame_count > 0
@@ -204,89 +258,94 @@ class Classified_Segment:
     # Serialization
 
     def to_dict(self) -> dict:
-        return dict(self.serialized_dict)
+        return self._storage.to_dict()
+
+    def to_serialized_dict(self) -> fm.Serialized_Dict:
+        return self._storage.to_serialized_dict()
 
     def to_msgpack(self) -> MsgPack_Serialized_Segment:
-        return self.serialized_dict.serialized
+        return self._storage.to_msgpack()
 
     # Deserialization
 
     def from_dict(segment_dict: dict) -> "Classified_Segment":
-        serialized_dict = fm.Serialized_Dict(python_dict=segment_dict)
-        return Classified_Segment(serialized_dict)
+        storage = _Classified_Segment_Dict_Storage(segment_dict)
+        return Classified_Segment(storage)
 
-    def from_msgpack(
-        segment_msgpack: MsgPack_Serialized_Segment
-    ) -> "Classified_Segment":
-        serialized_dict = fm.Serialized_Dict(msgpack_bytes=segment_msgpack)
-        return Classified_Segment(serialized_dict)
+    def from_serialized_dict(serialized_dict: fm.Serialized_Dict) -> "Classified_Segment":
+        storage = _Classified_Segment_Serialized_Dict_Storage(serialized_dict)
+        return Classified_Segment(storage)
+
+    def from_msgpack(segment_msgpack: MsgPack_Serialized_Segment) -> "Classified_Segment":
+        storage = _Classified_Segment_MsgPack_Storage(segment_msgpack)
+        return Classified_Segment(storage)
 
     # Stored properties
 
     @property
     def id(self) -> int:
         """..."""
-        return self.serialized_dict["id"]
+        return self._storage["id"]
 
     @property
     def topic(self) -> str:
         """..."""
-        return self.serialized_dict["topic"]
+        return self._storage["topic"]
 
     @property
     def use_pupil(self) -> bool:
         """..."""
-        return self.serialized_dict["use_pupil"]
+        return self._storage["use_pupil"]
 
     @property
     def segment_data(self) -> list:  # FIXME: Annotate with typed list
         """..."""
-        return self.serialized_dict["segment_data"]
+        return self._storage["segment_data"]
 
     @property
     def segment_time(self) -> list:  # FIXME: Annotate with typed list
         """..."""
-        return self.serialized_dict["segment_time"]
+        return self._storage["segment_time"]
 
     @property
     def segment_class(self) -> Segment_Class:
         """..."""
-        return Segment_Class(self.serialized_dict["segment_class"])
+        return Segment_Class(self._storage["segment_class"])
 
     @property
     def start_frame_index(self) -> int:
         """Index of the first segment frame, in the frame buffer."""
-        return self.serialized_dict["start_frame_index"]
+        return self._storage["start_frame_index"]
 
     @property
     def end_frame_index(self) -> int:
         """Index **after** the last segment frame, in the frame buffer."""
-        return self.serialized_dict["end_frame_index"]
+        return self._storage["end_frame_index"]
 
     @property
     def start_frame_timestamp(self) -> float:
         """Timestamp of the first frame, in the frame buffer."""
-        return self.serialized_dict["start_frame_timestamp"]
+        return self._storage["start_frame_timestamp"]
 
     @property
     def end_frame_timestamp(self) -> float:
         """Timestamp of the last frame, in the frame buffer."""
-        return self.serialized_dict["end_frame_timestamp"]
+        return self._storage["end_frame_timestamp"]
 
     @property
     def norm_pos(self):
         """..."""
-        return self.serialized_dict["norm_pos"]
+        return self._storage["norm_pos"]
 
     @property
     def gaze_point_3d(self):
         """..."""
-        return self.serialized_dict.get("gaze_point_3d", None)
+        return self._storage.get("gaze_point_3d", None)
 
     @property
     def confidence(self):
         """..."""
-        return self.serialized_dict["confidence"]
+        return self._storage["confidence"]
 
     # Computed properties
 
