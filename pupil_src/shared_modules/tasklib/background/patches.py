@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
-import warnings
 
 
 class Patch(metaclass=abc.ABCMeta):
@@ -31,11 +30,9 @@ class IPCLoggingPatch(Patch):
     ipc_push_url = None
 
     def __init__(self):
-        # assert (
-        #     IPCLoggingPatch.ipc_push_url
-        # ), "`ipc_push_url` was not set by foreground process"
-        if IPCLoggingPatch.ipc_push_url is None:
-            warnings.warn("`ipc_push_url` was not set by foreground process")
+        assert (
+            IPCLoggingPatch.ipc_push_url
+        ), "`ipc_push_url` was not set by foreground process"
         # copy because object attributes get copied to background processes,
         # but class attributes do not
         self.ipc_push_url_copy = IPCLoggingPatch.ipc_push_url
@@ -51,10 +48,3 @@ class IPCLoggingPatch(Patch):
         handler = zmq_tools.ZMQ_handler(zmq_ctx, self.ipc_push_url_copy)
         root_logger.addHandler(handler)
         root_logger.setLevel(logging.NOTSET)
-
-    def __getstate__(self):
-        return IPCLoggingPatch.ipc_push_url
-
-    def __setstate__(self, ipc_push_url):
-        IPCLoggingPatch.ipc_push_url = ipc_push_url
-        self.ipc_push_url_copy = ipc_push_url
