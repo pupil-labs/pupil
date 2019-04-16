@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 
-"""Python wrapper for C version of apriltags. This program creates two
+"""
+Modified version of https://github.com/swatbotics/apriltag/blob/427a42ce24578e0fcc483eaf35794b986352070d/python/apriltag.py
+
+Python wrapper for C version of apriltags. This program creates two
 classes that are used to detect apriltags and extract information from
 them. Using this module, you can identify all apriltags visible in an
 image, and get information about the location and orientation of the
 tags.
 
 Original author: Isaac Dulin, Spring 2016
-Updates: Matt Zucker, Fall 2016
+Updates:
+- Matt Zucker, Fall 2016
+- Pupil Labs, Spring 2019
 """
 
 import collections
