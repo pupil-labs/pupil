@@ -83,7 +83,10 @@ class Immutable_Capture:
             int(capture.frame_size[1]),
         )
         self.intrinsics: Camera_Model = capture.intrinsics
-        self.timestamps: np.ndarray = capture.timestamps
+        try:
+            self.timestamps: np.ndarray = capture.timestamps
+        except AttributeError:
+            self.timestamps: np.ndarray = np.ndarray([])
 
 
 Color_RGBA = typing.Tuple[float, float, float, float]
