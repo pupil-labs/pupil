@@ -9,5 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from head_pose_tracker.offline_head_pose_tracker import Offline_Head_Pose_Tracker
-from head_pose_tracker.online_head_pose_tracker import Online_Head_Pose_Tracker
+# Do not import Online/Offline_Head_Pose_Tracker plugins here!
+# If disobeyed background tasks will try to import them in the background
+# and fail. The plugins should not be required in the background.
