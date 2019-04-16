@@ -52,6 +52,36 @@ logger = logging.getLogger(__name__)
 
 EYE_MOVEMENT_EVENT_KEY = 'eye_movement_segments'
 
+
+class Time_Range():
+    def __init__(self, start_time: float, end_time: float):
+        assert start_time <= end_time
+        self.start_time = start_time
+        self.end_time = end_time
+
+    def contains(self, timestamp: float) -> bool:
+        return self.start_time <= timestamp and timestamp <= self.end_time
+
+    def intersection(self, other: 'Time_Range') -> typing.Optional['Time_Range']:
+        start_time = max(self.start_time, other.start_time)
+        end_time = min(self.end_time, other.end_time)
+        if start_time <= end_time:
+            return Time_Range(start_time=start_time, end_time=end_time)
+        else:
+            return None
+
+    def union(self, other: 'Time_Range') -> 'Time_Range':
+        """Warning: This method doesn't guarantee that the union is continuous."""
+        start_time = min(self.start_time, other.start_time)
+        end_time = max(self.end_time, other.end_time)
+        return Time_Range(start_time=start_time, end_time=end_time)
+
+    def countinuous_union(self, other: 'Time_Range') -> typing.Optional['Time_Range']:
+        if not self.intersection(other):
+            return None
+        return self.union(other)
+
+
 # TODO: This protocol definition can be moved into `camera_models.py`
 class Camera_Model(Protocol):
     def undistort(self, img: np.ndarray) -> np.ndarray:
@@ -379,6 +409,10 @@ class Classified_Segment:
     def mid_frame_timestamp(self) -> float:
         """Timestamp of the middle frame, in the frame buffer."""
         return (self.end_frame_timestamp + self.start_frame_timestamp) / 2
+
+    @property
+    def time_range(self) -> Time_Range:
+        return Time_Range(start_time=self.start_frame_timestamp, end_time=self.end_frame_timestamp)
 
     @property
     def color_rgb(self) -> Color_RGB:
