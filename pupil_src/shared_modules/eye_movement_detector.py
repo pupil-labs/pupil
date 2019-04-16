@@ -248,7 +248,7 @@ class Classified_Segment:
     def __init__(self, storage: typing.Type[_Classified_Segment_Abstract_Storage]):
         self._storage = storage
 
-    def __post_init__(self):
+    def validate(self):
         assert self.frame_count > 0
         assert len(self.segment_data) == len(self.segment_time) == self.frame_count
         assert self.start_frame_timestamp <= self.end_frame_timestamp
@@ -398,8 +398,11 @@ class Classified_Segment:
 class Classified_Segment_Factory:
     __slots__ = "_segment_id"
 
-    def __init__(self):
-        self._segment_id = 0
+    def __init__(self, start_id: int = None):
+        if start_id is None:
+            start_id = 0
+        assert isinstance(start_id, int)
+        self._segment_id = start_id
 
     def create_segment(
         self, gaze_data, gaze_time, use_pupil, nslr_segment, nslr_segment_class
@@ -434,6 +437,11 @@ class Classified_Segment_Factory:
             start_frame_timestamp=start_frame_timestamp,
             end_frame_timestamp=end_frame_timestamp,
         )
+
+        try:
+            segment.validate()
+        except:
+            return None
 
         return segment
 
@@ -489,7 +497,7 @@ Eye_Movement_Generator = typing.Generator[Eye_Movement_Generator_Yield, None, No
 
 @typing.no_type_check
 def eye_movement_detection_generator(
-    capture: Immutable_Capture, gaze_data: Gaze_Data
+    capture: Immutable_Capture, gaze_data: Gaze_Data, factory_start_id: int = None
 ) -> Eye_Movement_Generator:
     yield "Preparing gaze data...", ()
     gaze_data = [
@@ -503,7 +511,7 @@ def eye_movement_detection_generator(
 
     use_pupil = can_use_3d_gaze_mapping(gaze_data)
 
-    segment_factory = Classified_Segment_Factory()
+    segment_factory = Classified_Segment_Factory(start_id=factory_start_id)
 
     gaze_time = np.array([gp["timestamp"] for gp in gaze_data])
 
