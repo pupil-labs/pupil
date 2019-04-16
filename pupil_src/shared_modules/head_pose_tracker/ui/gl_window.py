@@ -62,11 +62,10 @@ class GLWindow(Observable, abc.ABC):
     def _glfw_init(self):
         glfw.glfwInit()
         window = glfw.glfwCreateWindow(
-            *self._general_settings.window_size,
-            title="Head Poses Visualizer",
-            share=glfw.glfwGetCurrentContext()
+            title="Head Pose Tracker Visualizer", share=glfw.glfwGetCurrentContext()
         )
         glfw.glfwSetWindowPos(window, *self._general_settings.window_position)
+        glfw.glfwSetWindowSize(window, *self._general_settings.window_size)
         return window
 
     @staticmethod
