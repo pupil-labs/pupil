@@ -568,10 +568,17 @@ Eye_Movement_Generator = typing.Generator[Eye_Movement_Generator_Yield, None, No
 def eye_movement_detection_generator(
     capture: Immutable_Capture, gaze_data: Gaze_Data, factory_start_id: int = None
 ) -> Eye_Movement_Generator:
+
+    def serialized_dict(datum):
+        if type(datum) is dict:
+            return fm.Serialized_Dict(python_dict=datum)
+        elif type(datum) is bytes:
+            return fm.Serialized_Dict(msgpack_bytes=datum)
+        else:
+            raise ValueError("Unsupported gaze datum type: {}.".format(type(datum)))
+
     yield "Preparing gaze data...", ()
-    gaze_data = [
-        fm.Serialized_Dict(msgpack_bytes=serialized) for serialized in gaze_data
-    ]
+    gaze_data = [ serialized_dict(datum) for datum in gaze_data ]
 
     if not gaze_data:
         logger.warning("No data available to find fixations")
@@ -590,14 +597,16 @@ def eye_movement_detection_generator(
     )
 
     yield "Classifying {} gaze data...".format("3d" if use_pupil else "2d"), ()
-    sample_class, segmentation, classification = nslr_hmm.classify_gaze(
+    gaze_classification, segmentation, segment_classification = nslr_hmm.classify_gaze(
         gaze_time, eye_positions
     )
+
+    # `gaze_classification` holds the classification for each gaze datum.
 
     yield "Detecting segmentation events...", ()
     for i, nslr_segment in enumerate(segmentation.segments):
 
-        nslr_segment_class = classification[i]
+        nslr_segment_class = segment_classification[i]
 
         segment = segment_factory.create_segment(
             gaze_data=gaze_data,
