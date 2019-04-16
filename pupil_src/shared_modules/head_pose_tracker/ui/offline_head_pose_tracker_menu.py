@@ -36,9 +36,6 @@ class OfflineHeadPoseTrackerMenu:
 
         self._plugin.menu.extend(self._render_on_top_menu())
 
-        self._visualization_menu.render()
-        self._plugin.menu.append(self._visualization_menu.menu)
-
         self._detection_menu.render()
         self._plugin.menu.append(self._detection_menu.menu)
 
@@ -47,6 +44,9 @@ class OfflineHeadPoseTrackerMenu:
 
         self._localization_menu.render()
         self._plugin.menu.append(self._localization_menu.menu)
+
+        self._visualization_menu.render()
+        self._plugin.menu.append(self._visualization_menu.menu)
 
     def _on_deinit_ui(self):
         self._plugin.remove_menu()

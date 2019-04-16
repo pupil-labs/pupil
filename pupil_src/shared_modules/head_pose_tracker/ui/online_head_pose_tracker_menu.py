@@ -27,11 +27,11 @@ class OnlineHeadPoseTrackerMenu:
 
         self._plugin.menu.extend(self._render_on_top_menu())
 
-        self._visualization_menu.render()
-        self._plugin.menu.append(self._visualization_menu.menu)
-
         self._optimization_menu.render()
         self._plugin.menu.append(self._optimization_menu.menu)
+
+        self._visualization_menu.render()
+        self._plugin.menu.append(self._visualization_menu.menu)
 
     def _on_deinit_ui(self):
         self._plugin.remove_menu()
