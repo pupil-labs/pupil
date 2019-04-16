@@ -11,6 +11,8 @@ See COPYING and COPYING.LESSER for license details.
 
 from pyglui import ui
 
+_SPACES = "        "
+
 
 class VisualizationMenu:
     menu_label = "Visualization options"
@@ -26,8 +28,6 @@ class VisualizationMenu:
         self.menu = ui.Growing_Menu(self.menu_label)
         self.menu.collapsed = False
 
-        self._spaces = "        "
-
     def render(self):
         self.menu.elements.clear()
         self._render_ui()
@@ -38,7 +38,7 @@ class VisualizationMenu:
             self._create_render_markers_switch(),
             self._create_show_marker_id_in_main_window_switch(),
             ui.Separator(),
-            self._create_open_visualization_window_switch(),
+            self._create_open_visualization_window_button(),
             self._create_show_camera_trace_switch(),
             self._create_show_marker_id_in_3d_window_switch(),
         ]
@@ -55,7 +55,7 @@ class VisualizationMenu:
         return ui.Switch(
             "render_markers",
             self._general_settings,
-            label=self._spaces + "Render markers",
+            label=_SPACES + "Render markers",
             setter=self._on_render_markers_switched,
         )
 
@@ -63,13 +63,13 @@ class VisualizationMenu:
         switch = ui.Switch(
             "show_marker_id_in_main_window",
             self._general_settings,
-            label=self._spaces + "Show marker id",
+            label=_SPACES + "Show marker id",
         )
         if not self._general_settings.render_markers:
             switch.read_only = True
         return switch
 
-    def _create_open_visualization_window_switch(self):
+    def _create_open_visualization_window_button(self):
         button = ui.Button(
             outer_label="Visualization 3d window",
             label="Open",
@@ -83,7 +83,7 @@ class VisualizationMenu:
         switch = ui.Switch(
             "show_camera_trace_in_3d_window",
             self._general_settings,
-            label=self._spaces + "Show camera trace",
+            label=_SPACES + "Show camera trace",
         )
         if not self._general_settings.open_visualization_window:
             switch.read_only = True
@@ -93,7 +93,7 @@ class VisualizationMenu:
         switch = ui.Switch(
             "show_marker_id_in_3d_window",
             self._general_settings,
-            label=self._spaces + "Show marker id",
+            label=_SPACES + "Show marker id",
         )
         if not self._general_settings.open_visualization_window:
             switch.read_only = True
