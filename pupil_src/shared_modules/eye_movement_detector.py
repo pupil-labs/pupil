@@ -53,6 +53,13 @@ logger = logging.getLogger(__name__)
 EYE_MOVEMENT_EVENT_KEY = 'eye_movement_segments'
 
 
+class sliceable_deque(collections.deque):
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return type(self)(itertools.islice(self, index.start, index.stop, index.step), maxlen=self.maxlen)
+        return collections.deque.__getitem__(self, index)
+
+
 class Time_Range():
     def __init__(self, start_time: float, end_time: float):
         assert start_time <= end_time
