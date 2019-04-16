@@ -45,7 +45,7 @@ class OfflineLocalizationController(Observable):
         if self._localization_storage.calculated:
             self.status = "calculated"
         else:
-            self.status = self.default_status
+            self.status = self._default_status
 
         optimization_controller.add_observer(
             "on_optimization_had_completed_before",
@@ -59,7 +59,7 @@ class OfflineLocalizationController(Observable):
         )
 
     @property
-    def default_status(self):
+    def _default_status(self):
         return "Not calculated yet"
 
     def _on_optimization_had_completed_before(self):
@@ -97,7 +97,7 @@ class OfflineLocalizationController(Observable):
     def reset(self):
         self.cancel_task()
         self._localization_storage.set_to_default_values()
-        self.status = self.default_status
+        self.status = self._default_status
 
     def _create_localization_task(self):
         def on_yield(data_pairs):

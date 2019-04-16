@@ -45,14 +45,14 @@ class OfflineOptimizationController(Observable):
         if self._optimization_storage.calculated:
             self.status = "calculated"
         else:
-            self.status = self.default_status
+            self.status = self._default_status
 
         detection_controller.add_observer(
             "on_detection_ended", self._on_detection_ended
         )
 
     @property
-    def default_status(self):
+    def _default_status(self):
         return "Not calculated yet"
 
     def _on_detection_ended(self):
@@ -71,7 +71,7 @@ class OfflineOptimizationController(Observable):
     def _reset(self):
         self.cancel_task()
         self._optimization_storage.set_to_default_values()
-        self.status = self.default_status
+        self.status = self._default_status
 
     def _create_optimization_task(self):
         def on_yield(result):
@@ -136,6 +136,11 @@ class OfflineOptimizationController(Observable):
     def is_running_task(self):
         return self._task is not None and self._task.running
 
+    def set_range_from_current_trim_marks(self):
+        self._general_settings.optimization_frame_index_range = (
+            self._get_current_trim_mark_range()
+        )
+
     def on_optimization_had_completed_before(self):
         pass
 
@@ -144,8 +149,3 @@ class OfflineOptimizationController(Observable):
 
     def on_optimization_completed(self):
         pass
-
-    def set_range_from_current_trim_marks(self):
-        self._general_settings.optimization_frame_index_range = (
-            self._get_current_trim_mark_range()
-        )
