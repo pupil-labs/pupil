@@ -92,7 +92,7 @@ class OfflineLocalizationController(Observable):
     def _abort_calculation(self, error_message):
         logger.error(error_message)
         self.status = error_message
-        self.on_calculation_could_not_be_started()
+        self.on_localization_could_not_be_started()
 
     def reset(self):
         self.cancel_task()
@@ -162,7 +162,7 @@ class OfflineLocalizationController(Observable):
             self._get_current_trim_mark_range()
         )
 
-    def on_calculation_could_not_be_started(self):
+    def on_localization_could_not_be_started(self):
         pass
 
     def on_localization_started(self):

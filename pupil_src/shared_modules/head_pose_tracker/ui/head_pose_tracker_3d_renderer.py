@@ -73,7 +73,8 @@ class HeadPoseTracker3DRenderer(plugin_ui.GLWindow):
         camera_trace = pose_data["camera_trace"]
         camera_pose_matrix = pose_data["camera_pose_matrix"]
 
-        # recent_camera_trace is updated no matter show_camera_trace_in_3d_window is on or not
+        # recent_camera_trace is updated no matter show_camera_trace_in_3d_window
+        # is on or not
         self._localization_storage.add_recent_camera_trace(camera_trace)
 
         color = (0.2, 0.2, 0.2, 0.1)

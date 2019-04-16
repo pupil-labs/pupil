@@ -70,14 +70,14 @@ class VisualizationMenu:
         return switch
 
     def _create_open_visualization_window_switch(self):
-        Button = ui.Button(
+        button = ui.Button(
             outer_label="Visualization 3d window",
             label="Open",
             function=self._on_open_visualization_window_button_clicked,
         )
         if self._general_settings.open_visualization_window:
-            Button.read_only = True
-        return Button
+            button.read_only = True
+        return button
 
     def _create_show_camera_trace_switch(self):
         switch = ui.Switch(

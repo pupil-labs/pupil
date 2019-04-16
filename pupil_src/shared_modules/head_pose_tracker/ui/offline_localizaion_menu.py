@@ -32,8 +32,8 @@ class OfflineLocalizationMenu:
         self.menu.collapsed = False
 
         localization_controller.add_observer(
-            "on_calculation_could_not_be_started",
-            self._on_calculation_could_not_be_started,
+            "on_localization_could_not_be_started",
+            self._on_localization_could_not_be_started,
         )
         localization_controller.add_observer(
             "on_localization_ended", self._on_localization_ended
@@ -82,7 +82,7 @@ class OfflineLocalizationMenu:
     def _on_click_calculate(self):
         self._localization_controller.calculate()
 
-    def _on_calculation_could_not_be_started(self):
+    def _on_localization_could_not_be_started(self):
         self.render()
 
     def _on_localization_ended(self):

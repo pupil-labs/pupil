@@ -100,7 +100,7 @@ class DetectionTimeline:
         )
         self._frame_count = frame_end - self._frame_start + 1
 
-    def _on_storage_changed(self, *args, **kwargs):
+    def _on_storage_changed(self):
         self.update_row()
         self.render_parent_timeline()
 
@@ -174,7 +174,7 @@ class LocalizationTimeline:
         )
         self._frame_count = frame_end - self._frame_start + 1
 
-    def _on_storage_changed(self, *args, **kwargs):
+    def _on_storage_changed(self):
         self.update_row()
         self.render_parent_timeline()
 
