@@ -35,7 +35,7 @@ class Online_Head_Pose_Tracker(Plugin, Observable):
         show_marker_id_in_3d_window=False,
         render_markers=True,
         show_marker_id_in_main_window=False,
-        window_size=(1280, 720),
+        window_size=(1280, 1280),
         window_position=(0, 0),
     ):
         super().__init__(g_pool)
