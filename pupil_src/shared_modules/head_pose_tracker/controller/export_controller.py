@@ -56,7 +56,7 @@ class ExportController(Observable):
         )
 
     def _3d_model_as_list(self):
-        return self._optimization_storage.tolist()
+        return self._optimization_storage.flattened_vertices()
 
     def _camera_poses(self, ts_window):
         return self._localization_storage.pose_bisector.by_ts_window(ts_window)
