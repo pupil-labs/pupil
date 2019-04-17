@@ -29,7 +29,7 @@ class Online_Head_Pose_Tracker(Plugin, Observable):
         self,
         g_pool,
         optimize_markers_3d_model=False,
-        optimize_camera_intrinsics=False,
+        optimize_camera_intrinsics=True,
         open_visualization_window=False,
         show_camera_trace_in_3d_window=False,
         show_marker_id_in_3d_window=False,
