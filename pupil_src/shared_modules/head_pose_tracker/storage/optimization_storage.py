@@ -65,10 +65,10 @@ class Markers3DModel:
             for marker_id, extrinsics in self.marker_id_to_extrinsics.items()
         }
 
-    def tolist(self):
+    def flattened_vertices(self):
         return [
-            (marker_id, *extrinsics.tolist())
-            for marker_id, extrinsics in self.marker_id_to_extrinsics.items()
+            (marker_id, *vertices.flat)
+            for marker_id, vertices in self.marker_id_to_points_3d.items()
         ]
 
     def set_origin_marker_id(self):
