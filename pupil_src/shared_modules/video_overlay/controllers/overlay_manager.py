@@ -10,6 +10,11 @@ class OverlayManager(SingleFileStorage):
         self._overlays = []
         self._load_from_disk()
 
+        # Save current settings to disk on get_init_dict() instead of cleanup().
+        # This ensures that the World Video Exporter loads the most recent settings.
+        plugin.remove_observer("cleanup", self._on_cleanup)
+        plugin.add_observer("get_init_dict", self._on_cleanup)
+
     @property
     def _storage_file_name(self):
         return "video_overlays.msgpack"

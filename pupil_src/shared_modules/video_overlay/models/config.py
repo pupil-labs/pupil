@@ -43,3 +43,15 @@ class Configuration(StorageItem):
     @staticmethod
     def from_tuple(tuple_):
         return Configuration(*tuple_)
+
+    @property
+    def as_dict(self):
+        return {
+            "video_path": self.video_path,
+            "origin": self.origin.x.value,
+            "origin": self.origin.y.value,
+            "scale": self.scale.value,
+            "alpha": self.alpha.value,
+            "hflip": self.hflip.value,
+            "vflip": self.vflip.value,
+        }
