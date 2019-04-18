@@ -82,30 +82,6 @@ class Time_Range():
         return self.union(other)
 
 
-# TODO: This protocol definition can be moved into `camera_models.py`
-class Camera_Model(Protocol):
-    def undistort(self, img: np.ndarray) -> np.ndarray:
-        ...
-
-    def unprojectPoints(
-        self, pts_2d: np.ndarray, use_distortion: bool = True, normalize: bool = False
-    ) -> np.ndarray:
-        ...
-
-    def projectPoints(
-        self,
-        object_points,
-        rvec: typing.Optional[np.ndarray] = None,
-        tvec: typing.Optional[np.ndarray] = None,
-        use_distortion: bool = True,
-    ):
-        ...
-
-    # def solvePnP(self, uv3d, xy): ...
-    def save(self, directory: str, custom_name: typing.Optional[str] = None):
-        ...
-
-
 class Immutable_Capture:
     def __init__(self, capture: typing.Type[vc.base_backend.Base_Source]):
         self.frame_size: typing.Tuple[int, int] = (
