@@ -1,3 +1,7 @@
+from glfw import getHDPIFactor, glfwGetCurrentContext, glfwGetCursorPos
+from methods import normalize, denormalize
+
+
 class Draggable:
     __slots__ = ("overlay", "drag_offset")
 
@@ -42,3 +46,13 @@ class Draggable:
         overlay_width = round(overlay_width * overlay_scale)
         overlay_height = round(overlay_height * overlay_scale)
         return overlay_width, overlay_height
+
+
+def current_mouse_pos(window, camera_render_size, frame_size):
+    hdpi_fac = getHDPIFactor(window)
+    x, y = glfwGetCursorPos(glfwGetCurrentContext())
+    pos = x * hdpi_fac, y * hdpi_fac
+    pos = normalize(pos, camera_render_size)
+    # Position in img pixels
+    pos = denormalize(pos, frame_size)
+    return (int(pos[0]), int(pos[1]))

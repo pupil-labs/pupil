@@ -16,8 +16,8 @@ class Configuration(StorageItem):
         video_path=None,
         origin_x=0,
         origin_y=0,
-        scale=1.0,
-        alpha=1.0,
+        scale=0.6,
+        alpha=0.8,
         hflip=False,
         vflip=False,
     ):

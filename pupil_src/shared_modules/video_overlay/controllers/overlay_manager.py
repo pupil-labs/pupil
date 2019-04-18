@@ -38,3 +38,7 @@ class OverlayManager(SingleFileStorage):
     @property
     def most_recent(self):
         return self._overlays[-1]
+
+    def remove_overlay(self, overlay):
+        self._overlays.remove(overlay)
+        self.save_to_disk()
