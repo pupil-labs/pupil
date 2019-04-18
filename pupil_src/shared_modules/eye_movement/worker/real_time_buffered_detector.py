@@ -100,10 +100,11 @@ class Real_Time_Buffered_Detector:
         self._segment_buffer.extend(new_segments)
 
         # Update gaze data buffer by removing any datapoints that precede the first classified segment
-        gaze_time_buffer = [gp["timestamp"] for gp in self._gaze_data_buffer]
-        start_timestamp = self._segment_buffer[0].start_frame_timestamp
-        i = bisect.bisect_left(gaze_time_buffer, start_timestamp)
-        self._gaze_data_buffer = self._gaze_data_buffer[i:]
+        if len(self._segment_buffer) > 0:
+            gaze_time_buffer = [gp["timestamp"] for gp in self._gaze_data_buffer]
+            start_timestamp = self._segment_buffer[0].start_frame_timestamp
+            i = bisect.bisect_left(gaze_time_buffer, start_timestamp)
+            self._gaze_data_buffer = self._gaze_data_buffer[i:]
 
         # Mark current gaze data buffer as classified
         self._is_gaze_buffer_classified = True
