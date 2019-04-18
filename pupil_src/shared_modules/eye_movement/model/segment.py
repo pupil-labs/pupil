@@ -131,7 +131,7 @@ class Classified_Segment:
         public_dict = {
             "id": self.id,
             "topic": self.topic,
-            "method": self.method.value,
+            "base_type": self.base_type.value,
             "segment_class": self.segment_class.value,
             "start_frame_index": self.start_frame_index,
             "end_frame_index": self.end_frame_index,
@@ -238,7 +238,7 @@ class Classified_Segment:
     # Computed properties
 
     @property
-    def method(self) -> Segment_Base_Type:
+    def base_type(self) -> Segment_Base_Type:
         """..."""
         return Segment_Base_Type.PUPIL if self.use_pupil else Segment_Base_Type.GAZE
 
