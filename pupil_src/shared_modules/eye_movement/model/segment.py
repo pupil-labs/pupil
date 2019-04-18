@@ -41,7 +41,7 @@ class Segment_Class(enum.Enum):
         return Segment_Class._nslr_class_to_segment_class_mapping[nslr_class]
 
     @property
-    def color(self) -> t.Type[Color]:
+    def color(self) -> Color:
         # TODO: Move drawing logic into ../ui/
         return self._segment_class_to_color_mapping[self]
 
@@ -109,7 +109,7 @@ class Classified_Segment:
 
         return Classified_Segment.from_dict(segment_dict)
 
-    def __init__(self, storage: t.Type[Classified_Segment_Storage]):
+    def __init__(self, storage: Classified_Segment_Storage):
         self._storage = storage
 
     def validate(self):
@@ -283,7 +283,7 @@ class Classified_Segment:
         return int(x), int(y)
 
     @property
-    def color(self) -> t.Type[Color]:
+    def color(self) -> Color:
         # TODO: Move drawing logic into ../ui/
         return self.segment_class.color
 
