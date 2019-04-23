@@ -30,7 +30,7 @@ def generic_overlay_elements(config):
         ui.Slider(
             "value",
             config.alpha,
-            label="Transparency",
+            label="Opacity",
             min=config.alpha.constraint.low,
             max=config.alpha.constraint.high,
             step=0.05,
@@ -40,7 +40,7 @@ def generic_overlay_elements(config):
     )
 
 
-class GenericOverlayMenuRenderer(Observable):
+class OverlayMenuRenderer(Observable):
     def __init__(self, overlay):
         self.overlay = weakref.ref(overlay)
         video_basename = os.path.basename(self.overlay().config.video_path)
@@ -55,6 +55,11 @@ class GenericOverlayMenuRenderer(Observable):
             self.menu[:] = not_valid_video_elements(self.overlay().config.video_path)
         self._append_remove_button()
 
+    def _append_remove_button(self):
+        pass  # do not show remove button by default
+
+
+class GenericOverlayMenuRenderer(OverlayMenuRenderer):
     def _append_remove_button(self):
         self.menu.append(ui.Button("Remove overlay", self._remove))
 

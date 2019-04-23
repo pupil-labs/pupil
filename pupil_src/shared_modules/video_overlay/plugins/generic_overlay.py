@@ -7,7 +7,7 @@ from video_capture.utils import VIDEO_EXTS
 
 from video_overlay.models.config import Configuration
 from video_overlay.controllers.overlay_manager import OverlayManager
-from video_overlay.ui.management import UIManagement
+from video_overlay.ui.management import UIManagementGeneric
 from video_overlay.ui.interactions import current_mouse_pos
 
 
@@ -61,7 +61,7 @@ class Vis_Generic_Video_Overlay(Observable, Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Generic Video Overlays"
-        self.ui = UIManagement(self, self.menu, self.manager.overlays)
+        self.ui = UIManagementGeneric(self, self.menu, self.manager.overlays)
         self.ui.add_observer("remove_overlay", self.manager.remove_overlay)
 
     def deinit_ui(self):

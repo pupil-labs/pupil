@@ -1,1 +1,2 @@
 from video_overlay.plugins.generic_overlay import Vis_Generic_Video_Overlay
+from video_overlay.plugins.eye_overlay import Vis_Eye_Video_Overlay

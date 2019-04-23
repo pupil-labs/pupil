@@ -9,11 +9,7 @@ class OverlayManager(SingleFileStorage):
         super().__init__(rec_dir, plugin)
         self._overlays = []
         self._load_from_disk()
-
-        # Save current settings to disk on get_init_dict() instead of cleanup().
-        # This ensures that the World Video Exporter loads the most recent settings.
-        plugin.remove_observer("cleanup", self._on_cleanup)
-        plugin.add_observer("get_init_dict", self._on_cleanup)
+        self._patch_on_cleanup(plugin)
 
     @property
     def _storage_file_name(self):
@@ -47,3 +43,12 @@ class OverlayManager(SingleFileStorage):
     def remove_overlay(self, overlay):
         self._overlays.remove(overlay)
         self.save_to_disk()
+
+    def _patch_on_cleanup(self, plugin):
+        """Patches cleanup observer to trigger on get_init_dict().
+
+        Save current settings to disk on get_init_dict() instead of cleanup().
+        This ensures that the World Video Exporter loads the most recent settings.
+        """
+        plugin.remove_observer("cleanup", self._on_cleanup)
+        plugin.add_observer("get_init_dict", self._on_cleanup)
