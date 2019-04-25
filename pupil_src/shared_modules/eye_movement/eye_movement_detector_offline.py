@@ -18,6 +18,7 @@ from eye_movement.model.segment import Classified_Segment
 from eye_movement.worker.offline_detection_task import Offline_Detection_Task
 from eye_movement.model.storage import Classified_Segment_Storage
 from eye_movement.controller.eye_movement_csv_exporter import Eye_Movement_CSV_Exporter
+from eye_movement.controller.eye_movement_seek_controller import Eye_Movement_Seek_Controller
 from observable import Observable
 from tasklib.manager import PluginTaskManager
 import player_methods as pm
@@ -39,7 +40,6 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
     def __init__(self, g_pool, show_segmentation=True):
         super().__init__(g_pool)
         self.show_segmentation = show_segmentation
-        self.current_segment_index = None
         self.eye_movement_detection_yields = collections.deque()
         self.status = ""
 
@@ -56,59 +56,15 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
             plugin=self,
             rec_dir=g_pool.rec_dir,
         )
+        self.seek_controller = Eye_Movement_Seek_Controller(
+            plugin=self,
+            storage=self.storage,
+            seek_to_timestamp=self.seek_to_timestamp,
         )
 
     def init_ui(self):
         self.add_menu()
         self.menu.label = type(self).MENU_LABEL_TEXT
-
-        def jump_next_segment(_):
-            if len(self.g_pool.eye_movements) < 1:
-                logger.warning("No eye movement segments availabe")
-                return
-
-            # Set current segment index to next one, or to 0 if not available
-            self.current_segment_index = (
-                self.current_segment_index if self.current_segment_index else 0
-            )
-            self.current_segment_index = (self.current_segment_index + 1) % len(
-                self.g_pool.eye_movements
-            )
-
-            next_segment_ts = self.g_pool.eye_movements[
-                self.current_segment_index
-            ].start_frame_timestamp
-
-            self.notify_all(
-                {
-                    "subject": "seek_control.should_seek",
-                    "timestamp": next_segment_ts,
-                }
-            )
-
-        def jump_prev_segment(_):
-            if len(self.g_pool.eye_movements) < 1:
-                logger.warning("No segmentation availabe")
-                return
-
-            # Set current segment index to previous one, or to 0 if not available
-            self.current_segment_index = (
-                self.current_segment_index if self.current_segment_index else 0
-            )
-            self.current_segment_index = (self.current_segment_index - 1) % len(
-                self.g_pool.eye_movements
-            )
-
-            prev_segment_ts = self.g_pool.eye_movements[
-                self.current_segment_index
-            ].start_frame_timestamp
-
-            self.notify_all(
-                {
-                    "subject": "seek_control.should_seek",
-                    "timestamp": prev_segment_ts,
-                }
-            )
 
         for help_block in self.__doc__.split("\n\n"):
             help_str = help_block.replace("\n", " ").replace("  ", "").strip()
@@ -295,29 +251,9 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
             info += "    Time to next segment: N/A\n"
         self.current_segment_details.text = info
 
-    def _find_focused_segment(self, visible_segments):
-        current_segment = None
-        visible_segments = visible_segments if visible_segments else []
-        current_segment_index = self.current_segment_index
 
-        if current_segment_index:
-            current_segment_index = current_segment_index % len(
-                self.g_pool.eye_movements
-            )
-            current_segment = self.g_pool.eye_movements[
-                current_segment_index
-            ]
 
-        if not visible_segments:
-            return current_segment_index, current_segment
 
-        if (current_segment not in visible_segments) and len(visible_segments) > 0:
-            current_segment = visible_segments[0]
-            current_segment_index = self.g_pool.eye_movements.data.index(
-                current_segment
-            )
-
-        return current_segment_index, current_segment
 
     def recent_events(self, events):
 
@@ -340,21 +276,6 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
             current_segment,
         )
 
-    def correlate_and_publish(self):
-        self.g_pool.eye_movements = pm.Affiliator(
-            self.eye_movement_detection_yields,
-            [
-                segment.start_frame_timestamp
-                for segment in self.eye_movement_detection_yields
-            ],
-            [
-                segment.end_frame_timestamp
-                for segment in self.eye_movement_detection_yields
-            ],
-        )
-        self.notify_all(
-            {"subject": Notification_Subject.SEGMENTATION_CHANGED, "delay": 1}
-        )
 
 
     def export_eye_movement(self, export_range, export_dir):
