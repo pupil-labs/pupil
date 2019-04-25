@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import os
-import csv
 import typing
 import collections
 from .eye_movement_detector_base import Eye_Movement_Detector_Base
@@ -18,6 +17,7 @@ from eye_movement.model.immutable_capture import Immutable_Capture
 from eye_movement.model.segment import Classified_Segment
 from eye_movement.worker.offline_detection_task import Offline_Detection_Task
 from eye_movement.model.storage import Classified_Segment_Storage
+from eye_movement.controller.eye_movement_csv_exporter import Eye_Movement_CSV_Exporter
 from observable import Observable
 from tasklib.manager import PluginTaskManager
 import player_methods as pm
@@ -356,61 +356,13 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
             {"subject": Notification_Subject.SEGMENTATION_CHANGED, "delay": 1}
         )
 
-    @classmethod
-    def csv_schema(cls):
-        return [
-            ("id", lambda seg: seg.id),
-            ("method", lambda seg: seg.method.value),
-            ("segment_class", lambda seg: seg.segment_class.value),
-            ("start_frame_index", lambda seg: seg.start_frame_index),
-            ("end_frame_index", lambda seg: seg.end_frame_index),
-            ("start_timestamp", lambda seg: seg.start_frame_timestamp),
-            ("end_timestamp", lambda seg: seg.end_frame_timestamp),
-            ("duration", lambda seg: seg.duration),
-            ("confidence", lambda seg: seg.confidence),
-            ("norm_pos_x", lambda seg: seg.norm_pos[0]),
-            ("norm_pos_y", lambda seg: seg.norm_pos[1]),
-            (
-                "gaze_point_3d_x",
-                lambda seg: seg.gaze_point_3d[0] if seg.gaze_point_3d else "",
-            ),
-            (
-                "gaze_point_3d_y",
-                lambda seg: seg.gaze_point_3d[1] if seg.gaze_point_3d else "",
-            ),
-            (
-                "gaze_point_3d_z",
-                lambda seg: seg.gaze_point_3d[2] if seg.gaze_point_3d else "",
-            ),
-        ]
-
-    @classmethod
-    def csv_header(cls):
-        return tuple(label for label, _ in cls.csv_schema())
-
-    @classmethod
-    def csv_row(cls, segment):
-        return tuple(str(getter(segment)) for _, getter in cls.csv_schema())
 
     def export_eye_movement(self, export_range, export_dir):
 
-        if not self.eye_movement_detection_yields:
+        segments_in_section = self.storage.segments_in_range(export_range)
+
+        if segments_in_section:
+            csv_exporter = Eye_Movement_CSV_Exporter()
+            csv_exporter.csv_export(segments_in_section, export_dir=export_dir)
+        else:
             logger.warning("No fixations in this recording nothing to export")
-            return
-
-        export_window = pm.exact_window(self.g_pool.timestamps, export_range)
-        segments_in_section = self.g_pool.eye_movements.by_ts_window(
-            export_window
-        )
-
-        segment_export_filename = "eye_movement.csv"
-        segment_export_full_path = os.path.join(export_dir, segment_export_filename)
-
-        with open(
-            segment_export_full_path, "w", encoding="utf-8", newline=""
-        ) as csv_file:
-            csv_writer = csv.writer(csv_file)
-            csv_writer.writerow(type(self).csv_header())
-            for segment in segments_in_section:
-                csv_writer.writerow(type(self).csv_row(segment))
-            logger.info("Created '{}' file.".format(segment_export_filename))
