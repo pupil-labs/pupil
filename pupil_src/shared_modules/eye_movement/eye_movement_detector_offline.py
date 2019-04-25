@@ -19,6 +19,8 @@ from eye_movement.worker.offline_detection_task import Offline_Detection_Task
 from eye_movement.model.storage import Classified_Segment_Storage
 from eye_movement.controller.eye_movement_csv_exporter import Eye_Movement_CSV_Exporter
 from eye_movement.controller.eye_movement_seek_controller import Eye_Movement_Seek_Controller
+from eye_movement.ui.menu_content import Menu_Content
+from eye_movement.ui.navigation_buttons import Prev_Segment_Button, Next_Segment_Button
 from observable import Observable
 from tasklib.manager import PluginTaskManager
 import player_methods as pm
@@ -39,16 +41,10 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
 
     def __init__(self, g_pool, show_segmentation=True):
         super().__init__(g_pool)
-        self.show_segmentation = show_segmentation
         self.eye_movement_detection_yields = collections.deque()
-        self.status = ""
 
         self.task_manager = PluginTaskManager(self)
         self.eye_movement_task = None
-
-        self.current_segment_details = None
-        self.next_segment_button = None
-        self.prev_segment_button = None
 
         self.notify_all(
             {"subject": Notification_Subject.SHOULD_RECALCULATE, "delay": 0.5}
@@ -63,65 +59,21 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         )
 
     def init_ui(self):
-        self.add_menu()
-        self.menu.label = type(self).MENU_LABEL_TEXT
-
-        for help_block in self.__doc__.split("\n\n"):
-            help_str = help_block.replace("\n", " ").replace("  ", "").strip()
-            self.menu.append(ui.Info_Text(help_str))
-
-        self.menu.append(
-            ui.Info_Text("Press the export button or type 'e' to start the export.")
+        )
+        self.menu_content = Menu_Content(
+            plugin=self,
+            label_text=self.MENU_LABEL_TEXT,
+            show_segmentation=show_segmentation,
+        )
+        self.prev_segment_button = Prev_Segment_Button(
+            on_click=self.seek_controller.jump_to_prev_segment
+        )
+        self.next_segment_button = Next_Segment_Button(
+            on_click=self.seek_controller.jump_to_next_segment
         )
 
-        detection_status_input = ui.Text_Input(
-            "status", self, label="Detection progress:", setter=lambda x: None
         )
-
-        show_segmentation_switch = ui.Switch(
-            "show_segmentation", self, label="Show segmentation"
         )
-
-        self.current_segment_details = ui.Info_Text("")
-
-        self.next_segment_button = ui.Thumb(
-            "jump_next_segment",
-            setter=jump_next_segment,
-            getter=lambda: False,
-            label=chr(0xE044),
-            hotkey="f",
-            label_font="pupil_icons",
-        )
-        self.next_segment_button.status_text = "Next Segment"
-
-        self.prev_segment_button = ui.Thumb(
-            "jump_prev_segment",
-            setter=jump_prev_segment,
-            getter=lambda: False,
-            label=chr(0xE045),
-            hotkey="F",
-            label_font="pupil_icons",
-        )
-        self.prev_segment_button.status_text = "Previous Segment"
-
-        self.menu.append(detection_status_input)
-        self.menu.append(show_segmentation_switch)
-        self.menu.append(self.current_segment_details)
-
-        self.g_pool.quickbar.append(self.next_segment_button)
-        self.g_pool.quickbar.append(self.prev_segment_button)
-
-    def deinit_ui(self):
-        self.remove_menu()
-        self.g_pool.quickbar.remove(self.next_segment_button)
-        self.g_pool.quickbar.remove(self.prev_segment_button)
-        self.current_segment_details = None
-        self.next_segment_button = None
-        self.prev_segment_button = None
-
-    def get_init_dict(self):
-        return {"show_segmentation": self.show_segmentation}
-
     def on_notify(self, notification):
         if notification["subject"] == "gaze_positions_changed":
             logger.info("Gaze postions changed. Recalculating.")
@@ -196,63 +148,29 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         if self.menu_icon:
             self.menu_icon.indicator_stop = 0.0
 
-    def _ui_draw_visible_segments(self, frame, visible_segments):
-        if not self.show_segmentation:
-            return
-        for segment in visible_segments:
-            segment.draw_on_frame(frame)
 
-    def _ui_update_segment_detail_text(self, index, total_count, focused_segment):
 
-        if (index is None) or (total_count < 1) or (not focused_segment):
-            self.current_segment_details.text = ""
-            return
+    def init_ui(self):
+        self.add_menu()
+        self.menu_content.add_to_menu(self.menu)
+        self.prev_segment_button.add_to_quickbar(self.g_pool.quickbar)
+        self.next_segment_button.add_to_quickbar(self.g_pool.quickbar)
 
-        info = ""
-        prev_segment = (
-            self.g_pool.eye_movements[index - 1] if index > 0 else None
-        )
-        next_segment = (
-            self.g_pool.eye_movements[self.current_segment_index + 1]
-            if self.current_segment_index < len(self.g_pool.eye_movements) - 1
-            else None
-        )
-
-        info += "Current segment, {} of {}\n".format(index + 1, total_count)
-        info += "    ID: {}\n".format(focused_segment.id)
-        info += "    Classification: {}\n".format(focused_segment.segment_class.value)
-        info += "    Confidence: {:.2f}\n".format(focused_segment.confidence)
-        info += "    Duration: {:.2f} milliseconds\n".format(focused_segment.duration)
-        info += "    Frame range: {}-{}\n".format(
-            focused_segment.start_frame_index + 1, focused_segment.end_frame_index + 1
-        )
-        info += "    2d gaze pos: x={:.3f}, y={:.3f}\n".format(
-            *focused_segment.norm_pos
-        )
-        if focused_segment.gaze_point_3d:
-            info += "    3d gaze pos: x={:.3f}, y={:.3f}, z={:.3f}\n".format(
-                *focused_segment.gaze_point_3d
-            )
+        if len(self.storage):
+            status = "Loaded from cache"
+            self.menu_content.update_status(status)
         else:
-            info += "    3d gaze pos: N/A\n"
+            self.trigger_recalculate()
 
-        if prev_segment:
-            info += "    Time since prev. segment: {:.2f} seconds\n".format(
-                prev_segment.duration / 1000
-            )
-        else:
-            info += "    Time since prev. segment: N/A\n"
+    def deinit_ui(self):
+        self.remove_menu()
+        self.prev_segment_button.remove_from_quickbar(self.g_pool.quickbar)
+        self.next_segment_button.remove_from_quickbar(self.g_pool.quickbar)
 
-        if next_segment:
-            info += "    Time to next segment: {:.2f} seconds\n".format(
-                focused_segment.duration / 1000
-            )
-        else:
-            info += "    Time to next segment: N/A\n"
-        self.current_segment_details.text = info
-
-
-
+    def get_init_dict(self):
+        return {
+            "show_segmentation": self.menu_content.show_segmentation,
+        }
 
 
     def recent_events(self, events):
