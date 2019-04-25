@@ -6,7 +6,7 @@ from pyglui import ui
 from observable import Observable
 
 from video_overlay.ui.interactions import Draggable
-from video_overlay.ui.menu import GenericOverlayMenuRenderer, OverlayMenuRenderer
+from video_overlay.ui.menu import GenericOverlayMenuRenderer, EyesOverlayMenuRenderer
 
 
 class UIManagement(Observable, abc.ABC):
@@ -118,6 +118,6 @@ class UIManagementEyes(UIManagement):
         )
 
     def _add_overlay_menu(self, overlay):
-        renderer = OverlayMenuRenderer(overlay)
+        renderer = EyesOverlayMenuRenderer(overlay)
         self._menu_renderers[overlay] = renderer
         self._parent_menu.append(renderer.menu)

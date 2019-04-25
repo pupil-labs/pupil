@@ -1,12 +1,14 @@
 import os
 import glob
 
+import player_methods as pm
 from plugin import Plugin
 from observable import Observable
 
-from video_overlay.workers.overlay_renderer import OverlayRenderer
+from video_overlay.workers.overlay_renderer import EyeOverlayRenderer
 from video_overlay.models.config import Configuration
 from video_overlay.ui.management import UIManagementEyes
+from video_overlay.utils.constraints import ConstraintedValue, BooleanConstraint
 
 
 class Vis_Eye_Video_Overlay(Observable, Plugin):
@@ -26,7 +28,8 @@ class Vis_Eye_Video_Overlay(Observable, Plugin):
         eye0_config = eye0_config or {"vflip": True, "origin_x": 210, "origin_y": 60}
         eye1_config = eye1_config or {"hflip": True, "origin_x": 10, "origin_y": 60}
 
-        self.show_ellipses = show_ellipses
+        self.current_frame_ts = None
+        self.show_ellipses = ConstraintedValue(show_ellipses, BooleanConstraint())
         self._scale = scale
         self._alpha = alpha
 
@@ -36,6 +39,7 @@ class Vis_Eye_Video_Overlay(Observable, Plugin):
     def recent_events(self, events):
         if "frame" in events:
             frame = events["frame"]
+            self.current_frame_ts = frame.timestamp
             for overlay in (self.eye0, self.eye1):
                 overlay.draw_on_frame(frame)
 
@@ -74,7 +78,9 @@ class Vis_Eye_Video_Overlay(Observable, Plugin):
         prefilled_config["scale"] = self.scale
         prefilled_config["alpha"] = self.alpha
         config = Configuration(**prefilled_config)
-        overlay = OverlayRenderer(config)
+        overlay = EyeOverlayRenderer(
+            config, self.show_ellipses, self.make_current_pupil_datum_getter(eye_id)
+        )
         return overlay
 
     def _video_path_for_eye(self, eye_id):
@@ -85,13 +91,27 @@ class Vis_Eye_Video_Overlay(Observable, Plugin):
             video_path_candidates = glob.iglob(video_path_pattern)
             return next(video_path_candidates)
         except StopIteration:
-            return None
+            return "/not/found/eye{}.mp4".format(eye_id)
 
     def get_init_dict(self):
         return {
             "scale": self.scale,
             "alpha": self.alpha,
-            "show_ellipses": self.show_ellipses,
+            "show_ellipses": self.show_ellipses.value,
             "eye0_config": self.eye0.config.as_dict(),
             "eye1_config": self.eye1.config.as_dict(),
         }
+
+    def make_current_pupil_datum_getter(self, eye_id):
+        def _pupil_getter():
+            try:
+                pupil_data = self.g_pool.pupil_positions_by_id[eye_id]
+                closest_pupil_idx = pm.find_closest(
+                    pupil_data.data_ts, self.current_frame_ts
+                )
+                current_datum = pupil_data.data[closest_pupil_idx]
+                return current_datum
+            except (IndexError, ValueError):
+                return None
+
+        return _pupil_getter

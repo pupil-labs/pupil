@@ -28,20 +28,18 @@ class OverlayRenderer:
         return self.valid_video_loaded
 
     def setup_pipeline(self):
-        return OrderedDict(
-            (
-                (self.config.scale, IM.ScaleTransform()),
-                (self.config.hflip, IM.HorizontalFlip()),
-                (self.config.vflip, IM.VerticalFlip()),
-            )
-        )
+        return [
+            (self.config.scale, IM.ScaleTransform()),
+            (self.config.hflip, IM.HorizontalFlip()),
+            (self.config.vflip, IM.VerticalFlip()),
+        ]
 
     def draw_on_frame(self, target_frame):
         if not self.valid_video_loaded:
             return
         overlay_frame = self.video.closest_frame_to_ts(target_frame.timestamp)
         overlay_image = overlay_frame.img
-        for param, manipulation in self.pipeline.items():
+        for param, manipulation in self.pipeline:
             overlay_image = manipulation.apply_to(overlay_image, param.value)
 
         self._adjust_origin_constraint(target_frame.img, overlay_image)
@@ -58,3 +56,10 @@ class OverlayRenderer:
         pm.transparent_image_overlay(
             overlay_origin, overlay_image, target_image, self.config.alpha.value
         )
+
+
+class EyeOverlayRenderer(OverlayRenderer):
+    def __init__(self, config, should_render_pupil_data, pupil_getter):
+        super().__init__(config)
+        pupil_renderer = (should_render_pupil_data, IM.PupilRenderer(pupil_getter))
+        self.pipeline.insert(0, pupil_renderer)

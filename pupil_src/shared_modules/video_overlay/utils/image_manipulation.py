@@ -38,7 +38,8 @@ class PupilRenderer(ImageManipulator):
         """parameter: boolean indicating if pupil should be rendered"""
         if parameter:
             pupil_position = self.pupil_getter()
-            self.render_pupil(image, pupil_position)
+            if pupil_position:
+                self.render_pupil(image, pupil_position)
         return image
 
     def render_pupil(self, image, pupil_position):
