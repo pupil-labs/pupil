@@ -46,10 +46,17 @@ class Eye_Movement_CSV_Exporter(CSV_Exporter[Classified_Segment]):
             ),
         ]
 
-    def csv_export(self, segments: t.Iterable[Classified_Segment], export_dir: str, export_name: str = ...):
+    def csv_export(
+        self,
+        segments: t.Iterable[Classified_Segment],
+        export_dir: str,
+        export_name: str = ...,
+    ):
 
         export_name = self.EXPORT_FILE_NAME if export_name is ... else export_name
-        export_path = super().csv_export(raw_values=segments, export_dir=export_dir, export_name=export_name)
+        export_path = super().csv_export(
+            raw_values=segments, export_dir=export_dir, export_name=export_name
+        )
 
         logger.info("Created file: '{}'.".format(export_path))
         return export_path

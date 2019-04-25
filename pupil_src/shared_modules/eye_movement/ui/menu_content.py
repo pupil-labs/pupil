@@ -15,13 +15,7 @@ from pyglui import ui
 
 
 class Menu_Content:
-
-    def __init__(
-            self,
-            plugin,
-            label_text: str,
-            show_segmentation: bool,
-    ):
+    def __init__(self, plugin, label_text: str, show_segmentation: bool):
         self.plugin = weakref.ref(plugin)
         self.label_text = label_text
         self.detection_status = ""
@@ -45,16 +39,11 @@ class Menu_Content:
     def add_to_menu(self, menu):
 
         self._detection_status_input = ui.Text_Input(
-            "detection_status",
-            self,
-            label="Detection progress:",
-            setter=lambda _: None,
+            "detection_status", self, label="Detection progress:", setter=lambda _: None
         )
 
         self._show_segmentation_switch = ui.Switch(
-            "show_segmentation",
-            self,
-            label="Show segmentation",
+            "show_segmentation", self, label="Show segmentation"
         )
 
         self._current_segment_details = ui.Info_Text("")
@@ -78,26 +67,36 @@ class Menu_Content:
             plugin.menu_icon.indicator_stop = new_progress
 
     def update_detail_text(
-            self,
-            current_index: int,
-            total_segment_count: int,
-            current_segment: t.Optional[Classified_Segment],
-            prev_segment: t.Optional[Classified_Segment],
-            next_segment: t.Optional[Classified_Segment],
+        self,
+        current_index: int,
+        total_segment_count: int,
+        current_segment: t.Optional[Classified_Segment],
+        prev_segment: t.Optional[Classified_Segment],
+        next_segment: t.Optional[Classified_Segment],
     ):
 
-        if (current_index is None) or (total_segment_count < 1) or (not current_segment):
+        if (
+            (current_index is None)
+            or (total_segment_count < 1)
+            or (not current_segment)
+        ):
             self._current_segment_details.text = ""
             return
 
         text = ""
         ident = "    "
 
-        text += "Current segment, {} of {}\n".format(current_index + 1, total_segment_count)
+        text += "Current segment, {} of {}\n".format(
+            current_index + 1, total_segment_count
+        )
         text += ident + "ID: {}\n".format(current_segment.id)
-        text += ident + "Classification: {}\n".format(current_segment.segment_class.value)
+        text += ident + "Classification: {}\n".format(
+            current_segment.segment_class.value
+        )
         text += ident + "Confidence: {:.2f}\n".format(current_segment.confidence)
-        text += ident + "Duration: {:.2f} milliseconds\n".format(current_segment.duration)
+        text += ident + "Duration: {:.2f} milliseconds\n".format(
+            current_segment.duration
+        )
         text += ident + "Frame range: {}-{}\n".format(
             current_segment.start_frame_index + 1, current_segment.end_frame_index + 1
         )
@@ -126,4 +125,3 @@ class Menu_Content:
             text += ident + "Time to next segment: N/A\n"
 
         self._current_segment_details.text = text
-

@@ -11,7 +11,9 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import enum
 import typing as t
-from gaze_producer.model.storage import StorageItem  # FIXME: Update import path when class moves to shared utils lib
+
+# TODO: Update StorageItem import path when class moves to shared utils lib
+from gaze_producer.model.storage import StorageItem
 from eye_movement.model.time_range import Time_Range
 from eye_movement.model.color import Color, Defo_Color_Palette
 import eye_movement.utils as utils
@@ -58,7 +60,9 @@ Segment_Class._nslr_class_to_segment_class_mapping: t.Mapping[int, "Segment_Clas
 
 # TODO: Move drawing logic into ../ui/
 # This needs to be defined outside class declaration; otherwise it is treated as a `enum` case.
-Segment_Class._segment_class_to_color_mapping: t.Mapping["Segment_Class", t.Type[Color]] = {
+Segment_Class._segment_class_to_color_mapping: t.Mapping[
+    "Segment_Class", t.Type[Color]
+] = {
     Segment_Class.FIXATION: Defo_Color_Palette.SUN_FLOWER,
     Segment_Class.SACCADE: Defo_Color_Palette.NEPHRITIS,
     Segment_Class.POST_SACCADIC_OSCILLATIONS: Defo_Color_Palette.BELIZE_HOLE,
@@ -67,7 +71,6 @@ Segment_Class._segment_class_to_color_mapping: t.Mapping["Segment_Class", t.Type
 
 
 class Classified_Segment_Raw(abc.ABC):
-
     @abc.abstractmethod
     def __getitem__(self, key):
         ...
@@ -97,7 +100,6 @@ class Classified_Segment_Raw(abc.ABC):
 
 
 class Classified_Segment_Raw_Dict(Classified_Segment_Raw):
-
     def __init__(self, python_dict: dict):
         self._python_dict = python_dict
 
@@ -122,7 +124,6 @@ class Classified_Segment_Raw_Dict(Classified_Segment_Raw):
 
 
 class Classified_Segment_Raw_Serialized_Dict(Classified_Segment_Raw):
-
     def __init__(self, serialized_dict: fm.Serialized_Dict):
         self._serialized_dict = serialized_dict
 
@@ -147,7 +148,6 @@ class Classified_Segment_Raw_Serialized_Dict(Classified_Segment_Raw):
 
 
 class Classified_Segment_Raw_MsgPack(Classified_Segment_Raw_Serialized_Dict):
-
     def __init__(self, msgpack_bytes: utils.MsgPack_Serialized_Segment):
         serialized_dict = fm.Serialized_Dict(msgpack_bytes=msgpack_bytes)
         super().__init__(serialized_dict=serialized_dict)
@@ -164,19 +164,23 @@ class Classified_Segment(StorageItem):
         k = Classified_Segment._private_schema_keys
         v = segment_tuple
         assert len(k) == len(v)
-        segment_dict = dict(zip(k,v))
-        segment_dict["segment_data"] = [fm.Serialized_Dict(msgpack_bytes=datum) for datum in segment_dict["segment_data"]]
+        segment_dict = dict(zip(k, v))
+        segment_dict["segment_data"] = [
+            fm.Serialized_Dict(msgpack_bytes=datum)
+            for datum in segment_dict["segment_data"]
+        ]
         return Classified_Segment.from_dict(segment_dict)
 
     @property
     def as_tuple(self) -> tuple:
-
         def value_for_key(key: str):
             if key == "segment_data":
                 return [datum.serialized for datum in self._storage["segment_data"]]
             return self._storage[key]
 
-        return tuple(value_for_key(key) for key in Classified_Segment._private_schema_keys)
+        return tuple(
+            value_for_key(key) for key in Classified_Segment._private_schema_keys
+        )
 
     #
 
@@ -292,12 +296,16 @@ class Classified_Segment(StorageItem):
         return Classified_Segment(storage)
 
     @staticmethod
-    def from_serialized_dict(serialized_dict: fm.Serialized_Dict) -> "Classified_Segment":
+    def from_serialized_dict(
+        serialized_dict: fm.Serialized_Dict
+    ) -> "Classified_Segment":
         storage = Classified_Segment_Raw_Serialized_Dict(serialized_dict)
         return Classified_Segment(storage)
 
     @staticmethod
-    def from_msgpack(segment_msgpack: utils.MsgPack_Serialized_Segment) -> "Classified_Segment":
+    def from_msgpack(
+        segment_msgpack: utils.MsgPack_Serialized_Segment
+    ) -> "Classified_Segment":
         storage = Classified_Segment_Raw_MsgPack(segment_msgpack)
         return Classified_Segment(storage)
 
@@ -403,14 +411,20 @@ class Classified_Segment(StorageItem):
 
     @property
     def time_range(self) -> Time_Range:
-        return Time_Range(start_time=self.start_frame_timestamp, end_time=self.end_frame_timestamp)
+        return Time_Range(
+            start_time=self.start_frame_timestamp, end_time=self.end_frame_timestamp
+        )
 
-    def mean_2d_point_within_world(self, world_frame: t.Tuple[int, int]) -> t.Tuple[int, int]:
+    def mean_2d_point_within_world(
+        self, world_frame: t.Tuple[int, int]
+    ) -> t.Tuple[int, int]:
         x, y = self.norm_pos
         x, y = mt.denormalize((x, y), world_frame, flip_y=True)
         return int(x), int(y)
 
-    def last_2d_point_within_world(self, world_frame: t.Tuple[int, int]) -> t.Tuple[int, int]:
+    def last_2d_point_within_world(
+        self, world_frame: t.Tuple[int, int]
+    ) -> t.Tuple[int, int]:
         x, y = self.segment_data[-1]["norm_pos"]
         x, y = mt.denormalize((x, y), world_frame, flip_y=True)
         return int(x), int(y)
@@ -428,7 +442,11 @@ class Classified_Segment(StorageItem):
         segment_color = self.color.to_rgba()
 
         pm.transparent_circle(
-            frame.img, segment_point, radius=25.0, color=segment_color.channels, thickness=3
+            frame.img,
+            segment_point,
+            radius=25.0,
+            color=segment_color.channels,
+            thickness=3,
         )
 
         text = str(self.id)
@@ -458,7 +476,7 @@ class Classified_Segment(StorageItem):
             segment_point,
             radius=48.0,
             stroke_width=10.0,
-            color=gl_utils.RGBA(*circle_color)
+            color=gl_utils.RGBA(*circle_color),
         )
 
         font_size = 22

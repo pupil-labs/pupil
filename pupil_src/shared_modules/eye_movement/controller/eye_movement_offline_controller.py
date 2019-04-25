@@ -22,18 +22,17 @@ def nop(*args, **kwargs):
 
 
 class Eye_Movement_Offline_Controller:
-
     def __init__(
-            self,
-            plugin,
-            storage: Classified_Segment_Storage,
-            on_started: t.Callable[[], None] = nop,
-            on_status: t.Callable[[str], None] = nop,
-            on_progress: t.Callable[[float], None] = nop,
-            on_exception: t.Callable[[Exception], None] = nop,
-            on_completed: t.Callable[[], None] = nop,
-            on_canceled_or_killed: t.Callable[[], None] = nop,
-            on_ended: t.Callable[[], None] = nop
+        self,
+        plugin,
+        storage: Classified_Segment_Storage,
+        on_started: t.Callable[[], None] = nop,
+        on_status: t.Callable[[str], None] = nop,
+        on_progress: t.Callable[[float], None] = nop,
+        on_exception: t.Callable[[Exception], None] = nop,
+        on_completed: t.Callable[[], None] = nop,
+        on_canceled_or_killed: t.Callable[[], None] = nop,
+        on_ended: t.Callable[[], None] = nop,
     ):
         self.g_pool = plugin.g_pool
         self.storage = storage

@@ -12,17 +12,14 @@ import typing as t
 import collections
 from eye_movement.model.segment import Classified_Segment
 from observable import Observable
-from gaze_producer.model.single_file_storage import SingleFileStorage  # FIXME: Update import path when class moves to shared utils lib
+
+# FIXME: Update SingleFileStorage import path when class moves to shared utils lib
+from gaze_producer.model.single_file_storage import SingleFileStorage
 import player_methods as pm
 
 
 class Classified_Segment_Storage(SingleFileStorage, Observable):
-
-    def __init__(
-            self,
-            plugin,
-            rec_dir,
-        ):
+    def __init__(self, plugin, rec_dir):
         super().__init__(plugin=plugin, rec_dir=rec_dir)
         self._queue = collections.deque()
         self._affiliator = pm.Affiliator()
@@ -83,7 +80,9 @@ class Classified_Segment_Storage(SingleFileStorage, Observable):
         range_window = pm.exact_window(self._timestamps, range)
         return self.segments_in_timestamp_window(range_window)
 
-    def segments_in_timestamp_window(self, timestamp_window) -> t.Iterable[Classified_Segment]:
+    def segments_in_timestamp_window(
+        self, timestamp_window
+    ) -> t.Iterable[Classified_Segment]:
         if len(self._affiliator) <= 0:
             return []
         return self._affiliator.by_ts_window(timestamp_window)

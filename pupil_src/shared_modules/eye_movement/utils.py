@@ -27,7 +27,7 @@ MsgPack_Serialized_Segment = t.Type[bytes]
 logger = logging.getLogger(__name__)
 
 
-EYE_MOVEMENT_EVENT_KEY = 'eye_movement_segments'
+EYE_MOVEMENT_EVENT_KEY = "eye_movement_segments"
 
 
 def can_use_3d_gaze_mapping(gaze_data) -> bool:

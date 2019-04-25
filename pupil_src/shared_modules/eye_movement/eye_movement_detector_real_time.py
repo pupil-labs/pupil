@@ -35,10 +35,14 @@ class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
 
         self._buffered_detector.extend_gaze_data(gaze_data=gaze_data, capture=capture)
 
-        frame_timestamp = events['frame'].timestamp
-        self._recent_segments = self._buffered_detector.segments_at_timestamp(frame_timestamp)
+        frame_timestamp = events["frame"].timestamp
+        self._recent_segments = self._buffered_detector.segments_at_timestamp(
+            frame_timestamp
+        )
 
-        public_segments = [segment.to_public_dict() for segment in self._recent_segments]
+        public_segments = [
+            segment.to_public_dict() for segment in self._recent_segments
+        ]
         events[EYE_MOVEMENT_EVENT_KEY] = public_segments
 
     def gl_display(self):

@@ -10,7 +10,12 @@ See COPYING and COPYING.LESSER for license details.
 """
 import typing as t
 import bisect
-from eye_movement.utils import Gaze_Data, logger, can_use_3d_gaze_mapping, gaze_data_to_nslr_data
+from eye_movement.utils import (
+    Gaze_Data,
+    logger,
+    can_use_3d_gaze_mapping,
+    gaze_data_to_nslr_data,
+)
 from eye_movement.model.time_range import Time_Range
 from eye_movement.model.immutable_capture import Immutable_Capture
 from eye_movement.model.segment import Classified_Segment, Classified_Segment_Factory
@@ -20,7 +25,6 @@ import nslr_hmm
 
 
 class Real_Time_Buffered_Detector:
-
     def __init__(self, max_segment_count: int = 1, max_sample_count: int = 1000):
         self._capture = None
         self._gaze_data_buffer = sliceable_deque([], maxlen=max_sample_count)
@@ -35,16 +39,30 @@ class Real_Time_Buffered_Detector:
         self._gaze_data_buffer.extend(gaze_data)
         self._is_gaze_buffer_classified = False
 
-    def segments_at_timestamp(self, target_timestamp: float) -> t.Iterable[Classified_Segment]:
+    def segments_at_timestamp(
+        self, target_timestamp: float
+    ) -> t.Iterable[Classified_Segment]:
         self._update_classification()
-        return [segment for segment in self._segment_buffer if segment.time_range.contains(target_timestamp)]
+        return [
+            segment
+            for segment in self._segment_buffer
+            if segment.time_range.contains(target_timestamp)
+        ]
 
-    def segments_in_time_range(self, target_range: Time_Range) -> t.Iterable[Classified_Segment]:
+    def segments_in_time_range(
+        self, target_range: Time_Range
+    ) -> t.Iterable[Classified_Segment]:
         self._update_classification()
-        return [segment for segment in self._segment_buffer if segment.time_range.intersection(target_range)]
+        return [
+            segment
+            for segment in self._segment_buffer
+            if segment.time_range.intersection(target_range)
+        ]
 
     @staticmethod
-    def _segment_generator(capture: Immutable_Capture, gaze_data: Gaze_Data, factory_start_id: int = None):
+    def _segment_generator(
+        capture: Immutable_Capture, gaze_data: Gaze_Data, factory_start_id: int = None
+    ):
         # TODO: Merge this version with the one in offline_detection_task
 
         if not gaze_data:
@@ -57,9 +75,7 @@ class Real_Time_Buffered_Detector:
 
         gaze_time = np.array([gp["timestamp"] for gp in gaze_data])
 
-        eye_positions = gaze_data_to_nslr_data(
-            capture, gaze_data, use_pupil=use_pupil
-        )
+        eye_positions = gaze_data_to_nslr_data(capture, gaze_data, use_pupil=use_pupil)
 
         gaze_classification, segmentation, segment_classification = nslr_hmm.classify_gaze(
             gaze_time, eye_positions
@@ -86,12 +102,14 @@ class Real_Time_Buffered_Detector:
         if self._is_gaze_buffer_classified:
             return
 
-        factory_start_id = self._segment_buffer[0].id if len(self._segment_buffer) > 0 else None
+        factory_start_id = (
+            self._segment_buffer[0].id if len(self._segment_buffer) > 0 else None
+        )
 
         segment_generator = type(self)._segment_generator(
             capture=self._capture,
             gaze_data=self._gaze_data_buffer,
-            factory_start_id=factory_start_id
+            factory_start_id=factory_start_id,
         )
         new_segments = list(segment_generator)
 

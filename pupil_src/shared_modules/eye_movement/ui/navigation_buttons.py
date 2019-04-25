@@ -14,12 +14,12 @@ from pyglui import ui
 
 class Navigation_Button:
     def __init__(
-            self,
-            selector: str,
-            label_text: str,
-            on_click: t.Callable[[], None],
-            pupil_icon: chr,
-            hotkey: str,
+        self,
+        selector: str,
+        label_text: str,
+        on_click: t.Callable[[], None],
+        pupil_icon: chr,
+        hotkey: str,
     ):
         self._selector = selector
         self._label_text = label_text
@@ -47,13 +47,9 @@ class Navigation_Button:
             self._ui_button = None
 
 
-
 class Prev_Segment_Button(Navigation_Button):
     def __init__(
-            self,
-            on_click: t.Callable[[], None],
-            pupil_icon=chr(0xE045),
-            hotkey="F",
+        self, on_click: t.Callable[[], None], pupil_icon=chr(0xE045), hotkey="F"
     ):
         super().__init__(
             selector="jump_to_prev_segment",
@@ -66,10 +62,7 @@ class Prev_Segment_Button(Navigation_Button):
 
 class Next_Segment_Button(Navigation_Button):
     def __init__(
-            self,
-            on_click: t.Callable[[], None],
-            pupil_icon=chr(0xE044),
-            hotkey="f",
+        self, on_click: t.Callable[[], None], pupil_icon=chr(0xE044), hotkey="f"
     ):
         super().__init__(
             selector="jump_to_next_segment",

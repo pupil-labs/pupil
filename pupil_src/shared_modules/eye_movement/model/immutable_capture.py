@@ -1,3 +1,13 @@
+"""
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2019 Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+"""
 import typing as t
 from camera_models import Camera_Model
 from video_capture.base_backend import Base_Source
@@ -15,4 +25,3 @@ class Immutable_Capture:
             self.timestamps: np.ndarray = capture.timestamps
         except AttributeError:
             self.timestamps: np.ndarray = np.ndarray([])
-

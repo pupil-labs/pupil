@@ -15,12 +15,11 @@ from eye_movement.model.storage import Classified_Segment_Storage
 
 
 class Eye_Movement_Seek_Controller:
-
     def __init__(
-            self,
-            plugin,
-            storage: Classified_Segment_Storage,
-            seek_to_timestamp: t.Callable[[float], None]
+        self,
+        plugin,
+        storage: Classified_Segment_Storage,
+        seek_to_timestamp: t.Callable[[float], None],
     ):
         self.storage = storage
         self._seek_to_timestamp = seek_to_timestamp
@@ -83,7 +82,9 @@ class Eye_Movement_Seek_Controller:
         self._current_segment_index = offset_index
         self.seek_to_timestamp(offset_timestamp)
 
-    def update_visible_segments(self, visible_segments: t.Iterable[Classified_Segment]) -> t.Optional[Classified_Segment]:
+    def update_visible_segments(
+        self, visible_segments: t.Iterable[Classified_Segment]
+    ) -> t.Optional[Classified_Segment]:
 
         if not self.total_segment_count:
             self._current_segment_index = None
@@ -103,9 +104,7 @@ class Eye_Movement_Seek_Controller:
 
         if (current_segment not in visible_segments) and len(visible_segments) > 0:
             current_segment = visible_segments[0]
-            current_segment_index = self.storage.index(
-                current_segment
-            )
+            current_segment_index = self.storage.index(current_segment)
 
         self._current_segment_index = current_segment_index
         return current_segment

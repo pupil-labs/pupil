@@ -15,8 +15,12 @@ from eye_movement.utils import Gaze_Data, EYE_MOVEMENT_EVENT_KEY, logger
 from eye_movement.model.segment import Classified_Segment
 from eye_movement.model.storage import Classified_Segment_Storage
 from eye_movement.controller.eye_movement_csv_exporter import Eye_Movement_CSV_Exporter
-from eye_movement.controller.eye_movement_seek_controller import Eye_Movement_Seek_Controller
-from eye_movement.controller.eye_movement_offline_controller import Eye_Movement_Offline_Controller
+from eye_movement.controller.eye_movement_seek_controller import (
+    Eye_Movement_Seek_Controller,
+)
+from eye_movement.controller.eye_movement_offline_controller import (
+    Eye_Movement_Offline_Controller,
+)
 from eye_movement.ui.menu_content import Menu_Content
 from eye_movement.ui.navigation_buttons import Prev_Segment_Button, Next_Segment_Button
 from observable import Observable
@@ -39,14 +43,9 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
 
     def __init__(self, g_pool, show_segmentation=True):
         super().__init__(g_pool)
-        self.storage = Classified_Segment_Storage(
-            plugin=self,
-            rec_dir=g_pool.rec_dir,
-        )
+        self.storage = Classified_Segment_Storage(plugin=self, rec_dir=g_pool.rec_dir)
         self.seek_controller = Eye_Movement_Seek_Controller(
-            plugin=self,
-            storage=self.storage,
-            seek_to_timestamp=self.seek_to_timestamp,
+            plugin=self, storage=self.storage, seek_to_timestamp=self.seek_to_timestamp
         )
         self.offline_controller = Eye_Movement_Offline_Controller(
             plugin=self,
@@ -69,33 +68,24 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         )
 
         self._gaze_changed_listener = Listener(
-            plugin=self,
-            topic="gaze_positions",
-            rec_dir=g_pool.rec_dir,
+            plugin=self, topic="gaze_positions", rec_dir=g_pool.rec_dir
         )
         self._gaze_changed_listener.add_observer(
-            method_name="on_data_changed",
-            observer=self.offline_controller.classify
+            method_name="on_data_changed", observer=self.offline_controller.classify
         )
         self._eye_movement_changed_announcer = Announcer(
-            plugin=self,
-            topic=EYE_MOVEMENT_ANNOUNCER_TOPIC,
-            rec_dir=g_pool.rec_dir,
+            plugin=self, topic=EYE_MOVEMENT_ANNOUNCER_TOPIC, rec_dir=g_pool.rec_dir
         )
 
     #
 
     def trigger_recalculate(self):
-        self.notify_all({
-            "subject": Notification_Subject.SHOULD_RECALCULATE,
-            "delay": 0.5
-        })
+        self.notify_all(
+            {"subject": Notification_Subject.SHOULD_RECALCULATE, "delay": 0.5}
+        )
 
     def seek_to_timestamp(self, timestamp):
-        self.notify_all({
-            "subject": "seek_control.should_seek",
-            "timestamp": timestamp,
-        })
+        self.notify_all({"subject": "seek_control.should_seek", "timestamp": timestamp})
 
     def on_task_progress(self, progress: float):
         self.menu_content.update_progress(progress)
@@ -129,16 +119,18 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         self.next_segment_button.remove_from_quickbar(self.g_pool.quickbar)
 
     def get_init_dict(self):
-        return {
-            "show_segmentation": self.menu_content.show_segmentation,
-        }
+        return {"show_segmentation": self.menu_content.show_segmentation}
 
     def on_notify(self, notification):
         if notification["subject"] == "gaze_positions_changed":
             # TODO: Remove when gaze_positions will be announced with `data_changed.Announcer`
             note = notification.copy()
-            note["subject"] = "data_changed.{}.announce_token".format(self._gaze_changed_listener._topic)
-            note["token"] = notification.get("token", "{:0>8x}".format(random.getrandbits(32)))
+            note["subject"] = "data_changed.{}.announce_token".format(
+                self._gaze_changed_listener._topic
+            )
+            note["token"] = notification.get(
+                "token", "{:0>8x}".format(random.getrandbits(32))
+            )
             self._gaze_changed_listener._on_notify(note)
         elif notification["subject"] == Notification_Subject.SHOULD_RECALCULATE:
             self.offline_controller.classify()

@@ -9,7 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import typing
-from eye_movement.utils import MsgPack_Serialized_Segment, Gaze_Data, logger, can_use_3d_gaze_mapping, clean_3d_data, np_denormalize, gaze_data_to_nslr_data
+from eye_movement.utils import (
+    MsgPack_Serialized_Segment,
+    Gaze_Data,
+    logger,
+    can_use_3d_gaze_mapping,
+    clean_3d_data,
+    np_denormalize,
+    gaze_data_to_nslr_data,
+)
 from eye_movement.model.segment import Classified_Segment_Factory
 from eye_movement.model.immutable_capture import Immutable_Capture
 from tasklib.background.task import TypedBackgroundGeneratorFunction
@@ -27,19 +35,23 @@ Offline_Detection_Task_Yield = typing.Tuple[
 EYE_MOVEMENT_DETECTION_STEP_PREPARING_LOCALIZED_STRING = "Preparing gaze data..."
 EYE_MOVEMENT_DETECTION_STEP_PROCESSING_LOCALIZED_STRING = "Processing gaze data..."
 EYE_MOVEMENT_DETECTION_STEP_CLASSIFYING_LOCALIZED_STRING = "Classifying gaze data..."
-EYE_MOVEMENT_DETECTION_STEP_DETECTING_LOCALIZED_STRING = "Detecting segmentation events..."
+EYE_MOVEMENT_DETECTION_STEP_DETECTING_LOCALIZED_STRING = (
+    "Detecting segmentation events..."
+)
 EYE_MOVEMENT_DETECTION_STEP_COMPLETE_LOCALIZED_STRING = "Segmentation complete"
 
 
 Offline_Detection_Task_Generator = typing.Iterator[Offline_Detection_Task_Yield]
 Offline_Detection_Task_Args = typing.Tuple[Immutable_Capture, Gaze_Data]
-Offline_Detection_Task_Function = typing.Callable[[Immutable_Capture, Gaze_Data], Offline_Detection_Task_Generator]
+Offline_Detection_Task_Function = typing.Callable[
+    [Immutable_Capture, Gaze_Data], Offline_Detection_Task_Generator
+]
+
 
 @typing.no_type_check
 def eye_movement_detection_generator(
     capture: Immutable_Capture, gaze_data: Gaze_Data, factory_start_id: int = None
 ) -> Offline_Detection_Task_Generator:
-
     def serialized_dict(datum):
         if type(datum) is dict:
             return fm.Serialized_Dict(python_dict=datum)
@@ -63,9 +75,7 @@ def eye_movement_detection_generator(
     gaze_time = np.array([gp["timestamp"] for gp in gaze_data])
 
     yield EYE_MOVEMENT_DETECTION_STEP_PROCESSING_LOCALIZED_STRING, ()
-    eye_positions = gaze_data_to_nslr_data(
-        capture, gaze_data, use_pupil=use_pupil
-    )
+    eye_positions = gaze_data_to_nslr_data(capture, gaze_data, use_pupil=use_pupil)
 
     yield EYE_MOVEMENT_DETECTION_STEP_CLASSIFYING_LOCALIZED_STRING, ()
     gaze_classification, segmentation, segment_classification = nslr_hmm.classify_gaze(
@@ -97,15 +107,13 @@ def eye_movement_detection_generator(
     yield EYE_MOVEMENT_DETECTION_STEP_COMPLETE_LOCALIZED_STRING, ()
 
 
-class Offline_Detection_Task(TypedBackgroundGeneratorFunction[Offline_Detection_Task_Yield, None, None]):
+class Offline_Detection_Task(
+    TypedBackgroundGeneratorFunction[Offline_Detection_Task_Yield, None, None]
+):
     def __init__(
         self,
         args: Offline_Detection_Task_Args,
         name: str = "Offline_Eye_Movement_Detection_Task",
         generator_function: Offline_Detection_Task_Function = eye_movement_detection_generator,
     ):
-        super().__init__(
-            name=name,
-            generator_function=generator_function,
-            args=args
-        )
+        super().__init__(name=name, generator_function=generator_function, args=args)
