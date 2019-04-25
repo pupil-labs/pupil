@@ -155,6 +155,47 @@ class Classified_Segment_Raw_MsgPack(Classified_Segment_Raw_Serialized_Dict):
 
 class Classified_Segment(StorageItem):
 
+    # StorageItem API
+
+    version = 1
+
+    @staticmethod
+    def from_tuple(segment_tuple: tuple) -> "Classified_Segment":
+        k = Classified_Segment._private_schema_keys
+        v = segment_tuple
+        assert len(k) == len(v)
+        segment_dict = dict(zip(k,v))
+        segment_dict["segment_data"] = [fm.Serialized_Dict(msgpack_bytes=datum) for datum in segment_dict["segment_data"]]
+        return Classified_Segment.from_dict(segment_dict)
+
+    @property
+    def as_tuple(self) -> tuple:
+
+        def value_for_key(key: str):
+            if key == "segment_data":
+                return [datum.serialized for datum in self._storage["segment_data"]]
+            return self._storage[key]
+
+        return tuple(value_for_key(key) for key in Classified_Segment._private_schema_keys)
+
+    #
+
+    _private_schema_keys = (
+        "id",
+        "topic",
+        "use_pupil",
+        "segment_data",
+        "segment_time",
+        "segment_class",
+        "start_frame_index",
+        "end_frame_index",
+        "start_frame_timestamp",
+        "end_frame_timestamp",
+        "confidence",  # optional
+        "norm_pos",  # optional
+        "gaze_point_3d",  # optional
+    )
+
     @staticmethod
     def from_attrs(
         id: int,
@@ -169,6 +210,19 @@ class Classified_Segment(StorageItem):
         end_frame_timestamp: float,
     ) -> "Classified_Segment":
 
+        confidence = np.mean([gp["confidence"] for gp in segment_data])
+        confidence = float(confidence)
+
+        norm_pos = np.array([gp["norm_pos"] for gp in segment_data])
+        norm_pos = np.mean(norm_pos, axis=0).tolist()
+
+        if use_pupil:
+            gaze_point_3d = [gp["gaze_point_3d"] for gp in segment_data]
+            gaze_point_3d = np.array(gaze_point_3d, dtype=np.float32)
+            gaze_point_3d = np.mean(gaze_point_3d, axis=0).tolist()
+        else:
+            gaze_point_3d = None
+
         segment_dict = {
             "id": id,
             "topic": topic,
@@ -180,21 +234,12 @@ class Classified_Segment(StorageItem):
             "end_frame_index": end_frame_index,
             "start_frame_timestamp": start_frame_timestamp,
             "end_frame_timestamp": end_frame_timestamp,
+            "confidence": confidence,
+            "norm_pos": norm_pos,
+            "gaze_point_3d": gaze_point_3d,
         }
 
-        segment_dict["confidence"] = float(
-            np.mean([gp["confidence"] for gp in segment_data])
-        )
-
-        norm_pos_2d_points = np.array([gp["norm_pos"] for gp in segment_data])
-        segment_dict["norm_pos"] = np.mean(norm_pos_2d_points, axis=0).tolist()
-
-        if use_pupil:
-            gaze_3d_points = np.array(
-                [gp["gaze_point_3d"] for gp in segment_data], dtype=np.float32
-            )
-            segment_dict["gaze_point_3d"] = np.mean(gaze_3d_points, axis=0).tolist()
-
+        assert set(Classified_Segment._private_schema_keys) == set(segment_dict.keys())
         return Classified_Segment.from_dict(segment_dict)
 
     def __init__(self, storage: Classified_Segment_Raw):
