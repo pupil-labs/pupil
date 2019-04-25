@@ -114,7 +114,7 @@ class UIManagementEyes(UIManagement):
             )
         )
         self._parent_menu.append(
-            ui.Switch("show_ellipses", self.plugin(), label="Visualize Ellipses")
+            ui.Switch("value", self.plugin().show_ellipses, label="Visualize Ellipses")
         )
 
     def _add_overlay_menu(self, overlay):
