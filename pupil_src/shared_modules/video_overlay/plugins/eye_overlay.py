@@ -11,7 +11,7 @@ from video_overlay.ui.management import UIManagementEyes
 from video_overlay.utils.constraints import ConstraintedValue, BooleanConstraint
 
 
-class Vis_Eye_Video_Overlay(Observable, Plugin):
+class Eye_Overlay(Observable, Plugin):
     icon_chr = chr(0xEC02)
     icon_font = "pupil_icons"
 

@@ -11,7 +11,7 @@ from video_overlay.ui.management import UIManagementGeneric
 from video_overlay.ui.interactions import current_mouse_pos
 
 
-class Vis_Generic_Video_Overlay(Observable, Plugin):
+class Video_Overlay(Observable, Plugin):
     icon_chr = "O"
 
     def __init__(self, g_pool):
