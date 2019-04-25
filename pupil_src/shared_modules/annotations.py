@@ -295,10 +295,11 @@ class Annotation_Player(AnnotationPlugin, Analysis_Plugin_Base):
 
     def on_notify(self, notification):
         if notification["subject"] == "should_export":
-            self.export_annotations(notification["range"], notification["export_dir"])
+            self.export_annotations(
+                notification["ts_window"], notification["export_dir"]
+            )
 
-    def export_annotations(self, export_range, export_dir):
-        export_window = pm.exact_window(self.g_pool.timestamps, export_range)
+    def export_annotations(self, export_window, export_dir):
         annotation_section = self.annotations.init_dict_for_window(export_window)
         annotation_idc = pm.find_closest(
             self.g_pool.timestamps, annotation_section["data_ts"]

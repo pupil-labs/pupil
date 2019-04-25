@@ -156,8 +156,6 @@ def _export_world_video(
         name_by_index = [p.__name__ for p in available_plugins]
         plugin_by_name = dict(zip(name_by_index, available_plugins))
 
-        audio_path = os.path.join(rec_dir, "audio.mp4")
-
         meta_info = pm.load_meta_info(rec_dir)
 
         g_pool = GlobalContainer()
@@ -213,7 +211,7 @@ def _export_world_video(
 
         # setup of writer
         writer = AV_Writer(
-            out_file_path, fps=cap.frame_rate, audio_loc=audio_path, use_timestamps=True
+            out_file_path, fps=cap.frame_rate, audio_dir=rec_dir, use_timestamps=True
         )
 
         cap.seek_to_frame(start_frame)
