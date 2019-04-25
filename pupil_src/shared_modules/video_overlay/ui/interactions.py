@@ -1,4 +1,4 @@
-from glfw import getHDPIFactor, glfwGetCurrentContext, glfwGetCursorPos
+from glfw import getHDPIFactor, glfwGetCurrentContext, glfwGetCursorPos, GLFW_PRESS
 from methods import normalize, denormalize
 
 
@@ -13,7 +13,7 @@ class Draggable:
         if not self.overlay.valid_video_loaded:
             return False  # click event has not been consumed
 
-        click_engaged = action == 1
+        click_engaged = action == GLFW_PRESS
         if click_engaged and self._in_bounds(pos):
             self.drag_offset = self._calculate_offset(pos)
             return True
