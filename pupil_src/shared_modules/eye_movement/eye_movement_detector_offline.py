@@ -17,6 +17,7 @@ from eye_movement.utils import Gaze_Data, EYE_MOVEMENT_EVENT_KEY, logger
 from eye_movement.model.immutable_capture import Immutable_Capture
 from eye_movement.model.segment import Classified_Segment
 from eye_movement.worker.offline_detection_task import Offline_Detection_Task
+from eye_movement.model.storage import Classified_Segment_Storage
 from observable import Observable
 from tasklib.manager import PluginTaskManager
 import player_methods as pm
@@ -51,6 +52,10 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
 
         self.notify_all(
             {"subject": Notification_Subject.SHOULD_RECALCULATE, "delay": 0.5}
+        self.storage = Classified_Segment_Storage(
+            plugin=self,
+            rec_dir=g_pool.rec_dir,
+        )
         )
 
     def init_ui(self):
