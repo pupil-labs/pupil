@@ -8,11 +8,12 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import abc
 import enum
 import typing as t
-from .segment_storage import Classified_Segment_Storage, Classified_Segment_Dict_Storage, Classified_Segment_Serialized_Dict_Storage, Classified_Segment_MsgPack_Storage
-from .time_range import Time_Range
-from .color import Color, Defo_Color_Palette
+from gaze_producer.model.storage import StorageItem  # FIXME: Update import path when class moves to shared utils lib
+from eye_movement.model.time_range import Time_Range
+from eye_movement.model.color import Color, Defo_Color_Palette
 import eye_movement.utils as utils
 import methods as mt
 import file_methods as fm
@@ -65,7 +66,94 @@ Segment_Class._segment_class_to_color_mapping: t.Mapping["Segment_Class", t.Type
 }
 
 
-class Classified_Segment:
+class Classified_Segment_Raw(abc.ABC):
+
+    @abc.abstractmethod
+    def __getitem__(self, key):
+        ...
+
+    @abc.abstractmethod
+    def get(self, key, default):
+        ...
+
+    @abc.abstractmethod
+    def __iter__(self):
+        ...
+
+    @abc.abstractmethod
+    def to_dict(self) -> dict:
+        ...
+
+    @abc.abstractmethod
+    def to_serialized_dict(self) -> fm.Serialized_Dict:
+        ...
+
+    @abc.abstractmethod
+    def to_msgpack(self) -> utils.MsgPack_Serialized_Segment:
+        ...
+
+    def keys(self) -> t.Set[str]:
+        return set(self)
+
+
+class Classified_Segment_Raw_Dict(Classified_Segment_Raw):
+
+    def __init__(self, python_dict: dict):
+        self._python_dict = python_dict
+
+    def __getitem__(self, key):
+        return self._python_dict.__getitem__(key)
+
+    def get(self, key, default):
+        return self._python_dict.get(key, default)
+
+    def __iter__(self):
+        return self._python_dict.__iter__()
+
+    def to_dict(self) -> dict:
+        return self._python_dict
+
+    def to_serialized_dict(self) -> fm.Serialized_Dict:
+        return fm.Serialized_Dict(python_dict=self._python_dict)
+
+    def to_msgpack(self) -> utils.MsgPack_Serialized_Segment:
+        serialized_dict = fm.Serialized_Dict(python_dict=self._python_dict)
+        return serialized_dict.serialized
+
+
+class Classified_Segment_Raw_Serialized_Dict(Classified_Segment_Raw):
+
+    def __init__(self, serialized_dict: fm.Serialized_Dict):
+        self._serialized_dict = serialized_dict
+
+    def __getitem__(self, key):
+        return self._serialized_dict.__getitem__(key)
+
+    def get(self, key, default):
+        return self._serialized_dict.get(key, default)
+
+    def __iter__(self):
+        return self._serialized_dict.__iter__()
+
+    def to_dict(self) -> dict:
+        return dict(self._serialized_dict)
+
+    def to_serialized_dict(self) -> fm.Serialized_Dict:
+        return self._serialized_dict
+
+    def to_msgpack(self) -> utils.MsgPack_Serialized_Segment:
+        serialized_dict = self._serialized_dict
+        return serialized_dict.serialized
+
+
+class Classified_Segment_Raw_MsgPack(Classified_Segment_Raw_Serialized_Dict):
+
+    def __init__(self, msgpack_bytes: utils.MsgPack_Serialized_Segment):
+        serialized_dict = fm.Serialized_Dict(msgpack_bytes=msgpack_bytes)
+        super().__init__(serialized_dict=serialized_dict)
+
+
+class Classified_Segment(StorageItem):
 
     @staticmethod
     def from_attrs(
@@ -109,7 +197,7 @@ class Classified_Segment:
 
         return Classified_Segment.from_dict(segment_dict)
 
-    def __init__(self, storage: Classified_Segment_Storage):
+    def __init__(self, storage: Classified_Segment_Raw):
         self._storage = storage
 
     def validate(self):
@@ -155,17 +243,17 @@ class Classified_Segment:
 
     @staticmethod
     def from_dict(segment_dict: dict) -> "Classified_Segment":
-        storage = Classified_Segment_Dict_Storage(segment_dict)
+        storage = Classified_Segment_Raw_Dict(segment_dict)
         return Classified_Segment(storage)
 
     @staticmethod
     def from_serialized_dict(serialized_dict: fm.Serialized_Dict) -> "Classified_Segment":
-        storage = Classified_Segment_Serialized_Dict_Storage(serialized_dict)
+        storage = Classified_Segment_Raw_Serialized_Dict(serialized_dict)
         return Classified_Segment(storage)
 
     @staticmethod
     def from_msgpack(segment_msgpack: utils.MsgPack_Serialized_Segment) -> "Classified_Segment":
-        storage = Classified_Segment_MsgPack_Storage(segment_msgpack)
+        storage = Classified_Segment_Raw_MsgPack(segment_msgpack)
         return Classified_Segment(storage)
 
     # Stored properties
