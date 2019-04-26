@@ -64,10 +64,6 @@ class HeadPoseTracker3DRenderer(plugin_ui.GLWindow):
             )
             utils.render_polygon_in_3d_window(points_3d, color)
 
-            if self._general_settings.show_marker_id_in_3d_window:
-                color = (1, 0, 0, 1)
-                utils.render_text_in_3d_window(str(marker_id), points_3d[0], color)
-
     def _render_camera(self):
         pose_data = self._localization_storage.current_pose
         camera_trace = pose_data["camera_trace"]

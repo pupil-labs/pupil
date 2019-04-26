@@ -90,7 +90,6 @@ class OfflineSettingsStorage(SettingsStorage):
         self.optimize_camera_intrinsics = True
         self.open_visualization_window = False
         self.show_camera_trace_in_3d_window = False
-        self.show_marker_id_in_3d_window = False
         self.render_markers = True
         self.show_marker_id_in_main_window = False
         self.window_size = (1000, 1000)
@@ -107,7 +106,6 @@ class OfflineSettingsStorage(SettingsStorage):
             self.optimize_camera_intrinsics,
             self.open_visualization_window,
             self.show_camera_trace_in_3d_window,
-            self.show_marker_id_in_3d_window,
             self.render_markers,
             self.show_marker_id_in_main_window,
             self.window_size,
@@ -124,7 +122,6 @@ class OfflineSettingsStorage(SettingsStorage):
             self.optimize_camera_intrinsics,
             self.open_visualization_window,
             self.show_camera_trace_in_3d_window,
-            self.show_marker_id_in_3d_window,
             self.render_markers,
             self.show_marker_id_in_main_window,
             self.window_size,
@@ -139,7 +136,6 @@ class OnlineSettings:
             self.optimize_camera_intrinsics,
             self.open_visualization_window,
             self.show_camera_trace_in_3d_window,
-            self.show_marker_id_in_3d_window,
             self.render_markers,
             self.show_marker_id_in_main_window,
             self.window_size,
@@ -153,7 +149,6 @@ class OnlineSettings:
             "optimize_camera_intrinsics": self.optimize_camera_intrinsics,
             "open_visualization_window": self.open_visualization_window,
             "show_camera_trace_in_3d_window": self.show_camera_trace_in_3d_window,
-            "show_marker_id_in_3d_window": self.show_marker_id_in_3d_window,
             "render_markers": self.render_markers,
             "show_marker_id_in_main_window": self.show_marker_id_in_main_window,
             "window_size": self.window_size,
