@@ -100,6 +100,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from vis_eye_video_overlay import Vis_Eye_Video_Overlay
         from seek_control import Seek_Control
         from offline_surface_tracker import Offline_Surface_Tracker
+        from head_pose_tracker.offline_head_pose_tracker import (
+            Offline_Head_Pose_Tracker,
+        )
 
         # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
         from fixation_detector import Offline_Fixation_Detector
@@ -146,6 +149,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Offline_Fixation_Detector,
             Offline_Blink_Detection,
             Offline_Surface_Tracker,
+            Offline_Head_Pose_Tracker,
             Raw_Data_Exporter,
             Annotation_Player,
             Log_History,
