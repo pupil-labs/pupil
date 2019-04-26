@@ -40,7 +40,6 @@ class VisualizationMenu:
             ui.Separator(),
             self._create_open_visualization_window_button(),
             self._create_show_camera_trace_switch(),
-            self._create_show_marker_id_in_3d_window_switch(),
         ]
         self.menu.elements.extend(menu)
 
@@ -84,16 +83,6 @@ class VisualizationMenu:
             "show_camera_trace_in_3d_window",
             self._general_settings,
             label=_SPACES + "Show camera trace",
-        )
-        if not self._general_settings.open_visualization_window:
-            switch.read_only = True
-        return switch
-
-    def _create_show_marker_id_in_3d_window_switch(self):
-        switch = ui.Switch(
-            "show_marker_id_in_3d_window",
-            self._general_settings,
-            label=_SPACES + "Show marker id",
         )
         if not self._general_settings.open_visualization_window:
             switch.read_only = True
