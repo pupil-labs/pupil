@@ -79,7 +79,7 @@ class Detector:
 
     def __init__(self, detector_options=DetectorOptions()):
         self.tag_detector = None
-        filename = self._get_filename()
+        filename = ctypes.util.find_library("apriltag")
         try:
             self.libc = ctypes.CDLL(filename)
         except OSError as err:
@@ -102,16 +102,6 @@ class Detector:
 
         for family in families_list:
             self.add_tag_family(detector_options, family)
-
-    @staticmethod
-    def _get_filename():
-        if os.uname()[0] == "Darwin":
-            extension = ".dylib"
-        else:
-            extension = ".so"
-
-        filename = "libapriltag" + extension
-        return filename
 
     def _declare_libc_function(self):
         self.libc.apriltag_detector_create.restype = ctypes.POINTER(_ApriltagDetector)
