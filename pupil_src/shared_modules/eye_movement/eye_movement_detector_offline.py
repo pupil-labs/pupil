@@ -37,6 +37,17 @@ EYE_MOVEMENT_ANNOUNCER_TOPIC = "eye_movement"
 class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
     """
     Eye movement classification detector based on segmented linear regression.
+
+    Event identification is based on segmentation that simultaneously denoises the signal and determines event
+    boundaries. The full gaze position time-series is segmented into an approximately optimal piecewise linear
+    function in O(n) time. Gaze feature parameters for classification into fixations, saccades, smooth pursuits and post-saccadic oscillations
+    are derived from human labeling in a data-driven manner.
+
+    More details about this approach can be found here:
+    https://www.nature.com/articles/s41598-017-17983-x
+
+    The open source implementation can be found here:
+    https://gitlab.com/nslr/nslr-hmm
     """
 
     MENU_LABEL_TEXT = "Eye Movement Detector"
