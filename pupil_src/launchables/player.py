@@ -56,6 +56,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
     logger = logging.getLogger(__name__)
 
     try:
+        from background_helper import IPC_Logging_Task_Proxy
+
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
+        from tasklib.background.patches import IPCLoggingPatch
+
+        IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         # imports
         from file_methods import Persistent_Dict, next_export_sub_dir
@@ -71,7 +78,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         import gl_utils
 
         # capture
-        from video_capture import init_playback_source
+        from video_capture import File_Source
 
         # helpers/utils
         from version_utils import VersionFormat
@@ -101,7 +108,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from raw_data_exporter import Raw_Data_Exporter
         from log_history import Log_History
         from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
-        from gaze_producers import Gaze_From_Recording, Offline_Calibration
+        from gaze_producer.gaze_from_recording import GazeFromRecording
+        from gaze_producer.gaze_from_offline_calibration import (
+            GazeFromOfflineCalibration,
+        )
         from system_graphs import System_Graphs
         from system_timelines import System_Timelines
         from blink_detection import Offline_Blink_Detection
@@ -109,10 +119,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_export.plugins.imotions_exporter import iMotions_Exporter
         from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
         from video_export.plugins.world_video_exporter import World_Video_Exporter
-
-        from background_helper import IPC_Logging_Task_Proxy
-
-        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+        from video_capture import File_Source
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
             "1.23"
@@ -144,11 +151,11 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Log_History,
             Pupil_From_Recording,
             Offline_Pupil_Detection,
-            Gaze_From_Recording,
+            GazeFromRecording,
+            GazeFromOfflineCalibration,
             World_Video_Exporter,
             iMotions_Exporter,
             Eye_Video_Exporter,
-            Offline_Calibration,
         ] + runtime_plugins
 
         plugins = system_plugins + user_plugins
@@ -239,8 +246,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             for f in glob(os.path.join(rec_dir, "world.*"))
             if os.path.splitext(f)[1] in valid_ext
         ][0]
-        init_playback_source(
-            g_pool, timing="external", source_path=video_path, buffered_decoding=True
+        File_Source(
+            g_pool,
+            timing="external",
+            source_path=video_path,
+            buffered_decoding=True,
+            fill_gaps=True,
         )
 
         # load session persistent settings
@@ -308,6 +319,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             left_idx = g_pool.seek_control.trim_left
             right_idx = g_pool.seek_control.trim_right
             export_range = left_idx, right_idx + 1  # exclusive range.stop
+            export_ts_window = pm.exact_window(g_pool.timestamps, (left_idx, right_idx))
 
             export_dir = os.path.join(g_pool.rec_dir, "exports")
             export_dir = next_export_sub_dir(export_dir)
@@ -330,6 +342,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             notification = {
                 "subject": "should_export",
                 "range": export_range,
+                "ts_window": export_ts_window,
                 "export_dir": export_dir,
             }
             g_pool.ipc_pub.notify(notification)
@@ -470,7 +483,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             ("System_Timelines", {}),
             ("World_Video_Exporter", {}),
             ("Pupil_From_Recording", {}),
-            ("Gaze_From_Recording", {}),
+            ("GazeFromRecording", {}),
             ("Audio_Playback", {}),
         ]
 
@@ -687,6 +700,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
         import player_methods as pm
+        import update_methods as um
 
         def on_drop(window, count, paths):
             nonlocal rec_dir
@@ -759,7 +773,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
 
             if rec_dir:
                 try:
-                    pm.update_recording_to_recent(rec_dir)
+                    um.update_recording_to_recent(rec_dir)
                 except AssertionError as err:
                     logger.error(str(err))
                     rec_dir = None

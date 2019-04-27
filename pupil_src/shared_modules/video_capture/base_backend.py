@@ -34,6 +34,10 @@ class EndofVideoError(Exception):
     pass
 
 
+class NoMoreVideoError(Exception):
+    pass
+
+
 class Base_Source(Plugin):
     """Abstract source class
 
@@ -171,6 +175,76 @@ class Base_Manager(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
+        from . import manager_classes
+
+        self.manager_classes = {m.__name__: m for m in manager_classes}
+
+    def on_notify(self, notification):
+        """
+        Reacts to notification:
+            ``backend.auto_select_manager``: Changes the current Manager to one that's emitted
+            ``backend.auto_activate_source``: Activates the current source via self.auto_activate_source()
+
+        Emmits notifications (indirectly):
+            ``start_plugin``: For world thread
+            ``backend.auto_activate_source``
+        """
+
+        if notification["subject"].startswith("backend.auto_select_manager"):
+            target_manager_class = self.manager_classes[notification["name"]]
+            self.replace_backend_manager(target_manager_class, auto_activate=True)
+        if (
+            notification["subject"].startswith("backend.auto_activate_source")
+            and notification["proc_name"] == self.g_pool.process
+        ):
+            self.auto_activate_source()
+
+    def replace_backend_manager(self, manager_class, auto_activate=False):
+        if self.g_pool.process.startswith("eye"):
+            if not isinstance(self.g_pool.capture_manager, manager_class):
+                self.g_pool.capture_manager.deinit_ui()
+                self.g_pool.capture_manager.cleanup()
+                self.g_pool.capture_manager = manager_class(self.g_pool)
+                self.g_pool.capture_manager.init_ui()
+        else:
+            if not isinstance(self, manager_class):
+                self.notify_all(
+                    {"subject": "start_plugin", "name": manager_class.__name__}
+                )
+        if auto_activate:
+            self.notify_all(
+                {
+                    "subject": "backend.auto_activate_source.{}".format(
+                        self.g_pool.process
+                    ),
+                    "proc_name": self.g_pool.process,
+                    "delay": 0.5,
+                }
+            )
+
+    def auto_activate_source(self):
+        """This function should be implemented in *_Manager classes 
+            to activate the corresponding source with following preferences:
+                eye0: Pupil Cam1/2 ID0
+                eye1: Pupil Cam1/2 ID1
+                world: Pupil Cam1 ID2
+
+            See issue #1278 for more details.
+        """
+        pass
+
+    def auto_select_manager(self):
+        self.notify_all(
+            {"subject": "backend.auto_select_manager", "name": self.class_name}
+        )
+
+    def add_auto_select_button(self):
+        from pyglui import ui
+
+        self.menu.append(
+            ui.Button("Start with default devices", self.auto_select_manager)
+        )
+
     def add_menu(self):
         super().add_menu()
         from . import manager_classes
@@ -178,23 +252,12 @@ class Base_Manager(Plugin):
 
         self.menu_icon.order = 0.1
 
-        def replace_backend_manager(manager_class):
-            if self.g_pool.process.startswith("eye"):
-                self.g_pool.capture_manager.deinit_ui()
-                self.g_pool.capture_manager.cleanup()
-                self.g_pool.capture_manager = manager_class(self.g_pool)
-                self.g_pool.capture_manager.init_ui()
-            else:
-                self.notify_all(
-                    {"subject": "start_plugin", "name": manager_class.__name__}
-                )
-
         # We add the capture selection menu
         manager_classes.sort(key=lambda x: x.gui_name)
         self.menu.append(
             ui.Selector(
                 "capture_manager",
-                setter=replace_backend_manager,
+                setter=self.replace_backend_manager,
                 getter=lambda: self.__class__,
                 selection=manager_classes,
                 labels=[b.gui_name for b in manager_classes],

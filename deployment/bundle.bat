@@ -32,9 +32,9 @@ if not exist %release_dir% (
 	mkdir %release_dir%
 )
 
-python ..\pupil_src\shared_modules\pupil_detectors\build.py
-python ..\pupil_src\shared_modules\cython_methods\build.py
-python ..\pupil_src\shared_modules\calibration_routines\optimization_calibration\build.py
+call python ..\pupil_src\shared_modules\pupil_detectors\build.py
+call python ..\pupil_src\shared_modules\cython_methods\build.py
+call python ..\pupil_src\shared_modules\calibration_routines\optimization_calibration\build.py
 
 call :Bundle capture %current_tag%
 call :Bundle service %current_tag%

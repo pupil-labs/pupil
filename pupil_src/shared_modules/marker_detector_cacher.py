@@ -26,13 +26,13 @@ def fill_cache(
 
     logger = logging.getLogger(__name__ + " with pid: " + str(os.getpid()))
     logger.debug("Started cacher process for Marker Detector")
-    from video_capture import init_playback_source, EndofVideoError, FileSeekError
+    from video_capture import File_Source, EndofVideoError, FileSeekError
     from square_marker_detect import detect_markers_robust
 
     aperture = 9
     markers = []
-    cap = init_playback_source(
-        Global_Container(), source_path=video_file_path, timing=None
+    cap = File_Source(
+        Global_Container(), source_path=video_file_path, timing=None, fill_gaps=True
     )
 
     def next_unvisited_idx(frame_idx):
@@ -109,6 +109,10 @@ def fill_cache(
             logger.debug(
                 "User required seek. Marker caching at Frame: {}".format(next_frame)
             )
+        # Delete the # to unfill the gap
+        # target_entry = cap.videoset.lookup[next_frame]
+        # if target_entry.container_idx == -1:
+        #     continue
 
         # check the visited list
         next_frame = next_unvisited_idx(next_frame)

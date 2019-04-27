@@ -751,6 +751,11 @@ class UVC_Manager(Base_Manager):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.devices = uvc.Device_List()
+        self.cam_selection_lut = {
+            "eye0": ["ID0"],
+            "eye1": ["ID1"],
+            "world": ["ID2", "Logitech"],
+        }
 
     def get_init_dict(self):
         return {}
@@ -760,6 +765,7 @@ class UVC_Manager(Base_Manager):
 
         from pyglui import ui
 
+        self.add_auto_select_button()
         ui_elements = []
         ui_elements.append(ui.Info_Text("Local UVC sources"))
 
@@ -773,41 +779,64 @@ class UVC_Manager(Base_Manager):
             ]
             return zip(*dev_pairs)
 
-        def activate(source_uid):
-            if not source_uid:
-                return
-            if not uvc.is_accessible(source_uid):
-                logger.error("The selected camera is already in use or blocked.")
-                return
-            settings = {
-                "frame_size": self.g_pool.capture.frame_size,
-                "frame_rate": self.g_pool.capture.frame_rate,
-                "uid": source_uid,
-            }
-            if self.g_pool.process == "world":
-                self.notify_all(
-                    {"subject": "start_plugin", "name": "UVC_Source", "args": settings}
-                )
-            else:
-                self.notify_all(
-                    {
-                        "subject": "start_eye_capture",
-                        "target": self.g_pool.process,
-                        "name": "UVC_Source",
-                        "args": settings,
-                    }
-                )
-
         ui_elements.append(
             ui.Selector(
                 "selected_source",
                 selection_getter=dev_selection_list,
                 getter=lambda: None,
-                setter=activate,
+                setter=self.activate,
                 label="Activate source",
             )
         )
         self.menu.extend(ui_elements)
+
+    def activate(self, source_uid):
+        if not source_uid:
+            return
+
+        try:
+            if not uvc.is_accessible(source_uid):
+                logger.error("The selected camera is already in use or blocked.")
+                return
+        except ValueError as ve:
+            logger.error(str(ve))
+            return
+
+        settings = {
+            "frame_size": self.g_pool.capture.frame_size,
+            "frame_rate": self.g_pool.capture.frame_rate,
+            "uid": source_uid,
+        }
+        if self.g_pool.process == "world":
+            self.notify_all(
+                {"subject": "start_plugin", "name": "UVC_Source", "args": settings}
+            )
+        else:
+            self.notify_all(
+                {
+                    "subject": "start_eye_capture",
+                    "target": self.g_pool.process,
+                    "name": "UVC_Source",
+                    "args": settings,
+                }
+            )
+
+    def auto_activate_source(self):
+        if not self.devices or len(self.devices) == 0:
+            logger.warning("No default device is available.")
+            return
+
+        cam_ids = self.cam_selection_lut[self.g_pool.process]
+
+        for cam_id in cam_ids:
+            try:
+                source_id = next(d["uid"] for d in self.devices if cam_id in d["name"])
+                self.activate(source_id)
+                break
+            except StopIteration:
+                source_id = None
+        else:
+            logger.warning("The default device is not found.")
 
     def deinit_ui(self):
         self.remove_menu()

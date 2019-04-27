@@ -115,7 +115,7 @@ def _export_world_video(
 
     # Plug-ins
     from plugin import Plugin_List, import_runtime_plugins
-    from video_capture import EndofVideoError, init_playback_source
+    from video_capture import EndofVideoError, File_Source
     from vis_circle import Vis_Circle
     from vis_cross import Vis_Cross
     from vis_eye_video_overlay import Vis_Eye_Video_Overlay
@@ -153,8 +153,6 @@ def _export_world_video(
         name_by_index = [p.__name__ for p in available_plugins]
         plugin_by_name = dict(zip(name_by_index, available_plugins))
 
-        audio_path = os.path.join(rec_dir, "audio.mp4")
-
         meta_info = pm.load_meta_info(rec_dir)
 
         g_pool = GlobalContainer()
@@ -170,7 +168,7 @@ def _export_world_video(
             )
         except StopIteration:
             raise FileNotFoundError("No Video world found")
-        cap = init_playback_source(g_pool, source_path=video_path, timing=None)
+        cap = File_Source(g_pool, source_path=video_path, fill_gaps=True, timing=None)
 
         timestamps = cap.timestamps
 
@@ -210,7 +208,7 @@ def _export_world_video(
 
         # setup of writer
         writer = AV_Writer(
-            out_file_path, fps=cap.frame_rate, audio_loc=audio_path, use_timestamps=True
+            out_file_path, fps=cap.frame_rate, audio_dir=rec_dir, use_timestamps=True
         )
 
         cap.seek_to_frame(start_frame)

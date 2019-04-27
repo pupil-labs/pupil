@@ -641,6 +641,7 @@ def eye(
                         }
                         ipc_socket.notify(properties_broadcast)
                 g_pool.capture.on_notify(notification)
+                g_pool.capture_manager.on_notify(notification)
 
             # Get an image from the grabber
             event = {}
