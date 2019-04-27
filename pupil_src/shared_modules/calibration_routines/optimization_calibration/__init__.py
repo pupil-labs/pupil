@@ -13,8 +13,6 @@ try:
     from .calibration_methods import bundle_adjust_calibration
 except ModuleNotFoundError:
     # when running from source compile cpp extension if necessary.
-    import sys
-    if not getattr(sys, "frozen", False):
-        from .build import build_cpp_extension
-        build_cpp_extension()
+    from .build import build_cpp_extension
+    build_cpp_extension()
     from .calibration_methods import bundle_adjust_calibration
