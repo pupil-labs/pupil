@@ -76,15 +76,32 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
+        self._cfg = {'min_pupil_confidence': 0.6,
+                     'temporal_cutoff': 0.3,
+                     'sample_cutoff': 10,
+                     'timestamp_reset_threshold': 5.0,
+                     'process_low_confidence': True}
+        self._caches = [deque(), deque()]
+        self.last_timestamp = -np.inf
 
-        self.min_pupil_confidence = 0.6
-        self._caches = (deque(), deque())
-        self.temportal_cutoff = 0.3
-        self.sample_cutoff = 10
+    def _reset(self):
+        self._caches[0].clear()
+        self._caches[1].clear()
+        self.last_timestamp = -np.inf
+
+    def add_menu(self):
+        super().add_menu()
+        self.menu.append(ui.Slider("min_pupil_confidence", self._cfg, step=0.01, min=0.0, max=1.0,
+                                   label="Min conf. for binocular",))
+        self.menu.append(ui.Slider("temporal_cutoff", self._cfg, step=0.01, min=0.0, max=1.0,
+                                   label="Max binocular time difference",))
+        self.menu.append(ui.Switch("process_low_confidence", self._cfg, label="Process low confidence data"))
+        self.menu.append(ui.Slider("sample_cutoff", self._cfg, step=1, min=0, max=20,
+                                   label="Per-eye buffer length",))
 
     def map_batch(self, pupil_list):
         current_caches = self._caches
-        self._caches = (deque(), deque())
+        self._reset()
         results = []
         for p in pupil_list:
             results.extend(self.on_pupil_datum(p))
@@ -93,51 +110,80 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
         return results
 
     def on_pupil_datum(self, p):
+        """
+        Process pupil datum, combine with data in cache if possible, and return gaze datum.
+        :param p: pupil datum (message with topic 'pupil.0' or 'pupil.1')
+        :return: [gaze_datum] or [].
+
+        Note the mapping logic has recently changed. See https://github.com/pupil-labs/pupil/issues/1493
+
+        High-confidence samples will attempt binocular mapping if the other eye also has a high-confidence sample
+        in its cache that is within time-delta temporal_cutoff. Otherwise monocular mapping will occur.
+
+        We add the sample to the cache and process the cache, doing monocular mapping on any (low-confidence) samples
+        that are newer than the previous last_timestamp, but older than the new last_timestamp.
+        """
+        # Reset last_timestamp to -np.inf if we receive a new timestamp that is too old (probably due to clock reset).
+        if p["timestamp"] < (self.last_timestamp - self._cfg['timestamp_reset_threshold']):
+            self._reset()
+
+        output = []
+        prev_last_timestamp = self.last_timestamp
+
+        if p["confidence"] >= self._cfg['min_pupil_confidence']:
+            # Try to do a binocular map.
+            if self._caches[1 - p["id"]] and\
+                    (self._caches[1 - p["id"]][0]["confidence"] >= self._cfg['min_pupil_confidence']):
+                other_p = self._caches[1 - p["id"]][0]  # Always 0th, because high-confidence sample force-clears cache.
+                t_a = p["timestamp"]
+                t_b = other_p["timestamp"]
+                max_t = max(t_a, t_b)
+                if (max_t >= self.last_timestamp) and (abs(t_a - t_b) < self._cfg['temporal_cutoff']):
+                    self.last_timestamp = max_t
+                    output.append(self._map_binocular(p, other_p))
+
+            # If binocular was unsuccessful, do monocular
+            if self.last_timestamp == prev_last_timestamp:
+                self.last_timestamp = p["timestamp"]
+                output.append(self._map_monocular(p))
+            # If this cache's 0th sample was high-confidence, we can drop it now because it has already been sent
+            # and because it is no longer needed for binocular mapping with new samples from the other eye.
+            if self._caches[p["id"]] and (self._caches[p["id"]][0]["confidence"] >= self._cfg['min_pupil_confidence']):
+                _ = self._caches[p["id"]].popleft()
+
+        # Append the sample to its eye's cache
         self._caches[p["id"]].append(p)
 
-        # map low confidence pupil data monocularly
-        if (
-            self._caches[0]
-            and self._caches[0][0]["confidence"] < self.min_pupil_confidence
-        ):
-            p = self._caches[0].popleft()
-            gaze_datum = self._map_monocular(p)
-        elif (
-            self._caches[1]
-            and self._caches[1][0]["confidence"] < self.min_pupil_confidence
-        ):
-            p = self._caches[1].popleft()
-            gaze_datum = self._map_monocular(p)
-        # map high confidence data binocularly if available
-        elif self._caches[0] and self._caches[1]:
-            # we have binocular data
-            if self._caches[0][0]["timestamp"] < self._caches[1][0]["timestamp"]:
-                p0 = self._caches[0].popleft()
-                p1 = self._caches[1][0]
-                older_pt = p0
-            else:
-                p0 = self._caches[0][0]
-                p1 = self._caches[1].popleft()
-                older_pt = p1
+        # Process both caches and push through any samples that are to be discarded.
+        from_cache = []  # Holds samples to be pushed through.
 
-            if abs(p0["timestamp"] - p1["timestamp"]) < self.temportal_cutoff:
-                gaze_datum = self._map_binocular(p0, p1)
-            else:
-                gaze_datum = self._map_monocular(older_pt)
+        # If this cache is over-sized then we'll always take its first sample.
+        if len(self._caches[p["id"]]) > self._cfg['sample_cutoff']:
+            _p = self._caches[p["id"]].popleft()
+            if (_p["timestamp"] >= prev_last_timestamp) and self._cfg['process_low_confidence']:
+                from_cache.append(_p)
 
-        elif len(self._caches[0]) > self.sample_cutoff:
-            p = self._caches[0].popleft()
-            gaze_datum = self._map_monocular(p)
-        elif len(self._caches[1]) > self.sample_cutoff:
-            p = self._caches[1].popleft()
-            gaze_datum = self._map_monocular(p)
-        else:
-            gaze_datum = None
+        # Push through any samples with low-confidence and newer than prev_last_timestamp and older than last_timestamp
+        for cache in self._caches:
+            hold_high_conf = None
+            while cache and (cache[0]["timestamp"] < self.last_timestamp):
+                _p = cache.popleft()
+                if _p["confidence"] >= self._cfg['min_pupil_confidence']:
+                    # We keep most recent high confidence sample. All high-conf samples are pushed on receipt so
+                    # no need to push this one again.
+                    hold_high_conf = _p
+                elif self._cfg['process_low_confidence'] and (_p["timestamp"] >= prev_last_timestamp):
+                    from_cache.append(_p)
+            if hold_high_conf:
+                cache.appendleft(hold_high_conf)
 
-        if gaze_datum:
-            return [gaze_datum]
-        else:
-            return []
+        # Sort from_cache and prepend to output
+        if len(from_cache) > 0:
+            ts = [_["timestamp"] for _ in from_cache]
+            sorted_id = np.argsort(ts)
+            output = [self._map_monocular(from_cache[_]) for _ in sorted_id] + output
+
+        return output
 
 
 class Dummy_Gaze_Mapper(Monocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
@@ -245,7 +291,7 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
                 (gaze_point_eye0[1] + gaze_point_eye1[1]) / 2.0,
             )
         confidence = (p0["confidence"] + p1["confidence"]) / 2.0
-        ts = (p0["timestamp"] + p1["timestamp"]) / 2.0
+        ts = max(p0["timestamp"], p1["timestamp"])
         return {
             "topic": "gaze.2d.01.",
             "norm_pos": gaze_point,
@@ -600,7 +646,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plug
             return None
 
         confidence = min(p0["confidence"], p1["confidence"])
-        ts = (p0["timestamp"] + p1["timestamp"]) / 2.0
+        ts = max(p0["timestamp"], p1["timestamp"])
         g = {
             "topic": "gaze.3d.01.",
             "eye_centers_3d": {0: s0_center.tolist(), 1: s1_center.tolist()},
