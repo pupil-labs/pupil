@@ -1,3 +1,4 @@
+#define _ENABLE_EXTENDED_ALIGNED_STORAGE
 #include "EyeModelFitter.h"
 #include "Fit/CircleOnSphereFit.h"
 #include "CircleDeviationVariance3D.h"
