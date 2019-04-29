@@ -9,19 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import typing
-from eye_movement.utils import (
-    MsgPack_Serialized_Segment,
-    Gaze_Data,
-    logger,
-    can_use_3d_gaze_mapping,
-    clean_3d_data,
-    np_denormalize,
-    gaze_data_to_nslr_data,
-)
-from eye_movement.model.segment import Classified_Segment_Factory
-from eye_movement.model.immutable_capture import Immutable_Capture
+import eye_movement.utils as utils
+import eye_movement.model as model
 from tasklib.background.task import TypedBackgroundGeneratorFunction
-import methods as mt
 import file_methods as fm
 import numpy as np
 import nslr_hmm
@@ -29,7 +19,7 @@ import nslr_hmm
 
 # TODO: Replace `str` with `Eye_Movement_Detection_Step`
 Offline_Detection_Task_Yield = typing.Tuple[
-    str, typing.Optional[MsgPack_Serialized_Segment]
+    str, typing.Optional[utils.MsgPack_Serialized_Segment]
 ]
 
 EYE_MOVEMENT_DETECTION_STEP_PREPARING_LOCALIZED_STRING = "Preparing gaze data..."
@@ -42,15 +32,15 @@ EYE_MOVEMENT_DETECTION_STEP_COMPLETE_LOCALIZED_STRING = "Segmentation complete"
 
 
 Offline_Detection_Task_Generator = typing.Iterator[Offline_Detection_Task_Yield]
-Offline_Detection_Task_Args = typing.Tuple[Immutable_Capture, Gaze_Data]
+Offline_Detection_Task_Args = typing.Tuple[model.Immutable_Capture, utils.Gaze_Data]
 Offline_Detection_Task_Function = typing.Callable[
-    [Immutable_Capture, Gaze_Data], Offline_Detection_Task_Generator
+    [model.Immutable_Capture, utils.Gaze_Data], Offline_Detection_Task_Generator
 ]
 
 
 @typing.no_type_check
 def eye_movement_detection_generator(
-    capture: Immutable_Capture, gaze_data: Gaze_Data, factory_start_id: int = None
+    capture: model.Immutable_Capture, gaze_data: utils.Gaze_Data, factory_start_id: int = None
 ) -> Offline_Detection_Task_Generator:
     def serialized_dict(datum):
         if type(datum) is dict:
@@ -64,18 +54,18 @@ def eye_movement_detection_generator(
     gaze_data = [serialized_dict(datum) for datum in gaze_data]
 
     if not gaze_data:
-        logger.warning("No data available to find fixations")
+        utils.logger.warning("No data available to find fixations")
         yield EYE_MOVEMENT_DETECTION_STEP_COMPLETE_LOCALIZED_STRING, ()
         return
 
-    use_pupil = can_use_3d_gaze_mapping(gaze_data)
+    use_pupil = utils.can_use_3d_gaze_mapping(gaze_data)
 
-    segment_factory = Classified_Segment_Factory(start_id=factory_start_id)
+    segment_factory = model.Classified_Segment_Factory(start_id=factory_start_id)
 
     gaze_time = np.array([gp["timestamp"] for gp in gaze_data])
 
     yield EYE_MOVEMENT_DETECTION_STEP_PROCESSING_LOCALIZED_STRING, ()
-    eye_positions = gaze_data_to_nslr_data(capture, gaze_data, use_pupil=use_pupil)
+    eye_positions = utils.gaze_data_to_nslr_data(capture, gaze_data, use_pupil=use_pupil)
 
     yield EYE_MOVEMENT_DETECTION_STEP_CLASSIFYING_LOCALIZED_STRING, ()
     gaze_classification, segmentation, segment_classification = nslr_hmm.classify_gaze(

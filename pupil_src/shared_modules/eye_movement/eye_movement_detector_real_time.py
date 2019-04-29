@@ -9,9 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 from .eye_movement_detector_base import Eye_Movement_Detector_Base
-from eye_movement.utils import EYE_MOVEMENT_EVENT_KEY
-from eye_movement.model.immutable_capture import Immutable_Capture
-from eye_movement.worker.real_time_buffered_detector import Real_Time_Buffered_Detector
+import eye_movement.utils as utils
+import eye_movement.model as model
+import eye_movement.worker as worker
 import eye_movement.ui as ui
 from pyglui import ui as gl_ui
 from pyglui.pyfontstash import fontstash
@@ -37,14 +37,14 @@ class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self._buffered_detector = Real_Time_Buffered_Detector()
+        self._buffered_detector = worker.Real_Time_Buffered_Detector()
         self._recent_segments = []
         self.glfont = None
 
     def recent_events(self, events):
 
         gaze_data = events["gaze"]
-        capture = Immutable_Capture(self.g_pool.capture)
+        capture = model.Immutable_Capture(self.g_pool.capture)
 
         self._buffered_detector.extend_gaze_data(gaze_data=gaze_data, capture=capture)
 
@@ -56,7 +56,7 @@ class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
         public_segments = [
             segment.to_public_dict() for segment in self._recent_segments
         ]
-        events[EYE_MOVEMENT_EVENT_KEY] = public_segments
+        events[utils.EYE_MOVEMENT_EVENT_KEY] = public_segments
 
     def gl_display(self):
         frame_size = self.g_pool.capture.frame_size

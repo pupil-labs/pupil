@@ -9,38 +9,37 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import typing as t
-from eye_movement.utils import logger
-from eye_movement.model.segment import Classified_Segment
-from eye_movement.model.storage import Classified_Segment_Storage
+import eye_movement.utils as utils
+import eye_movement.model as model
 
 
 class Eye_Movement_Seek_Controller:
     def __init__(
         self,
         plugin,
-        storage: Classified_Segment_Storage,
+        storage: model.Classified_Segment_Storage,
         seek_to_timestamp: t.Callable[[float], None],
     ):
         self.storage = storage
         self._seek_to_timestamp = seek_to_timestamp
         self._current_segment_index = 0
 
-    def __getitem__(self, index: int) -> t.Optional[Classified_Segment]:
+    def __getitem__(self, index: int) -> t.Optional[model.Classified_Segment]:
         if 0 <= index < self.total_segment_count:
             return self.storage[index]
         else:
             return None
 
     @property
-    def current_segment(self) -> t.Optional[Classified_Segment]:
+    def current_segment(self) -> t.Optional[model.Classified_Segment]:
         return self[self.current_segment_index]
 
     @property
-    def prev_segment(self) -> t.Optional[Classified_Segment]:
+    def prev_segment(self) -> t.Optional[model.Classified_Segment]:
         return self[self.current_segment_index - 1]
 
     @property
-    def next_segment(self) -> t.Optional[Classified_Segment]:
+    def next_segment(self) -> t.Optional[model.Classified_Segment]:
         return self[self.current_segment_index + 1]
 
     @property
@@ -63,11 +62,11 @@ class Eye_Movement_Seek_Controller:
     def _jump_to_segment_offset(self, offset: int):
 
         if offset == 0:
-            logger.warning("No eye movement seek offset")
+            utils.logger.warning("No eye movement seek offset")
             return
 
         if self.total_segment_count < 1:
-            logger.warning("No eye movement segments available")
+            utils.logger.warning("No eye movement segments available")
             return
 
         offset_index = self.current_segment_index
@@ -83,8 +82,8 @@ class Eye_Movement_Seek_Controller:
         self.seek_to_timestamp(offset_timestamp)
 
     def update_visible_segments(
-        self, visible_segments: t.Iterable[Classified_Segment]
-    ) -> t.Optional[Classified_Segment]:
+        self, visible_segments: t.Iterable[model.Classified_Segment]
+    ) -> t.Optional[model.Classified_Segment]:
 
         if not self.total_segment_count:
             self._current_segment_index = None

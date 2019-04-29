@@ -10,9 +10,8 @@ See COPYING and COPYING.LESSER for license details.
 """
 import typing as t
 import collections
-from eye_movement.model.segment import Classified_Segment
+from .segment import Classified_Segment
 from observable import Observable
-
 # FIXME: Update SingleFileStorage import path when class moves to shared utils lib
 from gaze_producer.model.single_file_storage import SingleFileStorage
 import player_methods as pm

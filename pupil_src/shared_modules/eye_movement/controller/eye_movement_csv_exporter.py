@@ -10,11 +10,11 @@ See COPYING and COPYING.LESSER for license details.
 """
 import typing as t
 from csv_utils import CSV_Exporter, CSV_EXPORT_SCHEMA_TYPE
-from eye_movement.utils import logger
-from eye_movement.model.segment import Classified_Segment
+import eye_movement.utils as utils
+import eye_movement.model as model
 
 
-class Eye_Movement_CSV_Exporter(CSV_Exporter[Classified_Segment]):
+class Eye_Movement_CSV_Exporter(CSV_Exporter[model.Classified_Segment]):
 
     EXPORT_FILE_NAME = "eye_movement.csv"
 
@@ -48,7 +48,7 @@ class Eye_Movement_CSV_Exporter(CSV_Exporter[Classified_Segment]):
 
     def csv_export(
         self,
-        segments: t.Iterable[Classified_Segment],
+        segments: t.Iterable[model.Classified_Segment],
         export_dir: str,
         export_name: str = ...,
     ):
@@ -58,5 +58,5 @@ class Eye_Movement_CSV_Exporter(CSV_Exporter[Classified_Segment]):
             raw_values=segments, export_dir=export_dir, export_name=export_name
         )
 
-        logger.info("Created file: '{}'.".format(export_path))
+        utils.logger.info("Created file: '{}'.".format(export_path))
         return export_path

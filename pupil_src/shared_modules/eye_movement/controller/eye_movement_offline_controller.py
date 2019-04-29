@@ -9,11 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import typing as t
-from eye_movement.utils import Gaze_Data, EYE_MOVEMENT_EVENT_KEY, logger
-from eye_movement.model.segment import Classified_Segment
-from eye_movement.model.immutable_capture import Immutable_Capture
-from eye_movement.model.storage import Classified_Segment_Storage
-from eye_movement.worker.offline_detection_task import Offline_Detection_Task
+import eye_movement.utils as utils
+import eye_movement.model as model
+import eye_movement.worker as worker
 from tasklib.manager import PluginTaskManager
 
 
@@ -25,7 +23,7 @@ class Eye_Movement_Offline_Controller:
     def __init__(
         self,
         plugin,
-        storage: Classified_Segment_Storage,
+        storage: model.Classified_Segment_Storage,
         on_started: t.Callable[[], None] = nop,
         on_status: t.Callable[[str], None] = nop,
         on_progress: t.Callable[[float], None] = nop,
@@ -55,15 +53,15 @@ class Eye_Movement_Offline_Controller:
         if self.g_pool.app == "exporter":
             return
 
-        logger.info("Gaze postions changed. Recalculating.")
+        utils.logger.info("Gaze postions changed. Recalculating.")
 
         if self.eye_movement_task and self.eye_movement_task.running:
             self.eye_movement_task.kill(grace_period=1)
 
-        capture = Immutable_Capture(self.g_pool.capture)
-        gaze_data: Gaze_Data = [gp.serialized for gp in self.g_pool.gaze_positions]
+        capture = model.Immutable_Capture(self.g_pool.capture)
+        gaze_data: utils.Gaze_Data = [gp.serialized for gp in self.g_pool.gaze_positions]
 
-        self.eye_movement_task = Offline_Detection_Task(args=(capture, gaze_data))
+        self.eye_movement_task = worker.Offline_Detection_Task(args=(capture, gaze_data))
         self.task_manager.add_task(self.eye_movement_task)
 
         self.eye_movement_task.add_observers(
@@ -89,7 +87,7 @@ class Eye_Movement_Offline_Controller:
             self._on_status(status)
 
         if serialized:
-            segment = Classified_Segment.from_msgpack(serialized)
+            segment = model.Classified_Segment.from_msgpack(serialized)
             self.storage.add(segment)
 
             current_ts = segment.end_frame_timestamp

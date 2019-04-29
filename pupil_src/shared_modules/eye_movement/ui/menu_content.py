@@ -10,8 +10,8 @@ See COPYING and COPYING.LESSER for license details.
 """
 import typing as t
 import weakref
-from eye_movement.model.segment import Classified_Segment
-from pyglui import ui
+import eye_movement.model as model
+from pyglui import ui as gl_ui
 
 
 class Menu_Content:
@@ -42,20 +42,20 @@ class Menu_Content:
 
     def add_to_menu(self, menu):
 
-        self._detection_status_input = ui.Text_Input(
+        self._detection_status_input = gl_ui.Text_Input(
             "detection_status", self, label="Detection progress:", setter=lambda _: None
         )
 
-        self._show_segmentation_switch = ui.Switch(
+        self._show_segmentation_switch = gl_ui.Switch(
             "show_segmentation", self, label="Show segmentation"
         )
 
-        self._current_segment_details = ui.Info_Text("")
+        self._current_segment_details = gl_ui.Info_Text("")
 
         menu.label = self.label_text
 
         for paragraph in self._info_paragraphs():
-            paragraph_ui = ui.Info_Text(paragraph)
+            paragraph_ui = gl_ui.Info_Text(paragraph)
             menu.append(paragraph_ui)
 
         menu.append(self._detection_status_input)
@@ -74,9 +74,9 @@ class Menu_Content:
         self,
         current_index: int,
         total_segment_count: int,
-        current_segment: t.Optional[Classified_Segment],
-        prev_segment: t.Optional[Classified_Segment],
-        next_segment: t.Optional[Classified_Segment],
+        current_segment: t.Optional[model.Classified_Segment],
+        prev_segment: t.Optional[model.Classified_Segment],
+        next_segment: t.Optional[model.Classified_Segment],
     ):
 
         if not self._current_segment_details:

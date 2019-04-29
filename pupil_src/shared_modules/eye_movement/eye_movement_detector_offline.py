@@ -11,18 +11,9 @@ See COPYING and COPYING.LESSER for license details.
 import typing
 import random
 from .eye_movement_detector_base import Eye_Movement_Detector_Base
-from eye_movement.utils import Gaze_Data, EYE_MOVEMENT_EVENT_KEY, logger
-from eye_movement.model.segment import Classified_Segment
-from eye_movement.model.storage import Classified_Segment_Storage
-from eye_movement.controller.eye_movement_csv_exporter import Eye_Movement_CSV_Exporter
-from eye_movement.controller.eye_movement_seek_controller import (
-    Eye_Movement_Seek_Controller,
-)
-from eye_movement.controller.eye_movement_offline_controller import (
-    Eye_Movement_Offline_Controller,
-)
-from eye_movement.ui.menu_content import Menu_Content
-from eye_movement.ui.navigation_buttons import Prev_Segment_Button, Next_Segment_Button
+import eye_movement.utils as utils
+import eye_movement.model as model
+import eye_movement.controller as controller
 import eye_movement.ui as ui
 from observable import Observable
 from data_changed import Listener, Announcer
@@ -55,11 +46,16 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
 
     def __init__(self, g_pool, show_segmentation=True):
         super().__init__(g_pool)
-        self.storage = Classified_Segment_Storage(plugin=self, rec_dir=g_pool.rec_dir)
-        self.seek_controller = Eye_Movement_Seek_Controller(
-            plugin=self, storage=self.storage, seek_to_timestamp=self.seek_to_timestamp
+        self.storage = model.Classified_Segment_Storage(
+            plugin=self,
+            rec_dir=g_pool.rec_dir
         )
-        self.offline_controller = Eye_Movement_Offline_Controller(
+        self.seek_controller = controller.Eye_Movement_Seek_Controller(
+            plugin=self,
+            storage=self.storage,
+            seek_to_timestamp=self.seek_to_timestamp,
+        )
+        self.offline_controller = controller.Eye_Movement_Offline_Controller(
             plugin=self,
             storage=self.storage,
             on_status=self.on_task_status,
@@ -67,26 +63,30 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
             on_exception=self.on_task_exception,
             on_completed=self.on_task_completed,
         )
-        self.menu_content = Menu_Content(
+        self.menu_content = ui.Menu_Content(
             plugin=self,
             label_text=self.MENU_LABEL_TEXT,
             show_segmentation=show_segmentation,
         )
-        self.prev_segment_button = Prev_Segment_Button(
-            on_click=self.seek_controller.jump_to_prev_segment
+        self.prev_segment_button = ui.Prev_Segment_Button(
+            on_click=self.seek_controller.jump_to_prev_segment,
         )
-        self.next_segment_button = Next_Segment_Button(
-            on_click=self.seek_controller.jump_to_next_segment
+        self.next_segment_button = ui.Next_Segment_Button(
+            on_click=self.seek_controller.jump_to_next_segment,
         )
-
         self._gaze_changed_listener = Listener(
-            plugin=self, topic="gaze_positions", rec_dir=g_pool.rec_dir
+            plugin=self,
+            topic="gaze_positions",
+            rec_dir=g_pool.rec_dir,
         )
         self._gaze_changed_listener.add_observer(
-            method_name="on_data_changed", observer=self.offline_controller.classify
+            method_name="on_data_changed",
+            observer=self.offline_controller.classify,
         )
         self._eye_movement_changed_announcer = Announcer(
-            plugin=self, topic=EYE_MOVEMENT_ANNOUNCER_TOPIC, rec_dir=g_pool.rec_dir
+            plugin=self,
+            topic=EYE_MOVEMENT_ANNOUNCER_TOPIC,
+            rec_dir=g_pool.rec_dir,
         )
 
     #
@@ -170,14 +170,14 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
             for segment in visible_segments:
                 ui.segment_draw(segment=segment, size=(frame.width, frame.height), image=frame.img)
 
-        events[EYE_MOVEMENT_EVENT_KEY] = visible_segments
+        events[utils.EYE_MOVEMENT_EVENT_KEY] = visible_segments
 
     def export_eye_movement(self, export_range, export_dir):
 
         segments_in_section = self.storage.segments_in_range(export_range)
 
         if segments_in_section:
-            csv_exporter = Eye_Movement_CSV_Exporter()
+            csv_exporter = controller.Eye_Movement_CSV_Exporter()
             csv_exporter.csv_export(segments_in_section, export_dir=export_dir)
         else:
-            logger.warning("No fixations in this recording nothing to export")
+            utils.logger.warning("No fixations in this recording nothing to export")

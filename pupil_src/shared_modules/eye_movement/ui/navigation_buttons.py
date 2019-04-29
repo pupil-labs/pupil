@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import typing as t
-from pyglui import ui
+from pyglui import ui as gl_ui
 
 
 class Navigation_Button:
@@ -30,7 +30,7 @@ class Navigation_Button:
 
     def add_to_quickbar(self, quickbar):
         on_click = self._on_click
-        self._ui_button = ui.Thumb(
+        self._ui_button = gl_ui.Thumb(
             self._selector,
             setter=lambda _: on_click(),
             getter=lambda: False,

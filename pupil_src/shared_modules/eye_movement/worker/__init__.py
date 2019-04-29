@@ -8,6 +8,5 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from .menu_content import Menu_Content
-from .navigation_buttons import Prev_Segment_Button, Next_Segment_Button
-from .segment_overlay import segment_draw
+from .offline_detection_task import Offline_Detection_Task
+from .real_time_buffered_detector import Real_Time_Buffered_Detector

@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import abc
-import enum
 import typing as t
 
 
