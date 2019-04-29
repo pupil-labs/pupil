@@ -130,13 +130,16 @@ class AV_Writer(object):
         self.video_stream.thread_count = max(1, mp.cpu_count() - 1)
         # self.video_stream.pix_fmt = "yuv420p"
 
-        try:
-            self.audio = audio_utils.load_audio(audio_dir)
-            self.audio_export_stream = self.container.add_stream(
-                template=self.audio.stream
-            )
-        except audio_utils.NoAudioLoadedError:
-            logger.warning("Could not mux audio. File not found.")
+        if audio_dir is not None:
+            try:
+                self.audio = audio_utils.load_audio(audio_dir)
+                self.audio_export_stream = self.container.add_stream(
+                    template=self.audio.stream
+                )
+            except audio_utils.NoAudioLoadedError:
+                logger.warning("Could not mux audio. File not found.")
+                self.audio = None
+        else:  # audio export explicitly disabled
             self.audio = None
 
         self.configured = False
