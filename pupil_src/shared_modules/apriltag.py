@@ -82,7 +82,7 @@ class Detector:
         filename = ctypes.util.find_library("apriltag")
         try:
             self.libc = ctypes.CDLL(filename)
-        except OSError as err:
+        except (OSError, TypeError) as err:
             raise RuntimeError("apriltag dependencies not found") from err
         if self.libc is None:
             raise RuntimeError("could not find DLL named " + filename)
