@@ -55,7 +55,6 @@ class StorageItem(abc.ABC):
         return unique_id
 
 
-
 class Storage(abc.ABC):
     def __init__(self, plugin):
         plugin.add_observer("cleanup", self._on_cleanup)
@@ -124,7 +123,41 @@ class Storage(abc.ABC):
         Copied from Django:
         https://github.com/django/django/blob/master/django/utils/text.py#L219
         """
-        file_name = str(file_name).strip().replace(' ', '_')
+        file_name = str(file_name).strip().replace(" ", "_")
         # django uses \w instead of _a-zA-Z0-9 but this leaves characters like ä, Ü, é
         # in the filename, which might be problematic
-        return re.sub(r'(?u)[^-_a-zA-Z0-9.]', '', file_name)
+        return re.sub(r"(?u)[^-_a-zA-Z0-9.]", "", file_name)
+
+
+class SingleFileStorage(Storage, abc.ABC):
+    """
+    Storage that can save and load all items from / to a single file
+    """
+
+    def __init__(self, rec_dir, plugin):
+        super().__init__(plugin)
+        self._rec_dir = rec_dir
+
+    def save_to_disk(self):
+        item_tuple_list = [item.as_tuple for item in self.items]
+        self._save_data_to_file(self._storage_file_path, item_tuple_list)
+
+    def _load_from_disk(self):
+        item_tuple_list = self._load_data_from_file(self._storage_file_path)
+        if item_tuple_list:
+            for item_tuple in item_tuple_list:
+                item = self._item_class.from_tuple(item_tuple)
+                self.add(item)
+
+    @property
+    @abc.abstractmethod
+    def _storage_file_name(self):
+        pass
+
+    @property
+    def _storage_file_path(self):
+        return os.path.join(self._storage_folder_path, self._storage_file_name)
+
+    @property
+    def _storage_folder_path(self):
+        return os.path.join(self._rec_dir, "offline_data")

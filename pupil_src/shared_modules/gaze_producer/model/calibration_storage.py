@@ -14,13 +14,15 @@ import os
 
 import file_methods as fm
 import make_unique
+
+from storage import Storage
 from gaze_producer import model
 from observable import Observable
 
 logger = logging.getLogger(__name__)
 
 
-class CalibrationStorage(model.storage.Storage, Observable):
+class CalibrationStorage(Storage, Observable):
     _calibration_suffix = "plcal"
 
     def __init__(self, rec_dir, plugin, get_recording_index_range, recording_uuid):
