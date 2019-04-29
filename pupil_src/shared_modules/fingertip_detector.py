@@ -170,7 +170,7 @@ class FingertipTracker(object):
             return None
 
     def _findFingertip(self, handmask_smooth, img_size, b0, b2):
-        _, contours, _ = cv2.findContours(
+        *_, contours, _ = cv2.findContours(
             handmask_smooth, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_TC89_KCOS
         )
         if len(contours) == 0:
@@ -232,7 +232,7 @@ class FingertipTracker(object):
                     continue
 
                 new_mask = handmask_smooth[y3 : y3 + h3, x3 : x3 + w3]
-                _, new_contours, _ = cv2.findContours(
+                *_, new_contours, _ = cv2.findContours(
                     new_mask, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_TC89_KCOS
                 )
                 if len(new_contours) == 0:
@@ -301,7 +301,7 @@ class FingertipTracker(object):
         cv2.drawContours(
             new_mask, [np.int0(cv2.boxPoints(new_rect))], 0, 255, thickness=-1
         )
-        _, new_contours, _ = cv2.findContours(
+        *_, new_contours, _ = cv2.findContours(
             np.bitwise_and(new_mask, handmask_smooth),
             mode=cv2.RETR_EXTERNAL,
             method=cv2.CHAIN_APPROX_TC89_KCOS,
