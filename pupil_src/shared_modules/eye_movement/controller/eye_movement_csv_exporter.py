@@ -22,7 +22,7 @@ class Eye_Movement_CSV_Exporter(CSV_Exporter[Classified_Segment]):
     def csv_export_schema(cls) -> CSV_EXPORT_SCHEMA_TYPE:
         return [
             ("id", lambda seg: seg.id),
-            ("method", lambda seg: seg.method.value),
+            ("base_type", lambda seg: seg.base_type.value),
             ("segment_class", lambda seg: seg.segment_class.value),
             ("start_frame_index", lambda seg: seg.start_frame_index),
             ("end_frame_index", lambda seg: seg.end_frame_index),
