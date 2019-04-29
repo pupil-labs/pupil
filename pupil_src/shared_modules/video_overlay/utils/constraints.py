@@ -39,11 +39,11 @@ class ConstraintedValue:
 
     @property
     def value(self):
-        return self._val
+        return self.constraint.apply_to(self._val)
 
     @value.setter
     def value(self, new_val):
-        self._val = self.constraint.apply_to(new_val)
+        self._val = new_val
 
     @property
     def constraint(self):
@@ -52,7 +52,6 @@ class ConstraintedValue:
     @constraint.setter
     def constraint(self, new_constraint):
         self._constraint = new_constraint
-        self.value = self.value  # apply new constraint
 
     @constraint.deleter
     def constraint(self):
