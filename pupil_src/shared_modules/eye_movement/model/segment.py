@@ -15,14 +15,10 @@ import typing as t
 # TODO: Update StorageItem import path when class moves to shared utils lib
 from gaze_producer.model.storage import StorageItem
 from eye_movement.model.time_range import Time_Range
-from eye_movement.model.color import Color, Defo_Color_Palette
 import eye_movement.utils as utils
 import methods as mt
 import file_methods as fm
-import player_methods as pm
-import pyglui.cygl.utils as gl_utils
 import numpy as np
-import cv2
 import nslr_hmm
 
 
@@ -43,11 +39,6 @@ class Segment_Class(enum.Enum):
     def from_nslr_class(nslr_class):
         return Segment_Class._nslr_class_to_segment_class_mapping[nslr_class]
 
-    @property
-    def color(self) -> Color:
-        # TODO: Move drawing logic into ../ui/
-        return self._segment_class_to_color_mapping[self]
-
 
 # This needs to be defined outside class declaration; otherwise it is treated as a `enum` case.
 Segment_Class._nslr_class_to_segment_class_mapping: t.Mapping[int, "Segment_Class"] = {
@@ -55,18 +46,6 @@ Segment_Class._nslr_class_to_segment_class_mapping: t.Mapping[int, "Segment_Clas
     nslr_hmm.SACCADE: Segment_Class.SACCADE,
     nslr_hmm.PSO: Segment_Class.POST_SACCADIC_OSCILLATIONS,
     nslr_hmm.SMOOTH_PURSUIT: Segment_Class.SMOOTH_PURSUIT,
-}
-
-
-# TODO: Move drawing logic into ../ui/
-# This needs to be defined outside class declaration; otherwise it is treated as a `enum` case.
-Segment_Class._segment_class_to_color_mapping: t.Mapping[
-    "Segment_Class", t.Type[Color]
-] = {
-    Segment_Class.FIXATION: Defo_Color_Palette.SUN_FLOWER,
-    Segment_Class.SACCADE: Defo_Color_Palette.NEPHRITIS,
-    Segment_Class.POST_SACCADIC_OSCILLATIONS: Defo_Color_Palette.BELIZE_HOLE,
-    Segment_Class.SMOOTH_PURSUIT: Defo_Color_Palette.WISTERIA,
 }
 
 
@@ -428,66 +407,6 @@ class Classified_Segment(StorageItem):
         x, y = self.segment_data[-1]["norm_pos"]
         x, y = mt.denormalize((x, y), world_frame, flip_y=True)
         return int(x), int(y)
-
-    @property
-    def color(self) -> Color:
-        # TODO: Move drawing logic into ../ui/
-        return self.segment_class.color
-
-    def draw_on_frame(self, frame):
-        # TODO: Move drawing logic into ../ui/
-        # TODO: Type annotate frame
-        world_frame = (frame.width, frame.height)
-        segment_point = self.mean_2d_point_within_world(world_frame)
-        segment_color = self.color.to_rgba()
-
-        pm.transparent_circle(
-            frame.img,
-            segment_point,
-            radius=25.0,
-            color=segment_color.channels,
-            thickness=3,
-        )
-
-        text = str(self.id)
-        text_origin = (segment_point[0] + 30, segment_point[1])
-        text_fg_color = self.color.to_rgb().channels
-        font_face = cv2.FONT_HERSHEY_DUPLEX
-        font_scale = 0.8
-        font_thickness = 1
-
-        cv2.putText(
-            img=frame.img,
-            text=text,
-            org=text_origin,
-            fontFace=font_face,
-            fontScale=font_scale,
-            color=text_fg_color,
-            thickness=font_thickness,
-        )
-
-    def draw_in_gl_context(self, frame_size: t.Tuple[int, int], glfont):
-        # TODO: Move drawing logic into ../ui/
-        # TODO: Type annotate glfont
-        segment_point = self.last_2d_point_within_world(frame_size)
-
-        circle_color = self.color.to_rgba().channels
-        gl_utils.draw_circle(
-            segment_point,
-            radius=48.0,
-            stroke_width=10.0,
-            color=gl_utils.RGBA(*circle_color),
-        )
-
-        font_size = 22
-        text = str(self.id)
-        text_origin_x = segment_point[0] + 48.0
-        text_origin_y = segment_point[1]
-        text_fg_color = self.color.to_rgba().channels
-
-        glfont.set_size(font_size)
-        glfont.set_color_float(text_fg_color)
-        glfont.draw_text(text_origin_x, text_origin_y, text)
 
 
 class Classified_Segment_Factory:

@@ -23,6 +23,7 @@ from eye_movement.controller.eye_movement_offline_controller import (
 )
 from eye_movement.ui.menu_content import Menu_Content
 from eye_movement.ui.navigation_buttons import Prev_Segment_Button, Next_Segment_Button
+import eye_movement.ui as ui
 from observable import Observable
 from data_changed import Listener, Announcer
 
@@ -167,7 +168,7 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
 
         if self.menu_content.show_segmentation:
             for segment in visible_segments:
-                segment.draw_on_frame(frame)
+                ui.segment_draw(segment=segment, size=(frame.width, frame.height), image=frame.img)
 
         events[EYE_MOVEMENT_EVENT_KEY] = visible_segments
 

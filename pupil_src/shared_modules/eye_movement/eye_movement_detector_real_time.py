@@ -12,7 +12,8 @@ from .eye_movement_detector_base import Eye_Movement_Detector_Base
 from eye_movement.utils import EYE_MOVEMENT_EVENT_KEY
 from eye_movement.model.immutable_capture import Immutable_Capture
 from eye_movement.worker.real_time_buffered_detector import Real_Time_Buffered_Detector
-from pyglui import ui
+import eye_movement.ui as ui
+from pyglui import ui as gl_ui
 from pyglui.pyfontstash import fontstash
 
 
@@ -60,7 +61,7 @@ class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
     def gl_display(self):
         frame_size = self.g_pool.capture.frame_size
         for segment in self._recent_segments:
-            segment.draw_in_gl_context(frame_size, self.glfont)
+            ui.segment_draw(segment=segment, size=frame_size, gl_font=self.glfont)
 
     def init_ui(self):
         self.add_menu()
@@ -68,10 +69,10 @@ class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
 
         for help_block in self.__doc__.split("\n\n"):
             help_str = help_block.replace("\n", " ").replace("  ", "").strip()
-            self.menu.append(ui.Info_Text(help_str))
+            self.menu.append(gl_ui.Info_Text(help_str))
 
         self.glfont = fontstash.Context()
-        self.glfont.add_font("opensans", ui.get_opensans_font_path())
+        self.glfont.add_font("opensans", gl_ui.get_opensans_font_path())
 
     def deinit_ui(self):
         self.remove_menu()
