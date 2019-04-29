@@ -21,6 +21,10 @@ class Menu_Content:
         self.detection_status = ""
         self.show_segmentation = show_segmentation
 
+        self._show_segmentation_switch = None
+        self._current_segment_details = None
+        self._detection_status_input = None
+
     #
 
     def _info_paragraphs(self) -> t.List[str]:
@@ -74,6 +78,9 @@ class Menu_Content:
         prev_segment: t.Optional[Classified_Segment],
         next_segment: t.Optional[Classified_Segment],
     ):
+
+        if not self._current_segment_details:
+            return
 
         if (
             (current_index is None)
