@@ -206,21 +206,21 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
         def on_drop(window, count, paths):
-            for x in range(count):
-                new_rec_dir = paths[x].decode("utf-8")
-                if pm.is_pupil_rec_dir(new_rec_dir):
-                    logger.debug("Starting new session with '{}'".format(new_rec_dir))
-                    ipc_pub.notify(
-                        {
-                            "subject": "player_drop_process.should_start",
-                            "rec_dir": new_rec_dir,
-                        }
-                    )
-                    glfw.glfwSetWindowShouldClose(window, True)
-                else:
-                    logger.error(
-                        "'{}' is not a valid pupil recording".format(new_rec_dir)
-                    )
+            paths = [paths[x].decode("utf-8") for x in range(count)]
+            for path in paths:
+                if pm.is_pupil_rec_dir(path):
+                    _restart_with_recording(path)
+                    return
+            # call `on_drop` callbacks until a plugin indicates
+            # that it has consumed the event (by returning True)
+            any(p.on_drop(paths) for p in g_pool.plugins)
+
+        def _restart_with_recording(rec_dir):
+            logger.debug("Starting new session with '{}'".format(decoded_path))
+            ipc_pub.notify(
+                {"subject": "player_drop_process.should_start", "rec_dir": decoded_path}
+            )
+            glfw.glfwSetWindowShouldClose(g_pool.main_window, True)
 
         tick = delta_t()
 
@@ -624,16 +624,20 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                     pos = x * hdpi_factor, y * hdpi_factor
                     pos = normalize(pos, g_pool.camera_render_size)
                     pos = denormalize(pos, g_pool.capture.frame_size)
-                    for p in g_pool.plugins:
-                        p.on_click(pos, button, action)
+
+                    # call `on_click` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_click(pos, button, action) for p in g_pool.plugins)
 
                 for key, scancode, action, mods in user_input.keys:
-                    for p in g_pool.plugins:
-                        p.on_key(key, scancode, action, mods)
+                    # call `on_key` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_key(key, scancode, action, mods) for p in g_pool.plugins)
 
                 for char_ in user_input.chars:
-                    for p in g_pool.plugins:
-                        p.on_char(char_)
+                    # call `char_` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_char(char_) for p in g_pool.plugins)
 
                 # present frames at appropriate speed
                 g_pool.seek_control.wait(events["frame"].timestamp)

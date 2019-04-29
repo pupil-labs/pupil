@@ -339,12 +339,16 @@ class Vis_Eye_Video_Overlay(Visualizer_Plugin_Base):
             if not self.eye1.on_click(
                 pos, button, action, self.hdpi_factor, self.eye_scale_factor
             ):
-                self.eye0.on_click(
+                # return if event was consumed by eye0
+                return self.eye0.on_click(
                     pos, button, action, self.hdpi_factor, self.eye_scale_factor
                 )
+            else:
+                return True  # event consumed by eye1
         else:
             self.eye0.drag_offset = None
             self.eye1.drag_offset = None
+            return False  # event not consumed
 
     def recent_events(self, events):
         frame = events.get("frame")

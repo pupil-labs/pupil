@@ -241,8 +241,10 @@ def eye(
 
         def on_drop(window, count, paths):
             paths = [paths[x].decode("utf-8") for x in range(count)]
-            g_pool.capture_manager.on_drop(paths)
-            g_pool.capture.on_drop(paths)
+            plugins = (g_pool.capture_manager, g_pool.capture)
+            # call `on_drop` callbacks until a plugin indicates
+            # that it has consumed the event (by returning True)
+            any(p.on_drop(paths) for p in plugins)
 
         # load session persistent settings
         session_settings = Persistent_Dict(
