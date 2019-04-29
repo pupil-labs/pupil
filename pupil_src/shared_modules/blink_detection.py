@@ -255,13 +255,13 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
             self.cache_activation()
             self.timeline.refresh()
         elif notification["subject"] == "should_export":
-            self.export(notification["range"], notification["export_dir"])
+            self.export(notification["ts_window"], notification["export_dir"])
 
     def _on_pupil_positions_changed(self):
         logger.info("Pupil postions changed. Recalculating.")
         self.recalculate()
 
-    def export(self, export_range, export_dir):
+    def export(self, export_window, export_dir):
         """
         Between in and out mark
 
@@ -294,8 +294,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
             "base_data",
         )
 
-        start, end = export_range
-        blinks_in_section = [b for b in self.g_pool.blinks if start <= b["index"] < end]
+        blinks_in_section = self.g_pool.blinks.by_ts_window(export_window)
 
         with open(
             os.path.join(export_dir, "blinks.csv"), "w", encoding="utf-8", newline=""

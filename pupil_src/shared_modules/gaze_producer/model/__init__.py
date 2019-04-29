@@ -9,9 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from gaze_producer.model import storage
-from gaze_producer.model.single_file_storage import SingleFileStorage
-
 from gaze_producer.model.calibration import Calibration, CalibrationResult
 from gaze_producer.model.calibration_storage import CalibrationStorage
 

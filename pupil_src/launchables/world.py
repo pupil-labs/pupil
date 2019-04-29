@@ -106,6 +106,13 @@ def world(
         ipc_pub.notify(n)
 
     try:
+        from background_helper import IPC_Logging_Task_Proxy
+
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
+        from tasklib.background.patches import IPCLoggingPatch
+
+        IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         # display
         import glfw
@@ -175,10 +182,6 @@ def world(
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
         from hololens_relay import Hololens_Relay
 
-        from background_helper import IPC_Logging_Task_Proxy
-
-        IPC_Logging_Task_Proxy.push_url = ipc_push_url
-
         # UI Platform tweaks
         if platform.system() == "Linux":
             scroll_factor = 10.0
@@ -236,6 +239,15 @@ def world(
             Camera_Intrinsics_Estimation,
             Hololens_Relay,
         ]
+
+        if platform.system() != "Windows":
+            # Head pose tracking is currently not available on Windows
+            from head_pose_tracker.online_head_pose_tracker import (
+                Online_Head_Pose_Tracker,
+            )
+
+            user_plugins.append(Online_Head_Pose_Tracker)
+
         system_plugins = (
             [
                 Log_Display,
@@ -343,8 +355,9 @@ def world(
 
         def on_drop(window, count, paths):
             paths = [paths[x].decode("utf-8") for x in range(count)]
-            for p in g_pool.plugins:
-                p.on_drop(paths)
+            # call `on_drop` callbacks until a plugin indicates
+            # that it has consumed the event (by returning True)
+            any(p.on_drop(paths) for p in g_pool.plugins)
 
         tick = delta_t()
 
@@ -655,16 +668,20 @@ def world(
                     pos = normalize(pos, camera_render_size)
                     # Position in img pixels
                     pos = denormalize(pos, g_pool.capture.frame_size)
-                    for p in g_pool.plugins:
-                        p.on_click(pos, button, action)
+
+                    # call `on_click` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_click(pos, button, action) for p in g_pool.plugins)
 
                 for key, scancode, action, mods in user_input.keys:
-                    for p in g_pool.plugins:
-                        p.on_key(key, scancode, action, mods)
+                    # call `on_key` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_key(key, scancode, action, mods) for p in g_pool.plugins)
 
                 for char_ in user_input.chars:
-                    for p in g_pool.plugins:
-                        p.on_char(char_)
+                    # call `char_` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_char(char_) for p in g_pool.plugins)
 
                 glfw.glfwSwapBuffers(main_window)
             glfw.glfwPollEvents()

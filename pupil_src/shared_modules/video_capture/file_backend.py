@@ -596,6 +596,7 @@ class File_Manager(Base_Manager):
         self.add_menu()
         from pyglui import ui
 
+        self.add_auto_select_button()
         self.menu.append(
             ui.Info_Text(
                 "Enter a folder to enumerate all eligible video files. "
@@ -638,11 +639,15 @@ class File_Manager(Base_Manager):
         settings = {"source_path": full_path, "timing": "own"}
         self.activate_source(settings)
 
+    def auto_activate_source(self):
+        self.activate(None)
+
     def on_drop(self, paths):
         for p in paths:
             if os.path.splitext(p)[-1] in self.file_exts:
                 self.activate(p)
-                return
+                return True
+        return False
 
     def enumerate_folder(self, path):
         eligible_files = []
