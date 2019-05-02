@@ -217,7 +217,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
 
     def create_pupil_positions_by_id(self, ts_to_datum, ts_to_topic):
         topic_data_ts = (
-            (ts_to_topic[ts], ts, datum) for ts, datum in ts_to_datum.items()
+            (ts_to_topic[ts], datum, ts) for ts, datum in ts_to_datum.items()
         )
         return self.create_pupil_positions_by_id_iterative(topic_data_ts)
 
@@ -225,7 +225,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         id0_id1_data = collections.deque(), collections.deque()
         id0_id1_time = collections.deque(), collections.deque()
 
-        for topic, timestamp, datum in topic_data_ts:
+        for topic, datum, timestamp in topic_data_ts:
             eye_id = int(topic[-1])  # use topic to identify eye
             assert eye_id == datum["id"]
             id0_id1_data[eye_id].append(datum)
