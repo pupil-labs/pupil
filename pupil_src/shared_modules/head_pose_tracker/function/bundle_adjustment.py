@@ -161,27 +161,34 @@ class BundleAdjustment:
         n_residuals = markers_points_2d_detected.size,
         n_variables = camera_extrinsics_array.size + marker_extrinsics_array.size
         """
+        import scipy.misc
 
         n_samples = len(self._frame_indices)
 
-        mat_camera = np.zeros((n_samples, self._camera_extrinsics_shape[0]), dtype=int)
+        mat_camera = np.zeros(
+            (n_samples, self._camera_extrinsics_shape[0]), dtype=np.uint8
+        )
         mat_camera[np.arange(n_samples), self._frame_indices] = 1
         mat_camera = cv2.resize(
             mat_camera,
             (
-                self._markers_points_2d_detected.size,
                 np.prod(self._camera_extrinsics_shape),
+                self._markers_points_2d_detected.size,
             ),
+            interpolation=cv2.INTER_NEAREST,
         )
 
-        mat_marker = np.zeros((n_samples, self._marker_extrinsics_shape[0]), dtype=int)
+        mat_marker = np.zeros(
+            (n_samples, self._marker_extrinsics_shape[0]), dtype=np.uint8
+        )
         mat_marker[np.arange(n_samples), self._marker_indices] = 1
         mat_marker = cv2.resize(
             mat_marker,
             (
-                self._markers_points_2d_detected.size,
                 np.prod(self._marker_extrinsics_shape),
+                self._markers_points_2d_detected.size,
             ),
+            interpolation=cv2.INTER_NEAREST,
         )
 
         sparsity_matrix = np.hstack((mat_camera, mat_marker))
