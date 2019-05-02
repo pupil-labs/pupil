@@ -11,8 +11,10 @@ See COPYING and COPYING.LESSER for license details.
 
 import collections
 
+import cv2
 import numpy as np
-from scipy import misc as scipy_misc, optimize as scipy_optimize, sparse as scipy_sparse
+from scipy import optimize as scipy_optimize
+from scipy import sparse as scipy_sparse
 
 from head_pose_tracker.function import utils
 
@@ -164,24 +166,22 @@ class BundleAdjustment:
 
         mat_camera = np.zeros((n_samples, self._camera_extrinsics_shape[0]), dtype=int)
         mat_camera[np.arange(n_samples), self._frame_indices] = 1
-        mat_camera = scipy_misc.imresize(
+        mat_camera = cv2.resize(
             mat_camera,
-            size=(
+            (
                 self._markers_points_2d_detected.size,
                 np.prod(self._camera_extrinsics_shape),
             ),
-            interp="nearest",
         )
 
         mat_marker = np.zeros((n_samples, self._marker_extrinsics_shape[0]), dtype=int)
         mat_marker[np.arange(n_samples), self._marker_indices] = 1
-        mat_marker = scipy_misc.imresize(
+        mat_marker = cv2.resize(
             mat_marker,
-            size=(
+            (
                 self._markers_points_2d_detected.size,
                 np.prod(self._marker_extrinsics_shape),
             ),
-            interp="nearest",
         )
 
         sparsity_matrix = np.hstack((mat_camera, mat_marker))
