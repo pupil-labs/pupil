@@ -125,7 +125,10 @@ class CalibrationStorage(Storage, Observable):
                 try:
                     calib_result = model.CalibrationResult(
                         mapping_plugin_name=data["mapper_name"],
-                        mapper_args=data["mapper_args"],
+                        # data["mapper_args"] is a fm.Frozen_Dict and causes
+                        # https://github.com/pupil-labs/pupil/issues/1498
+                        # if not converted to a normal dict
+                        mapper_args=dict(data["mapper_args"]),
                     )
                 except KeyError:
                     # notifications from old recordings will not have these fields!
