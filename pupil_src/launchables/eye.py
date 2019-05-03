@@ -278,9 +278,9 @@ def eye(
         )
 
         if eye_id == 0:
-            cap_src = ["Pupil Cam2 ID0", "Pupil Cam1 ID0", "HD-6000"]
+            cap_src = ["Pupil Cam3 ID0", "Pupil Cam2 ID0", "Pupil Cam1 ID0", "HD-6000"]
         else:
-            cap_src = ["Pupil Cam2 ID1", "Pupil Cam1 ID1"]
+            cap_src = ["Pupil Cam3 ID0", "Pupil Cam2 ID1", "Pupil Cam1 ID1"]
 
         # Initialize capture
         default_settings = (

@@ -118,8 +118,8 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
     match_pattern = "*.time"
     rename_set = RenameSet(rec_dir, match_pattern)
     rename_set.load_intrinsics()
-    rename_set.rename("Pupil Cam([0-2]) ID0", "eye0")
-    rename_set.rename("Pupil Cam([0-2]) ID1", "eye1")
+    rename_set.rename("Pupil Cam([0-3]) ID0", "eye0")
+    rename_set.rename("Pupil Cam([0-3]) ID1", "eye1")
     rename_set.rename("Pupil Cam([0-2]) ID2", "world")
     # Rewrite .time file to .npy file
     rewrite_time = RenameSet(rec_dir, match_pattern, ["time"])
