@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import collections
+import collections.abc
 import logging
 import os
 import pickle
@@ -212,15 +213,36 @@ class _Empty(object):
 
 
 # an Immutable dict for dics nested inside this dict.
-class _FrozenDict(dict):
-    def __setitem__(self, key, value):
-        raise NotImplementedError("Invalid operation")
+# https://stackoverflow.com/a/42322858
+class _FrozenDict(collections.abc.Mapping):
 
-    def clear(self):
-        raise NotImplementedError()
+    def __new__(cls, *args, **kwargs):
+        inst = super().__new__(cls)
+        inst.__private_dict = dict()
+        return inst
 
-    def update(self, *args, **kwargs):
-        raise NotImplementedError()
+    def __init__(self, *args, **kwargs):
+        self.__private_dict = dict(*args, **kwargs)
+
+    @property
+    def __dict__(self):
+        return self.__private_dict
+
+    def __iter__(self):
+        return self.__dict__.__iter__()
+
+    def __len__(self):
+        return self.__dict__.__len__()
+
+    def __getitem__(self, key):
+        return self.__dict__.__getitem__(key)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
 
 
 class Serialized_Dict(object):
