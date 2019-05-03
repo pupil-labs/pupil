@@ -36,6 +36,15 @@ class Surface_Offline(Surface):
         self.on_surface_change = None
         self.start_idx = None
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Remove the unpicklable entries.
+        del state['on_surface_change']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
     def map_section(self, section, all_world_timestamps, all_gaze_events, camera_model):
         try:
             location_cache = self.location_cache[section]
