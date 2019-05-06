@@ -9,13 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-# when running from source compile cpp extension if necessary.
-
-import sys
-
-if not getattr(sys, "frozen", False):
+try:
+    from .methods import *
+except ModuleNotFoundError:
+    # when running from source compile cpp extension if necessary.
     from .build import build_cpp_extension
-
     build_cpp_extension()
-
-from .methods import *
+    from .methods import *
