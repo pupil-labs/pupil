@@ -217,9 +217,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             any(p.on_drop(paths) for p in g_pool.plugins)
 
         def _restart_with_recording(rec_dir):
-            logger.debug("Starting new session with '{}'".format(decoded_path))
+            logger.debug("Starting new session with '{}'".format(rec_dir))
             ipc_pub.notify(
-                {"subject": "player_drop_process.should_start", "rec_dir": decoded_path}
+                {"subject": "player_drop_process.should_start", "rec_dir": rec_dir}
             )
             glfw.glfwSetWindowShouldClose(g_pool.main_window, True)
 
