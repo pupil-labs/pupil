@@ -635,7 +635,7 @@ class Offline_Surface_Tracker(Surface_Tracker, Analysis_Plugin_Base):
 
             # save surface_positions as csv
             with open(
-                os.path.join(metrics_dir, "srf_positons" + surface_name + ".csv"),
+                os.path.join(metrics_dir, "srf_positions" + surface_name + ".csv"),
                 "w",
                 encoding="utf-8",
                 newline="",
