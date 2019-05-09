@@ -9,9 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-
-class Empty(object):
-    pass
+from types import SimpleNamespace
 
 
 def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
@@ -40,7 +38,7 @@ def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
     from circle_detector import CircleTracker
 
     try:
-        src = File_Source(Empty(), source_path, timing=None)
+        src = File_Source(SimpleNamespace(), source_path, timing=None)
 
         frame = src.get_frame()
         logger.info("Starting calibration marker detection...")

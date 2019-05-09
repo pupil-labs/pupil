@@ -26,10 +26,12 @@ import csv
 # logging
 import logging
 import os
+import types.SimpleNamespace as Empty
 from bisect import bisect_left, bisect_right
 from collections import deque
 from itertools import chain
-
+from types import SimpleNamespace
+import cv2
 import msgpack
 import numpy as np
 from pyglui import ui
@@ -38,17 +40,12 @@ from pyglui.pyfontstash import fontstash
 from scipy.spatial.distance import pdist
 
 import background_helper as bh
-import cv2
 import file_methods as fm
 import player_methods as pm
 from methods import denormalize
 from plugin import Analysis_Plugin_Base
 
 logger = logging.getLogger(__name__)
-
-
-class Empty(object):
-    pass
 
 
 class Fixation_Detector_Base(Analysis_Plugin_Base):

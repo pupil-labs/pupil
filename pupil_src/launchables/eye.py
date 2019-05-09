@@ -11,10 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import os
 import platform
-
-
-class Global_Container(object):
-    pass
+from types import SimpleNamespace
 
 
 class Is_Alive_Manager(object):
@@ -175,7 +172,7 @@ def eye(
         hdpi_factor = 1.0
 
         # g_pool holds variables for this process
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
 
         # make some constants avaiable
         g_pool.user_dir = user_dir

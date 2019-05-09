@@ -9,9 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-
-class Global_Container(object):
-    pass
+from types import SimpleNamespace
 
 
 def fill_cache(
@@ -32,7 +30,7 @@ def fill_cache(
     aperture = 9
     markers = []
     cap = File_Source(
-        Global_Container(), source_path=video_file_path, timing=None, fill_gaps=True
+        SimpleNamespace(), source_path=video_file_path, timing=None, fill_gaps=True
     )
 
     def next_unvisited_idx(frame_idx):

@@ -15,6 +15,7 @@ import player_methods as pm
 import tasklib
 import tasklib.background.patches as bg_patches
 from calibration_routines import gaze_mapping_plugins
+from types import SimpleNamespace
 
 g_pool = None  # set by the plugin
 
@@ -48,15 +49,11 @@ def create_task(gaze_mapper, calibration):
     )
 
 
-class _Empty(object):
-    pass
-
-
 def _setup_fake_gpool(frame_size, intrinsics, detection_mapping_mode, rec_dir):
-    cap = _Empty()
+    cap = SimpleNamespace()
     cap.frame_size = frame_size
     cap.intrinsics = intrinsics
-    pool = _Empty()
+    pool = SimpleNamespace()
     pool.capture = cap
     pool.get_timestamp = time
     pool.detection_mapping_mode = detection_mapping_mode

@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import os
 from glob import glob
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -32,10 +33,6 @@ from video_capture import EndofVideoError, File_Source
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-class Empty(object):
-    pass
 
 
 def correlate_eye_world(eye_timestamps, world_timestamps):
@@ -69,7 +66,7 @@ class Eye_Wrapper(object):
         eye_loc = os.path.join(rec_dir, "eye{}.*".format(self.eyeid))
         try:
             self.source = File_Source(
-                Empty(), source_path=glob(eye_loc)[0], timing=None
+                SimpleNamespace(), source_path=glob(eye_loc)[0], timing=None
             )
             self.current_eye_frame = self.source.get_frame()
         except (FileNotFoundError, IndexError):

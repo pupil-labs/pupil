@@ -10,10 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import os
 import platform
-
-
-class Global_Container(object):
-    pass
+from types import SimpleNamespace
 
 
 def world(
@@ -199,7 +196,7 @@ def world(
         hdpi_factor = 1.0
 
         # g_pool holds variables for this process they are accessible to all plugins
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
         g_pool.app = "capture"
         g_pool.process = "world"
         g_pool.user_dir = user_dir
