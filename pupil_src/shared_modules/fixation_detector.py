@@ -26,11 +26,11 @@ import csv
 # logging
 import logging
 import os
-import types.SimpleNamespace as Empty
 from bisect import bisect_left, bisect_right
 from collections import deque
 from itertools import chain
 from types import SimpleNamespace
+
 import cv2
 import msgpack
 import numpy as np
@@ -449,7 +449,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
 
         gaze_data = [gp.serialized for gp in self.g_pool.gaze_positions]
 
-        cap = Empty()
+        cap = SimpleNamespace()
         cap.frame_size = self.g_pool.capture.frame_size
         cap.intrinsics = self.g_pool.capture.intrinsics
         cap.timestamps = self.g_pool.capture.timestamps
