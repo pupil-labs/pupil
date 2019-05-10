@@ -102,7 +102,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
     def init_cache(self, marker_cache, min_marker_perimeter, min_id_confidence):
         if self.defined:
-            logger.debug("Full update of surface '{}' positons cache".format(self.name))
+            logger.debug("Full update of surface '{}' positions cache".format(self.name))
             self.cache = Cache_List(
                 [
                     self.answer_caching_request(
