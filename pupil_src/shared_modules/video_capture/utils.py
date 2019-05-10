@@ -372,7 +372,7 @@ class RenameSet:
             return os.path.splitext(file_name)[0]
 
         def rename(self, source_pattern, destination_name):
-            # source_pattern: Pupil Cam(0|1) ID0
+            # source_pattern: Pupil Cam(1|2|3) ID0
             # destination_name: eye0
             if re.match(source_pattern, self.name):
                 new_path = re.sub(source_pattern, destination_name, self.path)
