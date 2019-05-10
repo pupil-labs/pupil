@@ -9,13 +9,14 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import typing
-import eye_movement.utils as utils
-import eye_movement.model as model
-from tasklib.background.task import TypedBackgroundGeneratorFunction
-import file_methods as fm
-import numpy as np
-import nslr_hmm
 
+import nslr_hmm
+import numpy as np
+
+import eye_movement.model as model
+import eye_movement.utils as utils
+import file_methods as fm
+from tasklib.background.task import TypedBackgroundGeneratorFunction
 
 # TODO: Replace `str` with `Eye_Movement_Detection_Step`
 Offline_Detection_Task_Yield = typing.Tuple[
@@ -40,7 +41,9 @@ Offline_Detection_Task_Function = typing.Callable[
 
 @typing.no_type_check
 def eye_movement_detection_generator(
-    capture: model.Immutable_Capture, gaze_data: utils.Gaze_Data, factory_start_id: int = None
+    capture: model.Immutable_Capture,
+    gaze_data: utils.Gaze_Data,
+    factory_start_id: int = None,
 ) -> Offline_Detection_Task_Generator:
     def serialized_dict(datum):
         if type(datum) is dict:
@@ -65,7 +68,9 @@ def eye_movement_detection_generator(
     gaze_time = np.array([gp["timestamp"] for gp in gaze_data])
 
     yield EYE_MOVEMENT_DETECTION_STEP_PROCESSING_LOCALIZED_STRING, ()
-    eye_positions = utils.gaze_data_to_nslr_data(capture, gaze_data, use_pupil=use_pupil)
+    eye_positions = utils.gaze_data_to_nslr_data(
+        capture, gaze_data, use_pupil=use_pupil
+    )
 
     yield EYE_MOVEMENT_DETECTION_STEP_CLASSIFYING_LOCALIZED_STRING, ()
     gaze_classification, segmentation, segment_classification = nslr_hmm.classify_gaze(
