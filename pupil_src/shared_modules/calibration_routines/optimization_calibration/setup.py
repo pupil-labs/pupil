@@ -58,34 +58,39 @@ opencv_libraries = [
 
 if platform.system() == "Windows":
     # Find the path where dependencies are installed.
-    usr_local = None
+    usr_locals = []
+    if 'CONDA_PREFIX' in os.environ:
+        usr_locals.append(os.path.join(os.environ['CONDA_PREFIX'], 'Library'))
+        include_dirs.append(os.path.join(os.environ['CONDA_PREFIX'], 'Library', 'include', 'eigen3'))
     if 'VCPKG_PREFIX' in os.environ:
-        usr_local = os.environ['VCPKG_PREFIX']
-    elif 'CONDA_PREFIX' in os.environ:
-        usr_local = os.path.join(os.environ['CONDA_PREFIX'], 'Library')
-    else:
+        usr_locals.append(os.environ['VCPKG_PREFIX'])
+    if 'PYTHONPATH' in os.environ:
         test_paths = os.environ['PYTHONPATH']
         for t_p in test_paths.split(';'):
-            if any([_.startswith('opencv_core') for _ in os.listdir(t_p)]):
-                usr_local = os.path.dirname(t_p)
+            if os.path.isdir(t_p) and any([_.startswith('opencv_core') for _ in os.listdir(t_p)]):
+                usr_locals.append(os.path.dirname(t_p))
                 break
-    if usr_local is None:
+    if len(usr_locals) == 0:
         raise EnvironmentError("Could not find library directory."
-                               "Set environment variable for VCPKG_PREFIX or use conda.")
+                               "Set environment variable for VCPKG_PREFIX or use Anaconda prompt.")
 
-    usr_local = os.path.abspath(usr_local)
-    include_dirs.append(os.path.join(usr_local, 'include'))
-    lib_dir = os.path.join(usr_local, 'lib')
-    library_dirs = [lib_dir]
-    libs = []
-    # Get a list of OpenCV libraries.
-    opencv_match = [_ for _ in os.listdir(lib_dir) if _.startswith('opencv_core')][0]
-    opencv_term = opencv_match[11:]
-    opencv_libs = [_ + opencv_term for _ in opencv_libraries]
-    # Get a list of required boost libraries (only boost_python?)
-    boost_libs = [_ for _ in os.listdir(lib_dir) if _.startswith('boost_python')]
+    usr_locals = [os.path.abspath(_) for _ in usr_locals]
+    include_dirs.extend([os.path.join(_, 'include') for _ in usr_locals])
+    library_dirs = [os.path.join(_, 'lib') for _ in usr_locals]
+
+    # Get a list of OpenCV libraries and boost libraries.
+    opencv_libs = []
+    boost_libs = []
+    for lib_dir in library_dirs:
+        for sub_dir in os.listdir(lib_dir):
+            if sub_dir.startswith('opencv_core'):
+                opencv_term = sub_dir[11:]
+                opencv_libs.extend([_ + opencv_term for _ in opencv_libraries])
+            elif sub_dir.startswith('boost_python'):
+                boost_libs.append(sub_dir)
+
     # Collect list of required libraries.
-    xtra_obj = opencv_libs + boost_libs + ['ceres.lib', 'glog.lib']
+    libs = [os.path.splitext(_)[0] for _ in list(set(opencv_libs)) + list(set(boost_libs)) + ['ceres.lib', 'glog.lib']]
 
 else:
     opencv_library_dirs = [
@@ -124,7 +129,6 @@ else:
     else:
         boost_lib = "boost_python" + str(python_version[0]) + str(python_version[1])
     libs = ["ceres", boost_lib] + opencv_libraries
-    xtra_obj = []
     library_dirs = opencv_library_dirs
 
 
@@ -142,7 +146,6 @@ extensions = [
             "-w",
             "-O2",
         ],  # -w hides warnings
-        extra_objects=xtra_obj,
         depends=dependencies,
         language="c++",
     )

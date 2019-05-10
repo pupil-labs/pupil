@@ -57,10 +57,11 @@ opencv_libraries = [
 if platform.system() == "Windows":
     # Find the path where dependencies are installed.
     usr_locals = []
-    if 'VCPKG_PREFIX' in os.environ:
-        usr_locals.append(os.environ['VCPKG_PREFIX'])
     if 'CONDA_PREFIX' in os.environ:
         usr_locals.append(os.path.join(os.environ['CONDA_PREFIX'], 'Library'))
+        include_dirs.append(os.path.join(os.environ['CONDA_PREFIX'], 'Library', 'include', 'eigen3'))
+    if 'VCPKG_PREFIX' in os.environ:
+        usr_locals.append(os.environ['VCPKG_PREFIX'])
     if 'PYTHONPATH' in os.environ:
         test_paths = os.environ['PYTHONPATH']
         for t_p in test_paths.split(';'):
@@ -69,12 +70,11 @@ if platform.system() == "Windows":
                 break
     if len(usr_locals) == 0:
         raise EnvironmentError("Could not find library directory."
-                               "Set environment variable for VCPKG_PREFIX or use conda.")
+                               "Set environment variable for VCPKG_PREFIX or use Anaconda prompt.")
 
     usr_locals = [os.path.abspath(_) for _ in usr_locals]
     include_dirs.extend([os.path.join(_, 'include') for _ in usr_locals])
     library_dirs = [os.path.join(_, 'lib') for _ in usr_locals]
-    libs = []
 
     # Get a list of OpenCV libraries and boost libraries.
     opencv_libs = []
@@ -88,7 +88,7 @@ if platform.system() == "Windows":
                 boost_libs.append(sub_dir)
 
     # Collect list of required libraries.
-    xtra_obj2d = list(set(opencv_libs)) + list(set(boost_libs)) + ['ceres.lib', 'glog.lib']
+    libs = [os.path.splitext(_)[0] for _ in list(set(opencv_libs)) + list(set(boost_libs)) + ['ceres.lib', 'glog.lib']]
 
 else:
     opencv_library_dirs = [
@@ -127,7 +127,6 @@ else:
     else:
         boost_lib = "boost_python" + str(python_version[0]) + str(python_version[1])
     libs = ["ceres", boost_lib] + opencv_libraries
-    xtra_obj2d = []
     library_dirs = opencv_library_dirs
 
 
@@ -150,7 +149,6 @@ extensions = [
             "-w",
             "-O2",
         ],  # ,'-O2'], #-w hides warnings
-        extra_objects=xtra_obj2d,
         depends=dependencies,
         language="c++",
     ),
@@ -174,7 +172,6 @@ extensions = [
             "-w",
             "-O2",
         ],  # ,'-O2'], #-w hides warnings
-        extra_objects=xtra_obj2d,
         depends=dependencies,
         language="c++",
     ),
