@@ -10,11 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import os
 import platform
-
-
-class Global_Container(object):
-    pass
-
+from types import SimpleNamespace
 
 # UI Platform tweaks
 if platform.system() == "Linux":
@@ -239,7 +235,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         hdpi_factor = 1.0
 
         # create container for globally scoped vars
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
         g_pool.app = "player"
         g_pool.zmq_ctx = zmq_ctx
         g_pool.ipc_pub = ipc_pub

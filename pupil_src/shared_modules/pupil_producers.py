@@ -9,16 +9,16 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import collections
 import logging
 import os
 from itertools import chain
-import collections
 
 import numpy as np
 import OpenGL.GL as gl
+import pyglui.cygl.utils as cygl_utils
 import zmq
 from pyglui import ui
-import pyglui.cygl.utils as cygl_utils
 from pyglui.pyfontstash import fontstash as fs
 
 import data_changed
@@ -35,10 +35,6 @@ logger = logging.getLogger(__name__)
 COLOR_LEGEND_EYE_RIGHT = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.0)
 COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.0)
 NUMBER_SAMPLES_TIMELINE = 4000
-
-
-class Empty(object):
-    pass
 
 
 class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
