@@ -125,7 +125,7 @@ class CalibrationStorage(Storage, Observable):
                 try:
                     calib_result = model.CalibrationResult(
                         mapping_plugin_name=data["mapper_name"],
-                        mapper_args=data["mapper_args"],
+                        mapper_args=dict(data["mapper_args"]),
                     )
                 except KeyError:
                     # notifications from old recordings will not have these fields!
