@@ -19,6 +19,9 @@ def nop(*args, **kwargs):
     pass
 
 
+MIN_DATA_CONFIDENCE_DEFAULT: float = 0.6
+
+
 class Eye_Movement_Offline_Controller:
     def __init__(
         self,
@@ -45,6 +48,13 @@ class Eye_Movement_Offline_Controller:
         self._on_canceled_or_killed = on_canceled_or_killed
         self._on_ended = on_ended
 
+    @property
+    def min_data_confidence(self) -> float:
+        try:
+            return self.g_pool.min_data_confidence
+        except AttributeError:
+            return MIN_DATA_CONFIDENCE_DEFAULT
+
     def classify(self, *args, **kwargs):
         """
         classify eye movement
@@ -59,7 +69,8 @@ class Eye_Movement_Offline_Controller:
             self.eye_movement_task.kill(grace_period=1)
 
         capture = model.Immutable_Capture(self.g_pool.capture)
-        gaze_data: utils.Gaze_Data = [gp.serialized for gp in self.g_pool.gaze_positions]
+        min_data_confidence = self.min_data_confidence
+        gaze_data: utils.Gaze_Data = [gp.serialized for gp in self.g_pool.gaze_positions if gp["confidence"] > min_data_confidence]
 
         self.eye_movement_task = worker.Offline_Detection_Task(args=(capture, gaze_data))
         self.task_manager.add_task(self.eye_movement_task)

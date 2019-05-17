@@ -17,6 +17,9 @@ from pyglui import ui as gl_ui
 from pyglui.pyfontstash import fontstash
 
 
+MIN_DATA_CONFIDENCE_DEFAULT: float = 0.6
+
+
 class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
     """
     Eye movement classification detector based on segmented linear regression.
@@ -41,10 +44,20 @@ class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
         self._recent_segments = []
         self.glfont = None
 
+    @property
+    def min_data_confidence(self):
+        try:
+            return self.g_pool.min_data_confidence
+        except AttributeError:
+            return MIN_DATA_CONFIDENCE_DEFAULT
+
     def recent_events(self, events):
 
         gaze_data = events["gaze"]
         capture = model.Immutable_Capture(self.g_pool.capture)
+
+        min_data_confidence = self.min_data_confidence
+        gaze_data = [datum for datum in gaze_data if datum["confidence"] > min_data_confidence]
 
         self._buffered_detector.extend_gaze_data(gaze_data=gaze_data, capture=capture)
 
