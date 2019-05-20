@@ -13,8 +13,7 @@ import enum
 import typing as t
 from .time_range import Time_Range
 import eye_movement.utils as utils
-# TODO: Update StorageItem import path when class moves to shared utils lib
-from gaze_producer.model.storage import StorageItem
+from storage import StorageItem
 import methods as mt
 import file_methods as fm
 import numpy as np
