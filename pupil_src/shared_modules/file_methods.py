@@ -15,6 +15,7 @@ import os
 import pickle
 import shutil
 import traceback as tb
+import types
 from glob import iglob
 
 import msgpack
@@ -211,18 +212,6 @@ class _Empty(object):
         pass
 
 
-# an Immutable dict for dics nested inside this dict.
-class _FrozenDict(dict):
-    def __setitem__(self, key, value):
-        raise NotImplementedError("Invalid operation")
-
-    def clear(self):
-        raise NotImplementedError()
-
-    def update(self, *args, **kwargs):
-        raise NotImplementedError()
-
-
 class Serialized_Dict(object):
     __slots__ = ["_ser_data", "_data"]
     cache_len = 100
@@ -264,7 +253,7 @@ class Serialized_Dict(object):
     @classmethod
     def unpacking_object_hook(self, obj):
         if type(obj) is dict:
-            return _FrozenDict(obj)
+            return types.MappingProxyType(obj)
 
     @classmethod
     def packing_hook(self, obj):

@@ -30,7 +30,9 @@ class IPCLoggingPatch(Patch):
     ipc_push_url = None
 
     def __init__(self):
-        assert IPCLoggingPatch.ipc_push_url, "`ipc_push_url` was not set by foreground process"
+        assert (
+            IPCLoggingPatch.ipc_push_url
+        ), "`ipc_push_url` was not set by foreground process"
         # copy because object attributes get copied to background processes,
         # but class attributes do not
         self.ipc_push_url_copy = IPCLoggingPatch.ipc_push_url

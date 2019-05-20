@@ -29,7 +29,9 @@ import os
 from bisect import bisect_left, bisect_right
 from collections import deque
 from itertools import chain
+from types import SimpleNamespace
 
+import cv2
 import msgpack
 import numpy as np
 from pyglui import ui
@@ -38,17 +40,12 @@ from pyglui.pyfontstash import fontstash
 from scipy.spatial.distance import pdist
 
 import background_helper as bh
-import cv2
 import file_methods as fm
 import player_methods as pm
 from methods import denormalize
 from plugin import Analysis_Plugin_Base
 
 logger = logging.getLogger(__name__)
-
-
-class Empty(object):
-    pass
 
 
 class Fixation_Detector_Base(Analysis_Plugin_Base):
@@ -438,7 +435,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         elif notification["subject"] == "fixation_detector.should_recalculate":
             self._classify()
         elif notification["subject"] == "should_export":
-            self.export_fixations(notification["range"], notification["export_dir"])
+            self.export_fixations(notification["ts_window"], notification["export_dir"])
 
     def _classify(self):
         """
@@ -452,7 +449,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
 
         gaze_data = [gp.serialized for gp in self.g_pool.gaze_positions]
 
-        cap = Empty()
+        cap = SimpleNamespace()
         cap.frame_size = self.g_pool.capture.frame_size
         cap.intrinsics = self.g_pool.capture.intrinsics
         cap.timestamps = self.g_pool.capture.timestamps
@@ -612,7 +609,7 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             " ".join(["{}".format(gp["timestamp"]) for gp in fixation["base_data"]]),
         )
 
-    def export_fixations(self, export_range, export_dir):
+    def export_fixations(self, export_window, export_dir):
         """
         between in and out mark
 
@@ -629,7 +626,6 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
             logger.warning("No fixations in this recording nothing to export")
             return
 
-        export_window = pm.exact_window(self.g_pool.timestamps, export_range)
         fixations_in_section = self.g_pool.fixations.by_ts_window(export_window)
 
         with open(

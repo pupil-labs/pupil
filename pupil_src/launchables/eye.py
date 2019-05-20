@@ -11,10 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import os
 import platform
-
-
-class Global_Container(object):
-    pass
+from types import SimpleNamespace
 
 
 class Is_Alive_Manager(object):
@@ -175,7 +172,7 @@ def eye(
         hdpi_factor = 1.0
 
         # g_pool holds variables for this process
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
 
         # make some constants avaiable
         g_pool.user_dir = user_dir
@@ -241,8 +238,10 @@ def eye(
 
         def on_drop(window, count, paths):
             paths = [paths[x].decode("utf-8") for x in range(count)]
-            g_pool.capture_manager.on_drop(paths)
-            g_pool.capture.on_drop(paths)
+            plugins = (g_pool.capture_manager, g_pool.capture)
+            # call `on_drop` callbacks until a plugin indicates
+            # that it has consumed the event (by returning True)
+            any(p.on_drop(paths) for p in plugins)
 
         # load session persistent settings
         session_settings = Persistent_Dict(
@@ -276,9 +275,9 @@ def eye(
         )
 
         if eye_id == 0:
-            cap_src = ["Pupil Cam2 ID0", "Pupil Cam1 ID0", "HD-6000"]
+            cap_src = ["Pupil Cam3 ID0", "Pupil Cam2 ID0", "Pupil Cam1 ID0", "HD-6000"]
         else:
-            cap_src = ["Pupil Cam2 ID1", "Pupil Cam1 ID1"]
+            cap_src = ["Pupil Cam3 ID1", "Pupil Cam2 ID1", "Pupil Cam1 ID1"]
 
         # Initialize capture
         default_settings = (
@@ -641,6 +640,7 @@ def eye(
                         }
                         ipc_socket.notify(properties_broadcast)
                 g_pool.capture.on_notify(notification)
+                g_pool.capture_manager.on_notify(notification)
 
             # Get an image from the grabber
             event = {}

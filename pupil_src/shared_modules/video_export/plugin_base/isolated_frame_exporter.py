@@ -12,6 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import os
 from glob import glob
+from types import SimpleNamespace
 
 import player_methods as pm
 from av_writer import AV_Writer
@@ -78,7 +79,7 @@ def _convert_video_file(
     timestamp_export_format,
 ):
     yield "Export video", 0.0
-    input_source = File_Source(EmptyGPool(), input_file, fill_gaps=True)
+    input_source = File_Source(SimpleNamespace(), input_file, fill_gaps=True)
     if not input_source.initialised:
         yield "Exporting video failed", 0.0
         return
@@ -86,12 +87,13 @@ def _convert_video_file(
     # yield progress results two times per second
     update_rate = int(input_source.frame_rate / 2)
 
-    export_window = pm.exact_window(world_timestamps, export_range)
+    export_start, export_stop = export_range  # export_stop is exclusive
+    export_window = pm.exact_window(world_timestamps, (export_start, export_stop - 1))
     (export_from_index, export_to_index) = pm.find_closest(
         input_source.timestamps, export_window
     )
     writer = AV_Writer(
-        output_file, fps=input_source.frame_rate, audio_loc=None, use_timestamps=True
+        output_file, fps=input_source.frame_rate, audio_dir=None, use_timestamps=True
     )
     input_source.seek_to_frame(export_from_index)
     next_update_idx = export_from_index + update_rate
@@ -100,7 +102,7 @@ def _convert_video_file(
             input_frame = input_source.get_frame()
         except EndofVideoError:
             break
-        if input_frame.index > export_to_index:
+        if input_frame.index >= export_to_index:
             break
 
         output_img = process_frame(input_source, input_frame)
@@ -118,7 +120,3 @@ def _convert_video_file(
     writer.close(timestamp_export_format)
     input_source.cleanup()
     yield "Exporting video completed", 100.0
-
-
-class EmptyGPool:
-    pass

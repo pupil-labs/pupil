@@ -73,6 +73,8 @@ class World_Video_Exporter(VideoExporter):
         pre_computed = {
             "gaze": self.g_pool.gaze_positions,
             "pupil": self.g_pool.pupil_positions,
+            "pupil_by_id_0": self.g_pool.pupil_positions_by_id[0],
+            "pupil_by_id_1": self.g_pool.pupil_positions_by_id[1],
             "fixations": self.g_pool.fixations,
         }
 
@@ -117,9 +119,9 @@ def _export_world_video(
     # Plug-ins
     from plugin import Plugin_List, import_runtime_plugins
     from video_capture import EndofVideoError, File_Source
+    from video_overlay.plugins import Video_Overlay, Eye_Overlay
     from vis_circle import Vis_Circle
     from vis_cross import Vis_Cross
-    from vis_eye_video_overlay import Vis_Eye_Video_Overlay
     from vis_light_points import Vis_Light_Points
     from vis_polyline import Vis_Polyline
     from vis_scan_path import Vis_Scan_Path
@@ -140,7 +142,8 @@ def _export_world_video(
                 Vis_Light_Points,
                 Vis_Watermark,
                 Vis_Scan_Path,
-                Vis_Eye_Video_Overlay,
+                Eye_Overlay,
+                Video_Overlay,
             ],
             key=lambda x: x.__name__,
         )
@@ -153,8 +156,6 @@ def _export_world_video(
         available_plugins = vis_plugins + analysis_plugins + user_plugins
         name_by_index = [p.__name__ for p in available_plugins]
         plugin_by_name = dict(zip(name_by_index, available_plugins))
-
-        audio_path = os.path.join(rec_dir, "audio.mp4")
 
         meta_info = pm.load_meta_info(rec_dir)
 
@@ -211,7 +212,7 @@ def _export_world_video(
 
         # setup of writer
         writer = AV_Writer(
-            out_file_path, fps=cap.frame_rate, audio_loc=audio_path, use_timestamps=True
+            out_file_path, fps=cap.frame_rate, audio_dir=rec_dir, use_timestamps=True
         )
 
         cap.seek_to_frame(start_frame)
@@ -234,6 +235,10 @@ def _export_world_video(
             ]
 
         g_pool.pupil_positions = pm.Bisector(**pre_computed_eye_data["pupil"])
+        g_pool.pupil_positions_by_id = (
+            pm.Bisector(**pre_computed_eye_data["pupil_by_id_0"]),
+            pm.Bisector(**pre_computed_eye_data["pupil_by_id_1"]),
+        )
         g_pool.gaze_positions = pm.Bisector(**pre_computed_eye_data["gaze"])
         g_pool.fixations = pm.Affiliator(**pre_computed_eye_data["fixations"])
 
