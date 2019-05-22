@@ -62,5 +62,8 @@ def gaze_data_to_nslr_data(capture, gaze_data, use_pupil: bool):
     x, y, z = gaze_points_3d.T
     r, theta, psi = mt.cart_to_spherical([x, y, z])
 
-    nslr_data = np.column_stack([theta, psi])
+    angles = [theta, psi]
+    angles = np.rad2deg(angles)
+
+    nslr_data = np.column_stack(angles)
     return nslr_data
