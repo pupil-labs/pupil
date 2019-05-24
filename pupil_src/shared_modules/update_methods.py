@@ -461,7 +461,7 @@ def update_recording_v111_v113(rec_dir):
         if not existing_videos:
             return
 
-        world_video_path = os.path.join(rec_dir, existing_videos[0])
+        world_video_path = existing_videos[0]
         world_video = av.open(world_video_path)
         f = world_video.streams.video[0].format
         resolution = f.width, f.height

@@ -2,6 +2,7 @@ import csv
 import itertools
 import logging
 import os
+import types
 
 import cv2
 
@@ -11,7 +12,7 @@ import player_methods
 logger = logging.getLogger(__name__)
 
 
-def background_video_processor(video_file_path, callable, visited_list, seek_idx=-1):
+def background_video_processor(video_file_path, callable, visited_list, seek_idx):
     return background_helper.IPC_Logging_Task_Proxy(
         "Background Video Processor",
         video_processing_generator,
@@ -27,11 +28,8 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
     logger.debug("Started cacher process for Marker Detector")
     import video_capture
 
-    class Global_Container(object):
-        pass
-
-    cap = video_capture.init_playback_source(
-        Global_Container(), source_path=video_file_path, timing=None
+    cap = video_capture.File_Source(
+        types.SimpleNamespace(), source_path=video_file_path, timing=None
     )
 
     visited_list = [x is not None for x in visited_list]

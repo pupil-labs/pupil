@@ -11,18 +11,12 @@ See COPYING and COPYING.LESSER for license details.
 
 import itertools
 import logging
-import multiprocessing
+import multiprocessing as mp
 import os
 import platform
 import time
 
 logger = logging.getLogger(__name__)
-# On macOS, "spawn" is set as default start method in main.py. This is not required
-# here and we set it back to "fork" to improve performance.
-if platform.system() == "Darwin":
-    mp = multiprocessing.get_context("fork")
-else:
-    mp = multiprocessing.get_context()
 
 import numpy as np
 import cv2
