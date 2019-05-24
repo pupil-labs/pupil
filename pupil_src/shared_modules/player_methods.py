@@ -214,7 +214,8 @@ def is_pupil_rec_dir(rec_dir):
 
 def transparent_circle(img, center, radius, color, thickness):
     center = tuple(map(int, center))
-    rgb = [255 * c for c in color[:3]]  # convert to 0-255 scale for OpenCV
+    assert len(color) == 4 and all( type(c) == float and 0.0 <= c <= 1.0 for c in color)
+    bgr = [255 * c for c in color[:3]]  # convert to 0-255 scale for OpenCV
     alpha = color[-1]
     radius = int(radius)
     if thickness > 0:
@@ -228,7 +229,7 @@ def transparent_circle(img, center, radius, color, thickness):
 
     try:
         overlay = img[roi].copy()
-        cv2.circle(img, center, radius, rgb, thickness=thickness, lineType=cv2.LINE_AA)
+        cv2.circle(img, center, radius, bgr, thickness=thickness, lineType=cv2.LINE_AA)
         opacity = alpha
         cv2.addWeighted(
             src1=img[roi],
