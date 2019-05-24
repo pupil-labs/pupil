@@ -61,6 +61,9 @@ class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
 
         self._buffered_detector.extend_gaze_data(gaze_data=gaze_data, capture=capture)
 
+        if "frame" not in events:
+            return
+
         frame_timestamp = events["frame"].timestamp
         self._recent_segments = self._buffered_detector.segments_at_timestamp(
             frame_timestamp
