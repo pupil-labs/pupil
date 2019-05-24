@@ -23,6 +23,8 @@ else:
     scroll_factor = 1.0
     window_position_default = (0, 0)
 
+MIN_DATA_CONFIDENCE_DEFAULT = 0.6
+MIN_CALIBRATION_CONFIDENCE_DEFAULT = 0.8
 
 def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version):
     # general imports
@@ -98,6 +100,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
 
         # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
         from fixation_detector import Offline_Fixation_Detector
+        from eye_movement import Offline_Eye_Movement_Detector
         from log_display import Log_Display
         from annotations import Annotation_Player
         from raw_data_exporter import Raw_Data_Exporter
@@ -141,6 +144,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Video_Overlay,
             # Vis_Scan_Path,
             Offline_Fixation_Detector,
+            Offline_Eye_Movement_Detector,
             Offline_Blink_Detection,
             Offline_Surface_Tracker,
             Raw_Data_Exporter,
@@ -303,9 +307,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.user_dir = user_dir
         g_pool.rec_dir = rec_dir
         g_pool.meta_info = meta_info
-        g_pool.min_data_confidence = session_settings.get("min_data_confidence", 0.6)
+        g_pool.min_data_confidence = session_settings.get("min_data_confidence", MIN_DATA_CONFIDENCE_DEFAULT)
         g_pool.min_calibration_confidence = session_settings.get(
-            "min_calibration_confidence", 0.8
+            "min_calibration_confidence", MIN_CALIBRATION_CONFIDENCE_DEFAULT
         )
 
         # populated by producers
@@ -313,6 +317,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.pupil_positions_by_id = (pm.Bisector(), pm.Bisector())
         g_pool.gaze_positions = pm.Bisector()
         g_pool.fixations = pm.Affiliator()
+        g_pool.eye_movements = pm.Affiliator()
 
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence

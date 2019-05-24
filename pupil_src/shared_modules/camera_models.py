@@ -9,13 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import abc
 import logging
 import os
+import typing
 
 import cv2
 import numpy as np
 
-from file_methods import save_object, load_object
+from file_methods import load_object, save_object
 
 logger = logging.getLogger(__name__)
 __version__ = 1
@@ -210,7 +212,38 @@ def save_intrinsics(directory, cam_name, resolution, intrinsics):
     )
 
 
-class Fisheye_Dist_Camera(object):
+class Camera_Model(abc.ABC):
+
+    @abc.abstractmethod
+    def undistort(self, img: np.ndarray) -> np.ndarray:
+        ...
+
+    @abc.abstractmethod
+    def unprojectPoints(
+        self, pts_2d: np.ndarray, use_distortion: bool = True, normalize: bool = False
+    ) -> np.ndarray:
+        ...
+
+    @abc.abstractmethod
+    def projectPoints(
+        self,
+        object_points,
+        rvec: typing.Optional[np.ndarray] = None,
+        tvec: typing.Optional[np.ndarray] = None,
+        use_distortion: bool = True,
+    ):
+        ...
+
+    @abc.abstractmethod
+    def solvePnP(self, uv3d, xy):
+        ...
+
+    @abc.abstractmethod
+    def save(self, directory: str, custom_name: typing.Optional[str] = None):
+        ...
+
+
+class Fisheye_Dist_Camera(Camera_Model):
     """ Camera model assuming a lense with fisheye distortion.
         Provides functionality to make use of a fisheye camera calibration.
         The implementation of cv2.fisheye is buggy and some functions had to be customized.
@@ -406,7 +439,7 @@ class Fisheye_Dist_Camera(object):
         )
 
 
-class Radial_Dist_Camera(object):
+class Radial_Dist_Camera(Camera_Model):
     """ Camera model assuming a lense with radial distortion (this is the defaut model in opencv).
         Provides functionality to make use of a pinhole camera calibration that is also compensating for lense distortion
     """
