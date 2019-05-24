@@ -167,8 +167,12 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         )
 
         if self.menu_content.show_segmentation:
+            segment_renderer = ui.Segment_Overlay_Image_Renderer(
+                canvas_size=(frame.width, frame.height),
+                image=frame.img,
+            )
             for segment in visible_segments:
-                ui.segment_draw(segment=segment, size=(frame.width, frame.height), image=frame.img)
+                segment_renderer.draw(segment)
 
         events[utils.EYE_MOVEMENT_EVENT_KEY] = visible_segments
 

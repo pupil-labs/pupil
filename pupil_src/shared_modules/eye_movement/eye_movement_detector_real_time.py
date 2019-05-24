@@ -77,9 +77,12 @@ class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
         events[utils.EYE_MOVEMENT_EVENT_KEY] = public_segments
 
     def gl_display(self):
-        frame_size = self.g_pool.capture.frame_size
+        segment_renderer = ui.Segment_Overlay_GL_Context_Renderer(
+            canvas_size=self.g_pool.capture.frame_size,
+            gl_font=self.glfont,
+        )
         for segment in self._recent_segments:
-            ui.segment_draw(segment=segment, size=frame_size, gl_font=self.glfont)
+            segment_renderer.draw(segment)
 
     def init_ui(self):
         self.add_menu()
