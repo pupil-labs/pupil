@@ -132,9 +132,31 @@ def _segment_draw_id_on_image(
 
 
 def segment_draw_in_gl_context(
-    segment: model.Classified_Segment, size: t.Tuple[int, int], gl_font: GL_Font
+    segment: model.Classified_Segment, size: t.Tuple[int, int], gl_font: t.Optional[GL_Font]
 ):
+    if segment.segment_class == model.Segment_Class.SACCADE:
+        _segment_draw_polyline_in_gl_context(
+            segment=segment,
+            size=size,
+            gl_font=gl_font,
+        )
+    elif segment.segment_class == model.Segment_Class.POST_SACCADIC_OSCILLATIONS:
+        _segment_draw_polyline_in_gl_context(
+            segment=segment,
+            size=size,
+            gl_font=gl_font,
+        )
+    else:
+        _segment_draw_last_position_in_gl_context(
+            segment=segment,
+            size=size,
+            gl_font=gl_font,
+        )
 
+
+def _segment_draw_last_position_in_gl_context(
+    segment: model.Classified_Segment, size: t.Tuple[int, int], gl_font: t.Optional[GL_Font]
+):
     segment_point = segment.last_2d_point_within_world(size)
     circle_color = color_from_segment(segment).to_rgba().channels
 
@@ -146,13 +168,47 @@ def segment_draw_in_gl_context(
     )
 
     if gl_font:
+        _segment_draw_id_in_gl_context(
+            segment=segment,
+            ref_point=segment_point,
+            gl_font=gl_font,
+        )
 
-        font_size = 22
-        text = str(segment.id)
-        text_origin_x = segment_point[0] + 48.0
-        text_origin_y = segment_point[1]
-        text_fg_color = color_from_segment(segment).to_rgba().channels
 
-        gl_font.set_size(font_size)
-        gl_font.set_color_float(text_fg_color)
-        gl_font.draw_text(text_origin_x, text_origin_y, text)
+def _segment_draw_polyline_in_gl_context(
+    segment: model.Classified_Segment, size: t.Tuple[int, int], gl_font: t.Optional[GL_Font]
+):
+    segment_points = segment.world_2d_points(size)
+    polyline_color = color_from_segment(segment).to_rgba().channels
+    polyline_thickness = 2
+
+    if not segment_points:
+        return
+
+    gl_utils.draw_polyline(
+        verts=segment_points,
+        thickness=float(polyline_thickness),
+        color=gl_utils.RGBA(*polyline_color),
+    )
+
+    if gl_font:
+        _segment_draw_id_in_gl_context(
+            segment=segment,
+            ref_point=segment_points[-1],
+            gl_font=gl_font,
+        )
+
+
+def _segment_draw_id_in_gl_context(
+    segment: model.Classified_Segment, ref_point: t.Tuple[int, int], gl_font: GL_Font
+):
+    font_size = 22
+    text = str(segment.id)
+    text_origin_x = ref_point[0] + 48.0
+    text_origin_y = ref_point[1]
+    text_fg_color = color_from_segment(segment).to_rgba().channels
+
+    gl_font.set_size(font_size)
+    gl_font.set_color_float(text_fg_color)
+    gl_font.draw_text(text_origin_x, text_origin_y, text)
+
