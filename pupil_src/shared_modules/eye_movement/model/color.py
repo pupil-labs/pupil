@@ -108,16 +108,42 @@ class Color_RGBA(Color):
 
 
 class Color_Palette(abc.ABC):
-    pass
+    @property
+    @abc.abstractmethod
+    def grey(self): ...
+
+    @property
+    @abc.abstractmethod
+    def yellow(self): ...
+
+    @property
+    @abc.abstractmethod
+    def green(self): ...
+
+    @property
+    @abc.abstractmethod
+    def blue(self): ...
+
+    @property
+    @abc.abstractmethod
+    def purple(self): ...
 
 
 class Defo_Color_Palette(Color_Palette):
     """
     https://flatuicolors.com/palette/defo
     """
+    WET_ASPHALT = Color_RGB(52, 73, 94)
+    grey = WET_ASPHALT
 
-    WET_ASPHALT = Color_RGB(52, 73, 94)  # grey
-    SUN_FLOWER = Color_RGB(241, 196, 15)  # yellow
-    NEPHRITIS = Color_RGB(39, 174, 96)  # green
-    BELIZE_HOLE = Color_RGB(41, 128, 185)  # blue
-    WISTERIA = Color_RGB(142, 68, 173)  # purple
+    SUN_FLOWER = Color_RGB(241, 196, 15)
+    yellow = SUN_FLOWER
+
+    NEPHRITIS = Color_RGB(39, 174, 96)
+    green = NEPHRITIS
+
+    BELIZE_HOLE = Color_RGB(41, 128, 185)
+    blue = BELIZE_HOLE
+
+    WISTERIA = Color_RGB(142, 68, 173)
+    purple = WISTERIA
