@@ -48,7 +48,29 @@ _DEFAULT_SEGMENT_CLASS_TO_COLOR_MAPPING = _segment_class_to_color_mapping_with_p
 def segment_draw_on_image(
     segment: model.Classified_Segment, size: t.Tuple[int, int], image: np.ndarray
 ):
+    if segment.segment_class == model.Segment_Class.SACCADE:
+        _segment_draw_polyline_on_image(
+            segment=segment,
+            size=size,
+            image=image,
+        )
+    elif segment.segment_class == model.Segment_Class.POST_SACCADIC_OSCILLATIONS:
+        _segment_draw_polyline_on_image(
+            segment=segment,
+            size=size,
+            image=image,
+        )
+    else:
+        _segment_draw_mean_position_on_image(
+            segment=segment,
+            size=size,
+            image=image,
+        )
 
+
+def _segment_draw_mean_position_on_image(
+    segment: model.Classified_Segment, size: t.Tuple[int, int], image: np.ndarray
+):
     segment_point = segment.mean_2d_point_within_world(size)
     segment_color = color_from_segment(segment).to_bgra().channels
 
@@ -56,8 +78,43 @@ def segment_draw_on_image(
         image, segment_point, radius=25.0, color=segment_color, thickness=3
     )
 
+    _segment_draw_id_on_image(
+        segment=segment,
+        ref_point=segment_point,
+        image=image,
+    )
+
+def _segment_draw_polyline_on_image(
+    segment: model.Classified_Segment, size: t.Tuple[int, int], image: np.ndarray
+):
+    segment_points = segment.world_2d_points(size)
+    polyline_color = color_from_segment(segment).to_bgr().channels
+    polyline_thickness = 2
+
+    if not segment_points:
+        return
+
+    cv2.polylines(
+        image,
+        np.asarray([segment_points], dtype=np.int32),
+        isClosed=False,
+        color=polyline_color,
+        thickness=polyline_thickness,
+        lineType=cv2.LINE_AA,
+    )
+
+    _segment_draw_id_on_image(
+        segment=segment,
+        ref_point=segment_points[-1],
+        image=image,
+    )
+
+
+def _segment_draw_id_on_image(
+    segment: model.Classified_Segment, ref_point: t.Tuple[int, int], image: np.ndarray
+):
     text = str(segment.id)
-    text_origin = (segment_point[0] + 30, segment_point[1])
+    text_origin = (ref_point[0] + 30, ref_point[1])
     text_fg_color = color_from_segment(segment).to_bgr().channels
     font_face = cv2.FONT_HERSHEY_DUPLEX
     font_scale = 0.8
