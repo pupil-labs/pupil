@@ -20,12 +20,18 @@ import nslr_hmm
 class Real_Time_Buffered_Detector:
     def __init__(self, max_segment_count: int = 1, max_sample_count: int = 1000):
         self._capture = None
-        self._gaze_data_buffer = stdlib_utils.sliceable_deque([], maxlen=max_sample_count)
-        self._segment_buffer = stdlib_utils.sliceable_deque([], maxlen=max_segment_count)
+        self._gaze_data_buffer = stdlib_utils.sliceable_deque(
+            [], maxlen=max_sample_count
+        )
+        self._segment_buffer = stdlib_utils.sliceable_deque(
+            [], maxlen=max_segment_count
+        )
         self._segment_factory = model.Classified_Segment_Factory()
         self._is_gaze_buffer_classified: bool = True
 
-    def extend_gaze_data(self, gaze_data: utils.Gaze_Data, capture: model.Immutable_Capture):
+    def extend_gaze_data(
+        self, gaze_data: utils.Gaze_Data, capture: model.Immutable_Capture
+    ):
         if not gaze_data:
             return
         self._capture = capture
@@ -54,7 +60,9 @@ class Real_Time_Buffered_Detector:
 
     @staticmethod
     def _segment_generator(
-        capture: model.Immutable_Capture, gaze_data: utils.Gaze_Data, factory_start_id: int = None
+        capture: model.Immutable_Capture,
+        gaze_data: utils.Gaze_Data,
+        factory_start_id: int = None,
     ):
         # TODO: Merge this version with the one in offline_detection_task
 
@@ -68,7 +76,9 @@ class Real_Time_Buffered_Detector:
 
         gaze_time = np.array([gp["timestamp"] for gp in gaze_data])
 
-        eye_positions = utils.gaze_data_to_nslr_data(capture, gaze_data, use_pupil=use_pupil)
+        eye_positions = utils.gaze_data_to_nslr_data(
+            capture, gaze_data, use_pupil=use_pupil
+        )
 
         gaze_classification, segmentation, segment_classification = nslr_hmm.classify_gaze(
             gaze_time, eye_positions

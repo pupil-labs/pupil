@@ -70,9 +70,15 @@ class Eye_Movement_Offline_Controller:
 
         capture = model.Immutable_Capture(self.g_pool.capture)
         min_data_confidence = self.min_data_confidence
-        gaze_data: utils.Gaze_Data = [gp.serialized for gp in self.g_pool.gaze_positions if gp["confidence"] > min_data_confidence]
+        gaze_data: utils.Gaze_Data = [
+            gp.serialized
+            for gp in self.g_pool.gaze_positions
+            if gp["confidence"] > min_data_confidence
+        ]
 
-        self.eye_movement_task = worker.Offline_Detection_Task(args=(capture, gaze_data))
+        self.eye_movement_task = worker.Offline_Detection_Task(
+            args=(capture, gaze_data)
+        )
         self.task_manager.add_task(self.eye_movement_task)
 
         self.eye_movement_task.add_observers(

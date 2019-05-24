@@ -17,7 +17,9 @@ import numpy as np
 import cv2
 
 
-def segment_draw(segment: model.Classified_Segment, size: t.Tuple[int, int], image=..., gl_font=...):
+def segment_draw(
+    segment: model.Classified_Segment, size: t.Tuple[int, int], image=..., gl_font=...
+):
     if image is not ...:
         segment_draw_on_image(segment=segment, size=size, image=image)
     else:
@@ -33,9 +35,7 @@ def color_from_segment_class(segment_class: model.Segment_Class) -> model.Color:
     return _segment_class_to_color_mapping[segment_class]
 
 
-_segment_class_to_color_mapping: t.Mapping[
-    model.Segment_Class, t.Type[model.Color]
-] = {
+_segment_class_to_color_mapping: t.Mapping[model.Segment_Class, t.Type[model.Color]] = {
     model.Segment_Class.FIXATION: model.Defo_Color_Palette.SUN_FLOWER,
     model.Segment_Class.SACCADE: model.Defo_Color_Palette.NEPHRITIS,
     model.Segment_Class.POST_SACCADIC_OSCILLATIONS: model.Defo_Color_Palette.BELIZE_HOLE,
@@ -43,17 +43,15 @@ _segment_class_to_color_mapping: t.Mapping[
 }
 
 
-def segment_draw_on_image(segment: model.Classified_Segment, size: t.Tuple[int, int], image: np.ndarray):
+def segment_draw_on_image(
+    segment: model.Classified_Segment, size: t.Tuple[int, int], image: np.ndarray
+):
 
     segment_point = segment.mean_2d_point_within_world(size)
     segment_color = color_from_segment(segment).to_rgba().channels
 
     pm.transparent_circle(
-        image,
-        segment_point,
-        radius=25.0,
-        color=segment_color,
-        thickness=3,
+        image, segment_point, radius=25.0, color=segment_color, thickness=3
     )
 
     text = str(segment.id)
@@ -74,7 +72,9 @@ def segment_draw_on_image(segment: model.Classified_Segment, size: t.Tuple[int, 
     )
 
 
-def segment_draw_in_gl_context(segment: model.Classified_Segment, size: t.Tuple[int, int], gl_font: GL_Font):
+def segment_draw_in_gl_context(
+    segment: model.Classified_Segment, size: t.Tuple[int, int], gl_font: GL_Font
+):
 
     segment_point = segment.last_2d_point_within_world(size)
     circle_color = color_from_segment(segment).to_rgba().channels

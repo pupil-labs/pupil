@@ -57,7 +57,9 @@ class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
         capture = model.Immutable_Capture(self.g_pool.capture)
 
         min_data_confidence = self.min_data_confidence
-        gaze_data = [datum for datum in gaze_data if datum["confidence"] > min_data_confidence]
+        gaze_data = [
+            datum for datum in gaze_data if datum["confidence"] > min_data_confidence
+        ]
 
         self._buffered_detector.extend_gaze_data(gaze_data=gaze_data, capture=capture)
 
