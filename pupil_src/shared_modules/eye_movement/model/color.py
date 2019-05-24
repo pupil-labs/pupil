@@ -129,6 +129,14 @@ class Color_Palette(abc.ABC):
     def purple(self): ...
 
 
+class Base_Color_Palette(Color_Palette):
+    grey = Color_RGB(128, 128, 128)
+    yellow = Color_RGB(255, 255, 0)
+    green = Color_RGB(0, 128, 0)
+    blue = Color_RGB(0, 128, 255)
+    purple = Color_RGB(128, 0, 255)
+
+
 class Defo_Color_Palette(Color_Palette):
     """
     https://flatuicolors.com/palette/defo
