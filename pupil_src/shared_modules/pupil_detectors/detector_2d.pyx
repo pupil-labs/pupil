@@ -1,32 +1,39 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 # cython: profile=False
+import math
+import sys
+
 import cv2
-import numpy as np
-from methods import Roi, normalize
-from plugin import Plugin
-from pyglui import ui
 import glfw
-from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
+import numpy as np
+from cython.operator cimport dereference as deref
+from pyglui import ui
 from pyglui.cygl.utils import draw_gl_texture
 
 cimport detector
 from detector cimport *
 from detector_utils cimport *
 from coarse_pupil cimport center_surround
+from gl_utils import (
+    adjust_gl_view,
+    clear_gl_screen,
+    basic_gl_setup,
+    make_coord_system_norm_based,
+    make_coord_system_pixel_based,
+)
+from methods import Roi, normalize
+from plugin import Plugin
 
-from cython.operator cimport dereference as deref
-import math
-import sys
 
 cdef class Detector_2D:
 
@@ -279,3 +286,9 @@ cdef class Detector_2D:
         #display the debug image in the window
         if self._window:
             self.gl_display_in_window(self.debugImage)
+
+    def set_2d_detector_property(self, name, value):
+        set_detector_property(self.detectProperties2D, name, value)
+
+    def get_detector_properties(self):
+        return {"2d": self.detectProperties2D}

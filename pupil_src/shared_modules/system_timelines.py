@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -14,7 +14,9 @@ import pyglui.cygl.utils as cygl_utils
 from pyglui import ui
 from pyglui.pyfontstash import fontstash as fs
 
+import data_changed
 import gl_utils
+from observable import Observable
 from plugin import System_Plugin_Base
 
 COLOR_LEGEND_WORLD = cygl_utils.RGBA(0.66, 0.86, 0.461, 1.0)
@@ -23,12 +25,18 @@ COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.0)
 NUMBER_SAMPLES_TIMELINE = 4000
 
 
-class System_Timelines(System_Plugin_Base):
+class System_Timelines(Observable, System_Plugin_Base):
     def __init__(self, g_pool, show_world_fps=True, show_eye_fps=True):
         super().__init__(g_pool)
         self.show_world_fps = show_world_fps
         self.show_eye_fps = show_eye_fps
         self.cache_fps_data()
+        self.pupil_positions_listener = data_changed.Listener(
+            "pupil_positions", g_pool.rec_dir, plugin=self
+        )
+        self.pupil_positions_listener.add_observer(
+            "on_data_changed", self._on_pupil_positions_changed
+        )
 
     def init_ui(self):
         self.glfont = fs.Context()
@@ -126,7 +134,6 @@ class System_Timelines(System_Plugin_Base):
 
         self.glfont.pop_state()
 
-    def on_notify(self, notification):
-        if notification["subject"] == "pupil_positions_changed":
-            self.cache_fps_data()
-            self.fps_timeline.refresh()
+    def _on_pupil_positions_changed(self):
+        self.cache_fps_data()
+        self.fps_timeline.refresh()

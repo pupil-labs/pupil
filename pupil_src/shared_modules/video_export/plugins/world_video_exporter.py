@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -30,7 +30,7 @@ class World_Video_Exporter(VideoExporter):
     def __init__(self, g_pool):
         super().__init__(g_pool, max_concurrent_tasks=1)
         self.logger = logging.getLogger(__name__)
-        self.logger.info("iMotions Exporter has been launched.")
+        self.logger.info("World Video Exporter has been launched.")
         self.rec_name = "world.mp4"
 
     def customize_menu(self):
@@ -73,6 +73,8 @@ class World_Video_Exporter(VideoExporter):
         pre_computed = {
             "gaze": self.g_pool.gaze_positions,
             "pupil": self.g_pool.pupil_positions,
+            "pupil_by_id_0": self.g_pool.pupil_positions_by_id[0],
+            "pupil_by_id_1": self.g_pool.pupil_positions_by_id[1],
             "fixations": self.g_pool.fixations,
         }
 
@@ -112,13 +114,14 @@ def _export_world_video(
     # we are not importing manual gaze correction. In Player corrections have already been applied.
     # in batch exporter this plugin makes little sense.
     from fixation_detector import Offline_Fixation_Detector
+    from eye_movement import Offline_Eye_Movement_Detector
 
     # Plug-ins
     from plugin import Plugin_List, import_runtime_plugins
-    from video_capture import EndofVideoError, init_playback_source
+    from video_capture import EndofVideoError, File_Source
+    from video_overlay.plugins import Video_Overlay, Eye_Overlay
     from vis_circle import Vis_Circle
     from vis_cross import Vis_Cross
-    from vis_eye_video_overlay import Vis_Eye_Video_Overlay
     from vis_light_points import Vis_Light_Points
     from vis_polyline import Vis_Polyline
     from vis_scan_path import Vis_Scan_Path
@@ -139,11 +142,12 @@ def _export_world_video(
                 Vis_Light_Points,
                 Vis_Watermark,
                 Vis_Scan_Path,
-                Vis_Eye_Video_Overlay,
+                Eye_Overlay,
+                Video_Overlay,
             ],
             key=lambda x: x.__name__,
         )
-        analysis_plugins = [Offline_Fixation_Detector]
+        analysis_plugins = [Offline_Fixation_Detector, Offline_Eye_Movement_Detector]
         user_plugins = sorted(
             import_runtime_plugins(os.path.join(user_dir, "plugins")),
             key=lambda x: x.__name__,
@@ -152,8 +156,6 @@ def _export_world_video(
         available_plugins = vis_plugins + analysis_plugins + user_plugins
         name_by_index = [p.__name__ for p in available_plugins]
         plugin_by_name = dict(zip(name_by_index, available_plugins))
-
-        audio_path = os.path.join(rec_dir, "audio.mp4")
 
         meta_info = pm.load_meta_info(rec_dir)
 
@@ -170,7 +172,7 @@ def _export_world_video(
             )
         except StopIteration:
             raise FileNotFoundError("No Video world found")
-        cap = init_playback_source(g_pool, source_path=video_path, timing=None)
+        cap = File_Source(g_pool, source_path=video_path, fill_gaps=True, timing=None)
 
         timestamps = cap.timestamps
 
@@ -210,7 +212,7 @@ def _export_world_video(
 
         # setup of writer
         writer = AV_Writer(
-            out_file_path, fps=cap.frame_rate, audio_loc=audio_path, use_timestamps=True
+            out_file_path, fps=cap.frame_rate, audio_dir=rec_dir, use_timestamps=True
         )
 
         cap.seek_to_frame(start_frame)
@@ -233,6 +235,10 @@ def _export_world_video(
             ]
 
         g_pool.pupil_positions = pm.Bisector(**pre_computed_eye_data["pupil"])
+        g_pool.pupil_positions_by_id = (
+            pm.Bisector(**pre_computed_eye_data["pupil_by_id_0"]),
+            pm.Bisector(**pre_computed_eye_data["pupil_by_id_1"]),
+        )
         g_pool.gaze_positions = pm.Bisector(**pre_computed_eye_data["gaze"])
         g_pool.fixations = pm.Affiliator(**pre_computed_eye_data["fixations"])
 
@@ -272,7 +278,7 @@ def _export_world_video(
             current_frame += 1
             yield "Exporting with pid {}".format(PID), current_frame
 
-        writer.close()
+        writer.close(timestamp_export_format="all")
 
         duration = time() - start_time
         effective_fps = float(current_frame) / duration

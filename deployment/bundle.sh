@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # get most major.minor tag, without trailing count
-current_tag=$(git describe --tags)
+current_tag=$(git describe --tags --long)
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
     release_dir=$(echo "pupil_${current_tag}_linux_x64")

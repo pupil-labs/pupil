@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,14 +10,18 @@ See COPYING and COPYING.LESSER for license details.
 """
 import os
 import platform
-
-
-class Global_Container(object):
-    pass
+from types import SimpleNamespace
 
 
 def world(
-    timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, version
+    timebase,
+    eye_procs_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
+    preferred_remote_port,
 ):
     """Reads world video and runs plugins.
 
@@ -99,6 +103,13 @@ def world(
         ipc_pub.notify(n)
 
     try:
+        from background_helper import IPC_Logging_Task_Proxy
+
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
+        from tasklib.background.patches import IPCLoggingPatch
+
+        IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         # display
         import glfw
@@ -141,6 +152,7 @@ def world(
             Gaze_Mapping_Plugin,
         )
         from fixation_detector import Fixation_Detector
+        from eye_movement import Eye_Movement_Detector_Real_Time
         from recorder import Recorder
         from display_recent_gaze import Display_Recent_Gaze
         from time_sync import Time_Sync
@@ -168,10 +180,6 @@ def world(
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
         from hololens_relay import Hololens_Relay
 
-        from background_helper import IPC_Logging_Task_Proxy
-
-        IPC_Logging_Task_Proxy.push_url = ipc_push_url
-
         # UI Platform tweaks
         if platform.system() == "Linux":
             scroll_factor = 10.0
@@ -189,7 +197,7 @@ def world(
         hdpi_factor = 1.0
 
         # g_pool holds variables for this process they are accessible to all plugins
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
         g_pool.app = "capture"
         g_pool.process = "world"
         g_pool.user_dir = user_dir
@@ -200,7 +208,8 @@ def world(
         g_pool.ipc_pub_url = ipc_pub_url
         g_pool.ipc_sub_url = ipc_sub_url
         g_pool.ipc_push_url = ipc_push_url
-        g_pool.eyes_are_alive = eyes_are_alive
+        g_pool.eye_procs_alive = eye_procs_alive
+        g_pool.preferred_remote_port = preferred_remote_port
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value
@@ -222,12 +231,22 @@ def world(
             Annotation_Capture,
             Log_History,
             Fixation_Detector,
+            Eye_Movement_Detector_Real_Time,
             Blink_Detection,
             Remote_Recorder,
             Accuracy_Visualizer,
             Camera_Intrinsics_Estimation,
             Hololens_Relay,
         ]
+
+        if platform.system() != "Windows":
+            # Head pose tracking is currently not available on Windows
+            from head_pose_tracker.online_head_pose_tracker import (
+                Online_Head_Pose_Tracker,
+            )
+
+            user_plugins.append(Online_Head_Pose_Tracker)
+
         system_plugins = (
             [
                 Log_Display,
@@ -335,8 +354,9 @@ def world(
 
         def on_drop(window, count, paths):
             paths = [paths[x].decode("utf-8") for x in range(count)]
-            for p in g_pool.plugins:
-                p.on_drop(paths)
+            # call `on_drop` callbacks until a plugin indicates
+            # that it has consumed the event (by returning True)
+            any(p.on_drop(paths) for p in g_pool.plugins)
 
         tick = delta_t()
 
@@ -498,7 +518,7 @@ def world(
                 "eye0_process",
                 label="Detect eye 0",
                 setter=lambda alive: start_stop_eye(0, alive),
-                getter=lambda: eyes_are_alive[0].value,
+                getter=lambda: eye_procs_alive[0].value,
             )
         )
         general_settings.append(
@@ -506,7 +526,7 @@ def world(
                 "eye1_process",
                 label="Detect eye 1",
                 setter=lambda alive: start_stop_eye(1, alive),
-                getter=lambda: eyes_are_alive[1].value,
+                getter=lambda: eye_procs_alive[1].value,
             )
         )
 
@@ -647,16 +667,20 @@ def world(
                     pos = normalize(pos, camera_render_size)
                     # Position in img pixels
                     pos = denormalize(pos, g_pool.capture.frame_size)
-                    for p in g_pool.plugins:
-                        p.on_click(pos, button, action)
+
+                    # call `on_click` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_click(pos, button, action) for p in g_pool.plugins)
 
                 for key, scancode, action, mods in user_input.keys:
-                    for p in g_pool.plugins:
-                        p.on_key(key, scancode, action, mods)
+                    # call `on_key` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_key(key, scancode, action, mods) for p in g_pool.plugins)
 
                 for char_ in user_input.chars:
-                    for p in g_pool.plugins:
-                        p.on_char(char_)
+                    # call `char_` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_char(char_) for p in g_pool.plugins)
 
                 glfw.glfwSwapBuffers(main_window)
             glfw.glfwPollEvents()
@@ -667,8 +691,8 @@ def world(
         session_settings["ui_config"] = g_pool.gui.configuration
         session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
         session_settings["version"] = str(g_pool.version)
-        session_settings["eye0_process_alive"] = eyes_are_alive[0].value
-        session_settings["eye1_process_alive"] = eyes_are_alive[1].value
+        session_settings["eye0_process_alive"] = eye_procs_alive[0].value
+        session_settings["eye1_process_alive"] = eye_procs_alive[1].value
         session_settings[
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
@@ -707,7 +731,14 @@ def world(
 
 
 def world_profiled(
-    timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, version
+    timebase,
+    eye_procs_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
+    preferred_remote_port,
 ):
     import cProfile
     import subprocess
@@ -715,15 +746,16 @@ def world_profiled(
     from .world import world
 
     cProfile.runctx(
-        "world(timebase, eyes_are_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
+        "world(timebase, eye_procs_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
         {
             "timebase": timebase,
-            "eyes_are_alive": eyes_are_alive,
+            "eye_procs_alive": eye_procs_alive,
             "ipc_pub_url": ipc_pub_url,
             "ipc_sub_url": ipc_sub_url,
             "ipc_push_url": ipc_push_url,
             "user_dir": user_dir,
             "version": version,
+            "preferred_remote_port": preferred_remote_port,
         },
         locals(),
         "world.pstats",

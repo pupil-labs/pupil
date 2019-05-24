@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -15,23 +15,23 @@ requires:
     -
 """
 
-import os, sys, platform
+# logging
+import logging
+import multiprocessing as mp
+import os
+import platform
+import sys
+from fractions import Fraction
+from threading import Event, Thread
+from time import time
+
+import numpy as np
+
+import audio_utils
 import av
 from av.packet import Packet
 
-import numpy as np
-from time import time
-from fractions import Fraction
-
-# logging
-import logging
-
 logger = logging.getLogger(__name__)
-
-
-from threading import Thread
-from threading import Event
-import multiprocessing as mp
 
 
 """
@@ -62,13 +62,25 @@ to be valid and should only now be accesed.
 """
 
 
-def write_timestamps(file_loc, timestamps):
+def write_timestamps(file_loc, timestamps, output_format="npy"):
+    """
+    Attritbutes:
+        output_format (str): Output file format. Available values:
+        - "npy": numpy array format (default)
+        - "csv": csv file export
+        - "all": Exports in all of the above formats
+    """
     directory, video_file = os.path.split(file_loc)
     name, ext = os.path.splitext(video_file)
-    ts_file = "{}_timestamps.npy".format(name)
+    ts_file = "{}_timestamps".format(name)
     ts_loc = os.path.join(directory, ts_file)
     ts = np.array(timestamps)
-    np.save(ts_loc, ts)
+    if output_format not in ("npy", "csv", "all"):
+        raise ValueError("Unknown timestamp output format `{}`".format(output_format))
+    if output_format in ("npy", "all"):
+        np.save(ts_loc + ".npy", ts)
+    if output_format in ("csv", "all"):
+        np.savetxt(ts_loc + ".csv", ts, fmt="%f", header="timestamps [seconds]")
 
 
 class AV_Writer(object):
@@ -85,7 +97,7 @@ class AV_Writer(object):
         file_loc,
         fps=30,
         video_stream={"codec": "mpeg4", "bit_rate": 15000 * 10e3},
-        audio_loc=None,
+        audio_dir=None,
         use_timestamps=False,
     ):
         super().__init__()
@@ -118,21 +130,18 @@ class AV_Writer(object):
         self.video_stream.thread_count = max(1, mp.cpu_count() - 1)
         # self.video_stream.pix_fmt = "yuv420p"
 
-        if audio_loc:
-            audio_dir = os.path.split(audio_loc)[0]
-            audio_ts_loc = os.path.join(audio_dir, "audio_timestamps.npy")
-            audio_exists = os.path.exists(audio_loc) and os.path.exists(audio_ts_loc)
-            if audio_exists:
-                self.audio_rec = av.open(audio_loc)
-                self.audio_ts = np.load(audio_ts_loc)
-                self.audio_export = self.container.add_stream(
-                    template=self.audio_rec.streams.audio[0]
+        if audio_dir is not None:
+            try:
+                self.audio = audio_utils.load_audio(audio_dir)
+                self.audio_export_stream = self.container.add_stream(
+                    template=self.audio.stream
                 )
-            else:
+            except audio_utils.NoAudioLoadedError:
                 logger.warning("Could not mux audio. File not found.")
-                self.audio_export = False
-        else:
-            self.audio_export = False
+                self.audio = None
+        else:  # audio export explicitly disabled
+            self.audio = None
+
         self.configured = False
         self.start_time = None
 
@@ -141,23 +150,32 @@ class AV_Writer(object):
 
     def write_video_frame(self, input_frame):
         if not self.configured:
-            self.video_stream.height = input_frame.height
-            self.video_stream.width = input_frame.width
-            self.configured = True
-            self.start_time = input_frame.timestamp
-            if input_frame.yuv_buffer is not None:
-                self.frame = av.VideoFrame(
-                    input_frame.width, input_frame.height, "yuv422p"
-                )
-            else:
-                self.frame = av.VideoFrame(
-                    input_frame.width, input_frame.height, "bgr24"
-                )
-            if self.use_timestamps:
-                self.frame.time_base = self.time_base
-            else:
-                self.frame.time_base = Fraction(1, self.fps)
+            self._configure_video(template_frame=input_frame)
 
+        self._update_frame_buffer(input_frame)
+        self._update_frame_pts(input_frame)
+        self._mux_video(input_frame)
+        self._mux_audio()
+
+    def _configure_video(self, template_frame):
+        self.video_stream.height = template_frame.height
+        self.video_stream.width = template_frame.width
+        self.configured = True
+        self.start_time = template_frame.timestamp
+        if template_frame.yuv_buffer is not None:
+            self.frame = av.VideoFrame(
+                template_frame.width, template_frame.height, "yuv422p"
+            )
+        else:
+            self.frame = av.VideoFrame(
+                template_frame.width, template_frame.height, "bgr24"
+            )
+        if self.use_timestamps:
+            self.frame.time_base = self.time_base
+        else:
+            self.frame.time_base = Fraction(1, self.fps)
+
+    def _update_frame_buffer(self, input_frame):
         if input_frame.yuv_buffer is not None:
             y, u, v = input_frame.yuv422
             self.frame.planes[0].update(y)
@@ -166,6 +184,7 @@ class AV_Writer(object):
         else:
             self.frame.planes[0].update(input_frame.img)
 
+    def _update_frame_pts(self, input_frame):
         if self.use_timestamps:
             self.frame.pts = int(
                 (input_frame.timestamp - self.start_time) / self.time_base
@@ -173,53 +192,54 @@ class AV_Writer(object):
         else:
             # our timebase is 1/30  so a frame idx is the correct pts for an fps recorded video.
             self.frame.pts = self.current_frame_idx
+
+    def _mux_video(self, input_frame):
         # send frame of to encoder
         for packet in self.video_stream.encode(self.frame):
             self.container.mux(packet)
         self.current_frame_idx += 1
         self.timestamps.append(input_frame.timestamp)
-        if self.audio_export:
-            for audio_packet in self.audio_rec.demux():
-                if self.audio_packets_decoded >= len(self.audio_ts):
-                    logger.debug(
-                        "More audio frames decoded than there are timestamps: {} > {}".format(
-                            self.audio_packets_decoded, len(self.audio_ts)
-                        )
+
+    def _mux_audio(self):
+        if not self.audio:
+            return
+
+        for audio_packet in self.audio.container.demux():
+            if self.audio_packets_decoded >= len(self.audio.timestamps):
+                logger.debug(
+                    "More audio frames decoded than there are timestamps: {} > {}".format(
+                        self.audio_packets_decoded, len(self.audio.timestamps)
                     )
-                    break
-                audio_pts = int(
-                    (self.audio_ts[self.audio_packets_decoded] - self.start_time)
-                    / self.audio_export.time_base
                 )
-                audio_packet.pts = audio_pts
-                audio_packet.dts = audio_pts
-                audio_packet.stream = self.audio_export
-                self.audio_packets_decoded += 1
+                break
+            audio_pts = int(
+                (self.audio.timestamps[self.audio_packets_decoded] - self.start_time)
+                / self.audio_export_stream.time_base
+            )
+            audio_packet.pts = audio_pts
+            audio_packet.dts = audio_pts
+            audio_packet.stream = self.audio_export_stream
+            self.audio_packets_decoded += 1
 
-                if audio_pts * self.audio_export.time_base < 0:
-                    logger.debug(
-                        "Seeking: {} -> {}".format(
-                            audio_pts * self.audio_export.time_base, self.start_time
-                        )
-                    )
-                    continue  # seek to start_time
+            audio_ts = audio_pts * self.audio_export_stream.time_base
+            if audio_ts < 0:
+                logger.debug("Seeking: {} -> {}".format(audio_ts, self.start_time))
+                continue  # seek to start_time
 
-                self.container.mux(audio_packet)
-                if (
-                    audio_pts * self.audio_export.time_base
-                    > self.frame.pts * self.time_base
-                ):
-                    break  # wait for next image
+            self.container.mux(audio_packet)
+            frame_ts = self.frame.pts * self.time_base
+            if audio_ts > frame_ts:
+                break  # wait for next image
 
-    def close(self, export_timestamps=True):
+    def close(self, timestamp_export_format="npy"):
         # only flush encoder if there has been at least one frame
         if self.configured:
             for packet in self.video_stream.encode(None):
                 self.container.mux(packet)
 
         self.container.close()  # throws RuntimeError if no frames were written
-        if export_timestamps:
-            write_timestamps(self.file_loc, self.timestamps)
+        if timestamp_export_format:
+            write_timestamps(self.file_loc, self.timestamps, timestamp_export_format)
 
     def release(self):
         self.close()

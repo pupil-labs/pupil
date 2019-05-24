@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -14,7 +14,7 @@ import logging
 from pyglui import ui
 
 from video_export.plugin_base.isolated_frame_exporter import IsolatedFrameExporter
-from vis_eye_video_overlay import draw_pupil_on_image
+from video_overlay.utils.image_manipulation import PupilRenderer
 
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ class Eye_Video_Exporter(IsolatedFrameExporter):
                 input_name=eye_name,
                 output_name=eye_name,
                 process_frame=process_frame,
-                export_timestamps=True,
+                timestamp_export_format="all",
             )
         except FileNotFoundError:
             # happens if there is no such eye video
@@ -82,14 +82,19 @@ class _add_pupil_ellipse:
     pupil positions for rendering.
     """
 
+    _warned_once_data_not_found = False
+
     def __init__(self, pupil_positions_of_eye):
+        self.renderer = PupilRenderer(pupil_getter=None)
         self._pupil_positions_of_eye = pupil_positions_of_eye
 
     def __call__(self, _, frame):
         eye_image = frame.img
         try:
             pupil_datum = self._pupil_positions_of_eye.by_ts(frame.timestamp)
-            draw_pupil_on_image(eye_image, pupil_datum)
+            self.renderer.render_pupil(eye_image, pupil_datum)
         except ValueError:
-            logger.warning("Inconsistent timestamps found in pupil data")
+            if not self._warned_once_data_not_found:
+                logger.warning("Could not draw pupil visualization. No data found.")
+                self._warned_once_data_not_found = True
         return eye_image

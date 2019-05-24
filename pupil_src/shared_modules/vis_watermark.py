@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -116,8 +116,10 @@ class Vis_Watermark(Visualizer_Plugin_Base):
                 and self.pos[1] < pos[1] < self.pos[1] + self.watermark.shape[1]
             ):
                 self.drag_offset = self.pos[0] - pos[0], self.pos[1] - pos[1]
+                return True  # event consumed
         else:
             self.drag_offset = None
+        return False  # event not consumed
 
     def init_ui(self):
         self.add_menu()

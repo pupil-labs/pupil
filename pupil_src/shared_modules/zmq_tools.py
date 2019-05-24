@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -47,7 +47,7 @@ class ZMQ_handler(logging.Handler):
                 record_dict["exc_info"] = str(record_dict["exc_info"])
             if record_dict["args"]:
                 # format message before sending to avoid serialization issues
-                record_dict['msg'] %= record_dict["args"]
+                record_dict["msg"] %= record_dict["args"]
                 record_dict["args"] = ()
             self.socket.send(record_dict)
 
@@ -64,9 +64,12 @@ class Msg_Receiver(ZMQ_Socket):
     __init__ will block until connection is established.
     """
 
-    def __init__(self, ctx, url, topics=(), block_until_connected=True):
+    def __init__(self, ctx, url, topics=(), block_until_connected=True, hwm=None):
         self.socket = zmq.Socket(ctx, zmq.SUB)
         assert type(topics) != str
+
+        if hwm is not None:
+            self.socket.set_hwm(hwm)
 
         if block_until_connected:
             # connect node and block until a connecetion has been made

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018  Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-from abc import ABCMeta, abstractmethod
+import abc
 
 from pyglui import ui
 
@@ -20,7 +20,7 @@ from plugin import Plugin
 logger = logging.getLogger(__name__)
 
 
-class TaskManager(Plugin, metaclass=ABCMeta):
+class TaskManager(Plugin, abc.ABC):
     """
     Base for plugins that need to perform 'tasks' (possibly running simultaneously).
 
@@ -64,7 +64,7 @@ class TaskManager(Plugin, metaclass=ABCMeta):
         self._add_manager_buttons_to_menu()
         self.menu.append(self.task_container)
 
-    @abstractmethod
+    @abc.abstractmethod
     def customize_menu(self):
         pass
 
@@ -141,6 +141,7 @@ class TaskUI:
     Wrapper for a submenu showing info and controls for a single task.
     Every task has such a menu.
     """
+
     def __init__(self, managed_task):
         # it's difficult to override Growing_Menu as this is a Cython class,
         # so we unfortunately have to wrap it
@@ -187,6 +188,7 @@ class ManagedTask:
     """
     Create an instance of this and add it to a task manager via add_task()
     """
+
     def __init__(self, task, args, heading, min_progress, max_progress):
         """
         :param task: function that will be executed in a new process.
@@ -240,7 +242,9 @@ class ManagedTask:
 
     def start(self):
         assert self.task_proxy is None
-        self.task_proxy = bh.IPC_Logging_Task_Proxy(self.heading, self.task, args=self.args)
+        self.task_proxy = bh.IPC_Logging_Task_Proxy(
+            self.heading, self.task, args=self.args
+        )
 
     def cancel(self):
         self._canceled = True

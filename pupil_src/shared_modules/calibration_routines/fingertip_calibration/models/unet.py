@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -13,7 +13,6 @@ See COPYING and COPYING.LESSER for license details.
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 def conv3x3(in_channels, out_channels, stride=1, padding=1, bias=True, groups=1):
@@ -64,8 +63,8 @@ class DownConv(nn.Module):
             self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
     def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
+        x = torch.relu(self.conv1(x))
+        x = torch.relu(self.conv2(x))
         before_pool = x
         if self.pooling:
             x = self.pool(x)
@@ -108,8 +107,8 @@ class UpConv(nn.Module):
             x = torch.cat((from_up, from_down), 1)
         else:
             x = from_up + from_down
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
+        x = torch.relu(self.conv1(x))
+        x = torch.relu(self.conv2(x))
         return x
 
 
@@ -246,5 +245,5 @@ class UNet(nn.Module):
         # nn.CrossEntropyLoss is your training script,
         # as this module includes a softmax already.
         x = self.conv_final(x)
-        x = F.tanh(x)
+        x = torch.tanh(x)
         return x

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,26 +9,27 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os
-import av
-from time import sleep
-
-from .base_backend import Base_Source, Playback_Source, Base_Manager, EndofVideoError
-from camera_models import load_intrinsics
-
-import numpy as np
-from multiprocessing import cpu_count
-import os.path
-from fractions import Fraction
-
 # logging
 import logging
+import os
+import os.path
+import av
+import numpy as np
+
+from multiprocessing import cpu_count
+from abc import ABC, abstractmethod
+from time import sleep
+from camera_models import load_intrinsics
+from .utils import VideoSet
+
+from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
 
 logger = logging.getLogger(__name__)
-
-assert av.__version__ >= "0.4.2", "pyav is out-of-date, please update"
+logger.setLevel(logging.INFO)
 av.logging.set_level(av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
+
+assert av.__version__ >= "0.4.2", "pyav is out-of-date, please update"
 
 
 class FileSeekError(Exception):
@@ -40,8 +41,8 @@ class Frame(object):
 
     def __init__(self, timestamp, av_frame, index):
         self._av_frame = av_frame
-        self.timestamp = timestamp
-        self.index = index
+        self.timestamp = float(timestamp)
+        self.index = int(index)
         self._img = None
         self._gray = None
         self.jpeg_buffer = None
@@ -74,12 +75,115 @@ class Frame(object):
         return self._gray
 
 
+class BrokenStream:
+    def __init__(self):
+        self.frame_size = (720, 1280)
+
+    def seek(self, position):
+        pass
+
+    def next_frame(self):
+        pass
+
+
+class FakeFrame:
+    """
+    Show FakeFrame when the video is broken or there is
+    gap between timestamp.
+    """
+
+    def __init__(self, shape, timestamp, index):
+        self.shape = shape
+        self.yuv_buffer = None
+        static_img = np.ones(self.shape, dtype=np.uint8) * 128
+        self.img = self.bgr = static_img
+        self.timestamp = float(timestamp)
+        self.index = int(index)
+
+    def copy(self):
+        return FakeFrame(self.shape, self.timestamp, self.index)
+
+    @property
+    def width(self):
+        return self.img.shape[1]
+
+    @property
+    def height(self):
+        return self.img.shape[0]
+
+    @property
+    def gray(self):
+        return self.img[:, :, 0]  # return first channel
+
+
+class Decoder(ABC):
+    @abstractmethod
+    def seek(self):
+        pass
+
+    @abstractmethod
+    def next_frame(self):
+        pass
+
+    @property
+    def frame_size(self):
+        return (
+            int(self.video_stream.format.width),
+            int(self.video_stream.format.height),
+        )
+
+    def cleanup(self):
+        pass
+
+
+class BufferedDecoder(Decoder):
+    def __init__(self, container, video_stream):
+        self.container = container
+        self.video_stream = video_stream
+        self._buffered_decoder = self.container.get_buffered_decoder(
+            self.video_stream, dec_batch=50, dec_buffer_size=200
+        )
+
+    @property
+    def buffered_decoder(self):
+        return self._buffered_decoder
+
+    def seek(self, position):
+        self.buffered_decoder.seek(position)
+
+    def next_frame(self):
+        return self.buffered_decoder.get_frame()
+
+    def cleanup(self):
+        self.buffered_decoder.stop_buffer_thread()
+
+
+class OnDemandDecoder(Decoder):
+    def __init__(self, container, video_stream):
+        self.container = container
+        self.video_stream = video_stream
+
+    def seek(self, position):
+        self.video_stream.seek(position)
+
+    def next_frame(self):
+        for packet in self.container.demux(self.video_stream):
+            for frame in packet.decode():
+                if frame:
+                    yield frame
+
+
 class File_Source(Playback_Source, Base_Source):
     """Simple file capture.
 
-    Attributes:
+    Playback_Source arguments:
+        timing (str): "external", "own" (default), None
+
+    File_Source arguments:
         source_path (str): Path to source file
-        timestamps (str): Path to timestamps file
+        loop (bool): loop video set if timing!="external"
+        buffered_decoding (bool): use buffered decode
+        fill_gaps (bool): fill gaps with static frames
     """
 
     def __init__(
@@ -88,118 +192,82 @@ class File_Source(Playback_Source, Base_Source):
         source_path=None,
         loop=False,
         buffered_decoding=False,
+        fill_gaps=False,
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(g_pool, *args, **kwargs)
         if self.timing == "external":
             self.recent_events = self.recent_events_external_timing
         else:
             self.recent_events = self.recent_events_own_timing
-
         # minimal attribute set
         self._initialised = True
         self.source_path = source_path
-        self.timestamps = None
         self.loop = loop
+        self.fill_gaps = fill_gaps
+        assert self.check_source_path(source_path)
+        rec, set_name = self.get_rec_set_name(self.source_path)
+        self.videoset = VideoSet(rec, set_name, self.fill_gaps)
+        # Load or build lookup table
+        self.videoset.load_or_build_lookup()
+        self.timestamps = self.videoset.lookup.timestamp
+        self.current_container_index = self.videoset.lookup.container_idx[0]
+        self.target_frame_idx = 0
+        self.current_frame_idx = 0
         self.buffering = buffered_decoding
+        # First video file is valid
+        if self.videoset.containers[self.current_container_index]:
+            self.setup_video(self.current_container_index)  # load first split
+        else:
+            self.video_stream = BrokenStream()
+            self.next_frame = self.video_stream.next_frame()
+            self.pts_rate = 48000
+            self.shape = (720, 1280, 3)
+            self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
+                self.timestamps
+            )
+        self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
 
+    def check_source_path(self, source_path):
         if not source_path or not os.path.isfile(source_path):
             logger.error(
                 "Init failed. Source file could not be found at `%s`" % source_path
             )
             self._initialised = False
             return
+        return True
 
-        self.container = av.open(str(source_path))
+    def get_rec_set_name(self, source_path):
+        """
+        Return dir and set name by source_path
+        """
+        rec, file_ = os.path.split(source_path)
+        set_name = os.path.splitext(file_)[0]
+        return rec, set_name
 
+    def setup_video(self, container_index):
         try:
-            self.video_stream = next(
-                s for s in self.container.streams if s.type == "video"
-            )  # looking for the first videostream
-            logger.debug("loaded videostream: %s" % self.video_stream)
-            self.video_stream.thread_count = cpu_count()
-        except StopIteration:
-            self.video_stream = None
-            logger.error("No videostream found in media container")
-
-        try:
-            self.audio_stream = next(
-                s for s in self.container.streams if s.type == "audio"
-            )  # looking for the first audiostream
-            logger.debug("loaded audiostream: %s" % self.audio_stream)
-        except StopIteration:
-            self.audio_stream = None
-            logger.debug("No audiostream found in media container")
-
-        if not self.video_stream and not self.audio_stream:
-            logger.error(
-                "Init failed. Could not find any video or audio stream in the given source file."
-            )
-            self._initialised = False
-            return
-
-        self.target_frame_idx = 0
-        self.current_frame_idx = 0
-
-        # we will use below for av playback
-        # self.selected_streams = [s for s in (self.video_stream,self.audio_stream) if s]
-        # self.av_packet_iterator = self.container.demux(self.selected_streams)
-
-        avg_rate = self.video_stream.average_rate
-        if avg_rate is None:
-            avg_rate = Fraction(0, 1)
-
-        if float(avg_rate) % 1 != 0.0:
-            logger.error(
-                "Videofile pts are not evenly spaced, pts to index conversion may fail and be inconsitent."
-            )
-
-        # load/generate timestamps.
-        timestamps_path, ext = os.path.splitext(source_path)
-        timestamps_path += "_timestamps.npy"
-        try:
-            self.timestamps = np.load(timestamps_path)
-        except IOError:
-            logger.warning(
-                "did not find timestamps file, making timetamps up based on fps and frame count. Frame count and timestamps are not accurate!"
-            )
-            frame_rate = float(avg_rate)
-            self.timestamps = [
-                i / frame_rate
-                for i in range(
-                    int(self.container.duration / av.time_base * frame_rate) + 100
-                )
-            ]  # we are adding some slack.
-        else:
-            logger.debug(
-                "Auto loaded %s timestamps from %s"
-                % (len(self.timestamps), timestamps_path)
-            )
-        assert isinstance(
-            self.timestamps[0], float
-        ), "Timestamps need to be instances of python float, got {}".format(
-            type(self.timestamps[0])
+            self.video_stream.cleanup()
+        except AttributeError:
+            pass
+        self.current_container_index = container_index
+        self.container = self.videoset.containers[container_index]
+        self.video_stream, self.audio_stream = self._get_streams(
+            self.container, self.buffering
         )
-        self.timestamps = self.timestamps
-
-        # set the pts rate to convert pts to frame index. We use videos with pts writte like indecies.
-        if self.buffering:
-            self.buffered_decoder = self.container.get_buffered_decoder(
-                self.video_stream, dec_batch=50, dec_buffer_size=200
-            )
-            self.next_frame = self.buffered_decoder.get_frame()
-        else:
-            self.next_frame = self._next_frame()
-        f0, f1 = next(self.next_frame), next(self.next_frame)
+        # set the pts rate to convert pts to frame index.
+        # We use videos with pts writte like indecies.
+        self.next_frame = self.video_stream.next_frame()
+        # We get the difference between two pts then seek back to the first frame
+        # But the index of the frame will start at 2
+        _, f1 = next(self.next_frame), next(self.next_frame)
         self.pts_rate = f1.pts
-        self.seek_to_frame(0)
+        self.shape = f1.to_nd_array(format="bgr24").shape
+        self.video_stream.seek(0)
         self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
             self.timestamps
         )
-
-        loc, name = os.path.split(os.path.splitext(source_path)[0])
-        self._intrinsics = load_intrinsics(loc, name, self.frame_size)
 
     def ensure_initialisation(fallback_func=None, requires_playback=False):
         from functools import wraps
@@ -220,6 +288,40 @@ class File_Source(Playback_Source, Base_Source):
 
         return decorator
 
+    def _get_streams(self, container, should_buffer):
+        """
+        Get Video and Audio stream from containers
+        """
+        try:
+            video_stream = next(
+                s for s in container.streams if s.type == "video"
+            )  # looking for the first videostream
+            logger.debug("loaded videostream: %s" % video_stream)
+            video_stream.thread_count = cpu_count()
+        except StopIteration:
+            video_stream = None
+            logger.error("No videostream found in media container")
+
+        try:
+            audio_stream = next(
+                s for s in container.streams if s.type == "audio"
+            )  # looking for the first audiostream
+            logger.debug("loaded audiostream: %s" % audio_stream)
+        except StopIteration:
+            audio_stream = None
+            logger.debug("No audiostream found in media container")
+        if not video_stream and not audio_stream:
+            logger.error(
+                "Init failed. Could not find any video or audio"
+                + "stream in the given source file."
+            )
+            self._initialised = False
+            return
+        if should_buffer:
+            return BufferedDecoder(container, video_stream), audio_stream
+        else:
+            return OnDemandDecoder(container, video_stream), audio_stream
+
     @property
     def initialised(self):
         return self._initialised
@@ -227,7 +329,7 @@ class File_Source(Playback_Source, Base_Source):
     @property
     @ensure_initialisation(fallback_func=lambda: (640, 480))
     def frame_size(self):
-        return int(self.video_stream.format.width), int(self.video_stream.format.height)
+        return self.video_stream.frame_size
 
     @property
     @ensure_initialisation(fallback_func=lambda: 20)
@@ -251,23 +353,36 @@ class File_Source(Playback_Source, Base_Source):
             return "File source in ghost mode"
 
     def get_frame_index(self):
-        return self.current_frame_idx
+        return int(self.current_frame_idx)
 
     def get_frame_count(self):
-        return len(self.timestamps)
+        return int(self.videoset.lookup.size)
 
-    @ensure_initialisation()
-    def _next_frame(self):
-        for packet in self.container.demux(self.video_stream):
-            for frame in packet.decode():
-                if frame:
-                    yield frame
+    def _convert_frame_index(self, pts):
+        """
+        Calculate frame index by current_container_index
+        """
+        # If the current container is 0, the pts is 128 (second frame)
+        # cont_frame_idx -> 1
+        # cont_mask: Return T only if the container=current container -> [T, T, T, F, F, F]
+        # frame_mask: Return T only if the self.videoset.lookup.container_frame_idx=cont_frame_idx
+        # -> [F, T(the second frame of the first container), F,
+        #     F, T(the second frame of the second container), F, F]
+        # videoset_idx: Return index which T in cont_mask and frame_mask
+        cont_frame_idx = self.pts_to_idx(pts)
+        cont_mask = np.isin(
+            self.videoset.lookup.container_idx, self.current_container_index
+        )
+        frame_mask = np.isin(self.videoset.lookup.container_frame_idx, cont_frame_idx)
+        videoset_idx = np.flatnonzero(cont_mask & frame_mask)[0]
+        return videoset_idx
 
     @ensure_initialisation()
     def pts_to_idx(self, pts):
-        # some older mkv did not use perfect timestamping so we are doing int(round()) to clear that.
-        # With properly spaced pts (any v0.6.100+ recording) just int() would suffice.
-        # print float(pts*self.video_stream.time_base*self.video_stream.average_rate),round(pts*self.video_stream.time_base*self.video_stream.average_rate)
+        # some older mkv did not use perfect timestamping
+        # so we are doing int(round()) to clear that.
+        # With properly spaced pts (any v0.6.100+ recording)
+        # just int() would suffice.
         return int(pts / self.pts_rate)
 
     @ensure_initialisation()
@@ -276,74 +391,57 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation()
     def get_frame(self):
-        frame = None
-        logged = False
-        for frame in self.next_frame:
-            if not frame:
-                break
-            index = self.pts_to_idx(frame.pts)
+        try:
+            target_entry = self.videoset.lookup[self.target_frame_idx]
+        except IndexError:
+            raise EndofVideoError
+        if target_entry.container_idx == -1:
+            return self._get_fake_frame_and_advance(target_entry.timestamp)
+        elif target_entry.container_idx != self.current_container_index:
+            self.setup_video(target_entry.container_idx)
+        for av_frame in self.next_frame:
+            if not av_frame:
+                raise EndofVideoError
+            index = self._convert_frame_index(av_frame.pts)
             if index == self.target_frame_idx:
                 break
             elif index < self.target_frame_idx:
                 pass
-                # logger.info('Frame index not consistent. Skipping forward')
-            else:
-                logger.debug("Frame index not consistent.")
-                break
-        if not frame:
-            if self.loop:
-                logger.info("Looping enabled. Seeking to beginning.")
-                self.seek_to_frame(0)
-                self.target_frame_idx = 0
-                return self.get_frame()
-            else:
-                logger.debug(
-                    "End of videofile %s %s"
-                    % (self.current_frame_idx, len(self.timestamps))
-                )
-                raise EndofVideoError("Reached end of video file")
         try:
-            timestamp = self.timestamps[index]
-        except IndexError:
-            logger.info("Reached end of timestamps list.")
-            raise EndofVideoError("Reached end of timestamps list.")
+            self.target_frame_idx = index + 1
+            self.current_frame_idx = index
+        except UnboundLocalError:
+            raise EndofVideoError
+        return Frame(target_entry.timestamp, av_frame, index=index)
 
-        self.target_frame_idx = index + 1
-        self.current_frame_idx = index
-
-        return Frame(timestamp, frame, index=index)
+    def _get_fake_frame_and_advance(self, ts):
+        self.current_frame_idx = self.target_frame_idx
+        self.target_frame_idx += 1
+        return FakeFrame(self.shape, ts, self.current_frame_idx)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):
         try:
             last_index = self._recent_frame.index
         except AttributeError:
-            # called once on start when self._recent_frame is None
+            # Get a frame at beginnning
             last_index = -1
-
+        # Seek Frame
         frame = None
         pbt = self.g_pool.seek_control.current_playback_time
         ts_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
         if ts_idx == last_index:
             frame = self._recent_frame.copy()
-            if self.play and ts_idx == self.get_frame_count() - 1:
-                logger.info("Video has ended.")
-                self.g_pool.seek_control.play = False
-
         elif ts_idx < last_index or ts_idx > last_index + 1:
-            # time to seek
             self.seek_to_frame(ts_idx)
 
-        # Only call get_frame() if the next frame is actually needed
-        from time import monotonic
-
+        # Normal Case to get next frame
         try:
             frame = frame or self.get_frame()
         except EndofVideoError:
-            logger.info("Video has ended.")
+            logger.info("No more video found")
             self.g_pool.seek_control.play = False
-            frame = frame or self._recent_frame.copy()
-
+            frame = self._recent_frame.copy()
         self.g_pool.seek_control.end_of_seek()
         events["frame"] = frame
         self._recent_frame = frame
@@ -356,6 +454,11 @@ class File_Source(Playback_Source, Base_Source):
             frame = self.get_frame()
         except EndofVideoError:
             logger.info("Video has ended.")
+            if self.loop:
+                logger.info("Looping enabled. Seeking to beginning.")
+                self.setup_video(0)
+                self.target_frame_idx = 0
+                return
             self.notify_all(
                 {
                     "subject": "file_source.video_finished",
@@ -371,19 +474,22 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
-        # frame accurate seeking
-        try:
-            if self.buffering:
-                self.buffered_decoder.seek(int(self.idx_to_pts(seek_pos)))
-            else:
-                self.video_stream.seek(int(self.idx_to_pts(seek_pos)))
-        except av.AVError as e:
-            raise FileSeekError()
+        target_entry = self.videoset.lookup[seek_pos]
+        if target_entry.container_idx > -1:
+            if target_entry.container_idx != self.current_container_index:
+                self.setup_video(target_entry.container_idx)
+            try:
+                # explicit conversion to python int required, else:
+                # TypeError: ('Container.seek only accepts integer offset.',
+                target_pts = int(self.idx_to_pts(target_entry.container_frame_idx))
+                self.video_stream.seek(target_pts)
+            except av.AVError as e:
+                raise FileSeekError() from e
         else:
-            if not self.buffering:
-                self.next_frame = self._next_frame()
-            self.finished_sleep = 0
-            self.target_frame_idx = seek_pos
+            self.video_stream.seek(0)
+        self.next_frame = self.video_stream.next_frame()
+        self.finished_sleep = 0
+        self.target_frame_idx = seek_pos
 
     def on_notify(self, notification):
         if (
@@ -402,9 +508,6 @@ class File_Source(Playback_Source, Base_Source):
         ):
             self.play = False
 
-    def seek_to_prev_frame(self):
-        self.seek_to_frame(max(0, self.current_frame_idx - 1))
-
     def init_ui(self):
         self.add_menu()
         self.menu.label = "File Source: {}".format(os.path.split(self.source_path)[-1])
@@ -412,7 +515,8 @@ class File_Source(Playback_Source, Base_Source):
 
         self.menu.append(
             ui.Info_Text(
-                "The file source plugin loads and displays video from a given file."
+                "The file source plugin loads and "
+                + "displays video from a given file."
             )
         )
 
@@ -461,7 +565,7 @@ class File_Source(Playback_Source, Base_Source):
 
     def cleanup(self):
         try:
-            self.buffered_decoder.stop_buffer_thread()
+            self.video_stream.cleanup()
         except AttributeError:
             pass
         super().cleanup()
@@ -492,9 +596,12 @@ class File_Manager(Base_Manager):
         self.add_menu()
         from pyglui import ui
 
+        self.add_auto_select_button()
         self.menu.append(
             ui.Info_Text(
-                "Enter a folder to enumerate all eligible video files. Be aware that entering folders with a lot of files can slow down Pupil Capture."
+                "Enter a folder to enumerate all eligible video files. "
+                + "Be aware that entering folders with a lot of files can "
+                + "slow down Pupil Capture."
             )
         )
 
@@ -532,11 +639,15 @@ class File_Manager(Base_Manager):
         settings = {"source_path": full_path, "timing": "own"}
         self.activate_source(settings)
 
+    def auto_activate_source(self):
+        self.activate(None)
+
     def on_drop(self, paths):
         for p in paths:
             if os.path.splitext(p)[-1] in self.file_exts:
                 self.activate(p)
-                return
+                return True
+        return False
 
     def enumerate_folder(self, path):
         eligible_files = []

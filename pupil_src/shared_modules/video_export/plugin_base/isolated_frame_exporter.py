@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,9 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import abc
 import os
-from abc import ABCMeta
 from glob import glob
+from types import SimpleNamespace
 
 import player_methods as pm
 from av_writer import AV_Writer
@@ -20,7 +21,7 @@ from video_capture import File_Source, EndofVideoError
 from video_export.plugin_base.video_exporter import VideoExporter
 
 
-class IsolatedFrameExporter(VideoExporter, metaclass=ABCMeta):
+class IsolatedFrameExporter(VideoExporter, abc.ABC):
     """
     A VideoExporter that exports a part or all of some video file and applies
     a function process_frame to every frame.
@@ -33,7 +34,7 @@ class IsolatedFrameExporter(VideoExporter, metaclass=ABCMeta):
         input_name,
         output_name,
         process_frame,
-        export_timestamps,
+        timestamp_export_format,
     ):
         os.makedirs(export_dir, exist_ok=True)
         self.logger.info("Exporting to {}".format(export_dir))
@@ -46,7 +47,7 @@ class IsolatedFrameExporter(VideoExporter, metaclass=ABCMeta):
             export_range,
             self.g_pool.timestamps,
             process_frame,
-            export_timestamps,
+            timestamp_export_format,
         )
         task = ManagedTask(
             _convert_video_file,
@@ -75,10 +76,10 @@ def _convert_video_file(
     export_range,
     world_timestamps,
     process_frame,
-    export_timestamps,
+    timestamp_export_format,
 ):
     yield "Export video", 0.0
-    input_source = File_Source(EmptyGPool(), input_file)
+    input_source = File_Source(SimpleNamespace(), input_file, fill_gaps=True)
     if not input_source.initialised:
         yield "Exporting video failed", 0.0
         return
@@ -86,12 +87,13 @@ def _convert_video_file(
     # yield progress results two times per second
     update_rate = int(input_source.frame_rate / 2)
 
-    export_window = pm.exact_window(world_timestamps, export_range)
+    export_start, export_stop = export_range  # export_stop is exclusive
+    export_window = pm.exact_window(world_timestamps, (export_start, export_stop - 1))
     (export_from_index, export_to_index) = pm.find_closest(
         input_source.timestamps, export_window
     )
     writer = AV_Writer(
-        output_file, fps=input_source.frame_rate, audio_loc=None, use_timestamps=True
+        output_file, fps=input_source.frame_rate, audio_dir=None, use_timestamps=True
     )
     input_source.seek_to_frame(export_from_index)
     next_update_idx = export_from_index + update_rate
@@ -100,8 +102,7 @@ def _convert_video_file(
             input_frame = input_source.get_frame()
         except EndofVideoError:
             break
-
-        if input_frame.index > export_to_index:
+        if input_frame.index >= export_to_index:
             break
 
         output_img = process_frame(input_source, input_frame)
@@ -109,17 +110,13 @@ def _convert_video_file(
         output_frame._img = output_img  # it's ._img because .img has no setter
         writer.write_video_frame(output_frame)
 
-        if input_source.current_frame_idx >= next_update_idx:
-            progress = (input_source.current_frame_idx - export_from_index) / (
+        if input_source.get_frame_index() >= next_update_idx:
+            progress = (input_source.get_frame_index() - export_from_index) / (
                 export_to_index - export_from_index
             )
-            yield "Exporting video", progress * 100.
+            yield "Exporting video", progress * 100.0
             next_update_idx += update_rate
 
-    writer.close(export_timestamps)
+    writer.close(timestamp_export_format)
     input_source.cleanup()
     yield "Exporting video completed", 100.0
-
-
-class EmptyGPool:
-    pass

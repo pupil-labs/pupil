@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -16,6 +16,7 @@ import os
 import pickle
 import shutil
 import traceback as tb
+import types
 from glob import iglob
 
 import msgpack
@@ -212,39 +213,6 @@ class _Empty(object):
         pass
 
 
-# an Immutable dict for dics nested inside this dict.
-# https://stackoverflow.com/a/42322858
-class _FrozenDict(collections.abc.Mapping):
-
-    def __new__(cls, *args, **kwargs):
-        inst = super().__new__(cls)
-        inst.__private_dict = dict()
-        return inst
-
-    def __init__(self, *args, **kwargs):
-        self.__private_dict = dict(*args, **kwargs)
-
-    @property
-    def __dict__(self):
-        return self.__private_dict
-
-    def __iter__(self):
-        return self.__dict__.__iter__()
-
-    def __len__(self):
-        return self.__dict__.__len__()
-
-    def __getitem__(self, key):
-        return self.__dict__.__getitem__(key)
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-
-
 class Serialized_Dict(object):
     __slots__ = ["_ser_data", "_data"]
     cache_len = 100
@@ -259,7 +227,9 @@ class Serialized_Dict(object):
         elif type(msgpack_bytes) is bytes:
             self._ser_data = msgpack_bytes
         else:
-            raise ValueError("Neither mapping nor payload is supplied or wrong format.")
+            raise ValueError(
+                "You did not supply mapping or payload to Serialized_Dict."
+            )
         self._data = None
 
     def _deser(self):
@@ -274,10 +244,17 @@ class Serialized_Dict(object):
             self._cache_ref.pop(0).purge_cache()
             self._cache_ref.append(self)
 
+    def __getstate__(self):
+        return self._ser_data
+
+    def __setstate__(self, msgpack_bytes):
+        self._ser_data = msgpack_bytes
+        self._data = None
+
     @classmethod
     def unpacking_object_hook(self, obj):
         if type(obj) is dict:
-            return _FrozenDict(obj)
+            return types.MappingProxyType(obj)
 
     @classmethod
     def packing_hook(self, obj):

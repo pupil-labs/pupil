@@ -19,7 +19,7 @@ def get_tag_commit():
     """
     try:
         desc_tag = check_output(
-            ["git", "describe", "--tags"],
+            ["git", "describe", "--tags", "--long"],
             stderr=STDOUT,
             cwd=os.path.dirname(os.path.abspath(__file__)),
         )

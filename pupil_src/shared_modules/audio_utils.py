@@ -1,20 +1,59 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import numpy as np
-import av
-import os
+import collections
+import glob
 import logging
+import os
+
+import numpy as np
+
+import av
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logger.DEBUG)
+logger.setLevel(logging.DEBUG)
+
+
+class NoAudioLoadedError(Exception):
+    pass
+
+
+LoadedAudio = collections.namedtuple(
+    "LoadedAudio", ["container", "stream", "timestamps"]
+)
+
+
+def load_audio(rec_dir):
+    audio_pattern = os.path.join(rec_dir, "audio*.mp4")
+    # sort matched files in order to prefer `audio.mp4` over `audio_xxxx.mp4`
+    for audio_file in sorted(glob.glob(audio_pattern)):
+        try:
+            container = av.open(audio_file)
+            stream = next(s for s in container.streams if s.type == "audio")
+            logger.debug("Loaded audiostream: %s" % stream)
+            break
+        except (av.AVError, StopIteration):
+            logger.debug(
+                "No audiostream found in media container {}".format(audio_file)
+            )
+    else:
+        raise NoAudioLoadedError("No valid audio file found")
+
+    audiots_path = os.path.splitext(audio_file)[0] + "_timestamps.npy"
+    try:
+        timestamps = np.load(audiots_path)
+    except IOError:
+        raise NoAudioLoadedError(
+            "Audio file found but could not load audio timestamps.", audio_file
+        )
+    return LoadedAudio(container, stream, timestamps)
 
 
 class Audio_Viz_Transform:
@@ -23,35 +62,15 @@ class Audio_Viz_Transform:
         import os
         import errno
 
-        audio_file = os.path.join(rec_dir, "audio.mp4")
-        if os.path.isfile(audio_file):
-            self.audio_container = av.open(str(audio_file))
-            try:
-                self.audio_stream = next(
-                    s for s in self.audio_container.streams if s.type == "audio"
-                )
-                logger.debug("loaded audiostream: %s" % self.audio_stream)
-            except StopIteration:
-                self.audio_stream = None
-                logger.debug("No audiostream found in media container")
-                return
-        else:
-            raise FileNotFoundError(errno.ENOENT, audio_file)
-        if self.audio_stream is not None:
-            audiots_path = os.path.splitext(audio_file)[0] + "_timestamps.npy"
-            try:
-                self.audio_timestamps = np.load(audiots_path)
-            except IOError:
-                self.audio_timestamps = None
-                logger.warning("Could not load audio timestamps")
-                raise FileNotFoundError(errno.ENOENT, audiots_path)
+        self.audio = load_audio(rec_dir)
+
         self.sps_rate = sps_rate
-        self.start_ts = self.audio_timestamps[0]
+        self.start_ts = self.audio.timestamps[0]
 
         # Test lowpass filtering + viz
         # self.lp_graph = av.filter.Graph()
         # self.lp_graph_list = []
-        # self.lp_graph_list.append(self.lp_graph.add_buffer(template=self.audio_stream))
+        # self.lp_graph_list.append(self.lp_graph.add_buffer(template=self.audio.stream))
         # args = "f=10"
         # print("args = {}".format(args))
         ## lp_graph_list.append(lp_graph.add("lowpass", args))
@@ -68,7 +87,7 @@ class Audio_Viz_Transform:
         #                                                     layout=audio_stream.layout,
         #                                                     rate=audio_stream.rate)
         self.audio_resampler = av.audio.resampler.AudioResampler(
-            format=self.audio_stream.format, layout=self.audio_stream.layout, rate=60
+            format=self.audio.stream.format, layout=self.audio.stream.layout, rate=60
         )
         self.next_audio_frame = self._next_audio_frame()
         self.all_abs_samples = None
@@ -79,13 +98,13 @@ class Audio_Viz_Transform:
         self.log_scaling = False
 
     def _next_audio_frame(self):
-        for packet in self.audio_container.demux(self.audio_stream):
+        for packet in self.audio.container.demux(self.audio.stream):
             for frame in packet.decode():
                 if frame:
                     yield frame
 
     def sec_to_frames(self, sec):
-        return int(np.ceil(sec * self.audio_stream.rate / self.audio_stream.frame_size))
+        return int(np.ceil(sec * self.audio.stream.rate / self.audio.stream.frame_size))
 
     def get_data(self, seconds=30.0, height=210, log_scale=False):
         import itertools
@@ -154,7 +173,7 @@ class Audio_Viz_Transform:
                     np.arange(0, len(self.all_abs_samples), 1, dtype=np.float32)
                     / self.audio_resampler.rate
                 )
-                new_ts += self.audio_timestamps[0]
+                new_ts += self.audio.timestamps[0]
 
                 # self.all_abs_samples = np.log10(self.all_abs_samples)
                 self.all_abs_samples[-1] = 0.0

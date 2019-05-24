@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -152,10 +152,9 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
 
     def on_notify(self, notification):
         if notification["subject"] == "should_export":
-            self.export_data(notification["range"], notification["export_dir"])
+            self.export_data(notification["ts_window"], notification["export_dir"])
 
-    def export_data(self, export_range, export_dir):
-        export_window = pm.exact_window(self.g_pool.timestamps, export_range)
+    def export_data(self, export_window, export_dir):
         if self.should_export_pupil_positions:
             with open(
                 os.path.join(export_dir, "pupil_positions.csv"),
@@ -167,7 +166,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
 
                 csv_writer.writerow(
                     (
-                        "world_timestamp",
+                        "pupil_timestamp",
                         "world_index",
                         "eye_id",
                         "confidence",
@@ -273,7 +272,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                 csv_writer = csv.writer(csvfile, delimiter=",")
                 csv_writer.writerow(
                     (
-                        "world_timestamp",
+                        "gaze_timestamp",
                         "world_index",
                         "confidence",
                         "norm_pos_x",

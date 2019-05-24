@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -71,7 +71,7 @@ class iMotions_Exporter(IsolatedFrameExporter):
                 input_name="world",
                 output_name="scene",
                 process_frame=_process_frame,
-                export_timestamps=False,
+                timestamp_export_format=None,
             )
         except FileNotFoundError:
             logger.info("'world' video not found. Export continues with gaze data.")
@@ -137,38 +137,43 @@ def _write_gaze_data(
             )
         )
 
-        for media_idx in range(*export_range):
+        export_start, export_stop = export_range  # export_stop is exclusive
+        export_window = pm.exact_window(timestamps, (export_start, export_stop - 1))
+        gaze_section = gaze_positions.init_dict_for_window(export_window)
+
+        # find closest world idx for each gaze datum
+        gaze_world_idc = pm.find_closest(timestamps, gaze_section["data_ts"])
+
+        for gaze_pos, media_idx in zip(gaze_section["data"], gaze_world_idc):
             media_timestamp = timestamps[media_idx]
-            media_window = pm.enclosing_window(timestamps, media_idx)
-            for gaze_pos in gaze_positions.by_ts_window(media_window):
-                try:
-                    pupil_dia = {}
-                    for p in gaze_pos["base_data"]:
-                        pupil_dia[p["id"]] = p["diameter_3d"]
+            try:
+                pupil_dia = {}
+                for p in gaze_pos["base_data"]:
+                    pupil_dia[p["id"]] = p["diameter_3d"]
 
-                    pixel_pos = denormalize(
-                        gaze_pos["norm_pos"], capture.frame_size, flip_y=True
-                    )
-                    undistorted3d = capture.intrinsics.unprojectPoints(pixel_pos)
-                    undistorted2d = capture.intrinsics.projectPoints(
-                        undistorted3d, use_distortion=False
-                    )
+                pixel_pos = denormalize(
+                    gaze_pos["norm_pos"], capture.frame_size, flip_y=True
+                )
+                undistorted3d = capture.intrinsics.unprojectPoints(pixel_pos)
+                undistorted2d = capture.intrinsics.projectPoints(
+                    undistorted3d, use_distortion=False
+                )
 
-                    data = (
-                        gaze_pos["timestamp"],
-                        media_timestamp,
-                        media_idx - export_range[0],
-                        *gaze_pos["gaze_point_3d"],  # Gaze3dX/Y/Z
-                        *undistorted2d.flat,  # Gaze2dX/Y
-                        pupil_dia.get(1, 0.),  # PupilDiaLeft
-                        pupil_dia.get(0, 0.),  # PupilDiaRight
-                        gaze_pos["confidence"],
-                    )  # Confidence
-                except KeyError:
-                    if not user_warned_3d_only:
-                        logger.error(
-                            "Currently, the iMotions export only supports 3d gaze data"
-                        )
-                        user_warned_3d_only = True
-                    continue
-                csv_writer.writerow(data)
+                data = (
+                    gaze_pos["timestamp"],
+                    media_timestamp,
+                    media_idx - export_range[0],
+                    *gaze_pos["gaze_point_3d"],  # Gaze3dX/Y/Z
+                    *undistorted2d.flat,  # Gaze2dX/Y
+                    pupil_dia.get(1, 0.0),  # PupilDiaLeft
+                    pupil_dia.get(0, 0.0),  # PupilDiaRight
+                    gaze_pos["confidence"],  # Confidence
+                )
+            except KeyError:
+                if not user_warned_3d_only:
+                    logger.error(
+                        "Currently, the iMotions export only supports 3d gaze data"
+                    )
+                    user_warned_3d_only = True
+                continue
+            csv_writer.writerow(data)
