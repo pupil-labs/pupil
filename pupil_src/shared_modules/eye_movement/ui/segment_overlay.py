@@ -32,15 +32,17 @@ def color_from_segment(segment: model.Classified_Segment) -> model.Color:
 
 
 def color_from_segment_class(segment_class: model.Segment_Class) -> model.Color:
-    return _segment_class_to_color_mapping[segment_class]
+    return _DEFAULT_SEGMENT_CLASS_TO_COLOR_MAPPING[segment_class]
 
 
-_segment_class_to_color_mapping: t.Mapping[model.Segment_Class, t.Type[model.Color]] = {
-    model.Segment_Class.FIXATION: model.Defo_Color_Palette.SUN_FLOWER,
-    model.Segment_Class.SACCADE: model.Defo_Color_Palette.NEPHRITIS,
-    model.Segment_Class.POST_SACCADIC_OSCILLATIONS: model.Defo_Color_Palette.BELIZE_HOLE,
-    model.Segment_Class.SMOOTH_PURSUIT: model.Defo_Color_Palette.WISTERIA,
-}
+def _segment_class_to_color_mapping_with_palette(palette) -> t.Mapping[model.Segment_Class, t.Type[model.Color]]:
+    return {
+        model.Segment_Class.FIXATION: palette.yellow,
+        model.Segment_Class.SACCADE: palette.green,
+        model.Segment_Class.POST_SACCADIC_OSCILLATIONS: palette.blue,
+        model.Segment_Class.SMOOTH_PURSUIT: palette.purple,
+    }
+_DEFAULT_SEGMENT_CLASS_TO_COLOR_MAPPING = _segment_class_to_color_mapping_with_palette(model.Defo_Color_Palette)
 
 
 def segment_draw_on_image(
