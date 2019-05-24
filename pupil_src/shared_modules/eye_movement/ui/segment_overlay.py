@@ -50,7 +50,7 @@ def segment_draw_on_image(
 ):
 
     segment_point = segment.mean_2d_point_within_world(size)
-    segment_color = color_from_segment(segment).to_rgba().channels
+    segment_color = color_from_segment(segment).to_bgra().channels
 
     pm.transparent_circle(
         image, segment_point, radius=25.0, color=segment_color, thickness=3
@@ -58,7 +58,7 @@ def segment_draw_on_image(
 
     text = str(segment.id)
     text_origin = (segment_point[0] + 30, segment_point[1])
-    text_fg_color = color_from_segment(segment).to_rgb().channels
+    text_fg_color = color_from_segment(segment).to_bgr().channels
     font_face = cv2.FONT_HERSHEY_DUPLEX
     font_scale = 0.8
     font_thickness = 1
