@@ -25,6 +25,10 @@ class Color(abc.ABC):
     def to_bgr(self) -> "Color_BGR":
         ...
 
+    @abc.abstractmethod
+    def to_bgra(self) -> "Color_BGRA":
+        ...
+
 
 class Color_RGB(Color):
     def __init__(self, red: int, green: int, blue: int):
@@ -56,6 +60,9 @@ class Color_RGB(Color):
 
     def to_bgr(self) -> "Color_BGR":
         return Color_BGR(blue=self.blue, green=self.green, red=self.red)
+
+    def to_bgra(self) -> "Color_BGRA":
+        return self.to_rgba().to_bgra()
 
 
 Color_RGB.BLACK = Color_RGB(0, 0, 0)
@@ -116,6 +123,9 @@ class Color_RGBA(Color):
     def to_bgr(self) -> "Color_BGR":
         return self.to_rgb().to_bgr()
 
+    def to_bgra(self) -> "Color_BGRA":
+        return Color_BGRA(blue=self.blue, green=self.green, red=self.red, alpha=self.alpha)
+
 
 class Color_BGR(Color):
     def __init__(self, blue: int, green: int, red: int):
@@ -146,6 +156,47 @@ class Color_BGR(Color):
 
     def to_bgr(self) -> "Color_BGR":
         return Color_BGR(*self.channels)
+
+    def to_bgra(self) -> "Color_BGRA":
+        return self.to_rgb().to_bgra()
+
+
+class Color_BGRA(Color):
+    def __init__(self, blue: float, green: float, red: float, alpha: float):
+        clip_float = lambda f: float(max(0.0, min(f, 1.0)))
+        self._channels = (clip_float(blue), clip_float(green), clip_float(red), clip_float(alpha))
+
+    @property
+    def blue(self) -> float:
+        return self.channels[0]
+
+    @property
+    def green(self) -> float:
+        return self.channels[1]
+
+    @property
+    def red(self) -> float:
+        return self.channels[2]
+
+    @property
+    def alpha(self) -> float:
+        return self.channels[3]
+
+    @property
+    def channels(self) -> t.Tuple[float, float, float, float]:
+        return self._channels
+
+    def to_rgb(self, bg_color: Color_RGB = ...) -> "Color_RGB":
+        return self.to_rgba().to_rgb()
+
+    def to_rgba(self) -> "Color_RGBA":
+        return Color_RGBA(red=self.red, green=self.green, blue=self.blue, alpha=self.alpha)
+
+    def to_bgr(self) -> "Color_BGR":
+        return self.to_rgba().to_bgr()
+
+    def to_bgra(self) -> "Color_BGRA":
+        return Color_BGRA(*self.channels)
 
 
 class Color_Palette(abc.ABC):
