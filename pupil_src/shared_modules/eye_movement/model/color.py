@@ -21,6 +21,10 @@ class Color(abc.ABC):
     def to_rgba(self) -> "Color_RGBA":
         ...
 
+    @abc.abstractmethod
+    def to_bgr(self) -> "Color_BGR":
+        ...
+
 
 class Color_RGB(Color):
     def __init__(self, red: int, green: int, blue: int):
@@ -49,6 +53,9 @@ class Color_RGB(Color):
     def to_rgba(self) -> "Color_RGBA":
         r, g, b = self.channels
         return Color_RGBA(float(r) / 255.0, float(g) / 255.0, float(b) / 255.0, 1.0)
+
+    def to_bgr(self) -> "Color_BGR":
+        return Color_BGR(blue=self.blue, green=self.green, red=self.red)
 
 
 Color_RGB.BLACK = Color_RGB(0, 0, 0)
@@ -105,6 +112,40 @@ class Color_RGBA(Color):
 
     def to_rgba(self) -> "Color_RGBA":
         return Color_RGBA(*self._channels)
+
+    def to_bgr(self) -> "Color_BGR":
+        return self.to_rgb().to_bgr()
+
+
+class Color_BGR(Color):
+    def __init__(self, blue: int, green: int, red: int):
+        clip_int = lambda i: int(max(0, min(i, 255)))
+        self._channels = (clip_int(blue), clip_int(green), clip_int(red))
+
+    @property
+    def blue(self) -> int:
+        return self.channels[0]
+
+    @property
+    def green(self) -> int:
+        return self.channels[1]
+
+    @property
+    def red(self) -> int:
+        return self.channels[2]
+
+    @property
+    def channels(self) -> t.Tuple[int, int, int]:
+        return self._channels
+
+    def to_rgb(self) -> "Color_RGB":
+        return Color_RGB(red=self.red, green=self.green, blue=self.blue)
+
+    def to_rgba(self) -> "Color_RGBA":
+        return self.to_rgb().to_rgba()
+
+    def to_bgr(self) -> "Color_BGR":
+        return Color_BGR(*self.channels)
 
 
 class Color_Palette(abc.ABC):
