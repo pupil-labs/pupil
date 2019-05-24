@@ -92,6 +92,12 @@ class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
             help_str = help_block.replace("\n", " ").replace("  ", "").strip()
             self.menu.append(gl_ui.Info_Text(help_str))
 
+        color_legend_text = ui.color_from_segment.__doc__
+        color_legend_text = color_legend_text.strip()
+        color_legend_text = color_legend_text.replace("  ", "")
+        color_legend_text = color_legend_text.replace("\n-", "\n    -")
+        self.menu.append(gl_ui.Info_Text(color_legend_text))
+
         self.glfont = fontstash.Context()
         self.glfont.add_font("opensans", gl_ui.get_opensans_font_path())
 

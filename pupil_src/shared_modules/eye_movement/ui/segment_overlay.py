@@ -19,6 +19,13 @@ import cv2
 
 
 def color_from_segment(segment: model.Classified_Segment) -> model.Color:
+    """
+    Segment color legend:
+        - Yellow - Fixation
+        - Green - Saccade
+        - Blue - PSO
+        - Purple - Smooth pursuit
+    """
     return color_from_segment_class(segment.segment_class)
 
 
@@ -29,6 +36,7 @@ def color_from_segment_class(segment_class: model.Segment_Class) -> model.Color:
 def _segment_class_to_color_mapping_with_palette(
     palette
 ) -> t.Mapping[model.Segment_Class, t.Type[model.Color]]:
+    # Note: Keep this mapping in sync with doc of color_from_segment
     return {
         model.Segment_Class.FIXATION: palette.yellow,
         model.Segment_Class.SACCADE: palette.green,
