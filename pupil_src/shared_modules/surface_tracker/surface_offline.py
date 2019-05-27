@@ -9,16 +9,23 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import logging
-import multiprocessing as mp
+import multiprocessing
+import platform
+
+import player_methods
+from surface_tracker import background_tasks, offline_utils
+from surface_tracker.cache import Cache
+from surface_tracker.surface import Surface, Surface_Location
 
 logger = logging.getLogger(__name__)
 
-from surface_tracker.cache import Cache
-import player_methods
 
-from surface_tracker.surface import Surface, Surface_Location
-from surface_tracker import offline_utils
-from surface_tracker import background_tasks
+# On macOS, "spawn" is set as default start method in main.py. This is not required
+# here and we set it back to "fork" to improve performance.
+if platform.system() == "Darwin":
+    mp_context = multiprocessing.get_context("fork")
+else:
+    mp_context = multiprocessing.get_context()
 
 
 class Surface_Offline(Surface):
@@ -30,7 +37,7 @@ class Surface_Offline(Surface):
     def __init__(self, name="unknown", init_dict=None):
         self.location_cache = None
         super().__init__(name=name, init_dict=init_dict)
-        self.cache_seek_idx = mp.Value("i", 0)
+        self.cache_seek_idx = mp_context.Value("i", 0)
         self.location_cache_filler = None
         self.observations_frame_idxs = []
         self.on_surface_change = None
@@ -181,7 +188,7 @@ class Surface_Offline(Surface):
                 self.registered_markers_dist,
             ),
             self.cache_seek_idx,
-            mp_context=mp,
+            mp_context,
         )
 
     def _update_definition(self, idx, visible_markers, camera_model):

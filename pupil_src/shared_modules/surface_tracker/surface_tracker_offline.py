@@ -37,9 +37,9 @@ from surface_tracker.surface_offline import Surface_Offline
 # On macOS, "spawn" is set as default start method in main.py. This is not required
 # here and we set it back to "fork" to improve performance.
 if platform.system() == "Darwin":
-    mp = multiprocessing.get_context("fork")
+    mp_context = multiprocessing.get_context("fork")
 else:
-    mp = multiprocessing.get_context()
+    mp_context = multiprocessing.get_context()
 
 
 class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
@@ -58,7 +58,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.MARKER_CACHE_VERSION = 3
         # Also add very small detected markers to cache and filter cache afterwards
         self.CACHE_MIN_MARKER_PERIMETER = 20
-        self.cache_seek_idx = mp.Value("i", 0)
+        self.cache_seek_idx = mp_context.Value("i", 0)
         self.marker_cache = None
         self.marker_cache_unfiltered = None
         self.cache_filler = None
@@ -148,7 +148,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             ),
             list(self.marker_cache),
             self.cache_seek_idx,
-            mp_context=mp,
+            mp_context,
         )
 
     def _filter_marker_cache(self, cache_to_filter):
@@ -307,7 +307,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             all_world_timestamps,
             all_gaze_events,
             self.camera_model,
-            mp_context=mp,
+            mp_context,
         )
 
     def _start_fixation_buffer_filler(
@@ -322,7 +322,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             all_world_timestamps,
             all_fixation_events,
             self.camera_model,
-            mp_context=mp,
+            mp_context,
         )
 
     def gl_display(self):
@@ -436,7 +436,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 self.g_pool.gaze_positions,
                 self.g_pool.fixations,
                 self.camera_model,
-                mp_context=mp,
+                mp_context,
             )
             self.export_proxies.add(proxy)
 
