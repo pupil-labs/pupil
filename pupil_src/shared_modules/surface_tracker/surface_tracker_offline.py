@@ -372,9 +372,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     def _draw_labels(self, width, height, scale):
         self.glfont.set_size(self.TIMELINE_LINE_HEIGHT * 0.8 * scale)
         self.glfont.draw_text(width, 0, "Marker Cache")
-        for idx, s in enumerate(self.surfaces):
+        for surface in self.surfaces:
             gl.glTranslatef(0, self.TIMELINE_LINE_HEIGHT * scale, 0)
-            self.glfont.draw_text(width, 0, s.name)
+            self.glfont.draw_text(width, 0, surface.name)
 
     def add_surface(self, init_dict=None):
         super().add_surface(init_dict)
