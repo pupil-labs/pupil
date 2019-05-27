@@ -147,7 +147,7 @@ class Surface_Offline(Surface):
                 except AttributeError:
                     self.location_cache_filler.cancel()
                     self.location_cache_filler = None
-                    raise
+                    return
 
             if self.location_cache_filler.completed:
                 self.location_cache_filler = None
