@@ -23,7 +23,7 @@ def color_from_segment(segment: model.Classified_Segment) -> model.Color:
     Segment color legend:
         - Yellow - Fixation
         - Green - Saccade
-        - Blue - PSO
+        - Blue - Post-saccadic oscillation
         - Purple - Smooth pursuit
     """
     return color_from_segment_class(segment.segment_class)
