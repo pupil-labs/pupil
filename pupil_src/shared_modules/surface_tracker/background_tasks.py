@@ -281,6 +281,9 @@ class Exporter:
 
         logger.info("Done exporting reference surface data.")
         return
+
+        # Task_proxy requires a genrator. The `yield` below
+        # triggers this function to become a generator.
         yield
 
     def _map_gaze_and_fixations(self):

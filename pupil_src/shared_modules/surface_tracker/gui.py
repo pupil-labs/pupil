@@ -12,9 +12,9 @@ See COPYING and COPYING.LESSER for license details.
 import platform
 from enum import Enum
 
-import OpenGL.GL as gl
 import cv2
 import numpy as np
+import OpenGL.GL as gl
 import pyglui
 import pyglui.cygl.utils as pyglui_utils
 
@@ -390,9 +390,13 @@ class GUI:
                         )
 
     def _check_surface_button_pressed(self, surface, pos):
-        corners, top_indicator, title_anchor, surface_edit_anchor, marker_edit_anchor = self._get_surface_anchor_points(
-            surface
-        )
+        (
+            corners,
+            top_indicator,
+            title_anchor,
+            surface_edit_anchor,
+            marker_edit_anchor,
+        ) = self._get_surface_anchor_points(surface)
 
         surface_edit_anchor = np.array(surface_edit_anchor)
         marker_edit_anchor = np.array(marker_edit_anchor)

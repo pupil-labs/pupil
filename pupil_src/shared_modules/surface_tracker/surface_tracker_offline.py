@@ -359,7 +359,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 if surface.location_cache is not None:
                     for r in surface.location_cache.positive_ranges:  # [[0,1],[3,4]]
                         found_at += ((ts[r[0]], 0), (ts[r[1]], 0))
-                    cached_surfaces.append(found_at)
+                cached_surfaces.append(found_at)
 
             color = pyglui_utils.RGBA(0, 0.7, 0.3, 0.8)
 
