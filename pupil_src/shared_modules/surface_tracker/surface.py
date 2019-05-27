@@ -605,3 +605,6 @@ class Surface_Location:
         location.surf_to_img_trans = np.asarray(copy["surf_to_img_trans"])
         location.num_detected_markers = copy["num_detected_markers"]
         return location
+
+    def __bool__(self):
+        return self.detected
