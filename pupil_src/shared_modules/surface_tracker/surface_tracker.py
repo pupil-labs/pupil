@@ -201,7 +201,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def _per_surface_ui(self, surface):
         def set_name(val):
-            if val != surface.name:
+            if val == surface.name:
                 return
 
             names = [x.name for x in self.surfaces]
