@@ -11,10 +11,10 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 import os
 
+import cv2
 import numpy as np
 
 import csv_utils
-import cv2
 
 logger = logging.getLogger(__name__)
 

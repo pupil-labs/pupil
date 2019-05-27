@@ -96,7 +96,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
 
         # from vis_scan_path import Vis_Scan_Path
         from seek_control import Seek_Control
-        from offline_surface_tracker import Offline_Surface_Tracker
+        from surface_tracker import Surface_Tracker_Offline
 
         # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
         from fixation_detector import Offline_Fixation_Detector
@@ -146,7 +146,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Offline_Fixation_Detector,
             Offline_Eye_Movement_Detector,
             Offline_Blink_Detection,
-            Offline_Surface_Tracker,
+            Surface_Tracker_Offline,
             Raw_Data_Exporter,
             Annotation_Player,
             Log_History,

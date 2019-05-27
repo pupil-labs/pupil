@@ -155,7 +155,7 @@ def load_intrinsics(directory, cam_name, resolution):
 
         intrinsics = calib_dict[str(resolution)]
         logger.info("Previously recorded calibration found and loaded!")
-    except Exception as e:
+    except Exception:
         logger.info(
             "No user calibration found for camera {} at resolution {}".format(
                 cam_name, resolution
@@ -213,7 +213,6 @@ def save_intrinsics(directory, cam_name, resolution, intrinsics):
 
 
 class Camera_Model(abc.ABC):
-
     @abc.abstractmethod
     def undistort(self, img: np.ndarray) -> np.ndarray:
         ...
@@ -235,7 +234,15 @@ class Camera_Model(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def solvePnP(self, uv3d, xy):
+    def solvePnP(
+        self,
+        uv3d,
+        xy,
+        flags: int = cv2.SOLVEPNP_ITERATIVE,
+        useExtrinsicGuess: bool = False,
+        rvec: typing.Optional[np.ndarray] = None,
+        tvec: typing.Optional[np.ndarray] = None,
+    ):
         ...
 
     @abc.abstractmethod
@@ -373,6 +380,16 @@ class Fisheye_Dist_Camera(Camera_Model):
             image_points.shape = (-1, 1, 2)
         return image_points
 
+    def undistortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=True)
+        points = self.projectPoints(points, use_distortion=False)
+        return points
+
+    def distortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=False)
+        points = self.projectPoints(points, use_distortion=True)
+        return points
+
     def solvePnP(
         self,
         uv3d,
@@ -415,12 +432,6 @@ class Fisheye_Dist_Camera(Camera_Model):
         )
 
         return res
-
-    def undistortPoints(self, xy):
-        xy_undist = cv2.fisheye.undistortPoints(
-            xy, self.K, self.D, R=np.eye(3), P=self.K
-        )
-        return xy_undist
 
     def save(self, directory, custom_name=None):
         """
@@ -533,6 +544,16 @@ class Radial_Dist_Camera(Camera_Model):
             image_points.shape = (-1, 1, 2)
         return image_points
 
+    def undistortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=True)
+        points = self.projectPoints(points, use_distortion=False)
+        return points
+
+    def distortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=False)
+        points = self.projectPoints(points, use_distortion=True)
+        return points
+
     def solvePnP(
         self,
         uv3d,
@@ -562,9 +583,6 @@ class Radial_Dist_Camera(Camera_Model):
             tvec=tvec,
         )
         return res
-
-    def undistortPoints(self, xy):
-        return cv2.undistortPoints(xy, self.K, self.D)
 
     def save(self, directory, custom_name=None):
         """

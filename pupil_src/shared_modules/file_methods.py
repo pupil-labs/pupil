@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import collections
+import collections.abc
 import logging
 import os
 import pickle
