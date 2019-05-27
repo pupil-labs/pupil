@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import itertools
 import logging
-import multiprocessing as mp
+import multiprocessing
 import os
 import platform
 import time
@@ -33,6 +33,13 @@ from surface_tracker.surface_tracker import Surface_Tracker
 from surface_tracker import offline_utils, background_tasks, Square_Marker_Detection
 from surface_tracker.gui import Heatmap_Mode
 from surface_tracker.surface_offline import Surface_Offline
+
+# On macOS, "spawn" is set as default start method in main.py. This is not required
+# here and we set it back to "fork" to improve performance.
+if platform.system() == "Darwin":
+    mp = multiprocessing.get_context("fork")
+else:
+    mp = multiprocessing.get_context()
 
 
 class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
@@ -141,6 +148,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             ),
             list(self.marker_cache),
             self.cache_seek_idx,
+            mp_context=mp,
         )
 
     def _filter_marker_cache(self, cache_to_filter):
@@ -299,6 +307,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             all_world_timestamps,
             all_gaze_events,
             self.camera_model,
+            mp_context=mp,
         )
 
     def _start_fixation_buffer_filler(
@@ -313,6 +322,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             all_world_timestamps,
             all_fixation_events,
             self.camera_model,
+            mp_context=mp,
         )
 
     def gl_display(self):
@@ -426,6 +436,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 self.g_pool.gaze_positions,
                 self.g_pool.fixations,
                 self.camera_model,
+                mp_context=mp,
             )
             self.export_proxies.add(proxy)
 

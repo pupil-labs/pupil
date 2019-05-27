@@ -12,11 +12,14 @@ import player_methods
 logger = logging.getLogger(__name__)
 
 
-def background_video_processor(video_file_path, callable, visited_list, seek_idx):
+def background_video_processor(
+    video_file_path, callable, visited_list, seek_idx, mp_context
+):
     return background_helper.IPC_Logging_Task_Proxy(
         "Background Video Processor",
         video_processing_generator,
         (video_file_path, callable, seek_idx, visited_list),
+        context=mp_context,
     )
 
 
@@ -107,11 +110,12 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
             yield next_frame_idx, res
 
 
-def background_data_processor(data, callable, seek_idx=-1):
+def background_data_processor(data, callable, seek_idx, mp_context):
     return background_helper.IPC_Logging_Task_Proxy(
         "Background Data Processor",
         data_processing_generator,
         (data, callable, seek_idx),
+        context=mp_context,
     )
 
 
@@ -181,12 +185,13 @@ def gaze_on_surface_generator(
 
 
 def background_gaze_on_surface(
-    surfaces, section, all_world_timestamps, all_gaze_events, camera_model
+    surfaces, section, all_world_timestamps, all_gaze_events, camera_model, mp_context
 ):
     return background_helper.IPC_Logging_Task_Proxy(
         "Background Data Processor",
         gaze_on_surface_generator,
         (surfaces, section, all_world_timestamps, all_gaze_events, camera_model),
+        context=mp_context,
     )
 
 
@@ -198,6 +203,7 @@ def get_export_proxy(
     gaze_positions,
     fixations,
     camera_model,
+    mp_context,
 ):
     exporter = Exporter(
         export_dir,
@@ -209,7 +215,9 @@ def get_export_proxy(
         camera_model,
     )
     proxy = background_helper.IPC_Logging_Task_Proxy(
-        "Offline Surface Tracker Exporter", exporter.save_surface_statisics_to_file
+        "Offline Surface Tracker Exporter",
+        exporter.save_surface_statisics_to_file,
+        context=mp_context,
     )
     return proxy
 

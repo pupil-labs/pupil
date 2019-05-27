@@ -181,6 +181,7 @@ class Surface_Offline(Surface):
                 self.registered_markers_dist,
             ),
             self.cache_seek_idx,
+            mp_context=mp,
         )
 
     def _update_definition(self, idx, visible_markers, camera_model):
