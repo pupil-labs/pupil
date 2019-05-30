@@ -139,7 +139,9 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         elif notification["subject"] == Notification_Subject.SHOULD_RECALCULATE:
             self.offline_controller.classify()
         elif notification["subject"] == "should_export":
-            self.export_eye_movement(notification["range"], notification["export_dir"])
+            self.export_eye_movement(
+                notification["ts_window"], notification["export_dir"]
+            )
 
     def recent_events(self, events):
 
@@ -167,9 +169,9 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
 
         events[utils.EYE_MOVEMENT_EVENT_KEY] = visible_segments
 
-    def export_eye_movement(self, export_range, export_dir):
+    def export_eye_movement(self, export_window, export_dir):
 
-        segments_in_section = self.storage.segments_in_range(export_range)
+        segments_in_section = self.storage.segments_in_timestamp_window(export_window)
 
         if segments_in_section:
             csv_exporter = controller.Eye_Movement_CSV_Exporter()
