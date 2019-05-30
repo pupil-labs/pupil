@@ -84,6 +84,13 @@ class Real_Time_Buffered_Detector:
             gaze_time, eye_positions
         )
 
+        # by-gaze clasification, modifies events["gaze"] by reference
+        for gaze, classification in zip(gaze_data, gaze_classification):
+            gaze[utils.EYE_MOVEMENT_GAZE_KEY] = model.Segment_Class.from_nslr_class(
+                classification
+            ).value
+
+        # by-segment classification
         for i, nslr_segment in enumerate(segmentation.segments):
 
             nslr_segment_class = segment_classification[i]
