@@ -17,9 +17,8 @@ import numpy as np
 
 Gaze_Data = t.Iterable[fm.Serialized_Dict]
 
-
-Gaze_Time = t.Iterable[float]
-
+Gaze_Timestamp = float
+Gaze_Time = t.Iterable[Gaze_Timestamp]
 
 MsgPack_Serialized_Segment = t.Type[bytes]
 

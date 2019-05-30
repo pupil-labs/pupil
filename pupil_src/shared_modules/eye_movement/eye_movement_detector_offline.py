@@ -174,7 +174,23 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         segments_in_section = self.storage.segments_in_timestamp_window(export_window)
 
         if segments_in_section:
-            csv_exporter = controller.Eye_Movement_CSV_Exporter()
-            csv_exporter.csv_export(segments_in_section, export_dir=export_dir)
+            by_segment_csv_exporter = controller.Eye_Movement_By_Segment_CSV_Exporter()
+            by_segment_csv_exporter.csv_export(
+                segments_in_section, export_dir=export_dir
+            )
+
+            export_window_start, export_window_stop = export_window
+            ts_segment_class_pairs = (
+                (gaze["timestamp"], seg.segment_class)
+                for seg in segments_in_section
+                for gaze in seg.segment_data
+                if export_window_start <= gaze["timestamp"] <= export_window_stop
+            )
+            by_gaze_csv_exporter = controller.Eye_Movement_By_Gaze_CSV_Exporter()
+            by_gaze_csv_exporter.csv_export(
+                ts_segment_class_pairs, export_dir=export_dir
+            )
         else:
-            utils.logger.warning("No fixations in this recording nothing to export")
+            utils.logger.warning(
+                "The selected export range does not include eye movement detections"
+            )
