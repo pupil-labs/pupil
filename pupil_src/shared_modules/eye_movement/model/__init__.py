@@ -8,7 +8,14 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from .color import Color, Color_RGB, Color_RGBA, Color_Palette, Base_Color_Palette, Defo_Color_Palette
+from .color import (
+    Color,
+    Color_RGB,
+    Color_RGBA,
+    Color_Palette,
+    Base_Color_Palette,
+    Defo_Color_Palette,
+)
 from .immutable_capture import Immutable_Capture
 from .segment import (
     Segment_Class,

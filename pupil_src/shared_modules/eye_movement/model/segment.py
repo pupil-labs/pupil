@@ -410,11 +410,13 @@ class Classified_Segment(StorageItem):
         def denormalize(point):
             x, y = mt.denormalize(point, world_size, flip_y=True)
             return int(x), int(y)
+
         return [
             denormalize(datum["norm_pos"])
             for datum in self.segment_data
             if datum["confidence"] >= min_data_confidence
         ]
+
 
 class Classified_Segment_Factory:
     __slots__ = "_segment_id"

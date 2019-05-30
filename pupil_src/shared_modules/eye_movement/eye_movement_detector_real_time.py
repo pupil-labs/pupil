@@ -78,8 +78,7 @@ class Eye_Movement_Detector_Real_Time(Eye_Movement_Detector_Base):
 
     def gl_display(self):
         segment_renderer = ui.Segment_Overlay_GL_Context_Renderer(
-            canvas_size=self.g_pool.capture.frame_size,
-            gl_font=self.glfont,
+            canvas_size=self.g_pool.capture.frame_size, gl_font=self.glfont
         )
         for segment in self._recent_segments:
             segment_renderer.draw(segment)

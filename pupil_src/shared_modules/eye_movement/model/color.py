@@ -124,7 +124,9 @@ class Color_RGBA(Color):
         return self.to_rgb().to_bgr()
 
     def to_bgra(self) -> "Color_BGRA":
-        return Color_BGRA(blue=self.blue, green=self.green, red=self.red, alpha=self.alpha)
+        return Color_BGRA(
+            blue=self.blue, green=self.green, red=self.red, alpha=self.alpha
+        )
 
 
 class Color_BGR(Color):
@@ -164,7 +166,12 @@ class Color_BGR(Color):
 class Color_BGRA(Color):
     def __init__(self, blue: float, green: float, red: float, alpha: float):
         clip_float = lambda f: float(max(0.0, min(f, 1.0)))
-        self._channels = (clip_float(blue), clip_float(green), clip_float(red), clip_float(alpha))
+        self._channels = (
+            clip_float(blue),
+            clip_float(green),
+            clip_float(red),
+            clip_float(alpha),
+        )
 
     @property
     def blue(self) -> float:
@@ -190,7 +197,9 @@ class Color_BGRA(Color):
         return self.to_rgba().to_rgb()
 
     def to_rgba(self) -> "Color_RGBA":
-        return Color_RGBA(red=self.red, green=self.green, blue=self.blue, alpha=self.alpha)
+        return Color_RGBA(
+            red=self.red, green=self.green, blue=self.blue, alpha=self.alpha
+        )
 
     def to_bgr(self) -> "Color_BGR":
         return self.to_rgba().to_bgr()
@@ -202,23 +211,28 @@ class Color_BGRA(Color):
 class Color_Palette(abc.ABC):
     @property
     @abc.abstractmethod
-    def grey(self): ...
+    def grey(self):
+        ...
 
     @property
     @abc.abstractmethod
-    def yellow(self): ...
+    def yellow(self):
+        ...
 
     @property
     @abc.abstractmethod
-    def green(self): ...
+    def green(self):
+        ...
 
     @property
     @abc.abstractmethod
-    def blue(self): ...
+    def blue(self):
+        ...
 
     @property
     @abc.abstractmethod
-    def purple(self): ...
+    def purple(self):
+        ...
 
 
 class Base_Color_Palette(Color_Palette):
@@ -233,6 +247,7 @@ class Defo_Color_Palette(Color_Palette):
     """
     https://flatuicolors.com/palette/defo
     """
+
     WET_ASPHALT = Color_RGB(52, 73, 94)
     grey = WET_ASPHALT
 

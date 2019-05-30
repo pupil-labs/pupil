@@ -47,13 +47,10 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
     def __init__(self, g_pool, show_segmentation=True):
         super().__init__(g_pool)
         self.storage = model.Classified_Segment_Storage(
-            plugin=self,
-            rec_dir=g_pool.rec_dir
+            plugin=self, rec_dir=g_pool.rec_dir
         )
         self.seek_controller = controller.Eye_Movement_Seek_Controller(
-            plugin=self,
-            storage=self.storage,
-            seek_to_timestamp=self.seek_to_timestamp,
+            plugin=self, storage=self.storage, seek_to_timestamp=self.seek_to_timestamp
         )
         self.offline_controller = controller.Eye_Movement_Offline_Controller(
             plugin=self,
@@ -69,24 +66,19 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
             show_segmentation=show_segmentation,
         )
         self.prev_segment_button = ui.Prev_Segment_Button(
-            on_click=self.seek_controller.jump_to_prev_segment,
+            on_click=self.seek_controller.jump_to_prev_segment
         )
         self.next_segment_button = ui.Next_Segment_Button(
-            on_click=self.seek_controller.jump_to_next_segment,
+            on_click=self.seek_controller.jump_to_next_segment
         )
         self._gaze_changed_listener = Listener(
-            plugin=self,
-            topic="gaze_positions",
-            rec_dir=g_pool.rec_dir,
+            plugin=self, topic="gaze_positions", rec_dir=g_pool.rec_dir
         )
         self._gaze_changed_listener.add_observer(
-            method_name="on_data_changed",
-            observer=self.offline_controller.classify,
+            method_name="on_data_changed", observer=self.offline_controller.classify
         )
         self._eye_movement_changed_announcer = Announcer(
-            plugin=self,
-            topic=EYE_MOVEMENT_ANNOUNCER_TOPIC,
-            rec_dir=g_pool.rec_dir,
+            plugin=self, topic=EYE_MOVEMENT_ANNOUNCER_TOPIC, rec_dir=g_pool.rec_dir
         )
 
     #
@@ -168,8 +160,7 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
 
         if self.menu_content.show_segmentation:
             segment_renderer = ui.Segment_Overlay_Image_Renderer(
-                canvas_size=(frame.width, frame.height),
-                image=frame.img,
+                canvas_size=(frame.width, frame.height), image=frame.img
             )
             for segment in visible_segments:
                 segment_renderer.draw(segment)
