@@ -440,7 +440,7 @@ class Classified_Segment_Factory:
             return None
 
         segment_class = Segment_Class.from_nslr_class(nslr_segment_class)
-        topic = "nslr_segmentation"
+        topic = utils.EYE_MOVEMENT_TOPIC_PREFIX + segment_class.value
 
         start_frame_index, end_frame_index = nslr_segment.i  # [i_0, i_1)
         start_frame_timestamp, end_frame_timestamp = (
