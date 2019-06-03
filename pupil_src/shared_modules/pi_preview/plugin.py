@@ -19,8 +19,12 @@ class PI_Preview(Plugin):
         self._num_prefix_elements = 0
 
     def recent_events(self, events):
-        self.connection.update()
-        frame = events.get("frame")
+        gaze = self.connection.update()
+        if gaze:
+            if "gaze" not in events:
+                events["gaze"] = gaze
+            else:
+                events["gaze"].extend(gaze)
 
     def init_ui(self):
         self.add_menu()
