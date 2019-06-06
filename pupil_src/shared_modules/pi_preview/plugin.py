@@ -27,6 +27,7 @@ class PI_Preview(Plugin):
         self._num_prefix_elements = 0
         self.last_click = None
         self.offset_active = offset_active
+        self.default_config()
 
     def on_click(self, pos, button, action):
         if action == glfw.GLFW_PRESS:
@@ -76,3 +77,6 @@ class PI_Preview(Plugin):
             "offset_active": self.offset_active,
             "linked_device": self.connection.sensor.linked_device,
         }
+    def default_config(self):
+        self.notify_all({"subject": "eye_process.should_stop", "eye_id": 0})
+        self.notify_all({"subject": "eye_process.should_stop", "eye_id": 1})
