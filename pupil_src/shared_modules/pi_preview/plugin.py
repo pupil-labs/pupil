@@ -1,5 +1,6 @@
 import logging
 
+import glfw
 from pyglui import ui
 
 from plugin import Plugin
@@ -23,7 +24,8 @@ class PI_Preview(Plugin):
         self.last_click = None
 
     def on_click(self, pos, button, action):
-        self.last_click = pos[0] / IMG_SIZE, (IMG_SIZE - pos[1]) / IMG_SIZE
+        if action == glfw.GLFW_PRESS:
+            self.last_click = pos[0] / IMG_SIZE, (IMG_SIZE - pos[1]) / IMG_SIZE
 
     def recent_events(self, events):
         gaze = self.connection.update()
