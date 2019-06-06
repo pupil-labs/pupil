@@ -80,3 +80,5 @@ class PI_Preview(Plugin):
     def default_config(self):
         self.notify_all({"subject": "eye_process.should_stop", "eye_id": 0})
         self.notify_all({"subject": "eye_process.should_stop", "eye_id": 1})
+        self.notify_all({"subject": "start_plugin", "name": "HMD_Calibration"})
+        self.notify_all({"subject": "stop_plugin", "name": "Recorder"})
