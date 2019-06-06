@@ -49,6 +49,7 @@ class PI_Preview(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Pupil Invisible Preview"
+        self.menu.append(ui.Button("Reset offset", self.reset_offset))
         self._num_prefix_elements = len(self.menu)
         self.update_ndsi_menu()
 
@@ -63,3 +64,5 @@ class PI_Preview(Plugin):
         self.connection.close()
         self.connection = None
 
+    def reset_offset(self):
+        self.offset = [0, 0]
