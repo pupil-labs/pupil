@@ -5,6 +5,7 @@ from pyglui import ui
 
 from plugin import Plugin
 
+from pi_preview import Linked_Device
 from pi_preview.connection import Connection
 
 logger = logging.getLogger(__name__)
@@ -16,9 +17,13 @@ class PI_Preview(Plugin):
     icon_chr = "PI"
     order = 0.02  # ensures init after all plugins
 
-    def __init__(self, g_pool, offset_active=False):
+    def __init__(self, g_pool, offset_active=False, linked_device=...):
         super().__init__(g_pool)
-        self.connection = Connection(update_ui_cb=self.update_ndsi_menu)
+        if linked_device is ...:
+            linked_device = Linked_Device()
+        else:
+            linked_device = Linked_Device(*linked_device)
+        self.connection = Connection(linked_device, update_ui_cb=self.update_ndsi_menu)
         self._num_prefix_elements = 0
         self.last_click = None
         self.offset_active = offset_active
@@ -65,3 +70,9 @@ class PI_Preview(Plugin):
     def cleanup(self):
         self.connection.close()
         self.connection = None
+
+    def get_init_dict(self):
+        return {
+            "offset_active": self.offset_active,
+            "linked_device": self.connection.sensor.linked_device,
+        }

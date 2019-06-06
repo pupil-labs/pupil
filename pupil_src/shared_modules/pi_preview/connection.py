@@ -2,18 +2,18 @@ import logging
 import ndsi
 from pyglui import ui
 
-from pi_preview import GAZE_SENSOR_TYPE
+from pi_preview import GAZE_SENSOR_TYPE, Linked_Device
 from pi_preview.sensor import GazeSensor
 
 logger = logging.getLogger(__name__)
 
 
 class Connection:
-    def __init__(self, update_ui_cb):
+    def __init__(self, linked_device, update_ui_cb):
         self.update_ui_cb = update_ui_cb
         self.network = ndsi.Network(callbacks=(self.on_event,))
         self.network.start()
-        self.sensor = GazeSensor(self.network, host_uuid=None)
+        self.sensor = GazeSensor(self.network, linked_device)
 
     def close(self):
         self.sensor.unlink()
@@ -37,11 +37,7 @@ class Connection:
             self.sensor.activate()
             self.update_ui_cb()
 
-        if (
-            event["subject"] == "detach"
-            and event["sensor_type"] == GAZE_SENSOR_TYPE
-            and event["host_uuid"] == self.sensor.host_uuid
-        ):
+        if event["subject"] == "detach" and event["host_uuid"] == self.sensor.host_uuid:
             self.sensor.deactivate()
 
     def add_ui_elements(self, menu):
@@ -76,5 +72,5 @@ class Connection:
         elif self.sensor.linked:
             self.sensor.unlink()
 
-        self.sensor = GazeSensor(self.network, host_uuid)
+        self.sensor = GazeSensor(self.network, Linked_Device(uuid=host_uuid))
         self.update_ui_cb()

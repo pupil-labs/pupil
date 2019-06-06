@@ -1,7 +1,7 @@
 import logging
 from pyglui import ui
 
-from pi_preview import GAZE_SENSOR_TYPE
+from pi_preview import GAZE_SENSOR_TYPE, Linked_Device
 
 logger = logging.getLogger(__name__)
 
@@ -9,11 +9,11 @@ logger = logging.getLogger(__name__)
 class GazeSensor:
     get_data_timeout = 100  # ms
 
-    def __init__(self, network, host_uuid):
+    def __init__(self, network, linked_device):
         self._ndsi_sensor = None
         self.network = network
-        self.host_uuid = host_uuid
-        self.host_name = None
+        self.host_uuid = linked_device.uuid
+        self.host_name = linked_device.name
         self.offset = [0, 0]
         if self.linked:
             self.activate()
@@ -25,6 +25,19 @@ class GazeSensor:
     @property
     def online(self):
         return bool(self._ndsi_sensor)
+
+    @property
+    def status(self):
+        if not self.linked:
+            return "Not linked"
+        elif not self.online:
+            return "Not connected"
+        else:
+            return "Connected"
+
+    @property
+    def linked_device(self):
+        return Linked_Device(self.host_uuid, self.host_name)
 
     def unlink(self):
         self.deactivate()
@@ -104,12 +117,3 @@ class GazeSensor:
 
     def reset_offset(self):
         self.offset = [0, 0]
-
-    @property
-    def status(self):
-        if not self.linked:
-            return "Not linked"
-        elif not self.online:
-            return "Not connected"
-        else:
-            return "Connected"
