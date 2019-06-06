@@ -8,6 +8,8 @@ from pi_preview.connection import Connection
 
 logger = logging.getLogger(__name__)
 
+IMG_SIZE = 1080
+
 
 class PI_Preview(Plugin):
     icon_chr = "PI"
@@ -21,7 +23,7 @@ class PI_Preview(Plugin):
         self.last_click = None
 
     def on_click(self, pos, button, action):
-        self.last_click = pos[0] / 1080.0, (1 - pos[1]) / 1080.0
+        self.last_click = pos[0] / IMG_SIZE, (IMG_SIZE - pos[1]) / IMG_SIZE
 
     def recent_events(self, events):
         gaze = self.connection.update()
@@ -33,7 +35,6 @@ class PI_Preview(Plugin):
             self.last_click = None
 
         for g in gaze:
-            print(gaze)
             g["norm_pos"][0] += self.offset[0]
             g["norm_pos"][1] += self.offset[1]
 
