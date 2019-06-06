@@ -44,7 +44,7 @@ class Connection:
     def _make_gaze_pos(x, y, ts, frame_size_x=1080, frame_size_y=1080):
         return {
             "topic": "gaze.pi",
-            "norm_pos": (x / frame_size_x, 1.0 - y / frame_size_y),
+            "norm_pos": [x / frame_size_x, 1.0 - y / frame_size_y],
             "timestamp": ts,
             "confidence": 1.0,
         }
@@ -90,13 +90,11 @@ class Connection:
             # split tuples into 2 lists
             return zip(*(devices or [(None, "No hosts found")]))
 
-        host_sel, host_sel_labels = host_selection_list()
         menu.append(
             ui.Selector(
                 "selected_sensor_uuid",
                 self,
-                selection=host_sel,
-                labels=host_sel_labels,
+                selection_getter=host_selection_list,
                 setter=self._select_sensor,
                 label="Remote host",
             )

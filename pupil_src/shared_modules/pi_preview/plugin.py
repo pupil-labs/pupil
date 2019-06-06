@@ -17,9 +17,26 @@ class PI_Preview(Plugin):
         super().__init__(g_pool)
         self.connection = Connection(update_ui_cb=self.update_ndsi_menu)
         self._num_prefix_elements = 0
+        self.offset = [0, 0]
+        self.last_click = None
+
+    def on_click(self, pos, button, action):
+        self.last_click = pos[0] / 1080.0, (1 - pos[1]) / 1080.0
 
     def recent_events(self, events):
         gaze = self.connection.update()
+        if gaze and self.last_click:
+            self.offset = (
+                self.last_click[0] - gaze[0]["norm_pos"][0],
+                self.last_click[1] - gaze[0]["norm_pos"][1],
+            )
+            self.last_click = None
+
+        for g in gaze:
+            print(gaze)
+            g["norm_pos"][0] += self.offset[0]
+            g["norm_pos"][1] += self.offset[1]
+
         if gaze:
             if "gaze" not in events:
                 events["gaze"] = gaze
