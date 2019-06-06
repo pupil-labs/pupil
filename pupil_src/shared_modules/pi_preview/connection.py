@@ -9,8 +9,9 @@ logger = logging.getLogger(__name__)
 
 
 class Connection:
-    def __init__(self, linked_device, update_ui_cb):
+    def __init__(self, linked_device, update_ui_cb, activate_ndsi_backend_cb):
         self.update_ui_cb = update_ui_cb
+        self.activate_ndsi_backend_cb = activate_ndsi_backend_cb
         self.network = ndsi.Network(callbacks=(self.on_event,))
         self.network.start()
         self.sensor = GazeSensor(self.network, linked_device)
@@ -74,3 +75,4 @@ class Connection:
 
         self.sensor = GazeSensor(self.network, Linked_Device(uuid=host_uuid))
         self.update_ui_cb()
+        self.activate_ndsi_backend_cb(host_uuid)

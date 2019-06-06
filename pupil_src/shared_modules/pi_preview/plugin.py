@@ -23,7 +23,11 @@ class PI_Preview(Plugin):
             linked_device = Linked_Device()
         else:
             linked_device = Linked_Device(*linked_device)
-        self.connection = Connection(linked_device, update_ui_cb=self.update_ndsi_menu)
+        self.connection = Connection(
+            linked_device,
+            update_ui_cb=self.update_ndsi_menu,
+            activate_ndsi_backend_cb=self.activate_ndsi_backend,
+        )
         self._num_prefix_elements = 0
         self.last_click = None
         self.offset_active = offset_active
@@ -77,6 +81,18 @@ class PI_Preview(Plugin):
             "offset_active": self.offset_active,
             "linked_device": self.connection.sensor.linked_device,
         }
+
+    def activate_ndsi_backend(self, host_uuid):
+        self.notify_all(
+            {"subject": "backend.auto_select_manager", "name": "NDSI_Manager"}
+        )
+        self.notify_all(
+            {
+                "subject": "backend.ndsi_do_select_host",
+                "target_host": host_uuid,
+                "delay": 0.4,
+            }
+        )
     def default_config(self):
         self.notify_all({"subject": "eye_process.should_stop", "eye_id": 0})
         self.notify_all({"subject": "eye_process.should_stop", "eye_id": 1})
