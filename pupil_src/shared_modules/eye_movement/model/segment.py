@@ -245,6 +245,7 @@ class Classified_Segment(StorageItem):
         public_dict = {
             "id": self.id,
             "topic": self.topic,
+            "timestamp": self.timestamp,
             "base_type": self.base_type.value,
             "segment_class": self.segment_class.value,
             "start_frame_index": self.start_frame_index,
