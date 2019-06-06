@@ -38,7 +38,7 @@ class Display_Recent_Gaze(System_Plugin_Base):
                 center_position=(pt[0] * 1080, (1 - pt[1]) * 1080),
                 radius=size,
                 stroke_width=40,
-                color=RGBA(0.1, 0.4, 0.8, 0.3),
+                color=RGBA(0.8, 0.0, 0.0, 0.3),
                 sharpness=0.2,
             )
             size += 1.3
