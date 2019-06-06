@@ -47,13 +47,10 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
     def __init__(self, g_pool, show_segmentation=True):
         super().__init__(g_pool)
         self.storage = model.Classified_Segment_Storage(
-            plugin=self,
-            rec_dir=g_pool.rec_dir
+            plugin=self, rec_dir=g_pool.rec_dir
         )
         self.seek_controller = controller.Eye_Movement_Seek_Controller(
-            plugin=self,
-            storage=self.storage,
-            seek_to_timestamp=self.seek_to_timestamp,
+            plugin=self, storage=self.storage, seek_to_timestamp=self.seek_to_timestamp
         )
         self.offline_controller = controller.Eye_Movement_Offline_Controller(
             plugin=self,
@@ -69,24 +66,19 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
             show_segmentation=show_segmentation,
         )
         self.prev_segment_button = ui.Prev_Segment_Button(
-            on_click=self.seek_controller.jump_to_prev_segment,
+            on_click=self.seek_controller.jump_to_prev_segment
         )
         self.next_segment_button = ui.Next_Segment_Button(
-            on_click=self.seek_controller.jump_to_next_segment,
+            on_click=self.seek_controller.jump_to_next_segment
         )
         self._gaze_changed_listener = Listener(
-            plugin=self,
-            topic="gaze_positions",
-            rec_dir=g_pool.rec_dir,
+            plugin=self, topic="gaze_positions", rec_dir=g_pool.rec_dir
         )
         self._gaze_changed_listener.add_observer(
-            method_name="on_data_changed",
-            observer=self.offline_controller.classify,
+            method_name="on_data_changed", observer=self.offline_controller.classify
         )
         self._eye_movement_changed_announcer = Announcer(
-            plugin=self,
-            topic=EYE_MOVEMENT_ANNOUNCER_TOPIC,
-            rec_dir=g_pool.rec_dir,
+            plugin=self, topic=EYE_MOVEMENT_ANNOUNCER_TOPIC, rec_dir=g_pool.rec_dir
         )
 
     #
@@ -147,7 +139,9 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         elif notification["subject"] == Notification_Subject.SHOULD_RECALCULATE:
             self.offline_controller.classify()
         elif notification["subject"] == "should_export":
-            self.export_eye_movement(notification["range"], notification["export_dir"])
+            self.export_eye_movement(
+                notification["ts_window"], notification["export_dir"]
+            )
 
     def recent_events(self, events):
 
@@ -168,20 +162,35 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
 
         if self.menu_content.show_segmentation:
             segment_renderer = ui.Segment_Overlay_Image_Renderer(
-                canvas_size=(frame.width, frame.height),
-                image=frame.img,
+                canvas_size=(frame.width, frame.height), image=frame.img
             )
             for segment in visible_segments:
                 segment_renderer.draw(segment)
 
         events[utils.EYE_MOVEMENT_EVENT_KEY] = visible_segments
 
-    def export_eye_movement(self, export_range, export_dir):
+    def export_eye_movement(self, export_window, export_dir):
 
-        segments_in_section = self.storage.segments_in_range(export_range)
+        segments_in_section = self.storage.segments_in_timestamp_window(export_window)
 
         if segments_in_section:
-            csv_exporter = controller.Eye_Movement_CSV_Exporter()
-            csv_exporter.csv_export(segments_in_section, export_dir=export_dir)
+            by_segment_csv_exporter = controller.Eye_Movement_By_Segment_CSV_Exporter()
+            by_segment_csv_exporter.csv_export(
+                segments_in_section, export_dir=export_dir
+            )
+
+            export_window_start, export_window_stop = export_window
+            ts_segment_class_pairs = (
+                (gaze["timestamp"], seg.segment_class)
+                for seg in segments_in_section
+                for gaze in seg.segment_data
+                if export_window_start <= gaze["timestamp"] <= export_window_stop
+            )
+            by_gaze_csv_exporter = controller.Eye_Movement_By_Gaze_CSV_Exporter()
+            by_gaze_csv_exporter.csv_export(
+                ts_segment_class_pairs, export_dir=export_dir
+            )
         else:
-            utils.logger.warning("No fixations in this recording nothing to export")
+            utils.logger.warning(
+                "The selected export range does not include eye movement detections"
+            )

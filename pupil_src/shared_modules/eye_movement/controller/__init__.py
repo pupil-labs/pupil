@@ -8,6 +8,9 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from .eye_movement_csv_exporter import Eye_Movement_CSV_Exporter
+from .eye_movement_csv_exporter import (
+    Eye_Movement_By_Segment_CSV_Exporter,
+    Eye_Movement_By_Gaze_CSV_Exporter,
+)
 from .eye_movement_offline_controller import Eye_Movement_Offline_Controller
 from .eye_movement_seek_controller import Eye_Movement_Seek_Controller

@@ -14,9 +14,9 @@ import eye_movement.utils as utils
 import eye_movement.model as model
 
 
-class Eye_Movement_CSV_Exporter(CSV_Exporter[model.Classified_Segment]):
+class Eye_Movement_By_Segment_CSV_Exporter(CSV_Exporter[model.Classified_Segment]):
 
-    EXPORT_FILE_NAME = "eye_movement.csv"
+    EXPORT_FILE_NAME = "eye_movement_by_segment.csv"
 
     @classmethod
     def csv_export_schema(cls) -> CSV_EXPORT_SCHEMA_TYPE:
@@ -56,6 +56,39 @@ class Eye_Movement_CSV_Exporter(CSV_Exporter[model.Classified_Segment]):
         export_name = self.EXPORT_FILE_NAME if export_name is ... else export_name
         export_path = super().csv_export(
             raw_values=segments, export_dir=export_dir, export_name=export_name
+        )
+
+        utils.logger.info("Created file: '{}'.".format(export_path))
+        return export_path
+
+
+Gaze_Timestamp_Segment_Class_Pair = t.Tuple[utils.Gaze_Timestamp, model.Segment_Class]
+
+
+class Eye_Movement_By_Gaze_CSV_Exporter(
+    CSV_Exporter[Gaze_Timestamp_Segment_Class_Pair]
+):
+
+    EXPORT_FILE_NAME = "eye_movement_by_gaze.csv"
+
+    @classmethod
+    def csv_export_schema(cls) -> CSV_EXPORT_SCHEMA_TYPE:
+        return [
+            ("gaze_timestamp", lambda gaze: gaze[0]),
+            ("movement_class", lambda gaze: gaze[1].value),
+        ]
+
+    def csv_export(
+        self,
+        ts_segment_class_pairs: t.Iterable[model.Classified_Segment],
+        export_dir: str,
+        export_name: str = ...,
+    ):
+        export_name = self.EXPORT_FILE_NAME if export_name is ... else export_name
+        export_path = super().csv_export(
+            raw_values=ts_segment_class_pairs,
+            export_dir=export_dir,
+            export_name=export_name,
         )
 
         utils.logger.info("Created file: '{}'.".format(export_path))

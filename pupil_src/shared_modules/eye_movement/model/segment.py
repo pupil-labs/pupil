@@ -245,6 +245,7 @@ class Classified_Segment(StorageItem):
         public_dict = {
             "id": self.id,
             "topic": self.topic,
+            "timestamp": self.timestamp,
             "base_type": self.base_type.value,
             "segment_class": self.segment_class.value,
             "start_frame_index": self.start_frame_index,
@@ -410,11 +411,13 @@ class Classified_Segment(StorageItem):
         def denormalize(point):
             x, y = mt.denormalize(point, world_size, flip_y=True)
             return int(x), int(y)
+
         return [
             denormalize(datum["norm_pos"])
             for datum in self.segment_data
             if datum["confidence"] >= min_data_confidence
         ]
+
 
 class Classified_Segment_Factory:
     __slots__ = "_segment_id"
@@ -438,7 +441,7 @@ class Classified_Segment_Factory:
             return None
 
         segment_class = Segment_Class.from_nslr_class(nslr_segment_class)
-        topic = "nslr_segmentation"
+        topic = utils.EYE_MOVEMENT_TOPIC_PREFIX + segment_class.value
 
         start_frame_index, end_frame_index = nslr_segment.i  # [i_0, i_1)
         start_frame_timestamp, end_frame_timestamp = (
