@@ -11,6 +11,7 @@ except (ImportError, AssertionError):
     raise Exception("pyndsi version is to old. Please upgrade") from None
 
 logger = logging.getLogger(__name__)
+GAZE_SENSOR_TYPE = "gaze"
 
 
 class Connection:
@@ -59,15 +60,18 @@ class Connection:
 
     def on_event(self, caller, event):
         if event["subject"] == "detach":
-            logger.debug("detached: %s" % event)
-            sensors = [s for s in self.network.sensors.values()]
+            sensors = [
+                s
+                for s in self.network.sensors.values()
+                if s["sensor_type"] == GAZE_SENSOR_TYPE
+            ]
             if self.selected_sensor_uuid == event["sensor_uuid"]:
                 if sensors:
                     self._select_sensor(sensors[0]["sensor_uuid"])
                 else:
                     self._select_sensor(None)
 
-        elif event["subject"] == "attach" and event["sensor_type"] == "gaze":
+        elif event["subject"] == "attach" and event["sensor_type"] == GAZE_SENSOR_TYPE:
             if not self.selected_sensor_uuid:
                 self._select_sensor(event["sensor_uuid"])
             else:
@@ -84,17 +88,19 @@ class Connection:
             devices = {
                 s["sensor_uuid"]: s["host_name"]  # removes duplicates
                 for s in self.network.sensors.values()
-                if s["sensor_type"] == "gaze"
+                if s["sensor_type"] == GAZE_SENSOR_TYPE
             }
             devices = [pair for pair in devices.items()]  # create tuples
             # split tuples into 2 lists
             return zip(*(devices or [(None, "No hosts found")]))
 
+        host_sel, host_sel_labels = host_selection_list()
         menu.append(
             ui.Selector(
                 "selected_sensor_uuid",
                 self,
-                selection_getter=host_selection_list,
+                selection=host_sel,
+                labels=host_sel_labels,
                 setter=self._select_sensor,
                 label="Remote host",
             )
