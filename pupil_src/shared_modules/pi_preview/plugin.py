@@ -16,11 +16,12 @@ class PI_Preview(Plugin):
     icon_chr = "PI"
     order = 0.02  # ensures init after all plugins
 
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, offset_active=False):
         super().__init__(g_pool)
         self.connection = Connection(update_ui_cb=self.update_ndsi_menu)
         self._num_prefix_elements = 0
         self.last_click = None
+        self.offset_active = offset_active
 
     def on_click(self, pos, button, action):
         if action == glfw.GLFW_PRESS:
@@ -28,16 +29,18 @@ class PI_Preview(Plugin):
 
     def recent_events(self, events):
         gaze = self.connection.update()
-        if gaze and self.last_click:
-            self.offset = (
-                self.last_click[0] - gaze[0]["norm_pos"][0],
-                self.last_click[1] - gaze[0]["norm_pos"][1],
-            )
-            self.last_click = None
+        if self.offset_active:
+            if gaze and self.last_click:
+                self.connection.sensor.offset = (
+                    self.last_click[0] - gaze[0]["norm_pos"][0],
+                    self.last_click[1] - gaze[0]["norm_pos"][1],
+                )
+                self.last_click = None
 
-        for g in gaze:
-            g["norm_pos"][0] += self.offset[0]
-            g["norm_pos"][1] += self.offset[1]
+            x, y = self.connection.sensor.offset
+            for g in gaze:
+                g["norm_pos"][0] += x
+                g["norm_pos"][1] += y
 
         if gaze:
             if "gaze" not in events:
@@ -48,6 +51,7 @@ class PI_Preview(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Pupil Invisible Preview"
+        self.menu.append(ui.Switch("offset_active", self, label="Manual offset"))
         self._num_prefix_elements = len(self.menu)
         self.update_ndsi_menu()
 
