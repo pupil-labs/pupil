@@ -106,11 +106,13 @@ class GazeSensor:
         }
 
     def add_ui_elements(self, menu):
-        menu.append(ui.Text_Input("status", self, label="Status", setter=lambda: None))
+        menu.append(
+            ui.Text_Input("status", self, label="Status", setter=lambda _: None)
+        )
         if self.linked:
             menu.append(
                 ui.Text_Input(
-                    "host_name", self, label="Linked device", setter=lambda: None
+                    "host_name", self, label="Linked device", setter=lambda _: None
                 )
             )
             menu.append(ui.Button("Reset offset", self.reset_offset))
