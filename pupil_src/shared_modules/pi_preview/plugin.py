@@ -93,8 +93,25 @@ class PI_Preview(Plugin):
                 "delay": 0.4,
             }
         )
+        self.notify_all({"subject": "pi_preview.focus_menu", "delay": 1.0})
+        self.notify_all({"subject": "world_process.adapt_window_size", "delay": 5.0})
+
     def default_config(self):
         self.notify_all({"subject": "eye_process.should_stop", "eye_id": 0})
         self.notify_all({"subject": "eye_process.should_stop", "eye_id": 1})
         self.notify_all({"subject": "start_plugin", "name": "HMD_Calibration"})
         self.notify_all({"subject": "stop_plugin", "name": "Recorder"})
+        self.notify_all({"subject": "pi_preview.focus_menu"})
+
+    def on_notify(self, notification):
+        if notification["subject"] == "pi_preview.focus_menu":
+            self._toggle_menu(False)
+
+    def _toggle_menu(self, collapsed):
+        # This is the menu toggle logic.
+        # Only one menu can be open.
+        # If no menu is open the menu_bar should collapse.
+        self.g_pool.menubar.collapsed = collapsed
+        for m in self.g_pool.menubar.elements:
+            m.collapsed = True
+        self.menu.collapsed = collapsed
