@@ -310,21 +310,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             mp_context,
         )
 
-    def _start_fixation_buffer_filler(
-        self, all_fixation_events, all_world_timestamps, section
-    ):
-        if self.fixations_on_surf_buffer_filler is not None:
-            self.fixations_on_surf_buffer_filler.cancel()
-        self.fixations_on_surf_buffer = []
-        self.fixations_on_surf_buffer_filler = background_tasks.background_gaze_on_surface(
-            self.surfaces,
-            section,
-            all_world_timestamps,
-            all_fixation_events,
-            self.camera_model,
-            mp_context,
-        )
-
     def gl_display(self):
         if self.timeline:
             self.timeline.refresh()
@@ -359,7 +344,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 if surface.location_cache is not None:
                     for r in surface.location_cache.positive_ranges:  # [[0,1],[3,4]]
                         found_at += ((ts[r[0]], 0), (ts[r[1]], 0))
-                    cached_surfaces.append(found_at)
+                cached_surfaces.append(found_at)
 
             color = pyglui_utils.RGBA(0, 0.7, 0.3, 0.8)
 
@@ -434,7 +419,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 self.surfaces,
                 self.g_pool.timestamps,
                 self.g_pool.gaze_positions,
-                self.g_pool.fixations,
                 self.camera_model,
                 mp_context,
             )

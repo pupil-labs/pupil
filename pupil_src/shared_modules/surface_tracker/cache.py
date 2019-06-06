@@ -28,7 +28,6 @@ class Cache(list):
     def __init__(self, init_list):
         super().__init__(init_list)
 
-        self._togo = self.count(False)
         self.length = len(self)
 
         self._positive_ranges = self.recompute_ranges(self.positive_eval_fn)
@@ -38,17 +37,9 @@ class Cache(list):
     def visited_ranges(self):
         return self._visited_ranges
 
-    @visited_ranges.setter
-    def visited_ranges(self, value):
-        raise Exception("Read only")
-
     @property
     def positive_ranges(self):
         return self._positive_ranges
-
-    @positive_ranges.setter
-    def positive_ranges(self, value):
-        raise Exception("Read only")
 
     def update(self, key, item, force=False):
         if self[key] is not None:
@@ -83,7 +74,7 @@ class Cache(list):
         ranges = []
         for key, group in itertools.groupby(self, eval_fn):
             group_start_index = group_end_index + 1
-            group_end_index += len(list(group))
+            group_end_index += sum(1 for _ in group)
             if key:
                 ranges.append([group_start_index, group_end_index])
         return ranges
@@ -113,4 +104,3 @@ class Cache(list):
                 # del second field
                 del ranges[i + 1]
                 return
-        return

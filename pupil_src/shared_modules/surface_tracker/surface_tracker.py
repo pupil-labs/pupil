@@ -201,7 +201,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def _per_surface_ui(self, surface):
         def set_name(val):
-            if val != surface.name:
+            if val == surface.name:
                 return
 
             names = [x.name for x in self.surfaces]
@@ -410,17 +410,11 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             timestamp: The timestamp of the current world camera frame
         """
         gaze_events = events.get("gaze", [])
-        fixation_events = events.get("fixations", [])
 
         surface_events = []
         for surface in self.surfaces:
             if surface.detected:
-                gaze_on_surf = surface.map_gaze_and_fixation_events(
-                    gaze_events, self.camera_model
-                )
-                fixations_on_surf = surface.map_gaze_and_fixation_events(
-                    fixation_events, self.camera_model
-                )
+                gaze_on_surf = surface.map_gaze_events(gaze_events, self.camera_model)
 
                 surface_event = {
                     "topic": "surfaces.{}".format(surface.name),
@@ -428,7 +422,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                     "surf_to_img_trans": surface.surf_to_img_trans.tolist(),
                     "img_to_surf_trans": surface.img_to_surf_trans.tolist(),
                     "gaze_on_surfaces": gaze_on_surf,
-                    "fixations_on_surfaces": fixations_on_surf,
                     "timestamp": timestamp,
                 }
                 surface_events.append(surface_event)
