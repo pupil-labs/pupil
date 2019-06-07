@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+from collections import deque
 
 from plugin import System_Plugin_Base
 from pyglui.cygl.utils import draw_points_norm, RGBA, draw_circle, draw_points
@@ -22,30 +23,27 @@ class Display_Recent_Gaze(System_Plugin_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.order = 0.8
-        self.pupil_display_list = []
+        self.pupil_display_list = deque(maxlen=1)
 
     def recent_events(self, events):
         for pt in events.get("gaze", []):
-            self.pupil_display_list.append((pt["norm_pos"], pt["confidence"] * 0.8))
-        self.pupil_display_list[:-15] = []
+            self.pupil_display_list.append(pt["norm_pos"])
 
     def gl_display(self):
 
-        size = 60
-        for pt, a in self.pupil_display_list:
-
+        size = 70
+        for pt in self.pupil_display_list:
+            draw_circle(
+                center_position=(pt[0] * 1080, (1 - pt[1]) * 1080),
+                radius=size + 75,
+                stroke_width=145,
+                color=RGBA(0.0, 0.0, 0.0, 0.8),
+                sharpness=0.15,
+            )
             draw_circle(
                 center_position=(pt[0] * 1080, (1 - pt[1]) * 1080),
                 radius=size,
-                stroke_width=40,
-                color=RGBA(0.8, 0.0, 0.0, 0.3),
-                sharpness=0.2,
+                stroke_width=10,
+                color=RGBA(1, 1, 1, 0.6),
+                sharpness=0.7,
             )
-            size += 1.3
-
-        # for pt, a in self.pupil_display_list:
-        #     # This could be faster if there would be a method to also add multiple colors per point
-        #     draw_points_norm([pt], size=35, color=RGBA(1.0, 0.2, 0.4, a))
-
-    def get_init_dict(self):
-        return {}

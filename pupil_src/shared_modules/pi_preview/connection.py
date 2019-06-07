@@ -20,7 +20,7 @@ class Connection:
         self.sensor.unlink()
         self.network.stop()
 
-    def update(self):
+    def fetch_data(self):
         self.poll_events()
         self.sensor.poll_notifications()
         return self.sensor.fetch_data()

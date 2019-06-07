@@ -7,6 +7,7 @@ from plugin import Plugin
 
 from pi_preview import Linked_Device
 from pi_preview.connection import Connection
+from pi_preview.filter import Filter
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +18,21 @@ class PI_Preview(Plugin):
     icon_chr = "PI"
     order = 0.02  # ensures init after all plugins
 
-    def __init__(self, g_pool, offset_active=False, linked_device=...):
+    def __init__(
+        self, g_pool, offset_active=False, linked_device=..., filter_config=...
+    ):
         super().__init__(g_pool)
+
         if linked_device is ...:
             linked_device = Linked_Device()
         else:
             linked_device = Linked_Device(*linked_device)
+
+        if filter_config is ...:
+            self.filter = Filter()
+        else:
+            self.filter = Filter(**filter_config)
+
         self.connection = Connection(
             linked_device,
             update_ui_cb=self.update_ndsi_menu,
@@ -38,7 +48,10 @@ class PI_Preview(Plugin):
             self.last_click = pos[0] / IMG_SIZE, (IMG_SIZE - pos[1]) / IMG_SIZE
 
     def recent_events(self, events):
-        gaze = self.connection.update()
+        gaze = self.connection.fetch_data()
+        for datum in gaze:
+            self.filter.apply(datum)
+
         if self.offset_active:
             if gaze and self.last_click:
                 self.connection.sensor.offset = (
@@ -61,6 +74,7 @@ class PI_Preview(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Pupil Invisible Preview"
+        self.filter.add_ui_elements(self.menu)
         self.menu.append(ui.Switch("offset_active", self, label="Manual offset"))
         self._num_prefix_elements = len(self.menu)
         self.update_ndsi_menu()
@@ -80,6 +94,7 @@ class PI_Preview(Plugin):
         return {
             "offset_active": self.offset_active,
             "linked_device": self.connection.sensor.linked_device,
+            "filter_config": self.filter.get_init_dict(),
         }
 
     def activate_ndsi_backend(self, host_uuid):
