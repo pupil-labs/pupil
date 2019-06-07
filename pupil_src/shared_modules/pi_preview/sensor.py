@@ -115,7 +115,4 @@ class GazeSensor:
                     "host_name", self, label="Linked device", setter=lambda _: None
                 )
             )
-            menu.append(ui.Button("Reset offset", self.reset_offset))
 
-    def reset_offset(self):
-        self.offset = [0, 0]

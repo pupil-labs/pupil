@@ -7,11 +7,12 @@ from plugin import Plugin
 
 from pi_preview import Linked_Device
 from pi_preview.connection import Connection
-from pi_preview.filter import Filter
+from pi_preview.filter import TemporalFilter, OffsetFilter
 
 logger = logging.getLogger(__name__)
 
-IMG_SIZE = 1080
+IMG_SIZE_X = 1088
+IMG_SIZE_Y = 1080
 
 
 class PI_Preview(Plugin):
@@ -19,7 +20,11 @@ class PI_Preview(Plugin):
     order = 0.02  # ensures init after all plugins
 
     def __init__(
-        self, g_pool, offset_active=False, linked_device=..., filter_config=...
+        self,
+        g_pool,
+        linked_device=...,
+        temporal_filter_config=...,
+        offset_filter_config=...,
     ):
         super().__init__(g_pool)
 
@@ -28,10 +33,13 @@ class PI_Preview(Plugin):
         else:
             linked_device = Linked_Device(*linked_device)
 
-        if filter_config is ...:
-            self.filter = Filter()
-        else:
-            self.filter = Filter(**filter_config)
+        if temporal_filter_config is ...:
+            temporal_filter_config = {"enabled": True}
+        if offset_filter_config is ...:
+            offset_filter_config = {"enabled": False}
+
+        self.temporal_filter = TemporalFilter(**temporal_filter_config)
+        self.offset_filter = OffsetFilter(**offset_filter_config)
 
         self.connection = Connection(
             linked_device,
@@ -40,30 +48,26 @@ class PI_Preview(Plugin):
         )
         self._num_prefix_elements = 0
         self.last_click = None
-        self.offset_active = offset_active
         self.default_config()
 
     def on_click(self, pos, button, action):
         if action == glfw.GLFW_PRESS:
-            self.last_click = pos[0] / IMG_SIZE, (IMG_SIZE - pos[1]) / IMG_SIZE
+            self.last_click = pos[0] / IMG_SIZE_X, (1.0 - pos[1] / IMG_SIZE_Y)
 
     def recent_events(self, events):
         gaze = self.connection.fetch_data()
         for datum in gaze:
-            self.filter.apply(datum)
+            self.temporal_filter.apply(datum)
 
-        if self.offset_active:
-            if gaze and self.last_click:
-                self.connection.sensor.offset = (
-                    self.last_click[0] - gaze[0]["norm_pos"][0],
-                    self.last_click[1] - gaze[0]["norm_pos"][1],
-                )
-                self.last_click = None
+        if self.last_click and gaze:
+            self.offset_filter.offset = (
+                self.last_click[0] - gaze[-1]["norm_pos"][0],
+                self.last_click[1] - gaze[-1]["norm_pos"][1],
+            )
+            self.last_click = None
 
-            x, y = self.connection.sensor.offset
-            for g in gaze:
-                g["norm_pos"][0] += x
-                g["norm_pos"][1] += y
+        for datum in gaze:
+            self.offset_filter.apply(datum)
 
         if gaze:
             if "gaze" not in events:
@@ -74,8 +78,10 @@ class PI_Preview(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Pupil Invisible Preview"
-        self.filter.add_ui_elements(self.menu)
-        self.menu.append(ui.Switch("offset_active", self, label="Manual offset"))
+        self.menu.append(ui.Info_Text("Filter settings"))
+        self.temporal_filter.add_ui_elements(self.menu)
+        self.offset_filter.add_ui_elements(self.menu)
+        self.menu.append(ui.Info_Text("Connection settings"))
         self._num_prefix_elements = len(self.menu)
         self.update_ndsi_menu()
 
@@ -92,9 +98,9 @@ class PI_Preview(Plugin):
 
     def get_init_dict(self):
         return {
-            "offset_active": self.offset_active,
             "linked_device": self.connection.sensor.linked_device,
-            "filter_config": self.filter.get_init_dict(),
+            "temporal_filter_config": self.temporal_filter.get_init_dict(),
+            "offset_filter_config": self.offset_filter.get_init_dict(),
         }
 
     def activate_ndsi_backend(self, host_uuid):
