@@ -201,7 +201,6 @@ def get_export_proxy(
     surfaces,
     world_timestamps,
     gaze_positions,
-    fixations,
     camera_model,
     mp_context,
 ):
@@ -211,7 +210,6 @@ def get_export_proxy(
         surfaces,
         world_timestamps,
         gaze_positions,
-        fixations,
         camera_model,
     )
     proxy = background_helper.IPC_Logging_Task_Proxy(
@@ -230,7 +228,6 @@ class Exporter:
         surfaces,
         world_timestamps,
         gaze_positions,
-        fixations,
         camera_model,
     ):
         self.export_range = export_range
@@ -238,10 +235,8 @@ class Exporter:
         self.surfaces = surfaces
         self.world_timestamps = world_timestamps
         self.gaze_positions = gaze_positions
-        self.fixations = fixations
         self.camera_model = camera_model
         self.gaze_on_surfaces = None
-        self.fixations_on_surfaces = None
 
     def save_surface_statisics_to_file(self):
         logger.info("exporting metrics to {}".format(self.metrics_dir))
@@ -254,9 +249,7 @@ class Exporter:
                 logger.warning("Could not make metrics dir {}".format(self.metrics_dir))
                 return
 
-        self.gaze_on_surfaces, self.fixations_on_surfaces = (
-            self._map_gaze_and_fixations()
-        )
+        self.gaze_on_surfaces = self._map_gaze()
 
         self._export_surface_visibility()
         self._export_surface_gaze_distribution()
@@ -270,41 +263,30 @@ class Exporter:
             self._export_gaze_on_surface(
                 self.gaze_on_surfaces[surf_idx], surface, surface_name
             )
-            self._export_fixations_on_surface(
-                self.fixations_on_surfaces[surf_idx], surface, surface_name
-            )
             self._export_surface_heatmap(surface, surface_name)
 
-            logger.info(
-                "Saved surface gaze and fixation data for '{}'".format(surface.name)
-            )
+            logger.info("Saved surface gaze data for '{}'".format(surface.name))
 
         logger.info("Done exporting reference surface data.")
         return
+
+        # Task_proxy requires a genrator. The `yield` below
+        # triggers this function to become a generator.
         yield
 
-    def _map_gaze_and_fixations(self):
+    def _map_gaze(self):
         section = slice(*self.export_range)
-        gaze_on_surface = []
-        for gaze in gaze_on_surface_generator(
-            self.surfaces,
-            section,
-            self.world_timestamps,
-            self.gaze_positions,
-            self.camera_model,
-        ):
-            gaze_on_surface.append(gaze)
-        fixations_on_surface = []
-        for fixation in gaze_on_surface_generator(
-            self.surfaces,
-            section,
-            self.world_timestamps,
-            self.fixations,
-            self.camera_model,
-        ):
-            fixations_on_surface.append(fixation)
+        gaze_on_surface = list(
+            gaze_on_surface_generator(
+                self.surfaces,
+                section,
+                self.world_timestamps,
+                self.gaze_positions,
+                self.camera_model,
+            )
+        )
 
-        return gaze_on_surface, fixations_on_surface
+        return gaze_on_surface
 
     def _export_surface_visibility(self):
         with open(
@@ -491,46 +473,5 @@ class Exporter:
                                 gp["norm_pos"][1] * surface.real_world_size["y"],
                                 gp["on_surf"],
                                 gp["confidence"],
-                            )
-                        )
-
-    def _export_fixations_on_surface(self, fixations_on_surf, surface, surface_name):
-        with open(
-            os.path.join(
-                self.metrics_dir, "fixations_on_surface" + surface_name + ".csv"
-            ),
-            "w",
-            encoding="utf-8",
-            newline="",
-        ) as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=",")
-            csv_writer.writerow(
-                (
-                    "start_timestamp",
-                    "norm_pos_x",
-                    "norm_pos_y",
-                    "x_scaled",
-                    "y_scaled",
-                    "on_surf",
-                )
-            )
-            for idx, fix_on_surf in enumerate(fixations_on_surf):
-                idx += self.export_range[0]
-                if fix_on_surf:
-                    without_duplicates = dict(
-                        [(fix["base_data"][1], fix) for fix in fix_on_surf]
-                    ).values()
-                    for fix in without_duplicates:
-                        csv_writer.writerow(
-                            (
-                                self.world_timestamps[idx],
-                                idx,
-                                fix["timestamp"],
-                                fix["norm_pos"][0],
-                                fix["norm_pos"][1],
-                                fix["norm_pos"][0] * surface.real_world_size["x"],
-                                fix["norm_pos"][1] * surface.real_world_size["y"],
-                                fix["on_surf"],
-                                fix["confidence"],
                             )
                         )

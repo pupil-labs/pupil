@@ -17,9 +17,8 @@ import numpy as np
 
 Gaze_Data = t.Iterable[fm.Serialized_Dict]
 
-
-Gaze_Time = t.Iterable[float]
-
+Gaze_Timestamp = float
+Gaze_Time = t.Iterable[Gaze_Timestamp]
 
 MsgPack_Serialized_Segment = t.Type[bytes]
 
@@ -27,7 +26,9 @@ MsgPack_Serialized_Segment = t.Type[bytes]
 logger = logging.getLogger(__name__)
 
 
+EYE_MOVEMENT_TOPIC_PREFIX = "eye_movement."
 EYE_MOVEMENT_EVENT_KEY = "eye_movement_segments"
+EYE_MOVEMENT_GAZE_KEY = "eye_movement"
 
 
 def can_use_3d_gaze_mapping(gaze_data) -> bool:

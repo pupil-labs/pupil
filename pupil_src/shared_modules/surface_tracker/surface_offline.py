@@ -67,7 +67,7 @@ class Surface_Offline(Surface):
                 )
                 gaze_events = all_gaze_events.by_ts_window(frame_window)
 
-                gaze_on_surf = self.map_gaze_and_fixation_events(
+                gaze_on_surf = self.map_gaze_events(
                     gaze_events, camera_model, trans_matrix=location.img_to_surf_trans
                 )
             else:
@@ -147,7 +147,7 @@ class Surface_Offline(Surface):
                 except AttributeError:
                     self.location_cache_filler.cancel()
                     self.location_cache_filler = None
-                    raise
+                    return
 
             if self.location_cache_filler.completed:
                 self.location_cache_filler = None
