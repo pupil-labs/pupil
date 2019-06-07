@@ -35,6 +35,7 @@ class Filter:
 
     def add_ui_elements(self, menu):
         filter_menu = ui.Growing_Menu("Gaze Filter")
+        filter_menu.collapsed = True
         filter_menu.append(ui.Switch("enabled", self))
         filter_menu.append(ui.Text_Input("freq", self))
         filter_menu.append(ui.Text_Input("mincutoff", self))
