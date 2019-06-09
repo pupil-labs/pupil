@@ -24,7 +24,7 @@ import camera_models as cm
 import file_methods as fm
 import player_methods as pm
 from version_utils import VersionFormat, read_rec_version
-from video_capture.utils import RenameSet
+from video_capture.utils import RenameSet, RawTimePairs
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,14 @@ def update_recording_to_recent(rec_dir):
     ):
         convert_pupil_mobile_recording_to_v094(rec_dir)
         meta_info["Data Format Version"] = "v0.9.4"
+        update_meta_info(rec_dir, meta_info)
+    elif (
+        meta_info.get("Capture Software", "Pupil Capture")
+        == "Pupil Invisible"
+        and "Data Format Version" not in meta_info
+    ):
+        convert_pupil_invisible_recording_to_v113(rec_dir)
+        meta_info["Data Format Version"] = "v1.13"
         update_meta_info(rec_dir, meta_info)
 
     # Reference format: v0.7.4
@@ -134,6 +142,47 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
             {"pupil_positions": [], "gaze_positions": [], "notifications": []},
             pupil_data_loc,
         )
+
+
+def convert_pupil_invisible_recording_to_v113(rec_dir):
+    _rename_pi_files(rec_dir)
+    _convert_pi_gaze(rec_dir)
+
+
+def _rename_pi_files(rec_dir):
+    # convert time files and rename corresponding videos
+    match_pattern = "*.time"
+    rename_set = RenameSet(rec_dir, match_pattern)
+    rename_set.load_intrinsics()
+    rename_set.rename(r"PI right v1 ps(1)", r"eye0")
+    rename_set.rename(r"PI right v1 ps([2-9])", r"eye0_\1")
+    rename_set.rename(r"PI left v1 ps(1)", r"eye1")
+    rename_set.rename(r"PI left v1 ps([2-9])", r"eye1_\1")
+    rename_set.rename(r"PI world v1 ps(1)", "world")
+    rename_set.rename(r"PI world v1 ps([2-9])", r"world_\1")
+    rewrite_time = RenameSet(rec_dir, match_pattern, ["time"])
+    rewrite_time.rewrite_time("_timestamps.npy")
+
+
+def _convert_pi_gaze(rec_dir):
+    gaze = RawTimePairs(
+        rec_dir, "gaze*[!_timestamps.npy]", raw_dtype="<f4", raw_shape=(-1, 2)
+    )
+
+    width, height = 1088, 1080
+
+    logger.info("Converting gaze data...")
+    template_datum = {
+        "topic": "gaze.pi",
+        "norm_pos": None,
+        "timestamp": None,
+        "confidence": 1.0,
+    }
+    with fm.PLData_Writer(rec_dir, "gaze") as writer:
+        for ((x, y), ts) in gaze.items():
+            template_datum["timestamp"] = ts
+            template_datum["norm_pos"] = (x / width, 1.0 - y / height)
+            writer.append(template_datum)
 
 
 def update_recording_v074_to_v082(rec_dir):
