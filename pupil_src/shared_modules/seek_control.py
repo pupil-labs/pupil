@@ -197,7 +197,7 @@ class Seek_Control(System_Plugin_Base):
         self.trim_right = min(self.trim_right, len(self.g_pool.timestamps) - 1)
 
     def ts_idx_from_playback_time(self, playback_time):
-        return pm.find_closest(self.g_pool.timestamps, [playback_time])
+        return pm.find_closest(self.g_pool.timestamps, playback_time)
 
     @property
     def forwards(self):
