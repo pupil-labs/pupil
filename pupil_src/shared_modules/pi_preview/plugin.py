@@ -11,8 +11,8 @@ from pi_preview.filter import TemporalFilter, OffsetFilter
 
 logger = logging.getLogger(__name__)
 
-IMG_SIZE_X = 1088
-IMG_SIZE_Y = 1080
+IMG_WIDTH = 1088
+IMG_HEIGHT = 1080
 
 
 class PI_Preview(Plugin):
@@ -52,7 +52,7 @@ class PI_Preview(Plugin):
 
     def on_click(self, pos, button, action):
         if action == glfw.GLFW_PRESS:
-            self.last_click = pos[0] / IMG_SIZE_X, (1.0 - pos[1] / IMG_SIZE_Y)
+            self.last_click = pos[0] / IMG_WIDTH, (1.0 - pos[1] / IMG_HEIGHT)
 
     def recent_events(self, events):
         gaze = self.connection.fetch_data()
