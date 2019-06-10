@@ -73,6 +73,6 @@ class Connection:
         elif self.sensor.linked:
             self.sensor.unlink()
 
-        self.sensor = GazeSensor(self.network, Linked_Device(uuid=host_uuid))
+        self.sensor = GazeSensor(self.network, Linked_Device(uuid=host_uuid, name=None))
         self.update_ui_cb()
         self.activate_ndsi_backend_cb(host_uuid)

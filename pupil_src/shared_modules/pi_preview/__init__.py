@@ -12,6 +12,6 @@ except (ImportError, AssertionError):
     raise Exception("pyndsi version is to old. Please upgrade") from None
 
 GAZE_SENSOR_TYPE = "gaze"
-Linked_Device = namedtuple("Linked_Device", ["uuid", "name"], defaults=(None, None))
+Linked_Device = namedtuple("Linked_Device", ["uuid", "name"])
 
 from pi_preview.plugin import PI_Preview

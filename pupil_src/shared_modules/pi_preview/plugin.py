@@ -29,7 +29,7 @@ class PI_Preview(Plugin):
         super().__init__(g_pool)
 
         if linked_device is ...:
-            linked_device = Linked_Device()
+            linked_device = Linked_Device(None, None)
         else:
             linked_device = Linked_Device(*linked_device)
 
