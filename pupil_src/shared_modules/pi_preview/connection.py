@@ -67,10 +67,10 @@ class Connection:
     def _select_sensor(self, host_uuid):
         if not host_uuid:
             return
-        elif self.sensor.linked and self.sensor.host_uuid == host_uuid:
+        elif self.sensor.is_linked and self.sensor.host_uuid == host_uuid:
             logger.info("Host already linked")
             return
-        elif self.sensor.linked:
+        elif self.sensor.is_linked:
             self.sensor.unlink()
 
         self.sensor = GazeSensor(self.network, Linked_Device(uuid=host_uuid, name=None))

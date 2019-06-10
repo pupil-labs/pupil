@@ -15,22 +15,22 @@ class GazeSensor:
         self.host_uuid = linked_device.uuid
         self.host_name = linked_device.name
         self.offset = [0, 0]
-        if self.linked:
+        if self.is_linked:
             self.activate()
 
     @property
-    def linked(self):
+    def is_linked(self):
         return bool(self.host_uuid)
 
     @property
-    def online(self):
+    def is_online(self):
         return bool(self._ndsi_sensor)
 
     @property
     def status(self):
-        if not self.linked:
+        if not self.is_linked:
             return "Not linked"
-        elif not self.online:
+        elif not self.is_online:
             return "Not connected"
         else:
             return "Connected"
@@ -45,7 +45,7 @@ class GazeSensor:
         self.network = None
 
     def activate(self):
-        if not self.linked:
+        if not self.is_linked:
             logger.error("Cannot activate unlinked sensor")
             return
 
@@ -70,12 +70,12 @@ class GazeSensor:
         logger.info("Linked {}".format(self._ndsi_sensor))
 
     def deactivate(self):
-        if self.online:
+        if self.is_online:
             self._ndsi_sensor.unlink()
             self._ndsi_sensor = None
 
     def poll_notifications(self):
-        if self.online:
+        if self.is_online:
             while self._ndsi_sensor.has_notifications:
                 self._ndsi_sensor.handle_notification()
 
@@ -89,7 +89,7 @@ class GazeSensor:
                 logger.info(str(self._ndsi_sensor.controls[event["control_id"]]))
 
     def fetch_data(self):
-        if self.online:
+        if self.is_online:
             return [
                 self._make_gaze_pos(x, y, ts)
                 for (x, y, ts) in self._ndsi_sensor.fetch_data()
@@ -109,7 +109,7 @@ class GazeSensor:
         menu.append(
             ui.Text_Input("status", self, label="Status", setter=lambda _: None)
         )
-        if self.linked:
+        if self.is_linked:
             menu.append(
                 ui.Text_Input(
                     "host_name", self, label="Linked device", setter=lambda _: None
