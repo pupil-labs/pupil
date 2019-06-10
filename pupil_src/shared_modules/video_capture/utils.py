@@ -8,18 +8,19 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import logging
-import glob
 import fnmatch
-import re
+import glob
+import logging
 import os
+import pathlib as pl
+import re
+from typing import Iterator, Sequence
+
+import av
 import cv2
 import numpy as np
-import av
 
-from typing import Sequence, Iterator
 from camera_models import load_intrinsics
-
 
 logger = logging.getLogger(__name__)
 
@@ -340,7 +341,7 @@ class VideoSet:
         """
         Frame timestamp difference [seconds] that needs to be exceeded
         in order to start filling frames.
-        
+
         median: Median frame timestamp difference in seconds
 
         return: float [seconds], should be >= median
@@ -440,10 +441,41 @@ class RenameSet:
         for loc in glob.glob(pattern):
             file_name = os.path.split(loc)[1]
             name = os.path.splitext(file_name)[0]
-            potential_locs = [
+            potential_locs = (
                 os.path.join(self.rec_dir, name + "." + ext) for ext in exts
-            ]
+            )
             existsting_files.extend(
                 [loc for loc in potential_locs if os.path.exists(loc)]
             )
         return existsting_files
+
+
+class RawTimePairs:
+    def __init__(
+        self, root_dir, pattern, raw_dtype="<f8", raw_shape=(-1,), time_dtype=">f8"
+    ):
+        self.raw_dtype = raw_dtype
+        self.raw_shape = raw_shape
+        self.time_dtype = time_dtype
+        self.root = pl.Path(root_dir)
+        self.part_stems = sorted(set(p.stem for p in self.root.glob(pattern)))
+
+    def items(self):
+        for data_raw, data_time in self._load_all_pairs():
+            yield from zip(data_raw, data_time)
+
+    def _load_all_pairs(self):
+        for stem in self.part_stems:
+            yield self._load_pairs_for_stem(stem)
+
+    def _load_pairs_for_stem(self, stem):
+        base = self.root / stem
+        data_time = self._load_file(base, ".time", self.time_dtype)
+        data_raw = self._load_file(base, ".raw", self.raw_dtype)
+        data_raw.shape = self.raw_shape
+        return data_raw, data_time
+
+    @staticmethod
+    def _load_file(path_without_suffix, suffix, format):
+        path = path_without_suffix.with_suffix(suffix)
+        return np.fromfile(str(path), format)
