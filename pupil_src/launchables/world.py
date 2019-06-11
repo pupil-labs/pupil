@@ -151,7 +151,6 @@ def world(
             Calibration_Plugin,
             Gaze_Mapping_Plugin,
         )
-        from fixation_detector import Fixation_Detector
         from eye_movement import Eye_Movement_Detector_Real_Time
         from recorder import Recorder
         from display_recent_gaze import Display_Recent_Gaze
@@ -175,7 +174,6 @@ def world(
         from audio_capture import Audio_Capture
         from accuracy_visualizer import Accuracy_Visualizer
 
-        # from saccade_detector import Saccade_Detector
         from system_graphs import System_Graphs
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
         from hololens_relay import Hololens_Relay
@@ -230,7 +228,6 @@ def world(
             Surface_Tracker_Online,
             Annotation_Capture,
             Log_History,
-            Fixation_Detector,
             Eye_Movement_Detector_Real_Time,
             Blink_Detection,
             Remote_Recorder,

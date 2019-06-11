@@ -342,13 +342,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             # Always save pupil positions
             self.pupil_list.extend(events["pupil"])
 
-            if on_position and len(self.markers) and events.get("fixations", []):
-                fixation_boost = 5
-                self.screen_marker_state = min(
-                    self.sample_duration + self.lead_in,
-                    self.screen_marker_state + fixation_boost,
-                )
-
             # Animate the screen marker
             if (
                 self.screen_marker_state
