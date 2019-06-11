@@ -141,6 +141,7 @@ def find_closest(target, source):
     -
     https://stackoverflow.com/questions/8914491/finding-the-nearest-value-and-return-the-index-of-array-in-python/8929827#8929827
     """
+    target = np.asarray(target)  # fixes https://github.com/pupil-labs/pupil/issues/1439
     idx = np.searchsorted(target, source)
     idx = np.clip(idx, 1, len(target) - 1)
     left = target[idx - 1]
@@ -214,7 +215,7 @@ def is_pupil_rec_dir(rec_dir):
 
 def transparent_circle(img, center, radius, color, thickness):
     center = tuple(map(int, center))
-    assert len(color) == 4 and all( type(c) == float and 0.0 <= c <= 1.0 for c in color)
+    assert len(color) == 4 and all(type(c) == float and 0.0 <= c <= 1.0 for c in color)
     bgr = [255 * c for c in color[:3]]  # convert to 0-255 scale for OpenCV
     alpha = color[-1]
     radius = int(radius)
