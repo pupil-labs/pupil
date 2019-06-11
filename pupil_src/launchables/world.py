@@ -179,7 +179,6 @@ def world(
         from system_graphs import System_Graphs
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
         from hololens_relay import Hololens_Relay
-        from pi_preview import PI_Preview
 
         # UI Platform tweaks
         if platform.system() == "Linux":
@@ -238,7 +237,6 @@ def world(
             Accuracy_Visualizer,
             Camera_Intrinsics_Estimation,
             Hololens_Relay,
-            PI_Preview,
         ]
 
         if platform.system() != "Windows":
