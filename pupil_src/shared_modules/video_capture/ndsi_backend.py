@@ -388,9 +388,9 @@ class NDSI_Manager(Base_Manager):
         self._rejoin_in = 400
         self.should_select_host = None
         self.cam_selection_lut = {
-            "eye0": ["ID0"],
-            "eye1": ["ID1"],
-            "world": ["ID2", "Logitech"],
+            "eye0": ["ID0", "PI right"],
+            "eye1": ["ID1", "PI left"],
+            "world": ["ID2", "Logitech", "PI world"],
         }
         logger.warning("Make sure the `time_sync` plugin is loaded!")
 
