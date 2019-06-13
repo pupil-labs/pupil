@@ -467,8 +467,12 @@ def update_recording_v111_v113(rec_dir):
         resolution = f.width, f.height
 
         intrinsics = cm.load_intrinsics(rec_dir, "world", resolution)
+
+        DEPRECATED_SQUARE_MARKER_KEY = "realtime_square_marker_surfaces"
+        if DEPRECATED_SQUARE_MARKER_KEY not in surface_definitions_dict:
+            return
         surfaces_definitions_old = surface_definitions_dict[
-            "realtime_square_marker_surfaces"
+            DEPRECATED_SQUARE_MARKER_KEY
         ]
 
         surfaces_definitions_new = []
