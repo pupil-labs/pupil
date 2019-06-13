@@ -120,7 +120,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_overlay.plugins import Video_Overlay, Eye_Overlay
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
-            "1.23"
+            "1.24"
         ), "pyglui out of date, please upgrade to newest version"
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, "plugins"))
