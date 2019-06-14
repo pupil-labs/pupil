@@ -1,13 +1,13 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 # cython: profile=False
 from detector cimport *
@@ -165,3 +165,12 @@ cdef inline getSphere(const ModelDebugProperties& result ):
 cdef inline getInitialSphere(const ModelDebugProperties& result ):
     sphere = result.initialSphere
     return [ [sphere.center[0],sphere.center[1],sphere.center[2]],sphere.radius]
+
+cdef inline set_detector_property(properties, name, value):
+    if name not in properties:
+        raise ValueError("No property with name `{}` found.".format(name))
+    if not isinstance(value, type(properties[name])):
+        raise TypeError("Value {} was not of expected type `{}` found."
+                        .format(value, type(properties[name]).__name__))
+
+    properties[name] = value

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -42,7 +42,7 @@ if platform.system() == "Darwin":
     call("ln -s /Applications/ %s/Applications" % src_dir, shell=True)
     call("rm dist/Pupil\ Capture.app/Contents/MacOS/.DS_Store", shell=True)
     call(
-        "hdiutil create  -volname '%s' -srcfolder %s -size 240m -format UDZO '%s.dmg'"
+        "hdiutil create  -volname '%s' -srcfolder %s -size 340m -format UDZO '%s.dmg'"
         % (bundle_dmg_name, src_dir, bundle_name),
         shell=True,
     )

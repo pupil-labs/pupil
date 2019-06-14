@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,24 +9,26 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import collections
 import logging
 import os
 from itertools import chain
-import collections
 
 import numpy as np
 import OpenGL.GL as gl
+import pyglui.cygl.utils as cygl_utils
 import zmq
 from pyglui import ui
-import pyglui.cygl.utils as cygl_utils
 from pyglui.pyfontstash import fontstash as fs
 
+import data_changed
 import file_methods as fm
 import gl_utils
 import player_methods as pm
-import pupil_detectors  # trigger module compilation
 import zmq_tools
+from observable import Observable
 from plugin import Producer_Plugin_Base
+from video_capture.utils import VideoSet
 
 logger = logging.getLogger(__name__)
 
@@ -35,15 +37,23 @@ COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.0)
 NUMBER_SAMPLES_TIMELINE = 4000
 
 
-class Empty(object):
-    pass
-
-
-class Pupil_Producer_Base(Producer_Plugin_Base):
+class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
     uniqueness = "by_base_class"
     order = 0.01
     icon_chr = chr(0xEC12)
     icon_font = "pupil_icons"
+
+    def __init__(self, g_pool):
+        super().__init__(g_pool)
+        self._pupil_changed_announcer = data_changed.Announcer(
+            "pupil_positions", g_pool.rec_dir, plugin=self
+        )
+        self._pupil_changed_listener = data_changed.Listener(
+            "pupil_positions", g_pool.rec_dir, plugin=self
+        )
+        self._pupil_changed_listener.add_observer(
+            "on_data_changed", self._refresh_timelines
+        )
 
     def init_ui(self):
         self.add_menu()
@@ -89,12 +99,11 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
         self.g_pool.user_timelines.append(self.dia_timeline)
         self.g_pool.user_timelines.append(self.conf_timeline)
 
-    def on_notify(self, notification):
-        if notification["subject"] == "pupil_positions_changed":
-            self.cache_pupil_timeline_data("diameter")
-            self.cache_pupil_timeline_data("confidence")
-            self.dia_timeline.refresh()
-            self.conf_timeline.refresh()
+    def _refresh_timelines(self):
+        self.cache_pupil_timeline_data("diameter")
+        self.cache_pupil_timeline_data("confidence")
+        self.dia_timeline.refresh()
+        self.conf_timeline.refresh()
 
     def deinit_ui(self):
         self.remove_menu()
@@ -202,13 +211,19 @@ class Pupil_Producer_Base(Producer_Plugin_Base):
             thickness=4.0 * scale,
         )
 
-    def create_pupil_positions_by_id(self, topics, data, timestamps):
+    def create_pupil_positions_by_id(self, ts_to_datum, ts_to_topic):
+        topic_data_ts = (
+            (ts_to_topic[ts], datum, ts) for ts, datum in ts_to_datum.items()
+        )
+        return self.create_pupil_positions_by_id_iterative(topic_data_ts)
+
+    def create_pupil_positions_by_id_iterative(self, topic_data_ts):
         id0_id1_data = collections.deque(), collections.deque()
         id0_id1_time = collections.deque(), collections.deque()
 
-        topic_data_ts = zip(topics, data, timestamps)
         for topic, datum, timestamp in topic_data_ts:
             eye_id = int(topic[-1])  # use topic to identify eye
+            assert eye_id == datum["id"]
             id0_id1_data[eye_id].append(datum)
             id0_id1_time[eye_id].append(timestamp)
 
@@ -225,11 +240,13 @@ class Pupil_From_Recording(Pupil_Producer_Base):
         g_pool.pupil_positions = pm.Bisector(
             pupil_data_file.data, pupil_data_file.timestamps
         )
-        g_pool.pupil_positions_by_id = self.create_pupil_positions_by_id(
-            pupil_data_file.topics, pupil_data_file.data, pupil_data_file.timestamps
+        g_pool.pupil_positions_by_id = self.create_pupil_positions_by_id_iterative(
+            zip(
+                pupil_data_file.topics, pupil_data_file.data, pupil_data_file.timestamps
+            )
         )
 
-        self.notify_all({"subject": "pupil_positions_changed"})
+        self._pupil_changed_announcer.announce_existing()
         logger.debug("pupil positions changed")
 
     def init_ui(self):
@@ -243,7 +260,7 @@ class Pupil_From_Recording(Pupil_Producer_Base):
 class Offline_Pupil_Detection(Pupil_Producer_Base):
     """docstring for Offline_Pupil_Detection"""
 
-    session_data_version = 2
+    session_data_version = 3
     session_data_name = "offline_pupil"
 
     def __init__(self, g_pool):
@@ -253,6 +270,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             zmq_ctx,
             g_pool.ipc_sub_url,
             topics=("pupil", "notify.file_source.video_finished"),
+            hwm=100_000,
         )
 
         self.data_dir = os.path.join(g_pool.rec_dir, "offline_data")
@@ -300,23 +318,23 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             for ext in (".mjpeg", ".mp4", ".mkv")
         ]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
-        timestamps_path = os.path.join(
-            self.g_pool.rec_dir, "eye{}_timestamps.npy".format(eye_id)
-        )
-
         if not existing_locs:
             logger.error("no eye video for eye '{}' found.".format(eye_id))
             self.detection_status[eye_id] = "No eye video found."
             return
-        if not os.path.exists(timestamps_path):
+        rec, file_ = os.path.split(existing_locs[0])
+        set_name = os.path.splitext(file_)[0]
+        self.videoset = VideoSet(rec, set_name, fill_gaps=False)
+        self.videoset.load_or_build_lookup()
+        timestamp_len = (self.videoset.lookup.container_idx > -1).sum()
+        if not timestamp_len:
             logger.error(
                 "no timestamps for eye video for eye '{}' found.".format(eye_id)
             )
             self.detection_status[eye_id] = "No eye video found."
             return
-
         video_loc = existing_locs[0]
-        self.eye_frame_num[eye_id] = len(np.load(timestamps_path))
+        self.eye_frame_num[eye_id] = timestamp_len
 
         capure_settings = "File_Source", {"source_path": video_loc, "timing": None}
         self.notify_all(
@@ -342,6 +360,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 # pupil data only has one remaining frame
                 payload_serialized = next(remaining_frames)
                 pupil_datum = fm.Serialized_Dict(msgpack_bytes=payload_serialized)
+                assert int(topic[-1]) == pupil_datum["id"]
                 self.pupil_positions[pupil_datum["timestamp"]] = pupil_datum
                 self.id_topics[pupil_datum["timestamp"]] = topic
             else:
@@ -361,15 +380,14 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         )
 
     def correlate_publish(self):
-        time = tuple(self.pupil_positions.keys())
-        data = tuple(self.pupil_positions.values())
-        topics = tuple(self.id_topics.values())
-        self.g_pool.pupil_positions = pm.Bisector(data, time)
+        self.g_pool.pupil_positions = pm.Bisector(
+            tuple(self.pupil_positions.values()), tuple(self.pupil_positions.keys())
+        )
         self.g_pool.pupil_positions_by_id = self.create_pupil_positions_by_id(
-            topics, data, time
+            self.pupil_positions, self.id_topics
         )
 
-        self.notify_all({"subject": "pupil_positions_changed"})
+        self._pupil_changed_announcer.announce_new()
         logger.debug("pupil positions changed")
         self.save_offline_data()
 
@@ -388,13 +406,12 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.save_offline_data()
 
     def save_offline_data(self):
-        ts_topic_data_zip = zip(
-            self.pupil_positions.keys(),
-            self.id_topics.values(),
-            self.pupil_positions.values(),
+        topic_data_ts = (
+            (self.id_topics[ts], datum, ts)
+            for ts, datum in self.pupil_positions.items()
         )
         with fm.PLData_Writer(self.data_dir, "offline_pupil") as writer:
-            for timestamp, topic, datum in ts_topic_data_zip:
+            for topic, datum, timestamp in topic_data_ts:
                 writer.append_serialized(timestamp, topic, datum.serialized)
 
         session_data = {}
@@ -407,6 +424,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def redetect(self):
         self.pupil_positions.clear()  # delete previously detected pupil positions
+        self.id_topics.clear()
         self.g_pool.pupil_positions = pm.Bisector([], [])
         self.detection_finished_flag = False
         self.detection_paused = False

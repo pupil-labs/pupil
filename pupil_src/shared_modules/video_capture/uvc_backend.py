@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -190,7 +190,10 @@ class UVC_Source(Base_Source):
         # UVC setting quirks:
         controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
 
-        if ("Pupil Cam2" in self.uvc_capture.name) and frame_size == (320, 240):
+        if (
+            ("Pupil Cam2" in self.uvc_capture.name)
+            or ("Pupil Cam3" in self.uvc_capture.name)
+        ) and frame_size == (320, 240):
             frame_size = (192, 192)
 
         self.frame_size = frame_size
@@ -244,8 +247,12 @@ class UVC_Source(Base_Source):
                 except KeyError:
                     pass
 
-        elif "Pupil Cam2" in self.uvc_capture.name:
+        elif (
+            "Pupil Cam2" in self.uvc_capture.name
+            or "Pupil Cam3" in self.uvc_capture.name
+        ):
             if self.exposure_mode == "auto":
+                # special settings apply to both, Pupil Cam2 and Cam3
                 special_settings = {200: 28, 180: 31}
                 controls_dict = dict(
                     [(c.display_name, c) for c in self.uvc_capture.controls]
@@ -423,7 +430,7 @@ class UVC_Source(Base_Source):
         size = self.uvc_capture.frame_sizes[best_size_idx]
         if tuple(size) != tuple(new_size):
             logger.warning(
-                "%s resolution capture mode not available. Selected {}.".format(
+                "{} resolution capture mode not available. Selected {}.".format(
                     new_size, size
                 )
             )
@@ -459,7 +466,10 @@ class UVC_Source(Base_Source):
         self.uvc_capture.frame_rate = rate
         self.frame_rate_backup = rate
 
-        if "Pupil Cam2" in self.uvc_capture.name:
+        if (
+            "Pupil Cam2" in self.uvc_capture.name
+            or "Pupil Cam3" in self.uvc_capture.name
+        ):
             special_settings = {200: 28, 180: 31}
             if self.exposure_mode == "auto":
                 self.preferred_exposure_time = Exposure_Time(
@@ -581,7 +591,10 @@ class UVC_Source(Base_Source):
             )
         )
 
-        if "Pupil Cam2" in self.uvc_capture.name:
+        if (
+            "Pupil Cam2" in self.uvc_capture.name
+            or "Pupil Cam3" in self.uvc_capture.name
+        ):
             special_settings = {200: 28, 180: 31}
 
             def set_exposure_mode(exposure_mode):
@@ -644,7 +657,10 @@ class UVC_Source(Base_Source):
         else:
             blacklist = []
 
-        if "Pupil Cam2" in self.uvc_capture.name:
+        if (
+            "Pupil Cam2" in self.uvc_capture.name
+            or "Pupil Cam3" in self.uvc_capture.name
+        ):
             blacklist += [
                 "Auto Exposure Mode",
                 "Auto Exposure Priority",
@@ -751,6 +767,11 @@ class UVC_Manager(Base_Manager):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.devices = uvc.Device_List()
+        self.cam_selection_lut = {
+            "eye0": ["ID0"],
+            "eye1": ["ID1"],
+            "world": ["ID2", "Logitech"],
+        }
 
     def get_init_dict(self):
         return {}
@@ -760,6 +781,7 @@ class UVC_Manager(Base_Manager):
 
         from pyglui import ui
 
+        self.add_auto_select_button()
         ui_elements = []
         ui_elements.append(ui.Info_Text("Local UVC sources"))
 
@@ -773,41 +795,64 @@ class UVC_Manager(Base_Manager):
             ]
             return zip(*dev_pairs)
 
-        def activate(source_uid):
-            if not source_uid:
-                return
-            if not uvc.is_accessible(source_uid):
-                logger.error("The selected camera is already in use or blocked.")
-                return
-            settings = {
-                "frame_size": self.g_pool.capture.frame_size,
-                "frame_rate": self.g_pool.capture.frame_rate,
-                "uid": source_uid,
-            }
-            if self.g_pool.process == "world":
-                self.notify_all(
-                    {"subject": "start_plugin", "name": "UVC_Source", "args": settings}
-                )
-            else:
-                self.notify_all(
-                    {
-                        "subject": "start_eye_capture",
-                        "target": self.g_pool.process,
-                        "name": "UVC_Source",
-                        "args": settings,
-                    }
-                )
-
         ui_elements.append(
             ui.Selector(
                 "selected_source",
                 selection_getter=dev_selection_list,
                 getter=lambda: None,
-                setter=activate,
+                setter=self.activate,
                 label="Activate source",
             )
         )
         self.menu.extend(ui_elements)
+
+    def activate(self, source_uid):
+        if not source_uid:
+            return
+
+        try:
+            if not uvc.is_accessible(source_uid):
+                logger.error("The selected camera is already in use or blocked.")
+                return
+        except ValueError as ve:
+            logger.error(str(ve))
+            return
+
+        settings = {
+            "frame_size": self.g_pool.capture.frame_size,
+            "frame_rate": self.g_pool.capture.frame_rate,
+            "uid": source_uid,
+        }
+        if self.g_pool.process == "world":
+            self.notify_all(
+                {"subject": "start_plugin", "name": "UVC_Source", "args": settings}
+            )
+        else:
+            self.notify_all(
+                {
+                    "subject": "start_eye_capture",
+                    "target": self.g_pool.process,
+                    "name": "UVC_Source",
+                    "args": settings,
+                }
+            )
+
+    def auto_activate_source(self):
+        if not self.devices or len(self.devices) == 0:
+            logger.warning("No default device is available.")
+            return
+
+        cam_ids = self.cam_selection_lut[self.g_pool.process]
+
+        for cam_id in cam_ids:
+            try:
+                source_id = next(d["uid"] for d in self.devices if cam_id in d["name"])
+                self.activate(source_id)
+                break
+            except StopIteration:
+                source_id = None
+        else:
+            logger.warning("The default device is not found.")
 
     def deinit_ui(self):
         self.remove_menu()

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -200,8 +200,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                         ref["screen_pos"] = marker_pos
                         ref["timestamp"] = frame.timestamp
                         self.ref_list.append(ref)
-                        if events.get("fixations", []):
-                            self.counter -= 5
                         if self.counter <= 0:
                             # last sample before counter done and moving on
                             audio.tink()

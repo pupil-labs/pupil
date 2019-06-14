@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,11 +10,13 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import collections
+import collections.abc
 import logging
 import os
 import pickle
 import shutil
 import traceback as tb
+import types
 from glob import iglob
 
 import msgpack
@@ -211,18 +213,6 @@ class _Empty(object):
         pass
 
 
-# an Immutable dict for dics nested inside this dict.
-class _FrozenDict(dict):
-    def __setitem__(self, key, value):
-        raise NotImplementedError("Invalid operation")
-
-    def clear(self):
-        raise NotImplementedError()
-
-    def update(self, *args, **kwargs):
-        raise NotImplementedError()
-
-
 class Serialized_Dict(object):
     __slots__ = ["_ser_data", "_data"]
     cache_len = 100
@@ -237,7 +227,9 @@ class Serialized_Dict(object):
         elif type(msgpack_bytes) is bytes:
             self._ser_data = msgpack_bytes
         else:
-            raise ValueError("Neither mapping nor payload is supplied or wrong format.")
+            raise ValueError(
+                "You did not supply mapping or payload to Serialized_Dict."
+            )
         self._data = None
 
     def _deser(self):
@@ -252,10 +244,17 @@ class Serialized_Dict(object):
             self._cache_ref.pop(0).purge_cache()
             self._cache_ref.append(self)
 
+    def __getstate__(self):
+        return self._ser_data
+
+    def __setstate__(self, msgpack_bytes):
+        self._ser_data = msgpack_bytes
+        self._data = None
+
     @classmethod
     def unpacking_object_hook(self, obj):
         if type(obj) is dict:
-            return _FrozenDict(obj)
+            return types.MappingProxyType(obj)
 
     @classmethod
     def packing_hook(self, obj):

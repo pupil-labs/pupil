@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -13,6 +13,7 @@ from bisect import bisect_left
 
 from pyglui import ui
 from plugin import System_Plugin_Base
+import player_methods as pm
 import time
 
 import logging
@@ -196,11 +197,7 @@ class Seek_Control(System_Plugin_Base):
         self.trim_right = min(self.trim_right, len(self.g_pool.timestamps) - 1)
 
     def ts_idx_from_playback_time(self, playback_time):
-        all_ts = self.g_pool.timestamps
-        index = bisect_left(all_ts, playback_time)
-        if index == len(all_ts):
-            index = len(all_ts) - 1
-        return index
+        return pm.find_closest(self.g_pool.timestamps, playback_time)
 
     @property
     def forwards(self):

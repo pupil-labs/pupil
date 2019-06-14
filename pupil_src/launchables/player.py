@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,11 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import os
 import platform
-
-
-class Global_Container(object):
-    pass
-
+from types import SimpleNamespace
 
 # UI Platform tweaks
 if platform.system() == "Linux":
@@ -26,6 +22,9 @@ elif platform.system() == "Windows":
 else:
     scroll_factor = 1.0
     window_position_default = (0, 0)
+
+MIN_DATA_CONFIDENCE_DEFAULT = 0.6
+MIN_CALIBRATION_CONFIDENCE_DEFAULT = 0.8
 
 
 def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version):
@@ -56,6 +55,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
     logger = logging.getLogger(__name__)
 
     try:
+        from background_helper import IPC_Logging_Task_Proxy
+
+        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
+        from tasklib.background.patches import IPCLoggingPatch
+
+        IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         # imports
         from file_methods import Persistent_Dict, next_export_sub_dir
@@ -71,7 +77,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         import gl_utils
 
         # capture
-        from video_capture import init_playback_source
+        from video_capture import File_Source
 
         # helpers/utils
         from version_utils import VersionFormat
@@ -87,33 +93,31 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from vis_polyline import Vis_Polyline
         from vis_light_points import Vis_Light_Points
         from vis_watermark import Vis_Watermark
-        from vis_fixation import Vis_Fixation
 
         # from vis_scan_path import Vis_Scan_Path
-        from vis_eye_video_overlay import Vis_Eye_Video_Overlay
         from seek_control import Seek_Control
-        from video_export_launcher import Video_Export_Launcher
-        from offline_surface_tracker import Offline_Surface_Tracker
+        from surface_tracker import Surface_Tracker_Offline
 
         # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
-        from fixation_detector import Offline_Fixation_Detector
-        from batch_exporter import Batch_Exporter, Batch_Export
+        from eye_movement import Offline_Eye_Movement_Detector
         from log_display import Log_Display
         from annotations import Annotation_Player
         from raw_data_exporter import Raw_Data_Exporter
         from log_history import Log_History
         from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
-        from gaze_producers import Gaze_From_Recording, Offline_Calibration
+        from gaze_producer.gaze_from_recording import GazeFromRecording
+        from gaze_producer.gaze_from_offline_calibration import (
+            GazeFromOfflineCalibration,
+        )
         from system_graphs import System_Graphs
         from system_timelines import System_Timelines
         from blink_detection import Offline_Blink_Detection
         from audio_playback import Audio_Playback
-        from imotions_exporter import iMotions_Exporter
-        from eye_video_exporter import Eye_Video_Exporter
-
-        from background_helper import IPC_Logging_Task_Proxy
-
-        IPC_Logging_Task_Proxy.push_url = ipc_push_url
+        from video_export.plugins.imotions_exporter import iMotions_Exporter
+        from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
+        from video_export.plugins.world_video_exporter import World_Video_Exporter
+        from video_capture import File_Source
+        from video_overlay.plugins import Video_Overlay, Eye_Overlay
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
             "1.23"
@@ -125,34 +129,40 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Seek_Control,
             Plugin_Manager,
             System_Graphs,
-            Batch_Export,
             System_Timelines,
             Audio_Playback,
         ]
         user_plugins = [
             Vis_Circle,
-            Vis_Fixation,
             Vis_Polyline,
             Vis_Light_Points,
             Vis_Cross,
             Vis_Watermark,
-            Vis_Eye_Video_Overlay,
+            Eye_Overlay,
+            Video_Overlay,
             # Vis_Scan_Path,
-            Offline_Fixation_Detector,
+            Offline_Eye_Movement_Detector,
             Offline_Blink_Detection,
-            Batch_Exporter,
-            Video_Export_Launcher,
-            Offline_Surface_Tracker,
+            Surface_Tracker_Offline,
             Raw_Data_Exporter,
             Annotation_Player,
             Log_History,
             Pupil_From_Recording,
             Offline_Pupil_Detection,
-            Gaze_From_Recording,
+            GazeFromRecording,
+            GazeFromOfflineCalibration,
+            World_Video_Exporter,
             iMotions_Exporter,
             Eye_Video_Exporter,
-            Offline_Calibration,
         ] + runtime_plugins
+
+        if platform.system() != "Windows":
+            # Head pose tracking is currently not available on Windows
+            from head_pose_tracker.offline_head_pose_tracker import (
+                Offline_Head_Pose_Tracker,
+            )
+
+            user_plugins.append(Offline_Head_Pose_Tracker)
 
         plugins = system_plugins + user_plugins
 
@@ -194,21 +204,21 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
         def on_drop(window, count, paths):
-            for x in range(count):
-                new_rec_dir = paths[x].decode("utf-8")
-                if pm.is_pupil_rec_dir(new_rec_dir):
-                    logger.debug("Starting new session with '{}'".format(new_rec_dir))
-                    ipc_pub.notify(
-                        {
-                            "subject": "player_drop_process.should_start",
-                            "rec_dir": new_rec_dir,
-                        }
-                    )
-                    glfw.glfwSetWindowShouldClose(window, True)
-                else:
-                    logger.error(
-                        "'{}' is not a valid pupil recording".format(new_rec_dir)
-                    )
+            paths = [paths[x].decode("utf-8") for x in range(count)]
+            for path in paths:
+                if pm.is_pupil_rec_dir(path):
+                    _restart_with_recording(path)
+                    return
+            # call `on_drop` callbacks until a plugin indicates
+            # that it has consumed the event (by returning True)
+            any(p.on_drop(paths) for p in g_pool.plugins)
+
+        def _restart_with_recording(rec_dir):
+            logger.debug("Starting new session with '{}'".format(rec_dir))
+            ipc_pub.notify(
+                {"subject": "player_drop_process.should_start", "rec_dir": rec_dir}
+            )
+            glfw.glfwSetWindowShouldClose(g_pool.main_window, True)
 
         tick = delta_t()
 
@@ -226,7 +236,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         hdpi_factor = 1.0
 
         # create container for globally scoped vars
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
         g_pool.app = "player"
         g_pool.zmq_ctx = zmq_ctx
         g_pool.ipc_pub = ipc_pub
@@ -242,8 +252,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             for f in glob(os.path.join(rec_dir, "world.*"))
             if os.path.splitext(f)[1] in valid_ext
         ][0]
-        init_playback_source(
-            g_pool, timing="external", source_path=video_path, buffered_decoding=True
+        File_Source(
+            g_pool,
+            timing="external",
+            source_path=video_path,
+            buffered_decoding=True,
+            fill_gaps=True,
         )
 
         # load session persistent settings
@@ -290,16 +304,18 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.user_dir = user_dir
         g_pool.rec_dir = rec_dir
         g_pool.meta_info = meta_info
-        g_pool.min_data_confidence = session_settings.get("min_data_confidence", 0.6)
+        g_pool.min_data_confidence = session_settings.get(
+            "min_data_confidence", MIN_DATA_CONFIDENCE_DEFAULT
+        )
         g_pool.min_calibration_confidence = session_settings.get(
-            "min_calibration_confidence", 0.8
+            "min_calibration_confidence", MIN_CALIBRATION_CONFIDENCE_DEFAULT
         )
 
         # populated by producers
         g_pool.pupil_positions = pm.Bisector()
         g_pool.pupil_positions_by_id = (pm.Bisector(), pm.Bisector())
         g_pool.gaze_positions = pm.Bisector()
-        g_pool.fixations = pm.Affiliator()
+        g_pool.eye_movements = pm.Affiliator()
 
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence
@@ -307,21 +323,11 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             notification["_notify_time_"] = time() + 0.8
             g_pool.ipc_pub.notify(notification)
 
-        def open_plugin(plugin):
-            if plugin == "Select to load":
-                return
-            g_pool.plugins.add(plugin)
-
-        def purge_plugins():
-            for p in g_pool.plugins:
-                if p.__class__ in user_plugins:
-                    p.alive = False
-            g_pool.plugins.clean()
-
         def do_export(_):
             left_idx = g_pool.seek_control.trim_left
             right_idx = g_pool.seek_control.trim_right
             export_range = left_idx, right_idx + 1  # exclusive range.stop
+            export_ts_window = pm.exact_window(g_pool.timestamps, (left_idx, right_idx))
 
             export_dir = os.path.join(g_pool.rec_dir, "exports")
             export_dir = next_export_sub_dir(export_dir)
@@ -344,6 +350,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             notification = {
                 "subject": "should_export",
                 "range": export_range,
+                "ts_window": export_ts_window,
                 "export_dir": export_dir,
             }
             g_pool.ipc_pub.notify(notification)
@@ -482,9 +489,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             ("Vis_Circle", {}),
             ("System_Graphs", {}),
             ("System_Timelines", {}),
-            ("Video_Export_Launcher", {}),
+            ("World_Video_Exporter", {}),
             ("Pupil_From_Recording", {}),
-            ("Gaze_From_Recording", {}),
+            ("GazeFromRecording", {}),
             ("Audio_Playback", {}),
         ]
 
@@ -617,16 +624,20 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                     pos = x * hdpi_factor, y * hdpi_factor
                     pos = normalize(pos, g_pool.camera_render_size)
                     pos = denormalize(pos, g_pool.capture.frame_size)
-                    for p in g_pool.plugins:
-                        p.on_click(pos, button, action)
+
+                    # call `on_click` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_click(pos, button, action) for p in g_pool.plugins)
 
                 for key, scancode, action, mods in user_input.keys:
-                    for p in g_pool.plugins:
-                        p.on_key(key, scancode, action, mods)
+                    # call `on_key` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_key(key, scancode, action, mods) for p in g_pool.plugins)
 
                 for char_ in user_input.chars:
-                    for p in g_pool.plugins:
-                        p.on_char(char_)
+                    # call `char_` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_char(char_) for p in g_pool.plugins)
 
                 # present frames at appropriate speed
                 g_pool.seek_control.wait(events["frame"].timestamp)
@@ -701,6 +712,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
         import player_methods as pm
+        import update_methods as um
 
         def on_drop(window, count, paths):
             nonlocal rec_dir
@@ -773,7 +785,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
 
             if rec_dir:
                 try:
-                    pm.update_recording_to_recent(rec_dir)
+                    um.update_recording_to_recent(rec_dir)
                 except AssertionError as err:
                     logger.error(str(err))
                     rec_dir = None

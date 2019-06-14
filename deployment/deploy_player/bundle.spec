@@ -3,7 +3,7 @@
 
 import platform, sys, os, os.path, zmq, glob, ntpath, numpy
 
-av_hidden_imports = ['av.format','av.packet','av.buffer','av.bytesource','av.frame','av.stream','av.descriptor','av.plane','av.audio.plane','av.container.streams','av.dictionary', 'av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane','av.option','av.container.pyio','av.video.codeccontext','av.audio.codeccontext','av.filter.context','av.filter.link','av.filter.pad']
+av_hidden_imports = ['av.format','av.packet','av.buffer','av.bytesource','av.frame','av.stream','av.descriptor','av.plane','av.audio.plane','av.container.streams','av.dictionary', 'av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane','av.option','av.container.pyio','av.video.codeccontext','av.audio.codeccontext','av.filter.context','av.filter.link','av.filter.pad','av.buffered_decoder','cysignals']
 pyglui_hidden_imports = ['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']
 pyndsi_hidden_imports = ['pyre']
 
@@ -38,6 +38,7 @@ if platform.system() == 'Darwin':
                    a.zipfiles,
                    a.datas,
                    [('libglfw.dylib', '/usr/local/lib/libglfw.dylib','BINARY')],
+                   [('libapriltag.dylib', '/usr/local/lib/libapriltag.dylib','BINARY')],
                    [('pyglui/OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
                    [('pyglui/Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
                    [('pyglui/pupil_icons.ttf',ui.get_pupil_icons_font_path(),'DATA')],
@@ -93,6 +94,7 @@ elif platform.system() == 'Linux':
                    a.datas,
                    [('libglfw.so', '/usr/lib/x86_64-linux-gnu/libglfw.so','BINARY')],
                    [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
+                   [('libapriltag.so', '/usr/local/lib/libapriltag.so','BINARY')],
                    [('pyglui/OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
                    [('pyglui/Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
                    [('pyglui/pupil_icons.ttf',ui.get_pupil_icons_font_path(),'DATA')],

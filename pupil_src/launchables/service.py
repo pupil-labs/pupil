@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -11,14 +11,18 @@ See COPYING and COPYING.LESSER for license details.
 import os
 
 # import sys, platform
-
-
-class Global_Container(object):
-    pass
+from types import SimpleNamespace
 
 
 def service(
-    timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, version
+    timebase,
+    eye_procs_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
+    preferred_remote_port,
 ):
     """Maps pupil to gaze data, can run various plug-ins.
 
@@ -100,15 +104,15 @@ def service(
         from frame_publisher import Frame_Publisher
         from blink_detection import Blink_Detection
         from service_ui import Service_UI
-
         from background_helper import IPC_Logging_Task_Proxy
+
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
         logger.info("Application Version: {}".format(version))
         logger.info("System Info: {}".format(get_system_info()))
 
         # g_pool holds variables for this process they are accesible to all plugins
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
         g_pool.app = "service"
         g_pool.user_dir = user_dir
         g_pool.version = version
@@ -118,8 +122,9 @@ def service(
         g_pool.ipc_pub_url = ipc_pub_url
         g_pool.ipc_sub_url = ipc_sub_url
         g_pool.ipc_push_url = ipc_push_url
-        g_pool.eyes_are_alive = eyes_are_alive
+        g_pool.eye_procs_alive = eye_procs_alive
         g_pool.timebase = timebase
+        g_pool.preferred_remote_port = preferred_remote_port
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value
@@ -266,8 +271,8 @@ def service(
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["version"] = str(g_pool.version)
-        session_settings["eye0_process_alive"] = eyes_are_alive[0].value
-        session_settings["eye1_process_alive"] = eyes_are_alive[1].value
+        session_settings["eye0_process_alive"] = eye_procs_alive[0].value
+        session_settings["eye1_process_alive"] = eye_procs_alive[1].value
         session_settings[
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
@@ -301,21 +306,29 @@ def service(
 
 
 def service_profiled(
-    timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, version
+    timebase,
+    eye_procs_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
+    preferred_remote_port,
 ):
     import cProfile, subprocess, os
     from .service import service
 
     cProfile.runctx(
-        "service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
+        "service(timebase,eye_procs_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
         {
             "timebase": timebase,
-            "eyes_are_alive": eyes_are_alive,
+            "eye_procs_alive": eye_procs_alive,
             "ipc_pub_url": ipc_pub_url,
             "ipc_sub_url": ipc_sub_url,
             "ipc_push_url": ipc_push_url,
             "user_dir": user_dir,
             "version": version,
+            "preferred_remote_port": preferred_remote_port,
         },
         locals(),
         "service.pstats",

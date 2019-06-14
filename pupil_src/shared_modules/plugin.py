@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -78,8 +78,11 @@ class Plugin(object):
         """
         Gets called when the user clicks in the window screen and the event has
         not been consumed by the GUI.
+
+        Return True if the event was consumed and should not be propagated
+        to any other plugin.
         """
-        pass
+        return False
 
     def on_pos(self, pos):
         """
@@ -91,28 +94,37 @@ class Plugin(object):
         """
         Gets called on key events that were not consumed by the GUI.
 
+        Return True if the event was consumed and should not be propagated
+        to any other plugin.
+
         See http://www.glfw.org/docs/latest/input_guide.html#input_key for
         more information key events.
         """
-        pass
+        return False
 
     def on_char(self, character):
         """
         Gets called on char events that were not consumed by the GUI.
 
+        Return True if the event was consumed and should not be propagated
+        to any other plugin.
+
         See http://www.glfw.org/docs/latest/input_guide.html#input_char for
         more information char events.
         """
-        pass
+        return False
 
     def on_drop(self, paths):
         """
         Gets called on dropped paths of files and/or directories on the window.
 
+        Return True if the event was consumed and should not be propagated
+        to any other plugin.
+
         See http://www.glfw.org/docs/latest/input_guide.html#path_drop for
         more information.
         """
-        pass
+        return False
 
     def on_window_resize(self, window, w, h):
         """

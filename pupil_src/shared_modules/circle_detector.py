@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -426,10 +426,17 @@ def find_concentric_circles(
 ):
     if first_check:
         concentric_circle_clusters = []
-        # CHAIN_APPROX_TC89_KCOS does not store absolutely all the contour points
-        _, contours, hierarchy = cv2.findContours(
+
+        # OpenCV version compatibility note:
+        # - Opencv3 returns three results: image, contours, hierarchy
+        # - Opencv4 returns two results: contours, hierarchy
+        # We do not use `image` in any case. Therefore, we can ensure
+        # compatibility by using `*_`
+        *_, contours, hierarchy = cv2.findContours(
             edge, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_TC89_KCOS
         )
+        # We use CHAIN_APPROX_TC89_KCOS because it is faster than
+        # the default method CV_CHAIN_APPROX_NONE
 
         if contours is None or hierarchy is None:
             return []
@@ -534,7 +541,7 @@ def find_concentric_circles(
         )
 
     else:
-        _, contours, hierarchy = cv2.findContours(
+        *_, contours, hierarchy = cv2.findContours(
             edge, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE
         )
 

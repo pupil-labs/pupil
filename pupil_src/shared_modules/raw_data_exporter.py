@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -28,7 +28,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
     keys:
         timestamp - timestamp of the source image frame
         index - associated_frame: closest world video frame
-        id - 0 or 1 for left/right eye
+        id - 0 or 1 for right and left eye (from the wearer's point of view)
         confidence - is an assessment by the pupil detector on how sure we can be on this measurement. A value of `0` indicates no confidence. `1` indicates perfect confidence. In our experience usefull data carries a confidence value greater than ~0.6. A `confidence` of exactly `0` means that we don't know anything. So you should ignore the position data.        norm_pos_x - x position in the eye image frame in normalized coordinates
         norm_pos_x - x position in the eye image frame in normalized coordinates
         norm_pos_y - y position in the eye image frame in normalized coordinates
@@ -152,10 +152,9 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
 
     def on_notify(self, notification):
         if notification["subject"] == "should_export":
-            self.export_data(notification["range"], notification["export_dir"])
+            self.export_data(notification["ts_window"], notification["export_dir"])
 
-    def export_data(self, export_range, export_dir):
-        export_window = pm.exact_window(self.g_pool.timestamps, export_range)
+    def export_data(self, export_window, export_dir):
         if self.should_export_pupil_positions:
             with open(
                 os.path.join(export_dir, "pupil_positions.csv"),
@@ -167,9 +166,9 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
 
                 csv_writer.writerow(
                     (
-                        "timestamp",
-                        "index",
-                        "id",
+                        "pupil_timestamp",
+                        "world_index",
+                        "eye_id",
                         "confidence",
                         "norm_pos_x",
                         "norm_pos_y",
@@ -273,8 +272,8 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                 csv_writer = csv.writer(csvfile, delimiter=",")
                 csv_writer.writerow(
                     (
-                        "timestamp",
-                        "index",
+                        "gaze_timestamp",
+                        "world_index",
                         "confidence",
                         "norm_pos_x",
                         "norm_pos_y",

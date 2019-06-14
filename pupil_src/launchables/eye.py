@@ -1,27 +1,24 @@
-'''
+"""
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
-'''
+"""
 
 import os
 import platform
-
-
-class Global_Container(object):
-    pass
+from types import SimpleNamespace
 
 
 class Is_Alive_Manager(object):
-    '''
+    """
     A context manager to wrap the is_alive flag.
     Is alive will stay true as long is the eye process is running.
-    '''
+    """
 
     def __init__(self, is_alive, ipc_socket, eye_id, logger):
         self.is_alive = is_alive
@@ -31,26 +28,41 @@ class Is_Alive_Manager(object):
 
     def __enter__(self):
         self.is_alive.value = True
-        self.ipc_socket.notify({'subject': 'eye_process.started',
-                                'eye_id': self.eye_id})
+        self.ipc_socket.notify(
+            {"subject": "eye_process.started", "eye_id": self.eye_id}
+        )
         return self
 
     def __exit__(self, etype, value, traceback):
         if etype is not None:
             import traceback as tb
-            self.logger.error('Process Eye{} crashed with trace:\n'.format(self.eye_id) +
-                              ''.join(tb.format_exception(etype, value, traceback)))
-            self.ipc_socket.notify({'subject': 'eye_process.stopped',
-                                    'eye_id': self.eye_id})
+
+            self.logger.error(
+                "Process Eye{} crashed with trace:\n".format(self.eye_id)
+                + "".join(tb.format_exception(etype, value, traceback))
+            )
+            self.ipc_socket.notify(
+                {"subject": "eye_process.stopped", "eye_id": self.eye_id}
+            )
 
         self.is_alive.value = False
-        self.ipc_socket.notify({'subject': 'eye_process.stopped',
-                                'eye_id': self.eye_id})
+        self.ipc_socket.notify(
+            {"subject": "eye_process.stopped", "eye_id": self.eye_id}
+        )
         return True  # do not propergate exception
 
 
-def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
-        user_dir, version, eye_id, overwrite_cap_settings=None):
+def eye(
+    timebase,
+    is_alive_flag,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
+    eye_id,
+    overwrite_cap_settings=None,
+):
     """reads eye video and detects the pupil.
 
     Creates a window, gl context.
@@ -78,6 +90,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
     # Otherwise the world process each process also loads the other imports.
     import zmq
     import zmq_tools
+
     zmq_ctx = zmq.Context()
     ipc_socket = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
     pupil_socket = zmq_tools.Msg_Streamer(zmq_ctx, ipc_pub_url)
@@ -85,6 +98,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
     # logging setup
     import logging
+
     logging.getLogger("OpenGL").setLevel(logging.ERROR)
     logger = logging.getLogger()
     logger.handlers = []
@@ -95,11 +109,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
     if is_alive_flag.value:
         # indicates eye process that this is a duplicated startup
-        logger.warning('Aborting redundant eye process startup')
+        logger.warning("Aborting redundant eye process startup")
         return
 
     with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id, logger):
         # general imports
+        import traceback
         import numpy as np
         import cv2
 
@@ -113,6 +128,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         from gl_utils import make_coord_system_norm_based
         from gl_utils import is_window_visible, glViewport
         from ui_roi import UIRoi
+
         # monitoring
         import psutil
 
@@ -127,19 +143,23 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         from video_capture import manager_classes
 
         from background_helper import IPC_Logging_Task_Proxy
+
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
         # Pupil detectors
         from pupil_detectors import Detector_2D, Detector_3D, Detector_Dummy
-        pupil_detectors = {Detector_2D.__name__: Detector_2D,
-                           Detector_3D.__name__: Detector_3D,
-                           Detector_Dummy.__name__: Detector_Dummy}
+
+        pupil_detectors = {
+            Detector_2D.__name__: Detector_2D,
+            Detector_3D.__name__: Detector_3D,
+            Detector_Dummy.__name__: Detector_Dummy,
+        }
 
         # UI Platform tweaks
-        if platform.system() == 'Linux':
+        if platform.system() == "Linux":
             scroll_factor = 10.0
             window_position_default = (600, 300 * eye_id + 30)
-        elif platform.system() == 'Windows':
+        elif platform.system() == "Windows":
             scroll_factor = 10.0
             window_position_default = (600, 90 + 300 * eye_id)
         else:
@@ -149,22 +169,23 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         icon_bar_width = 50
         window_size = None
         camera_render_size = None
-        hdpi_factor = 1.
+        hdpi_factor = 1.0
 
         # g_pool holds variables for this process
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
 
         # make some constants avaiable
         g_pool.user_dir = user_dir
         g_pool.version = version
-        g_pool.app = 'capture'
-        g_pool.process = 'eye{}'.format(eye_id)
+        g_pool.app = "capture"
+        g_pool.process = "eye{}".format(eye_id)
         g_pool.timebase = timebase
 
         g_pool.ipc_pub = ipc_socket
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value
+
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
 
@@ -179,7 +200,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             hdpi_factor = glfw.getHDPIFactor(window)
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w, h
-            camera_render_size = w-int(icon_bar_width*g_pool.gui.scale), h
+            camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
             for g in g_pool.graphs:
@@ -216,62 +237,74 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
         def on_drop(window, count, paths):
-            paths = [paths[x].decode('utf-8') for x in range(count)]
-            g_pool.capture_manager.on_drop(paths)
-            g_pool.capture.on_drop(paths)
+            paths = [paths[x].decode("utf-8") for x in range(count)]
+            plugins = (g_pool.capture_manager, g_pool.capture)
+            # call `on_drop` callbacks until a plugin indicates
+            # that it has consumed the event (by returning True)
+            any(p.on_drop(paths) for p in plugins)
 
         # load session persistent settings
-        session_settings = Persistent_Dict(os.path.join(g_pool.user_dir, 'user_settings_eye{}'.format(eye_id)))
-        if VersionFormat(session_settings.get("version", '0.0')) != g_pool.version:
-            logger.info("Session setting are from a different version of this app. I will not use those.")
+        session_settings = Persistent_Dict(
+            os.path.join(g_pool.user_dir, "user_settings_eye{}".format(eye_id))
+        )
+        if VersionFormat(session_settings.get("version", "0.0")) != g_pool.version:
+            logger.info(
+                "Session setting are from a different version of this app. I will not use those."
+            )
             session_settings.clear()
 
         g_pool.iconified = False
         g_pool.capture = None
         g_pool.capture_manager = None
-        g_pool.flip = session_settings.get('flip', False)
-        g_pool.display_mode = session_settings.get(
-            'display_mode', 'camera_image')
-        g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. This uses the least amount of CPU power",
-                                         'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be as small as possible, but large enough to capture all pupil movements.",
-                                         'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below."}
+        g_pool.flip = session_settings.get("flip", False)
+        g_pool.display_mode = session_settings.get("display_mode", "camera_image")
+        g_pool.display_mode_info_text = {
+            "camera_image": "Raw eye camera image. This uses the least amount of CPU power",
+            "roi": "Click and drag on the blue circles to adjust the region of interest. The region should be as small as possible, but large enough to capture all pupil movements.",
+            "algorithm": "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below.",
+        }
 
         capture_manager_settings = session_settings.get(
-            'capture_manager_settings', ('UVC_Manager',{}))
+            "capture_manager_settings", ("UVC_Manager", {})
+        )
 
         manager_class_name, manager_settings = capture_manager_settings
         manager_class_by_name = {c.__name__: c for c in manager_classes}
-        g_pool.capture_manager = manager_class_by_name[manager_class_name](g_pool, **manager_settings)
+        g_pool.capture_manager = manager_class_by_name[manager_class_name](
+            g_pool, **manager_settings
+        )
 
         if eye_id == 0:
-            cap_src = ["Pupil Cam2 ID0", "Pupil Cam1 ID0", "HD-6000"]
+            cap_src = ["Pupil Cam3 ID0", "Pupil Cam2 ID0", "Pupil Cam1 ID0", "HD-6000"]
         else:
-            cap_src = ["Pupil Cam2 ID1", "Pupil Cam1 ID1"]
+            cap_src = ["Pupil Cam3 ID1", "Pupil Cam2 ID1", "Pupil Cam1 ID1"]
 
         # Initialize capture
-        default_settings = ('UVC_Source', {
-                            'preferred_names': cap_src,
-                            'frame_size': (320, 240),
-                            'frame_rate': 120
-                            })
+        default_settings = (
+            "UVC_Source",
+            {"preferred_names": cap_src, "frame_size": (320, 240), "frame_rate": 120},
+        )
 
-        capture_source_settings = overwrite_cap_settings or session_settings.get('capture_settings', default_settings)
+        capture_source_settings = overwrite_cap_settings or session_settings.get(
+            "capture_settings", default_settings
+        )
         source_class_name, source_settings = capture_source_settings
-        source_class_by_name = {c.__name__:c for c in source_classes}
-        g_pool.capture = source_class_by_name[source_class_name](g_pool,**source_settings)
+        source_class_by_name = {c.__name__: c for c in source_classes}
+        g_pool.capture = source_class_by_name[source_class_name](
+            g_pool, **source_settings
+        )
         assert g_pool.capture
 
-        g_pool.u_r = UIRoi((g_pool.capture.frame_size[1],g_pool.capture.frame_size[0]))
-        roi_user_settings = session_settings.get('roi')
+        g_pool.u_r = UIRoi((g_pool.capture.frame_size[1], g_pool.capture.frame_size[0]))
+        roi_user_settings = session_settings.get("roi")
         if roi_user_settings and tuple(roi_user_settings[-1]) == g_pool.u_r.get()[-1]:
             g_pool.u_r.set(roi_user_settings)
 
-        pupil_detector_settings = session_settings.get(
-            'pupil_detector_settings', None)
-        last_pupil_detector = pupil_detectors[session_settings.get(
-            'last_pupil_detector', Detector_2D.__name__)]
-        g_pool.pupil_detector = last_pupil_detector(
-            g_pool, pupil_detector_settings)
+        pupil_detector_settings = session_settings.get("pupil_detector_settings", None)
+        last_pupil_detector = pupil_detectors[
+            session_settings.get("last_pupil_detector", Detector_2D.__name__)
+        ]
+        g_pool.pupil_detector = last_pupil_detector(g_pool, pupil_detector_settings)
 
         def set_display_mode_info(val):
             g_pool.display_mode = val
@@ -284,7 +317,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             g_pool.pupil_detector.init_ui()
 
         def toggle_general_settings(collapsed):
-            #this is the menu toggle logic.
+            # this is the menu toggle logic.
             # Only one menu can be open.
             # If no menu is open the menubar should collapse.
             g_pool.menubar.collapsed = collapsed
@@ -300,10 +333,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         width *= 2
         height *= 2
         width += icon_bar_width
-        width, height = session_settings.get('window_size', (width, height))
+        width, height = session_settings.get("window_size", (width, height))
 
         main_window = glfw.glfwCreateWindow(width, height, title, None, None)
-        window_pos = session_settings.get('window_position', window_position_default)
+        window_pos = session_settings.get("window_position", window_position_default)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
@@ -316,21 +349,30 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         # gl_state settings
         basic_gl_setup()
         g_pool.image_tex = Named_Texture()
-        g_pool.image_tex.update_from_ndarray(np.ones((1,1),dtype=np.uint8)+125)
+        g_pool.image_tex.update_from_ndarray(np.ones((1, 1), dtype=np.uint8) + 125)
 
         # setup GUI
         g_pool.gui = ui.UI()
-        g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
-        g_pool.menubar = ui.Scrolling_Menu("Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos='left')
-        g_pool.iconbar = ui.Scrolling_Menu("Icons",pos=(-icon_bar_width,0),size=(0,0),header_pos='hidden')
+        g_pool.gui_user_scale = session_settings.get("gui_scale", 1.0)
+        g_pool.menubar = ui.Scrolling_Menu(
+            "Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos="left"
+        )
+        g_pool.iconbar = ui.Scrolling_Menu(
+            "Icons", pos=(-icon_bar_width, 0), size=(0, 0), header_pos="hidden"
+        )
         g_pool.gui.append(g_pool.menubar)
         g_pool.gui.append(g_pool.iconbar)
 
-        general_settings = ui.Growing_Menu('General',header_pos='headline')
-        general_settings.append(ui.Selector('gui_user_scale', g_pool,
-                                          setter=set_scale,
-                                          selection=[.8, .9, 1., 1.1, 1.2],
-                                          label='Interface Size'))
+        general_settings = ui.Growing_Menu("General", header_pos="headline")
+        general_settings.append(
+            ui.Selector(
+                "gui_user_scale",
+                g_pool,
+                setter=set_scale,
+                selection=[0.8, 0.9, 1.0, 1.1, 1.2],
+                label="Interface Size",
+            )
+        )
 
         def set_window_size():
             f_width, f_height = g_pool.capture.frame_size
@@ -340,7 +382,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
 
         def uroi_on_mouse_button(button, action, mods):
-            if g_pool.display_mode == 'roi':
+            if g_pool.display_mode == "roi":
                 if action == glfw.GLFW_RELEASE and g_pool.u_r.active_edit_pt:
                     g_pool.u_r.active_edit_pt = False
                     # if the roi interacts we dont want
@@ -355,40 +397,55 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                     if g_pool.flip:
                         pos = 1 - pos[0], 1 - pos[1]
                     # Position in img pixels
-                    pos = denormalize(pos, g_pool.capture.frame_size)  # Position in img pixels
-                    if g_pool.u_r.mouse_over_edit_pt(pos, g_pool.u_r.handle_size, g_pool.u_r.handle_size):
+                    pos = denormalize(
+                        pos, g_pool.capture.frame_size
+                    )  # Position in img pixels
+                    if g_pool.u_r.mouse_over_edit_pt(
+                        pos, g_pool.u_r.handle_size, g_pool.u_r.handle_size
+                    ):
                         # if the roi interacts we dont want
                         # the gui to interact as well
                         return
 
-        general_settings.append(ui.Button('Reset window size', set_window_size))
-        general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
-        general_settings.append(ui.Selector('display_mode',
-                                            g_pool,
-                                            setter=set_display_mode_info,
-                                            selection=['camera_image','roi','algorithm'],
-                                            labels=['Camera Image', 'ROI', 'Algorithm'],
-                                            label="Mode")
-                                            )
-        g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
+        general_settings.append(ui.Button("Reset window size", set_window_size))
+        general_settings.append(ui.Switch("flip", g_pool, label="Flip image display"))
+        general_settings.append(
+            ui.Selector(
+                "display_mode",
+                g_pool,
+                setter=set_display_mode_info,
+                selection=["camera_image", "roi", "algorithm"],
+                labels=["Camera Image", "ROI", "Algorithm"],
+                label="Mode",
+            )
+        )
+        g_pool.display_mode_info = ui.Info_Text(
+            g_pool.display_mode_info_text[g_pool.display_mode]
+        )
 
         general_settings.append(g_pool.display_mode_info)
 
-        detector_selector = ui.Selector('pupil_detector',
-                                        getter=lambda: g_pool.pupil_detector.__class__,
-                                        setter=set_detector,
-                                        selection=[Detector_Dummy,
-                                                   Detector_2D,
-                                                   Detector_3D],
-                                        labels=['disabled',
-                                                'C++ 2d detector',
-                                                'C++ 3d detector'],
-                                        label="Detection method")
+        detector_selector = ui.Selector(
+            "pupil_detector",
+            getter=lambda: g_pool.pupil_detector.__class__,
+            setter=set_detector,
+            selection=[Detector_Dummy, Detector_2D, Detector_3D],
+            labels=["disabled", "C++ 2d detector", "C++ 3d detector"],
+            label="Detection method",
+        )
         general_settings.append(detector_selector)
 
         g_pool.menubar.append(general_settings)
-        icon = ui.Icon('collapsed', general_settings, label=chr(0xe8b8), on_val=False, off_val=True, setter=toggle_general_settings, label_font='pupil_icons')
-        icon.tooltip = 'General Settings'
+        icon = ui.Icon(
+            "collapsed",
+            general_settings,
+            label=chr(0xE8B8),
+            on_val=False,
+            off_val=True,
+            setter=toggle_general_settings,
+            label_font="pupil_icons",
+        )
+        icon.tooltip = "General Settings"
         g_pool.iconbar.append(icon)
         toggle_general_settings(False)
 
@@ -400,18 +457,19 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         def replace_source(source_class_name, source_settings):
             g_pool.capture.deinit_ui()
             g_pool.capture.cleanup()
-            g_pool.capture = source_class_by_name[source_class_name](g_pool,**source_settings)
+            g_pool.capture = source_class_by_name[source_class_name](
+                g_pool, **source_settings
+            )
             g_pool.capture.init_ui()
             if g_pool.writer:
                 logger.info("Done recording.")
                 try:
                     g_pool.writer.release()
                 except RuntimeError:
-                    logger.error('No eye video recorded')
+                    logger.error("No eye video recorded")
                 g_pool.writer = None
 
-        g_pool.replace_source = replace_source # for ndsi capture
-
+        g_pool.replace_source = replace_source  # for ndsi capture
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -424,7 +482,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         glfw.glfwSetDropCallback(main_window, on_drop)
 
         # load last gui configuration
-        g_pool.gui.configuration = session_settings.get('ui_config', {})
+        g_pool.gui.configuration = session_settings.get("ui_config", {})
 
         # set up performance graphs
         pid = os.getpid()
@@ -435,7 +493,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         cpu_graph.pos = (20, 50)
         cpu_graph.update_fn = ps.cpu_percent
         cpu_graph.update_rate = 5
-        cpu_graph.label = 'CPU %0.1f'
+        cpu_graph.label = "CPU %0.1f"
 
         fps_graph = graph.Bar_Graph()
         fps_graph.pos = (140, 50)
@@ -447,7 +505,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
         should_publish_frames = False
-        frame_publish_format = 'jpeg'
+        frame_publish_format = "jpeg"
         frame_publish_format_recent_warning = False
 
         # create a timer to control window update frequency
@@ -456,7 +514,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         def window_should_update():
             return next(window_update_timer)
 
-        logger.warning('Process started.')
+        logger.warning("Process started.")
 
         frame = None
 
@@ -465,16 +523,16 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
             if notify_sub.new_data:
                 t, notification = notify_sub.recv()
-                subject = notification['subject']
-                if subject.startswith('eye_process.should_stop'):
-                    if notification['eye_id'] == eye_id:
+                subject = notification["subject"]
+                if subject.startswith("eye_process.should_stop"):
+                    if notification["eye_id"] == eye_id:
                         break
-                elif subject == 'set_detection_mapping_mode':
-                    if notification['mode'] == '3d':
+                elif subject == "set_detection_mapping_mode":
+                    if notification["mode"] == "3d":
                         if not isinstance(g_pool.pupil_detector, Detector_3D):
                             set_detector(Detector_3D)
                         detector_selector.read_only = True
-                    elif notification['mode'] == '2d':
+                    elif notification["mode"] == "2d":
                         if not isinstance(g_pool.pupil_detector, Detector_2D):
                             set_detector(Detector_2D)
                         detector_selector.read_only = False
@@ -482,55 +540,123 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         if not isinstance(g_pool.pupil_detector, Detector_Dummy):
                             set_detector(Detector_Dummy)
                         detector_selector.read_only = True
-                elif subject == 'recording.started':
-                    if notification['record_eye'] and g_pool.capture.online:
-                        record_path = notification['rec_path']
-                        raw_mode = notification['compression']
+                elif subject == "recording.started":
+                    if notification["record_eye"] and g_pool.capture.online:
+                        record_path = notification["rec_path"]
+                        raw_mode = notification["compression"]
                         logger.info("Will save eye video to: {}".format(record_path))
-                        video_path = os.path.join(record_path, "eye{}.mp4".format(eye_id))
+                        video_path = os.path.join(
+                            record_path, "eye{}.mp4".format(eye_id)
+                        )
                         if raw_mode and frame and g_pool.capture.jpeg_support:
-                            g_pool.writer = JPEG_Writer(video_path, g_pool.capture.frame_rate)
-                        elif hasattr(g_pool.capture._recent_frame, 'h264_buffer'):
-                            g_pool.writer = H264Writer(video_path,
-                                                       g_pool.capture.frame_size[0],
-                                                       g_pool.capture.frame_size[1],
-                                                       g_pool.capture.frame_rate)
+                            g_pool.writer = JPEG_Writer(
+                                video_path, g_pool.capture.frame_rate
+                            )
+                        elif hasattr(g_pool.capture._recent_frame, "h264_buffer"):
+                            g_pool.writer = H264Writer(
+                                video_path,
+                                g_pool.capture.frame_size[0],
+                                g_pool.capture.frame_size[1],
+                                g_pool.capture.frame_rate,
+                            )
                         else:
-                            g_pool.writer = AV_Writer(video_path, g_pool.capture.frame_rate)
-                elif subject == 'recording.stopped':
+                            g_pool.writer = AV_Writer(
+                                video_path, g_pool.capture.frame_rate
+                            )
+                elif subject == "recording.stopped":
                     if g_pool.writer:
                         logger.info("Done recording.")
                         try:
                             g_pool.writer.release()
                         except RuntimeError:
-                            logger.error('No eye video recorded')
+                            logger.error("No eye video recorded")
                         g_pool.writer = None
-                elif subject.startswith('meta.should_doc'):
-                    ipc_socket.notify({
-                        'subject': 'meta.doc',
-                        'actor': 'eye{}'.format(eye_id),
-                        'doc': eye.__doc__
-                    })
-                elif subject.startswith('frame_publishing.started'):
+                elif subject.startswith("meta.should_doc"):
+                    ipc_socket.notify(
+                        {
+                            "subject": "meta.doc",
+                            "actor": "eye{}".format(eye_id),
+                            "doc": eye.__doc__,
+                        }
+                    )
+                elif subject.startswith("frame_publishing.started"):
                     should_publish_frames = True
-                    frame_publish_format = notification.get('format', 'jpeg')
-                elif subject.startswith('frame_publishing.stopped'):
+                    frame_publish_format = notification.get("format", "jpeg")
+                elif subject.startswith("frame_publishing.stopped"):
                     should_publish_frames = False
-                    frame_publish_format = 'jpeg'
-                elif subject.startswith('start_eye_capture') and notification['target'] == g_pool.process:
-                    replace_source(notification['name'],notification['args'])
+                    frame_publish_format = "jpeg"
+                elif (
+                    subject.startswith("start_eye_capture")
+                    and notification["target"] == g_pool.process
+                ):
+                    replace_source(notification["name"], notification["args"])
+                elif notification["subject"].startswith("pupil_detector.set_property"):
+                    target_process = notification.get("target", g_pool.process)
+                    should_apply = target_process == g_pool.process
 
+                    if should_apply:
+                        try:
+                            property_name = notification["name"]
+                            property_value = notification["value"]
+                            if "2d" in notification["subject"]:
+                                g_pool.pupil_detector.set_2d_detector_property(
+                                    property_name, property_value
+                                )
+                            elif "3d" in notification["subject"]:
+                                if not isinstance(g_pool.pupil_detector, Detector_3D):
+                                    raise ValueError(
+                                        "3d properties are only available"
+                                        " if 3d detector is active"
+                                    )
+                                g_pool.pupil_detector.set_3d_detector_property(
+                                    property_name, property_value
+                                )
+                            else:
+                                raise KeyError(
+                                    "Notification subject does not "
+                                    "specifiy detector type."
+                                )
+                            logger.debug(
+                                "`{}` property set to {}".format(
+                                    property_name, property_value
+                                )
+                            )
+                        except KeyError:
+                            logger.error("Malformed notification received")
+                            logger.debug(traceback.format_exc())
+                        except (ValueError, TypeError):
+                            logger.error("Invalid property or value")
+                            logger.debug(traceback.format_exc())
+                elif notification["subject"].startswith(
+                    "pupil_detector.broadcast_properties"
+                ):
+                    target_process = notification.get("target", g_pool.process)
+                    should_respond = target_process == g_pool.process
+                    if should_respond:
+                        props = g_pool.pupil_detector.get_detector_properties()
+                        properties_broadcast = {
+                            "subject": "pupil_detector.properties.{}".format(eye_id),
+                            **props,  # add properties to broadcast
+                        }
+                        ipc_socket.notify(properties_broadcast)
                 g_pool.capture.on_notify(notification)
+                g_pool.capture_manager.on_notify(notification)
 
             # Get an image from the grabber
             event = {}
             g_pool.capture.recent_events(event)
-            frame = event.get('frame')
+            frame = event.get("frame")
             g_pool.capture_manager.recent_events(event)
             if frame:
                 f_width, f_height = g_pool.capture.frame_size
-                if (g_pool.u_r.array_shape[0], g_pool.u_r.array_shape[1]) != (f_height, f_width):
-                    g_pool.pupil_detector.on_resolution_change((g_pool.u_r.array_shape[1], g_pool.u_r.array_shape[0]), g_pool.capture.frame_size)
+                if (g_pool.u_r.array_shape[0], g_pool.u_r.array_shape[1]) != (
+                    f_height,
+                    f_width,
+                ):
+                    g_pool.pupil_detector.on_resolution_change(
+                        (g_pool.u_r.array_shape[1], g_pool.u_r.array_shape[0]),
+                        g_pool.capture.frame_size,
+                    )
                     g_pool.u_r = UIRoi((f_height, f_width))
                 if should_publish_frames:
                     try:
@@ -546,21 +672,29 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                     except (AttributeError, AssertionError, NameError):
                         if not frame_publish_format_recent_warning:
                             frame_publish_format_recent_warning = True
-                            logger.warning('{}s are not compatible with format "{}"'.format(type(frame), frame_publish_format))
+                            logger.warning(
+                                '{}s are not compatible with format "{}"'.format(
+                                    type(frame), frame_publish_format
+                                )
+                            )
                     else:
                         frame_publish_format_recent_warning = False
-                        pupil_socket.send({'topic': 'frame.eye.{}'.format(eye_id),
-                                           'width': frame.width,
-                                           'height': frame.height,
-                                           'index': frame.index,
-                                           'timestamp': frame.timestamp,
-                                           'format': frame_publish_format,
-                                           '__raw_data__': [data]})
+                        pupil_socket.send(
+                            {
+                                "topic": "frame.eye.{}".format(eye_id),
+                                "width": frame.width,
+                                "height": frame.height,
+                                "index": frame.index,
+                                "timestamp": frame.timestamp,
+                                "format": frame_publish_format,
+                                "__raw_data__": [data],
+                            }
+                        )
 
                 t = frame.timestamp
                 dt, ts = t - ts, t
                 try:
-                    fps_graph.add(1./dt)
+                    fps_graph.add(1.0 / dt)
                 except ZeroDivisionError:
                     pass
 
@@ -568,10 +702,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                     g_pool.writer.write_video_frame(frame)
 
                 # pupil ellipse detection
-                result = g_pool.pupil_detector.detect(frame, g_pool.u_r, g_pool.display_mode == 'algorithm')
+                result = g_pool.pupil_detector.detect(
+                    frame, g_pool.u_r, g_pool.display_mode == "algorithm"
+                )
                 if result is not None:
-                    result['id'] = eye_id
-                    result['topic'] = 'pupil.{}'.format(eye_id)
+                    result["id"] = eye_id
+                    result["topic"] = "pupil.{}".format(eye_id)
                     pupil_socket.send(result)
 
             cpu_graph.update()
@@ -584,9 +720,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
                     if frame:
                         # switch to work in normalized coordinate space
-                        if g_pool.display_mode == 'algorithm':
+                        if g_pool.display_mode == "algorithm":
                             g_pool.image_tex.update_from_ndarray(frame.img)
-                        elif g_pool.display_mode in ('camera_image', 'roi'):
+                        elif g_pool.display_mode in ("camera_image", "roi"):
                             g_pool.image_tex.update_from_ndarray(frame.gray)
                         else:
                             pass
@@ -597,39 +733,61 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                     f_width, f_height = g_pool.capture.frame_size
                     make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     if frame and result:
-                        if result['method'] == '3d c++':
-                            eye_ball = result['projected_sphere']
+                        if result["method"] == "3d c++":
+                            eye_ball = result["projected_sphere"]
                             try:
                                 pts = cv2.ellipse2Poly(
-                                    (int(eye_ball['center'][0]),
-                                     int(eye_ball['center'][1])),
-                                    (int(eye_ball['axes'][0] / 2),
-                                     int(eye_ball['axes'][1] / 2)),
-                                    int(eye_ball['angle']), 0, 360, 8)
+                                    (
+                                        int(eye_ball["center"][0]),
+                                        int(eye_ball["center"][1]),
+                                    ),
+                                    (
+                                        int(eye_ball["axes"][0] / 2),
+                                        int(eye_ball["axes"][1] / 2),
+                                    ),
+                                    int(eye_ball["angle"]),
+                                    0,
+                                    360,
+                                    8,
+                                )
                             except ValueError as e:
                                 pass
                             else:
-                                draw_polyline(pts, 2, RGBA(0., .9, .1, result['model_confidence']))
-                        if result['confidence'] > 0:
-                            if 'ellipse' in result:
+                                draw_polyline(
+                                    pts,
+                                    2,
+                                    RGBA(0.0, 0.9, 0.1, result["model_confidence"]),
+                                )
+                        if result["confidence"] > 0:
+                            if "ellipse" in result:
                                 pts = cv2.ellipse2Poly(
-                                    (int(result['ellipse']['center'][0]),
-                                     int(result['ellipse']['center'][1])),
-                                    (int(result['ellipse']['axes'][0] / 2),
-                                     int(result['ellipse']['axes'][1] / 2)),
-                                    int(result['ellipse']['angle']), 0, 360, 15)
-                                confidence = result['confidence'] * 0.7
-                                draw_polyline(pts, 1, RGBA(1., 0, 0, confidence))
-                                draw_points([result['ellipse']['center']],
-                                            size=20,
-                                            color=RGBA(1., 0., 0., confidence),
-                                            sharpness=1.)
+                                    (
+                                        int(result["ellipse"]["center"][0]),
+                                        int(result["ellipse"]["center"][1]),
+                                    ),
+                                    (
+                                        int(result["ellipse"]["axes"][0] / 2),
+                                        int(result["ellipse"]["axes"][1] / 2),
+                                    ),
+                                    int(result["ellipse"]["angle"]),
+                                    0,
+                                    360,
+                                    15,
+                                )
+                                confidence = result["confidence"] * 0.7
+                                draw_polyline(pts, 1, RGBA(1.0, 0, 0, confidence))
+                                draw_points(
+                                    [result["ellipse"]["center"]],
+                                    size=20,
+                                    color=RGBA(1.0, 0.0, 0.0, confidence),
+                                    sharpness=1.0,
+                                )
 
                     glViewport(0, 0, *camera_render_size)
                     make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     # render the ROI
                     g_pool.u_r.draw(g_pool.gui.scale)
-                    if g_pool.display_mode == 'roi':
+                    if g_pool.display_mode == "roi":
                         g_pool.u_r.draw_points(g_pool.gui.scale)
 
                     glViewport(0, 0, *window_size)
@@ -660,21 +818,31 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
         # save session persistent settings
-        session_settings['gui_scale'] = g_pool.gui_user_scale
-        session_settings['roi'] = g_pool.u_r.get()
-        session_settings['flip'] = g_pool.flip
-        session_settings['display_mode'] = g_pool.display_mode
-        session_settings['ui_config'] = g_pool.gui.configuration
-        session_settings['capture_settings'] = g_pool.capture.class_name, g_pool.capture.get_init_dict()
-        session_settings['capture_manager_settings'] = g_pool.capture_manager.class_name, g_pool.capture_manager.get_init_dict()
-        session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
-        session_settings['version'] = str(g_pool.version)
-        session_settings['last_pupil_detector'] = g_pool.pupil_detector.__class__.__name__
-        session_settings['pupil_detector_settings'] = g_pool.pupil_detector.get_settings()
+        session_settings["gui_scale"] = g_pool.gui_user_scale
+        session_settings["roi"] = g_pool.u_r.get()
+        session_settings["flip"] = g_pool.flip
+        session_settings["display_mode"] = g_pool.display_mode
+        session_settings["ui_config"] = g_pool.gui.configuration
+        session_settings["capture_settings"] = (
+            g_pool.capture.class_name,
+            g_pool.capture.get_init_dict(),
+        )
+        session_settings["capture_manager_settings"] = (
+            g_pool.capture_manager.class_name,
+            g_pool.capture_manager.get_init_dict(),
+        )
+        session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
+        session_settings["version"] = str(g_pool.version)
+        session_settings[
+            "last_pupil_detector"
+        ] = g_pool.pupil_detector.__class__.__name__
+        session_settings[
+            "pupil_detector_settings"
+        ] = g_pool.pupil_detector.get_settings()
 
         session_window_size = glfw.glfwGetWindowSize(main_window)
         if 0 not in session_window_size:
-            session_settings['window_size'] = session_window_size
+            session_settings["window_size"] = session_window_size
 
         session_settings.close()
 
@@ -692,18 +860,49 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         logger.info("Process shutting down.")
 
 
-def eye_profiled(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
-                 user_dir, version, eye_id, overwrite_cap_settings=None):
+def eye_profiled(
+    timebase,
+    is_alive_flag,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    version,
+    eye_id,
+    overwrite_cap_settings=None,
+):
     import cProfile
     import subprocess
     import os
     from .eye import eye
-    cProfile.runctx("eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings)",
-                    {'timebase': timebase, 'is_alive_flag': is_alive_flag, 'ipc_pub_url': ipc_pub_url,
-                     'ipc_sub_url': ipc_sub_url, 'ipc_push_url': ipc_push_url, 'user_dir': user_dir,
-                     'version': version, 'eye_id': eye_id, 'overwrite_cap_settings': overwrite_cap_settings},
-                    locals(), "eye{}.pstats".format(eye_id))
-    loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
-    gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules', 'gprof2dot.py')
-    subprocess.call("python " + gprof2dot_loc + " -f pstats eye{0}.pstats | dot -Tpng -o eye{0}_cpu_time.png".format(eye_id), shell=True)
-    print("created cpu time graph for eye{} process. Please check out the png next to the eye.py file".format(eye_id))
+
+    cProfile.runctx(
+        "eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings)",
+        {
+            "timebase": timebase,
+            "is_alive_flag": is_alive_flag,
+            "ipc_pub_url": ipc_pub_url,
+            "ipc_sub_url": ipc_sub_url,
+            "ipc_push_url": ipc_push_url,
+            "user_dir": user_dir,
+            "version": version,
+            "eye_id": eye_id,
+            "overwrite_cap_settings": overwrite_cap_settings,
+        },
+        locals(),
+        "eye{}.pstats".format(eye_id),
+    )
+    loc = os.path.abspath(__file__).rsplit("pupil_src", 1)
+    gprof2dot_loc = os.path.join(loc[0], "pupil_src", "shared_modules", "gprof2dot.py")
+    subprocess.call(
+        "python "
+        + gprof2dot_loc
+        + " -f pstats eye{0}.pstats | dot -Tpng -o eye{0}_cpu_time.png".format(eye_id),
+        shell=True,
+    )
+    print(
+        "created cpu time graph for eye{} process. Please check out the png next to the eye.py file".format(
+            eye_id
+        )
+    )
+

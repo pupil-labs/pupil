@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -124,6 +124,8 @@ class Natural_Features_Calibration(Calibration_Plugin):
             self.first_img = None
             self.point = np.array([pos], dtype=np.float32)
             self.count = 30
+            return True  # click consumed
+        return False  # click not consumed
 
     def get_init_dict(self):
         return {}
