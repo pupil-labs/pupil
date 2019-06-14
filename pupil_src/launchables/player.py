@@ -596,6 +596,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             g_pool.plugins.clean()
 
             glfw.glfwMakeContextCurrent(main_window)
+            glfw.glfwPollEvents()
             # render visual feedback from loaded plugins
             if gl_utils.is_window_visible(main_window):
 
@@ -642,8 +643,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                 # present frames at appropriate speed
                 g_pool.seek_control.wait(events["frame"].timestamp)
                 glfw.glfwSwapBuffers(main_window)
-
-            glfw.glfwPollEvents()
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["min_data_confidence"] = g_pool.min_data_confidence
