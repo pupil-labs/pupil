@@ -179,7 +179,6 @@ def world(
         from system_graphs import System_Graphs
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
         from hololens_relay import Hololens_Relay
-        from pi_preview import PI_Preview
 
         # UI Platform tweaks
         if platform.system() == "Linux":
@@ -238,7 +237,6 @@ def world(
             Accuracy_Visualizer,
             Camera_Intrinsics_Estimation,
             Hololens_Relay,
-            PI_Preview,
         ]
 
         if platform.system() != "Windows":
@@ -433,8 +431,6 @@ def world(
                                 "doc": p.on_notify.__doc__,
                             }
                         )
-            elif subject == "world_process.adapt_window_size":
-                set_window_size()
 
         width, height = session_settings.get(
             "window_size", (1280 + icon_bar_width, 720)
@@ -503,7 +499,6 @@ def world(
             f_width, f_height = g_pool.capture.frame_size
             f_width += int(icon_bar_width * g_pool.gui.scale)
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
-            on_resize(main_window, f_width, f_height)
 
         general_settings.append(ui.Button("Reset window size", set_window_size))
         general_settings.append(
