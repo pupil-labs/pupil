@@ -117,7 +117,7 @@ def world(
         from pyglui import ui, cygl, __version__ as pyglui_version
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
-            "1.23"
+            "1.24"
         ), "pyglui out of date, please upgrade to newest version"
         from pyglui.cygl.utils import Named_Texture
         import gl_utils
