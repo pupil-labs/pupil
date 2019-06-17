@@ -639,6 +639,7 @@ def world(
 
             glfw.glfwMakeContextCurrent(main_window)
             # render visual feedback from loaded plugins
+            glfw.glfwPollEvents()
             if window_should_update() and gl_utils.is_window_visible(main_window):
 
                 gl_utils.glViewport(0, 0, *camera_render_size)
@@ -680,7 +681,6 @@ def world(
                     any(p.on_char(char_) for p in g_pool.plugins)
 
                 glfw.glfwSwapBuffers(main_window)
-            glfw.glfwPollEvents()
 
         glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
