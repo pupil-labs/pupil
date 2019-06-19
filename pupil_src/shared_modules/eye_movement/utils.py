@@ -48,7 +48,7 @@ def np_denormalize(points_2d, frame_size):
     return points_2d
 
 
-def gaze_data_to_nslr_data(capture, gaze_data, use_pupil: bool):
+def gaze_data_to_nslr_data(capture, gaze_data, gaze_timestamps, use_pupil: bool):
 
     if use_pupil:
         assert can_use_3d_gaze_mapping(gaze_data)
