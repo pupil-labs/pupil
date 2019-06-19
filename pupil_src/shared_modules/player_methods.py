@@ -42,7 +42,7 @@ class Bisector(object):
                     " timestamp in `data_ts`"
                 )
             )
-        elif not data:
+        elif len(data) == 0:
             self.data = []
             self.data_ts = np.asarray([])
             self.sorted_idc = []
