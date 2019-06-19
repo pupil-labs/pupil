@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 from itertools import chain
-
+import numpy as np
 import player_methods
 import tasklib
 from gaze_producer import worker
@@ -131,6 +131,11 @@ class GazeMapperController(Observable):
                 )
             )
         )
+
+        #Only keep unique gaze_data (according to gaze_ts)
+        gaze_ts, indices = np.unique(gaze_ts, return_index=True)
+        gaze_data = np.asarray(gaze_data, dtype=object)[indices]
+
         return player_methods.Bisector(gaze_data, gaze_ts)
 
     def on_gaze_mapping_calculated(self, gaze_mapper):
