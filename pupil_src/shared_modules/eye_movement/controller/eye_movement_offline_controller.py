@@ -119,6 +119,7 @@ class Eye_Movement_Offline_Controller:
 
     def _on_task_exception(self, exception: Exception):
         self._on_exception(exception)
+        self._on_task_completed(None)
 
     def _on_task_completed(self, _: None):
         self.storage.finalize()
