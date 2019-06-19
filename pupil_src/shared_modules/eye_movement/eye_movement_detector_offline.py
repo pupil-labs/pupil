@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import typing
+import logging
 import random
 from .eye_movement_detector_base import Eye_Movement_Detector_Base
 import eye_movement.utils as utils
@@ -17,6 +17,9 @@ import eye_movement.controller as controller
 import eye_movement.ui as ui
 from observable import Observable
 from data_changed import Listener, Announcer
+
+
+logger = logging.getLogger(__name__)
 
 
 class Notification_Subject:
@@ -191,6 +194,6 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
                 ts_segment_class_pairs, export_dir=export_dir
             )
         else:
-            utils.logger.warning(
+            logger.warning(
                 "The selected export range does not include eye movement detections"
             )
