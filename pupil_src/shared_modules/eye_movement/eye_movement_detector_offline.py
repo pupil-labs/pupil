@@ -58,6 +58,7 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         self.offline_controller = controller.Eye_Movement_Offline_Controller(
             plugin=self,
             storage=self.storage,
+            on_started=self.on_task_started,
             on_status=self.on_task_status,
             on_progress=self.on_task_progress,
             on_exception=self.on_task_exception,
@@ -94,6 +95,9 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
     def seek_to_timestamp(self, timestamp):
         self.notify_all({"subject": "seek_control.should_seek", "timestamp": timestamp})
 
+    def on_task_started(self):
+        self.menu_content.update_error_text("")
+
     def on_task_progress(self, progress: float):
         self.menu_content.update_progress(progress)
 
@@ -101,7 +105,9 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         self.menu_content.update_status(status)
 
     def on_task_exception(self, exception: Exception):
-        raise exception
+        error_message = f"{exception}"
+        logger.exception(error_message)
+        self.menu_content.update_error_text(error_message)
 
     def on_task_completed(self):
         self._eye_movement_changed_announcer.announce_new()
