@@ -106,7 +106,7 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
 
     def on_task_exception(self, exception: Exception):
         error_message = f"{exception}"
-        logger.exception(error_message)
+        logger.error(error_message)
         self.menu_content.update_error_text(error_message)
 
     def on_task_completed(self):
