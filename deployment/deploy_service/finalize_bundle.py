@@ -134,6 +134,7 @@ Icon=pupil-service
 Categories=Application;
 Name[en_US]=Pupil Service
 Actions=Terminal;
+StartupWMClass=Pupil Service
 
 [Desktop Action Terminal]
 Name=Open in Terminal

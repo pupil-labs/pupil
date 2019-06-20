@@ -158,7 +158,9 @@ Exec=/opt/pupil_player/pupil_player %F
 Terminal=false
 Icon=pupil-player
 Categories=Application;
-Name[en_US]=Pupil Player"""
+Name[en_US]=Pupil Player
+StartupWMClass=Pupil Player
+"""
         f.write(content)
     os.chmod(os.path.join(app_dir, "pupil_player.desktop"), 0o644)
 
