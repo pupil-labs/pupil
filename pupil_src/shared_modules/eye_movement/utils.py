@@ -89,7 +89,7 @@ def validate_nslr_data(eye_positions: np.ndarray, eye_timestamps: np.ndarray):
     if has_nan(eye_positions):
         raise ValueError("Gaze data contains NaN values")
     if not is_monotonic(eye_timestamps):
-        raise ValueError("Gaze timestamps contains NaN values")
+        raise ValueError("Gaze timestamps contain NaN values")
     if not is_monotonic(eye_timestamps):
         raise ValueError("Gaze timestamps are not monotonic")
     if not is_unique(eye_timestamps):
