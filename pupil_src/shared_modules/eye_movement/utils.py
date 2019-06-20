@@ -93,4 +93,4 @@ def validate_nslr_data(eye_positions: np.ndarray, eye_timestamps: np.ndarray):
     if not is_monotonic(eye_timestamps):
         raise ValueError("Gaze timestamps are not monotonic")
     if not is_unique(eye_timestamps):
-        raise ValueError("Gaze timestamps are not unique. Please recalculate gaze mapping with only 1 mapper enabled")
+        raise ValueError("Gaze timestamps are not unique. If you are using Offline Calibration, please disable all but one gaze mapping section.")
