@@ -76,9 +76,13 @@ class Real_Time_Buffered_Detector:
 
         gaze_time = np.array([gp["timestamp"] for gp in gaze_data])
 
-        eye_positions = utils.gaze_data_to_nslr_data(
-            capture, gaze_data, gaze_time, use_pupil=use_pupil
-        )
+        try:
+            eye_positions = utils.gaze_data_to_nslr_data(
+                capture, gaze_data, gaze_time, use_pupil=use_pupil
+            )
+        except utils.NSLRValidationError as e:
+            utils.logger.error(f"{e}")
+            return
 
         gaze_classification, segmentation, segment_classification = nslr_hmm.classify_gaze(
             gaze_time, eye_positions
