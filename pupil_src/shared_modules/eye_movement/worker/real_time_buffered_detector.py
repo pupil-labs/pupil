@@ -36,6 +36,9 @@ class Real_Time_Buffered_Detector:
             return
         self._capture = capture
         self._gaze_data_buffer.extend(gaze_data)
+        #TODO: Remove manual sorting when timestamps are guaranteed to be monotonic
+        #See: https://github.com/pupil-labs/pupil/issues/1493
+        self._gaze_data_buffer = sorted(self._gaze_data_buffer, key=lambda gp: gp['timestamp'])
         self._is_gaze_buffer_classified = False
 
     def segments_at_timestamp(
