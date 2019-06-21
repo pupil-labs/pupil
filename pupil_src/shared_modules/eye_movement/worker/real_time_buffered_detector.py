@@ -36,6 +36,9 @@ class Real_Time_Buffered_Detector:
             return
         self._capture = capture
         self._gaze_data_buffer.extend(gaze_data)
+        #TODO: Remove manual sorting when timestamps are guaranteed to be monotonic
+        #See: https://github.com/pupil-labs/pupil/issues/1493
+        self._gaze_data_buffer = sorted(self._gaze_data_buffer, key=lambda gp: gp['timestamp'])
         self._is_gaze_buffer_classified = False
 
     def segments_at_timestamp(
@@ -76,9 +79,13 @@ class Real_Time_Buffered_Detector:
 
         gaze_time = np.array([gp["timestamp"] for gp in gaze_data])
 
-        eye_positions = utils.gaze_data_to_nslr_data(
-            capture, gaze_data, gaze_time, use_pupil=use_pupil
-        )
+        try:
+            eye_positions = utils.gaze_data_to_nslr_data(
+                capture, gaze_data, gaze_time, use_pupil=use_pupil
+            )
+        except utils.NSLRValidationError as e:
+            utils.logger.error(f"{e}")
+            return
 
         gaze_classification, segmentation, segment_classification = nslr_hmm.classify_gaze(
             gaze_time, eye_positions
