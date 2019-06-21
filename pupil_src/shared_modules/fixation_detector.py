@@ -44,6 +44,7 @@ import file_methods as fm
 import player_methods as pm
 from methods import denormalize
 from plugin import Analysis_Plugin_Base
+from eye_movement.utils import can_use_3d_gaze_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +170,7 @@ def detect_fixations(
         logger.warning("No data available to find fixations")
         return "Fixation detection complete", ()
 
-    use_pupil = "gaze_normal_3d" in gaze_data[0] or "gaze_normals_3d" in gaze_data[0]
+    use_pupil = can_use_3d_gaze_mapping(gaze_data)
     logger.info(
         "Starting fixation detection using {} data...".format(
             "3d" if use_pupil else "2d"
@@ -711,7 +712,7 @@ class Fixation_Detector(Fixation_Detector_Base):
             pass
 
         gaze_3d = [gp for gp in self.history if "3d" in gp["base_data"][0]["method"]]
-        use_pupil = len(gaze_3d) > 0.8 * len(self.history)
+        use_pupil = can_use_3d_gaze_mapping(self.history)
 
         base_data = gaze_3d if use_pupil else self.history
 
