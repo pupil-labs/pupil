@@ -56,6 +56,8 @@ class Segment_Overlay_Renderer(abc.ABC):
             self.draw_polyline(segment)
         elif segment.segment_class == model.Segment_Class.POST_SACCADIC_OSCILLATIONS:
             self.draw_polyline(segment)
+        elif segment.segment_class == model.Segment_Class.SMOOTH_PURSUIT:
+            self.draw_polyline(segment)
         else:
             self.draw_circle(segment)
 
