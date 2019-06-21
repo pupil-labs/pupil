@@ -261,9 +261,9 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
     def __init__(
         self,
         g_pool,
-        max_dispersion=3.0,
-        min_duration=300,
-        max_duration=1000,
+        max_dispersion=1.50,
+        min_duration=80,
+        max_duration=220,
         show_fixations=True,
     ):
         super().__init__(g_pool)
