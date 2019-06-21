@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 class Notification_Subject:
     SHOULD_RECALCULATE = "segmentation_detector.should_recalculate"
+    MIN_DATA_CONFIDENCE_CHANGED = "min_data_confidence_changed"
 
 
 EYE_MOVEMENT_ANNOUNCER_TOPIC = "eye_movement"
@@ -145,7 +146,10 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
                 "token", "{:0>8x}".format(random.getrandbits(32))
             )
             self._gaze_changed_listener._on_notify(note)
-        elif notification["subject"] == Notification_Subject.SHOULD_RECALCULATE:
+        elif notification["subject"] in (
+            Notification_Subject.SHOULD_RECALCULATE,
+            Notification_Subject.MIN_DATA_CONFIDENCE_CHANGED,
+        ):
             self.offline_controller.classify()
         elif notification["subject"] == "should_export":
             self.export_eye_movement(
