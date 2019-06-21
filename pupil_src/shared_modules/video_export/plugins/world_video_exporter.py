@@ -75,6 +75,7 @@ class World_Video_Exporter(VideoExporter):
             "pupil": self.g_pool.pupil_positions,
             "pupil_by_id_0": self.g_pool.pupil_positions_by_id[0],
             "pupil_by_id_1": self.g_pool.pupil_positions_by_id[1],
+            "fixations": self.g_pool.fixations,
         }
 
         for key, bisector in pre_computed.items():
@@ -112,6 +113,7 @@ def _export_world_video(
 
     # we are not importing manual gaze correction. In Player corrections have already been applied.
     # in batch exporter this plugin makes little sense.
+    from fixation_detector import Offline_Fixation_Detector
     from eye_movement import Offline_Eye_Movement_Detector
 
     # Plug-ins
@@ -145,7 +147,7 @@ def _export_world_video(
             ],
             key=lambda x: x.__name__,
         )
-        analysis_plugins = [Offline_Eye_Movement_Detector]
+        analysis_plugins = [Offline_Fixation_Detector, Offline_Eye_Movement_Detector]
         user_plugins = sorted(
             import_runtime_plugins(os.path.join(user_dir, "plugins")),
             key=lambda x: x.__name__,
@@ -238,7 +240,7 @@ def _export_world_video(
             pm.Bisector(**pre_computed_eye_data["pupil_by_id_1"]),
         )
         g_pool.gaze_positions = pm.Bisector(**pre_computed_eye_data["gaze"])
-        g_pool.eye_movements = pm.Affiliator()  # filled by eye movement detector
+        g_pool.fixations = pm.Affiliator(**pre_computed_eye_data["fixations"])
 
         # add plugins
         g_pool.plugins = Plugin_List(g_pool, plugin_initializers)
