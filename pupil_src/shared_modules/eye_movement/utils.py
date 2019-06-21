@@ -76,6 +76,12 @@ def gaze_data_to_nslr_data(capture, gaze_data, gaze_timestamps, use_pupil: bool)
     return nslr_data
 
 
+class NSLRValidationError(Exception): pass
+class NSLRNaNValuesValidationError(NSLRValidationError): pass
+class NSLRNonMonotonicValidationError(NSLRValidationError): pass
+class NSLRNonUniqueValidationError(NSLRValidationError): pass
+
+
 def validate_nslr_data(eye_positions: np.ndarray, eye_timestamps: np.ndarray):
     def has_nan(arr: np.ndarray):
         return np.any(np.isnan(arr))
@@ -87,10 +93,10 @@ def validate_nslr_data(eye_positions: np.ndarray, eye_timestamps: np.ndarray):
         return arr.shape == np.unique(arr, axis=0).shape
 
     if has_nan(eye_positions):
-        raise ValueError("Gaze data contains NaN values")
+        raise NSLRNaNValuesValidationError("Gaze data contains NaN values")
+    if has_nan(eye_timestamps):
+        raise NSLRNaNValuesValidationError("Gaze timestamps contain NaN values")
     if not is_monotonic(eye_timestamps):
-        raise ValueError("Gaze timestamps contain NaN values")
-    if not is_monotonic(eye_timestamps):
-        raise ValueError("Gaze timestamps are not monotonic")
+        raise NSLRNonMonotonicValidationError("Gaze timestamps are not monotonic")
     if not is_unique(eye_timestamps):
-        raise ValueError("Gaze timestamps are not unique. If you are using Offline Calibration, please disable all but one gaze mapping section.")
+        raise NSLRNonUniqueValidationError("Gaze timestamps are not unique. If you are using Offline Calibration, please disable all but one gaze mapping section.")
