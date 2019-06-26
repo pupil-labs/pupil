@@ -228,8 +228,9 @@ class Classified_Segment(StorageItem):
         self._storage = storage
 
     def validate(self):
-        assert self.frame_count > 0
-        assert len(self.segment_data) == len(self.segment_time) == self.frame_count
+        if self.frame_count:
+            assert self.frame_count > 0
+        assert len(self.segment_data) == len(self.segment_time)
         assert self.start_frame_timestamp <= self.end_frame_timestamp
         assert self.start_frame_timestamp == self.segment_time[0]
         assert self.end_frame_timestamp == self.segment_time[-1]
@@ -321,14 +322,14 @@ class Classified_Segment(StorageItem):
         return Segment_Class(self._storage["segment_class"])
 
     @property
-    def start_frame_index(self) -> int:
+    def start_frame_index(self) -> t.Optional[int]:
         """Index of the first segment frame, in the frame buffer."""
-        return self._storage["start_frame_index"]
+        return self._storage.get("start_frame_index", None)
 
     @property
-    def end_frame_index(self) -> int:
+    def end_frame_index(self) -> t.Optional[int]:
         """Index **after** the last segment frame, in the frame buffer."""
-        return self._storage["end_frame_index"]
+        return self._storage.get("end_frame_index", None)
 
     @property
     def start_frame_timestamp(self) -> float:
@@ -373,15 +374,21 @@ class Classified_Segment(StorageItem):
         return (self.end_frame_timestamp - self.start_frame_timestamp) * 1000
 
     @property
-    def frame_count(self) -> int:
+    def frame_count(self) -> t.Optional[int]:
         """..."""
-        return self.end_frame_index - self.start_frame_index
+        if self.start_frame_index is not None and self.end_frame_index:
+            return self.end_frame_index - self.start_frame_index
+        else:
+            return None
 
     @property
-    def mid_frame_index(self):
+    def mid_frame_index(self) -> t.Optional[int]:
         """Index of the middle segment frame, in the frame buffer.
         """
-        return int((self.end_frame_index + self.start_frame_index) // 2)
+        if self.start_frame_index is not None and self.end_frame_index is not None:
+            return int((self.end_frame_index + self.start_frame_index) // 2)
+        else:
+            return None
 
     @property
     def mid_frame_timestamp(self) -> float:
@@ -449,7 +456,7 @@ class Classified_Segment_Factory:
             segment_time[-1],
         )  # [t_0, t_1]
 
-        if capture_time is not None and len(capture_time) > 0:
+        if isinstance(capture_time, np.ndarray) and capture_time.size > 1:
             time_range = [start_frame_timestamp, end_frame_timestamp]
             start_frame_index, end_frame_index = pm.find_closest(capture_time, time_range)
             start_frame_index, end_frame_index = int(start_frame_index), int(end_frame_index)
