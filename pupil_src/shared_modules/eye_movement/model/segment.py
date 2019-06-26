@@ -16,6 +16,7 @@ import eye_movement.utils as utils
 from storage import StorageItem
 import methods as mt
 import file_methods as fm
+import player_methods as pm
 import numpy as np
 import nslr_hmm
 
@@ -429,7 +430,7 @@ class Classified_Segment_Factory:
         self._segment_id = start_id
 
     def create_segment(
-        self, gaze_data, gaze_time, use_pupil, nslr_segment, nslr_segment_class
+        self, gaze_data, gaze_time, use_pupil, nslr_segment, nslr_segment_class, capture_time
     ) -> t.Optional[Classified_Segment]:
         segment_id = self._get_id_postfix_increment()
 
@@ -443,11 +444,17 @@ class Classified_Segment_Factory:
         segment_class = Segment_Class.from_nslr_class(nslr_segment_class)
         topic = utils.EYE_MOVEMENT_TOPIC_PREFIX + segment_class.value
 
-        start_frame_index, end_frame_index = nslr_segment.i  # [i_0, i_1)
         start_frame_timestamp, end_frame_timestamp = (
             segment_time[0],
             segment_time[-1],
         )  # [t_0, t_1]
+
+        if capture_time is not None and len(capture_time) > 0:
+            time_range = [start_frame_timestamp, end_frame_timestamp]
+            start_frame_index, end_frame_index = pm.find_closest(capture_time, time_range)
+            start_frame_index, end_frame_index = int(start_frame_index), int(end_frame_index)
+        else:
+            start_frame_index, end_frame_index = None, None
 
         segment = Classified_Segment.from_attrs(
             id=segment_id,
