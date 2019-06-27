@@ -428,10 +428,12 @@ class RenameSet:
             intrinsics.save(self.rec_dir, "world")
 
         for fn in self.existsting_files:
-            if fnmatch.fnmatch(fn, "*Pupil Cam1 ID2*"):
+            if fnmatch.fnmatch(fn, "*Pupil Cam1 ID2*[!.time]"):
                 _load_intrinsics(fn, "Pupil Cam1 ID2")
-            elif fnmatch.fnmatch(fn, "*Logitech Webcam C930e*"):
+                return
+            elif fnmatch.fnmatch(fn, "*Logitech Webcam C930e*[!.time]"):
                 _load_intrinsics(fn, "Logitech Webcam C930e")
+                return
 
     def get_existsting_files(self, pattern, exts):
         existsting_files = []

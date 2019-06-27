@@ -10,10 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import os
 import platform
-
-
-class Global_Container(object):
-    pass
+from types import SimpleNamespace
 
 
 def world(
@@ -120,7 +117,7 @@ def world(
         from pyglui import ui, cygl, __version__ as pyglui_version
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
-            "1.23"
+            "1.24"
         ), "pyglui out of date, please upgrade to newest version"
         from pyglui.cygl.utils import Named_Texture
         import gl_utils
@@ -155,12 +152,13 @@ def world(
             Gaze_Mapping_Plugin,
         )
         from fixation_detector import Fixation_Detector
+        from eye_movement import Eye_Movement_Detector_Real_Time
         from recorder import Recorder
         from display_recent_gaze import Display_Recent_Gaze
         from time_sync import Time_Sync
         from pupil_remote import Pupil_Remote
         from pupil_groups import Pupil_Groups
-        from surface_tracker import Surface_Tracker
+        from surface_tracker import Surface_Tracker_Online
         from log_display import Log_Display
         from annotations import Annotation_Capture
         from log_history import Log_History
@@ -199,7 +197,7 @@ def world(
         hdpi_factor = 1.0
 
         # g_pool holds variables for this process they are accessible to all plugins
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
         g_pool.app = "capture"
         g_pool.process = "world"
         g_pool.user_dir = user_dir
@@ -229,10 +227,11 @@ def world(
             Frame_Publisher,
             Pupil_Remote,
             Time_Sync,
-            Surface_Tracker,
+            Surface_Tracker_Online,
             Annotation_Capture,
             Log_History,
             Fixation_Detector,
+            Eye_Movement_Detector_Real_Time,
             Blink_Detection,
             Remote_Recorder,
             Accuracy_Visualizer,
@@ -432,6 +431,8 @@ def world(
                                 "doc": p.on_notify.__doc__,
                             }
                         )
+            elif subject == "world_process.adapt_window_size":
+                set_window_size()
 
         width, height = session_settings.get(
             "window_size", (1280 + icon_bar_width, 720)
@@ -500,6 +501,7 @@ def world(
             f_width, f_height = g_pool.capture.frame_size
             f_width += int(icon_bar_width * g_pool.gui.scale)
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
+            on_resize(main_window, f_width, f_height)
 
         general_settings.append(ui.Button("Reset window size", set_window_size))
         general_settings.append(
@@ -643,6 +645,7 @@ def world(
 
             glfw.glfwMakeContextCurrent(main_window)
             # render visual feedback from loaded plugins
+            glfw.glfwPollEvents()
             if window_should_update() and gl_utils.is_window_visible(main_window):
 
                 gl_utils.glViewport(0, 0, *camera_render_size)
@@ -684,7 +687,6 @@ def world(
                     any(p.on_char(char_) for p in g_pool.plugins)
 
                 glfw.glfwSwapBuffers(main_window)
-            glfw.glfwPollEvents()
 
         glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()

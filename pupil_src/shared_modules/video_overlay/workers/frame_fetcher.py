@@ -1,14 +1,10 @@
 import logging
+from types import SimpleNamespace
 
 import player_methods as pm
-
-from video_capture import File_Source, EndofVideoError
+from video_capture import EndofVideoError, File_Source
 
 logger = logging.getLogger(__name__)
-
-
-class _Empty:
-    """Replacement for actual g_pool object"""
 
 
 class FrameFetcher:
@@ -16,7 +12,9 @@ class FrameFetcher:
 
     def __init__(self, video_path):
         try:
-            self.source = File_Source(_Empty(), source_path=video_path, timing=None)
+            self.source = File_Source(
+                SimpleNamespace(), source_path=video_path, timing=None
+            )
         except AssertionError as err:
             raise FileNotFoundError(video_path) from err
         self.current_frame = self.source.get_frame()

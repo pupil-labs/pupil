@@ -148,7 +148,15 @@ class AV_Writer(object):
         self.current_frame_idx = 0
         self.audio_packets_decoded = 0
 
+        self._closed = False
+        self._last_ts = float("-inf")
+        self._last_pts = float("-inf")
+
     def write_video_frame(self, input_frame):
+        if self._closed:
+            logger.warning("Container was closed already")
+            return
+
         if not self.configured:
             self._configure_video(template_frame=input_frame)
 
@@ -186,12 +194,26 @@ class AV_Writer(object):
 
     def _update_frame_pts(self, input_frame):
         if self.use_timestamps:
-            self.frame.pts = int(
-                (input_frame.timestamp - self.start_time) / self.time_base
-            )
+            ts = input_frame.timestamp
+            if ts < self._last_ts:
+                self.close()
+                raise ValueError(
+                    (
+                        "Non-monotonic timestamps. Expected timestamp "
+                        "is >{}. Given timestamp: {}"
+                    ).format(self._last_ts, ts)
+                )
+            self._last_ts = ts
+
+            pts = int((ts - self.start_time) / self.time_base)
+            if pts <= self._last_pts:
+                pts = self._last_pts + 1
+            self.frame.pts = pts
+            self._last_pts = pts
         else:
             # our timebase is 1/30  so a frame idx is the correct pts for an fps recorded video.
             self.frame.pts = self.current_frame_idx
+        return self.frame.pts
 
     def _mux_video(self, input_frame):
         # send frame of to encoder
@@ -240,6 +262,7 @@ class AV_Writer(object):
         self.container.close()  # throws RuntimeError if no frames were written
         if timestamp_export_format:
             write_timestamps(self.file_loc, self.timestamps, timestamp_export_format)
+        self._closed = True
 
     def release(self):
         self.close()
