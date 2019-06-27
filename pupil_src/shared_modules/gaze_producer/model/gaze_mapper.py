@@ -9,10 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from gaze_producer import model
+from storage import StorageItem
 
 
-class GazeMapper(model.storage.StorageItem):
+class GazeMapper(StorageItem):
     version = 1
 
     def __init__(

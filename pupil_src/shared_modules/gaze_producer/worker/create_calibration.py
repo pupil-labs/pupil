@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 from time import time
+from types import SimpleNamespace
 
 import player_methods as pm
 import tasklib.background
@@ -61,17 +62,13 @@ def _create_ref_dict(ref):
     }
 
 
-class _Empty(object):
-    pass
-
-
 def _setup_fake_gpool(
     frame_size, intrinsics, detection_mapping_mode, rec_dir, min_calibration_confidence
 ):
-    cap = _Empty()
+    cap = SimpleNamespace()
     cap.frame_size = frame_size
     cap.intrinsics = intrinsics
-    pool = _Empty()
+    pool = SimpleNamespace()
     pool.capture = cap
     pool.get_timestamp = time
     pool.detection_mapping_mode = detection_mapping_mode
@@ -81,9 +78,7 @@ def _setup_fake_gpool(
     return pool
 
 
-def _create_calibration(
-    fake_gpool, ref_dicts_in_calib_range, pupil_pos_in_calib_range
-):
+def _create_calibration(fake_gpool, ref_dicts_in_calib_range, pupil_pos_in_calib_range):
     method, result = select_calibration_method(
         fake_gpool, pupil_pos_in_calib_range, ref_dicts_in_calib_range
     )

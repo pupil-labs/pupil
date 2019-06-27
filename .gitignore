@@ -37,6 +37,7 @@ settings/
 *.sublime-project
 *.sublime-workspace
 .vscode
+.idea
 #directory for test file will be ignored
 Pupil_Test_Files
 detector_2d.cpp

@@ -190,7 +190,10 @@ class UVC_Source(Base_Source):
         # UVC setting quirks:
         controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
 
-        if ("Pupil Cam2" in self.uvc_capture.name) and frame_size == (320, 240):
+        if (
+            ("Pupil Cam2" in self.uvc_capture.name)
+            or ("Pupil Cam3" in self.uvc_capture.name)
+        ) and frame_size == (320, 240):
             frame_size = (192, 192)
 
         self.frame_size = frame_size
@@ -244,8 +247,12 @@ class UVC_Source(Base_Source):
                 except KeyError:
                     pass
 
-        elif "Pupil Cam2" in self.uvc_capture.name:
+        elif (
+            "Pupil Cam2" in self.uvc_capture.name
+            or "Pupil Cam3" in self.uvc_capture.name
+        ):
             if self.exposure_mode == "auto":
+                # special settings apply to both, Pupil Cam2 and Cam3
                 special_settings = {200: 28, 180: 31}
                 controls_dict = dict(
                     [(c.display_name, c) for c in self.uvc_capture.controls]
@@ -459,7 +466,10 @@ class UVC_Source(Base_Source):
         self.uvc_capture.frame_rate = rate
         self.frame_rate_backup = rate
 
-        if "Pupil Cam2" in self.uvc_capture.name:
+        if (
+            "Pupil Cam2" in self.uvc_capture.name
+            or "Pupil Cam3" in self.uvc_capture.name
+        ):
             special_settings = {200: 28, 180: 31}
             if self.exposure_mode == "auto":
                 self.preferred_exposure_time = Exposure_Time(
@@ -581,7 +591,10 @@ class UVC_Source(Base_Source):
             )
         )
 
-        if "Pupil Cam2" in self.uvc_capture.name:
+        if (
+            "Pupil Cam2" in self.uvc_capture.name
+            or "Pupil Cam3" in self.uvc_capture.name
+        ):
             special_settings = {200: 28, 180: 31}
 
             def set_exposure_mode(exposure_mode):
@@ -644,7 +657,10 @@ class UVC_Source(Base_Source):
         else:
             blacklist = []
 
-        if "Pupil Cam2" in self.uvc_capture.name:
+        if (
+            "Pupil Cam2" in self.uvc_capture.name
+            or "Pupil Cam3" in self.uvc_capture.name
+        ):
             blacklist += [
                 "Auto Exposure Mode",
                 "Auto Exposure Priority",

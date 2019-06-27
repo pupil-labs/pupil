@@ -686,9 +686,6 @@ class Realsense2_Source(Base_Source):
         )
         logger.debug("self.restart_device --> self.notify_all")
 
-    def on_click(self, pos, button, action):
-        pass
-
     def on_notify(self, notification):
         logger.debug(
             'self.on_notify, notification["subject"]: ' + notification["subject"]

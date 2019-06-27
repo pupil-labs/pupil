@@ -372,7 +372,7 @@ class RenameSet:
             return os.path.splitext(file_name)[0]
 
         def rename(self, source_pattern, destination_name):
-            # source_pattern: Pupil Cam(0|1) ID0
+            # source_pattern: Pupil Cam(1|2|3) ID0
             # destination_name: eye0
             if re.match(source_pattern, self.name):
                 new_path = re.sub(source_pattern, destination_name, self.path)
@@ -428,10 +428,12 @@ class RenameSet:
             intrinsics.save(self.rec_dir, "world")
 
         for fn in self.existsting_files:
-            if fnmatch.fnmatch(fn, "*Pupil Cam1 ID2*"):
+            if fnmatch.fnmatch(fn, "*Pupil Cam1 ID2*[!.time]"):
                 _load_intrinsics(fn, "Pupil Cam1 ID2")
-            elif fnmatch.fnmatch(fn, "*Logitech Webcam C930e*"):
+                return
+            elif fnmatch.fnmatch(fn, "*Logitech Webcam C930e*[!.time]"):
                 _load_intrinsics(fn, "Logitech Webcam C930e")
+                return
 
     def get_existsting_files(self, pattern, exts):
         existsting_files = []

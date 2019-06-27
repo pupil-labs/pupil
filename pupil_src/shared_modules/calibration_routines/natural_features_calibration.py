@@ -124,6 +124,8 @@ class Natural_Features_Calibration(Calibration_Plugin):
             self.first_img = None
             self.point = np.array([pos], dtype=np.float32)
             self.count = 30
+            return True  # click consumed
+        return False  # click not consumed
 
     def get_init_dict(self):
         return {}

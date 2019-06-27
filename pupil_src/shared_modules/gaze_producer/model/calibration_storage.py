@@ -14,13 +14,15 @@ import os
 
 import file_methods as fm
 import make_unique
+
+from storage import Storage
 from gaze_producer import model
 from observable import Observable
 
 logger = logging.getLogger(__name__)
 
 
-class CalibrationStorage(model.storage.Storage, Observable):
+class CalibrationStorage(Storage, Observable):
     _calibration_suffix = "plcal"
 
     def __init__(self, rec_dir, plugin, get_recording_index_range, recording_uuid):
@@ -123,7 +125,7 @@ class CalibrationStorage(model.storage.Storage, Observable):
                 try:
                     calib_result = model.CalibrationResult(
                         mapping_plugin_name=data["mapper_name"],
-                        mapper_args=data["mapper_args"],
+                        mapper_args=dict(data["mapper_args"]),
                     )
                 except KeyError:
                     # notifications from old recordings will not have these fields!

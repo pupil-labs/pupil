@@ -225,8 +225,8 @@ class Base_Manager(Plugin):
     def auto_activate_source(self):
         """This function should be implemented in *_Manager classes 
             to activate the corresponding source with following preferences:
-                eye0: Pupil Cam1/2 ID0
-                eye1: Pupil Cam1/2 ID1
+                eye0: Pupil Cam1/2/3 ID0
+                eye1: Pupil Cam1/2/3 ID1
                 world: Pupil Cam1 ID2
 
             See issue #1278 for more details.

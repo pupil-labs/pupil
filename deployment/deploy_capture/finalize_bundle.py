@@ -134,6 +134,7 @@ Icon=pupil-capture
 Categories=Application;
 Name[en_US]=Pupil Capture
 Actions=Terminal;
+StartupWMClass=Pupil Capture - World
 
 [Desktop Action Terminal]
 Name=Open in Terminal

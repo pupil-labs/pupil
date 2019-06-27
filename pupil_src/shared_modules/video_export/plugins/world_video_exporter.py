@@ -73,6 +73,8 @@ class World_Video_Exporter(VideoExporter):
         pre_computed = {
             "gaze": self.g_pool.gaze_positions,
             "pupil": self.g_pool.pupil_positions,
+            "pupil_by_id_0": self.g_pool.pupil_positions_by_id[0],
+            "pupil_by_id_1": self.g_pool.pupil_positions_by_id[1],
             "fixations": self.g_pool.fixations,
         }
 
@@ -112,13 +114,14 @@ def _export_world_video(
     # we are not importing manual gaze correction. In Player corrections have already been applied.
     # in batch exporter this plugin makes little sense.
     from fixation_detector import Offline_Fixation_Detector
+    from eye_movement import Offline_Eye_Movement_Detector
 
     # Plug-ins
     from plugin import Plugin_List, import_runtime_plugins
     from video_capture import EndofVideoError, File_Source
+    from video_overlay.plugins import Video_Overlay, Eye_Overlay
     from vis_circle import Vis_Circle
     from vis_cross import Vis_Cross
-    from vis_eye_video_overlay import Vis_Eye_Video_Overlay
     from vis_light_points import Vis_Light_Points
     from vis_polyline import Vis_Polyline
     from vis_scan_path import Vis_Scan_Path
@@ -139,11 +142,12 @@ def _export_world_video(
                 Vis_Light_Points,
                 Vis_Watermark,
                 Vis_Scan_Path,
-                Vis_Eye_Video_Overlay,
+                Eye_Overlay,
+                Video_Overlay,
             ],
             key=lambda x: x.__name__,
         )
-        analysis_plugins = [Offline_Fixation_Detector]
+        analysis_plugins = [Offline_Fixation_Detector, Offline_Eye_Movement_Detector]
         user_plugins = sorted(
             import_runtime_plugins(os.path.join(user_dir, "plugins")),
             key=lambda x: x.__name__,
@@ -231,6 +235,10 @@ def _export_world_video(
             ]
 
         g_pool.pupil_positions = pm.Bisector(**pre_computed_eye_data["pupil"])
+        g_pool.pupil_positions_by_id = (
+            pm.Bisector(**pre_computed_eye_data["pupil_by_id_0"]),
+            pm.Bisector(**pre_computed_eye_data["pupil_by_id_1"]),
+        )
         g_pool.gaze_positions = pm.Bisector(**pre_computed_eye_data["gaze"])
         g_pool.fixations = pm.Affiliator(**pre_computed_eye_data["fixations"])
 
