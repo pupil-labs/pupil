@@ -91,35 +91,38 @@ if platform.system() == "Windows":
     libs = [os.path.splitext(_)[0] for _ in list(set(opencv_libs)) + list(set(boost_libs)) + ['ceres.lib', 'glog.lib']]
 
 else:
-    opencv_library_dirs = [
-        "/usr/local/opt/opencv/lib",  # old opencv brew (v3)
-        "/usr/local/opt/opencv@3/lib",  # new opencv@3 brew
-        "/usr/local/lib",  # new opencv brew (v4)
-    ]
-    opencv_include_dirs = [
-        "/usr/local/opt/opencv/include",  # old opencv brew (v3)
-        "/usr/local/opt/opencv@3/include",  # new opencv@3 brew
-        "/usr/local/include/opencv4",  # new opencv brew (v4)
-    ]
+    libext = '.dylib' if platform.system() == 'Darwin' else '.so'
+    library_dirs = ["/usr/local/lib", "/usr/lib"]
+    if 'CONDA_PREFIX' in os.environ:
+        library_dirs.append(os.path.join(os.environ['CONDA_PREFIX'], 'lib'))
+        include_dirs.append(os.path.join(os.environ['CONDA_PREFIX'], 'include', 'opencv4'))
+    else:
+        library_dirs.extend([
+            "/usr/local/opt/opencv/lib",  # old opencv brew (v3)
+            "/usr/local/opt/opencv@3/lib",  # new opencv@3 brew
+        ])
+        include_dirs.extend([
+            "/usr/local/opt/opencv/include",  # old opencv brew (v3)
+            "/usr/local/opt/opencv@3/include",  # new opencv@3 brew
+            "/usr/local/include/opencv4",  # new opencv brew (v4)
+        ])
     opencv_core_found = any(
-        os.path.isfile(path + "/libopencv_core.so") for path in opencv_library_dirs
+        os.path.isfile(path + "/libopencv_core" + libext) for path in library_dirs
     )
     if not opencv_core_found:
         ros_dists = ["kinetic", "jade", "indigo"]
         for ros_dist in ros_dists:
             ros_candidate_path = "/opt/ros/" + ros_dist + "/lib"
-            if os.path.isfile(ros_candidate_path + "/libopencv_core3.so"):
-                opencv_library_dirs = [ros_candidate_path]
-                opencv_include_dirs = [
-                    "/opt/ros/" + ros_dist + "/include/opencv-3.1.0-dev"
-                ]
+            if os.path.isfile(ros_candidate_path + "/libopencv_core3" + libext):
+                library_dirs.append(ros_candidate_path)
+                include_dirs.append("/opt/ros/" + ros_dist + "/include/opencv-3.1.0-dev")
                 opencv_libraries = [lib + "3" for lib in opencv_libraries]
                 break
     include_dirs.extend([
         "/usr/local/include/eigen3",
         "/usr/include/eigen3",
     ])
-    include_dirs.extend(opencv_include_dirs)
+
     python_version = sys.version_info
     if platform.system() == "Linux":
         # boost_python-py34
@@ -127,7 +130,15 @@ else:
     else:
         boost_lib = "boost_python" + str(python_version[0]) + str(python_version[1])
     libs = ["ceres", boost_lib] + opencv_libraries
-    library_dirs = opencv_library_dirs
+
+
+extra_link_args = []
+extra_compile_args = ["-D_USE_MATH_DEFINES", "-std=c++11",
+                      "-w", "-O2",
+                      ]  # ,'-O2'] #-w hides warnings
+if platform.system() == 'Darwin':
+    extra_compile_args.append("-stdlib=libc++")
+    extra_link_args.append("-stdlib=libc++")
 
 
 extensions = [
@@ -142,13 +153,8 @@ extensions = [
         include_dirs=include_dirs,
         libraries=libs,
         library_dirs=library_dirs,
-        extra_link_args=[],  # '-WL,-R/usr/local/lib'
-        extra_compile_args=[
-            "-D_USE_MATH_DEFINES",
-            "-std=c++11",
-            "-w",
-            "-O2",
-        ],  # ,'-O2'], #-w hides warnings
+        extra_link_args=extra_link_args,  # '-WL,-R/usr/local/lib'
+        extra_compile_args=extra_compile_args,
         depends=dependencies,
         language="c++",
     ),
@@ -165,13 +171,8 @@ extensions = [
         include_dirs=include_dirs,
         libraries=libs,
         library_dirs=library_dirs,
-        extra_link_args=[],  # '-WL,-R/usr/local/lib'
-        extra_compile_args=[
-            "-D_USE_MATH_DEFINES",
-            "-std=c++11",
-            "-w",
-            "-O2",
-        ],  # ,'-O2'], #-w hides warnings
+        extra_link_args=extra_link_args,
+        extra_compile_args = extra_compile_args,
         depends=dependencies,
         language="c++",
     ),
