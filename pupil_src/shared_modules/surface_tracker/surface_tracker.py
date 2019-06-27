@@ -23,7 +23,7 @@ import square_marker_detect as marker_det
 import file_methods
 
 from surface_tracker import gui, Square_Marker_Detection
-
+from surface_tracker.surface_marker_detector import Surface_Square_Marker_Detector
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
     """
@@ -40,17 +40,16 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.current_frame = None
         self.surfaces = []
         self.markers = []
-        self.markers_unfiltered = []
-        self.previous_markers = []
+        self.marker_detector = Surface_Square_Marker_Detector(
+            marker_min_confidence=0.1,
+            marker_min_perimeter=marker_min_perimeter,
+            robust_detection=True,
+            inverted_markers=inverted_markers,
+        )
         self._edit_surf_verts = []
         self._last_mouse_pos = (0.0, 0.0)
         self.gui = gui.GUI(self)
 
-        self.marker_min_perimeter = marker_min_perimeter
-        self.marker_min_confidence = 0.1
-        self.inverted_markers = inverted_markers
-
-        self.robust_detection = True
         self._add_surfaces_from_file()
 
     def _add_surfaces_from_file(self):
@@ -60,6 +59,55 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
         for init_dict in surface_definitions.get("surfaces", []):
             self.add_surface(init_dict)
+
+    @property
+    def marker_min_confidence(self) -> float:
+        #TODO: Check if/where this is used; if not used externally - remove
+        return self.marker_detector.marker_min_confidence
+
+    @marker_min_confidence.setter
+    def marker_min_confidence(self, value: float):
+        #TODO: Check if/where this is used; if not used externally - remove
+        self.marker_detector.marker_min_confidence = value
+
+    @property
+    def marker_min_perimeter(self) -> int:
+        #TODO: Check if/where this is used; if not used externally - remove
+        return self.marker_detector.marker_min_perimeter
+
+    @marker_min_perimeter.setter
+    def marker_min_perimeter(self, value: int):
+        #TODO: Check if/where this is used; if not used externally - remove
+        self.marker_detector.marker_min_perimeter = value
+
+    @property
+    def robust_detection(self) -> bool:
+        #TODO: Check if/where this is used; if not used externally - remove
+        return self.marker_detector.robust_detection
+
+    @robust_detection.setter
+    def robust_detection(self, value: bool):
+        #TODO: Check if/where this is used; if not used externally - remove
+        self.marker_detector.robust_detection = value
+
+    @property
+    def inverted_markers(self) -> bool:
+        #TODO: Check if/where this is used; if not used externally - remove
+        return self.marker_detector.inverted_markers
+
+    @inverted_markers.setter
+    def inverted_markers(self, value: bool):
+        #TODO: Check if/where this is used; if not used externally - remove
+        self.marker_detector.inverted_markers = value
+
+    @property
+    def markers_unfiltered(self):
+        #TODO: refactor this property
+        return self.marker_detector.previous_square_markers_unfiltered
+
+    def _filter_markers(self, markers):
+        #TODO: refactor this method
+        return self.marker_detector._filter_markers(markers)
 
     @property
     def camera_model(self):
@@ -340,58 +388,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         pass
 
     def _detect_markers(self, frame):
-        gray = frame.gray
-
-        if self.robust_detection:
-            markers = marker_det.detect_markers_robust(
-                gray,
-                grid_size=5,
-                aperture=11,
-                prev_markers=self.previous_markers,
-                true_detect_every_frame=3,
-                min_marker_perimeter=self.marker_min_perimeter,
-                invert_image=self.inverted_markers,
-            )
-        else:
-            markers = marker_det.detect_markers(
-                gray,
-                grid_size=5,
-                aperture=11,
-                min_marker_perimeter=self.marker_min_perimeter,
-            )
-
-        # Robust marker detection requires previous markers to be in a different
-        # format than the surface tracker.
-        self.previous_markers = markers
-        markers = [
-            Square_Marker_Detection(
-                m["id"], m["id_confidence"], m["verts"], m["perimeter"]
-            )
-            for m in markers
-        ]
-        markers = self._remove_duplicate_markers(markers)
-        self.markers_unfiltered = markers
-        self.markers = self._filter_markers(markers)
-
-    def _remove_duplicate_markers(self, markers):
-        # if an id shows twice use the bigger marker (usually this is a screen camera
-        # echo artifact.)
-        marker_by_id = {}
-        for m in markers:
-            if m.id not in marker_by_id or m.perimeter > marker_by_id[m.id].perimeter:
-                marker_by_id[m.id] = m
-
-        return list(marker_by_id.values())
-
-    def _filter_markers(self, markers):
-        markers = [
-            m
-            for m in markers
-            if m.perimeter >= self.marker_min_perimeter
-            and m.id_confidence > self.marker_min_confidence
-        ]
-
-        return markers
+        self.markers = self.marker_detector.detect_markers(gray_img=frame.gray)
 
     @abstractmethod
     def _update_surface_locations(self, frame_index):
