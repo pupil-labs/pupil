@@ -178,27 +178,36 @@ class Surface_Marker(Surface_Base_Marker):
 class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
-    def detect_markers(self, gray_img):
+    def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
         #TODO: Add type hints
         pass
 
 
+
 class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
 
-    def __init__(self, marker_min_confidence=None, marker_min_perimeter=None, robust_detection=None, inverted_markers=None):
-        def param(x, default):
+    def __init__(
+        self,
+        square_marker_min_confidence: float=...,
+        square_marker_min_perimeter: int=...,
+        square_marker_robust_detection: bool=...,
+        square_marker_inverted_markers: bool=...,
+        **kwargs,
+    ):
+        Param_T = typing.TypeVar('Param_T')
+        def param(x: Param_T, default: Param_T) -> Param_T:
             return x if x is not ... else default
         #
-        self.marker_min_perimeter  = param(marker_min_perimeter, 60)
-        self.marker_min_confidence = param(marker_min_confidence, 0.1)
+        self.marker_min_perimeter  = param(square_marker_min_perimeter, 60)
+        self.marker_min_confidence = param(square_marker_min_confidence, 0.1)
         #
-        self.robust_detection = param(robust_detection, True)
-        self.inverted_markers = param(inverted_markers, False)
+        self.robust_detection = param(square_marker_robust_detection, True)
+        self.inverted_markers = param(square_marker_inverted_markers, False)
         #
         self.previous_raw_markers = []
         self.previous_square_markers_unfiltered = []
 
-    def detect_markers(self, gray_img):
+    def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
         #TODO: Add type hints
 
         grid_size = 5
@@ -225,17 +234,20 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         # Robust marker detection requires previous markers to be in a different
         # format than the surface tracker.
         self.previous_raw_markers = markers
-        markers = [
-            Square_Marker_Detection(
-                m["id"], m["id_confidence"], m["verts"], m["perimeter"]
-            )
-            for m in markers
-        ]
+        markers = map(self._marker_from_raw, markers)
         markers = self._unique_markers(markers)
         self.previous_square_markers_unfiltered = markers
         markers = self._filter_markers(markers)
         return markers
 
+    def _marker_from_raw(self, raw_marker: dict) -> Surface_Marker:
+        square_marker = _Square_Marker_Detection(
+            id=raw_marker["id"],
+            id_confidence=raw_marker["id_confidence"],
+            verts_px=raw_marker["verts"],
+            perimeter=raw_marker["perimeter"],
+        )
+        return Surface_Marker.from_tuple(square_marker.to_tuple())
 
     def _unique_markers(self, markers):
         #TODO: Add type hints
