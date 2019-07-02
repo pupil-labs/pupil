@@ -30,7 +30,7 @@ import file_methods
 
 from surface_tracker.cache import Cache
 from surface_tracker.surface_tracker import Surface_Tracker
-from surface_tracker import offline_utils, background_tasks, Square_Marker_Detection
+from surface_tracker import offline_utils, background_tasks, Surface_Marker
 from surface_tracker.gui import Heatmap_Mode
 from surface_tracker.surface_offline import Surface_Offline
 
@@ -114,11 +114,11 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             marker_cache_unfiltered = []
             for markers in cache:
                 # Loaded markers are either False, [] or a list of dictionaries. We
-                # need to convert the dictionaries into Square_Marker_Detection objects.
+                # need to convert the dictionaries into Surface_Marker objects.
                 if markers:
 
                     markers = [
-                        Square_Marker_Detection(*args) if args else None
+                        Surface_Marker(*args) if args else None
                         for args in markers
                     ]
                 marker_cache_unfiltered.append(markers)

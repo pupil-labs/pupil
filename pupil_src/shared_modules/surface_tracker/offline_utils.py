@@ -1,6 +1,7 @@
 import square_marker_detect
 from .surface import Surface
-from .surface_tracker import Square_Marker_Detection
+from .surface_marker_detector import Surface_Marker
+from .surface_marker_detector import _Square_Marker_Detection #FIXME: Refactor
 
 
 class marker_detection_callable:
@@ -19,12 +20,15 @@ class marker_detection_callable:
             true_detect_every_frame=1,
             invert_image=self.inverted_markers,
         )
-        markers = [
-            Square_Marker_Detection(
+
+        def marker_from_raw_marker(m) -> Surface_Marker:
+            m = _Square_Marker_Detection(
                 m["id"], m["id_confidence"], m["verts"], m["perimeter"]
             )
-            for m in markers
-        ]
+            return Surface_Marker.from_tuple(m.to_tuple())
+
+        markers = map(marker_from_raw_marker, markers)
+        markers = list(markers)
         return markers
 
 
