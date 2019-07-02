@@ -19,11 +19,11 @@ import numpy as np
 import pyglui
 
 from plugin import Plugin
-import square_marker_detect as marker_det
 import file_methods
 
-from surface_tracker import gui, Square_Marker_Detection
-from surface_tracker.surface_marker_detector import Surface_Square_Marker_Detector
+from surface_tracker import gui
+# from surface_tracker.surface_marker_detector import Surface_Square_Marker_Detector as Surface_Marker_Detector
+from surface_tracker.surface_marker_detector import Surface_Apriltag_Marker_Detector as Surface_Marker_Detector
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
     """
@@ -40,11 +40,11 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.current_frame = None
         self.surfaces = []
         self.markers = []
-        self.marker_detector = Surface_Square_Marker_Detector(
-            marker_min_confidence=0.1,
-            marker_min_perimeter=marker_min_perimeter,
-            robust_detection=True,
-            inverted_markers=inverted_markers,
+        self.marker_detector = Surface_Marker_Detector(
+            square_marker_min_confidence=0.1,
+            square_marker_min_perimeter=marker_min_perimeter,
+            square_marker_robust_detection=True,
+            square_marker_inverted_markers=inverted_markers,
         )
         self._edit_surf_verts = []
         self._last_mouse_pos = (0.0, 0.0)
