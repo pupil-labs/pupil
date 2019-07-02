@@ -115,7 +115,11 @@ class _Apriltag_V2_Marker_Detection(_Raw_Apriltag_V2_Marker_Detection, Surface_B
     @property
     def id_confidence(self) -> float:
         #TODO: Why is it called "id_confidence" instead of "confidence"?
-        return 0.95 #FIXME
+        decision_margin = self.decision_margin
+        decision_margin /= 100.0
+        decision_margin = max(0.0, min(decision_margin, 1.0))
+        #TODO: Not sure this is the best estimate of confidence, and if decision_margin is in (0, 100)
+        return decision_margin
 
     @property
     @abc.abstractmethod
