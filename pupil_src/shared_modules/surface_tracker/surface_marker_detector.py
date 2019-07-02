@@ -379,7 +379,44 @@ class Surface_Apriltag_Marker_Detector(Surface_Base_Marker_Detector):
 
 class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
     #TODO: Implement
-    def __init__(self):
-        self._square_detector = Surface_Square_Marker_Detector()
-        self._apriltag_detector = Surface_Apriltag_Marker_Detector()
+    def __init__(
+        self,
+        square_marker_min_confidence: float=...,
+        square_marker_min_perimeter: int=...,
+        square_marker_robust_detection: bool=...,
+        square_marker_inverted_markers: bool=...,
+        apriltag_families: str=...,
+        apriltag_border: int=...,
+        apriltag_nthreads: int=...,
+        apriltag_quad_decimate: float=...,
+        apriltag_quad_blur: float=...,
+        apriltag_refine_edges: bool=...,
+        apriltag_refine_decode: bool=...,
+        apriltag_refine_pose: bool=...,
+        apriltag_debug: bool=...,
+        apriltag_quad_contours: bool=...,
+    ):
+        self._square_detector = Surface_Square_Marker_Detector(
+            marker_min_confidence=square_marker_min_confidence,
+            marker_min_perimeter=square_marker_min_perimeter,
+            robust_detection=square_marker_robust_detection,
+            inverted_markers=square_marker_inverted_markers,
+        )
+        self._apriltag_detector = Surface_Apriltag_Marker_Detector(
+            families=apriltag_families,
+            border=apriltag_border,
+            nthreads=apriltag_nthreads,
+            quad_decimate=apriltag_quad_decimate,
+            quad_blur=apriltag_quad_blur,
+            refine_edges=apriltag_refine_edges,
+            refine_decode=apriltag_refine_decode,
+            refine_pose=apriltag_refine_pose,
+            debug=apriltag_debug,
+            quad_contours=apriltag_quad_contours,
+        )
 
+    def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
+        markers = []
+        markers += self._square_detector.detect_markers(gray_img=gray_img)
+        markers += self._apriltag_detector.detect_markers(gray_img=gray_img)
+        return markers
