@@ -70,8 +70,7 @@ class _Square_Marker_Detection(_Raw_Square_Marker_Detection, Surface_Base_Marker
     def from_tuple(state: tuple) -> typing.Optional['_Square_Marker_Detection']:
         if state[-1] != _Square_Marker_Detection.marker_type:
             return None
-        state = state[:-1]
-        return _Square_Marker_Detection(*state)
+        return _Square_Marker_Detection(*state[:-1])
 
     def to_tuple(self) -> tuple:
         state = tuple(self)
@@ -102,8 +101,7 @@ class _Apriltag_V2_Marker_Detection(_Raw_Apriltag_V2_Marker_Detection, Surface_B
     def from_tuple(state: tuple) -> typing.Optional['_Apriltag_V2_Marker_Detection']:
         if state[-1] != _Apriltag_V2_Marker_Detection.marker_type:
             return None
-        state = state[:-1]
-        return _Apriltag_V2_Marker_Detection(*state)
+        return _Apriltag_V2_Marker_Detection(*state[:-1])
 
     def to_tuple(self) -> tuple:
         state = tuple(self)
