@@ -274,8 +274,107 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
 
 
 class Surface_Apriltag_Marker_Detector(Surface_Base_Marker_Detector):
-    #TODO: Implement
-    pass
+
+    @staticmethod
+    def _detector_options(
+        families: str=...,
+        border: int=...,
+        nthreads: int=...,
+        quad_decimate: float=...,
+        quad_blur: float=...,
+        refine_edges: bool=...,
+        refine_decode: bool=...,
+        refine_pose: bool=...,
+        debug: bool=...,
+        quad_contours: bool=...,
+    ):
+        options = apriltag.DetectorOptions()
+        if families is not ...:
+            options.families = str(families)
+        if border is not ...:
+            options.border = int(border)
+        if nthreads is not ...:
+            options.nthreads = int(nthreads)
+        if quad_decimate is not ...:
+            options.quad_decimate = float(quad_decimate)
+        if quad_blur is not ...:
+            options.quad_sigma = float(quad_blur)
+        if refine_edges is not ...:
+            options.refine_edges = int(refine_edges)
+        if refine_decode is not ...:
+            options.refine_decode = int(refine_decode)
+        if refine_pose is not ...:
+            options.refine_pose = int(refine_pose)
+        if debug is not ...:
+            options.debug = int(debug)
+        if quad_contours is not ...:
+            options.quad_contours = bool(quad_contours)
+        return options
+
+    def __init__(
+        self,
+        apriltag_families: str=...,
+        apriltag_border: int=...,
+        apriltag_nthreads: int=...,
+        apriltag_quad_decimate: float=...,
+        apriltag_quad_blur: float=...,
+        apriltag_refine_edges: bool=...,
+        apriltag_refine_decode: bool=...,
+        apriltag_refine_pose: bool=...,
+        apriltag_debug: bool=...,
+        apriltag_quad_contours: bool=...,
+        **kwargs,
+    ):
+        options = type(self)._detector_options(
+            families=apriltag_families,
+            border=apriltag_border,
+            nthreads=apriltag_nthreads,
+            quad_decimate=apriltag_quad_decimate,
+            quad_blur=apriltag_quad_blur,
+            refine_edges=apriltag_refine_edges,
+            refine_decode=apriltag_refine_decode,
+            refine_pose=apriltag_refine_pose,
+            debug=apriltag_debug,
+            quad_contours=apriltag_quad_contours,
+        )
+        self._detector = apriltag.Detector(
+            detector_options=options,
+        )
+
+        #TODO: Remove these external dependencies
+        self.marker_min_perimeter  = 60
+        self.marker_min_confidence = 0.1
+        self.robust_detection = True
+        self.inverted_markers = False
+        self.previous_raw_markers = []
+        self.previous_square_markers_unfiltered = []
+
+    def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
+        markers = self._detector.detect(img=gray_img)
+        markers = map(self._marker_from_raw, markers)
+        markers = list(markers)
+        self.previous_square_markers_unfiltered = markers
+        return markers
+
+    def _marker_from_raw(self, raw_marker: apriltag.DetectionBase) -> Surface_Marker:
+        apriltag_marker = _Apriltag_V2_Marker_Detection(
+            tag_family=raw_marker.tag_family,
+            tag_id=raw_marker.tag_id,
+            hamming=raw_marker.hamming,
+            goodness=raw_marker.goodness,
+            decision_margin=raw_marker.decision_margin,
+            homography=raw_marker.homography,
+            center=raw_marker.center,
+            corners=raw_marker.corners,
+        )
+        return Surface_Marker.from_tuple(apriltag_marker.to_tuple())
+
+    def _unique_markers(self, markers):
+        return markers #FIXME: Remove dependency on this method
+
+    def _filter_markers(self, markers):
+        return markers #FIXME: Remove dependency on this method
+
 
 
 class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
