@@ -103,7 +103,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     @property
     def markers_unfiltered(self):
         #TODO: refactor this property
-        return self.marker_detector.previous_square_markers_unfiltered
+        return self.marker_detector.markers_unfiltered
 
     def _filter_markers(self, markers):
         #TODO: refactor this method

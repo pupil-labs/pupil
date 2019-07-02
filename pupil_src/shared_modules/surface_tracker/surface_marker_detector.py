@@ -215,6 +215,10 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         self.previous_raw_markers = []
         self.previous_square_markers_unfiltered = []
 
+    @property
+    def markers_unfiltered(self):
+        return self.previous_square_markers_unfiltered
+
     def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
         #TODO: Add type hints
 
@@ -355,13 +359,17 @@ class Surface_Apriltag_Marker_Detector(Surface_Base_Marker_Detector):
         self.robust_detection = True
         self.inverted_markers = False
         self.previous_raw_markers = []
-        self.previous_square_markers_unfiltered = []
+        self.previous_apriltag_markers_unfiltered = []
+
+    @property
+    def markers_unfiltered(self):
+        return self.previous_apriltag_markers_unfiltered
 
     def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
         markers = self._detector.detect(img=gray_img)
         markers = map(self._marker_from_raw, markers)
         markers = list(markers)
-        self.previous_square_markers_unfiltered = markers
+        self.previous_apriltag_markers_unfiltered = markers
         return markers
 
     def _marker_from_raw(self, raw_marker: apriltag.DetectionBase) -> Surface_Marker:
