@@ -431,6 +431,45 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
             quad_contours=apriltag_quad_contours,
         )
 
+    @property
+    def marker_min_perimeter(self) -> int:
+        return self._square_detector.marker_min_perimeter
+
+    @marker_min_perimeter.setter
+    def marker_min_perimeter(self, value: int):
+        self._square_detector.marker_min_perimeter = value
+
+    @property
+    def marker_min_confidence(self) -> float:
+        return self._square_detector.marker_min_confidence
+
+    @marker_min_confidence.setter
+    def marker_min_confidence(self, value: float):
+        self._square_detector.marker_min_confidence = value
+
+    @property
+    def robust_detection(self) -> bool:
+        return self._square_detector.robust_detection
+
+    @robust_detection.setter
+    def robust_detection(self, value: bool):
+        self._square_detector.robust_detection = value
+
+    @property
+    def markers_unfiltered(self):
+        markers = []
+        markers += self._square_detector.markers_unfiltered
+        markers += self._apriltag_detector.markers_unfiltered
+        return markers
+
+    @property
+    def inverted_markers(self) -> bool:
+        return self._square_detector.robust_detection
+
+    @inverted_markers.setter
+    def inverted_markers(self, value: bool):
+        self._square_detector.robust_detection = value
+
     def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
         markers = []
         markers += self._square_detector.detect_markers(gray_img=gray_img)
