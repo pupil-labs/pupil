@@ -44,15 +44,16 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.markers = []
         self.markers_unfiltered = []
 
-        self.marker_min_confidence=0.1
+        self._edit_surf_verts = []
+        self._last_mouse_pos = (0.0, 0.0)
+        self.gui = gui.GUI(self)
+
         self.marker_min_perimeter = marker_min_perimeter
+        self.marker_min_confidence = 0.1
         self.marker_detector = Surface_Marker_Detector(
             square_marker_robust_detection=True,
             square_marker_inverted_markers=inverted_markers,
         )
-        self._edit_surf_verts = []
-        self._last_mouse_pos = (0.0, 0.0)
-        self.gui = gui.GUI(self)
 
         self._add_surfaces_from_file()
 
@@ -366,17 +367,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         markers = self.marker_detector.detect_markers(gray_img=frame.gray)
         markers = self._remove_duplicate_markers(markers)
         self.markers_unfiltered = markers
-        markers = self._filter_markers(markers)
-        self.markers = markers
-
-    def _filter_markers(self, markers):
-        markers = [
-            m
-            for m in markers
-            if m.perimeter >= self.marker_min_perimeter
-            and m.id_confidence > self.marker_min_confidence
-        ]
-        return markers
+        self.markers = self._filter_markers(markers)
 
     def _remove_duplicate_markers(self, markers):
         # if an id shows twice use the bigger marker (usually this is a screen camera
@@ -389,6 +380,15 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             marker_by_type[m.marker_type] = marker_by_id
 
         return [ m for by_id in marker_by_type.values() for m in by_id.values() ]
+
+    def _filter_markers(self, markers):
+        markers = [
+            m
+            for m in markers
+            if m.perimeter >= self.marker_min_perimeter
+            and m.id_confidence > self.marker_min_confidence
+        ]
+        return markers
 
     @abstractmethod
     def _update_surface_locations(self, frame_index):
