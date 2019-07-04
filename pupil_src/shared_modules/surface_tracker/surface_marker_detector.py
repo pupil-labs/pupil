@@ -1,21 +1,45 @@
+"""
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2018 Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+"""
 
 import abc
+import enum
 import typing
+import itertools
 import collections
 
 import square_marker_detect
 import apriltag
 
-import stdlib_utils
+
+__all__ = [
+    "Surface_Marker",
+    "Surface_Marker_Type",
+    "Surface_Square_Marker_Detector",
+    "Surface_Apriltag_V2_Marker_Detector",
+    "Surface_Combined_Marker_Detector",
+]
 
 
+@enum.unique
+class Surface_Marker_Type(enum.Enum):
+    # TODO: Is there a better (more uniquely descriptive) name than "square"?
+    SQUARE = "square"
+    APRILTAG_V2 = "apriltag_v2"
 
 
 class Surface_Base_Marker(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def from_tuple(state: tuple) -> typing.Optional['Surface_Base_Marker']:
+    def from_tuple(state: tuple) -> 'Surface_Base_Marker':
         pass
 
     @abc.abstractmethod
@@ -42,6 +66,11 @@ class Surface_Base_Marker(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def perimeter(self) -> float:
         #TODO: Is this used/useful outside surface_marker_detector.py? If not - remove
+        pass
+
+    @property
+    @abc.abstractmethod
+    def marker_type(self) -> Surface_Marker_Type:
         pass
 
 
@@ -62,18 +91,14 @@ _Square_Marker_Detection_Raw = collections.namedtuple(
 class _Square_Marker_Detection(_Square_Marker_Detection_Raw, Surface_Base_Marker):
     __slots__ = ()
 
-    marker_type = "square" #TODO: Is there a better name?
+    marker_type = Surface_Marker_Type.SQUARE
 
     @staticmethod
-    def from_tuple(state: tuple) -> typing.Optional['_Square_Marker_Detection']:
-        if state[-1] != _Square_Marker_Detection.marker_type:
-            return None
-        return _Square_Marker_Detection(*state[:-1])
+    def from_tuple(state: tuple) -> '_Square_Marker_Detection':
+        return _Square_Marker_Detection(*state)
 
     def to_tuple(self) -> tuple:
-        state = tuple(self)
-        state = (*state, self.marker_type)
-        return state
+        return tuple(self)
 
 
 _Apriltag_V2_Marker_Detection_Raw = collections.namedtuple(
@@ -94,13 +119,83 @@ _Apriltag_V2_Marker_Detection_Raw = collections.namedtuple(
 class _Apriltag_V2_Marker_Detection(_Apriltag_V2_Marker_Detection_Raw, Surface_Base_Marker):
     __slots__ = ()
 
-    marker_type = "apriltag_v2"
+    marker_type = Surface_Marker_Type.APRILTAG_V2
 
     @staticmethod
-    def from_tuple(state: tuple) -> typing.Optional['_Apriltag_V2_Marker_Detection']:
-        if state[-1] != _Apriltag_V2_Marker_Detection.marker_type:
-            return None
-        return _Apriltag_V2_Marker_Detection(*state[:-1])
+    def from_tuple(state: tuple) -> '_Apriltag_V2_Marker_Detection':
+        return _Apriltag_V2_Marker_Detection(*state)
+
+    def to_tuple(self) -> tuple:
+        return tuple(self)
+
+    @property
+    def id(self) -> str:
+        return self.tag_id
+
+    @property
+    def id_confidence(self) -> float:
+        decision_margin = self.decision_margin
+        decision_margin /= 100.0
+        decision_margin = max(0.0, min(decision_margin, 1.0))
+        # TODO: Not sure this is the best estimate of confidence, and if decision_margin is in (0, 100)
+        return decision_margin
+
+    @property
+    @abc.abstractmethod
+    def verts_px(self) -> list:
+        # Wrapping each point in a list is needed for compatibility with square detector
+        # TODO: See if this wrapping makes sense or if it should be refactored
+        return [[point] for point in self.corners]
+
+    @property
+    @abc.abstractmethod
+    def perimeter(self) -> float:
+        return 80 # FIXME
+
+
+# This exists because there is no easy way to make a user-defined class serializable with msgpack without extra hooks.
+# Therefore, Surface_Marker is defined as a sublcass of _Raw_Surface_Marker, which is a subclass of namedtuple,
+# because msgpack is able to serialize namedtuple subclasses out of the box.
+_Surface_Marker_Raw = collections.namedtuple("Surface_Marker", ["raw_marker"])
+
+
+class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
+
+    @staticmethod
+    def from_square_tag_detection(detection: dict) -> 'Surface_Marker':
+        raw_marker = _Square_Marker_Detection(
+            id=detection["id"],
+            id_confidence=detection["id_confidence"],
+            verts_px=detection["verts"],
+            perimeter=detection["perimeter"],
+        )
+        return Surface_Marker(raw_marker=raw_marker)
+
+    @staticmethod
+    def from_apriltag_v2_detection(detection: apriltag.DetectionBase) -> 'Surface_Marker':
+        raw_marker = _Apriltag_V2_Marker_Detection(
+            tag_family=detection.tag_family,
+            tag_id=detection.tag_id,
+            hamming=detection.hamming,
+            goodness=detection.goodness,
+            decision_margin=detection.decision_margin,
+            homography=detection.homography,
+            center=detection.center,
+            corners=detection.corners,
+        )
+        return Surface_Marker(raw_marker=raw_marker)
+
+    @staticmethod
+    def from_tuple(state: tuple) -> 'Surface_Marker':
+        marker_type = state[-1]
+        if marker_type == _Square_Marker_Detection.marker_type:
+            raw_marker = _Square_Marker_Detection.from_tuple(state[:-1])
+        elif marker_type == _Apriltag_V2_Marker_Detection.marker_type:
+            raw_marker = _Apriltag_V2_Marker_Detection.from_tuple(state[:-1])
+        else:
+            raw_marker = _Square_Marker_Detection(*state) #Legacy
+        assert raw_marker is not None
+        return Surface_Marker(raw_marker=raw_marker)
 
     def to_tuple(self) -> tuple:
         state = tuple(self)
@@ -109,189 +204,120 @@ class _Apriltag_V2_Marker_Detection(_Apriltag_V2_Marker_Detection_Raw, Surface_B
 
     @property
     def id(self) -> str:
-        return self.tag_id
+        return self.raw_marker.id
 
     @property
     def id_confidence(self) -> float:
-        #TODO: Why is it called "id_confidence" instead of "confidence"?
-        decision_margin = self.decision_margin
-        decision_margin /= 100.0
-        decision_margin = max(0.0, min(decision_margin, 1.0))
-        #TODO: Not sure this is the best estimate of confidence, and if decision_margin is in (0, 100)
-        return decision_margin
-
-    @property
-    @abc.abstractmethod
-    def verts_px(self) -> list:
-        # Wrapping each point in a list is needed for compatibility with square detector
-        #TODO: See if this wrapping makes sense or if it should be refactored
-        return [[point] for point in self.corners]
-
-    @property
-    @abc.abstractmethod
-    def perimeter(self) -> float:
-        #TODO: Is this used/useful outside surface_marker_detector.py? If not - remove
-        return 80 #FIXME
-
-
-
-
-class Surface_Marker(Surface_Base_Marker):
-
-    def __getstate__(self) -> tuple:
-        return self.to_tuple()
-
-    def __setstate__(self, state: tuple):
-        raw_marker = None
-        raw_marker = raw_marker or _Square_Marker_Detection.from_tuple(state)
-        raw_marker = raw_marker or _Apriltag_V2_Marker_Detection.from_tuple(state)
-        raw_marker = raw_marker or _Square_Marker_Detection(*state) #Legacy
-        assert raw_marker is not None
-        self._raw_marker = raw_marker
-
-    def __init__(self, *args):
-        self.__setstate__(tuple(args))
-
-    @staticmethod
-    def from_tuple(state: tuple) -> 'Surface_Marker':
-        return Surface_Marker(*state)
-
-    def to_tuple(self) -> tuple:
-        return self._raw_marker.to_tuple()
-
-    @property
-    def id(self) -> str:
-        return self._raw_marker.id
-
-    @property
-    def id_confidence(self) -> float:
-        #TODO: Why is it called "id_confidence" instead of "confidence"?
-        return self._raw_marker.id_confidence
+        return self.raw_marker.id_confidence
 
     @property
     def verts_px(self) -> list:
-        return self._raw_marker.verts_px
+        return self.raw_marker.verts_px
 
     @property
     def perimeter(self) -> float:
-        #TODO: Is this used/useful outside surface_marker_detector.py? If not - remove
-        return self._raw_marker.perimeter
+        return self.raw_marker.perimeter
 
-
-
-
-
-
-
-
+    @property
+    def marker_type(self) -> str:
+        return self.raw_marker.marker_type
 
 
 class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
 
+    @property
     @abc.abstractmethod
-    def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
-        #TODO: Add type hints
+    def robust_detection(self) -> bool:
+        # TODO: Remove external dependency on this property
         pass
 
+    @robust_detection.setter
+    @abc.abstractmethod
+    def robust_detection(self, value: bool):
+        # TODO: Remove external dependency on this property
+        pass
+
+    @property
+    @abc.abstractmethod
+    def inverted_markers(self) -> bool:
+        # TODO: Remove external dependency on this property
+        pass
+
+    @inverted_markers.setter
+    @abc.abstractmethod
+    def inverted_markers(self, value: bool):
+        # TODO: Remove external dependency on this property
+        pass
+
+    @abc.abstractmethod
+    def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
+        # TODO: Add type hints
+        pass
 
 
 class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
 
     def __init__(
         self,
-        square_marker_min_confidence: float=...,
-        square_marker_min_perimeter: int=...,
         square_marker_robust_detection: bool=...,
         square_marker_inverted_markers: bool=...,
         **kwargs,
     ):
-        Param_T = typing.TypeVar('Param_T')
-        def param(x: Param_T, default: Param_T) -> Param_T:
-            return x if x is not ... else default
-        #
-        self.marker_min_perimeter  = param(square_marker_min_perimeter, 60)
-        self.marker_min_confidence = param(square_marker_min_confidence, 0.1)
-        #
-        self.robust_detection = param(square_marker_robust_detection, True)
-        self.inverted_markers = param(square_marker_inverted_markers, False)
-        #
-        self.previous_raw_markers = []
-        self.previous_square_markers_unfiltered = []
+        self.__robust_detection = square_marker_robust_detection if square_marker_robust_detection is not ... else True
+        self.__inverted_markers = square_marker_inverted_markers if square_marker_inverted_markers is not ... else False
+        self.__previous_raw_markers = []
 
     @property
-    def markers_unfiltered(self):
-        return self.previous_square_markers_unfiltered
+    def robust_detection(self) -> bool:
+        # TODO: Remove external dependency on this property
+        return self.__robust_detection
 
-    def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
-        #TODO: Add type hints
+    @robust_detection.setter
+    def robust_detection(self, value: bool):
+        # TODO: Remove external dependency on this property
+        self.__robust_detection = value
+
+    @property
+    def inverted_markers(self) -> bool:
+        # TODO: Remove external dependency on this property
+        return self.__inverted_markers
+
+    @inverted_markers.setter
+    def inverted_markers(self, value: bool):
+        # TODO: Remove external dependency on this property
+        self.__inverted_markers = value
+
+    def detect_markers(self, gray_img) -> typing.Iterable[Surface_Marker]:
+        # TODO: Add type hints
 
         grid_size = 5
         aperture = 11
 
-        if self.robust_detection:
+        if self.__robust_detection:
             markers = square_marker_detect.detect_markers_robust(
                 gray_img=gray_img,
                 grid_size=grid_size,
                 aperture=aperture,
-                prev_markers=self.previous_raw_markers,
+                prev_markers=self.__previous_raw_markers,
                 true_detect_every_frame=3,
-                min_marker_perimeter=self.marker_min_perimeter,
-                invert_image=self.inverted_markers,
+                invert_image=self.__inverted_markers,
             )
         else:
             markers = square_marker_detect.detect_markers(
                 gray_img=gray_img,
                 grid_size=grid_size,
                 aperture=aperture,
-                min_marker_perimeter=self.marker_min_perimeter,
             )
 
         # Robust marker detection requires previous markers to be in a different
         # format than the surface tracker.
-        self.previous_raw_markers = markers
-        markers = map(self._marker_from_raw, markers)
-        markers = self._unique_markers(markers)
-        self.previous_square_markers_unfiltered = markers
-        markers = self._filter_markers(markers)
-        return markers
-
-    def _marker_from_raw(self, raw_marker: dict) -> Surface_Marker:
-        square_marker = _Square_Marker_Detection(
-            id=raw_marker["id"],
-            id_confidence=raw_marker["id_confidence"],
-            verts_px=raw_marker["verts"],
-            perimeter=raw_marker["perimeter"],
-        )
-        return Surface_Marker.from_tuple(square_marker.to_tuple())
-
-    def _unique_markers(self, markers):
-        #TODO: Add type hints
-
-        # if an id shows twice use the bigger marker (usually this is a screen camera
-        # echo artifact.)
-        markers = stdlib_utils.unique(
-            markers,
-            key=lambda m: m.id,
-            select=lambda x, y: x if x.perimeter >= y.perimeter else y
-        )
-        markers = list(markers)
-        return markers
-
-    def _filter_markers(self, markers):
-        #TODO: Add type hints
-        markers = [
-            m
-            for m in markers
-            if m.perimeter >= self.marker_min_perimeter
-            and m.id_confidence > self.marker_min_confidence
-        ]
-        return markers
+        self.__previous_raw_markers = markers
+        return map(Surface_Marker.from_square_tag_detection, markers)
 
 
-class Surface_Apriltag_Marker_Detector(Surface_Base_Marker_Detector):
-
-    @staticmethod
-    def _detector_options(
+class _Apriltag_V2_Detector_Options(apriltag.DetectorOptions):
+    def __init__(
+        self,
         families: str=...,
         border: int=...,
         nthreads: int=...,
@@ -303,28 +329,30 @@ class Surface_Apriltag_Marker_Detector(Surface_Base_Marker_Detector):
         debug: bool=...,
         quad_contours: bool=...,
     ):
-        options = apriltag.DetectorOptions()
+        super().__init__()
         if families is not ...:
-            options.families = str(families)
+            self.families = str(families)
         if border is not ...:
-            options.border = int(border)
+            self.border = int(border)
         if nthreads is not ...:
-            options.nthreads = int(nthreads)
+            self.nthreads = int(nthreads)
         if quad_decimate is not ...:
-            options.quad_decimate = float(quad_decimate)
+            self.quad_decimate = float(quad_decimate)
         if quad_blur is not ...:
-            options.quad_sigma = float(quad_blur)
+            self.quad_sigma = float(quad_blur)
         if refine_edges is not ...:
-            options.refine_edges = int(refine_edges)
+            self.refine_edges = int(refine_edges)
         if refine_decode is not ...:
-            options.refine_decode = int(refine_decode)
+            self.refine_decode = int(refine_decode)
         if refine_pose is not ...:
-            options.refine_pose = int(refine_pose)
+            self.refine_pose = int(refine_pose)
         if debug is not ...:
-            options.debug = int(debug)
+            self.debug = int(debug)
         if quad_contours is not ...:
-            options.quad_contours = bool(quad_contours)
-        return options
+            self.quad_contours = bool(quad_contours)
+
+
+class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
 
     def __init__(
         self,
@@ -340,7 +368,7 @@ class Surface_Apriltag_Marker_Detector(Surface_Base_Marker_Detector):
         apriltag_quad_contours: bool=...,
         **kwargs,
     ):
-        options = type(self)._detector_options(
+        options = _Apriltag_V2_Detector_Options(
             families=apriltag_families,
             border=apriltag_border,
             nthreads=apriltag_nthreads,
@@ -356,52 +384,31 @@ class Surface_Apriltag_Marker_Detector(Surface_Base_Marker_Detector):
             detector_options=options,
         )
 
-        #TODO: Remove these external dependencies
-        self.marker_min_perimeter  = 60
-        self.marker_min_confidence = 0.1
-        self.robust_detection = True
-        self.inverted_markers = False
-        self.previous_raw_markers = []
-        self.previous_apriltag_markers_unfiltered = []
+    @property
+    def robust_detection(self) -> bool:
+        return True
+
+    @robust_detection.setter
+    def robust_detection(self, value: bool):
+        pass #nop
 
     @property
-    def markers_unfiltered(self):
-        return self.previous_apriltag_markers_unfiltered
+    def inverted_markers(self) -> bool:
+        return False
 
-    def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
+    @inverted_markers.setter
+    def inverted_markers(self, value: bool):
+        pass #nop
+
+    def detect_markers(self, gray_img) -> typing.Iterable[Surface_Marker]:
         markers = self._detector.detect(img=gray_img)
-        markers = map(self._marker_from_raw, markers)
-        markers = list(markers)
-        self.previous_apriltag_markers_unfiltered = markers
-        return markers
-
-    def _marker_from_raw(self, raw_marker: apriltag.DetectionBase) -> Surface_Marker:
-        apriltag_marker = _Apriltag_V2_Marker_Detection(
-            tag_family=raw_marker.tag_family,
-            tag_id=raw_marker.tag_id,
-            hamming=raw_marker.hamming,
-            goodness=raw_marker.goodness,
-            decision_margin=raw_marker.decision_margin,
-            homography=raw_marker.homography,
-            center=raw_marker.center,
-            corners=raw_marker.corners,
-        )
-        return Surface_Marker.from_tuple(apriltag_marker.to_tuple())
-
-    def _unique_markers(self, markers):
-        return markers #FIXME: Remove dependency on this method
-
-    def _filter_markers(self, markers):
-        return markers #FIXME: Remove dependency on this method
-
+        return map(Surface_Marker.from_apriltag_v2_detection, markers)
 
 
 class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
-    #TODO: Implement
+
     def __init__(
         self,
-        square_marker_min_confidence: float=...,
-        square_marker_min_perimeter: int=...,
         square_marker_robust_detection: bool=...,
         square_marker_inverted_markers: bool=...,
         apriltag_families: str=...,
@@ -415,13 +422,11 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
         apriltag_debug: bool=...,
         apriltag_quad_contours: bool=...,
     ):
-        self._square_detector = Surface_Square_Marker_Detector(
-            marker_min_confidence=square_marker_min_confidence,
-            marker_min_perimeter=square_marker_min_perimeter,
+        self.__square_detector = Surface_Square_Marker_Detector(
             robust_detection=square_marker_robust_detection,
             inverted_markers=square_marker_inverted_markers,
         )
-        self._apriltag_detector = Surface_Apriltag_Marker_Detector(
+        self.__apriltag_detector = Surface_Apriltag_V2_Marker_Detector(
             families=apriltag_families,
             border=apriltag_border,
             nthreads=apriltag_nthreads,
@@ -435,46 +440,23 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
         )
 
     @property
-    def marker_min_perimeter(self) -> int:
-        return self._square_detector.marker_min_perimeter
-
-    @marker_min_perimeter.setter
-    def marker_min_perimeter(self, value: int):
-        self._square_detector.marker_min_perimeter = value
-
-    @property
-    def marker_min_confidence(self) -> float:
-        return self._square_detector.marker_min_confidence
-
-    @marker_min_confidence.setter
-    def marker_min_confidence(self, value: float):
-        self._square_detector.marker_min_confidence = value
-
-    @property
     def robust_detection(self) -> bool:
-        return self._square_detector.robust_detection
+        return self.__square_detector.robust_detection
 
     @robust_detection.setter
     def robust_detection(self, value: bool):
-        self._square_detector.robust_detection = value
-
-    @property
-    def markers_unfiltered(self):
-        markers = []
-        markers += self._square_detector.markers_unfiltered
-        markers += self._apriltag_detector.markers_unfiltered
-        return markers
+        self.__square_detector.robust_detection = value
 
     @property
     def inverted_markers(self) -> bool:
-        return self._square_detector.robust_detection
+        return self.__square_detector.inverted_markers
 
     @inverted_markers.setter
     def inverted_markers(self, value: bool):
-        self._square_detector.robust_detection = value
+        self.__square_detector.inverted_markers = value
 
-    def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
-        markers = []
-        markers += self._square_detector.detect_markers(gray_img=gray_img)
-        markers += self._apriltag_detector.detect_markers(gray_img=gray_img)
-        return markers
+    def detect_markers(self, gray_img) -> typing.Iterable[Surface_Marker]:
+        return itertools.chain(
+            self.__square_detector.detect_markers(gray_img=gray_img),
+            self.__apriltag_detector.detect_markers(gray_img=gray_img),
+        )
