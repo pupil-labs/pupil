@@ -23,8 +23,9 @@ import file_methods
 
 from surface_tracker import gui
 # from surface_tracker.surface_marker_detector import Surface_Square_Marker_Detector as Surface_Marker_Detector
-# from surface_tracker.surface_marker_detector import Surface_Apriltag_Marker_Detector as Surface_Marker_Detector
+# from surface_tracker.surface_marker_detector import Surface_Apriltag_V2_Marker_Detector as Surface_Marker_Detector
 from surface_tracker.surface_marker_detector import Surface_Combined_Marker_Detector as Surface_Marker_Detector
+
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
     """
@@ -41,9 +42,11 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.current_frame = None
         self.surfaces = []
         self.markers = []
+        self.markers_unfiltered = []
+
+        self.marker_min_confidence=0.1
+        self.marker_min_perimeter = marker_min_perimeter
         self.marker_detector = Surface_Marker_Detector(
-            square_marker_min_confidence=0.1,
-            square_marker_min_perimeter=marker_min_perimeter,
             square_marker_robust_detection=True,
             square_marker_inverted_markers=inverted_markers,
         )
@@ -60,26 +63,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
         for init_dict in surface_definitions.get("surfaces", []):
             self.add_surface(init_dict)
-
-    @property
-    def marker_min_confidence(self) -> float:
-        #TODO: Check if/where this is used; if not used externally - remove
-        return self.marker_detector.marker_min_confidence
-
-    @marker_min_confidence.setter
-    def marker_min_confidence(self, value: float):
-        #TODO: Check if/where this is used; if not used externally - remove
-        self.marker_detector.marker_min_confidence = value
-
-    @property
-    def marker_min_perimeter(self) -> int:
-        #TODO: Check if/where this is used; if not used externally - remove
-        return self.marker_detector.marker_min_perimeter
-
-    @marker_min_perimeter.setter
-    def marker_min_perimeter(self, value: int):
-        #TODO: Check if/where this is used; if not used externally - remove
-        self.marker_detector.marker_min_perimeter = value
 
     @property
     def robust_detection(self) -> bool:
@@ -100,15 +83,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def inverted_markers(self, value: bool):
         #TODO: Check if/where this is used; if not used externally - remove
         self.marker_detector.inverted_markers = value
-
-    @property
-    def markers_unfiltered(self):
-        #TODO: refactor this property
-        return self.marker_detector.markers_unfiltered
-
-    def _filter_markers(self, markers):
-        #TODO: refactor this method
-        return self.marker_detector._filter_markers(markers)
 
     @property
     def camera_model(self):
@@ -389,7 +363,32 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         pass
 
     def _detect_markers(self, frame):
-        self.markers = self.marker_detector.detect_markers(gray_img=frame.gray)
+        markers = self.marker_detector.detect_markers(gray_img=frame.gray)
+        markers = self._remove_duplicate_markers(markers)
+        self.markers_unfiltered = markers
+        markers = self._filter_markers(markers)
+        self.markers = markers
+
+    def _filter_markers(self, markers):
+        markers = [
+            m
+            for m in markers
+            if m.perimeter >= self.marker_min_perimeter
+            and m.id_confidence > self.marker_min_confidence
+        ]
+        return markers
+
+    def _remove_duplicate_markers(self, markers):
+        # if an id shows twice use the bigger marker (usually this is a screen camera
+        # echo artifact.)
+        marker_by_type = {}
+        for m in markers:
+            marker_by_id = marker_by_type.get(m.marker_type, {})
+            if m.id not in marker_by_id or m.perimeter > marker_by_id[m.id].perimeter:
+                marker_by_id[m.id] = m
+            marker_by_type[m.marker_type] = marker_by_id
+
+        return [ m for by_id in marker_by_type.values() for m in by_id.values() ]
 
     @abstractmethod
     def _update_surface_locations(self, frame_index):
