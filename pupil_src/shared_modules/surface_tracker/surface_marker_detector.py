@@ -45,13 +45,10 @@ class Surface_Base_Marker(metaclass=abc.ABCMeta):
         pass
 
 
-
-
 # TODO The square marker detection should return an object like this already. Also
 # this object should offer a mean/centroid function to be used when drawing the
 # marker toggle buttons
-
-_Raw_Square_Marker_Detection = collections.namedtuple(
+_Square_Marker_Detection_Raw = collections.namedtuple(
     "Square_Marker_Detection",
     [
         "id",
@@ -61,7 +58,8 @@ _Raw_Square_Marker_Detection = collections.namedtuple(
     ]
 )
 
-class _Square_Marker_Detection(_Raw_Square_Marker_Detection, Surface_Base_Marker):
+
+class _Square_Marker_Detection(_Square_Marker_Detection_Raw, Surface_Base_Marker):
     __slots__ = ()
 
     marker_type = "square" #TODO: Is there a better name?
@@ -78,7 +76,7 @@ class _Square_Marker_Detection(_Raw_Square_Marker_Detection, Surface_Base_Marker
         return state
 
 
-_Raw_Apriltag_V2_Marker_Detection = collections.namedtuple(
+_Apriltag_V2_Marker_Detection_Raw = collections.namedtuple(
     "Apriltag_V2_Marker_Detection",
     [
         "tag_family",
@@ -92,7 +90,8 @@ _Raw_Apriltag_V2_Marker_Detection = collections.namedtuple(
     ]
 )
 
-class _Apriltag_V2_Marker_Detection(_Raw_Apriltag_V2_Marker_Detection, Surface_Base_Marker):
+
+class _Apriltag_V2_Marker_Detection(_Apriltag_V2_Marker_Detection_Raw, Surface_Base_Marker):
     __slots__ = ()
 
     marker_type = "apriltag_v2"
