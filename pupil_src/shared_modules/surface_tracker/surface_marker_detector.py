@@ -507,3 +507,13 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
 
 Surface_Marker_Detector = Surface_Combined_Marker_Detector
 
+
+def test_surface_marker_from_raw_detection():
+    # TODO: Test `from_*_detection` methods below
+    # Surface_Marker.from_square_tag_detection({})
+    # Surface_Marker.from_apriltag_v2_detection(apriltag.DetectionBase())
+    assert True
+
+
+if __name__ == "__main__":
+    test_surface_marker_from_raw_detection()
