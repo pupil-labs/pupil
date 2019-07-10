@@ -22,9 +22,7 @@ from plugin import Plugin
 import file_methods
 
 from surface_tracker import gui
-# from surface_tracker.surface_marker_detector import Surface_Square_Marker_Detector as Surface_Marker_Detector
-# from surface_tracker.surface_marker_detector import Surface_Apriltag_V2_Marker_Detector as Surface_Marker_Detector
-from surface_tracker.surface_marker_detector import Surface_Combined_Marker_Detector as Surface_Marker_Detector
+from surface_tracker.surface_marker_detector import Surface_Marker_Detector
 
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):

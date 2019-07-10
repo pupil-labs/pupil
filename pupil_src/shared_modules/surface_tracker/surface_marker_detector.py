@@ -15,16 +15,14 @@ import typing
 import itertools
 import collections
 
-import square_marker_detect
-import apriltag
+from pupil_src.shared_modules import square_marker_detect
+from pupil_src.shared_modules import apriltag
 
 
 __all__ = [
     "Surface_Marker",
     "Surface_Marker_Type",
-    "Surface_Square_Marker_Detector",
-    "Surface_Apriltag_V2_Marker_Detector",
-    "Surface_Combined_Marker_Detector",
+    "Surface_Marker_Detector",
 ]
 
 
@@ -219,7 +217,7 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
         return self.raw_marker.perimeter
 
     @property
-    def marker_type(self) -> str:
+    def marker_type(self) -> Surface_Marker_Type:
         return self.raw_marker.marker_type
 
 
@@ -466,3 +464,7 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
             self.__square_detector.detect_markers(gray_img=gray_img),
             self.__apriltag_detector.detect_markers(gray_img=gray_img),
         )
+
+
+Surface_Marker_Detector = Surface_Combined_Marker_Detector
+
