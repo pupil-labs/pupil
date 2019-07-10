@@ -214,6 +214,14 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
         return Surface_Marker(raw_marker=raw_marker)
 
     @staticmethod
+    def deserialize(args) -> 'Surface_Marker':
+        if isinstance(args, list) and len(args) == 1:
+            state = tuple(*args)
+        else:
+            state = tuple(args)
+        return Surface_Marker.from_tuple(state=state)
+
+    @staticmethod
     def from_tuple(state: tuple) -> 'Surface_Marker':
         marker_type = state[-1]
         if marker_type == _Square_Marker_Detection.marker_type.value:

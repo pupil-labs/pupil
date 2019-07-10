@@ -118,7 +118,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 if markers:
 
                     markers = [
-                        Surface_Marker.from_tuple(tuple(*args)) if args else None
+                        Surface_Marker.deserialize(args) if args else None
                         for args in markers
                     ]
                 marker_cache_unfiltered.append(markers)
