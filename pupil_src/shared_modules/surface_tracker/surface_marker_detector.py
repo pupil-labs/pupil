@@ -72,9 +72,7 @@ class Surface_Base_Marker(metaclass=abc.ABCMeta):
         pass
 
 
-# TODO The square marker detection should return an object like this already. Also
-# this object should offer a mean/centroid function to be used when drawing the
-# marker toggle buttons
+# TODO: This object should offer a mean/centroid function to be used when drawing the marker toggle buttons
 _Square_Marker_Detection_Raw = collections.namedtuple(
     "Square_Marker_Detection",
     [
@@ -82,6 +80,7 @@ _Square_Marker_Detection_Raw = collections.namedtuple(
         "id_confidence",
         "verts_px",
         "perimeter",
+        "raw_marker_type",
     ]
 )
 
@@ -93,7 +92,20 @@ class _Square_Marker_Detection(_Square_Marker_Detection_Raw, Surface_Base_Marker
 
     @staticmethod
     def from_tuple(state: tuple) -> '_Square_Marker_Detection':
-        return _Square_Marker_Detection(*state)
+        cls = _Square_Marker_Detection
+        expected_marker_type = cls.marker_type
+
+        assert len(state) > 0
+        assert isinstance(state[-1], str)
+
+        try:
+            real_marker_type = Surface_Marker_Type(state[-1])
+        except ValueError:
+            real_marker_type = expected_marker_type
+            state = (*state, real_marker_type.value)
+
+        assert real_marker_type == expected_marker_type
+        return cls(*state)
 
     def to_tuple(self) -> tuple:
         return tuple(self)
@@ -110,6 +122,7 @@ _Apriltag_V2_Marker_Detection_Raw = collections.namedtuple(
         "homography",
         "center",
         "corners",
+        "raw_marker_type",
     ]
 )
 
@@ -121,7 +134,20 @@ class _Apriltag_V2_Marker_Detection(_Apriltag_V2_Marker_Detection_Raw, Surface_B
 
     @staticmethod
     def from_tuple(state: tuple) -> '_Apriltag_V2_Marker_Detection':
-        return _Apriltag_V2_Marker_Detection(*state)
+        cls = _Apriltag_V2_Marker_Detection
+        expected_marker_type = cls.marker_type
+
+        assert len(state) > 0
+        assert isinstance(state[-1], str)
+
+        try:
+            real_marker_type = Surface_Marker_Type(state[-1])
+        except ValueError:
+            real_marker_type = expected_marker_type
+            state = (*state, real_marker_type.value)
+
+        assert real_marker_type == expected_marker_type
+        return cls(*state)
 
     def to_tuple(self) -> tuple:
         return tuple(self)
@@ -161,37 +187,42 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
 
     @staticmethod
     def from_square_tag_detection(detection: dict) -> 'Surface_Marker':
-        raw_marker = _Square_Marker_Detection(
+        cls = _Square_Marker_Detection
+        raw_marker = cls(
             id=detection["id"],
             id_confidence=detection["id_confidence"],
             verts_px=detection["verts"],
             perimeter=detection["perimeter"],
+            raw_marker_type=cls.marker_type.value,
         )
         return Surface_Marker(raw_marker=raw_marker)
 
     @staticmethod
     def from_apriltag_v2_detection(detection: apriltag.DetectionBase) -> 'Surface_Marker':
-        raw_marker = _Apriltag_V2_Marker_Detection(
-            tag_family=detection.tag_family,
+        cls = _Apriltag_V2_Marker_Detection
+        raw_marker = cls(
+            tag_family=detection.tag_family.decode('utf8'),
             tag_id=detection.tag_id,
             hamming=detection.hamming,
             goodness=detection.goodness,
             decision_margin=detection.decision_margin,
-            homography=detection.homography,
-            center=detection.center,
-            corners=detection.corners,
+            homography=detection.homography.tolist(),
+            center=detection.center.tolist(),
+            corners=detection.corners.tolist(),
+            raw_marker_type=cls.marker_type.value,
         )
         return Surface_Marker(raw_marker=raw_marker)
 
     @staticmethod
     def from_tuple(state: tuple) -> 'Surface_Marker':
         marker_type = state[-1]
-        if marker_type == _Square_Marker_Detection.marker_type:
-            raw_marker = _Square_Marker_Detection.from_tuple(state[:-1])
-        elif marker_type == _Apriltag_V2_Marker_Detection.marker_type:
-            raw_marker = _Apriltag_V2_Marker_Detection.from_tuple(state[:-1])
+        if marker_type == _Square_Marker_Detection.marker_type.value:
+            raw_marker = _Square_Marker_Detection.from_tuple(state)
+        elif marker_type == _Apriltag_V2_Marker_Detection.marker_type.value:
+            raw_marker = _Apriltag_V2_Marker_Detection.from_tuple(state)
         else:
-            raw_marker = _Square_Marker_Detection(*state) #Legacy
+            raw_marker_type = _Square_Marker_Detection.marker_type.value
+            raw_marker = _Square_Marker_Detection(*state, raw_marker_type) #Legacy
         assert raw_marker is not None
         return Surface_Marker(raw_marker=raw_marker)
 
