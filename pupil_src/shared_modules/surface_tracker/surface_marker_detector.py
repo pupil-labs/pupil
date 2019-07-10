@@ -259,10 +259,12 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
 
     def __init__(
         self,
+        square_marker_min_perimeter: int=...,
         square_marker_robust_detection: bool=...,
         square_marker_inverted_markers: bool=...,
         **kwargs,
     ):
+        self.__marker_min_perimeter = square_marker_min_perimeter if square_marker_min_perimeter is not ... else 60
         self.__robust_detection = square_marker_robust_detection if square_marker_robust_detection is not ... else True
         self.__inverted_markers = square_marker_inverted_markers if square_marker_inverted_markers is not ... else False
         self.__previous_raw_markers = []
@@ -297,6 +299,7 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
             markers = square_marker_detect.detect_markers_robust(
                 gray_img=gray_img,
                 grid_size=grid_size,
+                min_marker_perimeter=self.__marker_min_perimeter,
                 aperture=aperture,
                 prev_markers=self.__previous_raw_markers,
                 true_detect_every_frame=3,
@@ -306,6 +309,7 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
             markers = square_marker_detect.detect_markers(
                 gray_img=gray_img,
                 grid_size=grid_size,
+                min_marker_perimeter=self.__marker_min_perimeter,
                 aperture=aperture,
             )
 
@@ -409,6 +413,7 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
 
     def __init__(
         self,
+        square_marker_min_perimeter: int=...,
         square_marker_robust_detection: bool=...,
         square_marker_inverted_markers: bool=...,
         apriltag_families: str=...,
@@ -423,20 +428,21 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
         apriltag_quad_contours: bool=...,
     ):
         self.__square_detector = Surface_Square_Marker_Detector(
-            robust_detection=square_marker_robust_detection,
-            inverted_markers=square_marker_inverted_markers,
+            square_marker_min_perimeter=square_marker_min_perimeter,
+            square_marker_robust_detection=square_marker_robust_detection,
+            square_marker_inverted_markers=square_marker_inverted_markers,
         )
         self.__apriltag_detector = Surface_Apriltag_V2_Marker_Detector(
-            families=apriltag_families,
-            border=apriltag_border,
-            nthreads=apriltag_nthreads,
-            quad_decimate=apriltag_quad_decimate,
-            quad_blur=apriltag_quad_blur,
-            refine_edges=apriltag_refine_edges,
-            refine_decode=apriltag_refine_decode,
-            refine_pose=apriltag_refine_pose,
-            debug=apriltag_debug,
-            quad_contours=apriltag_quad_contours,
+            apriltag_families=apriltag_families,
+            apriltag_border=apriltag_border,
+            apriltag_nthreads=apriltag_nthreads,
+            apriltag_quad_decimate=apriltag_quad_decimate,
+            apriltag_quad_blur=apriltag_quad_blur,
+            apriltag_refine_edges=apriltag_refine_edges,
+            apriltag_refine_decode=apriltag_refine_decode,
+            apriltag_refine_pose=apriltag_refine_pose,
+            apriltag_debug=apriltag_debug,
+            apriltag_quad_contours=apriltag_quad_contours,
         )
 
     @property

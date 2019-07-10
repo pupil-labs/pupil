@@ -53,6 +53,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.marker_detector = Surface_Marker_Detector(
             square_marker_robust_detection=True,
             square_marker_inverted_markers=inverted_markers,
+            square_marker_min_perimeter=marker_min_perimeter,
         )
 
         self._add_surfaces_from_file()
