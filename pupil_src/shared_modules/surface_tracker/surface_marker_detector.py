@@ -515,5 +515,74 @@ def test_surface_marker_from_raw_detection():
     assert True
 
 
+def test_surface_marker_deserialize():
+
+    # Square tag deserialization test
+
+    SQUARE_MARKER_ID = 55
+    SQUARE_MARKER_CONF = 0.0039215686274509665
+    SQUARE_MARKER_VERTS = [[[1084.0, 186.0]], [[1089.0, 198.0]], [[1099.0, 195.0]], [[1095.0, 184.0]]]
+    SQUARE_MARKER_PERIM = 46.32534599304199
+
+    # This is the format in which old (before Apriltag support was added) square tags where represented when serialized to msgpack
+    old_serialized_square =  [SQUARE_MARKER_ID, SQUARE_MARKER_CONF, SQUARE_MARKER_VERTS, SQUARE_MARKER_PERIM]
+    # This is the format in which new square tags are represented when serialized to msgpack
+    new_serialized_square = [[SQUARE_MARKER_ID, SQUARE_MARKER_CONF, SQUARE_MARKER_VERTS, SQUARE_MARKER_PERIM, _Square_Marker_Detection.marker_type.value]]
+
+    # Both formats should be supported by `Surface_Marker.deserialize` for backwards compatibility
+    old_marker_square = Surface_Marker.deserialize(old_serialized_square)
+    new_marker_square = Surface_Marker.deserialize(new_serialized_square)
+
+    assert old_marker_square.marker_type == Surface_Marker_Type.SQUARE
+    assert old_marker_square.id == SQUARE_MARKER_ID
+    assert old_marker_square.id_confidence == SQUARE_MARKER_CONF
+    assert old_marker_square.verts_px == SQUARE_MARKER_VERTS
+    assert old_marker_square.perimeter == SQUARE_MARKER_PERIM
+
+    assert new_marker_square.marker_type == old_marker_square.marker_type
+    assert new_marker_square.id == old_marker_square.id
+    assert new_marker_square.id_confidence == old_marker_square.id_confidence
+    assert new_marker_square.verts_px == old_marker_square.verts_px
+    assert new_marker_square.perimeter == old_marker_square.perimeter
+
+    # Apriltag V2 deserialization test
+
+    APRILTAG_V2_FAMILY = "tag36h11"
+    APRILTAG_V2_ID = 10
+    APRILTAG_V2_HAMMING = 2
+    APRILTAG_V2_GOODNESS = 0.0
+    APRILTAG_V2_DECISION_MARGIN = 44.26249694824219
+    APRILTAG_V2_HOMOGRAPHY = [
+        [0.7398546228643903, 0.24224258644348548, -22.823628761428765],
+        [-0.14956381555697143, -0.595697080889624, -53.73760032443805],
+        [0.00036910994224440203, -0.001201257450114289, -0.07585102600797115],
+    ]
+    APRILTAG_V2_CENTER = [300.90072557529066, 708.4624052256166]
+    APRILTAG_V2_CORNERS = [
+        [317.3298034667968, 706.38671875],
+        [300.56298828125, 717.4339599609377],
+        [284.8282165527345, 710.4930419921874],
+        [301.2247619628906, 699.854797363281]
+    ]
+
+    new_serialized_apriltag_v2 = [[
+        APRILTAG_V2_FAMILY, APRILTAG_V2_ID, APRILTAG_V2_HAMMING, APRILTAG_V2_GOODNESS, APRILTAG_V2_DECISION_MARGIN,
+        APRILTAG_V2_HOMOGRAPHY, APRILTAG_V2_CENTER, APRILTAG_V2_CORNERS, _Apriltag_V2_Marker_Detection.marker_type.value,
+    ]]
+
+    new_marker_apriltag_v2 = Surface_Marker.deserialize(new_serialized_apriltag_v2)
+
+    APRILTAG_V2_CONF = APRILTAG_V2_DECISION_MARGIN/100
+    APRILTAG_V2_VERTS = [[c] for c in APRILTAG_V2_CORNERS]
+    APRILTAG_V2_PERIM = 80 # FIXME
+
+    assert new_marker_apriltag_v2.marker_type == Surface_Marker_Type.APRILTAG_V2
+    assert new_marker_apriltag_v2.id == APRILTAG_V2_ID
+    assert new_marker_apriltag_v2.id_confidence == APRILTAG_V2_CONF
+    assert new_marker_apriltag_v2.verts_px == APRILTAG_V2_VERTS
+    assert new_marker_apriltag_v2.perimeter == APRILTAG_V2_PERIM
+
+
 if __name__ == "__main__":
     test_surface_marker_from_raw_detection()
+    test_surface_marker_deserialize()
