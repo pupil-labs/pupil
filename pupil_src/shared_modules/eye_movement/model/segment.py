@@ -456,7 +456,7 @@ class Classified_Segment_Factory:
             segment_time[-1],
         )  # [t_0, t_1]
 
-        if isinstance(capture_time, np.ndarray) and capture_time.size > 1:
+        if len(capture_time) > 1:
             time_range = [start_frame_timestamp, end_frame_timestamp]
             start_frame_index, end_frame_index = pm.find_closest(capture_time, time_range)
             start_frame_index, end_frame_index = int(start_frame_index), int(end_frame_index)
