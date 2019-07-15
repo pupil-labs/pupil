@@ -19,6 +19,10 @@ from pupil_src.shared_modules import square_marker_detect
 from pupil_src.shared_modules import apriltag
 
 
+from .surface_marker import Surface_Marker_UID
+from .surface_marker import Surface_Marker_TagID
+# TODO: Move Surface_Marker into surface_marker.py
+
 __all__ = [
     "Surface_Marker",
     "Surface_Marker_Type",
@@ -46,7 +50,18 @@ class Surface_Base_Marker(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def id(self) -> str:
+    def uid(self) -> Surface_Marker_UID:
+        """
+        Identifier that is guaranteed to be unique accross different marker types and tag families.
+        """
+        pass
+
+    @property
+    @abc.abstractmethod
+    def tag_id(self) -> Surface_Marker_TagID:
+        """
+        Tag identifier that is unique only within the same marker type and tag family.
+        """
         pass
 
     @property
@@ -76,7 +91,7 @@ class Surface_Base_Marker(metaclass=abc.ABCMeta):
 _Square_Marker_Detection_Raw = collections.namedtuple(
     "Square_Marker_Detection",
     [
-        "id",
+        "raw_id",
         "id_confidence",
         "verts_px",
         "perimeter",
@@ -110,12 +125,22 @@ class _Square_Marker_Detection(_Square_Marker_Detection_Raw, Surface_Base_Marker
     def to_tuple(self) -> tuple:
         return tuple(self)
 
+    @property
+    def uid(self) -> Surface_Marker_UID:
+        marker_type = self.marker_type.value
+        tag_id = self.tag_id
+        return Surface_Marker_UID(f"{marker_type}:{tag_id}")
+
+    @property
+    def tag_id(self) -> Surface_Marker_TagID:
+        return Surface_Marker_TagID(int(self.raw_id))
+
 
 _Apriltag_V2_Marker_Detection_Raw = collections.namedtuple(
     "Apriltag_V2_Marker_Detection",
     [
         "tag_family",
-        "tag_id",
+        "raw_id",
         "hamming",
         "goodness",
         "decision_margin",
@@ -153,8 +178,15 @@ class _Apriltag_V2_Marker_Detection(_Apriltag_V2_Marker_Detection_Raw, Surface_B
         return tuple(self)
 
     @property
-    def id(self) -> str:
-        return self.tag_id
+    def uid(self) -> Surface_Marker_UID:
+        marker_type = self.marker_type.value
+        tag_family = self.tag_family
+        tag_id = self.tag_id
+        return Surface_Marker_UID(f"{marker_type}:{tag_family}:{tag_id}")
+
+    @property
+    def tag_id(self) -> Surface_Marker_TagID:
+        return Surface_Marker_TagID(int(self.raw_id))
 
     @property
     def id_confidence(self) -> float:
@@ -189,7 +221,7 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
     def from_square_tag_detection(detection: dict) -> 'Surface_Marker':
         cls = _Square_Marker_Detection
         raw_marker = cls(
-            id=detection["id"],
+            raw_id=detection["id"],
             id_confidence=detection["id_confidence"],
             verts_px=detection["verts"],
             perimeter=detection["perimeter"],
@@ -202,7 +234,7 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
         cls = _Apriltag_V2_Marker_Detection
         raw_marker = cls(
             tag_family=detection.tag_family.decode('utf8'),
-            tag_id=detection.tag_id,
+            raw_id=detection.tag_id,
             hamming=detection.hamming,
             goodness=detection.goodness,
             decision_margin=detection.decision_margin,
@@ -240,8 +272,12 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
         return state
 
     @property
-    def id(self) -> str:
-        return self.raw_marker.id
+    def uid(self) -> Surface_Marker_UID:
+        return self.raw_marker.uid
+
+    @property
+    def tag_id(self) -> Surface_Marker_TagID:
+        return self.raw_marker.tag_id
 
     @property
     def id_confidence(self) -> float:
