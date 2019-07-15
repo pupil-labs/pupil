@@ -13,9 +13,10 @@ import multiprocessing
 import platform
 
 import player_methods
-from surface_tracker import background_tasks, offline_utils
-from surface_tracker.cache import Cache
-from surface_tracker.surface import Surface, Surface_Location
+
+from . import background_tasks, offline_utils
+from .cache import Cache
+from .surface import Surface, Surface_Location
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,5 @@
-import square_marker_detect
 from .surface import Surface
-from .surface_marker_detector import Surface_Marker, Surface_Marker_Detector
+from .surface_marker_detector import Surface_Marker_Detector
 
 
 class marker_detection_callable(Surface_Marker_Detector):

@@ -28,11 +28,12 @@ import OpenGL.GL as gl
 from plugin import Analysis_Plugin_Base
 import file_methods
 
-from surface_tracker.cache import Cache
-from surface_tracker.surface_tracker import Surface_Tracker
-from surface_tracker import offline_utils, background_tasks, Surface_Marker
-from surface_tracker.gui import Heatmap_Mode
-from surface_tracker.surface_offline import Surface_Offline
+from .cache import Cache
+from .surface_tracker import Surface_Tracker
+from . import offline_utils, background_tasks
+from .surface_marker import Surface_Marker
+from .gui import Heatmap_Mode
+from .surface_offline import Surface_Offline
 
 # On macOS, "spawn" is set as default start method in main.py. This is not required
 # here and we set it back to "fork" to improve performance.

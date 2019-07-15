@@ -21,8 +21,8 @@ import pyglui
 from plugin import Plugin
 import file_methods
 
-from surface_tracker import gui
-from surface_tracker.surface_marker_detector import Surface_Marker_Detector
+from . import gui
+from .surface_marker_detector import Surface_Marker_Detector
 
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):

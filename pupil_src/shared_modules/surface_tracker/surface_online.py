@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import collections
 
-from surface_tracker.surface import Surface
+from .surface import Surface
 
 
 class Surface_Online(Surface):

@@ -17,9 +17,9 @@ import pyglui
 import pyglui.cygl.utils as pyglui_utils
 import gl_utils
 
-from surface_tracker.gui import Heatmap_Mode
-from surface_tracker.surface_tracker import Surface_Tracker
-from surface_tracker.surface_online import Surface_Online
+from .gui import Heatmap_Mode
+from .surface_tracker import Surface_Tracker
+from .surface_online import Surface_Online
 
 
 class Surface_Tracker_Online(Surface_Tracker):
