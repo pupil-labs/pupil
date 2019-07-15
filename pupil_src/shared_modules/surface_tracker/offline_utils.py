@@ -25,7 +25,7 @@ class surface_locater_callable:
         self.registered_markers_dist = registered_markers_dist
 
     def __call__(self, markers):
-        markers = {m.id: m for m in markers}
+        markers = {m.uid: m for m in markers}
         return Surface.locate(
             markers,
             self.camera_model,

@@ -110,13 +110,14 @@ class GUI:
         anchor = np.array([np.min(verts_px[:, 0]), np.max(verts_px[:, 1])])
         line_height = 16
 
-        text = "id: {:d}".format(marker.id)
-        loc = anchor + (0, line_height * 1)
-        self._draw_text(loc, text, self.color_secondary)
+        text_lines = [
+            f"id: {marker.tag_id}",
+            f"conf: {marker.id_confidence:.2f}",
+        ]
 
-        text = "conf: {:.2f}".format(marker.id_confidence)
-        loc = anchor + (0, line_height * 2)
-        self._draw_text(loc, text, self.color_secondary)
+        for idx, text in enumerate(text_lines):
+            loc = anchor + (0, line_height * (idx+1))
+            self._draw_text(loc, text, self.color_secondary)
 
     def _draw_surface_frames(self, surface):
         if not surface.detected:
@@ -259,7 +260,7 @@ class GUI:
 
             centroid = np.mean(marker.verts_px, axis=0)
             centroid = (centroid[0, 0], centroid[0, 1])
-            if marker.id in surface.registered_markers_dist.keys():
+            if marker.uid in surface.registered_markers_dist.keys():
                 active_markers.append(centroid)
             else:
                 inactive_markers.append(centroid)
@@ -376,12 +377,12 @@ class GUI:
                     centroid = np.mean(marker.verts_px, axis=0)
                     dist = np.linalg.norm(centroid - pos)
                     if dist < self.button_click_radius:
-                        if marker.id not in surface.registered_markers_dist.keys():
+                        if marker.uid not in surface.registered_markers_dist.keys():
                             surface.add_marker(
-                                marker.id, marker.verts_px, self.tracker.camera_model
+                                marker.uid, marker.verts_px, self.tracker.camera_model
                             )
                         else:
-                            surface.pop_marker(marker.id)
+                            surface.pop_marker(marker.uid)
                         self.tracker.notify_all(
                             {
                                 "subject": "surface_tracker.surfaces_changed",

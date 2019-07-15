@@ -122,7 +122,7 @@ class Surface_Offline(Surface):
 
             if def_idx not in self.observations_frame_idxs:
                 markers = marker_cache[def_idx]
-                markers = {m.id: m for m in markers}
+                markers = {m.uid: m for m in markers}
                 self._update_definition(def_idx, markers, camera_model)
 
             # Stop searching if we looped once through the entire recording
@@ -161,7 +161,7 @@ class Surface_Offline(Surface):
                 location = Surface_Location(detected=False)
             else:
                 markers = marker_cache[frame_idx]
-                markers = {m.id: m for m in markers}
+                markers = {m.uid: m for m in markers}
                 location = Surface.locate(
                     markers,
                     camera_model,

@@ -24,7 +24,7 @@ class Surface_Online(Surface):
         self.gaze_history = collections.deque()
 
     def update_location(self, frame_idx, visible_markers, camera_model):
-        vis_markers_dict = {m.id: m for m in visible_markers}
+        vis_markers_dict = {m.uid: m for m in visible_markers}
 
         if not self.defined:
             self._update_definition(frame_idx, vis_markers_dict, camera_model)

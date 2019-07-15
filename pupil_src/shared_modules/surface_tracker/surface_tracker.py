@@ -371,14 +371,12 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def _remove_duplicate_markers(self, markers):
         # if an id shows twice use the bigger marker (usually this is a screen camera
         # echo artifact.)
-        marker_by_type = {}
+        marker_by_uid = {}
         for m in markers:
-            marker_by_id = marker_by_type.get(m.marker_type, {})
-            if m.id not in marker_by_id or m.perimeter > marker_by_id[m.id].perimeter:
-                marker_by_id[m.id] = m
-            marker_by_type[m.marker_type] = marker_by_id
+            if m.uid not in marker_by_uid or m.perimeter > marker_by_uid[m.uid].perimeter:
+                marker_by_uid[m.uid] = m
 
-        return [ m for by_id in marker_by_type.values() for m in by_id.values() ]
+        return list(marker_by_uid.values())
 
     def _filter_markers(self, markers):
         markers = [
