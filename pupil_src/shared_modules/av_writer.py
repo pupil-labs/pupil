@@ -209,6 +209,7 @@ class AV_Writer(object):
             if pts <= self._last_pts:
                 pts = self._last_pts + 1
             self.frame.pts = pts
+            self.frame.dts = pts
             self._last_pts = pts
         else:
             # our timebase is 1/30  so a frame idx is the correct pts for an fps recorded video.

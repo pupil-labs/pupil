@@ -76,6 +76,7 @@ if platform.system() == "Darwin":
     # print Exception("Codesing verification  failed")
     call("ln -s /Applications/ %s/Applications" % src_dir, shell=True)
     call("rm dist/Pupil\ Player.app/Contents/MacOS/.DS_Store", shell=True)
+    call("rm dist/Pupil\ Capture.app/Contents/MacOS/nslr/.DS_Store", shell=True)
     call(
         "hdiutil create -volname '%s' -srcfolder %s -format UDZO '%s.dmg'"
         % (bundle_dmg_name, src_dir, bundle_name),
