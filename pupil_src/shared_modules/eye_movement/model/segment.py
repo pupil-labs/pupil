@@ -135,7 +135,7 @@ class Classified_Segment(StorageItem):
 
     # StorageItem API
 
-    version = 1
+    version = 2
 
     @staticmethod
     def from_tuple(segment_tuple: tuple) -> "Classified_Segment":
