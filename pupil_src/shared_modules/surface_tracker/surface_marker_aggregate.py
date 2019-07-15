@@ -1,4 +1,7 @@
+import typing
 import numpy as np
+
+from .surface_marker import Surface_Marker_UID
 
 
 class Surface_Marker_Aggregate(object):
@@ -11,21 +14,37 @@ class Surface_Marker_Aggregate(object):
     vertices of a regular Marker, which are located in image pixel space.
     """
 
-    def __init__(self, id, verts_uv=None):
-        self.id = id
-        self.verts_uv = None
-        self.observations = []
+    def __init__(self, uid: Surface_Marker_UID, verts_uv: typing.Optional[np.ndarray]=None):
+        self._uid = uid
+        self._verts_uv = None
+        self._observations = []
 
         if verts_uv is not None:
-            self.verts_uv = np.array(verts_uv)
+            self._verts_uv = np.asarray(verts_uv)
+
+    @property
+    def uid(self) -> Surface_Marker_UID:
+        return self._uid
+
+    @property
+    def verts_uv(self) -> typing.Optional[np.ndarray]:
+        return self._verts_uv
+
+    @verts_uv.setter
+    def verts_uv(self, new_value: np.ndarray):
+        self._verts_uv = new_value
+
+    @property
+    def observations(self) -> list:
+        return self._observations
 
     def add_observation(self, verts_uv):
-        self.observations.append(verts_uv)
+        self._observations.append(verts_uv)
         self._compute_robust_mean()
 
     def _compute_robust_mean(self):
         # uv is of shape (N, 4, 2) where N is the number of collected observations
-        uv = np.array(self.observations)
+        uv = np.asarray(self._observations)
         base_line_mean = np.mean(uv, axis=0)
         distance = np.linalg.norm(uv - base_line_mean, axis=(1, 2))
 
@@ -33,7 +52,22 @@ class Surface_Marker_Aggregate(object):
         cut_off = sorted(distance)[len(distance) // 2]
         uv_subset = uv[distance <= cut_off]
         final_mean = np.mean(uv_subset, axis=0)
-        self.verts_uv = final_mean
+        self._verts_uv = final_mean
 
     def save_to_dict(self):
-        return {"id": self.id, "verts_uv": [v.tolist() for v in self.verts_uv]}
+        if self._verts_uv is not None:
+            verts_uv = [v.tolist() for v in self._verts_uv]
+        else:
+            verts_uv = None
+
+        return {
+            "uid": self.uid,
+            "verts_uv": verts_uv,
+        }
+
+    @staticmethod
+    def load_from_dict(state: dict) -> "Surface_Marker_Aggregate":
+        return Surface_Marker_Aggregate(
+            uid=state["uid"],
+            verts_uv=state["verts_uv"],
+        )
