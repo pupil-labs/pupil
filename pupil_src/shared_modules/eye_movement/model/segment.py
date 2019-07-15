@@ -16,6 +16,7 @@ import eye_movement.utils as utils
 from storage import StorageItem
 import methods as mt
 import file_methods as fm
+import player_methods as pm
 import numpy as np
 import nslr_hmm
 
@@ -134,7 +135,7 @@ class Classified_Segment(StorageItem):
 
     # StorageItem API
 
-    version = 1
+    version = 2
 
     @staticmethod
     def from_tuple(segment_tuple: tuple) -> "Classified_Segment":
@@ -227,8 +228,9 @@ class Classified_Segment(StorageItem):
         self._storage = storage
 
     def validate(self):
-        assert self.frame_count > 0
-        assert len(self.segment_data) == len(self.segment_time) == self.frame_count
+        if self.frame_count:
+            assert self.frame_count > 0
+        assert len(self.segment_data) == len(self.segment_time)
         assert self.start_frame_timestamp <= self.end_frame_timestamp
         assert self.start_frame_timestamp == self.segment_time[0]
         assert self.end_frame_timestamp == self.segment_time[-1]
@@ -320,14 +322,14 @@ class Classified_Segment(StorageItem):
         return Segment_Class(self._storage["segment_class"])
 
     @property
-    def start_frame_index(self) -> int:
+    def start_frame_index(self) -> t.Optional[int]:
         """Index of the first segment frame, in the frame buffer."""
-        return self._storage["start_frame_index"]
+        return self._storage.get("start_frame_index", None)
 
     @property
-    def end_frame_index(self) -> int:
+    def end_frame_index(self) -> t.Optional[int]:
         """Index **after** the last segment frame, in the frame buffer."""
-        return self._storage["end_frame_index"]
+        return self._storage.get("end_frame_index", None)
 
     @property
     def start_frame_timestamp(self) -> float:
@@ -372,15 +374,21 @@ class Classified_Segment(StorageItem):
         return (self.end_frame_timestamp - self.start_frame_timestamp) * 1000
 
     @property
-    def frame_count(self) -> int:
+    def frame_count(self) -> t.Optional[int]:
         """..."""
-        return self.end_frame_index - self.start_frame_index
+        if self.start_frame_index is not None and self.end_frame_index:
+            return self.end_frame_index - self.start_frame_index
+        else:
+            return None
 
     @property
-    def mid_frame_index(self):
+    def mid_frame_index(self) -> t.Optional[int]:
         """Index of the middle segment frame, in the frame buffer.
         """
-        return int((self.end_frame_index + self.start_frame_index) // 2)
+        if self.start_frame_index is not None and self.end_frame_index is not None:
+            return int((self.end_frame_index + self.start_frame_index) // 2)
+        else:
+            return None
 
     @property
     def mid_frame_timestamp(self) -> float:
@@ -429,7 +437,7 @@ class Classified_Segment_Factory:
         self._segment_id = start_id
 
     def create_segment(
-        self, gaze_data, gaze_time, use_pupil, nslr_segment, nslr_segment_class
+        self, gaze_data, gaze_time, use_pupil, nslr_segment, nslr_segment_class, world_timestamps
     ) -> t.Optional[Classified_Segment]:
         segment_id = self._get_id_postfix_increment()
 
@@ -443,11 +451,17 @@ class Classified_Segment_Factory:
         segment_class = Segment_Class.from_nslr_class(nslr_segment_class)
         topic = utils.EYE_MOVEMENT_TOPIC_PREFIX + segment_class.value
 
-        start_frame_index, end_frame_index = nslr_segment.i  # [i_0, i_1)
         start_frame_timestamp, end_frame_timestamp = (
             segment_time[0],
             segment_time[-1],
         )  # [t_0, t_1]
+
+        if len(world_timestamps) > 1:
+            time_range = [start_frame_timestamp, end_frame_timestamp]
+            start_frame_index, end_frame_index = pm.find_closest(world_timestamps, time_range)
+            start_frame_index, end_frame_index = int(start_frame_index), int(end_frame_index)
+        else:
+            start_frame_index, end_frame_index = None, None
 
         segment = Classified_Segment.from_attrs(
             id=segment_id,
