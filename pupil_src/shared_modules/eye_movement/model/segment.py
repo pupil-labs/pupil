@@ -437,7 +437,7 @@ class Classified_Segment_Factory:
         self._segment_id = start_id
 
     def create_segment(
-        self, gaze_data, gaze_time, use_pupil, nslr_segment, nslr_segment_class, capture_time
+        self, gaze_data, gaze_time, use_pupil, nslr_segment, nslr_segment_class, world_timestamps
     ) -> t.Optional[Classified_Segment]:
         segment_id = self._get_id_postfix_increment()
 
@@ -456,9 +456,9 @@ class Classified_Segment_Factory:
             segment_time[-1],
         )  # [t_0, t_1]
 
-        if len(capture_time) > 1:
+        if len(world_timestamps) > 1:
             time_range = [start_frame_timestamp, end_frame_timestamp]
-            start_frame_index, end_frame_index = pm.find_closest(capture_time, time_range)
+            start_frame_index, end_frame_index = pm.find_closest(world_timestamps, time_range)
             start_frame_index, end_frame_index = int(start_frame_index), int(end_frame_index)
         else:
             start_frame_index, end_frame_index = None, None

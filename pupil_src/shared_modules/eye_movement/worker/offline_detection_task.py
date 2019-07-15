@@ -90,7 +90,7 @@ def eye_movement_detection_generator(
             use_pupil=use_pupil,
             nslr_segment=nslr_segment,
             nslr_segment_class=nslr_segment_class,
-            capture_time=capture.timestamps,
+            world_timestamps=capture.timestamps,
         )
 
         if not segment:

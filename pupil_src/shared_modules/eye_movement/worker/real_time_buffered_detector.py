@@ -108,7 +108,7 @@ class Real_Time_Buffered_Detector:
                 use_pupil=use_pupil,
                 nslr_segment=nslr_segment,
                 nslr_segment_class=nslr_segment_class,
-                capture_time=capture.timestamps,
+                world_timestamps=capture.timestamps,
             )
 
             if not segment:
