@@ -24,7 +24,9 @@ from .surface_marker_aggregate import Surface_Marker_Aggregate
 logger = logging.getLogger(__name__)
 
 
-Surface_Marker_UID_To_Aggregate_Mapping = typing.Mapping[Surface_Marker_UID, Surface_Marker_Aggregate]
+Surface_Marker_UID_To_Aggregate_Mapping = typing.Mapping[
+    Surface_Marker_UID, Surface_Marker_Aggregate
+]
 
 
 class Surface(abc.ABC):
@@ -338,7 +340,10 @@ class Surface(abc.ABC):
                 self.registered_markers_dist[marker.uid].add_observation(uv_dist)
 
         num_observations = sum(
-            [len(aggregate.observations) for aggregate in self.registered_markers_undist.values()]
+            [
+                len(aggregate.observations)
+                for aggregate in self.registered_markers_undist.values()
+            ]
         )
         self._avg_obs_per_marker = num_observations / len(
             self.registered_markers_undist
@@ -462,7 +467,12 @@ class Surface(abc.ABC):
         )
 
     def _add_marker(
-        self, marker_uid: Surface_Marker_UID, verts_px, camera_model, markers: Surface_Marker_UID_To_Aggregate_Mapping, compensate_distortion
+        self,
+        marker_uid: Surface_Marker_UID,
+        verts_px,
+        camera_model,
+        markers: Surface_Marker_UID_To_Aggregate_Mapping,
+        compensate_distortion,
     ):
         surface_marker_dist = Surface_Marker_Aggregate(uid=marker_uid)
         marker_verts_dist = np.array(verts_px).reshape((4, 2))
@@ -547,8 +557,7 @@ class Surface(abc.ABC):
         self.real_world_size = init_dict["real_world_size"]
 
         marker_aggregates_undist = [
-            Surface_Marker_Aggregate.load_from_dict(d)
-            for d in init_dict["reg_markers"]
+            Surface_Marker_Aggregate.load_from_dict(d) for d in init_dict["reg_markers"]
         ]
         self._registered_markers_undist = {
             aggregate.uid: aggregate for aggregate in marker_aggregates_undist

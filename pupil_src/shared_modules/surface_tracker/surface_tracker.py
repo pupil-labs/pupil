@@ -66,22 +66,22 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     @property
     def robust_detection(self) -> bool:
-        #TODO: Check if/where this is used; if not used externally - remove
+        # TODO: Check if/where this is used; if not used externally - remove
         return self.marker_detector.robust_detection
 
     @robust_detection.setter
     def robust_detection(self, value: bool):
-        #TODO: Check if/where this is used; if not used externally - remove
+        # TODO: Check if/where this is used; if not used externally - remove
         self.marker_detector.robust_detection = value
 
     @property
     def inverted_markers(self) -> bool:
-        #TODO: Check if/where this is used; if not used externally - remove
+        # TODO: Check if/where this is used; if not used externally - remove
         return self.marker_detector.inverted_markers
 
     @inverted_markers.setter
     def inverted_markers(self, value: bool):
-        #TODO: Check if/where this is used; if not used externally - remove
+        # TODO: Check if/where this is used; if not used externally - remove
         self.marker_detector.inverted_markers = value
 
     @property
@@ -373,7 +373,10 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         # echo artifact.)
         marker_by_uid = {}
         for m in markers:
-            if m.uid not in marker_by_uid or m.perimeter > marker_by_uid[m.uid].perimeter:
+            if (
+                m.uid not in marker_by_uid
+                or m.perimeter > marker_by_uid[m.uid].perimeter
+            ):
                 marker_by_uid[m.uid] = m
 
         return list(marker_by_uid.values())

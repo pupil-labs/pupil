@@ -14,7 +14,6 @@ from .surface_marker_detector import Surface_Marker_Detector
 
 
 class marker_detection_callable(Surface_Marker_Detector):
-
     def __init__(self, min_marker_perimeter, inverted_markers):
         super().__init__(
             square_marker_min_perimeter=min_marker_perimeter,
@@ -26,7 +25,6 @@ class marker_detection_callable(Surface_Marker_Detector):
 
 
 class surface_locater_callable:
-
     def __init__(
         self, camera_model, registered_markers_undist, registered_markers_dist
     ):

@@ -39,10 +39,9 @@ class Surface_Marker_Type(enum.Enum):
 
 
 class Surface_Base_Marker(metaclass=abc.ABCMeta):
-
     @staticmethod
     @abc.abstractmethod
-    def from_tuple(state: tuple) -> 'Surface_Base_Marker':
+    def from_tuple(state: tuple) -> "Surface_Base_Marker":
         pass
 
     @abc.abstractmethod
@@ -68,7 +67,7 @@ class Surface_Base_Marker(metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def id_confidence(self) -> float:
-        #TODO: Why is it called "id_confidence" instead of "confidence"?
+        # TODO: Why is it called "id_confidence" instead of "confidence"?
         pass
 
     @property
@@ -79,7 +78,7 @@ class Surface_Base_Marker(metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def perimeter(self) -> float:
-        #TODO: Is this used/useful outside surface_marker_detector.py? If not - remove
+        # TODO: Is this used/useful outside surface_marker_detector.py? If not - remove
         pass
 
     @property
@@ -91,13 +90,7 @@ class Surface_Base_Marker(metaclass=abc.ABCMeta):
 # TODO: This object should offer a mean/centroid function to be used when drawing the marker toggle buttons
 _Square_Marker_Detection_Raw = collections.namedtuple(
     "Square_Marker_Detection",
-    [
-        "raw_id",
-        "id_confidence",
-        "verts_px",
-        "perimeter",
-        "raw_marker_type",
-    ]
+    ["raw_id", "id_confidence", "verts_px", "perimeter", "raw_marker_type"],
 )
 
 
@@ -107,7 +100,7 @@ class _Square_Marker_Detection(_Square_Marker_Detection_Raw, Surface_Base_Marker
     marker_type = Surface_Marker_Type.SQUARE
 
     @staticmethod
-    def from_tuple(state: tuple) -> '_Square_Marker_Detection':
+    def from_tuple(state: tuple) -> "_Square_Marker_Detection":
         cls = _Square_Marker_Detection
         expected_marker_type = cls.marker_type
 
@@ -149,17 +142,19 @@ _Apriltag_V2_Marker_Detection_Raw = collections.namedtuple(
         "center",
         "corners",
         "raw_marker_type",
-    ]
+    ],
 )
 
 
-class _Apriltag_V2_Marker_Detection(_Apriltag_V2_Marker_Detection_Raw, Surface_Base_Marker):
+class _Apriltag_V2_Marker_Detection(
+    _Apriltag_V2_Marker_Detection_Raw, Surface_Base_Marker
+):
     __slots__ = ()
 
     marker_type = Surface_Marker_Type.APRILTAG_V2
 
     @staticmethod
-    def from_tuple(state: tuple) -> '_Apriltag_V2_Marker_Detection':
+    def from_tuple(state: tuple) -> "_Apriltag_V2_Marker_Detection":
         cls = _Apriltag_V2_Marker_Detection
         expected_marker_type = cls.marker_type
 
@@ -207,7 +202,7 @@ class _Apriltag_V2_Marker_Detection(_Apriltag_V2_Marker_Detection_Raw, Surface_B
     @property
     @abc.abstractmethod
     def perimeter(self) -> float:
-        return 80 # FIXME
+        return 80  # FIXME
 
 
 # This exists because there is no easy way to make a user-defined class serializable with msgpack without extra hooks.
@@ -217,9 +212,8 @@ _Surface_Marker_Raw = collections.namedtuple("Surface_Marker", ["raw_marker"])
 
 
 class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
-
     @staticmethod
-    def from_square_tag_detection(detection: dict) -> 'Surface_Marker':
+    def from_square_tag_detection(detection: dict) -> "Surface_Marker":
         cls = _Square_Marker_Detection
         raw_marker = cls(
             raw_id=detection["id"],
@@ -231,10 +225,12 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
         return Surface_Marker(raw_marker=raw_marker)
 
     @staticmethod
-    def from_apriltag_v2_detection(detection: Apriltag_V2_Detection) -> 'Surface_Marker':
+    def from_apriltag_v2_detection(
+        detection: Apriltag_V2_Detection
+    ) -> "Surface_Marker":
         cls = _Apriltag_V2_Marker_Detection
         raw_marker = cls(
-            tag_family=detection.tag_family.decode('utf8'),
+            tag_family=detection.tag_family.decode("utf8"),
             raw_id=detection.tag_id,
             hamming=detection.hamming,
             goodness=detection.goodness,
@@ -247,7 +243,7 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
         return Surface_Marker(raw_marker=raw_marker)
 
     @staticmethod
-    def deserialize(args) -> 'Surface_Marker':
+    def deserialize(args) -> "Surface_Marker":
         if isinstance(args, list) and len(args) == 1:
             state = tuple(*args)
         else:
@@ -255,7 +251,7 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
         return Surface_Marker.from_tuple(state=state)
 
     @staticmethod
-    def from_tuple(state: tuple) -> 'Surface_Marker':
+    def from_tuple(state: tuple) -> "Surface_Marker":
         marker_type = state[-1]
         if marker_type == _Square_Marker_Detection.marker_type.value:
             raw_marker = _Square_Marker_Detection.from_tuple(state)
@@ -263,7 +259,7 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
             raw_marker = _Apriltag_V2_Marker_Detection.from_tuple(state)
         else:
             raw_marker_type = _Square_Marker_Detection.marker_type.value
-            raw_marker = _Square_Marker_Detection(*state, raw_marker_type) #Legacy
+            raw_marker = _Square_Marker_Detection(*state, raw_marker_type)  # Legacy
         assert raw_marker is not None
         return Surface_Marker(raw_marker=raw_marker)
 
@@ -310,13 +306,31 @@ def test_surface_marker_deserialize():
 
     SQUARE_MARKER_TAG_ID = 55
     SQUARE_MARKER_CONF = 0.0039215686274509665
-    SQUARE_MARKER_VERTS = [[[1084.0, 186.0]], [[1089.0, 198.0]], [[1099.0, 195.0]], [[1095.0, 184.0]]]
+    SQUARE_MARKER_VERTS = [
+        [[1084.0, 186.0]],
+        [[1089.0, 198.0]],
+        [[1099.0, 195.0]],
+        [[1095.0, 184.0]],
+    ]
     SQUARE_MARKER_PERIM = 46.32534599304199
 
     # This is the format in which old (before Apriltag support was added) square tags where represented when serialized to msgpack
-    old_serialized_square =  [SQUARE_MARKER_TAG_ID, SQUARE_MARKER_CONF, SQUARE_MARKER_VERTS, SQUARE_MARKER_PERIM]
+    old_serialized_square = [
+        SQUARE_MARKER_TAG_ID,
+        SQUARE_MARKER_CONF,
+        SQUARE_MARKER_VERTS,
+        SQUARE_MARKER_PERIM,
+    ]
     # This is the format in which new square tags are represented when serialized to msgpack
-    new_serialized_square = [[SQUARE_MARKER_TAG_ID, SQUARE_MARKER_CONF, SQUARE_MARKER_VERTS, SQUARE_MARKER_PERIM, _Square_Marker_Detection.marker_type.value]]
+    new_serialized_square = [
+        [
+            SQUARE_MARKER_TAG_ID,
+            SQUARE_MARKER_CONF,
+            SQUARE_MARKER_VERTS,
+            SQUARE_MARKER_PERIM,
+            _Square_Marker_Detection.marker_type.value,
+        ]
+    ]
 
     # Both formats should be supported by `Surface_Marker.deserialize` for backwards compatibility
     old_marker_square = Surface_Marker.deserialize(old_serialized_square)
@@ -351,19 +365,28 @@ def test_surface_marker_deserialize():
         [317.3298034667968, 706.38671875],
         [300.56298828125, 717.4339599609377],
         [284.8282165527345, 710.4930419921874],
-        [301.2247619628906, 699.854797363281]
+        [301.2247619628906, 699.854797363281],
     ]
 
-    new_serialized_apriltag_v2 = [[
-        APRILTAG_V2_FAMILY, APRILTAG_V2_TAG_ID, APRILTAG_V2_HAMMING, APRILTAG_V2_GOODNESS, APRILTAG_V2_DECISION_MARGIN,
-        APRILTAG_V2_HOMOGRAPHY, APRILTAG_V2_CENTER, APRILTAG_V2_CORNERS, _Apriltag_V2_Marker_Detection.marker_type.value,
-    ]]
+    new_serialized_apriltag_v2 = [
+        [
+            APRILTAG_V2_FAMILY,
+            APRILTAG_V2_TAG_ID,
+            APRILTAG_V2_HAMMING,
+            APRILTAG_V2_GOODNESS,
+            APRILTAG_V2_DECISION_MARGIN,
+            APRILTAG_V2_HOMOGRAPHY,
+            APRILTAG_V2_CENTER,
+            APRILTAG_V2_CORNERS,
+            _Apriltag_V2_Marker_Detection.marker_type.value,
+        ]
+    ]
 
     new_marker_apriltag_v2 = Surface_Marker.deserialize(new_serialized_apriltag_v2)
 
-    APRILTAG_V2_CONF = APRILTAG_V2_DECISION_MARGIN/100
+    APRILTAG_V2_CONF = APRILTAG_V2_DECISION_MARGIN / 100
     APRILTAG_V2_VERTS = [[c] for c in APRILTAG_V2_CORNERS]
-    APRILTAG_V2_PERIM = 80 # FIXME
+    APRILTAG_V2_PERIM = 80  # FIXME
 
     assert new_marker_apriltag_v2.marker_type == Surface_Marker_Type.APRILTAG_V2
     assert new_marker_apriltag_v2.tag_id == APRILTAG_V2_TAG_ID

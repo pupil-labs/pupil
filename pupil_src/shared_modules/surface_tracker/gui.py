@@ -110,13 +110,10 @@ class GUI:
         anchor = np.array([np.min(verts_px[:, 0]), np.max(verts_px[:, 1])])
         line_height = 16
 
-        text_lines = [
-            f"id: {marker.tag_id}",
-            f"conf: {marker.id_confidence:.2f}",
-        ]
+        text_lines = [f"id: {marker.tag_id}", f"conf: {marker.id_confidence:.2f}"]
 
         for idx, text in enumerate(text_lines):
-            loc = anchor + (0, line_height * (idx+1))
+            loc = anchor + (0, line_height * (idx + 1))
             self._draw_text(loc, text, self.color_secondary)
 
     def _draw_surface_frames(self, surface):

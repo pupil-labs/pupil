@@ -19,13 +19,10 @@ from pupil_src.shared_modules import apriltag
 from .surface_marker import Surface_Marker
 
 
-__all__ = [
-    "Surface_Marker_Detector",
-]
+__all__ = ["Surface_Marker_Detector"]
 
 
 class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
-
     @property
     @abc.abstractmethod
     def robust_detection(self) -> bool:
@@ -57,17 +54,28 @@ class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
 
 
 class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
-
     def __init__(
         self,
-        square_marker_min_perimeter: int=...,
-        square_marker_robust_detection: bool=...,
-        square_marker_inverted_markers: bool=...,
+        square_marker_min_perimeter: int = ...,
+        square_marker_robust_detection: bool = ...,
+        square_marker_inverted_markers: bool = ...,
         **kwargs,
     ):
-        self.__marker_min_perimeter = square_marker_min_perimeter if square_marker_min_perimeter is not ... else 60
-        self.__robust_detection = square_marker_robust_detection if square_marker_robust_detection is not ... else True
-        self.__inverted_markers = square_marker_inverted_markers if square_marker_inverted_markers is not ... else False
+        self.__marker_min_perimeter = (
+            square_marker_min_perimeter
+            if square_marker_min_perimeter is not ...
+            else 60
+        )
+        self.__robust_detection = (
+            square_marker_robust_detection
+            if square_marker_robust_detection is not ...
+            else True
+        )
+        self.__inverted_markers = (
+            square_marker_inverted_markers
+            if square_marker_inverted_markers is not ...
+            else False
+        )
         self.__previous_raw_markers = []
 
     @property
@@ -123,16 +131,16 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
 class _Apriltag_V2_Detector_Options(apriltag.DetectorOptions):
     def __init__(
         self,
-        families: str=...,
-        border: int=...,
-        nthreads: int=...,
-        quad_decimate: float=...,
-        quad_blur: float=...,
-        refine_edges: bool=...,
-        refine_decode: bool=...,
-        refine_pose: bool=...,
-        debug: bool=...,
-        quad_contours: bool=...,
+        families: str = ...,
+        border: int = ...,
+        nthreads: int = ...,
+        quad_decimate: float = ...,
+        quad_blur: float = ...,
+        refine_edges: bool = ...,
+        refine_decode: bool = ...,
+        refine_pose: bool = ...,
+        debug: bool = ...,
+        quad_contours: bool = ...,
     ):
         super().__init__()
         if families is not ...:
@@ -158,19 +166,18 @@ class _Apriltag_V2_Detector_Options(apriltag.DetectorOptions):
 
 
 class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
-
     def __init__(
         self,
-        apriltag_families: str=...,
-        apriltag_border: int=...,
-        apriltag_nthreads: int=...,
-        apriltag_quad_decimate: float=...,
-        apriltag_quad_blur: float=...,
-        apriltag_refine_edges: bool=...,
-        apriltag_refine_decode: bool=...,
-        apriltag_refine_pose: bool=...,
-        apriltag_debug: bool=...,
-        apriltag_quad_contours: bool=...,
+        apriltag_families: str = ...,
+        apriltag_border: int = ...,
+        apriltag_nthreads: int = ...,
+        apriltag_quad_decimate: float = ...,
+        apriltag_quad_blur: float = ...,
+        apriltag_refine_edges: bool = ...,
+        apriltag_refine_decode: bool = ...,
+        apriltag_refine_pose: bool = ...,
+        apriltag_debug: bool = ...,
+        apriltag_quad_contours: bool = ...,
         **kwargs,
     ):
         options = _Apriltag_V2_Detector_Options(
@@ -185,9 +192,7 @@ class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
             debug=apriltag_debug,
             quad_contours=apriltag_quad_contours,
         )
-        self._detector = apriltag.Detector(
-            detector_options=options,
-        )
+        self._detector = apriltag.Detector(detector_options=options)
 
     @property
     def robust_detection(self) -> bool:
@@ -195,7 +200,7 @@ class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
 
     @robust_detection.setter
     def robust_detection(self, value: bool):
-        pass #nop
+        pass  # nop
 
     @property
     def inverted_markers(self) -> bool:
@@ -203,7 +208,7 @@ class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
 
     @inverted_markers.setter
     def inverted_markers(self, value: bool):
-        pass #nop
+        pass  # nop
 
     def detect_markers(self, gray_img) -> typing.Iterable[Surface_Marker]:
         markers = self._detector.detect(img=gray_img)
@@ -211,22 +216,21 @@ class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
 
 
 class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
-
     def __init__(
         self,
-        square_marker_min_perimeter: int=...,
-        square_marker_robust_detection: bool=...,
-        square_marker_inverted_markers: bool=...,
-        apriltag_families: str=...,
-        apriltag_border: int=...,
-        apriltag_nthreads: int=...,
-        apriltag_quad_decimate: float=...,
-        apriltag_quad_blur: float=...,
-        apriltag_refine_edges: bool=...,
-        apriltag_refine_decode: bool=...,
-        apriltag_refine_pose: bool=...,
-        apriltag_debug: bool=...,
-        apriltag_quad_contours: bool=...,
+        square_marker_min_perimeter: int = ...,
+        square_marker_robust_detection: bool = ...,
+        square_marker_inverted_markers: bool = ...,
+        apriltag_families: str = ...,
+        apriltag_border: int = ...,
+        apriltag_nthreads: int = ...,
+        apriltag_quad_decimate: float = ...,
+        apriltag_quad_blur: float = ...,
+        apriltag_refine_edges: bool = ...,
+        apriltag_refine_decode: bool = ...,
+        apriltag_refine_pose: bool = ...,
+        apriltag_debug: bool = ...,
+        apriltag_quad_contours: bool = ...,
     ):
         self.__square_detector = Surface_Square_Marker_Detector(
             square_marker_min_perimeter=square_marker_min_perimeter,

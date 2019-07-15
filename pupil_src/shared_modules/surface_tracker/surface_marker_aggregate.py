@@ -25,7 +25,9 @@ class Surface_Marker_Aggregate(object):
     vertices of a regular Marker, which are located in image pixel space.
     """
 
-    def __init__(self, uid: Surface_Marker_UID, verts_uv: typing.Optional[np.ndarray]=None):
+    def __init__(
+        self, uid: Surface_Marker_UID, verts_uv: typing.Optional[np.ndarray] = None
+    ):
         self._uid = uid
         self._verts_uv = None
         self._observations = []
@@ -71,14 +73,8 @@ class Surface_Marker_Aggregate(object):
         else:
             verts_uv = None
 
-        return {
-            "uid": self.uid,
-            "verts_uv": verts_uv,
-        }
+        return {"uid": self.uid, "verts_uv": verts_uv}
 
     @staticmethod
     def load_from_dict(state: dict) -> "Surface_Marker_Aggregate":
-        return Surface_Marker_Aggregate(
-            uid=state["uid"],
-            verts_uv=state["verts_uv"],
-        )
+        return Surface_Marker_Aggregate(uid=state["uid"], verts_uv=state["verts_uv"])
