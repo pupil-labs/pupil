@@ -62,7 +62,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         )
 
         for init_dict in surface_definitions.get("surfaces", []):
-            self.add_surface(init_dict)
+            saved_version = init_dict.get("version", None)
+            if saved_version == self.Surface_Class.version:
+                self.add_surface(init_dict)
 
     @property
     def robust_detection(self) -> bool:

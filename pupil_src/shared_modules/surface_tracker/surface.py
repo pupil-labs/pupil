@@ -34,6 +34,8 @@ class Surface(abc.ABC):
     square markers in the real world. The markers are assumed to be in a fixed spatial
     relationship and to be in plane with one another as well as the surface."""
 
+    version = 1
+
     def __init__(self, name="unknown", init_dict=None):
         self.name = name
         self.real_world_size = {"x": 1.0, "y": 1.0}
