@@ -12,7 +12,11 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import enum
 import typing
+import functools
 import collections
+
+import cv2
+import numpy as np
 
 from pupil_src.shared_modules.apriltag import DetectionBase as Apriltag_V2_Detection
 
@@ -193,16 +197,15 @@ class _Apriltag_V2_Marker_Detection(
         return decision_margin
 
     @property
-    @abc.abstractmethod
     def verts_px(self) -> list:
         # Wrapping each point in a list is needed for compatibility with square detector
-        # TODO: See if this wrapping makes sense or if it should be refactored
         return [[point] for point in self.corners]
 
     @property
-    @abc.abstractmethod
     def perimeter(self) -> float:
-        return 80  # FIXME
+        verts_px = np.asarray(self.verts_px, dtype=np.float32)
+        perimeter = cv2.arcLength(verts_px, closed=True)
+        return perimeter
 
 
 # This exists because there is no easy way to make a user-defined class serializable with msgpack without extra hooks.
