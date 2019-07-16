@@ -13,8 +13,8 @@ import abc
 import typing
 import itertools
 
-from pupil_src.shared_modules import square_marker_detect
-from pupil_src.shared_modules import apriltag
+import square_marker_detect
+import apriltag
 
 from .surface_marker import Surface_Marker
 

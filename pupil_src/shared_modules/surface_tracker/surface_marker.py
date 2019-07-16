@@ -18,7 +18,7 @@ import collections
 import cv2
 import numpy as np
 
-from pupil_src.shared_modules.apriltag import DetectionBase as Apriltag_V2_Detection
+from apriltag import DetectionBase as Apriltag_V2_Detection
 
 
 __all__ = [
