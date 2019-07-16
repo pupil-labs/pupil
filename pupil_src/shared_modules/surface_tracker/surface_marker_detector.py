@@ -59,7 +59,6 @@ class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
-        # TODO: Add type hints
         pass
 
 
@@ -117,7 +116,6 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         self.__marker_min_perimeter = value
 
     def detect_markers(self, gray_img) -> typing.Iterable[Surface_Marker]:
-        # TODO: Add type hints
 
         grid_size = 5
         aperture = 11
