@@ -50,7 +50,7 @@ if platform.system() == "Windows":
         [np.get_include(), ""],
         [
             "C:\\work\\opencv\\build\\include",
-            "C:\\work\\opencv\\build\\x64\\vc14\\lib\\opencv_world320.lib",
+            "C:\\work\\opencv\\build\\x64\\vc14\\lib\\opencv_world345.lib",
         ],
         ["C:\\work\\ceres-windows\\Eigen", ""],
         [
