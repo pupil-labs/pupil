@@ -389,13 +389,13 @@ def test_surface_marker_deserialize():
 
     APRILTAG_V2_CONF = APRILTAG_V2_DECISION_MARGIN / 100
     APRILTAG_V2_VERTS = [[c] for c in APRILTAG_V2_CORNERS]
-    APRILTAG_V2_PERIM = 80  # FIXME
+    APRILTAG_V2_PERIM = 74.20
 
     assert new_marker_apriltag_v2.marker_type == Surface_Marker_Type.APRILTAG_V2
     assert new_marker_apriltag_v2.tag_id == APRILTAG_V2_TAG_ID
     assert new_marker_apriltag_v2.id_confidence == APRILTAG_V2_CONF
     assert new_marker_apriltag_v2.verts_px == APRILTAG_V2_VERTS
-    assert new_marker_apriltag_v2.perimeter == APRILTAG_V2_PERIM
+    assert round(new_marker_apriltag_v2.perimeter, 2) == APRILTAG_V2_PERIM
 
 
 if __name__ == "__main__":
