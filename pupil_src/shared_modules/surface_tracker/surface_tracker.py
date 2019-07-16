@@ -34,7 +34,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     icon_chr = chr(0xEC07)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
+    def __init__(self, g_pool, marker_min_perimeter: int = 60, inverted_markers: bool = False):
         super().__init__(g_pool)
 
         self.current_frame = None
@@ -46,12 +46,12 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self._last_mouse_pos = (0.0, 0.0)
         self.gui = gui.GUI(self)
 
-        self.marker_min_perimeter = marker_min_perimeter
+        self._marker_min_perimeter = marker_min_perimeter
         self.marker_min_confidence = 0.1
         self.marker_detector = Surface_Marker_Detector(
+            marker_min_perimeter=marker_min_perimeter,
             square_marker_robust_detection=True,
             square_marker_inverted_markers=inverted_markers,
-            square_marker_min_perimeter=marker_min_perimeter,
         )
 
         self._add_surfaces_from_file()
@@ -65,6 +65,15 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             saved_version = init_dict.get("version", None)
             if saved_version == self.Surface_Class.version:
                 self.add_surface(init_dict)
+
+    @property
+    def marker_min_perimeter(self) -> int:
+        return self._marker_min_perimeter
+
+    @marker_min_perimeter.setter
+    def marker_min_perimeter(self, value: int):
+        self._marker_min_perimeter = value
+        self.marker_detector.marker_min_perimeter = value
 
     @property
     def robust_detection(self) -> bool:

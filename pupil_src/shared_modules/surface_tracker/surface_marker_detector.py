@@ -47,6 +47,16 @@ class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
         # TODO: Remove external dependency on this property
         pass
 
+    @property
+    @abc.abstractmethod
+    def marker_min_perimeter(self) -> int:
+        pass
+
+    @marker_min_perimeter.setter
+    @abc.abstractmethod
+    def marker_min_perimeter(self, value: int):
+        pass
+
     @abc.abstractmethod
     def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
         # TODO: Add type hints
@@ -56,14 +66,14 @@ class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
 class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
     def __init__(
         self,
-        square_marker_min_perimeter: int = ...,
+        marker_min_perimeter: int = ...,
         square_marker_robust_detection: bool = ...,
         square_marker_inverted_markers: bool = ...,
         **kwargs,
     ):
         self.__marker_min_perimeter = (
-            square_marker_min_perimeter
-            if square_marker_min_perimeter is not ...
+            marker_min_perimeter
+            if marker_min_perimeter is not ...
             else 60
         )
         self.__robust_detection = (
@@ -98,17 +108,26 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         # TODO: Remove external dependency on this property
         self.__inverted_markers = value
 
+    @property
+    def marker_min_perimeter(self) -> int:
+        return self.__marker_min_perimeter
+
+    @marker_min_perimeter.setter
+    def marker_min_perimeter(self, value: int):
+        self.__marker_min_perimeter = value
+
     def detect_markers(self, gray_img) -> typing.Iterable[Surface_Marker]:
         # TODO: Add type hints
 
         grid_size = 5
         aperture = 11
+        min_perimeter = self.marker_min_perimeter
 
         if self.__robust_detection:
             markers = square_marker_detect.detect_markers_robust(
                 gray_img=gray_img,
                 grid_size=grid_size,
-                min_marker_perimeter=self.__marker_min_perimeter,
+                min_marker_perimeter=min_perimeter,
                 aperture=aperture,
                 prev_markers=self.__previous_raw_markers,
                 true_detect_every_frame=3,
@@ -118,14 +137,16 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
             markers = square_marker_detect.detect_markers(
                 gray_img=gray_img,
                 grid_size=grid_size,
-                min_marker_perimeter=self.__marker_min_perimeter,
+                min_marker_perimeter=min_perimeter,
                 aperture=aperture,
             )
 
         # Robust marker detection requires previous markers to be in a different
         # format than the surface tracker.
         self.__previous_raw_markers = markers
-        return map(Surface_Marker.from_square_tag_detection, markers)
+        markers = map(Surface_Marker.from_square_tag_detection, markers)
+        markers = filter(lambda m: min_perimeter <= m.perimeter, markers)
+        return markers
 
 
 class _Apriltag_V2_Detector_Options(apriltag.DetectorOptions):
@@ -168,6 +189,7 @@ class _Apriltag_V2_Detector_Options(apriltag.DetectorOptions):
 class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
     def __init__(
         self,
+        marker_min_perimeter: int = ...,
         apriltag_families: str = ...,
         apriltag_border: int = ...,
         apriltag_nthreads: int = ...,
@@ -193,6 +215,7 @@ class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
             quad_contours=apriltag_quad_contours,
         )
         self._detector = apriltag.Detector(detector_options=options)
+        self.__marker_min_perimeter = marker_min_perimeter
 
     @property
     def robust_detection(self) -> bool:
@@ -210,15 +233,26 @@ class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
     def inverted_markers(self, value: bool):
         pass  # nop
 
+    @property
+    def marker_min_perimeter(self) -> int:
+        return self.__marker_min_perimeter
+
+    @marker_min_perimeter.setter
+    def marker_min_perimeter(self, value: int):
+        self.__marker_min_perimeter = value
+
     def detect_markers(self, gray_img) -> typing.Iterable[Surface_Marker]:
+        min_perimeter = self.marker_min_perimeter
         markers = self._detector.detect(img=gray_img)
-        return map(Surface_Marker.from_apriltag_v2_detection, markers)
+        markers = map(Surface_Marker.from_apriltag_v2_detection, markers)
+        markers = filter(lambda m: min_perimeter <= m.perimeter, markers)
+        return markers
 
 
 class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
     def __init__(
         self,
-        square_marker_min_perimeter: int = ...,
+        marker_min_perimeter: int = ...,
         square_marker_robust_detection: bool = ...,
         square_marker_inverted_markers: bool = ...,
         apriltag_families: str = ...,
@@ -233,11 +267,12 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
         apriltag_quad_contours: bool = ...,
     ):
         self.__square_detector = Surface_Square_Marker_Detector(
-            square_marker_min_perimeter=square_marker_min_perimeter,
+            marker_min_perimeter=marker_min_perimeter,
             square_marker_robust_detection=square_marker_robust_detection,
             square_marker_inverted_markers=square_marker_inverted_markers,
         )
         self.__apriltag_detector = Surface_Apriltag_V2_Marker_Detector(
+            marker_min_perimeter=marker_min_perimeter,
             apriltag_families=apriltag_families,
             apriltag_border=apriltag_border,
             apriltag_nthreads=apriltag_nthreads,
@@ -265,6 +300,18 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
     @inverted_markers.setter
     def inverted_markers(self, value: bool):
         self.__square_detector.inverted_markers = value
+
+    @property
+    def marker_min_perimeter(self) -> int:
+        square_min_perimeter = self.__square_detector.marker_min_perimeter
+        apriltag_min_perimeter = self.__apriltag_detector.marker_min_perimeter
+        assert square_min_perimeter == apriltag_min_perimeter
+        return square_min_perimeter
+
+    @marker_min_perimeter.setter
+    def marker_min_perimeter(self, value: int):
+        self.__square_detector.marker_min_perimeter = value
+        self.__apriltag_detector.marker_min_perimeter = value
 
     def detect_markers(self, gray_img) -> typing.Iterable[Surface_Marker]:
         return itertools.chain(
