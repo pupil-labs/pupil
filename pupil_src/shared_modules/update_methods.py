@@ -518,6 +518,7 @@ def update_recording_v113_v114(rec_dir):
             (rec_dir / f"{name}_lookup.npy").unlink()
         except FileNotFoundError:
             pass
+    _update_info_version_to("v1.14", rec_dir)
 
 
 def check_for_worldless_recording(rec_dir):
