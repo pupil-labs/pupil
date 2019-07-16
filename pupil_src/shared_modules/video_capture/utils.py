@@ -285,13 +285,17 @@ class VideoSet:
             return
         """
         loaded_ts = self._loaded_ts_sorted()
+        loaded_ts = self._fix_negative_time_jumps(loaded_ts)
         loaded_ts = self._fill_gaps(loaded_ts)
         lookup = self._setup_lookup(loaded_ts)
         for container_idx, vid in enumerate(self.videos):
-            mask = np.isin(lookup.timestamp, vid.timestamps)
-            lookup.container_frame_idx[mask] = np.arange(vid.timestamps.size)
+            lookup_mask = np.isin(lookup.timestamp, vid.timestamps)
+            vid_mask = np.isin(vid.timestamps, lookup.timestamp)
+            lookup.container_frame_idx[lookup_mask] = np.arange(vid.timestamps.size)[
+                vid_mask
+            ]
             if vid.is_valid:
-                lookup.container_idx[mask] = container_idx
+                lookup.container_idx[lookup_mask] = container_idx
         self.lookup = lookup
 
     def save_lookup(self):
@@ -317,6 +321,23 @@ class VideoSet:
     def _remove_filled_gaps(self):
         cont_idc = self.lookup.container_idx
         self.lookup = self.lookup[cont_idc > -1]
+
+    @staticmethod
+    def _fix_negative_time_jumps(timestamps: np.ndarray) -> np.ndarray:
+        """Fix cases when large negative time jumps cause huge gaps due to sorting
+
+        Replaces timestamps causing negative jumps with mean value of its adjacent
+        timestamps. This work-around is based on the assumption that the negative time
+        jump is caused by a single invalid timestamp.
+        
+        Work around for https://github.com/pupil-labs/pupil/issues/1550
+        """
+        time_diff = np.diff(timestamps)
+        invalid_idc = np.flatnonzero(time_diff < 0)
+        timestamps[invalid_idc + 1] = np.mean(
+            (timestamps[invalid_idc + 2], timestamps[invalid_idc])
+        )
+        return timestamps
 
     def _fill_gaps(self, timestamps: np.ndarray) -> np.ndarray:
         time_diff = np.diff(timestamps)
