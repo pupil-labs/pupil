@@ -22,6 +22,9 @@ import gl_utils
 import glfw
 
 
+SURFACE_TRACKER_CHANGED_DELAY = 1.0
+
+
 class GUI:
     """Custom GUI functionality for visualizing and editing surfaces"""
 
@@ -361,6 +364,7 @@ class GUI:
                                 {
                                     "subject": "surface_tracker.surfaces_changed",
                                     "name": surface.name,
+                                    "delay": SURFACE_TRACKER_CHANGED_DELAY,
                                 }
                             )
                             self.tracker._edit_surf_verts = []
@@ -384,6 +388,7 @@ class GUI:
                             {
                                 "subject": "surface_tracker.surfaces_changed",
                                 "name": surface.name,
+                                "delay": SURFACE_TRACKER_CHANGED_DELAY,
                             }
                         )
 
