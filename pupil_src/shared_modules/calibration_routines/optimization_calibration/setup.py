@@ -45,7 +45,7 @@ singleeyefitter_include_path = "../../pupil_detectors/singleeyefitter"
 
 if platform.system() == "Windows":
     libs = []
-    library_dirs = ["C:\\work\\boost\\stage\\lib"]
+    library_dirs = []
     lib_spec = [
         [np.get_include(), ""],
         [
@@ -62,7 +62,6 @@ if platform.system() == "Windows":
             "C:\\work\\ceres-windows\\x64\\Release\\libglog_static.lib",
         ],
         ["C:\\work\\ceres-windows", ""],
-        ["C:\\work\\boost", ""],
     ]
 
     include_dirs = [spec[0] for spec in lib_spec]
@@ -113,13 +112,7 @@ else:
         shared_cpp_include_path,
         singleeyefitter_include_path,
     ] + opencv_include_dirs
-    python_version = sys.version_info
-    if platform.system() == "Linux":
-        # boost_python-py34
-        boost_lib = "boost_python-py" + str(python_version[0]) + str(python_version[1])
-    else:
-        boost_lib = "boost_python" + str(python_version[0]) + str(python_version[1])
-    libs = ["ceres", boost_lib] + opencv_libraries
+    libs = ["ceres"] + opencv_libraries
     xtra_obj = []
     library_dirs = opencv_library_dirs
 

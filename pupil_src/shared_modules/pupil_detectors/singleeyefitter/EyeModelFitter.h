@@ -1,6 +1,8 @@
 #ifndef SingleEyeFitter_h__
 #define SingleEyeFitter_h__
 
+#define _ENABLE_EXTENDED_ALIGNED_STORAGE
+
 #include <opencv2/video/tracking.hpp> // Kalaman Filter
 
 #include <vector>
@@ -13,9 +15,6 @@
 #include "geometry/Ellipse.h"
 #include "geometry/Sphere.h"
 #include "EyeModel.h"
-
-#include "logger/pycpplogger.h"
-
 
 namespace singleeyefitter {
 
@@ -60,8 +59,6 @@ namespace singleeyefitter {
             double mLastFrameTimestamp; //needed to calculate framerate
             int mApproximatedFramerate;
             math::SMA<double> mAverageFramerate;
-
-            pupillabs::PyCppLogger mLogger;
 
             void checkModels( float sensitivity,double frame_timestamp);
 
