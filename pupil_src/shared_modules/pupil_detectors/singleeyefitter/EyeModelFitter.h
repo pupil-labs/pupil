@@ -1,8 +1,6 @@
 #ifndef SingleEyeFitter_h__
 #define SingleEyeFitter_h__
 
-#define _ENABLE_EXTENDED_ALIGNED_STORAGE
-
 #include <opencv2/video/tracking.hpp> // Kalaman Filter
 
 #include <vector>
