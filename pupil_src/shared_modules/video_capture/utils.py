@@ -393,7 +393,8 @@ class RenameSet:
                     os.rename(self.path, new_path)
 
         def rewrite_time(self, destination_name):
-            timestamps = np.fromfile(self.path, dtype=">f8")
+            SECONDS_PER_NANOSECOND = 1e-9
+            timestamps = np.fromfile(self.path, dtype="<u8") * SECONDS_PER_NANOSECOND
             logger.info('Creating "{}_timestamps.npy"'.format(self.name))
             timestamp_loc = os.path.join(
                 os.path.dirname(self.path), "{}_timestamps.npy".format(self.name)
