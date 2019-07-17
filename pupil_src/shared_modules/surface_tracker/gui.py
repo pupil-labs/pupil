@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import platform
+import typing
 from enum import Enum
 
 import cv2
@@ -21,8 +22,45 @@ import pyglui.cygl.utils as pyglui_utils
 import gl_utils
 import glfw
 
+from .surface_marker import Surface_Marker_Type
+
 
 SURFACE_TRACKER_CHANGED_DELAY = 1.0
+
+
+PUPIL_COLOR_RGB_PRIMARY_IRIS_GREEN = (6, 161, 37)
+PUPIL_COLOR_RGB_PRIMARY_IRIS_LIGHT_BLUE = (3, 155, 229)
+PUPIL_COLOR_RGB_PRIMARY_IRIS_DARK_BLUE = (40, 53, 147)
+PUPIL_COLOR_RGB_SECONDARY_MACULA_PINK = (255, 158, 128)
+PUPIL_COLOR_RGB_SECONDARY_RETINA_RED = (244, 67, 54)
+PUPIL_COLOR_RGB_SECONDARY_VITREOUS_PURPLE = (173, 20, 87)
+# 60% opacity version
+PUPIL_COLOR_RGB_PRIMARY_IRIS_GREEN_60P = (106, 199, 124)
+PUPIL_COLOR_RGB_PRIMARY_IRIS_LIGHT_BLUE_60P = (104, 195, 239)
+PUPIL_COLOR_RGB_PRIMARY_IRIS_DARK_BLUE_60P = (126, 134, 190)
+PUPIL_COLOR_RGB_SECONDARY_MACULA_PINK_60P = (255, 197, 179)
+PUPIL_COLOR_RGB_SECONDARY_RETINA_RED_60P = (248, 142, 134)
+PUPIL_COLOR_RGB_SECONDARY_VITREOUS_PURPLE_60P = (206, 114, 154)
+
+
+def rgb_to_rgba(rgb: typing.Tuple[int, int, int], alpha: float = 1.0) -> typing.Tuple[float, float, float, float]:
+    return (rgb[0]/255, rgb[1]/255, rgb[2]/255, alpha)
+
+
+SURFACE_MARKER_COLOR_RGB_BY_TYPE = {
+    Surface_Marker_Type.SQUARE: PUPIL_COLOR_RGB_PRIMARY_IRIS_LIGHT_BLUE_60P,
+    Surface_Marker_Type.APRILTAG_V2: PUPIL_COLOR_RGB_PRIMARY_IRIS_GREEN_60P,
+}
+
+SURFACE_MARKER_TOGGLE_ACTIVE_COLOR_RGB_BY_TYPE = {
+    Surface_Marker_Type.SQUARE: (0, 209, 102),
+    Surface_Marker_Type.APRILTAG_V2: (0, 209, 102),
+}
+
+SURFACE_MARKER_TOGGLE_INACTIVE_COLOR_RGB_BY_TYPE = {
+    Surface_Marker_Type.SQUARE: (255, 51, 153),
+    Surface_Marker_Type.APRILTAG_V2: (255, 51, 153),
+}
 
 
 class GUI:
@@ -45,14 +83,15 @@ class GUI:
         self.heatmap_textures = {}
         self.surface_windows = {}
 
-        self.color_primary = (1.0, 0.2, 0.6)
-        self.color_secondary = (0.1, 0.85, 1.0)
-        self.color_tertiary = (0, 0.82, 0.4)
+        self.color_primary_rgb = (255, 51, 153)
+        self.color_secondary_rgb = (26, 217, 255)
+        self.color_tertiary_rgb = (0, 209, 102)
+        text_font_color_rgba = rgb_to_rgba(PUPIL_COLOR_RGB_PRIMARY_IRIS_LIGHT_BLUE)
 
         self.glfont = pyglui.pyfontstash.fontstash.Context()
         self.glfont.add_font("opensans", pyglui.ui.get_opensans_font_path())
         self.glfont.set_size(23)
-        self.glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
+        self.glfont.set_color_float(text_font_color_rgba)
 
     def update(self):
         if self.show_heatmap:
@@ -89,8 +128,8 @@ class GUI:
                 self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
 
     def _draw_markers(self):
-        color = pyglui_utils.RGBA(*self.color_secondary, 0.5)
         for marker in self.tracker.markers_unfiltered:
+            color = rgb_to_rgba(SURFACE_MARKER_COLOR_RGB_BY_TYPE[marker.marker_type], alpha=0.5)
             hat = np.array(
                 [[[0, 0], [0, 1], [0.5, 1.3], [1, 1], [1, 0], [0, 0]]], dtype=np.float32
             )
@@ -98,13 +137,14 @@ class GUI:
                 hat, _get_norm_to_points_trans(marker.verts_px)
             )
 
-            pyglui_utils.draw_polyline(hat.reshape((6, 2)), color=color)
+            # TODO: Should the had be drawn for small or low confidence markers?
+            pyglui_utils.draw_polyline(hat.reshape((6, 2)), color=pyglui.cygl.utils.RGBA(*color))
             if (
                 marker.perimeter >= self.tracker.marker_min_perimeter
                 and marker.id_confidence > self.tracker.marker_min_confidence
             ):
                 pyglui_utils.draw_polyline(
-                    hat.reshape((6, 2)), color=color, line_type=gl.GL_POLYGON
+                    hat.reshape((6, 2)), color=pyglui.cygl.utils.RGBA(*color), line_type=gl.GL_POLYGON
                 )
 
     def _draw_marker_id(self, marker):
@@ -112,12 +152,13 @@ class GUI:
         verts_px.shape = (4, 2)
         anchor = np.array([np.min(verts_px[:, 0]), np.max(verts_px[:, 1])])
         line_height = 16
+        color = rgb_to_rgba(SURFACE_MARKER_COLOR_RGB_BY_TYPE[marker.marker_type])
 
         text_lines = [f"id: {marker.tag_id}", f"conf: {marker.id_confidence:.2f}"]
 
         for idx, text in enumerate(text_lines):
             loc = anchor + (0, line_height * (idx + 1))
-            self._draw_text(loc, text, self.color_secondary)
+            self._draw_text(loc, text, color)
 
     def _draw_surface_frames(self, surface):
         if not surface.detected:
@@ -128,12 +169,14 @@ class GUI:
         )
         alpha = min(1, surface.build_up_status)
 
+        surface_color = rgb_to_rgba(self.color_primary_rgb, alpha=alpha)
+
         pyglui_utils.draw_polyline(
-            corners.reshape((5, 2)), color=pyglui_utils.RGBA(*self.color_primary, alpha)
+            corners.reshape((5, 2)), color=pyglui_utils.RGBA(*surface_color)
         )
         pyglui_utils.draw_polyline(
             top_indicator.reshape((4, 2)),
-            color=pyglui_utils.RGBA(*self.color_primary, alpha),
+            color=pyglui_utils.RGBA(*surface_color),
         )
 
         self._draw_surf_menu(
@@ -170,6 +213,7 @@ class GUI:
     def _draw_surf_menu(
         self, surface, title_anchor, surface_edit_anchor, marker_edit_anchor
     ):
+        marker_detection_color_rgba = rgb_to_rgba(self.color_secondary_rgb)
         marker_detection_status = "{}   {}/{}".format(
             surface.name,
             surface.num_detected_markers,
@@ -178,7 +222,7 @@ class GUI:
         self._draw_text(
             (title_anchor[0] + 15, title_anchor[1] + 6),
             marker_detection_status,
-            self.color_secondary,
+            marker_detection_color_rgba,
         )
 
         # If the surface is defined, draw menu buttons. Otherwise draw definition
@@ -197,49 +241,53 @@ class GUI:
         self, surface, surface_edit_anchor, marker_edit_anchor
     ):
         # Buttons
+        edit_button_color_rgba = rgb_to_rgba(self.color_primary_rgb)
+        edit_anchor_color_rgba = rgb_to_rgba(self.color_secondary_rgb)
+        text_color_rgba = rgb_to_rgba(self.color_secondary_rgb)
         pyglui_utils.draw_points(
-            [marker_edit_anchor], color=pyglui_utils.RGBA(*self.color_primary)
+            [marker_edit_anchor], color=pyglui_utils.RGBA(*edit_button_color_rgba)
         )
         if surface in self._edit_surf_markers:
             pyglui_utils.draw_points(
                 [marker_edit_anchor],
                 size=13,
-                color=pyglui_utils.RGBA(*self.color_secondary),
+                color=pyglui_utils.RGBA(*edit_anchor_color_rgba),
             )
         pyglui_utils.draw_points(
-            [surface_edit_anchor], color=pyglui_utils.RGBA(*self.color_primary)
+            [surface_edit_anchor], color=pyglui_utils.RGBA(*edit_button_color_rgba)
         )
         if surface in self._edit_surf_corners:
             pyglui_utils.draw_points(
                 [surface_edit_anchor],
                 size=13,
-                color=pyglui_utils.RGBA(*self.color_secondary),
+                color=pyglui_utils.RGBA(*edit_anchor_color_rgba),
             )
         # Text
         self._draw_text(
             (surface_edit_anchor[0] + 15, surface_edit_anchor[1] + 6),
             "edit surface",
-            self.color_secondary,
+            text_color_rgba,
         )
         self._draw_text(
             (marker_edit_anchor[0] + 15, marker_edit_anchor[1] + 6),
             "add/remove markers",
-            self.color_secondary,
+            text_color_rgba,
         )
 
     def _draw_surface_definition_progress(
         self, surface, surface_edit_anchor, marker_edit_anchor
     ):
         progress_text = "{:.0f} %".format(surface.build_up_status * 100)
+        progress_color_rgba = rgb_to_rgba(self.color_secondary_rgb)
         self._draw_text(
             (surface_edit_anchor[0] + 15, surface_edit_anchor[1] + 6),
             "Learning affiliated markers...",
-            self.color_secondary,
+            progress_color_rgba,
         )
         self._draw_text(
             (marker_edit_anchor[0] + 15, marker_edit_anchor[1] + 6),
             progress_text,
-            self.color_secondary,
+            progress_color_rgba,
         )
 
     def _draw_text(self, loc, text, color):
@@ -252,25 +300,38 @@ class GUI:
         self.glfont.draw_text(loc[0], loc[1], text)
 
     def _draw_marker_toggles(self, surface):
-        active_markers = []
-        inactive_markers = []
+        active_markers_by_type = {}
+        inactive_markers_by_type = {}
+
         for marker in self.tracker.markers:
+            marker_type = marker.marker_type
             if marker.perimeter < self.tracker.marker_min_perimeter:
                 continue
 
             centroid = np.mean(marker.verts_px, axis=0)
             centroid = (centroid[0, 0], centroid[0, 1])
             if marker.uid in surface.registered_markers_dist.keys():
+                active_markers = active_markers_by_type.get(marker_type, [])
                 active_markers.append(centroid)
+                active_markers_by_type[marker_type] = active_markers
             else:
+                inactive_markers = inactive_markers_by_type.get(marker_type, [])
                 inactive_markers.append(centroid)
+                inactive_markers_by_type[marker_type] = inactive_markers
 
-        pyglui_utils.draw_points(
-            inactive_markers, size=20, color=pyglui_utils.RGBA(*self.color_primary, 0.8)
-        )
-        pyglui_utils.draw_points(
-            active_markers, size=20, color=pyglui_utils.RGBA(*self.color_tertiary, 0.8)
-        )
+        for marker_type, inactive_markers in inactive_markers_by_type.items():
+            color_rgb = SURFACE_MARKER_TOGGLE_INACTIVE_COLOR_RGB_BY_TYPE[marker_type]
+            color_rgba = rgb_to_rgba(color_rgb, alpha=0.8)
+            pyglui_utils.draw_points(
+                inactive_markers, size=20, color=pyglui_utils.RGBA(*color_rgba)
+            )
+
+        for marker_type, active_markers in active_markers_by_type.items():
+            color_rgb = SURFACE_MARKER_TOGGLE_ACTIVE_COLOR_RGB_BY_TYPE[marker_type]
+            color_rgba = rgb_to_rgba(color_rgb, alpha=0.8)
+            pyglui_utils.draw_points(
+                active_markers, size=20, color=pyglui_utils.RGBA(*color_rgba)
+            )
 
     def _draw_surface_corner_handles(self, surface):
         img_corners = surface.map_from_surf(
@@ -279,8 +340,9 @@ class GUI:
             compensate_distortion=False,
         )
 
+        handle_color_rgba = rgb_to_rgba(self.color_primary_rgb, alpha=0.5)
         pyglui_utils.draw_points(
-            img_corners, size=20, color=pyglui_utils.RGBA(*self.color_primary, 0.5)
+            img_corners, size=20, color=pyglui_utils.RGBA(*handle_color_rgba)
         )
 
     def _draw_heatmap(self, surface):
