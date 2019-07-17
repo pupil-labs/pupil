@@ -69,7 +69,7 @@ def eye_movement_detection_generator(
 
     yield EYE_MOVEMENT_DETECTION_STEP_PROCESSING_LOCALIZED_STRING, ()
     eye_positions = utils.gaze_data_to_nslr_data(
-        capture, gaze_data, use_pupil=use_pupil
+        capture, gaze_data, gaze_time, use_pupil=use_pupil
     )
 
     yield EYE_MOVEMENT_DETECTION_STEP_CLASSIFYING_LOCALIZED_STRING, ()
@@ -90,6 +90,7 @@ def eye_movement_detection_generator(
             use_pupil=use_pupil,
             nslr_segment=nslr_segment,
             nslr_segment_class=nslr_segment_class,
+            world_timestamps=capture.timestamps,
         )
 
         if not segment:

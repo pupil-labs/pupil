@@ -52,12 +52,7 @@ _DEFAULT_SEGMENT_CLASS_TO_COLOR_MAPPING = _segment_class_to_color_mapping_with_p
 
 class Segment_Overlay_Renderer(abc.ABC):
     def draw(self, segment: model.Classified_Segment):
-        if segment.segment_class == model.Segment_Class.SACCADE:
-            self.draw_polyline(segment)
-        elif segment.segment_class == model.Segment_Class.POST_SACCADIC_OSCILLATIONS:
-            self.draw_polyline(segment)
-        else:
-            self.draw_circle(segment)
+        self.draw_polyline(segment)
 
     @property
     @abc.abstractmethod

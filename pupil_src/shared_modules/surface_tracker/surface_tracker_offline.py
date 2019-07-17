@@ -215,6 +215,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             return
 
         for frame_index, markers in self.cache_filler.fetch():
+            if frame_index is None:
+                continue
             markers = self._remove_duplicate_markers(markers)
             self.marker_cache_unfiltered.update(frame_index, markers)
             markers_filtered = self._filter_markers(markers)

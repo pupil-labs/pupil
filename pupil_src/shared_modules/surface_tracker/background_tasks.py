@@ -35,6 +35,10 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
         types.SimpleNamespace(), source_path=video_file_path, timing=None
     )
 
+    # Ensure that indiced are not generated beyond video frame count
+    frame_count = cap.get_frame_count()
+    visited_list = visited_list[:frame_count]
+
     visited_list = [x is not None for x in visited_list]
 
     def next_unvisited_idx(frame_idx):

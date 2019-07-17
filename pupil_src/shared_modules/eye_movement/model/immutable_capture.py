@@ -24,4 +24,4 @@ class Immutable_Capture:
         try:
             self.timestamps: np.ndarray = capture.timestamps
         except AttributeError:
-            self.timestamps: np.ndarray = np.ndarray([])
+            self.timestamps: np.ndarray = np.asarray([])

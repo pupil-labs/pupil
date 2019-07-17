@@ -177,6 +177,7 @@ class Service_UI(System_Plugin_Base):
     def update_ui(self):
         if not glfw.glfwWindowShouldClose(self.g_pool.main_window):
             gl_utils.glViewport(0, 0, *self.window_size)
+            glfw.glfwPollEvents()
             self.gl_display()
             try:
                 clipboard = glfw.glfwGetClipboardString(
@@ -193,7 +194,6 @@ class Service_UI(System_Plugin_Base):
                 )
 
             glfw.glfwSwapBuffers(self.g_pool.main_window)
-            glfw.glfwPollEvents()
         else:
             self.notify_all({"subject": "service_process.should_stop"})
 

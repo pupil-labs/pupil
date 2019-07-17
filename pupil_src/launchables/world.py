@@ -117,7 +117,7 @@ def world(
         from pyglui import ui, cygl, __version__ as pyglui_version
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
-            "1.23"
+            "1.24"
         ), "pyglui out of date, please upgrade to newest version"
         from pyglui.cygl.utils import Named_Texture
         import gl_utils
@@ -431,6 +431,8 @@ def world(
                                 "doc": p.on_notify.__doc__,
                             }
                         )
+            elif subject == "world_process.adapt_window_size":
+                set_window_size()
 
         width, height = session_settings.get(
             "window_size", (1280 + icon_bar_width, 720)
@@ -499,6 +501,7 @@ def world(
             f_width, f_height = g_pool.capture.frame_size
             f_width += int(icon_bar_width * g_pool.gui.scale)
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
+            on_resize(main_window, f_width, f_height)
 
         general_settings.append(ui.Button("Reset window size", set_window_size))
         general_settings.append(
@@ -642,6 +645,7 @@ def world(
 
             glfw.glfwMakeContextCurrent(main_window)
             # render visual feedback from loaded plugins
+            glfw.glfwPollEvents()
             if window_should_update() and gl_utils.is_window_visible(main_window):
 
                 gl_utils.glViewport(0, 0, *camera_render_size)
@@ -683,7 +687,6 @@ def world(
                     any(p.on_char(char_) for p in g_pool.plugins)
 
                 glfw.glfwSwapBuffers(main_window)
-            glfw.glfwPollEvents()
 
         glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()

@@ -32,7 +32,10 @@ EYE_MOVEMENT_GAZE_KEY = "eye_movement"
 
 
 def can_use_3d_gaze_mapping(gaze_data) -> bool:
-    return "gaze_normal_3d" in gaze_data[0] or "gaze_normals_3d" in gaze_data[0]
+    # return "gaze_normal_3d" in gaze_data[0] or "gaze_normals_3d" in gaze_data[0]
+    # Temporarily always using 2d gaze data, to ensure consistency
+    # See: https://github.com/pupil-labs/pupil/issues/1536
+    return False
 
 
 def clean_3d_data(gaze_points_3d: np.ndarray) -> np.ndarray:
@@ -48,7 +51,7 @@ def np_denormalize(points_2d, frame_size):
     return points_2d
 
 
-def gaze_data_to_nslr_data(capture, gaze_data, use_pupil: bool):
+def gaze_data_to_nslr_data(capture, gaze_data, gaze_timestamps, use_pupil: bool):
 
     if use_pupil:
         assert can_use_3d_gaze_mapping(gaze_data)
@@ -67,4 +70,36 @@ def gaze_data_to_nslr_data(capture, gaze_data, use_pupil: bool):
     angles = np.rad2deg(angles)
 
     nslr_data = np.column_stack(angles)
+
+    validate_nslr_data(
+        eye_positions=nslr_data,
+        eye_timestamps=gaze_timestamps,
+    )
+
     return nslr_data
+
+
+class NSLRValidationError(Exception): pass
+class NSLRNaNValuesValidationError(NSLRValidationError): pass
+class NSLRNonMonotonicValidationError(NSLRValidationError): pass
+class NSLRNonUniqueValidationError(NSLRValidationError): pass
+
+
+def validate_nslr_data(eye_positions: np.ndarray, eye_timestamps: np.ndarray):
+    def has_nan(arr: np.ndarray):
+        return np.any(np.isnan(arr))
+
+    def is_monotonic(arr: np.ndarray):
+        return np.all(arr[:-1] <= arr[1:])
+
+    def is_unique(arr: np.ndarray):
+        return arr.shape == np.unique(arr, axis=0).shape
+
+    if has_nan(eye_positions):
+        raise NSLRNaNValuesValidationError("Gaze data contains NaN values")
+    if has_nan(eye_timestamps):
+        raise NSLRNaNValuesValidationError("Gaze timestamps contain NaN values")
+    if not is_monotonic(eye_timestamps):
+        raise NSLRNonMonotonicValidationError("Gaze timestamps are not monotonic")
+    if not is_unique(eye_timestamps):
+        raise NSLRNonUniqueValidationError("Gaze timestamps are not unique. If you are using Offline Calibration, please disable all but one gaze mapping section.")

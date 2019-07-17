@@ -24,6 +24,7 @@ class Menu_Content:
         self._show_segmentation_switch = None
         self._current_segment_details = None
         self._detection_status_input = None
+        self._error_text = None
 
     #
 
@@ -50,6 +51,7 @@ class Menu_Content:
             "show_segmentation", self, label="Show segmentation"
         )
 
+        self._error_text = gl_ui.Info_Text("")
         self._current_segment_details = gl_ui.Info_Text("")
 
         menu.label = self.label_text
@@ -58,8 +60,9 @@ class Menu_Content:
             paragraph_ui = gl_ui.Info_Text(paragraph)
             menu.append(paragraph_ui)
 
-        menu.append(self._detection_status_input)
         menu.append(self._show_segmentation_switch)
+        menu.append(self._detection_status_input)
+        menu.append(self._error_text)
         menu.append(self._current_segment_details)
 
     def update_status(self, new_status: str):
@@ -69,6 +72,10 @@ class Menu_Content:
         plugin = self.plugin()
         if plugin and plugin.menu_icon:
             plugin.menu_icon.indicator_stop = new_progress
+
+    def update_error_text(self, error_message: str):
+        error_message = f"Error: {error_message}" if error_message else ""
+        self._error_text.text = error_message
 
     def update_detail_text(
         self,
@@ -105,7 +112,7 @@ class Menu_Content:
             current_segment.duration
         )
         text += ident + "Frame range: {}-{}\n".format(
-            current_segment.start_frame_index + 1, current_segment.end_frame_index + 1
+            current_segment.start_frame_index, current_segment.end_frame_index
         )
         text += ident + "2d gaze pos: x={:.3f}, y={:.3f}\n".format(
             *current_segment.norm_pos

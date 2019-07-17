@@ -26,6 +26,7 @@ else:
 MIN_DATA_CONFIDENCE_DEFAULT = 0.6
 MIN_CALIBRATION_CONFIDENCE_DEFAULT = 0.8
 
+
 def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version):
     # general imports
     from time import sleep
@@ -121,7 +122,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_overlay.plugins import Video_Overlay, Eye_Overlay
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
-            "1.23"
+            "1.24"
         ), "pyglui out of date, please upgrade to newest version"
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, "plugins"))
@@ -307,7 +308,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.user_dir = user_dir
         g_pool.rec_dir = rec_dir
         g_pool.meta_info = meta_info
-        g_pool.min_data_confidence = session_settings.get("min_data_confidence", MIN_DATA_CONFIDENCE_DEFAULT)
+        g_pool.min_data_confidence = session_settings.get(
+            "min_data_confidence", MIN_DATA_CONFIDENCE_DEFAULT
+        )
         g_pool.min_calibration_confidence = session_settings.get(
             "min_calibration_confidence", MIN_CALIBRATION_CONFIDENCE_DEFAULT
         )
@@ -598,6 +601,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             g_pool.plugins.clean()
 
             glfw.glfwMakeContextCurrent(main_window)
+            glfw.glfwPollEvents()
             # render visual feedback from loaded plugins
             if gl_utils.is_window_visible(main_window):
 
@@ -644,8 +648,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                 # present frames at appropriate speed
                 g_pool.seek_control.wait(events["frame"].timestamp)
                 glfw.glfwSwapBuffers(main_window)
-
-            glfw.glfwPollEvents()
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["min_data_confidence"] = g_pool.min_data_confidence
