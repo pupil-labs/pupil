@@ -13,6 +13,7 @@ import glob
 import logging
 import os
 import uuid
+from pathlib import Path
 from shutil import copy2
 
 import av
@@ -104,6 +105,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v19_v111(rec_dir)
     if rec_version < VersionFormat("1.13"):
         update_recording_v111_v113(rec_dir)
+    if rec_version < VersionFormat("1.14"):
+        update_recording_v113_v114(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -553,6 +556,18 @@ def update_recording_v111_v113(rec_dir):
 
     make_update()
     _update_info_version_to("v1.13", rec_dir)
+
+
+def update_recording_v113_v114(rec_dir):
+    # Force re-build of video lookup tables
+    names = ("world", "eye0", "eye1")
+    rec_dir = Path(rec_dir)
+    for name in names:
+        try:
+            (rec_dir / f"{name}_lookup.npy").unlink()
+        except FileNotFoundError:
+            pass
+    _update_info_version_to("v1.14", rec_dir)
 
 
 def check_for_worldless_recording(rec_dir):
