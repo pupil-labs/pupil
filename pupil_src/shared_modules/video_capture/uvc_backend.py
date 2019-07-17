@@ -98,9 +98,9 @@ class UVC_Source(Base_Source):
                             break
 
         # checkframestripes will be initialized accordingly in configure_capture()
-        self.check_stripes = check_stripes
+        self.enable_stripe_checks = check_stripes
         self.exposure_mode = exposure_mode
-        self.checkframestripes = None
+        self.stripe_detector = None
         self.preferred_exposure_time = None
 
         # check if we were sucessfull
@@ -263,9 +263,6 @@ class UVC_Source(Base_Source):
                     mode=self.exposure_mode,
                 )
 
-            if self.check_stripes:
-                self.checkframestripes = Check_Frame_Stripes()
-
             try:
                 controls_dict["Auto Exposure Priority"].value = 0
             except KeyError:
@@ -301,6 +298,9 @@ class UVC_Source(Base_Source):
                 logger.debug(
                     'No UVC setting "{}" found from settings.'.format(c.display_name)
                 )
+
+        if self.should_check_stripes:
+            self.stripe_detector = Check_Frame_Stripes()
 
     def _re_init_capture(self, uid):
         current_size = self.uvc_capture.frame_size
@@ -363,7 +363,7 @@ class UVC_Source(Base_Source):
                 if target is not None:
                     self.exposure_time = target
 
-            if self.checkframestripes and self.checkframestripes.require_restart(frame):
+            if self.stripe_detector and self.stripe_detector.require_restart(frame):
                 # set the self.frame_rate in order to restart
                 self.frame_rate = self.frame_rate
                 logger.info("Stripes detected")
@@ -396,7 +396,7 @@ class UVC_Source(Base_Source):
         d = super().get_init_dict()
         d["frame_size"] = self.frame_size
         d["frame_rate"] = self.frame_rate
-        d["check_stripes"] = self.check_stripes
+        d["check_stripes"] = self.enable_stripe_checks
         d["exposure_mode"] = self.exposure_mode
         if self.uvc_capture:
             d["name"] = self.name
@@ -441,8 +441,12 @@ class UVC_Source(Base_Source):
             self.g_pool.user_dir, self.name, self.frame_size
         )
 
-        if self.check_stripes and ("Pupil Cam2" in self.uvc_capture.name):
-            self.checkframestripes = Check_Frame_Stripes()
+        if self.should_check_stripes:
+            self.stripe_detector = Check_Frame_Stripes()
+
+    @property
+    def should_check_stripes(self):
+        return self.enable_stripe_checks and ("Pupil Cam2" in self.uvc_capture.name)
 
     @property
     def frame_rate(self):
@@ -483,8 +487,8 @@ class UVC_Source(Base_Source):
                         self.exposure_time, special_settings.get(new_rate, 32)
                     )
 
-            if self.check_stripes:
-                self.checkframestripes = Check_Frame_Stripes()
+        if self.should_check_stripes:
+            self.stripe_detector = Check_Frame_Stripes()
 
     @property
     def exposure_time(self):
@@ -719,17 +723,17 @@ class UVC_Source(Base_Source):
 
         if "Pupil Cam2" in self.uvc_capture.name:
 
-            def set_check_stripes(check_stripes):
-                self.check_stripes = check_stripes
-                if self.check_stripes:
-                    self.checkframestripes = Check_Frame_Stripes()
+            def set_check_stripes(enable_stripe_checks):
+                self.enable_stripe_checks = enable_stripe_checks
+                if self.enable_stripe_checks:
+                    self.stripe_detector = Check_Frame_Stripes()
                     logger.info(
                         "Check Stripes for camera {} is now on".format(
                             self.uvc_capture.name
                         )
                     )
                 else:
-                    self.checkframestripes = None
+                    self.stripe_detector = None
                     logger.info(
                         "Check Stripes for camera {} is now off".format(
                             self.uvc_capture.name
@@ -738,7 +742,7 @@ class UVC_Source(Base_Source):
 
             ui_elements.append(
                 ui.Switch(
-                    "check_stripes",
+                    "enable_stripe_checks",
                     self,
                     setter=set_check_stripes,
                     label="Check Stripes",
