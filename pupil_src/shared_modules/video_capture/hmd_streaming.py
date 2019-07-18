@@ -52,7 +52,7 @@ class HMD_Streaming_Source(Base_Source):
         self.remove_menu()
 
     def cleanup(self):
-        self.frame_sub.close()
+        self.frame_sub = None
 
     def recent_events(self, events):
         frame = self.get_frame()
