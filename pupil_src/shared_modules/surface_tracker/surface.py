@@ -471,8 +471,8 @@ class Surface(abc.ABC):
         ]
         aspect_ratio = self.real_world_size["y"] / self.real_world_size["x"]
         grid = (
-            int(self._heatmap_resolution),
             max(1, int(self._heatmap_resolution * aspect_ratio)),
+            int(self._heatmap_resolution),
         )
         if heatmap_data:
             xvals, yvals = zip(*((x, 1.0 - y) for x, y in heatmap_data))
