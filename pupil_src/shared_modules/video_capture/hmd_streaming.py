@@ -4,7 +4,7 @@ import numpy as np
 from pyglui import ui
 
 import zmq_tools
-from camera_models import Dummy_Camera
+from camera_models import Radial_Dist_Camera, Dummy_Camera
 from video_capture.base_backend import Base_Manager, Base_Source
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,7 @@ class HMD_Streaming_Source(Base_Source):
     def __init__(self, g_pool, *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
         self.fps = 30
+        self.projection_matrix = None
         self.frame_sub = zmq_tools.Msg_Receiver(
             self.g_pool.zmq_ctx,
             self.g_pool.ipc_sub_url,
@@ -76,6 +77,10 @@ class HMD_Streaming_Source(Base_Source):
                 )
 
     def _process_frame(self, frame_class, frame_data):
+        projection_matrix = np.array(frame_data["projection_matrix"]).reshape(3, 3)
+        if (projection_matrix != self.projection_matrix).any():
+            self.projection_matrix = projection_matrix
+            self._intrinsics = None  # resets intrinsics
 
         return frame_class(
             frame_data["__raw_data__"][0],
@@ -108,7 +113,13 @@ class HMD_Streaming_Source(Base_Source):
     @property
     def intrinsics(self):
         if self._intrinsics is None or self._intrinsics.resolution != self.frame_size:
-            self._intrinsics = Dummy_Camera(self.frame_size, self.name)
+            if self.projection_matrix is None:
+                distortion = [[0.0, 0.0, 0.0, 0.0, 0.0]]
+                self._intrinsics = Radial_Dist_Camera(
+                    self.projection_matrix, distortion, self.frame_size, self.name
+                )
+            else:
+                self._intrinsics = Dummy_Camera(self.frame_size, self.name)
         return self._intrinsics
 
     @intrinsics.setter
