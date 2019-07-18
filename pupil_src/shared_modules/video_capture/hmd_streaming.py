@@ -35,7 +35,9 @@ class HMD_Streaming_Source(Base_Source):
         super().__init__(g_pool, *args, **kwargs)
         self.fps = 30
         self.frame_sub = zmq_tools.Msg_Receiver(
-            self.g_pool.zmq_ctx, self.g_pool.ipc_sub_url, topics=("frame.world",)
+            self.g_pool.zmq_ctx,
+            self.g_pool.ipc_sub_url,
+            topics=("hmd_streaming.world",),
         )
 
     # def get_init_dict(self):
