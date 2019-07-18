@@ -10,10 +10,11 @@ from video_capture.base_backend import Base_Manager, Base_Source
 logger = logging.getLogger(__name__)
 
 
-class BGRFrame:
+class RGBFrame:
     def __init__(self, buffer, timestamp, index, width, height):
 
-        self.bgr = np.fromstring(buffer, dtype=np.uint8).reshape(height, width, 3)
+        rgb = np.fromstring(buffer, dtype=np.uint8).reshape(height, width, 3)
+        self.bgr = np.ascontiguousarray(np.flip(rgb, (0, 2)))
         self.img = self.bgr
         self.timestamp = timestamp
         self.index = index
@@ -22,6 +23,9 @@ class BGRFrame:
         # indicate that the frame does not have a native yuv or jpeg buffer
         self.yuv_buffer = None
         self.jpeg_buffer = None
+
+
+FRAME_CLASS_BY_FORMAT = {"rgb": RGBFrame}
 
 
 class HMD_Streaming_Source(Base_Source):
@@ -60,18 +64,24 @@ class HMD_Streaming_Source(Base_Source):
                 frame = self.frame_sub.recv()[1]
 
             try:
-                if frame["format"] == "bgr":
-                    return BGRFrame(
-                        frame["__raw_data__"][0],
-                        frame["timestamp"],
-                        frame["index"],
-                        frame["width"],
-                        frame["height"],
-                    )
+                frame_format = frame["format"]
+                if frame_format in FRAME_CLASS_BY_FORMAT:
+                    frame_class = FRAME_CLASS_BY_FORMAT[frame_format]
+                    return self._process_frame(frame_class, frame)
             except KeyError as err:
                 logger.debug(
                     "Ill-formatted frame received. Missing key: {}".format(err)
                 )
+
+    def _process_frame(self, frame_class, frame_data):
+
+        return frame_class(
+            frame_data["__raw_data__"][0],
+            frame_data["timestamp"],
+            frame_data["index"],
+            frame_data["width"],
+            frame_data["height"],
+        )
 
     @property
     def frame_size(self):
