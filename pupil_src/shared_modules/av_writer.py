@@ -150,7 +150,8 @@ class AV_Writer(object):
 
         self._closed = False
         self._last_ts = float("-inf")
-        self._last_pts = float("-inf")
+        self._last_video_pts = float("-inf")
+        self._last_audio_pts = float("-inf")
 
     def write_video_frame(self, input_frame):
         if self._closed:
@@ -206,10 +207,10 @@ class AV_Writer(object):
             self._last_ts = ts
 
             pts = int((ts - self.start_time) / self.time_base)
-            if pts <= self._last_pts:
-                pts = self._last_pts + 1
+            if pts <= self._last_video_pts:
+                pts = self._last_video_pts + 1
             self.frame.pts = pts
-            self._last_pts = pts
+            self._last_video_pts = pts
         else:
             # our timebase is 1/30  so a frame idx is the correct pts for an fps recorded video.
             self.frame.pts = self.current_frame_idx
@@ -238,6 +239,9 @@ class AV_Writer(object):
                 (self.audio.timestamps[self.audio_packets_decoded] - self.start_time)
                 / self.audio_export_stream.time_base
             )
+            if audio_pts <= self._last_audio_pts:
+                audio_pts = self._last_audio_pts + 1
+            self._last_audio_pts = audio_pts
             audio_packet.pts = audio_pts
             audio_packet.dts = audio_pts
             audio_packet.stream = self.audio_export_stream
