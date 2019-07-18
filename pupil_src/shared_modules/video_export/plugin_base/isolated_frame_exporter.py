@@ -12,6 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import os
 from glob import glob
+from types import SimpleNamespace
 
 import player_methods as pm
 from av_writer import AV_Writer
@@ -78,7 +79,7 @@ def _convert_video_file(
     timestamp_export_format,
 ):
     yield "Export video", 0.0
-    input_source = File_Source(EmptyGPool(), input_file, fill_gaps=True)
+    input_source = File_Source(SimpleNamespace(), input_file, fill_gaps=True)
     if not input_source.initialised:
         yield "Exporting video failed", 0.0
         return
@@ -119,7 +120,3 @@ def _convert_video_file(
     writer.close(timestamp_export_format)
     input_source.cleanup()
     yield "Exporting video completed", 100.0
-
-
-class EmptyGPool:
-    pass

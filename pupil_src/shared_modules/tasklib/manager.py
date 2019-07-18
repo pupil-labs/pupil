@@ -44,7 +44,7 @@ class PluginTaskManager:
         pass_shared_memory=False,
         args=None,
         kwargs=None,
-        patches=(IPCLoggingPatch(),),
+        patches=...,
     ):
         """
         Creates a managed background task.
@@ -77,6 +77,8 @@ class PluginTaskManager:
             A new task with base class TaskInterface.
 
         """
+        if patches is ...:
+            patches = (IPCLoggingPatch(),)
         task = tasklib.background.create(
             name,
             routine_or_generator_function,

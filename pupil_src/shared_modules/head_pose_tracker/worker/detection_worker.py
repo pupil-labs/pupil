@@ -13,12 +13,9 @@ import file_methods as fm
 import video_capture
 import apriltag
 from methods import normalize
+from types import SimpleNamespace
 
 apriltag_detector = apriltag.Detector()
-
-
-class Empty(object):
-    pass
 
 
 def get_markers_data(detection, img_size, timestamp):
@@ -59,7 +56,7 @@ def offline_detection(
     shared_memory.progress = (frame_indices[0] - frame_start + 1) / frame_count
     yield None
 
-    src = video_capture.File_Source(Empty(), source_path, timing=None)
+    src = video_capture.File_Source(SimpleNamespace(), source_path, timing=None)
 
     queue = []
     for frame_index in frame_indices:

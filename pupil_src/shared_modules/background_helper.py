@@ -26,19 +26,21 @@ class EarlyCancellationError(Exception):
 class Task_Proxy:
     """Future like object that runs a given generator in the background and returns is able to return the results incrementally"""
 
-    def __init__(self, name, generator, args=(), kwargs={}):
+    def __init__(self, name, generator, args=(), kwargs={}, context=...):
         super().__init__()
+        if context is ...:
+            context = mp.get_context()
 
-        self._should_terminate_flag = mp.Value(c_bool, 0)
+        self._should_terminate_flag = context.Value(c_bool, 0)
         self._completed = False
         self._canceled = False
 
-        pipe_recv, pipe_send = mp.Pipe(False)
+        pipe_recv, pipe_send = context.Pipe(False)
         wrapper_args = self._prepare_wrapper_args(
             pipe_send, self._should_terminate_flag, generator
         )
         wrapper_args.extend(args)
-        self.process = mp.Process(
+        self.process = context.Process(
             target=self._wrapper, name=name, args=wrapper_args, kwargs=kwargs
         )
         self.process.daemon = True

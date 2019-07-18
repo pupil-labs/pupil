@@ -11,10 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import os
 import platform
-
-
-class Global_Container(object):
-    pass
+from types import SimpleNamespace
 
 
 class Is_Alive_Manager(object):
@@ -175,7 +172,7 @@ def eye(
         hdpi_factor = 1.0
 
         # g_pool holds variables for this process
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
 
         # make some constants avaiable
         g_pool.user_dir = user_dir
@@ -787,6 +784,7 @@ def eye(
                                 )
 
                     glViewport(0, 0, *camera_render_size)
+                    glfw.glfwPollEvents()
                     make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     # render the ROI
                     g_pool.u_r.draw(g_pool.gui.scale)
@@ -810,7 +808,6 @@ def eye(
 
                     # update screen
                     glfw.glfwSwapBuffers(main_window)
-                glfw.glfwPollEvents()
 
         # END while running
 

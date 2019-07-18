@@ -11,10 +11,10 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 import os
 
+import cv2
 import numpy as np
 
 import csv_utils
-import cv2
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +141,7 @@ def find_closest(target, source):
     -
     https://stackoverflow.com/questions/8914491/finding-the-nearest-value-and-return-the-index-of-array-in-python/8929827#8929827
     """
+    target = np.asarray(target)  # fixes https://github.com/pupil-labs/pupil/issues/1439
     idx = np.searchsorted(target, source)
     idx = np.clip(idx, 1, len(target) - 1)
     left = target[idx - 1]
@@ -214,7 +215,8 @@ def is_pupil_rec_dir(rec_dir):
 
 def transparent_circle(img, center, radius, color, thickness):
     center = tuple(map(int, center))
-    rgb = [255 * c for c in color[:3]]  # convert to 0-255 scale for OpenCV
+    assert len(color) == 4 and all(type(c) == float and 0.0 <= c <= 1.0 for c in color)
+    bgr = [255 * c for c in color[:3]]  # convert to 0-255 scale for OpenCV
     alpha = color[-1]
     radius = int(radius)
     if thickness > 0:
@@ -228,7 +230,7 @@ def transparent_circle(img, center, radius, color, thickness):
 
     try:
         overlay = img[roi].copy()
-        cv2.circle(img, center, radius, rgb, thickness=thickness, lineType=cv2.LINE_AA)
+        cv2.circle(img, center, radius, bgr, thickness=thickness, lineType=cv2.LINE_AA)
         opacity = alpha
         cv2.addWeighted(
             src1=img[roi],

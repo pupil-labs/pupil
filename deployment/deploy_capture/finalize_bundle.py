@@ -41,6 +41,7 @@ if platform.system() == "Darwin":
     # print Exception("Codesing verification  failed")
     call("ln -s /Applications/ %s/Applications" % src_dir, shell=True)
     call("rm dist/Pupil\ Capture.app/Contents/MacOS/.DS_Store", shell=True)
+    call("rm dist/Pupil\ Capture.app/Contents/MacOS/nslr/.DS_Store", shell=True)
     call(
         "hdiutil create  -volname '%s' -srcfolder %s -size 340m -format UDZO '%s.dmg'"
         % (bundle_dmg_name, src_dir, bundle_name),
@@ -134,6 +135,7 @@ Icon=pupil-capture
 Categories=Application;
 Name[en_US]=Pupil Capture
 Actions=Terminal;
+StartupWMClass=Pupil Capture - World
 
 [Desktop Action Terminal]
 Name=Open in Terminal

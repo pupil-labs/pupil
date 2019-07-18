@@ -9,13 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import abc
 import logging
 import os
+import typing
 
 import cv2
 import numpy as np
 
-from file_methods import save_object, load_object
+from file_methods import load_object, save_object
 
 logger = logging.getLogger(__name__)
 __version__ = 1
@@ -153,7 +155,7 @@ def load_intrinsics(directory, cam_name, resolution):
 
         intrinsics = calib_dict[str(resolution)]
         logger.info("Previously recorded calibration found and loaded!")
-    except Exception as e:
+    except Exception:
         logger.info(
             "No user calibration found for camera {} at resolution {}".format(
                 cam_name, resolution
@@ -210,7 +212,45 @@ def save_intrinsics(directory, cam_name, resolution, intrinsics):
     )
 
 
-class Fisheye_Dist_Camera(object):
+class Camera_Model(abc.ABC):
+    @abc.abstractmethod
+    def undistort(self, img: np.ndarray) -> np.ndarray:
+        ...
+
+    @abc.abstractmethod
+    def unprojectPoints(
+        self, pts_2d: np.ndarray, use_distortion: bool = True, normalize: bool = False
+    ) -> np.ndarray:
+        ...
+
+    @abc.abstractmethod
+    def projectPoints(
+        self,
+        object_points,
+        rvec: typing.Optional[np.ndarray] = None,
+        tvec: typing.Optional[np.ndarray] = None,
+        use_distortion: bool = True,
+    ):
+        ...
+
+    @abc.abstractmethod
+    def solvePnP(
+        self,
+        uv3d,
+        xy,
+        flags: int = cv2.SOLVEPNP_ITERATIVE,
+        useExtrinsicGuess: bool = False,
+        rvec: typing.Optional[np.ndarray] = None,
+        tvec: typing.Optional[np.ndarray] = None,
+    ):
+        ...
+
+    @abc.abstractmethod
+    def save(self, directory: str, custom_name: typing.Optional[str] = None):
+        ...
+
+
+class Fisheye_Dist_Camera(Camera_Model):
     """ Camera model assuming a lense with fisheye distortion.
         Provides functionality to make use of a fisheye camera calibration.
         The implementation of cv2.fisheye is buggy and some functions had to be customized.
@@ -340,6 +380,16 @@ class Fisheye_Dist_Camera(object):
             image_points.shape = (-1, 1, 2)
         return image_points
 
+    def undistortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=True)
+        points = self.projectPoints(points, use_distortion=False)
+        return points
+
+    def distortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=False)
+        points = self.projectPoints(points, use_distortion=True)
+        return points
+
     def solvePnP(
         self,
         uv3d,
@@ -383,12 +433,6 @@ class Fisheye_Dist_Camera(object):
 
         return res
 
-    def undistortPoints(self, xy):
-        xy_undist = cv2.fisheye.undistortPoints(
-            xy, self.K, self.D, R=np.eye(3), P=self.K
-        )
-        return xy_undist
-
     def save(self, directory, custom_name=None):
         """
         Saves the current calibration to corresponding camera's calibrations file
@@ -406,7 +450,7 @@ class Fisheye_Dist_Camera(object):
         )
 
 
-class Radial_Dist_Camera(object):
+class Radial_Dist_Camera(Camera_Model):
     """ Camera model assuming a lense with radial distortion (this is the defaut model in opencv).
         Provides functionality to make use of a pinhole camera calibration that is also compensating for lense distortion
     """
@@ -500,6 +544,16 @@ class Radial_Dist_Camera(object):
             image_points.shape = (-1, 1, 2)
         return image_points
 
+    def undistortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=True)
+        points = self.projectPoints(points, use_distortion=False)
+        return points
+
+    def distortPoints(self, points):
+        points = self.unprojectPoints(points, use_distortion=False)
+        points = self.projectPoints(points, use_distortion=True)
+        return points
+
     def solvePnP(
         self,
         uv3d,
@@ -529,9 +583,6 @@ class Radial_Dist_Camera(object):
             tvec=tvec,
         )
         return res
-
-    def undistortPoints(self, xy):
-        return cv2.undistortPoints(xy, self.K, self.D)
 
     def save(self, directory, custom_name=None):
         """
