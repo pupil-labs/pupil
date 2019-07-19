@@ -32,6 +32,7 @@ from .cache import Cache
 from .surface_tracker import Surface_Tracker
 from . import offline_utils, background_tasks
 from .surface_marker import Surface_Marker
+from .surface_marker_detector import Surface_Marker_Detector_Mode
 from .gui import Heatmap_Mode
 from .surface_offline import Surface_Offline
 
@@ -67,6 +68,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.last_cache_update_ts = time.time()
         self.CACHE_UPDATE_INTERVAL_SEC = 5
 
+        self._init_marker_detection_modes()
+
         self.gaze_on_surf_buffer = None
         self.gaze_on_surf_buffer_filler = None
 
@@ -97,6 +100,20 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     @property
     def supported_heatmap_modes(self):
         return [Heatmap_Mode.WITHIN_SURFACE, Heatmap_Mode.ACROSS_SURFACES]
+
+    def _init_marker_detection_modes(self):
+        # This method should be called after `_init_marker_cache` to ensure that the cache is filled in.
+        assert self.marker_cache is not None
+
+        # Filter out non-filled frames where the cache entry is None.
+        # Chain the remaining entries (which are lists) to get a flat sequence.
+        cached_surface_marker_sequence = itertools.chain(*filter(None, self.marker_cache))
+
+        # Get the first surface marker from the sequence, and set the detection mode according to it.
+        first_cached_surface_marker = next(cached_surface_marker_sequence, None)
+        if first_cached_surface_marker is not None:
+            marker_detector_mode = Surface_Marker_Detector_Mode.from_marker(first_cached_surface_marker)
+            self.marker_detector_modes = {marker_detector_mode}
 
     def _init_marker_cache(self):
         previous_cache = file_methods.Persistent_Dict(
@@ -145,7 +162,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.cache_filler = background_tasks.background_video_processor(
             self.g_pool.capture.source_path,
             offline_utils.marker_detection_callable(
-                self.CACHE_MIN_MARKER_PERIMETER, self.inverted_markers
+                marker_detector_modes=self.marker_detector_modes,
+                min_marker_perimeter=self.CACHE_MIN_MARKER_PERIMETER,
+                inverted_markers=self.inverted_markers,
             ),
             list(self.marker_cache),
             self.cache_seek_idx,
