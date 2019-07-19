@@ -154,7 +154,6 @@ class BrokenStream(Decoder):
         yield from ()
 
 
-
 class BufferedDecoder(Decoder):
     def __init__(self, container, video_stream):
         self.container = container
@@ -227,12 +226,9 @@ class File_Source(Playback_Source, Base_Source):
         # Load or build lookup table
         self.videoset.load_or_build_lookup()
         self.timestamps = self.videoset.lookup.timestamp
-        self.current_container_index = self.videoset.lookup.container_idx[0]
-        self.target_frame_idx = 0
-        self.current_frame_idx = 0
         self.buffering = buffered_decoding
         # Load video split for first frame
-        self.setup_video(self.current_container_index)
+        self.reset_video()
         self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
 
     def check_source_path(self, source_path):
@@ -260,7 +256,7 @@ class File_Source(Playback_Source, Base_Source):
             self.video_stream.cleanup()
         except AttributeError:
             pass
-                
+
         if container_index < 0 or not self.videoset.containers[container_index]:
             # setup a 'valid' broken stream
             self.video_stream = BrokenStream()
@@ -270,7 +266,7 @@ class File_Source(Playback_Source, Base_Source):
                 self.container, self.buffering
             )
             self.video_stream.seek(0)
-        
+
         self.current_container_index = container_index
         self.frame_iterator = self.video_stream.get_frame_iterator()
         self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
@@ -402,7 +398,7 @@ class File_Source(Playback_Source, Base_Source):
                     raise EndofVideoError
                 self.target_frame_idx = pts_indices[0]
                 break
-        
+
         # update indices, we know that we advanced until target_frame_index!
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
@@ -451,11 +447,7 @@ class File_Source(Playback_Source, Base_Source):
             logger.info("Video has ended.")
             if self.loop:
                 logger.info("Looping enabled. Seeking to beginning.")
-                # TODO: This seems wrong, since container 0 does not need to be the first container! Shouldn't this be
-                # self.videoset.lookup.container_idx[0] instead? Maybe we can wrap the initial setup in a separate
-                # method and call this one from here and init. 
-                self.setup_video(0)
-                self.target_frame_idx = 0
+                self.reset_video()
                 return
             self.notify_all(
                 {
@@ -572,6 +564,15 @@ class File_Source(Playback_Source, Base_Source):
     @property
     def jpeg_support(self):
         return False
+
+    def reset_video(self):
+        """
+        Initializes video playback to first frame.
+        """
+        self.current_frame_idx = 0
+        self.target_frame_idx = 0
+        container_idx_of_first_frame = self.videoset.lookup[0].container_idx
+        self.setup_video(container_idx_of_first_frame)
 
 
 class File_Manager(Base_Manager):
