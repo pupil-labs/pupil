@@ -266,7 +266,6 @@ class File_Source(Playback_Source, Base_Source):
             # setup a 'valid' broken stream
             self.video_stream = BrokenStream()
             self.frame_iterator = self.video_stream.get_frame_iterator()
-            self.pts_rate = 48000
             self.shape = (720, 1280, 3)
             self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
                 self.timestamps
@@ -284,7 +283,6 @@ class File_Source(Playback_Source, Base_Source):
             # But the index of the frame will start at 2
             # TODO: This can raise StopIteration if the stream has less than 2 frames!
             _, f1 = next(self.frame_iterator), next(self.frame_iterator)
-            self.pts_rate = f1.pts
             self.shape = f1.to_nd_array(format="bgr24").shape
             self.video_stream.seek(0)
             self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
@@ -380,38 +378,6 @@ class File_Source(Playback_Source, Base_Source):
 
     def get_frame_count(self):
         return int(self.videoset.lookup.size)
-
-    def _convert_frame_index(self, pts):
-        # TODO: can go after rework!!
-        """
-        Calculate frame index by current_container_index
-        """
-        # If the current container is 0, the pts is 128 (second frame)
-        # cont_frame_idx -> 1
-        # cont_mask: Return T only if the container=current container -> [T, T, T, F, F, F]
-        # frame_mask: Return T only if the self.videoset.lookup.container_frame_idx=cont_frame_idx
-        # -> [F, T(the second frame of the first container), F,
-        #     F, T(the second frame of the second container), F, F]
-        # videoset_idx: Return index which T in cont_mask and frame_mask
-        cont_frame_idx = self.pts_to_idx(pts)
-        cont_mask = np.isin(
-            self.videoset.lookup.container_idx, self.current_container_index
-        )
-        frame_mask = np.isin(self.videoset.lookup.container_frame_idx, cont_frame_idx)
-        videoset_idx = np.flatnonzero(cont_mask & frame_mask)[0]
-        return videoset_idx
-
-    @ensure_initialisation()
-    def pts_to_idx(self, pts):
-        # some older mkv did not use perfect timestamping
-        # so we are doing int(round()) to clear that.
-        # With properly spaced pts (any v0.6.100+ recording)
-        # just int() would suffice.
-        return int(pts / self.pts_rate)
-
-    @ensure_initialisation()
-    def idx_to_pts(self, idx):
-        return idx * self.pts_rate
 
     @ensure_initialisation()
     def get_frame(self):
