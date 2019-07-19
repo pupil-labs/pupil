@@ -202,7 +202,7 @@ class Video:
     def load_ts(self):
         self.ts = np.load(self.ts_loc)
         self.ts = self._fix_negative_time_jumps(self.ts)
-    
+
     def load_pts(self):
         packets = self.cont.demux(video=0)
         # last pts is invalid
@@ -240,7 +240,7 @@ class Video:
         Replaces timestamps causing negative jumps with mean value of its adjacent
         timestamps. This work-around is based on the assumption that the negative time
         jump is caused by a single invalid timestamp.
-        
+
         Work around for https://github.com/pupil-labs/pupil/issues/1550
         """
         # TODO: what if adjacent timestamps are negative/zero as well?
@@ -485,8 +485,10 @@ class RenameSet:
 
 
 class RawTimePairs:
+    TIME_FACTORS = {"<u8": 1e-9}  # nano seconds to seconds factor
+
     def __init__(
-        self, root_dir, pattern, raw_dtype="<f8", raw_shape=(-1,), time_dtype=">f8"
+        self, root_dir, pattern, raw_dtype="<f8", raw_shape=(-1,), time_dtype="<u8"
     ):
         self.raw_dtype = raw_dtype
         self.raw_shape = raw_shape
@@ -505,6 +507,8 @@ class RawTimePairs:
     def _load_pairs_for_stem(self, stem):
         base = self.root / stem
         data_time = self._load_file(base, ".time", self.time_dtype)
+        if self.time_dtype in self.TIME_FACTORS:
+            data_time = data_time * self.TIME_FACTORS[self.time_dtype]
         data_raw = self._load_file(base, ".raw", self.raw_dtype)
         data_raw.shape = self.raw_shape
         return data_raw, data_time

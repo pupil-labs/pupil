@@ -43,8 +43,7 @@ def update_recording_to_recent(rec_dir):
         meta_info["Data Format Version"] = "v0.9.4"
         update_meta_info(rec_dir, meta_info)
     elif (
-        meta_info.get("Capture Software", "Pupil Capture")
-        == "Pupil Invisible"
+        meta_info.get("Capture Software", "Pupil Capture") == "Pupil Invisible"
         and "Data Format Version" not in meta_info
     ):
         convert_pupil_invisible_recording_to_v113(rec_dir)
