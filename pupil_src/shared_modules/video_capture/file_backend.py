@@ -382,6 +382,7 @@ class File_Source(Playback_Source, Base_Source):
         return int(self.videoset.lookup.size)
 
     def _convert_frame_index(self, pts):
+        # TODO: can go after rework!!
         """
         Calculate frame index by current_container_index
         """
@@ -423,20 +424,33 @@ class File_Source(Playback_Source, Base_Source):
         elif target_entry.container_idx != self.current_container_index:
             # Contained index changed, need to load other video split
             self.setup_video(target_entry.container_idx)
+
+        # advance frame iterator until we hit the target frame
         for av_frame in self.frame_iterator:
             if not av_frame:
                 raise EndofVideoError
-            index = self._convert_frame_index(av_frame.pts)
-            if index == self.target_frame_idx:
+            if av_frame.pts == target_entry.pts:
                 break
-            elif index < self.target_frame_idx:
+            elif av_frame.pts < target_entry.pts:
                 pass
-        try:
-            self.target_frame_idx = index + 1
-            self.current_frame_idx = index
-        except UnboundLocalError:
-            raise EndofVideoError
-        return Frame(target_entry.timestamp, av_frame, index=index)
+            else:
+                # This should never happen, but just in case we should make sure
+                # that our current_frame_idx is actually correct afterwards!
+                logger.warn("Advancing frame iterator went past the target frame!")
+                current_video_lookup = self.videoset.lookup[
+                    self.videoset.lookup.container_idx == target_entry.container_idx
+                ]
+                pts_indices = np.where(current_video_lookup.pts == av_frame.pts)[0]
+                if pts_indices.size != 1:
+                    logger.err("Found multiple maching pts! Something is wrong!")
+                    raise EndofVideoError
+                self.target_frame_idx = pts_indices[0]
+                break
+        
+        # update indices, we know that we advanced until target_frame_index!
+        self.current_frame_idx = self.target_frame_idx
+        self.target_frame_idx += 1
+        return Frame(target_entry.timestamp, av_frame, index=self.current_frame_idx)
 
     def _get_fake_frame_and_advance(self, ts):
         self.current_frame_idx = self.target_frame_idx
@@ -506,10 +520,7 @@ class File_Source(Playback_Source, Base_Source):
             if target_entry.container_idx != self.current_container_index:
                 self.setup_video(target_entry.container_idx)
             try:
-                # explicit conversion to python int required, else:
-                # TypeError: ('Container.seek only accepts integer offset.',
-                target_pts = int(self.idx_to_pts(target_entry.container_frame_idx))
-                self.video_stream.seek(target_pts)
+                self.video_stream.seek(target_entry.pts)
             except av.AVError as e:
                 raise FileSeekError() from e
         else:
