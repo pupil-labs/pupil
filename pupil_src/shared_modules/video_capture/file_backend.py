@@ -261,34 +261,21 @@ class File_Source(Playback_Source, Base_Source):
         except AttributeError:
             pass
                 
-        # TODO: move duplicate code from following if/else to back
         if container_index < 0 or not self.videoset.containers[container_index]:
             # setup a 'valid' broken stream
             self.video_stream = BrokenStream()
-            self.frame_iterator = self.video_stream.get_frame_iterator()
-            self.shape = (720, 1280, 3)
-            self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
-                self.timestamps
-            )
         else:
-            self.current_container_index = container_index
             self.container = self.videoset.containers[container_index]
             self.video_stream, self.audio_stream = self._get_streams(
                 self.container, self.buffering
             )
-            # set the pts rate to convert pts to frame index.
-            # We use videos with pts writte like indecies.
-            self.frame_iterator = self.video_stream.get_frame_iterator()
-            # We get the difference between two pts then seek back to the first frame
-            # But the index of the frame will start at 2
-            # TODO: This can raise StopIteration if the stream has less than 2 frames!
-            _, f1 = next(self.frame_iterator), next(self.frame_iterator)
-            self.shape = f1.to_nd_array(format="bgr24").shape
             self.video_stream.seek(0)
-            self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
-                self.timestamps
-            )
-            self.frame_iterator = self.video_stream.get_frame_iterator()
+        
+        self.current_container_index = container_index
+        self.frame_iterator = self.video_stream.get_frame_iterator()
+        self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
+            self.timestamps
+        )
 
     def ensure_initialisation(fallback_func=None, requires_playback=False):
         from functools import wraps
@@ -424,7 +411,8 @@ class File_Source(Playback_Source, Base_Source):
     def _get_fake_frame_and_advance(self, ts):
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
-        return FakeFrame(self.shape, ts, self.current_frame_idx)
+        fake_shape = (*self.frame_size, 3)
+        return FakeFrame(fake_shape, ts, self.current_frame_idx)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):
