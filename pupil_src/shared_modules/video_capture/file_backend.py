@@ -15,6 +15,7 @@ import os
 import os.path
 import av
 import numpy as np
+import typing as T
 
 from multiprocessing import cpu_count
 from abc import ABC, abstractmethod
@@ -75,17 +76,6 @@ class Frame(object):
         return self._gray
 
 
-class BrokenStream:
-    def __init__(self):
-        self.frame_size = (720, 1280)
-
-    def seek(self, position):
-        pass
-
-    def next_frame(self):
-        pass
-
-
 class FakeFrame:
     """
     Show FakeFrame when the video is broken or there is
@@ -117,12 +107,22 @@ class FakeFrame:
 
 
 class Decoder(ABC):
+    """
+    Abstract base class for stream decoders.
+    """
+
     @abstractmethod
-    def seek(self):
+    def seek(self, position: int):
+        """
+        Seek stream decoder to given position (in pts).
+        """
         pass
 
     @abstractmethod
-    def next_frame(self):
+    def get_frame_iterator(self) -> T.Iterator[Frame]:
+        """
+        Returns a fresh iterator for frames, starting from current seek position.
+        """
         pass
 
     @property
@@ -133,7 +133,26 @@ class Decoder(ABC):
         )
 
     def cleanup(self):
+        """
+        Implement for potential cleanup operations on stream close.
+
+        Should be called on stream close.
+        """
         pass
+
+
+class BrokenStream(Decoder):
+    def __init__(self):
+        # overwrite property with fixed frame size
+        self.frame_size = (720, 1280)
+
+    def seek(self, position):
+        pass
+
+    def get_frame_iterator(self):
+        # returns empty iterator
+        yield from ()
+
 
 
 class BufferedDecoder(Decoder):
@@ -144,18 +163,14 @@ class BufferedDecoder(Decoder):
             self.video_stream, dec_batch=50, dec_buffer_size=200
         )
 
-    @property
-    def buffered_decoder(self):
-        return self._buffered_decoder
-
     def seek(self, position):
-        self.buffered_decoder.seek(position)
+        self._buffered_decoder.seek(position)
 
-    def next_frame(self):
-        return self.buffered_decoder.get_frame()
+    def get_frame_iterator(self):
+        return self._buffered_decoder.get_frame()
 
     def cleanup(self):
-        self.buffered_decoder.stop_buffer_thread()
+        self._buffered_decoder.stop_buffer_thread()
 
 
 class OnDemandDecoder(Decoder):
@@ -166,7 +181,7 @@ class OnDemandDecoder(Decoder):
     def seek(self, position):
         self.video_stream.seek(position)
 
-    def next_frame(self):
+    def get_frame_iterator(self):
         for packet in self.container.demux(self.video_stream):
             for frame in packet.decode():
                 if frame:
@@ -221,7 +236,7 @@ class File_Source(Playback_Source, Base_Source):
             self.setup_video(self.current_container_index)  # load first split
         else:
             self.video_stream = BrokenStream()
-            self.next_frame = self.video_stream.next_frame()
+            self.frame_iterator = self.video_stream.get_frame_iterator()
             self.pts_rate = 48000
             self.shape = (720, 1280, 3)
             self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
@@ -258,10 +273,10 @@ class File_Source(Playback_Source, Base_Source):
         )
         # set the pts rate to convert pts to frame index.
         # We use videos with pts writte like indecies.
-        self.next_frame = self.video_stream.next_frame()
+        self.frame_iterator = self.video_stream.get_frame_iterator()
         # We get the difference between two pts then seek back to the first frame
         # But the index of the frame will start at 2
-        _, f1 = next(self.next_frame), next(self.next_frame)
+        _, f1 = next(self.frame_iterator), next(self.frame_iterator)
         self.pts_rate = f1.pts
         self.shape = f1.to_nd_array(format="bgr24").shape
         self.video_stream.seek(0)
@@ -399,7 +414,7 @@ class File_Source(Playback_Source, Base_Source):
             return self._get_fake_frame_and_advance(target_entry.timestamp)
         elif target_entry.container_idx != self.current_container_index:
             self.setup_video(target_entry.container_idx)
-        for av_frame in self.next_frame:
+        for av_frame in self.frame_iterator:
             if not av_frame:
                 raise EndofVideoError
             index = self._convert_frame_index(av_frame.pts)
@@ -487,7 +502,8 @@ class File_Source(Playback_Source, Base_Source):
                 raise FileSeekError() from e
         else:
             self.video_stream.seek(0)
-        self.next_frame = self.video_stream.next_frame()
+        # need to re-initialize frame_iterator at the new seek position
+        self.frame_iterator = self.video_stream.get_frame_iterator()
         self.finished_sleep = 0
         self.target_frame_idx = seek_pos
 
