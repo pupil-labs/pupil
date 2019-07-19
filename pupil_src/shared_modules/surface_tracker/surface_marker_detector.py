@@ -61,6 +61,9 @@ class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
     def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
         pass
 
+    def _surface_marker_filter(self, marker: Surface_Marker) -> bool:
+        return self.marker_min_perimeter <= marker.perimeter
+
 
 class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
     def __init__(
@@ -143,7 +146,7 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         # format than the surface tracker.
         self.__previous_raw_markers = markers
         markers = map(Surface_Marker.from_square_tag_detection, markers)
-        markers = filter(lambda m: min_perimeter <= m.perimeter, markers)
+        markers = filter(self._surface_marker_filter, markers)
         return markers
 
 
@@ -185,6 +188,21 @@ class _Apriltag_V2_Detector_Options(apriltag.DetectorOptions):
 
 
 class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
+
+    def __getstate__(self):
+        return (
+            self.__apriltag_options,
+            self.__marker_min_perimeter,
+        )
+
+    def __setstate__(self, state):
+        (
+            self.__apriltag_options,
+            self.__marker_min_perimeter,
+        ) = state
+        self._detector = apriltag.Detector(detector_options=self.__apriltag_options)
+
+
     def __init__(
         self,
         marker_min_perimeter: int = ...,
@@ -200,8 +218,8 @@ class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
         apriltag_quad_contours: bool = ...,
         **kwargs,
     ):
-        options = _Apriltag_V2_Detector_Options(
             families=apriltag_families,
+        apriltag_options = _Apriltag_V2_Detector_Options(
             border=apriltag_border,
             nthreads=apriltag_nthreads,
             quad_decimate=apriltag_quad_decimate,
@@ -212,8 +230,11 @@ class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
             debug=apriltag_debug,
             quad_contours=apriltag_quad_contours,
         )
-        self._detector = apriltag.Detector(detector_options=options)
-        self.__marker_min_perimeter = marker_min_perimeter
+        state = (
+            apriltag_options,
+            marker_min_perimeter,
+        )
+        self.__setstate__(state)
 
     @property
     def robust_detection(self) -> bool:
@@ -243,7 +264,7 @@ class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
         min_perimeter = self.marker_min_perimeter
         markers = self._detector.detect(img=gray_img)
         markers = map(Surface_Marker.from_apriltag_v2_detection, markers)
-        markers = filter(lambda m: min_perimeter <= m.perimeter, markers)
+        markers = filter(self._surface_marker_filter, markers)
         return markers
 
 
