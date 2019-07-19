@@ -441,8 +441,11 @@ class File_Source(Playback_Source, Base_Source):
                     self.videoset.lookup.container_idx == target_entry.container_idx
                 ]
                 pts_indices = np.where(current_video_lookup.pts == av_frame.pts)[0]
-                if pts_indices.size != 1:
+                if pts_indices.size > 1:
                     logger.err("Found multiple maching pts! Something is wrong!")
+                    raise EndofVideoError
+                elif pts_indices.size == 0:
+                    logger.err("Found no maching pts! Something is wrong!")
                     raise EndofVideoError
                 self.target_frame_idx = pts_indices[0]
                 break
