@@ -12,16 +12,18 @@ See COPYING and COPYING.LESSER for license details.
 import typing
 
 from .surface import Surface
-from .surface_marker_detector import Surface_Marker_Detector
+from .surface_marker_detector import Surface_Marker_Detector, Surface_Marker_Detector_Mode
 
 
 class marker_detection_callable(Surface_Marker_Detector):
     def __init__(
         self,
+        marker_detector_modes: typing.Set[Surface_Marker_Detector_Mode],
         min_marker_perimeter: int,
         inverted_markers: bool
     ):
         super().__init__(
+            marker_detector_modes=marker_detector_modes,
             marker_min_perimeter=min_marker_perimeter,
             square_marker_inverted_markers=inverted_markers,
         )
