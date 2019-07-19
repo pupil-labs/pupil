@@ -520,7 +520,9 @@ class File_Source(Playback_Source, Base_Source):
             if target_entry.container_idx != self.current_container_index:
                 self.setup_video(target_entry.container_idx)
             try:
-                self.video_stream.seek(target_entry.pts)
+                # explicit conversion to python int required, else:
+                # TypeError: ('Container.seek only accepts integer offset.')
+                self.video_stream.seek(int(target_entry.pts))
             except av.AVError as e:
                 raise FileSeekError() from e
         else:
