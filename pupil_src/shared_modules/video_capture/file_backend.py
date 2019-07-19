@@ -290,7 +290,7 @@ class File_Source(Playback_Source, Base_Source):
             self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
                 self.timestamps
             )
-            # TODO: do we need to reset self.frame_iterator here?
+            self.frame_iterator = self.video_stream.get_frame_iterator()
 
     def ensure_initialisation(fallback_func=None, requires_playback=False):
         from functools import wraps
