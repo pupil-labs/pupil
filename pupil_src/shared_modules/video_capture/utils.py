@@ -176,6 +176,7 @@ class Video:
     def __init__(self, path: str) -> None:
         self.path = path
         self.ts = None
+        self._pts = None
         self._is_valid = self.check_valid()
 
     @property
@@ -201,6 +202,11 @@ class Video:
     def load_ts(self):
         self.ts = np.load(self.ts_loc)
         self.ts = self._fix_negative_time_jumps(self.ts)
+    
+    def load_pts(self):
+        packets = self.cont.demux(video=0)
+        # last pts is invalid
+        self._pts = np.array([packet.pts for packet in packets][:-1])
 
     @property
     def name(self) -> str:
@@ -220,6 +226,12 @@ class Video:
         if self.ts is None:
             self.load_ts()
         return self.ts
+
+    @property
+    def pts(self) -> np.ndarray:
+        if self._pts is None:
+            self.load_pts()
+        return self._pts
 
     @staticmethod
     def _fix_negative_time_jumps(timestamps: np.ndarray) -> np.ndarray:
@@ -312,6 +324,7 @@ class VideoSet:
             lookup.container_frame_idx[lookup_mask] = np.arange(vid.timestamps.size)
             if vid.is_valid:
                 lookup.container_idx[lookup_mask] = container_idx
+            lookup.pts[lookup_mask] = vid.pts
         self.lookup = lookup
 
     def save_lookup(self):
@@ -373,6 +386,7 @@ class VideoSet:
                 ("container_idx", "<i8"),
                 ("container_frame_idx", "<i8"),
                 ("timestamp", "<f8"),
+                ("pts", "<i8"),
             ]
         )
         lookup = np.empty(timestamps.size, dtype=lookup_entry).view(np.recarray)
