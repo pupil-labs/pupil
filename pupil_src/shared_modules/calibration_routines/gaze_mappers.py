@@ -76,68 +76,128 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
+        self._cfg = {'min_pupil_confidence': 0.6,
+                     'temporal_cutoff': 0.03,
+                     'timestamp_reset_threshold': 5.0,
+                     'process_low_confidence': True,
+                     'sample_cutoff': 10}
+        self._state = {'cache': deque(),
+                       'cache_ts': deque(),
+                       'cache_id': deque(),
+                       'cache_conf': deque()}
 
-        self.min_pupil_confidence = 0.6
-        self._caches = (deque(), deque())
-        self.temportal_cutoff = 0.3
-        self.sample_cutoff = 10
+    def _reset(self):
+        self._state['cache'].clear()
+        self._state['cache_ts'].clear()
+        self._state['cache_id'].clear()
+        self._state['cache_conf'].clear()
+
+    def add_menu(self):
+        super().add_menu()
+        self.menu.append(ui.Slider("min_pupil_confidence", self._cfg, step=0.01, min=0.0, max=1.0,
+                                   label="Min conf. for binocular",))
+        self.menu.append(ui.Slider("temporal_cutoff", self._cfg, step=0.002, min=0.0, max=0.2,
+                                   label="Max binocular time diff. (s)",))
+        self.menu.append(ui.Slider("sample_cutoff", self._cfg, step=1, min=2, max=20,
+                                   label="Max queue length", ))
 
     def map_batch(self, pupil_list):
-        current_caches = self._caches
-        self._caches = (deque(), deque())
+        backup_state = self._state
+        self._reset()
         results = []
         for p in pupil_list:
             results.extend(self.on_pupil_datum(p))
-
-        self._caches = current_caches
+        self._state = backup_state
         return results
 
     def on_pupil_datum(self, p):
-        self._caches[p["id"]].append(p)
+        """
+        Process pupil datum, combine with data in cache if possible, and return gaze datum.
+        :param p: pupil datum (message with topic 'pupil.0' or 'pupil.1')
+        :return: [gaze_datum] or [].
 
-        # map low confidence pupil data monocularly
-        if (
-            self._caches[0]
-            and self._caches[0][0]["confidence"] < self.min_pupil_confidence
-        ):
-            p = self._caches[0].popleft()
-            gaze_datum = self._map_monocular(p)
-        elif (
-            self._caches[1]
-            and self._caches[1][0]["confidence"] < self.min_pupil_confidence
-        ):
-            p = self._caches[1].popleft()
-            gaze_datum = self._map_monocular(p)
-        # map high confidence data binocularly if available
-        elif self._caches[0] and self._caches[1]:
-            # we have binocular data
-            if self._caches[0][0]["timestamp"] < self._caches[1][0]["timestamp"]:
-                p0 = self._caches[0].popleft()
-                p1 = self._caches[1][0]
-                older_pt = p0
-            else:
-                p0 = self._caches[0][0]
-                p1 = self._caches[1].popleft()
-                older_pt = p1
+        Note the mapping logic has recently changed. See https://github.com/pupil-labs/pupil/issues/1493
 
-            if abs(p0["timestamp"] - p1["timestamp"]) < self.temportal_cutoff:
-                gaze_datum = self._map_binocular(p0, p1)
-            else:
-                gaze_datum = self._map_monocular(older_pt)
+        One objective of the new logic is to never push a sample with an older timestamp than a sample that has already
+        been pushed. This is not simple to achieve because sometimes a new sample will arrive (e.g. from eye B) with an
+        older timestamp than a previous sample (e.g. from eye A). i.e. A0-A1-A2-B0-A3-B1-A4-B2-A5 etc.
+        If we wish to combine samples from the two eyes for binocular reconstruction then we cannot push samples
+        immediately upon receipt and we must maintain a buffer of samples. How to do that without incurring too much
+        delay is tricky.
 
-        elif len(self._caches[0]) > self.sample_cutoff:
-            p = self._caches[0].popleft()
-            gaze_datum = self._map_monocular(p)
-        elif len(self._caches[1]) > self.sample_cutoff:
-            p = self._caches[1].popleft()
-            gaze_datum = self._map_monocular(p)
+        The only thing we can be sure of is that a new sample from one eye will have a later timestamp than
+        previous samples from that same eye.
+        """
+        # Reset state if we receive a new timestamp that is too old (probably due to clock reset).
+        if len(self._state["cache_ts"]) > 0:
+            t_delta = np.abs(p["timestamp"] - self._state["cache_ts"][-1])
+            if t_delta > self._cfg["timestamp_reset_threshold"]:
+                self._reset()
+
+        # Insert the new sample in the cache according to its timestamp.
+        if (len(self._state["cache_ts"]) == 0) or (p["timestamp"] > self._state["cache_ts"][-1]):
+            # Shortcut when timestamp is newer than anything in cache.
+            self._state["cache"].append(p)
+            self._state["cache_ts"].append(p["timestamp"])
+            self._state["cache_id"].append(p["id"])
+            self._state["cache_conf"].append(p["confidence"] >= self._cfg["min_pupil_confidence"])
         else:
-            gaze_datum = None
+            in_ix = np.searchsorted(self._state["cache_ts"], p["timestamp"])
+            self._state["cache"].insert(in_ix, p)
+            self._state["cache_ts"].insert(in_ix, p["timestamp"])
+            self._state["cache_id"].insert(in_ix, p["id"])
+            self._state["cache_conf"].insert(in_ix, p["confidence"] >= self._cfg["min_pupil_confidence"])
 
-        if gaze_datum:
-            return [gaze_datum]
-        else:
-            return []
+        # Process the cache left to right, stopping when we cannot confidently pop a sample.
+        output = []
+        for ix in range(len(self._state["cache"]) - 1):
+            # We can only ever pop a sample when there is a newer sample from the opposite eye,
+            # because then we know there cannot be a sample inserted older than the current sample.
+            newer_other = None
+            highconf_other = None
+
+            for _ix, _id in enumerate(self._state["cache_id"]):
+                if _id == 1-self._state["cache_id"][0]:
+                    newer_other = _ix
+
+                    # If current sample is low-conf then we don't need to search anymore. _Any_ other-eye samp is OK.
+                    if not self._state["cache_conf"][0]:
+                        break
+
+                    # If newer_other is more than temporal_cutoff newer then we don't need to search anymore.
+                    time_diff = self._state["cache_ts"][newer_other] - self._state["cache_ts"][0]
+                    if time_diff > self._cfg["temporal_cutoff"]:
+                        break
+
+                    # We know from above that current sample is high-conf and newer_other is within temporal_cutoff.
+                    # If newer_other is also high-confidence then we can do binocular mapping.
+                    if self._state["cache_conf"][newer_other]:
+                        highconf_other = newer_other
+                        break
+
+            if (not newer_other) and (len(self._state["cache"]) <= self._cfg["sample_cutoff"]):
+                break  # Can't do anything because the other eye might insert a sample older than the current sample.
+
+            if highconf_other:
+                if self._state["cache_id"][0] == 0:
+                    mapped_sample = self._map_binocular(self._state["cache"][0], self._state["cache"][highconf_other])
+                else:
+                    mapped_sample = self._map_binocular(self._state["cache"][highconf_other], self._state["cache"][0])
+            else:
+                mapped_sample = self._map_monocular(self._state["cache"][0])
+            output.append(mapped_sample)
+
+            # Pop the first sample off our state caches
+            self._state["cache"].popleft()
+            self._state["cache_id"].popleft()
+            self._state["cache_ts"].popleft()
+            self._state["cache_conf"].popleft()
+
+            # Cannot continue unless we have more than 1 sample in the cache.
+            if len(self._state["cache"]) == 1:
+                break
+
+        return output
 
 
 class Dummy_Gaze_Mapper(Monocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
@@ -245,7 +305,7 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
                 (gaze_point_eye0[1] + gaze_point_eye1[1]) / 2.0,
             )
         confidence = (p0["confidence"] + p1["confidence"]) / 2.0
-        ts = (p0["timestamp"] + p1["timestamp"]) / 2.0
+        ts = min(p0["timestamp"], p1["timestamp"])  # Was prev. avg, but min is more consistent with mapper logic.
         return {
             "topic": "gaze.2d.01.",
             "norm_pos": gaze_point,
@@ -600,7 +660,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plug
             return None
 
         confidence = min(p0["confidence"], p1["confidence"])
-        ts = (p0["timestamp"] + p1["timestamp"]) / 2.0
+        ts = min(p0["timestamp"], p1["timestamp"])
         g = {
             "topic": "gaze.3d.01.",
             "eye_centers_3d": {0: s0_center.tolist(), 1: s1_center.tolist()},
