@@ -76,19 +76,16 @@ if platform.system() == "Windows":
     include_dirs.extend([os.path.join(_, 'include') for _ in usr_locals])
     library_dirs = [os.path.join(_, 'lib') for _ in usr_locals]
 
-    # Get a list of OpenCV libraries and boost libraries.
+    # Get a list of OpenCV libraries
     opencv_libs = []
-    boost_libs = []
     for lib_dir in library_dirs:
         for sub_dir in os.listdir(lib_dir):
             if sub_dir.startswith('opencv_core'):
                 opencv_term = sub_dir[11:]
                 opencv_libs.extend([_ + opencv_term for _ in opencv_libraries])
-            elif sub_dir.startswith('boost_python'):
-                boost_libs.append(sub_dir)
 
     # Collect list of required libraries.
-    libs = [os.path.splitext(_)[0] for _ in list(set(opencv_libs)) + list(set(boost_libs)) + ['ceres.lib', 'glog.lib']]
+    libs = [os.path.splitext(_)[0] for _ in list(set(opencv_libs)) + ['ceres.lib', 'glog.lib']]
 
 else:
     libext = '.dylib' if platform.system() == 'Darwin' else '.so'
@@ -124,12 +121,7 @@ else:
     ])
 
     python_version = sys.version_info
-    if platform.system() == "Linux":
-        # boost_python-py34
-        boost_lib = "boost_python-py" + str(python_version[0]) + str(python_version[1])
-    else:
-        boost_lib = "boost_python" + str(python_version[0]) + str(python_version[1])
-    libs = ["ceres", boost_lib] + opencv_libraries
+    libs = ["ceres"] + opencv_libraries
 
 
 extra_link_args = []
