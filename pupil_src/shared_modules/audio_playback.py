@@ -343,7 +343,10 @@ class Audio_Playback(System_Plugin_Base):
                 audio_idx = bisect(
                     self.audio.timestamps, self.g_pool.timestamps[frame_idx]
                 )
-                self.seek_to_audio_frame(audio_idx)
+                if audio_idx < len(self.audio.timestamps):
+                    self.seek_to_audio_frame(audio_idx)
+                else:
+                    start_stream = False
 
             if self.filter_graph_list is None:
                 self.current_audio_volume = self.req_audio_volume

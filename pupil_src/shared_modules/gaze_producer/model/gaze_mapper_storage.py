@@ -14,13 +14,15 @@ import os
 
 import file_methods as fm
 import make_unique
+
+from storage import SingleFileStorage
 from gaze_producer import model
 from observable import Observable
 
 logger = logging.getLogger(__name__)
 
 
-class GazeMapperStorage(model.SingleFileStorage, Observable):
+class GazeMapperStorage(SingleFileStorage, Observable):
     def __init__(self, calibration_storage, rec_dir, plugin, get_recording_index_range):
         super().__init__(rec_dir, plugin)
         self._calibration_storage = calibration_storage

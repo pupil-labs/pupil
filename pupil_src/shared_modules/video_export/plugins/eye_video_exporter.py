@@ -14,7 +14,7 @@ import logging
 from pyglui import ui
 
 from video_export.plugin_base.isolated_frame_exporter import IsolatedFrameExporter
-from vis_eye_video_overlay import draw_pupil_on_image
+from video_overlay.utils.image_manipulation import PupilRenderer
 
 
 logger = logging.getLogger(__name__)
@@ -85,13 +85,14 @@ class _add_pupil_ellipse:
     _warned_once_data_not_found = False
 
     def __init__(self, pupil_positions_of_eye):
+        self.renderer = PupilRenderer(pupil_getter=None)
         self._pupil_positions_of_eye = pupil_positions_of_eye
 
     def __call__(self, _, frame):
         eye_image = frame.img
         try:
             pupil_datum = self._pupil_positions_of_eye.by_ts(frame.timestamp)
-            draw_pupil_on_image(eye_image, pupil_datum)
+            self.renderer.render_pupil(eye_image, pupil_datum)
         except ValueError:
             if not self._warned_once_data_not_found:
                 logger.warning("Could not draw pupil visualization. No data found.")

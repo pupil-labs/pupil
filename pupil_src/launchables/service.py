@@ -11,10 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import os
 
 # import sys, platform
-
-
-class Global_Container(object):
-    pass
+from types import SimpleNamespace
 
 
 def service(
@@ -115,7 +112,7 @@ def service(
         logger.info("System Info: {}".format(get_system_info()))
 
         # g_pool holds variables for this process they are accesible to all plugins
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
         g_pool.app = "service"
         g_pool.user_dir = user_dir
         g_pool.version = version

@@ -88,8 +88,8 @@ cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    )
 
     coords = cart2sph(result.circle.normal)
     if str(coords[0]) == 'nan':
-        py_result['theta'] = 0
-        py_result['phi'] = 0
+        py_result['theta'] = 0.0
+        py_result['phi'] = 0.0
     else:
         py_result['theta'] = coords[0]
         py_result['phi'] = coords[1]

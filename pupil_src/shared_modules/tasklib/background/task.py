@@ -10,11 +10,13 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
+import typing
 import multiprocessing as mp
 from collections import namedtuple
 
 from tasklib.interface import TaskInterface
 from tasklib.background.shared_memory import SharedMemory
+from tasklib.background.patches import Patch
 
 _TaskYieldSignal = namedtuple("_TaskYieldSignal", "datum")
 _TaskCompletedSignal = namedtuple("_TaskCompletedSignal", "return_value")
@@ -183,3 +185,57 @@ def _routine_wrapper(pipe_send, routine, args, kwargs, patches):
         pipe_send.send(_TaskExceptionSignal(e, traceback.format_exc()))
     finally:
         pipe_send.close()
+
+
+GFY = typing.TypeVar("GFY")  # Generator function yield type
+GFS = typing.TypeVar("GFS")  # Generator function send type
+GFR = typing.TypeVar("GFR")  # Generator function return type
+
+On_Started_Observer = typing.Callable[[], None]
+On_Yield_Observer = typing.Callable[[GFY], None]
+On_Completed_Observer = typing.Callable[[GFR], None]
+On_Ended = typing.Callable[[], None]
+On_Exception = typing.Callable[[Exception], None]
+On_Canceled_Or_Killed = typing.Callable[[], None]
+
+
+class TypedBackgroundGeneratorFunction(BackgroundGeneratorFunction, typing.Generic[GFY, GFS, GFR]):
+    def __init__(
+            self,
+            name: str,
+            generator_function: typing.Callable[..., typing.Generator[GFY, GFS, GFR]],
+            args: typing.List[typing.Any] = [],
+            kwargs: typing.Mapping[str, typing.Any] = {},
+            pass_shared_memory: bool = False,
+            patches: typing.Iterable[typing.Type[Patch]] = tuple(),
+    ):
+        super().__init__(
+            name=name,
+            generator_function=generator_function,
+            pass_shared_memory=pass_shared_memory,
+            args=args,
+            kwargs=kwargs,
+            patches=patches,
+        )
+
+    def add_observers(
+        self,
+        on_started: typing.Optional[On_Started_Observer] = None,
+        on_yield: typing.Optional[On_Yield_Observer] = None,
+        on_completed: typing.Optional[On_Completed_Observer] = None,
+        on_ended: typing.Optional[On_Ended] = None,
+        on_exception: typing.Optional[On_Exception] = None,
+        on_canceled_or_killed: typing.Optional[On_Canceled_Or_Killed] = None,
+    ):
+        if on_started:
+            self.add_observer("on_started", on_started)
+        if on_yield:
+            self.add_observer("on_yield", on_yield)
+        if on_completed:
+            self.add_observer("on_completed", on_completed)
+        if on_ended:
+            self.add_observer("on_ended", on_ended)
+        if on_exception:
+            self.add_observer("on_exception", on_exception)
+        if on_canceled_or_killed:
+            self.add_observer("on_canceled_or_killed", on_canceled_or_killed)

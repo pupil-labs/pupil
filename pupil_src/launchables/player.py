@@ -10,11 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import os
 import platform
-
-
-class Global_Container(object):
-    pass
-
+from types import SimpleNamespace
 
 # UI Platform tweaks
 if platform.system() == "Linux":
@@ -26,6 +22,9 @@ elif platform.system() == "Windows":
 else:
     scroll_factor = 1.0
     window_position_default = (0, 0)
+
+MIN_DATA_CONFIDENCE_DEFAULT = 0.6
+MIN_CALIBRATION_CONFIDENCE_DEFAULT = 0.8
 
 
 def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version):
@@ -97,12 +96,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from vis_fixation import Vis_Fixation
 
         # from vis_scan_path import Vis_Scan_Path
-        from vis_eye_video_overlay import Vis_Eye_Video_Overlay
         from seek_control import Seek_Control
-        from offline_surface_tracker import Offline_Surface_Tracker
+        from surface_tracker import Surface_Tracker_Offline
 
         # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
         from fixation_detector import Offline_Fixation_Detector
+        from eye_movement import Offline_Eye_Movement_Detector
         from log_display import Log_Display
         from annotations import Annotation_Player
         from raw_data_exporter import Raw_Data_Exporter
@@ -120,9 +119,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
         from video_export.plugins.world_video_exporter import World_Video_Exporter
         from video_capture import File_Source
+        from video_overlay.plugins import Video_Overlay, Eye_Overlay
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
-            "1.23"
+            "1.24"
         ), "pyglui out of date, please upgrade to newest version"
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, "plugins"))
@@ -141,11 +141,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Vis_Light_Points,
             Vis_Cross,
             Vis_Watermark,
-            Vis_Eye_Video_Overlay,
+            Eye_Overlay,
+            Video_Overlay,
             # Vis_Scan_Path,
             Offline_Fixation_Detector,
+            Offline_Eye_Movement_Detector,
             Offline_Blink_Detection,
-            Offline_Surface_Tracker,
+            Surface_Tracker_Offline,
             Raw_Data_Exporter,
             Annotation_Player,
             Log_History,
@@ -157,6 +159,14 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             iMotions_Exporter,
             Eye_Video_Exporter,
         ] + runtime_plugins
+
+        if platform.system() != "Windows":
+            # Head pose tracking is currently not available on Windows
+            from head_pose_tracker.offline_head_pose_tracker import (
+                Offline_Head_Pose_Tracker,
+            )
+
+            user_plugins.append(Offline_Head_Pose_Tracker)
 
         plugins = system_plugins + user_plugins
 
@@ -198,21 +208,21 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
         def on_drop(window, count, paths):
-            for x in range(count):
-                new_rec_dir = paths[x].decode("utf-8")
-                if pm.is_pupil_rec_dir(new_rec_dir):
-                    logger.debug("Starting new session with '{}'".format(new_rec_dir))
-                    ipc_pub.notify(
-                        {
-                            "subject": "player_drop_process.should_start",
-                            "rec_dir": new_rec_dir,
-                        }
-                    )
-                    glfw.glfwSetWindowShouldClose(window, True)
-                else:
-                    logger.error(
-                        "'{}' is not a valid pupil recording".format(new_rec_dir)
-                    )
+            paths = [paths[x].decode("utf-8") for x in range(count)]
+            for path in paths:
+                if pm.is_pupil_rec_dir(path):
+                    _restart_with_recording(path)
+                    return
+            # call `on_drop` callbacks until a plugin indicates
+            # that it has consumed the event (by returning True)
+            any(p.on_drop(paths) for p in g_pool.plugins)
+
+        def _restart_with_recording(rec_dir):
+            logger.debug("Starting new session with '{}'".format(rec_dir))
+            ipc_pub.notify(
+                {"subject": "player_drop_process.should_start", "rec_dir": rec_dir}
+            )
+            glfw.glfwSetWindowShouldClose(g_pool.main_window, True)
 
         tick = delta_t()
 
@@ -230,7 +240,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         hdpi_factor = 1.0
 
         # create container for globally scoped vars
-        g_pool = Global_Container()
+        g_pool = SimpleNamespace()
         g_pool.app = "player"
         g_pool.zmq_ctx = zmq_ctx
         g_pool.ipc_pub = ipc_pub
@@ -298,9 +308,11 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.user_dir = user_dir
         g_pool.rec_dir = rec_dir
         g_pool.meta_info = meta_info
-        g_pool.min_data_confidence = session_settings.get("min_data_confidence", 0.6)
+        g_pool.min_data_confidence = session_settings.get(
+            "min_data_confidence", MIN_DATA_CONFIDENCE_DEFAULT
+        )
         g_pool.min_calibration_confidence = session_settings.get(
-            "min_calibration_confidence", 0.8
+            "min_calibration_confidence", MIN_CALIBRATION_CONFIDENCE_DEFAULT
         )
 
         # populated by producers
@@ -308,6 +320,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.pupil_positions_by_id = (pm.Bisector(), pm.Bisector())
         g_pool.gaze_positions = pm.Bisector()
         g_pool.fixations = pm.Affiliator()
+        g_pool.eye_movements = pm.Affiliator()
 
         def set_data_confidence(new_confidence):
             g_pool.min_data_confidence = new_confidence
@@ -588,6 +601,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             g_pool.plugins.clean()
 
             glfw.glfwMakeContextCurrent(main_window)
+            glfw.glfwPollEvents()
             # render visual feedback from loaded plugins
             if gl_utils.is_window_visible(main_window):
 
@@ -616,22 +630,24 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                     pos = x * hdpi_factor, y * hdpi_factor
                     pos = normalize(pos, g_pool.camera_render_size)
                     pos = denormalize(pos, g_pool.capture.frame_size)
-                    for p in g_pool.plugins:
-                        p.on_click(pos, button, action)
+
+                    # call `on_click` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_click(pos, button, action) for p in g_pool.plugins)
 
                 for key, scancode, action, mods in user_input.keys:
-                    for p in g_pool.plugins:
-                        p.on_key(key, scancode, action, mods)
+                    # call `on_key` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_key(key, scancode, action, mods) for p in g_pool.plugins)
 
                 for char_ in user_input.chars:
-                    for p in g_pool.plugins:
-                        p.on_char(char_)
+                    # call `char_` callbacks until a plugin indicates
+                    # that it has consumed the event (by returning True)
+                    any(p.on_char(char_) for p in g_pool.plugins)
 
                 # present frames at appropriate speed
                 g_pool.seek_control.wait(events["frame"].timestamp)
                 glfw.glfwSwapBuffers(main_window)
-
-            glfw.glfwPollEvents()
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["min_data_confidence"] = g_pool.min_data_confidence

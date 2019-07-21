@@ -8,10 +8,10 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from gaze_producer import model
+from storage import StorageItem
 
 
-class ReferenceLocation(model.storage.StorageItem):
+class ReferenceLocation(StorageItem):
     version = 1
 
     def __init__(self, screen_pos, frame_index, timestamp):

@@ -14,9 +14,6 @@
 #include "geometry/Sphere.h"
 #include "EyeModel.h"
 
-#include "logger/pycpplogger.h"
-
-
 namespace singleeyefitter {
 
 
@@ -60,8 +57,6 @@ namespace singleeyefitter {
             double mLastFrameTimestamp; //needed to calculate framerate
             int mApproximatedFramerate;
             math::SMA<double> mAverageFramerate;
-
-            pupillabs::PyCppLogger mLogger;
 
             void checkModels( float sensitivity,double frame_timestamp);
 

@@ -11,13 +11,14 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 
+from storage import SingleFileStorage
 from gaze_producer import model
 from observable import Observable
 
 logger = logging.getLogger(__name__)
 
 
-class ReferenceLocationStorage(model.SingleFileStorage, Observable):
+class ReferenceLocationStorage(SingleFileStorage, Observable):
     def __init__(self, rec_dir, plugin):
         super().__init__(rec_dir, plugin)
         self._reference_locations = {}
