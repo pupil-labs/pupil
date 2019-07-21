@@ -74,13 +74,21 @@ class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
     """Base class to implement the map callback"""
 
-    def __init__(self, g_pool):
+    def __init__(
+        self,
+        g_pool,
+        min_pupil_confidence=0.6,
+        temporal_cutoff=0.03,
+        timestamp_reset_threshold=5.0,
+        process_low_confidence=True,
+        sample_cutoff=10,
+    ):
         super().__init__(g_pool)
-        self._cfg = {'min_pupil_confidence': 0.6,
-                     'temporal_cutoff': 0.03,
-                     'timestamp_reset_threshold': 5.0,
-                     'process_low_confidence': True,
-                     'sample_cutoff': 10}
+        self.min_pupil_confidence = min_pupil_confidence
+        self.temporal_cutoff = temporal_cutoff
+        self.timestamp_reset_threshold = timestamp_reset_threshold
+        self.process_low_confidence = process_low_confidence
+        self.sample_cutoff = sample_cutoff
         self._cache = deque()
 
     def _reset(self):
@@ -88,12 +96,31 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
     def add_menu(self):
         super().add_menu()
-        self.menu.append(ui.Slider("min_pupil_confidence", self._cfg, step=0.01, min=0.0, max=1.0,
-                                   label="Min conf. for binocular",))
-        self.menu.append(ui.Slider("temporal_cutoff", self._cfg, step=0.002, min=0.0, max=0.2,
-                                   label="Max binocular time diff. (s)",))
-        self.menu.append(ui.Slider("sample_cutoff", self._cfg, step=1, min=2, max=20,
-                                   label="Max queue length", ))
+        self.menu.append(
+            ui.Slider(
+                "min_pupil_confidence",
+                self,
+                step=0.01,
+                min=0.0,
+                max=1.0,
+                label="Min conf. for binocular",
+            )
+        )
+        self.menu.append(
+            ui.Slider(
+                "temporal_cutoff",
+                self,
+                step=0.002,
+                min=0.0,
+                max=0.2,
+                label="Max binocular time diff. (s)",
+            )
+        )
+        self.menu.append(
+            ui.Slider(
+                "sample_cutoff", self, step=1, min=2, max=20, label="Max queue length"
+            )
+        )
 
     def map_batch(self, pupil_list):
         backup_cache = self._cache.copy()
@@ -125,7 +152,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
         # Reset state if we receive a new timestamp that is too old (probably due to clock reset).
         if len(self._cache) > 0:
             t_delta = np.abs(p["timestamp"] - self._cache[-1]["timestamp"])
-            if t_delta > self._cfg["timestamp_reset_threshold"]:
+            if t_delta > self.timestamp_reset_threshold:
                 self._reset()
 
         # Insert the new sample in the cache according to its timestamp.
@@ -146,7 +173,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
             do_binoc = False
 
             for ix, other_samp in enumerate(self._cache):
-                if other_samp["id"] == 1-self._cache[0]["id"]:
+                if other_samp["id"] == 1 - self._cache[0]["id"]:
                     newer_other = ix
 
                     # If current sample is low-conf then we don't need to search anymore. _Any_ other-eye samp is OK.
@@ -155,26 +182,30 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
                     # If newer_other is more than temporal_cutoff newer then we don't need to search anymore.
                     time_diff = other_samp["timestamp"] - self._cache[0]["timestamp"]
-                    if time_diff > self._cfg["temporal_cutoff"]:
+                    if time_diff > self.temporal_cutoff:
                         break
 
                     # We know from above that current sample is high-conf and newer_other is within temporal_cutoff.
                     # If newer_other is also high-confidence then we can do binocular mapping.
-                    if other_samp["confidence"] >= self._cfg["min_pupil_confidence"]:
+                    if other_samp["confidence"] >= self.min_pupil_confidence:
                         do_binoc = True
                         break
 
             # If we have failed to find a newer sample from the other eye
             # then we cannot do anything because the other eye might yet insert a sample older than the current sample.
             # The only exception is if the cache is overflowing, then do _map_monocular anyway.
-            if (newer_other < 0) and (len(self._cache) <= self._cfg["sample_cutoff"]):
+            if (newer_other < 0) and (len(self._cache) <= self.sample_cutoff):
                 break
 
             if do_binoc:
                 if self._cache[0]["id"] == 0:
-                    mapped_sample = self._map_binocular(self._cache[0], self._cache[newer_other])
+                    mapped_sample = self._map_binocular(
+                        self._cache[0], self._cache[newer_other]
+                    )
                 else:
-                    mapped_sample = self._map_binocular(self._cache[newer_other], self._cache[0])
+                    mapped_sample = self._map_binocular(
+                        self._cache[newer_other], self._cache[0]
+                    )
             else:
                 mapped_sample = self._map_monocular(self._cache[0])
             output.append(mapped_sample)
@@ -294,7 +325,9 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
                 (gaze_point_eye0[1] + gaze_point_eye1[1]) / 2.0,
             )
         confidence = (p0["confidence"] + p1["confidence"]) / 2.0
-        ts = min(p0["timestamp"], p1["timestamp"])  # Was prev. avg, but min is more consistent with mapper logic.
+        ts = min(
+            p0["timestamp"], p1["timestamp"]
+        )  # Was prev. avg, but min is more consistent with mapper logic.
         return {
             "topic": "gaze.2d.01.",
             "norm_pos": gaze_point,
