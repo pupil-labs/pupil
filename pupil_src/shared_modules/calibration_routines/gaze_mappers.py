@@ -123,8 +123,8 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
         )
 
     def map_batch(self, pupil_list):
-        backup_cache = self._cache.copy()
-        self._reset()
+        backup_cache = self._cache
+        self._cache = deque()
         results = []
         for p in pupil_list:
             results.extend(self.on_pupil_datum(p))
