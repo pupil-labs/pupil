@@ -189,16 +189,19 @@ class Surface(abc.ABC):
             )
             on_srf = bool((0 <= surf_norm_pos[0] <= 1) and (0 <= surf_norm_pos[1] <= 1))
 
-            results.append(
-                {
-                    "topic": event["topic"] + "on_surface",
-                    "norm_pos": surf_norm_pos.tolist(),
-                    "confidence": event["confidence"],
-                    "on_surf": on_srf,
-                    "base_data": (event["topic"], event["timestamp"]),
-                    "timestamp": event["timestamp"],
-                }
-            )
+            mapped_datum = {
+                "topic": f"{event['topic']}_on_surface",
+                "norm_pos": surf_norm_pos.tolist(),
+                "confidence": event["confidence"],
+                "on_surf": on_srf,
+                "base_data": (event["topic"], event["timestamp"]),
+                "timestamp": event["timestamp"],
+            }
+            if event["topic"] == "fixations":
+                mapped_datum["id"] = event["id"]
+                mapped_datum["duration"] = event["duration"]
+                mapped_datum["dispersion"] = event["dispersion"]
+            results.append(mapped_datum)
         return results
 
     @abc.abstractmethod

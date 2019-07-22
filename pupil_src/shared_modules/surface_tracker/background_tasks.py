@@ -512,6 +512,9 @@ class Exporter:
                         )
 
     def _export_fixations_on_surface(self, fixations_on_surf, surface, surface_name):
+        """
+        fixations_on_surf structure: fixations_on_surf[world_frame_idx][event_idx]
+        """
         with open(
             os.path.join(
                 self.metrics_dir, "fixations_on_surface" + surface_name + ".csv"
@@ -523,7 +526,10 @@ class Exporter:
             csv_writer = csv.writer(csv_file, delimiter=",")
             csv_writer.writerow(
                 (
+                    "fixation_id",
                     "start_timestamp",
+                    "duration [ms]",
+                    "dispersion [deg]",
                     "norm_pos_x",
                     "norm_pos_y",
                     "x_scaled",
@@ -531,23 +537,21 @@ class Exporter:
                     "on_surf",
                 )
             )
-            for idx, fix_on_surf in enumerate(fixations_on_surf):
-                idx += self.export_range[0]
-                if fix_on_surf:
-                    without_duplicates = dict(
-                        [(fix["base_data"][1], fix) for fix in fix_on_surf]
-                    ).values()
-                    for fix in without_duplicates:
-                        csv_writer.writerow(
-                            (
-                                self.world_timestamps[idx],
-                                idx,
-                                fix["timestamp"],
-                                fix["norm_pos"][0],
-                                fix["norm_pos"][1],
-                                fix["norm_pos"][0] * surface.real_world_size["x"],
-                                fix["norm_pos"][1] * surface.real_world_size["y"],
-                                fix["on_surf"],
-                                fix["confidence"],
-                            )
-                        )
+            # flatten `fixations_on_surf[world_frame_idx][frame_event_idx]`
+            # to `fixations_on_surf[global_event_idx]`
+            fixations_on_surf = itertools.chain.from_iterable(fixations_on_surf)
+            without_duplicates = {fix["id"]: fix for fix in fixations_on_surf}.values()
+            for fix in without_duplicates:
+                csv_writer.writerow(
+                    (
+                        fix["id"],
+                        fix["timestamp"],
+                        fix["duration"],
+                        fix["dispersion"],
+                        fix["norm_pos"][0],
+                        fix["norm_pos"][1],
+                        fix["norm_pos"][0] * surface.real_world_size["x"],
+                        fix["norm_pos"][1] * surface.real_world_size["y"],
+                        fix["on_surf"],
+                    )
+                )
