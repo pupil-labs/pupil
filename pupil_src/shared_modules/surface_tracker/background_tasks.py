@@ -291,25 +291,35 @@ class Exporter:
         yield
 
     def _map_gaze_and_fixations(self):
+        """
+        Result: Tuple[events_per_surface, events_per_surface]
+        events_per_surface = List[events_surface_0, ..., events_surface_N]
+        events_surface_i = List[events_world_frame_0, ..., events_world_frame_M]
+        events_world_frame_j: List[event, ...]
+
+        N: Number of surfaces
+        M: Number of world frames
+        """
         section = slice(*self.export_range)
-        gaze_on_surface = []
-        for gaze in gaze_on_surface_generator(
-            self.surfaces,
-            section,
-            self.world_timestamps,
-            self.gaze_positions,
-            self.camera_model,
-        ):
-            gaze_on_surface.append(gaze)
-        fixations_on_surface = []
-        for fixation in gaze_on_surface_generator(
-            self.surfaces,
-            section,
-            self.world_timestamps,
-            self.fixations,
-            self.camera_model,
-        ):
-            fixations_on_surface.append(fixation)
+        gaze_on_surface = list(
+            gaze_on_surface_generator(
+                self.surfaces,
+                section,
+                self.world_timestamps,
+                self.gaze_positions,
+                self.camera_model,
+            )
+        )
+
+        fixations_on_surface = list(
+            gaze_on_surface_generator(
+                self.surfaces,
+                section,
+                self.world_timestamps,
+                self.fixations,
+                self.camera_model,
+            )
+        )
 
         return gaze_on_surface, fixations_on_surface
 
