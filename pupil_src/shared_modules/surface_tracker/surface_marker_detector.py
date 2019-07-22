@@ -52,29 +52,26 @@ class Surface_Marker_Detector_Mode(enum.Enum):
             return f"Apriltag ({DEFAULT_APRILTAG_FAMILY})"
         raise ValueError(f"Unlabeled surface marker mode: {self}")
 
+
 class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def robust_detection(self) -> bool:
-        # TODO: Remove external dependency on this property
         pass
 
     @robust_detection.setter
     @abc.abstractmethod
     def robust_detection(self, value: bool):
-        # TODO: Remove external dependency on this property
         pass
 
     @property
     @abc.abstractmethod
     def inverted_markers(self) -> bool:
-        # TODO: Remove external dependency on this property
         pass
 
     @inverted_markers.setter
     @abc.abstractmethod
     def inverted_markers(self, value: bool):
-        # TODO: Remove external dependency on this property
         pass
 
     @property
@@ -137,22 +134,18 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
 
     @property
     def robust_detection(self) -> bool:
-        # TODO: Remove external dependency on this property
         return self.__robust_detection
 
     @robust_detection.setter
     def robust_detection(self, value: bool):
-        # TODO: Remove external dependency on this property
         self.__robust_detection = value
 
     @property
     def inverted_markers(self) -> bool:
-        # TODO: Remove external dependency on this property
         return self.__inverted_markers
 
     @inverted_markers.setter
     def inverted_markers(self, value: bool):
-        # TODO: Remove external dependency on this property
         self.__inverted_markers = value
 
     @property

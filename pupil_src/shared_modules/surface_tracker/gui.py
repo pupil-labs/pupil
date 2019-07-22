@@ -308,8 +308,7 @@ class GUI:
             if marker.perimeter < self.tracker.marker_min_perimeter:
                 continue
 
-            centroid = np.mean(marker.verts_px, axis=0)
-            centroid = (centroid[0, 0], centroid[0, 1])
+            centroid = marker.centroid()
             if marker.uid in surface.registered_markers_dist.keys():
                 active_markers = active_markers_by_type.get(marker_type, [])
                 active_markers.append(centroid)
@@ -437,7 +436,7 @@ class GUI:
                 if not surface.detected:
                     continue
                 for marker in self.tracker.markers:
-                    centroid = np.mean(marker.verts_px, axis=0)
+                    centroid = np.asarray(marker.centroid())
                     dist = np.linalg.norm(centroid - pos)
                     if dist < self.button_click_radius:
                         if marker.uid not in surface.registered_markers_dist.keys():

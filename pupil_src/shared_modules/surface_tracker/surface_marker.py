@@ -82,7 +82,6 @@ class Surface_Base_Marker(metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def perimeter(self) -> float:
-        # TODO: Is this used/useful outside surface_marker_detector.py? If not - remove
         pass
 
     @property
@@ -90,8 +89,12 @@ class Surface_Base_Marker(metaclass=abc.ABCMeta):
     def marker_type(self) -> Surface_Marker_Type:
         pass
 
+    def centroid(self) -> typing.Tuple[float, float]:
+        centroid = np.mean(self.verts_px, axis=0)
+        centroid = tuple(*centroid.tolist())
+        return centroid
 
-# TODO: This object should offer a mean/centroid function to be used when drawing the marker toggle buttons
+
 _Square_Marker_Detection_Raw = collections.namedtuple(
     "Square_Marker_Detection",
     ["raw_id", "id_confidence", "verts_px", "perimeter", "raw_marker_type"],
