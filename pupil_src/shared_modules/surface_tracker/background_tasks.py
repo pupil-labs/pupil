@@ -528,8 +528,8 @@ class Exporter:
                 (
                     "fixation_id",
                     "start_timestamp",
-                    "duration [ms]",
-                    "dispersion [deg]",
+                    "duration",
+                    "dispersion",
                     "norm_pos_x",
                     "norm_pos_y",
                     "x_scaled",
