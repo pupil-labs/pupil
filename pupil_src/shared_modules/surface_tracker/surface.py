@@ -158,20 +158,20 @@ class Surface(abc.ABC):
         img_points.shape = orig_shape
         return img_points
 
-    def map_gaze_events(self, events, camera_model, trans_matrix=None):
+    def map_gaze_and_fixation_events(self, events, camera_model, trans_matrix=None):
         """
-        Map a list of gaze events onto the surface and return the
-        corresponding list of gaze on surface events.
+        Map a list of gaze or fixation events onto the surface and return the
+        corresponding list of gaze/fixation on surface events.
 
         Args:
-            events: List of gaze events.
+            events: List of gaze or fixation events.
             camera_model: Camera Model object.
             trans_matrix: The transformation matrix defining the location of
             the surface. If `None`, the current transformation matrix saved in the
             Surface object will be used.
 
         Returns:
-            List of gaze on surface events.
+            List of gaze or fixation on surface events.
 
         """
         results = []
@@ -189,16 +189,19 @@ class Surface(abc.ABC):
             )
             on_srf = bool((0 <= surf_norm_pos[0] <= 1) and (0 <= surf_norm_pos[1] <= 1))
 
-            results.append(
-                {
-                    "topic": event["topic"] + "_on_surface",
-                    "norm_pos": surf_norm_pos.tolist(),
-                    "confidence": event["confidence"],
-                    "on_surf": on_srf,
-                    "base_data": (event["topic"], event["timestamp"]),
-                    "timestamp": event["timestamp"],
-                }
-            )
+            mapped_datum = {
+                "topic": f"{event['topic']}_on_surface",
+                "norm_pos": surf_norm_pos.tolist(),
+                "confidence": event["confidence"],
+                "on_surf": on_srf,
+                "base_data": (event["topic"], event["timestamp"]),
+                "timestamp": event["timestamp"],
+            }
+            if event["topic"] == "fixations":
+                mapped_datum["id"] = event["id"]
+                mapped_datum["duration"] = event["duration"]
+                mapped_datum["dispersion"] = event["dispersion"]
+            results.append(mapped_datum)
         return results
 
     @abc.abstractmethod
@@ -471,8 +474,8 @@ class Surface(abc.ABC):
         ]
         aspect_ratio = self.real_world_size["y"] / self.real_world_size["x"]
         grid = (
-            int(self._heatmap_resolution),
             max(1, int(self._heatmap_resolution * aspect_ratio)),
+            int(self._heatmap_resolution),
         )
         if heatmap_data:
             xvals, yvals = zip(*((x, 1.0 - y) for x, y in heatmap_data))
