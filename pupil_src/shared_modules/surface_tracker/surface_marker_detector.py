@@ -95,11 +95,11 @@ class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def detect_markers_iter(self, gray_img) -> typing.Iterable[Surface_Marker]:
+    def detect_markers_iter(self, gray_img, frame_index: int) -> typing.Iterable[Surface_Marker]:
         pass
 
-    def detect_markers(self, gray_img) -> typing.List[Surface_Marker]:
-        return list(self.detect_markers_iter(gray_img=gray_img))
+    def detect_markers(self, gray_img, frame_index: int) -> typing.List[Surface_Marker]:
+        return list(self.detect_markers_iter(gray_img=gray_img, frame_index=frame_index))
 
     def _surface_marker_filter(self, marker: Surface_Marker) -> bool:
         return self.marker_min_perimeter <= marker.perimeter
@@ -131,6 +131,7 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         )
         self.__marker_detector_modes = marker_detector_modes
         self.__previous_raw_markers = []
+        self.__previous_frame_index = -1
 
     @property
     def robust_detection(self) -> bool:
@@ -164,12 +165,17 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
     def marker_detector_modes(self, value: typing.Set[Surface_Marker_Detector_Mode]):
         self.__marker_detector_modes = value
 
-    def detect_markers_iter(self, gray_img) -> typing.Iterable[Surface_Marker]:
+    def detect_markers_iter(self, gray_img, frame_index: int) -> typing.Iterable[Surface_Marker]:
         if Surface_Marker_Detector_Mode.SQUARE_MARKER not in self.marker_detector_modes:
             return []
 
+        # If current frame does not follow the previous frame, forget previously detected markers
+        if frame_index != self.__previous_frame_index + 1:
+            self.__previous_raw_markers = []
+
         grid_size = 5
-        aperture = 11
+        aperture = 9
+        true_detect_every_frame = 1
         min_perimeter = self.marker_min_perimeter
 
         if self.__robust_detection:
@@ -179,7 +185,7 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
                 min_marker_perimeter=min_perimeter,
                 aperture=aperture,
                 prev_markers=self.__previous_raw_markers,
-                true_detect_every_frame=3,
+                true_detect_every_frame=true_detect_every_frame,
                 invert_image=self.__inverted_markers,
             )
         else:
@@ -193,6 +199,7 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         # Robust marker detection requires previous markers to be in a different
         # format than the surface tracker.
         self.__previous_raw_markers = markers
+        self.__previous_frame_index = frame_index
         markers = map(Surface_Marker.from_square_tag_detection, markers)
         markers = filter(self._surface_marker_filter, markers)
         return markers
@@ -318,7 +325,7 @@ class Surface_Apriltag_V2_Marker_Detector(Surface_Base_Marker_Detector):
     def marker_detector_modes(self, value: typing.Set[Surface_Marker_Detector_Mode]):
         self.__marker_detector_modes = value
 
-    def detect_markers_iter(self, gray_img) -> typing.Iterable[Surface_Marker]:
+    def detect_markers_iter(self, gray_img, frame_index: int) -> typing.Iterable[Surface_Marker]:
         if Surface_Marker_Detector_Mode.APRILTAG_MARKER not in self.marker_detector_modes:
             return []
         markers = self._detector.detect(img=gray_img)
@@ -404,10 +411,10 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
         self.__square_detector.marker_detector_modes = value
         self.__apriltag_detector.marker_detector_modes = value
 
-    def detect_markers_iter(self, gray_img) -> typing.Iterable[Surface_Marker]:
+    def detect_markers_iter(self, gray_img, frame_index: int) -> typing.Iterable[Surface_Marker]:
         return itertools.chain(
-            self.__square_detector.detect_markers_iter(gray_img=gray_img),
-            self.__apriltag_detector.detect_markers_iter(gray_img=gray_img),
+            self.__square_detector.detect_markers_iter(gray_img=gray_img, frame_index=frame_index),
+            self.__apriltag_detector.detect_markers_iter(gray_img=gray_img, frame_index=frame_index),
         )
 
 

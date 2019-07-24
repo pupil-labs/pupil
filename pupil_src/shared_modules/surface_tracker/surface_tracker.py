@@ -406,7 +406,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         pass
 
     def _detect_markers(self, frame):
-        markers = self.marker_detector.detect_markers(gray_img=frame.gray)
+        markers = self.marker_detector.detect_markers(gray_img=frame.gray, frame_index=frame.index)
         markers = self._remove_duplicate_markers(markers)
         self.markers_unfiltered = markers
         self.markers = self._filter_markers(markers)

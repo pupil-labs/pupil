@@ -29,7 +29,7 @@ class marker_detection_callable(Surface_Marker_Detector):
         )
 
     def __call__(self, frame):
-        return self.detect_markers(gray_img=frame.gray)
+        return self.detect_markers(gray_img=frame.gray, frame_index=frame.index)
 
 
 class surface_locater_callable:
