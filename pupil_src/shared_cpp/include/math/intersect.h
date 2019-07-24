@@ -2,7 +2,6 @@
 #define __INTERSECT_H__
 
 #include <iostream>
-#include <boost/range.hpp>
 #include <Eigen/Core>
 #include "geometry/Sphere.h"
 #include "mathHelper.h"
@@ -28,7 +27,7 @@ namespace singleeyefitter {
     }
 
     template<typename Range>
-    typename boost::range_value<Range>::type::VectorType nearest_intersect(const Range& lines);
+    typename Range::value_type::VectorType nearest_intersect(const Range& lines);
 
     namespace detail {
         template<typename Scalar, int Dim>
@@ -61,9 +60,10 @@ namespace singleeyefitter {
 
 // Finds the intersection (in a least-squares sense) of multiple lines
     template<typename Range>
-    typename boost::range_value<Range>::type::VectorType nearest_intersect(const Range& lines)
+    typename Range::value_type::VectorType nearest_intersect(const Range& lines)
     {
-        typedef typename boost::range_value<Range>::type::VectorType Vector;
+        // NOTE: The type 'Range' will be of type std::vector<Eigen::ParameterizedLine<T>>
+        typedef typename Range::value_type::VectorType Vector;
         typedef typename Eigen::Matrix<typename Vector::Scalar, Vector::RowsAtCompileTime, Vector::RowsAtCompileTime> Matrix;
         static_assert(Vector::ColsAtCompileTime == 1, "Requires column vector");
         //size_t N = lines.size();

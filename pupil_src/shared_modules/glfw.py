@@ -407,9 +407,8 @@ glfwTerminate = _glfw.glfwTerminate
 glfwGetVersionString = _glfw.glfwGetVersionString
 glfwGetVersionString.restype = c_char_p
 
-
 # --- Error -------------------------------------------------------------------
-# glfwSetErrorCallback            = _glfw.glfwSetErrorCallback
+# glfwSetErrorCallback = _glfw.glfwSetErrorCallback
 
 # --- Monitor -----------------------------------------------------------------
 # glfwGetMonitors                 = _glfw.glfwGetMonitors
@@ -508,6 +507,16 @@ __c_callbacks__ = {}
 __py_callbacks__ = {}
 
 
+def glfwGetError():
+    _glfwGetError = _glfw.glfwGetError
+    _glfwGetError.argtypes = [POINTER(c_char_p)]
+    _glfwGetError.restype = c_int
+    msg = c_char_p()
+    result = _glfwGetError(byref(msg))
+    if result:
+        return msg.value.decode()
+
+
 def glfwInit():
     import os
 
@@ -519,7 +528,7 @@ def glfwInit():
     os.chdir(cwd)
     del os
     if res < 0:
-        raise Exception("GLFW could not be initialized")
+        raise Exception(f"GLFW could not be initialized: {glfwGetError()}")
 
 
 def glfwCreateWindow(
@@ -553,7 +562,7 @@ def glfwCreateWindow(
         }
         return window
     else:
-        raise Exception("GLFW window failed to create.")
+        raise Exception(f"GLFW window failed to create: {glfwGetError()}")
 
 
 def glfwDestroyWindow(window):

@@ -112,7 +112,7 @@ class Menu_Content:
             current_segment.duration
         )
         text += ident + "Frame range: {}-{}\n".format(
-            current_segment.start_frame_index + 1, current_segment.end_frame_index + 1
+            current_segment.start_frame_index, current_segment.end_frame_index
         )
         text += ident + "2d gaze pos: x={:.3f}, y={:.3f}\n".format(
             *current_segment.norm_pos

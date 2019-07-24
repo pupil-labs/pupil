@@ -216,6 +216,7 @@ def get_export_proxy(
     surfaces,
     world_timestamps,
     gaze_positions,
+    fixations,
     camera_model,
     mp_context,
 ):
@@ -225,6 +226,7 @@ def get_export_proxy(
         surfaces,
         world_timestamps,
         gaze_positions,
+        fixations,
         camera_model,
     )
     proxy = background_helper.IPC_Logging_Task_Proxy(
@@ -243,6 +245,7 @@ class Exporter:
         surfaces,
         world_timestamps,
         gaze_positions,
+        fixations,
         camera_model,
     ):
         self.export_range = export_range
@@ -250,8 +253,10 @@ class Exporter:
         self.surfaces = surfaces
         self.world_timestamps = world_timestamps
         self.gaze_positions = gaze_positions
+        self.fixations = fixations
         self.camera_model = camera_model
         self.gaze_on_surfaces = None
+        self.fixations_on_surfaces = None
 
     def save_surface_statisics_to_file(self):
         logger.info("exporting metrics to {}".format(self.metrics_dir))
@@ -264,7 +269,9 @@ class Exporter:
                 logger.warning("Could not make metrics dir {}".format(self.metrics_dir))
                 return
 
-        self.gaze_on_surfaces = self._map_gaze()
+        self.gaze_on_surfaces, self.fixations_on_surfaces = (
+            self._map_gaze_and_fixations()
+        )
 
         self._export_surface_visibility()
         self._export_surface_gaze_distribution()
@@ -278,9 +285,14 @@ class Exporter:
             self._export_gaze_on_surface(
                 self.gaze_on_surfaces[surf_idx], surface, surface_name
             )
+            self._export_fixations_on_surface(
+                self.fixations_on_surfaces[surf_idx], surface, surface_name
+            )
             self._export_surface_heatmap(surface, surface_name)
 
-            logger.info("Saved surface gaze data for '{}'".format(surface.name))
+            logger.info(
+                "Saved surface gaze and fixation data for '{}'".format(surface.name)
+            )
 
         logger.info("Done exporting reference surface data.")
         return
@@ -289,7 +301,16 @@ class Exporter:
         # triggers this function to become a generator.
         yield
 
-    def _map_gaze(self):
+    def _map_gaze_and_fixations(self):
+        """
+        Result: Tuple[events_per_surface, events_per_surface]
+        events_per_surface = List[events_surface_0, ..., events_surface_N]
+        events_surface_i = List[events_world_frame_0, ..., events_world_frame_M]
+        events_world_frame_j: List[event, ...]
+
+        N: Number of surfaces
+        M: Number of world frames
+        """
         section = slice(*self.export_range)
         gaze_on_surface = list(
             gaze_on_surface_generator(
@@ -301,7 +322,17 @@ class Exporter:
             )
         )
 
-        return gaze_on_surface
+        fixations_on_surface = list(
+            gaze_on_surface_generator(
+                self.surfaces,
+                section,
+                self.world_timestamps,
+                self.fixations,
+                self.camera_model,
+            )
+        )
+
+        return gaze_on_surface, fixations_on_surface
 
     def _export_surface_visibility(self):
         with open(
@@ -490,3 +521,48 @@ class Exporter:
                                 gp["confidence"],
                             )
                         )
+
+    def _export_fixations_on_surface(self, fixations_on_surf, surface, surface_name):
+        """
+        fixations_on_surf structure: fixations_on_surf[world_frame_idx][event_idx]
+        """
+        with open(
+            os.path.join(
+                self.metrics_dir, "fixations_on_surface" + surface_name + ".csv"
+            ),
+            "w",
+            encoding="utf-8",
+            newline="",
+        ) as csv_file:
+            csv_writer = csv.writer(csv_file, delimiter=",")
+            csv_writer.writerow(
+                (
+                    "fixation_id",
+                    "start_timestamp",
+                    "duration",
+                    "dispersion",
+                    "norm_pos_x",
+                    "norm_pos_y",
+                    "x_scaled",
+                    "y_scaled",
+                    "on_surf",
+                )
+            )
+            # flatten `fixations_on_surf[world_frame_idx][frame_event_idx]`
+            # to `fixations_on_surf[global_event_idx]`
+            fixations_on_surf = itertools.chain.from_iterable(fixations_on_surf)
+            without_duplicates = {fix["id"]: fix for fix in fixations_on_surf}.values()
+            for fix in without_duplicates:
+                csv_writer.writerow(
+                    (
+                        fix["id"],
+                        fix["timestamp"],
+                        fix["duration"],
+                        fix["dispersion"],
+                        fix["norm_pos"][0],
+                        fix["norm_pos"][1],
+                        fix["norm_pos"][0] * surface.real_world_size["x"],
+                        fix["norm_pos"][1] * surface.real_world_size["y"],
+                        fix["on_surf"],
+                    )
+                )
