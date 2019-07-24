@@ -49,17 +49,17 @@ def rgb_to_rgba(rgb: typing.Tuple[int, int, int], alpha: float = 1.0) -> typing.
 
 SURFACE_MARKER_COLOR_RGB_BY_TYPE = {
     Surface_Marker_Type.SQUARE: PUPIL_COLOR_RGB_PRIMARY_IRIS_LIGHT_BLUE_60P,
-    Surface_Marker_Type.APRILTAG_V2: PUPIL_COLOR_RGB_PRIMARY_IRIS_GREEN_60P,
+    Surface_Marker_Type.APRILTAG_V3: PUPIL_COLOR_RGB_PRIMARY_IRIS_GREEN_60P,
 }
 
 SURFACE_MARKER_TOGGLE_ACTIVE_COLOR_RGB_BY_TYPE = {
     Surface_Marker_Type.SQUARE: (0, 209, 102),
-    Surface_Marker_Type.APRILTAG_V2: (0, 209, 102),
+    Surface_Marker_Type.APRILTAG_V3: (0, 209, 102),
 }
 
 SURFACE_MARKER_TOGGLE_INACTIVE_COLOR_RGB_BY_TYPE = {
     Surface_Marker_Type.SQUARE: (255, 51, 153),
-    Surface_Marker_Type.APRILTAG_V2: (255, 51, 153),
+    Surface_Marker_Type.APRILTAG_V3: (255, 51, 153),
 }
 
 

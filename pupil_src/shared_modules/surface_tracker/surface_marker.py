@@ -18,7 +18,7 @@ import collections
 import cv2
 import numpy as np
 
-from apriltag import DetectionBase as Apriltag_V2_Detection
+from apriltags3 import Detection as Apriltag_V3_Detection
 
 
 __all__ = [
@@ -39,7 +39,7 @@ Surface_Marker_TagID = typing.NewType("Surface_Marker_TagID", int)
 class Surface_Marker_Type(enum.Enum):
     # TODO: Is there a better (more uniquely descriptive) name than "square"?
     SQUARE = "square"
-    APRILTAG_V2 = "apriltag_v2"
+    APRILTAG_V3 = "apriltag_v3"
 
 
 class Surface_Base_Marker(metaclass=abc.ABCMeta):
@@ -137,32 +137,34 @@ class _Square_Marker_Detection(_Square_Marker_Detection_Raw, Surface_Base_Marker
         return Surface_Marker_TagID(int(self.raw_id))
 
 
-_Apriltag_V2_Marker_Detection_Raw = collections.namedtuple(
-    "Apriltag_V2_Marker_Detection",
+_Apriltag_V3_Marker_Detection_Raw = collections.namedtuple(
+    "Apriltag_V3_Marker_Detection",
     [
         "tag_family",
         "raw_id",
         "hamming",
-        "goodness",
         "decision_margin",
         "homography",
         "center",
         "corners",
+        "pose_R",
+        "pose_t",
+        "pose_err",
         "raw_marker_type",
     ],
 )
 
 
-class _Apriltag_V2_Marker_Detection(
-    _Apriltag_V2_Marker_Detection_Raw, Surface_Base_Marker
+class _Apriltag_V3_Marker_Detection(
+    _Apriltag_V3_Marker_Detection_Raw, Surface_Base_Marker
 ):
     __slots__ = ()
 
-    marker_type = Surface_Marker_Type.APRILTAG_V2
+    marker_type = Surface_Marker_Type.APRILTAG_V3
 
     @staticmethod
-    def from_tuple(state: tuple) -> "_Apriltag_V2_Marker_Detection":
-        cls = _Apriltag_V2_Marker_Detection
+    def from_tuple(state: tuple) -> "_Apriltag_V3_Marker_Detection":
+        cls = _Apriltag_V3_Marker_Detection
         expected_marker_type = cls.marker_type
 
         assert len(state) > 0
@@ -231,19 +233,21 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
         return Surface_Marker(raw_marker=raw_marker)
 
     @staticmethod
-    def from_apriltag_v2_detection(
-        detection: Apriltag_V2_Detection
+    def from_apriltag_v3_detection(
+        detection: Apriltag_V3_Detection
     ) -> "Surface_Marker":
-        cls = _Apriltag_V2_Marker_Detection
+        cls = _Apriltag_V3_Marker_Detection
         raw_marker = cls(
             tag_family=detection.tag_family.decode("utf8"),
             raw_id=detection.tag_id,
             hamming=detection.hamming,
-            goodness=detection.goodness,
             decision_margin=detection.decision_margin,
             homography=detection.homography.tolist(),
             center=detection.center.tolist(),
             corners=detection.corners.tolist(),
+            pose_R=detection.pose_R,
+            pose_t=detection.pose_t,
+            pose_err=detection.pose_err,
             raw_marker_type=cls.marker_type.value,
         )
         return Surface_Marker(raw_marker=raw_marker)
@@ -261,8 +265,8 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
         marker_type = state[-1]
         if marker_type == _Square_Marker_Detection.marker_type.value:
             raw_marker = _Square_Marker_Detection.from_tuple(state)
-        elif marker_type == _Apriltag_V2_Marker_Detection.marker_type.value:
-            raw_marker = _Apriltag_V2_Marker_Detection.from_tuple(state)
+        elif marker_type == _Apriltag_V3_Marker_Detection.marker_type.value:
+            raw_marker = _Apriltag_V3_Marker_Detection.from_tuple(state)
         else:
             raw_marker_type = _Square_Marker_Detection.marker_type.value
             raw_marker = _Square_Marker_Detection(*state, raw_marker_type)  # Legacy
@@ -302,7 +306,7 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
 def test_surface_marker_from_raw_detection():
     # TODO: Test `from_*_detection` methods below
     # Surface_Marker.from_square_tag_detection({})
-    # Surface_Marker.from_apriltag_v2_detection(apriltag.DetectionBase())
+    # Surface_Marker.from_apriltag_v3_detection(apriltags3.Detection())
     assert True
 
 
@@ -354,51 +358,57 @@ def test_surface_marker_deserialize():
     assert new_marker_square.verts_px == old_marker_square.verts_px
     assert new_marker_square.perimeter == old_marker_square.perimeter
 
-    # Apriltag V2 deserialization test
+    # Apriltag V3 deserialization test
 
-    APRILTAG_V2_FAMILY = "tag36h11"
-    APRILTAG_V2_TAG_ID = 10
-    APRILTAG_V2_HAMMING = 2
-    APRILTAG_V2_GOODNESS = 0.0
-    APRILTAG_V2_DECISION_MARGIN = 44.26249694824219
-    APRILTAG_V2_HOMOGRAPHY = [
+    APRILTAG_V3_FAMILY = "tag36h11"
+    APRILTAG_V3_TAG_ID = 10
+    APRILTAG_V3_HAMMING = 2
+    APRILTAG_V3_GOODNESS = 0.0
+    APRILTAG_V3_DECISION_MARGIN = 44.26249694824219
+    APRILTAG_V3_HOMOGRAPHY = [
         [0.7398546228643903, 0.24224258644348548, -22.823628761428765],
         [-0.14956381555697143, -0.595697080889624, -53.73760032443805],
         [0.00036910994224440203, -0.001201257450114289, -0.07585102600797115],
     ]
-    APRILTAG_V2_CENTER = [300.90072557529066, 708.4624052256166]
-    APRILTAG_V2_CORNERS = [
+    APRILTAG_V3_CENTER = [300.90072557529066, 708.4624052256166]
+    APRILTAG_V3_CORNERS = [
         [317.3298034667968, 706.38671875],
         [300.56298828125, 717.4339599609377],
         [284.8282165527345, 710.4930419921874],
         [301.2247619628906, 699.854797363281],
     ]
+    APRILTAG_V3_POSE_R = None
+    APRILTAG_V3_POSE_T = None
+    APRILTAG_V3_POSE_ERR = None
 
-    new_serialized_apriltag_v2 = [
+    new_serialized_apriltag_v3 = [
         [
-            APRILTAG_V2_FAMILY,
-            APRILTAG_V2_TAG_ID,
-            APRILTAG_V2_HAMMING,
-            APRILTAG_V2_GOODNESS,
-            APRILTAG_V2_DECISION_MARGIN,
-            APRILTAG_V2_HOMOGRAPHY,
-            APRILTAG_V2_CENTER,
-            APRILTAG_V2_CORNERS,
-            _Apriltag_V2_Marker_Detection.marker_type.value,
+            APRILTAG_V3_FAMILY,
+            APRILTAG_V3_TAG_ID,
+            APRILTAG_V3_HAMMING,
+            APRILTAG_V3_GOODNESS,
+            APRILTAG_V3_DECISION_MARGIN,
+            APRILTAG_V3_HOMOGRAPHY,
+            APRILTAG_V3_CENTER,
+            APRILTAG_V3_CORNERS,
+            APRILTAG_V3_POSE_R,
+            APRILTAG_V3_POSE_T,
+            APRILTAG_V3_POSE_ERR,
+            _Apriltag_V3_Marker_Detection.marker_type.value,
         ]
     ]
 
-    new_marker_apriltag_v2 = Surface_Marker.deserialize(new_serialized_apriltag_v2)
+    new_marker_apriltag_v3 = Surface_Marker.deserialize(new_serialized_apriltag_v3)
 
-    APRILTAG_V2_CONF = APRILTAG_V2_DECISION_MARGIN / 100
-    APRILTAG_V2_VERTS = [[c] for c in APRILTAG_V2_CORNERS]
-    APRILTAG_V2_PERIM = 74.20
+    APRILTAG_V3_CONF = APRILTAG_V3_DECISION_MARGIN / 100
+    APRILTAG_V3_VERTS = [[c] for c in APRILTAG_V3_CORNERS]
+    APRILTAG_V3_PERIM = 74.20
 
-    assert new_marker_apriltag_v2.marker_type == Surface_Marker_Type.APRILTAG_V2
-    assert new_marker_apriltag_v2.tag_id == APRILTAG_V2_TAG_ID
-    assert new_marker_apriltag_v2.id_confidence == APRILTAG_V2_CONF
-    assert new_marker_apriltag_v2.verts_px == APRILTAG_V2_VERTS
-    assert round(new_marker_apriltag_v2.perimeter, 2) == APRILTAG_V2_PERIM
+    assert new_marker_apriltag_v3.marker_type == Surface_Marker_Type.APRILTAG_V3
+    assert new_marker_apriltag_v3.tag_id == APRILTAG_V3_TAG_ID
+    assert new_marker_apriltag_v3.id_confidence == APRILTAG_V3_CONF
+    assert new_marker_apriltag_v3.verts_px == APRILTAG_V3_VERTS
+    assert round(new_marker_apriltag_v3.perimeter, 2) == APRILTAG_V3_PERIM
 
 
 if __name__ == "__main__":
