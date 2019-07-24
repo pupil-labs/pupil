@@ -11,11 +11,11 @@ See COPYING and COPYING.LESSER for license details.
 
 import file_methods as fm
 import video_capture
-import apriltag
+import apriltags3
 from methods import normalize
 from types import SimpleNamespace
 
-apriltag_detector = apriltag.Detector()
+apriltag_detector = apriltags3.Detector()
 
 
 def get_markers_data(detection, img_size, timestamp):
