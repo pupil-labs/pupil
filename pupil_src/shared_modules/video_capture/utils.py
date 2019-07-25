@@ -454,20 +454,18 @@ class RenameSet:
 
     def read_start_time(self):
         info_json_path = os.path.join(self.rec_dir, 'info.json')
-        with open(info_json_path, 'r') as f:
-            json_data = json.load(f)
         try:
-            t0 = json_data['start_time']
-        except KeyError:
-            logger.error('Could not read recording start time from info.json!')
+            with open(info_json_path, 'r') as f:
+                json_data = json.load(f)
+            return json_data['start_time_synced']
+
+        except FileNotFoundError:
+            logger.warn('Trying to read info.json, but it does not exist!')
             return 0
-        # Add a correction in case start_time_synced is smaller
-        if 'start_time_synced' in json_data:
-            start_time_synced = json_data['start_time_synced']
-            if start_time_synced < t0:
-                logger.warn('start_time_synced is before start_time!')
-                t0 = start_time_synced
-        return t0
+        
+        except KeyError:
+            logger.error('Could not read start_time_synced from info.json!')
+            return 0
 
     def rewrite_time(self, destination_name):
         t0 = self.read_start_time()
