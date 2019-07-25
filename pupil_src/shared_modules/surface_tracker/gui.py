@@ -138,13 +138,13 @@ class GUI:
             )
 
             # TODO: Should the had be drawn for small or low confidence markers?
-            pyglui_utils.draw_polyline(hat.reshape((6, 2)), color=pyglui.cygl.utils.RGBA(*color))
+            pyglui_utils.draw_polyline(hat.reshape((6, 2)), color=pyglui_utils.RGBA(*color))
             if (
                 marker.perimeter >= self.tracker.marker_min_perimeter
                 and marker.id_confidence > self.tracker.marker_min_confidence
             ):
                 pyglui_utils.draw_polyline(
-                    hat.reshape((6, 2)), color=pyglui.cygl.utils.RGBA(*color), line_type=gl.GL_POLYGON
+                    hat.reshape((6, 2)), color=pyglui_utils.RGBA(*color), line_type=gl.GL_POLYGON
                 )
 
     def _draw_marker_id(self, marker):
