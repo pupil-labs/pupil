@@ -70,7 +70,9 @@ class Surface_Base_Marker(metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def id_confidence(self) -> float:
-        # TODO: Why is it called "id_confidence" instead of "confidence"?
+        """
+        Confidence that the surface marker has the suggested `tag_id`.
+        """
         pass
 
     @property
