@@ -15,6 +15,7 @@ import os
 import pathlib as pl
 import re
 from typing import Iterator, Sequence
+import json
 
 import av
 import cv2
@@ -425,9 +426,17 @@ class RenameSet:
                     os.remove(self.path)
                     os.rename(self.path, new_path)
 
-        def rewrite_time(self, destination_name):
+        def rewrite_time(self, destination_name, start_time):
+            timestamps = np.fromfile(self.path, dtype="<u8")
+            
+            # Subtract start_time from all times in the recording, so timestamps
+            # start at 0. This is to increase precision when converting
+            # timestamps to float32, e.g. for OpenGL! 
+            timestamps -= start_time
+
             SECONDS_PER_NANOSECOND = 1e-9
-            timestamps = np.fromfile(self.path, dtype="<u8") * SECONDS_PER_NANOSECOND
+            timestamps = timestamps * SECONDS_PER_NANOSECOND
+
             logger.info('Creating "{}_timestamps.npy"'.format(self.name))
             timestamp_loc = os.path.join(
                 os.path.dirname(self.path), "{}_timestamps.npy".format(self.name)
@@ -443,9 +452,27 @@ class RenameSet:
         for r in self.existsting_files:
             self.RenameFile(r).rename(source_pattern, destination_name)
 
+    def read_start_time(self):
+        info_json_path = os.path.join(self.rec_dir, 'info.json')
+        with open(info_json_path, 'r') as f:
+            json_data = json.load(f)
+        try:
+            t0 = json_data['start_time']
+        except KeyError:
+            logger.error('Could not read recording start time from info.json!')
+            return 0
+        # Add a correction in case start_time_synced is smaller
+        if 'start_time_synced' in json_data:
+            start_time_synced = json_data['start_time_synced']
+            if start_time_synced < t0:
+                logger.warn('start_time_synced is before start_time!')
+                t0 = start_time_synced
+        return t0
+
     def rewrite_time(self, destination_name):
+        t0 = self.read_start_time()
         for r in self.existsting_files:
-            self.RenameFile(r).rewrite_time(destination_name)
+            self.RenameFile(r).rewrite_time(destination_name, t0)
 
     def load_intrinsics(self):
         def _load_intrinsics(file_name, name):
