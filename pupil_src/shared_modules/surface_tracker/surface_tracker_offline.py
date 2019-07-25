@@ -107,7 +107,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         # Filter out non-filled frames where the cache entry is None.
         # Chain the remaining entries (which are lists) to get a flat sequence.
-        cached_surface_marker_sequence = itertools.chain(*filter(None, self.marker_cache))
+        filled_out_marker_cache = filter(lambda x: x is not None, self.marker_cache)
+        cached_surface_marker_sequence = itertools.chain.from_iterable(filled_out_marker_cache)
 
         # Get the first surface marker from the sequence, and set the detection mode according to it.
         first_cached_surface_marker = next(cached_surface_marker_sequence, None)
