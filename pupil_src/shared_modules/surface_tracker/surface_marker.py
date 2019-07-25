@@ -37,8 +37,7 @@ Surface_Marker_TagID = typing.NewType("Surface_Marker_TagID", int)
 
 @enum.unique
 class Surface_Marker_Type(enum.Enum):
-    # TODO: Is there a better (more uniquely descriptive) name than "square"?
-    SQUARE = "square"
+    SQUARE = "legacy"
     APRILTAG_V3 = "apriltag_v3"
 
 
