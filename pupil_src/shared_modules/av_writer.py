@@ -98,6 +98,7 @@ class AV_Writer(object):
         fps=30,
         video_stream={"codec": "mpeg4", "bit_rate": 15000 * 10e3},
         audio_dir=None,
+        use_frame_pts=False
     ):
         super().__init__()
         self.timestamps = []
@@ -146,6 +147,7 @@ class AV_Writer(object):
         self._closed = False
         self._last_ts = float("-inf")
         self._last_pts = float("-inf")
+        self.use_frame_pts = use_frame_pts
 
     def write_video_frame(self, input_frame):
         if self._closed:
@@ -196,7 +198,11 @@ class AV_Writer(object):
             )
         self._last_ts = ts
 
-        pts = int((ts - self.start_time) / self.time_base)
+        if self.use_frame_pts:
+            pts = input_frame.pts
+        else:
+            pts = int((ts - self.start_time) / self.time_base)
+
         if pts <= self._last_pts:
             pts = self._last_pts + 1
         self.frame.pts = pts
