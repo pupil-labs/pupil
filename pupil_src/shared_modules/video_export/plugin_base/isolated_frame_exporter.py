@@ -15,6 +15,7 @@ from glob import glob
 from types import SimpleNamespace
 
 import player_methods as pm
+from version_utils import read_rec_version, VersionFormat
 from av_writer import AV_Writer
 from task_manager import ManagedTask
 from video_capture import File_Source, EndofVideoError
@@ -42,7 +43,8 @@ class IsolatedFrameExporter(VideoExporter, abc.ABC):
         input_video_file = _find_video_file(self.g_pool.rec_dir, input_name)
         output_video_file = os.path.join(export_dir, output_name + ".mp4")
         task_args = (
-            input_video_file,
+            self.g_pool.rec_dir,
+            input_name,
             output_video_file,
             export_range,
             self.g_pool.timestamps,
@@ -71,13 +73,17 @@ def _find_video_file(directory, name):
 
 
 def _convert_video_file(
-    input_file,
+    rec_dir,
+    input_name,
     output_file,
     export_range,
     world_timestamps,
     process_frame,
     timestamp_export_format,
 ):
+    input_file = _find_video_file(rec_dir, input_name)
+    meta_info = pm.load_meta_info(rec_dir)
+
     yield "Export video", 0.0
     input_source = File_Source(SimpleNamespace(), input_file, fill_gaps=True)
     if not input_source.initialised:
@@ -92,9 +98,17 @@ def _convert_video_file(
     (export_from_index, export_to_index) = pm.find_closest(
         input_source.timestamps, export_window
     )
+
+    # setup of writer
+    rec_version = meta_info["Capture Software Version"]
+    recording_has_correct_pts = rec_version >= VersionFormat("1.14")
     writer = AV_Writer(
-        output_file, fps=input_source.frame_rate, audio_dir=None, use_frame_pts=True
+        output_file,
+        fps=input_source.frame_rate,
+        audio_dir=None,
+        use_frame_pts=recording_has_correct_pts,
     )
+
     input_source.seek_to_frame(export_from_index)
     next_update_idx = export_from_index + update_rate
     while True:

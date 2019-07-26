@@ -13,6 +13,7 @@ import logging
 import os
 
 import player_methods as pm
+from version_utils import VersionFormat, read_rec_version
 from task_manager import ManagedTask
 from video_export.plugin_base.video_exporter import VideoExporter
 
@@ -211,8 +212,13 @@ def _export_world_video(
         )
 
         # setup of writer
+        rec_version = meta_info["Capture Software Version"]
+        recording_has_correct_pts = rec_version >= VersionFormat("1.14")
         writer = AV_Writer(
-            out_file_path, fps=cap.frame_rate, audio_dir=rec_dir, use_frame_pts=True
+            out_file_path,
+            fps=cap.frame_rate,
+            audio_dir=rec_dir,
+            use_frame_pts=recording_has_correct_pts,
         )
 
         cap.seek_to_frame(start_frame)
