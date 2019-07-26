@@ -793,7 +793,7 @@ class Realsense_Source(Base_Source):
 
         video_path = os.path.join(rec_loc, "depth.mp4")
         self.depth_video_writer = AV_Writer(
-            video_path, fps=self.depth_frame_rate, use_timestamps=True
+            video_path, fps=self.depth_frame_rate
         )
 
     def stop_depth_recording(self):

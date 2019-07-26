@@ -212,7 +212,7 @@ def _export_world_video(
 
         # setup of writer
         writer = AV_Writer(
-            out_file_path, fps=cap.frame_rate, audio_dir=rec_dir, use_timestamps=True
+            out_file_path, fps=cap.frame_rate, audio_dir=rec_dir
         )
 
         cap.seek_to_frame(start_frame)

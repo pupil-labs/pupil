@@ -98,10 +98,8 @@ class AV_Writer(object):
         fps=30,
         video_stream={"codec": "mpeg4", "bit_rate": 15000 * 10e3},
         audio_dir=None,
-        use_timestamps=False,
     ):
         super().__init__()
-        self.use_timestamps = use_timestamps
         self.timestamps = []
         # the approximate capture rate.
         self.fps = int(fps)
@@ -117,10 +115,7 @@ class AV_Writer(object):
         self.container = av.open(self.file_loc, "w")
         logger.debug("Opened '{}' for writing.".format(self.file_loc))
 
-        if self.use_timestamps:
-            self.time_base = Fraction(1, 65535)  # highest resolution for mp4
-        else:
-            self.time_base = Fraction(1000, self.fps * 1000)  # timebase is fps
+        self.time_base = Fraction(1, 65535)  # highest resolution for mp4
 
         self.video_stream = self.container.add_stream(
             video_stream["codec"], 1 / self.time_base
@@ -178,10 +173,7 @@ class AV_Writer(object):
             self.frame = av.VideoFrame(
                 template_frame.width, template_frame.height, "bgr24"
             )
-        if self.use_timestamps:
-            self.frame.time_base = self.time_base
-        else:
-            self.frame.time_base = Fraction(1, self.fps)
+        self.frame.time_base = self.time_base
 
     def _update_frame_buffer(self, input_frame):
         if input_frame.yuv_buffer is not None:
@@ -193,27 +185,23 @@ class AV_Writer(object):
             self.frame.planes[0].update(input_frame.img)
 
     def _update_frame_pts(self, input_frame):
-        if self.use_timestamps:
-            ts = input_frame.timestamp
-            if ts < self._last_ts:
-                self.close()
-                raise ValueError(
-                    (
-                        "Non-monotonic timestamps. Expected timestamp "
-                        "is >{}. Given timestamp: {}"
-                    ).format(self._last_ts, ts)
-                )
-            self._last_ts = ts
+        ts = input_frame.timestamp
+        if ts < self._last_ts:
+            self.close()
+            raise ValueError(
+                (
+                    "Non-monotonic timestamps. Expected timestamp "
+                    "is >{}. Given timestamp: {}"
+                ).format(self._last_ts, ts)
+            )
+        self._last_ts = ts
 
-            pts = int((ts - self.start_time) / self.time_base)
-            if pts <= self._last_pts:
-                pts = self._last_pts + 1
-            self.frame.pts = pts
-            self.frame.dts = pts
-            self._last_pts = pts
-        else:
-            # our timebase is 1/30  so a frame idx is the correct pts for an fps recorded video.
-            self.frame.pts = self.current_frame_idx
+        pts = int((ts - self.start_time) / self.time_base)
+        if pts <= self._last_pts:
+            pts = self._last_pts + 1
+        self.frame.pts = pts
+        self.frame.dts = pts
+        self._last_pts = pts
         return self.frame.pts
 
     def _mux_video(self, input_frame):
