@@ -41,14 +41,16 @@ class Frame(object):
     """docstring of Frame"""
 
     def __init__(self, timestamp, av_frame, index):
-        self._av_frame = av_frame
         self.timestamp = float(timestamp)
+        self.pts = int(av_frame.pts)
         self.index = int(index)
-        self._img = None
-        self._gray = None
+        self.width = av_frame.width
+        self.height = av_frame.height
         self.jpeg_buffer = None
         self.yuv_buffer = None
-        self.height, self.width = av_frame.height, av_frame.width
+        self._av_frame = av_frame
+        self._img = None
+        self._gray = None
 
     def copy(self):
         return Frame(self.timestamp, self._av_frame, self.index)
@@ -75,31 +77,25 @@ class Frame(object):
                 self._gray = np.ascontiguousarray(self._gray[:, : self.width])
         return self._gray
 
-
 class FakeFrame:
     """
     Show FakeFrame when the video is broken or there is
     gap between timestamp.
     """
 
-    def __init__(self, shape, timestamp, index):
-        self.shape = shape
-        self.yuv_buffer = None
-        static_img = np.ones(self.shape, dtype=np.uint8) * 128
-        self.img = self.bgr = static_img
+    def __init__(self, shape2d, timestamp, pts, index):
         self.timestamp = float(timestamp)
+        self.pts = int(pts)
         self.index = int(index)
+        self.width = shape2d[0]
+        self.height = shape2d[1]
+        self.jpeg_buffer = None
+        self.yuv_buffer = None
+        static_img = np.ones((self.width, self.height, 3), dtype=np.uint8) * 128
+        self.img = self.bgr = static_img
 
     def copy(self):
-        return FakeFrame(self.shape, self.timestamp, self.index)
-
-    @property
-    def width(self):
-        return self.img.shape[1]
-
-    @property
-    def height(self):
-        return self.img.shape[0]
+        return FakeFrame(self.shape, self.timestamp, self.pts, self.index,)
 
     @property
     def gray(self):
@@ -368,9 +364,11 @@ class File_Source(Playback_Source, Base_Source):
             target_entry = self.videoset.lookup[self.target_frame_idx]
         except IndexError:
             raise EndofVideoError
+
         if target_entry.container_idx == -1:
-            return self._get_fake_frame_and_advance(target_entry.timestamp)
-        elif target_entry.container_idx != self.current_container_index:
+            return _get_fake_frame_and_advance(target_entry)
+
+        if target_entry.container_idx != self.current_container_index:
             # Contained index changed, need to load other video split
             self.setup_video(target_entry.container_idx)
 
@@ -404,11 +402,10 @@ class File_Source(Playback_Source, Base_Source):
         self.target_frame_idx += 1
         return Frame(target_entry.timestamp, av_frame, index=self.current_frame_idx)
 
-    def _get_fake_frame_and_advance(self, ts):
+    def _get_fake_frame_and_advance(self, target_entry):
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
-        fake_shape = (*self.frame_size, 3)
-        return FakeFrame(fake_shape, ts, self.current_frame_idx)
+        return FakeFrame(self.frame_size, target_entry.timestamp, self.current_frame_idx, target_entry.pts)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):
