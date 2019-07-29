@@ -98,7 +98,8 @@ class AV_Writer(object):
         fps=30,
         video_stream={"codec": "mpeg4", "bit_rate": 15000 * 10e3},
         audio_dir=None,
-        use_frame_pts=False
+        use_frame_pts=False,
+        frame_timebase=None,
     ):
         super().__init__()
         self.timestamps = []
@@ -116,7 +117,11 @@ class AV_Writer(object):
         self.container = av.open(self.file_loc, "w")
         logger.debug("Opened '{}' for writing.".format(self.file_loc))
 
-        self.time_base = Fraction(1, 65535)  # highest resolution for mp4
+        if frame_timebase is not None:
+            self.time_base = frame_timebase
+        else:
+            # fallback: highest resolution for mp4
+            self.time_base = Fraction(1, 65535)
 
         self.video_stream = self.container.add_stream(
             video_stream["codec"], 1 / self.time_base

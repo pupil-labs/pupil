@@ -107,6 +107,7 @@ def _convert_video_file(
         fps=input_source.frame_rate,
         audio_dir=None,
         use_frame_pts=recording_has_correct_pts,
+        frame_timebase=input_source.time_base if recording_has_correct_pts else None,
     )
 
     input_source.seek_to_frame(export_from_index)

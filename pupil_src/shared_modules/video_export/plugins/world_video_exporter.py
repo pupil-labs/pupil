@@ -219,6 +219,7 @@ def _export_world_video(
             fps=cap.frame_rate,
             audio_dir=rec_dir,
             use_frame_pts=recording_has_correct_pts,
+            frame_timebase=cap.time_base if recording_has_correct_pts else None,
         )
 
         cap.seek_to_frame(start_frame)
