@@ -25,7 +25,7 @@ from ndsi import H264Writer
 from pyglui import ui
 
 import csv_utils
-from av_writer import AV_Writer, JPEG_Writer
+from av_writer import MPEG_Writer, JPEG_Writer
 from file_methods import PLData_Writer, load_object
 from methods import get_system_info, timer
 
@@ -317,7 +317,7 @@ class Recorder(System_Plugin_Base):
 
         self.video_path = os.path.join(self.rec_path, "world.mp4")
         if self.raw_jpeg and self.g_pool.capture.jpeg_support:
-            self.writer = JPEG_Writer(self.video_path, self.g_pool.capture.frame_rate)
+            self.writer = JPEG_Writer(self.video_path)
         elif hasattr(self.g_pool.capture._recent_frame, "h264_buffer"):
             self.writer = H264Writer(
                 self.video_path,
@@ -326,7 +326,7 @@ class Recorder(System_Plugin_Base):
                 int(self.g_pool.capture.frame_rate),
             )
         else:
-            self.writer = AV_Writer(self.video_path, fps=self.g_pool.capture.frame_rate)
+            self.writer = MPEG_Writer(self.video_path)
 
         try:
             cal_pt_path = os.path.join(self.g_pool.user_dir, "user_calibration_data")

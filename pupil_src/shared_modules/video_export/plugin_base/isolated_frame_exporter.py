@@ -16,7 +16,7 @@ from types import SimpleNamespace
 
 import player_methods as pm
 from version_utils import read_rec_version, VersionFormat
-from av_writer import AV_Writer
+from av_writer import MPEG_Writer
 from task_manager import ManagedTask
 from video_capture import File_Source, EndofVideoError
 from video_export.plugin_base.video_exporter import VideoExporter
@@ -102,13 +102,10 @@ def _convert_video_file(
     # setup of writer
     rec_version = meta_info["Capture Software Version"]
     recording_has_correct_pts = rec_version >= VersionFormat("1.14")
-    writer = AV_Writer(
-        output_file,
-        fps=input_source.frame_rate,
-        audio_dir=None,
-        use_frame_pts=recording_has_correct_pts,
-        frame_timebase=input_source.time_base if recording_has_correct_pts else None,
-    )
+    if recording_has_correct_pts:
+        writer = MPEG_Writer(output_file, frame_pts_timebase=input_source.time_base)
+    else:
+        writer = MPEG_Writer(output_file)
 
     input_source.seek_to_frame(export_from_index)
     next_update_idx = export_from_index + update_rate

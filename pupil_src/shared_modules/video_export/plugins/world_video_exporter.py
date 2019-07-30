@@ -110,7 +110,7 @@ def _export_world_video(
 
     import file_methods as fm
     import player_methods as pm
-    from av_writer import AV_Writer
+    from av_writer import MPEG_Audio_Writer
 
     # we are not importing manual gaze correction. In Player corrections have already been applied.
     # in batch exporter this plugin makes little sense.
@@ -214,13 +214,12 @@ def _export_world_video(
         # setup of writer
         rec_version = meta_info["Capture Software Version"]
         recording_has_correct_pts = rec_version >= VersionFormat("1.14")
-        writer = AV_Writer(
-            out_file_path,
-            fps=cap.frame_rate,
-            audio_dir=rec_dir,
-            use_frame_pts=recording_has_correct_pts,
-            frame_timebase=cap.time_base if recording_has_correct_pts else None,
-        )
+        if recording_has_correct_pts:
+            writer = MPEG_Audio_Writer(
+                out_file_path, audio_dir=rec_dir, frame_pts_timebase=cap.time_base
+            )
+        else:
+            writer = MPEG_Audio_Writer(out_file_path, audio_dir=rec_dir)
 
         cap.seek_to_frame(start_frame)
 

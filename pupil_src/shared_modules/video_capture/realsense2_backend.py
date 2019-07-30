@@ -18,7 +18,7 @@ import pyrealsense2 as rs
 
 from version_utils import VersionFormat
 from .base_backend import Base_Source, Base_Manager
-from av_writer import AV_Writer
+from av_writer import MPEG_Writer
 from camera_models import load_intrinsics
 
 import glfw
@@ -709,9 +709,7 @@ class Realsense2_Source(Base_Source):
             return
 
         video_path = os.path.join(rec_loc, "depth.mp4")
-        self.depth_video_writer = AV_Writer(
-            video_path, fps=self.depth_frame_rate
-        )
+        self.depth_video_writer = MPEG_Writer(video_path)
 
     def stop_depth_recording(self):
         if self.depth_video_writer is None:
