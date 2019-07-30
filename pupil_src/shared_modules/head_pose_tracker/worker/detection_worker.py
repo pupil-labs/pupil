@@ -9,11 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import logging
+from types import SimpleNamespace
+
+import apriltag
 import file_methods as fm
 import video_capture
-import apriltag
 from methods import normalize
-from types import SimpleNamespace
+
+logger = logging.getLogger(__name__)
 
 apriltag_detector = apriltag.Detector()
 
@@ -30,10 +34,32 @@ def get_markers_data(detection, img_size, timestamp):
 def _detect(frame):
     image = frame.gray
     apriltag_detections = apriltag_detector.detect(image)
+    apriltag_detections = _filter_duplicate_markers(apriltag_detections)
+
     img_size = image.shape[::-1]
     return [
         get_markers_data(detection, img_size, frame.timestamp)
         for detection in apriltag_detections
+    ]
+
+
+def _filter_duplicate_markers(apriltag_detections):
+    marker_ids = [detection.tag_id for detection in apriltag_detections]
+    if len(set(marker_ids)) == len(marker_ids):
+        return apriltag_detections
+
+    duplicate_marker_ids = [
+        marker_id for marker_id in set(marker_ids) if marker_ids.count(marker_id) > 1
+    ]
+    for marker_id in duplicate_marker_ids:
+        logger.warning(
+            "Multiple markers with id {} are detected."
+            "Please remove the duplicate".format(marker_id)
+        )
+    return [
+        detection
+        for detection in apriltag_detections
+        if detection.tag_id not in duplicate_marker_ids
     ]
 
 
