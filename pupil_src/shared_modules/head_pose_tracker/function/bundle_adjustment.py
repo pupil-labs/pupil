@@ -45,7 +45,7 @@ class BundleAdjustment:
         markers_3d_model
         """
 
-        self._enough_samples = bool(len(initial_guess_result.key_markers) >= 100)
+        self._enough_samples = bool(len(initial_guess_result.key_markers) >= 30)
 
         self._marker_ids, self._frame_ids = self._set_ids(
             initial_guess_result.frame_id_to_extrinsics,
@@ -161,7 +161,6 @@ class BundleAdjustment:
         n_residuals = markers_points_2d_detected.size,
         n_variables = camera_extrinsics_array.size + marker_extrinsics_array.size
         """
-        import scipy.misc
 
         n_samples = len(self._frame_indices)
 
@@ -218,7 +217,7 @@ class BundleAdjustment:
             loss="soft_l1",
             diff_step=self._diff_step,
             jac_sparsity=sparsity_matrix,
-            max_nfev=50,
+            max_nfev=100,
         )
         return result
 
@@ -238,7 +237,7 @@ class BundleAdjustment:
         marker_id_to_extrinsics_opt = {
             self._marker_ids[marker_index]: extrinsics
             for marker_index, extrinsics in enumerate(marker_extrinsics_array)
-            if marker_index not in marker_indices_failed
+            if marker_index not in marker_indices_failed or marker_index == 0
         }
         frame_ids_failed = [self._frame_ids[i] for i in frame_indices_failed]
 
