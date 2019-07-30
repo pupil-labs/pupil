@@ -427,7 +427,7 @@ class Fisheye_Dist_Camera(Camera_Model):
             uv3d,
             xy_undist,
             self.K,
-            np.array([[0, 0, 0, 0, 0]]),
+            None,
             flags=flags,
             useExtrinsicGuess=useExtrinsicGuess,
             rvec=rvec,
