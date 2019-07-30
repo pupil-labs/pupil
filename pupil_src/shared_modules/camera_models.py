@@ -380,12 +380,15 @@ class Fisheye_Dist_Camera(Camera_Model):
             image_points.shape = (-1, 1, 2)
         return image_points
 
-    def undistortPoints(self, points):
+    def undistort_points_to_ideal_point_coordinates(self, points):
+        return cv2.fisheye.undistortPoints(points, self.K, self.D)
+
+    def undistort_points_on_image_plane(self, points):
         points = self.unprojectPoints(points, use_distortion=True)
         points = self.projectPoints(points, use_distortion=False)
         return points
 
-    def distortPoints(self, points):
+    def distort_points_on_image_plane(self, points):
         points = self.unprojectPoints(points, use_distortion=False)
         points = self.projectPoints(points, use_distortion=True)
         return points
@@ -417,7 +420,7 @@ class Fisheye_Dist_Camera(Camera_Model):
         if xy.ndim == 2:
             xy = np.expand_dims(xy, 0)
 
-        xy_undist = self.undistortPoints(xy.astype(np.float32))
+        xy_undist = self.undistort_points_on_image_plane(xy)
         xy_undist = np.squeeze(xy_undist)
 
         res = cv2.solvePnP(
@@ -544,12 +547,15 @@ class Radial_Dist_Camera(Camera_Model):
             image_points.shape = (-1, 1, 2)
         return image_points
 
-    def undistortPoints(self, points):
+    def undistort_points_to_ideal_point_coordinates(self, points):
+        return cv2.undistortPoints(points, self.K, self.D)
+
+    def undistort_points_on_image_plane(self, points):
         points = self.unprojectPoints(points, use_distortion=True)
         points = self.projectPoints(points, use_distortion=False)
         return points
 
-    def distortPoints(self, points):
+    def distort_points_on_image_plane(self, points):
         points = self.unprojectPoints(points, use_distortion=False)
         points = self.projectPoints(points, use_distortion=True)
         return points
