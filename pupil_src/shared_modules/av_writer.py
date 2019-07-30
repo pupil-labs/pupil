@@ -259,7 +259,7 @@ class MPEG_Writer(AV_Writer):
             self.frame.planes[0].update(input_frame.img)
 
         self.frame.pts = pts
-        # self.frame.dts = pts
+        self.frame.dts = pts
 
         yield from self.video_stream.encode(self.frame)
 
