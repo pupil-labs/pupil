@@ -136,7 +136,9 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
                         pupil_positions.timestamps[0],
                         pupil_positions.timestamps[-1],
                     )
-                    timestamps_target = np.linspace(t0, t1, NUMBER_SAMPLES_TIMELINE)
+                    timestamps_target = np.linspace(
+                        t0, t1, NUMBER_SAMPLES_TIMELINE, dtype=np.float32
+                    )
 
                     data_indeces = np.searchsorted(
                         pupil_positions.timestamps, timestamps_target
