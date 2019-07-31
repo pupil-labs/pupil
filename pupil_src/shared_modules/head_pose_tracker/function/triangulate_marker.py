@@ -46,8 +46,12 @@ def _prepare_data_for_triangulation(
 
     points1 = np.array(detection_1["verts"], dtype=np.float32).reshape((4, 1, 2))
     points2 = np.array(detection_2["verts"], dtype=np.float32).reshape((4, 1, 2))
-    undistort_points1 = camera_intrinsics.undistortPoints(points1)
-    undistort_points2 = camera_intrinsics.undistortPoints(points2)
+    undistort_points1 = camera_intrinsics.undistort_points_to_ideal_point_coordinates(
+        points1
+    )
+    undistort_points2 = camera_intrinsics.undistort_points_to_ideal_point_coordinates(
+        points2
+    )
 
     data_for_triangulation = proj_mat1, proj_mat2, undistort_points1, undistort_points2
     return data_for_triangulation
