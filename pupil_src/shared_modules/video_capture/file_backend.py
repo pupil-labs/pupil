@@ -95,7 +95,7 @@ class FakeFrame:
         self.img = self.bgr = static_img
 
     def copy(self):
-        return FakeFrame(self.shape, self.timestamp, self.pts, self.index,)
+        return FakeFrame((self.width, self.height), self.timestamp, self.pts, self.index)
 
     @property
     def gray(self):
@@ -366,7 +366,7 @@ class File_Source(Playback_Source, Base_Source):
             raise EndofVideoError
 
         if target_entry.container_idx == -1:
-            return _get_fake_frame_and_advance(target_entry)
+            return self._get_fake_frame_and_advance(target_entry)
 
         if target_entry.container_idx != self.current_container_index:
             # Contained index changed, need to load other video split
@@ -405,7 +405,7 @@ class File_Source(Playback_Source, Base_Source):
     def _get_fake_frame_and_advance(self, target_entry):
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
-        return FakeFrame(self.frame_size, target_entry.timestamp, self.current_frame_idx, target_entry.pts)
+        return FakeFrame(self.frame_size, target_entry.timestamp, target_entry.pts, self.current_frame_idx)
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):
