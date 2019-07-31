@@ -214,6 +214,14 @@ def save_intrinsics(directory, cam_name, resolution, intrinsics):
 
 class Camera_Model(abc.ABC):
     @abc.abstractmethod
+    def update_camera_matrix(self, camera_matrix: np.ndarray):
+        ...
+
+    @abc.abstractmethod
+    def update_dist_coefs(self, dist_coefs: np.ndarray):
+        ...
+
+    @abc.abstractmethod
     def undistort(self, img: np.ndarray) -> np.ndarray:
         ...
 
@@ -231,6 +239,20 @@ class Camera_Model(abc.ABC):
         tvec: typing.Optional[np.ndarray] = None,
         use_distortion: bool = True,
     ):
+        ...
+
+    @abc.abstractmethod
+    def undistort_points_to_ideal_point_coordinates(
+        self, points: np.ndarray
+    ) -> np.ndarray:
+        ...
+
+    @abc.abstractmethod
+    def undistort_points_on_image_plane(self, points: np.ndarray) -> np.ndarray:
+        ...
+
+    @abc.abstractmethod
+    def distort_points_on_image_plane(self, points: np.ndarray) -> np.ndarray:
         ...
 
     @abc.abstractmethod
@@ -261,6 +283,12 @@ class Fisheye_Dist_Camera(Camera_Model):
         self.D = np.array(D)
         self.resolution = resolution
         self.name = name
+
+    def update_camera_matrix(self, camera_matrix):
+        self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
+
+    def update_dist_coefs(self, dist_coefs):
+        self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
 
     def undistort(self, img):
         """
@@ -380,12 +408,15 @@ class Fisheye_Dist_Camera(Camera_Model):
             image_points.shape = (-1, 1, 2)
         return image_points
 
-    def undistortPoints(self, points):
+    def undistort_points_to_ideal_point_coordinates(self, points):
+        return cv2.fisheye.undistortPoints(points, self.K, self.D)
+
+    def undistort_points_on_image_plane(self, points):
         points = self.unprojectPoints(points, use_distortion=True)
         points = self.projectPoints(points, use_distortion=False)
         return points
 
-    def distortPoints(self, points):
+    def distort_points_on_image_plane(self, points):
         points = self.unprojectPoints(points, use_distortion=False)
         points = self.projectPoints(points, use_distortion=True)
         return points
@@ -399,38 +430,29 @@ class Fisheye_Dist_Camera(Camera_Model):
         rvec=None,
         tvec=None,
     ):
-        # xy_undist = self.unprojectPoints(xy)
-        # f = np.array((self.K[0, 0], self.K[1, 1])).reshape(1, 2)
-        # c = np.array((self.K[0, 2], self.K[1, 2])).reshape(1, 2)
-        # xy_undist = xy_undist * f + c
-        # xy_undist = cv2.fisheye.undistortPoints(xy, self.K, self.D, P=self.K)
-
         try:
             uv3d = np.reshape(uv3d, (1, -1, 3))
+        except ValueError:
+            raise ValueError("uv3d is not 3d points")
+        try:
             xy = np.reshape(xy, (1, -1, 2))
         except ValueError:
-            raise ValueError
+            raise ValueError("xy is not 2d points")
+        if uv3d.shape[1] != xy.shape[1]:
+            raise ValueError("the number of 3d points and 2d points are not the same")
 
-        if uv3d.shape[1] != xy.shape[1] or uv3d.shape[1] == 0 or xy.shape[1] == 0:
-            return False, None, None
-
-        if xy.ndim == 2:
-            xy = np.expand_dims(xy, 0)
-
-        xy_undist = self.undistortPoints(xy.astype(np.float32))
-        xy_undist = np.squeeze(xy_undist)
+        xy_undist = self.undistort_points_on_image_plane(xy)
 
         res = cv2.solvePnP(
             uv3d,
             xy_undist,
             self.K,
-            np.array([[0, 0, 0, 0, 0]]),
+            None,
             flags=flags,
             useExtrinsicGuess=useExtrinsicGuess,
             rvec=rvec,
             tvec=tvec,
         )
-
         return res
 
     def save(self, directory, custom_name=None):
@@ -462,10 +484,10 @@ class Radial_Dist_Camera(Camera_Model):
         self.name = name
 
     def update_camera_matrix(self, camera_matrix):
-        self.K[:] = np.array(camera_matrix)
+        self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
 
     def update_dist_coefs(self, dist_coefs):
-        self.D[:] = np.array(dist_coefs)
+        self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
 
     def undistort(self, img):
         """
@@ -544,12 +566,15 @@ class Radial_Dist_Camera(Camera_Model):
             image_points.shape = (-1, 1, 2)
         return image_points
 
-    def undistortPoints(self, points):
+    def undistort_points_to_ideal_point_coordinates(self, points):
+        return cv2.undistortPoints(points, self.K, self.D)
+
+    def undistort_points_on_image_plane(self, points):
         points = self.unprojectPoints(points, use_distortion=True)
         points = self.projectPoints(points, use_distortion=False)
         return points
 
-    def distortPoints(self, points):
+    def distort_points_on_image_plane(self, points):
         points = self.unprojectPoints(points, use_distortion=False)
         points = self.projectPoints(points, use_distortion=True)
         return points
@@ -565,12 +590,14 @@ class Radial_Dist_Camera(Camera_Model):
     ):
         try:
             uv3d = np.reshape(uv3d, (1, -1, 3))
+        except ValueError:
+            raise ValueError("uv3d is not 3d points")
+        try:
             xy = np.reshape(xy, (1, -1, 2))
         except ValueError:
-            raise ValueError
-
-        if uv3d.shape[1] != xy.shape[1] or uv3d.shape[1] == 0 or xy.shape[1] == 0:
-            return False, None, None
+            raise ValueError("xy is not 2d points")
+        if uv3d.shape[1] != xy.shape[1]:
+            raise ValueError("the number of 3d points and 2d points are not the same")
 
         res = cv2.solvePnP(
             uv3d,

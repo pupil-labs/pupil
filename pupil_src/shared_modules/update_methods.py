@@ -423,7 +423,7 @@ def update_recording_v111_v113(rec_dir):
 
         verts += 100
 
-        verts = intrinsics.undistortPoints(verts)
+        verts = intrinsics.undistort_points_on_image_plane(verts)
 
         verts -= 100
 
