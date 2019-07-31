@@ -432,12 +432,14 @@ class Fisheye_Dist_Camera(Camera_Model):
     ):
         try:
             uv3d = np.reshape(uv3d, (1, -1, 3))
+        except ValueError:
+            raise ValueError("uv3d is not 3d points")
+        try:
             xy = np.reshape(xy, (1, -1, 2))
         except ValueError:
-            raise ValueError
-
+            raise ValueError("xy is not 2d points")
         if uv3d.shape[1] != xy.shape[1]:
-            raise ValueError
+            raise ValueError("the number of 3d points and 2d points are not the same")
 
         xy_undist = self.undistort_points_on_image_plane(xy)
 
@@ -588,12 +590,14 @@ class Radial_Dist_Camera(Camera_Model):
     ):
         try:
             uv3d = np.reshape(uv3d, (1, -1, 3))
+        except ValueError:
+            raise ValueError("uv3d is not 3d points")
+        try:
             xy = np.reshape(xy, (1, -1, 2))
         except ValueError:
-            raise ValueError
-
+            raise ValueError("xy is not 2d points")
         if uv3d.shape[1] != xy.shape[1]:
-            raise ValueError
+            raise ValueError("the number of 3d points and 2d points are not the same")
 
         res = cv2.solvePnP(
             uv3d,
