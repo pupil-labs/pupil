@@ -8,18 +8,20 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import logging
-import glob
 import fnmatch
-import re
+import glob
+import logging
 import os
+import pathlib as pl
+import re
+from typing import Iterator, Sequence
+import json
+
+import av
 import cv2
 import numpy as np
-import av
 
-from typing import Sequence, Iterator
 from camera_models import load_intrinsics
-
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +177,7 @@ class Video:
     def __init__(self, path: str) -> None:
         self.path = path
         self.ts = None
+        self._pts = None
         self._is_valid = self.check_valid()
 
     @property
@@ -199,6 +202,12 @@ class Video:
 
     def load_ts(self):
         self.ts = np.load(self.ts_loc)
+        self.ts = self._fix_negative_time_jumps(self.ts)
+
+    def load_pts(self):
+        packets = self.cont.demux(video=0)
+        # last pts is invalid
+        self._pts = np.array([packet.pts for packet in packets][:-1])
 
     @property
     def name(self) -> str:
@@ -218,6 +227,30 @@ class Video:
         if self.ts is None:
             self.load_ts()
         return self.ts
+
+    @property
+    def pts(self) -> np.ndarray:
+        if self._pts is None:
+            self.load_pts()
+        return self._pts
+
+    @staticmethod
+    def _fix_negative_time_jumps(timestamps: np.ndarray) -> np.ndarray:
+        """Fix cases when large negative time jumps cause huge gaps due to sorting
+
+        Replaces timestamps causing negative jumps with mean value of its adjacent
+        timestamps. This work-around is based on the assumption that the negative time
+        jump is caused by a single invalid timestamp.
+
+        Work around for https://github.com/pupil-labs/pupil/issues/1550
+        """
+        # TODO: what if adjacent timestamps are negative/zero as well?
+        time_diff = np.diff(timestamps)
+        invalid_idc = np.flatnonzero(time_diff < 0)
+        timestamps[invalid_idc + 1] = np.mean(
+            (timestamps[invalid_idc + 2], timestamps[invalid_idc])
+        )
+        return timestamps
 
 
 class VideoSet:
@@ -285,17 +318,14 @@ class VideoSet:
             return
         """
         loaded_ts = self._loaded_ts_sorted()
-        loaded_ts = self._fix_negative_time_jumps(loaded_ts)
         loaded_ts = self._fill_gaps(loaded_ts)
         lookup = self._setup_lookup(loaded_ts)
         for container_idx, vid in enumerate(self.videos):
             lookup_mask = np.isin(lookup.timestamp, vid.timestamps)
-            vid_mask = np.isin(vid.timestamps, lookup.timestamp)
-            lookup.container_frame_idx[lookup_mask] = np.arange(vid.timestamps.size)[
-                vid_mask
-            ]
+            lookup.container_frame_idx[lookup_mask] = np.arange(vid.timestamps.size)
             if vid.is_valid:
                 lookup.container_idx[lookup_mask] = container_idx
+            lookup.pts[lookup_mask] = vid.pts
         self.lookup = lookup
 
     def save_lookup(self):
@@ -322,23 +352,6 @@ class VideoSet:
         cont_idc = self.lookup.container_idx
         self.lookup = self.lookup[cont_idc > -1]
 
-    @staticmethod
-    def _fix_negative_time_jumps(timestamps: np.ndarray) -> np.ndarray:
-        """Fix cases when large negative time jumps cause huge gaps due to sorting
-
-        Replaces timestamps causing negative jumps with mean value of its adjacent
-        timestamps. This work-around is based on the assumption that the negative time
-        jump is caused by a single invalid timestamp.
-        
-        Work around for https://github.com/pupil-labs/pupil/issues/1550
-        """
-        time_diff = np.diff(timestamps)
-        invalid_idc = np.flatnonzero(time_diff < 0)
-        timestamps[invalid_idc + 1] = np.mean(
-            (timestamps[invalid_idc + 2], timestamps[invalid_idc])
-        )
-        return timestamps
-
     def _fill_gaps(self, timestamps: np.ndarray) -> np.ndarray:
         time_diff = np.diff(timestamps)
         median_time_diff = np.median(time_diff)
@@ -361,7 +374,7 @@ class VideoSet:
         """
         Frame timestamp difference [seconds] that needs to be exceeded
         in order to start filling frames.
-        
+
         median: Median frame timestamp difference in seconds
 
         return: float [seconds], should be >= median
@@ -374,6 +387,7 @@ class VideoSet:
                 ("container_idx", "<i8"),
                 ("container_frame_idx", "<i8"),
                 ("timestamp", "<f8"),
+                ("pts", "<i8"),
             ]
         )
         lookup = np.empty(timestamps.size, dtype=lookup_entry).view(np.recarray)
@@ -412,8 +426,17 @@ class RenameSet:
                     os.remove(self.path)
                     os.rename(self.path, new_path)
 
-        def rewrite_time(self, destination_name):
-            timestamps = np.fromfile(self.path, dtype=">f8")
+        def rewrite_time(self, destination_name, start_time):
+            timestamps = np.fromfile(self.path, dtype="<u8")
+            
+            # Subtract start_time from all times in the recording, so timestamps
+            # start at 0. This is to increase precision when converting
+            # timestamps to float32, e.g. for OpenGL! 
+            timestamps -= start_time
+
+            SECONDS_PER_NANOSECOND = 1e-9
+            timestamps = timestamps * SECONDS_PER_NANOSECOND
+
             logger.info('Creating "{}_timestamps.npy"'.format(self.name))
             timestamp_loc = os.path.join(
                 os.path.dirname(self.path), "{}_timestamps.npy".format(self.name)
@@ -429,9 +452,25 @@ class RenameSet:
         for r in self.existsting_files:
             self.RenameFile(r).rename(source_pattern, destination_name)
 
+    def read_start_time(self):
+        info_json_path = os.path.join(self.rec_dir, 'info.json')
+        try:
+            with open(info_json_path, 'r') as f:
+                json_data = json.load(f)
+            return json_data['start_time_synced']
+
+        except FileNotFoundError:
+            logger.warn('Trying to read info.json, but it does not exist!')
+            return 0
+        
+        except KeyError:
+            logger.error('Could not read start_time_synced from info.json!')
+            return 0
+
     def rewrite_time(self, destination_name):
+        t0 = self.read_start_time()
         for r in self.existsting_files:
-            self.RenameFile(r).rewrite_time(destination_name)
+            self.RenameFile(r).rewrite_time(destination_name, t0)
 
     def load_intrinsics(self):
         def _load_intrinsics(file_name, name):
@@ -461,10 +500,45 @@ class RenameSet:
         for loc in glob.glob(pattern):
             file_name = os.path.split(loc)[1]
             name = os.path.splitext(file_name)[0]
-            potential_locs = [
+            potential_locs = (
                 os.path.join(self.rec_dir, name + "." + ext) for ext in exts
-            ]
+            )
             existsting_files.extend(
                 [loc for loc in potential_locs if os.path.exists(loc)]
             )
         return existsting_files
+
+
+class RawTimePairs:
+    TIME_FACTORS = {"<u8": 1e-9}  # nano seconds to seconds factor
+
+    def __init__(
+        self, root_dir, pattern, raw_dtype="<f8", raw_shape=(-1,), time_dtype="<u8"
+    ):
+        self.raw_dtype = raw_dtype
+        self.raw_shape = raw_shape
+        self.time_dtype = time_dtype
+        self.root = pl.Path(root_dir)
+        self.part_stems = sorted(set(p.stem for p in self.root.glob(pattern)))
+
+    def items(self):
+        for data_raw, data_time in self._load_all_pairs():
+            yield from zip(data_raw, data_time)
+
+    def _load_all_pairs(self):
+        for stem in self.part_stems:
+            yield self._load_pairs_for_stem(stem)
+
+    def _load_pairs_for_stem(self, stem):
+        base = self.root / stem
+        data_time = self._load_file(base, ".time", self.time_dtype)
+        if self.time_dtype in self.TIME_FACTORS:
+            data_time = data_time * self.TIME_FACTORS[self.time_dtype]
+        data_raw = self._load_file(base, ".raw", self.raw_dtype)
+        data_raw.shape = self.raw_shape
+        return data_raw, data_time
+
+    @staticmethod
+    def _load_file(path_without_suffix, suffix, format):
+        path = path_without_suffix.with_suffix(suffix)
+        return np.fromfile(str(path), format)
