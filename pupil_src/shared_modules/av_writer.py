@@ -102,7 +102,7 @@ class AV_Writer(abc.ABC):
 
         self.timestamps = []
         self.frame_pts_timebase = frame_pts_timebase
-        self.last_pts = float("-inf")
+        self.last_video_pts = float("-inf")
 
         self.output_file_path = output_file_path
         directory, video_file = os.path.split(output_file_path)
@@ -175,8 +175,8 @@ class AV_Writer(abc.ABC):
             pts = int((input_frame.timestamp - self.start_time) / self.time_base)
 
         # ensure strong monotonic pts
-        pts = max(pts, self.last_pts + 1)
-        self.last_pts = pts
+        pts = max(pts, self.last_video_pts + 1)
+        self.last_video_pts = pts
 
         for packet in self.encode_frame(input_frame, pts):
             self.container.mux(packet)
@@ -259,7 +259,6 @@ class MPEG_Writer(AV_Writer):
             self.frame.planes[0].update(input_frame.img)
 
         self.frame.pts = pts
-        self.frame.dts = pts
 
         yield from self.video_stream.encode(self.frame)
 
@@ -283,8 +282,9 @@ class JPEG_Writer(AV_Writer):
         packet = Packet()
         packet.payload = input_frame.jpeg_buffer
         packet.time_base = self.time_base
-        packet.dts = pts
         packet.pts = pts
+        # TODO: check if we still need dts here, as they were removed from MPEG_Writer
+        packet.dts = pts
         yield packet
 
 
@@ -309,6 +309,7 @@ class MPEG_Audio_Writer(MPEG_Writer):
             self.audio = None
 
         self.num_audio_packets_decoded = 0
+        self.last_audio_pts = float("-inf")
 
     def encode_frame(self, input_frame, pts: int) -> T.Iterator[Packet]:
         # encode video packets from AV_Writer base first
@@ -333,6 +334,10 @@ class MPEG_Audio_Writer(MPEG_Writer):
                 )
                 / self.audio_export_stream.time_base
             )
+            # ensure strong monotonic pts
+            pts = max(pts, self.last_audio_pts + 1)
+            self.last_audio_pts = pts
+            
             audio_packet.pts = audio_pts
             audio_packet.dts = audio_pts
             audio_packet.stream = self.audio_export_stream
