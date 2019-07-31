@@ -285,10 +285,10 @@ class Fisheye_Dist_Camera(Camera_Model):
         self.name = name
 
     def update_camera_matrix(self, camera_matrix):
-        self.K = np.array(camera_matrix).reshape(self.K.shape)
+        self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
 
     def update_dist_coefs(self, dist_coefs):
-        self.D = np.array(dist_coefs).reshape(self.D.shape)
+        self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
 
     def undistort(self, img):
         """
@@ -482,10 +482,10 @@ class Radial_Dist_Camera(Camera_Model):
         self.name = name
 
     def update_camera_matrix(self, camera_matrix):
-        self.K = np.array(camera_matrix).reshape(self.K.shape)
+        self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
 
     def update_dist_coefs(self, dist_coefs):
-        self.D = np.array(dist_coefs).reshape(self.D.shape)
+        self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
 
     def undistort(self, img):
         """
