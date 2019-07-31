@@ -77,25 +77,26 @@ class Frame(object):
                 self._gray = np.ascontiguousarray(self._gray[:, : self.width])
         return self._gray
 
+
 class FakeFrame:
     """
-    Show FakeFrame when the video is broken or there is
-    gap between timestamp.
+    Show FakeFrame when the video is broken or there is a gap between timestamp.
     """
 
-    def __init__(self, shape2d, timestamp, pts, index):
+    def __init__(self, width, height, timestamp, pts, index):
         self.timestamp = float(timestamp)
         self.pts = int(pts)
         self.index = int(index)
-        self.width = shape2d[0]
-        self.height = shape2d[1]
+        self.width = width
+        self.height = height
         self.jpeg_buffer = None
         self.yuv_buffer = None
-        static_img = np.ones((self.width, self.height, 3), dtype=np.uint8) * 128
+        shape = (self.height, self.width, 3)
+        static_img = np.ones(shape, dtype=np.uint8) * 128
         self.img = self.bgr = static_img
 
     def copy(self):
-        return FakeFrame((self.width, self.height), self.timestamp, self.pts, self.index)
+        return FakeFrame(self.width, self.height, self.timestamp, self.pts, self.index)
 
     @property
     def gray(self):
@@ -122,7 +123,8 @@ class Decoder(ABC):
         pass
 
     @property
-    def frame_size(self):
+    def frame_size(self) -> T.Tuple[int, int]:
+        """Frame size in (width, height)"""
         return (
             int(self.video_stream.format.width),
             int(self.video_stream.format.height),
@@ -140,7 +142,9 @@ class Decoder(ABC):
 class BrokenStream(Decoder):
     def __init__(self):
         # overwrite property with fixed frame size
-        self.frame_size = (720, 1280)
+        DEFAULT_WIDTH = 1280
+        DEFAULT_HIGHT = 720
+        self.frame_size = (DEFAULT_WIDTH, DEFAULT_HIGHT)
 
     def seek(self, position):
         pass
@@ -400,12 +404,22 @@ class File_Source(Playback_Source, Base_Source):
         # update indices, we know that we advanced until target_frame_index!
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
-        return Frame(target_entry.timestamp, av_frame, index=self.current_frame_idx)
+        return Frame(
+            timestamp=target_entry.timestamp,
+            av_frame=av_frame,
+            index=self.current_frame_idx,
+        )
 
     def _get_fake_frame_and_advance(self, target_entry):
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
-        return FakeFrame(self.frame_size, target_entry.timestamp, target_entry.pts, self.current_frame_idx)
+        return FakeFrame(
+            width=self.frame_size[0],
+            height=self.frame_size[1],
+            timestamp=target_entry.timestamp,
+            pts=target_entry.pts,
+            index=self.current_frame_idx,
+        )
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):
@@ -579,7 +593,7 @@ class File_Source(Playback_Source, Base_Source):
         
         Raises RuntimeError if no time_bases were found.
         """
-        
+
         base = None
         for container in self.videoset.containers:
             # find first videostream
@@ -589,15 +603,19 @@ class File_Source(Playback_Source, Base_Source):
             elif base == video_stream.time_base:
                 continue
             else:
-                logger.warn(f"Containers for File_Source({self.source_path}) have different time_bases! Returning lowest resolution!")
+                logger.warn(
+                    f"Containers for File_Source({self.source_path}) have different time_bases!"
+                    "Returning lowest resolution!"
+                )
                 base = min(base, video_stream.time_base)
-        
-        if base is None:
-            logger.error(f"Could not find any time_base for File_Source({self.source_path})!")
-            raise RuntimeError
-        
-        return base
 
+        if base is None:
+            logger.error(
+                f"Could not find any time_base for File_Source({self.source_path})!"
+            )
+            raise RuntimeError
+
+        return base
 
 
 class File_Manager(Base_Manager):
