@@ -140,7 +140,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
                         t0, t1, NUMBER_SAMPLES_TIMELINE, dtype=np.float32
                     )
 
-                    data_indeces = np.searchsorted(
+                    data_indeces = pm.find_closest(
                         pupil_positions.timestamps, timestamps_target
                     )
                     data_indeces = np.unique(data_indeces)
