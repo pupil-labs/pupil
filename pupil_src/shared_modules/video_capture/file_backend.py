@@ -589,11 +589,10 @@ class File_Source(Playback_Source, Base_Source):
     @ensure_initialisation()
     def time_base(self):
         """
-        Returns lowest resolution time_base across all containers for this source.
-        
+        Returns highest resolution time_base across all containers for this source.
+
         Raises RuntimeError if no time_bases were found.
         """
-
         base = None
         for container in self.videoset.containers:
             # find first videostream
