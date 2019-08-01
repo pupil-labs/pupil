@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import collections
+import logging
 
 import cv2
 import numpy as np
@@ -17,6 +18,8 @@ from scipy import optimize as scipy_optimize
 from scipy import sparse as scipy_sparse
 
 from head_pose_tracker.function import utils
+
+logger = logging.getLogger(__name__)
 
 BundleAdjustmentResult = collections.namedtuple(
     "BundleAdjustmentResult",
@@ -60,12 +63,18 @@ class BundleAdjustment:
         initial_guess_array, bounds, sparsity_matrix = self._prepare_parameters(
             camera_extrinsics_array, marker_extrinsics_array
         )
-        least_sq_result = self._least_squares(
-            initial_guess_array, bounds, sparsity_matrix
-        )
 
-        bundle_adjustment_result = self._get_result(least_sq_result)
-        return bundle_adjustment_result
+        try:
+            least_sq_result = self._least_squares(
+                initial_guess_array, bounds, sparsity_matrix
+            )
+        except ValueError as err:
+            logger.debug(
+                f"Value error encountered during optimizing 3d markers model: {err}"
+            )
+            return None
+        else:
+            return self._get_result(least_sq_result)
 
     @staticmethod
     def _set_ids(frame_id_to_extrinsics, marker_id_to_extrinsics):
@@ -116,7 +125,7 @@ class BundleAdjustment:
 
         return initial_guess_array, bounds, sparsity_matrix
 
-    def _calculate_bounds(self, eps=1e-16, scale=3e2):
+    def _calculate_bounds(self, eps=np.finfo(np.float).eps, scale=np.inf):
         """ calculate the lower and upper bounds on independent variables
             fix the first marker at the origin of the coordinate system
         """

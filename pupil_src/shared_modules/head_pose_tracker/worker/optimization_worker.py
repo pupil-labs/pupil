@@ -41,9 +41,11 @@ def optimization_routine(bg_storage, camera_intrinsics, bundle_adjustment):
         camera_intrinsics,
     )
     if not initial_guess:
-        return
+        return None
 
     result = bundle_adjustment.calculate(initial_guess)
+    if not result:
+        return None
 
     marker_id_to_extrinsics = result.marker_id_to_extrinsics
     marker_id_to_points_3d = {
