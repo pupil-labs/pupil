@@ -13,7 +13,6 @@ import logging
 import os
 
 import player_methods as pm
-from version_utils import VersionFormat, read_rec_version
 from task_manager import ManagedTask
 from video_export.plugin_base.video_exporter import VideoExporter
 
@@ -212,9 +211,7 @@ def _export_world_video(
         )
 
         # setup of writer
-        rec_version = meta_info["Capture Software Version"]
-        recording_has_correct_pts = rec_version >= VersionFormat("1.14")
-        if recording_has_correct_pts:
+        if pm.has_correct_pts_timing(rec_dir):
             writer = MPEG_Audio_Writer(
                 out_file_path, audio_dir=rec_dir, frame_pts_timebase=cap.time_base
             )

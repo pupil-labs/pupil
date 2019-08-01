@@ -15,7 +15,6 @@ from glob import glob
 from types import SimpleNamespace
 
 import player_methods as pm
-from version_utils import read_rec_version, VersionFormat
 from av_writer import MPEG_Writer
 from task_manager import ManagedTask
 from video_capture import File_Source, EndofVideoError
@@ -82,7 +81,6 @@ def _convert_video_file(
     timestamp_export_format,
 ):
     input_file = _find_video_file(rec_dir, input_name)
-    meta_info = pm.load_meta_info(rec_dir)
 
     yield "Export video", 0.0
     input_source = File_Source(SimpleNamespace(), input_file, fill_gaps=True)
@@ -100,9 +98,7 @@ def _convert_video_file(
     )
 
     # setup of writer
-    rec_version = meta_info["Capture Software Version"]
-    recording_has_correct_pts = rec_version >= VersionFormat("1.14")
-    if recording_has_correct_pts:
+    if pm.has_correct_pts_timing(rec_dir):
         writer = MPEG_Writer(output_file, frame_pts_timebase=input_source.time_base)
     else:
         writer = MPEG_Writer(output_file)
