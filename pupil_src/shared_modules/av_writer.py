@@ -221,7 +221,7 @@ class AV_Writer(abc.ABC):
     @property
     @abc.abstractmethod
     def supported_extensions(self) -> T.Tuple[str]:
-        """Supported file extensions."""
+        """Supported file extensions (starting with '.')."""
 
     @property
     @abc.abstractmethod
