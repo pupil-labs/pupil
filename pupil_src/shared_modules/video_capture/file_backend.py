@@ -77,7 +77,7 @@ class Frame(object):
 
 class BrokenStream:
     def __init__(self):
-        self.frame_size = (720, 1280)
+        self.frame_size = (1280, 720)
 
     def seek(self, position):
         pass
