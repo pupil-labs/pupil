@@ -9,21 +9,12 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-"""
-av_writer module uses PyAV (ffmpeg or libav backend) to write AV files.
-requires:
-    -
-"""
-
 # logging
 import logging
 import multiprocessing as mp
 import os
 import platform
-import sys
 from fractions import Fraction
-from threading import Event, Thread
-from time import time
 import abc
 import typing as T
 
@@ -209,7 +200,7 @@ class AV_Writer(abc.ABC):
     def on_first_frame(self, input_frame) -> None:
         """
         Will be called once for the first frame.
-        
+
         Overwrite to do additional setup.
         """
         pass
@@ -291,12 +282,7 @@ class JPEG_Writer(AV_Writer):
 class MPEG_Audio_Writer(MPEG_Writer):
     """Extension of MPEG_Writer with audio support."""
 
-    def __init__(
-        self,
-        output_file_path: str,
-        audio_dir: str,
-        **kwargs
-    ):
+    def __init__(self, output_file_path: str, audio_dir: str, **kwargs):
         super().__init__(output_file_path, **kwargs)
 
         try:
@@ -337,7 +323,7 @@ class MPEG_Audio_Writer(MPEG_Writer):
             # ensure strong monotonic pts
             pts = max(pts, self.last_audio_pts + 1)
             self.last_audio_pts = pts
-            
+
             audio_packet.pts = audio_pts
             audio_packet.dts = audio_pts
             audio_packet.stream = self.audio_export_stream
@@ -353,143 +339,3 @@ class MPEG_Audio_Writer(MPEG_Writer):
             frame_ts = self.frame.pts * self.time_base
             if audio_ts > frame_ts:
                 break  # wait for next image
-
-
-def format_time(time, time_base):
-    if time is None:
-        return "None"
-    return "{:.3f}s ({} or {}/{})".format(
-        time_base * time,
-        time_base * time,
-        time_base.numerator * time,
-        time_base.denominator,
-    )
-
-
-def rec_thread(file_loc, in_container, audio_src, should_close):
-    # print sys.modules['av']
-    # import av
-    if not in_container:
-        # create in container
-        if platform.system() == "Darwin":
-            in_container = av.open("none:{}".format(audio_src), format="avfoundation")
-        elif platform.system() == "Linux":
-            in_container = av.open("hw:{}".format(audio_src), format="alsa")
-
-    in_stream = None
-
-    # print len(in_container.streams), 'stream(s):'
-    for i, stream in enumerate(in_container.streams):
-
-        if stream.type == "audio":
-            # print '\t\taudio:'
-            # print '\t\t\tformat:', stream.format
-            # print '\t\t\tchannels: %s' % stream.channels
-            in_stream = stream
-            break
-
-    if in_stream is None:
-        # logger.error("No input audio stream found.")
-        return
-
-    # create out container
-    out_container = av.open(file_loc, "w")
-    # logger.debug("Opened '%s' for writing."%file_loc)
-    out_stream = out_container.add_stream(template=in_stream)
-
-    for packet in in_container.demux(in_stream):
-        # for frame in packet.decode():
-        #     packet = out_stream.encode(frame)
-        #     if packet:
-        # print '%r' %packet
-        # print '\tduration: %s' % format_time(packet.duration, packet.stream.time_base)
-        # print '\tpts: %s' % format_time(packet.pts, packet.stream.time_base)
-        # print '\tdts: %s' % format_time(packet.dts, packet.stream.time_base)
-        out_container.mux(packet)
-        if should_close.is_set():
-            break
-
-    out_container.close()
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-
-    from audio_capture import Audio_Capture
-
-    cap = Audio_Capture("test.wav", "default")
-
-    import time
-
-    time.sleep(5)
-    cap.cleanup()
-    # mic device
-    exit()
-
-    # container = av.open('hw:0',format="alsa")
-    container = av.open("1:0", format="avfoundation")
-    print("container:", container)
-    print("\tformat:", container.format)
-    print("\tduration:", float(container.duration) / av.time_base)
-    print("\tmetadata:")
-    for k, v in sorted(container.metadata.items()):
-        print("\t\t{}: {!r}".format(k, v))
-
-    print(len(container.streams), "stream(s):")
-    audio_stream = None
-    for i, stream in enumerate(container.streams):
-
-        print("\t{!r}".format(stream))
-        print("\t\ttime_base: {!r}".format(stream.time_base))
-        print("\t\trate: {!r}".format(stream.rate))
-        print("\t\tstart_time: {!r}".format(stream.start_time))
-        print("\t\tduration: {}".format(format_time(stream.duration, stream.time_base)))
-        print("\t\tbit_rate: {}".format(stream.bit_rate))
-        print("\t\tbit_rate_tolerance: {}".format(stream.bit_rate_tolerance))
-
-        if stream.type == b"audio":
-            print("\t\taudio:")
-            print("\t\t\tformat:", stream.format)
-            print("\t\t\tchannels: {}".format(stream.channels))
-            audio_stream = stream
-            break
-        elif stream.type == "container":
-            print("\t\tcontainer:")
-            print("\t\t\tformat:", stream.format)
-            print("\t\t\taverage_rate: {!r}".format(stream.average_rate))
-
-        print("\t\tmetadata:")
-        for k, v in sorted(stream.metadata.items()):
-            print("\t\t\t{}: {!r}".format(k, v))
-
-    if not audio_stream:
-        exit()
-
-    # file contianer:
-    out_container = av.open("test.wav", "w")
-    out_stream = out_container.add_stream(template=audio_stream)
-    # out_stream.rate = 44100
-    for i, packet in enumerate(container.demux(audio_stream)):
-        # for frame in packet.decode():
-        #     packet = out_stream.encode(frame)
-        #     if packet:
-        print("{!r}".format(packet))
-        print(
-            "\tduration: {}".format(
-                format_time(packet.duration, packet.stream.time_base)
-            )
-        )
-        print("\tpts: {}".format(format_time(packet.pts, packet.stream.time_base)))
-        print("\tdts: {}".format(format_time(packet.dts, packet.stream.time_base)))
-        out_container.mux(packet)
-        if i > 1000:
-            break
-
-    out_container.close()
-
-    # import cProfile,subthread,os
-    # cProfile.runctx("test()",{},locals(),"av_writer.pstats")
-    # loc = os.path.abspath(_file__).rsplit('pupil_src', 1)
-    # gprof2dot_loc = os.path.oin(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-    # subthread.call("python "+gprof2dot_loc+" -f pstats av_writer.pstats | dot -Tpng -o av_writer.png", shell=True)
-    # print "created cpu time graph for av_writer thread. Please check out the png next to the av_writer.py file"
