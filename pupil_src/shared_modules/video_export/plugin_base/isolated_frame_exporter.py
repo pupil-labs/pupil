@@ -39,7 +39,6 @@ class IsolatedFrameExporter(VideoExporter, abc.ABC):
         os.makedirs(export_dir, exist_ok=True)
         self.logger.info("Exporting to {}".format(export_dir))
 
-        input_video_file = _find_video_file(self.g_pool.rec_dir, input_name)
         output_video_file = os.path.join(export_dir, output_name + ".mp4")
         task_args = (
             self.g_pool.rec_dir,
