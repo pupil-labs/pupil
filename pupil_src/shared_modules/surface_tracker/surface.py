@@ -124,7 +124,7 @@ class Surface(abc.ABC):
 
         if compensate_distortion:
             orig_shape = points.shape
-            points = camera_model.undistortPoints(points)
+            points = camera_model.undistort_points_on_image_plane(points)
             points.shape = orig_shape
 
         points_on_surf = self._perspective_transform_points(points, trans_matrix)
@@ -270,7 +270,9 @@ class Surface(abc.ABC):
             registered_verts_dist, visible_verts_dist
         )
 
-        visible_verts_undist = camera_model.undistortPoints(visible_verts_dist)
+        visible_verts_undist = camera_model.undistort_points_on_image_plane(
+            visible_verts_dist
+        )
         img_to_surf_trans, surf_to_img_trans = Surface._find_homographies(
             registered_verts_undist, visible_verts_undist
         )
@@ -304,7 +306,7 @@ class Surface(abc.ABC):
             [m.verts_px for m in visible_markers.values()], dtype=np.float32
         )
         all_verts_dist.shape = (-1, 2)
-        all_verts_undist = camera_model.undistortPoints(all_verts_dist)
+        all_verts_undist = camera_model.undistort_points_on_image_plane(all_verts_dist)
 
         hull_undist = self._bounding_quadrangle(all_verts_undist)
         undist_img_to_surf_trans_candidate = self._get_trans_to_norm_corners(

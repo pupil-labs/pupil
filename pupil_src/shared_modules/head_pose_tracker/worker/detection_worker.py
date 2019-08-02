@@ -9,11 +9,19 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import logging
+from types import SimpleNamespace
+
+import cv2
+import numpy as np
+
+import apriltags3
 import file_methods as fm
 import video_capture
-import apriltags3
 from methods import normalize
-from types import SimpleNamespace
+from stdlib_utils import unique
+
+logger = logging.getLogger(__name__)
 
 apriltag_detector = apriltags3.Detector()
 
@@ -27,9 +35,31 @@ def get_markers_data(detection, img_size, timestamp):
     }
 
 
+def calc_perimeter(corners):
+    corners = np.asarray(corners, dtype=np.float32)
+    return cv2.arcLength(corners, closed=True)
+
+
+def dedupliciate_markers(marker_old, marker_new):
+    """Deduplicate markers by returning marker with bigger perimeter
+    
+    This heuristic is useful to remove "echos", i.e. markers that are being detected
+    within the scene video preview instead of the scene itself.
+    """
+    perimeter_old = calc_perimeter(marker_old.corners)
+    perimeter_new = calc_perimeter(marker_new.corners)
+    return marker_old if perimeter_old > perimeter_new else marker_new
+
+
 def _detect(frame):
     image = frame.gray
     apriltag_detections = apriltag_detector.detect(image)
+    apriltag_detections = unique(
+        apriltag_detections,
+        key=lambda marker: marker.tag_id,
+        select=dedupliciate_markers,
+    )
+
     img_size = image.shape[::-1]
     return [
         get_markers_data(detection, img_size, frame.timestamp)

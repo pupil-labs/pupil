@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import collections
+import random
 
 import player_methods as pm
 from head_pose_tracker import storage
@@ -23,6 +24,8 @@ from head_pose_tracker.function import utils
 IntrinsicsTuple = collections.namedtuple(
     "IntrinsicsTuple", ["camera_matrix", "dist_coefs"]
 )
+
+random.seed(0)
 
 
 def optimization_routine(bg_storage, camera_intrinsics, bundle_adjustment):
@@ -38,9 +41,11 @@ def optimization_routine(bg_storage, camera_intrinsics, bundle_adjustment):
         camera_intrinsics,
     )
     if not initial_guess:
-        return
+        return None
 
     result = bundle_adjustment.calculate(initial_guess)
+    if not result:
+        return None
 
     marker_id_to_extrinsics = result.marker_id_to_extrinsics
     marker_id_to_points_3d = {
@@ -52,7 +57,6 @@ def optimization_routine(bg_storage, camera_intrinsics, bundle_adjustment):
         marker_id_to_extrinsics,
         marker_id_to_points_3d,
     )
-    bg_storage.update_model(*model_tuple)
     intrinsics_tuple = IntrinsicsTuple(camera_intrinsics.K, camera_intrinsics.D)
     return (
         model_tuple,
@@ -82,24 +86,31 @@ def offline_optimization(
         for frame_index, num_markers in frame_index_to_num_markers.items()
         if num_markers >= 2
     ]
-    frame_indices = list(
+    frame_indices_valid = list(
         set(range(frame_start, frame_end + 1)) & set(frame_indices_with_marker)
     )
-    frame_count = len(frame_indices)
+    random.shuffle(frame_indices_valid)
 
     bg_storage = storage.Markers3DModel(user_defined_origin_marker_id)
     bundle_adjustment = BundleAdjustment(camera_intrinsics, optimize_camera_intrinsics)
 
-    for idx, frame_index in enumerate(frame_indices):
+    all_key_markers = []
+    for idx, frame_index in enumerate(frame_indices_valid):
         markers_in_frame = find_markers_in_frame(frame_index)
-        bg_storage.all_key_markers += pick_key_markers.run(
-            markers_in_frame, bg_storage.all_key_markers, select_key_markers_interval=1
+        all_key_markers += pick_key_markers.run(
+            markers_in_frame, all_key_markers, select_key_markers_interval=1
         )
 
-        if not (idx % 50 == 25 or idx == frame_count - 1):
-            continue
+    all_key_markers = sorted(
+        all_key_markers,
+        key=lambda x: (x.marker_id != user_defined_origin_marker_id, x.frame_id),
+    )
+    n_key_markers = 25
+    opt_times = len(all_key_markers) // n_key_markers + 5
+    for t in range(opt_times):
+        bg_storage.all_key_markers += all_key_markers[:n_key_markers]
+        del all_key_markers[:n_key_markers]
 
-        shared_memory.progress = (idx + 1) / frame_count
         try:
             (
                 model_tuple,
@@ -110,9 +121,11 @@ def offline_optimization(
         except TypeError:
             pass
         else:
+            bg_storage.update_model(*model_tuple)
             bg_storage.frame_id_to_extrinsics = frame_id_to_extrinsics
             bg_storage.discard_failed_key_markers(frame_ids_failed)
 
+            shared_memory.progress = (t + 1) / opt_times
             yield model_tuple, intrinsics_tuple
 
 
