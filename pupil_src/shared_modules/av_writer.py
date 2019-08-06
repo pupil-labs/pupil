@@ -181,11 +181,10 @@ class AV_Writer(abc.ABC):
             logger.warning("Trying to close container multiple times!")
             return
 
-        # cannot close container, if no frames were written (i.e. no timestamps recorded)
-        if not self.timestamps:
-            logger.warning("Trying to close container without any frames written!")
-            for packet in self.video_stream.encode(None):
-                self.container.mux(packet)
+        # flush stream
+        for packet in self.video_stream.encode(None):
+            self.container.mux(packet)
+
         self.container.close()
 
         write_timestamps(
