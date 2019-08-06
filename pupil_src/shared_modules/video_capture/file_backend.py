@@ -140,11 +140,13 @@ class Decoder(ABC):
 
 
 class BrokenStream(Decoder):
-    def __init__(self):
-        # overwrite property with fixed frame size
+
+    @property
+    def frame_size(self):
+        # fixed frame size
         DEFAULT_WIDTH = 1280
         DEFAULT_HIGHT = 720
-        self.frame_size = (DEFAULT_WIDTH, DEFAULT_HIGHT)
+        return (DEFAULT_WIDTH, DEFAULT_HIGHT)
 
     def seek(self, position):
         pass
