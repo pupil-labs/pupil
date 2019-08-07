@@ -175,9 +175,10 @@ class AV_Writer(abc.ABC):
 
         self.container.close()
 
-        write_timestamps(
-            self.output_file_path, self.timestamps, timestamp_export_format
-        )
+        if timestamp_export_format is not None:
+            write_timestamps(
+                self.output_file_path, self.timestamps, timestamp_export_format
+            )
         self.closed = True
 
     def release(self):
