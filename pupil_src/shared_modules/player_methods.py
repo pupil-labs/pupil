@@ -16,8 +16,6 @@ import numpy as np
 
 import csv_utils
 
-from version_utils import VersionFormat
-
 logger = logging.getLogger(__name__)
 
 
@@ -213,31 +211,6 @@ def is_pupil_rec_dir(rec_dir):
         logger.error("Could not read info.csv file: Not a valid Pupil recording.")
         return False
     return True
-
-
-def has_correct_pts_timing(rec_dir) -> bool:
-    """Checks if a recording has correct pts timing."""
-
-    try:
-        meta_info = load_meta_info(rec_dir)
-    except FileNotFoundError:
-        # A non-existing recording does not have correct pts yet
-        return False
-
-    capture_software = meta_info.get("Capture Software", "Pupil Capture")
-    capture_version = VersionFormat(meta_info["Capture Software Version"])
-
-    if capture_software == "Pupil Capture":
-        # Correct pts were introduced in 1.15
-        return capture_version >= VersionFormat("1.15")
-
-    if capture_software == "Pupil Mobile":
-        # TODO: Currently pupil mobile still uses fixed pts. This might change in the future!
-        return False
-
-    if capture_software == "Pupil Invisible":
-        # PI has correct pts from the beginning
-        return True
 
 
 def transparent_circle(img, center, radius, color, thickness):
