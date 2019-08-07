@@ -211,8 +211,9 @@ def _export_world_video(
         )
 
         # setup of writer
-        start_time_synced = float(meta_info["Start Time (Synced)"])
-        writer = MPEG_Audio_Writer(out_file_path, start_time_synced, audio_dir=rec_dir)
+        writer = MPEG_Audio_Writer(
+            out_file_path, start_time_synced=trimmed_timestamps[0], audio_dir=rec_dir
+        )
 
         cap.seek_to_frame(start_frame)
 

@@ -96,10 +96,14 @@ def _convert_video_file(
         input_source.timestamps, export_window
     )
 
-    # setup of writer
-    meta_info = pm.load_meta_info(rec_dir)
-    start_time_synced = float(meta_info["Start Time (Synced)"])
-    writer = MPEG_Writer(output_file, start_time_synced)
+    #  NOTE: Start time of the export recording will be synced with world recording
+    #  export! This means that if the recording to export started later than the world
+    #  video, the first frame of the exported recording will not be at timestamp 0 in
+    #  the recording, but later. Some video players (e.g. VLC on windows) might display
+    #  the video weirdly in this case, but we rather want syncronization between the
+    #  exported video!
+    start_time = export_window[0]
+    writer = MPEG_Writer(output_file, start_time)
 
     input_source.seek_to_frame(export_from_index)
     next_update_idx = export_from_index + update_rate
