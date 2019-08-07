@@ -362,9 +362,9 @@ class UVC_Source(Base_Source):
             
             if np.isclose(frame.timestamp, 0):
                 # sometimes (probably only on windows) after disconnections, the first frame has 0 ts
-                logger.warn(
+                logger.warning(
                     "Received frame with invalid timestamp."
-                    " This can happen after lost connections."
+                    " This can happen after a disconnect."
                     " Frame will be dropped!"
                 )
                 return
