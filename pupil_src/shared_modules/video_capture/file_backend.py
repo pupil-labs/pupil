@@ -584,37 +584,6 @@ class File_Source(Playback_Source, Base_Source):
         container_idx_of_first_frame = self.videoset.lookup[0].container_idx
         self.setup_video(container_idx_of_first_frame)
 
-    @property
-    @ensure_initialisation()
-    def time_base(self):
-        """
-        Returns highest resolution time_base across all containers for this source.
-
-        Raises RuntimeError if no time_bases were found.
-        """
-        base = None
-        for container in self.videoset.containers:
-            # find first videostream
-            video_stream = next(s for s in container.streams if s.type == "video")
-            if base is None:
-                base = video_stream.time_base
-            elif base == video_stream.time_base:
-                continue
-            else:
-                logger.warn(
-                    f"Containers for File_Source({self.source_path}) have different time_bases!"
-                    "Returning lowest resolution!"
-                )
-                base = min(base, video_stream.time_base)
-
-        if base is None:
-            logger.error(
-                f"Could not find any time_base for File_Source({self.source_path})!"
-            )
-            raise RuntimeError
-
-        return base
-
 
 class File_Manager(Base_Manager):
     """Summary
