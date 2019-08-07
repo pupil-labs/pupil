@@ -317,7 +317,7 @@ class Recorder(System_Plugin_Base):
 
         self.video_path = os.path.join(self.rec_path, "world.mp4")
         if self.raw_jpeg and self.g_pool.capture.jpeg_support:
-            self.writer = JPEG_Writer(self.video_path)
+            self.writer = JPEG_Writer(self.video_path, start_time_synced)
         elif hasattr(self.g_pool.capture._recent_frame, "h264_buffer"):
             self.writer = H264Writer(
                 self.video_path,
@@ -326,7 +326,7 @@ class Recorder(System_Plugin_Base):
                 int(self.g_pool.capture.frame_rate),
             )
         else:
-            self.writer = MPEG_Writer(self.video_path)
+            self.writer = MPEG_Writer(self.video_path, start_time_synced)
 
         try:
             cal_pt_path = os.path.join(self.g_pool.user_dir, "user_calibration_data")
@@ -351,6 +351,7 @@ class Recorder(System_Plugin_Base):
                 "session_name": self.session_name,
                 "record_eye": self.record_eye,
                 "compression": self.raw_jpeg,
+                "start_time_synced": float(start_time_synced)
             }
         )
 

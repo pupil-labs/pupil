@@ -211,12 +211,8 @@ def _export_world_video(
         )
 
         # setup of writer
-        if pm.has_correct_pts_timing(rec_dir):
-            writer = MPEG_Audio_Writer(
-                out_file_path, audio_dir=rec_dir, frame_pts_timebase=cap.time_base
-            )
-        else:
-            writer = MPEG_Audio_Writer(out_file_path, audio_dir=rec_dir)
+        start_time_synced = float(meta_info["Start Time (Synced)"])
+        writer = MPEG_Audio_Writer(out_file_path, start_time_synced, audio_dir=rec_dir)
 
         cap.seek_to_frame(start_frame)
 

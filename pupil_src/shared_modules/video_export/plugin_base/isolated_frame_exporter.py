@@ -97,10 +97,9 @@ def _convert_video_file(
     )
 
     # setup of writer
-    if pm.has_correct_pts_timing(rec_dir):
-        writer = MPEG_Writer(output_file, frame_pts_timebase=input_source.time_base)
-    else:
-        writer = MPEG_Writer(output_file)
+    meta_info = pm.load_meta_info(rec_dir)
+    start_time_synced = float(meta_info["Start Time (Synced)"])
+    writer = MPEG_Writer(output_file, start_time_synced)
 
     input_source.seek_to_frame(export_from_index)
     next_update_idx = export_from_index + update_rate

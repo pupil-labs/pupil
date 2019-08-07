@@ -77,23 +77,22 @@ def write_timestamps(file_loc, timestamps, output_format="npy"):
 
 
 class AV_Writer(abc.ABC):
-    def __init__(
-        self, output_file_path: str, frame_pts_timebase: T.Optional[Fraction] = None
-    ):
+    def __init__(self, output_file_path: str, start_time_synced: int):
         """
         A generic writer for frames to a file using pyAV.
 
         output_file_path: File to write frames to.
-
-        frame_pts_timebase:
-            If set to None, pts of written frames will be calculated from their timestamp.
-            If set, frames are expected to have correct pts for the given timebase.
-                The output stream will be created with this timebase.
+        start_time_synced: Start time of the recording.
+            Will be used to calculate positions of frames (pts).
         """
 
         self.timestamps = []
-        self.frame_pts_timebase = frame_pts_timebase
+        self.start_time = start_time_synced
         self.last_video_pts = float("-inf")
+
+        # always write with highest resolution for mp4
+        # NOTE: libav might lower the resolution on saving, if possible
+        self.time_base = Fraction(1, 65535)
 
         self.output_file_path = output_file_path
         directory, video_file = os.path.split(output_file_path)
@@ -123,15 +122,6 @@ class AV_Writer(abc.ABC):
 
         self.closed = False
 
-    @property
-    def time_base(self) -> Fraction:
-        """The desired time base for the output stream."""
-
-        if self.frame_pts_timebase is not None:
-            return self.frame_pts_timebase
-        # fallback to highest resolution for mp4
-        return Fraction(1, 65535)
-
     def write_video_frame(self, input_frame):
         """
         Write a frame to the video_stream.
@@ -145,7 +135,6 @@ class AV_Writer(abc.ABC):
         if not self.configured:
             self.video_stream.height = input_frame.height
             self.video_stream.width = input_frame.width
-            self.start_time = input_frame.timestamp
             self.configured = True
             self.on_first_frame(input_frame)
 
@@ -159,16 +148,15 @@ class AV_Writer(abc.ABC):
                     f"Last timestamp: {last_ts}. Given timestamp: {ts}"
                 )
 
-        if self.frame_pts_timebase is not None:
-            pts = input_frame.pts
-        else:
-            # need to calculate frame pts based on timestamp
-            pts = int((input_frame.timestamp - self.start_time) / self.time_base)
+        pts = int((input_frame.timestamp - self.start_time) / self.time_base)
 
         # ensure strong monotonic pts
         pts = max(pts, self.last_video_pts + 1)
         self.last_video_pts = pts
 
+        # TODO: Use custom Frame wrapper class, that wraps backend-specific frames.
+        # This way we could just attach the pts here to the frame.
+        # Currently this will fail e.g. for av.VideoFrame.
         for packet in self.encode_frame(input_frame, pts):
             self.container.mux(packet)
 
@@ -281,8 +269,8 @@ class JPEG_Writer(AV_Writer):
 class MPEG_Audio_Writer(MPEG_Writer):
     """Extension of MPEG_Writer with audio support."""
 
-    def __init__(self, output_file_path: str, audio_dir: str, **kwargs):
-        super().__init__(output_file_path, **kwargs)
+    def __init__(self, *args, audio_dir: str, **kwargs):
+        super().__init__(*args, **kwargs)
 
         try:
             self.audio = audio_utils.load_audio(audio_dir)

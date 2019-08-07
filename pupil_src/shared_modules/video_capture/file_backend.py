@@ -42,7 +42,6 @@ class Frame(object):
 
     def __init__(self, timestamp, av_frame, index):
         self.timestamp = float(timestamp)
-        self.pts = int(av_frame.pts)
         self.index = int(index)
         self.width = av_frame.width
         self.height = av_frame.height
@@ -83,9 +82,8 @@ class FakeFrame:
     Show FakeFrame when the video is broken or there is a gap between timestamp.
     """
 
-    def __init__(self, width, height, timestamp, pts, index):
+    def __init__(self, width, height, timestamp, index):
         self.timestamp = float(timestamp)
-        self.pts = int(pts)
         self.index = int(index)
         self.width = width
         self.height = height
@@ -96,7 +94,7 @@ class FakeFrame:
         self.img = self.bgr = static_img
 
     def copy(self):
-        return FakeFrame(self.width, self.height, self.timestamp, self.pts, self.index)
+        return FakeFrame(self.width, self.height, self.timestamp, self.index)
 
     @property
     def gray(self):
@@ -109,9 +107,9 @@ class Decoder(ABC):
     """
 
     @abstractmethod
-    def seek(self, position: int):
+    def seek(self, pts_position: int):
         """
-        Seek stream decoder to given position (in pts).
+        Seek stream decoder to given position (in pts!!)
         """
         pass
 
@@ -148,7 +146,7 @@ class BrokenStream(Decoder):
         DEFAULT_HIGHT = 720
         return (DEFAULT_WIDTH, DEFAULT_HIGHT)
 
-    def seek(self, position):
+    def seek(self, pts_position):
         pass
 
     def get_frame_iterator(self):
@@ -164,8 +162,8 @@ class BufferedDecoder(Decoder):
             self.video_stream, dec_batch=50, dec_buffer_size=200
         )
 
-    def seek(self, position):
-        self._buffered_decoder.seek(position)
+    def seek(self, pts_position):
+        self._buffered_decoder.seek(pts_position)
 
     def get_frame_iterator(self):
         return self._buffered_decoder.get_frame()
@@ -179,8 +177,8 @@ class OnDemandDecoder(Decoder):
         self.container = container
         self.video_stream = video_stream
 
-    def seek(self, position):
-        self.video_stream.seek(position)
+    def seek(self, pts_position):
+        self.video_stream.seek(pts_position)
 
     def get_frame_iterator(self):
         for packet in self.container.demux(self.video_stream):
@@ -419,7 +417,6 @@ class File_Source(Playback_Source, Base_Source):
             width=self.frame_size[0],
             height=self.frame_size[1],
             timestamp=target_entry.timestamp,
-            pts=target_entry.pts,
             index=self.current_frame_idx,
         )
 
