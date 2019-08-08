@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
+import collections
 import csv
 import logging
 import os
@@ -20,6 +21,7 @@ from pyglui import ui
 
 import player_methods as pm
 from plugin import Analysis_Plugin_Base
+
 
 # logging
 logger = logging.getLogger(__name__)
@@ -159,32 +161,27 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
 
     def export_data(self, export_window, export_dir):
         if self.should_export_pupil_positions:
-            pupil_positions_exporter = Pupil_Positions_Exporter(
-                pupil_positions=self.g_pool.pupil_positions,
-                timestamps=self.g_pool.timestamps,
-            )
+            pupil_positions_exporter = Pupil_Positions_Exporter()
             pupil_positions_exporter.csv_export_write(
+                positions_bisector=self.g_pool.pupil_positions,
+                timestamps=self.g_pool.timestamps,
                 export_window=export_window,
                 export_dir=export_dir,
             )
 
         if self.should_export_gaze_positions:
-            gaze_positions_exporter = Gaze_Positions_Exporter(
-                gaze_positions=self.g_pool.gaze_positions,
-                timestamps=self.g_pool.timestamps,
-            )
+            gaze_positions_exporter = Gaze_Positions_Exporter()
             gaze_positions_exporter.csv_export_write(
+                positions_bisector=self.g_pool.gaze_positions,
+                timestamps=self.g_pool.timestamps,
                 export_window=export_window,
                 export_dir=export_dir
             )
 
         if self.should_export_field_info:
-            with open(
-                os.path.join(export_dir, "pupil_gaze_positions_info.txt"),
-                "w",
-                encoding="utf-8",
-                newline="",
-            ) as info_file:
+            field_info_name = "pupil_gaze_positions_info.txt"
+            field_info_path = os.path.join(export_dir, field_info_name)
+            with open(field_info_path, "w", encoding="utf-8", newline="") as info_file:
                 info_file.write(self.__doc__)
 
 
@@ -228,201 +225,233 @@ class _Base_Positions_Exporter(abc.ABC):
         logger.info(f"Created '{export_file}' file.")
 
 
-class Pupil_Positions_Exporter:
-    def __init__(self, pupil_positions, timestamps):
-        self.pupil_positions = pupil_positions
-        self.timestamps = timestamps
+class Pupil_Positions_Exporter(_Base_Positions_Exporter):
 
-    def csv_export_write(self, export_window, export_dir):
-        with open(
-            os.path.join(export_dir, "pupil_positions.csv"),
-            "w",
-            encoding="utf-8",
-            newline="",
-        ) as csvfile:
-            csv_writer = csv.writer(csvfile, delimiter=",")
+    @classmethod
+    def csv_export_filename(cls) -> str:
+        return "pupil_positions.csv"
 
-            csv_writer.writerow(
-                (
-                    "pupil_timestamp",
-                    "world_index",
-                    "eye_id",
-                    "confidence",
-                    "norm_pos_x",
-                    "norm_pos_y",
-                    "diameter",
-                    "method",
-                    "ellipse_center_x",
-                    "ellipse_center_y",
-                    "ellipse_axis_a",
-                    "ellipse_axis_b",
-                    "ellipse_angle",
-                    "diameter_3d",
-                    "model_confidence",
-                    "model_id",
-                    "sphere_center_x",
-                    "sphere_center_y",
-                    "sphere_center_z",
-                    "sphere_radius",
-                    "circle_3d_center_x",
-                    "circle_3d_center_y",
-                    "circle_3d_center_z",
-                    "circle_3d_normal_x",
-                    "circle_3d_normal_y",
-                    "circle_3d_normal_z",
-                    "circle_3d_radius",
-                    "theta",
-                    "phi",
-                    "projected_sphere_center_x",
-                    "projected_sphere_center_y",
-                    "projected_sphere_axis_a",
-                    "projected_sphere_axis_b",
-                    "projected_sphere_angle",
-                )
+    @classmethod
+    def csv_export_labels(cls) -> typing.Tuple[csv_utils.CSV_EXPORT_LABEL_TYPE, ...]:
+        return (
+            # 2d data
+            "pupil_timestamp",
+            "world_index",
+            "eye_id",
+            "confidence",
+            "norm_pos_x",
+            "norm_pos_y",
+            "diameter",
+            "method",
+            # ellipse data
+            "ellipse_center_x",
+            "ellipse_center_y",
+            "ellipse_axis_a",
+            "ellipse_axis_b",
+            "ellipse_angle",
+            # 3d data
+            "diameter_3d",
+            "model_confidence",
+            "model_id",
+            "sphere_center_x",
+            "sphere_center_y",
+            "sphere_center_z",
+            "sphere_radius",
+            "circle_3d_center_x",
+            "circle_3d_center_y",
+            "circle_3d_center_z",
+            "circle_3d_normal_x",
+            "circle_3d_normal_y",
+            "circle_3d_normal_z",
+            "circle_3d_radius",
+            "theta",
+            "phi",
+            "projected_sphere_center_x",
+            "projected_sphere_center_y",
+            "projected_sphere_axis_a",
+            "projected_sphere_axis_b",
+            "projected_sphere_angle",
+        )
+
+    @classmethod
+    def dict_export(cls, raw_value: csv_utils.CSV_EXPORT_RAW_TYPE, world_index: int) -> dict:
+        # 2d data
+        pupil_timestamp = str(raw_value["timestamp"])
+        eye_id = raw_value["id"]
+        world_index = raw_value["world_index"]
+        confidence = raw_value["confidence"]
+        norm_pos_x = raw_value["norm_pos"][0]
+        norm_pos_y = raw_value["norm_pos"][1]
+        diameter = raw_value["diameter"]
+        method = raw_value["method"]
+
+        # ellipse data
+        try:
+            ellipse_center = raw_value["ellipse"]["center"]
+            ellipse_axis = raw_value["ellipse"]["axes"]
+            ellipse_angle = raw_value["ellipse"]["angle"]
+        except KeyError:
+            ellipse_center = [None, None]
+            ellipse_axis = [None, None]
+            ellipse_angle = None
+
+        # 3d data
+        try:
+            diameter_3d = raw_value["diameter_3d"]
+            model_confidence = raw_value["model_confidence"]
+            model_id = raw_value["model_id"]
+            sphere_center = raw_value["sphere"]["center"]
+            sphere_radius = raw_value["sphere"]["radius"]
+            circle_3d_center = raw_value["circle_3d"]["center"]
+            circle_3d_normal = raw_value["circle_3d"]["normal"]
+            circle_3d_radius = raw_value["circle_3d"]["radius"]
+            theta = raw_value["theta"]
+            phi = raw_value["phi"]
+            projected_sphere_center = raw_value["projected_sphere"]["center"]
+            projected_sphere_axis = raw_value["projected_sphere"]["axes"]
+            projected_sphere_angle = raw_value["projected_sphere"]["angle"]
+        except KeyError:
+            diameter_3d = None
+            model_confidence = None
+            model_id = None
+            sphere_center = [None, None, None]
+            sphere_radius = None
+            circle_3d_center = [None, None, None]
+            circle_3d_normal = [None, None, None]
+            circle_3d_radius = None
+            theta = None
+            phi = None
+            projected_sphere_center = [None, None]
+            projected_sphere_axis = [None, None]
+            projected_sphere_angle = None
+
+        return {
+            # 2d data
+            "pupil_timestamp": pupil_timestamp,
+            "world_index": world_index,
+            "eye_id": eye_id,
+            "confidence": confidence,
+            "norm_pos_x": norm_pos_x,
+            "norm_pos_y": norm_pos_y,
+            "diameter": diameter,
+            "method": method,
+            # ellipse data
+            "ellipse_center_x": ellipse_center[0],
+            "ellipse_center_y": ellipse_center[1],
+            "ellipse_axis_a": ellipse_axis[0],
+            "ellipse_axis_b": ellipse_axis[1],
+            "ellipse_angle": ellipse_angle,
+            # 3d data
+            "diameter_3d": diameter_3d,
+            "model_confidence": model_confidence,
+            "model_id": model_id,
+            "sphere_center_x": sphere_center[0],
+            "sphere_center_y": sphere_center[1],
+            "sphere_center_z": sphere_center[2],
+            "sphere_radius": sphere_radius,
+            "circle_3d_center_x": circle_3d_center[0],
+            "circle_3d_center_y": circle_3d_center[1],
+            "circle_3d_center_z": circle_3d_center[2],
+            "circle_3d_normal_x": circle_3d_normal[0],
+            "circle_3d_normal_y": circle_3d_normal[1],
+            "circle_3d_normal_z": circle_3d_normal[2],
+            "circle_3d_radius": circle_3d_radius,
+            "theta": theta,
+            "phi": phi,
+            "projected_sphere_center_x": projected_sphere_center[0],
+            "projected_sphere_center_y": projected_sphere_center[1],
+            "projected_sphere_axis_a": projected_sphere_axis[0],
+            "projected_sphere_axis_b": projected_sphere_axis[1],
+            "projected_sphere_angle": projected_sphere_angle,
+        }
+
+
+class Gaze_Positions_Exporter(_Base_Positions_Exporter):
+
+    @classmethod
+    def csv_export_filename(cls) -> str:
+        return "gaze_positions.csv"
+
+    @classmethod
+    def csv_export_labels(cls) -> typing.Tuple[csv_utils.CSV_EXPORT_LABEL_TYPE, ...]:
+        return (
+            "gaze_timestamp",
+            "world_index",
+            "confidence",
+            "norm_pos_x",
+            "norm_pos_y",
+            "base_data",
+            "gaze_point_3d_x",
+            "gaze_point_3d_y",
+            "gaze_point_3d_z",
+            "eye_center0_3d_x",
+            "eye_center0_3d_y",
+            "eye_center0_3d_z",
+            "gaze_normal0_x",
+            "gaze_normal0_y",
+            "gaze_normal0_z",
+            "eye_center1_3d_x",
+            "eye_center1_3d_y",
+            "eye_center1_3d_z",
+            "gaze_normal1_x",
+            "gaze_normal1_y",
+            "gaze_normal1_z",
+        )
+
+    @classmethod
+    def dict_export(cls, raw_value: csv_utils.CSV_EXPORT_RAW_TYPE, world_index: int) -> dict:
+
+        gaze_timestamp = str(raw_value["timestamp"])
+        confidence = raw_value["confidence"]
+        norm_pos = raw_value["norm_pos"]
+        base_data = None
+        gaze_points_3d = [None, None, None]
+        eye_centers0_3d = [None, None, None]
+        eye_centers1_3d = [None, None, None]
+        gaze_normals0_3d = [None, None, None]
+        gaze_normals1_3d = [None, None, None]
+
+        if raw_value.get("base_data", None) is not None:
+            base_data = raw_value["base_data"]
+            base_data = " ".join(
+                "{}-{}".format(b["timestamp"], b["id"]) for b in base_data
             )
 
-            pupil_section = self.pupil_positions.init_dict_for_window(
-                export_window
-            )
-            pupil_world_idc = pm.find_closest(
-                self.timestamps, pupil_section["data_ts"]
-            )
-            for p, idx in zip(pupil_section["data"], pupil_world_idc):
-                data_2d = [
-                    "{}".format(
-                        p["timestamp"]
-                    ),  # use str to be consitant with csv lib.
-                    idx,
-                    p["id"],
-                    p["confidence"],
-                    p["norm_pos"][0],
-                    p["norm_pos"][1],
-                    p["diameter"],
-                    p["method"],
-                ]
-                try:
-                    ellipse_data = [
-                        p["ellipse"]["center"][0],
-                        p["ellipse"]["center"][1],
-                        p["ellipse"]["axes"][0],
-                        p["ellipse"]["axes"][1],
-                        p["ellipse"]["angle"],
-                    ]
-                except KeyError:
-                    ellipse_data = [None] * 5
-                try:
-                    data_3d = [
-                        p["diameter_3d"],
-                        p["model_confidence"],
-                        p["model_id"],
-                        p["sphere"]["center"][0],
-                        p["sphere"]["center"][1],
-                        p["sphere"]["center"][2],
-                        p["sphere"]["radius"],
-                        p["circle_3d"]["center"][0],
-                        p["circle_3d"]["center"][1],
-                        p["circle_3d"]["center"][2],
-                        p["circle_3d"]["normal"][0],
-                        p["circle_3d"]["normal"][1],
-                        p["circle_3d"]["normal"][2],
-                        p["circle_3d"]["radius"],
-                        p["theta"],
-                        p["phi"],
-                        p["projected_sphere"]["center"][0],
-                        p["projected_sphere"]["center"][1],
-                        p["projected_sphere"]["axes"][0],
-                        p["projected_sphere"]["axes"][1],
-                        p["projected_sphere"]["angle"],
-                    ]
-                except KeyError:
-                    data_3d = [None] * 21
-                row = data_2d + ellipse_data + data_3d
-                csv_writer.writerow(row)
-            logger.info("Created 'pupil_positions.csv' file.")
+        # add 3d data if avaiblable
+        if raw_value.get("gaze_point_3d", None) is not None:
+            gaze_points_3d = raw_value["gaze_point_3d"]
+            # binocular
+            if raw_value.get("eye_centers_3d", None) is not None:
+                eye_centers0_3d = raw_value["eye_centers_3d"].get(0, [None, None, None])
+                eye_centers1_3d = raw_value["eye_centers_3d"].get(1, [None, None, None])
+                #
+                gaze_normals0_3d = raw_value["gaze_normals_3d"].get(0, [None, None, None])
+                gaze_normals1_3d = raw_value["gaze_normals_3d"].get(1, [None, None, None])
+            # monocular
+            elif raw_value.get("eye_center_3d", None) is not None:
+                eye_centers0_3d = raw_value["eye_center_3d"]
+                gaze_normals0_3d = raw_value["gaze_normal_3d"]
 
-
-class Gaze_Positions_Exporter:
-    def __init__(self, gaze_positions, timestamps):
-        self.gaze_positions = gaze_positions
-        self.timestamps = timestamps
-
-    def csv_export_write(self, export_window, export_dir):
-        with open(
-            os.path.join(export_dir, "gaze_positions.csv"),
-            "w",
-            encoding="utf-8",
-            newline="",
-        ) as csvfile:
-            csv_writer = csv.writer(csvfile, delimiter=",")
-            csv_writer.writerow(
-                (
-                    "gaze_timestamp",
-                    "world_index",
-                    "confidence",
-                    "norm_pos_x",
-                    "norm_pos_y",
-                    "base_data",
-                    "gaze_point_3d_x",
-                    "gaze_point_3d_y",
-                    "gaze_point_3d_z",
-                    "eye_center0_3d_x",
-                    "eye_center0_3d_y",
-                    "eye_center0_3d_z",
-                    "gaze_normal0_x",
-                    "gaze_normal0_y",
-                    "gaze_normal0_z",
-                    "eye_center1_3d_x",
-                    "eye_center1_3d_y",
-                    "eye_center1_3d_z",
-                    "gaze_normal1_x",
-                    "gaze_normal1_y",
-                    "gaze_normal1_z",
-                )
-            )
-
-            gaze_section = self.gaze_positions.init_dict_for_window(
-                export_window
-            )
-            gaze_world_idc = pm.find_closest(
-                self.timestamps, gaze_section["data_ts"]
-            )
-
-            for g, idx in zip(gaze_section["data"], gaze_world_idc):
-                data = [
-                    "{}".format(g["timestamp"]),
-                    idx,
-                    g["confidence"],
-                    g["norm_pos"][0],
-                    g["norm_pos"][1],
-                    " ".join(
-                        [
-                            "{}-{}".format(b["timestamp"], b["id"])
-                            for b in g["base_data"]
-                        ]
-                    ),
-                ]  # use str on timestamp to be consitant with csv lib.
-
-                # add 3d data if avaiblable
-                if g.get("gaze_point_3d", None) is not None:
-                    data_3d = [
-                        g["gaze_point_3d"][0],
-                        g["gaze_point_3d"][1],
-                        g["gaze_point_3d"][2],
-                    ]
-
-                    # binocular
-                    if g.get("eye_centers_3d", None) is not None:
-                        data_3d += g["eye_centers_3d"].get(0, [None, None, None])
-                        data_3d += g["gaze_normals_3d"].get(0, [None, None, None])
-                        data_3d += g["eye_centers_3d"].get(1, [None, None, None])
-                        data_3d += g["gaze_normals_3d"].get(1, [None, None, None])
-                    # monocular
-                    elif g.get("eye_center_3d", None) is not None:
-                        data_3d += g["eye_center_3d"]
-                        data_3d += g["gaze_normal_3d"]
-                        data_3d += [None] * 6
-                else:
-                    data_3d = [None] * 15
-                data += data_3d
-                csv_writer.writerow(data)
-            logger.info("Created 'gaze_positions.csv' file.")
+        return {
+            "gaze_timestamp": gaze_timestamp,
+            "world_index": world_index,
+            "confidence": confidence,
+            "norm_pos_x": norm_pos[0],
+            "norm_pos_y": norm_pos[1],
+            "base_data": base_data,
+            "gaze_point_3d_x": gaze_points_3d[0],
+            "gaze_point_3d_y": gaze_points_3d[1],
+            "gaze_point_3d_z": gaze_points_3d[2],
+            "eye_center0_3d_x": eye_centers0_3d[0],
+            "eye_center0_3d_y": eye_centers0_3d[1],
+            "eye_center0_3d_z": eye_centers0_3d[2],
+            "gaze_normal0_x": gaze_normals0_3d[0],
+            "gaze_normal0_y": gaze_normals0_3d[1],
+            "gaze_normal0_z": gaze_normals0_3d[2],
+            "eye_center1_3d_x": eye_centers1_3d[0],
+            "eye_center1_3d_y": eye_centers1_3d[1],
+            "eye_center1_3d_z": eye_centers1_3d[2],
+            "gaze_normal1_x": gaze_normals1_3d[0],
+            "gaze_normal1_y": gaze_normals1_3d[1],
+            "gaze_normal1_z": gaze_normals1_3d[2],
+        }
