@@ -18,7 +18,7 @@ import collections
 import cv2
 import numpy as np
 
-from apriltags3 import Detection as Apriltag_V3_Detection
+from pupil_apriltags import Detection as Apriltag_V3_Detection
 
 
 __all__ = [
@@ -307,7 +307,7 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
 def test_surface_marker_from_raw_detection():
     # TODO: Test `from_*_detection` methods below
     # Surface_Marker.from_square_tag_detection({})
-    # Surface_Marker.from_apriltag_v3_detection(apriltags3.Detection())
+    # Surface_Marker.from_apriltag_v3_detection(pupil_apriltags.Detection())
     assert True
 
 

@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import cv2
 import numpy as np
 
-import apriltags3
+import pupil_apriltags
 import file_methods as fm
 import video_capture
 from methods import normalize
@@ -23,7 +23,7 @@ from stdlib_utils import unique
 
 logger = logging.getLogger(__name__)
 
-apriltag_detector = apriltags3.Detector()
+apriltag_detector = pupil_apriltags.Detector()
 
 
 def get_markers_data(detection, img_size, timestamp):

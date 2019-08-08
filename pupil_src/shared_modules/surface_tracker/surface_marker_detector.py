@@ -15,7 +15,7 @@ import typing
 import itertools
 
 import square_marker_detect
-import apriltags3
+import pupil_apriltags
 
 from .surface_marker import Surface_Marker, Surface_Marker_Type
 
@@ -260,7 +260,7 @@ class Surface_Apriltag_V3_Marker_Detector(Surface_Base_Marker_Detector):
             self.__marker_detector_modes,
         ) = state
         params = self.__detector_params.to_dict()
-        self._detector = apriltags3.Detector(**params)
+        self._detector = pupil_apriltags.Detector(**params)
 
     def __init__(
         self,
