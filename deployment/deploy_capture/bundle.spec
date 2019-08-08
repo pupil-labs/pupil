@@ -80,7 +80,7 @@ if platform.system() == "Darwin":
     )
 
     apriltag_libs = [
-        (apriltag_relative_path(lib), lib, "BINARY")
+        (apriltag_relative_path(lib), str(lib), "BINARY")
         for lib in apriltag_lib_path.rglob("*.dylib")
     ]
 
@@ -153,7 +153,7 @@ elif platform.system() == "Linux":
     binaries = [b for b in binaries if not "libdrm.so.2" in b[0]]
 
     apriltag_libs = [
-        (apriltag_relative_path(lib), lib, "BINARY")
+        (apriltag_relative_path(lib), str(lib), "BINARY")
         for lib in apriltag_lib_path.rglob("*.so")
     ]
 
@@ -254,7 +254,7 @@ elif platform.system() == "Windows":
     )
 
     apriltag_libs = [
-        (apriltag_relative_path(lib), lib, "BINARY")
+        (apriltag_relative_path(lib), str(lib), "BINARY")
         for lib in apriltag_lib_path.rglob("*.dll")
     ]
 
