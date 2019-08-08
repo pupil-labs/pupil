@@ -1,3 +1,4 @@
+# cython: profile=False, language_level=3
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
@@ -9,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-# cython: profile=False
 import math
 import sys
 

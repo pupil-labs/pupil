@@ -18,7 +18,7 @@ sys.path.append(pupil_base_dir)
 pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
 sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
 
-from visualizer_3d import Visualizer
+from pupil_detectors.visualizer_3d import Visualizer
 from glfw import *
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D

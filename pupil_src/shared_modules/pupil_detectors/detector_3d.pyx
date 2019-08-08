@@ -1,3 +1,4 @@
+# cython: profile=False, language_level=3
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
@@ -9,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-# cython: profile=False
 import math
 from collections import namedtuple
 
@@ -32,8 +32,7 @@ from gl_utils import (
     make_coord_system_pixel_based,
 )
 from plugin import Plugin
-from visualizer_3d import Eye_Visualizer
-
+from pupil_detectors.visualizer_3d import Eye_Visualizer
 
 cdef class Detector_3D:
 
@@ -100,6 +99,9 @@ cdef class Detector_3D:
 
         if not self.detectProperties3D:
             self.detectProperties3D["model_sensitivity"] = 0.997
+
+        # Never freeze model in the beginning to allow initial model fitting.
+        self.detectProperties3D["model_is_frozen"] = False
 
     def get_settings(self):
         return {'2D_Settings': self.detectProperties2D , '3D_Settings' : self.detectProperties3D }
@@ -223,8 +225,23 @@ cdef class Detector_3D:
         self.menu.append(info_3d)
         self.menu.append(ui.Button('Reset 3D model', self.reset_3D_Model ))
         self.menu.append(ui.Button('Open debug window',self.toggle_window))
-        self.menu.append(ui.Slider('model_sensitivity',self.detectProperties3D,label='Model sensitivity',min=0.990,max=1.0,step=0.0001))
-        self.menu[-1].display_format = '%0.4f'
+        model_sensitivity_slider = ui.Slider(
+            'model_sensitivity',
+            self.detectProperties3D,
+            label='Model sensitivity',
+            min=0.990,
+            max=1.0,
+            step=0.0001,
+        )
+        model_sensitivity_slider.display_format = '%0.4f'
+        self.menu.append(model_sensitivity_slider)
+        self.menu.append(
+            ui.Switch(
+                'model_is_frozen',
+                self.detectProperties3D,
+                label='Freeze model',
+            )
+        )
         # self.menu.append(ui.Slider('pupil_radius_min',self.detectProperties3D,label='Pupil min radius', min=1.0,max= 8.0,step=0.1))
         # self.menu.append(ui.Slider('pupil_radius_max',self.detectProperties3D,label='Pupil max radius', min=1.0,max=8.0,step=0.1))
         # self.menu.append(ui.Slider('max_fit_residual',self.detectProperties3D,label='3D fit max residual', min=0.00,max=0.1,step=0.0001))
