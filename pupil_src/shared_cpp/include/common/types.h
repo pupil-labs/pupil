@@ -125,6 +125,7 @@ namespace singleeyefitter {
 
     struct Detector3DProperties {
         float model_sensitivity;
+        bool model_is_frozen;
     };
 
 } // singleeyefitter namespace

@@ -72,6 +72,14 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     result.timestamp = observation2D->timestamp;
 
     float modelSensitivity = props.model_sensitivity;
+    bool model_is_frozen = props.model_is_frozen;
+
+    if(model_is_frozen && mAlternativeModelsPtrs.size() > 0) {
+        // Model has been frozen. Remove any alternative models.
+        // They would not be updated during the freeze and just
+        // be out-of-date when the freeze is cancelled.
+        mAlternativeModelsPtrs.clear();
+    }
 
     double deltaTime = observation2D->timestamp - mLastFrameTimestamp;
     if( mLastFrameTimestamp != 0.0 ){
@@ -109,7 +117,8 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     if (observation2D->confidence >= 0.7) {
 
         // allow each model to decide by themself if the new observation supports the model or not
-        auto circleAndFit = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage()  );
+        // TODO: Pass freeze argument
+        auto circleAndFit = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage(), model_is_frozen);
         auto circle = circleAndFit.first;
         auto observationFit = circleAndFit.second;
 
@@ -133,7 +142,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         }
 
         for (auto& modelPtr : mAlternativeModelsPtrs) {
-             modelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() );
+             modelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage(), model_is_frozen);
         }
 
     }
@@ -203,8 +212,10 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         result.ellipse = Ellipse::Null;
    }
 
-    // contains the logic for building alternative models if the current one is bad
-    checkModels(modelSensitivity,observation2D->timestamp );
+    if (!model_is_frozen) {
+        // contains the logic for building alternative models if the current one is bad
+        checkModels(modelSensitivity,observation2D->timestamp );
+    }
     result.modelID = mActiveModelPtr->getModelID();
     result.modelBirthTimestamp = mActiveModelPtr->getBirthTimestamp();
     result.modelConfidence = mActiveModelPtr->getConfidence();

@@ -72,7 +72,7 @@ class EyeModel {
         ~EyeModel();
 
 
-        std::pair<Circle,ConfidenceValue> presentObservation(const ObservationPtr observation, double averageFramerate  );
+        std::pair<Circle,ConfidenceValue> presentObservation(const ObservationPtr observation, double averageFramerate, bool model_is_frozen);
         Sphere getSphere() const;
         Sphere getInitialSphere() const;
 

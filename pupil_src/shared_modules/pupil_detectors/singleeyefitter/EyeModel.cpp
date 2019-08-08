@@ -93,7 +93,7 @@ EyeModel::~EyeModel(){
 }
 
 
-std::pair<Circle,ConfidenceValue> EyeModel::presentObservation(const ObservationPtr newObservationPtr, double averageFramerate )
+std::pair<Circle,ConfidenceValue> EyeModel::presentObservation(const ObservationPtr newObservationPtr, double averageFramerate, bool model_is_frozen)
 {
 
     if (mBirthTimestamp == -1){
@@ -140,7 +140,7 @@ std::pair<Circle,ConfidenceValue> EyeModel::presentObservation(const Observation
     }
      mModelMutex.unlock();
 
-    if (shouldAddObservation) {
+    if (!model_is_frozen && shouldAddObservation) {
         //if the observation passed all tests we can add it
         mSupportingPupilsToAdd.emplace_back( newObservationPtr );
 
