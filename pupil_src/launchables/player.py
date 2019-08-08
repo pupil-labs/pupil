@@ -118,6 +118,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_export.plugins.imotions_exporter import iMotions_Exporter
         from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
         from video_export.plugins.world_video_exporter import World_Video_Exporter
+        from head_pose_tracker.offline_head_pose_tracker import Offline_Head_Pose_Tracker
         from video_capture import File_Source
         from video_overlay.plugins import Video_Overlay, Eye_Overlay
 
@@ -158,15 +159,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             World_Video_Exporter,
             iMotions_Exporter,
             Eye_Video_Exporter,
+            Offline_Head_Pose_Tracker,
         ] + runtime_plugins
-
-        if platform.system() != "Windows":
-            # Head pose tracking is currently not available on Windows
-            from head_pose_tracker.offline_head_pose_tracker import (
-                Offline_Head_Pose_Tracker,
-            )
-
-            user_plugins.append(Offline_Head_Pose_Tracker)
 
         plugins = system_plugins + user_plugins
 
