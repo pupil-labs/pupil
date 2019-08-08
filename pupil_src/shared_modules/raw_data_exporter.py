@@ -9,10 +9,13 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import abc
 import csv
 import logging
 import os
+import typing
 
+import csv_utils
 from pyglui import ui
 
 import player_methods as pm
@@ -183,6 +186,46 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
                 newline="",
             ) as info_file:
                 info_file.write(self.__doc__)
+
+
+class _Base_Positions_Exporter(abc.ABC):
+
+    @classmethod
+    @abc.abstractmethod
+    def csv_export_filename(cls) -> str:
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def csv_export_labels(cls) -> typing.Tuple[csv_utils.CSV_EXPORT_LABEL_TYPE, ...]:
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def dict_export(cls, raw_value: csv_utils.CSV_EXPORT_RAW_TYPE, world_index: int) -> dict:
+        pass
+
+    def csv_export_write(self, positions_bisector, timestamps, export_window, export_dir):
+        export_file = type(self).csv_export_filename()
+        export_path = os.path.join(export_dir, export_file)
+
+        export_section = positions_bisector.init_dict_for_window(
+            export_window
+        )
+        export_world_idc = pm.find_closest(
+            timestamps, export_section["data_ts"]
+        )
+
+        with open(export_path, "w", encoding="utf-8", newline="") as csvfile:
+            csv_header = type(self).csv_export_labels()
+            dict_writer = csv.DictWriter(csvfile, fieldnames=csv_header)
+            dict_writer.writeheader()
+
+            for g, idx in zip(export_section["data"], export_world_idc):
+                dict_row = type(self).dict_export(raw_value=g, world_index=idx)
+                dict_writer.writerow(dict_row)
+
+        logger.info(f"Created '{export_file}' file.")
 
 
 class Pupil_Positions_Exporter:
