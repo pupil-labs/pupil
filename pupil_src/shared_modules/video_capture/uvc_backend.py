@@ -17,6 +17,8 @@ from .base_backend import InitialisationError, Base_Source, Base_Manager
 from camera_models import load_intrinsics
 from .utils import Check_Frame_Stripes, Exposure_Time
 
+import numpy as np
+
 # check versions for our own depedencies as they are fast-changing
 assert VersionFormat(uvc.__version__) >= VersionFormat("0.13")
 
@@ -357,6 +359,15 @@ class UVC_Source(Base_Source):
     def recent_events(self, events):
         try:
             frame = self.uvc_capture.get_frame(0.05)
+            
+            if np.isclose(frame.timestamp, 0):
+                # sometimes (probably only on windows) after disconnections, the first frame has 0 ts
+                logger.warning(
+                    "Received frame with invalid timestamp."
+                    " This can happen after a disconnect."
+                    " Frame will be dropped!"
+                )
+                return
 
             if self.preferred_exposure_time:
                 target = self.preferred_exposure_time.calculate_based_on_frame(frame)
@@ -376,9 +387,8 @@ class UVC_Source(Base_Source):
             time.sleep(0.02)
             self._restart_logic()
         else:
-            if (
-                self.ts_offset
-            ):  # c930 timestamps need to be set here. The camera does not provide valid pts from device
+            if self.ts_offset:
+                # c930 timestamps need to be set here. The camera does not provide valid pts from device
                 frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
             frame.timestamp -= self.g_pool.timebase.value
             self._recent_frame = frame
