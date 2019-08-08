@@ -117,7 +117,6 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     if (observation2D->confidence >= 0.7) {
 
         // allow each model to decide by themself if the new observation supports the model or not
-        // TODO: Pass freeze argument
         auto circleAndFit = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage(), model_is_frozen);
         auto circle = circleAndFit.first;
         auto observationFit = circleAndFit.second;
