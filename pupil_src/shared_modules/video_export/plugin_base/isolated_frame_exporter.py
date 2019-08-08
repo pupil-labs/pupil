@@ -39,10 +39,10 @@ class IsolatedFrameExporter(VideoExporter, abc.ABC):
         os.makedirs(export_dir, exist_ok=True)
         self.logger.info("Exporting to {}".format(export_dir))
 
+        input_video_file = _find_video_file(self.g_pool.rec_dir, input_name)
         output_video_file = os.path.join(export_dir, output_name + ".mp4")
         task_args = (
-            self.g_pool.rec_dir,
-            input_name,
+            input_video_file,
             output_video_file,
             export_range,
             self.g_pool.timestamps,
@@ -71,16 +71,13 @@ def _find_video_file(directory, name):
 
 
 def _convert_video_file(
-    rec_dir,
-    input_name,
+    input_file,
     output_file,
     export_range,
     world_timestamps,
     process_frame,
     timestamp_export_format,
 ):
-    input_file = _find_video_file(rec_dir, input_name)
-
     yield "Export video", 0.0
     input_source = File_Source(SimpleNamespace(), input_file, fill_gaps=True)
     if not input_source.initialised:
