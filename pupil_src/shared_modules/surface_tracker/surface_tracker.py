@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,6 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 import os
 from abc import ABCMeta, abstractmethod
+import typing
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +20,10 @@ import numpy as np
 import pyglui
 
 from plugin import Plugin
-import square_marker_detect as marker_det
 import file_methods
 
-from surface_tracker import gui, Square_Marker_Detection
+from . import gui
+from .surface_marker_detector import Surface_Marker_Detector, Surface_Marker_Detector_Mode
 
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
@@ -34,23 +35,28 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     icon_chr = chr(0xEC07)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
+    def __init__(self, g_pool, marker_min_perimeter: int = 60, inverted_markers: bool = False):
         super().__init__(g_pool)
 
         self.current_frame = None
         self.surfaces = []
         self.markers = []
         self.markers_unfiltered = []
-        self.previous_markers = []
+
         self._edit_surf_verts = []
         self._last_mouse_pos = (0.0, 0.0)
         self.gui = gui.GUI(self)
 
-        self.marker_min_perimeter = marker_min_perimeter
+        marker_detector_modes = {Surface_Marker_Detector_Mode.APRILTAG_MARKER}
+        self._marker_min_perimeter = marker_min_perimeter
         self.marker_min_confidence = 0.0
-        self.inverted_markers = inverted_markers
+        self.marker_detector = Surface_Marker_Detector(
+            marker_detector_modes=marker_detector_modes,
+            marker_min_perimeter=marker_min_perimeter,
+            square_marker_robust_detection=True,
+            square_marker_inverted_markers=inverted_markers,
+        )
 
-        self.robust_detection = True
         self._add_surfaces_from_file()
 
     def _add_surfaces_from_file(self):
@@ -59,7 +65,42 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         )
 
         for init_dict in surface_definitions.get("surfaces", []):
-            self.add_surface(init_dict)
+            saved_version = init_dict.get("version", None)
+            if saved_version == self.Surface_Class.version:
+                self.add_surface(init_dict)
+
+    @property
+    def marker_detector_modes(self) -> typing.Set[Surface_Marker_Detector_Mode]:
+        return self.marker_detector.marker_detector_modes
+
+    @marker_detector_modes.setter
+    def marker_detector_modes(self, value: typing.Set[Surface_Marker_Detector_Mode]):
+        self.marker_detector.marker_detector_modes = value
+
+    @property
+    def marker_min_perimeter(self) -> int:
+        return self._marker_min_perimeter
+
+    @marker_min_perimeter.setter
+    def marker_min_perimeter(self, value: int):
+        self._marker_min_perimeter = value
+        self.marker_detector.marker_min_perimeter = value
+
+    @property
+    def robust_detection(self) -> bool:
+        return self.marker_detector.robust_detection
+
+    @robust_detection.setter
+    def robust_detection(self, value: bool):
+        self.marker_detector.robust_detection = value
+
+    @property
+    def inverted_markers(self) -> bool:
+        return self.marker_detector.inverted_markers
+
+    @inverted_markers.setter
+    def inverted_markers(self, value: bool):
+        self.marker_detector.inverted_markers = value
 
     @property
     def camera_model(self):
@@ -168,6 +209,19 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 {"subject": "surface_tracker.marker_detection_params_changed"}
             )
 
+        def marker_detector_mode_getter() -> Surface_Marker_Detector_Mode:
+            assert len(self.marker_detector_modes) == 1
+            return next(iter(self.marker_detector_modes))
+
+        def marker_detector_mode_setter(mode: Surface_Marker_Detector_Mode):
+            self.marker_detector_modes = {mode}
+            self.notify_all(
+                {"subject": "surface_tracker.marker_detection_params_changed"}
+            )
+
+        supported_surface_marker_detector_modes = Surface_Marker_Detector_Mode.all_supported_cases()
+        supported_surface_marker_detector_modes = sorted(supported_surface_marker_detector_modes, key=lambda m: m.value)
+
         advanced_menu = pyglui.ui.Growing_Menu("Marker Detection Parameters")
         advanced_menu.collapsed = True
         advanced_menu.append(
@@ -195,6 +249,18 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 step=1,
                 min=30,
                 max=100,
+            )
+        )
+        advanced_menu.append(
+            pyglui.ui.Selector(
+                "marker_detector_mode",
+                None, #self,
+                label="Marker Detector Mode",
+                getter=marker_detector_mode_getter,
+                setter=marker_detector_mode_setter,
+                labels=[mode.label for mode in supported_surface_marker_detector_modes],
+                selection=[mode for mode in supported_surface_marker_detector_modes],
+                # selection_getter=marker_detection_mode_selection_getter,
             )
         )
         self.menu.append(advanced_menu)
@@ -340,35 +406,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         pass
 
     def _detect_markers(self, frame):
-        gray = frame.gray
-
-        if self.robust_detection:
-            markers = marker_det.detect_markers_robust(
-                gray,
-                grid_size=5,
-                aperture=11,
-                prev_markers=self.previous_markers,
-                true_detect_every_frame=3,
-                min_marker_perimeter=self.marker_min_perimeter,
-                invert_image=self.inverted_markers,
-            )
-        else:
-            markers = marker_det.detect_markers(
-                gray,
-                grid_size=5,
-                aperture=11,
-                min_marker_perimeter=self.marker_min_perimeter,
-            )
-
-        # Robust marker detection requires previous markers to be in a different
-        # format than the surface tracker.
-        self.previous_markers = markers
-        markers = [
-            Square_Marker_Detection(
-                m["id"], m["id_confidence"], m["verts"], m["perimeter"]
-            )
-            for m in markers
-        ]
+        markers = self.marker_detector.detect_markers(gray_img=frame.gray, frame_index=frame.index)
         markers = self._remove_duplicate_markers(markers)
         self.markers_unfiltered = markers
         self.markers = self._filter_markers(markers)
@@ -376,12 +414,15 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def _remove_duplicate_markers(self, markers):
         # if an id shows twice use the bigger marker (usually this is a screen camera
         # echo artifact.)
-        marker_by_id = {}
+        marker_by_uid = {}
         for m in markers:
-            if m.id not in marker_by_id or m.perimeter > marker_by_id[m.id].perimeter:
-                marker_by_id[m.id] = m
+            if (
+                m.uid not in marker_by_uid
+                or m.perimeter > marker_by_uid[m.uid].perimeter
+            ):
+                marker_by_uid[m.uid] = m
 
-        return list(marker_by_id.values())
+        return list(marker_by_uid.values())
 
     def _filter_markers(self, markers):
         markers = [
@@ -390,7 +431,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             if m.perimeter >= self.marker_min_perimeter
             and m.id_confidence > self.marker_min_confidence
         ]
-
         return markers
 
     @abstractmethod

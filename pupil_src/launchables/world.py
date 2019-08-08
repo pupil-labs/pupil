@@ -179,6 +179,7 @@ def world(
         from system_graphs import System_Graphs
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
         from hololens_relay import Hololens_Relay
+        from head_pose_tracker.online_head_pose_tracker import Online_Head_Pose_Tracker
 
         # UI Platform tweaks
         if platform.system() == "Linux":
@@ -237,15 +238,8 @@ def world(
             Accuracy_Visualizer,
             Camera_Intrinsics_Estimation,
             Hololens_Relay,
+            Online_Head_Pose_Tracker,
         ]
-
-        if platform.system() != "Windows":
-            # Head pose tracking is currently not available on Windows
-            from head_pose_tracker.online_head_pose_tracker import (
-                Online_Head_Pose_Tracker,
-            )
-
-            user_plugins.append(Online_Head_Pose_Tracker)
 
         system_plugins = (
             [
