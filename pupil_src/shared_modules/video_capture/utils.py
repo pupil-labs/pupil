@@ -428,10 +428,10 @@ class RenameSet:
 
         def rewrite_time(self, destination_name, start_time):
             timestamps = np.fromfile(self.path, dtype="<u8")
-            
+
             # Subtract start_time from all times in the recording, so timestamps
             # start at 0. This is to increase precision when converting
-            # timestamps to float32, e.g. for OpenGL! 
+            # timestamps to float32, e.g. for OpenGL!
             timestamps -= start_time
 
             SECONDS_PER_NANOSECOND = 1e-9
@@ -462,7 +462,7 @@ class RenameSet:
         except FileNotFoundError:
             logger.warn('Trying to read info.json, but it does not exist!')
             return 0
-        
+
         except KeyError:
             logger.error('Could not read start_time_synced from info.json!')
             return 0
@@ -509,36 +509,38 @@ class RenameSet:
         return existsting_files
 
 
-class RawTimePairs:
-    TIME_FACTORS = {"<u8": 1e-9}  # nano seconds to seconds factor
+def pi_gaze_items(root_dir):
+    def find_raw_path(timestamps_path):
+        raw_name = timestamps_path.name.replace("_timestamps", "")
+        raw_path = timestamps_path.with_name(raw_name).with_suffix(".raw")
+        assert raw_path.exists(), f"The file does not exist at path: {raw_path}"
+        return raw_path
 
-    def __init__(
-        self, root_dir, pattern, raw_dtype="<f8", raw_shape=(-1,), time_dtype="<u8"
-    ):
-        self.raw_dtype = raw_dtype
-        self.raw_shape = raw_shape
-        self.time_dtype = time_dtype
-        self.root = pl.Path(root_dir)
-        self.part_stems = sorted(set(p.stem for p in self.root.glob(pattern)))
+    def load_timestamps_data(path):
+        timestamps = np.fromfile(str(path), "<f8")
+        timestamps_dtype = timestamps.dtype
+        if len(timestamps) > 0:
+            start_time = timestamps[0]
+            timestamps = [t - start_time for t in timestamps]
+        return np.asarray(timestamps, dtype=timestamps_dtype)
 
-    def items(self):
-        for data_raw, data_time in self._load_all_pairs():
-            yield from zip(data_raw, data_time)
+    def load_raw_data(path):
+        raw_data = np.fromfile(str(path), "<f4")
+        raw_data_dtype = raw_data.dtype
+        raw_data.shape = (-1, 2)
+        return np.asarray(raw_data, dtype=raw_data_dtype)
 
-    def _load_all_pairs(self):
-        for stem in self.part_stems:
-            yield self._load_pairs_for_stem(stem)
+    # This pattern will match any filename that:
+    # - starts with "gaze"
+    # - is followed by one or more characters
+    # - is followed by "_timestamps."
+    # - is followed by one or more characters
+    gaze_timestamp_pattern = "gaze?*_timestamps.?*"
 
-    def _load_pairs_for_stem(self, stem):
-        base = self.root / stem
-        data_time = self._load_file(base, ".time", self.time_dtype)
-        if self.time_dtype in self.TIME_FACTORS:
-            data_time = data_time * self.TIME_FACTORS[self.time_dtype]
-        data_raw = self._load_file(base, ".raw", self.raw_dtype)
-        data_raw.shape = self.raw_shape
-        return data_raw, data_time
-
-    @staticmethod
-    def _load_file(path_without_suffix, suffix, format):
-        path = path_without_suffix.with_suffix(suffix)
-        return np.fromfile(str(path), format)
+    for timestamps_path in pl.Path(root_dir).glob(gaze_timestamp_pattern):
+        raw_path = find_raw_path(timestamps_path)
+        timestamps = load_timestamps_data(timestamps_path)
+        raw_data = load_raw_data(raw_path)
+        assert len(raw_data) == len(timestamps),\
+            f"There is a mismatch between the number of raw data ({len(raw_data)}) and the number of timestamps ({len(timestamps)})"
+        yield from zip(raw_data, timestamps)
