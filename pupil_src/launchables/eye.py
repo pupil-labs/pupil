@@ -614,19 +614,19 @@ def eye(
                             elif property_name == "roi":
                                 try:
                                     # Modify the ROI with the values sent over network
-                                    lX, lY, uX, uY = property_value
+                                    minX, maxX, minY, maxY = property_value
                                     g_pool.u_r.set(
                                         [
-                                            max(g_pool.u_r.min_x, int(lX)),
-                                            min(g_pool.u_r.max_x, int(uX)),
-                                            max(g_pool.u_r.min_y, int(lY)),
-                                            min(g_pool.u_r.max_y, int(uY)),
+                                            max(g_pool.u_r.min_x, int(minX)),
+                                            max(g_pool.u_r.min_y, int(minY)),
+                                            min(g_pool.u_r.max_x, int(maxX)),
+                                            min(g_pool.u_r.max_y, int(maxY)),
                                         ]
                                     )
                                 except ValueError as err:
                                     raise ValueError(
                                         "ROI needs to be list of 4 integers:"
-                                        "(lower X, lower Y, upper X, upper Y)"
+                                        "(minX, maxX, minY, maxY)"
                                     ) from err
                             else:
                                 raise KeyError(
