@@ -54,8 +54,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     order = 0.2
     TIMELINE_LINE_HEIGHT = 16
 
-    def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
-        super().__init__(g_pool, marker_min_perimeter, inverted_markers)
+    def __init__(self, g_pool, *args, **kwargs):
+        super().__init__(g_pool, *args, **kwargs)
 
         self.MARKER_CACHE_VERSION = 3
         # Also add very small detected markers to cache and filter cache afterwards
@@ -108,12 +108,16 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         # Filter out non-filled frames where the cache entry is None.
         # Chain the remaining entries (which are lists) to get a flat sequence.
         filled_out_marker_cache = filter(lambda x: x is not None, self.marker_cache)
-        cached_surface_marker_sequence = itertools.chain.from_iterable(filled_out_marker_cache)
+        cached_surface_marker_sequence = itertools.chain.from_iterable(
+            filled_out_marker_cache
+        )
 
         # Get the first surface marker from the sequence, and set the detection mode according to it.
         first_cached_surface_marker = next(cached_surface_marker_sequence, None)
         if first_cached_surface_marker is not None:
-            marker_detector_mode = Surface_Marker_Detector_Mode.from_marker(first_cached_surface_marker)
+            marker_detector_mode = Surface_Marker_Detector_Mode.from_marker(
+                first_cached_surface_marker
+            )
             self.marker_detector_modes = {marker_detector_mode}
 
     def _init_marker_cache(self):

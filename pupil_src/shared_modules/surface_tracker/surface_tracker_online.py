@@ -28,15 +28,11 @@ class Surface_Tracker_Online(Surface_Tracker):
     necessary computation is done per frame.
     """
 
-    def __init__(self, g_pool, marker_min_perimeter=60, inverted_markers=False):
+    def __init__(self, g_pool, *args, **kwargs):
         self.freeze_scene = False
         self.frozen_scene_frame = None
         self.frozen_scene_tex = None
-        super().__init__(
-            g_pool,
-            marker_min_perimeter=marker_min_perimeter,
-            inverted_markers=inverted_markers,
-        )
+        super().__init__(g_pool, *args, **kwargs)
 
         self.menu = None
         self.button = None
