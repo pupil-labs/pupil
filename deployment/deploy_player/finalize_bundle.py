@@ -8,12 +8,14 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import os
+import pathlib
 import platform
-import sys, os
-from version import write_version_file, get_tag_commit, pupil_version
 import shutil
+import sys
 from subprocess import call
 
+from version import get_tag_commit, pupil_version, write_version_file
 
 mac_plist_document_type_str = """
 <key>CFBundleDocumentTypes</key>
@@ -75,8 +77,11 @@ if platform.system() == "Darwin":
     # if call("spctl --assess --type execute '%s'"%bundle_app_dir,shell=True) != 0:
     # print Exception("Codesing verification  failed")
     call("ln -s /Applications/ %s/Applications" % src_dir, shell=True)
-    call("rm dist/Pupil\ Player.app/Contents/MacOS/.DS_Store", shell=True)
-    call("rm dist/Pupil\ Capture.app/Contents/MacOS/nslr/.DS_Store", shell=True)
+
+    for DS_Store in pathlib.Path(src_dir).rglob(".DS_Store"):
+        print(f"Deleting {DS_Store}")
+        DS_Store.unlink()
+
     call(
         "hdiutil create -volname '%s' -srcfolder %s -format UDZO '%s.dmg'"
         % (bundle_dmg_name, src_dir, bundle_name),

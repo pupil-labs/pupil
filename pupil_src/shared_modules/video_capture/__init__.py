@@ -37,8 +37,9 @@ from .fake_backend import Fake_Source, Fake_Manager
 from .file_backend import FileSeekError
 from .file_backend import File_Source, File_Manager
 from .uvc_backend import UVC_Source, UVC_Manager
+from .hmd_streaming import HMD_Streaming_Source
 
-source_classes = [File_Source, UVC_Source, Fake_Source]
+source_classes = [File_Source, UVC_Source, Fake_Source, HMD_Streaming_Source]
 manager_classes = [File_Manager, UVC_Manager, Fake_Manager]
 
 try:
