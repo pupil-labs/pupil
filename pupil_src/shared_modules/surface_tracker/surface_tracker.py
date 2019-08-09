@@ -23,7 +23,10 @@ from plugin import Plugin
 import file_methods
 
 from . import gui
-from .surface_marker_detector import Surface_Marker_Detector, Surface_Marker_Detector_Mode
+from .surface_marker_detector import (
+    Surface_Marker_Detector,
+    Surface_Marker_Detector_Mode,
+)
 
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
@@ -219,8 +222,12 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 {"subject": "surface_tracker.marker_detection_params_changed"}
             )
 
-        supported_surface_marker_detector_modes = Surface_Marker_Detector_Mode.all_supported_cases()
-        supported_surface_marker_detector_modes = sorted(supported_surface_marker_detector_modes, key=lambda m: m.value)
+        supported_surface_marker_detector_modes = (
+            Surface_Marker_Detector_Mode.all_supported_cases()
+        )
+        supported_surface_marker_detector_modes = sorted(
+            supported_surface_marker_detector_modes, key=lambda m: m.value
+        )
 
         advanced_menu = pyglui.ui.Growing_Menu("Marker Detection Parameters")
         advanced_menu.collapsed = True
@@ -406,7 +413,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         pass
 
     def _detect_markers(self, frame):
-        markers = self.marker_detector.detect_markers(gray_img=frame.gray, frame_index=frame.index)
+        markers = self.marker_detector.detect_markers(
+            gray_img=frame.gray, frame_index=frame.index
+        )
         markers = self._remove_duplicate_markers(markers)
         self.markers_unfiltered = markers
         self.markers = self._filter_markers(markers)
