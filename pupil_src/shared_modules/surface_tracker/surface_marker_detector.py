@@ -181,7 +181,7 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
 
         grid_size = 5
         aperture = 9
-        true_detect_every_frame = 1
+        true_detect_every_frame = 3
         min_perimeter = self.marker_min_perimeter
 
         if self.__robust_detection:
