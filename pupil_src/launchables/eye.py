@@ -612,21 +612,22 @@ def eye(
                                     property_name, property_value
                                 )
                             elif property_name == "roi":
-                                if len(property_value) != 4:
-                                    raise ValueError(
-                                        "ROI needs to be a list of positions with four elements"
+                                try:
+                                    # Modify the ROI with the values sent over network
+                                    lX, lY, uX, uY = property_value
+                                    g_pool.u_r.set(
+                                        [
+                                            max(g_pool.u_r.min_x, int(lX)),
+                                            min(g_pool.u_r.max_x, int(uX)),
+                                            max(g_pool.u_r.min_y, int(lY)),
+                                            min(g_pool.u_r.max_y, int(uY)),
+                                        ]
                                     )
-
-                                # Modify the ROI with the values sent over network
-                                lX, lY, uX, uY = property_value
-                                g_pool.u_r.set(
-                                    [
-                                        max(g_pool.u_r.min_x, int(lX)),
-                                        min(g_pool.u_r.max_x, int(uX)),
-                                        max(g_pool.u_r.min_y, int(lY)),
-                                        min(g_pool.u_r.max_y, int(uY)),
-                                    ]
-                                )
+                                except ValueError as err:
+                                    raise ValueError(
+                                        "ROI needs to be list of 4 integers:"
+                                        "(lower X, lower Y, upper X, upper Y)"
+                                    ) from err
                             else:
                                 raise KeyError(
                                     "Notification subject does not "
