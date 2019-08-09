@@ -537,6 +537,8 @@ class Exporter:
             csv_writer = csv.writer(csv_file, delimiter=",")
             csv_writer.writerow(
                 (
+                    "world_timestamp",
+                    "world_index",
                     "fixation_id",
                     "start_timestamp",
                     "duration",
@@ -548,21 +550,22 @@ class Exporter:
                     "on_surf",
                 )
             )
-            # flatten `fixations_on_surf[world_frame_idx][frame_event_idx]`
-            # to `fixations_on_surf[global_event_idx]`
-            fixations_on_surf = itertools.chain.from_iterable(fixations_on_surf)
-            without_duplicates = {fix["id"]: fix for fix in fixations_on_surf}.values()
-            for fix in without_duplicates:
-                csv_writer.writerow(
-                    (
-                        fix["id"],
-                        fix["timestamp"],
-                        fix["duration"],
-                        fix["dispersion"],
-                        fix["norm_pos"][0],
-                        fix["norm_pos"][1],
-                        fix["norm_pos"][0] * surface.real_world_size["x"],
-                        fix["norm_pos"][1] * surface.real_world_size["y"],
-                        fix["on_surf"],
-                    )
-                )
+            for world_idx, fixs_for_frame in enumerate(fixations_on_surf):
+                world_idx += self.export_range[0]
+                if fixs_for_frame:
+                    for fix in fixs_for_frame:
+                        csv_writer.writerow(
+                            (
+                                self.world_timestamps[world_idx],
+                                world_idx,
+                                fix["id"],
+                                fix["timestamp"],
+                                fix["duration"],
+                                fix["dispersion"],
+                                fix["norm_pos"][0],
+                                fix["norm_pos"][1],
+                                fix["norm_pos"][0] * surface.real_world_size["x"],
+                                fix["norm_pos"][1] * surface.real_world_size["y"],
+                                fix["on_surf"],
+                            )
+                        )

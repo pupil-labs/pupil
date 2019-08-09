@@ -23,7 +23,10 @@ from plugin import Plugin
 import file_methods
 
 from . import gui
-from .surface_marker_detector import Surface_Marker_Detector, Surface_Marker_Detector_Mode
+from .surface_marker_detector import (
+    Surface_Marker_Detector,
+    Surface_Marker_Detector_Mode,
+)
 
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
@@ -35,7 +38,15 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     icon_chr = chr(0xEC07)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool, marker_min_perimeter: int = 60, inverted_markers: bool = False):
+    def __init__(
+        self,
+        g_pool,
+        marker_min_perimeter: int = 60,
+        inverted_markers: bool = False,
+        marker_detector_mode: typing.Union[
+            Surface_Marker_Detector_Mode, str
+        ] = Surface_Marker_Detector_Mode.APRILTAG_MARKER,
+    ):
         super().__init__(g_pool)
 
         self.current_frame = None
@@ -47,7 +58,14 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self._last_mouse_pos = (0.0, 0.0)
         self.gui = gui.GUI(self)
 
-        marker_detector_modes = {Surface_Marker_Detector_Mode.APRILTAG_MARKER}
+        if isinstance(marker_detector_mode, str):
+            # Here we ensure that we pass a proper Surface_Marker_Detector_Mode
+            # instance to Surface_Marker_Detector:
+            marker_detector_mode = Surface_Marker_Detector_Mode(marker_detector_mode)
+
+        # Even though the Surface_Marker_Detector class supports multiple detector
+        # modes at once, we only want one mode to be active during surface tracking.
+        marker_detector_modes = {marker_detector_mode}
         self._marker_min_perimeter = marker_min_perimeter
         self.marker_min_confidence = 0.0
         self.marker_detector = Surface_Marker_Detector(
@@ -76,6 +94,16 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     @marker_detector_modes.setter
     def marker_detector_modes(self, value: typing.Set[Surface_Marker_Detector_Mode]):
         self.marker_detector.marker_detector_modes = value
+
+    @property
+    def active_marker_detector_mode(self) -> Surface_Marker_Detector_Mode:
+        assert len(self.marker_detector_modes) == 1
+        return next(iter(self.marker_detector_modes))
+
+    @active_marker_detector_mode.setter
+    def active_marker_detector_mode(self, mode: Surface_Marker_Detector_Mode):
+        self.marker_detector_modes = {mode}
+        self.notify_all({"subject": "surface_tracker.marker_detection_params_changed"})
 
     @property
     def marker_min_perimeter(self) -> int:
@@ -209,18 +237,12 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 {"subject": "surface_tracker.marker_detection_params_changed"}
             )
 
-        def marker_detector_mode_getter() -> Surface_Marker_Detector_Mode:
-            assert len(self.marker_detector_modes) == 1
-            return next(iter(self.marker_detector_modes))
-
-        def marker_detector_mode_setter(mode: Surface_Marker_Detector_Mode):
-            self.marker_detector_modes = {mode}
-            self.notify_all(
-                {"subject": "surface_tracker.marker_detection_params_changed"}
-            )
-
-        supported_surface_marker_detector_modes = Surface_Marker_Detector_Mode.all_supported_cases()
-        supported_surface_marker_detector_modes = sorted(supported_surface_marker_detector_modes, key=lambda m: m.value)
+        supported_surface_marker_detector_modes = (
+            Surface_Marker_Detector_Mode.all_supported_cases()
+        )
+        supported_surface_marker_detector_modes = sorted(
+            supported_surface_marker_detector_modes, key=lambda m: m.value
+        )
 
         advanced_menu = pyglui.ui.Growing_Menu("Marker Detection Parameters")
         advanced_menu.collapsed = True
@@ -253,14 +275,11 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         )
         advanced_menu.append(
             pyglui.ui.Selector(
-                "marker_detector_mode",
-                None, #self,
+                "active_marker_detector_mode",
+                self,
                 label="Marker Detector Mode",
-                getter=marker_detector_mode_getter,
-                setter=marker_detector_mode_setter,
                 labels=[mode.label for mode in supported_surface_marker_detector_modes],
                 selection=[mode for mode in supported_surface_marker_detector_modes],
-                # selection_getter=marker_detection_mode_selection_getter,
             )
         )
         self.menu.append(advanced_menu)
@@ -406,7 +425,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         pass
 
     def _detect_markers(self, frame):
-        markers = self.marker_detector.detect_markers(gray_img=frame.gray, frame_index=frame.index)
+        markers = self.marker_detector.detect_markers(
+            gray_img=frame.gray, frame_index=frame.index
+        )
         markers = self._remove_duplicate_markers(markers)
         self.markers_unfiltered = markers
         self.markers = self._filter_markers(markers)
@@ -522,6 +543,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         return {
             "marker_min_perimeter": self.marker_min_perimeter,
             "inverted_markers": self.inverted_markers,
+            "marker_detector_mode": self.active_marker_detector_mode.value,
         }
 
     def save_surface_definitions_to_file(self):

@@ -29,7 +29,8 @@ apriltag_detector = pupil_apriltags.Detector()
 def get_markers_data(detection, img_size, timestamp):
     return {
         "id": detection.tag_id,
-        "verts": detection.corners[::-1].tolist(),
+        # verts: Corners need to be listed counter-clockwise
+        "verts": detection.corners.tolist(),
         "centroid": normalize(detection.center, img_size, flip_y=True),
         "timestamp": timestamp,
     }
