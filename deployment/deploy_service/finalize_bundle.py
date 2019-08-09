@@ -9,11 +9,14 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import os
+import pathlib
 import platform
-import sys, os
-from version import write_version_file, get_tag_commit, pupil_version
 import shutil
+import sys
 from subprocess import call
+
+from version import get_tag_commit, pupil_version, write_version_file
 
 if platform.system() == "Darwin":
     print("starting version stript:")
@@ -40,7 +43,11 @@ if platform.system() == "Darwin":
     # if call("spctl --assess --type execute '%s'"%bundle_app_dir,shell=True) != 0:
     # print Exception("Codesing verification  failed")
     call("ln -s /Applications/ %s/Applications" % src_dir, shell=True)
-    call("rm dist/Pupil\ Service.app/Contents/MacOS/.DS_Store", shell=True)
+
+    for DS_Store in pathlib.Path(src_dir).rglob(".DS_Store"):
+        print(f"Deleting {DS_Store}")
+        DS_Store.unlink()
+
     call(
         "hdiutil create -volname '%s' -srcfolder %s -size 340m -format UDZO '%s.dmg'"
         % (bundle_dmg_name, src_dir, bundle_name),
