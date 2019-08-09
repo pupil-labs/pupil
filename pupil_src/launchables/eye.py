@@ -611,10 +611,26 @@ def eye(
                                 g_pool.pupil_detector.set_3d_detector_property(
                                     property_name, property_value
                                 )
+                            elif property_name == "roi":
+                                if len(property_value) != 4:
+                                    raise ValueError(
+                                        "ROI needs to be a list of positions with four elements"
+                                    )
+
+                                # Modify the ROI with the values sent over network
+                                lX, lY, uX, uY = property_value
+                                g_pool.u_r.set(
+                                    [
+                                        max(g_pool.u_r.min_x, int(lX)),
+                                        min(g_pool.u_r.max_x, int(uX)),
+                                        max(g_pool.u_r.min_y, int(lY)),
+                                        min(g_pool.u_r.max_y, int(uY)),
+                                    ]
+                                )
                             else:
                                 raise KeyError(
                                     "Notification subject does not "
-                                    "specifiy detector type."
+                                    "specifiy detector type nor modify ROI."
                                 )
                             logger.debug(
                                 "`{}` property set to {}".format(
@@ -905,4 +921,3 @@ def eye_profiled(
             eye_id
         )
     )
-
