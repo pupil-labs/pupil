@@ -743,7 +743,7 @@ def world_profiled(
     from .world import world
 
     cProfile.runctx(
-        "world(timebase, eye_procs_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
+        "world(timebase, eye_procs_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port)",
         {
             "timebase": timebase,
             "eye_procs_alive": eye_procs_alive,
