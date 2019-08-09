@@ -552,6 +552,7 @@ class Surface(abc.ABC):
 
     def save_to_dict(self):
         return {
+            "version": self.version,
             "name": self.name,
             "real_world_size": self.real_world_size,
             "reg_markers": [
