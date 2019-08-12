@@ -49,7 +49,7 @@ if platform.system() == "Darwin":
         DS_Store.unlink()
 
     call(
-        "hdiutil create  -volname '%s' -srcfolder %s -stretch -format UDZO '%s.dmg'"
+        "hdiutil create  -volname '%s' -srcfolder %s -format UDZO -size 300m '%s.dmg'"
         % (bundle_dmg_name, src_dir, bundle_name),
         shell=True,
     )
