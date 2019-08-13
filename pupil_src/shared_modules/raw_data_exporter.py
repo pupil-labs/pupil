@@ -278,7 +278,6 @@ class Pupil_Positions_Exporter(_Base_Positions_Exporter):
         # 2d data
         pupil_timestamp = str(raw_value["timestamp"])
         eye_id = raw_value["id"]
-        world_index = raw_value["world_index"]
         confidence = raw_value["confidence"]
         norm_pos_x = raw_value["norm_pos"][0]
         norm_pos_y = raw_value["norm_pos"][1]
