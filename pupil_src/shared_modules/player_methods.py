@@ -195,23 +195,16 @@ def correlate_data(data, timestamps):
 
 
 def load_meta_info(rec_dir):
-    meta_info_path = os.path.join(rec_dir, "info.csv")
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-    return meta_info
+    return _Pupil_Recording(rec_dir).meta_info
 
 
 def is_pupil_rec_dir(rec_dir):
-    if not os.path.isdir(rec_dir):
-        logger.error("No valid dir supplied ({})".format(rec_dir))
-        return False
     try:
-        meta_info = load_meta_info(rec_dir)
-        meta_info["Recording Name"]  # Test key existence
-    except:
-        logger.error("Could not read info.csv file: Not a valid Pupil recording.")
+        _Pupil_Recording(rec_dir)
+        return True
+    except InvalidRecordingException as e:
+        logger.error(str(e))
         return False
-    return True
 
 
 class InvalidRecordingException(Exception):
