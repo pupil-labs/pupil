@@ -195,12 +195,12 @@ def correlate_data(data, timestamps):
 
 
 def load_meta_info(rec_dir):
-    return _Pupil_Recording(rec_dir).meta_info
+    return Pupil_Recording(rec_dir).meta_info
 
 
 def is_pupil_rec_dir(rec_dir):
     try:
-        _Pupil_Recording(rec_dir)
+        Pupil_Recording(rec_dir)
         return True
     except InvalidRecordingException as e:
         logger.error(str(e))
@@ -218,7 +218,7 @@ class InvalidRecordingException(Exception):
         return f"{type(self).__name__}: {super().__str__()}"
 
 
-class _Pupil_Recording:
+class Pupil_Recording:
     def __init__(self, rec_dir):
         self._rec_dir = rec_dir
         self._meta_info = None
