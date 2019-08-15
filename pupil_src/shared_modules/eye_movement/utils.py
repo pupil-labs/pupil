@@ -51,17 +51,23 @@ def np_denormalize(points_2d, frame_size):
     return points_2d
 
 
-def gaze_data_to_nslr_data(capture, gaze_data, gaze_timestamps, use_pupil: bool):
-
-    if use_pupil:
-        assert can_use_3d_gaze_mapping(gaze_data)
+def gaze_data_to_gaze_points_3d(capture, gaze_data) -> t.Tuple[np.ndarray, bool]:
+    try:
         gaze_points_3d = [gp["gaze_point_3d"] for gp in gaze_data]
         gaze_points_3d = np.array(gaze_points_3d, dtype=np.float32)
         gaze_points_3d = clean_3d_data(gaze_points_3d)
-    else:
+        use_pupil = True
+    except KeyError:
         gaze_points_2d = np.array([gp["norm_pos"] for gp in gaze_data])
         gaze_points_2d = np_denormalize(gaze_points_2d, capture.frame_size)
         gaze_points_3d = capture.intrinsics.unprojectPoints(gaze_points_2d)
+        use_pupil = False
+
+    return gaze_points_3d, use_pupil
+
+
+def gaze_data_to_nslr_data(capture, gaze_data, gaze_timestamps) -> t.Tuple[np.ndarray, bool]:
+    gaze_points_3d, use_pupil = gaze_data_to_gaze_points_3d(capture=capture, gaze_data=gaze_data)
 
     x, y, z = gaze_points_3d.T
     r, theta, psi = mt.cart_to_spherical([x, y, z])
@@ -76,7 +82,7 @@ def gaze_data_to_nslr_data(capture, gaze_data, gaze_timestamps, use_pupil: bool)
         eye_timestamps=gaze_timestamps,
     )
 
-    return nslr_data
+    return nslr_data, use_pupil
 
 
 class NSLRValidationError(Exception): pass
