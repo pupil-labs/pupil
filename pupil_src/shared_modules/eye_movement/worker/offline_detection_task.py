@@ -61,15 +61,13 @@ def eye_movement_detection_generator(
         yield EYE_MOVEMENT_DETECTION_STEP_COMPLETE_LOCALIZED_STRING, ()
         return
 
-    use_pupil = utils.can_use_3d_gaze_mapping(gaze_data)
-
     segment_factory = model.Classified_Segment_Factory(start_id=factory_start_id)
 
     gaze_time = np.array([gp["timestamp"] for gp in gaze_data])
 
     yield EYE_MOVEMENT_DETECTION_STEP_PROCESSING_LOCALIZED_STRING, ()
-    eye_positions = utils.gaze_data_to_nslr_data(
-        capture, gaze_data, gaze_time, use_pupil=use_pupil
+    eye_positions, use_pupil = utils.gaze_data_to_nslr_data(
+        capture, gaze_data, gaze_time
     )
 
     yield EYE_MOVEMENT_DETECTION_STEP_CLASSIFYING_LOCALIZED_STRING, ()
