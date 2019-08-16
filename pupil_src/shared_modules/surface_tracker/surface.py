@@ -12,12 +12,15 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import typing
 import logging
+import operator
 import uuid
 
 import cv2
 import numpy as np
 
 import methods
+from stdlib_utils import is_none, is_not_none
+
 from .surface_marker import Surface_Marker_UID
 from .surface_marker_aggregate import Surface_Marker_Aggregate
 
@@ -35,11 +38,33 @@ class Surface(abc.ABC):
     relationship and to be in plane with one another as well as the surface."""
 
     version = 1
+    def __init__(
+        self,
+        name="unknown",
+        real_world_size=None,
+        marker_aggregates_undist=None,
+        marker_aggregates_dist=None,
+        build_up_status: float = None,
+        deprecated_definition: bool = None,
+    ):
 
-    def __init__(self, name="unknown", init_dict=None):
+
+        init_args = [
+            real_world_size,
+            marker_aggregates_undist,
+            marker_aggregates_dist,
+            build_up_status,
+            deprecated_definition,
+        ]
+        assert all(map(is_none, init_args)) or all(map(is_not_none, init_args)),\
+            "Either all initialization arguments are None, or they all are not None"
+
+        marker_aggregates_undist = marker_aggregates_undist if marker_aggregates_undist is not None else []
+        marker_aggregates_dist = marker_aggregates_dist if marker_aggregates_dist is not None else []
+
         self.name = name
-        self.real_world_size = {"x": 1.0, "y": 1.0}
-        self.deprecated_definition = False
+        self.real_world_size = real_world_size if real_world_size is not None else {"x": 1.0, "y": 1.0}
+        self.deprecated_definition = deprecated_definition if deprecated_definition is not None else False
 
         # We store the surface state in two versions: once computed with the
         # undistorted scene image and once with the still distorted scene image. The
@@ -48,8 +73,13 @@ class Surface(abc.ABC):
         # outside of the image can not be re-distorted for visualization correctly.
         # Instead the slightly wrong but correct looking distorted version is
         # used for visualization.
-        self._registered_markers_undist: Surface_Marker_UID_To_Aggregate_Mapping = {}
-        self._registered_markers_dist: Surface_Marker_UID_To_Aggregate_Mapping = {}
+        self._registered_markers_undist: Surface_Marker_UID_To_Aggregate_Mapping = {
+            aggregate.uid: aggregate for aggregate in marker_aggregates_undist
+        }
+        self._registered_markers_dist: Surface_Marker_UID_To_Aggregate_Mapping = {
+            aggregate.uid: aggregate for aggregate in marker_aggregates_dist
+        }
+
         self.detected = False
         self.img_to_surf_trans = None
         self.surf_to_img_trans = None
@@ -59,7 +89,7 @@ class Surface(abc.ABC):
 
         self._REQUIRED_OBS_PER_MARKER = 5
         self._avg_obs_per_marker = 0
-        self.build_up_status = 0
+        self.build_up_status = build_up_status if build_up_status is not None else 0
 
         self.within_surface_heatmap = self.get_placeholder_heatmap()
         self.across_surface_heatmap = self.get_placeholder_heatmap()
@@ -71,8 +101,7 @@ class Surface(abc.ABC):
         # The uid is only used to implement __hash__ and __eq__
         self._uid = uuid.uuid4()
 
-        if init_dict is not None:
-            self._load_from_dict(init_dict)
+
 
     def __hash__(self):
         return int(self._uid)
