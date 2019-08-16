@@ -189,7 +189,13 @@ class Surface_File_Store(_Surface_File_Store_Base):
 
     def __migration_procedure(self, surface_class, source_version: Version, target_version: Version) -> Migration_Procedure:
         # Handle any special-case migrations here
-        # ...
+        if (source_version, target_version) == (0, 1):
+            return functools.partial(
+                self.__migration_v00_v01,
+                surface_class=surface_class,
+                source_version=source_version,
+                target_version=target_version,
+            )
 
         # Otherwise, fallback on the rewrite migration
         return functools.partial(
@@ -210,3 +216,24 @@ class Surface_File_Store(_Surface_File_Store_Base):
         # Otherwise, write the surfaces to the new location with the new format
         surfaces = source_file_store.read_surfaces_from_file(surface_class=surface_class)
         target_file_store.write_surfaces_to_file(surfaces=surfaces)
+
+    def __migration_v00_v01(self, surface_class, source_version: Version, target_version: Version):
+        assert source_version == 0
+        assert target_version == 1
+
+        # Try the simple migration from 0 to 1.
+        # If it fails with InvalidSurfaceDefinition, it means the file that v00 was trying to read doesn't contain v00 definitions, but v01 definitions.
+        # Try to migrate from 1 to 1; this will trigger reading from the legacy file and writing to the updated file.
+
+        try:
+            self.__simple_rewrite_migration(
+                surface_class=surface_class,
+                source_version=source_version,
+                target_version=target_version,
+            )
+        except InvalidSurfaceDefinition:
+            self.__simple_rewrite_migration(
+                surface_class=surface_class,
+                source_version=target_version,  # NOTE: target_version, not source_version
+                target_version=target_version,
+            )
