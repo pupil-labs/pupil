@@ -112,6 +112,20 @@ class Surface(abc.ABC):
         else:
             return False
 
+    @staticmethod
+    def property_equality(x: "Surface", y: "Surface") -> bool:
+        import multiprocessing as mp
+        def property_dict(x: Surface) -> dict:
+            x_dict = x.__dict__.copy()
+            del x_dict["_uid"]  # `_uid`s are always unique
+            for key in x_dict.keys():
+                if isinstance(x_dict[key], np.ndarray):
+                    x_dict[key] = x_dict[key].tolist()
+                if isinstance(x_dict[key], mp.sharedctypes.Synchronized):
+                    x_dict[key] = x_dict[key].value
+            return x_dict
+        return property_dict(x) == property_dict(y)
+
     @property
     def defined(self):
         return self.build_up_status >= 1.0

@@ -25,6 +25,14 @@ class Surface_Marker_Aggregate(object):
     vertices of a regular Marker, which are located in image pixel space.
     """
 
+    @staticmethod
+    def property_equality(x: "Surface_Marker_Aggregate", y: "Surface_Marker_Aggregate") -> bool:
+        def property_dict(x: Surface_Marker_Aggregate) -> dict:
+            x_dict = x.__dict__.copy()
+            x_dict["_verts_uv"] = x_dict["_verts_uv"].tolist()
+            return x_dict
+        return property_dict(x) == property_dict(y)
+
     def __init__(
         self, uid: Surface_Marker_UID, verts_uv: typing.Optional[np.ndarray] = None
     ):
@@ -34,6 +42,9 @@ class Surface_Marker_Aggregate(object):
 
         if verts_uv is not None:
             self._verts_uv = np.asarray(verts_uv)
+
+    def __eq__(self, other):
+        return Surface_Marker_Aggregate.property_equality(self, other)
 
     @property
     def uid(self) -> Surface_Marker_UID:
