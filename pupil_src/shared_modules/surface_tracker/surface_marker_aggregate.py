@@ -77,15 +77,3 @@ class Surface_Marker_Aggregate(object):
         uv_subset = uv[distance <= cut_off]
         final_mean = np.mean(uv_subset, axis=0)
         self._verts_uv = final_mean
-
-    def save_to_dict(self):
-        if self._verts_uv is not None:
-            verts_uv = [v.tolist() for v in self._verts_uv]
-        else:
-            verts_uv = None
-
-        return {"uid": self.uid, "verts_uv": verts_uv}
-
-    @staticmethod
-    def load_from_dict(state: dict) -> "Surface_Marker_Aggregate":
-        return Surface_Marker_Aggregate(uid=state["uid"], verts_uv=state["verts_uv"])
