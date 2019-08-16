@@ -28,6 +28,8 @@ from .surface_marker_detector import (
     Surface_Marker_Detector_Mode,
 )
 
+from .surface_file_store import Surface_File_Store
+
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
     """
@@ -74,18 +76,11 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             square_marker_robust_detection=True,
             square_marker_inverted_markers=inverted_markers,
         )
+        self._surface_file_store = Surface_File_Store(parent_dir=self._save_dir)
 
-        self._add_surfaces_from_file()
-
-    def _add_surfaces_from_file(self):
-        surface_definitions = file_methods.Persistent_Dict(
-            os.path.join(self._save_dir, "surface_definitions")
-        )
-
-        for init_dict in surface_definitions.get("surfaces", []):
-            saved_version = init_dict.get("version", None)
-            if saved_version == self.Surface_Class.version:
-                self.add_surface(init_dict)
+        # Add surfaces from file
+        for surface in self._surface_file_store.read_surfaces_from_file(surface_class=self.Surface_Class):
+            self.add_surface(surface)
 
     @property
     def marker_detector_modes(self) -> typing.Set[Surface_Marker_Detector_Mode]:
@@ -505,14 +500,12 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def on_add_surface_click(self, _=None):
         if self.markers:
-            self.add_surface(init_dict=None)
+            surface = self.Surface_Class(name="Surface {:}".format(len(self.surfaces) + 1))
+            self.add_surface(surface=surface)
         else:
             logger.warning("Can not add a new surface: No markers found in the image!")
 
-    def add_surface(self, init_dict):
-        surface = self.Surface_Class(
-            name="Surface {:}".format(len(self.surfaces) + 1), init_dict=init_dict
-        )
+    def add_surface(self, surface):
         self.surfaces.append(surface)
         self.gui.add_surface(surface)
         self._update_ui()
@@ -547,13 +540,8 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         }
 
     def save_surface_definitions_to_file(self):
-        surface_definitions = file_methods.Persistent_Dict(
-            os.path.join(self._save_dir, "surface_definitions")
-        )
-        surface_definitions["surfaces"] = [
-            surface.save_to_dict() for surface in self.surfaces if surface.defined
-        ]
-        surface_definitions.save()
+        surfaces = [surface for surface in self.surfaces if surface.defined]
+        self._surface_file_store.write_surfaces_to_file(surfaces=surfaces)
 
     def deinit_ui(self):
         self.g_pool.quickbar.remove(self.add_button)
