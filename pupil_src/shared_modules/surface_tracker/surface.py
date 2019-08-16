@@ -37,7 +37,6 @@ class Surface(abc.ABC):
     square markers in the real world. The markers are assumed to be in a fixed spatial
     relationship and to be in plane with one another as well as the surface."""
 
-    version = 1
     def __init__(
         self,
         name="unknown",
@@ -592,53 +591,6 @@ class Surface(abc.ABC):
         hm[:, :, 3] = 175
 
         return hm
-
-    def save_to_dict(self):
-        return {
-            "version": self.version,
-            "name": self.name,
-            "real_world_size": self.real_world_size,
-            "reg_markers": [
-                marker_aggregate.save_to_dict()
-                for marker_aggregate in self._registered_markers_undist.values()
-            ],
-            "registered_markers_dist": [
-                marker_aggregate.save_to_dict()
-                for marker_aggregate in self._registered_markers_dist.values()
-            ],
-            "build_up_status": self.build_up_status,
-            "deprecated": self.deprecated_definition,
-        }
-
-    def _load_from_dict(self, init_dict):
-        self.name = init_dict["name"]
-        self.real_world_size = init_dict["real_world_size"]
-
-        marker_aggregates_undist = [
-            Surface_Marker_Aggregate.load_from_dict(d) for d in init_dict["reg_markers"]
-        ]
-        self._registered_markers_undist = {
-            aggregate.uid: aggregate for aggregate in marker_aggregates_undist
-        }
-
-        marker_aggregates_dist = [
-            Surface_Marker_Aggregate.load_from_dict(d)
-            for d in init_dict["registered_markers_dist"]
-        ]
-        self._registered_markers_dist = {
-            aggregate.uid: aggregate for aggregate in marker_aggregates_dist
-        }
-        self.build_up_status = init_dict["build_up_status"]
-
-        try:
-            self.deprecated_definition = init_dict["deprecated"]
-        except KeyError:
-            pass
-        else:
-            logger.warning(
-                "You have loaded an old and deprecated surface definition! "
-                "Please re-define this surface for increased mapping accuracy!"
-            )
 
 
 class Surface_Location:

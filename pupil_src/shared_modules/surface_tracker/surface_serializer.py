@@ -13,6 +13,10 @@ from .surface_marker import create_surface_marker_uid, parse_surface_marker_tag_
 logger = logging.getLogger(__name__)
 
 
+class InvalidSurfaceDefinition(Exception):
+    pass
+
+
 class _Surface_Serializer_Base(abc.ABC):
 
     @property
@@ -27,6 +31,62 @@ class _Surface_Serializer_Base(abc.ABC):
     @abc.abstractmethod
     def surface_marker_aggregate_from_dict(self, surface_marker_aggregate_dict: dict) -> Surface_Marker_Aggregate:
         pass
+
+    def dict_from_surface(self, surface: Surface) -> dict:
+        dict_from_marker_aggregate = self.dict_from_surface_marker_aggregate
+
+        reg_markers = [
+            dict_from_marker_aggregate(marker_aggregate)
+            for marker_aggregate in surface._registered_markers_undist.values() #TODO: Provide a public property for this
+        ]
+        registered_markers_dist = [
+            dict_from_marker_aggregate(marker_aggregate)
+            for marker_aggregate in surface._registered_markers_dist.values() #TODO: Provide a public property for this
+        ]
+        return {
+            "version": self.version,
+            "name": surface.name,
+            "real_world_size": surface.real_world_size,
+            "reg_markers": reg_markers,
+            "registered_markers_dist": registered_markers_dist,
+            "build_up_status": surface.build_up_status,
+            "deprecated": surface.deprecated_definition,
+        }
+
+    def surface_from_dict(self, surface_class, surface_definition: dict) -> Surface:
+        assert isinstance(surface_class, type(object)), f"surface_class must be a class: {surface_class}"
+        assert issubclass(surface_class, Surface), f"surface_class must be a subclass of Surface: {surface_class}"
+
+        expected_version = self.version
+        actual_version = surface_definition["version"]
+        if actual_version != expected_version:
+            err_msg = f"Invalid version, expected: {expected_version}, actual: {actual_version}"
+            raise InvalidSurfaceDefinition(err_msg)
+
+        marker_aggregate_from_dict = self.surface_marker_aggregate_from_dict
+
+        marker_aggregates_undist = [marker_aggregate_from_dict(d) for d in surface_definition["reg_markers" ]]
+        marker_aggregates_dist = [marker_aggregate_from_dict(d) for d in surface_definition["registered_markers_dist"]]
+
+        deprecated_definition = None
+        try:
+            deprecated_definition = surface_definition["deprecated"]
+        except KeyError:
+            pass
+        else:
+            logger.warning(
+                "You have loaded an old and deprecated surface definition! "
+                "Please re-define this surface for increased mapping accuracy!"
+            )
+
+        return surface_class(
+            name=surface_definition["name"],
+            real_world_size=surface_definition["real_world_size"],
+            marker_aggregates_undist=marker_aggregates_undist,
+            marker_aggregates_dist=marker_aggregates_dist,
+            build_up_status=surface_definition["build_up_status"],
+            deprecated_definition=deprecated_definition,
+        )
 
 
 class _Surface_Serializer_V00(_Surface_Serializer_Base):
@@ -53,6 +113,20 @@ class _Surface_Serializer_V00(_Surface_Serializer_Base):
         )
         verts_uv = surface_marker_aggregate_dict["verts_uv"]
         return Surface_Marker_Aggregate(uid=uid, verts_uv=verts_uv)
+
+    def dict_from_surface(self, surface: Surface) -> dict:
+        surface_definition = super().dict_from_surface(surface=surface)
+        # The format of v00 doesn't store any value for "version" key
+        del surface_definition["version"]
+        return surface_definition
+
+    def surface_from_dict(self, surface_class, surface_definition: dict) -> Surface:
+        # The format of v00 doesn't store any value for "version" key
+        surface_definition["version"] = surface_definition.get("version", self.version)
+        return super().surface_from_dict(
+            surface_class=surface_class,
+            surface_definition=surface_definition,
+        )
 
 
 class _Surface_Serializer_V01(_Surface_Serializer_Base):
