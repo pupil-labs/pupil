@@ -1,23 +1,21 @@
 import os
 import sys
 
-path = os.path.dirname(__file__)
-sys.path.insert(0, path)
-path = os.path.dirname(path)
-sys.path.insert(0, path)
-path = os.path.dirname(path)
-sys.path.insert(0, path)
 
-from pupil_src.shared_modules.surface_tracker.surface import Surface
-from pupil_src.shared_modules.surface_tracker.surface_online import Surface_Online
-from pupil_src.shared_modules.surface_tracker.surface_offline import Surface_Offline
-from pupil_src.shared_modules.surface_tracker.surface import Surface_Marker_Aggregate
-from pupil_src.shared_modules.surface_tracker.surface_marker import Surface_Marker_UID
+if __name__ == "__main__":
+    print("Invoke tests by running:")
+    print("$ pytest -v {}".format(__file__))
+    exit(1)
 
-from pupil_src.shared_modules.surface_tracker.surface_serializer import _Surface_Serializer_V00
-from pupil_src.shared_modules.surface_tracker.surface_serializer import _Surface_Serializer_V01
 
-from pupil_src.shared_modules.surface_tracker.test_fixtures import (
+from .surface import Surface
+from .surface import Surface_Marker_Aggregate
+
+from .surface_serializer import _Surface_Serializer_Base
+from .surface_serializer import _Surface_Serializer_V00
+from .surface_serializer import _Surface_Serializer_V01
+
+from .test_fixtures import (
     SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_0_UNDIST,
     SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_1_UNDIST,
     SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_0_DIST,
@@ -98,8 +96,3 @@ def test_surface_serializer_V01_square():
             (SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_1_UNDIST, SURFACE_MARKER_AGGREGATE_V01_SQUARE_SERIALIZED_1_UNDIST),
         ]
     )
-
-
-if __name__ == "__main__":
-    test_surface_serializer_V00()
-    test_surface_serializer_V01_square()

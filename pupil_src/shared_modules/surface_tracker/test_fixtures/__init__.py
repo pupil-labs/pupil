@@ -1,8 +1,8 @@
 import numpy as np
 
-from pupil_src.shared_modules.surface_tracker.surface_online import Surface_Online
-from pupil_src.shared_modules.surface_tracker.surface_offline import Surface_Offline
-from pupil_src.shared_modules.surface_tracker.surface_marker_aggregate import Surface_Marker_Aggregate, Surface_Marker_UID
+from surface_tracker.surface_online import Surface_Online
+from surface_tracker.surface_offline import Surface_Offline
+from surface_tracker.surface_marker_aggregate import Surface_Marker_Aggregate, Surface_Marker_UID
 
 
 ##### V00
