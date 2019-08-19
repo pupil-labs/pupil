@@ -1,8 +1,48 @@
-from .fixtures_surface_v00_square import surface_pairs as surface_pairs_v00_square
-from .fixtures_surface_v00_square import surface_marker_aggregate_pairs as surface_marker_aggregate_pairs_v00_square
+import typing
+from surface_tracker.surface import Surface
+from surface_tracker.surface_marker_aggregate import Surface_Marker_Aggregate
 
-from .fixtures_surface_v01_apriltag import surface_pairs as surface_pairs_v01_apriltag
-from .fixtures_surface_v01_apriltag import surface_marker_aggregate_pairs as surface_marker_aggregate_pairs_v01_apriltag
+from .fixtures_surface_v00_square import (
+    surface_pairs as surface_pairs_v00_square,
+    surfaces_serialized as surfaces_serialized_v00_square,
+    surfaces_deserialized as surfaces_deserialized_v00_square,
+    surface_marker_aggregate_pairs as surface_marker_aggregate_pairs_v00_square,
+    surface_marker_aggregates_serialized as surface_marker_aggregates_serialized_v00_square,
+    surface_marker_aggregates_deserialized as surface_marker_aggregates_deserialized_v00_square,
+)
 
-from .fixtures_surface_v01_square import surface_pairs as surface_pairs_v01_square
-from .fixtures_surface_v01_square import surface_marker_aggregate_pairs as surface_marker_aggregate_pairs_v01_square
+from .fixtures_surface_v01_apriltag import (
+    surface_pairs as surface_pairs_v01_apriltag,
+    surfaces_serialized as surfaces_serialized_v01_apriltag,
+    surfaces_deserialized as surfaces_deserialized_v01_apriltag,
+    surface_marker_aggregate_pairs as surface_marker_aggregate_pairs_v01_apriltag,
+    surface_marker_aggregates_serialized as surface_marker_aggregates_serialized_v01_apriltag,
+    surface_marker_aggregates_deserialized as surface_marker_aggregates_deserialized_v01_apriltag,
+)
+
+from .fixtures_surface_v01_square import (
+    surface_pairs as surface_pairs_v01_square,
+    surfaces_serialized as surfaces_serialized_v01_square,
+    surfaces_deserialized as surfaces_deserialized_v01_square,
+    surface_marker_aggregate_pairs as surface_marker_aggregate_pairs_v01_square,
+    surface_marker_aggregates_serialized as surface_marker_aggregates_serialized_v01_square,
+    surface_marker_aggregates_deserialized as surface_marker_aggregates_deserialized_v01_square,
+)
+
+def surface_pairs_v01_mixed() -> typing.Collection[typing.Tuple[Surface, dict]]:
+    return (*surface_pairs_v01_apriltag(), *surface_pairs_v01_square())
+
+def surfaces_serialized_v01_mixed() -> typing.Collection[dict]:
+    return (*surfaces_serialized_v01_apriltag(), *surfaces_serialized_v01_square())
+
+def surfaces_deserialized_v01_mixed() -> typing.Collection[Surface]:
+    return (*surfaces_deserialized_v01_apriltag(), *surfaces_deserialized_v01_square())
+
+def surface_marker_aggregate_pairs_v01_mixed() -> typing.Collection[typing.Tuple[Surface_Marker_Aggregate, dict]]:
+    return (*surface_marker_aggregate_pairs_v01_apriltag(), *surface_marker_aggregate_pairs_v01_square())
+
+def surface_marker_aggregates_serialized_v01_mixed() -> typing.Collection[dict]:
+    return (*surface_marker_aggregates_serialized_v01_apriltag(), *surface_marker_aggregates_serialized_v01_square())
+
+def surface_marker_aggregates_deserialized_v01_mixed() -> typing.Collection[Surface_Marker_Aggregate]:
+    return (*surface_marker_aggregates_deserialized_v01_apriltag(), *surface_marker_aggregates_deserialized_v01_square())

@@ -9,7 +9,11 @@ from surface_tracker.surface_marker_aggregate import Surface_Marker_Aggregate, S
 
 __all__ = [
     "surface_pairs",
+    "surfaces_serialized",
+    "surfaces_deserialized",
     "surface_marker_aggregate_pairs",
+    "surface_marker_aggregates_serialized",
+    "surface_marker_aggregates_deserialized",
 ]
 
 
@@ -17,6 +21,12 @@ def surface_pairs() -> typing.Collection[typing.Tuple[Surface, dict]]:
     return (
         (SURFACE_V01_SQUARE_DESERIALIZED, SURFACE_V01_SQUARE_SERIALIZED),
     )
+
+def surfaces_serialized() -> typing.Collection[dict]:
+    return tuple(s for d, s in surface_pairs())
+
+def surfaces_deserialized() -> typing.Collection[Surface]:
+    return tuple(d for d, s in surface_pairs())
 
 
 def surface_marker_aggregate_pairs() -> typing.Collection[typing.Tuple[Surface_Marker_Aggregate, dict]]:
@@ -26,6 +36,12 @@ def surface_marker_aggregate_pairs() -> typing.Collection[typing.Tuple[Surface_M
         (SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_0_UNDIST, SURFACE_MARKER_AGGREGATE_V01_SQUARE_SERIALIZED_0_UNDIST),
         (SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_1_UNDIST, SURFACE_MARKER_AGGREGATE_V01_SQUARE_SERIALIZED_1_UNDIST),
     )
+
+def surface_marker_aggregates_serialized() -> typing.Collection[dict]:
+    return tuple(s for d, s in surface_marker_aggregate_pairs())
+
+def surface_marker_aggregates_deserialized() -> typing.Collection[Surface_Marker_Aggregate]:
+    return tuple(d for d, s in surface_marker_aggregate_pairs())
 
 
 ##### PRIVATE
