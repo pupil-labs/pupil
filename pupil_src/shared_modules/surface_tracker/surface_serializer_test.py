@@ -16,54 +16,43 @@ from .surface_serializer import _Surface_Serializer_V00
 from .surface_serializer import _Surface_Serializer_V01
 
 from .test_fixtures import (
-    SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_0_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_1_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_0_DIST,
-    SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_1_DIST,
-    SURFACE_V00_SERIALIZED,
+    surface_pairs_v00_square,
+    surface_pairs_v01_apriltag,
+    surface_pairs_v01_square,
 
-    SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_0_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_1_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_0_DIST,
-    SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_1_DIST,
-    SURFACE_V00_DESERIALIZED,
-
-    SURFACE_MARKER_AGGREGATE_V01_SQUARE_SERIALIZED_0_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V01_SQUARE_SERIALIZED_1_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V01_SQUARE_SERIALIZED_0_DIST,
-    SURFACE_MARKER_AGGREGATE_V01_SQUARE_SERIALIZED_1_DIST,
-    SURFACE_V01_SQUARE_SERIALIZED,
-
-    SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_0_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_1_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_0_DIST,
-    SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_1_DIST,
-    SURFACE_V01_SQUARE_DESERIALIZED,
-
-    SURFACE_MARKER_AGGREGATE_V01_APRILTAG_SERIALIZED_0_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V01_APRILTAG_SERIALIZED_1_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V01_APRILTAG_SERIALIZED_0_DIST,
-    SURFACE_MARKER_AGGREGATE_V01_APRILTAG_SERIALIZED_1_DIST,
-    SURFACE_V01_APRILTAG_SERIALIZED,
-
-    SURFACE_MARKER_AGGREGATE_V01_APRILTAG_DESERIALIZED_0_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V01_APRILTAG_DESERIALIZED_1_UNDIST,
-    SURFACE_MARKER_AGGREGATE_V01_APRILTAG_DESERIALIZED_0_DIST,
-    SURFACE_MARKER_AGGREGATE_V01_APRILTAG_DESERIALIZED_1_DIST,
-    SURFACE_V01_APRILTAG_DESERIALIZED,
+    surface_marker_aggregate_pairs_v00_square,
+    surface_marker_aggregate_pairs_v01_apriltag,
+    surface_marker_aggregate_pairs_v01_square,
 )
 
 
-def _test_surface_serializer(serializer, surface_pair, marker_aggregate_pairs):
+def _test_surface_serializer_with_surfaces(serializer, surface_pairs):
 
     assert isinstance(serializer, _Surface_Serializer_Base)
+    assert len(surface_pairs) > 0
 
-    deserialized_surface, serialized_surface = surface_pair
-    assert isinstance(deserialized_surface, Surface)
-    assert isinstance(serialized_surface, dict)
+    for deserialized_surface, serialized_surface in surface_pairs:
+        assert isinstance(deserialized_surface, Surface)
+        assert isinstance(serialized_surface, dict)
 
-    for deserialized_aggregate, serialized_aggregate in marker_aggregate_pairs:
+        serialization_result = serializer.dict_from_surface(
+            surface=deserialized_surface
+        )
+        assert serialization_result == serialized_surface
 
+        deserialization_result = serializer.surface_from_dict(
+            surface_class=type(deserialized_surface),
+            surface_definition=serialized_surface,
+        )
+        assert Surface.property_equality(deserialization_result, deserialized_surface)
+
+
+def _test_surface_serializer_with_surface_marker_aggregates(serializer, aggregate_pairs):
+
+    assert isinstance(serializer, _Surface_Serializer_Base)
+    assert len(aggregate_pairs) > 0
+
+    for deserialized_aggregate, serialized_aggregate in aggregate_pairs:
         assert isinstance(deserialized_aggregate, Surface_Marker_Aggregate)
         assert isinstance(serialized_aggregate, dict)
 
@@ -73,51 +62,35 @@ def _test_surface_serializer(serializer, surface_pair, marker_aggregate_pairs):
         deserialization_result = serializer.surface_marker_aggregate_from_dict(serialized_aggregate)
         assert deserialization_result == deserialized_aggregate
 
-    assert serializer.dict_from_surface(
-        surface=deserialized_surface,
-    ) == serialized_surface
-
-    deserialized_surface_result = serializer.surface_from_dict(
-        surface_class=type(deserialized_surface),
-        surface_definition=serialized_surface,
-    )
-    assert Surface.property_equality(deserialized_surface_result, deserialized_surface)
-
 
 def test_surface_serializer_V00():
-    _test_surface_serializer(
+    _test_surface_serializer_with_surfaces(
         serializer=_Surface_Serializer_V00(),
-        surface_pair=(SURFACE_V00_DESERIALIZED, SURFACE_V00_SERIALIZED),
-        marker_aggregate_pairs=[
-            (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_0_DIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_0_DIST),
-            (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_1_DIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_1_DIST),
-            (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_0_UNDIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_0_UNDIST),
-            (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_1_UNDIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_1_UNDIST),
-        ]
+        surface_pairs=surface_pairs_v00_square()
+    )
+    _test_surface_serializer_with_surface_marker_aggregates(
+        serializer=_Surface_Serializer_V00(),
+        aggregate_pairs=surface_marker_aggregate_pairs_v00_square()
     )
 
 
 def test_surface_serializer_V01_square():
-    _test_surface_serializer(
+    _test_surface_serializer_with_surfaces(
         serializer=_Surface_Serializer_V01(),
-        surface_pair=(SURFACE_V01_SQUARE_DESERIALIZED, SURFACE_V01_SQUARE_SERIALIZED),
-        marker_aggregate_pairs=[
-            (SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_0_DIST, SURFACE_MARKER_AGGREGATE_V01_SQUARE_SERIALIZED_0_DIST),
-            (SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_1_DIST, SURFACE_MARKER_AGGREGATE_V01_SQUARE_SERIALIZED_1_DIST),
-            (SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_0_UNDIST, SURFACE_MARKER_AGGREGATE_V01_SQUARE_SERIALIZED_0_UNDIST),
-            (SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_1_UNDIST, SURFACE_MARKER_AGGREGATE_V01_SQUARE_SERIALIZED_1_UNDIST),
-        ]
+        surface_pairs=surface_pairs_v01_square()
+    )
+    _test_surface_serializer_with_surface_marker_aggregates(
+        serializer=_Surface_Serializer_V01(),
+        aggregate_pairs=surface_marker_aggregate_pairs_v01_square()
     )
 
 
 def test_surface_serializer_V01_apriltag():
-    _test_surface_serializer(
+    _test_surface_serializer_with_surfaces(
         serializer=_Surface_Serializer_V01(),
-        surface_pair=(SURFACE_V01_APRILTAG_DESERIALIZED, SURFACE_V01_APRILTAG_SERIALIZED),
-        marker_aggregate_pairs=[
-            (SURFACE_MARKER_AGGREGATE_V01_APRILTAG_DESERIALIZED_0_DIST, SURFACE_MARKER_AGGREGATE_V01_APRILTAG_SERIALIZED_0_DIST),
-            (SURFACE_MARKER_AGGREGATE_V01_APRILTAG_DESERIALIZED_1_DIST, SURFACE_MARKER_AGGREGATE_V01_APRILTAG_SERIALIZED_1_DIST),
-            (SURFACE_MARKER_AGGREGATE_V01_APRILTAG_DESERIALIZED_0_UNDIST, SURFACE_MARKER_AGGREGATE_V01_APRILTAG_SERIALIZED_0_UNDIST),
-            (SURFACE_MARKER_AGGREGATE_V01_APRILTAG_DESERIALIZED_1_UNDIST, SURFACE_MARKER_AGGREGATE_V01_APRILTAG_SERIALIZED_1_UNDIST),
-        ]
+        surface_pairs=surface_pairs_v01_apriltag()
+    )
+    _test_surface_serializer_with_surface_marker_aggregates(
+        serializer=_Surface_Serializer_V01(),
+        aggregate_pairs=surface_marker_aggregate_pairs_v01_apriltag()
     )
