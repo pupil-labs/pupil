@@ -16,6 +16,8 @@ import cv2
 import numpy as np
 
 import csv_utils
+from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
+
 
 logger = logging.getLogger(__name__)
 
@@ -237,12 +239,17 @@ class Pupil_Recording:
 
     def load(self, rec_dir):
 
+        def normalize_extension(ext: str) -> str:
+            if ext.startswith("."):
+                extension = ext[1:]
+            return ext
+
         def is_video_file(file_path):
             if not os.path.isfile(file_path):
                 return False
-            # TODO: Are there any other valid extensions?
-            valid_video_extensions = [".mp4"]
             _, ext = os.path.splitext(file_path)
+            ext = normalize_extension(ext)
+            valid_video_extensions = map(normalize_extension, VALID_VIDEO_EXTENSIONS)
             if ext not in valid_video_extensions:
                 return False
             return True
