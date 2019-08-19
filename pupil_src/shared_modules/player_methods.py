@@ -211,7 +211,7 @@ def is_pupil_rec_dir(rec_dir):
 
 class InvalidRecordingException(Exception):
     def __init__(self, reason: str, recovery: str = ""):
-        message = reason + "\n" + recovery if recovery else reason
+        message = (reason + "\n" + recovery) if recovery else reason
         super().__init__(message)
         self.reason = reason
         self.recovery = recovery
