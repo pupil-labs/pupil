@@ -32,17 +32,18 @@ from pupil_src.shared_modules.surface_tracker.test_fixtures import (
 )
 
 
-def test_surface_serializer_V00():
-    serializer = _Surface_Serializer_V00()
+def _test_surface_serializer(serializer, surface_pair, marker_aggregate_pairs):
 
-    marker_aggregate_pairs = [
-        (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_0_DIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_0_DIST),
-        (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_1_DIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_1_DIST),
-        (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_0_UNDIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_0_UNDIST),
-        (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_1_UNDIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_1_UNDIST),
-    ]
+    assert isinstance(serializer, _Surface_Serializer_Base)
+
+    deserialized_surface, serialized_surface = surface_pair
+    assert isinstance(deserialized_surface, Surface)
+    assert isinstance(serialized_surface, dict)
 
     for deserialized_aggregate, serialized_aggregate in marker_aggregate_pairs:
+
+        assert isinstance(deserialized_aggregate, Surface_Marker_Aggregate)
+        assert isinstance(serialized_aggregate, dict)
 
         serialization_result = serializer.dict_from_surface_marker_aggregate(deserialized_aggregate)
         assert serialization_result == serialized_aggregate
@@ -51,14 +52,27 @@ def test_surface_serializer_V00():
         assert deserialization_result == deserialized_aggregate
 
     assert serializer.dict_from_surface(
-        surface=SURFACE_V00_DESERIALIZED,
-    ) == SURFACE_V00_SERIALIZED
+        surface=deserialized_surface,
+    ) == serialized_surface
 
-    deserialized_surface = serializer.surface_from_dict(
-        surface_class=type(SURFACE_V00_DESERIALIZED),
-        surface_definition=SURFACE_V00_SERIALIZED,
+    deserialized_surface_result = serializer.surface_from_dict(
+        surface_class=type(deserialized_surface),
+        surface_definition=serialized_surface,
     )
-    assert Surface.property_equality(deserialized_surface, SURFACE_V00_DESERIALIZED)
+    assert Surface.property_equality(deserialized_surface_result, deserialized_surface)
+
+
+def test_surface_serializer_V00():
+    _test_surface_serializer(
+        serializer=_Surface_Serializer_V00(),
+        surface_pair=(SURFACE_V00_DESERIALIZED, SURFACE_V00_SERIALIZED),
+        marker_aggregate_pairs=[
+            (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_0_DIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_0_DIST),
+            (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_1_DIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_1_DIST),
+            (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_0_UNDIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_0_UNDIST),
+            (SURFACE_MARKER_AGGREGATE_V00_DESERIALIZED_1_UNDIST, SURFACE_MARKER_AGGREGATE_V00_SERIALIZED_1_UNDIST),
+        ]
+    )
 
 
 def test_surface_serializer_V01():
