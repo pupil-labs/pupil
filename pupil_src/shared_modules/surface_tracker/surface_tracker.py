@@ -501,7 +501,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def on_add_surface_click(self, _=None):
         if self.markers:
             surface = self.Surface_Class(name="Surface {:}".format(len(self.surfaces) + 1))
-            self.add_surface(surface=surface)
+            self.add_surface(surface)
         else:
             logger.warning("Can not add a new surface: No markers found in the image!")
 
