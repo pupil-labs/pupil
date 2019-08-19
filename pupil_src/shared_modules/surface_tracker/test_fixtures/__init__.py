@@ -46,3 +46,9 @@ def surface_marker_aggregates_serialized_v01_mixed() -> typing.Collection[dict]:
 
 def surface_marker_aggregates_deserialized_v01_mixed() -> typing.Collection[Surface_Marker_Aggregate]:
     return (*surface_marker_aggregates_deserialized_v01_apriltag(), *surface_marker_aggregates_deserialized_v01_square())
+
+from .fixtures_surface_definition_files import (
+    surface_definition_v00_dir,
+    surface_definition_v01_before_update_dir,
+    surface_definition_v01_after_update_dir,
+)
