@@ -424,20 +424,19 @@ class GUI:
                 )
                 for idx, corner in enumerate(img_corners):
                     dist = np.linalg.norm(corner - pos)
-                    if dist < self.button_click_radius:
-                        if action == glfw.GLFW_PRESS:
-                            self.tracker._edit_surf_verts.append((surface, idx))
-                            return True  # click event consumed
-                        elif action == glfw.GLFW_RELEASE:
-                            self.tracker.notify_all(
-                                {
-                                    "subject": "surface_tracker.surfaces_changed",
-                                    "name": surface.name,
-                                    "delay": SURFACE_TRACKER_CHANGED_DELAY,
-                                }
-                            )
-                            self.tracker._edit_surf_verts = []
-                            return True  # click event consumed
+                    if action == glfw.GLFW_PRESS and dist < self.button_click_radius:
+                        self.tracker._edit_surf_verts.append((surface, idx))
+                        return True  # click event consumed
+                    elif action == glfw.GLFW_RELEASE and self.tracker._edit_surf_verts:
+                        self.tracker.notify_all(
+                            {
+                                "subject": "surface_tracker.surfaces_changed",
+                                "name": surface.name,
+                                "delay": SURFACE_TRACKER_CHANGED_DELAY,
+                            }
+                        )
+                        self.tracker._edit_surf_verts = []
+                        return True  # click event consumed
 
         return False  # click event not consumed
 
