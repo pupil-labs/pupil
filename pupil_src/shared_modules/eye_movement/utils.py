@@ -31,12 +31,15 @@ EYE_MOVEMENT_EVENT_KEY = "eye_movement_segments"
 EYE_MOVEMENT_GAZE_KEY = "eye_movement"
 
 
-def can_use_3d_gaze_mapping(gaze_data) -> bool:
+def extract_3d_gaze_points(gaze_data) -> t.Optional[np.asarray]:
     try:
-        _ = [gp["gaze_point_3d"] for gp in gaze_data]
-        return True
+        return [gp["gaze_point_3d"] for gp in gaze_data]
     except KeyError:
-        return False
+        return None
+
+
+def can_use_3d_gaze_mapping(gaze_data) -> bool:
+    return extract_3d_gaze_points(gaze_data) is not None
 
 
 def clean_3d_data(gaze_points_3d: np.ndarray) -> np.ndarray:
@@ -53,12 +56,13 @@ def np_denormalize(points_2d, frame_size):
 
 
 def gaze_data_to_gaze_points_3d(capture, gaze_data) -> t.Tuple[np.ndarray, bool]:
-    try:
-        gaze_points_3d = [gp["gaze_point_3d"] for gp in gaze_data]
+    gaze_points_3d = extract_3d_gaze_points(gaze_data)
+
+    if gaze_points_3d is not None:
         gaze_points_3d = np.array(gaze_points_3d, dtype=np.float32)
         gaze_points_3d = clean_3d_data(gaze_points_3d)
         use_pupil = True
-    except KeyError:
+    else:
         gaze_points_2d = np.array([gp["norm_pos"] for gp in gaze_data])
         gaze_points_2d = np_denormalize(gaze_points_2d, capture.frame_size)
         gaze_points_3d = capture.intrinsics.unprojectPoints(gaze_points_2d)
