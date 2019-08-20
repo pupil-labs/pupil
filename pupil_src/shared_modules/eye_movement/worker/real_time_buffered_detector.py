@@ -73,15 +73,13 @@ class Real_Time_Buffered_Detector:
             utils.logger.warning("Not enough data available to find fixations")
             return
 
-        use_pupil = utils.can_use_3d_gaze_mapping(gaze_data)
-
         segment_factory = model.Classified_Segment_Factory(start_id=factory_start_id)
 
         gaze_time = np.array([gp["timestamp"] for gp in gaze_data])
 
         try:
-            eye_positions = utils.gaze_data_to_nslr_data(
-                capture, gaze_data, gaze_time, use_pupil=use_pupil
+            eye_positions, use_pupil = utils.gaze_data_to_nslr_data(
+                capture, gaze_data, gaze_time
             )
         except utils.NSLRValidationError as e:
             utils.logger.error(f"{e}")
