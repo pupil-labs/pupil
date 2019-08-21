@@ -194,8 +194,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         self.timeline = pyglui.ui.Timeline(
             "Surface Tracker",
-            self._gl_display_cache_bars,
-            self._draw_labels,
+            self._timeline_draw_data_cb,
+            self._timeline_draw_label_cb,
             self.TIMELINE_LINE_HEIGHT * (len(self.surfaces) + 1),
         )
         self.g_pool.user_timelines.append(self.timeline)
@@ -342,7 +342,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.timeline.refresh()
         super().gl_display()
 
-    def _gl_display_cache_bars(self, width, height, scale):
+    def _timeline_draw_data_cb(self, width, height, scale):
         ts = self.g_pool.timestamps
         with gl_utils.Coord_System(ts[0], ts[-1], height, 0):
             # Lines for areas that have been cached
@@ -381,7 +381,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     surface, color=color, line_type=gl.GL_LINES, thickness=scale * 2
                 )
 
-    def _draw_labels(self, width, height, scale):
+    def _timeline_draw_label_cb(self, width, height, scale):
         self.glfont.set_size(self.TIMELINE_LINE_HEIGHT * 0.8 * scale)
         self.glfont.draw_text(width, 0, "Marker Cache")
         for surface in self.surfaces:
