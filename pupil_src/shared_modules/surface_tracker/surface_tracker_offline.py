@@ -202,6 +202,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.timeline.content_height = (
             len(self.surfaces) + 1
         ) * self.TIMELINE_LINE_HEIGHT
+        self._set_timeline_refresh_needed()
 
     def recent_events(self, events):
         super().recent_events(events)
@@ -216,6 +217,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 self.gaze_on_surf_buffer_filler = None
                 self._update_surface_heatmaps()
                 self.gaze_on_surf_buffer = None
+
+            self._set_timeline_refresh_needed()
 
         for proxy in list(self.export_proxies):
             for _ in proxy.fetch():
@@ -264,6 +267,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         if now - self.last_cache_update_ts > self.CACHE_UPDATE_INTERVAL_SEC:
             self._save_marker_cache()
             self.last_cache_update_ts = now
+
+        self._set_timeline_refresh_needed()
 
     def _update_surface_locations(self, frame_index):
         for surface in self.surfaces:
@@ -408,6 +413,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         except AttributeError:
             pass
         self.surfaces[-1].on_surface_change = self.on_surface_change
+        self._set_timeline_refresh_needed()
 
     def remove_surface(self, surface):
         super().remove_surface(surface)
@@ -416,6 +422,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         except KeyError:
             pass
         self.timeline.content_height -= self.TIMELINE_LINE_HEIGHT
+        self._set_timeline_refresh_needed()
 
     def on_notify(self, notification):
         super().on_notify(notification)
