@@ -385,7 +385,9 @@ class GUI:
             self._on_click_menu_buttons,
             self._on_click_marker_toggles,
         ]
-        _ = any(handler(action, pos) for handler in click_handlers_sorted_by_precedence)
+        for handler in click_handlers_sorted_by_precedence:
+            if handler(action, pos):
+                return
 
     def _on_click_menu_buttons(self, action, pos):
         if action == glfw.GLFW_PRESS:
