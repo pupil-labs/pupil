@@ -338,9 +338,20 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         )
 
     def gl_display(self):
-        if self.timeline:
-            self.timeline.refresh()
+        self._timeline_refresh_if_needed()
         super().gl_display()
+
+    def _set_timeline_refresh_needed(self):
+        self.__is_timeline_refresh_needed = True
+
+    def _timeline_refresh_if_needed(self):
+        try:
+            is_timeline_refresh_needed = self.__is_timeline_refresh_needed
+        except AttributeError:
+            return
+        if is_timeline_refresh_needed and self.timeline:
+            self.__is_timeline_refresh_needed = False
+            self.timeline.refresh()
 
     def _timeline_draw_data_cb(self, width, height, scale):
         ts = self.g_pool.timestamps
