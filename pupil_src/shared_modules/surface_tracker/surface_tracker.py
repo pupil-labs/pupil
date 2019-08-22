@@ -46,6 +46,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         marker_detector_mode: typing.Union[
             Surface_Marker_Detector_Mode, str
         ] = Surface_Marker_Detector_Mode.APRILTAG_MARKER,
+        use_online_detection: bool = False,
     ):
         super().__init__(g_pool)
 
@@ -73,6 +74,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             marker_min_perimeter=marker_min_perimeter,
             square_marker_robust_detection=True,
             square_marker_inverted_markers=inverted_markers,
+            square_marker_use_online_mode=use_online_detection,
         )
 
         self._add_surfaces_from_file()

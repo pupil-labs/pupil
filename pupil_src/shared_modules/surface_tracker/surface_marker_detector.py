@@ -118,7 +118,7 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         marker_min_perimeter: int = ...,
         square_marker_robust_detection: bool = ...,
         square_marker_inverted_markers: bool = ...,
-        **kwargs,
+        square_marker_use_online_mode: bool = ...,
     ):
         self.__marker_min_perimeter = (
             marker_min_perimeter if marker_min_perimeter is not ... else 60
@@ -136,6 +136,11 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         self.__marker_detector_modes = marker_detector_modes
         self.__previous_raw_markers = []
         self.__previous_frame_index = -1
+        self.use_online_mode = (
+            square_marker_use_online_mode
+            if square_marker_use_online_mode is not ...
+            else False
+        )
 
     @property
     def robust_detection(self) -> bool:
@@ -179,9 +184,13 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         if frame_index != self.__previous_frame_index + 1:
             self.__previous_raw_markers = []
 
+        if self.use_online_mode:
+            true_detect_every_frame = 3
+        else:
+            true_detect_every_frame = 1
+
         grid_size = 5
         aperture = 9
-        true_detect_every_frame = 3
         min_perimeter = self.marker_min_perimeter
 
         if self.__robust_detection:
@@ -342,6 +351,7 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
         marker_min_perimeter: int = ...,
         square_marker_robust_detection: bool = ...,
         square_marker_inverted_markers: bool = ...,
+        square_marker_use_online_mode: bool = ...,
         apriltag_families: str = ...,
         apriltag_border: int = ...,
         apriltag_nthreads: int = 2,
@@ -358,6 +368,7 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
             marker_min_perimeter=marker_min_perimeter,
             square_marker_robust_detection=square_marker_robust_detection,
             square_marker_inverted_markers=square_marker_inverted_markers,
+            square_marker_use_online_mode=square_marker_use_online_mode,
         )
         self.__apriltag_detector = Surface_Apriltag_V3_Marker_Detector(
             marker_detector_modes=marker_detector_modes,

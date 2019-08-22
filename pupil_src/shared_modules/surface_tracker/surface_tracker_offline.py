@@ -55,7 +55,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     TIMELINE_LINE_HEIGHT = 16
 
     def __init__(self, g_pool, *args, **kwargs):
-        super().__init__(g_pool, *args, **kwargs)
+        super().__init__(g_pool, *args, use_online_detection=False, **kwargs)
 
         self.MARKER_CACHE_VERSION = 3
         # Also add very small detected markers to cache and filter cache afterwards
