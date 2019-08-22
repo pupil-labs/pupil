@@ -417,6 +417,7 @@ class GUI:
         return False  # click event not consumed
 
     def _on_click_corner_handles(self, action, pos):
+        was_event_consumed = False
         for surface in self._edit_surf_corners:
             if surface.detected and surface.defined:
                 img_corners = surface.map_from_surf(
@@ -428,7 +429,8 @@ class GUI:
                     dist = np.linalg.norm(corner - pos)
                     if action == glfw.GLFW_PRESS and dist < self.button_click_radius:
                         self.tracker._edit_surf_verts.append((surface, idx))
-                        return True  # click event consumed
+                        # click event consumed; give a chance for other surfaces' corners to react to it
+                        was_event_consumed = True
                     elif action == glfw.GLFW_RELEASE and self.tracker._edit_surf_verts:
                         self.tracker.notify_all(
                             {
@@ -438,9 +440,9 @@ class GUI:
                             }
                         )
                         self.tracker._edit_surf_verts = []
-                        return True  # click event consumed
+                        return True  # click event consumed; exit immediately
 
-        return False  # click event not consumed
+        return was_event_consumed
 
     def _on_click_marker_toggles(self, action, pos):
         if action == glfw.GLFW_PRESS:
