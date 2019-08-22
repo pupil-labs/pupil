@@ -240,7 +240,11 @@ class Plugin(object):
 
     @property
     def pretty_class_name(self):
-        return self.class_name.replace("_", " ")
+        return self.__class__.parse_pretty_class_name()
+
+    @classmethod
+    def parse_pretty_class_name(cls) -> str:
+        return cls.__name__.replace("_", " ")
 
     def add_menu(self):
         """

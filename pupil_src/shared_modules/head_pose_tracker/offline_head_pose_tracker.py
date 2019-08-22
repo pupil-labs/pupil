@@ -14,20 +14,17 @@ import os
 import csv_utils
 import player_methods as pm
 from head_pose_tracker import ui as plugin_ui, controller, storage
-from observable import Observable
-from plugin import Plugin
 from plugin_timeline import PluginTimeline
 from tasklib.manager import PluginTaskManager
 
+from .base_head_pose_tracker import Head_Pose_Tracker_Base
 
-class Offline_Head_Pose_Tracker(Plugin, Observable):
+
+class Offline_Head_Pose_Tracker(Head_Pose_Tracker_Base):
     """
     This plugin tracks the pose of the scene camera based on fiducial markers in the
     environment.
     """
-
-    icon_chr = chr(0xEC07)
-    icon_font = "pupil_icons"
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
