@@ -391,7 +391,7 @@ class GUI:
 
     def _on_click_menu_buttons(self, action, pos):
         if action == glfw.GLFW_PRESS:
-            for surface in self.tracker.surfaces:
+            for surface in reversed(self.tracker.surfaces):
 
                 if not surface.detected:
                     continue
