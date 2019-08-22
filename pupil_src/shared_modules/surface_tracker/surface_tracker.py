@@ -122,10 +122,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def robust_detection(self) -> bool:
         return self.marker_detector.robust_detection
 
-    @robust_detection.setter
-    def robust_detection(self, value: bool):
-        self.marker_detector.robust_detection = value
-
     @property
     def inverted_markers(self) -> bool:
         return self.marker_detector.inverted_markers
@@ -235,12 +231,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 {"subject": "surface_tracker.marker_detection_params_changed"}
             )
 
-        def set_robust_detection(val):
-            self.robust_detection = val
-            self.notify_all(
-                {"subject": "surface_tracker.marker_detection_params_changed"}
-            )
-
         supported_surface_marker_detector_modes = (
             Surface_Marker_Detector_Mode.all_supported_cases()
         )
@@ -250,14 +240,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
         advanced_menu = pyglui.ui.Growing_Menu("Marker Detection Parameters")
         advanced_menu.collapsed = True
-        advanced_menu.append(
-            pyglui.ui.Switch(
-                "robust_detection",
-                self,
-                setter=set_robust_detection,
-                label="Robust detection",
-            )
-        )
         advanced_menu.append(
             pyglui.ui.Switch(
                 "inverted_markers",
