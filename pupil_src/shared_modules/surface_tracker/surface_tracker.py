@@ -38,6 +38,10 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     icon_chr = chr(0xEC07)
     icon_font = "pupil_icons"
 
+    @classmethod
+    def parse_pretty_class_name(cls) -> str:
+        return "Surface Tracker"
+
     def __init__(
         self,
         g_pool,

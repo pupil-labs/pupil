@@ -14,3 +14,7 @@ from plugin import Analysis_Plugin_Base
 class Eye_Movement_Detector_Base(Analysis_Plugin_Base):
     icon_chr = chr(0xEC03)
     icon_font = "pupil_icons"
+    @classmethod
+
+    def parse_pretty_class_name(cls) -> str:
+        return "Eye Movement Detector"
