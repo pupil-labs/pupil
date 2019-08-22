@@ -180,14 +180,19 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         if Surface_Marker_Detector_Mode.SQUARE_MARKER not in self.marker_detector_modes:
             return []
 
-        # If current frame does not follow the previous frame, forget previously detected markers
-        if frame_index != self.__previous_frame_index + 1:
-            self.__previous_raw_markers = []
-
         if self.use_online_mode:
             true_detect_every_frame = 3
         else:
             true_detect_every_frame = 1
+            # in offline mode we can get non-monotonic data,
+            # in which case the previous data is invalid
+            if frame_index != self.__previous_frame_index + 1:
+                self.__previous_raw_markers = []
+            # TODO: Does this mean that seeking in the recording while the
+            # surface is being detected will essentially compromise the data? As
+            # in these cases we cannot use the previous frame data for inferring
+            # better marker positions. But if we would not have seeked we could
+            # have used this information! This looks like an inconsistency!
 
         grid_size = 5
         aperture = 9
