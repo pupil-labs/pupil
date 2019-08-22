@@ -396,7 +396,7 @@ def detect_markers_robust(
         gray_img = 255 - gray_img
 
     global tick
-    if not tick:
+    if tick == 0:
         tick = true_detect_every_frame
         new_markers = detect_markers(
             gray_img, grid_size, min_marker_perimeter, aperture, visualize
