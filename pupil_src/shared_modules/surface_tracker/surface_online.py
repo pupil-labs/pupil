@@ -17,8 +17,8 @@ from .surface import Surface
 class Surface_Online(Surface):
     """Surface_Online recalculates it's location on demand."""
 
-    def __init__(self, name="unknown", init_dict=None):
-        super().__init__(name=name, init_dict=init_dict)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.GAZE_HISTORY_LENGTH = 1
         self.gaze_history = collections.deque()

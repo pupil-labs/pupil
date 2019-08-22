@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import errno
 
-# logging
+import glob
 import logging
 import os
 import platform
@@ -441,12 +441,14 @@ class Recorder(System_Plugin_Base):
 
         del self.pldata_writers
 
-        try:
-            copy2(
-                os.path.join(self.g_pool.user_dir, "surface_definitions"),
-                os.path.join(self.rec_path, "surface_definitions"),
-            )
-        except:
+        surface_definition_file_paths = glob.glob(os.path.join(self.g_pool.user_dir, "surface_definitions*"))
+
+        if len(surface_definition_file_paths) > 0:
+            for source_path in surface_definition_file_paths:
+                _, filename = os.path.split(source_path)
+                target_path = os.path.join(self.rec_path, filename)
+                copy2(source_path, target_path)
+        else:
             logger.info(
                 "No surface_definitions data found. You may want this if you do marker tracking."
             )

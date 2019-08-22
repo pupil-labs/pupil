@@ -13,6 +13,7 @@ import abc
 import enum
 import typing
 import functools
+import itertools
 import collections
 
 import cv2
@@ -26,6 +27,10 @@ __all__ = [
     "Surface_Marker_UID",
     "Surface_Marker_TagID",
     "Surface_Marker_Type",
+    "create_surface_marker_uid",
+    "parse_surface_marker_type",
+    "parse_surface_marker_tag_id",
+    "parse_surface_marker_tag_family",
 ]
 
 
@@ -39,6 +44,41 @@ Surface_Marker_TagID = typing.NewType("Surface_Marker_TagID", int)
 class Surface_Marker_Type(enum.Enum):
     SQUARE = "legacy"
     APRILTAG_V3 = "apriltag_v3"
+
+
+def parse_surface_marker_type(uid: Surface_Marker_UID) -> Surface_Marker_Type:
+    marker_type, _, _ = _parse_surface_marker_uid_components(uid=uid)
+    return marker_type
+
+
+def parse_surface_marker_tag_family(uid: Surface_Marker_UID) -> typing.Optional[str]:
+    _, tag_family ,_ = _parse_surface_marker_uid_components(uid=uid)
+    return tag_family
+
+
+def parse_surface_marker_tag_id(uid: Surface_Marker_UID) -> Surface_Marker_TagID:
+    _, _, tag_id = _parse_surface_marker_uid_components(uid=uid)
+    return tag_id
+
+
+def create_surface_marker_uid(marker_type: Surface_Marker_Type, tag_family: typing.Optional[str], tag_id: Surface_Marker_TagID) -> Surface_Marker_UID:
+    marker_type = marker_type.value
+    if tag_family is None:
+        return Surface_Marker_UID(f"{marker_type}:{tag_id}")
+    else:
+        return Surface_Marker_UID(f"{marker_type}:{tag_family}:{tag_id}")
+
+
+def _parse_surface_marker_uid_components(uid: Surface_Marker_UID) -> typing.Tuple[Surface_Marker_Type, typing.Optional[str], Surface_Marker_TagID]:
+    components = str(uid).split(":")
+    if len(components) == 2:
+        marker_type, tag_id = components
+        tag_family = None
+    elif len(components) == 3:
+        marker_type, tag_family, tag_id = components
+    else:
+        raise ValueError(f"Invalid surface marker uid: \"{uid}\"")
+    return Surface_Marker_Type(marker_type), tag_family, Surface_Marker_TagID(int(tag_id))
 
 
 class Surface_Base_Marker(metaclass=abc.ABCMeta):
@@ -129,9 +169,7 @@ class _Square_Marker_Detection(_Square_Marker_Detection_Raw, Surface_Base_Marker
 
     @property
     def uid(self) -> Surface_Marker_UID:
-        marker_type = self.marker_type.value
-        tag_id = self.tag_id
-        return Surface_Marker_UID(f"{marker_type}:{tag_id}")
+        return create_surface_marker_uid(marker_type=self.marker_type, tag_family=None, tag_id=self.tag_id)
 
     @property
     def tag_id(self) -> Surface_Marker_TagID:
@@ -185,10 +223,7 @@ class _Apriltag_V3_Marker_Detection(
 
     @property
     def uid(self) -> Surface_Marker_UID:
-        marker_type = self.marker_type.value
-        tag_family = self.tag_family
-        tag_id = self.tag_id
-        return Surface_Marker_UID(f"{marker_type}:{tag_family}:{tag_id}")
+        return create_surface_marker_uid(marker_type=self.marker_type, tag_family=self.tag_family, tag_id=self.tag_id)
 
     @property
     def tag_id(self) -> Surface_Marker_TagID:
@@ -364,7 +399,6 @@ def test_surface_marker_deserialize():
     APRILTAG_V3_FAMILY = "tag36h11"
     APRILTAG_V3_TAG_ID = 10
     APRILTAG_V3_HAMMING = 2
-    APRILTAG_V3_GOODNESS = 0.0
     APRILTAG_V3_DECISION_MARGIN = 44.26249694824219
     APRILTAG_V3_HOMOGRAPHY = [
         [0.7398546228643903, 0.24224258644348548, -22.823628761428765],
@@ -387,7 +421,6 @@ def test_surface_marker_deserialize():
             APRILTAG_V3_FAMILY,
             APRILTAG_V3_TAG_ID,
             APRILTAG_V3_HAMMING,
-            APRILTAG_V3_GOODNESS,
             APRILTAG_V3_DECISION_MARGIN,
             APRILTAG_V3_HOMOGRAPHY,
             APRILTAG_V3_CENTER,
@@ -412,6 +445,26 @@ def test_surface_marker_deserialize():
     assert round(new_marker_apriltag_v3.perimeter, 2) == APRILTAG_V3_PERIM
 
 
+def test_surface_marker_uid_helpers():
+    all_marker_types = set(Surface_Marker_Type)
+    all_tag_ids = [Surface_Marker_TagID(123)]
+    all_tag_families = ["best_tags", None]
+    all_combinations = itertools.product(all_marker_types, all_tag_families, all_tag_ids)
+
+    for marker_type, tag_family, tag_id in all_combinations:
+        uid = create_surface_marker_uid(
+            marker_type=marker_type,
+            tag_family=tag_family,
+            tag_id=tag_id,
+        )
+        assert len(uid) > 0, "Surface_Marker_UID is not valid"
+
+        assert parse_surface_marker_type(uid=uid) == marker_type
+        assert parse_surface_marker_tag_id(uid=uid) == tag_id
+        assert parse_surface_marker_tag_family(uid=uid) == tag_family
+
+
 if __name__ == "__main__":
     test_surface_marker_from_raw_detection()
     test_surface_marker_deserialize()
+    test_surface_marker_uid_helpers()

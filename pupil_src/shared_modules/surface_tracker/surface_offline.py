@@ -36,9 +36,9 @@ class Surface_Offline(Surface):
     The cache is filled in the background.
     """
 
-    def __init__(self, name="unknown", init_dict=None):
+    def __init__(self, *args, **kwargs):
         self.location_cache = None
-        super().__init__(name=name, init_dict=init_dict)
+        super().__init__(*args, **kwargs)
         self.cache_seek_idx = mp_context.Value("i", 0)
         self.location_cache_filler = None
         self.observations_frame_idxs = []

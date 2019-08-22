@@ -12,12 +12,15 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import typing
 import logging
+import operator
 import uuid
 
 import cv2
 import numpy as np
 
 import methods
+from stdlib_utils import is_none, is_not_none
+
 from .surface_marker import Surface_Marker_UID
 from .surface_marker_aggregate import Surface_Marker_Aggregate
 
@@ -34,12 +37,33 @@ class Surface(abc.ABC):
     square markers in the real world. The markers are assumed to be in a fixed spatial
     relationship and to be in plane with one another as well as the surface."""
 
-    version = 1
+    def __init__(
+        self,
+        name="unknown",
+        real_world_size=None,
+        marker_aggregates_undist=None,
+        marker_aggregates_dist=None,
+        build_up_status: float = None,
+        deprecated_definition: bool = None,
+    ):
 
-    def __init__(self, name="unknown", init_dict=None):
+
+        init_args = [
+            real_world_size,
+            marker_aggregates_undist,
+            marker_aggregates_dist,
+            build_up_status,
+            deprecated_definition,
+        ]
+        assert all(map(is_none, init_args)) or all(map(is_not_none, init_args)),\
+            "Either all initialization arguments are None, or they all are not None"
+
+        marker_aggregates_undist = marker_aggregates_undist if marker_aggregates_undist is not None else []
+        marker_aggregates_dist = marker_aggregates_dist if marker_aggregates_dist is not None else []
+
         self.name = name
-        self.real_world_size = {"x": 1.0, "y": 1.0}
-        self.deprecated_definition = False
+        self.real_world_size = real_world_size if real_world_size is not None else {"x": 1.0, "y": 1.0}
+        self.deprecated_definition = deprecated_definition if deprecated_definition is not None else False
 
         # We store the surface state in two versions: once computed with the
         # undistorted scene image and once with the still distorted scene image. The
@@ -48,8 +72,13 @@ class Surface(abc.ABC):
         # outside of the image can not be re-distorted for visualization correctly.
         # Instead the slightly wrong but correct looking distorted version is
         # used for visualization.
-        self._registered_markers_undist: Surface_Marker_UID_To_Aggregate_Mapping = {}
-        self._registered_markers_dist: Surface_Marker_UID_To_Aggregate_Mapping = {}
+        self._registered_markers_undist: Surface_Marker_UID_To_Aggregate_Mapping = {
+            aggregate.uid: aggregate for aggregate in marker_aggregates_undist
+        }
+        self._registered_markers_dist: Surface_Marker_UID_To_Aggregate_Mapping = {
+            aggregate.uid: aggregate for aggregate in marker_aggregates_dist
+        }
+
         self.detected = False
         self.img_to_surf_trans = None
         self.surf_to_img_trans = None
@@ -59,7 +88,7 @@ class Surface(abc.ABC):
 
         self._REQUIRED_OBS_PER_MARKER = 5
         self._avg_obs_per_marker = 0
-        self.build_up_status = 0
+        self.build_up_status = build_up_status if build_up_status is not None else 0
 
         self.within_surface_heatmap = self.get_placeholder_heatmap()
         self.across_surface_heatmap = self.get_placeholder_heatmap()
@@ -71,8 +100,7 @@ class Surface(abc.ABC):
         # The uid is only used to implement __hash__ and __eq__
         self._uid = uuid.uuid4()
 
-        if init_dict is not None:
-            self._load_from_dict(init_dict)
+
 
     def __hash__(self):
         return int(self._uid)
@@ -82,6 +110,20 @@ class Surface(abc.ABC):
             return self._uid == other._uid
         else:
             return False
+
+    @staticmethod
+    def property_equality(x: "Surface", y: "Surface") -> bool:
+        import multiprocessing as mp
+        def property_dict(x: Surface) -> dict:
+            x_dict = x.__dict__.copy()
+            del x_dict["_uid"]  # `_uid`s are always unique
+            for key in x_dict.keys():
+                if isinstance(x_dict[key], np.ndarray):
+                    x_dict[key] = x_dict[key].tolist()
+                if isinstance(x_dict[key], mp.sharedctypes.Synchronized):
+                    x_dict[key] = x_dict[key].value
+            return x_dict
+        return property_dict(x) == property_dict(y)
 
     @property
     def defined(self):
@@ -552,53 +594,6 @@ class Surface(abc.ABC):
         hm[:, :, 3] = 175
 
         return hm
-
-    def save_to_dict(self):
-        return {
-            "version": self.version,
-            "name": self.name,
-            "real_world_size": self.real_world_size,
-            "reg_markers": [
-                marker_aggregate.save_to_dict()
-                for marker_aggregate in self._registered_markers_undist.values()
-            ],
-            "registered_markers_dist": [
-                marker_aggregate.save_to_dict()
-                for marker_aggregate in self._registered_markers_dist.values()
-            ],
-            "build_up_status": self.build_up_status,
-            "deprecated": self.deprecated_definition,
-        }
-
-    def _load_from_dict(self, init_dict):
-        self.name = init_dict["name"]
-        self.real_world_size = init_dict["real_world_size"]
-
-        marker_aggregates_undist = [
-            Surface_Marker_Aggregate.load_from_dict(d) for d in init_dict["reg_markers"]
-        ]
-        self._registered_markers_undist = {
-            aggregate.uid: aggregate for aggregate in marker_aggregates_undist
-        }
-
-        marker_aggregates_dist = [
-            Surface_Marker_Aggregate.load_from_dict(d)
-            for d in init_dict["registered_markers_dist"]
-        ]
-        self._registered_markers_dist = {
-            aggregate.uid: aggregate for aggregate in marker_aggregates_dist
-        }
-        self.build_up_status = init_dict["build_up_status"]
-
-        try:
-            self.deprecated_definition = init_dict["deprecated"]
-        except KeyError:
-            pass
-        else:
-            logger.warning(
-                "You have loaded an old and deprecated surface definition! "
-                "Please re-define this surface for increased mapping accuracy!"
-            )
 
 
 class Surface_Location:

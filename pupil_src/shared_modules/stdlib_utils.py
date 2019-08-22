@@ -1,6 +1,14 @@
 import typing
+import functools
 import itertools
+import operator
 import collections
+
+
+is_none = functools.partial(operator.is_, None)
+
+
+is_not_none = functools.partial(operator.is_not, None)
 
 
 class sliceable_deque(collections.deque):
@@ -53,6 +61,19 @@ def test_unique():
     assert list(unique(arr, key=lambda _: 0)) == [1]
     assert list(unique(arr, key=lambda _: 0, select=lambda old, new: new)) == [0]
     assert list(unique(arr, select=lambda old, new: old*10 + new)) == [11, 222, 3, 44, 5, 6, 0]
+
+
+def test_operators():
+
+    assert is_none(None) == True
+    assert is_not_none(None) == False
+
+    things = [0, 5, [], [1,2,3], "", "abc"]
+
+    for thing in things:
+        assert is_none(thing) == False
+        assert is_not_none(thing) == True
+
 
 if __name__ == '__main__':
     test_unique()
