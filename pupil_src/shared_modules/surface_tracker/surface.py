@@ -570,7 +570,7 @@ class Surface(abc.ABC):
             hist *= (255.0 / hist_max) if hist_max else 0.0
             hist = hist.astype(np.uint8)
         else:
-            self.within_surface_heatmap = self.get_uniform_heatmap()
+            self.within_surface_heatmap = self.get_uniform_heatmap(grid)
             return
 
         color_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
@@ -580,8 +580,11 @@ class Surface(abc.ABC):
             self.within_surface_heatmap[:, :, 3] = 125
         self.within_surface_heatmap[:, :, :3] = color_map
 
-    def get_uniform_heatmap(self):
-        hm = np.zeros((1, 1, 4), dtype=np.uint8)
+    def get_uniform_heatmap(self, resolution):
+        if len(resolution) != 2:
+            raise ValueError("resolution has to be two dimensional but found dimension {}!".format(len(resolution)))
+
+        hm = np.zeros((*resolution, 4), dtype=np.uint8)
         hm[:, :, :3] = cv2.applyColorMap(hm[:, :, :3], cv2.COLORMAP_JET)
         hm[:, :, 3] = 125
         return hm

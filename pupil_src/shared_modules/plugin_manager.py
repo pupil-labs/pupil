@@ -60,7 +60,7 @@ class Plugin_Manager(System_Plugin_Base):
 
             return ui.Switch(
                 p.__name__,
-                label=p.__name__.replace("_", " "),
+                label=p.parse_pretty_class_name(),
                 setter=setter,
                 getter=getter,
             )

@@ -348,9 +348,9 @@ def world(
 
         def on_drop(window, count, paths):
             paths = [paths[x].decode("utf-8") for x in range(count)]
-            # call `on_drop` callbacks until a plugin indicates
-            # that it has consumed the event (by returning True)
-            any(p.on_drop(paths) for p in g_pool.plugins)
+            for plugin in g_pool.plugins:
+                if plugin.on_drop(paths):
+                    break
 
         tick = delta_t()
 
@@ -666,19 +666,19 @@ def world(
                     # Position in img pixels
                     pos = denormalize(pos, g_pool.capture.frame_size)
 
-                    # call `on_click` callbacks until a plugin indicates
-                    # that it has consumed the event (by returning True)
-                    any(p.on_click(pos, button, action) for p in g_pool.plugins)
+                    for plugin in g_pool.plugins:
+                        if plugin.on_click(pos, button, action):
+                            break
 
                 for key, scancode, action, mods in user_input.keys:
-                    # call `on_key` callbacks until a plugin indicates
-                    # that it has consumed the event (by returning True)
-                    any(p.on_key(key, scancode, action, mods) for p in g_pool.plugins)
+                    for plugin in g_pool.plugins:
+                        if plugin.on_key(key, scancode, action, mods):
+                            break
 
                 for char_ in user_input.chars:
-                    # call `char_` callbacks until a plugin indicates
-                    # that it has consumed the event (by returning True)
-                    any(p.on_char(char_) for p in g_pool.plugins)
+                    for plugin in g_pool.plugins:
+                        if plugin.on_char(char_):
+                            break
 
                 glfw.glfwSwapBuffers(main_window)
 

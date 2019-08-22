@@ -55,7 +55,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     TIMELINE_LINE_HEIGHT = 16
 
     def __init__(self, g_pool, *args, **kwargs):
-        super().__init__(g_pool, *args, **kwargs)
+        super().__init__(g_pool, *args, use_online_detection=False, **kwargs)
 
         self.MARKER_CACHE_VERSION = 3
         # Also add very small detected markers to cache and filter cache afterwards
@@ -194,14 +194,15 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         self.timeline = pyglui.ui.Timeline(
             "Surface Tracker",
-            self._gl_display_cache_bars,
-            self._draw_labels,
+            self._timeline_draw_data_cb,
+            self._timeline_draw_label_cb,
             self.TIMELINE_LINE_HEIGHT * (len(self.surfaces) + 1),
         )
         self.g_pool.user_timelines.append(self.timeline)
         self.timeline.content_height = (
             len(self.surfaces) + 1
         ) * self.TIMELINE_LINE_HEIGHT
+        self._set_timeline_refresh_needed()
 
     def recent_events(self, events):
         super().recent_events(events)
@@ -216,6 +217,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 self.gaze_on_surf_buffer_filler = None
                 self._update_surface_heatmaps()
                 self.gaze_on_surf_buffer = None
+
+            self._set_timeline_refresh_needed()
 
         for proxy in list(self.export_proxies):
             for _ in proxy.fetch():
@@ -265,6 +268,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self._save_marker_cache()
             self.last_cache_update_ts = now
 
+        self._set_timeline_refresh_needed()
+
     def _update_surface_locations(self, frame_index):
         for surface in self.surfaces:
             surface.update_location(frame_index, self.marker_cache, self.camera_model)
@@ -312,7 +317,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 surface.across_surface_heatmap = heatmap
         else:
             for surface in self.surfaces:
-                surface.across_surface_heatmap = surface.get_uniform_heatmap()
+                surface.across_surface_heatmap = surface.get_uniform_heatmap((1, 1))
 
     def _fill_gaze_on_surf_buffer(self):
         in_mark = self.g_pool.seek_control.trim_left
@@ -338,11 +343,22 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         )
 
     def gl_display(self):
-        if self.timeline:
-            self.timeline.refresh()
+        self._timeline_refresh_if_needed()
         super().gl_display()
 
-    def _gl_display_cache_bars(self, width, height, scale):
+    def _set_timeline_refresh_needed(self):
+        self.__is_timeline_refresh_needed = True
+
+    def _timeline_refresh_if_needed(self):
+        try:
+            is_timeline_refresh_needed = self.__is_timeline_refresh_needed
+        except AttributeError:
+            return
+        if is_timeline_refresh_needed and self.timeline:
+            self.__is_timeline_refresh_needed = False
+            self.timeline.refresh()
+
+    def _timeline_draw_data_cb(self, width, height, scale):
         ts = self.g_pool.timestamps
         with gl_utils.Coord_System(ts[0], ts[-1], height, 0):
             # Lines for areas that have been cached
@@ -381,7 +397,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     surface, color=color, line_type=gl.GL_LINES, thickness=scale * 2
                 )
 
-    def _draw_labels(self, width, height, scale):
+    def _timeline_draw_label_cb(self, width, height, scale):
         self.glfont.set_size(self.TIMELINE_LINE_HEIGHT * 0.8 * scale)
         self.glfont.draw_text(width, 0, "Marker Cache")
         for surface in self.surfaces:
@@ -397,6 +413,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         except AttributeError:
             pass
         self.surfaces[-1].on_surface_change = self.on_surface_change
+        self._set_timeline_refresh_needed()
 
     def remove_surface(self, surface):
         super().remove_surface(surface)
@@ -405,6 +422,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         except KeyError:
             pass
         self.timeline.content_height -= self.TIMELINE_LINE_HEIGHT
+        self._set_timeline_refresh_needed()
 
     def on_notify(self, notification):
         super().on_notify(notification)

@@ -32,7 +32,7 @@ class Surface_Tracker_Online(Surface_Tracker):
         self.freeze_scene = False
         self.frozen_scene_frame = None
         self.frozen_scene_tex = None
-        super().__init__(g_pool, *args, **kwargs)
+        super().__init__(g_pool, *args, use_online_detection=True, **kwargs)
 
         self.menu = None
         self.button = None

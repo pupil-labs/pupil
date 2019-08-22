@@ -8,13 +8,16 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from plugin import Analysis_Plugin_Base
+
+from observable import Observable
+from plugin import Plugin
 
 
-class Eye_Movement_Detector_Base(Analysis_Plugin_Base):
-    icon_chr = chr(0xEC03)
+class Head_Pose_Tracker_Base(Plugin, Observable):
+
+    icon_chr = chr(0xEC07)
     icon_font = "pupil_icons"
-    @classmethod
 
+    @classmethod
     def parse_pretty_class_name(cls) -> str:
-        return "Eye Movement Detector"
+        return "Head Pose Tracker"
