@@ -58,16 +58,6 @@ class Surface_Marker_Detector_Mode(enum.Enum):
 class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
-    def robust_detection(self) -> bool:
-        pass
-
-    @robust_detection.setter
-    @abc.abstractmethod
-    def robust_detection(self, value: bool):
-        pass
-
-    @property
-    @abc.abstractmethod
     def inverted_markers(self) -> bool:
         pass
 
@@ -116,17 +106,11 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         self,
         marker_detector_modes: typing.Set[Surface_Marker_Detector_Mode],
         marker_min_perimeter: int = ...,
-        square_marker_robust_detection: bool = ...,
         square_marker_inverted_markers: bool = ...,
-        **kwargs,
+        square_marker_use_online_mode: bool = ...,
     ):
         self.__marker_min_perimeter = (
             marker_min_perimeter if marker_min_perimeter is not ... else 60
-        )
-        self.__robust_detection = (
-            square_marker_robust_detection
-            if square_marker_robust_detection is not ...
-            else True
         )
         self.__inverted_markers = (
             square_marker_inverted_markers
@@ -136,14 +120,11 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         self.__marker_detector_modes = marker_detector_modes
         self.__previous_raw_markers = []
         self.__previous_frame_index = -1
-
-    @property
-    def robust_detection(self) -> bool:
-        return self.__robust_detection
-
-    @robust_detection.setter
-    def robust_detection(self, value: bool):
-        self.__robust_detection = value
+        self.use_online_mode = (
+            square_marker_use_online_mode
+            if square_marker_use_online_mode is not ...
+            else False
+        )
 
     @property
     def inverted_markers(self) -> bool:
@@ -175,32 +156,33 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         if Surface_Marker_Detector_Mode.SQUARE_MARKER not in self.marker_detector_modes:
             return []
 
-        # If current frame does not follow the previous frame, forget previously detected markers
-        if frame_index != self.__previous_frame_index + 1:
-            self.__previous_raw_markers = []
+        if self.use_online_mode:
+            true_detect_every_frame = 3
+        else:
+            true_detect_every_frame = 1
+            # in offline mode we can get non-monotonic data,
+            # in which case the previous data is invalid
+            if frame_index != self.__previous_frame_index + 1:
+                self.__previous_raw_markers = []
+            # TODO: Does this mean that seeking in the recording while the
+            # surface is being detected will essentially compromise the data? As
+            # in these cases we cannot use the previous frame data for inferring
+            # better marker positions. But if we would not have seeked we could
+            # have used this information! This looks like an inconsistency!
 
         grid_size = 5
         aperture = 9
-        true_detect_every_frame = 3
         min_perimeter = self.marker_min_perimeter
 
-        if self.__robust_detection:
-            markers = square_marker_detect.detect_markers_robust(
-                gray_img=gray_img,
-                grid_size=grid_size,
-                min_marker_perimeter=min_perimeter,
-                aperture=aperture,
-                prev_markers=self.__previous_raw_markers,
-                true_detect_every_frame=true_detect_every_frame,
-                invert_image=self.__inverted_markers,
-            )
-        else:
-            markers = square_marker_detect.detect_markers(
-                gray_img=gray_img,
-                grid_size=grid_size,
-                min_marker_perimeter=min_perimeter,
-                aperture=aperture,
-            )
+        markers = square_marker_detect.detect_markers_robust(
+            gray_img=gray_img,
+            grid_size=grid_size,
+            min_marker_perimeter=min_perimeter,
+            aperture=aperture,
+            prev_markers=self.__previous_raw_markers,
+            true_detect_every_frame=true_detect_every_frame,
+            invert_image=self.__inverted_markers,
+        )
 
         # Robust marker detection requires previous markers to be in a different
         # format than the surface tracker.
@@ -290,14 +272,6 @@ class Surface_Apriltag_V3_Marker_Detector(Surface_Base_Marker_Detector):
         self.__setstate__(state)
 
     @property
-    def robust_detection(self) -> bool:
-        return True
-
-    @robust_detection.setter
-    def robust_detection(self, value: bool):
-        pass  # nop
-
-    @property
     def inverted_markers(self) -> bool:
         return False
 
@@ -340,8 +314,8 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
         self,
         marker_detector_modes: typing.Set[Surface_Marker_Detector_Mode],
         marker_min_perimeter: int = ...,
-        square_marker_robust_detection: bool = ...,
         square_marker_inverted_markers: bool = ...,
+        square_marker_use_online_mode: bool = ...,
         apriltag_families: str = ...,
         apriltag_border: int = ...,
         apriltag_nthreads: int = 2,
@@ -356,8 +330,8 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
         self.__square_detector = Surface_Square_Marker_Detector(
             marker_detector_modes=marker_detector_modes,
             marker_min_perimeter=marker_min_perimeter,
-            square_marker_robust_detection=square_marker_robust_detection,
             square_marker_inverted_markers=square_marker_inverted_markers,
+            square_marker_use_online_mode=square_marker_use_online_mode,
         )
         self.__apriltag_detector = Surface_Apriltag_V3_Marker_Detector(
             marker_detector_modes=marker_detector_modes,
@@ -373,14 +347,6 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
             apriltag_debug=apriltag_debug,
             apriltag_quad_contours=apriltag_quad_contours,
         )
-
-    @property
-    def robust_detection(self) -> bool:
-        return self.__square_detector.robust_detection
-
-    @robust_detection.setter
-    def robust_detection(self, value: bool):
-        self.__square_detector.robust_detection = value
 
     @property
     def inverted_markers(self) -> bool:
