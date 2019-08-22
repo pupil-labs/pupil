@@ -34,7 +34,7 @@ class _Surface_File_Store_Base(abc.ABC):
 
     def __init__(self, parent_dir, _persistent_dict_class=file_methods.Persistent_Dict):
         if not os.path.exists(parent_dir):
-            raise ValueError(f"Parent directory does not exist: {parent_dir}")
+            raise FileNotFoundError(f"No such file or directory: {parent_dir}")
         if not os.path.isdir(parent_dir):
             raise ValueError(f"Item at path is not a directory: {parent_dir}")
         self._parent_dir = parent_dir
