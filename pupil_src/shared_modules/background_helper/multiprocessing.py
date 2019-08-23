@@ -13,21 +13,21 @@ import logging
 import multiprocessing as mp
 import zmq
 from ctypes import c_bool
+import typing
 
 import zmq_tools
+
+from .base import EarlyCancellationError
+from .base import Task_Proxy as Base_Task_Proxy
+
 
 logger = logging.getLogger(__name__)
 
 
-class EarlyCancellationError(Exception):
-    pass
+class Task_Proxy(Base_Task_Proxy):
 
-
-class Task_Proxy:
-    """Future like object that runs a given generator in the background and returns is able to return the results incrementally"""
-
-    def __init__(self, name, generator, args=(), kwargs={}, context=...):
-        super().__init__()
+    def __init__(self, name, generator, args=(), kwargs={}, context=..., **_):
+        super().__init__(name=name, generator=generator, args=args, kwargs=kwargs)
         if context is ...:
             context = mp.get_context()
 
@@ -80,8 +80,7 @@ class Task_Proxy:
     def _change_logging_behavior(self):
         pass
 
-    def fetch(self):
-        """Fetches progress and available results from background"""
+    def fetch(self) -> typing.Iterator[typing.Any]:
         if self.completed or self.canceled:
             return
 
@@ -115,11 +114,11 @@ class Task_Proxy:
             self.process = None
 
     @property
-    def completed(self):
+    def completed(self) -> bool:
         return self._completed
 
     @property
-    def canceled(self):
+    def canceled(self) -> bool:
         return self._canceled
 
 
