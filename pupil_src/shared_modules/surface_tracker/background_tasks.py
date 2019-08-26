@@ -17,7 +17,8 @@ import types
 
 import cv2
 
-from background_helper import IPC_Logging_Task_Proxy as Task_Proxy
+from background_helper import Multiprocessing_Logging_Task_Proxy
+from background_helper import Threading_Task_Proxy
 import player_methods
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 def background_video_processor(
     video_file_path, callable, visited_list, seek_idx, mp_context
 ):
-    return Task_Proxy(
+    return Multiprocessing_Logging_Task_Proxy(
         "Background Video Processor",
         video_processing_generator,
         (video_file_path, callable, seek_idx, visited_list),
@@ -126,7 +127,7 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
 
 
 def background_data_processor(data, callable, seek_idx, mp_context):
-    return Task_Proxy(
+    return Multiprocessing_Logging_Task_Proxy(
         "Background Data Processor",
         data_processing_generator,
         (data, callable, seek_idx),
@@ -202,7 +203,7 @@ def gaze_on_surface_generator(
 def background_gaze_on_surface(
     surfaces, section, all_world_timestamps, all_gaze_events, camera_model, mp_context
 ):
-    return Task_Proxy(
+    return Threading_Task_Proxy(
         "Background Data Processor",
         gaze_on_surface_generator,
         (surfaces, section, all_world_timestamps, all_gaze_events, camera_model),
@@ -229,7 +230,7 @@ def get_export_proxy(
         fixations,
         camera_model,
     )
-    proxy = Task_Proxy(
+    proxy = Multiprocessing_Logging_Task_Proxy(
         "Offline Surface Tracker Exporter",
         exporter.save_surface_statisics_to_file,
         context=mp_context,
