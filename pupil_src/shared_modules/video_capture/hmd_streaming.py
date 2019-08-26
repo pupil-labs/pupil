@@ -113,7 +113,7 @@ class HMD_Streaming_Source(Base_Source):
     @property
     def intrinsics(self):
         if self._intrinsics is None or self._intrinsics.resolution != self.frame_size:
-            if self.projection_matrix is None:
+            if self.projection_matrix is not None:
                 distortion = [[0.0, 0.0, 0.0, 0.0, 0.0]]
                 self._intrinsics = Radial_Dist_Camera(
                     self.projection_matrix, distortion, self.frame_size, self.name
