@@ -476,10 +476,21 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 surface.within_surface_heatmap = surface.get_placeholder_heatmap()
             self._fill_gaze_on_surf_buffer()
 
+        elif notification["subject"] == "surface_tracker_offline._should_fill_gaze_on_surf_buffer":
+            self._fill_gaze_on_surf_buffer()
+
     def on_surface_change(self, surface):
         self.save_surface_definitions_to_file()
         self._heatmap_update_requests.add(surface)
-        self._fill_gaze_on_surf_buffer()
+        self._debounced_fill_gaze_on_surf_buffer()
+
+    def _debounced_fill_gaze_on_surf_buffer(self):
+        self.notify_all(
+            {
+                "subject": "surface_tracker_offline._should_fill_gaze_on_surf_buffer",
+                "delay": 1.0,
+            }
+        )
 
     def deinit_ui(self):
         super().deinit_ui()
