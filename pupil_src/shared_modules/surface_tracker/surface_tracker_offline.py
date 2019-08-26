@@ -164,6 +164,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.marker_cache_unfiltered = Cache(previous_state)
         self.marker_cache = self._filter_marker_cache(self.marker_cache_unfiltered)
 
+        if self.cache_filler:
+            self.cache_filler.cancel()
+
         self.cache_filler = background_tasks.background_video_processor(
             self.g_pool.capture.source_path,
             offline_utils.marker_detection_callable(
