@@ -41,8 +41,10 @@ apriltag_hidden_imports = ["pupil_apriltags"]
 
 from pyglui import ui
 import pupil_apriltags
+import pyrealsense
 
 apriltag_lib_path = pathlib.Path(pupil_apriltags.__file__).parent
+pyrealsense_path = pathlib.Path(pyrealsense.__file__).parent / "lrs_parsed_classes"
 
 
 def apriltag_relative_path(absolute_path):
@@ -55,14 +57,12 @@ if platform.system() == "Darwin":
     from version import pupil_version
 
     del sys.path[-1]
-
     a = Analysis(
         ["../../pupil_src/main.py"],
         pathex=["../../pupil_src/shared_modules/"],
-        hiddenimports=[]
-        + av_hidden_imports
-        + pyglui_hidden_imports
-        + apriltag_hidden_imports,
+        hiddenimports=(
+            av_hidden_imports + pyglui_hidden_imports + apriltag_hidden_imports
+        ),
         hookspath=None,
         runtime_hooks=None,
         excludes=["matplotlib"],
@@ -86,16 +86,19 @@ if platform.system() == "Darwin":
 
     # exclude system lib.
     libSystem = [bn for bn in a.binaries if "libSystem.dylib" in bn]
+
     coll = COLLECT(
         exe,
         a.binaries - libSystem,
         a.zipfiles,
         a.datas,
+        [("libuvc.0.dylib", "/usr/local/lib/libuvc.0.dylib", "BINARY")],
         [("libglfw.dylib", "/usr/local/lib/libglfw.dylib", "BINARY")],
         [("librealsense.dylib", "/usr/local/lib/librealsense.dylib", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
+        [("pyrealsense/lrs_parsed_classes", pyrealsense_path, "DATA")],
         apriltag_libs,
         Tree(
             "../../pupil_src/shared_modules/calibration_routines/fingertip_calibration/weights/",
@@ -113,7 +116,6 @@ if platform.system() == "Darwin":
         version=str(pupil_version()),
         info_plist={"NSHighResolutionCapable": "True"},
     )
-
 
 elif platform.system() == "Linux":
     a = Analysis(
@@ -296,4 +298,3 @@ elif platform.system() == "Windows":
         upx=True,
         name="Pupil Capture",
     )
-
