@@ -11,3 +11,8 @@ See COPYING and COPYING.LESSER for license details.
 
 # Keep source compatibility
 from .multiprocessing import EarlyCancellationError, Task_Proxy, IPC_Logging_Task_Proxy
+
+from .threading import Task_Proxy as Threading_Task_Proxy
+
+from .multiprocessing import Task_Proxy as Multiprocessing_Task_Proxy
+from .multiprocessing import IPC_Logging_Task_Proxy as Multiprocessing_Logging_Task_Proxy
