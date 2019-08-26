@@ -242,20 +242,25 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         if self.cache_filler is None:
             return
 
+        start_time = time.perf_counter()
+        did_timeout = False
+
         for frame_index, markers in self.cache_filler.fetch():
-            if frame_index is None:
-                continue
-            markers = self._remove_duplicate_markers(markers)
-            self.marker_cache_unfiltered.update(frame_index, markers)
-            markers_filtered = self._filter_markers(markers)
-            self.marker_cache.update(frame_index, markers_filtered)
+            if frame_index is not None:
+                markers = self._remove_duplicate_markers(markers)
+                self.marker_cache_unfiltered.update(frame_index, markers)
+                markers_filtered = self._filter_markers(markers)
+                self.marker_cache.update(frame_index, markers_filtered)
 
-            for surface in self.surfaces:
-                surface.update_location_cache(
-                    frame_index, self.marker_cache, self.camera_model
-                )
+                for surface in self.surfaces:
+                    surface.update_location_cache(
+                        frame_index, self.marker_cache, self.camera_model
+                    )
+            if time.perf_counter() - start_time > 1/50:
+                did_timeout = True
+                break
 
-        if self.cache_filler.completed:
+        if self.cache_filler.completed and not did_timeout:
             self.cache_filler = None
             for surface in self.surfaces:
                 self._heatmap_update_requests.add(surface)
