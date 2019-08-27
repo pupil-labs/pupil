@@ -256,7 +256,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     surface.update_location_cache(
                         frame_index, self.marker_cache, self.camera_model
                     )
-            if time.perf_counter() - start_time > 1/50:
+            if time.perf_counter() - start_time > 1 / 50:
                 did_timeout = True
                 break
 
@@ -481,7 +481,10 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 surface.within_surface_heatmap = surface.get_placeholder_heatmap()
             self._fill_gaze_on_surf_buffer()
 
-        elif notification["subject"] == "surface_tracker_offline._should_fill_gaze_on_surf_buffer":
+        elif (
+            notification["subject"]
+            == "surface_tracker_offline._should_fill_gaze_on_surf_buffer"
+        ):
             self._fill_gaze_on_surf_buffer()
 
     def on_surface_change(self, surface):
