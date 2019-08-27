@@ -13,7 +13,7 @@ class FrameFetcher:
     def __init__(self, video_path):
         try:
             self.source = File_Source(
-                SimpleNamespace(), source_path=video_path, timing=None
+                SimpleNamespace(), source_path=video_path, timing=None, fill_gaps=True
             )
         except AssertionError as err:
             raise FileNotFoundError(video_path) from err
