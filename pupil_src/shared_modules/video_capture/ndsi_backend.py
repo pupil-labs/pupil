@@ -20,7 +20,7 @@ from camera_models import load_intrinsics
 try:
     from ndsi import __version__
 
-    assert __version__ >= "0.4"
+    assert __version__ >= "1.0"
     from ndsi import __protocol_version__
 except (ImportError, AssertionError):
     raise Exception("pyndsi version is to old. Please upgrade") from None
