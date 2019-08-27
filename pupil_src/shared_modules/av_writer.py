@@ -160,14 +160,20 @@ class AV_Writer(abc.ABC):
 
         # ensure strong monotonic pts
         pts = max(pts, self.last_video_pts + 1)
-        self.last_video_pts = pts
 
+        n_frames = self.video_stream.frames
         # TODO: Use custom Frame wrapper class, that wraps backend-specific frames.
         # This way we could just attach the pts here to the frame.
         # Currently this will fail e.g. for av.VideoFrame.
         for packet in self.encode_frame(input_frame, pts):
             self.container.mux(packet)
+        if self.video_stream.frames != n_frames + 1:
+            logger.warning(
+                f"Failed to write frame #{n_frames} to video file. Ignoring."
+            )
+            return
 
+        self.last_video_pts = pts
         self.timestamps.append(ts)
 
     def close(self, timestamp_export_format="npy"):
