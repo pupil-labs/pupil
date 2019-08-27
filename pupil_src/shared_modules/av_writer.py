@@ -139,6 +139,14 @@ class AV_Writer(abc.ABC):
             self.on_first_frame(input_frame)
 
         ts = input_frame.timestamp
+
+        if ts < self.start_time:
+            # This can happen, because we might have a frame already in the
+            # pipeline when starting the recording. We should skip this frame
+            # then, as the processes are not yet synced.
+            logger.debug("Skipping frame that arrived before sync time.")
+            return
+
         if self.timestamps:
             last_ts = self.timestamps[-1]
             if ts < last_ts:
