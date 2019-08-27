@@ -46,6 +46,18 @@ split_str = """
 </plist>"""
 
 if platform.system() == "Darwin":
+
+    def get_size(start_path="."):
+        total_size = 0
+        for dirpath, dirnames, filenames in os.walk(start_path):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                # skip if it is symbolic link
+                if not os.path.islink(fp):
+                    total_size += os.path.getsize(fp)
+
+        return total_size
+
     print("starting version stript:")
     write_version_file("dist/Pupil Player.app/Contents/MacOS")
     print("created version file in app dir")
@@ -64,11 +76,23 @@ if platform.system() == "Darwin":
     bundle_dmg_name = "Install Pupil Player"
     src_dir = "dist"
     bundle_app_dir = os.path.join(src_dir, "Pupil Player.app/")
+
+    for DS_Store in pathlib.Path(src_dir).rglob(".DS_Store"):
+        print(f"Deleting {DS_Store}")
+        DS_Store.unlink()
+
     print("Codesigning now")
+    sign = "Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
     if (
         call(
-            "codesign --force --verify --verbose -s 'Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)' --deep '%s'"
-            % bundle_app_dir,
+            (
+                "codesign "
+                "--force "
+                "--verify "
+                "--verbose "
+                f"-s '{sign}' "
+                f"--deep '{bundle_app_dir}'"
+            ),
             shell=True,
         )
         != 0
@@ -78,13 +102,17 @@ if platform.system() == "Darwin":
     # print Exception("Codesing verification  failed")
     call("ln -s /Applications/ %s/Applications" % src_dir, shell=True)
 
-    for DS_Store in pathlib.Path(src_dir).rglob(".DS_Store"):
-        print(f"Deleting {DS_Store}")
-        DS_Store.unlink()
+    volumen_size = get_size(src_dir)
 
     call(
-        "hdiutil create -volname '%s' -srcfolder %s -format UDZO  -size 300m '%s.dmg'"
-        % (bundle_dmg_name, src_dir, bundle_name),
+        (
+            f"hdiutil create  "
+            f"-volname '{bundle_dmg_name}' "
+            f"-srcfolder {src_dir} "
+            f"-format UDZO "
+            f"-size {volumen_size}b "
+            f"'{bundle_name}.dmg'"
+        ),
         shell=True,
     )
 

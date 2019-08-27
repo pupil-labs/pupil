@@ -59,11 +59,12 @@ if platform.system() == "Darwin":
     a = Analysis(
         ["../../pupil_src/main.py"],
         pathex=["../../pupil_src/shared_modules/"],
-        hiddenimports=[]
-        + av_hidden_imports
-        + pyglui_hidden_imports
-        + pyndsi_hidden_imports
-        + apriltag_hidden_imports,
+        hiddenimports=(
+            av_hidden_imports
+            + pyglui_hidden_imports
+            + pyndsi_hidden_imports
+            + apriltag_hidden_imports
+        ),
         hookspath=None,
         runtime_hooks=None,
         excludes=["matplotlib", "pyrealsense"],
@@ -299,4 +300,3 @@ elif platform.system() == "Windows":
         upx=True,
         name="Pupil Player",
     )
-
