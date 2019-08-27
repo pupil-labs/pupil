@@ -65,7 +65,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.marker_cache_unfiltered = None
         self.cache_filler = None
         self._init_marker_cache()
-        self.last_cache_update_ts = time.time()
+        self.last_cache_update_ts = time.perf_counter()
         self.CACHE_UPDATE_INTERVAL_SEC = 5
 
         self._init_marker_detection_modes()
@@ -268,7 +268,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self._save_marker_cache()
             self.save_surface_definitions_to_file()
 
-        now = time.time()
+        now = time.perf_counter()
         if now - self.last_cache_update_ts > self.CACHE_UPDATE_INTERVAL_SEC:
             self._save_marker_cache()
             self.last_cache_update_ts = now
