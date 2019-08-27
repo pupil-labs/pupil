@@ -65,7 +65,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.marker_cache_unfiltered = None
         self.cache_filler = None
         self._init_marker_cache()
-        self.last_cache_update_ts = time.time()
+        self.last_cache_update_ts = time.perf_counter()
         self.CACHE_UPDATE_INTERVAL_SEC = 5
 
         self._init_marker_detection_modes()
@@ -256,7 +256,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                     surface.update_location_cache(
                         frame_index, self.marker_cache, self.camera_model
                     )
-            if time.perf_counter() - start_time > 1/50:
+            if time.perf_counter() - start_time > 1 / 50:
                 did_timeout = True
                 break
 
@@ -268,7 +268,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self._save_marker_cache()
             self.save_surface_definitions_to_file()
 
-        now = time.time()
+        now = time.perf_counter()
         if now - self.last_cache_update_ts > self.CACHE_UPDATE_INTERVAL_SEC:
             self._save_marker_cache()
             self.last_cache_update_ts = now
@@ -481,7 +481,10 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 surface.within_surface_heatmap = surface.get_placeholder_heatmap()
             self._fill_gaze_on_surf_buffer()
 
-        elif notification["subject"] == "surface_tracker_offline._should_fill_gaze_on_surf_buffer":
+        elif (
+            notification["subject"]
+            == "surface_tracker_offline._should_fill_gaze_on_surf_buffer"
+        ):
             self._fill_gaze_on_surf_buffer()
 
     def on_surface_change(self, surface):
