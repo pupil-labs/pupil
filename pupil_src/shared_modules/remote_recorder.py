@@ -68,7 +68,10 @@ class Remote_Recorder_Core:
         self.num_states_changed = num_states_changed_callback
 
         self._attached_rec_states = {}
-        self._network = ndsi.Network(callbacks=(self.on_event,))
+        self._network = ndsi.Network(
+            formats={ndsi.DataFormat.V3},
+            callbacks=(self.on_event,)
+        )
         self._network.start()
 
     def poll_network_events(self):

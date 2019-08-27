@@ -381,7 +381,10 @@ class NDSI_Manager(Base_Manager):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.network = ndsi.Network(callbacks=(self.on_event,))
+        self.network = ndsi.Network(
+            formats={ndsi.DataFormat.V3},
+            callbacks=(self.on_event,)
+        )
         self.network.start()
         self.selected_host = None
         self._recover_in = 3
