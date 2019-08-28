@@ -33,20 +33,16 @@ logger = logging.getLogger(__name__)
 
 def update_recording_to_recent(rec_dir):
 
-    meta_info = pm.load_meta_info(rec_dir)
+    pupil_recording = pm.Pupil_Recording(rec_dir=rec_dir)
+
+    meta_info = pupil_recording.meta_info
     update_meta_info(rec_dir, meta_info)
 
-    if (
-        meta_info.get("Capture Software", "Pupil Capture") == "Pupil Mobile"
-        and "Data Format Version" not in meta_info
-    ):
+    if pupil_recording.is_pupil_mobile and pupil_recording.data_format_version is None:
         convert_pupil_mobile_recording_to_v094(rec_dir)
         meta_info["Data Format Version"] = "v0.9.4"
         update_meta_info(rec_dir, meta_info)
-    elif (
-        meta_info.get("Capture Software", "Pupil Capture") == "Pupil Invisible"
-        and "Data Format Version" not in meta_info
-    ):
+    elif pupil_recording.is_pupil_invisible and pupil_recording.data_format_version is None:
         convert_pupil_invisible_recording_to_v113(rec_dir)
         meta_info["Data Format Version"] = "v1.13"
         update_meta_info(rec_dir, meta_info)

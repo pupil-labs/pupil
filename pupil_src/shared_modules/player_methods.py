@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import glob
 import logging
 import os
+import typing
 
 import cv2
 import numpy as np
@@ -233,6 +234,22 @@ class Pupil_Recording:
     @property
     def meta_info(self):
         return self._meta_info
+
+    @property
+    def capture_software(self) -> str:
+        return self.meta_info.get("Capture Software", "Pupil Capture")
+
+    @property
+    def data_format_version(self) -> typing.Optional[str]:
+        return self.meta_info.get("Data Format Version", None)
+
+    @property
+    def is_pupil_mobile(self) -> bool:
+        return self.capture_software == "Pupil Mobile"
+
+    @property
+    def is_pupil_invisible(self) -> bool:
+        return self.capture_software == "Pupil Invisible"
 
     def reload(self):
         self.load(rec_dir=self.rec_dir)
