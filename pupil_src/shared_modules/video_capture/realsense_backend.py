@@ -21,7 +21,7 @@ from pyrealsense.extlib import rsutilwrapper
 
 from version_utils import VersionFormat
 from .base_backend import Base_Source, Base_Manager
-from av_writer import AV_Writer
+from av_writer import MPEG_Writer
 from camera_models import load_intrinsics
 
 import glfw
@@ -779,11 +779,11 @@ class Realsense_Source(Base_Source):
             del kwargs["topic"]
             self._initialize_device(**kwargs)
         elif notification["subject"] == "recording.started":
-            self.start_depth_recording(notification["rec_path"])
+            self.start_depth_recording(notification["rec_path"], notification["start_time_synced"])
         elif notification["subject"] == "recording.stopped":
             self.stop_depth_recording()
 
-    def start_depth_recording(self, rec_loc):
+    def start_depth_recording(self, rec_loc, start_time_synced):
         if not self.record_depth:
             return
 
@@ -792,9 +792,7 @@ class Realsense_Source(Base_Source):
             return
 
         video_path = os.path.join(rec_loc, "depth.mp4")
-        self.depth_video_writer = AV_Writer(
-            video_path, fps=self.depth_frame_rate, use_timestamps=True
-        )
+        self.depth_video_writer = MPEG_Writer(video_path, start_time_synced)
 
     def stop_depth_recording(self):
         if self.depth_video_writer is None:

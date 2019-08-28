@@ -41,14 +41,15 @@ class Frame(object):
     """docstring of Frame"""
 
     def __init__(self, timestamp, av_frame, index):
-        self._av_frame = av_frame
         self.timestamp = float(timestamp)
         self.index = int(index)
-        self._img = None
-        self._gray = None
+        self.width = av_frame.width
+        self.height = av_frame.height
         self.jpeg_buffer = None
         self.yuv_buffer = None
-        self.height, self.width = av_frame.height, av_frame.width
+        self._av_frame = av_frame
+        self._img = None
+        self._gray = None
 
     def copy(self):
         return Frame(self.timestamp, self._av_frame, self.index)
@@ -78,28 +79,22 @@ class Frame(object):
 
 class FakeFrame:
     """
-    Show FakeFrame when the video is broken or there is
-    gap between timestamp.
+    Show FakeFrame when the video is broken or there is a gap between timestamp.
     """
 
-    def __init__(self, shape, timestamp, index):
-        self.shape = shape
-        self.yuv_buffer = None
-        static_img = np.ones(self.shape, dtype=np.uint8) * 128
-        self.img = self.bgr = static_img
+    def __init__(self, width, height, timestamp, index):
         self.timestamp = float(timestamp)
         self.index = int(index)
+        self.width = width
+        self.height = height
+        self.jpeg_buffer = None
+        self.yuv_buffer = None
+        shape = (self.height, self.width, 3)
+        static_img = np.ones(shape, dtype=np.uint8) * 128
+        self.img = self.bgr = static_img
 
     def copy(self):
-        return FakeFrame(self.shape, self.timestamp, self.index)
-
-    @property
-    def width(self):
-        return self.img.shape[1]
-
-    @property
-    def height(self):
-        return self.img.shape[0]
+        return FakeFrame(self.width, self.height, self.timestamp, self.index)
 
     @property
     def gray(self):
@@ -112,9 +107,9 @@ class Decoder(ABC):
     """
 
     @abstractmethod
-    def seek(self, position: int):
+    def seek(self, pts_position: int):
         """
-        Seek stream decoder to given position (in pts).
+        Seek stream decoder to given position (in pts!!)
         """
         pass
 
@@ -126,7 +121,8 @@ class Decoder(ABC):
         pass
 
     @property
-    def frame_size(self):
+    def frame_size(self) -> T.Tuple[int, int]:
+        """Frame size in (width, height)"""
         return (
             int(self.video_stream.format.width),
             int(self.video_stream.format.height),
@@ -142,11 +138,15 @@ class Decoder(ABC):
 
 
 class BrokenStream(Decoder):
-    def __init__(self):
-        # overwrite property with fixed frame size
-        self.frame_size = (720, 1280)
 
-    def seek(self, position):
+    @property
+    def frame_size(self):
+        # fixed frame size
+        DEFAULT_WIDTH = 1280
+        DEFAULT_HIGHT = 720
+        return (DEFAULT_WIDTH, DEFAULT_HIGHT)
+
+    def seek(self, pts_position):
         pass
 
     def get_frame_iterator(self):
@@ -162,8 +162,8 @@ class BufferedDecoder(Decoder):
             self.video_stream, dec_batch=50, dec_buffer_size=200
         )
 
-    def seek(self, position):
-        self._buffered_decoder.seek(position)
+    def seek(self, pts_position):
+        self._buffered_decoder.seek(pts_position)
 
     def get_frame_iterator(self):
         return self._buffered_decoder.get_frame()
@@ -177,8 +177,8 @@ class OnDemandDecoder(Decoder):
         self.container = container
         self.video_stream = video_stream
 
-    def seek(self, position):
-        self.video_stream.seek(position)
+    def seek(self, pts_position):
+        self.video_stream.seek(pts_position)
 
     def get_frame_iterator(self):
         for packet in self.container.demux(self.video_stream):
@@ -368,9 +368,11 @@ class File_Source(Playback_Source, Base_Source):
             target_entry = self.videoset.lookup[self.target_frame_idx]
         except IndexError:
             raise EndofVideoError
+
         if target_entry.container_idx == -1:
-            return self._get_fake_frame_and_advance(target_entry.timestamp)
-        elif target_entry.container_idx != self.current_container_index:
+            return self._get_fake_frame_and_advance(target_entry)
+
+        if target_entry.container_idx != self.current_container_index:
             # Contained index changed, need to load other video split
             self.setup_video(target_entry.container_idx)
 
@@ -402,13 +404,21 @@ class File_Source(Playback_Source, Base_Source):
         # update indices, we know that we advanced until target_frame_index!
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
-        return Frame(target_entry.timestamp, av_frame, index=self.current_frame_idx)
+        return Frame(
+            timestamp=target_entry.timestamp,
+            av_frame=av_frame,
+            index=self.current_frame_idx,
+        )
 
-    def _get_fake_frame_and_advance(self, ts):
+    def _get_fake_frame_and_advance(self, target_entry):
         self.current_frame_idx = self.target_frame_idx
         self.target_frame_idx += 1
-        fake_shape = (*self.frame_size, 3)
-        return FakeFrame(fake_shape, ts, self.current_frame_idx)
+        return FakeFrame(
+            width=self.frame_size[0],
+            height=self.frame_size[1],
+            timestamp=target_entry.timestamp,
+            index=self.current_frame_idx,
+        )
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):

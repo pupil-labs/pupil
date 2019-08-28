@@ -207,7 +207,7 @@ def is_pupil_rec_dir(rec_dir):
     try:
         meta_info = load_meta_info(rec_dir)
         meta_info["Recording Name"]  # Test key existence
-    except:
+    except (FileNotFoundError, KeyError):
         logger.error("Could not read info.csv file: Not a valid Pupil recording.")
         return False
     return True

@@ -321,11 +321,32 @@ class VideoSet:
         loaded_ts = self._fill_gaps(loaded_ts)
         lookup = self._setup_lookup(loaded_ts)
         for container_idx, vid in enumerate(self.videos):
-            lookup_mask = np.isin(lookup.timestamp, vid.timestamps)
-            lookup.container_frame_idx[lookup_mask] = np.arange(vid.timestamps.size)
+            # NOTE: For unknown reasons we sometimes have more timestamps than
+            # frames. We don't know how to match non-matching timestamps and
+            # pts, so we might introduce a systematic bias when fixing this! The
+            # idea is to keep only data for timestamps that were recorded, but
+            # leave frames blank if we don't have frame information.
+            npts = vid.pts.size
+            ntime = vid.timestamps.size
+            if npts < ntime:
+                logger.warning(
+                    f"Found {ntime} timestamps vs {npts} frames!"
+                    f" Last {abs(npts - ntime)} frames are empty!"
+                )
+            elif ntime < npts:
+                logger.warning(
+                    f"Found {ntime} timestamps vs {npts} frames!"
+                    f" Discarding last {abs(npts - ntime)} frames!"
+                )
+            data_size = min(npts, ntime)
+            vid_timestamps = vid.timestamps[:data_size]
+            vid_pts = vid.pts[:data_size]
+
+            lookup_mask = np.isin(lookup.timestamp, vid_timestamps)
+            lookup.container_frame_idx[lookup_mask] = np.arange(vid_timestamps.size)
             if vid.is_valid:
                 lookup.container_idx[lookup_mask] = container_idx
-            lookup.pts[lookup_mask] = vid.pts
+            lookup.pts[lookup_mask] = vid_pts
         self.lookup = lookup
 
     def save_lookup(self):
@@ -428,10 +449,10 @@ class RenameSet:
 
         def rewrite_time(self, destination_name, start_time):
             timestamps = np.fromfile(self.path, dtype="<u8")
-            
+
             # Subtract start_time from all times in the recording, so timestamps
             # start at 0. This is to increase precision when converting
-            # timestamps to float32, e.g. for OpenGL! 
+            # timestamps to float32, e.g. for OpenGL!
             timestamps -= start_time
 
             SECONDS_PER_NANOSECOND = 1e-9
@@ -453,18 +474,18 @@ class RenameSet:
             self.RenameFile(r).rename(source_pattern, destination_name)
 
     def read_start_time(self):
-        info_json_path = os.path.join(self.rec_dir, 'info.json')
+        info_json_path = os.path.join(self.rec_dir, "info.json")
         try:
-            with open(info_json_path, 'r') as f:
+            with open(info_json_path, "r") as f:
                 json_data = json.load(f)
-            return json_data['start_time_synced']
+            return json_data["start_time_synced"]
 
         except FileNotFoundError:
-            logger.warn('Trying to read info.json, but it does not exist!')
+            logger.warn("Trying to read info.json, but it does not exist!")
             return 0
-        
+
         except KeyError:
-            logger.error('Could not read start_time_synced from info.json!')
+            logger.error("Could not read start_time_synced from info.json!")
             return 0
 
     def rewrite_time(self, destination_name):
