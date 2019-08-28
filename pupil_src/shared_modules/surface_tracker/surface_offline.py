@@ -1,21 +1,23 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import logging
 import multiprocessing
 import platform
 
 import player_methods
-from surface_tracker import background_tasks, offline_utils
-from surface_tracker.cache import Cache
-from surface_tracker.surface import Surface, Surface_Location
+
+from . import background_tasks, offline_utils
+from .cache import Cache
+from .surface import Surface, Surface_Location
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +36,9 @@ class Surface_Offline(Surface):
     The cache is filled in the background.
     """
 
-    def __init__(self, name="unknown", init_dict=None):
+    def __init__(self, *args, **kwargs):
         self.location_cache = None
-        super().__init__(name=name, init_dict=init_dict)
+        super().__init__(*args, **kwargs)
         self.cache_seek_idx = mp_context.Value("i", 0)
         self.location_cache_filler = None
         self.observations_frame_idxs = []
@@ -67,7 +69,7 @@ class Surface_Offline(Surface):
                 )
                 gaze_events = all_gaze_events.by_ts_window(frame_window)
 
-                gaze_on_surf = self.map_gaze_events(
+                gaze_on_surf = self.map_gaze_and_fixation_events(
                     gaze_events, camera_model, trans_matrix=location.img_to_surf_trans
                 )
             else:
@@ -122,7 +124,7 @@ class Surface_Offline(Surface):
 
             if def_idx not in self.observations_frame_idxs:
                 markers = marker_cache[def_idx]
-                markers = {m.id: m for m in markers}
+                markers = {m.uid: m for m in markers}
                 self._update_definition(def_idx, markers, camera_model)
 
             # Stop searching if we looped once through the entire recording
@@ -161,7 +163,7 @@ class Surface_Offline(Surface):
                 location = Surface_Location(detected=False)
             else:
                 markers = marker_cache[frame_idx]
-                markers = {m.id: m for m in markers}
+                markers = {m.uid: m for m in markers}
                 location = Surface.locate(
                     markers,
                     camera_model,

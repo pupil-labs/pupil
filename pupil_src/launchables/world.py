@@ -179,6 +179,7 @@ def world(
         from system_graphs import System_Graphs
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
         from hololens_relay import Hololens_Relay
+        from head_pose_tracker.online_head_pose_tracker import Online_Head_Pose_Tracker
 
         # UI Platform tweaks
         if platform.system() == "Linux":
@@ -237,15 +238,8 @@ def world(
             Accuracy_Visualizer,
             Camera_Intrinsics_Estimation,
             Hololens_Relay,
+            Online_Head_Pose_Tracker,
         ]
-
-        if platform.system() != "Windows":
-            # Head pose tracking is currently not available on Windows
-            from head_pose_tracker.online_head_pose_tracker import (
-                Online_Head_Pose_Tracker,
-            )
-
-            user_plugins.append(Online_Head_Pose_Tracker)
 
         system_plugins = (
             [
@@ -354,9 +348,9 @@ def world(
 
         def on_drop(window, count, paths):
             paths = [paths[x].decode("utf-8") for x in range(count)]
-            # call `on_drop` callbacks until a plugin indicates
-            # that it has consumed the event (by returning True)
-            any(p.on_drop(paths) for p in g_pool.plugins)
+            for plugin in g_pool.plugins:
+                if plugin.on_drop(paths):
+                    break
 
         tick = delta_t()
 
@@ -672,19 +666,19 @@ def world(
                     # Position in img pixels
                     pos = denormalize(pos, g_pool.capture.frame_size)
 
-                    # call `on_click` callbacks until a plugin indicates
-                    # that it has consumed the event (by returning True)
-                    any(p.on_click(pos, button, action) for p in g_pool.plugins)
+                    for plugin in g_pool.plugins:
+                        if plugin.on_click(pos, button, action):
+                            break
 
                 for key, scancode, action, mods in user_input.keys:
-                    # call `on_key` callbacks until a plugin indicates
-                    # that it has consumed the event (by returning True)
-                    any(p.on_key(key, scancode, action, mods) for p in g_pool.plugins)
+                    for plugin in g_pool.plugins:
+                        if plugin.on_key(key, scancode, action, mods):
+                            break
 
                 for char_ in user_input.chars:
-                    # call `char_` callbacks until a plugin indicates
-                    # that it has consumed the event (by returning True)
-                    any(p.on_char(char_) for p in g_pool.plugins)
+                    for plugin in g_pool.plugins:
+                        if plugin.on_char(char_):
+                            break
 
                 glfw.glfwSwapBuffers(main_window)
 
@@ -749,7 +743,7 @@ def world_profiled(
     from .world import world
 
     cProfile.runctx(
-        "world(timebase, eye_procs_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
+        "world(timebase, eye_procs_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port)",
         {
             "timebase": timebase,
             "eye_procs_alive": eye_procs_alive,

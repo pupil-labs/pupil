@@ -108,6 +108,7 @@ class Menu_Content:
             current_segment.segment_class.value
         )
         text += ident + "Confidence: {:.2f}\n".format(current_segment.confidence)
+        text += ident + "Gaze data: {}\n".format("3D" if current_segment.use_pupil else "2D")
         text += ident + "Duration: {:.2f} milliseconds\n".format(
             current_segment.duration
         )

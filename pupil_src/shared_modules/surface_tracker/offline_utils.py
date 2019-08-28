@@ -1,31 +1,35 @@
-import square_marker_detect
+"""
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2019 Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+"""
+
+import typing
+
 from .surface import Surface
-from .surface_tracker import Square_Marker_Detection
+from .surface_marker_detector import Surface_Marker_Detector, Surface_Marker_Detector_Mode
 
 
-class marker_detection_callable:
-    def __init__(self, min_marker_perimeter, inverted_markers):
-        self.min_marker_perimeter = min_marker_perimeter
-        self.inverted_markers = inverted_markers
+class marker_detection_callable(Surface_Marker_Detector):
+    def __init__(
+        self,
+        marker_detector_modes: typing.Set[Surface_Marker_Detector_Mode],
+        min_marker_perimeter: int,
+        inverted_markers: bool
+    ):
+        super().__init__(
+            marker_detector_modes=marker_detector_modes,
+            marker_min_perimeter=min_marker_perimeter,
+            square_marker_inverted_markers=inverted_markers,
+        )
 
     def __call__(self, frame):
-        markers = square_marker_detect.detect_markers_robust(
-            frame.gray,
-            grid_size=5,
-            prev_markers=[],
-            min_marker_perimeter=self.min_marker_perimeter,
-            aperture=9,
-            visualize=0,
-            true_detect_every_frame=1,
-            invert_image=self.inverted_markers,
-        )
-        markers = [
-            Square_Marker_Detection(
-                m["id"], m["id_confidence"], m["verts"], m["perimeter"]
-            )
-            for m in markers
-        ]
-        return markers
+        return self.detect_markers(gray_img=frame.gray, frame_index=frame.index)
 
 
 class surface_locater_callable:
@@ -37,7 +41,7 @@ class surface_locater_callable:
         self.registered_markers_dist = registered_markers_dist
 
     def __call__(self, markers):
-        markers = {m.id: m for m in markers}
+        markers = {m.uid: m for m in markers}
         return Surface.locate(
             markers,
             self.camera_model,

@@ -47,6 +47,10 @@ class Blink_Detection(Analysis_Plugin_Base):
     icon_chr = chr(0xE81A)
     icon_font = "pupil_icons"
 
+    @classmethod
+    def parse_pretty_class_name(cls) -> str:
+        return "Blink Detector"
+
     def __init__(
         self,
         g_pool,

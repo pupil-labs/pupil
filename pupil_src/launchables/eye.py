@@ -239,9 +239,9 @@ def eye(
         def on_drop(window, count, paths):
             paths = [paths[x].decode("utf-8") for x in range(count)]
             plugins = (g_pool.capture_manager, g_pool.capture)
-            # call `on_drop` callbacks until a plugin indicates
-            # that it has consumed the event (by returning True)
-            any(p.on_drop(paths) for p in plugins)
+            for plugin in plugins:
+                if plugin.on_drop(paths):
+                    break
 
         # load session persistent settings
         session_settings = Persistent_Dict(
@@ -608,10 +608,27 @@ def eye(
                                 g_pool.pupil_detector.set_3d_detector_property(
                                     property_name, property_value
                                 )
+                            elif property_name == "roi":
+                                try:
+                                    # Modify the ROI with the values sent over network
+                                    minX, maxX, minY, maxY = property_value
+                                    g_pool.u_r.set(
+                                        [
+                                            max(g_pool.u_r.min_x, int(minX)),
+                                            max(g_pool.u_r.min_y, int(minY)),
+                                            min(g_pool.u_r.max_x, int(maxX)),
+                                            min(g_pool.u_r.max_y, int(maxY)),
+                                        ]
+                                    )
+                                except ValueError as err:
+                                    raise ValueError(
+                                        "ROI needs to be list of 4 integers:"
+                                        "(minX, maxX, minY, maxY)"
+                                    ) from err
                             else:
                                 raise KeyError(
                                     "Notification subject does not "
-                                    "specifiy detector type."
+                                    "specifiy detector type nor modify ROI."
                                 )
                             logger.debug(
                                 "`{}` property set to {}".format(
@@ -781,7 +798,6 @@ def eye(
                                 )
 
                     glViewport(0, 0, *camera_render_size)
-                    glfw.glfwPollEvents()
                     make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     # render the ROI
                     g_pool.u_r.draw(g_pool.gui.scale)
@@ -805,6 +821,7 @@ def eye(
 
                     # update screen
                     glfw.glfwSwapBuffers(main_window)
+                glfw.glfwPollEvents()
 
         # END while running
 
@@ -902,4 +919,3 @@ def eye_profiled(
             eye_id
         )
     )
-

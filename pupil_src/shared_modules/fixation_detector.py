@@ -53,6 +53,10 @@ class Fixation_Detector_Base(Analysis_Plugin_Base):
     icon_chr = chr(0xEC03)
     icon_font = "pupil_icons"
 
+    @classmethod
+    def parse_pretty_class_name(cls) -> str:
+        return "Fixation Detector"
+
 
 def fixation_from_data(dispersion, method, base_data, timestamps=None):
     norm_pos = np.mean([gp["norm_pos"] for gp in base_data], axis=0).tolist()

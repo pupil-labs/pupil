@@ -118,6 +118,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_export.plugins.imotions_exporter import iMotions_Exporter
         from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
         from video_export.plugins.world_video_exporter import World_Video_Exporter
+        from head_pose_tracker.offline_head_pose_tracker import Offline_Head_Pose_Tracker
         from video_capture import File_Source
         from video_overlay.plugins import Video_Overlay, Eye_Overlay
 
@@ -158,15 +159,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             World_Video_Exporter,
             iMotions_Exporter,
             Eye_Video_Exporter,
+            Offline_Head_Pose_Tracker,
         ] + runtime_plugins
-
-        if platform.system() != "Windows":
-            # Head pose tracking is currently not available on Windows
-            from head_pose_tracker.offline_head_pose_tracker import (
-                Offline_Head_Pose_Tracker,
-            )
-
-            user_plugins.append(Offline_Head_Pose_Tracker)
 
         plugins = system_plugins + user_plugins
 
@@ -213,9 +207,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                 if pm.is_pupil_rec_dir(path):
                     _restart_with_recording(path)
                     return
-            # call `on_drop` callbacks until a plugin indicates
-            # that it has consumed the event (by returning True)
-            any(p.on_drop(paths) for p in g_pool.plugins)
+            for plugin in g_pool.plugins:
+                if plugin.on_drop(paths):
+                    break
 
         def _restart_with_recording(rec_dir):
             logger.debug("Starting new session with '{}'".format(rec_dir))
@@ -631,19 +625,19 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                     pos = normalize(pos, g_pool.camera_render_size)
                     pos = denormalize(pos, g_pool.capture.frame_size)
 
-                    # call `on_click` callbacks until a plugin indicates
-                    # that it has consumed the event (by returning True)
-                    any(p.on_click(pos, button, action) for p in g_pool.plugins)
+                    for plugin in g_pool.plugins:
+                        if plugin.on_click(pos, button, action):
+                            break
 
                 for key, scancode, action, mods in user_input.keys:
-                    # call `on_key` callbacks until a plugin indicates
-                    # that it has consumed the event (by returning True)
-                    any(p.on_key(key, scancode, action, mods) for p in g_pool.plugins)
+                    for plugin in g_pool.plugins:
+                        if plugin.on_key(key, scancode, action, mods):
+                            break
 
                 for char_ in user_input.chars:
-                    # call `char_` callbacks until a plugin indicates
-                    # that it has consumed the event (by returning True)
-                    any(p.on_char(char_) for p in g_pool.plugins)
+                    for plugin in g_pool.plugins:
+                        if plugin.on_char(char_):
+                            break
 
                 # present frames at appropriate speed
                 g_pool.seek_control.wait(events["frame"].timestamp)

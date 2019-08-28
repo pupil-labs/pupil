@@ -9,13 +9,28 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import os
+import pathlib
 import platform
-import sys, os
-from version import write_version_file, get_tag_commit, pupil_version
 import shutil
+import sys
 from subprocess import call
 
+from version import get_tag_commit, pupil_version, write_version_file
+
 if platform.system() == "Darwin":
+
+    def get_size(start_path="."):
+        total_size = 0
+        for dirpath, dirnames, filenames in os.walk(start_path):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                # skip if it is symbolic link
+                if not os.path.islink(fp):
+                    total_size += os.path.getsize(fp)
+
+        return total_size
+
     print("starting version stript:")
     write_version_file("dist/Pupil Capture.app/Contents/MacOS")
     print("created version file in dist folder")
@@ -27,11 +42,23 @@ if platform.system() == "Darwin":
     bundle_dmg_name = "Install Pupil Capture"
     src_dir = "dist"
     bundle_app_dir = os.path.join(src_dir, "Pupil Capture.app/")
+
+    for DS_Store in pathlib.Path(src_dir).rglob(".DS_Store"):
+        print(f"Deleting {DS_Store}")
+        DS_Store.unlink()
+
     print("Codesigning now")
+    sign = "Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
     if (
         call(
-            "codesign --force --verify --verbose -s 'Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)' --deep '%s'"
-            % bundle_app_dir,
+            (
+                "codesign "
+                "--force "
+                "--verify "
+                "--verbose "
+                f"-s '{sign}' "
+                f"--deep '{bundle_app_dir}'"
+            ),
             shell=True,
         )
         != 0
@@ -40,11 +67,18 @@ if platform.system() == "Darwin":
     # if call("spctl --assess --type execute '%s'"%bundle_app_dir,shell=True) != 0:
     # print Exception("Codesing verification  failed")
     call("ln -s /Applications/ %s/Applications" % src_dir, shell=True)
-    call("rm dist/Pupil\ Capture.app/Contents/MacOS/.DS_Store", shell=True)
-    call("rm dist/Pupil\ Capture.app/Contents/MacOS/nslr/.DS_Store", shell=True)
+
+    volumen_size = get_size(src_dir)
+
     call(
-        "hdiutil create  -volname '%s' -srcfolder %s -size 340m -format UDZO '%s.dmg'"
-        % (bundle_dmg_name, src_dir, bundle_name),
+        (
+            f"hdiutil create  "
+            f"-volname '{bundle_dmg_name}' "
+            f"-srcfolder {src_dir} "
+            f"-format UDZO "
+            f"-size {volumen_size}b "
+            f"'{bundle_name}.dmg'"
+        ),
         shell=True,
     )
 

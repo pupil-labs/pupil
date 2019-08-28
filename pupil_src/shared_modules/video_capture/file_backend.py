@@ -30,7 +30,7 @@ logger.setLevel(logging.INFO)
 av.logging.set_level(av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
 
-assert av.__version__ >= "0.4.2", "pyav is out-of-date, please update"
+assert av.__version__ >= "0.4.3", "pyav is out-of-date, please update"
 
 
 class FileSeekError(Exception):
@@ -138,7 +138,6 @@ class Decoder(ABC):
 
 
 class BrokenStream(Decoder):
-
     @property
     def frame_size(self):
         # fixed frame size

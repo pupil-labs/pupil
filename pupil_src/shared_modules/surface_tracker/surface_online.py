@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2019 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -11,20 +11,20 @@ See COPYING and COPYING.LESSER for license details.
 
 import collections
 
-from surface_tracker.surface import Surface
+from .surface import Surface
 
 
 class Surface_Online(Surface):
     """Surface_Online recalculates it's location on demand."""
 
-    def __init__(self, name="unknown", init_dict=None):
-        super().__init__(name=name, init_dict=init_dict)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.GAZE_HISTORY_LENGTH = 1
         self.gaze_history = collections.deque()
 
     def update_location(self, frame_idx, visible_markers, camera_model):
-        vis_markers_dict = {m.id: m for m in visible_markers}
+        vis_markers_dict = {m.uid: m for m in visible_markers}
 
         if not self.defined:
             self._update_definition(frame_idx, vis_markers_dict, camera_model)

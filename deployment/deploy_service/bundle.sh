@@ -1,3 +1,3 @@
 
 pyinstaller --noconfirm --clean --log-level WARN bundle.spec
-python finalize_bundle.py
+python3 finalize_bundle.py
