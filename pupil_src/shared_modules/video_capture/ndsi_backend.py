@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import time
 import logging
+from packaging.version import Version
 
 import ndsi
 
@@ -20,7 +21,7 @@ from camera_models import load_intrinsics
 try:
     from ndsi import __version__
 
-    assert __version__ >= "0.4"
+    assert Version(__version__) >= Version("1.0.dev0")
     from ndsi import __protocol_version__
 except (ImportError, AssertionError):
     raise Exception("pyndsi version is to old. Please upgrade") from None
@@ -381,7 +382,9 @@ class NDSI_Manager(Base_Manager):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.network = ndsi.Network(callbacks=(self.on_event,))
+        self.network = ndsi.Network(
+            formats={ndsi.DataFormat.V3}, callbacks=(self.on_event,)
+        )
         self.network.start()
         self.selected_host = None
         self._recover_in = 3
