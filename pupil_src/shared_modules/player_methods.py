@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import glob
 import logging
 import os
 
@@ -15,6 +16,8 @@ import cv2
 import numpy as np
 
 import csv_utils
+from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
+
 
 logger = logging.getLogger(__name__)
 
@@ -194,23 +197,129 @@ def correlate_data(data, timestamps):
 
 
 def load_meta_info(rec_dir):
-    meta_info_path = os.path.join(rec_dir, "info.csv")
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-    return meta_info
+    return Pupil_Recording(rec_dir).meta_info
 
 
 def is_pupil_rec_dir(rec_dir):
-    if not os.path.isdir(rec_dir):
-        logger.error("No valid dir supplied ({})".format(rec_dir))
-        return False
     try:
-        meta_info = load_meta_info(rec_dir)
-        meta_info["Recording Name"]  # Test key existence
-    except:
-        logger.error("Could not read info.csv file: Not a valid Pupil recording.")
+        Pupil_Recording(rec_dir)
+        return True
+    except InvalidRecordingException as e:
+        logger.error(str(e))
         return False
-    return True
+
+
+class InvalidRecordingException(Exception):
+    def __init__(self, reason: str, recovery: str = ""):
+        message = (reason + "\n" + recovery) if recovery else reason
+        super().__init__(message)
+        self.reason = reason
+        self.recovery = recovery
+
+    def __str__(self):
+        return f"{type(self).__name__}: {super().__str__()}"
+
+
+class Pupil_Recording:
+    def __init__(self, rec_dir):
+        self._rec_dir = rec_dir
+        self._meta_info = None
+        self.load(rec_dir=rec_dir)
+
+    @property
+    def rec_dir(self):
+        return self._rec_dir
+
+    @property
+    def meta_info(self):
+        return self._meta_info
+
+    def reload(self):
+        self.load(rec_dir=self.rec_dir)
+
+    def load(self, rec_dir):
+
+        def normalize_extension(ext: str) -> str:
+            if ext.startswith("."):
+                extension = ext[1:]
+            return ext
+
+        def is_video_file(file_path):
+            if not os.path.isfile(file_path):
+                return False
+            _, ext = os.path.splitext(file_path)
+            ext = normalize_extension(ext)
+            valid_video_extensions = map(normalize_extension, VALID_VIDEO_EXTENSIONS)
+            if ext not in valid_video_extensions:
+                return False
+            return True
+
+        if not os.path.exists(rec_dir):
+            raise InvalidRecordingException(
+                reason=f"Target at path does not exist: {rec_dir}",
+                recovery=""
+            )
+
+        if not os.path.isdir(rec_dir):
+            if is_video_file(rec_dir):
+                raise InvalidRecordingException(
+                    reason=f"The provided path is a video, not a recording directory",
+                    recovery="Please provide a recording directory"
+                )
+            else:
+                raise InvalidRecordingException(
+                    reason=f"Target at path is not a directory: {rec_dir}",
+                    recovery=""
+                )
+
+        info_path = os.path.join(rec_dir, "info.csv")
+
+        if not os.path.exists(info_path):
+            raise InvalidRecordingException(
+                reason=f"There is no info.csv in the target directory",
+                recovery=""
+            )
+
+        if not os.path.isfile(info_path):
+            raise InvalidRecordingException(
+                reason=f"Target info.csv is not a file: {info_path}",
+                recovery=""
+            )
+
+        with open(info_path, "r", encoding="utf-8") as csvfile:
+            try:
+                meta_info = csv_utils.read_key_value_file(csvfile)
+            except Exception as e:
+                raise InvalidRecordingException(
+                    reason=f"Failed reading info.csv: {e}",
+                    recovery=""
+                )
+
+        info_mandatory_keys = ["Recording Name"]
+
+        for key in info_mandatory_keys:
+            try:
+                meta_info[key]
+            except KeyError:
+                raise InvalidRecordingException(
+                    reason=f"Target info.csv does not have \"{key}\"",
+                    recovery=""
+                )
+
+        all_file_paths = glob.iglob(os.path.join(rec_dir, "*"))
+
+        # TODO: Should this validation be "are there any video files" or are there specific video files?
+        if not any(is_video_file(path) for path in all_file_paths):
+            raise InvalidRecordingException(
+                reason=f"Target directory does not contain any video files",
+                recovery=""
+            )
+
+        # TODO: Are there any other validations missing?
+        # All validations passed
+
+        self._rec_dir = rec_dir
+        self._meta_info = meta_info
 
 
 def transparent_circle(img, center, radius, color, thickness):
