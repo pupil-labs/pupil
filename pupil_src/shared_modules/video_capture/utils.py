@@ -449,10 +449,10 @@ class RenameSet:
 
         def rewrite_time(self, destination_name, start_time):
             timestamps = np.fromfile(self.path, dtype="<u8")
-            
+
             # Subtract start_time from all times in the recording, so timestamps
             # start at 0. This is to increase precision when converting
-            # timestamps to float32, e.g. for OpenGL! 
+            # timestamps to float32, e.g. for OpenGL!
             timestamps -= start_time
 
             SECONDS_PER_NANOSECOND = 1e-9
@@ -474,18 +474,18 @@ class RenameSet:
             self.RenameFile(r).rename(source_pattern, destination_name)
 
     def read_start_time(self):
-        info_json_path = os.path.join(self.rec_dir, 'info.json')
+        info_json_path = os.path.join(self.rec_dir, "info.json")
         try:
-            with open(info_json_path, 'r') as f:
+            with open(info_json_path, "r") as f:
                 json_data = json.load(f)
-            return json_data['start_time_synced']
+            return json_data["start_time_synced"]
 
         except FileNotFoundError:
-            logger.warn('Trying to read info.json, but it does not exist!')
+            logger.warn("Trying to read info.json, but it does not exist!")
             return 0
-        
+
         except KeyError:
-            logger.error('Could not read start_time_synced from info.json!')
+            logger.error("Could not read start_time_synced from info.json!")
             return 0
 
     def rewrite_time(self, destination_name):
