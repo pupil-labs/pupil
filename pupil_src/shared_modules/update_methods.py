@@ -23,9 +23,10 @@ from scipy.interpolate import interp1d
 import csv_utils
 import camera_models as cm
 import file_methods as fm
+import methods as m
 import player_methods as pm
 from version_utils import VersionFormat, read_rec_version
-from video_capture.utils import RenameSet, RawTimePairs
+from video_capture.utils import RenameSet, pi_gaze_items
 
 logger = logging.getLogger(__name__)
 
@@ -167,10 +168,6 @@ def _rename_pi_files(rec_dir):
 
 
 def _convert_pi_gaze(rec_dir):
-    gaze = RawTimePairs(
-        rec_dir, "gaze*[!_timestamps.npy]", raw_dtype="<f4", raw_shape=(-1, 2)
-    )
-
     width, height = 1088, 1080
 
     logger.info("Converting gaze data...")
@@ -181,9 +178,9 @@ def _convert_pi_gaze(rec_dir):
         "confidence": 1.0,
     }
     with fm.PLData_Writer(rec_dir, "gaze") as writer:
-        for ((x, y), ts) in gaze.items():
+        for ((x, y), ts) in pi_gaze_items(root_dir=rec_dir):
             template_datum["timestamp"] = ts
-            template_datum["norm_pos"] = (x / width, 1.0 - y / height)
+            template_datum["norm_pos"] = m.normalize((x, y), size=(width, height), flip_y=True)
             writer.append(template_datum)
 
 
