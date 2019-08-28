@@ -20,8 +20,8 @@ import av
 import numpy as np
 from scipy.interpolate import interp1d
 
-import csv_utils
 import camera_models as cm
+import csv_utils
 import file_methods as fm
 import methods as m
 import player_methods as pm
