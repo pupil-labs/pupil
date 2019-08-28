@@ -107,6 +107,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v111_v113(rec_dir)
     if rec_version < VersionFormat("1.14"):
         update_recording_v113_v114(rec_dir)
+    if rec_version < VersionFormat("1.16"):
+        update_recording_v114_v116(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -180,7 +182,9 @@ def _convert_pi_gaze(rec_dir):
     with fm.PLData_Writer(rec_dir, "gaze") as writer:
         for ((x, y), ts) in pi_gaze_items(root_dir=rec_dir):
             template_datum["timestamp"] = ts
-            template_datum["norm_pos"] = m.normalize((x, y), size=(width, height), flip_y=True)
+            template_datum["norm_pos"] = m.normalize(
+                (x, y), size=(width, height), flip_y=True
+            )
             writer.append(template_datum)
         logger.info(f"Converted {len(writer.ts_queue)} gaze positions.")
 
@@ -556,6 +560,16 @@ def update_recording_v111_v113(rec_dir):
 
 
 def update_recording_v113_v114(rec_dir):
+    _delete_all_lookup_files(rec_dir)
+    _update_info_version_to("v1.14", rec_dir)
+
+
+def update_recording_v114_v116(rec_dir):
+    _delete_all_lookup_files(rec_dir)
+    _update_info_version_to("v1.16", rec_dir)
+
+
+def _delete_all_lookup_files(rec_dir):
     # Force re-build of video lookup tables
     names = ("world", "eye0", "eye1")
     rec_dir = Path(rec_dir)
@@ -564,7 +578,6 @@ def update_recording_v113_v114(rec_dir):
             (rec_dir / f"{name}_lookup.npy").unlink()
         except FileNotFoundError:
             pass
-    _update_info_version_to("v1.14", rec_dir)
 
 
 def check_for_worldless_recording(rec_dir):
