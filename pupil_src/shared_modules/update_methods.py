@@ -148,11 +148,11 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
 
 
 def convert_pupil_invisible_recording_to_v113(rec_dir):
-    _rename_pi_files(rec_dir)
-    _convert_pi_gaze(rec_dir)
+    _pi_rename_files(rec_dir)
+    _pi_convert_gaze(rec_dir)
 
 
-def _rename_pi_files(rec_dir):
+def _pi_rename_files(rec_dir):
     # convert time files and rename corresponding videos
     match_pattern = "*.time"
     rename_set = RenameSet(rec_dir, match_pattern)
@@ -167,7 +167,7 @@ def _rename_pi_files(rec_dir):
     rewrite_time.rewrite_time("_timestamps.npy")
 
 
-def _convert_pi_gaze(rec_dir):
+def _pi_convert_gaze(rec_dir):
     width, height = 1088, 1080
 
     logger.info("Converting gaze data...")
