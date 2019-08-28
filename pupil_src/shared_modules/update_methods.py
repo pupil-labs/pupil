@@ -182,6 +182,7 @@ def _convert_pi_gaze(rec_dir):
             template_datum["timestamp"] = ts
             template_datum["norm_pos"] = m.normalize((x, y), size=(width, height), flip_y=True)
             writer.append(template_datum)
+        logger.info(f"Converted {len(writer.ts_queue)} gaze positions.")
 
 
 def update_recording_v074_to_v082(rec_dir):

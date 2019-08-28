@@ -538,12 +538,8 @@ def pi_gaze_items(root_dir):
         return raw_path
 
     def load_timestamps_data(path):
-        timestamps = np.fromfile(str(path), "<f8")
-        timestamps_dtype = timestamps.dtype
-        if len(timestamps) > 0:
-            start_time = timestamps[0]
-            timestamps = [t - start_time for t in timestamps]
-        return np.asarray(timestamps, dtype=timestamps_dtype)
+        timestamps = np.load(str(path))
+        return timestamps
 
     def load_raw_data(path):
         raw_data = np.fromfile(str(path), "<f4")
@@ -554,9 +550,8 @@ def pi_gaze_items(root_dir):
     # This pattern will match any filename that:
     # - starts with "gaze"
     # - is followed by one or more characters
-    # - is followed by "_timestamps."
-    # - is followed by one or more characters
-    gaze_timestamp_pattern = "gaze?*_timestamps.?*"
+    # - is followed by "_timestamps.npy"
+    gaze_timestamp_pattern = "gaze?*_timestamps.npy"
 
     for timestamps_path in pl.Path(root_dir).glob(gaze_timestamp_pattern):
         raw_path = find_raw_path(timestamps_path)
