@@ -241,7 +241,7 @@ class Pupil_Recording:
 
         def normalize_extension(ext: str) -> str:
             if ext.startswith("."):
-                extension = ext[1:]
+                ext = ext[1:]
             return ext
 
         def is_video_file(file_path):
