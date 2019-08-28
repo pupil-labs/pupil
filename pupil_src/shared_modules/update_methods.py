@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import collections
 import glob
+import json
 import logging
 import os
 import uuid
@@ -47,9 +48,7 @@ def update_recording_to_recent(rec_dir):
         meta_info.get("Capture Software", "Pupil Capture") == "Pupil Invisible"
         and "Data Format Version" not in meta_info
     ):
-        convert_pupil_invisible_recording_to_v113(rec_dir)
-        meta_info["Data Format Version"] = "v1.13"
-        update_meta_info(rec_dir, meta_info)
+        convert_pupil_invisible_recording_to_v113(rec_dir, meta_info)
 
     # Reference format: v0.7.4
     rec_version = read_rec_version(meta_info)
@@ -147,9 +146,12 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         )
 
 
-def convert_pupil_invisible_recording_to_v113(rec_dir):
+def convert_pupil_invisible_recording_to_v113(rec_dir, meta_info):
     _pi_rename_files(rec_dir)
     _pi_convert_gaze(rec_dir)
+    _pi_assign_rec_uuid(rec_dir, meta_info)
+    meta_info["Data Format Version"] = "v1.13"
+    update_meta_info(rec_dir, meta_info)
 
 
 def _pi_rename_files(rec_dir):
@@ -180,9 +182,18 @@ def _pi_convert_gaze(rec_dir):
     with fm.PLData_Writer(rec_dir, "gaze") as writer:
         for ((x, y), ts) in pi_gaze_items(root_dir=rec_dir):
             template_datum["timestamp"] = ts
-            template_datum["norm_pos"] = m.normalize((x, y), size=(width, height), flip_y=True)
+            template_datum["norm_pos"] = m.normalize(
+                (x, y), size=(width, height), flip_y=True
+            )
             writer.append(template_datum)
         logger.info(f"Converted {len(writer.ts_queue)} gaze positions.")
+
+
+def _pi_assign_rec_uuid(rec_dir, meta_info):
+    info_json_path = Path(rec_dir) / "info.json"
+    with info_json_path.open() as info_json_file:
+        info_json = json.load(info_json_file)
+    meta_info["Recording UUID"] = info_json.get("recording_uuid", uuid.uuid4())
 
 
 def update_recording_v074_to_v082(rec_dir):
