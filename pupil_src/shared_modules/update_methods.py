@@ -164,6 +164,23 @@ def _substitute_patterns_in_filenames(
                 filepath.replace(new_path)
 
 
+def _rewrite_times(
+    recording: pm.Pupil_Recording,
+    dtype: str,
+    conversion: T.Optional[T.Callable[[np.array], np.array]] = None,
+) -> None:
+    for path in recording.files().raw_time():
+        timestamps = np.fromfile(str(path), dtype=dtype)
+
+        if conversion is not None:
+            timestamps = conversion(timestamps)
+
+        new_name = f"{path.stem}_timestamps.npy"
+        logger.info(f"Creating {new_name}")
+        timestamp_loc = path.parent / new_name
+        np.save(str(timestamp_loc), timestamps)
+
+
 def convert_pupil_mobile_recording_to_v094(rec_dir):
     logger.info("Converting Pupil Mobile recording to v0.9.4 format")
     recording = pm.Pupil_Recording(rec_dir)
@@ -178,11 +195,8 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
             r"Pupil Cam([0-2]) ID2": "world",
         },
     )
+    _rewrite_times(recording, dtype=">f8")
 
-    match_pattern = "*.time"
-    # Rewrite .time file to .npy file
-    rewrite_time = RenameSet(rec_dir, match_pattern, ["time"])
-    rewrite_time.rewrite_time("_timestamps.npy")
     pupil_data_loc = os.path.join(rec_dir, "pupil_data")
     if not os.path.exists(pupil_data_loc):
         logger.info('Creating "pupil_data"')
@@ -217,9 +231,29 @@ def _pi_rename_files(rec_dir):
         },
     )
 
-    match_pattern = "*.time"
-    rewrite_time = RenameSet(rec_dir, match_pattern, ["time"])
-    rewrite_time.rewrite_time("_timestamps.npy")
+    # TODO: Extracting start_time_synced from info.json should be moved into
+    # Pupil_Recording class. Then the following snippet can be removed.
+    info_json_path = os.path.join(rec_dir, "info.json")
+    try:
+        with open(info_json_path, "r") as f:
+            json_data = json.load(f)
+        start_time = json_data["start_time_synced"]
+    except FileNotFoundError:
+        logger.warn("Trying to read info.json, but it does not exist!")
+        start_time = 0
+    except KeyError:
+        logger.error("Could not read start_time_synced from info.json!")
+        start_time = 0
+
+    SECONDS_PER_NANOSECOND = 1e-9
+
+    def conversion(timestamps: np.array):
+        # Subtract start_time from all times in the recording, so timestamps
+        # start at 0. This is to increase precision when converting
+        # timestamps to float32, e.g. for OpenGL!
+        return (timestamps - start_time) * SECONDS_PER_NANOSECOND
+
+    _rewrite_times(recording, dtype="<u8", conversion=conversion)
 
 
 def _pi_convert_gaze(rec_dir):
