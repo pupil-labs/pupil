@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import glob
 import logging
 import os
-import typing
+import typing as T
 
 import cv2
 import numpy as np
@@ -240,7 +240,7 @@ class Pupil_Recording:
         return self.meta_info.get("Capture Software", "Pupil Capture")
 
     @property
-    def data_format_version(self) -> typing.Optional[str]:
+    def data_format_version(self) -> T.Optional[str]:
         return self.meta_info.get("Data Format Version", None)
 
     @property
