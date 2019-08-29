@@ -61,8 +61,27 @@ class iMotions_Exporter(IsolatedFrameExporter):
         super().customize_menu()
 
     def export_data(self, export_range, export_dir):
+
+        pupil_recording = pm.Pupil_Recording(rec_dir=self.g_pool.rec_dir)
+
+        if pupil_recording.is_pupil_invisible:
+            logger.error("Currently, the iMotions export doesn't support Pupil Invisible recordings")
+            return
+
         rec_start = _get_recording_start_date(self.g_pool.rec_dir)
         im_dir = os.path.join(export_dir, "iMotions_{}".format(rec_start))
+
+        try:
+            csv_header, csv_rows = _csv_exported_gaze_data(
+                gaze_positions=self.g_pool.gaze_positions,
+                destination_folder=im_dir,
+                export_range=export_range,
+                timestamps=self.g_pool.timestamps,
+                capture=self.g_pool.capture
+            )
+        except _iMotionsExporterNo3DGazeDataError:
+            logger.error("Currently, the iMotions export only supports 3d gaze data")
+            return
 
         try:
             self.add_export_job(
@@ -77,13 +96,14 @@ class iMotions_Exporter(IsolatedFrameExporter):
             logger.info("'world' video not found. Export continues with gaze data.")
 
         _copy_info_csv(self.g_pool.rec_dir, im_dir)
-        _write_gaze_data(
-            self.g_pool.gaze_positions,
-            im_dir,
-            export_range,
-            self.g_pool.timestamps,
-            self.g_pool.capture,
-        )
+
+        gaze_file_path = os.path.join(im_dir, "gaze.tlv")
+
+        with open(gaze_file_path, "w", encoding="utf-8", newline="") as csv_file:
+            csv_writer = csv.writer(csv_file, delimiter="\t")
+            csv_writer.writerow(csv_header)
+            for csv_row in csv_rows:
+                csv_writer.writerow(csv_row)
 
 
 def _process_frame(capture, frame):
@@ -109,71 +129,63 @@ def _get_recording_start_date(source_folder):
     return "{}_{}".format(date, time)
 
 
-user_warned_3d_only = False
+class _iMotionsExporterNo3DGazeDataError(Exception):
+    pass
 
 
-def _write_gaze_data(
-    gaze_positions, destination_folder, export_range, timestamps, capture
-):
-    global user_warned_3d_only
-    with open(
-        os.path.join(destination_folder, "gaze.tlv"), "w", encoding="utf-8", newline=""
-    ) as csv_file:
-        csv_writer = csv.writer(csv_file, delimiter="\t")
+def _csv_exported_gaze_data(gaze_positions, destination_folder, export_range, timestamps, capture):
 
-        csv_writer.writerow(
-            (
-                "GazeTimeStamp",
-                "MediaTimeStamp",
-                "MediaFrameIndex",
-                "Gaze3dX",
-                "Gaze3dY",
-                "Gaze3dZ",
-                "Gaze2dX",
-                "Gaze2dY",
-                "PupilDiaLeft",
-                "PupilDiaRight",
-                "Confidence",
+    export_start, export_stop = export_range  # export_stop is exclusive
+    export_window = pm.exact_window(timestamps, (export_start, export_stop - 1))
+    gaze_section = gaze_positions.init_dict_for_window(export_window)
+
+    # find closest world idx for each gaze datum
+    gaze_world_idc = pm.find_closest(timestamps, gaze_section["data_ts"])
+
+    csv_header = (
+        "GazeTimeStamp",
+        "MediaTimeStamp",
+        "MediaFrameIndex",
+        "Gaze3dX",
+        "Gaze3dY",
+        "Gaze3dZ",
+        "Gaze2dX",
+        "Gaze2dY",
+        "PupilDiaLeft",
+        "PupilDiaRight",
+        "Confidence",
+    )
+
+    csv_rows = []
+
+    for gaze_pos, media_idx in zip(gaze_section["data"], gaze_world_idc):
+        media_timestamp = timestamps[media_idx]
+        try:
+            pupil_dia = {}
+            for p in gaze_pos["base_data"]:
+                pupil_dia[p["id"]] = p["diameter_3d"]
+
+            pixel_pos = denormalize(
+                gaze_pos["norm_pos"], capture.frame_size, flip_y=True
             )
-        )
+            undistorted3d = capture.intrinsics.unprojectPoints(pixel_pos)
+            undistorted2d = capture.intrinsics.projectPoints(
+                undistorted3d, use_distortion=False
+            )
 
-        export_start, export_stop = export_range  # export_stop is exclusive
-        export_window = pm.exact_window(timestamps, (export_start, export_stop - 1))
-        gaze_section = gaze_positions.init_dict_for_window(export_window)
+            data = (
+                gaze_pos["timestamp"],
+                media_timestamp,
+                media_idx - export_range[0],
+                *gaze_pos["gaze_point_3d"],  # Gaze3dX/Y/Z
+                *undistorted2d.flat,  # Gaze2dX/Y
+                pupil_dia.get(1, 0.0),  # PupilDiaLeft
+                pupil_dia.get(0, 0.0),  # PupilDiaRight
+                gaze_pos["confidence"],  # Confidence
+            )
+        except KeyError:
+            raise _iMotionsExporterNo3DGazeDataError()
 
-        # find closest world idx for each gaze datum
-        gaze_world_idc = pm.find_closest(timestamps, gaze_section["data_ts"])
+        csv_rows.append(data)
 
-        for gaze_pos, media_idx in zip(gaze_section["data"], gaze_world_idc):
-            media_timestamp = timestamps[media_idx]
-            try:
-                pupil_dia = {}
-                for p in gaze_pos["base_data"]:
-                    pupil_dia[p["id"]] = p["diameter_3d"]
-
-                pixel_pos = denormalize(
-                    gaze_pos["norm_pos"], capture.frame_size, flip_y=True
-                )
-                undistorted3d = capture.intrinsics.unprojectPoints(pixel_pos)
-                undistorted2d = capture.intrinsics.projectPoints(
-                    undistorted3d, use_distortion=False
-                )
-
-                data = (
-                    gaze_pos["timestamp"],
-                    media_timestamp,
-                    media_idx - export_range[0],
-                    *gaze_pos["gaze_point_3d"],  # Gaze3dX/Y/Z
-                    *undistorted2d.flat,  # Gaze2dX/Y
-                    pupil_dia.get(1, 0.0),  # PupilDiaLeft
-                    pupil_dia.get(0, 0.0),  # PupilDiaRight
-                    gaze_pos["confidence"],  # Confidence
-                )
-            except KeyError:
-                if not user_warned_3d_only:
-                    logger.error(
-                        "Currently, the iMotions export only supports 3d gaze data"
-                    )
-                    user_warned_3d_only = True
-                continue
-            csv_writer.writerow(data)
+    return csv_header, csv_rows
