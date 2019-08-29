@@ -156,6 +156,7 @@ def _try_patch_world_instrinsics_file(recording: pm.Pupil_Recording) -> None:
 def _substitute_patterns_in_filenames(
     paths: T.Iterable[Path], schema: T.Dict[str, str]
 ) -> None:
+    """Applies re.sub on all combinations of paths and schema and renames the files."""
     for filepath in paths:
         for pattern, replacement in schema.items():
             new_path, n_substitutions = re.subn(pattern, replacement, str(filepath))
@@ -169,6 +170,7 @@ def _rewrite_times(
     dtype: str,
     conversion: T.Optional[T.Callable[[np.array], np.array]] = None,
 ) -> None:
+    """Load raw times (assuming dtype), apply conversion and save as _timestamps.npy."""
     for path in recording.files().raw_time():
         timestamps = np.fromfile(str(path), dtype=dtype)
 
