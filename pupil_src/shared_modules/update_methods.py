@@ -14,7 +14,9 @@ import json
 import logging
 import os
 from pathlib import Path
+import re
 from shutil import copy2
+import typing as T
 import uuid
 
 import av
@@ -151,19 +153,33 @@ def _try_patch_world_instrinsics_file(recording: pm.Pupil_Recording) -> None:
         _patch_intrinsics_file(world_videos[0], "world")
 
 
+def _substitute_patterns_in_filenames(
+    paths: T.Iterable[Path], schema: T.Dict[str, str]
+) -> None:
+    for filepath in paths:
+        for pattern, replacement in schema.items():
+            new_path, n_substitutions = re.subn(pattern, replacement, str(filepath))
+            if n_substitutions > 0:
+                # Path.replace() renames with overwriting
+                filepath.replace(new_path)
+
+
 def convert_pupil_mobile_recording_to_v094(rec_dir):
     logger.info("Converting Pupil Mobile recording to v0.9.4 format")
     recording = pm.Pupil_Recording(rec_dir)
 
     # NOTE: could still be worldless at this point
     _try_patch_world_instrinsics_file(recording)
+    _substitute_patterns_in_filenames(
+        recording.files(),
+        schema={
+            r"Pupil Cam([0-3]) ID0": "eye0",
+            r"Pupil Cam([0-3]) ID1": "eye1",
+            r"Pupil Cam([0-2]) ID2": "world",
+        },
+    )
 
-    # convert time files and rename corresponding videos
     match_pattern = "*.time"
-    rename_set = RenameSet(rec_dir, match_pattern)
-    rename_set.rename("Pupil Cam([0-3]) ID0", "eye0")
-    rename_set.rename("Pupil Cam([0-3]) ID1", "eye1")
-    rename_set.rename("Pupil Cam([0-2]) ID2", "world")
     # Rewrite .time file to .npy file
     rewrite_time = RenameSet(rec_dir, match_pattern, ["time"])
     rewrite_time.rewrite_time("_timestamps.npy")
@@ -189,16 +205,19 @@ def _pi_rename_files(rec_dir):
 
     # NOTE: could still be worldless at this point
     _try_patch_world_instrinsics_file(recording)
+    _substitute_patterns_in_filenames(
+        recording.files(),
+        schema={
+            r"PI right v1 ps(1)": r"eye0",
+            r"PI right v1 ps([2-9])": r"eye0_\1",
+            r"PI left v1 ps(1)": r"eye1",
+            r"PI left v1 ps([2-9])": r"eye1_\1",
+            r"PI world v1 ps(1)": r"world",
+            r"PI world v1 ps([2-9])": r"world_\1",
+        },
+    )
 
-    # convert time files and rename corresponding videos
     match_pattern = "*.time"
-    rename_set = RenameSet(rec_dir, match_pattern)
-    rename_set.rename(r"PI right v1 ps(1)", r"eye0")
-    rename_set.rename(r"PI right v1 ps([2-9])", r"eye0_\1")
-    rename_set.rename(r"PI left v1 ps(1)", r"eye1")
-    rename_set.rename(r"PI left v1 ps([2-9])", r"eye1_\1")
-    rename_set.rename(r"PI world v1 ps(1)", "world")
-    rename_set.rename(r"PI world v1 ps([2-9])", r"world_\1")
     rewrite_time = RenameSet(rec_dir, match_pattern, ["time"])
     rewrite_time.rewrite_time("_timestamps.npy")
 
