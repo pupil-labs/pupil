@@ -29,7 +29,7 @@ import file_methods as fm
 import methods as m
 import player_methods as pm
 from version_utils import VersionFormat, read_rec_version
-from video_capture.utils import RenameSet, pi_gaze_items
+from video_capture.utils import pi_gaze_items
 
 logger = logging.getLogger(__name__)
 
