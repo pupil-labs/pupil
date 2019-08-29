@@ -789,6 +789,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
                     um.update_recording_to_recent(rec_dir)
                 except AssertionError as err:
                     logger.error(str(err))
+                    tip = "Oops! There was an error updating the recording."
                     rec_dir = None
                 else:
                     glfw.glfwSetWindowShouldClose(window, True)
