@@ -8,9 +8,12 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import collections
 import glob
 import logging
 import os
+from pathlib import Path
+import re
 import typing as T
 
 import cv2
@@ -329,6 +332,61 @@ class Pupil_Recording:
 
         self._rec_dir = rec_dir
         self._meta_info = meta_info
+
+    class FileFilter(collections.Sequence):
+        """Utility class for conveniently filtering files of the recording.
+
+        Filters can be applied sequentially, since they return a filter again.
+        Overloading __getitem__ and __len__ allows for full sequence functionality.
+        Example usage:
+
+            # prints all world videos in my_rec_dir
+            for path in FileFilter("my_rec_dir").videos().world():
+                print(f"World video file: {path}")
+        """
+
+        def world(self) -> "Pupil_Recording.FileFilter":
+            patterns = [
+                "world",  # pupil core
+                "Pupil Cam([0-2]) ID2",  # pupil mobile
+                "PI world v1 ps",  # PI
+            ]
+            return self.filter(*patterns)
+
+        def videos(self) -> "Pupil_Recording.FileFilter":
+            return self.filter(*VALID_VIDEO_EXTENSIONS)
+
+        def raw_time(self) -> "Pupil_Recording.FileFilter":
+            return self.filter(r"\.time")
+
+        def mobile(self) -> "Pupil_Recording.FileFilter":
+            return self.filter(r"Pupil Cam[0-3] ID[0-2]")
+
+        # TODO: add more filters for other types of files
+
+        def __init__(self, rec_dir: str):
+            """Init filter to all files in the directory."""
+            self.__files = [path for path in Path(rec_dir).iterdir() if path.is_file()]
+
+        def __getitem__(self, key):
+            # Used for implementing collections.Sequence
+            return self.__files[key]
+
+        def __len__(self):
+            # Used for implementing collections.Sequence
+            return len(self.__files)
+
+        def filter(self, *patterns: str) -> "Pupil_Recording.FileFilter":
+            """Filters current files, keeping anything matching any of the patterns."""
+            self.__files = [
+                item
+                for item in self.__files
+                if any(re.search(pattern, str(item)) for pattern in patterns)
+            ]
+            return self
+
+    def files(self) -> "Pupil_Recording.FileFilter":
+        return Pupil_Recording.FileFilter(self.rec_dir)
 
 
 def transparent_circle(img, center, radius, color, thickness):
