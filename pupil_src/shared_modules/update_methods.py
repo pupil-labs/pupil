@@ -13,9 +13,9 @@ import glob
 import json
 import logging
 import os
-import uuid
 from pathlib import Path
 from shutil import copy2
+import uuid
 
 import av
 import numpy as np
@@ -126,12 +126,41 @@ def _update_info_version_to(new_version, rec_dir):
     update_meta_info(rec_dir, meta_info)
 
 
+def _patch_intrinsics_file(video: Path, new_name: str = None) -> None:
+    """Tries to create a 'new_name'.instrinsics file from the video in 'Path'."""
+    if new_name is None:
+        new_name = video.stem
+    try:
+        container = av.open(str(video))
+    except av.AVError:
+        frame_size = (480, 360)
+    else:
+        frame_size = (
+            container.streams.video[0].format.width,
+            container.streams.video[0].format.height,
+        )
+    rec_dir = video.parent
+    intrinsics = cm.load_intrinsics(rec_dir, video.name, frame_size)
+    intrinsics.save(rec_dir, new_name)
+
+
+def _try_patch_world_instrinsics_file(recording: pm.Pupil_Recording) -> None:
+    """Create world.intrinsics file if a world video exists."""
+    world_videos = list(recording.files().world().videos())
+    if world_videos:
+        _patch_intrinsics_file(world_videos[0], "world")
+
+
 def convert_pupil_mobile_recording_to_v094(rec_dir):
     logger.info("Converting Pupil Mobile recording to v0.9.4 format")
+    recording = pm.Pupil_Recording(rec_dir)
+
+    # NOTE: could still be worldless at this point
+    _try_patch_world_instrinsics_file(recording)
+
     # convert time files and rename corresponding videos
     match_pattern = "*.time"
     rename_set = RenameSet(rec_dir, match_pattern)
-    rename_set.load_intrinsics()
     rename_set.rename("Pupil Cam([0-3]) ID0", "eye0")
     rename_set.rename("Pupil Cam([0-3]) ID1", "eye1")
     rename_set.rename("Pupil Cam([0-2]) ID2", "world")
@@ -156,10 +185,14 @@ def convert_pupil_invisible_recording_to_v113(rec_dir, meta_info):
 
 
 def _pi_rename_files(rec_dir):
+    recording = pm.Pupil_Recording(rec_dir)
+
+    # NOTE: could still be worldless at this point
+    _try_patch_world_instrinsics_file(recording)
+
     # convert time files and rename corresponding videos
     match_pattern = "*.time"
     rename_set = RenameSet(rec_dir, match_pattern)
-    rename_set.load_intrinsics()
     rename_set.rename(r"PI right v1 ps(1)", r"eye0")
     rename_set.rename(r"PI right v1 ps([2-9])", r"eye0_\1")
     rename_set.rename(r"PI left v1 ps(1)", r"eye1")
