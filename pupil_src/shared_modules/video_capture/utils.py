@@ -8,20 +8,15 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import fnmatch
 import glob
 import logging
 import os
 import pathlib as pl
-import re
 from typing import Iterator, Sequence
-import json
-
 import av
 import cv2
 import numpy as np
 
-from camera_models import load_intrinsics
 
 logger = logging.getLogger(__name__)
 
