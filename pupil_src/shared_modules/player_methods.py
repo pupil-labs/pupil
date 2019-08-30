@@ -367,18 +367,6 @@ class Pupil_Recording:
         def world(self) -> FilterType:
             return self.filter("world")
 
-        def videos(self) -> FilterType:
-            return self.filter("videos")
-
-        def raw_time(self) -> FilterType:
-            return self.filter("rawtimes")
-
-        def mobile(self) -> FilterType:
-            return self.filter("mobile")
-
-        def timestamps(self) -> FilterType:
-            return self.filter("timestamps")
-
         def eye0(self) -> FilterType:
             return self.filter("eye0")
 
@@ -387,6 +375,24 @@ class Pupil_Recording:
 
         def eyes(self) -> FilterType:
             return self.filter_mutliple("eye0", "eye1", mode="union")
+
+        def videos(self) -> FilterType:
+            return self.filter("videos")
+
+        def raw_time(self) -> FilterType:
+            return self.filter("rawtimes")
+
+        def timestamps(self) -> FilterType:
+            return self.filter("timestamps")
+
+        def core(self) -> FilterType:
+            return self.filter("core")
+
+        def mobile(self) -> FilterType:
+            return self.filter("mobile")
+
+        def pi(self) -> FilterType:
+            return self.filter("pi")
 
         def filter(self, key: str) -> FilterType:
             """Filters files by key from the PATTERNS dict.
