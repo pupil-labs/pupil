@@ -137,14 +137,15 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
     _try_patch_world_instrinsics_file(
         rec_dir, recording.files().mobile().world().videos()
     )
-    _substitute_patterns_in_filenames(
-        recording.files(),
-        schema={
-            r"Pupil Cam(\d) ID0": r"eye0",
-            r"Pupil Cam(\d) ID1": r"eye1",
-            r"Pupil Cam(\d) ID2": r"world",
-        },
-    )
+    for path in recording.files():
+        # replace prefix based on cam_id, part number is already correct
+        match = re.match(r"^(?P<prefix>Pupil Cam\d ID(?P<cam_id>\d))", path.name)
+        if match:
+            replacement_for_cam_id = {"0": "eye0", "1": "eye1", "2": "world"}
+            replacement = replacement_for_cam_id[match.group("cam_id")]
+            new_name = str(path).replace(match.group("prefix"), replacement)
+            path.replace(new_name)  # rename with overwrite
+
     _rewrite_times(recording, dtype=">f8")
 
     pupil_data_loc = os.path.join(rec_dir, "pupil_data")
@@ -169,17 +170,28 @@ def _pi_rename_files(rec_dir):
 
     # NOTE: could still be worldless at this point
     _try_patch_world_instrinsics_file(rec_dir, recording.files().pi().world().videos())
-    _substitute_patterns_in_filenames(
-        recording.files(),
-        schema={
-            r"PI right v1 ps(1)": r"eye0",
-            r"PI right v1 ps([2-9])": r"eye0_\1",
-            r"PI left v1 ps(1)": r"eye1",
-            r"PI left v1 ps([2-9])": r"eye1_\1",
-            r"PI world v1 ps(1)": r"world",
-            r"PI world v1 ps([2-9])": r"world_\1",
-        },
-    )
+
+    for path in recording.files():
+        # replace prefix based on cam_type, need to reformat part number
+        match = re.match(
+            r"^(?P<prefix>PI (?P<cam_type>left|right|world) v\d+ ps(?P<part>\d+))",
+            path.name,
+        )
+        if match:
+            replacement_for_cam_type = {
+                "right": "eye0",
+                "left": "eye1",
+                "world": "world",
+            }
+            replacement = replacement_for_cam_type[match.group("cam_type")]
+            part_number = int(match.group("part"))
+            if part_number > 1:
+                # add zero-filled part number - 1
+                # NOTE: recordings for PI start at part 1, mobile start at part 0
+                replacement += f"_{part_number - 1:03}"
+
+            new_name = str(path).replace(match.group("prefix"), replacement)
+            path.replace(new_name)  # rename with overwrite
 
     # TODO: Extracting start_time_synced from info.json should be moved into
     # Pupil_Recording class. Then the following snippet can be removed.
@@ -236,18 +248,6 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
 
     intrinsics = cm.load_intrinsics(rec_dir, camera_hint, frame_size)
     intrinsics.save(rec_dir, "world")
-
-
-def _substitute_patterns_in_filenames(
-    paths: T.Iterable[Path], schema: T.Dict[str, str]
-) -> None:
-    """Applies re.sub on all combinations of paths and schema and renames the files."""
-    for filepath in paths:
-        for pattern, replacement in schema.items():
-            new_path, n_substitutions = re.subn(pattern, replacement, str(filepath))
-            if n_substitutions > 0:
-                # Path.replace() renames with overwriting
-                filepath.replace(new_path)
 
 
 def _rewrite_times(
