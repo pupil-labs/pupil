@@ -143,8 +143,8 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         if match:
             replacement_for_cam_id = {"0": "eye0", "1": "eye1", "2": "world"}
             replacement = replacement_for_cam_id[match.group("cam_id")]
-            new_name = str(path).replace(match.group("prefix"), replacement)
-            path.replace(new_name)  # rename with overwrite
+            new_name = path.name.replace(match.group("prefix"), replacement)
+            path.replace(path.with_name(new_name))  # rename with overwrite
 
     _rewrite_times(recording, dtype=">f8")
 
@@ -190,8 +190,8 @@ def _pi_rename_files(rec_dir):
                 # NOTE: recordings for PI start at part 1, mobile start at part 0
                 replacement += f"_{part_number - 1:03}"
 
-            new_name = str(path).replace(match.group("prefix"), replacement)
-            path.replace(new_name)  # rename with overwrite
+            new_name = path.name.replace(match.group("prefix"), replacement)
+            path.replace(path.with_name(new_name))  # rename with overwrite
 
     # TODO: Extracting start_time_synced from info.json should be moved into
     # Pupil_Recording class. Then the following snippet can be removed.
