@@ -30,6 +30,7 @@ import methods as m
 import player_methods as pm
 from version_utils import VersionFormat, read_rec_version
 from video_capture.utils import pi_gaze_items
+from video_capture.file_backend import BrokenStream
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +134,9 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
     recording = pm.Pupil_Recording(rec_dir)
 
     # NOTE: could still be worldless at this point
-    _try_patch_world_instrinsics_file(recording)
+    _try_patch_world_instrinsics_file(
+        rec_dir, recording.files().mobile().world().videos()
+    )
     _substitute_patterns_in_filenames(
         recording.files(),
         schema={
@@ -165,7 +168,7 @@ def _pi_rename_files(rec_dir):
     recording = pm.Pupil_Recording(rec_dir)
 
     # NOTE: could still be worldless at this point
-    _try_patch_world_instrinsics_file(recording)
+    _try_patch_world_instrinsics_file(rec_dir, recording.files().pi().world().videos())
     _substitute_patterns_in_filenames(
         recording.files(),
         schema={
@@ -203,29 +206,36 @@ def _pi_rename_files(rec_dir):
     _rewrite_times(recording, dtype="<u8", conversion=conversion)
 
 
-def _try_patch_world_instrinsics_file(recording: pm.Pupil_Recording) -> None:
-    """Create world.intrinsics file if a world video exists."""
-    for world_video in recording.files().world().videos():
+def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) -> None:
+    """Tries to create a reasonable world.intrinsics file from a set of videos."""
+    if not videos:
+        return
+
+    # Make sure the default value always correlates to the frame size of fake frames
+    frame_size = BrokenStream().frame_size
+    # TODO: Due to the naming conventions for multipart-recordings, we can't
+    # easily lookup 'any' video name in the pre_recorded_calibrations, since it
+    # might be a multipart recording. Therefore we need to compute a hint here
+    # for the lookup. This could be improved.
+    camera_hint = ""
+    for video in videos:
         try:
-            _patch_intrinsics_file(world_videos, "world")
-            break
+            container = av.open(str(video))
         except av.AVError:
             continue
 
+        for camera in cm.pre_recorded_calibrations:
+            if camera in video.name:
+                camera_hint = camera
+                break
+        frame_size = (
+            container.streams.video[0].format.width,
+            container.streams.video[0].format.height,
+        )
+        break
 
-def _patch_intrinsics_file(video: Path, new_name: str = None) -> None:
-    """Tries to create a 'new_name'.instrinsics file from the video in 'Path'."""
-    if new_name is None:
-        new_name = video.stem
-    # raises av.AVError when corrupt
-    container = av.open(str(video))
-    frame_size = (
-        container.streams.video[0].format.width,
-        container.streams.video[0].format.height,
-    )
-    rec_dir = video.parent
-    intrinsics = cm.load_intrinsics(rec_dir, video.name, frame_size)
-    intrinsics.save(rec_dir, new_name)
+    intrinsics = cm.load_intrinsics(rec_dir, camera_hint, frame_size)
+    intrinsics.save(rec_dir, "world")
 
 
 def _substitute_patterns_in_filenames(
