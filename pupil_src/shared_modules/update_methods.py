@@ -140,9 +140,9 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
     _substitute_patterns_in_filenames(
         recording.files(),
         schema={
-            r"Pupil Cam([0-3]) ID0": r"eye0",
-            r"Pupil Cam([0-3]) ID1": r"eye1",
-            r"Pupil Cam([0-2]) ID2": r"world",
+            r"Pupil Cam(\d) ID0": r"eye0",
+            r"Pupil Cam(\d) ID1": r"eye1",
+            r"Pupil Cam(\d) ID2": r"world",
         },
     )
     _rewrite_times(recording, dtype=">f8")
