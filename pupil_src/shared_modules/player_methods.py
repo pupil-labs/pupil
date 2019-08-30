@@ -365,7 +365,6 @@ class Pupil_Recording:
         # TODO: add more filters for other types of files
 
         def __init__(self, rec_dir: str):
-            """Init filter to all files in the directory."""
             self.__files = [path for path in Path(rec_dir).iterdir() if path.is_file()]
 
         def __getitem__(self, key):
