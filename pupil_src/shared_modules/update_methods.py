@@ -132,15 +132,12 @@ def _patch_intrinsics_file(video: Path, new_name: str = None) -> None:
     """Tries to create a 'new_name'.instrinsics file from the video in 'Path'."""
     if new_name is None:
         new_name = video.stem
-    try:
-        container = av.open(str(video))
-    except av.AVError:
-        frame_size = (480, 360)
-    else:
-        frame_size = (
-            container.streams.video[0].format.width,
-            container.streams.video[0].format.height,
-        )
+    # raises av.AVError when corrupt
+    container = av.open(str(video))
+    frame_size = (
+        container.streams.video[0].format.width,
+        container.streams.video[0].format.height,
+    )
     rec_dir = video.parent
     intrinsics = cm.load_intrinsics(rec_dir, video.name, frame_size)
     intrinsics.save(rec_dir, new_name)
@@ -148,9 +145,12 @@ def _patch_intrinsics_file(video: Path, new_name: str = None) -> None:
 
 def _try_patch_world_instrinsics_file(recording: pm.Pupil_Recording) -> None:
     """Create world.intrinsics file if a world video exists."""
-    world_videos = list(recording.files().world().videos())
-    if world_videos:
-        _patch_intrinsics_file(world_videos[0], "world")
+    for world_video in recording.files().world().videos():
+        try:
+            _patch_intrinsics_file(world_videos, "world")
+            break
+        except av.AVError:
+            continue
 
 
 def _substitute_patterns_in_filenames(
