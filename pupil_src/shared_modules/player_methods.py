@@ -345,24 +345,76 @@ class Pupil_Recording:
                 print(f"World video file: {path}")
         """
 
-        def world(self) -> "Pupil_Recording.FileFilter":
-            patterns = [
-                "world",  # pupil core
-                "Pupil Cam([0-2]) ID2",  # pupil mobile
-                "PI world v1 ps",  # PI
+        FilterType = "Pupil_Recording.FileFilter"
+
+        PATTERNS = {
+            ("capture", "world"): r"world",
+            ("capture", "eye0"): r"eye0",
+            ("capture", "eye1"): r"eye1",
+            ("mobile", "world"): [
+                r"Pupil Cam([0-2]) ID2",  # pupil core headset
+                r"Logitech Webcam C930e",  # old headset with logitech webcam
+            ],
+            ("mobile", "eye0"): r"Pupil Cam([0-2]) ID0",
+            ("mobile", "eye1"): r"Pupil Cam([0-2]) ID1",
+            ("pi", "world"): r"PI world v1 ps",
+            ("pi", "eye0"): r"PI left v1 ps",
+            ("pi", "eye1"): r"PI right v1 ps",
+            ("videos",): [rf"\.{ext}$" for ext in VALID_VIDEO_EXTENSIONS],
+            ("rawtimes",): r"\.time$",
+        }
+
+        def world(self) -> FilterType:
+            return self.filter("world")
+
+        def videos(self) -> FilterType:
+            return self.filter("videos")
+
+        def raw_time(self) -> FilterType:
+            return self.filter("rawtimes")
+
+        def mobile(self) -> FilterType:
+            return self.filter("mobile")
+
+        def timestamps(self) -> FilterType:
+            return self.filter("timestamps")
+
+        def eye0(self) -> FilterType:
+            return self.filter("eye0")
+
+        def eye1(self) -> FilterType:
+            return self.filter("eye1")
+
+        def eyes(self) -> FilterType:
+            return self.filter_mutliple("eye0", "eye1", mode="union")
+
+        def filter(self, key: str) -> FilterType:
+            """Filters files by key from the PATTERNS dict.
+
+            Keeps all files that match any pattern which contains the key.
+            """
+            return self.filter_patterns(*self.patterns_with_key(key))
+
+        def filter_multiple(self, *keys: str, mode: str) -> FilterType:
+            """Filters files by multiple keys from the PATTERNS dict.
+            
+            Mode can be set to 'union' or 'intersection' and determines aggregation of
+                resulting files for every key.
+            """
+            patterns_for_keys = [self.patterns_with_key(key) for key in keys]
+            sets_of_files = [
+                set(self.files_with_patterns(*patterns))
+                for patterns in patterns_for_keys
             ]
-            return self.filter(*patterns)
-
-        def videos(self) -> "Pupil_Recording.FileFilter":
-            return self.filter(*VALID_VIDEO_EXTENSIONS)
-
-        def raw_time(self) -> "Pupil_Recording.FileFilter":
-            return self.filter(r"\.time")
-
-        def mobile(self) -> "Pupil_Recording.FileFilter":
-            return self.filter(r"Pupil Cam[0-3] ID[0-2]")
-
-        # TODO: add more filters for other types of files
+            if mode == "union":
+                self.__files = set.union(*sets_of_files)
+            elif mode == "intersection":
+                self.__files = set.intersection(*sets_of_files)
+            else:
+                logger.warning(
+                    f"Unknown filter mode: {mode}! Must be 'union' or 'intersection'!"
+                )
+            return self
 
         def __init__(self, rec_dir: str):
             self.__files = [path for path in Path(rec_dir).iterdir() if path.is_file()]
@@ -375,14 +427,26 @@ class Pupil_Recording:
             # Used for implementing collections.Sequence
             return len(self.__files)
 
-        def filter(self, *patterns: str) -> "Pupil_Recording.FileFilter":
+        def filter_patterns(self, *patterns: str) -> FilterType:
             """Filters current files, keeping anything matching any of the patterns."""
-            self.__files = [
+            self.__files = self.files_with_patterns(*patterns)
+            return self
+
+        def files_with_patterns(self, *patterns: str) -> T.Sequence[Path]:
+            return [
                 item
                 for item in self.__files
-                if any(re.search(pattern, str(item)) for pattern in patterns)
+                if any([re.search(pattern, str(item)) for pattern in patterns])
             ]
-            return self
+
+        @classmethod
+        def patterns_with_key(cls, key: str):
+            for keys, pattern in cls.PATTERNS.items():
+                if key in keys:
+                    if isinstance(pattern, list):
+                        yield from pattern
+                    else:
+                        yield pattern
 
     def files(self) -> "Pupil_Recording.FileFilter":
         return Pupil_Recording.FileFilter(self.rec_dir)
