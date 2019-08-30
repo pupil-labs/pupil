@@ -348,18 +348,18 @@ class Pupil_Recording:
         FilterType = "Pupil_Recording.FileFilter"
 
         PATTERNS = {
-            ("capture", "world"): r"world",
-            ("capture", "eye0"): r"eye0",
-            ("capture", "eye1"): r"eye1",
+            ("core", "world"): r"^world",
+            ("core", "eye0"): r"^eye0",
+            ("core", "eye1"): r"^eye1",
             ("mobile", "world"): [
-                r"Pupil Cam([0-2]) ID2",  # pupil core headset
-                r"Logitech Webcam C930e",  # old headset with logitech webcam
+                r"^Pupil Cam(\d) ID2",  # pupil core headset
+                r"^Logitech Webcam C930e",  # old headset with logitech webcam
             ],
-            ("mobile", "eye0"): r"Pupil Cam([0-2]) ID0",
-            ("mobile", "eye1"): r"Pupil Cam([0-2]) ID1",
-            ("pi", "world"): r"PI world v1 ps",
-            ("pi", "eye0"): r"PI left v1 ps",
-            ("pi", "eye1"): r"PI right v1 ps",
+            ("mobile", "eye0"): r"^Pupil Cam(\d) ID0",
+            ("mobile", "eye1"): r"^Pupil Cam(\d) ID1",
+            ("pi", "world"): r"^PI world v(\d+) ps(\d+)",
+            ("pi", "eye0"): r"^PI left v(\d+) ps(\d+)",
+            ("pi", "eye1"): r"^PI right v(\d+) ps(\d+)",
             ("videos",): [rf"\.{ext}$" for ext in VALID_VIDEO_EXTENSIONS],
             ("rawtimes",): r"\.time$",
         }
