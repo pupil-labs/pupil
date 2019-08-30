@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import collections
-from enum import Enum
+import enum
 import glob
 import logging
 import os
@@ -402,7 +402,8 @@ class Pupil_Recording:
             """
             return self.filter_patterns(*self.patterns_with_key(key))
 
-        class FilterMode(Enum):
+        @enum.unique
+        class FilterMode(enum.Enum):
             UNION = 1
             INTERSECTION = 2
 
