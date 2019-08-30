@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import collections
+from enum import Enum
 import glob
 import logging
 import os
@@ -401,20 +402,23 @@ class Pupil_Recording:
             """
             return self.filter_patterns(*self.patterns_with_key(key))
 
-        def filter_multiple(self, *keys: str, mode: str) -> FilterType:
+        class FilterMode(Enum):
+            UNION = 1
+            INTERSECTION = 2
+
+        def filter_multiple(self, *keys: str, mode: FilterMode) -> FilterType:
             """Filters files by multiple keys from the PATTERNS dict.
-            
-            Mode can be set to 'union' or 'intersection' and determines aggregation of
-                resulting files for every key.
+
+            Mode determines aggregation of resulting files for every key.
             """
             patterns_for_keys = [self.patterns_with_key(key) for key in keys]
             sets_of_files = [
                 set(self.files_with_patterns(*patterns))
                 for patterns in patterns_for_keys
             ]
-            if mode == "union":
+            if mode is self.FilterMode.UNION:
                 self.__files = set.union(*sets_of_files)
-            elif mode == "intersection":
+            elif mode is self.FilterMode.INTERSECTION:
                 self.__files = set.intersection(*sets_of_files)
             else:
                 logger.warning(
