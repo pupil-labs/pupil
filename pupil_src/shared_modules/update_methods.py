@@ -128,61 +128,6 @@ def _update_info_version_to(new_version, rec_dir):
     update_meta_info(rec_dir, meta_info)
 
 
-def _patch_intrinsics_file(video: Path, new_name: str = None) -> None:
-    """Tries to create a 'new_name'.instrinsics file from the video in 'Path'."""
-    if new_name is None:
-        new_name = video.stem
-    # raises av.AVError when corrupt
-    container = av.open(str(video))
-    frame_size = (
-        container.streams.video[0].format.width,
-        container.streams.video[0].format.height,
-    )
-    rec_dir = video.parent
-    intrinsics = cm.load_intrinsics(rec_dir, video.name, frame_size)
-    intrinsics.save(rec_dir, new_name)
-
-
-def _try_patch_world_instrinsics_file(recording: pm.Pupil_Recording) -> None:
-    """Create world.intrinsics file if a world video exists."""
-    for world_video in recording.files().world().videos():
-        try:
-            _patch_intrinsics_file(world_videos, "world")
-            break
-        except av.AVError:
-            continue
-
-
-def _substitute_patterns_in_filenames(
-    paths: T.Iterable[Path], schema: T.Dict[str, str]
-) -> None:
-    """Applies re.sub on all combinations of paths and schema and renames the files."""
-    for filepath in paths:
-        for pattern, replacement in schema.items():
-            new_path, n_substitutions = re.subn(pattern, replacement, str(filepath))
-            if n_substitutions > 0:
-                # Path.replace() renames with overwriting
-                filepath.replace(new_path)
-
-
-def _rewrite_times(
-    recording: pm.Pupil_Recording,
-    dtype: str,
-    conversion: T.Optional[T.Callable[[np.array], np.array]] = None,
-) -> None:
-    """Load raw times (assuming dtype), apply conversion and save as _timestamps.npy."""
-    for path in recording.files().raw_time():
-        timestamps = np.fromfile(str(path), dtype=dtype)
-
-        if conversion is not None:
-            timestamps = conversion(timestamps)
-
-        new_name = f"{path.stem}_timestamps.npy"
-        logger.info(f"Creating {new_name}")
-        timestamp_loc = path.parent / new_name
-        np.save(str(timestamp_loc), timestamps)
-
-
 def convert_pupil_mobile_recording_to_v094(rec_dir):
     logger.info("Converting Pupil Mobile recording to v0.9.4 format")
     recording = pm.Pupil_Recording(rec_dir)
@@ -256,6 +201,61 @@ def _pi_rename_files(rec_dir):
         return (timestamps - start_time) * SECONDS_PER_NANOSECOND
 
     _rewrite_times(recording, dtype="<u8", conversion=conversion)
+
+
+def _try_patch_world_instrinsics_file(recording: pm.Pupil_Recording) -> None:
+    """Create world.intrinsics file if a world video exists."""
+    for world_video in recording.files().world().videos():
+        try:
+            _patch_intrinsics_file(world_videos, "world")
+            break
+        except av.AVError:
+            continue
+
+
+def _patch_intrinsics_file(video: Path, new_name: str = None) -> None:
+    """Tries to create a 'new_name'.instrinsics file from the video in 'Path'."""
+    if new_name is None:
+        new_name = video.stem
+    # raises av.AVError when corrupt
+    container = av.open(str(video))
+    frame_size = (
+        container.streams.video[0].format.width,
+        container.streams.video[0].format.height,
+    )
+    rec_dir = video.parent
+    intrinsics = cm.load_intrinsics(rec_dir, video.name, frame_size)
+    intrinsics.save(rec_dir, new_name)
+
+
+def _substitute_patterns_in_filenames(
+    paths: T.Iterable[Path], schema: T.Dict[str, str]
+) -> None:
+    """Applies re.sub on all combinations of paths and schema and renames the files."""
+    for filepath in paths:
+        for pattern, replacement in schema.items():
+            new_path, n_substitutions = re.subn(pattern, replacement, str(filepath))
+            if n_substitutions > 0:
+                # Path.replace() renames with overwriting
+                filepath.replace(new_path)
+
+
+def _rewrite_times(
+    recording: pm.Pupil_Recording,
+    dtype: str,
+    conversion: T.Optional[T.Callable[[np.array], np.array]] = None,
+) -> None:
+    """Load raw times (assuming dtype), apply conversion and save as _timestamps.npy."""
+    for path in recording.files().raw_time():
+        timestamps = np.fromfile(str(path), dtype=dtype)
+
+        if conversion is not None:
+            timestamps = conversion(timestamps)
+
+        new_name = f"{path.stem}_timestamps.npy"
+        logger.info(f"Creating {new_name}")
+        timestamp_loc = path.parent / new_name
+        np.save(str(timestamp_loc), timestamps)
 
 
 def _pi_convert_gaze(rec_dir):
