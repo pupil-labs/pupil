@@ -446,7 +446,7 @@ class Pupil_Recording:
             return [
                 item
                 for item in self.__files
-                if any([re.search(pattern, str(item)) for pattern in patterns])
+                if any([re.search(pattern, item.name) for pattern in patterns])
             ]
 
         @classmethod
