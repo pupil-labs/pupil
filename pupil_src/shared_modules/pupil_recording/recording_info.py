@@ -1,8 +1,11 @@
 import abc
 import collections
 import csv
+import datetime
 import json
 import os
+import re
+import time
 import typing as T
 import uuid
 from packaging.version import Version as RecordingVersion
@@ -289,6 +292,144 @@ class RecordingInfoFile(RecordingInfo):
             return self.__info_storage
 
 
+class RecordingInfoFileCSV(RecordingInfoFile):
+
+    # RecordingInfo
+
+    @property
+    def recording_uuid(self) -> uuid.UUID:
+        return uuid.UUID(self["Recording UUID"])
+
+    @recording_uuid.setter
+    def recording_uuid(self, value: uuid.UUID):
+        self["Recording UUID"] = str(value)
+
+    @property
+    def recording_name(self) -> str:
+        return self["Recording Name"]
+
+    @recording_name.setter
+    def recording_name(self, value: str):
+        self["Recording Name"] = str(value)
+
+    @property
+    def software_version(self) -> RecordingVersion:
+        return RecordingVersion(self["Capture Software Version"])
+
+    @software_version.setter
+    def software_version(self, value: RecordingVersion):
+        self["Capture Software Version"] = str(value) #TODO: Test if this conversion is correct
+
+    @property
+    def data_format_version(self) -> RecordingVersion:
+        return RecordingVersion(self["Data Format Version"])
+
+    @data_format_version.setter
+    def data_format_version(self, value: RecordingVersion):
+        self["Data Format Version"] = str(value) #TODO: Test if this conversion is correct
+
+    @property
+    def duration_s(self) -> float:
+        return _parse_time_string_to_seconds(time_str=self["Duration Time"])
+
+    @duration_s.setter
+    def duration_s(self, value: float):
+        self["Duration Time"] = _format_seconds_to_time_string(sec=value)
+
+    @property
+    def duration_ns(self) -> int:
+        return _sec_to_nanosec(self.duration_s)
+
+    @duration_ns.setter
+    def duration_ns(self, value: int):
+        self.duration_s = _nanosec_to_sec(value)
+
+    @property
+    def start_time_s(self) -> float:
+        return _parse_time_string_to_seconds(time_str=self["Start Time"])
+
+    @start_time_s.setter
+    def start_time_s(self, value: float):
+        self["Start Time"] = _format_seconds_to_time_string(sec=value)
+
+    @property
+    def start_time_ns(self) -> int:
+        return _sec_to_nanosec(self.start_time_s)
+
+    @start_time_ns.setter
+    def start_time_ns(self, value: int):
+        self.start_time_s = _nanosec_to_sec(value)
+
+    @property
+    def start_time_synced_s(self) -> float:
+        return float(self["Start Time (Synced)"])
+
+    @start_time_synced_s.setter
+    def start_time_synced_s(self, value: float):
+        self["Start Time (Synced)"] = value
+
+    @property
+    def start_time_synced_ns(self) -> int:
+        return _sec_to_nanosec(self.start_time_synced_s)
+
+    @start_time_synced_ns.setter
+    def start_time_synced_ns(self, value: int):
+        self.start_time_synced_s = _nanosec_to_sec(value)
+
+    @property
+    def world_camera_frames(self) -> int:
+        return int(self["World Camera Frames"])
+
+    @world_camera_frames.setter
+    def world_camera_frames(self, value: int):
+        self["World Camera Frames"] = int(value)
+
+    @property
+    def world_camera_resolution(self) -> T.Tuple[int, int]:
+        resolution = self["World Camera Resolution"]
+        resolution_match = re.search(r"^(\d+)x(\d+)$", resolution.strip())
+        if not resolution_match:
+            raise RecordingInfoInvalidError #TODO
+        w, h = resolution_match[1], resolution_match[2]
+        return int(w), int(h)
+
+    @world_camera_resolution.setter
+    def world_camera_resolution(self, value: T.Tuple[int, int]):
+        w, h = value
+        self["World Camera Resolution"] = f"{v}x{h}"
+
+    _required_keys_with_types = {
+        "Recording UUID": str,
+        "Duration Time": str,
+        "Capture Software Version": str,
+    }
+
+    _optional_keys_with_defaults = {
+        "World Camera Frames": "0", #TODO
+        "World Camera Resolution": "0x0", #TODO
+    }
+
+    # RecordingInfoFile
+
+    @property
+    def file_name(self) -> str:
+        return "info.csv"
+
+    @staticmethod
+    def _read_dict_from_file(file) -> dict:
+        return csv_utils.read_key_value_file(file)
+
+    @staticmethod
+    def _write_dict_to_file(file, dict_to_write: dict, sort_keys: bool):
+        if sort_keys:
+            ordered_dict = collections.OrderedDict()
+            for key in sorted(dict_to_write.keys()):
+                ordered_dict[key] = dict_to_write[key]
+            dict_to_write = ordered_dict
+
+        csv_utils.write_key_value_file(file, dict_to_write, append=False)
+
+
 class RecordingInfoFileJSON(RecordingInfoFile):
 
     # RecordingInfo
@@ -465,3 +606,17 @@ def _get_world_camera_frame_count(rec_dir: str) -> int:
 
 def _get_world_camera_resolution(rec_dir: str) -> T.Tuple[int, int]:
     return (0, 0) #FIXME
+
+
+def _parse_time_string_to_seconds(time_str: str, format="%H:%M:%S") -> float:
+    t = time.strptime(time_str, format)
+    t = datetime.timedelta(
+        hours=t.tm_hour,
+        minutes=t.tm_min,
+        seconds=t.tm_sec,
+    )
+    return float(t.total_seconds())
+
+def _format_seconds_to_time_string(sec: float) -> str:
+    t = time.gmtime(sec)
+    return time.strftime("%H:%M:%S", t)
