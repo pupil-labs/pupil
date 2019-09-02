@@ -160,7 +160,6 @@ class RecordingInfo(collections.abc.MutableMapping):
 
         # Unique token to mark that there is no default value and the key is required
         required_key_default = uuid.uuid4()
-        print(required_key_default)
 
         valid_keys_with_types_and_defaults = {}
 
