@@ -396,7 +396,7 @@ class RecordingInfoFileJSON(RecordingInfoFile):
     def world_camera_frames(self) -> int:
         frame_count = self._get_cached_computed_property(
             key="_world_camera_frames",
-            getter=_get_world_camera_resolution,
+            getter=_get_world_camera_frame_count,
             rec_dir=self.rec_dir
         )
         return int(frame_count)
