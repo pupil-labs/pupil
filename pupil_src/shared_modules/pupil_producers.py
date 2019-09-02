@@ -329,7 +329,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.videoset = VideoSet(rec, set_name, fill_gaps=False)
         self.videoset.load_or_build_lookup()
         timestamp_len = (self.videoset.lookup.container_idx > -1).sum()
-        if not timestamp_len:
+        if self.videoset.is_empty():
             logger.error(
                 "no timestamps for eye video for eye '{}' found.".format(eye_id)
             )
