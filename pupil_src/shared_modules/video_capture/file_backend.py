@@ -219,7 +219,6 @@ class File_Source(Playback_Source, Base_Source):
         self.source_path = source_path
         self.loop = loop
         self.fill_gaps = fill_gaps
-        assert self.check_source_path(source_path)
         rec, set_name = self.get_rec_set_name(self.source_path)
         self.videoset = VideoSet(rec, set_name, self.fill_gaps)
         # Load or build lookup table
@@ -229,15 +228,6 @@ class File_Source(Playback_Source, Base_Source):
         # Load video split for first frame
         self.reset_video()
         self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
-
-    def check_source_path(self, source_path):
-        if not source_path or not os.path.isfile(source_path):
-            logger.error(
-                "Init failed. Source file could not be found at `%s`" % source_path
-            )
-            self._initialised = False
-            return
-        return True
 
     def get_rec_set_name(self, source_path):
         """
