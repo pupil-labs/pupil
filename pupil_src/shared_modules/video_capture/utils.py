@@ -335,7 +335,7 @@ class VideoSet:
         time_diff = np.diff(timestamps)
         invalid_idc = np.flatnonzero(time_diff < 0)
         timestamps[invalid_idc + 1] = np.mean(
-            (timestamps[invalid_idc + 2], timestamps[invalid_idc])
+            (timestamps[invalid_idc + 2], timestamps[invalid_idc]), axis=0
         )
         return timestamps
 
