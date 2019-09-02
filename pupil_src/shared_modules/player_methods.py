@@ -366,6 +366,7 @@ class Pupil_Recording:
             ("videos",): [rf"\.{ext}$" for ext in VALID_VIDEO_EXTENSIONS],
             ("rawtimes",): r"\.time$",
             ("timestamps",): r"_timestamps\.npy$",
+            ("lookup",): r"_lookup\.npy$",
         }
 
         def world(self) -> FilterType:
@@ -388,6 +389,9 @@ class Pupil_Recording:
 
         def timestamps(self) -> FilterType:
             return self.filter("timestamps")
+
+        def lookup(self) -> FilterType:
+            return self.filter("lookup")
 
         def core(self) -> FilterType:
             return self.filter("core")
