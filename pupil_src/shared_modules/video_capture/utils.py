@@ -321,32 +321,36 @@ class VideoSet:
         loaded_ts = self._fill_gaps(loaded_ts)
         lookup = self._setup_lookup(loaded_ts)
         for container_idx, vid in enumerate(self.videos):
-            # NOTE: For unknown reasons we sometimes have more timestamps than
-            # frames. We don't know how to match non-matching timestamps and
-            # pts, so we might introduce a systematic bias when fixing this! The
-            # idea is to keep only data for timestamps that were recorded, but
-            # leave frames blank if we don't have frame information.
-            npts = vid.pts.size
-            ntime = vid.timestamps.size
-            if npts < ntime:
-                logger.warning(
-                    f"Found {ntime} timestamps vs {npts} frames!"
-                    f" Last {abs(npts - ntime)} frames are empty!"
-                )
-            elif ntime < npts:
-                logger.warning(
-                    f"Found {ntime} timestamps vs {npts} frames!"
-                    f" Discarding last {abs(npts - ntime)} frames!"
-                )
-            data_size = min(npts, ntime)
-            vid_timestamps = vid.timestamps[:data_size]
-            vid_pts = vid.pts[:data_size]
+            if not vid.is_valid:
+                # For invalid videos, we still try to load the timestamps (might be empty)
+                lookup_mask = np.isin(lookup.timestamp, vid.timestamps)
+                lookup.container_frame_idx[lookup_mask] = np.arange(vid.timestamps.size)
+            else:
+                # NOTE: For unknown reasons we sometimes have more timestamps than
+                # frames. We don't know how to match non-matching timestamps and
+                # pts, so we might introduce a systematic bias when fixing this! The
+                # idea is to keep only data for timestamps that were recorded, but
+                # leave frames blank if we don't have frame information.
+                npts = vid.pts.size
+                ntime = vid.timestamps.size
+                if npts < ntime:
+                    logger.warning(
+                        f"Found {ntime} timestamps vs {npts} frames!"
+                        f" Last {abs(npts - ntime)} frames are empty!"
+                    )
+                elif ntime < npts:
+                    logger.warning(
+                        f"Found {ntime} timestamps vs {npts} frames!"
+                        f" Discarding last {abs(npts - ntime)} frames!"
+                    )
+                data_size = min(npts, ntime)
+                vid_timestamps = vid.timestamps[:data_size]
+                vid_pts = vid.pts[:data_size]
 
-            lookup_mask = np.isin(lookup.timestamp, vid_timestamps)
-            lookup.container_frame_idx[lookup_mask] = np.arange(vid_timestamps.size)
-            if vid.is_valid:
+                lookup_mask = np.isin(lookup.timestamp, vid_timestamps)
+                lookup.container_frame_idx[lookup_mask] = np.arange(vid_timestamps.size)
                 lookup.container_idx[lookup_mask] = container_idx
-            lookup.pts[lookup_mask] = vid_pts
+                lookup.pts[lookup_mask] = vid_pts
         self.lookup = lookup
 
     def save_lookup(self):
