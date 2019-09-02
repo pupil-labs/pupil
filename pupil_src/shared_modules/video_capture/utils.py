@@ -8,20 +8,15 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import fnmatch
 import glob
 import logging
 import os
 import pathlib as pl
-import re
 from typing import Iterator, Sequence
-import json
-
 import av
 import cv2
 import numpy as np
 
-from camera_models import load_intrinsics
 
 logger = logging.getLogger(__name__)
 
@@ -421,119 +416,6 @@ class VideoSet:
         return lookup
 
 
-class RenameSet:
-    class RenameFile:
-        def __init__(self, path):
-            self.path = path
-
-        @property
-        def name(self):
-            file_name = os.path.split(self.path)[1]
-            return os.path.splitext(file_name)[0]
-
-        def rename(self, source_pattern, destination_name):
-            # source_pattern: Pupil Cam(1|2|3) ID0
-            # destination_name: eye0
-            if re.match(source_pattern, self.name):
-                new_path = re.sub(source_pattern, destination_name, self.path)
-                logger.info(
-                    'Renaming "{}" to "{}"'.format(
-                        self.name, os.path.split(new_path)[1]
-                    )
-                )
-                try:
-                    os.rename(self.path, new_path)
-                except FileExistsError:
-                    # Only happens on Windows. Behavior on Unix is to
-                    # overwrite the existing file.To mirror this behaviour
-                    # we need to delete the old file and try renaming the
-                    # new one again.
-                    os.remove(self.path)
-                    os.rename(self.path, new_path)
-
-        def rewrite_time(self, destination_name, start_time):
-            timestamps = np.fromfile(self.path, dtype="<u8")
-
-            # Subtract start_time from all times in the recording, so timestamps
-            # start at 0. This is to increase precision when converting
-            # timestamps to float32, e.g. for OpenGL!
-            timestamps -= start_time
-
-            SECONDS_PER_NANOSECOND = 1e-9
-            timestamps = timestamps * SECONDS_PER_NANOSECOND
-
-            logger.info('Creating "{}_timestamps.npy"'.format(self.name))
-            timestamp_loc = os.path.join(
-                os.path.dirname(self.path), "{}_timestamps.npy".format(self.name)
-            )
-            np.save(timestamp_loc, timestamps)
-
-    def __init__(self, rec_dir, pattern, exts=VIDEO_TIME_EXTS):
-        self.rec_dir = rec_dir
-        self.pattern = os.path.join(rec_dir, pattern)
-        self.existsting_files = self.get_existsting_files(self.pattern, exts)
-
-    def rename(self, source_pattern, destination_name):
-        for r in self.existsting_files:
-            self.RenameFile(r).rename(source_pattern, destination_name)
-
-    def read_start_time(self):
-        info_json_path = os.path.join(self.rec_dir, "info.json")
-        try:
-            with open(info_json_path, "r") as f:
-                json_data = json.load(f)
-            return json_data["start_time_synced"]
-
-        except FileNotFoundError:
-            logger.warn("Trying to read info.json, but it does not exist!")
-            return 0
-
-        except KeyError:
-            logger.error("Could not read start_time_synced from info.json!")
-            return 0
-
-    def rewrite_time(self, destination_name):
-        t0 = self.read_start_time()
-        for r in self.existsting_files:
-            self.RenameFile(r).rewrite_time(destination_name, t0)
-
-    def load_intrinsics(self):
-        def _load_intrinsics(file_name, name):
-            try:
-                video = av.open(file_name, "r")
-            except av.AVError:
-                frame_size = (480, 360)
-            else:
-                frame_size = (
-                    video.streams.video[0].format.width,
-                    video.streams.video[0].format.height,
-                )
-                del video
-            intrinsics = load_intrinsics(self.rec_dir, name, frame_size)
-            intrinsics.save(self.rec_dir, "world")
-
-        for fn in self.existsting_files:
-            if fnmatch.fnmatch(fn, "*Pupil Cam1 ID2*[!.time]"):
-                _load_intrinsics(fn, "Pupil Cam1 ID2")
-                return
-            elif fnmatch.fnmatch(fn, "*Logitech Webcam C930e*[!.time]"):
-                _load_intrinsics(fn, "Logitech Webcam C930e")
-                return
-
-    def get_existsting_files(self, pattern, exts):
-        existsting_files = []
-        for loc in glob.glob(pattern):
-            file_name = os.path.split(loc)[1]
-            name = os.path.splitext(file_name)[0]
-            potential_locs = (
-                os.path.join(self.rec_dir, name + "." + ext) for ext in exts
-            )
-            existsting_files.extend(
-                [loc for loc in potential_locs if os.path.exists(loc)]
-            )
-        return existsting_files
-
-
 def pi_gaze_items(root_dir):
     def find_raw_path(timestamps_path):
         raw_name = timestamps_path.name.replace("_timestamps", "")
@@ -561,6 +443,7 @@ def pi_gaze_items(root_dir):
         raw_path = find_raw_path(timestamps_path)
         timestamps = load_timestamps_data(timestamps_path)
         raw_data = load_raw_data(raw_path)
-        assert len(raw_data) == len(timestamps),\
-            f"There is a mismatch between the number of raw data ({len(raw_data)}) and the number of timestamps ({len(timestamps)})"
+        assert len(raw_data) == len(
+            timestamps
+        ), f"There is a mismatch between the number of raw data ({len(raw_data)}) and the number of timestamps ({len(timestamps)})"
         yield from zip(raw_data, timestamps)
