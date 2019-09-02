@@ -249,8 +249,7 @@ class RecordingInfoFile(RecordingInfo):
     def load_file(self, should_validate: bool = True):
         with open(self.file_path, "r") as file:
             read_dict = self._read_dict_from_file(file=file)
-        for key, value in read_dict.items():
-            self[key] = value
+        self.update(read_dict)
         if should_validate:
             self.validate()
 
