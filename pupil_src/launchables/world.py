@@ -393,9 +393,12 @@ def world(
                         g_pool.plugins.add(g_pool.plugin_by_name["Dummy_Gaze_Mapper"])
                 g_pool.detection_mapping_mode = noti["mode"]
             elif subject == "start_plugin":
-                g_pool.plugins.add(
-                    g_pool.plugin_by_name[noti["name"]], args=noti.get("args", {})
-                )
+                try:
+                    g_pool.plugins.add(
+                        g_pool.plugin_by_name[noti["name"]], args=noti.get("args", {})
+                    )
+                except KeyError as err:
+                    logger.error(f"Attempt to load unknown plugin: {err}")
             elif subject == "stop_plugin":
                 for p in g_pool.plugins:
                     if p.class_name == noti["name"]:
