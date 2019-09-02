@@ -257,6 +257,16 @@ class VideoSet:
         self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
         self._containers = [vid.load_valid_container() for vid in self.videos]
 
+    def is_empty(self) -> bool:
+        if not self.videos:
+            # no videos found
+            return True
+        if not self.fill_gaps and not self.containers:
+            # only corrupted videos and no gap-filling
+            return True
+        # in all other cases we have something to display
+        return False
+
     @property
     def videos(self) -> Sequence[Video]:
         return self._videos
