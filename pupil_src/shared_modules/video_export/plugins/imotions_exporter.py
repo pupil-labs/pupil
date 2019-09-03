@@ -62,7 +62,7 @@ class iMotions_Exporter(IsolatedFrameExporter):
 
     def export_data(self, export_range, export_dir):
 
-        pupil_recording = pm.Pupil_Recording(rec_dir=self.g_pool.rec_dir)
+        pupil_recording = pm.PupilRecording(rec_dir=self.g_pool.rec_dir)
 
         if pupil_recording.is_pupil_invisible:
             logger.error("Currently, the iMotions export doesn't support Pupil Invisible recordings")

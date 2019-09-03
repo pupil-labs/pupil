@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 def update_recording_to_recent(rec_dir):
 
-    pupil_recording = pm.Pupil_Recording(rec_dir=rec_dir)
+    pupil_recording = pm.PupilRecording(rec_dir=rec_dir)
 
     meta_info = pupil_recording.meta_info
     update_meta_info(rec_dir, meta_info)
@@ -131,7 +131,7 @@ def _update_info_version_to(new_version, rec_dir):
 
 def convert_pupil_mobile_recording_to_v094(rec_dir):
     logger.info("Converting Pupil Mobile recording to v0.9.4 format")
-    recording = pm.Pupil_Recording(rec_dir)
+    recording = pm.PupilRecording(rec_dir)
 
     # NOTE: could still be worldless at this point
     _try_patch_world_instrinsics_file(
@@ -166,7 +166,7 @@ def convert_pupil_invisible_recording_to_v113(rec_dir, meta_info):
 
 
 def _pi_rename_files(rec_dir):
-    recording = pm.Pupil_Recording(rec_dir)
+    recording = pm.PupilRecording(rec_dir)
 
     # NOTE: could still be worldless at this point
     _try_patch_world_instrinsics_file(rec_dir, recording.files().pi().world().videos())
@@ -251,7 +251,7 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
 
 
 def _rewrite_times(
-    recording: pm.Pupil_Recording,
+    recording: pm.PupilRecording,
     dtype: str,
     conversion: T.Optional[T.Callable[[np.array], np.array]] = None,
 ) -> None:

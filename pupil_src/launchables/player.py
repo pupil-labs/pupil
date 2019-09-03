@@ -757,7 +757,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
 
             if rec_dir:
                 try:
-                    pm.Pupil_Recording(rec_dir)  # Validate rec_dir by trying to load it
+                    pm.PupilRecording(rec_dir)  # Validate rec_dir by trying to load it
                     logger.info("Starting new session with '{}'".format(rec_dir))
                     text = "Updating recording format."
                     tip = "This may take a while!"
