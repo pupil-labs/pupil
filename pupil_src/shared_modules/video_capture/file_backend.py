@@ -227,7 +227,14 @@ class File_Source(Playback_Source, Base_Source):
         self.videoset = VideoSet(rec, set_name, self.fill_gaps)
         # Load or build lookup table
         self.videoset.load_or_build_lookup()
-        self.timestamps = self.videoset.lookup.timestamp
+        self.timestamps = self.videoset.lookup.timestamps
+        if len(self.timestamps) > 1:
+            self.frame_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
+                self.timestamps
+            )
+        else:
+            # TODO: where does the fallback framerate of 1/20 come from?
+            self.frame_rate = 20
         self.buffering = buffered_decoding
         # Load video split for first frame
         self.reset_video()
@@ -269,9 +276,6 @@ class File_Source(Playback_Source, Base_Source):
         self.video_stream.seek(0)
         self.current_container_index = container_index
         self.frame_iterator = self.video_stream.get_frame_iterator()
-        self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
-            self.timestamps
-        )
 
     def ensure_initialisation(fallback_func=None, requires_playback=False):
         from functools import wraps
@@ -319,11 +323,6 @@ class File_Source(Playback_Source, Base_Source):
     @ensure_initialisation(fallback_func=lambda: (640, 480))
     def frame_size(self):
         return self.video_stream.frame_size
-
-    @property
-    @ensure_initialisation(fallback_func=lambda: 20)
-    def frame_rate(self):
-        return 1.0 / float(self.average_rate)
 
     def get_init_dict(self):
         if self.g_pool.app == "capture":
