@@ -310,7 +310,6 @@ class File_Source(Playback_Source, Base_Source):
         return self._initialised
 
     @property
-    @ensure_initialisation(fallback_func=lambda: (640, 480))
     def frame_size(self):
         return self.video_stream.frame_size
 
@@ -393,7 +392,6 @@ class File_Source(Playback_Source, Base_Source):
             index=self.current_frame_idx,
         )
 
-    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):
         try:
             last_index = self._recent_frame.index
