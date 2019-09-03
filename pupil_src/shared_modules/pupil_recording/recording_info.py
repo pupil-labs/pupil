@@ -190,6 +190,30 @@ class RecordingInfo(collections.abc.MutableMapping):
                     expected_type=expected_type
                 )
 
+    @staticmethod
+    def property_equality(x: "RecordingInfo", y: "RecordingInfo") -> bool:
+        return  x.recording_uuid == y.recording_uuid \
+            and x.recording_name == y.recording_name \
+            and x.software_version == y.software_version \
+            and x.data_format_version == y.data_format_version \
+            and x.duration_ns == y.duration_ns \
+            and x.start_time_ns == y.start_time_ns \
+            and x.start_time_synced_ns == y.start_time_synced_ns \
+            and x.world_camera_frames == y.world_camera_frames \
+            and x.world_camera_resolution == y.world_camera_resolution
+
+    def copy_from(self, other):
+        self.recording_uuid = other.recording_uuid
+        self.recording_name = other.recording_name
+        self.software_version = other.software_version
+        self.data_format_version = other.data_format_version
+        self.duration_ns = other.duration_ns
+        self.start_time_ns = other.start_time_ns
+        self.start_time_synced_ns = other.start_time_synced_ns
+        self.world_camera_frames = other.world_camera_frames
+        self.world_camera_resolution = other.world_camera_resolution
+        assert RecordingInfo.property_equality(self, other)
+
 
 class RecordingInfoFile(RecordingInfo):
 
