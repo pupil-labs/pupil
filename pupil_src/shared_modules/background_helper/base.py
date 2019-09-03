@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
-import typing
+import typing as T
 
 
 class EarlyCancellationError(Exception):
@@ -29,7 +29,7 @@ class Task_Proxy(abc.ABC):
         self._name = name
 
     @abc.abstractmethod
-    def fetch(self) -> typing.Iterator[typing.Any]:
+    def fetch(self) -> T.Iterator[T.Any]:
         """Fetches progress and available results from background"""
         pass
 

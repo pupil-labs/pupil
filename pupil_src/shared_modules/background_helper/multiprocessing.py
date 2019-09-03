@@ -13,7 +13,7 @@ import logging
 import multiprocessing as mp
 import zmq
 from ctypes import c_bool
-import typing
+import typing as T
 
 import zmq_tools
 
@@ -80,7 +80,7 @@ class Task_Proxy(Base_Task_Proxy):
     def _change_logging_behavior(self):
         pass
 
-    def fetch(self) -> typing.Iterator[typing.Any]:
+    def fetch(self) -> T.Iterator[T.Any]:
         if self.completed or self.canceled:
             return
 

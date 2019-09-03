@@ -14,7 +14,7 @@ import logging
 from queue import Queue
 from queue import Empty as EmptyQueueException
 import threading
-import typing
+import typing as T
 
 from .base import EarlyCancellationError
 from .base import Task_Proxy as Base_Task_Proxy
@@ -43,7 +43,7 @@ class Task_Proxy(Base_Task_Proxy):
         self.process.start()
         self.pipe = pipe_recv
 
-    def fetch(self) -> typing.Iterator[typing.Any]:
+    def fetch(self) -> T.Iterator[T.Any]:
         if self.completed or self.canceled:
             return
 
@@ -149,7 +149,7 @@ class _Threading_Connection:
         self._recv_buffer.append(value)
         return True
 
-    def recv(self) -> typing.Any:
+    def recv(self) -> T.Any:
         if len(self._recv_buffer) > 0:
             return self._recv_buffer.pop()
         try:
