@@ -455,9 +455,12 @@ class File_Source(Playback_Source, Base_Source):
             self._recent_frame = frame
             events["frame"] = frame
 
-    @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
-        target_entry = self.videoset.lookup[seek_pos]
+        try:
+            target_entry = self.videoset.lookup[seek_pos]
+        except IndexError:
+            logger.warning("Seeking to invalid position!")
+            return
         if target_entry.container_idx > -1:
             if target_entry.container_idx != self.current_container_index:
                 self._setup_video(target_entry.container_idx)
