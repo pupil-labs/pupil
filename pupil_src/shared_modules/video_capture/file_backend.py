@@ -251,9 +251,7 @@ class File_Source(Playback_Source, Base_Source):
             self.video_stream = BrokenStream()
         else:
             self.container = self.videoset.containers[container_index]
-            self.video_stream, self.audio_stream = self._get_streams(
-                self.container, self.buffering
-            )
+            self.video_stream = self._get_streams(self.container, self.buffering)
             self.video_stream.seek(0)
 
         self.current_container_index = container_index
@@ -283,7 +281,7 @@ class File_Source(Playback_Source, Base_Source):
 
     def _get_streams(self, container, should_buffer):
         """
-        Get Video and Audio stream from containers
+        Get Video stream from containers
         """
         try:
             video_stream = next(
@@ -292,28 +290,16 @@ class File_Source(Playback_Source, Base_Source):
             logger.debug("loaded videostream: %s" % video_stream)
             video_stream.thread_count = cpu_count()
         except StopIteration:
-            video_stream = None
-            logger.error("No videostream found in media container")
-
-        try:
-            audio_stream = next(
-                s for s in container.streams if s.type == "audio"
-            )  # looking for the first audiostream
-            logger.debug("loaded audiostream: %s" % audio_stream)
-        except StopIteration:
-            audio_stream = None
-            logger.debug("No audiostream found in media container")
-        if not video_stream and not audio_stream:
             logger.error(
-                "Init failed. Could not find any video or audio"
-                + "stream in the given source file."
+                "Init failed. Could not find any video stream in the given source file."
             )
             self._initialised = False
             return
+
         if should_buffer:
-            return BufferedDecoder(container, video_stream), audio_stream
+            return BufferedDecoder(container, video_stream)
         else:
-            return OnDemandDecoder(container, video_stream), audio_stream
+            return OnDemandDecoder(container, video_stream)
 
     @property
     def initialised(self):
