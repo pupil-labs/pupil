@@ -23,6 +23,7 @@ from time import sleep
 from camera_models import load_intrinsics
 from .utils import VideoSet
 
+import player_methods as pm
 from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
 
 logger = logging.getLogger(__name__)
@@ -219,9 +220,33 @@ class File_Source(Playback_Source, Base_Source):
         self.loop = loop
         self.fill_gaps = fill_gaps
         rec, set_name = self.get_rec_set_name(self.source_path)
+
+        # setup videoset
         self.videoset = VideoSet(rec, set_name, self.fill_gaps)
-        # Load or build lookup table
         self.videoset.load_or_build_lookup()
+        if self.videoset.is_empty() and self.fill_gaps:
+
+            # TODO: replace calculation of start/end time with meta info wrapper
+            meta_info = pm.load_meta_info(rec)
+            try:
+                start_time = meta_info["Start Time (Synced)"]
+                duration = meta_info["Duration Time"]
+            except KeyError as e:
+                raise KeyError(
+                    "Could not recover timing information"
+                    " for empty videoset from recording info!"
+                )
+            try:
+                H, M, S = (int(part) for part in duration.split(":"))
+            except ValueError:
+                raise ValueError(f"Could not parse video duration: {duration}")
+            end_time = start_time + S + 60 * M + 3600 * H
+
+            fallback_framerate = 30
+            timestamps = np.arange(start_time, end_time, 1 / fallback_framerate)
+            self.videoset.build_lookup(timestamps)
+            assert not self.videoset.is_empty()
+
         self.timestamps = self.videoset.lookup.timestamps
         if len(self.timestamps) > 1:
             self.frame_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
