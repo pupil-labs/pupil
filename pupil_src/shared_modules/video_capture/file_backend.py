@@ -418,13 +418,14 @@ class File_Source(Playback_Source, Base_Source):
         events["frame"] = frame
         self._recent_frame = frame
 
-    @ensure_initialisation(
-        fallback_func=lambda evt: sleep(0.05), requires_playback=True
-    )
     def recent_events_own_timing(self, events):
         try:
             frame = self.get_frame()
         except EndofVideoError:
+            if self.timing:
+                # this is to ensure we don't do full-CPU loops on broken videos when
+                # streaming a recording into capture (!)
+                time.sleep(0.05)
             logger.info("Video has ended.")
             if self.loop:
                 logger.info("Looping enabled. Seeking to beginning.")
