@@ -215,7 +215,6 @@ class File_Source(Playback_Source, Base_Source):
         else:
             self.recent_events = self.recent_events_own_timing
         # minimal attribute set
-        self._initialised = True
         self.source_path = source_path
         self.loop = loop
         self.fill_gaps = fill_gaps
@@ -267,25 +266,6 @@ class File_Source(Playback_Source, Base_Source):
         self.current_container_index = container_index
         self.frame_iterator = self.video_stream.get_frame_iterator()
 
-    def ensure_initialisation(fallback_func=None, requires_playback=False):
-        from functools import wraps
-
-        def decorator(func):
-            @wraps(func)
-            def run_func(self, *args, **kwargs):
-                if self._initialised and self.video_stream:
-                    # test self.play only if requires_playback is True
-                    if not requires_playback or self.play:
-                        return func(self, *args, **kwargs)
-                if fallback_func:
-                    return fallback_func(*args, **kwargs)
-                else:
-                    logger.debug("Initialisation required.")
-
-            return run_func
-
-        return decorator
-
     def _get_streams(self, container, should_buffer):
         """Get Video stream from containers."""
         try:
@@ -293,7 +273,6 @@ class File_Source(Playback_Source, Base_Source):
             video_stream = next(s for s in container.streams if s.type == "video")
         except StopIteration:
             logger.error("Could not find any video stream in the given source file.")
-            self._initialised = False
             # fallback to 'valid' broken stream
             return BrokenStream()
 
@@ -307,7 +286,7 @@ class File_Source(Playback_Source, Base_Source):
 
     @property
     def initialised(self):
-        return self._initialised
+        return not self.videoset.is_empty()
 
     @property
     def frame_size(self):

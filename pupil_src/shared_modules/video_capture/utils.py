@@ -250,6 +250,10 @@ class Video:
         return timestamps
 
 
+class LookupTableNotInitializedError(AttributeError):
+    pass
+
+
 class VideoSet:
     def __init__(self, rec: str, name: str, fill_gaps: bool):
         self.rec = rec
@@ -260,14 +264,14 @@ class VideoSet:
         self._containers = [vid.load_valid_container() for vid in self.videos]
 
     def is_empty(self) -> bool:
-        if not self.videos:
-            # no videos found
-            return True
-        if not self.fill_gaps and not self.containers:
-            # only corrupted videos and no gap-filling
-            return True
-        # in all other cases we have something to display
-        return False
+        try:
+            # bool(self.lookup.timestamp) raises ValueError for numpy arrays: The truth
+            # value of an array with more than one element is ambiguous.
+            return len(self.lookup.timestamp) == 0
+        except AttributeError:
+            raise LookupTableNotInitializedError(
+                "Lookup table was not initialized correctly!"
+            )
 
     @property
     def videos(self) -> Sequence[Video]:
