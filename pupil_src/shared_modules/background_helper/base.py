@@ -17,7 +17,7 @@ class EarlyCancellationError(Exception):
     pass
 
 
-class Task_Proxy(abc.ABC):
+class BaseTaskProxy(abc.ABC):
     """Future like object that runs a given generator in the background and returns is able to return the results incrementally"""
 
     @property

@@ -17,13 +17,13 @@ import threading
 import typing as T
 
 from .base import EarlyCancellationError
-from .base import Task_Proxy as Base_Task_Proxy
+from .base import BaseTaskProxy
 
 
 logger = logging.getLogger(__name__)
 
 
-class Task_Proxy(Base_Task_Proxy):
+class ThreadingTaskProxy(BaseTaskProxy):
 
     def __init__(self, name: str, generator, args=(), kwargs={}, **_):
         super().__init__(name=name, generator=generator, args=args, kwargs=kwargs)
@@ -32,7 +32,7 @@ class Task_Proxy(Base_Task_Proxy):
         self._completed = False
         self._canceled = False
 
-        pipe_recv, pipe_send = _Threading_Pipe(False)
+        pipe_recv, pipe_send = _ThreadingPipe(False)
         wrapper_args = self._prepare_wrapper_args(
             pipe_send, generator
         )
@@ -73,7 +73,8 @@ class Task_Proxy(Base_Task_Proxy):
                 # fetch to flush pipe to allow process to react to cancel comand.
                 pass
         if self.process is not None:
-            self.process.join(timeout)
+            # self.process.join(timeout)
+            self.process.join()
             assert not self.process.is_alive()
             self.process = None
 
@@ -109,14 +110,14 @@ class Task_Proxy(Base_Task_Proxy):
             logger.debug("Exiting _wrapper")
 
 
-def _Threading_Pipe(duplex: bool):
+def _ThreadingPipe(duplex: bool):
     shared_queue = Queue()
-    pipe_recv = _Threading_Connection(send_queue=shared_queue, recv_queue=shared_queue)
+    pipe_recv = _ThreadingConnection(send_queue=shared_queue, recv_queue=shared_queue)
     pipe_send = pipe_recv
     return pipe_recv, pipe_send
 
 
-class _Threading_Connection:
+class _ThreadingConnection:
     def __init__(self, send_queue: Queue, recv_queue: Queue):
         self._send_queue = send_queue
         self._recv_queue = recv_queue

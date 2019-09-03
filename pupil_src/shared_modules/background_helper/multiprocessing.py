@@ -18,13 +18,13 @@ import typing as T
 import zmq_tools
 
 from .base import EarlyCancellationError
-from .base import Task_Proxy as Base_Task_Proxy
+from .base import BaseTaskProxy
 
 
 logger = logging.getLogger(__name__)
 
 
-class Task_Proxy(Base_Task_Proxy):
+class MultiprocessingTaskProxy(BaseTaskProxy):
 
     def __init__(self, name, generator, args=(), kwargs={}, context=..., **_):
         super().__init__(name=name, generator=generator, args=args, kwargs=kwargs)
@@ -122,7 +122,7 @@ class Task_Proxy(Base_Task_Proxy):
         return self._canceled
 
 
-class IPC_Logging_Task_Proxy(Task_Proxy):
+class MultiprocessingLoggingTaskProxy(MultiprocessingTaskProxy):
     push_url = None
 
     def _prepare_wrapper_args(self, *args):
@@ -166,7 +166,7 @@ if __name__ == "__main__":
             sleep(np.random.rand() * 0.1)
 
     # initialize task proxy
-    task = Task_Proxy(
+    task = MultiprocessingTaskProxy(
         "Background", example_generator, args=(5.0, 3.0), kwargs={"steps": 100}
     )
 
