@@ -37,6 +37,10 @@ class FileSeekError(Exception):
     pass
 
 
+class NoVideoError(Exception):
+    pass
+
+
 class Frame(object):
     """docstring of Frame"""
 
@@ -237,10 +241,14 @@ class File_Source(Playback_Source, Base_Source):
         set_name = os.path.splitext(file_)[0]
         return rec, set_name
 
-    def setup_video(self, container_index):
-        """
-        Setup streams for a given container_index.
-        """
+    def _setup_video(self, container_index):
+        """Setup streams for a given container_index."""
+        if self.videoset.is_empty():
+            # calling this (with an index!) for an empty video means we did something wrong
+            raise NoVideoError(
+                "Trying to setup video for empty videoset. This should not happen."
+            )
+
         try:
             self.video_stream.cleanup()
         except AttributeError:
@@ -351,7 +359,7 @@ class File_Source(Playback_Source, Base_Source):
 
         if target_entry.container_idx != self.current_container_index:
             # Contained index changed, need to load other video split
-            self.setup_video(target_entry.container_idx)
+            self._setup_video(target_entry.container_idx)
 
         # advance frame iterator until we hit the target frame
         for av_frame in self.frame_iterator:
@@ -454,7 +462,7 @@ class File_Source(Playback_Source, Base_Source):
         target_entry = self.videoset.lookup[seek_pos]
         if target_entry.container_idx > -1:
             if target_entry.container_idx != self.current_container_index:
-                self.setup_video(target_entry.container_idx)
+                self._setup_video(target_entry.container_idx)
             try:
                 # explicit conversion to python int required, else:
                 # TypeError: ('Container.seek only accepts integer offset.')
@@ -559,7 +567,7 @@ class File_Source(Playback_Source, Base_Source):
         self.current_frame_idx = 0
         self.target_frame_idx = 0
         container_idx_of_first_frame = self.videoset.lookup[0].container_idx
-        self.setup_video(container_idx_of_first_frame)
+        self._setup_video(container_idx_of_first_frame)
 
 
 class File_Manager(Base_Manager):
