@@ -567,8 +567,11 @@ class File_Source(Playback_Source, Base_Source):
         """
         self.current_frame_idx = 0
         self.target_frame_idx = 0
-        container_idx_of_first_frame = self.videoset.lookup[0].container_idx
-        self._setup_video(container_idx_of_first_frame)
+        if not self.initialised:
+            self._setup_video(-1)
+        else:
+            container_idx_of_first_frame = self.videoset.lookup[0].container_idx
+            self._setup_video(container_idx_of_first_frame)
 
 
 class File_Manager(Base_Manager):
