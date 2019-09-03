@@ -324,6 +324,10 @@ class VideoSet:
         Case 6: all videos are broken and self._fill_gaps is False
             return
         """
+        if self.is_empty():
+            # create valid empty lookup table
+            return self._setup_lookup(np.array([]))
+
         loaded_ts = self._loaded_ts_sorted()
         loaded_ts = self._fill_gaps(loaded_ts)
         lookup = self._setup_lookup(loaded_ts)
