@@ -280,21 +280,18 @@ class File_Source(Playback_Source, Base_Source):
         return decorator
 
     def _get_streams(self, container, should_buffer):
-        """
-        Get Video stream from containers
-        """
+        """Get Video stream from containers."""
         try:
-            video_stream = next(
-                s for s in container.streams if s.type == "video"
-            )  # looking for the first videostream
-            logger.debug("loaded videostream: %s" % video_stream)
-            video_stream.thread_count = cpu_count()
+            # look for the first videostream
+            video_stream = next(s for s in container.streams if s.type == "video")
         except StopIteration:
-            logger.error(
-                "Init failed. Could not find any video stream in the given source file."
-            )
+            logger.error("Could not find any video stream in the given source file.")
             self._initialised = False
-            return
+            # fallback to 'valid' broken stream
+            return BrokenStream()
+
+        logger.debug(f"loaded videostream: {str(video_stream)}")
+        video_stream.thread_count = cpu_count()
 
         if should_buffer:
             return BufferedDecoder(container, video_stream)
