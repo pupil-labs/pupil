@@ -9,6 +9,9 @@ import csv_utils
 from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
 
 
+from .recording_info import RecordingInfo, RecordingInfoInvalidError, RecordingInfoFileCSV, RecordingInfoFileJSON
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,25 +28,26 @@ class InvalidRecordingException(Exception):
 
 class PupilRecording:
     def __init__(self, rec_dir):
-        self._rec_dir = rec_dir
-        self._meta_info = None
+        self._info_csv = None
         self.load(rec_dir=rec_dir)
 
     @property
-    def rec_dir(self):
-        return self._rec_dir
+    def meta_info(self) -> RecordingInfoFileCSV:
+        return self._info_csv
 
     @property
-    def meta_info(self):
-        return self._meta_info
+    def rec_dir(self):
+        return self.meta_info.rec_dir
 
     @property
     def capture_software(self) -> str:
-        return self.meta_info.get("Capture Software", "Pupil Capture")
+        return self.meta_info.capture_software
 
     @property
     def data_format_version(self) -> T.Optional[str]:
-        return self.meta_info.get("Data Format Version", None)
+        # TODO: self.meta_info.data_format_version returns a non-optional RecordingVersion instance;
+        #       Investigate if that property is allowed to return None, and decide how to proceed with this API.
+        return self.meta_info.data_format_version
 
     @property
     def is_pupil_mobile(self) -> bool:
@@ -90,35 +94,28 @@ class PupilRecording:
                     reason=f"Target at path is not a directory: {rec_dir}", recovery=""
                 )
 
-        info_path = rec_dir / "info.csv"
-
-        if not info_path.exists():
+        try:
+            info_csv = RecordingInfoFileCSV(rec_dir=rec_dir)
+        except FileNotFoundError:
             raise InvalidRecordingException(
-                reason=f"There is no info.csv in the target directory", recovery=""
+                reason=f"There is no info.csv in the target directory",
+                recovery=""
+            )
+        except RecordingInfoInvalidError as err:
+            raise InvalidRecordingException(
+                reason=f"{err}",
+                recovery=""
             )
 
-        if not info_path.is_file():
-            raise InvalidRecordingException(
-                reason=f"Target info.csv is not a file: {info_path}", recovery=""
-            )
-
-        with info_path.open("r", encoding="utf-8") as csvfile:
+        if info_csv.is_pupil_invisible:
             try:
-                meta_info = csv_utils.read_key_value_file(csvfile)
-            except Exception as e:
-                raise InvalidRecordingException(
-                    reason=f"Failed reading info.csv: {e}", recovery=""
-                )
-
-        info_mandatory_keys = ["Recording Name"]
-
-        for key in info_mandatory_keys:
-            try:
-                meta_info[key]
-            except KeyError:
-                raise InvalidRecordingException(
-                    reason=f'Target info.csv does not have "{key}"', recovery=""
-                )
+                info_json = RecordingInfoFileJSON(rec_dir=rec_dir)
+            except (FileNotFoundError, RecordingInfoInvalidError):
+                pass
+            else:
+                # Overwrite info.csv with data from info.json
+                info_csv.copy_from(info_json)
+                info_csv.save_file()
 
         all_file_paths = rec_dir.glob("*")
 
@@ -131,8 +128,7 @@ class PupilRecording:
         # TODO: Are there any other validations missing?
         # All validations passed
 
-        self._rec_dir = rec_dir
-        self._meta_info = meta_info
+        self._info_csv = info_csv
 
     class FileFilter(collections.Sequence):
         """Utility class for conveniently filtering files of the recording.
