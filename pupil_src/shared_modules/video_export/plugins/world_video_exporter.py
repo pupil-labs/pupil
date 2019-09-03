@@ -163,6 +163,15 @@ def _export_world_video(
         g_pool.app = "exporter"
         g_pool.min_data_confidence = min_data_confidence
 
+        valid_ext = (".mp4", ".mkv", ".avi", ".h264", ".mjpeg", ".fake")
+        try:
+            video_path = next(
+                f
+                for f in glob(os.path.join(rec_dir, "world.*"))
+                if os.path.splitext(f)[1] in valid_ext
+            )
+        except StopIteration:
+            raise FileNotFoundError("No Video world found")
         cap = File_Source(g_pool, source_path=video_path, fill_gaps=True, timing=None)
         if not cap.initialised:
             warn = "Trying to export zero-duration world video."
