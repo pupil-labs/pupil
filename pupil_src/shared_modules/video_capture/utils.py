@@ -194,6 +194,8 @@ class Video:
     def load_valid_container(self):
         if self.is_valid:
             return self.cont
+        else:
+            return None
 
     def load_ts(self):
         self.ts = np.load(self.ts_loc)
