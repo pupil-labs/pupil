@@ -246,14 +246,19 @@ class File_Source(Playback_Source, Base_Source):
         except AttributeError:
             pass
 
-        if container_index < 0 or not self.videoset.containers[container_index]:
+        if container_index < 0:
             # setup a 'valid' broken stream
             self.video_stream = BrokenStream()
         else:
-            self.container = self.videoset.containers[container_index]
-            self.video_stream = self._get_streams(self.container, self.buffering)
-            self.video_stream.seek(0)
+            container = self.videoset.containers[container_index]
+            if container is None:
+                # TODO: Shouldn't this be caught through an invalid container_index?
+                logger.warning("Video container is broken, although it appeared valid.")
+                self.video_stream = BrokenStream()
+            else:
+                self.video_stream = self._get_streams(container, self.buffering)
 
+        self.video_stream.seek(0)
         self.current_container_index = container_index
         self.frame_iterator = self.video_stream.get_frame_iterator()
         self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
