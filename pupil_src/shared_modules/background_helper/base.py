@@ -35,6 +35,11 @@ class BaseTaskProxy(abc.ABC):
 
     @abc.abstractmethod
     def cancel(self, timeout=1):
+        """
+        Cancel current task.
+
+        :param float timeout: Number of seconds to wait for the task to stop its processing.
+        """
         pass
 
     @property
