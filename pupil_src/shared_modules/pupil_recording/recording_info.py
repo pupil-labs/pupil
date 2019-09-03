@@ -149,6 +149,7 @@ class RecordingInfo(collections.abc.MutableMapping):
     @property
     @abc.abstractmethod
     def _required_keys_with_types(self) -> dict:
+        #TODO: Come up with a more flexible way to type-check, to accomodate cases where the property may return None
         pass
 
     @property
@@ -424,6 +425,7 @@ class RecordingInfoFileCSV(RecordingInfoFile):
         "Recording UUID": str,
         "Duration Time": str,
         "Capture Software Version": str,
+        #TODO: Add all required keys...
     }
 
     _optional_keys_with_defaults = {
@@ -477,6 +479,7 @@ class RecordingInfoFileJSON(RecordingInfoFile):
         "start_time": int,
         "duration": int,
         "start_time_synced": int,
+        #TODO: Add all required keys...
     }
 
     DEFAULT_ANDROID_DEVICE_ID = ""
@@ -487,6 +490,7 @@ class RecordingInfoFileJSON(RecordingInfoFile):
         "android_device_id": DEFAULT_ANDROID_DEVICE_ID,
         "android_device_name": DEFAULT_ANDROID_DEVICE_NAME,
         "android_device_model": DEFAULT_ANDROID_DEVICE_MODEL,
+        #TODO: Add all optional keys...
     }
 
     @property
