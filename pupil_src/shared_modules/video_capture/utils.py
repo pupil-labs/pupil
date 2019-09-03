@@ -259,7 +259,7 @@ class VideoSet:
         self.rec = rec
         self.name = name
         self.fill_gaps = fill_gaps
-        self.video_exts = VIDEO_EXTS
+        self.video_exts = set(VIDEO_EXTS) - {"fake"}
         self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
         self._containers = [vid.load_valid_container() for vid in self.videos]
 
@@ -328,16 +328,15 @@ class VideoSet:
         Case 6: all videos are broken and self._fill_gaps is False
             return
         """
-        if self.is_empty():
-            # create valid empty lookup table
-            if fallback_timestamps is None:
-                fallback_timestamps = []
+
+        loaded_ts = self._loaded_ts_sorted()
+        loaded_ts = self._fill_gaps(loaded_ts)
+
+        if len(loaded_ts) == 0 and fallback_timestamps is not None:
             fallback_timestamps = np.asanyarray(fallback_timestamps)
             self.lookup = self._setup_lookup(fallback_timestamps)
             return
 
-        loaded_ts = self._loaded_ts_sorted()
-        loaded_ts = self._fill_gaps(loaded_ts)
         lookup = self._setup_lookup(loaded_ts)
         for container_idx, vid in enumerate(self.videos):
             if not vid.is_valid:
@@ -388,6 +387,8 @@ class VideoSet:
             self.build_lookup()
 
     def _loaded_ts_sorted(self) -> np.ndarray:
+        if not self.videos:
+            return np.array([])
         loaded_ts = [vid.timestamps for vid in self.videos]
         all_ts = np.concatenate(loaded_ts)
         return all_ts

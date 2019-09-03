@@ -237,6 +237,10 @@ class File_Source(Playback_Source, Base_Source):
                     " for empty videoset from recording info!"
                 )
             try:
+                start_time = float(start_time)
+            except ValueError:
+                raise ValueError(f"Could not parse start time: {start_time}")
+            try:
                 H, M, S = (int(part) for part in duration.split(":"))
             except ValueError:
                 raise ValueError(f"Could not parse video duration: {duration}")
