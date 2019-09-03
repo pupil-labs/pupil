@@ -233,7 +233,7 @@ class RecordingInfoFile(RecordingInfo):
         pass
 
     def __init__(self, rec_dir: str, should_load_file: bool = True, should_validate: bool = True):
-        self._rec_dir = rec_dir
+        self._rec_dir = str(rec_dir)
         if should_load_file:
             self.load_file(should_validate=should_validate)
 
