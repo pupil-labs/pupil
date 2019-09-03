@@ -259,27 +259,29 @@ class Pupil_Recording:
         self.load(rec_dir=self.rec_dir)
 
     def load(self, rec_dir):
+        rec_dir = Path(rec_dir).resolve()
+
         def normalize_extension(ext: str) -> str:
             if ext.startswith("."):
                 ext = ext[1:]
             return ext
 
         def is_video_file(file_path):
-            if not os.path.isfile(file_path):
+            if not file_path.is_file():
                 return False
-            _, ext = os.path.splitext(file_path)
+            ext = file_path.suffix
             ext = normalize_extension(ext)
             valid_video_extensions = map(normalize_extension, VALID_VIDEO_EXTENSIONS)
             if ext not in valid_video_extensions:
                 return False
             return True
 
-        if not os.path.exists(rec_dir):
+        if not rec_dir.exists():
             raise InvalidRecordingException(
                 reason=f"Target at path does not exist: {rec_dir}", recovery=""
             )
 
-        if not os.path.isdir(rec_dir):
+        if not rec_dir.is_dir():
             if is_video_file(rec_dir):
                 raise InvalidRecordingException(
                     reason=f"The provided path is a video, not a recording directory",
@@ -290,19 +292,19 @@ class Pupil_Recording:
                     reason=f"Target at path is not a directory: {rec_dir}", recovery=""
                 )
 
-        info_path = os.path.join(rec_dir, "info.csv")
+        info_path = rec_dir / "info.csv"
 
-        if not os.path.exists(info_path):
+        if not info_path.exists():
             raise InvalidRecordingException(
                 reason=f"There is no info.csv in the target directory", recovery=""
             )
 
-        if not os.path.isfile(info_path):
+        if not info_path.is_file():
             raise InvalidRecordingException(
                 reason=f"Target info.csv is not a file: {info_path}", recovery=""
             )
 
-        with open(info_path, "r", encoding="utf-8") as csvfile:
+        with info_path.open("r", encoding="utf-8") as csvfile:
             try:
                 meta_info = csv_utils.read_key_value_file(csvfile)
             except Exception as e:
@@ -320,7 +322,7 @@ class Pupil_Recording:
                     reason=f'Target info.csv does not have "{key}"', recovery=""
                 )
 
-        all_file_paths = glob.iglob(os.path.join(rec_dir, "*"))
+        all_file_paths = rec_dir.glob("*")
 
         # TODO: Should this validation be "are there any video files" or are there specific video files?
         if not any(is_video_file(path) for path in all_file_paths):
@@ -363,6 +365,8 @@ class Pupil_Recording:
             ("pi", "eye1"): r"^PI right v(\d+) ps(\d+)",
             ("videos",): [rf"\.{ext}$" for ext in VALID_VIDEO_EXTENSIONS],
             ("rawtimes",): r"\.time$",
+            ("timestamps",): r"_timestamps\.npy$",
+            ("lookup",): r"_lookup\.npy$",
         }
 
         def world(self) -> FilterType:
@@ -385,6 +389,9 @@ class Pupil_Recording:
 
         def timestamps(self) -> FilterType:
             return self.filter("timestamps")
+
+        def lookup(self) -> FilterType:
+            return self.filter("lookup")
 
         def core(self) -> FilterType:
             return self.filter("core")
