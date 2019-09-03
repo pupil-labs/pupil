@@ -37,10 +37,6 @@ class FileSeekError(Exception):
     pass
 
 
-class NoVideoError(Exception):
-    pass
-
-
 class Frame(object):
     """docstring of Frame"""
 
@@ -250,12 +246,6 @@ class File_Source(Playback_Source, Base_Source):
 
     def _setup_video(self, container_index):
         """Setup streams for a given container_index."""
-        if self.videoset.is_empty():
-            # calling this (with an index!) for an empty video means we did something wrong
-            raise NoVideoError(
-                "Trying to setup video for empty videoset. This should not happen."
-            )
-
         try:
             self.video_stream.cleanup()
         except AttributeError:
