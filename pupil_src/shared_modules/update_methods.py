@@ -13,9 +13,11 @@ import glob
 import json
 import logging
 import os
-import uuid
 from pathlib import Path
+import re
 from shutil import copy2
+import typing as T
+import uuid
 
 import av
 import numpy as np
@@ -27,7 +29,8 @@ import file_methods as fm
 import methods as m
 import player_methods as pm
 from version_utils import VersionFormat, read_rec_version
-from video_capture.utils import RenameSet, pi_gaze_items
+from video_capture.utils import pi_gaze_items
+from video_capture.file_backend import BrokenStream
 
 logger = logging.getLogger(__name__)
 
@@ -128,16 +131,23 @@ def _update_info_version_to(new_version, rec_dir):
 
 def convert_pupil_mobile_recording_to_v094(rec_dir):
     logger.info("Converting Pupil Mobile recording to v0.9.4 format")
-    # convert time files and rename corresponding videos
-    match_pattern = "*.time"
-    rename_set = RenameSet(rec_dir, match_pattern)
-    rename_set.load_intrinsics()
-    rename_set.rename("Pupil Cam([0-3]) ID0", "eye0")
-    rename_set.rename("Pupil Cam([0-3]) ID1", "eye1")
-    rename_set.rename("Pupil Cam([0-2]) ID2", "world")
-    # Rewrite .time file to .npy file
-    rewrite_time = RenameSet(rec_dir, match_pattern, ["time"])
-    rewrite_time.rewrite_time("_timestamps.npy")
+    recording = pm.Pupil_Recording(rec_dir)
+
+    # NOTE: could still be worldless at this point
+    _try_patch_world_instrinsics_file(
+        rec_dir, recording.files().mobile().world().videos()
+    )
+    for path in recording.files():
+        # replace prefix based on cam_id, part number is already correct
+        match = re.match(r"^(?P<prefix>Pupil Cam\d ID(?P<cam_id>\d))", path.name)
+        if match:
+            replacement_for_cam_id = {"0": "eye0", "1": "eye1", "2": "world"}
+            replacement = replacement_for_cam_id[match.group("cam_id")]
+            new_name = path.name.replace(match.group("prefix"), replacement)
+            path.replace(path.with_name(new_name))  # rename with overwrite
+
+    _rewrite_times(recording, dtype=">f8")
+
     pupil_data_loc = os.path.join(rec_dir, "pupil_data")
     if not os.path.exists(pupil_data_loc):
         logger.info('Creating "pupil_data"')
@@ -156,18 +166,106 @@ def convert_pupil_invisible_recording_to_v113(rec_dir, meta_info):
 
 
 def _pi_rename_files(rec_dir):
-    # convert time files and rename corresponding videos
-    match_pattern = "*.time"
-    rename_set = RenameSet(rec_dir, match_pattern)
-    rename_set.load_intrinsics()
-    rename_set.rename(r"PI right v1 ps(1)", r"eye0")
-    rename_set.rename(r"PI right v1 ps([2-9])", r"eye0_\1")
-    rename_set.rename(r"PI left v1 ps(1)", r"eye1")
-    rename_set.rename(r"PI left v1 ps([2-9])", r"eye1_\1")
-    rename_set.rename(r"PI world v1 ps(1)", "world")
-    rename_set.rename(r"PI world v1 ps([2-9])", r"world_\1")
-    rewrite_time = RenameSet(rec_dir, match_pattern, ["time"])
-    rewrite_time.rewrite_time("_timestamps.npy")
+    recording = pm.Pupil_Recording(rec_dir)
+
+    # NOTE: could still be worldless at this point
+    _try_patch_world_instrinsics_file(rec_dir, recording.files().pi().world().videos())
+
+    for path in recording.files():
+        # replace prefix based on cam_type, need to reformat part number
+        match = re.match(
+            r"^(?P<prefix>PI (?P<cam_type>left|right|world) v\d+ ps(?P<part>\d+))",
+            path.name,
+        )
+        if match:
+            replacement_for_cam_type = {
+                "right": "eye0",
+                "left": "eye1",
+                "world": "world",
+            }
+            replacement = replacement_for_cam_type[match.group("cam_type")]
+            part_number = int(match.group("part"))
+            if part_number > 1:
+                # add zero-filled part number - 1
+                # NOTE: recordings for PI start at part 1, mobile start at part 0
+                replacement += f"_{part_number - 1:03}"
+
+            new_name = path.name.replace(match.group("prefix"), replacement)
+            path.replace(path.with_name(new_name))  # rename with overwrite
+
+    # TODO: Extracting start_time_synced from info.json should be moved into
+    # Pupil_Recording class. Then the following snippet can be removed.
+    info_json_path = os.path.join(rec_dir, "info.json")
+    try:
+        with open(info_json_path, "r") as f:
+            json_data = json.load(f)
+        start_time = json_data["start_time_synced"]
+    except FileNotFoundError:
+        logger.warn("Trying to read info.json, but it does not exist!")
+        start_time = 0
+    except KeyError:
+        logger.error("Could not read start_time_synced from info.json!")
+        start_time = 0
+
+    SECONDS_PER_NANOSECOND = 1e-9
+
+    def conversion(timestamps: np.array):
+        # Subtract start_time from all times in the recording, so timestamps
+        # start at 0. This is to increase precision when converting
+        # timestamps to float32, e.g. for OpenGL!
+        return (timestamps - start_time) * SECONDS_PER_NANOSECOND
+
+    _rewrite_times(recording, dtype="<u8", conversion=conversion)
+
+
+def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) -> None:
+    """Tries to create a reasonable world.intrinsics file from a set of videos."""
+    if not videos:
+        return
+
+    # Make sure the default value always correlates to the frame size of fake frames
+    frame_size = BrokenStream().frame_size
+    # TODO: Due to the naming conventions for multipart-recordings, we can't
+    # easily lookup 'any' video name in the pre_recorded_calibrations, since it
+    # might be a multipart recording. Therefore we need to compute a hint here
+    # for the lookup. This could be improved.
+    camera_hint = ""
+    for video in videos:
+        try:
+            container = av.open(str(video))
+        except av.AVError:
+            continue
+
+        for camera in cm.pre_recorded_calibrations:
+            if camera in video.name:
+                camera_hint = camera
+                break
+        frame_size = (
+            container.streams.video[0].format.width,
+            container.streams.video[0].format.height,
+        )
+        break
+
+    intrinsics = cm.load_intrinsics(rec_dir, camera_hint, frame_size)
+    intrinsics.save(rec_dir, "world")
+
+
+def _rewrite_times(
+    recording: pm.Pupil_Recording,
+    dtype: str,
+    conversion: T.Optional[T.Callable[[np.array], np.array]] = None,
+) -> None:
+    """Load raw times (assuming dtype), apply conversion and save as _timestamps.npy."""
+    for path in recording.files().raw_time():
+        timestamps = np.fromfile(str(path), dtype=dtype)
+
+        if conversion is not None:
+            timestamps = conversion(timestamps)
+
+        new_name = f"{path.stem}_timestamps.npy"
+        logger.info(f"Creating {new_name}")
+        timestamp_loc = path.parent / new_name
+        np.save(str(timestamp_loc), timestamps)
 
 
 def _pi_convert_gaze(rec_dir):
