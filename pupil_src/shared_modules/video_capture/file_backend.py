@@ -221,10 +221,35 @@ class File_Source(Playback_Source, Base_Source):
         self.fill_gaps = fill_gaps
         rec, set_name = self.get_rec_set_name(self.source_path)
 
-        # setup videoset
+        self._init_videoset()
+
+        self.timestamps = self.videoset.lookup.timestamp
+        if len(self.timestamps) > 1:
+            self._frame_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
+                self.timestamps
+            )
+        else:
+            # TODO: where does the fallback framerate of 1/20 come from?
+            self._frame_rate = 20
+        self.buffering = buffered_decoding
+        # Load video split for first frame
+        self.reset_video()
+        self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
+
+    def get_rec_set_name(self, source_path):
+        """
+        Return dir and set name by source_path
+        """
+        rec, file_ = os.path.split(source_path)
+        set_name = os.path.splitext(file_)[0]
+        return rec, set_name
+
+    def _init_videoset(self):
+        rec, set_name = self.get_rec_set_name(self.source_path)
         self.videoset = VideoSet(rec, set_name, self.fill_gaps)
         self.videoset.load_or_build_lookup()
         if self.videoset.is_empty() and self.fill_gaps:
+            # create artificial lookup table here
 
             # TODO: replace calculation of start/end time with meta info wrapper
             meta_info = pm.load_meta_info(rec)
@@ -250,27 +275,6 @@ class File_Source(Playback_Source, Base_Source):
             timestamps = np.arange(start_time, end_time, 1 / fallback_framerate)
             self.videoset.build_lookup(timestamps)
             assert not self.videoset.is_empty()
-
-        self.timestamps = self.videoset.lookup.timestamp
-        if len(self.timestamps) > 1:
-            self._frame_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
-                self.timestamps
-            )
-        else:
-            # TODO: where does the fallback framerate of 1/20 come from?
-            self._frame_rate = 20
-        self.buffering = buffered_decoding
-        # Load video split for first frame
-        self.reset_video()
-        self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
-
-    def get_rec_set_name(self, source_path):
-        """
-        Return dir and set name by source_path
-        """
-        rec, file_ = os.path.split(source_path)
-        set_name = os.path.splitext(file_)[0]
-        return rec, set_name
 
     def _setup_video(self, container_index):
         """Setup streams for a given container_index."""
