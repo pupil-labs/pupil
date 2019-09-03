@@ -451,6 +451,20 @@ class RecordingInfoFileCSV(RecordingInfoFile):
 
         csv_utils.write_key_value_file(file, dict_to_write, append=False)
 
+    # Public
+
+    @property
+    def capture_software(self) -> str:
+        return self.get("Capture Software", "Pupil Capture")
+
+    @property
+    def is_pupil_mobile(self) -> bool:
+        return self.capture_software == "Pupil Mobile"
+
+    @property
+    def is_pupil_invisible(self) -> bool:
+        return self.capture_software == "Pupil Invisible"
+
 
 class RecordingInfoFileJSON(RecordingInfoFile):
 
