@@ -247,14 +247,14 @@ class File_Source(Playback_Source, Base_Source):
             self.videoset.build_lookup(timestamps)
             assert not self.videoset.is_empty()
 
-        self.timestamps = self.videoset.lookup.timestamps
+        self.timestamps = self.videoset.lookup.timestamp
         if len(self.timestamps) > 1:
-            self.frame_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
+            self._frame_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
                 self.timestamps
             )
         else:
             # TODO: where does the fallback framerate of 1/20 come from?
-            self.frame_rate = 20
+            self._frame_rate = 20
         self.buffering = buffered_decoding
         # Load video split for first frame
         self.reset_video()
@@ -316,6 +316,10 @@ class File_Source(Playback_Source, Base_Source):
     @property
     def frame_size(self):
         return self.video_stream.frame_size
+
+    @property
+    def frame_rate(self):
+        return self._frame_rate
 
     def get_init_dict(self):
         if self.g_pool.app == "capture":
