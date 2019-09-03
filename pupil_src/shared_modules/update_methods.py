@@ -698,7 +698,7 @@ def check_for_worldless_recording(rec_dir):
     )
 
     if not world_video_exists:
-        fake_world_version = 1
+        fake_world_version = 2
         fake_world_path = os.path.join(rec_dir, "world.fake")
         if os.path.exists(fake_world_path):
             fake_world = fm.load_object(fake_world_path)
@@ -706,51 +706,9 @@ def check_for_worldless_recording(rec_dir):
                 return
 
         logger.warning("No world video found. Constructing an artificial replacement.")
-        eye_ts_files = glob.glob(os.path.join(rec_dir, "eye*_timestamps.npy"))
 
-        min_ts = np.inf
-        max_ts = -np.inf
-        for f in eye_ts_files:
-            try:
-                eye_ts = np.load(f)
-                assert len(eye_ts.shape) == 1
-                assert eye_ts.shape[0] > 1
-                min_ts = min(min_ts, eye_ts[0])
-                max_ts = max(max_ts, eye_ts[-1])
-            except AssertionError:
-                logger.debug(
-                    (
-                        "Ignoring {} since it does not conform with the expected format"
-                        " (one-dimensional list with at least two entries)".format(f)
-                    )
-                )
-        assert -np.inf < min_ts < max_ts < np.inf, (
-            "This recording is invalid because it does not contain any valid eye timestamp"
-            " files from which artifical world timestamps could be generated from."
-        )
-
-        frame_rate = 30
-        timestamps = np.arange(min_ts, max_ts, 1 / frame_rate)
-        np.save(os.path.join(rec_dir, "world_timestamps.npy"), timestamps)
-        fm.save_object(
-            {
-                "frame_rate": frame_rate,
-                "frame_size": (1280, 720),
-                "version": fake_world_version,
-            },
-            os.path.join(rec_dir, "world.fake"),
-        )
-        lookup_entry = np.dtype(
-            [
-                ("container_idx", "<i8"),
-                ("container_frame_idx", "<i8"),
-                ("timestamp", "<f8"),
-            ]
-        )
-        lookup = np.empty(timestamps.size, dtype=lookup_entry).view(np.recarray)
-        lookup.timestamp = timestamps
-        lookup.container_idx = -1
-        np.save(os.path.join(rec_dir, "world_lookup.npy"), lookup)
+        fake_world_object = {"version": fake_world_version}
+        fm.save_object(fake_world_object, os.path.join(rec_dir, "world.fake"))
 
 
 def update_recording_bytes_to_unicode(rec_dir):
