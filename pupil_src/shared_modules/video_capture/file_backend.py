@@ -346,7 +346,6 @@ class File_Source(Playback_Source, Base_Source):
     def get_frame_count(self):
         return int(self.videoset.lookup.size)
 
-    @ensure_initialisation()
     def get_frame(self):
         try:
             target_entry = self.videoset.lookup[self.target_frame_idx]
