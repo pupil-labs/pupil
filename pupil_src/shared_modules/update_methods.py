@@ -31,13 +31,15 @@ import player_methods as pm
 from version_utils import VersionFormat, read_rec_version
 from video_capture.utils import pi_gaze_items
 from video_capture.file_backend import BrokenStream
+from pupil_recording import PupilRecording
+from pupil_recording.recording_info import RecordingInfoFile
 
 logger = logging.getLogger(__name__)
 
 
 def update_recording_to_recent(rec_dir):
 
-    pupil_recording = pm.PupilRecording(rec_dir=rec_dir)
+    pupil_recording = PupilRecording(rec_dir=rec_dir)
 
     meta_info = pupil_recording.meta_info
     update_meta_info(rec_dir, meta_info)
@@ -131,7 +133,7 @@ def _update_info_version_to(new_version, rec_dir):
 
 def convert_pupil_mobile_recording_to_v094(rec_dir):
     logger.info("Converting Pupil Mobile recording to v0.9.4 format")
-    recording = pm.PupilRecording(rec_dir)
+    recording = PupilRecording(rec_dir)
 
     # NOTE: could still be worldless at this point
     _try_patch_world_instrinsics_file(
@@ -166,7 +168,7 @@ def convert_pupil_invisible_recording_to_v113(rec_dir, meta_info):
 
 
 def _pi_rename_files(rec_dir):
-    recording = pm.PupilRecording(rec_dir)
+    recording = PupilRecording(rec_dir)
 
     # NOTE: could still be worldless at this point
     _try_patch_world_instrinsics_file(rec_dir, recording.files().pi().world().videos())
@@ -251,7 +253,7 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
 
 
 def _rewrite_times(
-    recording: pm.PupilRecording,
+    recording: PupilRecording,
     dtype: str,
     conversion: T.Optional[T.Callable[[np.array], np.array]] = None,
 ) -> None:

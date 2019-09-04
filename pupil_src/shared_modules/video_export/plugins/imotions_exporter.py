@@ -17,6 +17,7 @@ from shutil import copy2
 import csv_utils
 import player_methods as pm
 from methods import denormalize
+from pupil_recording import PupilRecording
 from video_export.plugin_base.isolated_frame_exporter import IsolatedFrameExporter
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ class iMotions_Exporter(IsolatedFrameExporter):
 
     def export_data(self, export_range, export_dir):
 
-        pupil_recording = pm.PupilRecording(rec_dir=self.g_pool.rec_dir)
+        pupil_recording = PupilRecording(rec_dir=self.g_pool.rec_dir)
 
         if pupil_recording.is_pupil_invisible:
             logger.error("Currently, the iMotions export doesn't support Pupil Invisible recordings")
