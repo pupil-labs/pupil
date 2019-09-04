@@ -227,6 +227,10 @@ class RecordingInfoFile(RecordingInfo):
     def file_path(self) -> str:
         return os.path.join(self.rec_dir, self.file_name)
 
+    @property
+    def does_file_exist(self) -> bool:
+        return os.path.isfile(self.file_path)
+
     def _keys_to_save(self):
         return set(self._schema.keys())
 
@@ -255,6 +259,12 @@ class RecordingInfoFile(RecordingInfo):
         self.update(read_dict)
         if should_validate:
             self.validate()
+
+    def remove_file(self):
+        try:
+            os.remove(self.file_path)
+        except FileNotFoundError:
+            pass
 
     def _get_cached_computed_property(self, key: str, getter, *getter_args, **getter_kwargs):
         try:
