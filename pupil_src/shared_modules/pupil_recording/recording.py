@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 import re
 import typing as T
+import uuid
 
 import csv_utils
 from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
@@ -95,27 +96,46 @@ class PupilRecording:
                 )
 
         try:
-            info_csv = RecordingInfoFileCSV(rec_dir=rec_dir)
+            # Load the info.csv file without validating it, since the data might be split between info.csv and info.json
+            info_csv = RecordingInfoFileCSV(rec_dir=rec_dir, should_validate=False)
         except FileNotFoundError:
             raise InvalidRecordingException(
                 reason=f"There is no info.csv in the target directory",
                 recovery=""
             )
+
+        info_json = None
+
+        if info_csv.is_pupil_invisible:
+            try:
+                info_json = RecordingInfoFileJSON(rec_dir=rec_dir, should_validate=False)
+            except (FileNotFoundError, RecordingInfoInvalidError) as err:
+                pass
+            else:
+
+                try:
+                    _ = info_json.recording_uuid
+                except KeyError:
+                    info_json.recording_uuid = uuid.uuid4()
+
+                # Overwrite info.csv with data from info.json
+                info_csv.copy_from(info_json)
+                info_csv.capture_software = RecordingInfoFileCSV.CAPTURE_SOFTWARE_PUPIL_INVISIBLE
+                info_csv.data_format_version = None
+                info_csv.save_file()
+
+        try:
+            # At this point the info.csv file must be valid
+            info_csv.validate()
         except RecordingInfoInvalidError as err:
             raise InvalidRecordingException(
                 reason=f"{err}",
                 recovery=""
             )
-
-        if info_csv.is_pupil_invisible:
-            try:
-                info_json = RecordingInfoFileJSON(rec_dir=rec_dir)
-            except (FileNotFoundError, RecordingInfoInvalidError):
-                pass
-            else:
-                # Overwrite info.csv with data from info.json
-                info_csv.copy_from(info_json)
-                info_csv.save_file()
+        else:
+            if info_json is not None:
+                info_json.remove_file()
+                del info_json
 
         all_file_paths = rec_dir.glob("*")
 
