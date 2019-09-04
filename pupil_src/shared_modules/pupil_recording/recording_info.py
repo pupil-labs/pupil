@@ -373,7 +373,7 @@ class RecordingInfoFileCSV(RecordingInfoFile):
 
     @start_time_synced_s.setter
     def start_time_synced_s(self, value: float):
-        self["Start Time (Synced)"] = value
+        self["Start Time (Synced)"] = str(value)
 
     @property
     def start_time_synced_ns(self) -> int:
@@ -389,7 +389,7 @@ class RecordingInfoFileCSV(RecordingInfoFile):
 
     @world_camera_frames.setter
     def world_camera_frames(self, value: int):
-        self["World Camera Frames"] = int(value)
+        self["World Camera Frames"] = str(value)
 
     @property
     def world_camera_resolution(self) -> T.Tuple[int, int]:
