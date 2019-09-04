@@ -59,12 +59,12 @@ class RecordingInfo(collections.abc.MutableMapping):
 
     @property
     @abc.abstractmethod
-    def data_format_version(self) -> RecordingVersion:
+    def data_format_version(self) -> T.Optional[RecordingVersion]:
         pass
 
     @data_format_version.setter
     @abc.abstractmethod
-    def data_format_version(self, value: RecordingVersion):
+    def data_format_version(self, value: T.Optional[RecordingVersion]):
         pass
 
     @property
@@ -322,12 +322,16 @@ class RecordingInfoFileCSV(RecordingInfoFile):
         self["Capture Software Version"] = str(value) #TODO: Test if this conversion is correct
 
     @property
-    def data_format_version(self) -> RecordingVersion:
-        return RecordingVersion(self["Data Format Version"])
+    def data_format_version(self) -> T.Optional[RecordingVersion]:
+        version_string = self["Data Format Version"]
+        if version_string:
+            return RecordingVersion(version_string)
+        else:
+            return None
 
     @data_format_version.setter
-    def data_format_version(self, value: RecordingVersion):
-        self["Data Format Version"] = str(value) #TODO: Test if this conversion is correct
+    def data_format_version(self, value: T.Optional[RecordingVersion]):
+        self["Data Format Version"] = str(value) if value else None #TODO: Test if this conversion is correct
 
     @property
     def duration_s(self) -> float:
@@ -502,11 +506,11 @@ class RecordingInfoFileJSON(RecordingInfoFile):
         self["app_version"] = str(value) #TODO: Test if this conversion is correct
 
     @property
-    def data_format_version(self) -> RecordingVersion:
+    def data_format_version(self) -> T.Optional[RecordingVersion]:
         return RecordingVersion(self["data_format_version"])
 
     @data_format_version.setter
-    def data_format_version(self, value: RecordingVersion):
+    def data_format_version(self, value: T.Optional[RecordingVersion]):
         self["data_format_version"] = str(value)
 
     @property
