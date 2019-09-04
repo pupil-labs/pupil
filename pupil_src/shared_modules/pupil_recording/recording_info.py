@@ -351,11 +351,13 @@ class RecordingInfoFileCSV(RecordingInfoFile):
 
     @property
     def start_time_s(self) -> float:
-        return _parse_time_string_to_seconds(time_str=self["Start Time"])
+        return float(self["Start Time (System)"])
 
     @start_time_s.setter
     def start_time_s(self, value: float):
-        self["Start Time"] = _format_seconds_to_time_string(sec=value)
+        self["Start Time (System)"] = str(value)
+        self["Start Time"] = time.strftime("%H:%M:%S", time.localtime(value))
+        self["Start Date"] = time.strftime("%d.%m.%Y", time.localtime(value))
 
     @property
     def start_time_ns(self) -> int:
