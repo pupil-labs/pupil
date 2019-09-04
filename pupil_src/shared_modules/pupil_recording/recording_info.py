@@ -343,7 +343,7 @@ class RecordingInfoFileCSV(RecordingInfoFile):
 
     @property
     def data_format_version(self) -> T.Optional[RecordingVersion]:
-        version_string = self["Data Format Version"]
+        version_string = self.get("Data Format Version", "")
         if version_string:
             return RecordingVersion(version_string)
         else:
