@@ -155,6 +155,16 @@ class RecordingInfo(collections.abc.MutableMapping):
     def _schema(self) -> T.Mapping[str, T.Tuple[ValueValidation, T.Optional[ValueDefaultGetter]]]:
         pass
 
+    # Public
+
+    CAPTURE_SOFTWARE_PUPIL_CAPTURE = "Pupil Capture"
+    CAPTURE_SOFTWARE_PUPIL_MOBILE = "Pupil Mobile"
+    CAPTURE_SOFTWARE_PUPIL_INVISIBLE = "Pupil Invisible"
+
+    DEFAULT_ANDROID_DEVICE_ID = ""
+    DEFAULT_ANDROID_DEVICE_NAME = ""
+    DEFAULT_ANDROID_DEVICE_MODEL = ""
+
     def validate(self):
         for key, (validation, default_getter) in self._schema.items():
             if key not in self:
@@ -454,10 +464,6 @@ class RecordingInfoFileCSV(RecordingInfoFile):
 
     # Public
 
-    CAPTURE_SOFTWARE_PUPIL_CAPTURE = "Pupil Capture"
-    CAPTURE_SOFTWARE_PUPIL_MOBILE = "Pupil Mobile"
-    CAPTURE_SOFTWARE_PUPIL_INVISIBLE = "Pupil Invisible"
-
     @property
     def capture_software(self) -> str:
         return self.get("Capture Software", self.CAPTURE_SOFTWARE_PUPIL_CAPTURE)
@@ -478,10 +484,6 @@ class RecordingInfoFileCSV(RecordingInfoFile):
 class RecordingInfoFileJSON(RecordingInfoFile):
 
     # RecordingInfo
-
-    DEFAULT_ANDROID_DEVICE_ID = ""
-    DEFAULT_ANDROID_DEVICE_NAME = ""
-    DEFAULT_ANDROID_DEVICE_MODEL = ""
 
     @property
     def _schema(self):
