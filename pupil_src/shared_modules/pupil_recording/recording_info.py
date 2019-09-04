@@ -3,6 +3,7 @@ import collections
 import csv
 import datetime
 import json
+import math
 import os
 import re
 import time
@@ -168,15 +169,20 @@ class RecordingInfo(collections.abc.MutableMapping):
 
     @staticmethod
     def property_equality(x: "RecordingInfo", y: "RecordingInfo") -> bool:
+
+        def _equal_sec(x: float, y: float) -> bool:
+            # Decimal precision is lost when writing to / reading from info.csv
+            return math.floor(x) == math.floor(y)
+
         return  x.recording_uuid == y.recording_uuid \
             and x.recording_name == y.recording_name \
             and x.software_version == y.software_version \
             and x.data_format_version == y.data_format_version \
-            and x.duration_ns == y.duration_ns \
-            and x.start_time_ns == y.start_time_ns \
-            and x.start_time_synced_ns == y.start_time_synced_ns \
             and x.world_camera_frames == y.world_camera_frames \
-            and x.world_camera_resolution == y.world_camera_resolution
+            and x.world_camera_resolution == y.world_camera_resolution \
+            and _equal_sec(x.duration_s, y.duration_s) \
+            and _equal_sec(x.start_time_s, y.start_time_s) \
+            and _equal_sec(x.start_time_synced_s, y.start_time_synced_s)
 
     def copy_from(self, other):
         self.recording_uuid = other.recording_uuid
