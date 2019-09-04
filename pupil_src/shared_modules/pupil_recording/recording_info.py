@@ -620,25 +620,26 @@ class RecordingInfoFileJSON(RecordingInfoFile):
         json.dump(dict_to_write, file, indent=4, sort_keys=sort_keys)
 
 
-### PRIVATE
+########## PRIVATE ##########
+
 
 def _nanosec_to_sec(ns: int) -> float:
     return float(ns / 1e9)
 
+
 def _sec_to_nanosec(s: float) -> int:
     return int(s * 1e9)
 
-def _get_recording_name(rec_dir: str) -> str:
-    return os.path.basename(rec_dir)
 
-def _get_world_camera_frame_count(rec_dir: str) -> int:
 def _default_recording_name(info: RecordingInfoFile) -> str:
     return os.path.basename(info.rec_dir)
 
 
+def _default_world_camera_frame_count(info: RecordingInfoFile) -> int:
     return 0 #FIXME
 
-def _get_world_camera_resolution(rec_dir: str) -> T.Tuple[int, int]:
+
+def _default_world_camera_resolution(info: RecordingInfoFile) -> T.Tuple[int, int]:
     return (0, 0) #FIXME
 
 
@@ -651,9 +652,16 @@ def _parse_time_string_to_seconds(time_str: str, format="%H:%M:%S") -> float:
     )
     return float(t.total_seconds())
 
-def _format_seconds_to_time_string(sec: float) -> str:
+
+def _format_seconds_to_time_string(sec: float, format="%H:%M:%S") -> str:
     t = time.gmtime(sec)
-    return time.strftime("%H:%M:%S", t)
+    return time.strftime(format, t)
+
+
+def _format_timestamp_to_time_string(ts: float, format="%H:%M:%S") -> str:
+    t = datetime.datetime.utcfromtimestamp(ts)
+    t = t.timetuple()
+    return time.strftime(format, t)
 
 
 def _validate_recording_uuid(input):
