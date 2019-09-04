@@ -711,6 +711,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
         import player_methods as pm
+        from pupil_recording import PupilRecording
         import update_methods as um
 
         def on_drop(window, count, paths):
