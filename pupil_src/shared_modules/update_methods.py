@@ -53,6 +53,11 @@ def update_recording_to_recent(rec_dir):
         and pupil_recording.data_format_version is None
     ):
         convert_pupil_invisible_recording_to_v113(rec_dir, meta_info)
+        # Remove the "info.json" file if it exists after converting
+        info_json = RecordingInfoFile.read_json(rec_dir=rec_dir, should_validate=False)
+        if info_json.does_file_exist:
+            info_json.remove_file()
+        del info_json
 
     # Reference format: v0.7.4
     rec_version = read_rec_version(meta_info)

@@ -132,10 +132,6 @@ class PupilRecording:
                 reason=f"{err}",
                 recovery=""
             )
-        else:
-            if info_json is not None:
-                info_json.remove_file()
-                del info_json
 
         all_file_paths = rec_dir.glob("*")
 
