@@ -15,7 +15,7 @@ def info_csv_v1_14() -> str:
             "Recording Name": "2019_04_01",
             "Start Date": "01.04.2019",
             "Start Time": "16:08:20",
-            "Start Time(System)": "1554127700.34813",
+            "Start Time (System)": "1554127700.34813",
             "Start Time (Synced)": "23849.548983486",
             "Recording UUID": "3361ce29-b43d-44fc-9f2f-1861ae0f2a5b",
             "Duration Time": "00:00:59",
