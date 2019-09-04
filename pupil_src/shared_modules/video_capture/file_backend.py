@@ -444,7 +444,7 @@ class File_Source(Playback_Source, Base_Source):
 
     def recent_events_own_timing(self, events):
         if not self.play:
-            if self.timing:
+            if self.timing == "own":
                 # this is to ensure we don't do full-CPU loops on broken videos when
                 # streaming a recording into capture (!)
                 sleep(0.05)
@@ -452,7 +452,7 @@ class File_Source(Playback_Source, Base_Source):
         try:
             frame = self.get_frame()
         except EndofVideoError:
-            if self.timing:
+            if self.timing == "own":
                 # this is to ensure we don't do full-CPU loops on broken videos when
                 # streaming a recording into capture (!)
                 sleep(0.05)
@@ -469,7 +469,7 @@ class File_Source(Playback_Source, Base_Source):
             )
             self.play = False
         else:
-            if self.timing:
+            if self.timing == "own":
                 self.wait(frame.timestamp)
             self._recent_frame = frame
             events["frame"] = frame
