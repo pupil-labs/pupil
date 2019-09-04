@@ -269,7 +269,15 @@ class File_Source(Playback_Source, Base_Source):
                 H, M, S = (int(part) for part in duration.split(":"))
             except ValueError:
                 raise ValueError(f"Could not parse video duration: {duration}")
-            end_time = start_time + S + 60 * M + 3600 * H
+            SEC_PER_MINUTE = 60
+            SEC_PER_HOUR = 3600
+            end_time = start_time + S + (SEC_PER_MINUTE * M) + (SEC_PER_HOUR * H)
+            # since the eye recordings might be slightly longer than the world recording
+            # (due to notification delays) we want to make sure that we generate enough
+            # fake world frames to display all eye data, so we make the world recording
+            # artificially longer
+            BACK_BUFFER_SECONDS = 3
+            end_time += BACK_BUFFER_SECONDS
 
             fallback_framerate = 30
             timestamps = np.arange(start_time, end_time, 1 / fallback_framerate)
