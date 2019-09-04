@@ -155,6 +155,16 @@ class RecordingInfo(collections.abc.MutableMapping):
     def world_camera_resolution(self, value: T.Tuple[int, int]):
         pass
 
+    @property
+    @abc.abstractmethod
+    def capture_software(self) -> str:
+        pass
+
+    @capture_software.setter
+    @abc.abstractmethod
+    def capture_software(self, value: str):
+        pass
+
     ValueValidation = T.Callable[[T.Any], T.Optional[str]]
     ValueDefaultGetter = T.Callable[["RecordingInfo"], T.Any]
 
@@ -172,6 +182,14 @@ class RecordingInfo(collections.abc.MutableMapping):
     DEFAULT_ANDROID_DEVICE_ID = ""
     DEFAULT_ANDROID_DEVICE_NAME = ""
     DEFAULT_ANDROID_DEVICE_MODEL = ""
+
+    @property
+    def is_pupil_mobile(self) -> bool:
+        return self.capture_software == self.CAPTURE_SOFTWARE_PUPIL_MOBILE
+
+    @property
+    def is_pupil_invisible(self) -> bool:
+        return self.capture_software == self.CAPTURE_SOFTWARE_PUPIL_INVISIBLE
 
     def validate(self):
         for key, (validation, default_getter) in self._schema.items():
@@ -468,6 +486,14 @@ class _RecordingInfoFileCSV(RecordingInfoFile):
         self["World Camera Resolution"] = f"{w}x{h}"
 
     @property
+    def capture_software(self) -> str:
+        return self.get("Capture Software", self.CAPTURE_SOFTWARE_PUPIL_CAPTURE)
+
+    @capture_software.setter
+    def capture_software(self, value: str):
+        self["Capture Software"] = value
+
+    @property
     def _schema(self):
         return {
             "Recording UUID": (_validate_recording_uuid, None),
@@ -503,24 +529,6 @@ class _RecordingInfoFileCSV(RecordingInfoFile):
             dict_to_write = ordered_dict
 
         csv_utils.write_key_value_file(file, dict_to_write, append=False)
-
-    # Public
-
-    @property
-    def capture_software(self) -> str:
-        return self.get("Capture Software", self.CAPTURE_SOFTWARE_PUPIL_CAPTURE)
-
-    @capture_software.setter
-    def capture_software(self, value: str):
-        self["Capture Software"] = value
-
-    @property
-    def is_pupil_mobile(self) -> bool:
-        return self.capture_software == self.CAPTURE_SOFTWARE_PUPIL_MOBILE
-
-    @property
-    def is_pupil_invisible(self) -> bool:
-        return self.capture_software == self.CAPTURE_SOFTWARE_PUPIL_INVISIBLE
 
 
 class _RecordingInfoFileJSON(RecordingInfoFile):
@@ -659,6 +667,14 @@ class _RecordingInfoFileJSON(RecordingInfoFile):
             key="_world_camera_resolution",
             cached_value=(int(w), int(h))
         )
+
+    @property
+    def capture_software(self) -> str:
+        return self.CAPTURE_SOFTWARE_PUPIL_INVISIBLE
+
+    @capture_software.setter
+    def capture_software(self, value: str):
+        pass  # no-op
 
     # RecordingInfoFile
 
