@@ -403,7 +403,7 @@ class RecordingInfoFileCSV(RecordingInfoFile):
     @world_camera_resolution.setter
     def world_camera_resolution(self, value: T.Tuple[int, int]):
         w, h = value
-        self["World Camera Resolution"] = f"{v}x{h}"
+        self["World Camera Resolution"] = f"{w}x{h}"
 
     @property
     def _schema(self):
