@@ -445,18 +445,24 @@ class RecordingInfoFileCSV(RecordingInfoFile):
     # Public
 
     CAPTURE_SOFTWARE_PUPIL_CAPTURE = "Pupil Capture"
+    CAPTURE_SOFTWARE_PUPIL_MOBILE = "Pupil Mobile"
+    CAPTURE_SOFTWARE_PUPIL_INVISIBLE = "Pupil Invisible"
 
     @property
     def capture_software(self) -> str:
-        return self.get("Capture Software", "Pupil Capture")
+        return self.get("Capture Software", self.CAPTURE_SOFTWARE_PUPIL_CAPTURE)
+
+    @capture_software.setter
+    def capture_software(self, value: str):
+        self["Capture Software"] = value
 
     @property
     def is_pupil_mobile(self) -> bool:
-        return self.capture_software == "Pupil Mobile"
+        return self.capture_software == self.CAPTURE_SOFTWARE_PUPIL_MOBILE
 
     @property
     def is_pupil_invisible(self) -> bool:
-        return self.capture_software == "Pupil Invisible"
+        return self.capture_software == self.CAPTURE_SOFTWARE_PUPIL_INVISIBLE
 
 
 class RecordingInfoFileJSON(RecordingInfoFile):
