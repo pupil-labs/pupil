@@ -146,50 +146,25 @@ class RecordingInfo(collections.abc.MutableMapping):
     def world_camera_resolution(self, value: T.Tuple[int, int]):
         pass
 
-    @property
-    @abc.abstractmethod
-    def _required_keys_with_types(self) -> dict:
-        #TODO: Come up with a more flexible way to type-check, to accomodate cases where the property may return None
-        pass
+    ValueValidation = T.Callable[[T.Any], T.Optional[str]]
+    ValueDefaultGetter = T.Callable[["RecordingInfo"], T.Any]
 
     @property
     @abc.abstractmethod
-    def _optional_keys_with_defaults(self) -> dict:
+    def _schema(self) -> T.Mapping[str, T.Tuple[ValueValidation, T.Optional[ValueDefaultGetter]]]:
         pass
 
     def validate(self):
-
-        # Unique token to mark that there is no default value and the key is required
-        required_key_default = uuid.uuid4()
-
-        valid_keys_with_types_and_defaults = {}
-
-        valid_keys_with_types_and_defaults.update(
-            (key, (expected_type, required_key_default))
-            for key, expected_type in self._required_keys_with_types.items()
-        )
-
-        valid_keys_with_types_and_defaults.update(
-            (key, (type(default_value), default_value))
-            for key, default_value in self._optional_keys_with_defaults.items()
-        )
-
-        for key, (expected_type, default_value) in valid_keys_with_types_and_defaults.items():
-
+        for key, (validation, default_getter) in self._schema.items():
             if key not in self:
-                if default_value is required_key_default:
-                    raise RecordingInfoInvalidError.missingKey(key=key)
+                if default_getter is None:
+                    raise RecordingInfoInvalidError.missingKey(key)
                 else:
-                    self[key] = default_value
+                    self[key] = default_getter(self)
                     continue
-
-            actual_type = type(self[key])
-            if actual_type != expected_type:
-                raise RecordingInfoInvalidError.wrongTypeForKey(
-                    key=key,
-                    actual_type=actual_type,
-                    expected_type=expected_type
-                )
+            validation_error = validation(self[key])
+            if validation_error is not None:
+                raise RecordingInfoInvalidError(f"Error on key \"{key}\": {validation_error}")
 
     @staticmethod
     def property_equality(x: "RecordingInfo", y: "RecordingInfo") -> bool:
@@ -247,10 +222,7 @@ class RecordingInfoFile(RecordingInfo):
         return os.path.join(self.rec_dir, self.file_name)
 
     def _keys_to_save(self):
-        keys_to_save = set()
-        keys_to_save.update(self._required_keys_with_types.keys())
-        keys_to_save.update(self._optional_keys_with_defaults.keys())
-        return keys_to_save
+        return set(self._schema.keys())
 
     def _dict_to_save(self):
         dict_to_save = {}
@@ -421,17 +393,22 @@ class RecordingInfoFileCSV(RecordingInfoFile):
         w, h = value
         self["World Camera Resolution"] = f"{v}x{h}"
 
-    _required_keys_with_types = {
-        "Recording UUID": str,
-        "Duration Time": str,
-        "Capture Software Version": str,
-        #TODO: Add all required keys...
-    }
-
-    _optional_keys_with_defaults = {
-        "World Camera Frames": "0", #TODO
-        "World Camera Resolution": "0x0", #TODO
-    }
+    @property
+    def _schema(self):
+        return {
+            "Recording UUID": (_validate_recording_uuid, None),
+            "Recording Name": (_validate_type(str), _default_recording_name),
+            "Duration Time": (_validate_type(str), None), #TODO: Add better validation
+            "Start Date": (_validate_type(str), None), #TODO: Add better validation
+            "Start Time": (_validate_type(str), None), #TODO: Add better validation
+            "Start Time (System)": (_validate_type(str), None), #TODO: Add better validation
+            "Start Time (Synced)": (_validate_type(str), None), #TODO: Add better validation
+            "Capture Software Version": (_validate_type(str), None),
+            "Capture Software": (_validate_type(str), lambda info: info.CAPTURE_SOFTWARE_PUPIL_CAPTURE),
+            "World Camera Frames": (_validate_type(str), lambda _: "0"), #TODO: Add better default
+            "World Camera Resolution": (_validate_type(str), lambda _: "0x0"), #TODO: Add better validation and default
+            "System Info": (_validate_type(str), lambda _: "..."), #TODO: Get default system information
+        }
 
     # RecordingInfoFile
 
@@ -455,6 +432,8 @@ class RecordingInfoFileCSV(RecordingInfoFile):
 
     # Public
 
+    CAPTURE_SOFTWARE_PUPIL_CAPTURE = "Pupil Capture"
+
     @property
     def capture_software(self) -> str:
         return self.get("Capture Software", "Pupil Capture")
@@ -472,26 +451,25 @@ class RecordingInfoFileJSON(RecordingInfoFile):
 
     # RecordingInfo
 
-    _required_keys_with_types = {
-        "data_format_version": str,
-        "recording_uuid": str,
-        "app_version": str,
-        "start_time": int,
-        "duration": int,
-        "start_time_synced": int,
-        #TODO: Add all required keys...
-    }
-
     DEFAULT_ANDROID_DEVICE_ID = ""
     DEFAULT_ANDROID_DEVICE_NAME = ""
     DEFAULT_ANDROID_DEVICE_MODEL = ""
 
-    _optional_keys_with_defaults = {
-        "android_device_id": DEFAULT_ANDROID_DEVICE_ID,
-        "android_device_name": DEFAULT_ANDROID_DEVICE_NAME,
-        "android_device_model": DEFAULT_ANDROID_DEVICE_MODEL,
-        #TODO: Add all optional keys...
-    }
+    @property
+    def _schema(self):
+        return {
+            "data_format_version": (_validate_version, None),
+            "recording_uuid": (_validate_recording_uuid, None),
+            "app_version": (_validate_version, None),
+            "start_time": (_validate_type(int), None),
+            "duration": (_validate_type(int), None),
+            "start_time_synced": (_validate_type(int), None),
+            #TODO: Add all required keys...
+            "android_device_id": (_validate_type(str), lambda info: info.DEFAULT_ANDROID_DEVICE_ID),
+            "android_device_name": (_validate_type(str), lambda info: info.DEFAULT_ANDROID_DEVICE_NAME),
+            "android_device_model": (_validate_type(str), lambda info: info.DEFAULT_ANDROID_DEVICE_MODEL),
+            #TODO: Add all optional keys...
+        }
 
     @property
     def recording_uuid(self) -> uuid.UUID:
@@ -642,6 +620,10 @@ def _get_recording_name(rec_dir: str) -> str:
     return os.path.basename(rec_dir)
 
 def _get_world_camera_frame_count(rec_dir: str) -> int:
+def _default_recording_name(info: RecordingInfoFile) -> str:
+    return os.path.basename(info.rec_dir)
+
+
     return 0 #FIXME
 
 def _get_world_camera_resolution(rec_dir: str) -> T.Tuple[int, int]:
@@ -660,3 +642,26 @@ def _parse_time_string_to_seconds(time_str: str, format="%H:%M:%S") -> float:
 def _format_seconds_to_time_string(sec: float) -> str:
     t = time.gmtime(sec)
     return time.strftime("%H:%M:%S", t)
+
+
+def _validate_recording_uuid(input):
+    try:
+        _ = uuid.UUID(input)
+        return None
+    except Exception:
+        return f"Invalid UUID string: {input}"
+
+
+def _validate_version(input):
+    if not isinstance(input, str):
+        return f"Expected type: {str}, actual type: {type(input)}"
+    #TODO: Validate version string format
+    return None
+
+
+def _validate_type(expected_type):
+    def validation(input):
+        if not isinstance(input, expected_type):
+            return f"Expected type: {expected_type}, actual type: {type(input)}"
+        return None
+    return validation
