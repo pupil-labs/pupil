@@ -10,7 +10,7 @@ import csv_utils
 from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
 
 
-from .recording_info import RecordingInfo, RecordingInfoInvalidError, RecordingInfoFileCSV, RecordingInfoFileJSON
+from .recording_info import RecordingInfo, RecordingInfoFile, RecordingInfoInvalidError, RecordingVersion
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class PupilRecording:
         self.load(rec_dir=rec_dir)
 
     @property
-    def meta_info(self) -> RecordingInfoFileCSV:
+    def meta_info(self) -> RecordingInfoFile:
         return self._info_csv
 
     @property
@@ -97,7 +97,7 @@ class PupilRecording:
 
         try:
             # Load the info.csv file without validating it, since the data might be split between info.csv and info.json
-            info_csv = RecordingInfoFileCSV(rec_dir=rec_dir, should_validate=False)
+            info_csv = RecordingInfoFile.read_csv(rec_dir=rec_dir, should_validate=False)
         except FileNotFoundError:
             raise InvalidRecordingException(
                 reason=f"There is no info.csv in the target directory",
@@ -108,7 +108,7 @@ class PupilRecording:
 
         if info_csv.is_pupil_invisible:
             try:
-                info_json = RecordingInfoFileJSON(rec_dir=rec_dir, should_validate=False)
+                info_json = RecordingInfoFile.read_json(rec_dir=rec_dir, should_validate=False)
             except (FileNotFoundError, RecordingInfoInvalidError) as err:
                 pass
             else:
@@ -120,7 +120,7 @@ class PupilRecording:
 
                 # Overwrite info.csv with data from info.json
                 info_csv.copy_from(info_json)
-                info_csv.capture_software = RecordingInfoFileCSV.CAPTURE_SOFTWARE_PUPIL_INVISIBLE
+                info_csv.capture_software = RecordingInfoFile.CAPTURE_SOFTWARE_PUPIL_INVISIBLE
                 info_csv.data_format_version = None
                 info_csv.save_file()
 

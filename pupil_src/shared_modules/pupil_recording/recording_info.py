@@ -14,6 +14,14 @@ from packaging.version import Version as RecordingVersion
 import csv_utils
 
 
+__all__ = [
+    "RecordingInfo",
+    "RecordingInfoFile",
+    "RecordingInfoInvalidError",
+    "RecordingVersion",
+]
+
+
 class RecordingInfoInvalidError(Exception):
     @staticmethod
     def missingKey(key: str) -> "RecordingInfoInvalidError":
@@ -224,7 +232,41 @@ class RecordingInfoFile(RecordingInfo):
     def _write_dict_to_file(file, dict_to_write: dict, sort_keys: bool):
         pass
 
-    def __init__(self, rec_dir: str, should_load_file: bool = True, should_validate: bool = True):
+    # Public
+
+    @staticmethod
+    def read_csv(rec_dir: str, should_validate: bool = True) -> "RecordingInfoFile":
+        return _RecordingInfoFileCSV(
+            rec_dir=rec_dir,
+            should_load_file=True,
+            should_validate=should_validate,
+        )
+
+    @staticmethod
+    def read_json(rec_dir: str, should_validate: bool = True) -> "RecordingInfoFile":
+        return _RecordingInfoFileJSON(
+            rec_dir=rec_dir,
+            should_load_file=True,
+            should_validate=should_validate,
+        )
+
+    @staticmethod
+    def create_csv(rec_dir: str) -> "RecordingInfoFile":
+        return _RecordingInfoFileCSV(
+            rec_dir=rec_dir,
+            should_load_file=False,
+            should_validate=False,
+        )
+
+    @staticmethod
+    def create_json(rec_dir: str) -> "RecordingInfoFile":
+        return _RecordingInfoFileJSON(
+            rec_dir=rec_dir,
+            should_load_file=False,
+            should_validate=False,
+        )
+
+    def __init__(self, rec_dir: str, should_load_file: bool, should_validate: bool):
         self._rec_dir = str(rec_dir)
         if should_load_file:
             self.load_file(should_validate=should_validate)
@@ -313,7 +355,7 @@ class RecordingInfoFile(RecordingInfo):
             return self.__info_storage
 
 
-class RecordingInfoFileCSV(RecordingInfoFile):
+class _RecordingInfoFileCSV(RecordingInfoFile):
 
     # RecordingInfo
 
@@ -481,7 +523,7 @@ class RecordingInfoFileCSV(RecordingInfoFile):
         return self.capture_software == self.CAPTURE_SOFTWARE_PUPIL_INVISIBLE
 
 
-class RecordingInfoFileJSON(RecordingInfoFile):
+class _RecordingInfoFileJSON(RecordingInfoFile):
 
     # RecordingInfo
 
@@ -619,15 +661,6 @@ class RecordingInfoFileJSON(RecordingInfoFile):
         )
 
     # RecordingInfoFile
-
-    def __init__(self, rec_dir: str, should_load_file: bool = True, should_validate: bool = True):
-        self._info = {}
-        self._cache = {}
-        super().__init__(
-            rec_dir=rec_dir,
-            should_load_file=should_load_file,
-            should_validate=should_validate,
-        )
 
     @property
     def file_name(self) -> str:

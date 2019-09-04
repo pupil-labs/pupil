@@ -1,17 +1,14 @@
 import os
 import uuid
 
-from .recording_info import RecordingVersion, RecordingInfo
-from .recording_info import RecordingInfoInvalidError
-from .recording_info import RecordingInfoFileCSV
-from .recording_info import RecordingInfoFileJSON
+from .recording_info import RecordingVersion, RecordingInfo, RecordingInfoFile, RecordingInfoInvalidError
 
 from . import test_fixtures
 
 
 def test_info_json_basic():
     rec_dir = test_fixtures.info_json_basic()
-    info_file = RecordingInfoFileJSON(rec_dir=rec_dir)
+    info_file = RecordingInfoFile.read_json(rec_dir=rec_dir)
     _check_info_property_types(info_file)
 
     assert len(info_file.recording_name) > 0
@@ -21,7 +18,7 @@ def test_info_json_basic():
 
 def test_info_csv_v1_14():
     rec_dir = test_fixtures.info_csv_v1_14()
-    info_file = RecordingInfoFileCSV(rec_dir=rec_dir)
+    info_file = RecordingInfoFile.read_csv(rec_dir=rec_dir)
     _check_info_property_types(info_file)
 
     assert len(info_file.recording_name) > 0

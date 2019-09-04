@@ -1,1 +1,1 @@
-from .recording import PupilRecording, InvalidRecordingException
+from .recording import PupilRecording, InvalidRecordingException, RecordingVersion
