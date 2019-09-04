@@ -198,7 +198,11 @@ class Video:
             return None
 
     def load_ts(self):
-        self.ts = np.load(self.ts_loc)
+        try:
+            self.ts = np.load(self.ts_loc)
+        except FileNotFoundError:
+            self.ts = np.array([])
+            return
         self.ts = self._fix_negative_time_jumps(self.ts)
 
     def load_pts(self):
