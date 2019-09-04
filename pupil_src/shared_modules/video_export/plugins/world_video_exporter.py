@@ -173,6 +173,11 @@ def _export_world_video(
         except StopIteration:
             raise FileNotFoundError("No Video world found")
         cap = File_Source(g_pool, source_path=video_path, fill_gaps=True, timing=None)
+        if not cap.initialised:
+            warn = "Trying to export zero-duration world video."
+            logger.warning(warn)
+            yield warn, 0.0
+            return
 
         timestamps = cap.timestamps
 
