@@ -27,7 +27,7 @@ class InvalidRecordingException(Exception):
         return f"{type(self).__name__}: {super().__str__()}"
 
 
-class PupilRecording:
+class PupilRecording(RecordingInfo):
     def __init__(self, rec_dir):
         self._info_csv = None
         self.load(rec_dir=rec_dir)
@@ -40,9 +40,48 @@ class PupilRecording:
     def rec_dir(self):
         return self.meta_info.rec_dir
 
+    # MutableMapping
+
+    def __getitem__(self, key):
+        return self.meta_info.__getitem__(key)
+
+    def __setitem__(self, key, item):
+        return self.meta_info.__setitem__(key, item)
+
+    def __delitem__(self, key):
+        return self.meta_info.__delitem__(key)
+
+    def __iter__(self):
+        return self.meta_info.__iter__()
+
+    def __len__(self):
+        return self.meta_info.__len__()
+
+    # RecordingInfo
+
     @property
-    def capture_software(self) -> str:
-        return self.meta_info.capture_software
+    def recording_uuid(self) -> uuid.UUID:
+        return self.meta_info.recording_uuid
+
+    @recording_uuid.setter
+    def recording_uuid(self, value: uuid.UUID):
+        self.meta_info.recording_uuid = value
+
+    @property
+    def recording_name(self) -> str:
+        return self.meta_info.recording_name
+
+    @recording_name.setter
+    def recording_name(self, value: str):
+        self.meta_info.recording_name = value
+
+    @property
+    def software_version(self) -> RecordingVersion:
+        return self.meta_info.software_version
+
+    @software_version.setter
+    def software_version(self, value: RecordingVersion):
+        self.meta_info.software_version = value
 
     @property
     def data_format_version(self) -> T.Optional[str]:
@@ -50,13 +89,93 @@ class PupilRecording:
         #       Investigate if that property is allowed to return None, and decide how to proceed with this API.
         return self.meta_info.data_format_version
 
-    @property
-    def is_pupil_mobile(self) -> bool:
-        return self.capture_software == "Pupil Mobile"
+    @data_format_version.setter
+    def data_format_version(self, value: T.Optional[str]):
+        self.meta_info.data_format_version = RecordingVersion(value) if value else None
 
     @property
-    def is_pupil_invisible(self) -> bool:
-        return self.capture_software == "Pupil Invisible"
+    def duration_s(self) -> float:
+        return self.meta_info.duration_s
+
+    @duration_s.setter
+    def duration_s(self, value: float):
+        self.meta_info.duration_s = value
+
+    @property
+    def duration_ns(self) -> int:
+        return self.meta_info.duration_ns
+
+    @duration_ns.setter
+    def duration_ns(self, value: int):
+        self.meta_info.duration_ns = value
+
+    @property
+    def start_time_s(self) -> float:
+        return self.meta_info.start_time_s
+
+    @start_time_s.setter
+    def start_time_s(self, value: float):
+        self.meta_info.start_time_s = value
+
+    @property
+    def start_time_ns(self) -> int:
+        return self.meta_info.start_time_ns
+
+    @start_time_ns.setter
+    def start_time_ns(self, value: int):
+        self.meta_info.start_time_ns = value
+
+    @property
+    def start_time_synced_s(self) -> float:
+        return self.meta_info.start_time_synced_s
+
+    @start_time_synced_s.setter
+    def start_time_synced_s(self, value: float):
+        self.start_time_synced_s = value
+
+    @property
+    def start_time_synced_ns(self) -> int:
+        return self.meta_info.start_time_synced_ns
+
+    @start_time_synced_ns.setter
+    def start_time_synced_ns(self, value: int):
+        self.meta_info.start_time_synced_ns = value
+
+    @property
+    def world_camera_frames(self) -> int:
+        return self.meta_info.world_camera_frames
+
+    @world_camera_frames.setter
+    def world_camera_frames(self, value: int):
+        self.meta_info.world_camera_frames = value
+
+    @property
+    def world_camera_resolution(self) -> T.Tuple[int, int]:
+        return self.world_camera_resolution
+
+    @world_camera_resolution.setter
+    def world_camera_resolution(self, value: T.Tuple[int, int]):
+        self.world_camera_resolution = value
+
+    @property
+    def capture_software(self) -> str:
+        return self.meta_info.capture_software
+
+    @capture_software.setter
+    def capture_software(self, value: str):
+        self.meta_info.capture_software = value
+
+    @property
+    def _schema(self):
+        return self.meta_info._schema
+
+    def validate(self):
+        try:
+            self.reload()
+        except InvalidRecordingException as err:
+            raise RecordingInfoInvalidError(f"{err}")
+
+    # Public
 
     def reload(self):
         self.load(rec_dir=self.rec_dir)
