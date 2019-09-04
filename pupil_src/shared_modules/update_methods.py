@@ -235,15 +235,24 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
             container = av.open(str(video))
         except av.AVError:
             continue
+        try:
+            frame_size = (
+                container.streams.video[0].format.width,
+                container.streams.video[0].format.height,
+            )
+        except Exception as e:
+            # there's a whole bunch of things that can go wrong here, if the video file
+            # was corrupted, but could still be opened!
+            logger.debug(
+                f"Video {str(video)} was opened, but could not be parsed appropriately!"
+                f" See error: {e}"
+            )
+            continue
 
         for camera in cm.pre_recorded_calibrations:
             if camera in video.name:
                 camera_hint = camera
                 break
-        frame_size = (
-            container.streams.video[0].format.width,
-            container.streams.video[0].format.height,
-        )
         break
 
     intrinsics = cm.load_intrinsics(rec_dir, camera_hint, frame_size)
