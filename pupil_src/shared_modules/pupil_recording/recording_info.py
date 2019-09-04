@@ -493,7 +493,11 @@ class RecordingInfoFileJSON(RecordingInfoFile):
 
     @property
     def recording_name(self) -> str:
-        return self._get_cached_computed_property("_recording_name", _get_recording_name, rec_dir=self.rec_dir)
+        return self._get_cached_computed_property(
+            key="_recording_name",
+            getter=_default_recording_name,
+            info=self
+        )
 
     @recording_name.setter
     def recording_name(self, value: str):
@@ -567,8 +571,8 @@ class RecordingInfoFileJSON(RecordingInfoFile):
     def world_camera_frames(self) -> int:
         frame_count = self._get_cached_computed_property(
             key="_world_camera_frames",
-            getter=_get_world_camera_frame_count,
-            rec_dir=self.rec_dir
+            getter=_default_world_camera_frame_count,
+            info=self,
         )
         return int(frame_count)
 
@@ -583,8 +587,8 @@ class RecordingInfoFileJSON(RecordingInfoFile):
     def world_camera_resolution(self) -> T.Tuple[int, int]:
         w, h = self._get_cached_computed_property(
             key="_world_camera_resolution",
-            getter=_get_world_camera_resolution,
-            rec_dir=self.rec_dir
+            getter=_default_world_camera_resolution,
+            info=self,
         )
         return (int(w), int(h))
 
