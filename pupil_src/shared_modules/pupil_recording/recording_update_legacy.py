@@ -33,8 +33,56 @@ from video_capture.utils import pi_gaze_items
 from video_capture.file_backend import BrokenStream
 from pupil_recording import PupilRecording
 from pupil_recording.recording_info import RecordingInfoFile
+from .info import recording_info_utils as utils
+from .info import RecordingInfoFile
+
 
 logger = logging.getLogger(__name__)
+
+
+def was_recording_opened_in_player_before(rec_dir: str) -> bool:
+    info_csv = utils.read_info_csv_file(rec_dir)
+    return "Data Format Version" in info_csv
+
+
+def recording_update_legacy_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
+    update_recording_to_recent(rec_dir)
+    return _recording_update_legacy_from_v1_15_to_pprf_2_0(rec_dir)
+
+
+def _recording_update_legacy_to_v1_15(rec_dir):
+    info_csv = utils.read_info_csv_file(rec_dir)
+    #TODO: Use the legacy update_methods to update the recording to v1.15
+
+
+def _recording_update_legacy_from_v1_15_to_pprf_2_0(rec_dir):
+    info_csv = utils.read_info_csv_file(rec_dir)
+
+    # Get information about recording from info.csv
+    recording_uuid = None #TODO
+    start_time_system_s = None  # TODO
+    start_time_synced_s = None  # TODO
+    duration_s = None  # TODO
+    recording_software_name = None  # TODO
+    recording_software_version = None  # TODO
+    recording_name = None  # TODO
+    system_info = None #TODO
+
+    # Create a recording info file with the new format, fill out the information, validate, and return.
+    new_info_file = RecordingInfoFile.create_empty_file(rec_dir)
+    new_info_file.recording_uuid = recording_uuid
+    new_info_file.start_time_system_s = start_time_system_s
+    new_info_file.start_time_synced_s = start_time_synced_s
+    new_info_file.duration_s = duration_s
+    new_info_file.recording_software_name = recording_software_name
+    new_info_file.recording_software_version = recording_software_version
+    new_info_file.recording_name = recording_name
+    new_info_file.system_info = system_info
+    new_info_file.validate()
+    return new_info_file
+
+
+########## PRIVATE ##########
 
 
 def update_recording_to_recent(rec_dir):
