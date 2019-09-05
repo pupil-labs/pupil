@@ -348,6 +348,10 @@ class RecordingInfoFile(RecordingInfo):
             )
 
     def load_file(self, should_validate: bool = True):
+        """
+        Load the data from the info file in the recording directory.
+        :param should_validate: If `True`, validates the loaded data.
+        """
         with open(self.file_path, "r") as file:
             read_dict = self._read_dict_from_file(file=file)
         self.update(read_dict)
@@ -387,6 +391,10 @@ class RecordingInfoFile(RecordingInfo):
 
     @staticmethod
     def create_empty_file(rec_dir: str) -> "RecordingInfoFile":
+        """
+        Creates a new `RecordingInfoFile` instance using the latest meta format version, but without any data.
+        :param rec_dir: Path to the recording directory.
+        """
         latest_info_file_version = max(RecordingInfoFile._info_file_versions)
         latest_info_file_class = RecordingInfoFile._info_file_versions[latest_info_file_version]
         return latest_info_file_class(
@@ -396,6 +404,11 @@ class RecordingInfoFile(RecordingInfo):
         )
 
     def updated_file(self, should_validate: bool = True) -> "RecordingInfoFile":
+        """
+        Create a new `RecordingInfoFile` instance using the latest meta format version, copying all the public properties of `self`.
+        :param should_validate: If `True`, validatest the new instance.
+        :returns: The newly created instance.
+        """
         new_file = self.create_empty_file(rec_dir=self.rec_dir)
         new_file.copy_from(self)
 
@@ -431,14 +444,26 @@ class RecordingInfoFile(RecordingInfo):
     @property
     @abc.abstractmethod
     def _private_key_schema(self) -> _KeyValueSchema:
+        """
+        Schema of the data representation used when reading from / writing to the file.
+        """
         pass
 
     @staticmethod
     def _info_file_path(rec_dir: str) -> str:
+        """
+        :param rec_dir: Path to the recording directory.
+        :return: Full path of the file.
+        """
         return os.path.join(rec_dir, RecordingInfoFile.file_name)
 
     @staticmethod
     def _read_dict_from_file(file) -> dict:
+        """
+        Read and deserialized data from a file handle.
+        :param file: File handle to read from.
+        :return: Deserialized data.
+        """
         return json.load(file)
 
     @staticmethod
@@ -452,6 +477,9 @@ class RecordingInfoFile(RecordingInfo):
         return set(self._private_key_schema.keys())
 
     def _dict_to_save(self):
+        """
+        Generates a new `dict` that should be serialized and saved in the file.
+        """
         dict_to_save = {}
         for key in self._keys_to_save():
             try:
