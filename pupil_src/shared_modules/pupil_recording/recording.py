@@ -10,7 +10,7 @@ import csv_utils
 from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
 
 
-from .recording_info import RecordingInfo, RecordingInfoFile, RecordingInfoInvalidError, RecordingVersion
+from .info.recording_info import RecordingInfo, RecordingInfoFile, RecordingInfoInvalidError, RecordingVersion
 
 
 logger = logging.getLogger(__name__)
@@ -29,12 +29,12 @@ class InvalidRecordingException(Exception):
 
 class PupilRecording(RecordingInfo):
     def __init__(self, rec_dir):
-        self._info_csv = None
+        self._info_file = None
         self.load(rec_dir=rec_dir)
 
     @property
     def meta_info(self) -> RecordingInfoFile:
-        return self._info_csv
+        return self._info_file
 
     @property
     def rec_dir(self):
@@ -60,6 +60,14 @@ class PupilRecording(RecordingInfo):
     # RecordingInfo
 
     @property
+    def meta_version(self) -> RecordingVersion:
+        return self.meta_info.meta_version
+
+    @property
+    def min_player_version(self) -> RecordingVersion:
+        return self.meta_info.min_player_version
+
+    @property
     def recording_uuid(self) -> uuid.UUID:
         return self.meta_info.recording_uuid
 
@@ -68,30 +76,36 @@ class PupilRecording(RecordingInfo):
         self.meta_info.recording_uuid = value
 
     @property
-    def recording_name(self) -> str:
-        return self.meta_info.recording_name
+    def start_time_system_s(self) -> float:
+        return self.meta_info.start_time_system_s
 
-    @recording_name.setter
-    def recording_name(self, value: str):
-        self.meta_info.recording_name = value
-
-    @property
-    def software_version(self) -> RecordingVersion:
-        return self.meta_info.software_version
-
-    @software_version.setter
-    def software_version(self, value: RecordingVersion):
-        self.meta_info.software_version = value
+    @start_time_system_s.setter
+    def start_time_system_s(self, value: float):
+        self.meta_info.start_time_system_s = value
 
     @property
-    def data_format_version(self) -> T.Optional[str]:
-        # TODO: self.meta_info.data_format_version returns a non-optional RecordingVersion instance;
-        #       Investigate if that property is allowed to return None, and decide how to proceed with this API.
-        return self.meta_info.data_format_version
+    def start_time_system_ns(self) -> int:
+        return self.meta_info.start_time_system_ns
 
-    @data_format_version.setter
-    def data_format_version(self, value: T.Optional[str]):
-        self.meta_info.data_format_version = RecordingVersion(value) if value else None
+    @start_time_system_ns.setter
+    def start_time_system_ns(self, value: int):
+        self.meta_info.start_time_system_ns = value
+
+    @property
+    def start_time_synced_s(self) -> float:
+        return self.meta_info.start_time_synced_s
+
+    @start_time_synced_s.setter
+    def start_time_synced_s(self, value: float):
+        self.meta_info.start_time_synced_s = value
+
+    @property
+    def start_time_synced_ns(self) -> int:
+        return self.meta_info.start_time_synced_ns
+
+    @start_time_synced_ns.setter
+    def start_time_synced_ns(self, value: int):
+        self.meta_info.start_time_synced_ns = value
 
     @property
     def duration_s(self) -> float:
@@ -110,64 +124,36 @@ class PupilRecording(RecordingInfo):
         self.meta_info.duration_ns = value
 
     @property
-    def start_time_s(self) -> float:
-        return self.meta_info.start_time_s
+    def recording_software_name(self) -> str:
+        return self.meta_info.recording_software_name
 
-    @start_time_s.setter
-    def start_time_s(self, value: float):
-        self.meta_info.start_time_s = value
-
-    @property
-    def start_time_ns(self) -> int:
-        return self.meta_info.start_time_ns
-
-    @start_time_ns.setter
-    def start_time_ns(self, value: int):
-        self.meta_info.start_time_ns = value
+    @recording_software_name.setter
+    def recording_software_name(self, value: str):
+        self.meta_info.recording_software_name = value
 
     @property
-    def start_time_synced_s(self) -> float:
-        return self.meta_info.start_time_synced_s
+    def recording_software_version(self) -> RecordingVersion:
+        return self.meta_info.recording_software_version
 
-    @start_time_synced_s.setter
-    def start_time_synced_s(self, value: float):
-        self.start_time_synced_s = value
-
-    @property
-    def start_time_synced_ns(self) -> int:
-        return self.meta_info.start_time_synced_ns
-
-    @start_time_synced_ns.setter
-    def start_time_synced_ns(self, value: int):
-        self.meta_info.start_time_synced_ns = value
+    @recording_software_version.setter
+    def recording_software_version(self, value: RecordingVersion):
+        self.meta_info.recording_software_version = value
 
     @property
-    def world_camera_frames(self) -> int:
-        return self.meta_info.world_camera_frames
+    def recording_name(self) -> str:
+        return self.meta_info.recording_name
 
-    @world_camera_frames.setter
-    def world_camera_frames(self, value: int):
-        self.meta_info.world_camera_frames = value
-
-    @property
-    def world_camera_resolution(self) -> T.Tuple[int, int]:
-        return self.world_camera_resolution
-
-    @world_camera_resolution.setter
-    def world_camera_resolution(self, value: T.Tuple[int, int]):
-        self.world_camera_resolution = value
+    @recording_name.setter
+    def recording_name(self, value: str):
+        self.meta_info.recording_name = value
 
     @property
-    def capture_software(self) -> str:
-        return self.meta_info.capture_software
+    def system_info(self) -> str:
+        return self.meta_info.system_info
 
-    @capture_software.setter
-    def capture_software(self, value: str):
-        self.meta_info.capture_software = value
-
-    @property
-    def _schema(self):
-        return self.meta_info._schema
+    @system_info.setter
+    def system_info(self, value: str):
+        self.meta_info.system_info = value
 
     def validate(self):
         try:
@@ -215,42 +201,14 @@ class PupilRecording(RecordingInfo):
                 )
 
         try:
-            # Load the info.csv file without validating it, since the data might be split between info.csv and info.json
-            info_csv = RecordingInfoFile.read_csv(rec_dir=rec_dir, should_validate=False)
+            info_file = RecordingInfoFile.read_file_from_recording(rec_dir=rec_dir)
         except FileNotFoundError:
             raise InvalidRecordingException(
                 reason=f"There is no info.csv in the target directory",
                 recovery=""
             )
-
-        info_json = None
-
-        if info_csv.is_pupil_invisible:
-            try:
-                info_json = RecordingInfoFile.read_json(rec_dir=rec_dir, should_validate=False)
-            except (FileNotFoundError, RecordingInfoInvalidError) as err:
-                pass
-            else:
-
-                try:
-                    _ = info_json.recording_uuid
-                except KeyError:
-                    info_json.recording_uuid = uuid.uuid4()
-
-                # Overwrite info.csv with data from info.json
-                info_csv.copy_from(info_json)
-                info_csv.capture_software = RecordingInfoFile.CAPTURE_SOFTWARE_PUPIL_INVISIBLE
-                info_csv.data_format_version = None
-                info_csv.save_file()
-
-        try:
-            # At this point the info.csv file must be valid
-            info_csv.validate()
         except RecordingInfoInvalidError as err:
-            raise InvalidRecordingException(
-                reason=f"{err}",
-                recovery=""
-            )
+            raise  InvalidRecordingException(f"{err}")
 
         all_file_paths = rec_dir.glob("*")
 
@@ -263,7 +221,7 @@ class PupilRecording(RecordingInfo):
         # TODO: Are there any other validations missing?
         # All validations passed
 
-        self._info_csv = info_csv
+        self._info_file = info_file
 
     class FileFilter(collections.Sequence):
         """Utility class for conveniently filtering files of the recording.
