@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import enum
 import logging
 import time
 
@@ -29,6 +30,17 @@ assert VersionFormat(uvc.__version__) >= VersionFormat("0.13")
 # logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+class TJSAMP(enum.IntEnum):
+    """Reimplements turbojpeg.h TJSAMP"""
+
+    TJSAMP_444 = 0
+    TJSAMP_422 = 1
+    TJSAMP_420 = 2
+    TJSAMP_GRAY = 3
+    TJSAMP_440 = 4
+    TJSAMP_411 = 5
 
 
 class UVC_Source(Base_Source):
