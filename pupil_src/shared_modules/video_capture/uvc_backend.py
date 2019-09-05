@@ -182,7 +182,21 @@ class UVC_Source(Base_Source):
     def configure_capture(self, frame_size, frame_rate, uvc_controls):
         # Set camera defaults. Override with previous settings afterwards
         if "Pupil Cam" in self.uvc_capture.name:
-            self.ts_offset = 0.0
+            if platform.system() == "Windows":
+                # NOTE: Hardware timestamps seem to be broken on windows. Needs further
+                # investigation! Disabling for now.
+                # TODO: Find accurate offsets for different resolutions!
+                offsets = {"ID0": -0.015, "ID1": -0.015, "ID2": -0.07}
+                match = re.match(r"Pupil Cam\d (?P<cam_id>ID[0-2])", self.name)
+                if not match:
+                    logger.debug(f"Could not parse camera name: {self.name}")
+                    self.ts_offset = 0.0
+                else:
+                    self.ts_offset = offsets[match.group("cam_id")]
+
+            else:
+                # use software timestamps
+                self.ts_offset = 0.0
         else:
             logger.info(
                 "Hardware timestamps not supported for {}. Using software timestamps.".format(
