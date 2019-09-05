@@ -45,7 +45,7 @@ class OverlayRenderer:
             # TODO: this is only fore extra safety until we have a unified Frame class
             # and can be sure that everything ending up here has the 'is_fake'
             # attribute!
-            logger.debug(
+            logger.warning(
                 f"Frame passed to overlay renderer does not have 'is_fake' attribute!"
                 f" Frame: {overlay_frame}"
             )
