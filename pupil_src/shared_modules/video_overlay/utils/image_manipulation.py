@@ -17,15 +17,21 @@ class ScaleTransform(ImageManipulator):
 
 
 class HorizontalFlip(ImageManipulator):
-    def apply_to(self, image, parameter, **kwargs):
+    def apply_to(self, image, parameter, *, is_fake_frame, **kwargs):
         """parameter: boolean indicating if image should be flipped"""
-        return np.fliplr(image) if parameter else image
+        if parameter and not is_fake_frame:
+            return np.fliplr(image)
+        else:
+            return image
 
 
 class VerticalFlip(ImageManipulator):
-    def apply_to(self, image, parameter, **kwargs):
+    def apply_to(self, image, parameter, *, is_fake_frame, **kwargs):
         """parameter: boolean indicating if image should be flipped"""
-        return np.flipud(image) if parameter else image
+        if parameter and not is_fake_frame:
+            return np.flipud(image)
+        else:
+            return image
 
 
 class PupilRenderer(ImageManipulator):
