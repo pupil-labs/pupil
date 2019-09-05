@@ -9,15 +9,19 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import time
 import logging
-import uvc
-from version_utils import VersionFormat
-from .base_backend import InitialisationError, Base_Source, Base_Manager
-from camera_models import load_intrinsics
-from .utils import Check_Frame_Stripes, Exposure_Time
+import time
 
 import numpy as np
+import uvc
+from pyglui import cygl
+
+import gl_utils
+from camera_models import load_intrinsics
+from version_utils import VersionFormat
+
+from .base_backend import Base_Manager, Base_Source, InitialisationError
+from .utils import Check_Frame_Stripes, Exposure_Time
 
 # check versions for our own depedencies as they are fast-changing
 assert VersionFormat(uvc.__version__) >= VersionFormat("0.13")
