@@ -59,14 +59,14 @@ def _recording_update_legacy_from_v1_15_to_pprf_2_0(rec_dir):
     info_csv = utils.read_info_csv_file(rec_dir)
 
     # Get information about recording from info.csv
-    recording_uuid = None #TODO
-    start_time_system_s = None  # TODO
-    start_time_synced_s = None  # TODO
-    duration_s = None  # TODO
-    recording_software_name = None  # TODO
-    recording_software_version = None  # TODO
-    recording_name = None  # TODO
-    system_info = None #TODO
+    recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
+    start_time_system_s = float(info_csv["Start Time (System)"])
+    start_time_synced_s = float(info_csv["Start Time (Synced)"])
+    duration_s = float(info_csv["Duration Time"])
+    recording_software_name = info_csv.get("Capture Software", RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE)
+    recording_software_version = utils.recording_version_from_string(info_csv["Capture Software Version"])
+    recording_name = info_csv.get("Recording Name", utils.default_recording_name(rec_dir))
+    system_info = info_csv.get("System Info", utils.default_system_info(rec_dir))
 
     # Create a recording info file with the new format, fill out the information, validate, and return.
     new_info_file = RecordingInfoFile.create_empty_file(rec_dir)

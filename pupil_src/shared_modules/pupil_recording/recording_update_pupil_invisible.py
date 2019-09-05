@@ -15,14 +15,14 @@ def recording_update_pupil_invisible_to_pprf_2_0(rec_dir: str) -> RecordingInfoF
     info_json = utils.read_info_json_file(rec_dir)
 
     # Get information about recording from info.csv and info.json
-    recording_uuid = None #TODO
-    start_time_system_ns = None  # TODO
-    start_time_synced_ns = None  # TODO
-    duration_ns = None  # TODO
-    recording_software_name = None  # TODO
-    recording_software_version = None  # TODO
-    recording_name = None  # TODO
-    system_info = None #TODO
+    recording_uuid = info_json["recording_uuid"]
+    start_time_system_ns = int(info_json["start_time"])
+    start_time_synced_ns = int(info_json["start_time_synced"])
+    duration_ns = int(info_json["duration"])
+    recording_software_name = RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+    recording_software_version = utils.recording_version_from_string(info_json["app_version"])
+    recording_name = utils.default_recording_name(rec_dir)
+    system_info = android_system_info(info_json)
 
     # Create a recording info file with the new format, fill out the information, validate, and return.
     new_info_file = RecordingInfoFile.create_empty_file(rec_dir)
@@ -36,3 +36,10 @@ def recording_update_pupil_invisible_to_pprf_2_0(rec_dir: str) -> RecordingInfoF
     new_info_file.system_info = system_info
     new_info_file.validate()
     return new_info_file
+
+
+def android_system_info(info_json: dict) -> str:
+    android_device_id = info_json.get("android_device_id", "?")
+    android_device_name = info_json.get("android_device_name", "?")
+    android_device_model = info_json.get("android_device_model", "?")
+    return f"Android device ID: {android_device_id}; Android device name: {android_device_name}; Android device model: {android_device_model}"
