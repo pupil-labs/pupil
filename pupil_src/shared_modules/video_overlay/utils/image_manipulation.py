@@ -34,9 +34,9 @@ class PupilRenderer(ImageManipulator):
     def __init__(self, pupil_getter):
         self.pupil_getter = pupil_getter
 
-    def apply_to(self, image, parameter, **kwargs):
+    def apply_to(self, image, parameter, *, is_fake_frame, **kwargs):
         """parameter: boolean indicating if pupil should be rendered"""
-        if parameter:
+        if parameter and not is_fake_frame:
             pupil_position = self.pupil_getter()
             if pupil_position:
                 self.render_pupil(image, pupil_position)
