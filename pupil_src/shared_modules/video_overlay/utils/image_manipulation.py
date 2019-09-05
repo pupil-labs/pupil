@@ -6,24 +6,24 @@ import numpy as np
 
 class ImageManipulator(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def apply_to(self, image, parameter):
+    def apply_to(self, image, parameter, **kwargs):
         raise NotImplementedError
 
 
 class ScaleTransform(ImageManipulator):
-    def apply_to(self, image, parameter):
+    def apply_to(self, image, parameter, **kwargs):
         """parameter: scale factor as float"""
         return cv2.resize(image, (0, 0), fx=parameter, fy=parameter)
 
 
 class HorizontalFlip(ImageManipulator):
-    def apply_to(self, image, parameter):
+    def apply_to(self, image, parameter, **kwargs):
         """parameter: boolean indicating if image should be flipped"""
         return np.fliplr(image) if parameter else image
 
 
 class VerticalFlip(ImageManipulator):
-    def apply_to(self, image, parameter):
+    def apply_to(self, image, parameter, **kwargs):
         """parameter: boolean indicating if image should be flipped"""
         return np.flipud(image) if parameter else image
 
@@ -34,7 +34,7 @@ class PupilRenderer(ImageManipulator):
     def __init__(self, pupil_getter):
         self.pupil_getter = pupil_getter
 
-    def apply_to(self, image, parameter):
+    def apply_to(self, image, parameter, **kwargs):
         """parameter: boolean indicating if pupil should be rendered"""
         if parameter:
             pupil_position = self.pupil_getter()
