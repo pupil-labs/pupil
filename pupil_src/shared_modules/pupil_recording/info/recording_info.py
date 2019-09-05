@@ -404,9 +404,23 @@ class RecordingInfoFile(RecordingInfo):
 
         return new_file
 
+    def validate(self):
+        for key, (validator, default_getter) in self._private_key_schema.items():
+            if key not in self:
+                if default_getter is None:
+                    raise RecordingInfoInvalidError(f"Missing required key: \"{key}\"")
+                else:
+                    self[key] = default_getter()
+                    continue
+            try:
+                validator(self[key])
+            except Exception as err:
+                raise RecordingInfoInvalidError(f"Validation failed with exception: {err}")
+        super().validate()
+
     # Internal
 
-    _KeyValueValidator = T.Callable[[T.Any], T.Optional[RecordingInfoInvalidError]]
+    _KeyValueValidator = T.Callable[[T.Any], None]
     _KeyValueDefaultGetter = T.Callable[["RecordingInfoFile"], T.Any]
     _KeyValueSchema = T.Mapping[str, T.Tuple[_KeyValueValidator, T.Optional[_KeyValueDefaultGetter]]]
 
