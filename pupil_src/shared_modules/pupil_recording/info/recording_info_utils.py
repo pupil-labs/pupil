@@ -33,11 +33,15 @@ def seconds_from_nanoseconds(value: int) -> float:
     return float(value / 1e9)
 
 
-def default_recording_name(info: RecordingInfoFile) -> str:
-    return os.path.basename(str(info.rec_dir))
+def default_recording_name(info) -> str:
+    if isinstance(info, RecordingInfoFile):
+        rec_dir = info.rec_dir
+    else:
+        rec_dir = str(info)
+    return os.path.basename(rec_dir)
 
 
-def default_system_info(info: RecordingInfo) -> str:
+def default_system_info(info) -> str:
     return get_system_info()
 
 
