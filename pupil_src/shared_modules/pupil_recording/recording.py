@@ -204,22 +204,11 @@ class PupilRecording(RecordingInfo):
             info_file = RecordingInfoFile.read_file_from_recording(rec_dir=rec_dir)
         except FileNotFoundError:
             raise InvalidRecordingException(
-                reason=f"There is no info.csv in the target directory",
+                reason=f"There is no {RecordingInfoFile.file_name} in the target directory",
                 recovery=""
             )
         except RecordingInfoInvalidError as err:
             raise  InvalidRecordingException(f"{err}")
-
-        all_file_paths = rec_dir.glob("*")
-
-        # TODO: Should this validation be "are there any video files" or are there specific video files?
-        if not any(is_video_file(path) for path in all_file_paths):
-            raise InvalidRecordingException(
-                reason=f"Target directory does not contain any video files", recovery=""
-            )
-
-        # TODO: Are there any other validations missing?
-        # All validations passed
 
         self._info_file = info_file
 
