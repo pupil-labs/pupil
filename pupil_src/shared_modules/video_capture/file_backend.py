@@ -36,7 +36,7 @@ class FileSeekError(Exception):
     pass
 
 
-class Frame(object):
+class Frame:
     """docstring of Frame"""
 
     def __init__(self, timestamp, av_frame, index):
@@ -48,6 +48,7 @@ class Frame(object):
         self.jpeg_buffer = None
         self.yuv_buffer = None
         self.height, self.width = av_frame.height, av_frame.width
+        self.is_fake = False
 
     def copy(self):
         return Frame(self.timestamp, self._av_frame, self.index)
@@ -99,6 +100,7 @@ class FakeFrame:
         self.img = self.bgr = static_img
         self.timestamp = float(timestamp)
         self.index = int(index)
+        self.is_fake = True
 
     def copy(self):
         return FakeFrame(self.shape, self.timestamp, self.index)
