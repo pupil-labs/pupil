@@ -13,6 +13,15 @@ def is_pupil_mobile_recording(rec_dir: str) -> bool:
 
 
 def recording_update_pupil_mobile_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
+    _recording_update_pupil_mobile_to_v1_15(rec_dir)
+    return _recording_update_pupil_mobile_from_v1_15_to_pprf_2_0(rec_dir)
+
+
+def _recording_update_pupil_mobile_to_v1_15(rec_dir: str):
+    pass #TODO: Update Pupil Invisible recording to Pupil Capture v1.15 format
+
+
+def _recording_update_pupil_mobile_from_v1_15_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
     info_csv = utils.read_info_csv_file(rec_dir)
 
     # Get information about recording from info.csv
