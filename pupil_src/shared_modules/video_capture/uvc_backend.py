@@ -375,7 +375,6 @@ class UVC_Source(Base_Source):
     def recent_events(self, events):
         try:
             frame = self.uvc_capture.get_frame(0.05)
-            
             if np.isclose(frame.timestamp, 0):
                 # sometimes (probably only on windows) after disconnections, the first frame has 0 ts
                 logger.warning(
@@ -783,6 +782,30 @@ class UVC_Source(Base_Source):
             self.uvc_capture.close()
             self.uvc_capture = None
         super().cleanup()
+
+    def gl_display(self):
+        # Temporary copy of Base_Source.gl_display until proper frame class hierarchy
+        # is implemented
+        if self._recent_frame is not None:
+            frame = self._recent_frame
+            if (
+                # `frame.yuv_subsampling` is `None` without calling `frame.yuv_buffer`
+                frame.yuv_buffer is not None
+                and TJSAMP(frame.yuv_subsampling) == TJSAMP.TJSAMP_422
+            ):
+                self.g_pool.image_tex.update_from_yuv_buffer(
+                    frame.yuv_buffer, frame.width, frame.height
+                )
+            else:
+                self.g_pool.image_tex.update_from_ndarray(frame.bgr)
+            gl_utils.glFlush()
+        gl_utils.make_coord_system_norm_based()
+        self.g_pool.image_tex.draw()
+        if not self.online:
+            cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8), alpha=0.4)
+        gl_utils.make_coord_system_pixel_based(
+            (self.frame_size[1], self.frame_size[0], 3)
+        )
 
 
 class UVC_Manager(Base_Manager):
