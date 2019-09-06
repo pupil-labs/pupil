@@ -97,16 +97,6 @@ def _update_recording_to_old_style_v1_16(rec_dir):
         convert_pupil_mobile_recording_to_v094(rec_dir)
         meta_info["Data Format Version"] = "v0.9.4"
         update_meta_info(rec_dir, meta_info)
-    elif (
-        pupil_recording.is_pupil_invisible
-        and pupil_recording.data_format_version is None
-    ):
-        convert_pupil_invisible_recording_to_v113(rec_dir, meta_info)
-        # Remove the "info.json" file if it exists after converting
-        info_json = RecordingInfoFile.read_json(rec_dir=rec_dir, should_validate=False)
-        if info_json.does_file_exist:
-            info_json.remove_file()
-        del info_json
 
     # Reference format: v0.7.4
     rec_version = read_rec_version(meta_info)
@@ -213,67 +203,6 @@ def convert_pupil_mobile_recording_to_v094(rec_dir):
         )
 
 
-def convert_pupil_invisible_recording_to_v113(rec_dir, meta_info):
-    _pi_rename_files(rec_dir)
-    _pi_convert_gaze(rec_dir)
-    _pi_assign_rec_uuid(rec_dir, meta_info)
-    meta_info["Data Format Version"] = "v1.13"
-    update_meta_info(rec_dir, meta_info)
-
-
-def _pi_rename_files(rec_dir):
-    recording = PupilRecording(rec_dir)
-
-    # NOTE: could still be worldless at this point
-    _try_patch_world_instrinsics_file(rec_dir, recording.files().pi().world().videos())
-
-    for path in recording.files():
-        # replace prefix based on cam_type, need to reformat part number
-        match = re.match(
-            r"^(?P<prefix>PI (?P<cam_type>left|right|world) v\d+ ps(?P<part>\d+))",
-            path.name,
-        )
-        if match:
-            replacement_for_cam_type = {
-                "right": "eye0",
-                "left": "eye1",
-                "world": "world",
-            }
-            replacement = replacement_for_cam_type[match.group("cam_type")]
-            part_number = int(match.group("part"))
-            if part_number > 1:
-                # add zero-filled part number - 1
-                # NOTE: recordings for PI start at part 1, mobile start at part 0
-                replacement += f"_{part_number - 1:03}"
-
-            new_name = path.name.replace(match.group("prefix"), replacement)
-            path.replace(path.with_name(new_name))  # rename with overwrite
-
-    # TODO: Extracting start_time_synced from info.json should be moved into
-    # Pupil_Recording class. Then the following snippet can be removed.
-    info_json_path = os.path.join(rec_dir, "info.json")
-    try:
-        with open(info_json_path, "r") as f:
-            json_data = json.load(f)
-        start_time = json_data["start_time_synced"]
-    except FileNotFoundError:
-        logger.warn("Trying to read info.json, but it does not exist!")
-        start_time = 0
-    except KeyError:
-        logger.error("Could not read start_time_synced from info.json!")
-        start_time = 0
-
-    SECONDS_PER_NANOSECOND = 1e-9
-
-    def conversion(timestamps: np.array):
-        # Subtract start_time from all times in the recording, so timestamps
-        # start at 0. This is to increase precision when converting
-        # timestamps to float32, e.g. for OpenGL!
-        return (timestamps - start_time) * SECONDS_PER_NANOSECOND
-
-    _rewrite_times(recording, dtype="<u8", conversion=conversion)
-
-
 def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) -> None:
     """Tries to create a reasonable world.intrinsics file from a set of videos."""
     if not videos:
@@ -322,33 +251,6 @@ def _rewrite_times(
         logger.info(f"Creating {new_name}")
         timestamp_loc = path.parent / new_name
         np.save(str(timestamp_loc), timestamps)
-
-
-def _pi_convert_gaze(rec_dir):
-    width, height = 1088, 1080
-
-    logger.info("Converting gaze data...")
-    template_datum = {
-        "topic": "gaze.pi",
-        "norm_pos": None,
-        "timestamp": None,
-        "confidence": 1.0,
-    }
-    with fm.PLData_Writer(rec_dir, "gaze") as writer:
-        for ((x, y), ts) in pi_gaze_items(root_dir=rec_dir):
-            template_datum["timestamp"] = ts
-            template_datum["norm_pos"] = m.normalize(
-                (x, y), size=(width, height), flip_y=True
-            )
-            writer.append(template_datum)
-        logger.info(f"Converted {len(writer.ts_queue)} gaze positions.")
-
-
-def _pi_assign_rec_uuid(rec_dir, meta_info):
-    info_json_path = Path(rec_dir) / "info.json"
-    with info_json_path.open() as info_json_file:
-        info_json = json.load(info_json_file)
-    meta_info["Recording UUID"] = info_json.get("recording_uuid", uuid.uuid4())
 
 
 def update_recording_v074_to_v082(rec_dir):
