@@ -14,7 +14,7 @@ Serialization format as defined in https://docs.python.org/3.6/library/json.html
 All following versions follow [Semantic Versioning 2.0.0](https://semver.org/).
 
 Fields:
-```json
+```js
 {
     // required keys
     "meta_version": "2.0",
