@@ -119,7 +119,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_export.plugins.imotions_exporter import iMotions_Exporter
         from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
         from video_export.plugins.world_video_exporter import World_Video_Exporter
-        from head_pose_tracker.offline_head_pose_tracker import Offline_Head_Pose_Tracker
+        from head_pose_tracker.offline_head_pose_tracker import (
+            Offline_Head_Pose_Tracker,
+        )
         from video_capture import File_Source
         from video_overlay.plugins import Video_Overlay, Eye_Overlay
 
@@ -711,7 +713,11 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
         import player_methods as pm
-        from pupil_recording import PupilRecording
+        from pupil_recording import (
+            PupilRecording,
+            assert_valid_recording_type,
+            update_recording,
+        )
         import update_methods as um
 
         def on_drop(window, count, paths):
@@ -759,13 +765,14 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
 
             if rec_dir:
                 try:
-                    PupilRecording(rec_dir)  # Validate rec_dir by trying to load it
+                    assert_valid_recording_type(rec_dir)
                     logger.info("Starting new session with '{}'".format(rec_dir))
                     text = "Updating recording format."
                     tip = "This may take a while!"
                 except pm.InvalidRecordingException as err:
                     logger.error(str(err))
                     tip = "Oops! That was not a valid recording."
+                    # TODO: display reason
                     if err.recovery:
                         tip += " " + err.recovery + "."
                     rec_dir = None
@@ -788,7 +795,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
 
             if rec_dir:
                 try:
-                    um.update_recording_to_recent(rec_dir)
+                    update_recording(rec_dir)
                 except AssertionError as err:
                     logger.error(str(err))
                     tip = "Oops! There was an error updating the recording."
