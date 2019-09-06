@@ -1,1 +1,1 @@
-from .recording_info import RecordingInfoFile, Version, RecordingInfoInvalidError
+from .recording_info import RecordingInfoFile, RecordingInfoInvalidError, Version

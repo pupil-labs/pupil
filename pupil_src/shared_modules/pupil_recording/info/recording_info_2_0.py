@@ -1,8 +1,7 @@
-import json
 import uuid
 
-from .recording_info import RecordingInfoFile, Version
-from . import recording_info_utils as utils
+import pupil_recording.info.recording_info_utils as utils
+from pupil_recording import RecordingInfoFile, Version
 
 
 class _RecordingInfoFile_2_0(RecordingInfoFile):

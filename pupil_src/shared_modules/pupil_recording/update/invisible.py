@@ -1,7 +1,5 @@
-from ..info import recording_info_utils as utils
-from ..info import RecordingInfoFile, Version
-from ..recording import InvalidRecordingException
-
+import pupil_recording.info.recording_info_utils as utils
+from pupil_recording import InvalidRecordingException, RecordingInfoFile, Version
 
 NEWEST_SUPPORTED_VERSION = Version("1.0")
 

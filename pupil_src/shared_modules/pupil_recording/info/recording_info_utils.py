@@ -6,7 +6,7 @@ import uuid
 import csv_utils
 from methods import get_system_info
 
-from .recording_info import RecordingInfo, RecordingInfoFile, Version
+from pupil_recording import RecordingInfoFile, Version
 
 
 def string_from_recording_version(value: Version) -> str:
