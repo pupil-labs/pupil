@@ -7,21 +7,26 @@ from .info import RecordingInfoFile
 def is_pupil_mobile_recording(rec_dir: str) -> bool:
     info_csv = utils.read_info_csv_file(rec_dir)
     try:
-        return info_csv["Capture Software"] == "Pupil Mobile" and "Data Format Version" not in info_csv
+        return (
+            info_csv["Capture Software"] == "Pupil Mobile"
+            and "Data Format Version" not in info_csv
+        )
     except KeyError:
         return False
 
 
-def recording_update_pupil_mobile_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
+def transform_mobile_to_corresponding_new_style(rec_dir: str) -> RecordingInfoFile:
     _recording_update_pupil_mobile_to_v1_15(rec_dir)
     return _recording_update_pupil_mobile_from_v1_15_to_pprf_2_0(rec_dir)
 
 
 def _recording_update_pupil_mobile_to_v1_15(rec_dir: str):
-    pass #TODO: Update Pupil Invisible recording to Pupil Capture v1.15 format
+    pass  # TODO: Update Pupil Invisible recording to Pupil Capture v1.15 format
 
 
-def _recording_update_pupil_mobile_from_v1_15_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
+def _recording_update_pupil_mobile_from_v1_15_to_pprf_2_0(
+    rec_dir: str
+) -> RecordingInfoFile:
     info_csv = utils.read_info_csv_file(rec_dir)
 
     # Get information about recording from info.csv
@@ -30,8 +35,12 @@ def _recording_update_pupil_mobile_from_v1_15_to_pprf_2_0(rec_dir: str) -> Recor
     start_time_synced_s = float(info_csv["Start Time (Synced)"])
     duration_s = float(info_csv["Duration Time"])
     recording_software_name = info_csv["Capture Software"]
-    recording_software_version = utils.recording_version_from_string(info_csv["Capture Software Version"])
-    recording_name = info_csv.get("Recording Name", utils.default_recording_name(rec_dir))
+    recording_software_version = utils.recording_version_from_string(
+        info_csv["Capture Software Version"]
+    )
+    recording_name = info_csv.get(
+        "Recording Name", utils.default_recording_name(rec_dir)
+    )
     system_info = info_csv.get("System Info", utils.default_system_info(rec_dir))
 
     # Create a recording info file with the new format, fill out the information, validate, and return.

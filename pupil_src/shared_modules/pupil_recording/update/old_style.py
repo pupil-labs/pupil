@@ -40,22 +40,23 @@ from .info import RecordingInfoFile
 logger = logging.getLogger(__name__)
 
 
+__all__ = [
+    "was_recording_opened_in_player_before",
+    "recording_update_old_style_to_pprf_2_0",
+]
+
+
 def was_recording_opened_in_player_before(rec_dir: str) -> bool:
     info_csv = utils.read_info_csv_file(rec_dir)
     return "Data Format Version" in info_csv
 
 
-def recording_update_legacy_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
-    update_recording_to_recent(rec_dir)
-    return _recording_update_legacy_from_v1_15_to_pprf_2_0(rec_dir)
+def recording_update_old_style_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
+    _update_recording_to_old_style_v1_16(rec_dir)
+    return _recording_update_legacy_from_v1_16_to_pprf_2_0(rec_dir)
 
 
-def _recording_update_legacy_to_v1_15(rec_dir):
-    info_csv = utils.read_info_csv_file(rec_dir)
-    #TODO: Use the legacy update_methods to update the recording to v1.15
-
-
-def _recording_update_legacy_from_v1_15_to_pprf_2_0(rec_dir):
+def _recording_update_legacy_from_v1_16_to_pprf_2_0(rec_dir):
     info_csv = utils.read_info_csv_file(rec_dir)
 
     # Get information about recording from info.csv
@@ -85,7 +86,7 @@ def _recording_update_legacy_from_v1_15_to_pprf_2_0(rec_dir):
 ########## PRIVATE ##########
 
 
-def update_recording_to_recent(rec_dir):
+def _update_recording_to_old_style_v1_16(rec_dir):
 
     pupil_recording = PupilRecording(rec_dir=rec_dir)
 

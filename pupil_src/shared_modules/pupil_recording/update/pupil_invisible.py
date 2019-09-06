@@ -1,26 +1,48 @@
-from .info import recording_info_utils as utils
-from .info import RecordingInfoFile
+from ..info import recording_info_utils as utils
+from ..info import RecordingInfoFile, RecordingVersion
+from ..recording import InvalidRecordingException
+
+
+NEWEST_SUPPORTED_VERSION = RecordingVersion("1.0")
 
 
 def is_pupil_invisible_recording(rec_dir: str) -> bool:
-    info_csv = utils.read_info_csv_file(rec_dir)
     try:
-        return info_csv["Capture Software"] == "Pupil Invisible" and "Data Format Version" not in info_csv
-    except KeyError:
+        utils.read_info_json_file(rec_dir)
+        return True
+    except FileNotFoundError:
         return False
 
 
-def recording_update_pupil_invisible_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
-    _recording_update_pupil_invisible_to_v1_15(rec_dir)
-    return _recording_update_pupil_invisible_from_v1_15_to_pprf_2_0(rec_dir)
+def transform_PI_to_corresponding_new_style(rec_dir: str):
+    info_json = utils.read_info_json_file(rec_dir)
+    pi_version = utils.recording_version_from_string(info_json["data_format_version"])
+
+    if pi_version > NEWEST_SUPPORTED_VERSION:
+        raise InvalidRecordingException(
+            f"This version of Pupil Invisible is too new : {pi_version}"
+        )
+
+    # elif pi_version > 3.0:
+    #     ...
+    # elif pi_version > 2.0:
+    #     ...
+
+    elif pi_version == RecordingVersion("1.0"):
+        _transform_PI_v1_0_to_pprf_2_0(rec_dir)
+    else:
+        raise InvalidRecordingException(
+            f"This version of Pupil Invisible is too old: {pi_version}"
+        )
 
 
-def _recording_update_pupil_invisible_to_v1_15(rec_dir: str):
-    pass #TODO: Update Pupil Invisible recording to Pupil Capture v1.15 format
+def _transform_PI_v1_0_to_pprf_2_0(rec_dir: str):
+    _generate_pprf_2_0_info_file(rec_dir)
+    # TODO: rename info.json file to info.invisible.json
+    # TODO: rename and convert time, video, gaze
 
 
-def _recording_update_pupil_invisible_from_v1_15_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
-    info_csv = utils.read_info_csv_file(rec_dir)
+def _generate_pprf_2_0_info_file(rec_dir: str) -> RecordingInfoFile:
     info_json = utils.read_info_json_file(rec_dir)
 
     # Get information about recording from info.csv and info.json
@@ -29,7 +51,9 @@ def _recording_update_pupil_invisible_from_v1_15_to_pprf_2_0(rec_dir: str) -> Re
     start_time_synced_ns = int(info_json["start_time_synced"])
     duration_ns = int(info_json["duration"])
     recording_software_name = RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
-    recording_software_version = utils.recording_version_from_string(info_json["app_version"])
+    recording_software_version = utils.recording_version_from_string(
+        info_json["app_version"]
+    )
     recording_name = utils.default_recording_name(rec_dir)
     system_info = android_system_info(info_json)
 
@@ -44,7 +68,7 @@ def _recording_update_pupil_invisible_from_v1_15_to_pprf_2_0(rec_dir: str) -> Re
     new_info_file.recording_name = recording_name
     new_info_file.system_info = system_info
     new_info_file.validate()
-    return new_info_file
+    new_info_file.save_file()
 
 
 def android_system_info(info_json: dict) -> str:

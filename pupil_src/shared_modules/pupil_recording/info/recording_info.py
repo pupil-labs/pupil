@@ -33,12 +33,15 @@ logger = logging.getLogger(__name__)
 class RecordingInfoInvalidError(Exception):
     @staticmethod
     def missingKey(key: str) -> "RecordingInfoInvalidError":
-        return RecordingInfoInvalidError(f"Key \"{key}\" is missing")
+        return RecordingInfoInvalidError(f'Key "{key}" is missing')
 
     @staticmethod
-    def wrongTypeForKey(key: str, actual_type, expected_type) -> "RecordingInfoInvalidError":
+    def wrongTypeForKey(
+        key: str, actual_type, expected_type
+    ) -> "RecordingInfoInvalidError":
         return RecordingInfoInvalidError(
-            f"Value for key \"{key}\" is of the wrong type \"{actual_type}\"; expected \"{expected_type}\"")
+            f'Value for key "{key}" is of the wrong type "{actual_type}"; expected "{expected_type}"'
+        )
 
 
 class RecordingInfo(collections.abc.MutableMapping):
@@ -192,7 +195,7 @@ class RecordingInfo(collections.abc.MutableMapping):
         except RecordingInfoInvalidError:
             raise
         except Exception as err:
-            raise  RecordingInfoInvalidError(f"Validation failed with exception: {err}")
+            raise RecordingInfoInvalidError(f"Validation failed with exception: {err}")
 
     @classmethod
     def property_equality(cls, x: "RecordingInfo", y: "RecordingInfo") -> bool:
@@ -205,7 +208,10 @@ class RecordingInfo(collections.abc.MutableMapping):
     def copy_from(self, other):
         x, y = self, other
 
-        for property_name, ((_, x_setter), (y_getter, _)) in self.__matching_public_properties(x, y).items():
+        for (
+            property_name,
+            ((_, x_setter), (y_getter, _)),
+        ) in self.__matching_public_properties(x, y).items():
             value = y_getter(y)
             x_setter(x, value)
 
@@ -213,16 +219,22 @@ class RecordingInfo(collections.abc.MutableMapping):
 
     @classmethod
     def _assert_property_equality(cls, x: "RecordingInfo", y: "RecordingInfo") -> bool:
-
         def equal_seconds(x: float, y: float) -> bool:
             # Decimal precision is lost when writing to / reading from info.csv
             return math.floor(x) == math.floor(y)
 
-        for property_name, ((x_getter, _), (y_getter, _)) in cls.__matching_public_properties(x, y).items():
+        for (
+            property_name,
+            ((x_getter, _), (y_getter, _)),
+        ) in cls.__matching_public_properties(x, y).items():
             x_value = x_getter(x)
             y_value = y_getter(y)
 
-            if property_name.endswith("_s") and isinstance(x_value, float) and isinstance(y_value, float):
+            if (
+                property_name.endswith("_s")
+                and isinstance(x_value, float)
+                and isinstance(y_value, float)
+            ):
                 # Compare seconds using `equal_seconds` instead of `==`
                 assert equal_seconds(x_value, y_value), f"TODO"
             else:
@@ -237,46 +249,34 @@ class RecordingInfo(collections.abc.MutableMapping):
     @property
     def _public_properties(self) -> T.Mapping[str, _PublicProperty]:
         return {
-            "meta_version": (
-                type(self).meta_version.fget,
-                None,
-            ),
-            "min_player_version": (
-                type(self).min_player_version.fget,
-                None,
-            ),
+            "meta_version": (type(self).meta_version.fget, None),
+            "min_player_version": (type(self).min_player_version.fget, None),
             "recording_uuid": (
                 type(self).recording_uuid.fget,
                 type(self).recording_uuid.fset,
             ),
             "start_time_system_s": (
                 type(self).start_time_system_s.fget,
-                type(self).start_time_system_s.fset
+                type(self).start_time_system_s.fset,
             ),
             "start_time_synced_s": (
                 type(self).start_time_synced_s.fget,
-                type(self).start_time_synced_s.fset
+                type(self).start_time_synced_s.fset,
             ),
-            "duration_s": (
-                type(self).duration_s.fget,
-                type(self).duration_s.fset
-            ),
+            "duration_s": (type(self).duration_s.fget, type(self).duration_s.fset),
             "recording_software_name": (
                 type(self).recording_software_name.fget,
-                type(self).recording_software_name.fset
+                type(self).recording_software_name.fset,
             ),
             "recording_software_version": (
                 type(self).recording_software_version.fget,
-                type(self).recording_software_version.fset
+                type(self).recording_software_version.fset,
             ),
             "recording_name": (
                 type(self).recording_name.fget,
-                type(self).recording_name.fset
+                type(self).recording_name.fset,
             ),
-            "system_info": (
-                type(self).system_info.fget,
-                type(self).system_info.fset
-            ),
+            "system_info": (type(self).system_info.fget, type(self).system_info.fset),
         }
 
     def _validate_public_interface(self):
@@ -284,7 +284,9 @@ class RecordingInfo(collections.abc.MutableMapping):
             try:
                 _ = getter(self)
             except Exception as err:
-                RecordingInfoInvalidError(f"Accessing property \"{property_name}\" failed with exception: {err}")
+                RecordingInfoInvalidError(
+                    f'Accessing property "{property_name}" failed with exception: {err}'
+                )
 
     # Private
 
@@ -297,7 +299,9 @@ class RecordingInfo(collections.abc.MutableMapping):
             return self.__private_storage
 
     @classmethod
-    def __matching_public_properties(cls, x: "RecordingInfo", y: "RecordingInfo") -> T.Mapping[str, T.Tuple[_PublicProperty, _PublicProperty]]:
+    def __matching_public_properties(
+        cls, x: "RecordingInfo", y: "RecordingInfo"
+    ) -> T.Mapping[str, T.Tuple[_PublicProperty, _PublicProperty]]:
 
         x_properties = x._public_properties
         y_properties = y._public_properties
@@ -309,7 +313,9 @@ class RecordingInfo(collections.abc.MutableMapping):
             property_names = x_property_names
         else:
             property_names = x_property_names.union(y_property_names)
-            logger.debug(f"Public property mismatch; will only check the following properties: {property_names}")
+            logger.debug(
+                f"Public property mismatch; will only check the following properties: {property_names}"
+            )
 
         return {key: (x_properties[key], y_properties[key]) for key in property_names}
 
@@ -342,9 +348,7 @@ class RecordingInfoFile(RecordingInfo):
             self.validate()
         with open(self.file_path, "w") as file:
             self._write_dict_to_file(
-                file=file,
-                dict_to_write=self._dict_to_save(),
-                sort_keys=sort_keys
+                file=file, dict_to_write=self._dict_to_save(), sort_keys=sort_keys
             )
 
     def load_file(self, should_validate: bool = True):
@@ -378,15 +382,19 @@ class RecordingInfoFile(RecordingInfo):
 
     @staticmethod
     def read_file_from_recording(rec_dir: str) -> "RecordingInfoFile":
-        current_info_file_version = RecordingInfoFile.detect_recording_info_file_version(rec_dir)
+        current_info_file_version = RecordingInfoFile.detect_recording_info_file_version(
+            rec_dir
+        )
         try:
-            current_info_file_class = RecordingInfoFile._info_file_versions[current_info_file_version]
+            current_info_file_class = RecordingInfoFile._info_file_versions[
+                current_info_file_version
+            ]
         except KeyError:
-            raise RecordingInfoInvalidError(f"Unsupported info file version {current_info_file_version}")
+            raise RecordingInfoInvalidError(
+                f"Unsupported info file version {current_info_file_version}"
+            )
         return current_info_file_class(
-            rec_dir=rec_dir,
-            should_load_file=True,
-            should_validate=True,
+            rec_dir=rec_dir, should_load_file=True, should_validate=True
         )
 
     @staticmethod
@@ -396,50 +404,38 @@ class RecordingInfoFile(RecordingInfo):
         :param rec_dir: Path to the recording directory.
         """
         latest_info_file_version = max(RecordingInfoFile._info_file_versions)
-        latest_info_file_class = RecordingInfoFile._info_file_versions[latest_info_file_version]
+        latest_info_file_class = RecordingInfoFile._info_file_versions[
+            latest_info_file_version
+        ]
         return latest_info_file_class(
-            rec_dir=rec_dir,
-            should_load_file=False,
-            should_validate=False,
+            rec_dir=rec_dir, should_load_file=False, should_validate=False
         )
-
-    def updated_file(self, should_validate: bool = True) -> "RecordingInfoFile":
-        """
-        Create a new `RecordingInfoFile` instance using the latest meta format version, copying all the public properties of `self`.
-        :param should_validate: If `True`, validatest the new instance.
-        :returns: The newly created instance.
-        """
-        new_file = self.create_empty_file(rec_dir=self.rec_dir)
-        new_file.copy_from(self)
-
-        if should_validate:
-            new_file.validate()
-
-        return new_file
 
     def validate(self):
         for key, (validator, default_getter) in self._private_key_schema.items():
             if key not in self:
                 if default_getter is None:
-                    raise RecordingInfoInvalidError(f"Missing required key: \"{key}\"")
+                    raise RecordingInfoInvalidError(f'Missing required key: "{key}"')
                 else:
                     self[key] = default_getter()
                     continue
             try:
                 validator(self[key])
             except Exception as err:
-                raise RecordingInfoInvalidError(f"Validation failed with exception: {err}")
+                raise RecordingInfoInvalidError(
+                    f"Validation failed with exception: {err}"
+                )
         super().validate()
 
     # Internal
 
     _KeyValueValidator = T.Callable[[T.Any], None]
     _KeyValueDefaultGetter = T.Callable[["RecordingInfoFile"], T.Any]
-    _KeyValueSchema = T.Mapping[str, T.Tuple[_KeyValueValidator, T.Optional[_KeyValueDefaultGetter]]]
+    _KeyValueSchema = T.Mapping[
+        str, T.Tuple[_KeyValueValidator, T.Optional[_KeyValueDefaultGetter]]
+    ]
 
-    _info_file_versions = {
-        RecordingVersion("2.0"): _RecordingInfoFile_2_0,
-    }
+    _info_file_versions = {RecordingVersion("2.0"): _RecordingInfoFile_2_0}
 
     @property
     @abc.abstractmethod
