@@ -387,18 +387,20 @@ class RecordingInfoFile(RecordingInfo):
         )
 
     @staticmethod
-    def create_empty_file(rec_dir: str) -> "RecordingInfoFile":
+    def create_empty_file(
+        rec_dir: str, fixed_version: T.Optional[Version] = None
+    ) -> "RecordingInfoFile":
         """
         Creates a new `RecordingInfoFile` instance using the latest meta format version,
         but without any data.
 
         :param rec_dir: Path to the recording directory.
         """
-        latest_info_file_version = max(RecordingInfoFile._info_file_versions)
-        latest_info_file_class = RecordingInfoFile._info_file_versions[
-            latest_info_file_version
-        ]
-        return latest_info_file_class(
+        if fixed_version is None:
+            # use latest version as default
+            fixed_version = max(RecordingInfoFile._info_file_versions)
+        info_file_class = RecordingInfoFile._info_file_versions[fixed_version]
+        return info_file_class(
             rec_dir=rec_dir, should_load_file=False, should_validate=False
         )
 
