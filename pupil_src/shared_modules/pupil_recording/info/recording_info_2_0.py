@@ -1,7 +1,7 @@
 import json
 import uuid
 
-from .recording_info import RecordingInfoFile, RecordingVersion
+from .recording_info import RecordingInfoFile, Version
 from . import recording_info_utils as utils
 
 
@@ -10,12 +10,12 @@ class _RecordingInfoFile_2_0(RecordingInfoFile):
     # RecordingInfo
 
     @property
-    def meta_version(self) -> RecordingVersion:
-        return utils.recording_version_from_string("2.0")
+    def meta_version(self) -> Version:
+        return Version("2.0")
 
     @property
-    def min_player_version(self) -> RecordingVersion:
-        return utils.recording_version_from_string("1.16")
+    def min_player_version(self) -> Version:
+        return Version("1.16")
 
     @property
     def recording_uuid(self) -> uuid.UUID:
@@ -82,11 +82,11 @@ class _RecordingInfoFile_2_0(RecordingInfoFile):
         self["recording_software_name"] = str(value)
 
     @property
-    def recording_software_version(self) -> RecordingVersion:
-        return utils.recording_version_from_string(self["recording_software_version"])
+    def recording_software_version(self) -> Version:
+        return Version(self["recording_software_version"])
 
     @recording_software_version.setter
-    def recording_software_version(self, value: RecordingVersion):
+    def recording_software_version(self, value: Version):
         self["recording_software_version"] = utils.string_from_recording_version(value)
 
     @property

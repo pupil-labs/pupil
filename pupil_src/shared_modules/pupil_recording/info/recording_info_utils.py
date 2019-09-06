@@ -6,15 +6,11 @@ import uuid
 import csv_utils
 from methods import get_system_info
 
-from .recording_info import RecordingInfo, RecordingInfoFile, RecordingVersion
+from .recording_info import RecordingInfo, RecordingInfoFile, Version
 
 
-def string_from_recording_version(value: RecordingVersion) -> str:
-    return str(value) #TODO: Make sure this conversion is correct
-
-
-def recording_version_from_string(value: str) -> RecordingVersion:
-    return RecordingVersion(value)
+def string_from_recording_version(value: Version) -> str:
+    return str(value)  # TODO: Make sure this conversion is correct
 
 
 def string_from_uuid(value: uuid.UUID) -> str:
@@ -46,7 +42,7 @@ def default_system_info(info) -> str:
 
 
 def validator_version_string(value: str):
-    _ = recording_version_from_string(value)
+    _ = Version(value)
 
 
 def validator_uuid_string(value: str):
@@ -55,7 +51,10 @@ def validator_uuid_string(value: str):
 
 def validator_type(value_type) -> T.Callable[[T.Any], None]:
     def f(value):
-        assert isinstance(value, value_type), f"Expected instance of type: {value_type} but got: {type(value)}"
+        assert isinstance(
+            value, value_type
+        ), f"Expected instance of type: {value_type} but got: {type(value)}"
+
     return f
 
 
@@ -63,6 +62,7 @@ def validator_optional_type(value_type) -> T.Callable[[T.Any], None]:
     def f(value):
         if value is not None:
             validator_type(value_type)(value)
+
     return f
 
 

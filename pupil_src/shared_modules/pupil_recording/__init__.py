@@ -1,7 +1,7 @@
 from .recording import (
     PupilRecording,
     InvalidRecordingException,
-    RecordingVersion,
+    Version,
     RecDirState,
     get_rec_dir_state,
     assert_valid_recording_type,

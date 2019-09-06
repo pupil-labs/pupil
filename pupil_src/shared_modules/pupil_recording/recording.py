@@ -6,16 +6,17 @@ import re
 import typing as T
 import uuid
 
-import csv_utils
 from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
-
 
 from .info.recording_info import (
     RecordingInfo,
     RecordingInfoFile,
     RecordingInfoInvalidError,
-    RecordingVersion,
+    Version,
 )
+from pupil_recording.update.old_style import was_recording_opened_in_player_before
+from pupil_recording.update.invisible import is_pupil_invisible_recording
+from pupil_recording.update.mobile import is_pupil_mobile_recording
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class RecordingType(enum.Enum):
 
 
 def get_recording_type(rec_dir: str) -> RecordingType:
-    _assert_valid_rec_dir()
+    _assert_valid_rec_dir(rec_dir)
 
     if RecordingInfoFile.does_recording_contain_info_file(rec_dir):
         return RecordingType.NEW_STYLE
@@ -131,11 +132,11 @@ class PupilRecording(RecordingInfo):
     # RecordingInfo
 
     @property
-    def meta_version(self) -> RecordingVersion:
+    def meta_version(self) -> Version:
         return self.meta_info.meta_version
 
     @property
-    def min_player_version(self) -> RecordingVersion:
+    def min_player_version(self) -> Version:
         return self.meta_info.min_player_version
 
     @property
@@ -203,11 +204,11 @@ class PupilRecording(RecordingInfo):
         self.meta_info.recording_software_name = value
 
     @property
-    def recording_software_version(self) -> RecordingVersion:
+    def recording_software_version(self) -> Version:
         return self.meta_info.recording_software_version
 
     @recording_software_version.setter
-    def recording_software_version(self, value: RecordingVersion):
+    def recording_software_version(self, value: Version):
         self.meta_info.recording_software_version = value
 
     @property
@@ -246,7 +247,10 @@ class PupilRecording(RecordingInfo):
             info_file = RecordingInfoFile.read_file_from_recording(rec_dir=rec_dir)
         except FileNotFoundError:
             raise InvalidRecordingException(
-                reason=f"There is no {RecordingInfoFile.file_name} in the target directory",
+                reason=(
+                    f"There is no {RecordingInfoFile.file_name}"
+                    " in the target directory"
+                ),
                 recovery="",
             )
         except RecordingInfoInvalidError as err:
@@ -386,4 +390,3 @@ class PupilRecording(RecordingInfo):
 
     def files(self) -> "PupilRecording.FileFilter":
         return PupilRecording.FileFilter(self.rec_dir)
-

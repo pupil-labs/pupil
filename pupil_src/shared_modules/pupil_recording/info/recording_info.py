@@ -11,7 +11,7 @@ import time
 import typing as T
 import uuid
 
-from packaging.version import Version as RecordingVersion
+from packaging.version import Version as Version
 
 from .recording_info_2_0 import _RecordingInfoFile_2_0
 from . import recording_info_utils as utils
@@ -19,12 +19,7 @@ from . import recording_info_utils as utils
 import csv_utils
 
 
-__all__ = [
-    "RecordingInfo",
-    "RecordingInfoFile",
-    "RecordingInfoInvalidError",
-    "RecordingVersion",
-]
+__all__ = ["RecordingInfo", "RecordingInfoFile", "RecordingInfoInvalidError", "Version"]
 
 
 logger = logging.getLogger(__name__)
@@ -71,12 +66,12 @@ class RecordingInfo(collections.abc.MutableMapping):
 
     @property
     @abc.abstractmethod
-    def meta_version(self) -> RecordingVersion:
+    def meta_version(self) -> Version:
         pass
 
     @property
     @abc.abstractmethod
-    def min_player_version(self) -> RecordingVersion:
+    def min_player_version(self) -> Version:
         pass
 
     @property
@@ -161,12 +156,12 @@ class RecordingInfo(collections.abc.MutableMapping):
 
     @property
     @abc.abstractmethod
-    def recording_software_version(self) -> RecordingVersion:
+    def recording_software_version(self) -> Version:
         pass
 
     @recording_software_version.setter
     @abc.abstractmethod
-    def recording_software_version(self, value: RecordingVersion):
+    def recording_software_version(self, value: Version):
         pass
 
     @property
@@ -374,11 +369,11 @@ class RecordingInfoFile(RecordingInfo):
         return os.path.isfile(file_path)
 
     @staticmethod
-    def detect_recording_info_file_version(rec_dir: str) -> RecordingVersion:
+    def detect_recording_info_file_version(rec_dir: str) -> Version:
         file_path = RecordingInfoFile._info_file_path(rec_dir=rec_dir)
         with open(file_path, "r") as file:
             read_dict = RecordingInfoFile._read_dict_from_file(file=file)
-        return utils.recording_version_from_string(read_dict["meta_version"])
+        return Version(read_dict["meta_version"])
 
     @staticmethod
     def read_file_from_recording(rec_dir: str) -> "RecordingInfoFile":
@@ -435,7 +430,7 @@ class RecordingInfoFile(RecordingInfo):
         str, T.Tuple[_KeyValueValidator, T.Optional[_KeyValueDefaultGetter]]
     ]
 
-    _info_file_versions = {RecordingVersion("2.0"): _RecordingInfoFile_2_0}
+    _info_file_versions = {Version("2.0"): _RecordingInfoFile_2_0}
 
     @property
     @abc.abstractmethod

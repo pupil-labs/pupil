@@ -65,7 +65,7 @@ def _recording_update_legacy_from_v1_16_to_pprf_2_0(rec_dir):
     start_time_synced_s = float(info_csv["Start Time (Synced)"])
     duration_s = float(info_csv["Duration Time"])
     recording_software_name = info_csv.get("Capture Software", RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE)
-    recording_software_version = utils.recording_version_from_string(info_csv["Capture Software Version"])
+    recording_software_version = Version(info_csv["Capture Software Version"])
     recording_name = info_csv.get("Recording Name", utils.default_recording_name(rec_dir))
     system_info = info_csv.get("System Info", utils.default_system_info(rec_dir))
 

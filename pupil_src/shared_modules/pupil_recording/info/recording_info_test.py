@@ -1,7 +1,12 @@
 import os
 import uuid
 
-from .recording_info import RecordingVersion, RecordingInfo, RecordingInfoFile, RecordingInfoInvalidError
+from .recording_info import (
+    Version,
+    RecordingInfo,
+    RecordingInfoFile,
+    RecordingInfoInvalidError,
+)
 
 from . import test_fixtures
 
@@ -32,8 +37,8 @@ def test_info_csv_v1_14():
 def _check_info_property_types(info: RecordingInfo):
     assert isinstance(info.recording_uuid, uuid.UUID)
     assert isinstance(info.recording_name, str)
-    assert isinstance(info.software_version, RecordingVersion)
-    assert isinstance(info.data_format_version, RecordingVersion)
+    assert isinstance(info.software_version, Version)
+    assert isinstance(info.data_format_version, Version)
     assert isinstance(info.duration_s, float)
     assert isinstance(info.duration_ns, int)
     assert isinstance(info.start_time_s, float)
