@@ -1,23 +1,15 @@
 import abc
 import collections
-import csv
-import datetime
 import json
 import logging
 import math
 import os
-import re
-import time
 import typing as T
 import uuid
 
 from packaging.version import Version as Version
 
-from .recording_info_2_0 import _RecordingInfoFile_2_0
-from . import recording_info_utils as utils
-
-import csv_utils
-
+from pupil_recording.info.recording_info_2_0 import _RecordingInfoFile_2_0
 
 __all__ = ["RecordingInfo", "RecordingInfoFile", "RecordingInfoInvalidError", "Version"]
 
@@ -35,7 +27,10 @@ class RecordingInfoInvalidError(Exception):
         key: str, actual_type, expected_type
     ) -> "RecordingInfoInvalidError":
         return RecordingInfoInvalidError(
-            f'Value for key "{key}" is of the wrong type "{actual_type}"; expected "{expected_type}"'
+            (
+                f'Value for key "{key}" is of the wrong type "{actual_type}"; '
+                f'expected "{expected_type}"'
+            )
         )
 
 
@@ -277,7 +272,7 @@ class RecordingInfo(collections.abc.MutableMapping):
     def _validate_public_interface(self):
         for property_name, (getter, setter) in self._public_properties.items():
             try:
-                _ = getter(self)
+                getter(self)
             except Exception as err:
                 RecordingInfoInvalidError(
                     f'Accessing property "{property_name}" failed with exception: {err}'
@@ -309,7 +304,8 @@ class RecordingInfo(collections.abc.MutableMapping):
         else:
             property_names = x_property_names.union(y_property_names)
             logger.debug(
-                f"Public property mismatch; will only check the following properties: {property_names}"
+                "Public property mismatch; will only check the following properties: "
+                f"{property_names}"
             )
 
         return {key: (x_properties[key], y_properties[key]) for key in property_names}
@@ -377,25 +373,25 @@ class RecordingInfoFile(RecordingInfo):
 
     @staticmethod
     def read_file_from_recording(rec_dir: str) -> "RecordingInfoFile":
-        current_info_file_version = RecordingInfoFile.detect_recording_info_file_version(
+        info_file_version = RecordingInfoFile.detect_recording_info_file_version(
             rec_dir
         )
         try:
-            current_info_file_class = RecordingInfoFile._info_file_versions[
-                current_info_file_version
-            ]
+            info_file_class = RecordingInfoFile._info_file_versions[info_file_version]
         except KeyError:
             raise RecordingInfoInvalidError(
-                f"Unsupported info file version {current_info_file_version}"
+                f"Unsupported info file version {info_file_version}"
             )
-        return current_info_file_class(
+        return info_file_class(
             rec_dir=rec_dir, should_load_file=True, should_validate=True
         )
 
     @staticmethod
     def create_empty_file(rec_dir: str) -> "RecordingInfoFile":
         """
-        Creates a new `RecordingInfoFile` instance using the latest meta format version, but without any data.
+        Creates a new `RecordingInfoFile` instance using the latest meta format version,
+        but without any data.
+
         :param rec_dir: Path to the recording directory.
         """
         latest_info_file_version = max(RecordingInfoFile._info_file_versions)

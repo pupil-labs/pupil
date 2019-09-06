@@ -14,7 +14,6 @@ import collections.abc
 import logging
 import os
 import pickle
-import shutil
 import traceback as tb
 import types
 from glob import iglob
@@ -43,15 +42,13 @@ class Persistent_Dict(dict):
             self.update(**load_object(self.file_path, allow_legacy=False))
         except IOError:
             logger.debug(
-                "Session settings file '{}' not found. Will make new one on exit.".format(
-                    self.file_path
-                )
+                f"Session settings file '{self.file_path}' not found."
+                " Will make new one on exit."
             )
-        except:  # KeyError, EOFError
+        except Exception:  # KeyError, EOFError
             logger.warning(
-                "Session settings file '{}'could not be read. Will overwrite on exit.".format(
-                    self.file_path
-                )
+                f"Session settings file '{self.file_path}'could not be read."
+                " Will overwrite on exit."
             )
             logger.debug(tb.format_exc())
 

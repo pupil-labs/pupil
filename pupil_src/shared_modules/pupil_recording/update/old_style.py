@@ -13,11 +13,11 @@ import glob
 import json
 import logging
 import os
-from pathlib import Path
 import re
-from shutil import copy2
 import typing as T
 import uuid
+from pathlib import Path
+from shutil import copy2
 
 import av
 import numpy as np
@@ -28,14 +28,12 @@ import csv_utils
 import file_methods as fm
 import methods as m
 import player_methods as pm
-from version_utils import VersionFormat, read_rec_version
-from video_capture.utils import pi_gaze_items
-from video_capture.file_backend import BrokenStream
-from pupil_recording import PupilRecording
+import pupil_recording.info.recording_info_utils as rec_info_utils
+from pupil_recording import PupilRecording, Version
 from pupil_recording.recording_info import RecordingInfoFile
-from .info import recording_info_utils as utils
-from .info import RecordingInfoFile
-
+from version_utils import VersionFormat, read_rec_version
+from video_capture.file_backend import BrokenStream
+from video_capture.utils import pi_gaze_items
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +45,7 @@ __all__ = [
 
 
 def was_recording_opened_in_player_before(rec_dir: str) -> bool:
-    info_csv = utils.read_info_csv_file(rec_dir)
+    info_csv = rec_info_utils.read_info_csv_file(rec_dir)
     return "Data Format Version" in info_csv
 
 
@@ -57,19 +55,26 @@ def recording_update_old_style_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
 
 
 def _recording_update_legacy_from_v1_16_to_pprf_2_0(rec_dir):
-    info_csv = utils.read_info_csv_file(rec_dir)
+    info_csv = rec_info_utils.read_info_csv_file(rec_dir)
 
     # Get information about recording from info.csv
     recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
     start_time_system_s = float(info_csv["Start Time (System)"])
     start_time_synced_s = float(info_csv["Start Time (Synced)"])
     duration_s = float(info_csv["Duration Time"])
-    recording_software_name = info_csv.get("Capture Software", RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE)
+    recording_software_name = info_csv.get(
+        "Capture Software", RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
+    )
     recording_software_version = Version(info_csv["Capture Software Version"])
-    recording_name = info_csv.get("Recording Name", utils.default_recording_name(rec_dir))
-    system_info = info_csv.get("System Info", utils.default_system_info(rec_dir))
+    recording_name = info_csv.get(
+        "Recording Name", rec_info_utils.default_recording_name(rec_dir)
+    )
+    system_info = info_csv.get(
+        "System Info", rec_info_utils.default_system_info(rec_dir)
+    )
 
-    # Create a recording info file with the new format, fill out the information, validate, and return.
+    # Create a recording info file with the new format,
+    # fill out the information, validate, and return.
     new_info_file = RecordingInfoFile.create_empty_file(rec_dir)
     new_info_file.recording_uuid = recording_uuid
     new_info_file.start_time_system_s = start_time_system_s
@@ -431,12 +436,12 @@ def update_recording_v093_to_v094(rec_dir):
         try:
             rec_object = fm.load_object(rec_file, allow_legacy=False)
             fm.save_object(rec_object, rec_file)
-        except:
+        except Exception:
             try:
                 rec_object = fm.load_object(rec_file, allow_legacy=True)
                 fm.save_object(rec_object, rec_file)
                 logger.info("Converted `{}` from pickle to msgpack".format(file))
-            except:
+            except Exception:
                 logger.warning("did not convert {}".format(rec_file))
 
     _update_info_version_to("v0.9.4", rec_dir)
@@ -487,9 +492,8 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
             if len(old_ts) != in_frame_num:
                 in_frame_size /= len(old_ts) / in_frame_num
                 logger.debug(
-                    "Provided audio frame size is inconsistent with amount of timestamps. Correcting frame size to {}".format(
-                        in_frame_size
-                    )
+                    "Provided audio frame size is inconsistent with amount of "
+                    f"timestamps. Correcting frame size to {in_frame_size}"
                 )
 
             old_ts_idx = (
@@ -781,8 +785,9 @@ def check_for_worldless_recording(rec_dir):
                     )
                 )
         assert -np.inf < min_ts < max_ts < np.inf, (
-            "This recording is invalid because it does not contain any valid eye timestamp"
-            " files from which artifical world timestamps could be generated from."
+            "This recording is invalid because it does not contain any valid eye "
+            "timestamp files from which artifical world timestamps could be generated "
+            "from."
         )
 
         frame_rate = 30
@@ -854,7 +859,7 @@ def update_recording_v073_to_v074(rec_dir):
             p["method"] = "3d c++"
             try:
                 p["projected_sphere"] = p.pop("projectedSphere")
-            except:
+            except Exception:
                 p["projected_sphere"] = {"center": (0, 0), "angle": 0, "axes": (0, 0)}
             p["model_confidence"] = p.pop("modelConfidence")
             p["model_id"] = p.pop("modelID")
