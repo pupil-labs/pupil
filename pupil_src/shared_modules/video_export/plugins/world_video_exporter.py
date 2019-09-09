@@ -158,22 +158,18 @@ def _export_world_video(
         name_by_index = [p.__name__ for p in available_plugins]
         plugin_by_name = dict(zip(name_by_index, available_plugins))
 
-        meta_info = PupilRecording(rec_dir).meta_info
+        recording = PupilRecording(rec_dir)
+        meta_info = recording.meta_info
 
         g_pool = GlobalContainer()
         g_pool.app = "exporter"
         g_pool.min_data_confidence = min_data_confidence
 
-        valid_ext = (".mp4", ".mkv", ".avi", ".h264", ".mjpeg", ".fake")
-        try:
-            video_path = next(
-                f
-                for f in glob(os.path.join(rec_dir, "world.*"))
-                if os.path.splitext(f)[1] in valid_ext
-            )
-        except StopIteration:
-            raise FileNotFoundError("No Video world found")
-        cap = File_Source(g_pool, source_path=video_path, fill_gaps=True, timing=None)
+        videos = recording.files().core().world().videos()
+        if not videos:
+            raise FileNotFoundError("No world video found")
+
+        cap = File_Source(g_pool, source_path=videos[0], fill_gaps=True, timing=None)
 
         timestamps = cap.timestamps
 
