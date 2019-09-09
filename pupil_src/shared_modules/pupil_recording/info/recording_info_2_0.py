@@ -90,7 +90,10 @@ class _RecordingInfoFile_2_0(RecordingInfoFile):
 
     @property
     def recording_name(self) -> str:
-        return str(self["recording_name"])
+        try:
+            return str(self["recording_name"])
+        except KeyError:
+            return utils.default_recording_name(self)
 
     @recording_name.setter
     def recording_name(self, value: str):
@@ -98,7 +101,10 @@ class _RecordingInfoFile_2_0(RecordingInfoFile):
 
     @property
     def system_info(self) -> str:
-        return str(self["system_info"])
+        try:
+            return str(self["system_info"])
+        except KeyError:
+            return utils.default_system_info(self)
 
     @system_info.setter
     def system_info(self, value: str):
