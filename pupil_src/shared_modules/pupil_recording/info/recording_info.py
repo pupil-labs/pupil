@@ -408,7 +408,7 @@ class RecordingInfoFile(RecordingInfo):
                 if default_getter is None:
                     raise RecordingInfoInvalidError(f'Missing required key: "{key}"')
                 else:
-                    self[key] = default_getter()
+                    self[key] = default_getter(self)
                     continue
             try:
                 validator(self[key])
