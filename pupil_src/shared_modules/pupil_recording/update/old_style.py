@@ -29,7 +29,7 @@ import player_methods as pm
 import pupil_recording.info.recording_info_utils as rec_info_utils
 from pupil_recording.info.recording_info import RecordingInfoFile, Version
 from pupil_recording.recording import PupilRecording
-from version_utils import VersionFormat, read_rec_version
+from version_utils import VersionFormat
 from video_capture.file_backend import BrokenStream
 
 logger = logging.getLogger(__name__)
@@ -780,3 +780,15 @@ def update_recording_v03_to_v074(rec_dir):
     ts_path_old = os.path.join(rec_dir, "timestamps.npy")
     if not os.path.isfile(ts_path) and os.path.isfile(ts_path_old):
         os.rename(ts_path_old, ts_path)
+
+
+def _read_rec_version_legacy(meta_info):
+    version = meta_info.get(
+        "Data Format Version", meta_info["Capture Software Version"]
+    )
+    version = "".join(
+        [c for c in version if c in "1234567890.-"]
+    )  # strip letters in case of legacy version format
+    version = VersionFormat(version)
+    logger.debug("Recording version: {}".format(version))
+    return version
