@@ -37,8 +37,9 @@ def _transform_mobile_v1_2_to_pprf_2_0(rec_dir: str):
     _generate_pprf_2_0_info_file(rec_dir)
 
     # rename info.csv file to info.mobile.csv
-    info_json = Path(rec_dir) / "info.csv"
-    info_json.replace("info.mobile.csv")
+    info_csv = Path(rec_dir) / "info.csv"
+    new_path = info_csv.with_name("info.mobile.csv")
+    info_csv.replace(new_path)
 
     recording = PupilRecording(rec_dir)
 
