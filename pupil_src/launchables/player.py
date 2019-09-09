@@ -83,7 +83,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from version_utils import VersionFormat
         from methods import normalize, denormalize, delta_t, get_system_info
         import player_methods as pm
-        from pupil_recording import PupilRecording
+        from pupil_recording.recording import PupilRecording
         from csv_utils import write_key_value_file
 
         # Plug-ins
