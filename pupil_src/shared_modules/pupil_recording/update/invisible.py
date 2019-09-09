@@ -42,7 +42,8 @@ def _transform_invisible_v1_0_to_pprf_2_0(rec_dir: str):
 
     # rename info.json file to info.invisible.json
     info_json = Path(rec_dir) / "info.json"
-    info_json.replace("info.invisible.json")
+    new_path = info_json.with_name("info.invisible.json")
+    info_json.replace(new_path)
 
     recording = PupilRecording(rec_dir)
 
