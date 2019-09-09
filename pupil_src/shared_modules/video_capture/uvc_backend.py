@@ -195,8 +195,8 @@ class UVC_Source(Base_Source):
                     self.ts_offset = offsets[match.group("cam_id")]
 
             else:
-                # use software timestamps
-                self.ts_offset = 0.0
+                # use hardware timestamps
+                self.ts_offset = None
         else:
             logger.info(
                 "Hardware timestamps not supported for {}. Using software timestamps.".format(
@@ -403,7 +403,7 @@ class UVC_Source(Base_Source):
             time.sleep(0.02)
             self._restart_logic()
         else:
-            if self.ts_offset != 0:
+            if self.ts_offset is not None:
                 # c930 timestamps need to be set here. The camera does not provide valid pts from device
                 frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
             frame.timestamp -= self.g_pool.timebase.value
