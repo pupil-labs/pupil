@@ -277,7 +277,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
 
         window_pos = session_settings.get("window_position", window_position_default)
         window_name = "Pupil Player: {} - {}".format(
-            meta_info["Recording Name"], os.path.split(rec_dir)[-1]
+            meta_info["recording_name"], os.path.split(rec_dir)[-1]
         )
 
         glfw.glfwInit()
@@ -339,7 +339,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
 
             export_info = {
                 "Player Software Version": str(g_pool.version),
-                "Data Format Version": meta_info["Data Format Version"],
+                "Data Format Version": meta_info["min_player_version"],
                 "Export Date": strftime("%d.%m.%Y", localtime()),
                 "Export Time": strftime("%H:%M:%S", localtime()),
                 "Frame Index Range:": g_pool.seek_control.get_frame_index_trim_range_string(),
@@ -419,12 +419,12 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         )
         general_settings.append(
             ui.Info_Text(
-                "Capture Version: {}".format(meta_info["Capture Software Version"])
+                "Capture Version: {}".format(meta_info["recording_software_version"])
             )
         )
         general_settings.append(
             ui.Info_Text(
-                "Data Format Version: {}".format(meta_info["Data Format Version"])
+                "Data Format Version: {}".format(meta_info["min_player_version"])
             )
         )
 

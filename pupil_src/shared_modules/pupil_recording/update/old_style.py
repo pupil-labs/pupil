@@ -157,6 +157,8 @@ def _update_recording_to_old_style_v1_16(rec_dir):
 
 
 def update_meta_info(rec_dir, meta_info):
+    # TODO: We read from PupilRecording here and save manually! I think this needs to be
+    # adapted!
     logger.info("Updating meta info")
     meta_info_path = os.path.join(rec_dir, "info.csv")
     with open(meta_info_path, "w", newline="", encoding="utf-8") as csvfile:
@@ -165,6 +167,8 @@ def update_meta_info(rec_dir, meta_info):
 
 def _update_info_version_to(new_version, rec_dir):
     meta_info = pm.load_meta_info(rec_dir)
+    # TODO: What to do with data format version? I think we should not rely on
+    # PupilRecording (i.e. player_methdos) here? This might be conflicting meta formats!
     meta_info["Data Format Version"] = new_version
     update_meta_info(rec_dir, meta_info)
 

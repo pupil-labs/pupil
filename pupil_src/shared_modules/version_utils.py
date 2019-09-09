@@ -64,7 +64,7 @@ def get_version(version_file=None):
 
 def read_rec_version(meta_info):
     version = meta_info.get(
-        "Data Format Version", meta_info["Capture Software Version"]
+        "Data Format Version", meta_info["recording_software_version"]
     )
     version = "".join(
         [c for c in version if c in "1234567890.-"]
