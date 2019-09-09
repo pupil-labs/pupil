@@ -66,7 +66,9 @@ class iMotions_Exporter(IsolatedFrameExporter):
         pupil_recording = PupilRecording(rec_dir=self.g_pool.rec_dir)
 
         if pupil_recording.is_pupil_invisible:
-            logger.error("Currently, the iMotions export doesn't support Pupil Invisible recordings")
+            logger.error(
+                "Currently, the iMotions export doesn't support Pupil Invisible recordings"
+            )
             return
 
         rec_start = _get_recording_start_date(self.g_pool.rec_dir)
@@ -78,7 +80,7 @@ class iMotions_Exporter(IsolatedFrameExporter):
                 destination_folder=im_dir,
                 export_range=export_range,
                 timestamps=self.g_pool.timestamps,
-                capture=self.g_pool.capture
+                capture=self.g_pool.capture,
             )
         except _iMotionsExporterNo3DGazeDataError:
             logger.error("Currently, the iMotions export only supports 3d gaze data")
@@ -134,7 +136,9 @@ class _iMotionsExporterNo3DGazeDataError(Exception):
     pass
 
 
-def _csv_exported_gaze_data(gaze_positions, destination_folder, export_range, timestamps, capture):
+def _csv_exported_gaze_data(
+    gaze_positions, destination_folder, export_range, timestamps, capture
+):
 
     export_start, export_stop = export_range  # export_stop is exclusive
     export_window = pm.exact_window(timestamps, (export_start, export_stop - 1))
