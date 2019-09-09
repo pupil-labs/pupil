@@ -126,4 +126,3 @@ class _RecordingInfoFile_2_0(RecordingInfoFile):
             "recording_name": (utils.validator_type(str), utils.default_recording_name),
             "system_info": (utils.validator_type(str), utils.default_system_info),
         }
-
