@@ -28,7 +28,6 @@ import file_methods as fm
 import player_methods as pm
 import pupil_recording.info.recording_info_utils as rec_info_utils
 from pupil_recording.info.recording_info import RecordingInfoFile, Version
-from pupil_recording.recording import PupilRecording
 from version_utils import VersionFormat
 from video_capture.file_backend import BrokenStream
 
@@ -64,7 +63,9 @@ def _recording_update_legacy_from_v1_16_to_pprf_2_0(rec_dir):
 
     # Create a recording info file with the new format,
     # fill out the information, validate, and return.
-    new_info_file = RecordingInfoFile.create_empty_file(rec_dir)
+    new_info_file = RecordingInfoFile.create_empty_file(
+        rec_dir, fixed_version=Version("2.0")
+    )
     new_info_file.recording_uuid = recording_uuid
     new_info_file.start_time_system_s = start_time_system_s
     new_info_file.start_time_synced_s = start_time_synced_s
@@ -82,13 +83,11 @@ def _recording_update_legacy_from_v1_16_to_pprf_2_0(rec_dir):
 
 def _update_recording_to_old_style_v1_16(rec_dir):
 
-    pupil_recording = PupilRecording(rec_dir=rec_dir)
-
-    meta_info = pupil_recording.meta_info
+    meta_info = rec_info_utils.read_info_csv_file(rec_dir)
     update_meta_info(rec_dir, meta_info)
 
     # Reference format: v0.7.4
-    rec_version = read_rec_version(meta_info)
+    rec_version = _read_rec_version_legacy(meta_info)
 
     # Convert python2 to python3
     if rec_version <= VersionFormat("0.8.7"):
