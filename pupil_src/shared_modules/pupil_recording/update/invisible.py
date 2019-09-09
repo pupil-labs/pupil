@@ -20,6 +20,7 @@ NEWEST_SUPPORTED_VERSION = Version("1.0")
 
 
 def transform_invisible_to_corresponding_new_style(rec_dir: str):
+    logger.info("Transform Pupil Invisible to new style recording...")
     info_json = utils.read_info_json_file(rec_dir)
     pi_version = Version(info_json["data_format_version"])
 

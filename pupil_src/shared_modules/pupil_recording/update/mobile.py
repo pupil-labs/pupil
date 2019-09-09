@@ -1,3 +1,4 @@
+import logging
 import re
 import uuid
 from pathlib import Path
@@ -11,8 +12,11 @@ from . import update_utils
 
 NEXT_UNSUPPORTED_VERSION = Version("1.3")
 
+logger = logging.getLogger(__name__)
+
 
 def transform_mobile_to_corresponding_new_style(rec_dir: str) -> RecordingInfoFile:
+    logger.info("Transform Pupil Mobile to new style recording...")
     info_csv = utils.read_info_csv_file(rec_dir)
     mobile_version = Version(info_csv["Data Format Version"])
 
