@@ -15,6 +15,7 @@ import os
 import player_methods as pm
 from task_manager import ManagedTask
 from video_export.plugin_base.video_exporter import VideoExporter
+from pupil_recording.recording import PupilRecording
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +158,7 @@ def _export_world_video(
         name_by_index = [p.__name__ for p in available_plugins]
         plugin_by_name = dict(zip(name_by_index, available_plugins))
 
-        meta_info = pm.load_meta_info(rec_dir)
+        meta_info = PupilRecording(rec_dir).meta_info
 
         g_pool = GlobalContainer()
         g_pool.app = "exporter"

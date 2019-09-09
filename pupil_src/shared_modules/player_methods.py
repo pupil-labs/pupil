@@ -8,22 +8,10 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import collections
-import enum
-import glob
 import logging
-import os
-from pathlib import Path
-import re
-import typing as T
 
 import cv2
 import numpy as np
-
-import csv_utils
-from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
-from pupil_recording.recording import PupilRecording, InvalidRecordingException
-
 
 logger = logging.getLogger(__name__)
 
@@ -200,19 +188,6 @@ def correlate_data(data, timestamps):
             frame_idx += 1
 
     return data_by_frame
-
-
-def load_meta_info(rec_dir):
-    return PupilRecording(rec_dir).meta_info
-
-
-def is_pupil_rec_dir(rec_dir):
-    try:
-        PupilRecording(rec_dir)
-        return True
-    except InvalidRecordingException as e:
-        logger.error(str(e))
-        return False
 
 
 def transparent_circle(img, center, radius, color, thickness):

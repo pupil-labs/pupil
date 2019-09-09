@@ -160,9 +160,7 @@ def update_meta_info(rec_dir, meta_info):
 
 
 def _update_info_version_to(new_version, rec_dir):
-    meta_info = pm.load_meta_info(rec_dir)
-    # TODO: What to do with data format version? I think we should not rely on
-    # PupilRecording (i.e. player_methdos) here? This might be conflicting meta formats!
+    meta_info = rec_info_utils.read_info_csv_file(rec_dir)
     meta_info["Data Format Version"] = new_version
     update_meta_info(rec_dir, meta_info)
 
@@ -429,7 +427,7 @@ def update_recording_v18_v19(rec_dir):
 def update_recording_v19_v111(rec_dir):
     logger.info("Updating recording from v1.9 to v1.11")
 
-    meta_info = pm.load_meta_info(rec_dir)
+    meta_info = rec_info_utils.read_info_csv_file(rec_dir)
     meta_info["Data Format Version"] = "v1.11"
     meta_info["Recording UUID"] = meta_info.get("Recording UUID", uuid.uuid4())
     update_meta_info(rec_dir, meta_info)
