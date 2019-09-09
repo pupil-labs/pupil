@@ -17,6 +17,7 @@ import pickle
 import traceback as tb
 import types
 from glob import iglob
+from pathlib import Path
 
 import msgpack
 import numpy as np
@@ -71,8 +72,8 @@ def _load_object_legacy(file_path):
 def load_object(file_path, allow_legacy=True):
     import gc
 
-    file_path = os.path.expanduser(file_path)
-    with open(file_path, "rb") as fh:
+    file_path = Path(file_path).expanduser()
+    with file_path.open("rb") as fh:
         try:
             gc.disable()  # speeds deserialization up.
             data = msgpack.unpack(fh, raw=False)
@@ -105,8 +106,8 @@ def save_object(object_, file_path):
             return o.tolist()
         return o
 
-    file_path = os.path.expanduser(file_path)
-    with open(file_path, "wb") as fh:
+    file_path = Path(file_path).expanduser()
+    with file_path.open("wb") as fh:
         msgpack.pack(object_, fh, use_bin_type=True, default=ndarrray_to_list)
 
 
