@@ -1,21 +1,10 @@
 import uuid
 
-from ..info import recording_info_utils as utils
-from ..info import RecordingInfoFile, Version
-from ..recording import InvalidRecordingException
+from pupil_recording.info import recording_info_utils as utils
+from pupil_recording.info.recording_info import RecordingInfoFile, Version
+from pupil_recording.recording_utils import InvalidRecordingException
 
 NEXT_UNSUPPORTED_VERSION = Version("1.3")
-
-
-def is_pupil_mobile_recording(rec_dir: str) -> bool:
-    info_csv = utils.read_info_csv_file(rec_dir)
-    try:
-        return (
-            info_csv["Capture Software"] == "Pupil Mobile"
-            and "Data Format Version" not in info_csv
-        )
-    except KeyError:
-        return False
 
 
 def transform_mobile_to_corresponding_new_style(rec_dir: str) -> RecordingInfoFile:

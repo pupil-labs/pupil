@@ -1,7 +1,7 @@
 import uuid
 
 import pupil_recording.info.recording_info_utils as utils
-from pupil_recording import RecordingInfoFile, Version
+from pupil_recording.info.recording_info import RecordingInfoFile, Version
 
 
 class _RecordingInfoFile_2_0(RecordingInfoFile):
@@ -120,3 +120,5 @@ class _RecordingInfoFile_2_0(RecordingInfoFile):
             "recording_name": (utils.validator_type(str), utils.default_recording_name),
             "system_info": (utils.validator_type(str), utils.default_system_info),
         }
+
+    RecordingInfoFile.register_child_class(Version("2.0"), _RecordingInfoFile_2_0)

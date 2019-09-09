@@ -713,12 +713,8 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
         import player_methods as pm
-        from pupil_recording import (
-            PupilRecording,
-            assert_valid_recording_type,
-            update_recording,
-        )
-        import update_methods as um
+        from pupil_recording.recording_utils import assert_valid_recording_type
+        from pupil_recording.update import update_recording
 
         def on_drop(window, count, paths):
             nonlocal rec_dir

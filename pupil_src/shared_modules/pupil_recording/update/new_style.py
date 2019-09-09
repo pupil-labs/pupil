@@ -1,4 +1,5 @@
-from pupil_recording import RecordingInfoFile, Version, InvalidRecordingException
+from pupil_recording.info.recording_info import RecordingInfoFile, Version
+from pupil_recording.recording_utils import InvalidRecordingException
 from version_utils import pupil_version
 
 

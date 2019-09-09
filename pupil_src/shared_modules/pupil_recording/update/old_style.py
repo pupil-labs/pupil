@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 import collections
 import glob
-import json
 import logging
 import os
 import re
@@ -26,27 +25,17 @@ from scipy.interpolate import interp1d
 import camera_models as cm
 import csv_utils
 import file_methods as fm
-import methods as m
 import player_methods as pm
 import pupil_recording.info.recording_info_utils as rec_info_utils
-from pupil_recording import PupilRecording, Version
-from pupil_recording.recording_info import RecordingInfoFile
+from pupil_recording.info.recording_info import RecordingInfoFile, Version
+from pupil_recording.recording import PupilRecording
 from version_utils import VersionFormat, read_rec_version
 from video_capture.file_backend import BrokenStream
-from video_capture.utils import pi_gaze_items
 
 logger = logging.getLogger(__name__)
 
 
-__all__ = [
-    "was_recording_opened_in_player_before",
-    "recording_update_old_style_to_pprf_2_0",
-]
-
-
-def was_recording_opened_in_player_before(rec_dir: str) -> bool:
-    info_csv = rec_info_utils.read_info_csv_file(rec_dir)
-    return "Data Format Version" in info_csv
+__all__ = ["recording_update_old_style_to_pprf_2_0"]
 
 
 def recording_update_old_style_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:

@@ -1,105 +1,24 @@
 import collections
 import enum
 import logging
-from pathlib import Path
 import re
 import typing as T
-import uuid
+from pathlib import Path
 
-from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
-
-from .info.recording_info import (
-    RecordingInfo,
+from pupil_recording.info.recording_info import (
     RecordingInfoFile,
     RecordingInfoInvalidError,
-    Version,
 )
-from pupil_recording.update.old_style import was_recording_opened_in_player_before
-from pupil_recording.update.invisible import is_pupil_invisible_recording
-from pupil_recording.update.mobile import is_pupil_mobile_recording
-
+from pupil_recording.recording_utils import (
+    InvalidRecordingException,
+    _assert_valid_rec_dir,
+)
+from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 
 
-class InvalidRecordingException(Exception):
-    def __init__(self, reason: str, recovery: str = ""):
-        message = (reason + "\n" + recovery) if recovery else reason
-        super().__init__(message)
-        self.reason = reason
-        self.recovery = recovery
-
-    def __str__(self):
-        return f"{type(self).__name__}: {super().__str__()}"
-
-
-class RecordingType(enum.Enum):
-    MOBILE = enum.auto()
-    INVISIBLE = enum.auto()
-    OLD_STYLE = enum.auto()
-    NEW_STYLE = enum.auto()
-
-
-def get_recording_type(rec_dir: str) -> RecordingType:
-    _assert_valid_rec_dir(rec_dir)
-
-    if RecordingInfoFile.does_recording_contain_info_file(rec_dir):
-        return RecordingType.NEW_STYLE
-
-    elif was_recording_opened_in_player_before(rec_dir):
-        return RecordingType.OLD_STYLE
-
-    elif is_pupil_invisible_recording(rec_dir):
-        return RecordingType.INVISIBLE
-
-    elif is_pupil_mobile_recording(rec_dir):
-        return RecordingType.MOBILE
-
-    raise InvalidRecordingException(
-        reason=f"There is no info file in the target directory.", recovery=""
-    )
-
-
-def _assert_valid_rec_dir(rec_dir: str):
-    rec_dir = Path(rec_dir).resolve()
-
-    def normalize_extension(ext: str) -> str:
-        if ext.startswith("."):
-            ext = ext[1:]
-        return ext
-
-    def is_video_file(file_path: Path):
-        if not file_path.is_file():
-            return False
-        ext = file_path.suffix
-        ext = normalize_extension(ext)
-        valid_video_extensions = map(normalize_extension, VALID_VIDEO_EXTENSIONS)
-        if ext not in valid_video_extensions:
-            return False
-        return True
-
-    if not rec_dir.exists():
-        raise InvalidRecordingException(
-            reason=f"Target at path does not exist: {rec_dir}", recovery=""
-        )
-
-    if not rec_dir.is_dir():
-        if is_video_file(rec_dir):
-            raise InvalidRecordingException(
-                reason=f"The provided path is a video, not a recording directory",
-                recovery="Please provide a recording directory",
-            )
-        else:
-            raise InvalidRecordingException(
-                reason=f"Target at path is not a directory: {rec_dir}", recovery=""
-            )
-
-
-def assert_valid_recording_type(rec_dir: str):
-    assert get_recording_type(rec_dir) in RecordingType
-
-
-class PupilRecording(RecordingInfo):
+class PupilRecording:
     def __init__(self, rec_dir):
         self._info_file = None
         self.load(rec_dir=rec_dir)
@@ -111,127 +30,6 @@ class PupilRecording(RecordingInfo):
     @property
     def rec_dir(self):
         return self.meta_info.rec_dir
-
-    # MutableMapping
-
-    def __getitem__(self, key):
-        return self.meta_info.__getitem__(key)
-
-    def __setitem__(self, key, item):
-        return self.meta_info.__setitem__(key, item)
-
-    def __delitem__(self, key):
-        return self.meta_info.__delitem__(key)
-
-    def __iter__(self):
-        return self.meta_info.__iter__()
-
-    def __len__(self):
-        return self.meta_info.__len__()
-
-    # RecordingInfo
-
-    @property
-    def meta_version(self) -> Version:
-        return self.meta_info.meta_version
-
-    @property
-    def min_player_version(self) -> Version:
-        return self.meta_info.min_player_version
-
-    @property
-    def recording_uuid(self) -> uuid.UUID:
-        return self.meta_info.recording_uuid
-
-    @recording_uuid.setter
-    def recording_uuid(self, value: uuid.UUID):
-        self.meta_info.recording_uuid = value
-
-    @property
-    def start_time_system_s(self) -> float:
-        return self.meta_info.start_time_system_s
-
-    @start_time_system_s.setter
-    def start_time_system_s(self, value: float):
-        self.meta_info.start_time_system_s = value
-
-    @property
-    def start_time_system_ns(self) -> int:
-        return self.meta_info.start_time_system_ns
-
-    @start_time_system_ns.setter
-    def start_time_system_ns(self, value: int):
-        self.meta_info.start_time_system_ns = value
-
-    @property
-    def start_time_synced_s(self) -> float:
-        return self.meta_info.start_time_synced_s
-
-    @start_time_synced_s.setter
-    def start_time_synced_s(self, value: float):
-        self.meta_info.start_time_synced_s = value
-
-    @property
-    def start_time_synced_ns(self) -> int:
-        return self.meta_info.start_time_synced_ns
-
-    @start_time_synced_ns.setter
-    def start_time_synced_ns(self, value: int):
-        self.meta_info.start_time_synced_ns = value
-
-    @property
-    def duration_s(self) -> float:
-        return self.meta_info.duration_s
-
-    @duration_s.setter
-    def duration_s(self, value: float):
-        self.meta_info.duration_s = value
-
-    @property
-    def duration_ns(self) -> int:
-        return self.meta_info.duration_ns
-
-    @duration_ns.setter
-    def duration_ns(self, value: int):
-        self.meta_info.duration_ns = value
-
-    @property
-    def recording_software_name(self) -> str:
-        return self.meta_info.recording_software_name
-
-    @recording_software_name.setter
-    def recording_software_name(self, value: str):
-        self.meta_info.recording_software_name = value
-
-    @property
-    def recording_software_version(self) -> Version:
-        return self.meta_info.recording_software_version
-
-    @recording_software_version.setter
-    def recording_software_version(self, value: Version):
-        self.meta_info.recording_software_version = value
-
-    @property
-    def recording_name(self) -> str:
-        return self.meta_info.recording_name
-
-    @recording_name.setter
-    def recording_name(self, value: str):
-        self.meta_info.recording_name = value
-
-    @property
-    def system_info(self) -> str:
-        return self.meta_info.system_info
-
-    @system_info.setter
-    def system_info(self, value: str):
-        self.meta_info.system_info = value
-
-    def validate(self):
-        try:
-            self.reload()
-        except InvalidRecordingException as err:
-            raise RecordingInfoInvalidError(f"{err}")
 
     # Public
 

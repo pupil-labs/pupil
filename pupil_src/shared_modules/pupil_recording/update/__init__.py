@@ -1,4 +1,4 @@
-from pupil_recording.recording import RecordingType, get_recording_type
+from pupil_recording.recording_utils import RecordingType, get_recording_type
 from pupil_recording.update.invisible import (
     transform_invisible_to_corresponding_new_style,
 )

@@ -9,8 +9,6 @@ import uuid
 
 from packaging.version import Version as Version
 
-from pupil_recording.info.recording_info_2_0 import _RecordingInfoFile_2_0
-
 __all__ = ["RecordingInfo", "RecordingInfoFile", "RecordingInfoInvalidError", "Version"]
 
 
@@ -428,7 +426,15 @@ class RecordingInfoFile(RecordingInfo):
         str, T.Tuple[_KeyValueValidator, T.Optional[_KeyValueDefaultGetter]]
     ]
 
-    _info_file_versions = {Version("2.0"): _RecordingInfoFile_2_0}
+    _info_file_versions = {}
+
+    @classmethod
+    def register_child_class(cls, version: Version, child_class: type):
+        """Use this to register interface implementations for specific versions."""
+        # NOTE: This is dependency inversion to avoids circular imports, because we
+        # don't need to know our child classes.
+        # TODO: Would be much cleaner with self-registering meta classes.
+        cls._info_file_versions[version] = child_class
 
     @property
     @abc.abstractmethod

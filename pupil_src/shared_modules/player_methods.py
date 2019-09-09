@@ -22,7 +22,7 @@ import numpy as np
 
 import csv_utils
 from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
-from pupil_recording import PupilRecording, InvalidRecordingException
+from pupil_recording.recording import PupilRecording, InvalidRecordingException
 
 
 logger = logging.getLogger(__name__)

@@ -6,28 +6,17 @@ import numpy as np
 
 import file_methods as fm
 import methods as m
+import pupil_recording.info.recording_info_utils as utils
+from pupil_recording.info.recording_info import Version
+from pupil_recording.recording import PupilRecording, RecordingInfoFile
+from pupil_recording.recording_utils import InvalidRecordingException
 from video_capture.utils import pi_gaze_items
 
-from pupil_recording import (
-    InvalidRecordingException,
-    RecordingInfoFile,
-    Version,
-    PupilRecording,
-)
-import pupil_recording.info.recording_info_utils as utils
 from . import update_utils
 
 logger = logging.getLogger(__name__)
 
 NEWEST_SUPPORTED_VERSION = Version("1.0")
-
-
-def is_pupil_invisible_recording(rec_dir: str) -> bool:
-    try:
-        utils.read_info_json_file(rec_dir)
-        return True
-    except FileNotFoundError:
-        return False
 
 
 def transform_invisible_to_corresponding_new_style(rec_dir: str):

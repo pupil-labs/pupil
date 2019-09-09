@@ -6,9 +6,8 @@ import av
 import numpy as np
 
 import camera_models as cm
+from pupil_recording.recording import PupilRecording
 from video_capture.file_backend import BrokenStream
-
-from ..recording import PupilRecording
 
 logger = logging.getLogger(__name__)
 
