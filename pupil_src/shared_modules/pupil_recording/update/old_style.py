@@ -87,11 +87,6 @@ def _update_recording_to_old_style_v1_16(rec_dir):
     meta_info = pupil_recording.meta_info
     update_meta_info(rec_dir, meta_info)
 
-    if pupil_recording.is_pupil_mobile and pupil_recording.data_format_version is None:
-        convert_pupil_mobile_recording_to_v094(rec_dir)
-        meta_info["Data Format Version"] = "v0.9.4"
-        update_meta_info(rec_dir, meta_info)
-
     # Reference format: v0.7.4
     rec_version = read_rec_version(meta_info)
 
@@ -167,84 +162,6 @@ def _update_info_version_to(new_version, rec_dir):
     meta_info = pm.load_meta_info(rec_dir)
     meta_info["Data Format Version"] = new_version
     update_meta_info(rec_dir, meta_info)
-
-
-def convert_pupil_mobile_recording_to_v094(rec_dir):
-    logger.info("Converting Pupil Mobile recording to v0.9.4 format")
-    recording = PupilRecording(rec_dir)
-
-    # NOTE: could still be worldless at this point
-    _try_patch_world_instrinsics_file(
-        rec_dir, recording.files().mobile().world().videos()
-    )
-    for path in recording.files():
-        # replace prefix based on cam_id, part number is already correct
-        match = re.match(r"^(?P<prefix>Pupil Cam\d ID(?P<cam_id>\d))", path.name)
-        if match:
-            replacement_for_cam_id = {"0": "eye0", "1": "eye1", "2": "world"}
-            replacement = replacement_for_cam_id[match.group("cam_id")]
-            new_name = path.name.replace(match.group("prefix"), replacement)
-            path.replace(path.with_name(new_name))  # rename with overwrite
-
-    _rewrite_times(recording, dtype=">f8")
-
-    pupil_data_loc = os.path.join(rec_dir, "pupil_data")
-    if not os.path.exists(pupil_data_loc):
-        logger.info('Creating "pupil_data"')
-        fm.save_object(
-            {"pupil_positions": [], "gaze_positions": [], "notifications": []},
-            pupil_data_loc,
-        )
-
-
-def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) -> None:
-    """Tries to create a reasonable world.intrinsics file from a set of videos."""
-    if not videos:
-        return
-
-    # Make sure the default value always correlates to the frame size of fake frames
-    frame_size = BrokenStream().frame_size
-    # TODO: Due to the naming conventions for multipart-recordings, we can't
-    # easily lookup 'any' video name in the pre_recorded_calibrations, since it
-    # might be a multipart recording. Therefore we need to compute a hint here
-    # for the lookup. This could be improved.
-    camera_hint = ""
-    for video in videos:
-        try:
-            container = av.open(str(video))
-        except av.AVError:
-            continue
-
-        for camera in cm.pre_recorded_calibrations:
-            if camera in video.name:
-                camera_hint = camera
-                break
-        frame_size = (
-            container.streams.video[0].format.width,
-            container.streams.video[0].format.height,
-        )
-        break
-
-    intrinsics = cm.load_intrinsics(rec_dir, camera_hint, frame_size)
-    intrinsics.save(rec_dir, "world")
-
-
-def _rewrite_times(
-    recording: PupilRecording,
-    dtype: str,
-    conversion: T.Optional[T.Callable[[np.array], np.array]] = None,
-) -> None:
-    """Load raw times (assuming dtype), apply conversion and save as _timestamps.npy."""
-    for path in recording.files().raw_time():
-        timestamps = np.fromfile(str(path), dtype=dtype)
-
-        if conversion is not None:
-            timestamps = conversion(timestamps)
-
-        new_name = f"{path.stem}_timestamps.npy"
-        logger.info(f"Creating {new_name}")
-        timestamp_loc = path.parent / new_name
-        np.save(str(timestamp_loc), timestamps)
 
 
 def update_recording_v074_to_v082(rec_dir):
