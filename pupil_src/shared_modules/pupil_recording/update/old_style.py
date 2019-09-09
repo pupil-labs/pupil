@@ -34,15 +34,23 @@ from video_capture.file_backend import BrokenStream
 logger = logging.getLogger(__name__)
 
 
-__all__ = ["recording_update_old_style_to_pprf_2_0"]
+__all__ = ["transform_old_style_to_pprf_2_0"]
 
 
-def recording_update_old_style_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
+def transform_old_style_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
+    logger.info("Transform old style to new style recording...")
     _update_recording_to_old_style_v1_16(rec_dir)
-    return _recording_update_legacy_from_v1_16_to_pprf_2_0(rec_dir)
+    _generate_pprf_2_0_info_file(rec_dir)
+
+    # rename info.csv file to info.old_style.csv
+    logger.debug("Rename `info.csv` file to `info.old_style.csv`")
+    info_csv = Path(rec_dir) / "info.csv"
+    new_path = info_csv.with_name("info.old_style.csv")
+    info_csv.replace(new_path)
 
 
-def _recording_update_legacy_from_v1_16_to_pprf_2_0(rec_dir):
+def _generate_pprf_2_0_info_file(rec_dir):
+    logger.debug("Generate PPRF 2.0 info file...")
     info_csv = rec_info_utils.read_info_csv_file(rec_dir)
 
     # Get information about recording from info.csv
@@ -75,13 +83,14 @@ def _recording_update_legacy_from_v1_16_to_pprf_2_0(rec_dir):
     new_info_file.recording_name = recording_name
     new_info_file.system_info = system_info
     new_info_file.validate()
-    return new_info_file
+    new_info_file.save_file()
 
 
 ########## PRIVATE ##########
 
 
 def _update_recording_to_old_style_v1_16(rec_dir):
+    logger.debug("Update old style recording...")
 
     meta_info = rec_info_utils.read_info_csv_file(rec_dir)
     update_meta_info(rec_dir, meta_info)
@@ -130,7 +139,7 @@ def _update_recording_to_old_style_v1_16(rec_dir):
         update_recording_v13_v14(rec_dir)
 
     # Do this independent of rec_version
-    check_for_worldless_recording(rec_dir)
+    check_for_worldless_recording_old_style(rec_dir)
 
     if rec_version < VersionFormat("1.8"):
         update_recording_v14_v18(rec_dir)
@@ -555,7 +564,7 @@ def _delete_all_lookup_files(rec_dir):
             pass
 
 
-def check_for_worldless_recording(rec_dir):
+def check_for_worldless_recording_old_style(rec_dir):
     logger.info("Checking for world-less recording")
     valid_ext = (".mp4", ".mkv", ".avi", ".h264", ".mjpeg")
 
