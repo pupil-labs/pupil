@@ -155,7 +155,7 @@ class PupilRecording:
             return self
 
         def __init__(self, rec_dir: str):
-            self.__files = [path for path in Path(rec_dir).iterdir() if path.is_file()]
+            self.__files = sorted(filter(Path.is_file, Path(rec_dir).iterdir()))
 
         def __getitem__(self, key):
             # Used for implementing collections.Sequence
