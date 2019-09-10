@@ -104,5 +104,8 @@ def is_pupil_mobile_recording(rec_dir: str) -> bool:
 
 
 def was_recording_opened_in_player_before(rec_dir: str) -> bool:
-    info_csv = recording_info_utils.read_info_csv_file(rec_dir)
+    try:
+        info_csv = recording_info_utils.read_info_csv_file(rec_dir)
+    except FileNotFoundError:
+        return False
     return "Data Format Version" in info_csv
