@@ -254,6 +254,16 @@ class File_Source(Playback_Source, Base_Source):
 
             recording = PupilRecording(rec)
             start_time = recording.meta_info.start_time_synced_s
+            if (
+                recording.meta_info.recording_software_name
+                == recording.meta_info.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
+                # TODO: Currently PI timestamp data is shifted to start at 0 (by
+                # subtracting start_time_synced) in order to deal with opengl rounding
+                # issues for large numbers in float32 precision. This will change in the
+                # future, which will require this to be updated again.
+                start_time = 0
+
             duration = recording.meta_info.duration_s
             # since the eye recordings might be slightly longer than the world recording
             # (due to notification delays) we want to make sure that we generate enough
