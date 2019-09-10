@@ -1,14 +1,13 @@
 import os
 import uuid
 
+from . import test_fixtures
 from .recording_info import (
-    Version,
     RecordingInfo,
     RecordingInfoFile,
     RecordingInfoInvalidError,
+    Version,
 )
-
-from . import test_fixtures
 
 
 def test_info_json_basic():

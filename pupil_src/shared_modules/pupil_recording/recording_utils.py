@@ -1,9 +1,10 @@
 import enum
 from pathlib import Path
 
-from pupil_recording.info import recording_info_utils
-from pupil_recording.info.recording_info import RecordingInfoFile
-from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
+from .info import recording_info_utils
+from .info.recording_info import RecordingInfoFile
+
+VALID_VIDEO_EXTENSIONS = ("mp4", "mjpeg", "h264", "mkv", "avi", "fake")
 
 
 class InvalidRecordingException(Exception):

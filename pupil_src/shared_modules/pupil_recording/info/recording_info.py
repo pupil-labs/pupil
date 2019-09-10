@@ -7,7 +7,7 @@ import os
 import typing as T
 import uuid
 
-from packaging.version import Version as Version
+from .. import Version
 
 __all__ = ["RecordingInfo", "RecordingInfoFile", "RecordingInfoInvalidError", "Version"]
 

@@ -6,8 +6,8 @@ import av
 import numpy as np
 
 import camera_models as cm
-from pupil_recording.recording import PupilRecording
-from video_capture.file_backend import BrokenStream
+
+from ..recording import PupilRecording
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +17,8 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
     if not videos:
         return
 
-    # Make sure the default value always correlates to the frame size of fake frames
-    frame_size = BrokenStream().frame_size
+    # Make sure the default value always correlates to the frame size of BrokenStream
+    frame_size = (1280, 720)
     # TODO: Due to the naming conventions for multipart-recordings, we can't
     # easily lookup 'any' video name in the pre_recorded_calibrations, since it
     # might be a multipart recording. Therefore we need to compute a hint here

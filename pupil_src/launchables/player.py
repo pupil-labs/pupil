@@ -83,7 +83,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from version_utils import VersionFormat
         from methods import normalize, denormalize, delta_t, get_system_info
         import player_methods as pm
-        from pupil_recording.recording import PupilRecording
+        from pupil_recording import PupilRecording
         from csv_utils import write_key_value_file
 
         # Plug-ins
@@ -125,7 +125,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_capture import File_Source
         from video_overlay.plugins import Video_Overlay, Eye_Overlay
 
-        from pupil_recording.recording_utils import (
+        from pupil_recording import (
             assert_valid_recording_type,
             InvalidRecordingException,
         )
@@ -713,11 +713,11 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
         import player_methods as pm
-        from pupil_recording.recording_utils import (
+        from pupil_recording import (
             assert_valid_recording_type,
             InvalidRecordingException,
         )
-        from pupil_recording.update import update_recording
+        from pupil_recording import update_recording
 
         def on_drop(window, count, paths):
             nonlocal rec_dir

@@ -15,7 +15,7 @@ import os
 import player_methods as pm
 from task_manager import ManagedTask
 from video_export.plugin_base.video_exporter import VideoExporter
-from pupil_recording.recording import PupilRecording
+from pupil_recording import PupilRecording
 
 logger = logging.getLogger(__name__)
 

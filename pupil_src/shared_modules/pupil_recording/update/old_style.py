@@ -12,8 +12,6 @@ import collections
 import glob
 import logging
 import os
-import re
-import typing as T
 import uuid
 from pathlib import Path
 from shutil import copy2
@@ -25,11 +23,11 @@ from scipy.interpolate import interp1d
 import camera_models as cm
 import csv_utils
 import file_methods as fm
-import player_methods as pm
-import pupil_recording.info.recording_info_utils as rec_info_utils
-from pupil_recording.info.recording_info import RecordingInfoFile, Version
 from version_utils import VersionFormat
-from video_capture.file_backend import BrokenStream
+
+from .. import Version
+from ..info import RecordingInfoFile
+from ..info import recording_info_utils as rec_info_utils
 
 logger = logging.getLogger(__name__)
 

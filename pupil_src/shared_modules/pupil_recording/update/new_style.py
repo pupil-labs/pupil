@@ -2,10 +2,12 @@ import logging
 from pathlib import Path
 
 import file_methods as fm
-from pupil_recording.recording import PupilRecording
-from pupil_recording.info.recording_info import RecordingInfoFile, Version
-from pupil_recording.recording_utils import InvalidRecordingException
 from version_utils import pupil_version
+
+from .. import Version
+from ..info import RecordingInfoFile
+from ..recording import PupilRecording
+from ..recording_utils import InvalidRecordingException
 
 logger = logging.getLogger(__name__)
 

@@ -5,15 +5,12 @@ import re
 import typing as T
 from pathlib import Path
 
-from pupil_recording.info.recording_info import (
-    RecordingInfoFile,
-    RecordingInfoInvalidError,
-)
-from pupil_recording.recording_utils import (
+from .info.recording_info import RecordingInfoFile, RecordingInfoInvalidError
+from .recording_utils import (
     InvalidRecordingException,
     _assert_valid_rec_dir,
+    VALID_VIDEO_EXTENSIONS,
 )
-from video_capture.utils import VIDEO_EXTS as VALID_VIDEO_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 

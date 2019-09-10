@@ -1,7 +1,7 @@
 import uuid
 
+from . import RecordingInfoFile, Version
 from . import recording_info_utils as utils
-from .recording_info import RecordingInfoFile, Version
 
 
 class _RecordingInfoFile_2_0(RecordingInfoFile):

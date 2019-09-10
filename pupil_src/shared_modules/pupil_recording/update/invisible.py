@@ -6,12 +6,13 @@ import numpy as np
 
 import file_methods as fm
 import methods as m
-import pupil_recording.info.recording_info_utils as utils
-from pupil_recording.info.recording_info import Version
-from pupil_recording.recording import PupilRecording, RecordingInfoFile
-from pupil_recording.recording_utils import InvalidRecordingException
 from video_capture.utils import pi_gaze_items
 
+from .. import Version
+from ..info import RecordingInfoFile
+from ..info import recording_info_utils as utils
+from ..recording import PupilRecording
+from ..recording_utils import InvalidRecordingException
 from . import update_utils
 
 logger = logging.getLogger(__name__)

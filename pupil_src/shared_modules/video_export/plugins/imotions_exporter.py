@@ -17,7 +17,7 @@ from shutil import copy2
 import csv_utils
 import player_methods as pm
 from methods import denormalize
-from pupil_recording.recording import PupilRecording
+from pupil_recording import PupilRecording
 from video_export.plugin_base.isolated_frame_exporter import IsolatedFrameExporter
 
 logger = logging.getLogger(__name__)

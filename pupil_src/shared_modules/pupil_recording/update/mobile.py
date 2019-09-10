@@ -3,11 +3,11 @@ import re
 import uuid
 from pathlib import Path
 
-from pupil_recording.info import recording_info_utils as utils
-from pupil_recording.info.recording_info import RecordingInfoFile, Version
-from pupil_recording.recording import PupilRecording
-from pupil_recording.recording_utils import InvalidRecordingException
-
+from .. import Version
+from ..info import RecordingInfoFile
+from ..info import recording_info_utils as utils
+from ..recording import PupilRecording
+from ..recording_utils import InvalidRecordingException
 from . import update_utils
 
 NEXT_UNSUPPORTED_VERSION = Version("1.3")

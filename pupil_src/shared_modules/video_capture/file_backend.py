@@ -25,6 +25,7 @@ from .utils import VideoSet
 
 import player_methods as pm
 from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
+from pupil_recording import PupilRecording
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -251,33 +252,15 @@ class File_Source(Playback_Source, Base_Source):
         if self.videoset.is_empty() and self.fill_gaps:
             # create artificial lookup table here
 
-            # TODO: replace calculation of start/end time with meta info wrapper
-            meta_info = pm.load_meta_info(rec)
-            try:
-                start_time = meta_info["Start Time (Synced)"]
-                duration = meta_info["Duration Time"]
-            except KeyError as e:
-                raise KeyError(
-                    "Could not recover timing information"
-                    " for empty videoset from recording info!"
-                )
-            try:
-                start_time = float(start_time)
-            except ValueError:
-                raise ValueError(f"Could not parse start time: {start_time}")
-            try:
-                H, M, S = (int(part) for part in duration.split(":"))
-            except ValueError:
-                raise ValueError(f"Could not parse video duration: {duration}")
-            SEC_PER_MINUTE = 60
-            SEC_PER_HOUR = 3600
-            end_time = start_time + S + (SEC_PER_MINUTE * M) + (SEC_PER_HOUR * H)
+            recording = PupilRecording(rec)
+            start_time = recording.meta_info.start_time_synced_s
+            duration = recording.meta_info.duration_s
             # since the eye recordings might be slightly longer than the world recording
             # (due to notification delays) we want to make sure that we generate enough
             # fake world frames to display all eye data, so we make the world recording
             # artificially longer
             BACK_BUFFER_SECONDS = 3
-            end_time += BACK_BUFFER_SECONDS
+            end_time = start_time + duration + BACK_BUFFER_SECONDS
 
             fallback_framerate = 30
             timestamps = np.arange(start_time, end_time, 1 / fallback_framerate)
