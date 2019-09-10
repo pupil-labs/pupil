@@ -1,4 +1,9 @@
-from ..recording_utils import RecordingType, get_recording_type
+from ..recording import PupilRecording
+from ..recording_utils import (
+    InvalidRecordingException,
+    RecordingType,
+    get_recording_type,
+)
 from .invisible import transform_invisible_to_corresponding_new_style
 from .mobile import transform_mobile_to_corresponding_new_style
 from .new_style import (
@@ -19,6 +24,13 @@ def update_recording(rec_dir: str):
     recording_type = get_recording_type(rec_dir)
     if recording_type in _transformations_to_new_style:
         _transformations_to_new_style[recording_type](rec_dir)
+
+    try:
+        # This will throw InvalidRecordingException if we cannot open the recording due
+        # to meta info version or min_player_version mismatches.
+        PupilRecording(rec_dir)
+    except InvalidRecordingException:
+        raise
 
     check_for_worldless_recording_new_style(rec_dir)
 
