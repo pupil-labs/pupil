@@ -55,7 +55,7 @@ def _generate_pprf_2_0_info_file(rec_dir):
     recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
     start_time_system_s = float(info_csv["Start Time (System)"])
     start_time_synced_s = float(info_csv["Start Time (Synced)"])
-    duration_s = float(info_csv["Duration Time"])
+    duration_s = _parse_duration_string(info_csv["Duration Time"])
     recording_software_name = info_csv.get(
         "Capture Software", RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
     )
@@ -82,6 +82,13 @@ def _generate_pprf_2_0_info_file(rec_dir):
     new_info_file.system_info = system_info
     new_info_file.validate()
     new_info_file.save_file()
+
+
+def _parse_duration_string(duration_string: str):
+    H, M, S = [int(part) for part in duration_string.split(":")]
+    SECONDS_PER_H = 3600
+    SECONDS_PER_M = 60
+    return (H * SECONDS_PER_H) + (M * SECONDS_PER_M) + S
 
 
 ########## PRIVATE ##########
