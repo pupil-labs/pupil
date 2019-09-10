@@ -801,6 +801,12 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
                     logger.error(str(err))
                     tip = "Oops! There was an error updating the recording."
                     rec_dir = None
+                except InvalidRecordingException as err:
+                    logger.error(str(err))
+                    tip = err.reason
+                    if err.recovery:
+                        tip += " " + err.recovery + "."
+                    rec_dir = None
                 else:
                     glfw.glfwSetWindowShouldClose(window, True)
 
