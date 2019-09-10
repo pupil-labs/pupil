@@ -23,6 +23,7 @@ from time import sleep
 from camera_models import load_intrinsics
 from .utils import VideoSet
 
+import player_methods as pm
 from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
 
 logger = logging.getLogger(__name__)
@@ -215,29 +216,25 @@ class File_Source(Playback_Source, Base_Source):
         else:
             self.recent_events = self.recent_events_own_timing
         # minimal attribute set
-        self._initialised = True
         self.source_path = source_path
         self.loop = loop
         self.fill_gaps = fill_gaps
-        assert self.check_source_path(source_path)
         rec, set_name = self.get_rec_set_name(self.source_path)
-        self.videoset = VideoSet(rec, set_name, self.fill_gaps)
-        # Load or build lookup table
-        self.videoset.load_or_build_lookup()
+
+        self._init_videoset()
+
         self.timestamps = self.videoset.lookup.timestamp
+        if len(self.timestamps) > 1:
+            self._frame_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
+                self.timestamps
+            )
+        else:
+            # TODO: where does the fallback framerate of 1/20 come from?
+            self._frame_rate = 20
         self.buffering = buffered_decoding
         # Load video split for first frame
         self.reset_video()
         self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
-
-    def check_source_path(self, source_path):
-        if not source_path or not os.path.isfile(source_path):
-            logger.error(
-                "Init failed. Source file could not be found at `%s`" % source_path
-            )
-            self._initialised = False
-            return
-        return True
 
     def get_rec_set_name(self, source_path):
         """
@@ -247,97 +244,98 @@ class File_Source(Playback_Source, Base_Source):
         set_name = os.path.splitext(file_)[0]
         return rec, set_name
 
-    def setup_video(self, container_index):
-        """
-        Setup streams for a given container_index.
-        """
+    def _init_videoset(self):
+        rec, set_name = self.get_rec_set_name(self.source_path)
+        self.videoset = VideoSet(rec, set_name, self.fill_gaps)
+        self.videoset.load_or_build_lookup()
+        if self.videoset.is_empty() and self.fill_gaps:
+            # create artificial lookup table here
+
+            # TODO: replace calculation of start/end time with meta info wrapper
+            meta_info = pm.load_meta_info(rec)
+            try:
+                start_time = meta_info["Start Time (Synced)"]
+                duration = meta_info["Duration Time"]
+            except KeyError as e:
+                raise KeyError(
+                    "Could not recover timing information"
+                    " for empty videoset from recording info!"
+                )
+            try:
+                start_time = float(start_time)
+            except ValueError:
+                raise ValueError(f"Could not parse start time: {start_time}")
+            try:
+                H, M, S = (int(part) for part in duration.split(":"))
+            except ValueError:
+                raise ValueError(f"Could not parse video duration: {duration}")
+            SEC_PER_MINUTE = 60
+            SEC_PER_HOUR = 3600
+            end_time = start_time + S + (SEC_PER_MINUTE * M) + (SEC_PER_HOUR * H)
+            # since the eye recordings might be slightly longer than the world recording
+            # (due to notification delays) we want to make sure that we generate enough
+            # fake world frames to display all eye data, so we make the world recording
+            # artificially longer
+            BACK_BUFFER_SECONDS = 3
+            end_time += BACK_BUFFER_SECONDS
+
+            fallback_framerate = 30
+            timestamps = np.arange(start_time, end_time, 1 / fallback_framerate)
+            self.videoset.build_lookup(timestamps)
+            assert not self.videoset.is_empty()
+
+    def _setup_video(self, container_index):
+        """Setup streams for a given container_index."""
         try:
             self.video_stream.cleanup()
         except AttributeError:
             pass
 
-        if container_index < 0 or not self.videoset.containers[container_index]:
+        if container_index < 0:
             # setup a 'valid' broken stream
             self.video_stream = BrokenStream()
         else:
-            self.container = self.videoset.containers[container_index]
-            self.video_stream, self.audio_stream = self._get_streams(
-                self.container, self.buffering
-            )
-            self.video_stream.seek(0)
+            container = self.videoset.containers[container_index]
+            if container is None:
+                # TODO: Shouldn't this be caught through an invalid container_index?
+                logger.warning("Video container is broken, although it appeared valid.")
+                self.video_stream = BrokenStream()
+            else:
+                self.video_stream = self._get_streams(container, self.buffering)
 
+        self.video_stream.seek(0)
         self.current_container_index = container_index
         self.frame_iterator = self.video_stream.get_frame_iterator()
-        self.average_rate = (self.timestamps[-1] - self.timestamps[0]) / len(
-            self.timestamps
-        )
-
-    def ensure_initialisation(fallback_func=None, requires_playback=False):
-        from functools import wraps
-
-        def decorator(func):
-            @wraps(func)
-            def run_func(self, *args, **kwargs):
-                if self._initialised and self.video_stream:
-                    # test self.play only if requires_playback is True
-                    if not requires_playback or self.play:
-                        return func(self, *args, **kwargs)
-                if fallback_func:
-                    return fallback_func(*args, **kwargs)
-                else:
-                    logger.debug("Initialisation required.")
-
-            return run_func
-
-        return decorator
 
     def _get_streams(self, container, should_buffer):
-        """
-        Get Video and Audio stream from containers
-        """
+        """Get Video stream from containers."""
         try:
-            video_stream = next(
-                s for s in container.streams if s.type == "video"
-            )  # looking for the first videostream
-            logger.debug("loaded videostream: %s" % video_stream)
-            video_stream.thread_count = cpu_count()
+            # look for the first videostream
+            video_stream = next(s for s in container.streams if s.type == "video")
         except StopIteration:
-            video_stream = None
-            logger.error("No videostream found in media container")
+            logger.error("Could not find any video stream in the given source file.")
+            # fallback to 'valid' broken stream
+            return BrokenStream()
 
-        try:
-            audio_stream = next(
-                s for s in container.streams if s.type == "audio"
-            )  # looking for the first audiostream
-            logger.debug("loaded audiostream: %s" % audio_stream)
-        except StopIteration:
-            audio_stream = None
-            logger.debug("No audiostream found in media container")
-        if not video_stream and not audio_stream:
-            logger.error(
-                "Init failed. Could not find any video or audio"
-                + "stream in the given source file."
-            )
-            self._initialised = False
-            return
+        logger.debug(f"loaded videostream: {str(video_stream)}")
+        video_stream.thread_count = cpu_count()
+
         if should_buffer:
-            return BufferedDecoder(container, video_stream), audio_stream
+            return BufferedDecoder(container, video_stream)
         else:
-            return OnDemandDecoder(container, video_stream), audio_stream
+            return OnDemandDecoder(container, video_stream)
 
     @property
     def initialised(self):
-        return self._initialised
+        return not self.videoset.is_empty()
 
     @property
-    @ensure_initialisation(fallback_func=lambda: (640, 480))
     def frame_size(self):
         return self.video_stream.frame_size
 
     @property
-    @ensure_initialisation(fallback_func=lambda: 20)
     def frame_rate(self):
-        return 1.0 / float(self.average_rate)
+        return self._frame_rate
 
     def get_init_dict(self):
         if self.g_pool.app == "capture":
@@ -361,7 +359,6 @@ class File_Source(Playback_Source, Base_Source):
     def get_frame_count(self):
         return int(self.videoset.lookup.size)
 
-    @ensure_initialisation()
     def get_frame(self):
         try:
             target_entry = self.videoset.lookup[self.target_frame_idx]
@@ -373,7 +370,7 @@ class File_Source(Playback_Source, Base_Source):
 
         if target_entry.container_idx != self.current_container_index:
             # Contained index changed, need to load other video split
-            self.setup_video(target_entry.container_idx)
+            self._setup_video(target_entry.container_idx)
 
         # advance frame iterator until we hit the target frame
         for av_frame in self.frame_iterator:
@@ -419,7 +416,6 @@ class File_Source(Playback_Source, Base_Source):
             index=self.current_frame_idx,
         )
 
-    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):
         try:
             last_index = self._recent_frame.index
@@ -446,13 +442,20 @@ class File_Source(Playback_Source, Base_Source):
         events["frame"] = frame
         self._recent_frame = frame
 
-    @ensure_initialisation(
-        fallback_func=lambda evt: sleep(0.05), requires_playback=True
-    )
     def recent_events_own_timing(self, events):
+        if not self.play:
+            if self.timing == "own":
+                # this is to ensure we don't do full-CPU loops on broken videos when
+                # streaming a recording into capture (!)
+                sleep(0.05)
+            return
         try:
             frame = self.get_frame()
         except EndofVideoError:
+            if self.timing == "own":
+                # this is to ensure we don't do full-CPU loops on broken videos when
+                # streaming a recording into capture (!)
+                sleep(0.05)
             logger.info("Video has ended.")
             if self.loop:
                 logger.info("Looping enabled. Seeking to beginning.")
@@ -466,17 +469,20 @@ class File_Source(Playback_Source, Base_Source):
             )
             self.play = False
         else:
-            if self.timing:
+            if self.timing == "own":
                 self.wait(frame.timestamp)
             self._recent_frame = frame
             events["frame"] = frame
 
-    @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
-        target_entry = self.videoset.lookup[seek_pos]
+        try:
+            target_entry = self.videoset.lookup[seek_pos]
+        except IndexError:
+            logger.warning("Seeking to invalid position!")
+            return
         if target_entry.container_idx > -1:
             if target_entry.container_idx != self.current_container_index:
-                self.setup_video(target_entry.container_idx)
+                self._setup_video(target_entry.container_idx)
             try:
                 # explicit conversion to python int required, else:
                 # TypeError: ('Container.seek only accepts integer offset.')
@@ -580,8 +586,11 @@ class File_Source(Playback_Source, Base_Source):
         """
         self.current_frame_idx = 0
         self.target_frame_idx = 0
-        container_idx_of_first_frame = self.videoset.lookup[0].container_idx
-        self.setup_video(container_idx_of_first_frame)
+        if not self.initialised:
+            self._setup_video(-1)
+        else:
+            container_idx_of_first_frame = self.videoset.lookup[0].container_idx
+            self._setup_video(container_idx_of_first_frame)
 
 
 class File_Manager(Base_Manager):

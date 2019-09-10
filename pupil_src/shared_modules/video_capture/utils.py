@@ -194,9 +194,15 @@ class Video:
     def load_valid_container(self):
         if self.is_valid:
             return self.cont
+        else:
+            return None
 
     def load_ts(self):
-        self.ts = np.load(self.ts_loc)
+        try:
+            self.ts = np.load(self.ts_loc)
+        except FileNotFoundError:
+            self.ts = np.array([])
+            return
         self.ts = self._fix_negative_time_jumps(self.ts)
 
     def load_pts(self):
@@ -248,14 +254,28 @@ class Video:
         return timestamps
 
 
+class LookupTableNotInitializedError(AttributeError):
+    pass
+
+
 class VideoSet:
     def __init__(self, rec: str, name: str, fill_gaps: bool):
         self.rec = rec
         self.name = name
         self.fill_gaps = fill_gaps
-        self.video_exts = VIDEO_EXTS
+        self.video_exts = set(VIDEO_EXTS) - {"fake"}
         self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
         self._containers = [vid.load_valid_container() for vid in self.videos]
+
+    def is_empty(self) -> bool:
+        try:
+            # bool(self.lookup.timestamp) raises ValueError for numpy arrays: The truth
+            # value of an array with more than one element is ambiguous.
+            return len(self.lookup.timestamp) == 0
+        except AttributeError:
+            raise LookupTableNotInitializedError(
+                "Lookup table was not initialized correctly!"
+            )
 
     @property
     def videos(self) -> Sequence[Video]:
@@ -279,7 +299,7 @@ class VideoSet:
             if (self.fill_gaps or Video(loc).is_valid)
         )
 
-    def build_lookup(self):
+    def build_lookup(self, fallback_timestamps=None):
         """
         The lookup table is a np.recarray containing entries
         for each (virtual and real) frame.
@@ -312,8 +332,15 @@ class VideoSet:
         Case 6: all videos are broken and self._fill_gaps is False
             return
         """
+
         loaded_ts = self._loaded_ts_sorted()
         loaded_ts = self._fill_gaps(loaded_ts)
+
+        if len(loaded_ts) == 0 and fallback_timestamps is not None:
+            fallback_timestamps = np.asanyarray(fallback_timestamps)
+            self.lookup = self._setup_lookup(fallback_timestamps)
+            return
+
         lookup = self._setup_lookup(loaded_ts)
         for container_idx, vid in enumerate(self.videos):
             if not vid.is_valid:
@@ -347,23 +374,25 @@ class VideoSet:
                 lookup.container_idx[lookup_mask] = container_idx
                 lookup.pts[lookup_mask] = vid_pts
         self.lookup = lookup
-
-    def save_lookup(self):
         np.save(self.lookup_loc, self.lookup)
+        # filter gaps (after saving!)
+        if not self.fill_gaps:
+            self._remove_filled_gaps()
 
     def load_lookup(self):
         self.lookup = np.load(self.lookup_loc).view(np.recarray)
+        if not self.fill_gaps:
+            self._remove_filled_gaps()
 
     def load_or_build_lookup(self):
         try:
             self.load_lookup()
         except FileNotFoundError:
             self.build_lookup()
-            self.save_lookup()
-        if not self.fill_gaps:
-            self._remove_filled_gaps()
 
     def _loaded_ts_sorted(self) -> np.ndarray:
+        if not self.videos:
+            return np.array([])
         loaded_ts = [vid.timestamps for vid in self.videos]
         all_ts = np.concatenate(loaded_ts)
         return all_ts

@@ -138,9 +138,6 @@ def _update_recording_to_old_style_v1_16(rec_dir):
     if rec_version < VersionFormat("1.4"):
         update_recording_v13_v14(rec_dir)
 
-    # Do this independent of rec_version
-    check_for_worldless_recording_old_style(rec_dir)
-
     if rec_version < VersionFormat("1.8"):
         update_recording_v14_v18(rec_dir)
     if rec_version < VersionFormat("1.9"):
@@ -562,74 +559,6 @@ def _delete_all_lookup_files(rec_dir):
             (rec_dir / f"{name}_lookup.npy").unlink()
         except FileNotFoundError:
             pass
-
-
-def check_for_worldless_recording_old_style(rec_dir):
-    logger.info("Checking for world-less recording")
-    valid_ext = (".mp4", ".mkv", ".avi", ".h264", ".mjpeg")
-
-    world_video_exists = any(
-        (
-            os.path.splitext(f)[1] in valid_ext
-            for f in glob.glob(os.path.join(rec_dir, "world.*"))
-        )
-    )
-
-    if not world_video_exists:
-        fake_world_version = 1
-        fake_world_path = os.path.join(rec_dir, "world.fake")
-        if os.path.exists(fake_world_path):
-            fake_world = fm.load_object(fake_world_path)
-            if fake_world["version"] == fake_world_version:
-                return
-
-        logger.warning("No world video found. Constructing an artificial replacement.")
-        eye_ts_files = glob.glob(os.path.join(rec_dir, "eye*_timestamps.npy"))
-
-        min_ts = np.inf
-        max_ts = -np.inf
-        for f in eye_ts_files:
-            try:
-                eye_ts = np.load(f)
-                assert len(eye_ts.shape) == 1
-                assert eye_ts.shape[0] > 1
-                min_ts = min(min_ts, eye_ts[0])
-                max_ts = max(max_ts, eye_ts[-1])
-            except AssertionError:
-                logger.debug(
-                    (
-                        "Ignoring {} since it does not conform with the expected format"
-                        " (one-dimensional list with at least two entries)".format(f)
-                    )
-                )
-        assert -np.inf < min_ts < max_ts < np.inf, (
-            "This recording is invalid because it does not contain any valid eye "
-            "timestamp files from which artifical world timestamps could be generated "
-            "from."
-        )
-
-        frame_rate = 30
-        timestamps = np.arange(min_ts, max_ts, 1 / frame_rate)
-        np.save(os.path.join(rec_dir, "world_timestamps.npy"), timestamps)
-        fm.save_object(
-            {
-                "frame_rate": frame_rate,
-                "frame_size": (1280, 720),
-                "version": fake_world_version,
-            },
-            os.path.join(rec_dir, "world.fake"),
-        )
-        lookup_entry = np.dtype(
-            [
-                ("container_idx", "<i8"),
-                ("container_frame_idx", "<i8"),
-                ("timestamp", "<f8"),
-            ]
-        )
-        lookup = np.empty(timestamps.size, dtype=lookup_entry).view(np.recarray)
-        lookup.timestamp = timestamps
-        lookup.container_idx = -1
-        np.save(os.path.join(rec_dir, "world_lookup.npy"), lookup)
 
 
 def update_recording_bytes_to_unicode(rec_dir):
