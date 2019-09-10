@@ -14,10 +14,10 @@ import logging
 import time
 
 import numpy as np
-import uvc
 from pyglui import cygl
 
 import gl_utils
+import uvc
 from camera_models import load_intrinsics
 from version_utils import VersionFormat
 
@@ -196,7 +196,21 @@ class UVC_Source(Base_Source):
     def configure_capture(self, frame_size, frame_rate, uvc_controls):
         # Set camera defaults. Override with previous settings afterwards
         if "Pupil Cam" in self.uvc_capture.name:
-            self.ts_offset = 0.0
+            if platform.system() == "Windows":
+                # NOTE: Hardware timestamps seem to be broken on windows. Needs further
+                # investigation! Disabling for now.
+                # TODO: Find accurate offsets for different resolutions!
+                offsets = {"ID0": -0.015, "ID1": -0.015, "ID2": -0.07}
+                match = re.match(r"Pupil Cam\d (?P<cam_id>ID[0-2])", self.name)
+                if not match:
+                    logger.debug(f"Could not parse camera name: {self.name}")
+                    self.ts_offset = -0.01
+                else:
+                    self.ts_offset = offsets[match.group("cam_id")]
+
+            else:
+                # use hardware timestamps
+                self.ts_offset = None
         else:
             logger.info(
                 "Hardware timestamps not supported for {}. Using software timestamps.".format(
@@ -375,6 +389,7 @@ class UVC_Source(Base_Source):
     def recent_events(self, events):
         try:
             frame = self.uvc_capture.get_frame(0.05)
+
             if np.isclose(frame.timestamp, 0):
                 # sometimes (probably only on windows) after disconnections, the first frame has 0 ts
                 logger.warning(
@@ -402,7 +417,7 @@ class UVC_Source(Base_Source):
             time.sleep(0.02)
             self._restart_logic()
         else:
-            if self.ts_offset:
+            if self.ts_offset is not None:
                 # c930 timestamps need to be set here. The camera does not provide valid pts from device
                 frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
             frame.timestamp -= self.g_pool.timebase.value
