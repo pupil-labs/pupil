@@ -7,6 +7,8 @@ import os
 import typing as T
 import uuid
 
+from version_utils import pupil_version
+
 from .. import Version
 
 __all__ = ["RecordingInfo", "RecordingInfoFile", "RecordingInfoInvalidError", "Version"]
@@ -376,10 +378,47 @@ class RecordingInfoFile(RecordingInfo):
         )
         try:
             info_file_class = RecordingInfoFile._info_file_versions[info_file_version]
+
         except KeyError:
-            raise RecordingInfoInvalidError(
-                f"Unsupported info file version {info_file_version}"
+            latest_version = RecordingInfoFile.get_latest_info_file_version()
+            if info_file_version <= latest_version:
+                # Something went really wrong with our versioning! Should never happen!
+                raise RecordingInfoInvalidError("Unexpected version order error!")
+
+            # We don't have a template for this meta version. Check for
+            # min_player_version and try to find a best template.
+            try:
+                info_file_path = RecordingInfoFile._info_file_path(rec_dir)
+                with open(info_file_path, "r") as f:
+                    info_dict = RecordingInfoFile._read_dict_from_file(f)
+                min_player_version = Version(info_dict["min_player_version"])
+            except BaseException as e:
+                # Catching BaseException since at this point we don't know anything
+                logger.error(
+                    f"Exception during trying to load min_player_version for recording"
+                    f" with meta version {info_file_version} from player with latest"
+                    f" meta version {latest_version}: {str(e)}"
+                )
+                raise RecordingInfoInvalidError(
+                    f"Recording is too new to be opened with this version of Player!"
+                )
+            if min_player_version > Version(pupil_version()):
+                raise RecordingInfoInvalidError(
+                    f"This recording requires Player version >= {min_player_version}!"
+                )
+
+            # At this point we should be safe, but warn the user anyways
+            logger.warning(
+                "Opening recording of newer version than this version of Pupil Player."
+                " This might lead to problems."
+                " Please consider updating to the latest version of Pupil Player!"
             )
+            logger.debug(
+                f"Trying to open info file meta version {info_file_version}"
+                f" with template for version {latest_version}!"
+            )
+            info_file_class = RecordingInfoFile._info_file_versions[latest_version]
+
         return info_file_class(
             rec_dir=rec_dir, should_load_file=True, should_validate=True
         )
@@ -435,6 +474,14 @@ class RecordingInfoFile(RecordingInfo):
         # don't need to know our child classes.
         # TODO: Would be much cleaner with self-registering meta classes.
         cls._info_file_versions[version] = child_class
+
+    @classmethod
+    def get_latest_info_file_version(cls) -> Version:
+        if not cls._info_file_versions:
+            raise ValueError(
+                "RecordingInfoFile not correctly initialized! No templates registered."
+            )
+        return sorted(cls._info_file_versions.keys())[-1]
 
     @property
     @abc.abstractmethod
