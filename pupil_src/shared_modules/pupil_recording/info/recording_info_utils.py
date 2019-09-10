@@ -76,3 +76,11 @@ def read_info_json_file(rec_dir: str) -> dict:
     file_path = os.path.join(rec_dir, "info.json")
     with open(file_path, "r") as file:
         return json.load(file)
+
+
+def parse_duration_string(duration_string: str) -> int:
+    """Returns number of seconds from string 'HH:MM:SS'."""
+    H, M, S = [int(part) for part in duration_string.split(":")]
+    SECONDS_PER_H = 3600
+    SECONDS_PER_M = 60
+    return (H * SECONDS_PER_H) + (M * SECONDS_PER_M) + S

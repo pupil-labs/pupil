@@ -10,6 +10,10 @@ from ..recording import PupilRecording
 from ..recording_utils import InvalidRecordingException
 from . import update_utils
 
+# NOTE: Due to Pupil Mobile not having a data format version, we are using the software
+# version here. The idea is to use Major.Minor specifically. This means that the
+# software version of Pupil Mobile should can be increased in the patch version part
+# only if this won't need additional update methods here.
 NEXT_UNSUPPORTED_VERSION = Version("1.3")
 
 logger = logging.getLogger(__name__)
@@ -18,7 +22,8 @@ logger = logging.getLogger(__name__)
 def transform_mobile_to_corresponding_new_style(rec_dir: str) -> RecordingInfoFile:
     logger.info("Transform Pupil Mobile to new style recording...")
     info_csv = utils.read_info_csv_file(rec_dir)
-    mobile_version = Version(info_csv["Data Format Version"])
+
+    mobile_version = Version(info_csv["Capture Software Version"])
 
     if mobile_version >= NEXT_UNSUPPORTED_VERSION:
         raise InvalidRecordingException(
@@ -64,7 +69,7 @@ def _generate_pprf_2_0_info_file(rec_dir: str) -> RecordingInfoFile:
     recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
     start_time_system_s = float(info_csv["Start Time (System)"])
     start_time_synced_s = float(info_csv["Start Time (Synced)"])
-    duration_s = float(info_csv["Duration Time"])
+    duration_s = utils.parse_duration_string(info_csv["Duration Time"])
     recording_software_name = info_csv["Capture Software"]
     recording_software_version = Version(info_csv["Capture Software Version"])
     recording_name = info_csv.get(
