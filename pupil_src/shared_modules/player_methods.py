@@ -192,7 +192,8 @@ def correlate_data(data, timestamps):
 
 def transparent_circle(img, center, radius, color, thickness):
     center = tuple(map(int, center))
-    assert len(color) == 4 and all(type(c) == float and 0.0 <= c <= 1.0 for c in color)
+    assert len(color) == 4 and all(type(c) == float for c in color)
+    color = np.clip(color, 0.0, 1.0)  # sometimes the sliders returns values > 1.0
     bgr = [255 * c for c in color[:3]]  # convert to 0-255 scale for OpenCV
     alpha = color[-1]
     radius = int(radius)
