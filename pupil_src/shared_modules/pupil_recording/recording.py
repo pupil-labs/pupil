@@ -8,7 +8,7 @@ from pathlib import Path
 from .info.recording_info import RecordingInfoFile, RecordingInfoInvalidError
 from .recording_utils import (
     InvalidRecordingException,
-    _assert_valid_rec_dir,
+    assert_valid_rec_dir,
     VALID_VIDEO_EXTENSIONS,
 )
 
@@ -36,7 +36,7 @@ class PupilRecording:
     def load(self, rec_dir):
         rec_dir = Path(rec_dir).resolve()
 
-        _assert_valid_rec_dir(rec_dir)
+        assert_valid_rec_dir(rec_dir)
 
         try:
             info_file = RecordingInfoFile.read_file_from_recording(rec_dir=rec_dir)
