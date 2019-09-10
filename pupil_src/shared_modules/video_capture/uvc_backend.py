@@ -190,7 +190,7 @@ class UVC_Source(Base_Source):
                 match = re.match(r"Pupil Cam\d (?P<cam_id>ID[0-2])", self.name)
                 if not match:
                     logger.debug(f"Could not parse camera name: {self.name}")
-                    self.ts_offset = 0.0
+                    self.ts_offset = -0.01
                 else:
                     self.ts_offset = offsets[match.group("cam_id")]
 
