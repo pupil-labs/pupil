@@ -11,7 +11,7 @@ from ..recording_utils import InvalidRecordingException
 from . import update_utils
 
 # NOTE: Due to Pupil Mobile not having a data format version, we are using the software
-# version here. The idea is to use Minor.Major specifically. This means that the
+# version here. The idea is to use Major.Minor specifically. This means that the
 # software version of Pupil Mobile should can be increased in the patch version part
 # only if this won't need additional update methods here.
 NEXT_UNSUPPORTED_VERSION = Version("1.3")
