@@ -392,7 +392,7 @@ class RecordingInfoFile(RecordingInfo):
                 with open(info_file_path, "r") as f:
                     info_dict = RecordingInfoFile._read_dict_from_file(f)
                 min_player_version = Version(info_dict["min_player_version"])
-            except BaseException as e:
+            except Exception as e:
                 # Catching BaseException since at this point we don't know anything
                 logger.error(
                     f"Exception during trying to load min_player_version for recording"
