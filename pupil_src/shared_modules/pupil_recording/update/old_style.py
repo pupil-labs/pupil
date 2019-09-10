@@ -10,14 +10,11 @@ See COPYING and COPYING.LESSER for license details.
 """
 import collections
 import glob
-import json
 import logging
 import os
-from pathlib import Path
-import re
-from shutil import copy2
-import typing as T
 import uuid
+from pathlib import Path
+from shutil import copy2
 
 import av
 import numpy as np
@@ -26,34 +23,78 @@ from scipy.interpolate import interp1d
 import camera_models as cm
 import csv_utils
 import file_methods as fm
-import methods as m
-import player_methods as pm
-from version_utils import VersionFormat, read_rec_version
-from video_capture.utils import pi_gaze_items
-from video_capture.file_backend import BrokenStream
+from version_utils import VersionFormat
+
+from .. import Version
+from ..info import RecordingInfoFile
+from ..info import recording_info_utils as rec_info_utils
 
 logger = logging.getLogger(__name__)
 
 
-def update_recording_to_recent(rec_dir):
+__all__ = ["transform_old_style_to_pprf_2_0"]
 
-    pupil_recording = pm.Pupil_Recording(rec_dir=rec_dir)
 
-    meta_info = pupil_recording.meta_info
+def transform_old_style_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
+    logger.info("Transform old style to new style recording...")
+    _update_recording_to_old_style_v1_16(rec_dir)
+    _generate_pprf_2_0_info_file(rec_dir)
+
+    # rename info.csv file to info.old_style.csv
+    logger.debug("Rename `info.csv` file to `info.old_style.csv`")
+    info_csv = Path(rec_dir) / "info.csv"
+    new_path = info_csv.with_name("info.old_style.csv")
+    info_csv.replace(new_path)
+
+
+def _generate_pprf_2_0_info_file(rec_dir):
+    logger.debug("Generate PPRF 2.0 info file...")
+    info_csv = rec_info_utils.read_info_csv_file(rec_dir)
+
+    # Get information about recording from info.csv
+    recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
+    start_time_system_s = float(info_csv["Start Time (System)"])
+    start_time_synced_s = float(info_csv["Start Time (Synced)"])
+    duration_s = float(info_csv["Duration Time"])
+    recording_software_name = info_csv.get(
+        "Capture Software", RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
+    )
+    recording_software_version = Version(info_csv["Capture Software Version"])
+    recording_name = info_csv.get(
+        "Recording Name", rec_info_utils.default_recording_name(rec_dir)
+    )
+    system_info = info_csv.get(
+        "System Info", rec_info_utils.default_system_info(rec_dir)
+    )
+
+    # Create a recording info file with the new format,
+    # fill out the information, validate, and return.
+    new_info_file = RecordingInfoFile.create_empty_file(
+        rec_dir, fixed_version=Version("2.0")
+    )
+    new_info_file.recording_uuid = recording_uuid
+    new_info_file.start_time_system_s = start_time_system_s
+    new_info_file.start_time_synced_s = start_time_synced_s
+    new_info_file.duration_s = duration_s
+    new_info_file.recording_software_name = recording_software_name
+    new_info_file.recording_software_version = recording_software_version
+    new_info_file.recording_name = recording_name
+    new_info_file.system_info = system_info
+    new_info_file.validate()
+    new_info_file.save_file()
+
+
+########## PRIVATE ##########
+
+
+def _update_recording_to_old_style_v1_16(rec_dir):
+    logger.debug("Update old style recording...")
+
+    meta_info = rec_info_utils.read_info_csv_file(rec_dir)
     update_meta_info(rec_dir, meta_info)
 
-    if pupil_recording.is_pupil_mobile and pupil_recording.data_format_version is None:
-        convert_pupil_mobile_recording_to_v094(rec_dir)
-        meta_info["Data Format Version"] = "v0.9.4"
-        update_meta_info(rec_dir, meta_info)
-    elif (
-        pupil_recording.is_pupil_invisible
-        and pupil_recording.data_format_version is None
-    ):
-        convert_pupil_invisible_recording_to_v113(rec_dir, meta_info)
-
     # Reference format: v0.7.4
-    rec_version = read_rec_version(meta_info)
+    rec_version = _read_rec_version_legacy(meta_info)
 
     # Convert python2 to python3
     if rec_version <= VersionFormat("0.8.7"):
@@ -95,9 +136,6 @@ def update_recording_to_recent(rec_dir):
     if rec_version < VersionFormat("1.4"):
         update_recording_v13_v14(rec_dir)
 
-    # Do this independent of rec_version
-    check_for_worldless_recording(rec_dir)
-
     if rec_version < VersionFormat("1.8"):
         update_recording_v14_v18(rec_dir)
     if rec_version < VersionFormat("1.9"):
@@ -117,6 +155,8 @@ def update_recording_to_recent(rec_dir):
 
 
 def update_meta_info(rec_dir, meta_info):
+    # TODO: We read from PupilRecording here and save manually! I think this needs to be
+    # adapted!
     logger.info("Updating meta info")
     meta_info_path = os.path.join(rec_dir, "info.csv")
     with open(meta_info_path, "w", newline="", encoding="utf-8") as csvfile:
@@ -124,184 +164,9 @@ def update_meta_info(rec_dir, meta_info):
 
 
 def _update_info_version_to(new_version, rec_dir):
-    meta_info = pm.load_meta_info(rec_dir)
+    meta_info = rec_info_utils.read_info_csv_file(rec_dir)
     meta_info["Data Format Version"] = new_version
     update_meta_info(rec_dir, meta_info)
-
-
-def convert_pupil_mobile_recording_to_v094(rec_dir):
-    logger.info("Converting Pupil Mobile recording to v0.9.4 format")
-    recording = pm.Pupil_Recording(rec_dir)
-
-    # NOTE: could still be worldless at this point
-    _try_patch_world_instrinsics_file(
-        rec_dir, recording.files().mobile().world().videos()
-    )
-    for path in recording.files():
-        # replace prefix based on cam_id, part number is already correct
-        match = re.match(r"^(?P<prefix>Pupil Cam\d ID(?P<cam_id>\d))", path.name)
-        if match:
-            replacement_for_cam_id = {"0": "eye0", "1": "eye1", "2": "world"}
-            replacement = replacement_for_cam_id[match.group("cam_id")]
-            new_name = path.name.replace(match.group("prefix"), replacement)
-            path.replace(path.with_name(new_name))  # rename with overwrite
-
-    _rewrite_times(recording, dtype=">f8")
-
-    pupil_data_loc = os.path.join(rec_dir, "pupil_data")
-    if not os.path.exists(pupil_data_loc):
-        logger.info('Creating "pupil_data"')
-        fm.save_object(
-            {"pupil_positions": [], "gaze_positions": [], "notifications": []},
-            pupil_data_loc,
-        )
-
-
-def convert_pupil_invisible_recording_to_v113(rec_dir, meta_info):
-    _pi_rename_files(rec_dir)
-    _pi_convert_gaze(rec_dir)
-    _pi_assign_rec_uuid(rec_dir, meta_info)
-    meta_info["Data Format Version"] = "v1.13"
-    update_meta_info(rec_dir, meta_info)
-
-
-def _pi_rename_files(rec_dir):
-    recording = pm.Pupil_Recording(rec_dir)
-
-    # NOTE: could still be worldless at this point
-    _try_patch_world_instrinsics_file(rec_dir, recording.files().pi().world().videos())
-
-    for path in recording.files():
-        # replace prefix based on cam_type, need to reformat part number
-        match = re.match(
-            r"^(?P<prefix>PI (?P<cam_type>left|right|world) v\d+ ps(?P<part>\d+))",
-            path.name,
-        )
-        if match:
-            replacement_for_cam_type = {
-                "right": "eye0",
-                "left": "eye1",
-                "world": "world",
-            }
-            replacement = replacement_for_cam_type[match.group("cam_type")]
-            part_number = int(match.group("part"))
-            if part_number > 1:
-                # add zero-filled part number - 1
-                # NOTE: recordings for PI start at part 1, mobile start at part 0
-                replacement += f"_{part_number - 1:03}"
-
-            new_name = path.name.replace(match.group("prefix"), replacement)
-            path.replace(path.with_name(new_name))  # rename with overwrite
-
-    # TODO: Extracting start_time_synced from info.json should be moved into
-    # Pupil_Recording class. Then the following snippet can be removed.
-    info_json_path = os.path.join(rec_dir, "info.json")
-    try:
-        with open(info_json_path, "r") as f:
-            json_data = json.load(f)
-        start_time = json_data["start_time_synced"]
-    except FileNotFoundError:
-        logger.warn("Trying to read info.json, but it does not exist!")
-        start_time = 0
-    except KeyError:
-        logger.error("Could not read start_time_synced from info.json!")
-        start_time = 0
-
-    SECONDS_PER_NANOSECOND = 1e-9
-
-    def conversion(timestamps: np.array):
-        # Subtract start_time from all times in the recording, so timestamps
-        # start at 0. This is to increase precision when converting
-        # timestamps to float32, e.g. for OpenGL!
-        return (timestamps - start_time) * SECONDS_PER_NANOSECOND
-
-    _rewrite_times(recording, dtype="<u8", conversion=conversion)
-
-
-def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) -> None:
-    """Tries to create a reasonable world.intrinsics file from a set of videos."""
-    if not videos:
-        return
-
-    # Make sure the default value always correlates to the frame size of fake frames
-    frame_size = BrokenStream().frame_size
-    # TODO: Due to the naming conventions for multipart-recordings, we can't
-    # easily lookup 'any' video name in the pre_recorded_calibrations, since it
-    # might be a multipart recording. Therefore we need to compute a hint here
-    # for the lookup. This could be improved.
-    camera_hint = ""
-    for video in videos:
-        try:
-            container = av.open(str(video))
-        except av.AVError:
-            continue
-        try:
-            frame_size = (
-                container.streams.video[0].format.width,
-                container.streams.video[0].format.height,
-            )
-        except Exception as e:
-            # there's a whole bunch of things that can go wrong here, if the video file
-            # was corrupted, but could still be opened!
-            logger.debug(
-                f"Video {str(video)} was opened, but could not be parsed appropriately!"
-                f" See error: {e}"
-            )
-            continue
-
-        for camera in cm.pre_recorded_calibrations:
-            if camera in video.name:
-                camera_hint = camera
-                break
-        break
-
-    intrinsics = cm.load_intrinsics(rec_dir, camera_hint, frame_size)
-    intrinsics.save(rec_dir, "world")
-
-
-def _rewrite_times(
-    recording: pm.Pupil_Recording,
-    dtype: str,
-    conversion: T.Optional[T.Callable[[np.array], np.array]] = None,
-) -> None:
-    """Load raw times (assuming dtype), apply conversion and save as _timestamps.npy."""
-    for path in recording.files().raw_time():
-        timestamps = np.fromfile(str(path), dtype=dtype)
-
-        if conversion is not None:
-            timestamps = conversion(timestamps)
-
-        new_name = f"{path.stem}_timestamps.npy"
-        logger.info(f"Creating {new_name}")
-        timestamp_loc = path.parent / new_name
-        np.save(str(timestamp_loc), timestamps)
-
-
-def _pi_convert_gaze(rec_dir):
-    width, height = 1088, 1080
-
-    logger.info("Converting gaze data...")
-    template_datum = {
-        "topic": "gaze.pi",
-        "norm_pos": None,
-        "timestamp": None,
-        "confidence": 1.0,
-    }
-    with fm.PLData_Writer(rec_dir, "gaze") as writer:
-        for ((x, y), ts) in pi_gaze_items(root_dir=rec_dir):
-            template_datum["timestamp"] = ts
-            template_datum["norm_pos"] = m.normalize(
-                (x, y), size=(width, height), flip_y=True
-            )
-            writer.append(template_datum)
-        logger.info(f"Converted {len(writer.ts_queue)} gaze positions.")
-
-
-def _pi_assign_rec_uuid(rec_dir, meta_info):
-    info_json_path = Path(rec_dir) / "info.json"
-    with info_json_path.open() as info_json_file:
-        info_json = json.load(info_json_file)
-    meta_info["Recording UUID"] = info_json.get("recording_uuid", uuid.uuid4())
 
 
 def update_recording_v074_to_v082(rec_dir):
@@ -384,12 +249,12 @@ def update_recording_v093_to_v094(rec_dir):
         try:
             rec_object = fm.load_object(rec_file, allow_legacy=False)
             fm.save_object(rec_object, rec_file)
-        except:
+        except Exception:
             try:
                 rec_object = fm.load_object(rec_file, allow_legacy=True)
                 fm.save_object(rec_object, rec_file)
                 logger.info("Converted `{}` from pickle to msgpack".format(file))
-            except:
+            except Exception:
                 logger.warning("did not convert {}".format(rec_file))
 
     _update_info_version_to("v0.9.4", rec_dir)
@@ -440,9 +305,8 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
             if len(old_ts) != in_frame_num:
                 in_frame_size /= len(old_ts) / in_frame_num
                 logger.debug(
-                    "Provided audio frame size is inconsistent with amount of timestamps. Correcting frame size to {}".format(
-                        in_frame_size
-                    )
+                    "Provided audio frame size is inconsistent with amount of "
+                    f"timestamps. Correcting frame size to {in_frame_size}"
                 )
 
             old_ts_idx = (
@@ -567,7 +431,7 @@ def update_recording_v18_v19(rec_dir):
 def update_recording_v19_v111(rec_dir):
     logger.info("Updating recording from v1.9 to v1.11")
 
-    meta_info = pm.load_meta_info(rec_dir)
+    meta_info = rec_info_utils.read_info_csv_file(rec_dir)
     meta_info["Data Format Version"] = "v1.11"
     meta_info["Recording UUID"] = meta_info.get("Recording UUID", uuid.uuid4())
     update_meta_info(rec_dir, meta_info)
@@ -695,31 +559,6 @@ def _delete_all_lookup_files(rec_dir):
             pass
 
 
-def check_for_worldless_recording(rec_dir):
-    logger.info("Checking for world-less recording")
-    valid_ext = (".mp4", ".mkv", ".avi", ".h264", ".mjpeg")
-
-    world_video_exists = any(
-        (
-            os.path.splitext(f)[1] in valid_ext
-            for f in glob.glob(os.path.join(rec_dir, "world.*"))
-        )
-    )
-
-    if not world_video_exists:
-        fake_world_version = 2
-        fake_world_path = os.path.join(rec_dir, "world.fake")
-        if os.path.exists(fake_world_path):
-            fake_world = fm.load_object(fake_world_path)
-            if fake_world["version"] == fake_world_version:
-                return
-
-        logger.warning("No world video found. Constructing an artificial replacement.")
-
-        fake_world_object = {"version": fake_world_version}
-        fm.save_object(fake_world_object, os.path.join(rec_dir, "world.fake"))
-
-
 def update_recording_bytes_to_unicode(rec_dir):
     logger.info("Updating recording from bytes to unicode.")
 
@@ -765,7 +604,7 @@ def update_recording_v073_to_v074(rec_dir):
             p["method"] = "3d c++"
             try:
                 p["projected_sphere"] = p.pop("projectedSphere")
-            except:
+            except Exception:
                 p["projected_sphere"] = {"center": (0, 0), "angle": 0, "axes": (0, 0)}
             p["model_confidence"] = p.pop("modelConfidence")
             p["model_id"] = p.pop("modelID")
@@ -874,3 +713,15 @@ def update_recording_v03_to_v074(rec_dir):
     ts_path_old = os.path.join(rec_dir, "timestamps.npy")
     if not os.path.isfile(ts_path) and os.path.isfile(ts_path_old):
         os.rename(ts_path_old, ts_path)
+
+
+def _read_rec_version_legacy(meta_info):
+    version = meta_info.get(
+        "Data Format Version", meta_info["Capture Software Version"]
+    )
+    version = "".join(
+        [c for c in version if c in "1234567890.-"]
+    )  # strip letters in case of legacy version format
+    version = VersionFormat(version)
+    logger.debug("Recording version: {}".format(version))
+    return version
