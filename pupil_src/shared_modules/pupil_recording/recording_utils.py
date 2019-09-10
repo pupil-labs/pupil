@@ -19,6 +19,13 @@ class InvalidRecordingException(Exception):
 
 
 def assert_valid_recording_type(rec_dir: str):
+    """Checks if rec_dir is (any) valid pupil recording.
+
+    This does not assure that it can be opened immediately by player!
+    Valid types are also old_style, mobile and invisible, which have to upgraded first.
+
+    Raises InvalidRecordingException with a message if rec_dir is not valid.
+    """
     assert get_recording_type(rec_dir) in RecordingType
 
 
@@ -30,18 +37,18 @@ class RecordingType(enum.Enum):
 
 
 def get_recording_type(rec_dir: str) -> RecordingType:
-    _assert_valid_rec_dir(rec_dir)
+    assert_valid_rec_dir(rec_dir)
 
     if RecordingInfoFile.does_recording_contain_info_file(rec_dir):
         return RecordingType.NEW_STYLE
 
-    elif was_recording_opened_in_player_before(rec_dir):
+    elif _was_recording_opened_in_player_before(rec_dir):
         return RecordingType.OLD_STYLE
 
-    elif is_pupil_invisible_recording(rec_dir):
+    elif _is_pupil_invisible_recording(rec_dir):
         return RecordingType.INVISIBLE
 
-    elif is_pupil_mobile_recording(rec_dir):
+    elif _is_pupil_mobile_recording(rec_dir):
         return RecordingType.MOBILE
 
     raise InvalidRecordingException(
@@ -49,7 +56,14 @@ def get_recording_type(rec_dir: str) -> RecordingType:
     )
 
 
-def _assert_valid_rec_dir(rec_dir: str):
+def assert_valid_rec_dir(rec_dir: str):
+    """Checks if rec_dir is a directory.
+
+    Raises InvalidRecordingException (with corresponding message) when:
+        - rec_dir does not exist
+        - rec_dir points to a video file instead of the directory
+        - rec_dir points to a file in general
+    """
     rec_dir = Path(rec_dir).resolve()
 
     def normalize_extension(ext: str) -> str:
@@ -84,7 +98,12 @@ def _assert_valid_rec_dir(rec_dir: str):
             )
 
 
-def is_pupil_invisible_recording(rec_dir: str) -> bool:
+# NOTE: The following functions are actually not correct given their name, only in the
+# context of their usage above in get_recording_type(). They should not be called from
+# outside!
+
+
+def _is_pupil_invisible_recording(rec_dir: str) -> bool:
     try:
         recording_info_utils.read_info_json_file(rec_dir)
         return True
@@ -92,7 +111,7 @@ def is_pupil_invisible_recording(rec_dir: str) -> bool:
         return False
 
 
-def is_pupil_mobile_recording(rec_dir: str) -> bool:
+def _is_pupil_mobile_recording(rec_dir: str) -> bool:
     info_csv = recording_info_utils.read_info_csv_file(rec_dir)
     try:
         return (
@@ -103,7 +122,7 @@ def is_pupil_mobile_recording(rec_dir: str) -> bool:
         return False
 
 
-def was_recording_opened_in_player_before(rec_dir: str) -> bool:
+def _was_recording_opened_in_player_before(rec_dir: str) -> bool:
     try:
         info_csv = recording_info_utils.read_info_csv_file(rec_dir)
     except FileNotFoundError:
