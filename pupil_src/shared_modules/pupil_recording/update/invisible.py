@@ -64,7 +64,7 @@ def _generate_pprf_2_0_info_file(rec_dir: str) -> RecordingInfoFile:
     info_json = utils.read_info_json_file(rec_dir)
 
     # Get information about recording from info.csv and info.json
-    recording_uuid = info_json["recording_uuid"]
+    recording_uuid = info_json["recording_id"]
     start_time_system_ns = int(info_json["start_time"])
     start_time_synced_ns = int(info_json["start_time_synced"])
     duration_ns = int(info_json["duration"])
