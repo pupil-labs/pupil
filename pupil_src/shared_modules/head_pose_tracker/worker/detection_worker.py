@@ -87,7 +87,9 @@ def offline_detection(
     shared_memory.progress = (frame_indices[0] - frame_start + 1) / frame_count
     yield None
 
-    src = video_capture.File_Source(SimpleNamespace(), source_path, timing=None)
+    src = video_capture.File_Source(
+        SimpleNamespace(), source_path, fill_gaps=True, timing=None
+    )
 
     queue = []
     for frame_index in frame_indices:

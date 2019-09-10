@@ -43,7 +43,10 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
     import video_capture
 
     cap = video_capture.File_Source(
-        types.SimpleNamespace(), source_path=video_file_path, timing=None
+        types.SimpleNamespace(),
+        source_path=video_file_path,
+        fill_gaps=True,
+        timing=None,
     )
 
     # Ensure that indiced are not generated beyond video frame count

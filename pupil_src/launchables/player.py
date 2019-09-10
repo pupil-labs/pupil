@@ -83,6 +83,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from version_utils import VersionFormat
         from methods import normalize, denormalize, delta_t, get_system_info
         import player_methods as pm
+        from pupil_recording import PupilRecording
         from csv_utils import write_key_value_file
 
         # Plug-ins
@@ -118,9 +119,16 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from video_export.plugins.imotions_exporter import iMotions_Exporter
         from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
         from video_export.plugins.world_video_exporter import World_Video_Exporter
-        from head_pose_tracker.offline_head_pose_tracker import Offline_Head_Pose_Tracker
+        from head_pose_tracker.offline_head_pose_tracker import (
+            Offline_Head_Pose_Tracker,
+        )
         from video_capture import File_Source
         from video_overlay.plugins import Video_Overlay, Eye_Overlay
+
+        from pupil_recording import (
+            assert_valid_recording_type,
+            InvalidRecordingException,
+        )
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
             "1.24"
@@ -204,9 +212,13 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         def on_drop(window, count, paths):
             paths = [paths[x].decode("utf-8") for x in range(count)]
             for path in paths:
-                if pm.is_pupil_rec_dir(path):
+                try:
+                    assert_valid_recording_type(path)
                     _restart_with_recording(path)
                     return
+                except InvalidRecordingException as err:
+                    logger.debug(str(err))
+
             for plugin in g_pool.plugins:
                 if plugin.on_drop(paths):
                     break
@@ -223,7 +235,8 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         def get_dt():
             return next(tick)
 
-        meta_info = pm.load_meta_info(rec_dir)
+        recording = PupilRecording(rec_dir)
+        meta_info = recording.meta_info
 
         # log info about Pupil Platform and Platform in player.log
         logger.info("Application Version: {}".format(app_version))
@@ -244,12 +257,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
         g_pool.camera_render_size = None
 
-        valid_ext = (".mp4", ".mkv", ".avi", ".h264", ".mjpeg", ".fake")
-        video_path = [
-            f
-            for f in glob(os.path.join(rec_dir, "world.*"))
-            if os.path.splitext(f)[1] in valid_ext
-        ][0]
+        video_path = recording.files().core().world().videos()[0]
         File_Source(
             g_pool,
             timing="external",
@@ -273,9 +281,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         width, height = session_settings.get("window_size", (width, height))
 
         window_pos = session_settings.get("window_position", window_position_default)
-        window_name = "Pupil Player: {} - {}".format(
-            meta_info["Recording Name"], os.path.split(rec_dir)[-1]
-        )
+        window_name = f"Pupil Player: {meta_info.recording_name} - {rec_dir}"
 
         glfw.glfwInit()
         main_window = glfw.glfwCreateWindow(width, height, window_name, None, None)
@@ -294,8 +300,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             logger.warning(icon_bar_width * g_pool.gui_user_scale * hdpi_factor)
             glfw.glfwSetWindowSize(main_window, *window_size)
 
-        # load pupil_positions, gaze_positions
-        g_pool.binocular = meta_info.get("Eye Mode", "monocular") == "binocular"
         g_pool.version = app_version
         g_pool.timestamps = g_pool.capture.timestamps
         g_pool.get_timestamp = lambda: 0.0
@@ -336,7 +340,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
 
             export_info = {
                 "Player Software Version": str(g_pool.version),
-                "Data Format Version": meta_info["Data Format Version"],
+                "Data Format Version": meta_info.min_player_version,
                 "Export Date": strftime("%d.%m.%Y", localtime()),
                 "Export Time": strftime("%H:%M:%S", localtime()),
                 "Frame Index Range:": g_pool.seek_control.get_frame_index_trim_range_string(),
@@ -412,16 +416,15 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             )
         )
         general_settings.append(
-            ui.Info_Text("Player Version: {}".format(g_pool.version))
+            ui.Info_Text(f"Minimum Player Version: {meta_info.min_player_version}")
+        )
+        general_settings.append(ui.Info_Text(f"Player Version: {g_pool.version}"))
+        general_settings.append(
+            ui.Info_Text(f"Recording Software: {meta_info.recording_software_name}")
         )
         general_settings.append(
             ui.Info_Text(
-                "Capture Version: {}".format(meta_info["Capture Software Version"])
-            )
-        )
-        general_settings.append(
-            ui.Info_Text(
-                "Data Format Version: {}".format(meta_info["Data Format Version"])
+                f"Recording Software Version: {meta_info.recording_software_version}"
             )
         )
 
@@ -710,14 +713,21 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
         import player_methods as pm
-        import update_methods as um
+        from pupil_recording import (
+            assert_valid_recording_type,
+            InvalidRecordingException,
+        )
+        from pupil_recording import update_recording
 
         def on_drop(window, count, paths):
             nonlocal rec_dir
             rec_dir = paths[0].decode("utf-8")
 
         if rec_dir:
-            if not pm.is_pupil_rec_dir(rec_dir):
+            try:
+                assert_valid_recording_type(rec_dir)
+            except InvalidRecordingException as err:
+                logger.error(str(err))
                 rec_dir = None
         # load session persistent settings
         session_settings = Persistent_Dict(
@@ -757,13 +767,13 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
 
             if rec_dir:
                 try:
-                    pm.Pupil_Recording(rec_dir)  # Validate rec_dir by trying to load it
+                    assert_valid_recording_type(rec_dir)
                     logger.info("Starting new session with '{}'".format(rec_dir))
                     text = "Updating recording format."
                     tip = "This may take a while!"
-                except pm.InvalidRecordingException as err:
+                except InvalidRecordingException as err:
                     logger.error(str(err))
-                    tip = "Oops! That was not a valid recording."
+                    tip = err.reason
                     if err.recovery:
                         tip += " " + err.recovery + "."
                     rec_dir = None
@@ -786,9 +796,16 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
 
             if rec_dir:
                 try:
-                    um.update_recording_to_recent(rec_dir)
+                    update_recording(rec_dir)
                 except AssertionError as err:
                     logger.error(str(err))
+                    tip = "Oops! There was an error updating the recording."
+                    rec_dir = None
+                except InvalidRecordingException as err:
+                    logger.error(str(err))
+                    tip = err.reason
+                    if err.recovery:
+                        tip += " " + err.recovery + "."
                     rec_dir = None
                 else:
                     glfw.glfwSetWindowShouldClose(window, True)
