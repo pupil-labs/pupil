@@ -25,17 +25,18 @@ def update_recording(rec_dir: str):
     if recording_type in _transformations_to_new_style:
         _transformations_to_new_style[recording_type](rec_dir)
 
-    try:
-        # This will throw InvalidRecordingException if we cannot open the recording due
-        # to meta info version or min_player_version mismatches.
-        PupilRecording(rec_dir)
-    except InvalidRecordingException:
-        raise
+    _assert_compatible_meta_version(rec_dir)
 
     check_for_worldless_recording_new_style(rec_dir)
 
     # update to latest
     recording_update_to_latest_new_style(rec_dir)
+
+
+def _assert_compatible_meta_version(rec_dir: str):
+    # This will throw InvalidRecordingException if we cannot open the recording due
+    # to meta info version or min_player_version mismatches.
+    PupilRecording(rec_dir)
 
 
 __all__ = ["update_recording"]
