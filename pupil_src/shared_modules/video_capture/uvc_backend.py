@@ -11,6 +11,8 @@ See COPYING and COPYING.LESSER for license details.
 
 import enum
 import logging
+import platform
+import re
 import time
 
 import numpy as np
@@ -60,7 +62,6 @@ class UVC_Source(Base_Source):
         check_stripes=True,
         exposure_mode="manual",
     ):
-        import platform
 
         super().__init__(g_pool)
         self.uvc_capture = None
