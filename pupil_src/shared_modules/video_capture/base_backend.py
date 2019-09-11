@@ -9,15 +9,14 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import logging
 from time import monotonic, sleep
-from plugin import Plugin
+
+import numpy as np
+from pyglui import cygl
 
 import gl_utils
-from pyglui import cygl
-import numpy as np
-
-
-import logging
+from plugin import Plugin
 
 logger = logging.getLogger(__name__)
 

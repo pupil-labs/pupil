@@ -9,15 +9,22 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import time
+import enum
 import logging
-import uvc
-from version_utils import VersionFormat
-from .base_backend import InitialisationError, Base_Source, Base_Manager
-from camera_models import load_intrinsics
-from .utils import Check_Frame_Stripes, Exposure_Time
+import platform
+import re
+import time
 
 import numpy as np
+from pyglui import cygl
+
+import gl_utils
+import uvc
+from camera_models import load_intrinsics
+from version_utils import VersionFormat
+
+from .base_backend import Base_Manager, Base_Source, InitialisationError
+from .utils import Check_Frame_Stripes, Exposure_Time
 
 # check versions for our own depedencies as they are fast-changing
 assert VersionFormat(uvc.__version__) >= VersionFormat("0.13")
@@ -25,6 +32,17 @@ assert VersionFormat(uvc.__version__) >= VersionFormat("0.13")
 # logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+class TJSAMP(enum.IntEnum):
+    """Reimplements turbojpeg.h TJSAMP"""
+
+    TJSAMP_444 = 0
+    TJSAMP_422 = 1
+    TJSAMP_420 = 2
+    TJSAMP_GRAY = 3
+    TJSAMP_440 = 4
+    TJSAMP_411 = 5
 
 
 class UVC_Source(Base_Source):
@@ -44,7 +62,6 @@ class UVC_Source(Base_Source):
         check_stripes=True,
         exposure_mode="manual",
     ):
-        import platform
 
         super().__init__(g_pool)
         self.uvc_capture = None
@@ -180,7 +197,21 @@ class UVC_Source(Base_Source):
     def configure_capture(self, frame_size, frame_rate, uvc_controls):
         # Set camera defaults. Override with previous settings afterwards
         if "Pupil Cam" in self.uvc_capture.name:
-            self.ts_offset = 0.0
+            if platform.system() == "Windows":
+                # NOTE: Hardware timestamps seem to be broken on windows. Needs further
+                # investigation! Disabling for now.
+                # TODO: Find accurate offsets for different resolutions!
+                offsets = {"ID0": -0.015, "ID1": -0.015, "ID2": -0.07}
+                match = re.match(r"Pupil Cam\d (?P<cam_id>ID[0-2])", self.name)
+                if not match:
+                    logger.debug(f"Could not parse camera name: {self.name}")
+                    self.ts_offset = -0.01
+                else:
+                    self.ts_offset = offsets[match.group("cam_id")]
+
+            else:
+                # use hardware timestamps
+                self.ts_offset = None
         else:
             logger.info(
                 "Hardware timestamps not supported for {}. Using software timestamps.".format(
@@ -359,7 +390,7 @@ class UVC_Source(Base_Source):
     def recent_events(self, events):
         try:
             frame = self.uvc_capture.get_frame(0.05)
-            
+
             if np.isclose(frame.timestamp, 0):
                 # sometimes (probably only on windows) after disconnections, the first frame has 0 ts
                 logger.warning(
@@ -387,7 +418,7 @@ class UVC_Source(Base_Source):
             time.sleep(0.02)
             self._restart_logic()
         else:
-            if self.ts_offset:
+            if self.ts_offset is not None:
                 # c930 timestamps need to be set here. The camera does not provide valid pts from device
                 frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
             frame.timestamp -= self.g_pool.timebase.value
@@ -767,6 +798,30 @@ class UVC_Source(Base_Source):
             self.uvc_capture.close()
             self.uvc_capture = None
         super().cleanup()
+
+    def gl_display(self):
+        # Temporary copy of Base_Source.gl_display until proper frame class hierarchy
+        # is implemented
+        if self._recent_frame is not None:
+            frame = self._recent_frame
+            if (
+                # `frame.yuv_subsampling` is `None` without calling `frame.yuv_buffer`
+                frame.yuv_buffer is not None
+                and TJSAMP(frame.yuv_subsampling) == TJSAMP.TJSAMP_422
+            ):
+                self.g_pool.image_tex.update_from_yuv_buffer(
+                    frame.yuv_buffer, frame.width, frame.height
+                )
+            else:
+                self.g_pool.image_tex.update_from_ndarray(frame.bgr)
+            gl_utils.glFlush()
+        gl_utils.make_coord_system_norm_based()
+        self.g_pool.image_tex.draw()
+        if not self.online:
+            cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8), alpha=0.4)
+        gl_utils.make_coord_system_pixel_based(
+            (self.frame_size[1], self.frame_size[0], 3)
+        )
 
 
 class UVC_Manager(Base_Manager):

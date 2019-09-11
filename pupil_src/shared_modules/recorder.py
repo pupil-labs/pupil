@@ -14,20 +14,21 @@ import errno
 import glob
 import logging
 import os
-import platform
 import uuid
 from shutil import copy2
 from time import gmtime, localtime, strftime, time
 
-import numpy as np
 import psutil
 from ndsi import H264Writer
 from pyglui import ui
 
 import csv_utils
-from av_writer import AV_Writer, JPEG_Writer
+from av_writer import MPEG_Writer, JPEG_Writer
 from file_methods import PLData_Writer, load_object
 from methods import get_system_info, timer
+
+from pupil_recording.info import Version
+from pupil_recording.info import RecordingInfoFile
 
 # from scipy.interpolate import UnivariateSpline
 from plugin import System_Plugin_Base
@@ -294,30 +295,26 @@ class Recorder(System_Plugin_Base):
                 os.mkdir(self.rec_path)
                 logger.debug("Created new recording dir {}".format(self.rec_path))
                 break
-            except:
+            except FileExistsError:
                 logger.debug(
                     "We dont want to overwrite data, incrementing counter & trying to make new data folder"
                 )
                 counter += 1
 
-        self.meta_info_path = os.path.join(self.rec_path, "info.csv")
-
-        with open(self.meta_info_path, "w", newline="", encoding="utf-8") as csvfile:
-            csv_utils.write_key_value_file(
-                csvfile,
-                {
-                    "Recording Name": self.session_name,
-                    "Start Date": strftime("%d.%m.%Y", localtime(self.start_time)),
-                    "Start Time": strftime("%H:%M:%S", localtime(self.start_time)),
-                    "Start Time (System)": self.start_time,
-                    "Start Time (Synced)": start_time_synced,
-                    "Recording UUID": recording_uuid,
-                },
-            )
+        self.meta_info = RecordingInfoFile.create_empty_file(self.rec_path)
+        self.meta_info.recording_software_name = (
+            RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
+        )
+        self.meta_info.recording_software_version = Version(self.g_pool.version.vstring)
+        self.meta_info.recording_name = self.session_name
+        self.meta_info.start_time_synced_s = start_time_synced
+        self.meta_info.start_time_system_s = self.start_time
+        self.meta_info.recording_uuid = recording_uuid
+        self.meta_info.system_info = get_system_info()
 
         self.video_path = os.path.join(self.rec_path, "world.mp4")
         if self.raw_jpeg and self.g_pool.capture.jpeg_support:
-            self.writer = JPEG_Writer(self.video_path, self.g_pool.capture.frame_rate)
+            self.writer = JPEG_Writer(self.video_path, start_time_synced)
         elif hasattr(self.g_pool.capture._recent_frame, "h264_buffer"):
             self.writer = H264Writer(
                 self.video_path,
@@ -326,7 +323,7 @@ class Recorder(System_Plugin_Base):
                 int(self.g_pool.capture.frame_rate),
             )
         else:
-            self.writer = AV_Writer(self.video_path, fps=self.g_pool.capture.frame_rate)
+            self.writer = MPEG_Writer(self.video_path, start_time_synced)
 
         try:
             cal_pt_path = os.path.join(self.g_pool.user_dir, "user_calibration_data")
@@ -351,6 +348,7 @@ class Recorder(System_Plugin_Base):
                 "session_name": self.session_name,
                 "record_eye": self.record_eye,
                 "compression": self.raw_jpeg,
+                "start_time_synced": float(start_time_synced),
             }
         )
 
@@ -424,6 +422,8 @@ class Recorder(System_Plugin_Base):
             self.button.status_text = self.get_rec_time_str()
 
     def stop(self):
+        duration_s = self.g_pool.get_timestamp() - self.meta_info.start_time_synced_s
+
         # explicit release of VideoWriter
         try:
             self.writer.release()
@@ -435,13 +435,14 @@ class Recorder(System_Plugin_Base):
         finally:
             self.writer = None
 
-        # save_object(self.data, os.path.join(self.rec_path, "pupil_data"))
         for writer in self.pldata_writers.values():
             writer.close()
 
         del self.pldata_writers
 
-        surface_definition_file_paths = glob.glob(os.path.join(self.g_pool.user_dir, "surface_definitions*"))
+        surface_definition_file_paths = glob.glob(
+            os.path.join(self.g_pool.user_dir, "surface_definitions*")
+        )
 
         if len(surface_definition_file_paths) > 0:
             for source_path in surface_definition_file_paths:
@@ -453,33 +454,15 @@ class Recorder(System_Plugin_Base):
                 "No surface_definitions data found. You may want this if you do marker tracking."
             )
 
-        try:
-            with open(self.meta_info_path, "a", newline="") as csvfile:
-                csv_utils.write_key_value_file(
-                    csvfile,
-                    {
-                        "Duration Time": self.get_rec_time_str(),
-                        "World Camera Frames": self.frame_count,
-                        "World Camera Resolution": str(
-                            self.g_pool.capture.frame_size[0]
-                        )
-                        + "x"
-                        + str(self.g_pool.capture.frame_size[1]),
-                        "Capture Software Version": self.g_pool.version,
-                        "Data Format Version": self.g_pool.version,
-                        "System Info": get_system_info(),
-                    },
-                    append=True,
-                )
-        except Exception:
-            logger.exception("Could not save metadata. Please report this bug!")
+        self.meta_info.duration_s = duration_s
+        self.meta_info.save_file()
 
         try:
             with open(
                 os.path.join(self.rec_path, "user_info.csv"), "w", newline=""
             ) as csvfile:
                 csv_utils.write_key_value_file(csvfile, self.user_info)
-        except Exception:
+        except OSError:
             logger.exception("Could not save userdata. Please report this bug!")
 
         self.close_info_menu()

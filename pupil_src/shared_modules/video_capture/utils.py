@@ -8,17 +8,14 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import logging
 import glob
-import fnmatch
-import re
+import logging
 import os
+import pathlib as pl
+from typing import Iterator, Sequence
+import av
 import cv2
 import numpy as np
-import av
-
-from typing import Sequence, Iterator
-from camera_models import load_intrinsics
 
 
 logger = logging.getLogger(__name__)
@@ -175,6 +172,7 @@ class Video:
     def __init__(self, path: str) -> None:
         self.path = path
         self.ts = None
+        self._pts = None
         self._is_valid = self.check_valid()
 
     @property
@@ -196,9 +194,21 @@ class Video:
     def load_valid_container(self):
         if self.is_valid:
             return self.cont
+        else:
+            return None
 
     def load_ts(self):
-        self.ts = np.load(self.ts_loc)
+        try:
+            self.ts = np.load(self.ts_loc)
+        except FileNotFoundError:
+            self.ts = np.array([])
+            return
+        self.ts = self._fix_negative_time_jumps(self.ts)
+
+    def load_pts(self):
+        packets = self.cont.demux(video=0)
+        # last pts is invalid
+        self._pts = np.array([packet.pts for packet in packets][:-1])
 
     @property
     def name(self) -> str:
@@ -219,15 +229,53 @@ class Video:
             self.load_ts()
         return self.ts
 
+    @property
+    def pts(self) -> np.ndarray:
+        if self._pts is None:
+            self.load_pts()
+        return self._pts
+
+    @staticmethod
+    def _fix_negative_time_jumps(timestamps: np.ndarray) -> np.ndarray:
+        """Fix cases when large negative time jumps cause huge gaps due to sorting
+
+        Replaces timestamps causing negative jumps with mean value of its adjacent
+        timestamps. This work-around is based on the assumption that the negative time
+        jump is caused by a single invalid timestamp.
+
+        Work around for https://github.com/pupil-labs/pupil/issues/1550
+        """
+        # TODO: what if adjacent timestamps are negative/zero as well?
+        time_diff = np.diff(timestamps)
+        invalid_idc = np.flatnonzero(time_diff < 0)
+        timestamps[invalid_idc + 1] = np.mean(
+            (timestamps[invalid_idc + 2], timestamps[invalid_idc]), axis=0
+        )
+        return timestamps
+
+
+class LookupTableNotInitializedError(AttributeError):
+    pass
+
 
 class VideoSet:
     def __init__(self, rec: str, name: str, fill_gaps: bool):
         self.rec = rec
         self.name = name
         self.fill_gaps = fill_gaps
-        self.video_exts = VIDEO_EXTS
+        self.video_exts = set(VIDEO_EXTS) - {"fake"}
         self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
         self._containers = [vid.load_valid_container() for vid in self.videos]
+
+    def is_empty(self) -> bool:
+        try:
+            # bool(self.lookup.timestamp) raises ValueError for numpy arrays: The truth
+            # value of an array with more than one element is ambiguous.
+            return len(self.lookup.timestamp) == 0
+        except AttributeError:
+            raise LookupTableNotInitializedError(
+                "Lookup table was not initialized correctly!"
+            )
 
     @property
     def videos(self) -> Sequence[Video]:
@@ -251,7 +299,7 @@ class VideoSet:
             if (self.fill_gaps or Video(loc).is_valid)
         )
 
-    def build_lookup(self):
+    def build_lookup(self, fallback_timestamps=None):
         """
         The lookup table is a np.recarray containing entries
         for each (virtual and real) frame.
@@ -284,36 +332,67 @@ class VideoSet:
         Case 6: all videos are broken and self._fill_gaps is False
             return
         """
+
         loaded_ts = self._loaded_ts_sorted()
-        loaded_ts = self._fix_negative_time_jumps(loaded_ts)
         loaded_ts = self._fill_gaps(loaded_ts)
+
+        if len(loaded_ts) == 0 and fallback_timestamps is not None:
+            fallback_timestamps = np.asanyarray(fallback_timestamps)
+            self.lookup = self._setup_lookup(fallback_timestamps)
+            return
+
         lookup = self._setup_lookup(loaded_ts)
         for container_idx, vid in enumerate(self.videos):
-            lookup_mask = np.isin(lookup.timestamp, vid.timestamps)
-            vid_mask = np.isin(vid.timestamps, lookup.timestamp)
-            lookup.container_frame_idx[lookup_mask] = np.arange(vid.timestamps.size)[
-                vid_mask
-            ]
-            if vid.is_valid:
-                lookup.container_idx[lookup_mask] = container_idx
-        self.lookup = lookup
+            if not vid.is_valid:
+                # For invalid videos, we still try to load the timestamps (might be empty)
+                lookup_mask = np.isin(lookup.timestamp, vid.timestamps)
+                lookup.container_frame_idx[lookup_mask] = np.arange(vid.timestamps.size)
+            else:
+                # NOTE: For unknown reasons we sometimes have more timestamps than
+                # frames. We don't know how to match non-matching timestamps and
+                # pts, so we might introduce a systematic bias when fixing this! The
+                # idea is to keep only data for timestamps that were recorded, but
+                # leave frames blank if we don't have frame information.
+                npts = vid.pts.size
+                ntime = vid.timestamps.size
+                if npts < ntime:
+                    logger.warning(
+                        f"Found {ntime} timestamps vs {npts} frames!"
+                        f" Last {abs(npts - ntime)} frames are empty!"
+                    )
+                elif ntime < npts:
+                    logger.warning(
+                        f"Found {ntime} timestamps vs {npts} frames!"
+                        f" Discarding last {abs(npts - ntime)} frames!"
+                    )
+                data_size = min(npts, ntime)
+                vid_timestamps = vid.timestamps[:data_size]
+                vid_pts = vid.pts[:data_size]
 
-    def save_lookup(self):
+                lookup_mask = np.isin(lookup.timestamp, vid_timestamps)
+                lookup.container_frame_idx[lookup_mask] = np.arange(vid_timestamps.size)
+                lookup.container_idx[lookup_mask] = container_idx
+                lookup.pts[lookup_mask] = vid_pts
+        self.lookup = lookup
         np.save(self.lookup_loc, self.lookup)
+        # filter gaps (after saving!)
+        if not self.fill_gaps:
+            self._remove_filled_gaps()
 
     def load_lookup(self):
         self.lookup = np.load(self.lookup_loc).view(np.recarray)
+        if not self.fill_gaps:
+            self._remove_filled_gaps()
 
     def load_or_build_lookup(self):
         try:
             self.load_lookup()
         except FileNotFoundError:
             self.build_lookup()
-            self.save_lookup()
-        if not self.fill_gaps:
-            self._remove_filled_gaps()
 
     def _loaded_ts_sorted(self) -> np.ndarray:
+        if not self.videos:
+            return np.array([])
         loaded_ts = [vid.timestamps for vid in self.videos]
         all_ts = np.concatenate(loaded_ts)
         return all_ts
@@ -321,23 +400,6 @@ class VideoSet:
     def _remove_filled_gaps(self):
         cont_idc = self.lookup.container_idx
         self.lookup = self.lookup[cont_idc > -1]
-
-    @staticmethod
-    def _fix_negative_time_jumps(timestamps: np.ndarray) -> np.ndarray:
-        """Fix cases when large negative time jumps cause huge gaps due to sorting
-
-        Replaces timestamps causing negative jumps with mean value of its adjacent
-        timestamps. This work-around is based on the assumption that the negative time
-        jump is caused by a single invalid timestamp.
-        
-        Work around for https://github.com/pupil-labs/pupil/issues/1550
-        """
-        time_diff = np.diff(timestamps)
-        invalid_idc = np.flatnonzero(time_diff < 0)
-        timestamps[invalid_idc + 1] = np.mean(
-            (timestamps[invalid_idc + 2], timestamps[invalid_idc])
-        )
-        return timestamps
 
     def _fill_gaps(self, timestamps: np.ndarray) -> np.ndarray:
         time_diff = np.diff(timestamps)
@@ -361,7 +423,7 @@ class VideoSet:
         """
         Frame timestamp difference [seconds] that needs to be exceeded
         in order to start filling frames.
-        
+
         median: Median frame timestamp difference in seconds
 
         return: float [seconds], should be >= median
@@ -374,6 +436,7 @@ class VideoSet:
                 ("container_idx", "<i8"),
                 ("container_frame_idx", "<i8"),
                 ("timestamp", "<f8"),
+                ("pts", "<i8"),
             ]
         )
         lookup = np.empty(timestamps.size, dtype=lookup_entry).view(np.recarray)
@@ -382,89 +445,34 @@ class VideoSet:
         return lookup
 
 
-class RenameSet:
-    class RenameFile:
-        def __init__(self, path):
-            self.path = path
+def pi_gaze_items(root_dir):
+    def find_raw_path(timestamps_path):
+        raw_name = timestamps_path.name.replace("_timestamps", "")
+        raw_path = timestamps_path.with_name(raw_name).with_suffix(".raw")
+        assert raw_path.exists(), f"The file does not exist at path: {raw_path}"
+        return raw_path
 
-        @property
-        def name(self):
-            file_name = os.path.split(self.path)[1]
-            return os.path.splitext(file_name)[0]
+    def load_timestamps_data(path):
+        timestamps = np.load(str(path))
+        return timestamps
 
-        def rename(self, source_pattern, destination_name):
-            # source_pattern: Pupil Cam(1|2|3) ID0
-            # destination_name: eye0
-            if re.match(source_pattern, self.name):
-                new_path = re.sub(source_pattern, destination_name, self.path)
-                logger.info(
-                    'Renaming "{}" to "{}"'.format(
-                        self.name, os.path.split(new_path)[1]
-                    )
-                )
-                try:
-                    os.rename(self.path, new_path)
-                except FileExistsError:
-                    # Only happens on Windows. Behavior on Unix is to
-                    # overwrite the existing file.To mirror this behaviour
-                    # we need to delete the old file and try renaming the
-                    # new one again.
-                    os.remove(self.path)
-                    os.rename(self.path, new_path)
+    def load_raw_data(path):
+        raw_data = np.fromfile(str(path), "<f4")
+        raw_data_dtype = raw_data.dtype
+        raw_data.shape = (-1, 2)
+        return np.asarray(raw_data, dtype=raw_data_dtype)
 
-        def rewrite_time(self, destination_name):
-            timestamps = np.fromfile(self.path, dtype=">f8")
-            logger.info('Creating "{}_timestamps.npy"'.format(self.name))
-            timestamp_loc = os.path.join(
-                os.path.dirname(self.path), "{}_timestamps.npy".format(self.name)
-            )
-            np.save(timestamp_loc, timestamps)
+    # This pattern will match any filename that:
+    # - starts with "gaze"
+    # - is followed by one or more characters
+    # - is followed by "_timestamps.npy"
+    gaze_timestamp_pattern = "gaze?*_timestamps.npy"
 
-    def __init__(self, rec_dir, pattern, exts=VIDEO_TIME_EXTS):
-        self.rec_dir = rec_dir
-        self.pattern = os.path.join(rec_dir, pattern)
-        self.existsting_files = self.get_existsting_files(self.pattern, exts)
-
-    def rename(self, source_pattern, destination_name):
-        for r in self.existsting_files:
-            self.RenameFile(r).rename(source_pattern, destination_name)
-
-    def rewrite_time(self, destination_name):
-        for r in self.existsting_files:
-            self.RenameFile(r).rewrite_time(destination_name)
-
-    def load_intrinsics(self):
-        def _load_intrinsics(file_name, name):
-            try:
-                video = av.open(file_name, "r")
-            except av.AVError:
-                frame_size = (480, 360)
-            else:
-                frame_size = (
-                    video.streams.video[0].format.width,
-                    video.streams.video[0].format.height,
-                )
-                del video
-            intrinsics = load_intrinsics(self.rec_dir, name, frame_size)
-            intrinsics.save(self.rec_dir, "world")
-
-        for fn in self.existsting_files:
-            if fnmatch.fnmatch(fn, "*Pupil Cam1 ID2*[!.time]"):
-                _load_intrinsics(fn, "Pupil Cam1 ID2")
-                return
-            elif fnmatch.fnmatch(fn, "*Logitech Webcam C930e*[!.time]"):
-                _load_intrinsics(fn, "Logitech Webcam C930e")
-                return
-
-    def get_existsting_files(self, pattern, exts):
-        existsting_files = []
-        for loc in glob.glob(pattern):
-            file_name = os.path.split(loc)[1]
-            name = os.path.splitext(file_name)[0]
-            potential_locs = [
-                os.path.join(self.rec_dir, name + "." + ext) for ext in exts
-            ]
-            existsting_files.extend(
-                [loc for loc in potential_locs if os.path.exists(loc)]
-            )
-        return existsting_files
+    for timestamps_path in pl.Path(root_dir).glob(gaze_timestamp_pattern):
+        raw_path = find_raw_path(timestamps_path)
+        timestamps = load_timestamps_data(timestamps_path)
+        raw_data = load_raw_data(raw_path)
+        assert len(raw_data) == len(
+            timestamps
+        ), f"There is a mismatch between the number of raw data ({len(raw_data)}) and the number of timestamps ({len(timestamps)})"
+        yield from zip(raw_data, timestamps)

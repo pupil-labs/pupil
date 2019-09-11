@@ -20,31 +20,81 @@ import av
 import numpy as np
 from scipy.interpolate import interp1d
 
-import csv_utils
 import camera_models as cm
+import csv_utils
 import file_methods as fm
-import player_methods as pm
-from version_utils import VersionFormat, read_rec_version
-from video_capture.utils import RenameSet
+from version_utils import VersionFormat
+
+from .. import Version
+from ..info import RecordingInfoFile
+from ..info import recording_info_utils as rec_info_utils
 
 logger = logging.getLogger(__name__)
 
 
-def update_recording_to_recent(rec_dir):
+__all__ = ["transform_old_style_to_pprf_2_0"]
 
-    meta_info = pm.load_meta_info(rec_dir)
+
+def transform_old_style_to_pprf_2_0(rec_dir: str) -> RecordingInfoFile:
+    logger.info("Transform old style to new style recording...")
+    _update_recording_to_old_style_v1_16(rec_dir)
+    _generate_pprf_2_0_info_file(rec_dir)
+
+    # rename info.csv file to info.old_style.csv
+    logger.debug("Rename `info.csv` file to `info.old_style.csv`")
+    info_csv = Path(rec_dir) / "info.csv"
+    new_path = info_csv.with_name("info.old_style.csv")
+    info_csv.replace(new_path)
+
+
+def _generate_pprf_2_0_info_file(rec_dir):
+    logger.debug("Generate PPRF 2.0 info file...")
+    info_csv = rec_info_utils.read_info_csv_file(rec_dir)
+
+    # Get information about recording from info.csv
+    recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
+    start_time_system_s = float(info_csv["Start Time (System)"])
+    start_time_synced_s = float(info_csv["Start Time (Synced)"])
+    duration_s = rec_info_utils.parse_duration_string(info_csv["Duration Time"])
+    recording_software_name = info_csv.get(
+        "Capture Software", RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
+    )
+    recording_software_version = Version(info_csv["Capture Software Version"])
+    recording_name = info_csv.get(
+        "Recording Name", rec_info_utils.default_recording_name(rec_dir)
+    )
+    system_info = info_csv.get(
+        "System Info", rec_info_utils.default_system_info(rec_dir)
+    )
+
+    # Create a recording info file with the new format,
+    # fill out the information, validate, and return.
+    new_info_file = RecordingInfoFile.create_empty_file(
+        rec_dir, fixed_version=Version("2.0")
+    )
+    new_info_file.recording_uuid = recording_uuid
+    new_info_file.start_time_system_s = start_time_system_s
+    new_info_file.start_time_synced_s = start_time_synced_s
+    new_info_file.duration_s = duration_s
+    new_info_file.recording_software_name = recording_software_name
+    new_info_file.recording_software_version = recording_software_version
+    new_info_file.recording_name = recording_name
+    new_info_file.system_info = system_info
+    new_info_file.validate()
+    new_info_file.save_file()
+
+
+########## PRIVATE ##########
+
+
+def _update_recording_to_old_style_v1_16(rec_dir):
+    logger.debug("Update old style recording...")
+
+    meta_info = rec_info_utils.read_info_csv_file(rec_dir)
     update_meta_info(rec_dir, meta_info)
 
-    if (
-        meta_info.get("Capture Software", "Pupil Capture") == "Pupil Mobile"
-        and "Data Format Version" not in meta_info
-    ):
-        convert_pupil_mobile_recording_to_v094(rec_dir)
-        meta_info["Data Format Version"] = "v0.9.4"
-        update_meta_info(rec_dir, meta_info)
-
     # Reference format: v0.7.4
-    rec_version = read_rec_version(meta_info)
+    rec_version = _read_rec_version_legacy(meta_info)
 
     # Convert python2 to python3
     if rec_version <= VersionFormat("0.8.7"):
@@ -86,9 +136,6 @@ def update_recording_to_recent(rec_dir):
     if rec_version < VersionFormat("1.4"):
         update_recording_v13_v14(rec_dir)
 
-    # Do this independent of rec_version
-    check_for_worldless_recording(rec_dir)
-
     if rec_version < VersionFormat("1.8"):
         update_recording_v14_v18(rec_dir)
     if rec_version < VersionFormat("1.9"):
@@ -99,6 +146,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v111_v113(rec_dir)
     if rec_version < VersionFormat("1.14"):
         update_recording_v113_v114(rec_dir)
+    if rec_version < VersionFormat("1.16"):
+        update_recording_v114_v116(rec_dir)
 
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
@@ -106,6 +155,8 @@ def update_recording_to_recent(rec_dir):
 
 
 def update_meta_info(rec_dir, meta_info):
+    # TODO: We read from PupilRecording here and save manually! I think this needs to be
+    # adapted!
     logger.info("Updating meta info")
     meta_info_path = os.path.join(rec_dir, "info.csv")
     with open(meta_info_path, "w", newline="", encoding="utf-8") as csvfile:
@@ -113,30 +164,9 @@ def update_meta_info(rec_dir, meta_info):
 
 
 def _update_info_version_to(new_version, rec_dir):
-    meta_info = pm.load_meta_info(rec_dir)
+    meta_info = rec_info_utils.read_info_csv_file(rec_dir)
     meta_info["Data Format Version"] = new_version
     update_meta_info(rec_dir, meta_info)
-
-
-def convert_pupil_mobile_recording_to_v094(rec_dir):
-    logger.info("Converting Pupil Mobile recording to v0.9.4 format")
-    # convert time files and rename corresponding videos
-    match_pattern = "*.time"
-    rename_set = RenameSet(rec_dir, match_pattern)
-    rename_set.load_intrinsics()
-    rename_set.rename("Pupil Cam([0-3]) ID0", "eye0")
-    rename_set.rename("Pupil Cam([0-3]) ID1", "eye1")
-    rename_set.rename("Pupil Cam([0-2]) ID2", "world")
-    # Rewrite .time file to .npy file
-    rewrite_time = RenameSet(rec_dir, match_pattern, ["time"])
-    rewrite_time.rewrite_time("_timestamps.npy")
-    pupil_data_loc = os.path.join(rec_dir, "pupil_data")
-    if not os.path.exists(pupil_data_loc):
-        logger.info('Creating "pupil_data"')
-        fm.save_object(
-            {"pupil_positions": [], "gaze_positions": [], "notifications": []},
-            pupil_data_loc,
-        )
 
 
 def update_recording_v074_to_v082(rec_dir):
@@ -219,12 +249,12 @@ def update_recording_v093_to_v094(rec_dir):
         try:
             rec_object = fm.load_object(rec_file, allow_legacy=False)
             fm.save_object(rec_object, rec_file)
-        except:
+        except Exception:
             try:
                 rec_object = fm.load_object(rec_file, allow_legacy=True)
                 fm.save_object(rec_object, rec_file)
                 logger.info("Converted `{}` from pickle to msgpack".format(file))
-            except:
+            except Exception:
                 logger.warning("did not convert {}".format(rec_file))
 
     _update_info_version_to("v0.9.4", rec_dir)
@@ -275,9 +305,8 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
             if len(old_ts) != in_frame_num:
                 in_frame_size /= len(old_ts) / in_frame_num
                 logger.debug(
-                    "Provided audio frame size is inconsistent with amount of timestamps. Correcting frame size to {}".format(
-                        in_frame_size
-                    )
+                    "Provided audio frame size is inconsistent with amount of "
+                    f"timestamps. Correcting frame size to {in_frame_size}"
                 )
 
             old_ts_idx = (
@@ -402,7 +431,7 @@ def update_recording_v18_v19(rec_dir):
 def update_recording_v19_v111(rec_dir):
     logger.info("Updating recording from v1.9 to v1.11")
 
-    meta_info = pm.load_meta_info(rec_dir)
+    meta_info = rec_info_utils.read_info_csv_file(rec_dir)
     meta_info["Data Format Version"] = "v1.11"
     meta_info["Recording UUID"] = meta_info.get("Recording UUID", uuid.uuid4())
     update_meta_info(rec_dir, meta_info)
@@ -510,6 +539,16 @@ def update_recording_v111_v113(rec_dir):
 
 
 def update_recording_v113_v114(rec_dir):
+    _delete_all_lookup_files(rec_dir)
+    _update_info_version_to("v1.14", rec_dir)
+
+
+def update_recording_v114_v116(rec_dir):
+    _delete_all_lookup_files(rec_dir)
+    _update_info_version_to("v1.16", rec_dir)
+
+
+def _delete_all_lookup_files(rec_dir):
     # Force re-build of video lookup tables
     names = ("world", "eye0", "eye1")
     rec_dir = Path(rec_dir)
@@ -518,74 +557,6 @@ def update_recording_v113_v114(rec_dir):
             (rec_dir / f"{name}_lookup.npy").unlink()
         except FileNotFoundError:
             pass
-    _update_info_version_to("v1.14", rec_dir)
-
-
-def check_for_worldless_recording(rec_dir):
-    logger.info("Checking for world-less recording")
-    valid_ext = (".mp4", ".mkv", ".avi", ".h264", ".mjpeg")
-
-    world_video_exists = any(
-        (
-            os.path.splitext(f)[1] in valid_ext
-            for f in glob.glob(os.path.join(rec_dir, "world.*"))
-        )
-    )
-
-    if not world_video_exists:
-        fake_world_version = 1
-        fake_world_path = os.path.join(rec_dir, "world.fake")
-        if os.path.exists(fake_world_path):
-            fake_world = fm.load_object(fake_world_path)
-            if fake_world["version"] == fake_world_version:
-                return
-
-        logger.warning("No world video found. Constructing an artificial replacement.")
-        eye_ts_files = glob.glob(os.path.join(rec_dir, "eye*_timestamps.npy"))
-
-        min_ts = np.inf
-        max_ts = -np.inf
-        for f in eye_ts_files:
-            try:
-                eye_ts = np.load(f)
-                assert len(eye_ts.shape) == 1
-                assert eye_ts.shape[0] > 1
-                min_ts = min(min_ts, eye_ts[0])
-                max_ts = max(max_ts, eye_ts[-1])
-            except AssertionError:
-                logger.debug(
-                    (
-                        "Ignoring {} since it does not conform with the expected format"
-                        " (one-dimensional list with at least two entries)".format(f)
-                    )
-                )
-        assert -np.inf < min_ts < max_ts < np.inf, (
-            "This recording is invalid because it does not contain any valid eye timestamp"
-            " files from which artifical world timestamps could be generated from."
-        )
-
-        frame_rate = 30
-        timestamps = np.arange(min_ts, max_ts, 1 / frame_rate)
-        np.save(os.path.join(rec_dir, "world_timestamps.npy"), timestamps)
-        fm.save_object(
-            {
-                "frame_rate": frame_rate,
-                "frame_size": (1280, 720),
-                "version": fake_world_version,
-            },
-            os.path.join(rec_dir, "world.fake"),
-        )
-        lookup_entry = np.dtype(
-            [
-                ("container_idx", "<i8"),
-                ("container_frame_idx", "<i8"),
-                ("timestamp", "<f8"),
-            ]
-        )
-        lookup = np.empty(timestamps.size, dtype=lookup_entry).view(np.recarray)
-        lookup.timestamp = timestamps
-        lookup.container_idx = -1
-        np.save(os.path.join(rec_dir, "world_lookup.npy"), lookup)
 
 
 def update_recording_bytes_to_unicode(rec_dir):
@@ -633,7 +604,7 @@ def update_recording_v073_to_v074(rec_dir):
             p["method"] = "3d c++"
             try:
                 p["projected_sphere"] = p.pop("projectedSphere")
-            except:
+            except Exception:
                 p["projected_sphere"] = {"center": (0, 0), "angle": 0, "axes": (0, 0)}
             p["model_confidence"] = p.pop("modelConfidence")
             p["model_id"] = p.pop("modelID")
@@ -742,3 +713,15 @@ def update_recording_v03_to_v074(rec_dir):
     ts_path_old = os.path.join(rec_dir, "timestamps.npy")
     if not os.path.isfile(ts_path) and os.path.isfile(ts_path_old):
         os.rename(ts_path_old, ts_path)
+
+
+def _read_rec_version_legacy(meta_info):
+    version = meta_info.get(
+        "Data Format Version", meta_info["Capture Software Version"]
+    )
+    version = "".join(
+        [c for c in version if c in "1234567890.-"]
+    )  # strip letters in case of legacy version format
+    version = VersionFormat(version)
+    logger.debug("Recording version: {}".format(version))
+    return version
