@@ -39,7 +39,7 @@ class FileSeekError(Exception):
     pass
 
 
-class Frame(object):
+class Frame:
     """docstring of Frame"""
 
     def __init__(self, timestamp, av_frame, index):
@@ -52,6 +52,7 @@ class Frame(object):
         self._av_frame = av_frame
         self._img = None
         self._gray = None
+        self.is_fake = False
 
     def copy(self):
         return Frame(self.timestamp, self._av_frame, self.index)
@@ -94,6 +95,7 @@ class FakeFrame:
         shape = (self.height, self.width, 3)
         static_img = np.ones(shape, dtype=np.uint8) * 128
         self.img = self.bgr = static_img
+        self.is_fake = True
 
     def copy(self):
         return FakeFrame(self.width, self.height, self.timestamp, self.index)

@@ -12,7 +12,7 @@ class FrameFetcher:
 
     def __init__(self, video_path):
         self.source = File_Source(
-            SimpleNamespace(), source_path=video_path, timing=None
+            SimpleNamespace(), source_path=video_path, timing=None, fill_gaps=True
         )
         if not self.source.initialised:
             raise FileNotFoundError(video_path)
