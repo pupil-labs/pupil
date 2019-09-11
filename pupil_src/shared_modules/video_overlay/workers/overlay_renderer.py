@@ -41,6 +41,9 @@ class OverlayRenderer:
         overlay_image = overlay_frame.img
         try:
             is_fake_frame = overlay_frame.is_fake
+            # TODO: once we have the unified Frame class, we should just pass the frames
+            # to the image manipulation pipeline (instead of the images). Then we can
+            # get rid of the additional parameter stuff in ImageManipulation!
         except AttributeError:
             # TODO: this is only fore extra safety until we have a unified Frame class
             # and can be sure that everything ending up here has the 'is_fake'
