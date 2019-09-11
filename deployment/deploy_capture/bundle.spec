@@ -41,10 +41,8 @@ apriltag_hidden_imports = ["pupil_apriltags"]
 
 from pyglui import ui
 import pupil_apriltags
-import pyrealsense
 
 apriltag_lib_path = pathlib.Path(pupil_apriltags.__file__).parent
-pyrealsense_path = pathlib.Path(pyrealsense.__file__).parent / "lrs_parsed_classes"
 
 
 def apriltag_relative_path(absolute_path):
@@ -55,6 +53,10 @@ def apriltag_relative_path(absolute_path):
 if platform.system() == "Darwin":
     sys.path.append(".")
     from version import pupil_version
+
+    import pyrealsense
+
+    pyrealsense_path = pathlib.Path(pyrealsense.__file__).parent / "lrs_parsed_classes"
 
     del sys.path[-1]
     a = Analysis(
