@@ -717,7 +717,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
             assert_valid_recording_type,
             InvalidRecordingException,
         )
-        from pupil_recording import update_recording
+        from pupil_recording.update import update_recording
 
         def on_drop(window, count, paths):
             nonlocal rec_dir
