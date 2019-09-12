@@ -29,8 +29,10 @@ av_hidden_imports = [
     "av.filter.link",
     "av.filter.pad",
     "av.buffered_decoder",
-    "cysignals",
 ]
+if platform.system() != "Windows":
+    av_hidden_imports.append("cysignals")
+
 pyglui_hidden_imports = [
     "pyglui.pyfontstash.fontstash",
     "pyglui.cygl.shader",
@@ -269,27 +271,9 @@ elif platform.system() == "Windows":
         a.datas,
         [("PupilDrvInst.exe", "../../pupil_external/PupilDrvInst.exe", "BINARY")],
         [("glfw3.dll", "../../pupil_external/glfw3.dll", "BINARY")],
-        [
-            (
-                "pyglui/OpenSans-Regular.ttf",
-                os.path.join(package_path, "pyglui/OpenSans-Regular.ttf"),
-                "DATA",
-            )
-        ],
-        [
-            (
-                "pyglui/Roboto-Regular.ttf",
-                os.path.join(package_path, "pyglui/Roboto-Regular.ttf"),
-                "DATA",
-            )
-        ],
-        [
-            (
-                "pyglui/pupil_icons.ttf",
-                os.path.join(package_path, "pyglui/pupil_icons.ttf"),
-                "DATA",
-            )
-        ],
+        [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
+        [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
+        [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         apriltag_libs,
         Tree(
             "../../pupil_src/shared_modules/calibration_routines/fingertip_calibration/weights/",
