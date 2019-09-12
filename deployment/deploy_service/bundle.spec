@@ -1,7 +1,7 @@
 # -*- mode: python -*-
 
 
-import platform, sys, os, os.path, numpy, ntpath, glob
+import platform, sys, os, os.path, numpy, glob
 
 av_hidden_imports = [
     "av.format",
@@ -29,8 +29,10 @@ av_hidden_imports = [
     "av.filter.link",
     "av.filter.pad",
     "av.buffered_decoder",
-    "cysignals",
 ]
+if platform.system() != "Windows":
+    av_hidden_imports.append("cysignals")
+
 pyglui_hidden_imports = [
     "pyglui.pyfontstash.fontstash",
     "pyglui.cygl.shader",
@@ -155,9 +157,8 @@ elif platform.system() == "Windows":
     np_dll_list = []
 
     for dll_path in np_dlls:
-        dll_p, dll_f = ntpath.split(dll_path)
+        dll_p, dll_f = os.path.split(dll_path)
         np_dll_list += [(dll_f, dll_path, "BINARY")]
-    system_path = os.path.join(os.environ["windir"], "system32")
 
     print("Using Environment:")
     python_path = None
@@ -226,27 +227,9 @@ elif platform.system() == "Windows":
         a.datas,
         [("PupilDrvInst.exe", "../../pupil_external/PupilDrvInst.exe", "BINARY")],
         [("glfw3.dll", "../../pupil_external/glfw3.dll", "BINARY")],
-        [
-            (
-                "pyglui/OpenSans-Regular.ttf",
-                os.path.join(package_path, "pyglui/OpenSans-Regular.ttf"),
-                "DATA",
-            )
-        ],
-        [
-            (
-                "pyglui/Roboto-Regular.ttf",
-                os.path.join(package_path, "pyglui/Roboto-Regular.ttf"),
-                "DATA",
-            )
-        ],
-        [
-            (
-                "pyglui/pupil_icons.ttf",
-                os.path.join(package_path, "pyglui/pupil_icons.ttf"),
-                "DATA",
-            )
-        ],
+        [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
+        [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
+        [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         np_dll_list,
         strip=False,
         upx=True,

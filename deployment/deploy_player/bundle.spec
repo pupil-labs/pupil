@@ -1,7 +1,7 @@
 # -*- mode: python -*-
 
 
-import platform, sys, os, os.path, zmq, glob, ntpath, numpy, pathlib
+import platform, sys, os, os.path, zmq, glob, numpy, pathlib
 
 av_hidden_imports = [
     "av.format",
@@ -29,8 +29,10 @@ av_hidden_imports = [
     "av.filter.link",
     "av.filter.pad",
     "av.buffered_decoder",
-    "cysignals",
 ]
+if platform.system() != "Windows":
+    av_hidden_imports.append("cysignals")
+
 pyglui_hidden_imports = [
     "pyglui.pyfontstash.fontstash",
     "pyglui.cygl.shader",
@@ -188,32 +190,9 @@ elif platform.system() == "Windows":
     np_dll_list = []
 
     for dll_path in np_dlls:
-        dll_p, dll_f = ntpath.split(dll_path)
+        dll_p, dll_f = os.path.split(dll_path)
         np_dll_list += [(dll_f, dll_path, "BINARY")]
 
-    zmq_path = os.path.dirname(zmq.__file__)
-
-    zmq_p, zmq_lib = ntpath.split(glob.glob(zmq_path + "/libzmq.*.pyd")[0])
-
-    system_path = os.path.join(os.environ["windir"], "system32")
-
-    print("Using Environment:")
-    python_path = None
-    package_path = None
-    for path in sys.path:
-        print(" -- " + path)
-        if path.endswith("scripts"):
-            python_path = os.path.abspath(os.path.join(path, os.path.pardir))
-        elif path.endswith("site-packages"):
-            lib_dir = os.path.abspath(os.path.join(path, os.path.pardir))
-            python_path = os.path.abspath(os.path.join(lib_dir, os.path.pardir))
-            package_path = path
-    if python_path and package_path:
-        print("PYTHON PATH @ " + python_path)
-        print("PACKAGE PATH @ " + package_path)
-    else:
-        print("could not find python_path or package_path. EXIT.")
-        quit()
     scipy_imports = ["scipy.integrate"]
     scipy_imports += [
         "scipy.integrate._ode",
@@ -269,27 +248,9 @@ elif platform.system() == "Windows":
         a.zipfiles,
         a.datas,
         [("glfw3.dll", "../../pupil_external/glfw3.dll", "BINARY")],
-        [
-            (
-                "pyglui/OpenSans-Regular.ttf",
-                os.path.join(package_path, "pyglui/OpenSans-Regular.ttf"),
-                "DATA",
-            )
-        ],
-        [
-            (
-                "pyglui/Roboto-Regular.ttf",
-                os.path.join(package_path, "pyglui/Roboto-Regular.ttf"),
-                "DATA",
-            )
-        ],
-        [
-            (
-                "pyglui/pupil_icons.ttf",
-                os.path.join(package_path, "pyglui/pupil_icons.ttf"),
-                "DATA",
-            )
-        ],
+        [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
+        [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
+        [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         apriltag_libs,
         Tree(
             "../../pupil_src/shared_modules/calibration_routines/fingertip_calibration/weights/",

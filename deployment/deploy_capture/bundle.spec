@@ -1,7 +1,7 @@
 # -*- mode: python -*-
 
 
-import platform, sys, os, os.path, numpy, ntpath, glob, pathlib
+import platform, sys, os, os.path, numpy, glob, pathlib
 
 av_hidden_imports = [
     "av.format",
@@ -191,7 +191,7 @@ elif platform.system() == "Windows":
     np_dll_list = []
 
     for dll_path in np_dlls:
-        dll_p, dll_f = ntpath.split(dll_path)
+        dll_p, dll_f = os.path.split(dll_path)
         np_dll_list += [(dll_f, dll_path, "BINARY")]
 
     scipy_imports = ["scipy.integrate"]
