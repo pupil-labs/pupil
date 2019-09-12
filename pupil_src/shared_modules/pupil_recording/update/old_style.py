@@ -28,6 +28,7 @@ from version_utils import VersionFormat
 from .. import Version
 from ..info import RecordingInfoFile
 from ..info import recording_info_utils as rec_info_utils
+from ..recording_utils import InvalidRecordingException
 
 logger = logging.getLogger(__name__)
 
@@ -52,20 +53,26 @@ def _generate_pprf_2_0_info_file(rec_dir):
     info_csv = rec_info_utils.read_info_csv_file(rec_dir)
 
     # Get information about recording from info.csv
-    recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
-    start_time_system_s = float(info_csv["Start Time (System)"])
-    start_time_synced_s = float(info_csv["Start Time (Synced)"])
-    duration_s = rec_info_utils.parse_duration_string(info_csv["Duration Time"])
-    recording_software_name = info_csv.get(
-        "Capture Software", RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
-    )
-    recording_software_version = Version(info_csv["Capture Software Version"])
-    recording_name = info_csv.get(
-        "Recording Name", rec_info_utils.default_recording_name(rec_dir)
-    )
-    system_info = info_csv.get(
-        "System Info", rec_info_utils.default_system_info(rec_dir)
-    )
+    try:
+        recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
+        start_time_system_s = float(info_csv["Start Time (System)"])
+        start_time_synced_s = float(info_csv["Start Time (Synced)"])
+        duration_s = rec_info_utils.parse_duration_string(info_csv["Duration Time"])
+        recording_software_name = info_csv.get(
+            "Capture Software", RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
+        )
+        recording_software_version = Version(info_csv["Capture Software Version"])
+        recording_name = info_csv.get(
+            "Recording Name", rec_info_utils.default_recording_name(rec_dir)
+        )
+        system_info = info_csv.get(
+            "System Info", rec_info_utils.default_system_info(rec_dir)
+        )
+    except KeyError as e:
+        logger.debug(f"KeyError while parsing old-style info.csv: {str(e)}")
+        raise InvalidRecordingException(
+            "This recording is too old to be opened with this version of Player!"
+        )
 
     # Create a recording info file with the new format,
     # fill out the information, validate, and return.
