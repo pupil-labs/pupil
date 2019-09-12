@@ -26,6 +26,7 @@ import csv_utils
 from av_writer import MPEG_Writer, JPEG_Writer
 from file_methods import PLData_Writer, load_object
 from methods import get_system_info, timer
+from video_capture.ndsi_backend import NDSI_Source
 
 from pupil_recording.info import Version
 from pupil_recording.info import RecordingInfoFile
@@ -267,6 +268,24 @@ class Recorder(System_Plugin_Base):
         return strftime("%H:%M:%S", rec_time)
 
     def start(self):
+        self.start_time = time()
+        start_time_synced = self.g_pool.get_timestamp()
+
+        if isinstance(self.g_pool.capture, NDSI_Source):
+            # If the user did not enable TimeSync, the timestamps will be way off and
+            # the recording code will crash. We check the difference between the last
+            # frame's time and the start_time_synced and if this does not match, we stop
+            # the recording and show a warning instead.
+            TIMESTAMP_ERROR_THRESHOLD = 5.0
+            frame = self.g_pool.capture._recent_frame
+            if frame is not None:
+                if abs(frame.timestamp - start_time_synced) > TIMESTAMP_ERROR_THRESHOLD:
+                    logger.warning(
+                        "Incoming timestamps are way off!"
+                        " Are you using the TimeSync plugin?"
+                    )
+                    return
+
         session = os.path.join(self.rec_root_dir, self.session_name)
         try:
             os.makedirs(session, exist_ok=True)
@@ -283,8 +302,6 @@ class Recorder(System_Plugin_Base):
         self.frame_count = 0
         self.running = True
         self.menu.read_only = True
-        self.start_time = time()
-        start_time_synced = self.g_pool.get_timestamp()
         recording_uuid = uuid.uuid4()
 
         # set up self incrementing folder within session folder
