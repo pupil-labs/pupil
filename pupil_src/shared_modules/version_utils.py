@@ -38,6 +38,9 @@ def pupil_version():
     """
     [major].[minor].[trailing-untagged-commits]
     """
+    # NOTE: This returns the current version as read from the last git tag. Normally you
+    # don't want to use this, but get_version() below, which also works in a bundled
+    # version (without git).
     version = get_tag_commit()
     if version is None:
         raise ValueError("Version Error")
@@ -50,9 +53,10 @@ def pupil_version():
     return version
 
 
-def get_version(version_file=None):
+def get_version():
     # get the current software version
     if getattr(sys, "frozen", False):
+        version_file = os.path.join(sys._MEIPASS, "_version_string_")
         with open(version_file, "r") as f:
             version = f.read()
     else:

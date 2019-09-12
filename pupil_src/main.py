@@ -25,11 +25,9 @@ if running_from_bundle:
     # Specifiy user dir.
     folder_name = "pupil_{}_settings".format(parsed_args.app)
     user_dir = os.path.expanduser(os.path.join("~", folder_name))
-    version_file = os.path.join(sys._MEIPASS, "_version_string_")
 else:
     # Specifiy user dir.
     user_dir = os.path.join(pupil_base_dir, "{}_settings".format(parsed_args.app))
-    version_file = None
 
 # create folder for user settings, tmp data
 if not os.path.isdir(user_dir):
@@ -43,7 +41,7 @@ if not os.path.isdir(plugin_dir):
 # app version
 from version_utils import get_version
 
-app_version = get_version(version_file)
+app_version = get_version()
 
 # threading and processing
 from multiprocessing import (

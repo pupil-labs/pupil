@@ -7,7 +7,7 @@ import os
 import typing as T
 import uuid
 
-from version_utils import pupil_version
+from version_utils import get_version
 
 from .. import Version
 
@@ -402,7 +402,10 @@ class RecordingInfoFile(RecordingInfo):
                 raise RecordingInfoInvalidError(
                     f"Recording is too new to be opened with this version of Player!"
                 )
-            if min_player_version > Version(pupil_version()):
+
+            # TODO: get_version() returns a LooseVersion, but we are using
+            # packaging.Version now, need to adjust this across the codebase
+            if min_player_version > Version(get_version().vstring):
                 raise RecordingInfoInvalidError(
                     f"This recording requires Player version >= {min_player_version}!"
                 )
