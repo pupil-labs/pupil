@@ -38,6 +38,9 @@ def pupil_version():
     """
     [major].[minor].[trailing-untagged-commits]
     """
+    # NOTE: This returns the current version as read from the last git tag. Normally you
+    # don't want to use this, but get_version() below, which also works in a bundled
+    # version (without git).
     version = get_tag_commit()
     if version is None:
         raise ValueError("Version Error")
