@@ -53,9 +53,10 @@ def pupil_version():
     return version
 
 
-def get_version(version_file=None):
+def get_version():
     # get the current software version
     if getattr(sys, "frozen", False):
+        version_file = os.path.join(sys._MEIPASS, "_version_string_")
         with open(version_file, "r") as f:
             version = f.read()
     else:
