@@ -278,13 +278,18 @@ class Recorder(System_Plugin_Base):
             # the recording and show a warning instead.
             TIMESTAMP_ERROR_THRESHOLD = 5.0
             frame = self.g_pool.capture._recent_frame
-            if frame is not None:
-                if abs(frame.timestamp - start_time_synced) > TIMESTAMP_ERROR_THRESHOLD:
-                    logger.warning(
-                        "Incoming timestamps are way off!"
-                        " Are you using the TimeSync plugin?"
-                    )
-                    return
+            if frame is None:
+                logger.error(
+                    "Recording a Pupil Mobile stream requires a connection!"
+                    " Aborting recording."
+                )
+                return
+            if abs(frame.timestamp - start_time_synced) > TIMESTAMP_ERROR_THRESHOLD:
+                logger.error(
+                    "Pupil Mobile stream is not in sync. Aborting recording."
+                    " Enable the Time Sync plugin and try again."
+                )
+                return
 
         session = os.path.join(self.rec_root_dir, self.session_name)
         try:
