@@ -193,25 +193,7 @@ elif platform.system() == "Windows":
     for dll_path in np_dlls:
         dll_p, dll_f = ntpath.split(dll_path)
         np_dll_list += [(dll_f, dll_path, "BINARY")]
-    system_path = os.path.join(os.environ["windir"], "system32")
 
-    print("Using Environment:")
-    python_path = None
-    package_path = None
-    for path in sys.path:
-        print(" -- " + path)
-        if path.endswith("scripts"):
-            python_path = os.path.abspath(os.path.join(path, os.path.pardir))
-        elif path.endswith("site-packages"):
-            lib_dir = os.path.abspath(os.path.join(path, os.path.pardir))
-            python_path = os.path.abspath(os.path.join(lib_dir, os.path.pardir))
-            package_path = path
-    if python_path and package_path:
-        print("PYTHON PATH @ " + python_path)
-        print("PACKAGE PATH @ " + package_path)
-    else:
-        print("could not find python_path or package_path. EXIT.")
-        quit()
     scipy_imports = ["scipy.integrate"]
     scipy_imports += [
         "scipy.integrate._ode",
