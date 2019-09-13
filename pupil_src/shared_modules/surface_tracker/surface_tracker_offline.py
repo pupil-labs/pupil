@@ -34,7 +34,7 @@ from . import offline_utils, background_tasks
 from .surface_marker import Surface_Marker
 from .surface_marker_detector import Surface_Marker_Detector_Mode
 from .gui import Heatmap_Mode
-from .surface_offline import Surface_Offline
+from .surface import Surface_Offline
 
 # On macOS, "spawn" is set as default start method in main.py. This is not required
 # here and we set it back to "fork" to improve performance.

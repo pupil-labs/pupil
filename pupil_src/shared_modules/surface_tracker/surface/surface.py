@@ -21,9 +21,10 @@ import numpy as np
 import methods
 from stdlib_utils import is_none, is_not_none
 
-from .surface_marker import Surface_Marker_UID
-from .surface_marker_aggregate import Surface_Marker_Aggregate
-import surface_utils
+from surface_tracker.surface_marker import Surface_Marker_UID
+from surface_tracker.surface_marker_aggregate import Surface_Marker_Aggregate
+from .surface_location import Surface_Location
+from . import surface_utils
 
 logger = logging.getLogger(__name__)
 
@@ -595,64 +596,3 @@ class Surface(abc.ABC):
         hm[:, :, 3] = 175
 
         return hm
-
-
-class Surface_Location:
-    def __init__(
-        self,
-        detected,
-        dist_img_to_surf_trans=None,
-        surf_to_dist_img_trans=None,
-        img_to_surf_trans=None,
-        surf_to_img_trans=None,
-        num_detected_markers=0,
-    ):
-        self.detected = detected
-
-        if self.detected:
-            assert (
-                dist_img_to_surf_trans is not None
-                and surf_to_dist_img_trans is not None
-                and img_to_surf_trans is not None
-                and surf_to_img_trans is not None
-                and num_detected_markers > 0
-            ), (
-                "Surface_Location can not be detected and have None as "
-                "transformations at the same time!"
-            )
-
-        self.dist_img_to_surf_trans = dist_img_to_surf_trans
-        self.surf_to_dist_img_trans = surf_to_dist_img_trans
-        self.img_to_surf_trans = img_to_surf_trans
-        self.surf_to_img_trans = surf_to_img_trans
-        self.num_detected_markers = num_detected_markers
-
-    def get_serializable_copy(self):
-        location = {}
-        location["detected"] = self.detected
-        location["num_detected_markers"] = self.num_detected_markers
-        if self.detected:
-            location["dist_img_to_surf_trans"] = self.dist_img_to_surf_trans.tolist()
-            location["surf_to_dist_img_trans"] = self.surf_to_dist_img_trans.tolist()
-            location["img_to_surf_trans"] = self.img_to_surf_trans.tolist()
-            location["surf_to_img_trans"] = self.surf_to_img_trans.tolist()
-        else:
-            location["dist_img_to_surf_trans"] = None
-            location["surf_to_dist_img_trans"] = None
-            location["img_to_surf_trans"] = None
-            location["surf_to_img_trans"] = None
-        return location
-
-    @staticmethod
-    def load_from_serializable_copy(copy):
-        location = Surface_Location(detected=False)
-        location.detected = copy["detected"]
-        location.dist_img_to_surf_trans = np.asarray(copy["dist_img_to_surf_trans"])
-        location.surf_to_dist_img_trans = np.asarray(copy["surf_to_dist_img_trans"])
-        location.img_to_surf_trans = np.asarray(copy["img_to_surf_trans"])
-        location.surf_to_img_trans = np.asarray(copy["surf_to_img_trans"])
-        location.num_detected_markers = copy["num_detected_markers"]
-        return location
-
-    def __bool__(self):
-        return self.detected

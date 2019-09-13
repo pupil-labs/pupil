@@ -5,9 +5,9 @@ import os
 import typing
 
 from .surface import Surface
-from .surface import Surface_Marker_Aggregate
 from .surface_marker import Surface_Marker_UID, Surface_Marker_Type, Surface_Marker_TagID
 from .surface_marker import create_surface_marker_uid, parse_surface_marker_tag_id, parse_surface_marker_type
+from .surface_marker_aggregate import Surface_Marker_Aggregate
 
 
 logger = logging.getLogger(__name__)

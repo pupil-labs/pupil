@@ -19,7 +19,7 @@ import gl_utils
 
 from .gui import Heatmap_Mode
 from .surface_tracker import Surface_Tracker
-from .surface_online import Surface_Online
+from .surface import Surface_Online
 
 
 class Surface_Tracker_Online(Surface_Tracker):
