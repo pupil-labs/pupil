@@ -1,3 +1,7 @@
+from types import SimpleNamespace
+
+from video_capture.file_backend import File_Source
+
 from ..recording import PupilRecording
 from ..recording_utils import (
     InvalidRecordingException,
@@ -32,11 +36,30 @@ def update_recording(rec_dir: str):
     # update to latest
     recording_update_to_latest_new_style(rec_dir)
 
+    # generate lookup tables once at the start of player, so we don't pause later for
+    # compiling large lookup tables when they are needed
+    _generate_all_lookup_tables(rec_dir)
+
 
 def _assert_compatible_meta_version(rec_dir: str):
     # This will throw InvalidRecordingException if we cannot open the recording due
     # to meta info version or min_player_version mismatches.
     PupilRecording(rec_dir)
+
+
+def _generate_all_lookup_tables(rec_dir: str):
+    recording = PupilRecording(rec_dir)
+    videosets = [
+        recording.files().core().world().videos(),
+        recording.files().core().eye0().videos(),
+        recording.files().core().eye1().videos(),
+    ]
+    for videos in videosets:
+        if not videos:
+            continue
+        File_Source(
+            SimpleNamespace(), source_path=videos[0], fill_gaps=True, timing=None
+        )
 
 
 __all__ = ["update_recording"]
