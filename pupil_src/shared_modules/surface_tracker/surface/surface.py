@@ -139,32 +139,6 @@ class Surface(abc.ABC):
     def registered_markers_undist(self) -> Surface_Marker_UID_To_Aggregate_Mapping:
         return self._registered_markers_undist
 
-    def map_to_surf(
-        self, points, camera_model, compensate_distortion=True, trans_matrix=None
-    ):
-        # TODO: Inline all method calls
-        return surface_utils.map_to_surf(
-            points=points,
-            camera_model=camera_model,
-            img_to_surf_trans=self.img_to_surf_trans,
-            dist_img_to_surf_trans=self.dist_img_to_surf_trans,
-            compensate_distortion=compensate_distortion,
-            trans_matrix=trans_matrix
-        )
-
-    def map_from_surf(
-        self, points, camera_model, compensate_distortion=True, trans_matrix=None
-    ):
-        # TODO: Inline all method calls
-        return surface_utils.map_from_surf(
-            points=points,
-            camera_model=camera_model,
-            surf_to_img_trans=self.surf_to_img_trans,
-            surf_to_dist_img_trans=self.surf_to_dist_img_trans,
-            compensate_distortion=compensate_distortion,
-            trans_matrix=trans_matrix
-        )
-
     def map_gaze_and_fixation_events(self, events, camera_model, trans_matrix=None):
         """
         Map a list of gaze or fixation events onto the surface and return the
@@ -342,8 +316,12 @@ class Surface(abc.ABC):
         compensate_distortion: bool,
     ):
         # Markers undistorted
-        new_corner_pos = self.map_to_surf(
-            new_pos, camera_model, compensate_distortion=compensate_distortion
+        new_corner_pos = surface_utils.map_to_surf(
+            points=new_pos,
+            camera_model=camera_model,
+            img_to_surf_trans=self.img_to_surf_trans,
+            dist_img_to_surf_trans=self.dist_img_to_surf_trans,
+            compensate_distortion=compensate_distortion
         )
         old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
 
@@ -382,8 +360,12 @@ class Surface(abc.ABC):
     ):
         surface_marker_dist = Surface_Marker_Aggregate(uid=marker_uid)
         marker_verts_dist = np.array(verts_px).reshape((4, 2))
-        uv_coords_dist = self.map_to_surf(
-            marker_verts_dist, camera_model, compensate_distortion=compensate_distortion
+        uv_coords_dist = surface_utils.map_to_surf(
+            points=marker_verts_dist,
+            camera_model=camera_model,
+            img_to_surf_trans=self.img_to_surf_trans,
+            dist_img_to_surf_trans=self.dist_img_to_surf_trans,
+            compensate_distortion=compensate_distortion
         )
         surface_marker_dist.add_observation(uv_coords_dist)
         markers[marker_uid] = surface_marker_dist

@@ -23,6 +23,7 @@ import gl_utils
 import glfw
 
 from .surface_marker import Surface_Marker_Type
+from .surface import surface_utils
 
 
 SURFACE_TRACKER_CHANGED_DELAY = 1.0
@@ -184,16 +185,26 @@ class GUI:
         )
 
     def _get_surface_anchor_points(self, surface):
+        # TODO: Provide API in Surface to get surface corner points
         corners = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]], dtype=np.float32)
-        corners = surface.map_from_surf(
-            corners, self.tracker.camera_model, compensate_distortion=False
+        corners = surface_utils.map_from_surf(
+            points=corners,
+            camera_model=self.tracker.camera_model,
+            surf_to_img_trans=surface.surf_to_img_trans,
+            surf_to_dist_img_trans=surface.surf_to_dist_img_trans,
+            compensate_distortion=False
         )
 
+        # TODO: Provide API in Surface to get surface top indicator points
         top_indicator = np.array(
             [[0.3, 0.7], [0.7, 0.7], [0.5, 0.9], [0.3, 0.7]], dtype=np.float32
         )
-        top_indicator = surface.map_from_surf(
-            top_indicator, self.tracker.camera_model, compensate_distortion=False
+        top_indicator = surface_utils.map_from_surf(
+            points=top_indicator,
+            camera_model=self.tracker.camera_model,
+            surf_to_img_trans=surface.surf_to_img_trans,
+            surf_to_dist_img_trans=surface.surf_to_dist_img_trans,
+            compensate_distortion=False
         )
 
         title_anchor = corners.reshape((5, -1))[2]
