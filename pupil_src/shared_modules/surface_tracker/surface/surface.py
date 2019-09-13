@@ -92,8 +92,8 @@ class Surface(abc.ABC):
         self._avg_obs_per_marker = 0
         self.build_up_status = build_up_status if build_up_status is not None else 0
 
-        self.within_surface_heatmap = self.get_placeholder_heatmap()
-        self.across_surface_heatmap = self.get_placeholder_heatmap()
+        self.within_surface_heatmap = surface_utils.placeholder_heatmap()
+        self.across_surface_heatmap = surface_utils.placeholder_heatmap()
         self._HEATMAP_MIN_DATA_CONFIDENCE = 0.6
         self._heatmap_scale = 0.5
         self._heatmap_resolution = 31
@@ -171,7 +171,7 @@ class Surface(abc.ABC):
             points = camera_model.undistort_points_on_image_plane(points)
             points.shape = orig_shape
 
-        points_on_surf = self._perspective_transform_points(points, trans_matrix)
+        points_on_surf = surface_utils.perspective_transform_points(points, trans_matrix)
 
         return points_on_surf
 
@@ -203,7 +203,7 @@ class Surface(abc.ABC):
             else:
                 trans_matrix = self.surf_to_dist_img_trans
 
-        img_points = self._perspective_transform_points(points, trans_matrix)
+        img_points = surface_utils.perspective_transform_points(points, trans_matrix)
 
         if compensate_distortion:
             orig_shape = points.shape
@@ -211,10 +211,6 @@ class Surface(abc.ABC):
             img_points.shape = orig_shape
 
         return img_points
-
-    def _perspective_transform_points(self, points, trans_matrix):
-        # TODO: Inline all method calls
-        return surface_utils.perspective_transform_points(points, trans_matrix)
 
     def map_gaze_and_fixation_events(self, events, camera_model, trans_matrix=None):
         """
@@ -282,11 +278,6 @@ class Surface(abc.ABC):
             registered_markers_dist,
         )
 
-    @staticmethod
-    def _find_homographies(points_A, points_B):
-        # TODO: Inline all method calls
-        return surface_utils.find_homographies(points_A, points_B)
-
     def _update_definition(self, idx, visible_markers, camera_model):
         if not visible_markers:
             return
@@ -297,8 +288,8 @@ class Surface(abc.ABC):
         all_verts_dist.shape = (-1, 2)
         all_verts_undist = camera_model.undistort_points_on_image_plane(all_verts_dist)
 
-        hull_undist = self._bounding_quadrangle(all_verts_undist)
-        undist_img_to_surf_trans_candidate = self._get_trans_to_norm_corners(
+        hull_undist = surface_utils.bounding_quadrangle(all_verts_undist)
+        undist_img_to_surf_trans_candidate = surface_utils.perspective_transform_to_norm_corners(
             hull_undist
         )
         all_verts_undist.shape = (-1, 1, 2)
@@ -306,8 +297,8 @@ class Surface(abc.ABC):
             all_verts_undist, undist_img_to_surf_trans_candidate
         )
 
-        hull_dist = self._bounding_quadrangle(all_verts_dist)
-        dist_img_to_surf_trans_candidate = self._get_trans_to_norm_corners(hull_dist)
+        hull_dist = surface_utils.bounding_quadrangle(all_verts_dist)
+        dist_img_to_surf_trans_candidate = surface_utils.perspective_transform_to_norm_corners(hull_dist)
         all_verts_dist.shape = (-1, 1, 2)
         marker_surf_coords_dist = cv2.perspectiveTransform(
             all_verts_dist, dist_img_to_surf_trans_candidate
@@ -348,14 +339,6 @@ class Surface(abc.ABC):
 
         if self.build_up_status >= 1:
             self.prune_markers()
-
-    def _bounding_quadrangle(self, vertices):
-        # TODO: Inline all method calls
-        return surface_utils.bounding_quadrangle(vertices)
-
-    def _get_trans_to_norm_corners(self, verts):
-        # TODO: Inline all method calls
-        return surface_utils.perspective_transform_to_norm_corners(verts)
 
     def prune_markers(self):
         """Prune markers that are not support by sufficient observations."""
@@ -484,7 +467,7 @@ class Surface(abc.ABC):
             hist *= (255.0 / hist_max) if hist_max else 0.0
             hist = hist.astype(np.uint8)
         else:
-            self.within_surface_heatmap = self.get_uniform_heatmap(grid)
+            self.within_surface_heatmap = surface_utils.uniform_heatmap(grid)
             return
 
         color_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
@@ -493,11 +476,3 @@ class Surface(abc.ABC):
             self.within_surface_heatmap = np.ones((*grid, 4), dtype=np.uint8)
             self.within_surface_heatmap[:, :, 3] = 125
         self.within_surface_heatmap[:, :, :3] = color_map
-
-    def get_uniform_heatmap(self, resolution):
-        # TODO: Inline all method calls
-        return surface_utils.uniform_heatmap(resolution)
-
-    def get_placeholder_heatmap(self):
-        # TODO: Inline all method calls
-        return surface_utils.placeholder_heatmap()

@@ -34,7 +34,7 @@ from . import offline_utils, background_tasks
 from .surface_marker import Surface_Marker
 from .surface_marker_detector import Surface_Marker_Detector_Mode
 from .gui import Heatmap_Mode
-from .surface import Surface_Offline
+from .surface import Surface_Offline, surface_utils
 
 # On macOS, "spawn" is set as default start method in main.py. This is not required
 # here and we set it back to "fork" to improve performance.
@@ -322,7 +322,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 surface.across_surface_heatmap = heatmap
         else:
             for surface in self.surfaces:
-                surface.across_surface_heatmap = surface.get_uniform_heatmap((1, 1))
+                surface.across_surface_heatmap = surface_utils.uniform_heatmap((1, 1))
 
     def _fill_gaze_on_surf_buffer(self):
         in_mark = self.g_pool.seek_control.trim_left
@@ -444,13 +444,13 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for surface in self.surfaces:
                 if surface.name == notification["name"]:
                     self._heatmap_update_requests.add(surface)
-                    surface.within_surface_heatmap = surface.get_placeholder_heatmap()
+                    surface.within_surface_heatmap = surface_utils.placeholder_heatmap()
                     break
             self._fill_gaze_on_surf_buffer()
 
         elif notification["subject"].startswith("seek_control.trim_indices_changed"):
             for surface in self.surfaces:
-                surface.within_surface_heatmap = surface.get_placeholder_heatmap()
+                surface.within_surface_heatmap = surface_utils.placeholder_heatmap()
                 self._heatmap_update_requests.add(surface)
             self._fill_gaze_on_surf_buffer()
 
@@ -458,7 +458,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             for surface in self.surfaces:
                 if surface.name == notification["name"]:
                     surface.location_cache = None
-                    surface.within_surface_heatmap = surface.get_placeholder_heatmap()
+                    surface.within_surface_heatmap = surface_utils.placeholder_heatmap()
                     self._heatmap_update_requests.add(surface)
                     break
 
@@ -478,7 +478,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         elif notification["subject"] == "gaze_positions_changed":
             for surface in self.surfaces:
                 self._heatmap_update_requests.add(surface)
-                surface.within_surface_heatmap = surface.get_placeholder_heatmap()
+                surface.within_surface_heatmap = surface_utils.placeholder_heatmap()
             self._fill_gaze_on_surf_buffer()
 
         elif (
