@@ -6,10 +6,17 @@ import numpy as np
 
 import methods
 
+from surface_tracker.surface_marker import Surface_Marker_UID
+from surface_tracker.surface_marker_aggregate import Surface_Marker_Aggregate
+
 from .surface_location import Surface_Location
 
-
 logger = logging.getLogger(__name__)
+
+
+Surface_Marker_UID_To_Aggregate_Mapping = typing.Mapping[
+    Surface_Marker_UID, Surface_Marker_Aggregate
+]
 
 
 def perspective_transform_points(points, trans_matrix):
@@ -183,7 +190,7 @@ def map_to_surf(
         points = camera_model.undistort_points_on_image_plane(points)
         points.shape = orig_shape
 
-    points_on_surf = surface_utils.perspective_transform_points(points, trans_matrix)
+    points_on_surf = perspective_transform_points(points, trans_matrix)
 
     return points_on_surf
 
@@ -216,7 +223,7 @@ def map_from_surf(
         else:
             trans_matrix = surf_to_dist_img_trans
 
-    img_points = surface_utils.perspective_transform_points(points, trans_matrix)
+    img_points = perspective_transform_points(points, trans_matrix)
 
     if compensate_distortion:
         orig_shape = points.shape
@@ -274,6 +281,32 @@ def map_gaze_and_fixation_event(event, camera_model, img_to_surf_trans, dist_img
     return mapped_datum
 
 
+def add_marker(
+    marker_uid: Surface_Marker_UID,
+    verts_px,
+    camera_model,
+    markers: Surface_Marker_UID_To_Aggregate_Mapping,
+    img_to_surf_trans,
+    dist_img_to_surf_trans,
+    compensate_distortion: bool,
+    should_copy_markers: bool = True
+) -> Surface_Marker_UID_To_Aggregate_Mapping:
+    if should_copy_markers:
+        markers = markers.copy()
+    surface_marker_dist = Surface_Marker_Aggregate(uid=marker_uid)
+    marker_verts_dist = np.array(verts_px).reshape((4, 2))
+    uv_coords_dist = map_to_surf(
+        points=marker_verts_dist,
+        camera_model=camera_model,
+        img_to_surf_trans=img_to_surf_trans,
+        dist_img_to_surf_trans=dist_img_to_surf_trans,
+        compensate_distortion=compensate_distortion
+    )
+    surface_marker_dist.add_observation(uv_coords_dist)
+    markers[marker_uid] = surface_marker_dist
+    return markers
+
+
 def move_corner(
     corner_idx: int,
     new_pos,
@@ -283,7 +316,7 @@ def move_corner(
     dist_img_to_surf_trans,
     compensate_distortion: bool,
     should_copy_marker_aggregate_mapping: bool = True,
-):
+) -> Surface_Marker_UID_To_Aggregate_Mapping:
     """Update surface definition by moving one of the corners to a new position.
 
     Args:
@@ -297,7 +330,7 @@ def move_corner(
         marker_aggregate_mapping = marker_aggregate_mapping.copy()
 
     # Markers undistorted
-    new_corner_pos = surface_utils.map_to_surf(
+    new_corner_pos = map_to_surf(
         points=new_pos,
         camera_model=camera_model,
         img_to_surf_trans=img_to_surf_trans,

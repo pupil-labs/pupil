@@ -24,14 +24,11 @@ from stdlib_utils import is_none, is_not_none
 from surface_tracker.surface_marker import Surface_Marker_UID
 from surface_tracker.surface_marker_aggregate import Surface_Marker_Aggregate
 from .surface_location import Surface_Location
+from .surface_utils import Surface_Marker_UID_To_Aggregate_Mapping
 from . import surface_utils
 
+
 logger = logging.getLogger(__name__)
-
-
-Surface_Marker_UID_To_Aggregate_Mapping = typing.Mapping[
-    Surface_Marker_UID, Surface_Marker_Aggregate
-]
 
 
 class Surface(abc.ABC):
@@ -274,40 +271,26 @@ class Surface(abc.ABC):
         )
 
     def add_marker(self, marker_id, verts_px, camera_model):
-        self._add_marker(
-            marker_id,
-            verts_px,
-            camera_model,
-            markers=self._registered_markers_undist,
-            compensate_distortion=True,
-        )
-        self._add_marker(
-            marker_id,
-            verts_px,
-            camera_model,
-            markers=self._registered_markers_dist,
-            compensate_distortion=False,
-        )
-
-    def _add_marker(
-        self,
-        marker_uid: Surface_Marker_UID,
-        verts_px,
-        camera_model,
-        markers: Surface_Marker_UID_To_Aggregate_Mapping,
-        compensate_distortion,
-    ):
-        surface_marker_dist = Surface_Marker_Aggregate(uid=marker_uid)
-        marker_verts_dist = np.array(verts_px).reshape((4, 2))
-        uv_coords_dist = surface_utils.map_to_surf(
-            points=marker_verts_dist,
+        self._registered_markers_undist = surface_utils.add_marker(
+            marker_uid=marker_id,
+            verts_px=verts_px,
             camera_model=camera_model,
+            markers=self._registered_markers_undist,
             img_to_surf_trans=self.img_to_surf_trans,
             dist_img_to_surf_trans=self.dist_img_to_surf_trans,
-            compensate_distortion=compensate_distortion
+            compensate_distortion=True,
+            should_copy_markers=False
         )
-        surface_marker_dist.add_observation(uv_coords_dist)
-        markers[marker_uid] = surface_marker_dist
+        self._registered_markers_dist = surface_utils.add_marker(
+            marker_uid=marker_id,
+            verts_px=verts_px,
+            camera_model=camera_model,
+            markers=self._registered_markers_dist,
+            img_to_surf_trans=self.img_to_surf_trans,
+            dist_img_to_surf_trans=self.dist_img_to_surf_trans,
+            compensate_distortion=False,
+            should_copy_markers=False
+        )
 
     def pop_marker(self, marker_uid: Surface_Marker_UID):
         self._registered_markers_dist.pop(marker_uid)
