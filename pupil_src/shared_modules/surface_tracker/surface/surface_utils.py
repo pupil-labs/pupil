@@ -149,3 +149,79 @@ def placeholder_heatmap(resolution=(1, 1)):
     hm = np.zeros((*resolution, 4), dtype=np.uint8)
     hm[:, :, 3] = 175
     return hm
+
+
+def map_to_surf(
+    points, camera_model, img_to_surf_trans, dist_img_to_surf_trans, compensate_distortion=True, trans_matrix=None
+):
+    """Map points from image pixel space to normalized surface space.
+
+    Args:
+        points (ndarray): An array of 2D points with shape (2,) or (N, 2).
+        camera_model: Camera Model object.
+        compensate_distortion: If `True` camera distortion will be correctly
+        compensated using the `camera_model`. Note that points that lie outside
+        of the image can not be undistorted correctly and the attempt may
+        introduce a large error.
+        trans_matrix: The transformation matrix defining the location of
+        the surface. If `None`, the current transformation matrix saved in the
+        Surface object will be used.
+
+    Returns:
+        ndarray: Points mapped into normalized surface space. Has the same shape
+        as the input.
+
+    """
+    if trans_matrix is None:
+        if compensate_distortion:
+            trans_matrix = img_to_surf_trans
+        else:
+            trans_matrix = dist_img_to_surf_trans
+
+    if compensate_distortion:
+        orig_shape = points.shape
+        points = camera_model.undistort_points_on_image_plane(points)
+        points.shape = orig_shape
+
+    points_on_surf = surface_utils.perspective_transform_points(points, trans_matrix)
+
+    return points_on_surf
+
+
+def map_from_surf(
+    points, camera_model, surf_to_img_trans, surf_to_dist_img_trans, compensate_distortion=True, trans_matrix=None
+):
+    """Map points from normalized surface space to image pixel space.
+
+    Args:
+        points (ndarray): An array of 2D points with shape (2,) or (N, 2).
+        camera_model: Camera Model object.
+        compensate_distortion: If `True` camera distortion will be correctly
+        compensated using the `camera_model`. Note that points that lie outside
+        of the image can not be undistorted correctly and the attempt may
+        introduce a large error.
+        trans_matrix: The transformation matrix defining the location of
+        the surface. If `None`, the current transformation matrix saved in the
+        Surface object will be used.
+
+    Returns:
+        ndarray: Points mapped into image space. Has the same shape
+        as the input.
+
+    """
+
+    if trans_matrix is None:
+        if compensate_distortion:
+            trans_matrix = surf_to_img_trans
+        else:
+            trans_matrix = surf_to_dist_img_trans
+
+    img_points = surface_utils.perspective_transform_points(points, trans_matrix)
+
+    if compensate_distortion:
+        orig_shape = points.shape
+        img_points = camera_model.distortPoints(img_points)
+        img_points.shape = orig_shape
+
+    return img_points
+
