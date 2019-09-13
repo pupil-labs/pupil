@@ -252,57 +252,26 @@ class Surface(abc.ABC):
         self._registered_markers_dist = persistent_markers_dist
 
     def move_corner(self, corner_idx, new_pos, camera_model):
-        """Update surface definition by moving one of the corners to a new position.
-
-        Args:
-            corner_idx: Identifier of the corner to be moved. The order of corners is
-            `[(0, 0), (1, 0), (1, 1), (0, 1)]`
-            new_pos: The updated position of the corner in image pixel coordinates.
-            camera_model: Camera Model object.
-
-        """
-        self._move_corner(
-            corner_idx,
-            new_pos,
-            camera_model,
-            marker_aggregate_mapping=self.registered_markers_undist,
-            compensate_distortion=True,
-        )
-
-        self._move_corner(
-            corner_idx,
-            new_pos,
-            camera_model,
-            marker_aggregate_mapping=self._registered_markers_dist,
-            compensate_distortion=False,
-        )
-
-    def _move_corner(
-        self,
-        corner_idx: int,
-        new_pos,
-        camera_model,
-        marker_aggregate_mapping: Surface_Marker_UID_To_Aggregate_Mapping,
-        compensate_distortion: bool,
-    ):
-        # Markers undistorted
-        new_corner_pos = surface_utils.map_to_surf(
-            points=new_pos,
+        self.registered_markers_undist = surface_utils.move_corner(
+            corner_idx=corner_idx,
+            new_pos=new_pos,
             camera_model=camera_model,
+            marker_aggregate_mapping=self.registered_markers_undist,
             img_to_surf_trans=self.img_to_surf_trans,
             dist_img_to_surf_trans=self.dist_img_to_surf_trans,
-            compensate_distortion=compensate_distortion
+            compensate_distortion=True,
+            should_copy_marker_aggregate_mapping=False
         )
-        old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
-
-        new_corners = old_corners.copy()
-        new_corners[corner_idx] = new_corner_pos
-
-        transform = cv2.getPerspectiveTransform(new_corners, old_corners)
-        for marker_aggregate in marker_aggregate_mapping.values():
-            marker_aggregate.verts_uv = cv2.perspectiveTransform(
-                marker_aggregate.verts_uv.reshape((-1, 1, 2)), transform
-            ).reshape((-1, 2))
+        self._registered_markers_dist = surface_utils.move_corner(
+            corner_idx=corner_idx,
+            new_pos=new_pos,
+            camera_model=camera_model,
+            marker_aggregate_mapping=self._registered_markers_dist,
+            img_to_surf_trans=self.img_to_surf_trans,
+            dist_img_to_surf_trans=self.dist_img_to_surf_trans,
+            compensate_distortion=False,
+            should_copy_marker_aggregate_mapping=False
+        )
 
     def add_marker(self, marker_id, verts_px, camera_model):
         self._add_marker(

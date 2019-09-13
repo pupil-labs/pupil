@@ -272,3 +272,47 @@ def map_gaze_and_fixation_event(event, camera_model, img_to_surf_trans, dist_img
         mapped_datum["duration"] = event["duration"]
         mapped_datum["dispersion"] = event["dispersion"]
     return mapped_datum
+
+
+def move_corner(
+    corner_idx: int,
+    new_pos,
+    camera_model,
+    marker_aggregate_mapping: Surface_Marker_UID_To_Aggregate_Mapping,
+    img_to_surf_trans,
+    dist_img_to_surf_trans,
+    compensate_distortion: bool,
+    should_copy_marker_aggregate_mapping: bool = True,
+):
+    """Update surface definition by moving one of the corners to a new position.
+
+    Args:
+        corner_idx: Identifier of the corner to be moved. The order of corners is
+        `[(0, 0), (1, 0), (1, 1), (0, 1)]`
+        new_pos: The updated position of the corner in image pixel coordinates.
+        camera_model: Camera Model object.
+
+    """
+    if should_copy_marker_aggregate_mapping:
+        marker_aggregate_mapping = marker_aggregate_mapping.copy()
+
+    # Markers undistorted
+    new_corner_pos = surface_utils.map_to_surf(
+        points=new_pos,
+        camera_model=camera_model,
+        img_to_surf_trans=img_to_surf_trans,
+        dist_img_to_surf_trans=dist_img_to_surf_trans,
+        compensate_distortion=compensate_distortion
+    )
+    old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
+
+    new_corners = old_corners.copy()
+    new_corners[corner_idx] = new_corner_pos
+
+    transform = cv2.getPerspectiveTransform(new_corners, old_corners)
+    for marker_aggregate in marker_aggregate_mapping.values():
+        marker_aggregate.verts_uv = cv2.perspectiveTransform(
+            marker_aggregate.verts_uv.reshape((-1, 1, 2)), transform
+        ).reshape((-1, 2))
+    
+    return marker_aggregate_mapping
