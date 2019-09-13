@@ -225,3 +225,50 @@ def map_from_surf(
 
     return img_points
 
+
+def map_gaze_and_fixation_event(event, camera_model, img_to_surf_trans, dist_img_to_surf_trans, compensate_distortion, trans_matrix):
+    """
+    Map a list of gaze or fixation events onto the surface and return the
+    corresponding list of gaze/fixation on surface events.
+
+    Args:
+        events: List of gaze or fixation events.
+        camera_model: Camera Model object.
+        trans_matrix: The transformation matrix defining the location of
+        the surface. If `None`, the current transformation matrix saved in the
+        Surface object will be used.
+
+    Returns:
+        List of gaze or fixation on surface events.
+
+    """
+
+    gaze_norm_pos = event["norm_pos"]
+    gaze_img_point = methods.denormalize(
+        gaze_norm_pos, camera_model.resolution, flip_y=True
+    )
+    gaze_img_point = np.array(gaze_img_point)
+
+    surf_norm_pos = map_to_surf(
+        points=gaze_img_point,
+        camera_model=camera_model,
+        img_to_surf_trans=img_to_surf_trans,
+        dist_img_to_surf_trans=dist_img_to_surf_trans,
+        compensate_distortion=compensate_distortion,
+        trans_matrix=trans_matrix
+    )
+    on_surf = bool((0 <= surf_norm_pos[0] <= 1) and (0 <= surf_norm_pos[1] <= 1))
+
+    mapped_datum = {
+        "topic": f"{event['topic']}_on_surface",
+        "norm_pos": surf_norm_pos.tolist(),
+        "confidence": event["confidence"],
+        "on_surf": on_surf,
+        "base_data": (event["topic"], event["timestamp"]),
+        "timestamp": event["timestamp"],
+    }
+    if event["topic"] == "fixations":
+        mapped_datum["id"] = event["id"]
+        mapped_datum["duration"] = event["duration"]
+        mapped_datum["dispersion"] = event["dispersion"]
+    return mapped_datum

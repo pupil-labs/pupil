@@ -140,50 +140,20 @@ class Surface(abc.ABC):
         return self._registered_markers_undist
 
     def map_gaze_and_fixation_events(self, events, camera_model, trans_matrix=None):
-        """
-        Map a list of gaze or fixation events onto the surface and return the
-        corresponding list of gaze/fixation on surface events.
+        img_to_surf_trans = self.img_to_surf_trans
+        dist_img_to_surf_trans = self.dist_img_to_surf_trans
 
-        Args:
-            events: List of gaze or fixation events.
-            camera_model: Camera Model object.
-            trans_matrix: The transformation matrix defining the location of
-            the surface. If `None`, the current transformation matrix saved in the
-            Surface object will be used.
-
-        Returns:
-            List of gaze or fixation on surface events.
-
-        """
-        results = []
-        for event in events:
-            gaze_norm_pos = event["norm_pos"]
-            gaze_img_point = methods.denormalize(
-                gaze_norm_pos, camera_model.resolution, flip_y=True
-            )
-            gaze_img_point = np.array(gaze_img_point)
-            surf_norm_pos = self.map_to_surf(
-                gaze_img_point,
-                camera_model,
+        def on_surface_event(event):
+            return surface_utils.map_gaze_and_fixation_event(
+                event=event,
+                camera_model=camera_model,
+                img_to_surf_trans=img_to_surf_trans,
+                dist_img_to_surf_trans=dist_img_to_surf_trans,
                 compensate_distortion=True,
-                trans_matrix=trans_matrix,
+                trans_matrix=trans_matrix
             )
-            on_srf = bool((0 <= surf_norm_pos[0] <= 1) and (0 <= surf_norm_pos[1] <= 1))
 
-            mapped_datum = {
-                "topic": f"{event['topic']}_on_surface",
-                "norm_pos": surf_norm_pos.tolist(),
-                "confidence": event["confidence"],
-                "on_surf": on_srf,
-                "base_data": (event["topic"], event["timestamp"]),
-                "timestamp": event["timestamp"],
-            }
-            if event["topic"] == "fixations":
-                mapped_datum["id"] = event["id"]
-                mapped_datum["duration"] = event["duration"]
-                mapped_datum["dispersion"] = event["dispersion"]
-            results.append(mapped_datum)
-        return results
+        return [on_surface_event(event) for event in events]
 
     @abc.abstractmethod
     def update_location(self, frame_idx, visible_markers, camera_model):
