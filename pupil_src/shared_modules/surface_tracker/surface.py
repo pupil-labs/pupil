@@ -23,6 +23,7 @@ from stdlib_utils import is_none, is_not_none
 
 from .surface_marker import Surface_Marker_UID
 from .surface_marker_aggregate import Surface_Marker_Aggregate
+import surface_utils
 
 logger = logging.getLogger(__name__)
 
