@@ -9,12 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import abc
 import itertools
 import logging
 import multiprocessing
 import os
 import platform
 import time
+import typing as T
+import weakref
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +37,10 @@ from . import offline_utils, background_tasks
 from .surface_marker import Surface_Marker
 from .surface_marker_detector import Surface_Marker_Detector_Mode
 from .gui import Heatmap_Mode
-from .surface import Surface_Offline, surface_utils
+from .surface import Surface, Surface_Offline, surface_utils
 
 from .worker import mp_context
+from .worker import Surface_Location_Filler
 
 
 class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
@@ -51,6 +55,11 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def __init__(self, g_pool, *args, **kwargs):
         super().__init__(g_pool, *args, use_online_detection=False, **kwargs)
+        self.surface_location_cache_filler = Surface_Location_Filler(
+            on_did_calculate_surface_location=self.on_surface_location_filler_did_calculate_surface_location,
+            on_did_cancel=self.on_surface_location_filler_did_cancel,
+            on_did_complete=self.on_surface_location_filler_did_complete,
+        )
 
         self.MARKER_CACHE_VERSION = 3
         # Also add very small detected markers to cache and filter cache afterwards
@@ -95,6 +104,22 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     @property
     def supported_heatmap_modes(self):
         return [Heatmap_Mode.WITHIN_SURFACE, Heatmap_Mode.ACROSS_SURFACES]
+
+    # Surface_Location_Filler callbacks
+
+    def on_surface_location_filler_did_calculate_surface_location(self, surface: Surface_Offline, cache_idx: int, location):
+        surface.overwrite_single_entry_in_location_cache(
+            frame_idx=cache_idx,
+            location=location,
+        )
+        self._set_timeline_refresh_needed()
+
+    def on_surface_location_filler_did_cancel(self):
+        pass
+
+    def on_surface_location_filler_did_complete(self):
+        for surface in self.surfaces:
+            surface.on_surface_change(surface)
 
     def _init_marker_detection_modes(self):
         # This method should be called after `_init_marker_cache` to ensure that the cache is filled in.
@@ -159,6 +184,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.marker_cache_unfiltered = Cache(previous_state)
         self.marker_cache = self._filter_marker_cache(self.marker_cache_unfiltered)
 
+        self.surface_location_cache_filler.cancel()
+
         self.cache_filler = background_tasks.background_video_processor(
             self.g_pool.capture.source_path,
             offline_utils.marker_detection_callable(
@@ -202,6 +229,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
     def recent_events(self, events):
         super().recent_events(events)
         self._fetch_data_from_bg_fillers()
+        self.surface_location_cache_filler.fetch()
 
     def _fetch_data_from_bg_fillers(self):
         if self.gaze_on_surf_buffer_filler is not None:
@@ -259,6 +287,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.cache_filler = None
             for surface in self.surfaces:
                 self._heatmap_update_requests.add(surface)
+            self.surface_location_cache_filler.start(
+                surfaces=self.surfaces,
+                cache_seek_idx=self.cache_seek_idx,
+                marker_cache=self.marker_cache,
+                camera_model=self.camera_model,
+            )
             self._fill_gaze_on_surf_buffer()
             self._save_marker_cache()
             self.save_surface_definitions_to_file()

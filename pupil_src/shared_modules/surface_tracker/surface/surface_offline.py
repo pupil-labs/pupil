@@ -40,7 +40,6 @@ class Surface_Offline(Surface):
         self.location_cache = None
         super().__init__(*args, **kwargs)
         self.cache_seek_idx = mp_context.Value("i", 0)
-        self.location_cache_filler = None
         self.observations_frame_idxs = []
         self.on_surface_change = None
         self.start_idx = None
@@ -80,8 +79,6 @@ class Surface_Offline(Surface):
     def update_location(self, frame_idx, marker_cache, camera_model):
         if not self.defined:
             self._build_definition_from_cache(camera_model, frame_idx, marker_cache)
-
-        self._fetch_from_location_cache_filler()
         try:
             location = self.location_cache[frame_idx]
         except (TypeError, AttributeError):
@@ -141,20 +138,6 @@ class Surface_Offline(Surface):
             if self.on_surface_change is not None:
                 self.on_surface_change(self)
 
-    def _fetch_from_location_cache_filler(self):
-        if self.location_cache_filler is not None:
-            for cache_idx, location in self.location_cache_filler.fetch():
-                try:
-                    self.location_cache.update(cache_idx, location, force=True)
-                except AttributeError:
-                    self.location_cache_filler.cancel()
-                    self.location_cache_filler = None
-                    return
-
-            if self.location_cache_filler.completed:
-                self.location_cache_filler = None
-                self.on_surface_change(self)
-
     def update_location_cache(self, frame_idx, marker_cache, camera_model):
         # TODO: Update all call sites of this method with calculate_and_overwrite_single_entry_in_location_cache
         return self.calculate_and_overwrite_single_entry_in_location_cache(
@@ -187,22 +170,9 @@ class Surface_Offline(Surface):
     def _recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
         logging.debug("Recalculate Surface Cache!")
         # TODO: Re-think this API
-        if self.location_cache_filler is not None:
-            self.location_cache_filler.cancel()
-
         # Reset cache and recalculate.
         self.cache_seek_idx.value = frame_idx
         self.location_cache = Cache([None for _ in marker_cache])
-        self.location_cache_filler = background_tasks.background_data_processor(
-            marker_cache,
-            offline_utils.surface_locater_callable(
-                camera_model,
-                self.registered_markers_undist,
-                self.registered_markers_dist,
-            ),
-            self.cache_seek_idx,
-            mp_context,
-        )
 
     def _update_definition(self, idx, visible_markers, camera_model):
         self.observations_frame_idxs.append(idx)

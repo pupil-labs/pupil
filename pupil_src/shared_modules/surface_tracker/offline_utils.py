@@ -48,3 +48,25 @@ class surface_locater_callable:
             self.registered_markers_undist,
             self.registered_markers_dist,
         )
+
+
+class surfaces_locator_callable:
+    def __init__(
+        self, surfaces, camera_model
+    ):
+        self.camera_model = camera_model
+        surfaces_registered_markers_dist = [s.registered_markers_dist for s in surfaces]
+        surfaces_registered_markers_undist = [s.registered_markers_undist for s in surfaces]
+        self.surfaces_data = list(zip(surfaces_registered_markers_dist, surfaces_registered_markers_undist))
+
+    def __call__(self, markers):
+        markers = {m.uid: m for m in markers}
+        def locate_surface(surface_data):
+            registered_markers_dist, registered_markers_undist = surface_data
+            return Surface.locate(
+                markers,
+                self.camera_model,
+                registered_markers_undist,
+                registered_markers_dist,
+            )
+        return list(enumerate(map(locate_surface, self.surfaces_data)))
