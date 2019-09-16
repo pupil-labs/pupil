@@ -172,6 +172,18 @@ class Surface(abc.ABC):
             registered_markers_dist,
         )
 
+    def map_from_surf(
+        self, points, camera_model, compensate_distortion=True, trans_matrix=None
+    ):
+        return surface_utils.map_from_surf(
+            points=points,
+            camera_model=camera_model,
+            surf_to_img_trans=self.surf_to_img_trans,
+            surf_to_dist_img_trans=self.surf_to_dist_img_trans,
+            compensate_distortion=compensate_distortion,
+            trans_matrix=None,
+        )
+
     def _update_definition(self, idx, visible_markers, camera_model):
         if not visible_markers:
             return

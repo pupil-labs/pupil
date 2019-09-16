@@ -187,11 +187,9 @@ class GUI:
     def _get_surface_anchor_points(self, surface):
         # TODO: Provide API in Surface to get surface corner points
         corners = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]], dtype=np.float32)
-        corners = surface_utils.map_from_surf(
+        corners = surface.map_from_surf(
             points=corners,
             camera_model=self.tracker.camera_model,
-            surf_to_img_trans=surface.surf_to_img_trans,
-            surf_to_dist_img_trans=surface.surf_to_dist_img_trans,
             compensate_distortion=False
         )
 
@@ -199,11 +197,9 @@ class GUI:
         top_indicator = np.array(
             [[0.3, 0.7], [0.7, 0.7], [0.5, 0.9], [0.3, 0.7]], dtype=np.float32
         )
-        top_indicator = surface_utils.map_from_surf(
+        top_indicator = surface.map_from_surf(
             points=top_indicator,
             camera_model=self.tracker.camera_model,
-            surf_to_img_trans=surface.surf_to_img_trans,
-            surf_to_dist_img_trans=surface.surf_to_dist_img_trans,
             compensate_distortion=False
         )
 
@@ -345,9 +341,9 @@ class GUI:
 
     def _draw_surface_corner_handles(self, surface):
         img_corners = surface.map_from_surf(
-            self.norm_corners.copy(),
-            self.tracker.camera_model,
-            compensate_distortion=False,
+            points=self.norm_corners.copy(),
+            camera_model=self.tracker.camera_model,
+            compensate_distortion=False
         )
 
         handle_color_rgba = rgb_to_rgba(self.color_primary_rgb, alpha=0.5)
@@ -432,9 +428,9 @@ class GUI:
         for surface in self._edit_surf_corners:
             if surface.detected and surface.defined:
                 img_corners = surface.map_from_surf(
-                    self.norm_corners.copy(),
-                    self.tracker.camera_model,
-                    compensate_distortion=False,
+                    points=self.norm_corners.copy(),
+                    camera_model=self.tracker.camera_model,
+                    compensate_distortion=False
                 )
                 for idx, corner in enumerate(img_corners):
                     dist = np.linalg.norm(corner - pos)
