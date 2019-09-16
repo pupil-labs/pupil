@@ -275,10 +275,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 markers_filtered = self._filter_markers(markers)
                 self.marker_cache.update(frame_index, markers_filtered)
 
-                for surface in self.surfaces:
-                    surface.update_location_cache(
-                        frame_index, self.marker_cache, self.camera_model
-                    )
+                if frame_index == self.current_frame:
+                    for surface in self.surfaces:
+                        surface.update_location_cache(
+                            frame_index, self.marker_cache, self.camera_model
+                        )
+
             if time.perf_counter() - start_time > 1 / 50:
                 did_timeout = True
                 break
