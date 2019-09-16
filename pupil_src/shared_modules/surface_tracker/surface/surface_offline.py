@@ -156,8 +156,18 @@ class Surface_Offline(Surface):
                 self.on_surface_change(self)
 
     def update_location_cache(self, frame_idx, marker_cache, camera_model):
-        """ Update a single entry in the location cache."""
+        # TODO: Update all call sites of this method with calculate_and_overwrite_single_entry_in_location_cache
+        return self.calculate_and_overwrite_single_entry_in_location_cache(
+            frame_idx=frame_idx,
+            marker_cache=marker_cache,
+            camera_model=camera_model,
+        )
 
+    def overwrite_single_entry_in_location_cache(self, frame_idx: int, location):
+        self.location_cache.update(frame_idx, location, force=True)
+
+    def calculate_and_overwrite_single_entry_in_location_cache(self, frame_idx: int, marker_cache, camera_model):
+        """ Update a single entry in the location cache."""
         try:
             if not marker_cache[frame_idx]:
                 location = Surface_Location(detected=False)
@@ -170,12 +180,13 @@ class Surface_Offline(Surface):
                     self.registered_markers_undist,
                     self.registered_markers_dist,
                 )
-            self.location_cache.update(frame_idx, location, force=True)
+            self.overwrite_single_entry_in_location_cache(frame_idx, location)
         except (TypeError, AttributeError):
             self._recalculate_location_cache(frame_idx, marker_cache, camera_model)
 
     def _recalculate_location_cache(self, frame_idx, marker_cache, camera_model):
         logging.debug("Recalculate Surface Cache!")
+        # TODO: Re-think this API
         if self.location_cache_filler is not None:
             self.location_cache_filler.cancel()
 
