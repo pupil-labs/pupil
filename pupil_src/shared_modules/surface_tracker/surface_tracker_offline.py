@@ -36,12 +36,7 @@ from .surface_marker_detector import Surface_Marker_Detector_Mode
 from .gui import Heatmap_Mode
 from .surface import Surface_Offline, surface_utils
 
-# On macOS, "spawn" is set as default start method in main.py. This is not required
-# here and we set it back to "fork" to improve performance.
-if platform.system() == "Darwin":
-    mp_context = multiprocessing.get_context("fork")
-else:
-    mp_context = multiprocessing.get_context()
+from .worker import mp_context
 
 
 class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
