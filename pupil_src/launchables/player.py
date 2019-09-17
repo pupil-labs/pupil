@@ -773,9 +773,11 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
                     tip = "This may take a while!"
                 except InvalidRecordingException as err:
                     logger.error(str(err))
-                    tip = err.reason
                     if err.recovery:
-                        tip += " " + err.recovery + "."
+                        text = err.reason
+                        tip = err.recovery
+                    else:
+                        tip = err.reason
                     rec_dir = None
 
             gl_utils.clear_gl_screen()
@@ -803,9 +805,11 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
                     rec_dir = None
                 except InvalidRecordingException as err:
                     logger.error(str(err))
-                    tip = err.reason
                     if err.recovery:
-                        tip += " " + err.recovery + "."
+                        text = err.reason
+                        tip = err.recovery
+                    else:
+                        tip = err.reason
                     rec_dir = None
                 else:
                     glfw.glfwSetWindowShouldClose(window, True)
