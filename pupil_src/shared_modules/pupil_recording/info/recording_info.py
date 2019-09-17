@@ -151,12 +151,12 @@ class RecordingInfo(collections.abc.MutableMapping):
 
     @property
     @abc.abstractmethod
-    def recording_software_version(self) -> Version:
+    def recording_software_version(self) -> str:
         pass
 
     @recording_software_version.setter
     @abc.abstractmethod
-    def recording_software_version(self, value: Version):
+    def recording_software_version(self, value: str):
         pass
 
     @property

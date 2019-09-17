@@ -71,7 +71,7 @@ def _generate_pprf_2_0_info_file(rec_dir: str) -> RecordingInfoFile:
     start_time_synced_s = float(info_csv["Start Time (Synced)"])
     duration_s = utils.parse_duration_string(info_csv["Duration Time"])
     recording_software_name = info_csv["Capture Software"]
-    recording_software_version = Version(info_csv["Capture Software Version"])
+    recording_software_version = info_csv["Capture Software Version"]
     recording_name = info_csv.get(
         "Recording Name", utils.default_recording_name(rec_dir)
     )

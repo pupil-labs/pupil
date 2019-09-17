@@ -69,7 +69,7 @@ def _generate_pprf_2_0_info_file(rec_dir: str) -> RecordingInfoFile:
     start_time_synced_ns = int(info_json["start_time"])
     duration_ns = int(info_json["duration"])
     recording_software_name = RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
-    recording_software_version = Version(info_json["app_version"])
+    recording_software_version = info_json["app_version"]
     recording_name = utils.default_recording_name(rec_dir)
     system_info = android_system_info(info_json)
 
