@@ -1,3 +1,4 @@
+import logging
 from types import SimpleNamespace
 
 from video_capture.file_backend import File_Source
@@ -16,6 +17,8 @@ from .new_style import (
 )
 from .old_style import transform_old_style_to_pprf_2_0
 
+logger = logging.getLogger(__name__)
+
 _transformations_to_new_style = {
     RecordingType.INVISIBLE: transform_invisible_to_corresponding_new_style,
     RecordingType.MOBILE: transform_mobile_to_corresponding_new_style,
@@ -26,6 +29,36 @@ _transformations_to_new_style = {
 def update_recording(rec_dir: str):
 
     recording_type = get_recording_type(rec_dir)
+
+    if recording_type == RecordingType.INVISIBLE:
+        # NOTE: there is an issue with PI recordings, where sometimes multiple parts of
+        # the recording are stored as an .mjpeg and .mp4, but for the same part number.
+        # The recording is un-usable in this case, since the time information is lost.
+        # Trying to open the recording will crash in the lookup-table generation. We
+        # just gracefully exit here and display an error message.
+        PI_world_videos = PupilRecording.FileFilter(rec_dir).pi().world().videos()
+        name_stems = [path.stem for path in PI_world_videos]
+        unique_name_stems = set(name_stems)
+        # the assumption here is that we should have only one file per name stem
+        if len(name_stems) != len(unique_name_stems):
+            duplicate_stems = [
+                unique_stem
+                for unique_stem in unique_name_stems
+                if name_stems.count(unique_stem) > 1
+            ]
+            duplicate_videos = [
+                path.name for path in PI_world_videos if path.stem in duplicate_stems
+            ]
+            logger.error(
+                "Found duplicate video stems for this Pupil Invisible recording!"
+                " Please each out to info@pupil-labs.com for support!\n"
+                f"Duplicate videos: {', '.join(duplicate_videos)}"
+            )
+            raise InvalidRecordingException(
+                "This recording cannot be opened in Player.",
+                "Please each out to info@pupil-labs.com for support!",
+            )
+
     if recording_type in _transformations_to_new_style:
         _transformations_to_new_style[recording_type](rec_dir)
 
