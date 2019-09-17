@@ -36,27 +36,21 @@ def update_recording(rec_dir: str):
         # The recording is un-usable in this case, since the time information is lost.
         # Trying to open the recording will crash in the lookup-table generation. We
         # just gracefully exit here and display an error message.
-        PI_world_videos = PupilRecording.FileFilter(rec_dir).pi().world().videos()
-        name_stems = [path.stem for path in PI_world_videos]
-        unique_name_stems = set(name_stems)
-        # the assumption here is that we should have only one file per name stem
-        if len(name_stems) != len(unique_name_stems):
-            duplicate_stems = [
-                unique_stem
-                for unique_stem in unique_name_stems
-                if name_stems.count(unique_stem) > 1
-            ]
-            duplicate_videos = [
-                path.name for path in PI_world_videos if path.stem in duplicate_stems
+        mjpeg_world_videos = (
+            PupilRecording.FileFilter(rec_dir).pi().world().filter_patterns(".mjpeg$")
+        )
+        if mjpeg_world_videos:
+            videos = [
+                path.name
+                for path in PupilRecording.FileFilter(rec_dir).pi().world().videos()
             ]
             logger.error(
-                "Found duplicate video stems for this Pupil Invisible recording!"
-                " Please each out to info@pupil-labs.com for support!\n"
-                f"Duplicate videos: {', '.join(duplicate_videos)}"
+                "Found mjpeg world videos for this Pupil Invisible recording! Videos:\n"
+                + ",\n".join(videos)
             )
             raise InvalidRecordingException(
                 "This recording cannot be opened in Player.",
-                "Please each out to info@pupil-labs.com for support!",
+                recovery="Please reach out to info@pupil-labs.com for support!",
             )
 
     if recording_type in _transformations_to_new_style:
