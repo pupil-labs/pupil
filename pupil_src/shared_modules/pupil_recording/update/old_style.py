@@ -61,7 +61,7 @@ def _generate_pprf_2_0_info_file(rec_dir):
         recording_software_name = info_csv.get(
             "Capture Software", RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
         )
-        recording_software_version = Version(info_csv["Capture Software Version"])
+        recording_software_version = info_csv["Capture Software Version"]
         recording_name = info_csv.get(
             "Recording Name", rec_info_utils.default_recording_name(rec_dir)
         )
