@@ -114,14 +114,11 @@ def _is_pupil_invisible_recording(rec_dir: str) -> bool:
 def _is_pupil_mobile_recording(rec_dir: str) -> bool:
     try:
         info_csv = recording_info_utils.read_info_csv_file(rec_dir)
-    except FileNotFoundError:
-        return False
-    try:
         return (
             info_csv["Capture Software"] == "Pupil Mobile"
             and "Data Format Version" not in info_csv
         )
-    except KeyError:
+    except (KeyError, FileNotFoundError):
         return False
 
 
