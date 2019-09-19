@@ -147,10 +147,11 @@ def eye(
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
         # Pupil detectors
-        from pupil_detectors import Detector_2D, Detector_3D, Detector_Dummy
+        from pupil_detectors import Detector_3D, Detector_Dummy
+        from pupil_detectors.plugins import Detector_2D_Plugin
 
         pupil_detectors = {
-            Detector_2D.__name__: Detector_2D,
+            Detector_2D_Plugin.__name__: Detector_2D_Plugin,
             Detector_3D.__name__: Detector_3D,
             Detector_Dummy.__name__: Detector_Dummy,
         }
@@ -302,7 +303,7 @@ def eye(
 
         pupil_detector_settings = session_settings.get("pupil_detector_settings", None)
         last_pupil_detector = pupil_detectors[
-            session_settings.get("last_pupil_detector", Detector_2D.__name__)
+            session_settings.get("last_pupil_detector", Detector_2D_Plugin.__name__)
         ]
         g_pool.pupil_detector = last_pupil_detector(g_pool, pupil_detector_settings)
 
@@ -429,7 +430,7 @@ def eye(
             "pupil_detector",
             getter=lambda: g_pool.pupil_detector.__class__,
             setter=set_detector,
-            selection=[Detector_Dummy, Detector_2D, Detector_3D],
+            selection=[Detector_Dummy, Detector_2D_Plugin, Detector_3D],
             labels=["disabled", "C++ 2d detector", "C++ 3d detector"],
             label="Detection method",
         )
@@ -533,8 +534,8 @@ def eye(
                             set_detector(Detector_3D)
                         detector_selector.read_only = True
                     elif notification["mode"] == "2d":
-                        if not isinstance(g_pool.pupil_detector, Detector_2D):
-                            set_detector(Detector_2D)
+                        if not isinstance(g_pool.pupil_detector, Detector_2D_Plugin):
+                            set_detector(Detector_2D_Plugin)
                         detector_selector.read_only = False
                     else:
                         if not isinstance(g_pool.pupil_detector, Detector_Dummy):
