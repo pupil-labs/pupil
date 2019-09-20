@@ -262,16 +262,6 @@ def eye(
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
-        # Pupil detectors
-        from pupil_detectors import Detector_3D, Detector_Dummy
-        from pupil_detectors.plugins import Detector_2D_Plugin
-
-        pupil_detectors = {
-            Detector_2D_Plugin.__name__: Detector_2D_Plugin,
-            Detector_3D.__name__: Detector_3D,
-            Detector_Dummy.__name__: Detector_Dummy,
-        }
-
         # UI Platform tweaks
         if platform.system() == "Linux":
             scroll_factor = 10.0
@@ -305,6 +295,8 @@ def eye(
 
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
+
+        pupil_detector_manager = PupilDetectorManager(g_pool)
 
         # Callback functions
         def on_resize(window, w, h):
@@ -417,21 +409,11 @@ def eye(
         if roi_user_settings and tuple(roi_user_settings[-1]) == g_pool.u_r.get()[-1]:
             g_pool.u_r.set(roi_user_settings)
 
-        pupil_detector_settings = session_settings.get("pupil_detector_settings", None)
-        last_pupil_detector = pupil_detectors[
-            session_settings.get("last_pupil_detector", Detector_2D_Plugin.__name__)
-        ]
-        g_pool.pupil_detector = last_pupil_detector(g_pool, pupil_detector_settings)
+        pupil_detector_manager.load_from_session_settings(session_settings)
 
         def set_display_mode_info(val):
             g_pool.display_mode = val
             g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
-
-        def set_detector(new_detector):
-            g_pool.pupil_detector.deinit_ui()
-            g_pool.pupil_detector.cleanup()
-            g_pool.pupil_detector = new_detector(g_pool)
-            g_pool.pupil_detector.init_ui()
 
         def toggle_general_settings(collapsed):
             # this is the menu toggle logic.
@@ -544,10 +526,10 @@ def eye(
 
         detector_selector = ui.Selector(
             "pupil_detector",
-            getter=lambda: g_pool.pupil_detector.__class__,
-            setter=set_detector,
-            selection=[Detector_Dummy, Detector_2D_Plugin, Detector_3D],
-            labels=["disabled", "C++ 2d detector", "C++ 3d detector"],
+            getter=pupil_detector_manager.ui_selector_getter,
+            setter=pupil_detector_manager.ui_selector_setter,
+            selection=pupil_detector_manager.ui_selector_values,
+            labels=pupil_detector_manager.ui_selector_labels,
             label="Detection method",
         )
         general_settings.append(detector_selector)
@@ -566,7 +548,7 @@ def eye(
         g_pool.iconbar.append(icon)
         toggle_general_settings(False)
 
-        g_pool.pupil_detector.init_ui()
+        pupil_detector_manager.active_detector.init_ui()
         g_pool.capture.init_ui()
         g_pool.capture_manager.init_ui()
         g_pool.writer = None
@@ -646,16 +628,13 @@ def eye(
                         break
                 elif subject == "set_detection_mapping_mode":
                     if notification["mode"] == "3d":
-                        if not isinstance(g_pool.pupil_detector, Detector_3D):
-                            set_detector(Detector_3D)
+                        pupil_detector_manager.set_detection_mapping_mode_3d()
                         detector_selector.read_only = True
                     elif notification["mode"] == "2d":
-                        if not isinstance(g_pool.pupil_detector, Detector_2D_Plugin):
-                            set_detector(Detector_2D_Plugin)
+                        pupil_detector_manager.set_detection_mapping_mode_2d()
                         detector_selector.read_only = False
                     else:
-                        if not isinstance(g_pool.pupil_detector, Detector_Dummy):
-                            set_detector(Detector_Dummy)
+                        pupil_detector_manager.set_detection_mapping_mode_none()
                         detector_selector.read_only = True
                 elif subject == "recording.started":
                     if notification["record_eye"] and g_pool.capture.online:
@@ -713,16 +692,11 @@ def eye(
                             property_name = notification["name"]
                             property_value = notification["value"]
                             if "2d" in notification["subject"]:
-                                g_pool.pupil_detector.set_2d_detector_property(
+                                pupil_detector_manager.active_detector.set_2d_detector_property(
                                     property_name, property_value
                                 )
                             elif "3d" in notification["subject"]:
-                                if not isinstance(g_pool.pupil_detector, Detector_3D):
-                                    raise ValueError(
-                                        "3d properties are only available"
-                                        " if 3d detector is active"
-                                    )
-                                g_pool.pupil_detector.set_3d_detector_property(
+                                pupil_detector_manager.active_detector.set_3d_detector_property(
                                     property_name, property_value
                                 )
                             elif property_name == "roi":
@@ -764,7 +738,7 @@ def eye(
                     target_process = notification.get("target", g_pool.process)
                     should_respond = target_process == g_pool.process
                     if should_respond:
-                        props = g_pool.pupil_detector.get_detector_properties()
+                        props = pupil_detector_manager.active_detector.namespaced_detector_properties()
                         properties_broadcast = {
                             "subject": "pupil_detector.properties.{}".format(eye_id),
                             **props,  # add properties to broadcast
@@ -784,7 +758,7 @@ def eye(
                     f_height,
                     f_width,
                 ):
-                    g_pool.pupil_detector.on_resolution_change(
+                    pupil_detector_manager.active_detector.on_resolution_change(
                         (g_pool.u_r.array_shape[1], g_pool.u_r.array_shape[0]),
                         g_pool.capture.frame_size,
                     )
@@ -833,7 +807,7 @@ def eye(
                     g_pool.writer.write_video_frame(frame)
 
                 # pupil ellipse detection
-                result = g_pool.pupil_detector.detect(
+                result = pupil_detector_manager.active_detector.detect(
                     frame, g_pool.u_r, g_pool.display_mode == "algorithm"
                 )
                 if result is not None:
@@ -934,7 +908,7 @@ def eye(
 
                     make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
 
-                    g_pool.pupil_detector.visualize()  # detector decides if we visualize or not
+                    pupil_detector_manager.active_detector.visualize()  # detector decides if we visualize or not
 
                     # update screen
                     glfw.glfwSwapBuffers(main_window)
@@ -964,12 +938,8 @@ def eye(
         )
         session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
         session_settings["version"] = str(g_pool.version)
-        session_settings[
-            "last_pupil_detector"
-        ] = g_pool.pupil_detector.__class__.__name__
-        session_settings[
-            "pupil_detector_settings"
-        ] = g_pool.pupil_detector.get_settings()
+
+        pupil_detector_manager.save_to_session_settings(session_settings)
 
         session_window_size = glfw.glfwGetWindowSize(main_window)
         if 0 not in session_window_size:
@@ -979,9 +949,9 @@ def eye(
 
         g_pool.capture.deinit_ui()
         g_pool.capture_manager.deinit_ui()
-        g_pool.pupil_detector.deinit_ui()
+        pupil_detector_manager.active_detector.deinit_ui()
 
-        g_pool.pupil_detector.cleanup()
+        pupil_detector_manager.active_detector.cleanup()
         g_pool.capture_manager.cleanup()
         g_pool.capture.cleanup()
 
