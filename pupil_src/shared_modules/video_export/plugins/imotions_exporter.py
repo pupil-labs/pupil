@@ -145,7 +145,7 @@ def _copy_info_csv(source_folder, destination_folder):
         logger.error("Error while exporting iMotions data. World video not found!")
         return
 
-    cap = File_Source(SimpleNamespace(), str(world_video))
+    cap = File_Source(SimpleNamespace(), world_video)
     world_frames = cap.get_frame_count()
     world_resolution = f"{cap.frame_size[0]}x{cap.frame_size[1]}"
 

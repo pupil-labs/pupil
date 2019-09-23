@@ -95,7 +95,7 @@ def _generate_all_lookup_tables(rec_dir: str):
     for videos in videosets:
         if not videos:
             continue
-        source_path = str(videos[0].resolve())
+        source_path = videos[0].resolve()
         File_Source(
             SimpleNamespace(), source_path=source_path, fill_gaps=True, timing=None
         )
