@@ -59,7 +59,6 @@ class PupilDetectorManager:
 
     def activate_detector_by_class(self, plugin_class, g_pool=..., plugin_properties=None):
         g_pool = g_pool if g_pool is not ... else self.g_pool
-        print(f">>>>> ACTIVATE_DETECTOR_BY_CLASS === class={plugin_class}, g_pool={g_pool}, self.g_pool={self.g_pool}, props={plugin_properties}")
         self.active_detector = plugin_class(g_pool, plugin_properties)
 
     # Session persistance
