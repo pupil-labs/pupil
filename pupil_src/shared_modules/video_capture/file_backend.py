@@ -213,6 +213,7 @@ class File_Source(Playback_Source, Base_Source):
         *args,
         **kwargs,
     ):
+        assert isinstance(source_path, str), "source_path needs to be 'str'"
         super().__init__(g_pool, *args, **kwargs)
         if self.timing == "external":
             self.recent_events = self.recent_events_external_timing
