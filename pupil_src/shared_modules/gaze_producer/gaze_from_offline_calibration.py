@@ -8,16 +8,14 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import os
-
-import csv_utils
 import data_changed
-from gaze_producer import ui as plugin_ui, controller, model
+from gaze_producer import controller, model
+from gaze_producer import ui as plugin_ui
 from gaze_producer.gaze_producer_base import GazeProducerBase
 from observable import Observable
 from plugin_timeline import PluginTimeline
-from tasklib.manager import PluginTaskManager
 from pupil_recording import PupilRecording
+from tasklib.manager import PluginTaskManager
 
 
 # IMPORTANT: GazeProducerBase needs to be THE LAST in the list of bases, otherwise
