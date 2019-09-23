@@ -29,7 +29,7 @@ class CalibrationStorage(Storage, Observable):
         super().__init__(plugin)
         self._rec_dir = rec_dir
         self._get_recording_index_range = get_recording_index_range
-        self._recording_uuid = recording_uuid
+        self._recording_uuid = str(recording_uuid)
         self._calibrations = []
         self._load_from_disk()
         if not self._calibrations:
