@@ -745,6 +745,7 @@ def eye(
                         ipc_socket.notify(properties_broadcast)
                 g_pool.capture.on_notify(notification)
                 g_pool.capture_manager.on_notify(notification)
+                pupil_detector_manager.active_detector.on_notify(notification)
 
             # Get an image from the grabber
             event = {}
@@ -805,10 +806,8 @@ def eye(
                 if g_pool.writer:
                     g_pool.writer.write_video_frame(frame)
 
-                # pupil ellipse detection
-                result = pupil_detector_manager.active_detector.detect(
-                    frame, g_pool.u_r, g_pool.display_mode == "algorithm"
-                )
+                pupil_detector_manager.active_detector.recent_events(event)
+                result = event.get("pupil_detection_result", None)
                 if result is not None:
                     result["id"] = eye_id
                     result["topic"] = "pupil.{}".format(eye_id)
@@ -907,7 +906,7 @@ def eye(
 
                     make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
 
-                    pupil_detector_manager.active_detector.visualize()  # detector decides if we visualize or not
+                    pupil_detector_manager.active_detector.gl_display()  # detector decides if we visualize or not
 
                     # update screen
                     glfw.glfwSwapBuffers(main_window)
