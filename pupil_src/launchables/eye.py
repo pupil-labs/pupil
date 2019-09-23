@@ -50,8 +50,8 @@ class PupilDetectorManager:
         self.g_pool.pupil_detector = detector
         # NOTE: Need to init_ui manually
 
-    def activate_detector_by_name(self, name: str, g_pool=..., plugin_properties=None):
-        plugin_class = self.registry.class_by_name(name)
+    def activate_detector_by_name(self, plugin_name: str, g_pool=..., plugin_properties=None):
+        plugin_class = self.registry.class_by_name(plugin_name)
         self.activate_detector_by_class(
             plugin_class=plugin_class,
             g_pool=g_pool,
