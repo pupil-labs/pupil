@@ -257,11 +257,11 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
         g_pool.camera_render_size = None
 
-        video_path = recording.files().core().world().videos()[0]
+        video_path = recording.files().core().world().videos()[0].resolve()
         File_Source(
             g_pool,
             timing="external",
-            source_path=video_path,
+            source_path=str(video_path),
             buffered_decoding=True,
             fill_gaps=True,
         )
