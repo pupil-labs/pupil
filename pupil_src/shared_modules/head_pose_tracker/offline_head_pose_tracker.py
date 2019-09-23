@@ -9,12 +9,11 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os
-
-import csv_utils
 import player_methods as pm
-from head_pose_tracker import ui as plugin_ui, controller, storage
+from head_pose_tracker import controller, storage
+from head_pose_tracker import ui as plugin_ui
 from plugin_timeline import PluginTimeline
+from pupil_recording import PupilRecording
 from tasklib.manager import PluginTaskManager
 
 from .base_head_pose_tracker import Head_Pose_Tracker_Base
@@ -30,7 +29,9 @@ class Offline_Head_Pose_Tracker(Head_Pose_Tracker_Base):
         super().__init__(g_pool)
 
         self._task_manager = PluginTaskManager(plugin=self)
-        self._current_recording_uuid = self._load_recording_uuid_from_info_csv()
+        self._current_recording_uuid = str(
+            PupilRecording(g_pool.rec_dir).meta_info.recording_uuid
+        )
 
         self._setup_storages()
         self._setup_controllers()
@@ -200,12 +201,6 @@ class Offline_Head_Pose_Tracker(Head_Pose_Tracker_Base):
         minutes = abs(time // 60)  # abs because it's sometimes -0
         seconds = round(time % 60)
         return "{:02.0f}:{:02.0f}".format(minutes, seconds)
-
-    def _load_recording_uuid_from_info_csv(self):
-        info_csv_path = os.path.join(self.g_pool.rec_dir, "info.csv")
-        with open(info_csv_path, "r", encoding="utf-8") as csv_file:
-            recording_info = csv_utils.read_key_value_file(csv_file)
-            return recording_info["Recording UUID"]
 
     def get_current_frame_index(self):
         return self.g_pool.capture.get_frame_index()
