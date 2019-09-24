@@ -123,6 +123,33 @@ sudo sh -c 'echo "/usr/local/lib" > /etc/ld.so.conf.d/ceres.conf'
 sudo ldconfig
 ```
 
+### Installing Python Libraries
+
+We recommend using a virtual environment with a valid installation of Python 3.6 or higher.
+
+```sh
+pip install cysignals
+pip install cython
+pip install msgpack==0.5.6
+pip install numexpr
+pip install packaging
+pip install psutil
+pip install pyaudio
+pip install pyopengl
+pip install pyzmq
+pip install scipy
+pip install torch torchvision
+pip install git+https://github.com/zeromq/pyre
+
+pip install pupil_apriltags
+pip install git+https://github.com/pupil-labs/PyAV
+pip install git+https://github.com/pupil-labs/pyuvc
+pip install git+https://github.com/pupil-labs/pyndsi
+pip install git+https://github.com/pupil-labs/pyglui
+pip install git+https://github.com/pupil-labs/nslr
+pip install git+https://github.com/pupil-labs/nslr-hmm
+```
+
 ## Continue Installation
 
 That's it! You are done! Continue to follow the rest of the instructions on the [project main page](../README.md).
