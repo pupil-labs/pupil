@@ -9,29 +9,19 @@ Chat with us on [Discord](https://pupil-labs.com/chat "#pupil channel on Discord
 For an intro to the Pupil mobile eye tracking platform have a look at the [Pupil Labs Website](http://pupil-labs.com "Pupil Labs").
 
 ## Getting Started
-<table>
-<tr>
-	<td align="center" width="20%"><img width="100" src="https://github.com/pupil-labs/pupil/wiki/media/icons/Pupil_Logo_wiki-01.png" /></td>
-	<td  align="center" width="20%"><img width="100" src="https://github.com/pupil-labs/pupil/wiki/media/icons/Pupil_Logo_wiki-03.png" /></td>
-	<td align="center" width="20%"><img width="100" src="https://github.com/pupil-labs/pupil/wiki/media/icons/Pupil_Logo_wiki-04.png" /></td>
-	<td align="center" width="20%"><img width="100" src="https://github.com/pupil-labs/pupil/wiki/media/icons/Pupil_Logo_wiki-05.png" /></td>
-	<td align="center" width="20%"><img width="100" src="https://github.com/pupil-labs/pupil/wiki/media/icons/Pupil_Logo_wiki-02.png" /></td>
-</tr>
-<tr>
-	<td><a href="http://docs.pupil-labs.com/#pupil-hardware" title="Pupil Labs Docs - Pupil Hardware">Pupil Hardware</a></td>
-	<td><a href="http://docs.pupil-labs.com/#getting-started" title="Pupil Labs Docs - Getting Started With Pupil">Getting Started</a></td>
-	<td><a href="http://docs.pupil-labs.com/#user-docs" title="Pupil Labs Docs - User Docs">User Docs</a></td>
-	<td><a href="http://docs.pupil-labs.com/#developer-docs" title="Pupil Labs Docs - Dev Docs">Developer Docs</a></td>
-	<td><a href="http://docs.pupil-labs.com/#community" title="Pupil Labs Docs - Community">Community</a></td>
-</tr>
-<tr>
-	<td valign="top">Get and setup your Pupil eye tracking hardware</td>
-	<td valign="top">Get up and running and learn the basic Pupil workflow</td>
-	<td valign="top">Learn more about Pupil Capture and Pupil Player software settings and workflows here</td>
-	<td valign="top">Want to write code? Read the developer docs here</td>
-	<td valign="top">Connect with the Pupil community. Chat with us on <a href="https://pupil-labs.com/chat" title="#pupil channel on DiscordApp">Discord</a></td>		
-</tr>
-</table>
+
+<p align="center"><img src="https://via.placeholder.com/640x320?text=PLACEHOLDER"/></p>
+
+## Building and Running Pupil from Source
+
+### Install Dependencies
+
+The dependency setup for building and running Pupil from source is quite complex at the moment, but we are actively working on making it easier to run from source. Please see the following documents on how to install and set up all necessary dependencies for your platform:
+
+* [Ubuntu 18.04 LTS](./docs/dependencies-ubuntu18.md) (recommended Linux distribution)
+* [Ubuntu 17.10 or lower](./docs/dependencies-ubuntu17.md)
+* [MacOS](./docs/dependencies-macos.md)
+* [Windows](./docs/dependencies-windows.md)
 
 
 ## License
