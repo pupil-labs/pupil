@@ -16,8 +16,6 @@ sudo apt install -y libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev
 sudo apt install -y python3-opencv libopencv-dev
 
 # 3D Eye model dependencies
-sudo apt install -y libboost-dev
-sudo apt install -y libboost-python-dev
 sudo apt install -y libgoogle-glog-dev libatlas-base-dev libeigen3-dev
 sudo apt install -y libceres-dev
 ```

@@ -93,9 +93,7 @@ sudo udevadm trigger
 
 ## 3D Eye Model Dependencies
 ```sh
-sudo apt-get install -y libboost-dev
-sudo apt-get install -y libboost-python-dev
-sudo apt-get install -y libgoogle-glog-dev libatlas-base-dev libeigen3-dev
+sudo apt install -y libgoogle-glog-dev libatlas-base-dev libeigen3-dev
 ```
 
 ## Ceres

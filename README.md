@@ -33,10 +33,12 @@ pip install cysignals
 pip install cython
 pip install msgpack==0.5.6
 pip install numexpr
+pip install packaging
 pip install psutil
 pip install pyaudio
 pip install pyopengl
 pip install pyzmq
+pip install scipy
 pip install torch torchvision
 pip install git+https://github.com/zeromq/pyre
 
