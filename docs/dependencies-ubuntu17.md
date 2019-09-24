@@ -124,3 +124,7 @@ sudo make install
 sudo sh -c 'echo "/usr/local/lib" > /etc/ld.so.conf.d/ceres.conf'
 sudo ldconfig
 ```
+
+## Continue Installation
+
+That's it! You are done! Continue to follow the rest of the instructions on the [project main page](..).

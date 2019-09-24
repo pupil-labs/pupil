@@ -48,3 +48,7 @@ If you want to run libuvc as normal user, add the following udev rules:
 echo 'SUBSYSTEM=="usb",  ENV{DEVTYPE}=="usb_device", GROUP="plugdev", MODE="0664"' | sudo tee /etc/udev/rules.d/10-libuvc.rules > /dev/null
 sudo udevadm trigger
 ```
+
+## Continue Installation
+
+That's it! You are done! Continue to follow the rest of the instructions on the [project main page](..).
