@@ -51,4 +51,4 @@ sudo udevadm trigger
 
 ## Continue Installation
 
-That's it! You are done! Continue to follow the rest of the instructions on the [project main page](..).
+That's it! You are done! Continue to follow the rest of the instructions on the [project main page](../README.md).
