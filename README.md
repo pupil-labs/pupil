@@ -29,14 +29,14 @@ The dependency setup for building and running Pupil from source is quite complex
 We recommend using a virtual environment with a valid installation of Python 3.6 or higher.
 
 ```sh
-pip install numexpr
-pip install Cython
-pip install psutil
-pip install pyzmq
-pip install msgpack==0.5.6
-pip install pyopengl
-pip install pyaudio
 pip install cysignals
+pip install cython
+pip install msgpack==0.5.6
+pip install numexpr
+pip install psutil
+pip install pyaudio
+pip install pyopengl
+pip install pyzmq
 pip install torch torchvision
 pip install git+https://github.com/zeromq/pyre
 
