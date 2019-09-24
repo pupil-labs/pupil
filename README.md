@@ -49,6 +49,8 @@ pip install git+https://github.com/pupil-labs/nslr
 pip install git+https://github.com/pupil-labs/nslr-hmm
 ```
 
+**NOTE:** Installing **pyglui** might fail on newer versions of **macOS** due to missing OpenGL headers. In this case, you need to install Xcode which comes with the required header files.
+
 
 
 ## License
