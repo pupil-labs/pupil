@@ -34,27 +34,18 @@ The dependency setup for building and running Pupil from source is quite complex
 * [MacOS](./docs/dependencies-macos.md)
 * [Windows](./docs/dependencies-windows.md)
 
-#### Intel RealSense 3D Support
-
-If you want to use an Intel RealSense 3D scene camera, please follow the additional setup instructions for the camera model you have.
-
-**Note:** Using 3D world cameras is not available for **Linux**. This is due to ["librealsense" requiring kernel patches for the "Video4Linux" backend](https://github.com/IntelRealSense/librealsense/blob/66e42069837ed6e0eb46351cc4aa2acca49a4728/doc/installation.md#video4linux-backend-preparation).
-
-* [Intel RealSense R200](./docs/dependencies-realsense-r200.md)
-* Intel RealSense D400 (setup documentation is not yet complete, please contact us on Discord for support)
-
-
-### Download and Run Pupil
+### Download Pupil
 
 After having set up all necessary dependencies, you can download and run Pupil.
 
-For a quickstart you can just clone the github repository. If you created your own fork on please adjust the command appropriately.
 ```sh
 git clone https://github.com/pupil-labs/pupil.git # or your fork
 cd pupil
 ```
 
 **Note:** If you are using Windows, you will have to do some more adjustments after downloading. Please see the [Dependencies for Windows](./docs/dependencies-windows.md) setup guide for a full workthrough.
+
+### Run Pupil
 
 Now you can fire up python to start Pupil Capture, Player or Service:
 
