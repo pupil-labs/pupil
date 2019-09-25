@@ -18,10 +18,12 @@ If you want to develop a plugin or to extend Pupil for your project, this is the
 
 If you have questions, encounter any problems, or want to share progress -- chat with us on the Pupil channel on [Discord](https://pupil-labs.com/chat). We will try our best to help you out, and answer questions quickly.
 
-Pupil is a prototype and will continue to be in active development. If you plan to make changes to Pupil, want to see how it works, [fork the project on GitHub](https://github.com/pupil-labs/pupil/fork), install all dependencies and run Pupil source directly with Python.
+Pupil is a prototype and will continue to be in active development. If you plan to make changes to Pupil or want to see how it works, [fork the project on GitHub](https://github.com/pupil-labs/pupil/fork), install all dependencies and run Pupil source directly with Python.
+
 
 ### When is it recommended to run from source?
 For a lot of applications it is sufficient to use our network api. In some cases it is justified to write custom plugins. Loading custom plugins during runtime is supported for the bundled applications as well. Be aware that the bundled applications only allow access to libraries that are already included in the bundle. Therefore, it is recommended to run from source if you develop a plugin or you make changes to the Pupil source code itself. This will also give you the advantage of receiving features and bug fixes as soon as they hit the Github repository.
+
 
 ### Installing Dependencies
 
@@ -31,6 +33,16 @@ The dependency setup for building and running Pupil from source is quite complex
 * [Ubuntu 17.10 or lower](./docs/dependencies-ubuntu17.md)
 * [MacOS](./docs/dependencies-macos.md)
 * [Windows](./docs/dependencies-windows.md)
+
+#### Intel RealSense 3D Support
+
+If you want to use an Intel RealSense 3D scene camera, please follow the additional setup instructions for the camera model you have.
+
+**Note:** Using 3D world cameras is not available for **Linux**. This is due to ["librealsense" requiring kernel patches for the "Video4Linux" backend](https://github.com/IntelRealSense/librealsense/blob/66e42069837ed6e0eb46351cc4aa2acca49a4728/doc/installation.md#video4linux-backend-preparation).
+
+* [Intel RealSense R200](./docs/dependencies-realsense-r200.md)
+* Intel RealSense D400 (setup documentation is not yet complete, please contact us on Discord for support)
+
 
 ### Download and Run Pupil
 
