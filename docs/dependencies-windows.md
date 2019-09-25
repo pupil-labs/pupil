@@ -142,6 +142,13 @@ Navigate to your work directory
 - Open a command prompt in your work dir
 - `git clone https://github.com/pupil-labs/pupil.git`
 
+
+### Include pupil_external in PATH variable
+
+- Follow the instructions under the System Environment Variables section above to add a new environment variable to PATH
+- Add the following folder: `C:\work\pupil\pupil_external`
+- You might have to restart your computer so that the PATH variable is refreshed
+
 ### Setup pupil_external dependencies
 The following steps require you to store dynamic libraries in the `pupil_external` folder of the cloned repository so that you do not have to add further modifications to your system PATH.
 
@@ -177,12 +184,6 @@ The following steps require you to store dynamic libraries in the `pupil_externa
 - Unzip OpenCV to your work dir and rename dir to `opencv`
 - Copy `opencv\build\x64\vc14\bin\opencv_world345.dll` to `pupil_external`
 
-### Include pupil_external in PATH variable
-
-- Follow the instructions under the System Environment Variables section above to add a new environment variable to PATH
-- Add the following folder: `C:\work\pupil\pupil_external`
-- Restart your computer so that the PATH variable is refreshed
-
 ### Modify pupil_detectors setup.py
 
 - Open `pupil\pupil_src\shared_modules\pupil_detectors\setup.py`
@@ -208,4 +209,16 @@ In case you are using Visual Studio 2017 with v15.8 or v15.9 update, you may enc
 
 ### Start the application
 
-To start either of the applications -- Capture, Player, or Service -- you need to execute the respective `run_*.bat` file, i.e. `run_capture.bat`, `run_player.bat`, or `run_service.bat`. You can also run `main.py` directly from your IDE, or with the commands `python main.py capture`, `python main.py player`, or `python main.py service`.
+To start either of the applications -- Capture, Player, or Service -- you can to execute the respective `run_*.bat` file (e.g. by double clicking), i.e. `run_capture.bat`, `run_player.bat`, or `run_service.bat`.
+
+You can also run `main.py` directly from your IDE or command line:
+```sh
+# run capture
+python main.py capture
+
+# or run player
+python main.py player
+
+# or run service
+python main.py service
+```
