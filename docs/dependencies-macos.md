@@ -1,4 +1,4 @@
-# Dependencies for MacOS
+# Dependencies for macOS
 
 These instructions have been tested for MacOS 10.8, 10.9, 10.10, 10.11, and 10.12.
 
@@ -90,6 +90,8 @@ pip install git+https://github.com/pupil-labs/nslr-hmm
 
 **NOTE:** Installing **pyglui** might fail on newer versions of **macOS** due to missing OpenGL headers. In this case, you need to install Xcode which comes with the required header files.
 
-## Continue Installation
+## Next Steps
 
-That's it! You are done! Continue to follow the rest of the instructions on the [project main page](../README.md).
+That's it! You're done installing dependencies!
+
+Now, you should be able to run Pupil from source. Follow the remaining instructions in the [README](../README.md).
