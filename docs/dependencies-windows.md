@@ -213,12 +213,6 @@ To start either of the applications -- Capture, Player, or Service -- you can to
 
 You can also run `main.py` directly from your IDE or command line:
 ```sh
-# run capture
-python main.py capture
-
-# or run player
-python main.py player
-
-# or run service
-python main.py service
+cd pupil_src
+python main.py capture # or player/service
 ```
