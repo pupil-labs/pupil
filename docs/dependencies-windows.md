@@ -12,7 +12,7 @@ Therefore we can only debug and support issues for **Windows 10**.
   
 We will make a directory called `work` at `C:\work` and will use this directory for all build processes and setup scripts. Whenever we refer to the `work` directory, it will refer to `C:\work`. You can change this to whatever is convenient for you, but note that many setup files have hardcoded references to `C:\work`, so changing this won't run without a lot of adjustments.
 
-If for whatever reason you still don't want to use `C:\work`, you might want to consider creating a symbolic link at `C:\world` to your actual development folder. This might save you some work.
+If for whatever reason you still don't want to use `C:\work`, you might want to consider creating a symbolic link at `C:\work` to your actual development folder. This might save you some work.
 
 ### Command Prompt
   
