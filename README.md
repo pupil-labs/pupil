@@ -21,7 +21,7 @@ If you have questions, encounter any problems, or want to share progress -- chat
 Pupil is a prototype and will continue to be in active development. If you plan to make changes to Pupil or want to see how it works, [fork the project on GitHub](https://github.com/pupil-labs/pupil/fork), install all dependencies and run Pupil source directly with Python.
 
 
-### When is it recommended to run from source?
+### When Is It Recommended to Run from Source?
 For a lot of applications it is sufficient to use our network api. In some cases it is justified to write custom plugins. Loading custom plugins during runtime is supported for the bundled applications as well. Be aware that the bundled applications only allow access to libraries that are already included in the bundle. Therefore, it is recommended to run from source if you develop a plugin or you make changes to the Pupil source code itself. This will also give you the advantage of receiving features and bug fixes as soon as they hit the Github repository.
 
 
