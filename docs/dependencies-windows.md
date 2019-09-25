@@ -18,10 +18,10 @@ If for whatever reason you still don't want to use `C:\work`, you might want to 
   
 We will **always** be using `x64 Native Tools Command Prompt for VS 2017` as our command prompt. Make sure to only use this command prompt. Unlike unix systems, windows has many possible "terminals" or "cmd prompts". We are targeting `x64` systems and require the `x64` command prompt. You can access this cmd prompt from the Visual Studio 2017 shortcut in your Start menu.
 
-### 64 bit
+### 64 Bit
 You should be using a 64 bit system and therefore all downloads, builds, and libraries should be for `x64` unless otherwise specified.
 
-### Windows paths and Python
+### Windows Paths and Python
 
 Windows uses backslashes `\` as path separators. In Python, this is a special "escape" character. When specifying Windows paths in a Python string you must either use `\\` instead of `\` or use [Python raw strings](https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals), e.g. `r"\"`.
 
@@ -137,34 +137,39 @@ Navigate to your work directory
 - Right click on `libglog_static` and `Build`
 - Right click on `ceres_static` and `Build`
 
-### Clone the Pupil Repo
+## Modifying Pupil to Work with Windows
 
-- Open a command prompt in your work dir
-- `git clone https://github.com/pupil-labs/pupil.git`
+Before you can start using Pupil from source on Windows, you will have to make a few additional changes to the repository.
 
+### Clone Pupil Repository
 
-### Include pupil_external in PATH variable
+Open a command prompt in your work dir and:
+```sh
+git clone https://github.com/pupil-labs/pupil.git
+```
+
+### Include pupil_external in PATH Variable
 
 - Follow the instructions under the System Environment Variables section above to add a new environment variable to PATH
 - Add the following folder: `C:\work\pupil\pupil_external`
 - You might have to restart your computer so that the PATH variable is refreshed
 
-### Setup pupil_external dependencies
+### Setup pupil_external Dependencies
 The following steps require you to store dynamic libraries in the `pupil_external` folder of the cloned repository so that you do not have to add further modifications to your system PATH.
 
-### GLEW to pupil_external
+#### GLEW
 
 - Download GLEW Windows binaries from [sourceforge](http://glew.sourceforge.net/)
 - Unzip GLEW in your work dir
 - Copy `glew32.dll` to `pupil_external`
 
-### GLFW to pupil_external
+#### GLFW
 
 - Download GLFW Windows binaries from [glfw.org](http://www.glfw.org/download.html)
 - Unzip GLFW to your work dir
 - Copy `glfw3.dll` from `lib-vc2015` to `pupil_external`
 
-### FFMPEG to pupil_external
+#### FFMPEG
 
 - Download FFMPEG v4.0 Windows shared binaries from [ffmpeg](http://ffmpeg.zeranoe.com/builds/)
 - Unzip ffmpeg-shared to your work dir
@@ -178,7 +183,7 @@ The following steps require you to store dynamic libraries in the `pupil_externa
     - `swresample-3.dll`
     - `swscale-5.dll`
 
-### OpenCV to pupil_external
+#### OpenCV
 
 - Download opencv 3.4.5 exe installer from [sourceforge](https://sourceforge.net/projects/opencvlibrary/files/3.4.5/opencv-3.4.5-vc14_vc15.exe/download)
 - Unzip OpenCV to your work dir and rename dir to `opencv`
@@ -192,9 +197,8 @@ The following steps require you to store dynamic libraries in the `pupil_externa
 - Edit paths if necessary
 - Save and close setup.py
 
-<aside class="faq">When starting run_capture.bat, it will build the pupil_detectors module. However, if you are debugging, you may want to try building explicitly. From within `pupil/pupil_src/shared_modules/pupil_detectors` run `python setup.py build` to build the pupil_detectors.</aside>
+**Note:** When starting run_capture.bat, it will build the pupil_detectors module. However, if you are debugging, you may want to try building explicitly. From within `pupil/pupil_src/shared_modules/pupil_detectors` run `python setup.py build` to build the pupil_detectors.
 
-\
 In case you are using Visual Studio 2017 with v15.8 or v15.9 update, you may encounter an error regarding _ENABLE_EXTENDED_ALIGNED_STORAGE while building. Please refer to the fix [here](https://github.com/pupil-labs/pupil/issues/1331#issuecomment-430418074).
 
 ### Modify optimization_calibration setup.py
@@ -205,9 +209,9 @@ In case you are using Visual Studio 2017 with v15.8 or v15.9 update, you may enc
 - Edit paths if necessary
 - Save and close setup.py
 
-<aside class="faq">When starting run_capture.bat, it will build the optimization_calibration module. However, if you are debugging, you may want to try building explicitly. From within `pupil/pupil_src/shared_modules/calibration_routines/optimization_calibration` run `python setup.py build` to build the optimization_calibration module.</aside>
+**Note:** When starting run_capture.bat, it will build the optimization_calibration module. However, if you are debugging, you may want to try building explicitly. From within `pupil/pupil_src/shared_modules/calibration_routines/optimization_calibration` run `python setup.py build` to build the optimization_calibration module.
 
-### Start the application
+## Start Pupil
 
 To start either of the applications -- Capture, Player, or Service -- you can to execute the respective `run_*.bat` file (e.g. by double clicking), i.e. `run_capture.bat`, `run_player.bat`, or `run_service.bat`.
 
