@@ -47,7 +47,7 @@ echo 'SUBSYSTEM=="usb",  ENV{DEVTYPE}=="usb_device", GROUP="plugdev", MODE="0664
 sudo udevadm trigger
 ```
 
-### Installing Python Libraries
+### Install Python Libraries
 
 We recommend using a virtual environment with a valid installation of Python 3.6 or higher.
 
@@ -74,6 +74,8 @@ pip install git+https://github.com/pupil-labs/nslr
 pip install git+https://github.com/pupil-labs/nslr-hmm
 ```
 
-## Continue Installation
+## Next Steps
 
-That's it! You are done! Continue to follow the rest of the instructions on the [project main page](../README.md).
+That's it! You're done installing dependencies!
+
+Now, you should be able to run Pupil from source. Follow the remaining instructions in the [README](../README.md).

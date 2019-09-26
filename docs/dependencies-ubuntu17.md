@@ -123,7 +123,7 @@ sudo sh -c 'echo "/usr/local/lib" > /etc/ld.so.conf.d/ceres.conf'
 sudo ldconfig
 ```
 
-### Installing Python Libraries
+### Install Python Libraries
 
 We recommend using a virtual environment with a valid installation of Python 3.6 or higher.
 

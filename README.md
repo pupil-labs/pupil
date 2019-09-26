@@ -19,8 +19,6 @@ Our vision is to create tools for a diverse group of people interested in learni
 
 Chat with us on [Discord](https://pupil-labs.com/chat "Pupil Server on Discord").
 
-## Website
-For an intro to Pupil Core mobile eye tracking platform take a look at the [Pupil Labs Website](http://pupil-labs.com/products/core "Pupil Labs").
 
 ## Users
 [Download the latest apps](https://github.com/pupil-labs/pupil/releases/latest "Download Pupil Capture, Pupil Player, and Pupil Service application bundles")! 
@@ -34,6 +32,17 @@ There are a number of ways you can extend the functionality of Pupil.
 - [Run from Source](#installing-dependencies): Can't do what you need to do with the network based api or plugin? Then get ready to dive into the inner workings of Pupil and run from source!
 
 All setup and dependency installation instructions are contained in this repo. All other developer documentation is [here](https://docs.pupil-labs.com/developer/core "Pupil Core developer docs").
+
+If you want to develop a plugin or to extend Pupil for your project, this is the place to start.
+
+If you have questions, encounter any problems, or want to share progress -- chat with us on the Pupil channel on [Discord](https://pupil-labs.com/chat). We will try our best to help you out, and answer questions quickly.
+
+Pupil is a prototype and will continue to be in active development. If you plan to make changes to Pupil or want to see how it works, [fork the project on GitHub](https://github.com/pupil-labs/pupil/fork), install all dependencies and run Pupil source directly with Python.
+
+
+### When Is It Recommended to Run from Source?
+For a lot of applications it is sufficient to use our network api. In some cases it is justified to write custom plugins. Loading custom plugins during runtime is supported for the bundled applications as well. Be aware that the bundled applications only allow access to libraries that are already included in the bundle. Therefore, it is recommended to run from source if you develop a plugin or you make changes to the Pupil source code itself. This will also give you the advantage of receiving features and bug fixes as soon as they hit the Github repository.
+
 
 ### Installing Dependencies
 - [Ubuntu 18.04 LTS](./docs/dependencies-ubuntu18.md "Pupil dependency installation for Ubuntu 18.04") (recommended Linux distribution)
@@ -51,8 +60,6 @@ cd pupil
 
 _Note_: If you are using Windows, you will have to complete a few more steps after cloning the repo. Please refer to the [Windows 10 dependencies setup guide](./docs/dependencies-windows.md "Pupil dependency installation for Windows 10").
 
-### Run Pupil
-Open your terminal and use Python to start Pupil Capture, Player, or Service.
 
 ```sh
 cd pupil_src

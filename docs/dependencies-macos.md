@@ -23,7 +23,7 @@ ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/
 brew install python3
 ```
 
-Add Homebrew installed executables and Python scripts to your path. Add the following two lines to your ~/.bash_profile. (you can open textedit from the terminal like so: `open ~/.bash_profile`)
+Add Homebrew installed executables and Python scripts to your path. Add the following two lines to your `~/.bash_profile`. (you can open textedit from the terminal like so: `open ~/.bash_profile`)
 
 ```sh
 export PATH=/usr/local/bin:/usr/local/sbin:$PATH
@@ -61,7 +61,7 @@ cmake ..
 make && make install
 ```
 
-### Installing Python Libraries
+### Install Python Libraries
 
 We recommend using a virtual environment with a valid installation of Python 3.6 or higher.
 
