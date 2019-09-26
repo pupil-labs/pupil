@@ -1,5 +1,14 @@
 # Pupil
-<p align="center"><img src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_repo_banner.jpg"/></p>
+<a 
+href="https://pupil-labs.com"
+rel="noopener"
+target="_blank">
+	<p align="center">
+		<img 
+		src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_repo_banner.jpg" 
+		alt="Pupil Labs - Pupil Core software: open source eye tracking platform."/>
+	</p>
+</a>
 
 **Open source eye tracking platform.**
 
