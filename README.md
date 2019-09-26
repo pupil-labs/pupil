@@ -48,6 +48,8 @@ cd pupil
 
 _Note_: If you are using Windows, you will have to complete a few more steps after cloning the repo. Please refer to the [Windows 10 dependencies setup guide](./docs/dependencies-windows.md "Pupil dependency installation for Windows 10").
 
+### Run Pupil
+
 ```sh
 cd pupil_src
 python main.py capture # or player/service
