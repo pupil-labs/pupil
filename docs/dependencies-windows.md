@@ -215,7 +215,14 @@ In case you are using Visual Studio 2017 with v15.8 or v15.9 update, you may enc
 
 To start either of the applications -- Capture, Player, or Service -- you can to execute the respective `run_*.bat` file (e.g. by double clicking), i.e. `run_capture.bat`, `run_player.bat`, or `run_service.bat`.
 
-You can also run `main.py` directly from your IDE or command line:
+```powershell
+cd pupil_src
+run_capture.bat
+# or run_player.bat
+# or run_service.bat
+```
+
+You can also run `main.py` directly from your IDE or command line. Make sure that the `pupil_external` folder is part of your system path.
 ```sh
 cd pupil_src
 python main.py capture # or player/service
