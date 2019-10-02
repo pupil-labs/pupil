@@ -70,7 +70,7 @@ class OfflineDetectionController(Observable):
             self._source_path,
             self._all_timestamps,
             self._general_settings.detection_frame_index_range,
-            self._detection_storage.frame_index_to_num_markers,
+            self._detection_storage.frame_index_to_num_markers.keys(),
         )
         return self._task_manager.create_background_task(
             name="marker detection",
