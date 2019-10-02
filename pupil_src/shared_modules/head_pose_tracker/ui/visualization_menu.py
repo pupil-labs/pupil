@@ -22,7 +22,7 @@ class VisualizationMenu:
         self._head_pose_tracker_3d_renderer = head_pose_tracker_3d_renderer
 
         head_pose_tracker_3d_renderer.add_observer(
-            "switch_visualization_window", self._on_switch_visualization_window
+            "toggle_visualization_window", self._on_toggle_visualization_window
         )
 
         self.menu = ui.Growing_Menu(self.menu_label)
@@ -38,7 +38,7 @@ class VisualizationMenu:
             self._create_render_markers_switch(),
             self._create_show_marker_id_in_main_window_switch(),
             ui.Separator(),
-            self._create_open_visualization_window_button(),
+            self._create_toggle_visualization_window_button(),
             self._create_show_camera_trace_switch(),
         ]
         self.menu.elements.extend(menu)
@@ -68,14 +68,13 @@ class VisualizationMenu:
             switch.read_only = True
         return switch
 
-    def _create_open_visualization_window_button(self):
+    def _create_toggle_visualization_window_button(self):
+        label = "Close" if self._general_settings.open_visualization_window else "Open"
         button = ui.Button(
             outer_label="Visualization 3d window",
-            label="Open",
-            function=self._on_open_visualization_window_button_clicked,
+            label=label,
+            function=self._on_toggle_visualization_window_button_clicked,
         )
-        if self._general_settings.open_visualization_window:
-            button.read_only = True
         return button
 
     def _create_show_camera_trace_switch(self):
@@ -92,8 +91,8 @@ class VisualizationMenu:
         self._general_settings.render_markers = new_value
         self.render()
 
-    def _on_open_visualization_window_button_clicked(self):
-        self._head_pose_tracker_3d_renderer.switch_visualization_window(True)
+    def _on_toggle_visualization_window_button_clicked(self):
+        self._head_pose_tracker_3d_renderer.toggle_visualization_window()
 
-    def _on_switch_visualization_window(self, _):
+    def _on_toggle_visualization_window(self):
         self.render()
