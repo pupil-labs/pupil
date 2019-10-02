@@ -153,9 +153,9 @@ class PupilRecording:
                 for patterns in patterns_for_keys
             ]
             if mode is self.FilterMode.UNION:
-                self.__files = set.union(*sets_of_files)
+                self.__files = list(set.union(*sets_of_files))
             elif mode is self.FilterMode.INTERSECTION:
-                self.__files = set.intersection(*sets_of_files)
+                self.__files = list(set.intersection(*sets_of_files))
             else:
                 logger.warning(
                     f"Unknown filter mode: {mode}! Must be 'union' or 'intersection'!"

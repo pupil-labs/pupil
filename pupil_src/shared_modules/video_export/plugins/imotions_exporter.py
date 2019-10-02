@@ -151,7 +151,7 @@ def _copy_info_csv(source_folder, destination_folder):
 
     data = {}
     data["Recording Name"] = meta.recording_name
-    data["Start Data"] = start_date
+    data["Start Date"] = start_date
     data["Start Time"] = start_time
     data["Start Time (System)"] = meta.start_time_system_s
     data["Start Time (Synced)"] = meta.start_time_synced_s
