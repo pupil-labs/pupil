@@ -821,7 +821,8 @@ def _warn_imprecise_value_inference():
         return
     logger.warning(
         "\n\n!! Deprecation Warning !! Pupil Mobile recordings recorded with older"
-        " versions than r0.21.0 are deprecated and will not be supported by future"
+        " versions than r0.21.0, or Pupil Capture recordings recorded with older"
+        " versions than v1.3, are deprecated and will not be supported by future"
         " Pupil Player versions!\n"
     )
     logger.warning(
