@@ -9,10 +9,13 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import abc
+import logging
 
 from pyglui import ui
 
 from gaze_producer import ui as plugin_ui
+
+logger = logging.getLogger(__name__)
 
 
 class StorageEditMenu(plugin_ui.SelectAndRefreshMenu, abc.ABC):
@@ -21,6 +24,7 @@ class StorageEditMenu(plugin_ui.SelectAndRefreshMenu, abc.ABC):
     selector to create a new item and shows for every item two buttons,
     one to duplicate the current item, and one to delete it.
     """
+
     new_button_label = "New"
     duplicate_button_label = "Duplicate Current Configuration"
 
@@ -76,12 +80,18 @@ class StorageEditMenu(plugin_ui.SelectAndRefreshMenu, abc.ABC):
     def _on_click_new_button(self):
         new_item = self._new_item()
         self._storage.add(new_item)
+        if new_item not in self._storage:
+            logger.error("New item could not be added. Aborting.")
+            return
         self.current_item = new_item
         self.render()
 
     def _on_click_duplicate_button(self):
         new_item = self._duplicate_item(self.current_item)
         self._storage.add(new_item)
+        if new_item not in self._storage:
+            logger.error("New item could not be added. Aborting.")
+            return
         self.current_item = new_item
         self.render()
 
