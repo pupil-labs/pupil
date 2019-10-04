@@ -105,12 +105,8 @@ def offline_detection(
             frame = src.get_frame()
             detections = _detect(frame)
 
-        if detections:
-            serialized_dicts = [fm.Serialized_Dict(d) for d in detections]
-        else:
-            serialized_dicts = [fm.Serialized_Dict({})]
-
-        queue.append((timestamp, serialized_dicts, frame_index, len(detections)))
+        serialized_dicts = [fm.Serialized_Dict(d) for d in detections]
+        queue.append((timestamp, serialized_dicts, frame_index))
 
         if len(queue) >= batch_size:
             shared_memory.progress = (frame_index - frame_start + 1) / frame_count
