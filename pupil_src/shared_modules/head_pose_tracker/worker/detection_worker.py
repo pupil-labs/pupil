@@ -100,7 +100,8 @@ def offline_detection(
     ):
         detections = []
         if timestamp in timestamps_no_gaps:
-            src.seek_to_frame(target_frame_idx)
+            if target_frame_idx != src.target_frame_idx:
+                src.seek_to_frame(target_frame_idx)  # only seek frame if necessary
             frame = src.get_frame()
             detections = _detect(frame)
 
