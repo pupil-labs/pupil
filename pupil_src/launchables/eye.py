@@ -70,12 +70,12 @@ def eye(
     Streams Pupil coordinates.
 
     Reacts to notifications:
-       ``set_detection_mapping_mode``: Sets detection method
-       ``eye_process.should_stop``: Stops the eye process
-       ``recording.started``: Starts recording eye video
-       ``recording.stopped``: Stops recording eye video
-       ``frame_publishing.started``: Starts frame publishing
-       ``frame_publishing.stopped``: Stops frame publishing
+        ``set_detection_mapping_mode``: Sets detection method
+        ``eye_process.should_stop``: Stops the eye process
+        ``recording.started``: Starts recording eye video
+        ``recording.stopped``: Stops recording eye video
+        ``frame_publishing.started``: Starts frame publishing
+        ``frame_publishing.stopped``: Stops frame publishing
         ``start_eye_plugin``: Start plugins in eye process
 
     Emits notifications:
