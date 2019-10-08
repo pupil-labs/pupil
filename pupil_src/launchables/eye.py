@@ -460,23 +460,6 @@ def eye(
         if roi_user_settings and tuple(roi_user_settings[-1]) == g_pool.u_r.get()[-1]:
             g_pool.u_r.set(roi_user_settings)
 
-        def replace_source(source_class_name, source_settings):
-            g_pool.capture.deinit_ui()
-            g_pool.capture.cleanup()
-            g_pool.capture = source_class_by_name[source_class_name](
-                g_pool, **source_settings
-            )
-            g_pool.capture.init_ui()
-            if g_pool.writer:
-                logger.info("Done recording.")
-                try:
-                    g_pool.writer.release()
-                except RuntimeError:
-                    logger.error("No eye video recorded")
-                g_pool.writer = None
-
-        g_pool.replace_source = replace_source  # for ndsi capture
-
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
         glfw.glfwSetWindowIconifyCallback(main_window, on_iconify)
@@ -592,7 +575,10 @@ def eye(
                     subject.startswith("start_eye_capture")
                     and notification["target"] == g_pool.process
                 ):
-                    replace_source(notification["name"], notification["args"])
+                    g_pool.plugins.add(
+                        g_pool.plugin_by_name[notification["name"]],
+                        notification.get("args", {}),
+                    )
                 elif notification["subject"].startswith("pupil_detector.set_property"):
                     target_process = notification.get("target", g_pool.process)
                     should_apply = target_process == g_pool.process
