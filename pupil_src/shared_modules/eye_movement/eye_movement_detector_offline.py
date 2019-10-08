@@ -53,6 +53,7 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         self.storage = model.Classified_Segment_Storage(
             plugin=self, rec_dir=g_pool.rec_dir
         )
+        self.add_observer("on_task_completed", self.storage.save_to_disk)
         self.seek_controller = controller.Eye_Movement_Seek_Controller(
             plugin=self, storage=self.storage, seek_to_timestamp=self.seek_to_timestamp
         )
@@ -207,3 +208,6 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
             logger.warning(
                 "The selected export range does not include eye movement detections"
             )
+
+    def cleanup(self):
+        self.remove_observer("on_task_completed", self.storage.save_to_disk)
