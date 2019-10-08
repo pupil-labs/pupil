@@ -132,6 +132,9 @@ def eye(
         # monitoring
         import psutil
 
+        # Plug-ins
+        from plugin import Plugin_List
+
         # helpers/utils
         from uvc import get_time_monotonic
         from file_methods import Persistent_Dict
@@ -188,6 +191,31 @@ def eye(
 
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
+
+        plugins = manager_classes + source_classes
+        g_pool.plugin_by_name = {p.__name__: p for p in plugins}
+
+        preferred_names = [
+            f"Pupil Cam3 ID{eye_id}",
+            f"Pupil Cam2 ID{eye_id}",
+            f"Pupil Cam1 ID{eye_id}",
+        ]
+        if eye_id == 0:
+            preferred_names += ["HD-6000"]
+        default_capture_settings = (
+            "UVC_Source",
+            {
+                "preferred_names": preferred_names,
+                "frame_size": (320, 240),
+                "frame_rate": 120,
+            },
+        )
+        capture_settings = overwrite_cap_settings or default_capture_settings
+
+        default_plugins = [
+            # TODO: extend with plugins
+            capture_settings
+        ]
 
         # Callback functions
         def on_resize(window, w, h):
@@ -274,32 +302,6 @@ def eye(
             g_pool, **manager_settings
         )
 
-        if eye_id == 0:
-            cap_src = ["Pupil Cam3 ID0", "Pupil Cam2 ID0", "Pupil Cam1 ID0", "HD-6000"]
-        else:
-            cap_src = ["Pupil Cam3 ID1", "Pupil Cam2 ID1", "Pupil Cam1 ID1"]
-
-        # Initialize capture
-        default_settings = (
-            "UVC_Source",
-            {"preferred_names": cap_src, "frame_size": (320, 240), "frame_rate": 120},
-        )
-
-        capture_source_settings = overwrite_cap_settings or session_settings.get(
-            "capture_settings", default_settings
-        )
-        source_class_name, source_settings = capture_source_settings
-        source_class_by_name = {c.__name__: c for c in source_classes}
-        g_pool.capture = source_class_by_name[source_class_name](
-            g_pool, **source_settings
-        )
-        assert g_pool.capture
-
-        g_pool.u_r = UIRoi((g_pool.capture.frame_size[1], g_pool.capture.frame_size[0]))
-        roi_user_settings = session_settings.get("roi")
-        if roi_user_settings and tuple(roi_user_settings[-1]) == g_pool.u_r.get()[-1]:
-            g_pool.u_r.set(roi_user_settings)
-
         pupil_detector_settings = session_settings.get("pupil_detector_settings", None)
         last_pupil_detector = pupil_detectors[
             session_settings.get("last_pupil_detector", Detector_2D.__name__)
@@ -329,11 +331,7 @@ def eye(
         glfw.glfwInit()
         title = "Pupil Capture - eye {}".format(eye_id)
 
-        width, height = g_pool.capture.frame_size
-        width *= 2
-        height *= 2
-        width += icon_bar_width
-        width, height = session_settings.get("window_size", (width, height))
+        width, height = session_settings.get("window_size", (640 + icon_bar_width, 480))
 
         main_window = glfw.glfwCreateWindow(width, height, title, None, None)
         window_pos = session_settings.get("window_position", window_position_default)
@@ -449,10 +447,18 @@ def eye(
         g_pool.iconbar.append(icon)
         toggle_general_settings(False)
 
+        g_pool.plugins = Plugin_List(
+            g_pool, session_settings.get("loaded_plugins", default_plugins)
+        )
+
         g_pool.pupil_detector.init_ui()
-        g_pool.capture.init_ui()
         g_pool.capture_manager.init_ui()
         g_pool.writer = None
+
+        g_pool.u_r = UIRoi((g_pool.capture.frame_size[1], g_pool.capture.frame_size[0]))
+        roi_user_settings = session_settings.get("roi")
+        if roi_user_settings and tuple(roi_user_settings[-1]) == g_pool.u_r.get()[-1]:
+            g_pool.u_r.set(roi_user_settings)
 
         def replace_source(source_class_name, source_settings):
             g_pool.capture.deinit_ui()
@@ -831,16 +837,13 @@ def eye(
             g_pool.writer = None
 
         glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
+        session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         # save session persistent settings
         session_settings["gui_scale"] = g_pool.gui_user_scale
         session_settings["roi"] = g_pool.u_r.get()
         session_settings["flip"] = g_pool.flip
         session_settings["display_mode"] = g_pool.display_mode
         session_settings["ui_config"] = g_pool.gui.configuration
-        session_settings["capture_settings"] = (
-            g_pool.capture.class_name,
-            g_pool.capture.get_init_dict(),
-        )
         session_settings["capture_manager_settings"] = (
             g_pool.capture_manager.class_name,
             g_pool.capture_manager.get_init_dict(),
@@ -860,13 +863,15 @@ def eye(
 
         session_settings.close()
 
-        g_pool.capture.deinit_ui()
+        for plugin in g_pool.plugins:
+            plugin.alive = False
+        g_pool.plugins.clean()
+
         g_pool.capture_manager.deinit_ui()
         g_pool.pupil_detector.deinit_ui()
 
         g_pool.pupil_detector.cleanup()
         g_pool.capture_manager.cleanup()
-        g_pool.capture.cleanup()
 
         glfw.glfwDestroyWindow(main_window)
         g_pool.gui.terminate()
