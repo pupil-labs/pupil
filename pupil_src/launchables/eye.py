@@ -142,8 +142,7 @@ def eye(
         from methods import normalize, denormalize, timer
         from av_writer import JPEG_Writer, MPEG_Writer
         from ndsi import H264Writer
-        from video_capture import source_classes
-        from video_capture import manager_classes
+        from video_capture import source_classes, manager_classes
 
         from background_helper import IPC_Logging_Task_Proxy
 
@@ -214,7 +213,8 @@ def eye(
 
         default_plugins = [
             # TODO: extend with plugins
-            capture_settings
+            capture_settings,
+            ("UVC_Manager", {}),
         ]
 
         # Callback functions
@@ -291,16 +291,6 @@ def eye(
             "roi": "Click and drag on the blue circles to adjust the region of interest. The region should be as small as possible, but large enough to capture all pupil movements.",
             "algorithm": "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below.",
         }
-
-        capture_manager_settings = session_settings.get(
-            "capture_manager_settings", ("UVC_Manager", {})
-        )
-
-        manager_class_name, manager_settings = capture_manager_settings
-        manager_class_by_name = {c.__name__: c for c in manager_classes}
-        g_pool.capture_manager = manager_class_by_name[manager_class_name](
-            g_pool, **manager_settings
-        )
 
         pupil_detector_settings = session_settings.get("pupil_detector_settings", None)
         last_pupil_detector = pupil_detectors[
@@ -452,7 +442,6 @@ def eye(
         )
 
         g_pool.pupil_detector.init_ui()
-        g_pool.capture_manager.init_ui()
         g_pool.writer = None
 
         g_pool.u_r = UIRoi((g_pool.capture.frame_size[1], g_pool.capture.frame_size[0]))
@@ -830,10 +819,6 @@ def eye(
         session_settings["flip"] = g_pool.flip
         session_settings["display_mode"] = g_pool.display_mode
         session_settings["ui_config"] = g_pool.gui.configuration
-        session_settings["capture_manager_settings"] = (
-            g_pool.capture_manager.class_name,
-            g_pool.capture_manager.get_init_dict(),
-        )
         session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
         session_settings["version"] = str(g_pool.version)
         session_settings[
@@ -853,11 +838,9 @@ def eye(
             plugin.alive = False
         g_pool.plugins.clean()
 
-        g_pool.capture_manager.deinit_ui()
         g_pool.pupil_detector.deinit_ui()
 
         g_pool.pupil_detector.cleanup()
-        g_pool.capture_manager.cleanup()
 
         glfw.glfwDestroyWindow(main_window)
         g_pool.gui.terminate()
