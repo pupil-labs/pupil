@@ -266,8 +266,7 @@ def eye(
 
         def on_drop(window, count, paths):
             paths = [paths[x].decode("utf-8") for x in range(count)]
-            plugins = (g_pool.capture_manager, g_pool.capture)
-            for plugin in plugins:
+            for plugin in g_pool.plugins:
                 if plugin.on_drop(paths):
                     break
 
@@ -283,7 +282,6 @@ def eye(
 
         g_pool.iconified = False
         g_pool.capture = None
-        g_pool.capture_manager = None
         g_pool.flip = session_settings.get("flip", False)
         g_pool.display_mode = session_settings.get("display_mode", "camera_image")
         g_pool.display_mode_info_text = {
@@ -634,14 +632,14 @@ def eye(
                             **props,  # add properties to broadcast
                         }
                         ipc_socket.notify(properties_broadcast)
-                g_pool.capture.on_notify(notification)
-                g_pool.capture_manager.on_notify(notification)
+                for plugin in g_pool.plugins:
+                    plugin.on_notify(notification)
 
-            # Get an image from the grabber
             event = {}
-            g_pool.capture.recent_events(event)
+            for plugin in g_pool.plugins:
+                plugin.recent_events(event)
+
             frame = event.get("frame")
-            g_pool.capture_manager.recent_events(event)
             if frame:
                 f_width, f_height = g_pool.capture.frame_size
                 if (g_pool.u_r.array_shape[0], g_pool.u_r.array_shape[1]) != (
