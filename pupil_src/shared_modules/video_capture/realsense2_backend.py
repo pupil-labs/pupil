@@ -895,7 +895,7 @@ class Realsense2_Manager(Base_Manager):
             else:
                 self.notify_all(
                     {
-                        "subject": "start_eye_capture",
+                        "subject": "start_eye_plugin",
                         "target": self.g_pool.process,
                         "name": "Realsense2_Source",
                         "args": settings,
