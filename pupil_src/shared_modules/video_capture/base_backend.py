@@ -200,14 +200,16 @@ class Base_Manager(Plugin):
             self.auto_activate_source()
 
     def replace_backend_manager(self, manager_class, auto_activate=False):
-        if self.g_pool.process.startswith("eye"):
-            if not isinstance(self.g_pool.capture_manager, manager_class):
-                self.g_pool.capture_manager.deinit_ui()
-                self.g_pool.capture_manager.cleanup()
-                self.g_pool.capture_manager = manager_class(self.g_pool)
-                self.g_pool.capture_manager.init_ui()
-        else:
-            if not isinstance(self, manager_class):
+        if not isinstance(self, manager_class):
+            if self.g_pool.process.startswith("eye"):
+                self.notify_all(
+                    {
+                        "subject": "start_eye_plugin",
+                        "target": self.g_pool.process,
+                        "name": manager_class.__name__,
+                    }
+                )
+            else:
                 self.notify_all(
                     {"subject": "start_plugin", "name": manager_class.__name__}
                 )
