@@ -76,6 +76,7 @@ def eye(
        ``recording.stopped``: Stops recording eye video
        ``frame_publishing.started``: Starts frame publishing
        ``frame_publishing.stopped``: Stops frame publishing
+        ``start_eye_plugin``: Start plugins in eye process
 
     Emits notifications:
         ``eye_process.started``: Eye process started
@@ -559,13 +560,16 @@ def eye(
                     should_publish_frames = False
                     frame_publish_format = "jpeg"
                 elif (
-                    subject.startswith("start_eye_capture")
+                    subject.startswith("start_eye_plugin")
                     and notification["target"] == g_pool.process
                 ):
-                    g_pool.plugins.add(
-                        g_pool.plugin_by_name[notification["name"]],
-                        notification.get("args", {}),
-                    )
+                    try:
+                        g_pool.plugins.add(
+                            g_pool.plugin_by_name[notification["name"]],
+                            notification.get("args", {}),
+                        )
+                    except KeyError as err:
+                        logger.error(f"Attempt to load unknown plugin: {err}")
                 elif notification["subject"].startswith("pupil_detector.set_property"):
                     target_process = notification.get("target", g_pool.process)
                     should_apply = target_process == g_pool.process

@@ -186,6 +186,7 @@ class Base_Manager(Plugin):
 
         Emmits notifications (indirectly):
             ``start_plugin``: For world thread
+            ``start_eye_plugin``: For eye thread
             ``backend.auto_activate_source``
         """
 
