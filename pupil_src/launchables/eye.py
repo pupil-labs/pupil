@@ -828,6 +828,7 @@ def eye(
         # in case eye recording was still runnnig: Save&close
         if g_pool.writer:
             logger.info("Done recording eye.")
+            g_pool.writer.release()
             g_pool.writer = None
 
         glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
