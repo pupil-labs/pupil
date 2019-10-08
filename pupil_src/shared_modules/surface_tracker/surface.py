@@ -47,7 +47,6 @@ class Surface(abc.ABC):
         deprecated_definition: bool = None,
     ):
 
-
         init_args = [
             real_world_size,
             marker_aggregates_undist,
@@ -55,15 +54,24 @@ class Surface(abc.ABC):
             build_up_status,
             deprecated_definition,
         ]
-        assert all(map(is_none, init_args)) or all(map(is_not_none, init_args)),\
-            "Either all initialization arguments are None, or they all are not None"
+        assert all(map(is_none, init_args)) or all(
+            map(is_not_none, init_args)
+        ), "Either all initialization arguments are None, or they all are not None"
 
-        marker_aggregates_undist = marker_aggregates_undist if marker_aggregates_undist is not None else []
-        marker_aggregates_dist = marker_aggregates_dist if marker_aggregates_dist is not None else []
+        marker_aggregates_undist = (
+            marker_aggregates_undist if marker_aggregates_undist is not None else []
+        )
+        marker_aggregates_dist = (
+            marker_aggregates_dist if marker_aggregates_dist is not None else []
+        )
 
         self.name = name
-        self.real_world_size = real_world_size if real_world_size is not None else {"x": 1.0, "y": 1.0}
-        self.deprecated_definition = deprecated_definition if deprecated_definition is not None else False
+        self.real_world_size = (
+            real_world_size if real_world_size is not None else {"x": 1.0, "y": 1.0}
+        )
+        self.deprecated_definition = (
+            deprecated_definition if deprecated_definition is not None else False
+        )
 
         # We store the surface state in two versions: once computed with the
         # undistorted scene image and once with the still distorted scene image. The
@@ -100,8 +108,6 @@ class Surface(abc.ABC):
         # The uid is only used to implement __hash__ and __eq__
         self._uid = uuid.uuid4()
 
-
-
     def __hash__(self):
         return int(self._uid)
 
@@ -114,6 +120,7 @@ class Surface(abc.ABC):
     @staticmethod
     def property_equality(x: "Surface", y: "Surface") -> bool:
         import multiprocessing as mp
+
         def property_dict(x: Surface) -> dict:
             x_dict = x.__dict__.copy()
             del x_dict["_uid"]  # `_uid`s are always unique
@@ -123,6 +130,7 @@ class Surface(abc.ABC):
                 if isinstance(x_dict[key], mp.sharedctypes.Synchronized):
                     x_dict[key] = x_dict[key].value
             return x_dict
+
         return property_dict(x) == property_dict(y)
 
     @property
@@ -582,7 +590,11 @@ class Surface(abc.ABC):
 
     def get_uniform_heatmap(self, resolution):
         if len(resolution) != 2:
-            raise ValueError("resolution has to be two dimensional but found dimension {}!".format(len(resolution)))
+            raise ValueError(
+                "resolution has to be two dimensional but found dimension {}!".format(
+                    len(resolution)
+                )
+            )
 
         hm = np.zeros((*resolution, 4), dtype=np.uint8)
         hm[:, :, :3] = cv2.applyColorMap(hm[:, :, :3], cv2.COLORMAP_JET)
