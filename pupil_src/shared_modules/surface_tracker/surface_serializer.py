@@ -51,11 +51,11 @@ class _Surface_Serializer_Base(abc.ABC):
 
         reg_markers = [
             dict_from_marker_aggregate(marker_aggregate)
-            for marker_aggregate in surface._registered_markers_undist.values()  # TODO: Provide a public property for this
+            for marker_aggregate in surface.registered_markers_undist.values()
         ]
         registered_markers_dist = [
             dict_from_marker_aggregate(marker_aggregate)
-            for marker_aggregate in surface._registered_markers_dist.values()  # TODO: Provide a public property for this
+            for marker_aggregate in surface.registered_markers_dist.values()
         ]
         return {
             "version": self.version,
