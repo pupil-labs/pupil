@@ -169,7 +169,8 @@ def _export_world_video(
         if not videos:
             raise FileNotFoundError("No world video found")
 
-        cap = File_Source(g_pool, source_path=videos[0], fill_gaps=True, timing=None)
+        source_path = videos[0].resolve()
+        cap = File_Source(g_pool, source_path=source_path, fill_gaps=True, timing=None)
         if not cap.initialised:
             warn = "Trying to export zero-duration world video."
             logger.warning(warn)

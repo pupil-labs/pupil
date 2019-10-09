@@ -219,7 +219,7 @@ class File_Source(Playback_Source, Base_Source):
         else:
             self.recent_events = self.recent_events_own_timing
         # minimal attribute set
-        self.source_path = source_path
+        self.source_path = str(source_path)
         self.loop = loop
         self.fill_gaps = fill_gaps
         rec, set_name = self.get_rec_set_name(self.source_path)
@@ -688,7 +688,7 @@ class File_Manager(Base_Manager):
         else:
             self.notify_all(
                 {
-                    "subject": "start_eye_capture",
+                    "subject": "start_eye_plugin",
                     "target": self.g_pool.process,
                     "name": "File_Source",
                     "args": settings,

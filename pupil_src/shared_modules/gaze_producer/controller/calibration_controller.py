@@ -27,7 +27,7 @@ class CalibrationController(Observable):
         self._reference_location_storage = reference_location_storage
         self._task_manager = task_manager
         self._get_current_trim_mark_range = get_current_trim_mark_range
-        self._recording_uuid = recording_uuid
+        self._recording_uuid = str(recording_uuid)
 
     def calculate(self, calibration):
         def on_calibration_completed(status_and_result):

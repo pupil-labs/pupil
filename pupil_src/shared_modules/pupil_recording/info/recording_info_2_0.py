@@ -1,3 +1,14 @@
+"""
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2019 Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+"""
+
 import uuid
 
 from . import RecordingInfoFile, Version
@@ -81,12 +92,12 @@ class _RecordingInfoFile_2_0(RecordingInfoFile):
         self["recording_software_name"] = str(value)
 
     @property
-    def recording_software_version(self) -> Version:
-        return Version(self["recording_software_version"])
+    def recording_software_version(self) -> str:
+        return self["recording_software_version"]
 
     @recording_software_version.setter
-    def recording_software_version(self, value: Version):
-        self["recording_software_version"] = utils.string_from_recording_version(value)
+    def recording_software_version(self, value: str):
+        self["recording_software_version"] = value
 
     @property
     def recording_name(self) -> str:

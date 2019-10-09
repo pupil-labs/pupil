@@ -10,14 +10,16 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import csv
+import datetime
 import logging
 import os
-from shutil import copy2
+from types import SimpleNamespace
 
 import csv_utils
 import player_methods as pm
 from methods import denormalize
 from pupil_recording import PupilRecording
+from video_capture.file_backend import File_Source
 from video_export.plugin_base.isolated_frame_exporter import IsolatedFrameExporter
 
 logger = logging.getLogger(__name__)
@@ -64,10 +66,11 @@ class iMotions_Exporter(IsolatedFrameExporter):
     def export_data(self, export_range, export_dir):
 
         pupil_recording = PupilRecording(rec_dir=self.g_pool.rec_dir)
+        meta = pupil_recording.meta_info
 
-        if pupil_recording.is_pupil_invisible:
+        if meta.recording_software_name == meta.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE:
             logger.error(
-                "Currently, the iMotions export doesn't support Pupil Invisible recordings"
+                "The iMotions exporter does not yet support Pupil Invisible recordings!"
             )
             return
 
@@ -118,18 +121,60 @@ def _process_frame(capture, frame):
 
 
 def _copy_info_csv(source_folder, destination_folder):
-    info_src = os.path.join(source_folder, "info.csv")
+    # TODO: The iMotions export still relies on the old-style info.csv, so we have to
+    # generate this here manually. We should clarify with iMotions whether we can update
+    # this to our new recording format.
+    recording = PupilRecording(source_folder)
+    meta = recording.meta_info
+
+    # NOTE: This is potentially incorrect, since we don't know the timezone. But we are
+    # keeping this format for backwards compatibility with the old-style info.csv.
+    start_datetime = datetime.datetime.fromtimestamp(meta.start_time_system_s)
+    start_date = start_datetime.strftime("%d.%m.%Y")
+    start_time = start_datetime.strftime("%H:%M:%S")
+
+    duration_full_s = meta.duration_s
+    duration_h = int(duration_full_s // 3600)
+    duration_m = int((duration_full_s % 3600) // 60)
+    duration_s = int(round(duration_full_s % 3600 % 60))
+    duration_time = f"{duration_h:02}:{duration_m:02}:{duration_s:02}"
+
+    try:
+        world_video = recording.files().core().world().videos()[0]
+    except IndexError:
+        logger.error("Error while exporting iMotions data. World video not found!")
+        return
+
+    cap = File_Source(SimpleNamespace(), world_video)
+    world_frames = cap.get_frame_count()
+    world_resolution = f"{cap.frame_size[0]}x{cap.frame_size[1]}"
+
+    data = {}
+    data["Recording Name"] = meta.recording_name
+    data["Start Date"] = start_date
+    data["Start Time"] = start_time
+    data["Start Time (System)"] = meta.start_time_system_s
+    data["Start Time (Synced)"] = meta.start_time_synced_s
+    data["Recording UUID"] = str(meta.recording_uuid)
+    data["Duration Time"] = duration_time
+    data["World Camera Frames"] = world_frames
+    data["World Camera Resolution"] = world_resolution
+    data["Capture Software Version"] = meta.recording_software_version
+    data["Data Format Version"] = str(meta.min_player_version)
+    data["System Info"] = meta.system_info
+
     info_dest = os.path.join(destination_folder, "iMotions_info.csv")
-    copy2(info_src, info_dest)
+    with open(info_dest, "w", newline="", encoding="utf-8") as f:
+        csv_utils.write_key_value_file(f, data)
 
 
 def _get_recording_start_date(source_folder):
-    csv_loc = os.path.join(source_folder, "info.csv")
-    with open(csv_loc, "r", encoding="utf-8") as csv_file:
-        rec_info = csv_utils.read_key_value_file(csv_file)
-        date = rec_info["Start Date"].replace(".", "_").replace(":", "_")
-        time = rec_info["Start Time"].replace(":", "_")
-    return "{}_{}".format(date, time)
+    recording = PupilRecording(source_folder)
+    meta = recording.meta_info
+    # NOTE: This is potentially incorrect, since we don't know the timezone. But we are
+    # keeping this format for backwards compatibility with the old-style info.csv.
+    start_datetime = datetime.datetime.fromtimestamp(meta.start_time_system_s)
+    return start_datetime.strftime("%d_%m_%Y_%H_%M_%S")
 
 
 class _iMotionsExporterNo3DGazeDataError(Exception):

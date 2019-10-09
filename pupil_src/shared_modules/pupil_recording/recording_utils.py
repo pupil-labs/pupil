@@ -1,3 +1,14 @@
+"""
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2019 Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+"""
+
 import enum
 from pathlib import Path
 
@@ -112,13 +123,13 @@ def _is_pupil_invisible_recording(rec_dir: str) -> bool:
 
 
 def _is_pupil_mobile_recording(rec_dir: str) -> bool:
-    info_csv = recording_info_utils.read_info_csv_file(rec_dir)
     try:
+        info_csv = recording_info_utils.read_info_csv_file(rec_dir)
         return (
             info_csv["Capture Software"] == "Pupil Mobile"
             and "Data Format Version" not in info_csv
         )
-    except KeyError:
+    except (KeyError, FileNotFoundError):
         return False
 
 

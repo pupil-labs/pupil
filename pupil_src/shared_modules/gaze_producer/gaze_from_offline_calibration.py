@@ -8,14 +8,13 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import os
-
-import csv_utils
 import data_changed
-from gaze_producer import ui as plugin_ui, controller, model
+from gaze_producer import controller, model
+from gaze_producer import ui as plugin_ui
 from gaze_producer.gaze_producer_base import GazeProducerBase
 from observable import Observable
 from plugin_timeline import PluginTimeline
+from pupil_recording import PupilRecording
 from tasklib.manager import PluginTaskManager
 
 
@@ -33,7 +32,7 @@ class GazeFromOfflineCalibration(Observable, GazeProducerBase):
 
         self._task_manager = PluginTaskManager(plugin=self)
 
-        self._recording_uuid = self._load_recording_uuid_from_info_csv()
+        self._recording_uuid = PupilRecording(g_pool.rec_dir).meta_info.recording_uuid
 
         self._setup_storages()
         self._setup_controllers()
@@ -209,9 +208,3 @@ class GazeFromOfflineCalibration(Observable, GazeProducerBase):
         minutes = abs(time // 60)  # abs because it's sometimes -0
         seconds = round(time % 60)
         return "{:02.0f}:{:02.0f}".format(minutes, seconds)
-
-    def _load_recording_uuid_from_info_csv(self):
-        info_csv_path = os.path.join(self.g_pool.rec_dir, "info.csv")
-        with open(info_csv_path, "r", encoding="utf-8") as csv_file:
-            recording_info = csv_utils.read_key_value_file(csv_file)
-            return recording_info["Recording UUID"]

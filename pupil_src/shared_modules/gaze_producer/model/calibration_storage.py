@@ -29,7 +29,7 @@ class CalibrationStorage(Storage, Observable):
         super().__init__(plugin)
         self._rec_dir = rec_dir
         self._get_recording_index_range = get_recording_index_range
-        self._recording_uuid = recording_uuid
+        self._recording_uuid = str(recording_uuid)
         self._calibrations = []
         self._load_from_disk()
         if not self._calibrations:
@@ -59,8 +59,9 @@ class CalibrationStorage(Storage, Observable):
     def add(self, calibration):
         if any(c.unique_id == calibration.unique_id for c in self._calibrations):
             logger.warning(
-                "Did not add calibration {} because it is already in the "
-                "storage".format(calibration.name)
+                f"Did not add calibration {calibration.name} ({calibration.unique_id})"
+                " because it is already in the storage. Currently in storage:\n"
+                + "\n".join(f"- {c.name} ({c.unique_id})" for c in self._calibrations)
             )
             return
         self._calibrations.append(calibration)

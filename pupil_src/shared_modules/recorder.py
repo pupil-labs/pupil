@@ -327,7 +327,7 @@ class Recorder(System_Plugin_Base):
         self.meta_info.recording_software_name = (
             RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
         )
-        self.meta_info.recording_software_version = Version(self.g_pool.version.vstring)
+        self.meta_info.recording_software_version = self.g_pool.version.vstring
         self.meta_info.recording_name = self.session_name
         self.meta_info.start_time_synced_s = start_time_synced
         self.meta_info.start_time_system_s = self.start_time

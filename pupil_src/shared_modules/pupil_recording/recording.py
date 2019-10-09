@@ -1,3 +1,14 @@
+"""
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2019 Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+"""
+
 import collections
 import enum
 import logging
@@ -142,9 +153,9 @@ class PupilRecording:
                 for patterns in patterns_for_keys
             ]
             if mode is self.FilterMode.UNION:
-                self.__files = set.union(*sets_of_files)
+                self.__files = list(set.union(*sets_of_files))
             elif mode is self.FilterMode.INTERSECTION:
-                self.__files = set.intersection(*sets_of_files)
+                self.__files = list(set.intersection(*sets_of_files))
             else:
                 logger.warning(
                     f"Unknown filter mode: {mode}! Must be 'union' or 'intersection'!"
