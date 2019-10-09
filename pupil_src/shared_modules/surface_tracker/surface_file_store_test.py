@@ -31,21 +31,15 @@ from .test_fixtures import (
 
 
 def test_file_store_v00():
-    _test_file_store_read_write(
-        root_dir=surface_definition_v00_dir(),
-    )
+    _test_file_store_read_write(root_dir=surface_definition_v00_dir())
 
 
 def test_file_store_v01_before_update():
-    _test_file_store_read_write(
-        root_dir=surface_definition_v01_before_update_dir(),
-    )
+    _test_file_store_read_write(root_dir=surface_definition_v01_before_update_dir())
 
 
 def test_file_store_v01_after_update():
-    _test_file_store_read_write(
-        root_dir=surface_definition_v01_after_update_dir(),
-    )
+    _test_file_store_read_write(root_dir=surface_definition_v01_after_update_dir())
 
 
 ##### PRIVATE

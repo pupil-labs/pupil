@@ -83,10 +83,7 @@ def perspective_transform_to_norm_corners(verts):
 
 
 def locate_surface(
-    visible_markers,
-    camera_model,
-    registered_markers_undist,
-    registered_markers_dist,
+    visible_markers, camera_model, registered_markers_undist, registered_markers_dist
 ):
     """Computes a Surface_Location based on a list of visible markers."""
 
@@ -96,9 +93,9 @@ def locate_surface(
 
     # If the surface is defined by 2+ markers, we require 2+ markers to be detected.
     # If the surface is defined by 1 marker, we require 1 marker to be detected.
-    if not visible_registered_marker_ids or len(
-        visible_registered_marker_ids
-    ) < min(2, len(registered_markers_undist)):
+    if not visible_registered_marker_ids or len(visible_registered_marker_ids) < min(
+        2, len(registered_markers_undist)
+    ):
         return Surface_Location(detected=False)
 
     visible_verts_dist = np.array(
@@ -111,10 +108,7 @@ def locate_surface(
         ]
     )
     registered_verts_dist = np.array(
-        [
-            registered_markers_dist[uid].verts_uv
-            for uid in visible_registered_marker_ids
-        ]
+        [registered_markers_dist[uid].verts_uv for uid in visible_registered_marker_ids]
     )
 
     visible_verts_dist.shape = (-1, 2)
@@ -144,7 +138,11 @@ def locate_surface(
 
 def uniform_heatmap(resolution):
     if len(resolution) != 2:
-        raise ValueError("resolution has to be two dimensional but found dimension {}!".format(len(resolution)))
+        raise ValueError(
+            "resolution has to be two dimensional but found dimension {}!".format(
+                len(resolution)
+            )
+        )
 
     hm = np.zeros((*resolution, 4), dtype=np.uint8)
     hm[:, :, :3] = cv2.applyColorMap(hm[:, :, :3], cv2.COLORMAP_JET)
@@ -159,7 +157,12 @@ def placeholder_heatmap(resolution=(1, 1)):
 
 
 def map_to_surf(
-    points, camera_model, img_to_surf_trans, dist_img_to_surf_trans, compensate_distortion=True, trans_matrix=None
+    points,
+    camera_model,
+    img_to_surf_trans,
+    dist_img_to_surf_trans,
+    compensate_distortion=True,
+    trans_matrix=None,
 ):
     """Map points from image pixel space to normalized surface space.
 
@@ -196,7 +199,12 @@ def map_to_surf(
 
 
 def map_from_surf(
-    points, camera_model, surf_to_img_trans, surf_to_dist_img_trans, compensate_distortion=True, trans_matrix=None
+    points,
+    camera_model,
+    surf_to_img_trans,
+    surf_to_dist_img_trans,
+    compensate_distortion=True,
+    trans_matrix=None,
 ):
     """Map points from normalized surface space to image pixel space.
 
@@ -233,7 +241,14 @@ def map_from_surf(
     return img_points
 
 
-def map_gaze_and_fixation_event(event, camera_model, img_to_surf_trans, dist_img_to_surf_trans, compensate_distortion, trans_matrix):
+def map_gaze_and_fixation_event(
+    event,
+    camera_model,
+    img_to_surf_trans,
+    dist_img_to_surf_trans,
+    compensate_distortion,
+    trans_matrix,
+):
     """
     Map a list of gaze or fixation events onto the surface and return the
     corresponding list of gaze/fixation on surface events.
@@ -262,7 +277,7 @@ def map_gaze_and_fixation_event(event, camera_model, img_to_surf_trans, dist_img
         img_to_surf_trans=img_to_surf_trans,
         dist_img_to_surf_trans=dist_img_to_surf_trans,
         compensate_distortion=compensate_distortion,
-        trans_matrix=trans_matrix
+        trans_matrix=trans_matrix,
     )
     on_surf = bool((0 <= surf_norm_pos[0] <= 1) and (0 <= surf_norm_pos[1] <= 1))
 
@@ -289,7 +304,7 @@ def add_marker(
     img_to_surf_trans,
     dist_img_to_surf_trans,
     compensate_distortion: bool,
-    should_copy_markers: bool = True
+    should_copy_markers: bool = True,
 ) -> Surface_Marker_UID_To_Aggregate_Mapping:
     if should_copy_markers:
         markers = markers.copy()
@@ -300,7 +315,7 @@ def add_marker(
         camera_model=camera_model,
         img_to_surf_trans=img_to_surf_trans,
         dist_img_to_surf_trans=dist_img_to_surf_trans,
-        compensate_distortion=compensate_distortion
+        compensate_distortion=compensate_distortion,
     )
     surface_marker_dist.add_observation(uv_coords_dist)
     markers[marker_uid] = surface_marker_dist
@@ -335,7 +350,7 @@ def move_corner(
         camera_model=camera_model,
         img_to_surf_trans=img_to_surf_trans,
         dist_img_to_surf_trans=dist_img_to_surf_trans,
-        compensate_distortion=compensate_distortion
+        compensate_distortion=compensate_distortion,
     )
     old_corners = np.array([(0, 0), (1, 0), (1, 1), (0, 1)], dtype=np.float32)
 
@@ -347,5 +362,5 @@ def move_corner(
         marker_aggregate.verts_uv = cv2.perspectiveTransform(
             marker_aggregate.verts_uv.reshape((-1, 1, 2)), transform
         ).reshape((-1, 2))
-    
+
     return marker_aggregate_mapping

@@ -52,7 +52,7 @@ def parse_surface_marker_type(uid: Surface_Marker_UID) -> Surface_Marker_Type:
 
 
 def parse_surface_marker_tag_family(uid: Surface_Marker_UID) -> typing.Optional[str]:
-    _, tag_family ,_ = _parse_surface_marker_uid_components(uid=uid)
+    _, tag_family, _ = _parse_surface_marker_uid_components(uid=uid)
     return tag_family
 
 
@@ -61,7 +61,11 @@ def parse_surface_marker_tag_id(uid: Surface_Marker_UID) -> Surface_Marker_TagID
     return tag_id
 
 
-def create_surface_marker_uid(marker_type: Surface_Marker_Type, tag_family: typing.Optional[str], tag_id: Surface_Marker_TagID) -> Surface_Marker_UID:
+def create_surface_marker_uid(
+    marker_type: Surface_Marker_Type,
+    tag_family: typing.Optional[str],
+    tag_id: Surface_Marker_TagID,
+) -> Surface_Marker_UID:
     marker_type = marker_type.value
     if tag_family is None:
         return Surface_Marker_UID(f"{marker_type}:{tag_id}")
@@ -69,7 +73,9 @@ def create_surface_marker_uid(marker_type: Surface_Marker_Type, tag_family: typi
         return Surface_Marker_UID(f"{marker_type}:{tag_family}:{tag_id}")
 
 
-def _parse_surface_marker_uid_components(uid: Surface_Marker_UID) -> typing.Tuple[Surface_Marker_Type, typing.Optional[str], Surface_Marker_TagID]:
+def _parse_surface_marker_uid_components(
+    uid: Surface_Marker_UID
+) -> typing.Tuple[Surface_Marker_Type, typing.Optional[str], Surface_Marker_TagID]:
     components = str(uid).split(":")
     if len(components) == 2:
         marker_type, tag_id = components
@@ -77,8 +83,12 @@ def _parse_surface_marker_uid_components(uid: Surface_Marker_UID) -> typing.Tupl
     elif len(components) == 3:
         marker_type, tag_family, tag_id = components
     else:
-        raise ValueError(f"Invalid surface marker uid: \"{uid}\"")
-    return Surface_Marker_Type(marker_type), tag_family, Surface_Marker_TagID(int(tag_id))
+        raise ValueError(f'Invalid surface marker uid: "{uid}"')
+    return (
+        Surface_Marker_Type(marker_type),
+        tag_family,
+        Surface_Marker_TagID(int(tag_id)),
+    )
 
 
 class Surface_Base_Marker(metaclass=abc.ABCMeta):
@@ -169,7 +179,9 @@ class _Square_Marker_Detection(_Square_Marker_Detection_Raw, Surface_Base_Marker
 
     @property
     def uid(self) -> Surface_Marker_UID:
-        return create_surface_marker_uid(marker_type=self.marker_type, tag_family=None, tag_id=self.tag_id)
+        return create_surface_marker_uid(
+            marker_type=self.marker_type, tag_family=None, tag_id=self.tag_id
+        )
 
     @property
     def tag_id(self) -> Surface_Marker_TagID:
@@ -223,7 +235,9 @@ class _Apriltag_V3_Marker_Detection(
 
     @property
     def uid(self) -> Surface_Marker_UID:
-        return create_surface_marker_uid(marker_type=self.marker_type, tag_family=self.tag_family, tag_id=self.tag_id)
+        return create_surface_marker_uid(
+            marker_type=self.marker_type, tag_family=self.tag_family, tag_id=self.tag_id
+        )
 
     @property
     def tag_id(self) -> Surface_Marker_TagID:
@@ -449,13 +463,13 @@ def test_surface_marker_uid_helpers():
     all_marker_types = set(Surface_Marker_Type)
     all_tag_ids = [Surface_Marker_TagID(123)]
     all_tag_families = ["best_tags", None]
-    all_combinations = itertools.product(all_marker_types, all_tag_families, all_tag_ids)
+    all_combinations = itertools.product(
+        all_marker_types, all_tag_families, all_tag_ids
+    )
 
     for marker_type, tag_family, tag_id in all_combinations:
         uid = create_surface_marker_uid(
-            marker_type=marker_type,
-            tag_family=tag_family,
-            tag_id=tag_id,
+            marker_type=marker_type, tag_family=tag_family, tag_id=tag_id
         )
         assert len(uid) > 0, "Surface_Marker_UID is not valid"
 

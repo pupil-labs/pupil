@@ -141,15 +141,15 @@ class Surface_Offline(Surface):
     def update_location_cache(self, frame_idx, marker_cache, camera_model):
         # TODO: Update all call sites of this method with calculate_and_overwrite_single_entry_in_location_cache
         return self.calculate_and_overwrite_single_entry_in_location_cache(
-            frame_idx=frame_idx,
-            marker_cache=marker_cache,
-            camera_model=camera_model,
+            frame_idx=frame_idx, marker_cache=marker_cache, camera_model=camera_model
         )
 
     def overwrite_single_entry_in_location_cache(self, frame_idx: int, location):
         self.location_cache.update(frame_idx, location, force=True)
 
-    def calculate_and_overwrite_single_entry_in_location_cache(self, frame_idx: int, marker_cache, camera_model):
+    def calculate_and_overwrite_single_entry_in_location_cache(
+        self, frame_idx: int, marker_cache, camera_model
+    ):
         """ Update a single entry in the location cache."""
         try:
             if not marker_cache[frame_idx]:

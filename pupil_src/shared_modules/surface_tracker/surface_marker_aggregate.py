@@ -26,11 +26,14 @@ class Surface_Marker_Aggregate(object):
     """
 
     @staticmethod
-    def property_equality(x: "Surface_Marker_Aggregate", y: "Surface_Marker_Aggregate") -> bool:
+    def property_equality(
+        x: "Surface_Marker_Aggregate", y: "Surface_Marker_Aggregate"
+    ) -> bool:
         def property_dict(x: Surface_Marker_Aggregate) -> dict:
             x_dict = x.__dict__.copy()
             x_dict["_verts_uv"] = x_dict["_verts_uv"].tolist()
             return x_dict
+
         return property_dict(x) == property_dict(y)
 
     def __init__(

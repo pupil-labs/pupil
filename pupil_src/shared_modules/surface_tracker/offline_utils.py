@@ -12,7 +12,10 @@ See COPYING and COPYING.LESSER for license details.
 import typing
 
 from .surface import Surface
-from .surface_marker_detector import Surface_Marker_Detector, Surface_Marker_Detector_Mode
+from .surface_marker_detector import (
+    Surface_Marker_Detector,
+    Surface_Marker_Detector_Mode,
+)
 
 
 class marker_detection_callable(Surface_Marker_Detector):
@@ -20,7 +23,7 @@ class marker_detection_callable(Surface_Marker_Detector):
         self,
         marker_detector_modes: typing.Set[Surface_Marker_Detector_Mode],
         min_marker_perimeter: int,
-        inverted_markers: bool
+        inverted_markers: bool,
     ):
         super().__init__(
             marker_detector_modes=marker_detector_modes,
@@ -51,16 +54,19 @@ class surface_locater_callable:
 
 
 class surfaces_locator_callable:
-    def __init__(
-        self, surfaces, camera_model
-    ):
+    def __init__(self, surfaces, camera_model):
         self.camera_model = camera_model
         surfaces_registered_markers_dist = [s.registered_markers_dist for s in surfaces]
-        surfaces_registered_markers_undist = [s.registered_markers_undist for s in surfaces]
-        self.surfaces_data = list(zip(surfaces_registered_markers_dist, surfaces_registered_markers_undist))
+        surfaces_registered_markers_undist = [
+            s.registered_markers_undist for s in surfaces
+        ]
+        self.surfaces_data = list(
+            zip(surfaces_registered_markers_dist, surfaces_registered_markers_undist)
+        )
 
     def __call__(self, markers):
         markers = {m.uid: m for m in markers}
+
         def locate_surface(surface_data):
             registered_markers_dist, registered_markers_undist = surface_data
             return Surface.locate(
@@ -69,4 +75,5 @@ class surfaces_locator_callable:
                 registered_markers_undist,
                 registered_markers_dist,
             )
+
         return list(enumerate(map(locate_surface, self.surfaces_data)))

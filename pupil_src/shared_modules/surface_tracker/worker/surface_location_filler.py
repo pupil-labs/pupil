@@ -12,7 +12,9 @@ from .worker_utils import mp_context
 
 class Surface_Location_Filler(observable.Observable):
 
-    ON_DID_CALCULATE_SURFACE_LOCATION_CALLBACK = T.Callable[[Surface, int, Surface_Location], None]
+    ON_DID_CALCULATE_SURFACE_LOCATION_CALLBACK = T.Callable[
+        [Surface, int, Surface_Location], None
+    ]
     ON_DID_CANCEL = T.Callable[[], None]
     ON_DID_COMPLETE = T.Callable[[], None]
 
@@ -26,21 +28,16 @@ class Surface_Location_Filler(observable.Observable):
 
         if on_did_calculate_surface_location is not None:
             self.add_observer(
-                "on_did_calculate_surface_location",
-                on_did_calculate_surface_location,
+                "on_did_calculate_surface_location", on_did_calculate_surface_location
             )
         if on_did_cancel is not None:
-            self.add_observer(
-                "on_did_cancel",
-                on_did_cancel,
-            )
+            self.add_observer("on_did_cancel", on_did_cancel)
         if on_did_complete is not None:
-            self.add_observer(
-                "on_did_complete",
-                on_did_complete,
-            )
+            self.add_observer("on_did_complete", on_did_complete)
 
-    def on_did_calculate_surface_location(self, surface: Surface, cache_idx: int, location: Surface_Location):
+    def on_did_calculate_surface_location(
+        self, surface: Surface, cache_idx: int, location: Surface_Location
+    ):
         pass
 
     def on_did_cancel(self):
@@ -52,12 +49,9 @@ class Surface_Location_Filler(observable.Observable):
     def start(self, surfaces, cache_seek_idx, marker_cache, camera_model):
         self.__surfaces = surfaces
 
-        self.__background_task = background_tasks.background_data_processor( #TODO: Use 1 task for all surfaces
+        self.__background_task = background_tasks.background_data_processor(  # TODO: Use 1 task for all surfaces
             marker_cache,
-            offline_utils.surfaces_locator_callable(
-                self.__surfaces,
-                camera_model,
-            ),
+            offline_utils.surfaces_locator_callable(self.__surfaces, camera_model),
             cache_seek_idx,
             mp_context,
         )

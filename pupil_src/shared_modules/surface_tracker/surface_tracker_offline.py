@@ -107,10 +107,11 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     # Surface_Location_Filler callbacks
 
-    def on_surface_location_filler_did_calculate_surface_location(self, surface: Surface_Offline, cache_idx: int, location):
+    def on_surface_location_filler_did_calculate_surface_location(
+        self, surface: Surface_Offline, cache_idx: int, location
+    ):
         surface.overwrite_single_entry_in_location_cache(
-            frame_idx=cache_idx,
-            location=location,
+            frame_idx=cache_idx, location=location
         )
         self._set_timeline_refresh_needed()
 

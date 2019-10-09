@@ -84,7 +84,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self._surface_file_store = Surface_File_Store(parent_dir=self._save_dir)
 
         # Add surfaces from file
-        for surface in self._surface_file_store.read_surfaces_from_file(surface_class=self.Surface_Class):
+        for surface in self._surface_file_store.read_surfaces_from_file(
+            surface_class=self.Surface_Class
+        ):
             self.add_surface(surface)
 
     @property
@@ -483,7 +485,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def on_add_surface_click(self, _=None):
         if self.markers:
-            surface = self.Surface_Class(name="Surface {:}".format(len(self.surfaces) + 1))
+            surface = self.Surface_Class(
+                name="Surface {:}".format(len(self.surfaces) + 1)
+            )
             self.add_surface(surface)
         else:
             logger.warning("Can not add a new surface: No markers found in the image!")

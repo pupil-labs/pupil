@@ -64,24 +64,34 @@ class _Surface_File_Store_Base(abc.ABC):
             file_path=self.file_path,
             serializer=self.serializer,
             surface_class=surface_class,
-            should_skip_on_invalid=False
+            should_skip_on_invalid=False,
         )
 
     def write_surfaces_to_file(self, surfaces: typing.Iterator[Surface]):
         dict_from_surface = self.serializer.dict_from_surface
-        serialized_surfaces = [ dict_from_surface(surface) for surface in surfaces if surface.defined]
+        serialized_surfaces = [
+            dict_from_surface(surface) for surface in surfaces if surface.defined
+        ]
         surface_definitions = self._persistent_dict_class(self.file_path)
         surface_definitions["surfaces"] = serialized_surfaces
         surface_definitions.save()
 
     # Protected API
 
-    def _read_surfaces_from_file_path(self, file_path: str, serializer: _Surface_Serializer_Base, surface_class, should_skip_on_invalid: bool = False) -> typing.Iterator[Surface]:
+    def _read_surfaces_from_file_path(
+        self,
+        file_path: str,
+        serializer: _Surface_Serializer_Base,
+        surface_class,
+        should_skip_on_invalid: bool = False,
+    ) -> typing.Iterator[Surface]:
         # TODO: Assert surface_class is a class, and is a Surface subclass
 
         def surface_from_dict(surface_dict: dict) -> typing.Optional[Surface]:
             try:
-                return serializer.surface_from_dict(surface_definition=surface_dict, surface_class=surface_class)
+                return serializer.surface_from_dict(
+                    surface_definition=surface_dict, surface_class=surface_class
+                )
             except InvalidSurfaceDefinition:
                 if should_skip_on_invalid:
                     return None
@@ -137,7 +147,7 @@ class _Surface_File_Store_V01(_Surface_File_Store_Base):
             file_path=self.__legacy_file_path,
             serializer=self.serializer,
             surface_class=surface_class,
-            should_skip_on_invalid=True  # Since this file might contain older surface definitions, those can be skipped
+            should_skip_on_invalid=True,  # Since this file might contain older surface definitions, those can be skipped
         )
 
     # Private
@@ -165,7 +175,9 @@ class Surface_File_Store(_Surface_File_Store_Base):
 
         # Pre-computed properties
         self.__supported_versions = tuple(sorted(self.__versioned_file_stores.keys()))
-        self.__migration_step_sequence = tuple(zip(self.__supported_versions, self.__supported_versions[1:]))
+        self.__migration_step_sequence = tuple(
+            zip(self.__supported_versions, self.__supported_versions[1:])
+        )
 
     @property
     def file_name(self) -> str:
@@ -183,10 +195,16 @@ class Surface_File_Store(_Surface_File_Store_Base):
 
         # Perform all migrations
         for source_version, target_version in self.__migration_step_sequence:
-            migration_proc = self.__migration_procedure(surface_class=surface_class, source_version=source_version, target_version=target_version)
+            migration_proc = self.__migration_procedure(
+                surface_class=surface_class,
+                source_version=source_version,
+                target_version=target_version,
+            )
             migration_proc()
 
-        return self.__file_store_latest.read_surfaces_from_file(surface_class=surface_class)
+        return self.__file_store_latest.read_surfaces_from_file(
+            surface_class=surface_class
+        )
 
     def write_surfaces_to_file(self, surfaces: typing.Iterator[Surface]):
         self.__file_store_latest.write_surfaces_to_file(surfaces=surfaces)
@@ -198,7 +216,9 @@ class Surface_File_Store(_Surface_File_Store_Base):
         latest_version = self.__supported_versions[-1]
         return self.__versioned_file_stores[latest_version]
 
-    def __migration_procedure(self, surface_class, source_version: Version, target_version: Version) -> Migration_Procedure:
+    def __migration_procedure(
+        self, surface_class, source_version: Version, target_version: Version
+    ) -> Migration_Procedure:
         # Handle any special-case migrations here
         if (source_version, target_version) == (0, 1):
             return functools.partial(
@@ -216,7 +236,9 @@ class Surface_File_Store(_Surface_File_Store_Base):
             target_version=target_version,
         )
 
-    def __simple_rewrite_migration(self, surface_class, source_version: Version, target_version: Version):
+    def __simple_rewrite_migration(
+        self, surface_class, source_version: Version, target_version: Version
+    ):
         source_file_store = self.__versioned_file_stores[source_version]
         target_file_store = self.__versioned_file_stores[target_version]
 
@@ -225,10 +247,14 @@ class Surface_File_Store(_Surface_File_Store_Base):
             return
 
         # Otherwise, write the surfaces to the new location with the new format
-        surfaces = source_file_store.read_surfaces_from_file(surface_class=surface_class)
+        surfaces = source_file_store.read_surfaces_from_file(
+            surface_class=surface_class
+        )
         target_file_store.write_surfaces_to_file(surfaces=surfaces)
 
-    def __migration_v00_v01(self, surface_class, source_version: Version, target_version: Version):
+    def __migration_v00_v01(
+        self, surface_class, source_version: Version, target_version: Version
+    ):
         assert source_version == 0
         assert target_version == 1
 

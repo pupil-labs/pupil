@@ -44,8 +44,10 @@ PUPIL_COLOR_RGB_SECONDARY_RETINA_RED_60P = (248, 142, 134)
 PUPIL_COLOR_RGB_SECONDARY_VITREOUS_PURPLE_60P = (206, 114, 154)
 
 
-def rgb_to_rgba(rgb: typing.Tuple[int, int, int], alpha: float = 1.0) -> typing.Tuple[float, float, float, float]:
-    return (rgb[0]/255, rgb[1]/255, rgb[2]/255, alpha)
+def rgb_to_rgba(
+    rgb: typing.Tuple[int, int, int], alpha: float = 1.0
+) -> typing.Tuple[float, float, float, float]:
+    return (rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, alpha)
 
 
 SURFACE_MARKER_COLOR_RGB_BY_TYPE = {
@@ -130,7 +132,9 @@ class GUI:
 
     def _draw_markers(self):
         for marker in self.tracker.markers_unfiltered:
-            color = rgb_to_rgba(SURFACE_MARKER_COLOR_RGB_BY_TYPE[marker.marker_type], alpha=0.5)
+            color = rgb_to_rgba(
+                SURFACE_MARKER_COLOR_RGB_BY_TYPE[marker.marker_type], alpha=0.5
+            )
             hat = np.array(
                 [[[0, 0], [0, 1], [0.5, 1.3], [1, 1], [1, 0], [0, 0]]], dtype=np.float32
             )
@@ -139,13 +143,17 @@ class GUI:
             )
 
             # TODO: Should the had be drawn for small or low confidence markers?
-            pyglui_utils.draw_polyline(hat.reshape((6, 2)), color=pyglui_utils.RGBA(*color))
+            pyglui_utils.draw_polyline(
+                hat.reshape((6, 2)), color=pyglui_utils.RGBA(*color)
+            )
             if (
                 marker.perimeter >= self.tracker.marker_min_perimeter
                 and marker.id_confidence > self.tracker.marker_min_confidence
             ):
                 pyglui_utils.draw_polyline(
-                    hat.reshape((6, 2)), color=pyglui_utils.RGBA(*color), line_type=gl.GL_POLYGON
+                    hat.reshape((6, 2)),
+                    color=pyglui_utils.RGBA(*color),
+                    line_type=gl.GL_POLYGON,
                 )
 
     def _draw_marker_id(self, marker):
@@ -176,8 +184,7 @@ class GUI:
             corners.reshape((5, 2)), color=pyglui_utils.RGBA(*surface_color)
         )
         pyglui_utils.draw_polyline(
-            top_indicator.reshape((4, 2)),
-            color=pyglui_utils.RGBA(*surface_color),
+            top_indicator.reshape((4, 2)), color=pyglui_utils.RGBA(*surface_color)
         )
 
         self._draw_surf_menu(
@@ -190,7 +197,7 @@ class GUI:
         corners = surface.map_from_surf(
             points=corners,
             camera_model=self.tracker.camera_model,
-            compensate_distortion=False
+            compensate_distortion=False,
         )
 
         # TODO: Provide API in Surface to get surface top indicator points
@@ -200,7 +207,7 @@ class GUI:
         top_indicator = surface.map_from_surf(
             points=top_indicator,
             camera_model=self.tracker.camera_model,
-            compensate_distortion=False
+            compensate_distortion=False,
         )
 
         title_anchor = corners.reshape((5, -1))[2]
@@ -343,7 +350,7 @@ class GUI:
         img_corners = surface.map_from_surf(
             points=self.norm_corners.copy(),
             camera_model=self.tracker.camera_model,
-            compensate_distortion=False
+            compensate_distortion=False,
         )
 
         handle_color_rgba = rgb_to_rgba(self.color_primary_rgb, alpha=0.5)
@@ -430,7 +437,7 @@ class GUI:
                 img_corners = surface.map_from_surf(
                     points=self.norm_corners.copy(),
                     camera_model=self.tracker.camera_model,
-                    compensate_distortion=False
+                    compensate_distortion=False,
                 )
                 for idx, corner in enumerate(img_corners):
                     dist = np.linalg.norm(corner - pos)
