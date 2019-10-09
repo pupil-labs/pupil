@@ -85,7 +85,10 @@ class _Surface_File_Store_Base(abc.ABC):
         surface_class,
         should_skip_on_invalid: bool = False,
     ) -> typing.Iterator[Surface]:
-        # TODO: Assert surface_class is a class, and is a Surface subclass
+        if not issubclass(surface_class, Surface):
+            raise TypeError(
+                f"`surface_class` arg must be a subclass of {Surface.__name__}"
+            )
 
         def surface_from_dict(surface_dict: dict) -> typing.Optional[Surface]:
             try:
