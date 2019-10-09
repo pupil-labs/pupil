@@ -9,17 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import abc
 import itertools
 import logging
-import multiprocessing
 import os
-import platform
 import time
-import typing as T
-import weakref
-
-logger = logging.getLogger(__name__)
 
 import numpy as np
 import cv2
@@ -37,10 +30,12 @@ from . import offline_utils, background_tasks
 from .surface_marker import Surface_Marker
 from .surface_marker_detector import Surface_Marker_Detector_Mode
 from .gui import Heatmap_Mode
-from .surface import Surface, Surface_Offline, surface_utils
+from .surface import Surface_Offline, surface_utils
 
 from .worker import mp_context
 from .worker import Surface_Location_Filler
+
+logger = logging.getLogger(__name__)
 
 
 class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
@@ -123,7 +118,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             surface.on_surface_change(surface)
 
     def _init_marker_detection_modes(self):
-        # This method should be called after `_init_marker_cache` to ensure that the cache is filled in.
+        # This method should be called after `_init_marker_cache` to ensure that the
+        # cache is filled in.
         assert self.marker_cache is not None
 
         # Filter out non-filled frames where the cache entry is None.
@@ -133,7 +129,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             filled_out_marker_cache
         )
 
-        # Get the first surface marker from the sequence, and set the detection mode according to it.
+        # Get the first surface marker from the sequence, and set the detection mode
+        # according to it.
         first_cached_surface_marker = next(cached_surface_marker_sequence, None)
         if first_cached_surface_marker is not None:
             marker_detector_mode = Surface_Marker_Detector_Mode.from_marker(

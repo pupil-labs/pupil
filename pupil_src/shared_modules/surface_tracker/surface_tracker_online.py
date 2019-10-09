@@ -11,8 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 
-logger = logging.getLogger(__name__)
-
 import pyglui
 import pyglui.cygl.utils as pyglui_utils
 import gl_utils
@@ -20,6 +18,8 @@ import gl_utils
 from .gui import Heatmap_Mode
 from .surface_tracker import Surface_Tracker
 from .surface import Surface_Online
+
+logger = logging.getLogger(__name__)
 
 
 class Surface_Tracker_Online(Surface_Tracker):

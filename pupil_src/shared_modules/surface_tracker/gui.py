@@ -23,7 +23,6 @@ import gl_utils
 import glfw
 
 from .surface_marker import Surface_Marker_Type
-from .surface import surface_utils
 
 
 SURFACE_TRACKER_CHANGED_DELAY = 1.0
@@ -384,7 +383,8 @@ class GUI:
         gl.glOrtho(0, 1, 0, 1, -1, 1)
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glPushMatrix()
-        # apply trans_mat  to our quad - this will stretch the quad such that the ref suface will span the window extends
+        # apply trans_mat  to our quad - this will stretch the quad such that the ref
+        # suface will span the window extends
         gl.glLoadMatrixf(trans_mat)
         self.heatmap_textures[surface].draw()
         gl.glMatrixMode(gl.GL_PROJECTION)
@@ -443,7 +443,8 @@ class GUI:
                     dist = np.linalg.norm(corner - pos)
                     if action == glfw.GLFW_PRESS and dist < self.button_click_radius:
                         self.tracker._edit_surf_verts.append((surface, idx))
-                        # click event consumed; give a chance for other surfaces' corners to react to it
+                        # click event consumed; give a chance for other surfaces'
+                        # corners to react to it
                         was_event_consumed = True
                     elif action == glfw.GLFW_RELEASE and self.tracker._edit_surf_verts:
                         self.tracker.notify_all(

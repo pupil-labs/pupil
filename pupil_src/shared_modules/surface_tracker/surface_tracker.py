@@ -10,17 +10,14 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-import os
 from abc import ABCMeta, abstractmethod
 import typing
 
-logger = logging.getLogger(__name__)
 
 import numpy as np
 import pyglui
 
 from plugin import Plugin
-import file_methods
 
 from . import gui
 from .surface_marker_detector import (
@@ -29,6 +26,8 @@ from .surface_marker_detector import (
 )
 
 from .surface_file_store import Surface_File_Store
+
+logger = logging.getLogger(__name__)
 
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):

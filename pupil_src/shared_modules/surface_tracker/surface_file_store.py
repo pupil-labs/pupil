@@ -147,7 +147,9 @@ class _Surface_File_Store_V01(_Surface_File_Store_Base):
             file_path=self.__legacy_file_path,
             serializer=self.serializer,
             surface_class=surface_class,
-            should_skip_on_invalid=True,  # Since this file might contain older surface definitions, those can be skipped
+            # Since this file might contain older surface definitions, those can be
+            # skipped:
+            should_skip_on_invalid=True,
         )
 
     # Private
@@ -259,8 +261,10 @@ class Surface_File_Store(_Surface_File_Store_Base):
         assert target_version == 1
 
         # Try the simple migration from 0 to 1.
-        # If it fails with InvalidSurfaceDefinition, it means the file that v00 was trying to read doesn't contain v00 definitions, but v01 definitions.
-        # Try to migrate from 1 to 1; this will trigger reading from the legacy file and writing to the updated file.
+        # If it fails with InvalidSurfaceDefinition, it means the file that v00 was
+        # trying to read doesn't contain v00 definitions, but v01 definitions.
+        # Try to migrate from 1 to 1; this will trigger reading from the legacy file
+        # and writing to the updated file.
 
         try:
             self.__simple_rewrite_migration(
@@ -271,6 +275,7 @@ class Surface_File_Store(_Surface_File_Store_Base):
         except InvalidSurfaceDefinition:
             self.__simple_rewrite_migration(
                 surface_class=surface_class,
-                source_version=target_version,  # NOTE: target_version, not source_version
+                # NOTE: target_version, not source_version
+                source_version=target_version,
                 target_version=target_version,
             )

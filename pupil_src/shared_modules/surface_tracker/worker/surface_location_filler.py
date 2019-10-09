@@ -1,6 +1,4 @@
-import abc
 import typing as T
-import weakref
 
 import observable
 

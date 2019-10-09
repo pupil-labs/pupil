@@ -9,10 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os
-import sys
-
-
 if __name__ == "__main__":
     print("Invoke tests by running:")
     print("$ pytest -v {}".format(__file__))

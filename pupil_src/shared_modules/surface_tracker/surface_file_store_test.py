@@ -10,9 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import os
-import sys
-import numpy as np
-
 
 if __name__ == "__main__":
     print("Invoke tests by running:")

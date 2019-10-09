@@ -10,9 +10,9 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
+import itertools
 
 logger = logging.getLogger(__name__)
-import itertools
 
 
 class Cache(list):

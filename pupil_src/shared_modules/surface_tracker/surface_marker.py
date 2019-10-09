@@ -12,7 +12,6 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import enum
 import typing
-import functools
 import itertools
 import collections
 
@@ -248,7 +247,8 @@ class _Apriltag_V3_Marker_Detection(
         decision_margin = self.decision_margin
         decision_margin /= 100.0
         decision_margin = max(0.0, min(decision_margin, 1.0))
-        # TODO: Not sure this is the best estimate of confidence, and if decision_margin is in (0, 100)
+        # TODO: Not sure this is the best estimate of confidence, and if decision_margin
+        # is in (0, 100)
         return decision_margin
 
     @property
@@ -263,9 +263,10 @@ class _Apriltag_V3_Marker_Detection(
         return perimeter
 
 
-# This exists because there is no easy way to make a user-defined class serializable with msgpack without extra hooks.
-# Therefore, Surface_Marker is defined as a sublcass of _Raw_Surface_Marker, which is a subclass of namedtuple,
-# because msgpack is able to serialize namedtuple subclasses out of the box.
+# This exists because there is no easy way to make a user-defined class serializable
+# with msgpack without extra hooks. Therefore, Surface_Marker is defined as a sublcass
+# of _Raw_Surface_Marker, which is a subclass of namedtuple, because msgpack is able to
+# serialize namedtuple subclasses out of the box.
 _Surface_Marker_Raw = collections.namedtuple("Surface_Marker", ["raw_marker"])
 
 
@@ -374,14 +375,16 @@ def test_surface_marker_deserialize():
     ]
     SQUARE_MARKER_PERIM = 46.32534599304199
 
-    # This is the format in which old (before Apriltag support was added) square tags where represented when serialized to msgpack
+    # This is the format in which old (before Apriltag support was added) square tags
+    # where represented when serialized to msgpack
     old_serialized_square = [
         SQUARE_MARKER_TAG_ID,
         SQUARE_MARKER_CONF,
         SQUARE_MARKER_VERTS,
         SQUARE_MARKER_PERIM,
     ]
-    # This is the format in which new square tags are represented when serialized to msgpack
+    # This is the format in which new square tags are represented when serialized to
+    # msgpack
     new_serialized_square = [
         [
             SQUARE_MARKER_TAG_ID,
@@ -392,7 +395,8 @@ def test_surface_marker_deserialize():
         ]
     ]
 
-    # Both formats should be supported by `Surface_Marker.deserialize` for backwards compatibility
+    # Both formats should be supported by `Surface_Marker.deserialize` for backwards
+    # compatibility
     old_marker_square = Surface_Marker.deserialize(old_serialized_square)
     new_marker_square = Surface_Marker.deserialize(new_serialized_square)
 

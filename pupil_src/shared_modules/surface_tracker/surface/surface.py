@@ -10,15 +10,12 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
-import typing
 import logging
-import operator
 import uuid
 
 import cv2
 import numpy as np
 
-import methods
 from stdlib_utils import is_none, is_not_none
 
 from surface_tracker.surface_marker import Surface_Marker_UID
