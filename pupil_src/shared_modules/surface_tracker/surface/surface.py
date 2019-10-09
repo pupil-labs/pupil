@@ -268,7 +268,7 @@ class Surface(abc.ABC):
         self._registered_markers_dist = persistent_markers_dist
 
     def move_corner(self, corner_idx, new_pos, camera_model):
-        self.registered_markers_undist = surface_utils.move_corner(
+        self._registered_markers_undist = surface_utils.move_corner(
             corner_idx=corner_idx,
             new_pos=new_pos,
             camera_model=camera_model,
