@@ -141,7 +141,7 @@ class GUI:
                 hat, _get_norm_to_points_trans(marker.verts_px)
             )
 
-            # TODO: Should the had be drawn for small or low confidence markers?
+            # TODO: Should the hat be drawn for small or low confidence markers?
             pyglui_utils.draw_polyline(
                 hat.reshape((6, 2)), color=pyglui_utils.RGBA(*color)
             )
