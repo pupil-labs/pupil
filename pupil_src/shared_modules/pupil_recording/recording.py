@@ -107,7 +107,9 @@ class PupilRecording:
             return self.filter("eye1")
 
         def eyes(self) -> FilterType:
-            return self.filter_mutliple("eye0", "eye1", mode="union")
+            return self.filter_multiple(
+                "eye0", "eye1", mode=PupilRecording.FileFilter.FilterMode.UNION
+            )
 
         def videos(self) -> FilterType:
             return self.filter("videos")

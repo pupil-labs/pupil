@@ -210,11 +210,10 @@ def eye(
                 "frame_rate": 120,
             },
         )
-        capture_settings = overwrite_cap_settings or default_capture_settings
 
         default_plugins = [
             # TODO: extend with plugins
-            capture_settings,
+            default_capture_settings,
             ("UVC_Manager", {}),
         ]
 
@@ -436,9 +435,13 @@ def eye(
         g_pool.iconbar.append(icon)
         toggle_general_settings(False)
 
-        g_pool.plugins = Plugin_List(
-            g_pool, session_settings.get("loaded_plugins", default_plugins)
-        )
+        plugins_to_load = session_settings.get("loaded_plugins", default_plugins)
+        if overwrite_cap_settings:
+            # Ensure that overwrite_cap_settings takes preference over source plugins
+            # with incorrect settings that were loaded from session settings.
+            plugins_to_load.append(overwrite_cap_settings)
+
+        g_pool.plugins = Plugin_List(g_pool, plugins_to_load)
 
         g_pool.pupil_detector.init_ui()
         g_pool.writer = None
