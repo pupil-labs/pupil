@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os, sys, platform, textwrap
+import os, sys, platform
 
 running_from_bundle = getattr(sys, "frozen", False)
 if not running_from_bundle:
@@ -27,11 +27,10 @@ from version_utils import get_version
 app_version = get_version()
 if parsed_args.version:
     running_from = "bundle" if running_from_bundle else "source"
-    version_message = textwrap.dedent(
-        f"""
-        Pupil {parsed_args.app.capitalize()} version {app_version} ({running_from})
-        """
-    ).strip()
+    version_message = (
+        f"Pupil {parsed_args.app.capitalize()} version {app_version} ({running_from})"
+    )
+
     print(version_message)
     sys.exit()
 
