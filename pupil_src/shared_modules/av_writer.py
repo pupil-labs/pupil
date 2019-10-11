@@ -55,7 +55,7 @@ to be valid and should only now be accesed.
 """
 
 
-def write_timestamps(file_loc, timestamps, output_format="npy"):
+def write_timestamps(file_loc, timestamps, output_format="npy", pts=None):
     """
     Attritbutes:
         output_format (str): Output file format. Available values:
@@ -73,7 +73,18 @@ def write_timestamps(file_loc, timestamps, output_format="npy"):
     if output_format in ("npy", "all"):
         np.save(ts_loc + ".npy", ts)
     if output_format in ("csv", "all"):
-        np.savetxt(ts_loc + ".csv", ts, fmt="%f", header="timestamps [seconds]")
+        if pts is None:
+            np.savetxt(ts_loc + ".csv", ts, fmt="%f", header="timestamps [seconds]")
+        else:
+            pts = np.asarray(pts)
+            ts_pts = np.vstack((ts, pts)).T
+            np.savetxt(
+                ts_loc + ".csv",
+                ts_pts,
+                fmt=["%f", "%i"],
+                delimiter=",",
+                header="timestamps [seconds],pts",
+            )
 
 
 class AV_Writer(abc.ABC):
@@ -87,6 +98,7 @@ class AV_Writer(abc.ABC):
         """
 
         self.timestamps = []
+        self.pts = []
         self.start_time = start_time_synced
         self.last_video_pts = float("-inf")
 
@@ -175,6 +187,7 @@ class AV_Writer(abc.ABC):
 
         self.last_video_pts = pts
         self.timestamps.append(ts)
+        self.pts.append(pts)
 
     def close(self, timestamp_export_format="npy"):
         """Close writer, triggering stream and timestamp save."""
@@ -190,7 +203,10 @@ class AV_Writer(abc.ABC):
 
             if timestamp_export_format is not None:
                 write_timestamps(
-                    self.output_file_path, self.timestamps, timestamp_export_format
+                    self.output_file_path,
+                    self.timestamps,
+                    timestamp_export_format,
+                    pts=self.pts,
                 )
 
         self.container.close()
