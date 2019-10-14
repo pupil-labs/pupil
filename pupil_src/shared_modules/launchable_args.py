@@ -33,6 +33,7 @@ def parse(running_from_bundle, **defaults):
     else:
         _setup_source_parsers(parser)
     _add_debug_profile_args(parser)
+    _add_version_arg(parser)
 
     return parser.parse_known_args(namespace=target_ns)
 
@@ -47,16 +48,19 @@ def _setup_source_parsers(main_parser):
         "capture", help="Real-time processing and recording"
     )
     _add_remote_port_arg(parser_capture)
+    _add_version_arg(parser_capture)
 
     parser_service = subparsers.add_parser(
         "service", help="Real-time processing with minimal UI"
     )
     _add_remote_port_arg(parser_service)
+    _add_version_arg(parser_service)
 
     parser_player = subparsers.add_parser(
         "player", help="Process, visualize, and export recordings"
     )
     _add_recording_arg(parser_player)
+    _add_version_arg(parser_player)
 
 
 def _setup_bundle_parsers(main_parser, namespace):
@@ -86,3 +90,7 @@ def _add_debug_profile_args(parser):
     parser.add_argument(
         "--profile", action="store_true", help="profile the application's CPU time"
     )
+
+
+def _add_version_arg(parser):
+    parser.add_argument("--version", action="store_true", help="show version")
