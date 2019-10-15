@@ -16,8 +16,9 @@ from .detector_base_plugin import PupilDetectorPlugin
 
 
 class DetectorDummyPlugin(PupilDetectorPlugin):
-
-    ########## PupilDetectorPlugin API
+    uniqueness = "by_base_class"
+    label = "disabled"
+    identifier = "disabled"
 
     @classmethod
     def parse_pretty_class_name(cls) -> str:
@@ -26,24 +27,8 @@ class DetectorDummyPlugin(PupilDetectorPlugin):
     def __init__(self, g_pool, *args, **kwargs):
         super().__init__(g_pool=g_pool)
 
-    @property
-    def pupil_detector(self) -> DetectorBase:
-        return self
-
-    ########## PupilDetector API
-
-    ##### Legacy API
-
-    def set_2d_detector_property(self, name: str, value: T.Any):
+    def detect(self, frame):
         pass
-
-    def set_3d_detector_property(self, name: str, value: T.Any):
-        pass
-
-    ##### Core API
-
-    def detect(self, frame, user_roi, visualize, pause_video: bool = False, **kwargs):
-        return {}
 
     def namespaced_detector_properties(self) -> dict:
         return {}
