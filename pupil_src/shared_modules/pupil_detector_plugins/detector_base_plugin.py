@@ -2,6 +2,7 @@ import abc
 import typing as T
 
 from plugin import Plugin
+from pupil_detectors import DetectorBase
 
 
 class PupilDetectorPlugin(Plugin):
@@ -13,7 +14,7 @@ class PupilDetectorPlugin(Plugin):
 
     @property
     @abc.abstractmethod
-    def pupil_detector(self) -> PupilDetector:
+    def pupil_detector(self) -> DetectorBase:
         pass
 
     ##### Plugin API

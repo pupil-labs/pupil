@@ -10,7 +10,9 @@ See COPYING and COPYING.LESSER for license details.
 """
 import typing as T
 
-from .detector_base_plugin import PupilDetector, PupilDetectorPlugin
+from pupil_detectors import DetectorBase
+
+from .detector_base_plugin import PupilDetectorPlugin
 
 
 class DetectorDummyPlugin(PupilDetectorPlugin):
@@ -25,7 +27,7 @@ class DetectorDummyPlugin(PupilDetectorPlugin):
         super().__init__(g_pool=g_pool)
 
     @property
-    def pupil_detector(self) -> PupilDetector:
+    def pupil_detector(self) -> DetectorBase:
         return self
 
     ########## PupilDetector API

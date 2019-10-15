@@ -1,4 +1,3 @@
-from pupil_detectors import PupilDetector, Detector3D
 from .detector_base_plugin import PupilDetectorPlugin
 
 from pyglui import ui
@@ -12,6 +11,7 @@ from gl_utils import (
     make_coord_system_pixel_based,
 )
 from plugin import Plugin
+from pupil_detectors import Detector3D, DetectorBase, Roi
 from .visualizer_3d import Eye_Visualizer
 
 
@@ -44,7 +44,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
         return self.detector_3d.detector_properties_3d
 
     @property
-    def pupil_detector(self) -> PupilDetector:
+    def pupil_detector(self) -> DetectorBase:
         return self.detector_3d
 
     ### PupilDetectorPlugin API

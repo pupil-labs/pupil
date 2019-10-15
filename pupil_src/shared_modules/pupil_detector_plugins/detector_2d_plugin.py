@@ -1,4 +1,4 @@
-from pupil_detectors import PupilDetector, Detector2D
+from pupil_detectors import DetectorBase, Detector2D
 from .detector_base_plugin import PupilDetectorPlugin
 
 from pyglui import ui
@@ -55,7 +55,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
     ##### Plugin API
 
     @property
-    def pupil_detector(self) -> PupilDetector:
+    def pupil_detector(self) -> DetectorBase:
         return self.detector_2d
 
     @property
