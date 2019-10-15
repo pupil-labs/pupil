@@ -1,17 +1,18 @@
-from .detector_base_plugin import PupilDetectorPlugin
-
 from pyglui import ui
 from pyglui.cygl.utils import draw_gl_texture
 
 from gl_utils import (
     adjust_gl_view,
-    clear_gl_screen,
     basic_gl_setup,
+    clear_gl_screen,
     make_coord_system_norm_based,
     make_coord_system_pixel_based,
 )
+from methods import normalize
 from plugin import Plugin
 from pupil_detectors import Detector3D, DetectorBase, Roi
+
+from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_3d import Eye_Visualizer
 
 
