@@ -92,12 +92,13 @@ class Base_Source(Plugin):
             else:
                 self.g_pool.image_tex.update_from_ndarray(frame.bgr)
             gl_utils.glFlush()
-        gl_utils.make_coord_system_norm_based()
+        should_flip = getattr(self.g_pool, "flip", False)
+        gl_utils.make_coord_system_norm_based(flip=should_flip)
         self.g_pool.image_tex.draw()
         if not self.online:
             cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8), alpha=0.4)
         gl_utils.make_coord_system_pixel_based(
-            (self.frame_size[1], self.frame_size[0], 3)
+            (self.frame_size[1], self.frame_size[0], 3), flip=should_flip
         )
 
     @property
