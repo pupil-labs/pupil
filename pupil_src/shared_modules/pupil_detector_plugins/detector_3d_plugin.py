@@ -49,6 +49,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
         )
         result["topic"] = f"pupil.{eye_id}"
         result["id"] = eye_id
+        result["method"] = "3d c++"
         return result
 
     @property
@@ -70,7 +71,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
         return "Pupil Detector 3D"
 
     def init_ui(self):
-        Plugin.add_menu(self)
+        self.add_menu()
         self.menu.label = self.pretty_class_name
         info = ui.Info_Text(
             "Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "
@@ -148,7 +149,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
         self.debug_window_update()
 
     def deinit_ui(self):
-        Plugin.remove_menu(self)
+        self.remove_menu()
 
     def cleanup(self):
         self.debug_window_close()  # if we change detectors, be sure debug window is also closed
