@@ -1,83 +1,61 @@
 import typing as T
+
+from pyglui import ui
+
 from plugin import Plugin
+
+from . import available_detector_plugins
 
 
 class PupilDetectorManager(Plugin):
     def __init__(self, g_pool):
-        from pupil_detectors.plugins import (
-            PupilDetectorPluginRegistry,
-            DetectorDummyPlugin,
-            Detector2DPlugin,
-            Detector3DPlugin,
+        super().__init__(g_pool)
+
+        (
+            self._default_pupil_detector_class,
+            self._available_pupil_detector_classes,
+        ) = available_detector_plugins()
+
+        self._notification_handler = {
+            "set_detection_mapping_mode": self.set_detection_mode
+        }
+
+    def init_ui(self):
+        general_settings = self.g_pool.menubar[0]
+        self._selector = ui.Selector(
+            "pupil_detector",
+            getter=self.ui_selector_getter,
+            setter=self.ui_selector_setter,
+            selection=self.ui_selector_values,
+            labels=self.ui_selector_labels,
+            label="Detection method",
         )
+        general_settings.insert(0, self._selector)
 
-        self.g_pool = g_pool
-        self.registry = PupilDetectorPluginRegistry.shared_registry()
+    def on_notify(self, notification):
+        subject = notification["subject"]
+        handler = self._notification_handler[subject]
+        handler(notification)
 
-        # Set manager defaults
-        self._default_pupil_detector_class = Detector2DPlugin
-        self._default_pupil_detector_class_for_mapping_mode_2d = Detector2DPlugin
-        self._default_pupil_detector_class_for_mapping_mode_3d = Detector3DPlugin
-        self._default_pupil_detector_class_for_mapping_mode_none = DetectorDummyPlugin
+    def set_detection_mode(self, notification):
+        mode = notification["mode"]
+        self._selector.read_only = mode != "disabled"
 
-    @property
-    def active_detector_name(self) -> str:
-        plugin_class = self.active_detector.__class__
-        plugin_name = self.registry.name_from_class(plugin_class)
-        return plugin_name
+        for detector_cls in self._available_pupil_detector_classes:
+            if detector_cls.identifier == mode:
+                props = notification.get("properties", None)
+                self._notify_new_detector(detector_cls, properties=props)
+                return
 
-    @property
-    def active_detector(self):
-        try:
-            return self.g_pool.pupil_detector
-        except AttributeError:
-            return None
-
-    @active_detector.setter
-    def active_detector(self, detector):
-        if self.active_detector:
-            self.active_detector.deinit_ui()
-            self.active_detector.cleanup()
-        self.g_pool.pupil_detector = detector
-        # NOTE: Need to init_ui manually
-
-    def activate_detector_by_name(
-        self, plugin_name: str, g_pool=..., plugin_properties=None
-    ):
-        plugin_class = self.registry.class_by_name(plugin_name)
-        self.activate_detector_by_class(plugin_class=plugin_class, g_pool=g_pool)
-
-    def activate_detector_by_class(
-        self, plugin_class, g_pool=..., plugin_properties=None
-    ):
-        g_pool = g_pool if g_pool is not ... else self.g_pool
-        self.active_detector = plugin_class(g_pool, plugin_properties)
-
-    # Session persistance
-
-    _PUPIL_DETECTOR_SELECTION_NAME_KEY = "last_pupil_detector"
-    _PUPIL_DETECTOR_PROPERTIES_KEY = "pupil_detector_settings"
-
-    def load_from_session_settings(self, session_settings: T.Mapping[str, T.Any]):
-        plugin_name = session_settings.get(
-            self._PUPIL_DETECTOR_SELECTION_NAME_KEY, None
+    def _notify_new_detector(self, detector_cls, properties=None):
+        self.notify_all(
+            {
+                "subject": "start_eye_plugin",
+                "target": self.g_pool.process,
+                "name": detector_cls.__name__,
+                "args": properties or {},
+            }
         )
-        plugin_prop = session_settings.get(self._PUPIL_DETECTOR_PROPERTIES_KEY, None)
-        if plugin_name:
-            self.activate_detector_by_name(
-                plugin_name=plugin_name, plugin_properties=plugin_prop
-            )
-        else:
-            plugin_class = self._default_pupil_detector_class
-            self.activate_detector_by_class(
-                plugin_class=plugin_class, plugin_properties=plugin_prop
-            )
-
-    def save_to_session_settings(self, session_settings: T.Mapping[str, T.Any]):
-        plugin_name = self.active_detector_name
-        plugin_prop = self.active_detector.namespaced_detector_properties()
-        session_settings[self._PUPIL_DETECTOR_SELECTION_NAME_KEY] = plugin_name
-        session_settings[self._PUPIL_DETECTOR_PROPERTIES_KEY] = plugin_prop
 
     # UI Selector
 
@@ -97,25 +75,3 @@ class PupilDetectorManager(Plugin):
     @property
     def ui_selector_labels(self) -> T.List[str]:
         return self.registry.registered_plugin_labels()
-
-    # Mapping Mode Selector
-
-    def set_detection_mapping_mode_2d(self):
-        self._set_detection_mapping_mode_with_class(
-            plugin_class=self._default_pupil_detector_class_for_mapping_mode_2d
-        )
-
-    def set_detection_mapping_mode_3d(self):
-        self._set_detection_mapping_mode_with_class(
-            plugin_class=self._default_pupil_detector_class_for_mapping_mode_3d
-        )
-
-    def set_detection_mapping_mode_none(self):
-        self._set_detection_mapping_mode_with_class(
-            plugin_class=self._default_pupil_detector_class_for_mapping_mode_none
-        )
-
-    def _set_detection_mapping_mode_with_class(self, plugin_class):
-        if not isinstance(self.active_detector, plugin_class):
-            self.activate_detector_by_class(plugin_class=plugin_class)
-            self.active_detector.init_ui()

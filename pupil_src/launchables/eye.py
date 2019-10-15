@@ -400,16 +400,6 @@ def eye(
 
         general_settings.append(g_pool.display_mode_info)
 
-        detector_selector = ui.Selector(
-            "pupil_detector",
-            getter=pupil_detector_manager.ui_selector_getter,
-            setter=pupil_detector_manager.ui_selector_setter,
-            selection=pupil_detector_manager.ui_selector_values,
-            labels=pupil_detector_manager.ui_selector_labels,
-            label="Detection method",
-        )
-        general_settings.append(detector_selector)
-
         g_pool.menubar.append(general_settings)
         icon = ui.Icon(
             "collapsed",
@@ -496,16 +486,6 @@ def eye(
                 if subject.startswith("eye_process.should_stop"):
                     if notification["eye_id"] == eye_id:
                         break
-                elif subject == "set_detection_mapping_mode":
-                    if notification["mode"] == "3d":
-                        pupil_detector_manager.set_detection_mapping_mode_3d()
-                        detector_selector.read_only = True
-                    elif notification["mode"] == "2d":
-                        pupil_detector_manager.set_detection_mapping_mode_2d()
-                        detector_selector.read_only = False
-                    else:
-                        pupil_detector_manager.set_detection_mapping_mode_none()
-                        detector_selector.read_only = True
                 elif subject == "recording.started":
                     if notification["record_eye"] and g_pool.capture.online:
                         record_path = notification["rec_path"]
@@ -559,69 +539,7 @@ def eye(
                         )
                     except KeyError as err:
                         logger.error(f"Attempt to load unknown plugin: {err}")
-                elif notification["subject"].startswith("pupil_detector.set_property"):
-                    target_process = notification.get("target", g_pool.process)
-                    should_apply = target_process == g_pool.process
 
-                    if should_apply:
-                        try:
-                            property_name = notification["name"]
-                            property_value = notification["value"]
-                            if "2d" in notification["subject"]:
-                                pupil_detector_manager.active_detector.set_2d_detector_property(
-                                    property_name, property_value
-                                )
-                            elif "3d" in notification["subject"]:
-                                pupil_detector_manager.active_detector.set_3d_detector_property(
-                                    property_name, property_value
-                                )
-                            elif property_name == "roi":
-                                try:
-                                    # Modify the ROI with the values sent over network
-                                    minX, maxX, minY, maxY = property_value
-                                    g_pool.u_r.set(
-                                        [
-                                            max(g_pool.u_r.min_x, int(minX)),
-                                            max(g_pool.u_r.min_y, int(minY)),
-                                            min(g_pool.u_r.max_x, int(maxX)),
-                                            min(g_pool.u_r.max_y, int(maxY)),
-                                        ]
-                                    )
-                                except ValueError as err:
-                                    raise ValueError(
-                                        "ROI needs to be list of 4 integers:"
-                                        "(minX, maxX, minY, maxY)"
-                                    ) from err
-                            else:
-                                raise KeyError(
-                                    "Notification subject does not "
-                                    "specifiy detector type nor modify ROI."
-                                )
-                            logger.debug(
-                                "`{}` property set to {}".format(
-                                    property_name, property_value
-                                )
-                            )
-                        except KeyError:
-                            logger.error("Malformed notification received")
-                            logger.debug(traceback.format_exc())
-                        except (ValueError, TypeError):
-                            logger.error("Invalid property or value")
-                            logger.debug(traceback.format_exc())
-                elif notification["subject"].startswith(
-                    "pupil_detector.broadcast_properties"
-                ):
-                    target_process = notification.get("target", g_pool.process)
-                    should_respond = target_process == g_pool.process
-                    if should_respond:
-                        props = (
-                            pupil_detector_manager.active_detector.namespaced_detector_properties()
-                        )
-                        properties_broadcast = {
-                            "subject": "pupil_detector.properties.{}".format(eye_id),
-                            **props,  # add properties to broadcast
-                        }
-                        ipc_socket.notify(properties_broadcast)
                 for plugin in g_pool.plugins:
                     plugin.on_notify(notification)
 
@@ -686,8 +604,6 @@ def eye(
 
                 result = event.get("pupil_detection_result", None)
                 if result is not None:
-                    result["id"] = eye_id
-                    result["topic"] = "pupil.{}".format(eye_id)
                     pupil_socket.send(result)
 
             cpu_graph.update()
