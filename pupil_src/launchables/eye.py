@@ -146,6 +146,7 @@ def eye(
         from video_capture import source_classes, manager_classes
 
         from background_helper import IPC_Logging_Task_Proxy
+        from pupil_detector_plugins import available_detector_plugins
         from pupil_detector_plugins.manager import PupilDetectorManager
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
@@ -184,8 +185,13 @@ def eye(
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
 
-        pupil_detector_manager = PupilDetectorManager(g_pool)
-        plugins = manager_classes + source_classes
+        default_detector_cls, available_detectors = available_detector_plugins()
+        plugins = (
+            manager_classes
+            + source_classes
+            + available_detectors
+            + [PupilDetectorManager]
+        )
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
         preferred_names = [
@@ -208,6 +214,8 @@ def eye(
             # TODO: extend with plugins
             default_capture_settings,
             ("UVC_Manager", {}),
+            ("PupilDetectorManager", {}),
+            (default_detector_cls.__name__, {}),
         ]
 
         # Callback functions
@@ -282,8 +290,6 @@ def eye(
             "roi": "Click and drag on the blue circles to adjust the region of interest. The region should be as small as possible, but large enough to capture all pupil movements.",
             "algorithm": "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below.",
         }
-
-        pupil_detector_manager.load_from_session_settings(session_settings)
 
         def set_display_mode_info(val):
             g_pool.display_mode = val
@@ -618,7 +624,6 @@ def eye(
                         ipc_socket.notify(properties_broadcast)
                 for plugin in g_pool.plugins:
                     plugin.on_notify(notification)
-                pupil_detector_manager.active_detector.on_notify(notification)
 
             event = {}
             for plugin in g_pool.plugins:
@@ -679,7 +684,6 @@ def eye(
                 if g_pool.writer:
                     g_pool.writer.write_video_frame(frame)
 
-                pupil_detector_manager.active_detector.recent_events(event)
                 result = event.get("pupil_detection_result", None)
                 if result is not None:
                     result["id"] = eye_id
