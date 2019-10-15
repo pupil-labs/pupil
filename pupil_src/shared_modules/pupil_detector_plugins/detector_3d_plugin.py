@@ -72,37 +72,66 @@ class Detector3DPlugin(PupilDetectorPlugin):
     def init_ui(self):
         Plugin.add_menu(self)
         self.menu.label = self.pretty_class_name
-        info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
-                                +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
-                                +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
+        info = ui.Info_Text(
+            "Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "
+            + "Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "
+            + "Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds."
+        )
         self.menu.append(info)
-        #self.menu.append(ui.Switch('coarse_detection',self.detector_properties_2d,label='Use coarse detection'))
-        self.menu.append(ui.Slider('intensity_range',self.detector_properties_2d,label='Pupil intensity range',min=0,max=60,step=1))
-        self.menu.append(ui.Slider('pupil_size_min',self.detector_properties_2d,label='Pupil min',min=1,max=250,step=1))
-        self.menu.append(ui.Slider('pupil_size_max',self.detector_properties_2d,label='Pupil max',min=50,max=400,step=1))
-        #self.menu.append(ui.Slider('ellipse_roundness_ratio',self.detector_properties_2d,min=0.01,max=1.0,step=0.01))
-        #self.menu.append(ui.Slider('initial_ellipse_fit_treshhold',self.detector_properties_2d,min=0.01,max=6.0,step=0.01))
-        #self.menu.append(ui.Slider('canny_treshold',self.detector_properties_2d,min=1,max=1000,step=1))
-        #self.menu.append(ui.Slider('canny_ration',self.detector_properties_2d,min=1,max=4,step=1))
-        info_3d = ui.Info_Text("Open the debug window to see a visualization of the 3D pupil detection." )
+        # self.menu.append(ui.Switch('coarse_detection',self.detector_properties_2d,label='Use coarse detection'))
+        self.menu.append(
+            ui.Slider(
+                "intensity_range",
+                self.detector_properties_2d,
+                label="Pupil intensity range",
+                min=0,
+                max=60,
+                step=1,
+            )
+        )
+        self.menu.append(
+            ui.Slider(
+                "pupil_size_min",
+                self.detector_properties_2d,
+                label="Pupil min",
+                min=1,
+                max=250,
+                step=1,
+            )
+        )
+        self.menu.append(
+            ui.Slider(
+                "pupil_size_max",
+                self.detector_properties_2d,
+                label="Pupil max",
+                min=50,
+                max=400,
+                step=1,
+            )
+        )
+        # self.menu.append(ui.Slider('ellipse_roundness_ratio',self.detector_properties_2d,min=0.01,max=1.0,step=0.01))
+        # self.menu.append(ui.Slider('initial_ellipse_fit_treshhold',self.detector_properties_2d,min=0.01,max=6.0,step=0.01))
+        # self.menu.append(ui.Slider('canny_treshold',self.detector_properties_2d,min=1,max=1000,step=1))
+        # self.menu.append(ui.Slider('canny_ration',self.detector_properties_2d,min=1,max=4,step=1))
+        info_3d = ui.Info_Text(
+            "Open the debug window to see a visualization of the 3D pupil detection."
+        )
         self.menu.append(info_3d)
-        self.menu.append(ui.Button('Reset 3D model', self.reset_model))
-        self.menu.append(ui.Button('Open debug window',self.debug_window_toggle))
+        self.menu.append(ui.Button("Reset 3D model", self.reset_model))
+        self.menu.append(ui.Button("Open debug window", self.debug_window_toggle))
         model_sensitivity_slider = ui.Slider(
-            'model_sensitivity',
+            "model_sensitivity",
             self.detector_properties_3d,
-            label='Model sensitivity',
+            label="Model sensitivity",
             min=0.990,
             max=1.0,
             step=0.0001,
         )
-        model_sensitivity_slider.display_format = '%0.4f'
+        model_sensitivity_slider.display_format = "%0.4f"
         self.menu.append(model_sensitivity_slider)
         self.menu.append(
             ui.Switch(
-                'model_is_frozen',
-                self.detector_properties_3d,
-                label='Freeze model',
+                "model_is_frozen", self.detector_properties_3d, label="Freeze model"
             )
         )
         # self.menu.append(ui.Slider('pupil_radius_min',self.detector_properties_3d,label='Pupil min radius', min=1.0,max= 8.0,step=0.1))
@@ -111,9 +140,9 @@ class Detector3DPlugin(PupilDetectorPlugin):
         # self.menu.append(ui.Slider('max_circle_variance',self.detector_properties_3d,label='3D fit max circle variance', min=0.01,max=2.0,step=0.001))
         # self.menu.append(ui.Slider('combine_evaluation_max',self.detector_properties_3d,label='3D fit max combinations eval', min=500,max=50000,step=5000))
         # self.menu.append(ui.Slider('combine_depth_max',self.detector_properties_3d,label='3D fit max combination depth', min=10,max=5000,step=20))
-        #advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
-        #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detector_properties_2d,label='Contour min length',min=1,max=200,step=1))
-        #sidebar.append(advanced_controls_menu)
+        # advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
+        # advanced_controls_menu.append(ui.Slider('contour_size_min',self.detector_properties_2d,label='Contour min length',min=1,max=200,step=1))
+        # sidebar.append(advanced_controls_menu)
 
     def gl_display(self):
         self.debug_window_update()
@@ -122,12 +151,12 @@ class Detector3DPlugin(PupilDetectorPlugin):
         Plugin.remove_menu(self)
 
     def cleanup(self):
-        self.debug_window_close() # if we change detectors, be sure debug window is also closed
+        self.debug_window_close()  # if we change detectors, be sure debug window is also closed
 
     # Public
 
     def reset_model(self):
-         self.detector_3d.reset_model()
+        self.detector_3d.reset_model()
 
     # Debug window management
 
@@ -151,4 +180,6 @@ class Detector3DPlugin(PupilDetectorPlugin):
 
     def debug_window_update(self):
         if self.is_debug_window_open:
-            self.debugVisualizer3D.update_window(self.g_pool, self.detector_3d.debug_result)
+            self.debugVisualizer3D.update_window(
+                self.g_pool, self.detector_3d.debug_result
+            )
