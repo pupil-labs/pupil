@@ -33,14 +33,11 @@ class PupilDetectorPlugin(Plugin):
         if not frame:
             return
 
-        # TODO: Extract event handling logic from eye.py
+        event["pupil_detection_result"] = self.detect(frame=frame)
 
-        # Pupil ellipse detection
-        event["pupil_detection_result"] = self.detect(
-            frame=frame,
-            user_roi=self.g_pool.u_r,
-            visualize=self.g_pool.display_mode == "algorithm",
-        )
+    @abc.abstractmethod
+    def detect(self, frame):
+        pass
 
     def on_notify(self, notification):
         subject = notification["subject"]
@@ -114,17 +111,6 @@ class PupilDetectorPlugin(Plugin):
 
     def set_3d_detector_property(self, name: str, value: T.Any):
         return self.pupil_detector.set_3d_detector_property(name=name, value=value)
-
-    ##### Core API
-
-    def detect(self, frame, user_roi, visualize, pause_video: bool = False, **kwargs):
-        return self.pupil_detector.detect(
-            frame=frame,
-            user_roi=user_roi,
-            visualize=visualize,
-            pause_video=pause_video,
-            **kwargs,
-        )
 
     def namespaced_detector_properties(self) -> dict:
         return self.pupil_detector.namespaced_detector_properties()
