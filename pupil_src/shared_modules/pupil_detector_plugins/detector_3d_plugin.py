@@ -17,32 +17,47 @@ from .visualizer_3d import Eye_Visualizer
 
 
 class Detector3DPlugin(PupilDetectorPlugin):
-    uniqueness = 'unique'
-    icon_font = 'pupil_icons'
-    icon_chr = chr(0xec19)
+    uniqueness = "by_base_class"
+    icon_font = "pupil_icons"
+    icon_chr = chr(0xEC19)
 
-    def __init__(self, g_pool = None, namespaced_properties = None, detector_3d: Detector3D = None):
+    label = "C++ 3d detector"
+    identifier = "3d"
+
+    def __init__(
+        self, g_pool=None, namespaced_properties=None, detector_3d: Detector3D = None
+    ):
         super().__init__(g_pool=g_pool)
         self.detector_3d = detector_3d or Detector3D(namespaced_properties or {})
-        #debug window
+        # debug window
         self.debugVisualizer3D = Eye_Visualizer(g_pool, self.detector_3d.focal_length())
 
-    def detect(self, frame, user_roi, visualize, pause_video = False):
-        return self.detector_3d.detect(
-            frame,
-            user_roi,
-            visualize,
-            pause_video,
-            is_debugging_enabled=self.is_debug_window_open
+    def detect(self, frame):
+        roi = Roi(*self.g_pool.u_r.get()[:4])
+        result = self.detector_3d.detect(
+            gray_img=frame.gray,
+            timestamp=frame.timestamp,
+            color_img=frame.bgr,
+            roi=roi,
+            debug=self.is_debug_window_open,
         )
+
+        eye_id = self.g_pool.eye_id
+        location = result["location"]
+        result["norm_pos"] = normalize(
+            location, (frame.width, frame.height), flip_y=True
+        )
+        result["topic"] = f"pupil.{eye_id}"
+        result["id"] = eye_id
+        return result
 
     @property
     def detector_properties_2d(self) -> dict:
-        return self.detector_3d.detector_properties_2d
+        return self.detector_3d.get_properties()["2d"]
 
     @property
     def detector_properties_3d(self) -> dict:
-        return self.detector_3d.detector_properties_3d
+        return self.detector_3d.get_properties()["3d"]
 
     @property
     def pupil_detector(self) -> DetectorBase:
