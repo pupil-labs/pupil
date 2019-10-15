@@ -1,26 +1,28 @@
 import abc
+import logging
+import traceback
 import typing as T
 
-from plugin import Plugin
 from pupil_detectors import DetectorBase
+
+from plugin import Plugin
+
+logger = logging.getLogger(__name__)
 
 
 class PupilDetectorPlugin(Plugin):
-
-    ########## PupilDetectorPlugin API
-
     label = "Unnamed"
     identifier = "unnamed"
+    order = 0.1
 
     @property
     @abc.abstractmethod
     def pupil_detector(self) -> DetectorBase:
         pass
 
-    ##### Plugin API
-
     def __init__(self, g_pool):
         super().__init__(g_pool)
+        g_pool.pupil_detector = self
         self._notification_handler = {
             "pupil_detector.broadcast_properties": self.handle_broadcast_properties_notification,
             "pupil_detector.set_property": self.handle_set_property_notification,
@@ -47,20 +49,19 @@ class PupilDetectorPlugin(Plugin):
                 handler(notification)
 
     def handle_broadcast_properties_notification(self, notification):
-        target_process = notification.get("target", g_pool.process)
-        eye_id = target_process[-1]  # either "0" or "1"
-        should_respond = target_process == g_pool.process
+        target_process = notification.get("target", self.g_pool.process)
+        should_respond = target_process == self.g_pool.process
         if should_respond:
             props = self.namespaced_detector_properties()
             properties_broadcast = {
-                "subject": f"pupil_detector.properties.{eye_id}",
+                "subject": f"pupil_detector.properties.{self.g_pool.eye_id}",
                 **props,  # add properties to broadcast
             }
             self.notify_all(properties_broadcast)
 
     def handle_set_property_notification(self, notification):
-        target_process = notification.get("target", g_pool.process)
-        should_apply = target_process == g_pool.process
+        target_process = notification.get("target", self.g_pool.process)
+        should_apply = target_process == self.g_pool.process
 
         if should_apply:
             try:
@@ -79,12 +80,13 @@ class PupilDetectorPlugin(Plugin):
                     try:
                         # Modify the ROI with the values sent over network
                         minX, maxX, minY, maxY = property_value
-                        self.g_pool.u_r.set(
+                        user_roi = self.g_pool.u_r
+                        user_roi.set(
                             [
-                                max(g_pool.u_r.min_x, int(minX)),
-                                max(g_pool.u_r.min_y, int(minY)),
-                                min(g_pool.u_r.max_x, int(maxX)),
-                                min(g_pool.u_r.max_y, int(maxY)),
+                                max(user_roi.min_y, int(minY)),
+                                max(user_roi.min_x, int(minX)),
+                                min(user_roi.max_x, int(maxX)),
+                                min(user_roi.max_y, int(maxY)),
                             ]
                         )
                     except ValueError as err:
@@ -106,10 +108,6 @@ class PupilDetectorPlugin(Plugin):
             except (ValueError, TypeError):
                 logger.error("Invalid property or value")
                 logger.debug(traceback.format_exc())
-
-    ########## PupilDetector API
-
-    ##### Legacy API
 
     def set_2d_detector_property(self, name: str, value: T.Any):
         return self.pupil_detector.set_2d_detector_property(name=name, value=value)

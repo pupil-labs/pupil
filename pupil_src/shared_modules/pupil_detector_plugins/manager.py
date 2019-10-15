@@ -8,13 +8,12 @@ from . import available_detector_plugins
 
 
 class PupilDetectorManager(Plugin):
+    order = 0.2
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
-        (
-            self._default_pupil_detector_class,
-            self._available_pupil_detector_classes,
-        ) = available_detector_plugins()
+        self._available_pupil_detector_classes = available_detector_plugins()[1]
 
         self._notification_handler = {
             "set_detection_mapping_mode": self.set_detection_mode
@@ -30,12 +29,13 @@ class PupilDetectorManager(Plugin):
             labels=self.ui_selector_labels,
             label="Detection method",
         )
-        general_settings.insert(0, self._selector)
+        general_settings.append(self._selector)
 
     def on_notify(self, notification):
         subject = notification["subject"]
-        handler = self._notification_handler[subject]
-        handler(notification)
+        if subject in self._notification_handler:
+            handler = self._notification_handler[subject]
+            handler(notification)
 
     def set_detection_mode(self, notification):
         mode = notification["mode"]
@@ -60,9 +60,7 @@ class PupilDetectorManager(Plugin):
     # UI Selector
 
     def ui_selector_getter(self) -> str:
-        plugin_class = self.active_detector.__class__
-        plugin_name = self.registry.name_from_class(plugin_class)
-        return plugin_name
+        return self.g_pool.pupil_detector.identifier
 
     def ui_selector_setter(self, value: str):
         self.activate_detector_by_name(plugin_name=value)
@@ -70,8 +68,8 @@ class PupilDetectorManager(Plugin):
 
     @property
     def ui_selector_values(self) -> T.List[str]:
-        return self.registry.registered_plugin_names()
+        return [klass.identifier for klass in self._available_pupil_detector_classes]
 
     @property
     def ui_selector_labels(self) -> T.List[str]:
-        return self.registry.registered_plugin_labels()
+        return [klass.label for klass in self._available_pupil_detector_classes]
