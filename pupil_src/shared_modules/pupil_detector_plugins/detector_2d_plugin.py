@@ -19,6 +19,9 @@ class Detector2DPlugin(PupilDetectorPlugin):
     icon_font = "pupil_icons"
     icon_chr = chr(0xEC18)
 
+    label = "C++ 2d detector"
+    identifier = "2d"
+
     def __init__(
         self, g_pool=None, namespaced_properties=None, detector_2d: Detector2D = None
     ):
