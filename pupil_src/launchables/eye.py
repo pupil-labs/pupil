@@ -174,7 +174,8 @@ def eye(
         g_pool.user_dir = user_dir
         g_pool.version = version
         g_pool.app = "capture"
-        g_pool.process = "eye{}".format(eye_id)
+        g_pool.eye_id = eye_id
+        g_pool.process = f"eye{eye_id}"
         g_pool.timebase = timebase
 
         g_pool.ipc_pub = ipc_socket
@@ -214,8 +215,9 @@ def eye(
             # TODO: extend with plugins
             default_capture_settings,
             ("UVC_Manager", {}),
-            ("PupilDetectorManager", {}),
+            # Detector needs to be loaded first to set `g_pool.pupil_detector`
             (default_detector_cls.__name__, {}),
+            ("PupilDetectorManager", {}),
         ]
 
         # Callback functions
@@ -422,7 +424,6 @@ def eye(
 
         g_pool.plugins = Plugin_List(g_pool, plugins_to_load)
 
-        pupil_detector_manager.active_detector.init_ui()
         g_pool.writer = None
 
         g_pool.u_r = UIRoi((g_pool.capture.frame_size[1], g_pool.capture.frame_size[0]))
@@ -554,7 +555,7 @@ def eye(
                     f_height,
                     f_width,
                 ):
-                    pupil_detector_manager.active_detector.on_resolution_change(
+                    g_pool.pupil_detector.on_resolution_change(
                         (g_pool.u_r.array_shape[1], g_pool.u_r.array_shape[0]),
                         g_pool.capture.frame_size,
                     )
@@ -620,14 +621,11 @@ def eye(
                             g_pool.image_tex.update_from_ndarray(frame.img)
                         elif g_pool.display_mode in ("camera_image", "roi"):
                             g_pool.image_tex.update_from_ndarray(frame.gray)
-                        else:
-                            pass
-                    glViewport(0, 0, *camera_render_size)
-                    make_coord_system_norm_based(g_pool.flip)
-                    g_pool.image_tex.draw()
 
-                    f_width, f_height = g_pool.capture.frame_size
-                    make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
+                    glViewport(0, 0, *camera_render_size)
+                    for p in g_pool.plugins:
+                        p.gl_display()
+
                     if frame and result:
                         if result["method"] == "3d c++":
                             eye_ball = result["projected_sphere"]
@@ -680,26 +678,51 @@ def eye(
                                 )
 
                     glViewport(0, 0, *camera_render_size)
-                    make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
+                    # make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     # render the ROI
                     g_pool.u_r.draw(g_pool.gui.scale)
                     if g_pool.display_mode == "roi":
                         g_pool.u_r.draw_points(g_pool.gui.scale)
 
                     glViewport(0, 0, *window_size)
-                    make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
+                    # make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
                     # render graphs
                     fps_graph.draw()
                     cpu_graph.draw()
 
                     # render GUI
-                    unused_elements = g_pool.gui.update()
-                    for butt in unused_elements.buttons:
-                        uroi_on_mouse_button(*butt)
+                    try:
+                        clipboard = glfw.glfwGetClipboardString(main_window).decode()
+                    except AttributeError:  # clipboard is None, might happen on startup
+                        clipboard = ""
+                    g_pool.gui.update_clipboard(clipboard)
+                    user_input = g_pool.gui.update()
+                    if user_input.clipboard != clipboard:
+                        # only write to clipboard if content changed
+                        glfw.glfwSetClipboardString(
+                            main_window, user_input.clipboard.encode()
+                        )
 
-                    make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
+                    for button, action, mods in user_input.buttons:
+                        x, y = glfw.glfwGetCursorPos(main_window)
+                        pos = x * hdpi_factor, y * hdpi_factor
+                        pos = normalize(pos, camera_render_size)
+                        # Position in img pixels
+                        pos = denormalize(pos, g_pool.capture.frame_size)
 
-                    pupil_detector_manager.active_detector.gl_display()  # detector decides if we visualize or not
+                        for plugin in g_pool.plugins:
+                            if plugin.on_click(pos, button, action):
+                                break
+
+                    for key, scancode, action, mods in user_input.keys:
+                        for plugin in g_pool.plugins:
+                            if plugin.on_key(key, scancode, action, mods):
+                                break
+
+                    for char_ in user_input.chars:
+                        for plugin in g_pool.plugins:
+                            if plugin.on_char(char_):
+                                break
 
                     # update screen
                     glfw.glfwSwapBuffers(main_window)
@@ -724,8 +747,6 @@ def eye(
         session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
         session_settings["version"] = str(g_pool.version)
 
-        pupil_detector_manager.save_to_session_settings(session_settings)
-
         session_window_size = glfw.glfwGetWindowSize(main_window)
         if 0 not in session_window_size:
             session_settings["window_size"] = session_window_size
@@ -735,9 +756,6 @@ def eye(
         for plugin in g_pool.plugins:
             plugin.alive = False
         g_pool.plugins.clean()
-
-        pupil_detector_manager.active_detector.deinit_ui()
-        pupil_detector_manager.active_detector.cleanup()
 
         glfw.glfwDestroyWindow(main_window)
         g_pool.gui.terminate()
