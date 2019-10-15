@@ -1,17 +1,19 @@
-from pupil_detectors import DetectorBase, Detector2D
-from .detector_base_plugin import PupilDetectorPlugin
-
 from pyglui import ui
 from pyglui.cygl.utils import draw_gl_texture
+
 import glfw
 from gl_utils import (
     adjust_gl_view,
-    clear_gl_screen,
     basic_gl_setup,
+    clear_gl_screen,
     make_coord_system_norm_based,
     make_coord_system_pixel_based,
 )
+from methods import normalize
 from plugin import Plugin
+from pupil_detectors import Detector2D, DetectorBase, Roi
+
+from .detector_base_plugin import PupilDetectorPlugin
 
 
 class Detector2DPlugin(PupilDetectorPlugin):
@@ -27,37 +29,29 @@ class Detector2DPlugin(PupilDetectorPlugin):
     ):
         super().__init__(g_pool=g_pool)
         self.detector_2d = detector_2d or Detector2D(namespaced_properties or {})
-        # debug window
-        self._window = None
-        self.windowShouldOpen = False
-        self.windowShouldClose = False
-
-    ##### Core API
 
     @property
     def detector_properties_2d(self) -> dict:
-        return self.detector_2d.detector_properties_2d
+        return self.detector_2d.get_properties()["2d"]
 
-    def detect(self, frame, user_roi, visualize, pause_video=False):
-        if self.windowShouldOpen:
-            self.open_window((frame.width, frame.height))
-        if self.windowShouldClose:
-            self.close_window()
-
-        return self.detector_2d.detect(
-            frame,
-            user_roi,
-            visualize,
-            pause_video,
-            use_debug_image=self._window != None,
+    def detect(self, frame):
+        roi = Roi(*self.g_pool.u_r.get()[:4])
+        result = self.detector_2d.detect(
+            gray_img=frame.gray, color_img=frame.bgr, roi=roi
         )
-
-    ##### Legacy API
+        eye_id = self.g_pool.eye_id
+        location = result["location"]
+        result["norm_pos"] = normalize(
+            location, (frame.width, frame.height), flip_y=True
+        )
+        result["timestamp"] = frame.timestamp
+        result["topic"] = f"pupil.{eye_id}"
+        result["id"] = eye_id
+        result["method"] = "2d c++"
+        return result
 
     def set_2d_detector_property(self, name, value):
         self.detector_2d.set_2d_detector_property(name, value)
-
-    ##### Plugin API
 
     @property
     def pupil_detector(self) -> DetectorBase:
@@ -68,7 +62,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         return "Pupil Detector 2D"
 
     def init_ui(self):
-        Plugin.add_menu(self)
+        self.add_menu()
         self.menu.label = self.pretty_class_name
         self.menu_icon.label_font = "pupil_icons"
         info = ui.Info_Text(
@@ -108,92 +102,10 @@ class Detector2DPlugin(PupilDetectorPlugin):
                 step=1,
             )
         )
-        self.menu.append(ui.Button("Open debug window", self.toggle_window))
         # advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
         # advanced_controls_menu.append(ui.Slider('contour_size_min',self.detector_properties_2d,label='Contour min length',min=1,max=200,step=1))
         # advanced_controls_menu.append(ui.Slider('ellipse_true_support_min_dist',self.detector_properties_2d,label='ellipse_true_support_min_dist',min=0.1,max=7,step=0.1))
         # self.menu.append(advanced_controls_menu)
 
     def deinit_ui(self):
-        Plugin.remove_menu(self)
-
-    def toggle_window(self):
-        if self._window:
-            self.windowShouldClose = True
-        else:
-            self.windowShouldOpen = True
-
-    def open_window(self, size):
-        if not self._window:
-            if 0:  # we are not fullscreening
-                monitor = glfw.glfwGetMonitors()[self.monitor_idx]
-                mode = glfw.glfwGetVideoMode(monitor)
-                width, height = mode[0], mode[1]
-            else:
-                monitor = None
-                width, height = size
-
-            active_window = glfw.glfwGetCurrentContext()
-            self._window = glfw.glfwCreateWindow(
-                width,
-                height,
-                "Pupil Detector Debug Window",
-                monitor=monitor,
-                share=active_window,
-            )
-            if not 0:
-                glfw.glfwSetWindowPos(self._window, 200, 0)
-
-            self.on_resize(self._window, width, height)
-
-            # Register callbacks
-            glfw.glfwSetWindowSizeCallback(self._window, self.on_resize)
-            # glfwSetKeyCallback(self._window,self.on_window_key)
-            glfw.glfwSetWindowCloseCallback(self._window, self.on_close)
-
-            # gl_state settings
-            glfw.glfwMakeContextCurrent(self._window)
-            basic_gl_setup()
-
-            # refresh speed settings
-            glfw.glfwSwapInterval(0)
-
-            glfw.glfwMakeContextCurrent(active_window)
-
-            self.windowShouldOpen = False
-
-    # window calbacks
-    def on_resize(self, window, w, h):
-        active_window = glfw.glfwGetCurrentContext()
-        glfw.glfwMakeContextCurrent(window)
-        adjust_gl_view(w, h)
-        glfw.glfwMakeContextCurrent(active_window)
-
-    def on_close(self, window):
-        self.windowShouldClose = True
-
-    def close_window(self):
-        if self._window:
-            active_window = glfw.glfwGetCurrentContext()
-            glfw.glfwDestroyWindow(self._window)
-            self._window = None
-            self.windowShouldClose = False
-            glfw.glfwMakeContextCurrent(active_window)
-
-    def gl_display_in_window(self, img):
-        active_window = glfw.glfwGetCurrentContext()
-        glfw.glfwMakeContextCurrent(self._window)
-        clear_gl_screen()
-        # gl stuff that will show on your plugin window goes here
-        make_coord_system_norm_based()
-        draw_gl_texture(img, interpolation=False)
-        glfw.glfwSwapBuffers(self._window)
-        glfw.glfwMakeContextCurrent(active_window)
-
-    def cleanup(self):
-        self.close_window()  # if we change detectors, be sure debug window is also closed
-
-    def gl_display(self):
-        # display the debug image in the window
-        if self._window:
-            self.gl_display_in_window(self.detector_2d.debug_image)
+        self.remove_menu()
