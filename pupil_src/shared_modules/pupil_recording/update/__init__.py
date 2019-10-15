@@ -1,3 +1,15 @@
+"""
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2019 Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+"""
+
+import logging
 from types import SimpleNamespace
 
 from video_capture.file_backend import File_Source
@@ -16,6 +28,8 @@ from .new_style import (
 )
 from .old_style import transform_old_style_to_pprf_2_0
 
+logger = logging.getLogger(__name__)
+
 _transformations_to_new_style = {
     RecordingType.INVISIBLE: transform_invisible_to_corresponding_new_style,
     RecordingType.MOBILE: transform_mobile_to_corresponding_new_style,
@@ -26,6 +40,30 @@ _transformations_to_new_style = {
 def update_recording(rec_dir: str):
 
     recording_type = get_recording_type(rec_dir)
+
+    if recording_type == RecordingType.INVISIBLE:
+        # NOTE: there is an issue with PI recordings, where sometimes multiple parts of
+        # the recording are stored as an .mjpeg and .mp4, but for the same part number.
+        # The recording is un-usable in this case, since the time information is lost.
+        # Trying to open the recording will crash in the lookup-table generation. We
+        # just gracefully exit here and display an error message.
+        mjpeg_world_videos = (
+            PupilRecording.FileFilter(rec_dir).pi().world().filter_patterns(".mjpeg$")
+        )
+        if mjpeg_world_videos:
+            videos = [
+                path.name
+                for path in PupilRecording.FileFilter(rec_dir).pi().world().videos()
+            ]
+            logger.error(
+                "Found mjpeg world videos for this Pupil Invisible recording! Videos:\n"
+                + ",\n".join(videos)
+            )
+            raise InvalidRecordingException(
+                "This recording cannot be opened in Player.",
+                recovery="Please reach out to info@pupil-labs.com for support!",
+            )
+
     if recording_type in _transformations_to_new_style:
         _transformations_to_new_style[recording_type](rec_dir)
 
@@ -57,8 +95,9 @@ def _generate_all_lookup_tables(rec_dir: str):
     for videos in videosets:
         if not videos:
             continue
+        source_path = videos[0].resolve()
         File_Source(
-            SimpleNamespace(), source_path=videos[0], fill_gaps=True, timing=None
+            SimpleNamespace(), source_path=source_path, fill_gaps=True, timing=None
         )
 
 

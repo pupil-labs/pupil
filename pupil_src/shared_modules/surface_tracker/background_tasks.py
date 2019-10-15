@@ -463,6 +463,8 @@ class Exporter:
                     "img_to_surf_trans",
                     "surf_to_img_trans",
                     "num_detected_markers",
+                    "dist_img_to_surf_trans",
+                    "surf_to_dist_img_trans",
                 )
             )
             for idx, (ts, ref_surf_data) in enumerate(
@@ -481,6 +483,8 @@ class Exporter:
                                 ref_surf_data.img_to_surf_trans,
                                 ref_surf_data.surf_to_img_trans,
                                 ref_surf_data.num_detected_markers,
+                                ref_surf_data.dist_img_to_surf_trans,
+                                ref_surf_data.surf_to_dist_img_trans,
                             )
                         )
 

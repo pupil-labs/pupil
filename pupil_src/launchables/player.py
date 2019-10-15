@@ -257,7 +257,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
         g_pool.camera_render_size = None
 
-        video_path = recording.files().core().world().videos()[0]
+        video_path = recording.files().core().world().videos()[0].resolve()
         File_Source(
             g_pool,
             timing="external",
@@ -759,6 +759,21 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
         text = "Drop a recording directory onto this window."
         tip = "(Tip: You can drop a recording directory onto the app icon.)"
         # text = "Please supply a Pupil recording directory as first arg when calling Pupil Player."
+
+        def display_string(string, font_size, center_y):
+            x = w / 2 * hdpi_factor
+            y = center_y * hdpi_factor
+
+            glfont.set_size(font_size * hdpi_factor)
+
+            glfont.set_blur(10.5)
+            glfont.set_color_float((0.0, 0.0, 0.0, 1.0))
+            glfont.draw_text(x, y, string)
+
+            glfont.set_blur(0.96)
+            glfont.set_color_float((1.0, 1.0, 1.0, 1.0))
+            glfont.draw_text(x, y, string)
+
         while not glfw.glfwWindowShouldClose(window):
 
             fb_size = glfw.glfwGetFramebufferSize(window)
@@ -773,24 +788,21 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
                     tip = "This may take a while!"
                 except InvalidRecordingException as err:
                     logger.error(str(err))
-                    tip = err.reason
                     if err.recovery:
-                        tip += " " + err.recovery + "."
+                        text = err.reason
+                        tip = err.recovery
+                    else:
+                        text = "Invalid recording"
+                        tip = err.reason
                     rec_dir = None
 
             gl_utils.clear_gl_screen()
-            glfont.set_blur(10.5)
-            glfont.set_color_float((0.0, 0.0, 0.0, 1.0))
-            glfont.set_size(w / 25.0 * hdpi_factor)
-            glfont.draw_text(w / 2 * hdpi_factor, 0.3 * h * hdpi_factor, text)
-            glfont.set_size(w / 30.0 * hdpi_factor)
-            glfont.draw_text(w / 2 * hdpi_factor, 0.4 * h * hdpi_factor, tip)
-            glfont.set_blur(0.96)
-            glfont.set_color_float((1.0, 1.0, 1.0, 1.0))
-            glfont.set_size(w / 25.0 * hdpi_factor)
-            glfont.draw_text(w / 2 * hdpi_factor, 0.3 * h * hdpi_factor, text)
-            glfont.set_size(w / 30.0 * hdpi_factor)
-            glfont.draw_text(w / 2 * hdpi_factor, 0.4 * h * hdpi_factor, tip)
+
+            display_string(text, font_size=51, center_y=216)
+            for idx, line in enumerate(tip.split("\n")):
+                tip_font_size = 42
+                center_y = 288 + tip_font_size * idx * 1.2
+                display_string(line, font_size=tip_font_size, center_y=center_y)
 
             glfw.glfwSwapBuffers(window)
 
@@ -803,9 +815,12 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
                     rec_dir = None
                 except InvalidRecordingException as err:
                     logger.error(str(err))
-                    tip = err.reason
                     if err.recovery:
-                        tip += " " + err.recovery + "."
+                        text = err.reason
+                        tip = err.recovery
+                    else:
+                        text = "Invalid recording"
+                        tip = err.reason
                     rec_dir = None
                 else:
                     glfw.glfwSetWindowShouldClose(window, True)

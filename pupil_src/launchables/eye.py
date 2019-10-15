@@ -11,14 +11,20 @@ See COPYING and COPYING.LESSER for license details.
 
 import os
 import platform
-from types import SimpleNamespace
 import typing as T
+from types import SimpleNamespace
+
+from plugin import Plugin
 
 
-class PupilDetectorManager:
-
+class PupilDetectorManager(Plugin):
     def __init__(self, g_pool):
-        from pupil_detectors.plugins import PupilDetectorPluginRegistry, DetectorDummyPlugin, Detector2DPlugin, Detector3DPlugin
+        from pupil_detectors.plugins import (
+            PupilDetectorPluginRegistry,
+            DetectorDummyPlugin,
+            Detector2DPlugin,
+            Detector3DPlugin,
+        )
 
         self.g_pool = g_pool
         self.registry = PupilDetectorPluginRegistry.shared_registry()
@@ -50,14 +56,15 @@ class PupilDetectorManager:
         self.g_pool.pupil_detector = detector
         # NOTE: Need to init_ui manually
 
-    def activate_detector_by_name(self, plugin_name: str, g_pool=..., plugin_properties=None):
+    def activate_detector_by_name(
+        self, plugin_name: str, g_pool=..., plugin_properties=None
+    ):
         plugin_class = self.registry.class_by_name(plugin_name)
-        self.activate_detector_by_class(
-            plugin_class=plugin_class,
-            g_pool=g_pool,
-        )
+        self.activate_detector_by_class(plugin_class=plugin_class, g_pool=g_pool)
 
-    def activate_detector_by_class(self, plugin_class, g_pool=..., plugin_properties=None):
+    def activate_detector_by_class(
+        self, plugin_class, g_pool=..., plugin_properties=None
+    ):
         g_pool = g_pool if g_pool is not ... else self.g_pool
         self.active_detector = plugin_class(g_pool, plugin_properties)
 
@@ -67,18 +74,18 @@ class PupilDetectorManager:
     _PUPIL_DETECTOR_PROPERTIES_KEY = "pupil_detector_settings"
 
     def load_from_session_settings(self, session_settings: T.Mapping[str, T.Any]):
-        plugin_name = session_settings.get(self._PUPIL_DETECTOR_SELECTION_NAME_KEY, None)
+        plugin_name = session_settings.get(
+            self._PUPIL_DETECTOR_SELECTION_NAME_KEY, None
+        )
         plugin_prop = session_settings.get(self._PUPIL_DETECTOR_PROPERTIES_KEY, None)
         if plugin_name:
             self.activate_detector_by_name(
-                plugin_name=plugin_name,
-                plugin_properties=plugin_prop,
+                plugin_name=plugin_name, plugin_properties=plugin_prop
             )
         else:
             plugin_class = self._default_pupil_detector_class
             self.activate_detector_by_class(
-                plugin_class=plugin_class,
-                plugin_properties=plugin_prop,
+                plugin_class=plugin_class, plugin_properties=plugin_prop
             )
 
     def save_to_session_settings(self, session_settings: T.Mapping[str, T.Any]):
@@ -185,12 +192,13 @@ def eye(
     Streams Pupil coordinates.
 
     Reacts to notifications:
-       ``set_detection_mapping_mode``: Sets detection method
-       ``eye_process.should_stop``: Stops the eye process
-       ``recording.started``: Starts recording eye video
-       ``recording.stopped``: Stops recording eye video
-       ``frame_publishing.started``: Starts frame publishing
-       ``frame_publishing.stopped``: Stops frame publishing
+        ``set_detection_mapping_mode``: Sets detection method
+        ``eye_process.should_stop``: Stops the eye process
+        ``recording.started``: Starts recording eye video
+        ``recording.stopped``: Stops recording eye video
+        ``frame_publishing.started``: Starts frame publishing
+        ``frame_publishing.stopped``: Stops frame publishing
+        ``start_eye_plugin``: Start plugins in eye process
 
     Emits notifications:
         ``eye_process.started``: Eye process started
@@ -247,6 +255,9 @@ def eye(
         # monitoring
         import psutil
 
+        # Plug-ins
+        from plugin import Plugin_List
+
         # helpers/utils
         from uvc import get_time_monotonic
         from file_methods import Persistent_Dict
@@ -254,8 +265,7 @@ def eye(
         from methods import normalize, denormalize, timer
         from av_writer import JPEG_Writer, MPEG_Writer
         from ndsi import H264Writer
-        from video_capture import source_classes
-        from video_capture import manager_classes
+        from video_capture import source_classes, manager_classes
 
         from background_helper import IPC_Logging_Task_Proxy
 
@@ -296,6 +306,30 @@ def eye(
         g_pool.get_now = get_time_monotonic
 
         pupil_detector_manager = PupilDetectorManager(g_pool)
+        plugins = manager_classes + source_classes
+        g_pool.plugin_by_name = {p.__name__: p for p in plugins}
+
+        preferred_names = [
+            f"Pupil Cam3 ID{eye_id}",
+            f"Pupil Cam2 ID{eye_id}",
+            f"Pupil Cam1 ID{eye_id}",
+        ]
+        if eye_id == 0:
+            preferred_names += ["HD-6000"]
+        default_capture_settings = (
+            "UVC_Source",
+            {
+                "preferred_names": preferred_names,
+                "frame_size": (320, 240),
+                "frame_rate": 120,
+            },
+        )
+
+        default_plugins = [
+            # TODO: extend with plugins
+            default_capture_settings,
+            ("UVC_Manager", {}),
+        ]
 
         # Callback functions
         def on_resize(window, w, h):
@@ -346,8 +380,7 @@ def eye(
 
         def on_drop(window, count, paths):
             paths = [paths[x].decode("utf-8") for x in range(count)]
-            plugins = (g_pool.capture_manager, g_pool.capture)
-            for plugin in plugins:
+            for plugin in g_pool.plugins:
                 if plugin.on_drop(paths):
                     break
 
@@ -363,7 +396,6 @@ def eye(
 
         g_pool.iconified = False
         g_pool.capture = None
-        g_pool.capture_manager = None
         g_pool.flip = session_settings.get("flip", False)
         g_pool.display_mode = session_settings.get("display_mode", "camera_image")
         g_pool.display_mode_info_text = {
@@ -371,42 +403,6 @@ def eye(
             "roi": "Click and drag on the blue circles to adjust the region of interest. The region should be as small as possible, but large enough to capture all pupil movements.",
             "algorithm": "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below.",
         }
-
-        capture_manager_settings = session_settings.get(
-            "capture_manager_settings", ("UVC_Manager", {})
-        )
-
-        manager_class_name, manager_settings = capture_manager_settings
-        manager_class_by_name = {c.__name__: c for c in manager_classes}
-        g_pool.capture_manager = manager_class_by_name[manager_class_name](
-            g_pool, **manager_settings
-        )
-
-        if eye_id == 0:
-            cap_src = ["Pupil Cam3 ID0", "Pupil Cam2 ID0", "Pupil Cam1 ID0", "HD-6000"]
-        else:
-            cap_src = ["Pupil Cam3 ID1", "Pupil Cam2 ID1", "Pupil Cam1 ID1"]
-
-        # Initialize capture
-        default_settings = (
-            "UVC_Source",
-            {"preferred_names": cap_src, "frame_size": (320, 240), "frame_rate": 120},
-        )
-
-        capture_source_settings = overwrite_cap_settings or session_settings.get(
-            "capture_settings", default_settings
-        )
-        source_class_name, source_settings = capture_source_settings
-        source_class_by_name = {c.__name__: c for c in source_classes}
-        g_pool.capture = source_class_by_name[source_class_name](
-            g_pool, **source_settings
-        )
-        assert g_pool.capture
-
-        g_pool.u_r = UIRoi((g_pool.capture.frame_size[1], g_pool.capture.frame_size[0]))
-        roi_user_settings = session_settings.get("roi")
-        if roi_user_settings and tuple(roi_user_settings[-1]) == g_pool.u_r.get()[-1]:
-            g_pool.u_r.set(roi_user_settings)
 
         pupil_detector_manager.load_from_session_settings(session_settings)
 
@@ -427,11 +423,7 @@ def eye(
         glfw.glfwInit()
         title = "Pupil Capture - eye {}".format(eye_id)
 
-        width, height = g_pool.capture.frame_size
-        width *= 2
-        height *= 2
-        width += icon_bar_width
-        width, height = session_settings.get("window_size", (width, height))
+        width, height = session_settings.get("window_size", (640 + icon_bar_width, 480))
 
         main_window = glfw.glfwCreateWindow(width, height, title, None, None)
         window_pos = session_settings.get("window_position", window_position_default)
@@ -547,27 +539,21 @@ def eye(
         g_pool.iconbar.append(icon)
         toggle_general_settings(False)
 
+        plugins_to_load = session_settings.get("loaded_plugins", default_plugins)
+        if overwrite_cap_settings:
+            # Ensure that overwrite_cap_settings takes preference over source plugins
+            # with incorrect settings that were loaded from session settings.
+            plugins_to_load.append(overwrite_cap_settings)
+
+        g_pool.plugins = Plugin_List(g_pool, plugins_to_load)
+
         pupil_detector_manager.active_detector.init_ui()
-        g_pool.capture.init_ui()
-        g_pool.capture_manager.init_ui()
         g_pool.writer = None
 
-        def replace_source(source_class_name, source_settings):
-            g_pool.capture.deinit_ui()
-            g_pool.capture.cleanup()
-            g_pool.capture = source_class_by_name[source_class_name](
-                g_pool, **source_settings
-            )
-            g_pool.capture.init_ui()
-            if g_pool.writer:
-                logger.info("Done recording.")
-                try:
-                    g_pool.writer.release()
-                except RuntimeError:
-                    logger.error("No eye video recorded")
-                g_pool.writer = None
-
-        g_pool.replace_source = replace_source  # for ndsi capture
+        g_pool.u_r = UIRoi((g_pool.capture.frame_size[1], g_pool.capture.frame_size[0]))
+        roi_user_settings = session_settings.get("roi")
+        if roi_user_settings and tuple(roi_user_settings[-1]) == g_pool.u_r.get()[-1]:
+            g_pool.u_r.set(roi_user_settings)
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -678,10 +664,16 @@ def eye(
                     should_publish_frames = False
                     frame_publish_format = "jpeg"
                 elif (
-                    subject.startswith("start_eye_capture")
+                    subject.startswith("start_eye_plugin")
                     and notification["target"] == g_pool.process
                 ):
-                    replace_source(notification["name"], notification["args"])
+                    try:
+                        g_pool.plugins.add(
+                            g_pool.plugin_by_name[notification["name"]],
+                            notification.get("args", {}),
+                        )
+                    except KeyError as err:
+                        logger.error(f"Attempt to load unknown plugin: {err}")
                 elif notification["subject"].startswith("pupil_detector.set_property"):
                     target_process = notification.get("target", g_pool.process)
                     should_apply = target_process == g_pool.process
@@ -737,21 +729,23 @@ def eye(
                     target_process = notification.get("target", g_pool.process)
                     should_respond = target_process == g_pool.process
                     if should_respond:
-                        props = pupil_detector_manager.active_detector.namespaced_detector_properties()
+                        props = (
+                            pupil_detector_manager.active_detector.namespaced_detector_properties()
+                        )
                         properties_broadcast = {
                             "subject": "pupil_detector.properties.{}".format(eye_id),
                             **props,  # add properties to broadcast
                         }
                         ipc_socket.notify(properties_broadcast)
-                g_pool.capture.on_notify(notification)
-                g_pool.capture_manager.on_notify(notification)
+                for plugin in g_pool.plugins:
+                    plugin.on_notify(notification)
                 pupil_detector_manager.active_detector.on_notify(notification)
 
-            # Get an image from the grabber
             event = {}
-            g_pool.capture.recent_events(event)
+            for plugin in g_pool.plugins:
+                plugin.recent_events(event)
+
             frame = event.get("frame")
-            g_pool.capture_manager.recent_events(event)
             if frame:
                 f_width, f_height = g_pool.capture.frame_size
                 if (g_pool.u_r.array_shape[0], g_pool.u_r.array_shape[1]) != (
@@ -917,23 +911,17 @@ def eye(
         # in case eye recording was still runnnig: Save&close
         if g_pool.writer:
             logger.info("Done recording eye.")
+            g_pool.writer.release()
             g_pool.writer = None
 
         glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
+        session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         # save session persistent settings
         session_settings["gui_scale"] = g_pool.gui_user_scale
         session_settings["roi"] = g_pool.u_r.get()
         session_settings["flip"] = g_pool.flip
         session_settings["display_mode"] = g_pool.display_mode
         session_settings["ui_config"] = g_pool.gui.configuration
-        session_settings["capture_settings"] = (
-            g_pool.capture.class_name,
-            g_pool.capture.get_init_dict(),
-        )
-        session_settings["capture_manager_settings"] = (
-            g_pool.capture_manager.class_name,
-            g_pool.capture_manager.get_init_dict(),
-        )
         session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
         session_settings["version"] = str(g_pool.version)
 
@@ -945,13 +933,12 @@ def eye(
 
         session_settings.close()
 
-        g_pool.capture.deinit_ui()
-        g_pool.capture_manager.deinit_ui()
-        pupil_detector_manager.active_detector.deinit_ui()
+        for plugin in g_pool.plugins:
+            plugin.alive = False
+        g_pool.plugins.clean()
 
+        pupil_detector_manager.active_detector.deinit_ui()
         pupil_detector_manager.active_detector.cleanup()
-        g_pool.capture_manager.cleanup()
-        g_pool.capture.cleanup()
 
         glfw.glfwDestroyWindow(main_window)
         g_pool.gui.terminate()

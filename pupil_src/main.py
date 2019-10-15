@@ -18,8 +18,21 @@ if not running_from_bundle:
 
 import launchable_args
 
-default_args = {"app": "capture", "debug": False, "profile": False}
+default_args = {"app": "capture", "debug": False, "profile": False, "version": False}
 parsed_args, unknown_args = launchable_args.parse(running_from_bundle, **default_args)
+
+# app version
+from version_utils import get_version
+
+app_version = get_version()
+if parsed_args.version:
+    running_from = "bundle" if running_from_bundle else "source"
+    version_message = (
+        f"Pupil {parsed_args.app.capitalize()} version {app_version} ({running_from})"
+    )
+
+    print(version_message)
+    sys.exit()
 
 if running_from_bundle:
     # Specifiy user dir.
@@ -37,11 +50,6 @@ if not os.path.isdir(user_dir):
 plugin_dir = os.path.join(user_dir, "plugins")
 if not os.path.isdir(plugin_dir):
     os.mkdir(plugin_dir)
-
-# app version
-from version_utils import get_version
-
-app_version = get_version()
 
 # threading and processing
 from multiprocessing import (

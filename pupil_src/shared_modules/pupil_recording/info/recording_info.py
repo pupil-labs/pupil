@@ -1,3 +1,14 @@
+"""
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2019 Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+"""
+
 import abc
 import collections
 import json
@@ -151,12 +162,12 @@ class RecordingInfo(collections.abc.MutableMapping):
 
     @property
     @abc.abstractmethod
-    def recording_software_version(self) -> Version:
+    def recording_software_version(self) -> str:
         pass
 
     @recording_software_version.setter
     @abc.abstractmethod
-    def recording_software_version(self, value: Version):
+    def recording_software_version(self, value: str):
         pass
 
     @property

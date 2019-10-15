@@ -570,10 +570,7 @@ class NDSI_Manager(Base_Manager):
 
     def activate_source(self, settings={}):
         settings["network"] = self.network
-        if hasattr(self.g_pool, "plugins"):
-            self.g_pool.plugins.add(NDSI_Source, args=settings)
-        else:
-            self.g_pool.replace_source(NDSI_Source.__name__, source_settings=settings)
+        self.g_pool.plugins.add(NDSI_Source, args=settings)
 
     def recover(self):
         self.g_pool.capture.recover(self.network)

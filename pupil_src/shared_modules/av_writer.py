@@ -183,16 +183,17 @@ class AV_Writer(abc.ABC):
             logger.warning("Trying to close container multiple times!")
             return
 
-        # flush stream
-        for packet in self.video_stream.encode(None):
-            self.container.mux(packet)
+        if self.configured:
+            # at least one frame has been written, flush stream
+            for packet in self.video_stream.encode(None):
+                self.container.mux(packet)
+
+            if timestamp_export_format is not None:
+                write_timestamps(
+                    self.output_file_path, self.timestamps, timestamp_export_format
+                )
 
         self.container.close()
-
-        if timestamp_export_format is not None:
-            write_timestamps(
-                self.output_file_path, self.timestamps, timestamp_export_format
-            )
         self.closed = True
 
     def release(self):
