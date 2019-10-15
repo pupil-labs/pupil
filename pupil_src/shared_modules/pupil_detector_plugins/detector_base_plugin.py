@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class PupilDetectorPlugin(Plugin):
-    label = "Unnamed"
+    label = "Unnamed"  # Used in eye -> general settings as selector
+    # Used to select correct detector on set_detection_mapping_mode:
     identifier = "unnamed"
     order = 0.1
 
