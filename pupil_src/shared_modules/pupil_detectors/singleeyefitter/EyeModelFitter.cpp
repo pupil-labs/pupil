@@ -18,6 +18,9 @@
 #include <algorithm>
 #include <queue>
 
+// Ensure correct compilation after update to Visual Studio 2017 v15.8
+#define _ENABLE_EXTENDED_ALIGNED_STORAGE
+
 namespace singleeyefitter {
 
 

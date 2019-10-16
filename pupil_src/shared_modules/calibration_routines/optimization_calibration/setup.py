@@ -31,7 +31,7 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Build import cythonize
 import numpy as np
-import os, sys, platform
+import os, sys, platform, shutil, glob
 
 
 dependencies = []
@@ -42,32 +42,78 @@ for dirpath, dirnames, filenames in os.walk("."):
 
 shared_cpp_include_path = "../../../shared_cpp/include"
 singleeyefitter_include_path = "../../pupil_detectors/singleeyefitter"
+extra_compile_args = ["-D_USE_MATH_DEFINES", "-std=c++11", "-w", "-O2"]
 
 if platform.system() == "Windows":
     libs = []
     library_dirs = []
-    lib_spec = [
-        [np.get_include(), ""],
-        [
-            "C:\\work\\opencv\\build\\include",
-            "C:\\work\\opencv\\build\\x64\\vc14\\lib\\opencv_world345.lib",
-        ],
-        ["C:\\work\\ceres-windows\\Eigen", ""],
-        [
-            "C:\\work\\ceres-windows\\ceres-solver\\include",
-            "C:\\work\\ceres-windows\\x64\\Release\\ceres_static.lib",
-        ],
-        [
-            "C:\\work\\ceres-windows\\glog\\src\\windows",
-            "C:\\work\\ceres-windows\\x64\\Release\\libglog_static.lib",
-        ],
-        ["C:\\work\\ceres-windows", ""],
-    ]
+
+    # Check if the setup.py is running in a Conda environment
+    is_conda = os.path.exists(os.path.join(sys.prefix, "conda-meta"))
+    if is_conda:
+        # Deduct the include and library dir dynamically
+        include_dir = os.path.join(sys.prefix, "Library", "include")
+        lib_dir = os.path.join(sys.prefix, "Library", "lib")
+        if not os.path.exists(include_dir) or not os.path.exists(lib_dir):
+            raise EnvironmentError("Unable to locate Anaconda include or lib directory")
+
+        # When installing Eigen via Conda it is installed in a folder called 'eigen3'. Deal with that, if appropriate.
+        eigen_dir = os.path.join(include_dir, "Eigen")
+        custom_eigen_dir = os.path.join(include_dir, "eigen3")
+        if not os.path.exists(eigen_dir) and os.path.exists(custom_eigen_dir):
+            """
+            # Creating a junction might be the prettiest way - but it need extended rights.
+            import ctypes
+            kernel_dll = ctypes.windll.LoadLibrary("kernel32.dll")
+            if kernel_dll.CreateSymbolicLinkA(eigen_dir, custom_eigen_dir, 1) == 0:
+                raise EnvironmentError(f"Unable tio create junction between {eigen_dir} and {custom_eigen_dir}.")
+            """
+
+            # Use the ugly variant and simply copy the directory
+            shutil.copytree(src=custom_eigen_dir, dst=eigen_dir)
+
+        # Change mode to prevent mismatch with the Conda libraries
+        extra_compile_args.append("-MD")
+
+        # Finally build lib_spec dynamically
+        lib_spec = [
+            [np.get_include(), ""],
+            [include_dir, ""],
+            [
+                os.path.join(include_dir, "opencv2"),
+                *glob.glob(os.path.join(lib_dir, "opencv_*.lib")),
+            ],
+            [os.path.join(include_dir, "Eigen"), ""],
+            [os.path.join(include_dir, "ceres"), os.path.join(lib_dir, "ceres.lib")],
+            [os.path.join(include_dir, "glog"), os.path.join(lib_dir, "glog.lib")],
+        ]
+    else:
+        lib_spec = [
+            [np.get_include(), ""],
+            [
+                "C:\\work\\opencv\\build\\include",
+                "C:\\work\\opencv\\build\\x64\\vc14\\lib\\opencv_world345.lib",
+            ],
+            ["C:\\work\\ceres-windows\\Eigen", ""],
+            [
+                "C:\\work\\ceres-windows\\ceres-solver\\include",
+                "C:\\work\\ceres-windows\\x64\\Release\\ceres_static.lib",
+            ],
+            [
+                "C:\\work\\ceres-windows\\glog\\src\\windows",
+                "C:\\work\\ceres-windows\\x64\\Release\\libglog_static.lib",
+            ],
+            ["C:\\work\\ceres-windows", ""],
+        ]
 
     include_dirs = [spec[0] for spec in lib_spec]
     include_dirs.append(shared_cpp_include_path)
     include_dirs.append(singleeyefitter_include_path)
-    xtra_obj = [spec[1] for spec in lib_spec]
+
+    # Handle multiple library entries, for example in the case of OpenCV
+    xtra_obj = []
+    for spec in lib_spec:
+        xtra_obj.extend(spec[1:])
 
 else:
     # opencv3 - highgui module has been split into parts: imgcodecs, videoio, and highgui itself
@@ -124,12 +170,7 @@ extensions = [
         libraries=libs,
         library_dirs=library_dirs,
         extra_link_args=[],  # '-WL,-R/usr/local/lib'
-        extra_compile_args=[
-            "-D_USE_MATH_DEFINES",
-            "-std=c++11",
-            "-w",
-            "-O2",
-        ],  # -w hides warnings
+        extra_compile_args=extra_compile_args,  # -w hides warnings
         extra_objects=xtra_obj,
         depends=dependencies,
         language="c++",
