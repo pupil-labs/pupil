@@ -13,6 +13,7 @@ from plugin import Plugin
 from pupil_detectors import Detector3D, DetectorBase, Roi
 
 from .detector_base_plugin import PupilDetectorPlugin
+from .visualizer_2d import draw_pupil_outline, draw_eyeball_outline
 from .visualizer_3d import Eye_Visualizer
 
 
@@ -147,6 +148,9 @@ class Detector3DPlugin(PupilDetectorPlugin):
 
     def gl_display(self):
         self.debug_window_update()
+        if self._recent_detection_result:
+            draw_eyeball_outline(self._recent_detection_result)
+            draw_pupil_outline(self._recent_detection_result)
 
     def deinit_ui(self):
         self.remove_menu()

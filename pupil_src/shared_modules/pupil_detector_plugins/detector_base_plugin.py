@@ -24,6 +24,7 @@ class PupilDetectorPlugin(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         g_pool.pupil_detector = self
+        self._recent_detection_result = None
         self._notification_handler = {
             "pupil_detector.broadcast_properties": self.handle_broadcast_properties_notification,
             "pupil_detector.set_property": self.handle_set_property_notification,
@@ -32,9 +33,12 @@ class PupilDetectorPlugin(Plugin):
     def recent_events(self, event):
         frame = event.get("frame")
         if not frame:
+            self._recent_detection_result = None
             return
 
-        event["pupil_detection_result"] = self.detect(frame=frame)
+        detection_result = self.detect(frame=frame)
+        event["pupil_detection_result"] = detection_result
+        self._recent_detection_result = detection_result
 
     @abc.abstractmethod
     def detect(self, frame):

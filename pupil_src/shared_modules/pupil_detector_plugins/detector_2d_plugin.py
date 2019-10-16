@@ -61,6 +61,10 @@ class Detector2DPlugin(PupilDetectorPlugin):
     def pretty_class_name(self):
         return "Pupil Detector 2D"
 
+    def gl_display(self):
+        if self._recent_detection_result:
+            draw_pupil_outline(self._recent_detection_result)
+
     def init_ui(self):
         self.add_menu()
         self.menu.label = self.pretty_class_name

@@ -619,57 +619,6 @@ def eye(
                     for p in g_pool.plugins:
                         p.gl_display()
 
-                    if frame and result:
-                        if result["method"] == "3d c++":
-                            eye_ball = result["projected_sphere"]
-                            try:
-                                pts = cv2.ellipse2Poly(
-                                    (
-                                        int(eye_ball["center"][0]),
-                                        int(eye_ball["center"][1]),
-                                    ),
-                                    (
-                                        int(eye_ball["axes"][0] / 2),
-                                        int(eye_ball["axes"][1] / 2),
-                                    ),
-                                    int(eye_ball["angle"]),
-                                    0,
-                                    360,
-                                    8,
-                                )
-                            except ValueError as e:
-                                pass
-                            else:
-                                draw_polyline(
-                                    pts,
-                                    2,
-                                    RGBA(0.0, 0.9, 0.1, result["model_confidence"]),
-                                )
-                        if result["confidence"] > 0:
-                            if "ellipse" in result:
-                                pts = cv2.ellipse2Poly(
-                                    (
-                                        int(result["ellipse"]["center"][0]),
-                                        int(result["ellipse"]["center"][1]),
-                                    ),
-                                    (
-                                        int(result["ellipse"]["axes"][0] / 2),
-                                        int(result["ellipse"]["axes"][1] / 2),
-                                    ),
-                                    int(result["ellipse"]["angle"]),
-                                    0,
-                                    360,
-                                    15,
-                                )
-                                confidence = result["confidence"] * 0.7
-                                draw_polyline(pts, 1, RGBA(1.0, 0, 0, confidence))
-                                draw_points(
-                                    [result["ellipse"]["center"]],
-                                    size=20,
-                                    color=RGBA(1.0, 0.0, 0.0, confidence),
-                                    sharpness=1.0,
-                                )
-
                     glViewport(0, 0, *camera_render_size)
                     # render the ROI
                     g_pool.u_r.draw(g_pool.gui.scale)
