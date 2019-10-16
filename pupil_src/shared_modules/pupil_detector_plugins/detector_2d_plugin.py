@@ -14,6 +14,7 @@ from plugin import Plugin
 from pupil_detectors import Detector2D, DetectorBase, Roi
 
 from .detector_base_plugin import PupilDetectorPlugin
+from .visualizer_2d import draw_pupil_outline
 
 
 class Detector2DPlugin(PupilDetectorPlugin):
