@@ -808,6 +808,8 @@ class UVC_Source(Base_Source):
                 # `frame.yuv_subsampling` is `None` without calling `frame.yuv_buffer`
                 frame.yuv_buffer is not None
                 and TJSAMP(frame.yuv_subsampling) == TJSAMP.TJSAMP_422
+                # TODO: Find a better solution than this:
+                and getattr(self.g_pool, "display_mode", "") != "algorithm"
             ):
                 self.g_pool.image_tex.update_from_yuv_buffer(
                     frame.yuv_buffer, frame.width, frame.height

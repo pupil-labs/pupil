@@ -85,7 +85,11 @@ class Base_Source(Plugin):
     def gl_display(self):
         if self._recent_frame is not None:
             frame = self._recent_frame
-            if frame.yuv_buffer is not None:
+            if (
+                frame.yuv_buffer is not None
+                # TODO: Find a better solution than this:
+                and getattr(self.g_pool, "display_mode", "") != "algorithm"
+            ):
                 self.g_pool.image_tex.update_from_yuv_buffer(
                     frame.yuv_buffer, frame.width, frame.height
                 )

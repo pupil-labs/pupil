@@ -615,13 +615,6 @@ def eye(
                     glfw.glfwMakeContextCurrent(main_window)
                     clear_gl_screen()
 
-                    if frame:
-                        # switch to work in normalized coordinate space
-                        if g_pool.display_mode == "algorithm":
-                            g_pool.image_tex.update_from_ndarray(frame.img)
-                        elif g_pool.display_mode in ("camera_image", "roi"):
-                            g_pool.image_tex.update_from_ndarray(frame.gray)
-
                     glViewport(0, 0, *camera_render_size)
                     for p in g_pool.plugins:
                         p.gl_display()
@@ -678,14 +671,12 @@ def eye(
                                 )
 
                     glViewport(0, 0, *camera_render_size)
-                    # make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     # render the ROI
                     g_pool.u_r.draw(g_pool.gui.scale)
                     if g_pool.display_mode == "roi":
                         g_pool.u_r.draw_points(g_pool.gui.scale)
 
                     glViewport(0, 0, *window_size)
-                    # make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
                     # render graphs
                     fps_graph.draw()
                     cpu_graph.draw()
