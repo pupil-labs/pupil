@@ -82,19 +82,23 @@ class PupilDetectorPlugin(Plugin):
                 try:
                     # Modify the ROI with the values sent over network
                     minX, maxX, minY, maxY = property_value
-                    user_roi = self.g_pool.u_r
-                    user_roi.set(
-                        [
-                            max(user_roi.min_y, int(minY)),
-                            max(user_roi.min_x, int(minX)),
-                            min(user_roi.max_x, int(maxX)),
-                            min(user_roi.max_y, int(maxY)),
-                        ]
-                    )
-                except ValueError as err:
+                except (ValueError, TypeError) as err:
+                    # NOTE: ValueError gets throws when length of the tuple does not
+                    # match. TypeError gets thrown when it is not a tuple.
                     raise ValueError(
-                        "ROI needs to be list of 4 integers:" "(minX, maxX, minY, maxY)"
+                        "ROI needs to be 4 integers: (minX, maxX, minY, maxY)"
                     ) from err
+                if minX > maxX or minY > maxY:
+                    raise ValueError("ROI malformed: minX > maxX or minY > maxY!")
+                user_roi = self.g_pool.u_r
+                user_roi.set(
+                    [
+                        max(user_roi.min_x, int(minX)),
+                        max(user_roi.min_y, int(minY)),
+                        min(user_roi.max_x, int(maxX)),
+                        min(user_roi.max_y, int(maxY)),
+                    ]
+                )
             else:
                 raise KeyError(
                     "Notification subject does not "
