@@ -76,7 +76,7 @@ class PupilDetectorPlugin(Plugin):
                 if len(subject_components) > 2:
                     namespace = subject_components[2]
                     self.pupil_detector.update_properties(
-                        namespace, {property_name: property_value}
+                        {namespace: {property_name: property_value}}
                     )
                 elif property_name == "roi":
                     try:
