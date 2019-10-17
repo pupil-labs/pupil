@@ -79,8 +79,8 @@ class PupilDetectorPlugin(Plugin):
                     {namespace: {property_name: property_value}}
                 )
             elif property_name == "roi":
+                # Modify the ROI with the values sent over network
                 try:
-                    # Modify the ROI with the values sent over network
                     minX, maxX, minY, maxY = property_value
                 except (ValueError, TypeError) as err:
                     # NOTE: ValueError gets throws when length of the tuple does not
@@ -100,9 +100,7 @@ class PupilDetectorPlugin(Plugin):
                     "Notification subject does not "
                     "specifiy detector type nor modify ROI."
                 )
-            logger.debug(
-                "`{}` property set to {}".format(property_name, property_value)
-            )
+            logger.debug(f"`{property_name}` property set to {property_value}")
         except KeyError:
             logger.error("Malformed notification received")
             logger.debug(traceback.format_exc())
