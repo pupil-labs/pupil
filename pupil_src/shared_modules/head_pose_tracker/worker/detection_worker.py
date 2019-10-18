@@ -78,7 +78,7 @@ def offline_detection(
     batch_size = 30
     frame_start, frame_end = frame_index_range
     frame_indices = sorted(
-        set(range(frame_start, frame_end + 1)) - set(calculated_frame_indices)
+        set(range(frame_start, frame_end + 1)) - calculated_frame_indices
     )
     if not frame_indices:
         return
