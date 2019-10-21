@@ -63,53 +63,50 @@ class PupilDetectorPlugin(Plugin):
 
     def handle_set_property_notification(self, notification):
         target_process = notification.get("target", self.g_pool.process)
-        should_apply = target_process == self.g_pool.process
+        if target_process != self.g_pool.process:
+            return
 
-        if should_apply:
-            try:
-                property_name = notification["name"]
-                property_value = notification["value"]
-                subject_components = notification["subject"].split(".")
-                # len(pupil_detector.properties) is at least 2 due to the subject prefix
-                # being pupil_detector.set_property. The third component is the optional
-                # namespace of the property.
-                if len(subject_components) > 2:
-                    namespace = subject_components[2]
-                    self.pupil_detector.update_properties(
-                        namespace, {property_name: property_value}
-                    )
-                elif property_name == "roi":
-                    try:
-                        # Modify the ROI with the values sent over network
-                        minX, maxX, minY, maxY = property_value
-                        user_roi = self.g_pool.u_r
-                        user_roi.set(
-                            [
-                                max(user_roi.min_y, int(minY)),
-                                max(user_roi.min_x, int(minX)),
-                                min(user_roi.max_x, int(maxX)),
-                                min(user_roi.max_y, int(maxY)),
-                            ]
-                        )
-                    except ValueError as err:
-                        raise ValueError(
-                            "ROI needs to be list of 4 integers:"
-                            "(minX, maxX, minY, maxY)"
-                        ) from err
-                else:
-                    raise KeyError(
-                        "Notification subject does not "
-                        "specifiy detector type nor modify ROI."
-                    )
-                logger.debug(
-                    "`{}` property set to {}".format(property_name, property_value)
+        try:
+            property_name = notification["name"]
+            property_value = notification["value"]
+            subject_components = notification["subject"].split(".")
+            # len(pupil_detector.properties) is at least 2 due to the subject prefix
+            # being pupil_detector.set_property. The third component is the optional
+            # namespace of the property.
+            if len(subject_components) > 2:
+                namespace = subject_components[2]
+                self.pupil_detector.update_properties(
+                    {namespace: {property_name: property_value}}
                 )
-            except KeyError:
-                logger.error("Malformed notification received")
-                logger.debug(traceback.format_exc())
-            except (ValueError, TypeError):
-                logger.error("Invalid property or value")
-                logger.debug(traceback.format_exc())
+            elif property_name == "roi":
+                # Modify the ROI with the values sent over network
+                try:
+                    minX, maxX, minY, maxY = property_value
+                except (ValueError, TypeError) as err:
+                    # NOTE: ValueError gets throws when length of the tuple does not
+                    # match. TypeError gets thrown when it is not a tuple.
+                    raise ValueError(
+                        "ROI needs to be 4 integers: (minX, maxX, minY, maxY)"
+                    ) from err
+                if minX > maxX or minY > maxY:
+                    raise ValueError("ROI malformed: minX > maxX or minY > maxY!")
+                ui_roi = self.g_pool.u_r
+                ui_roi.lX = max(ui_roi.min_x, int(minX))
+                ui_roi.lY = max(ui_roi.min_y, int(minY))
+                ui_roi.uX = min(ui_roi.max_x, int(maxX))
+                ui_roi.uY = min(ui_roi.max_y, int(maxY))
+            else:
+                raise KeyError(
+                    "Notification subject does not "
+                    "specifiy detector type nor modify ROI."
+                )
+            logger.debug(f"`{property_name}` property set to {property_value}")
+        except KeyError:
+            logger.error("Malformed notification received")
+            logger.debug(traceback.format_exc())
+        except (ValueError, TypeError):
+            logger.error("Invalid property or value")
+            logger.debug(traceback.format_exc())
 
     def set_2d_detector_property(self, name: str, value: T.Any):
         return self.pupil_detector.set_2d_detector_property(name=name, value=value)
