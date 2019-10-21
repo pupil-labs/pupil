@@ -205,7 +205,7 @@ class Surface(abc.ABC):
 
         if compensate_distortion:
             orig_shape = points.shape
-            img_points = camera_model.distortPoints(img_points)
+            img_points = camera_model.distort_points_on_image_plane(img_points)
             img_points.shape = orig_shape
 
         return img_points
