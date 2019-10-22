@@ -443,10 +443,17 @@ class Exporter:
     def _export_surface_heatmap(self, surface, surface_name):
         if surface.within_surface_heatmap is not None:
             logger.info("Saved Heatmap as .png file.")
-            cv2.imwrite(
-                os.path.join(self.metrics_dir, "heatmap" + surface_name + ".png"),
-                surface.within_surface_heatmap,
+            heatmap_file_name = "heatmap" + surface_name + ".png"
+            heatmap_path = os.path.join(self.metrics_dir, heatmap_file_name)
+
+            surface_size = surface.real_world_size
+            heatmap_resolution = (int(surface_size["x"]), int(surface_size["y"]))
+
+            heatmap_img = surface.within_surface_heatmap
+            heatmap_img = cv2.resize(
+                heatmap_img, heatmap_resolution, interpolation=cv2.INTER_NEAREST
             )
+            cv2.imwrite(heatmap_path, heatmap_img)
 
     def _export_surface_positions(self, surface, surface_name):
         with open(
