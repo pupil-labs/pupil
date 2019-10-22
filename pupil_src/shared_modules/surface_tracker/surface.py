@@ -10,9 +10,8 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
-import typing
 import logging
-import operator
+import typing
 import uuid
 
 import cv2
@@ -47,7 +46,6 @@ class Surface(abc.ABC):
         deprecated_definition: bool = None,
     ):
 
-
         init_args = [
             real_world_size,
             marker_aggregates_undist,
@@ -55,15 +53,25 @@ class Surface(abc.ABC):
             build_up_status,
             deprecated_definition,
         ]
-        assert all(map(is_none, init_args)) or all(map(is_not_none, init_args)),\
-            "Either all initialization arguments are None, or they all are not None"
+        all_args_none = all(map(is_none, init_args))
+        no_arg_none = all(map(is_not_none, init_args))
+        assert (
+            all_args_none or no_arg_none
+        ), "Either all initialization arguments are None, or they all are not None"
 
-        marker_aggregates_undist = marker_aggregates_undist if marker_aggregates_undist is not None else []
-        marker_aggregates_dist = marker_aggregates_dist if marker_aggregates_dist is not None else []
+        if marker_aggregates_undist is None:
+            marker_aggregates_undist = []
+        if marker_aggregates_dist is None:
+            marker_aggregates_dist = []
+
+        if real_world_size is None:
+            real_world_size = {"x": 1.0, "y": 1.0}
+        if deprecated_definition is None:
+            deprecated_definition = False
 
         self.name = name
-        self.real_world_size = real_world_size if real_world_size is not None else {"x": 1.0, "y": 1.0}
-        self.deprecated_definition = deprecated_definition if deprecated_definition is not None else False
+        self.real_world_size = real_world_size
+        self.deprecated_definition = deprecated_definition
 
         # We store the surface state in two versions: once computed with the
         # undistorted scene image and once with the still distorted scene image. The
@@ -100,8 +108,6 @@ class Surface(abc.ABC):
         # The uid is only used to implement __hash__ and __eq__
         self._uid = uuid.uuid4()
 
-
-
     def __hash__(self):
         return int(self._uid)
 
@@ -114,6 +120,7 @@ class Surface(abc.ABC):
     @staticmethod
     def property_equality(x: "Surface", y: "Surface") -> bool:
         import multiprocessing as mp
+
         def property_dict(x: Surface) -> dict:
             x_dict = x.__dict__.copy()
             del x_dict["_uid"]  # `_uid`s are always unique
@@ -123,6 +130,7 @@ class Surface(abc.ABC):
                 if isinstance(x_dict[key], mp.sharedctypes.Synchronized):
                     x_dict[key] = x_dict[key].value
             return x_dict
+
         return property_dict(x) == property_dict(y)
 
     @property
@@ -205,7 +213,7 @@ class Surface(abc.ABC):
 
         if compensate_distortion:
             orig_shape = points.shape
-            img_points = camera_model.distortPoints(img_points)
+            img_points = camera_model.distort_points_on_image_plane(img_points)
             img_points.shape = orig_shape
 
         return img_points
@@ -333,9 +341,29 @@ class Surface(abc.ABC):
         points_A = points_A.reshape((-1, 1, 2))
         points_B = points_B.reshape((-1, 1, 2))
 
-        B_to_A, mask = cv2.findHomography(
-            points_A, points_B, method=cv2.RANSAC, ransacReprojThreshold=100
-        )
+        B_to_A, mask = cv2.findHomography(points_A, points_B)
+        # NOTE: cv2.findHomography(A, B) will not produce the inverse of
+        # cv2.findHomography(B, A)! The errors can actually be quite large, resulting in
+        # on-screen discrepancies of up to 50 pixels. We try to find the inverse
+        # analytically instead with fallbacks.
+
+        try:
+            A_to_B = np.linalg.inv(B_to_A)
+            return A_to_B, B_to_A
+        except np.linalg.LinAlgError as e:
+            logger.debug(
+                "Failed to calculate inverse homography with np.inv()! "
+                "Trying with np.pinv() instead."
+            )
+
+        try:
+            A_to_B = np.linalg.pinv(B_to_A)
+            return A_to_B, B_to_A
+        except np.linalg.LinAlgError as e:
+            logger.warning(
+                "Failed to calculate inverse homography with np.pinv()! "
+                "Falling back to inaccurate manual computation!"
+            )
 
         A_to_B, mask = cv2.findHomography(points_B, points_A)
         return A_to_B, B_to_A
@@ -582,7 +610,7 @@ class Surface(abc.ABC):
 
     def get_uniform_heatmap(self, resolution):
         if len(resolution) != 2:
-            raise ValueError("resolution has to be two dimensional but found dimension {}!".format(len(resolution)))
+            raise ValueError(f"Resolution has to be 2D! Received: ({resolution})!")
 
         hm = np.zeros((*resolution, 4), dtype=np.uint8)
         hm[:, :, :3] = cv2.applyColorMap(hm[:, :, :3], cv2.COLORMAP_JET)
