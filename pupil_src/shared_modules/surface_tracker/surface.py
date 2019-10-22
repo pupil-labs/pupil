@@ -94,7 +94,7 @@ class Surface(abc.ABC):
         self.surf_to_dist_img_trans = None
         self.num_detected_markers = 0
 
-        self._REQUIRED_OBS_PER_MARKER = 5
+        self._REQUIRED_OBS_PER_MARKER = 1
         self._avg_obs_per_marker = 0
         self.build_up_status = build_up_status if build_up_status is not None else 0
 
