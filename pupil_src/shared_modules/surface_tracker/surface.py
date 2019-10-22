@@ -94,6 +94,9 @@ class Surface(abc.ABC):
         self.surf_to_dist_img_trans = None
         self.num_detected_markers = 0
 
+        # TODO: The aggregation over neighbors for REQUIRED_OBS_PER_MARKER can lead to
+        # inaccurate surface definitions. By setting this to 1 we disable the
+        # aggregation for now. Need to refactor this in the future.
         self._REQUIRED_OBS_PER_MARKER = 1
         self._avg_obs_per_marker = 0
         self.build_up_status = build_up_status if build_up_status is not None else 0
