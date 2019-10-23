@@ -32,7 +32,11 @@ from .gui import Heatmap_Mode
 from .surface_marker import Surface_Marker
 from .surface_marker_detector import MarkerDetectorMode
 from .surface_offline import Surface_Offline
-from .surface_tracker import Surface_Tracker
+from .surface_tracker import (
+    Surface_Tracker,
+    APRILTAG_HIGH_RES_ON,
+    APRILTAG_SHARPENING_ON,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +123,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             marker_detector_mode = MarkerDetectorMode.from_marker(
                 first_cached_surface_marker
             )
-            self.marker_detector_mode = {marker_detector_mode}
+            self.marker_detector_mode = marker_detector_mode
 
     def _init_marker_cache(self):
         previous_cache = file_methods.Persistent_Dict(
@@ -127,12 +131,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         )
         version = previous_cache.get("version", 0)
         cache = previous_cache.get("marker_cache_unfiltered", None)
+        self._set_detector_params_from_previous_cache(previous_cache)
 
         if cache is None:
             self._recalculate_marker_cache()
         elif version != self.MARKER_CACHE_VERSION:
             logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
-            self.inverted_markers = previous_cache.get("inverted_markers", False)
             self._recalculate_marker_cache()
         else:
             marker_cache_unfiltered = []
@@ -148,8 +152,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 marker_cache_unfiltered.append(markers)
 
             self._recalculate_marker_cache(previous_state=marker_cache_unfiltered)
-            self.inverted_markers = previous_cache.get("inverted_markers", False)
             logger.debug("Restored previous marker cache.")
+
+    def _set_detector_params_from_previous_cache(self, previous_cache):
+        self.inverted_markers = previous_cache.get("inverted_markers", False)
+        self.quad_decimate = previous_cache.get("quad_decimate", APRILTAG_HIGH_RES_ON)
+        self.sharpening = previous_cache.get("sharpening", APRILTAG_SHARPENING_ON)
 
     def _recalculate_marker_cache(self, previous_state=None):
         if previous_state is None:
@@ -169,8 +177,11 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self.g_pool.capture.source_path,
             offline_utils.marker_detection_callable(
                 marker_detector_mode=self.marker_detector_mode,
-                min_marker_perimeter=self.CACHE_MIN_MARKER_PERIMETER,
-                inverted_markers=self.inverted_markers,
+                marker_min_perimeter=self.CACHE_MIN_MARKER_PERIMETER,
+                square_marker_inverted_markers=self.inverted_markers,
+                square_marker_use_online_mode=False,
+                apriltag_quad_decimate=self.quad_decimate,
+                apriltag_decode_sharpening=self.sharpening,
             ),
             list(self.marker_cache),
             self.cache_seek_idx,

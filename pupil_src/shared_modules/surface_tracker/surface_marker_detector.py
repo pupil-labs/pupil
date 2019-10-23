@@ -65,7 +65,9 @@ class MarkerDetectorMode(T.NamedTuple):
         if marker_type == Surface_Marker_Type.SQUARE:
             return cls(MarkerType.SQUARE_MARKER)
         if marker_type == Surface_Marker_Type.APRILTAG_V3:
-            return cls(MarkerType.APRILTAG_MARKER, marker.tag_family)
+            return cls(
+                MarkerType.APRILTAG_MARKER, ApriltagFamily(marker.raw_marker.tag_family)
+            )
         raise ValueError(
             f"Can't map marker of type '{marker_type}' to a detection mode"
         )
