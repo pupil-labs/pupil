@@ -87,7 +87,7 @@ class Surface_Tracker_Online(Surface_Tracker):
 
         surf_menu.append(
             pyglui.ui.Text_Input(
-                "GAZE_HISTORY_LENGTH",
+                "gaze_history_length",
                 surface,
                 label="Gaze History Length [seconds]",
                 setter=set_gaze_hist_len,
