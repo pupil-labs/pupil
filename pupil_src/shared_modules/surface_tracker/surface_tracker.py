@@ -10,25 +10,28 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-import os
+import typing as T
 from abc import ABCMeta, abstractmethod
-import typing
-
-logger = logging.getLogger(__name__)
 
 import numpy as np
 import pyglui
 
 from plugin import Plugin
-import file_methods
 
 from . import gui
+from .surface_file_store import Surface_File_Store
 from .surface_marker_detector import (
     Surface_Marker_Detector,
     Surface_Marker_Detector_Mode,
+    MarkerType,
+    ApriltagFamily,
 )
 
-from .surface_file_store import Surface_File_Store
+logger = logging.getLogger(__name__)
+
+DEFAULT_DETECTOR_MODE = Surface_Marker_Detector_Mode(
+    MarkerType.APRILTAG_MARKER, ApriltagFamily.tag25h9
+)
 
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
@@ -49,9 +52,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         g_pool,
         marker_min_perimeter: int = 60,
         inverted_markers: bool = False,
-        marker_detector_mode: typing.Union[
-            Surface_Marker_Detector_Mode, str
-        ] = Surface_Marker_Detector_Mode.APRILTAG_MARKER,
+        marker_detector_mode: T.Union[
+            Surface_Marker_Detector_Mode, T.Tuple
+        ] = DEFAULT_DETECTOR_MODE,
         use_online_detection: bool = False,
     ):
         super().__init__(g_pool)
@@ -65,10 +68,12 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self._last_mouse_pos = (0.0, 0.0)
         self.gui = gui.GUI(self)
 
-        if isinstance(marker_detector_mode, str):
+        if not isinstance(marker_detector_mode, Surface_Marker_Detector_Mode):
             # Here we ensure that we pass a proper Surface_Marker_Detector_Mode
             # instance to Surface_Marker_Detector:
-            marker_detector_mode = Surface_Marker_Detector_Mode(marker_detector_mode)
+            marker_detector_mode = Surface_Marker_Detector_Mode.from_tuple(
+                marker_detector_mode
+            )
 
         # Even though the Surface_Marker_Detector class supports multiple detector
         # modes at once, we only want one mode to be active during surface tracking.
@@ -84,15 +89,17 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self._surface_file_store = Surface_File_Store(parent_dir=self._save_dir)
 
         # Add surfaces from file
-        for surface in self._surface_file_store.read_surfaces_from_file(surface_class=self.Surface_Class):
+        for surface in self._surface_file_store.read_surfaces_from_file(
+            surface_class=self.Surface_Class
+        ):
             self.add_surface(surface)
 
     @property
-    def marker_detector_modes(self) -> typing.Set[Surface_Marker_Detector_Mode]:
+    def marker_detector_modes(self) -> T.Set[Surface_Marker_Detector_Mode]:
         return self.marker_detector.marker_detector_modes
 
     @marker_detector_modes.setter
-    def marker_detector_modes(self, value: typing.Set[Surface_Marker_Detector_Mode]):
+    def marker_detector_modes(self, value: T.Set[Surface_Marker_Detector_Mode]):
         self.marker_detector.marker_detector_modes = value
 
     @property
@@ -227,7 +234,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             Surface_Marker_Detector_Mode.all_supported_cases()
         )
         supported_surface_marker_detector_modes = sorted(
-            supported_surface_marker_detector_modes, key=lambda m: m.value
+            supported_surface_marker_detector_modes, key=lambda m: m.label
         )
 
         advanced_menu = pyglui.ui.Growing_Menu("Marker Detection Parameters")
@@ -483,7 +490,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def on_add_surface_click(self, _=None):
         if self.markers:
-            surface = self.Surface_Class(name="Surface {:}".format(len(self.surfaces) + 1))
+            surface = self.Surface_Class(
+                name="Surface {:}".format(len(self.surfaces) + 1)
+            )
             self.add_surface(surface)
         else:
             logger.warning("Can not add a new surface: No markers found in the image!")
@@ -519,7 +528,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         return {
             "marker_min_perimeter": self.marker_min_perimeter,
             "inverted_markers": self.inverted_markers,
-            "marker_detector_mode": self.active_marker_detector_mode.value,
+            "marker_detector_mode": self.active_marker_detector_mode.as_tuple(),
         }
 
     def save_surface_definitions_to_file(self):
