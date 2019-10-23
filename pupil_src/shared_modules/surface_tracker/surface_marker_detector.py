@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import abc
 import enum
+import logging
 import typing as T
 
 import square_marker_detect
@@ -18,6 +19,7 @@ import pupil_apriltags
 
 from .surface_marker import Surface_Marker, Surface_Marker_Type
 
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "MarkerDetectorController",
@@ -157,14 +159,6 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
     def marker_min_perimeter(self, value: int):
         self.__marker_min_perimeter = value
 
-    @property
-    def marker_detector_mode(self) -> MarkerDetectorMode:
-        return self.__marker_detector_modes
-
-    @marker_detector_mode.setter
-    def marker_detector_mode(self, value: MarkerDetectorMode):
-        self.__marker_detector_modes = value
-
     def detect_markers_iter(
         self, gray_img, frame_index: int
     ) -> T.Iterable[Surface_Marker]:
@@ -275,28 +269,12 @@ class Surface_Apriltag_V3_Marker_Detector(Surface_Base_Marker_Detector):
         self.__setstate__(state)
 
     @property
-    def inverted_markers(self) -> bool:
-        return False
-
-    @inverted_markers.setter
-    def inverted_markers(self, value: bool):
-        pass  # nop
-
-    @property
     def marker_min_perimeter(self) -> int:
         return self.__marker_min_perimeter
 
     @marker_min_perimeter.setter
     def marker_min_perimeter(self, value: int):
         self.__marker_min_perimeter = value
-
-    @property
-    def marker_detector_mode(self) -> MarkerDetectorMode:
-        return self.__marker_detector_modes
-
-    @marker_detector_mode.setter
-    def marker_detector_mode(self, value: MarkerDetectorMode):
-        self.__marker_detector_modes = value
 
     def detect_markers_iter(
         self, gray_img, frame_index: int
@@ -338,6 +316,15 @@ class MarkerDetectorController(Surface_Base_Marker_Detector):
                 apriltag_nthreads=self._apriltag_nthreads,
                 apriltag_quad_decimate=self._apriltag_quad_decimate,
                 apriltag_decode_sharpening=self._apriltag_decode_sharpening,
+            )
+            logger.debug(
+                "Init Apriltag Detector (\n"
+                f"\tmarker_min_perimeter={self.marker_min_perimeter}\n"
+                f"\tapriltag_families={self._marker_detector_mode.family}\n"
+                f"\tapriltag_nthreads={self._apriltag_nthreads}\n"
+                f"\tapriltag_quad_decimate={self._apriltag_quad_decimate}\n"
+                f"\tapriltag_decode_sharpening={self._apriltag_decode_sharpening}\n"
+                ")"
             )
         elif self._marker_detector_mode.marker_type == MarkerType.SQUARE_MARKER:
             self.__detector = Surface_Square_Marker_Detector(
