@@ -16,25 +16,26 @@ import os
 import platform
 import time
 
-logger = logging.getLogger(__name__)
-
-import numpy as np
 import cv2
-import pyglui
-import gl_utils
-import pyglui.cygl.utils as pyglui_utils
+import numpy as np
 import OpenGL.GL as gl
+import pyglui
+import pyglui.cygl.utils as pyglui_utils
 
-from plugin import Analysis_Plugin_Base
 import file_methods
+import gl_utils
+from plugin import Analysis_Plugin_Base
 
+from . import background_tasks, offline_utils
 from .cache import Cache
-from .surface_tracker import Surface_Tracker
-from . import offline_utils, background_tasks
+from .gui import Heatmap_Mode
 from .surface_marker import Surface_Marker
 from .surface_marker_detector import MarkerDetectorMode
-from .gui import Heatmap_Mode
 from .surface_offline import Surface_Offline
+from .surface_tracker import Surface_Tracker
+
+logger = logging.getLogger(__name__)
+
 
 # On macOS, "spawn" is set as default start method in main.py. This is not required
 # here and we set it back to "fork" to improve performance.
