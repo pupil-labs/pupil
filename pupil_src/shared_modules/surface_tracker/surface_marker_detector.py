@@ -38,6 +38,11 @@ class ApriltagFamily(enum.Enum):
     tag16h5 = "tag16h5"
     tag25h9 = "tag25h9"
     tag36h11 = "tag36h11"
+    tagCircle21h7 = "tagCircle21h7"
+    tagCircle49h12 = "tagCircle49h12"
+    tagCustom48h12 = "tagCustom48h12"
+    tagStandard41h12 = "tagStandard41h12"
+    tagStandard52h13 = "tagStandard52h13"
 
 
 class MarkerDetectorMode(T.NamedTuple):
