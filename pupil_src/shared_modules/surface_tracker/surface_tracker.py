@@ -82,7 +82,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             marker_detector_mode = MarkerDetectorMode.from_tuple(marker_detector_mode)
 
         self._marker_min_perimeter = marker_min_perimeter
-        self.marker_min_confidence = 0.0
         self.marker_detector = MarkerDetectorController(
             marker_detector_mode=marker_detector_mode,
             marker_min_perimeter=marker_min_perimeter,
@@ -479,7 +478,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             m
             for m in markers
             if m.perimeter >= self.marker_min_perimeter
-            and m.id_confidence > self.marker_min_confidence
         ]
         return markers
 
