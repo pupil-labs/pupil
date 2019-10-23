@@ -130,7 +130,7 @@ class GUI:
                 self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
 
     def _draw_markers(self):
-        for marker in self.tracker.markers_unfiltered:
+        for marker in self.tracker.markers:
             color = rgb_to_rgba(
                 SURFACE_MARKER_COLOR_RGB_BY_TYPE[marker.marker_type], alpha=0.5
             )

@@ -260,11 +260,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self._update_marker_and_surface_caches()
 
         self.markers = self.marker_cache[frame.index]
-        self.markers_unfiltered = self.marker_cache_unfiltered[frame.index]
         if self.markers is None:
             # Move seek index to current frame because caches do not contain data for it
             self.markers = []
-            self.markers_unfiltered = []
             self.cache_seek_idx.value = frame.index
 
     def _update_marker_and_surface_caches(self):

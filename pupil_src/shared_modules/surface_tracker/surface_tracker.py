@@ -70,7 +70,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.current_frame = None
         self.surfaces = []
         self.markers = []
-        self.markers_unfiltered = []
 
         self._edit_surf_verts = []
         self._last_mouse_pos = (0.0, 0.0)
