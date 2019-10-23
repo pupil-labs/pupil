@@ -205,7 +205,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             ui.Selector(
                 "marker_detector_mode",
                 self,
-                label="Marker Detector Mode",
+                label="Marker type",
                 labels=[mode.label for mode in supported_surface_marker_detector_modes],
                 selection=[mode for mode in supported_surface_marker_detector_modes],
             )
