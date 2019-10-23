@@ -9,25 +9,11 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import typing
-
 from .surface import Surface
-from .surface_marker_detector import MarkerDetectorController, MarkerDetectorMode
+from .surface_marker_detector import MarkerDetectorController
 
 
 class marker_detection_callable(MarkerDetectorController):
-    def __init__(
-        self,
-        marker_detector_modes: typing.Set[MarkerDetectorMode],
-        min_marker_perimeter: int,
-        inverted_markers: bool,
-    ):
-        super().__init__(
-            marker_detector_modes=marker_detector_modes,
-            marker_min_perimeter=min_marker_perimeter,
-            square_marker_inverted_markers=inverted_markers,
-        )
-
     def __call__(self, frame):
         return self.detect_markers(gray_img=frame.gray, frame_index=frame.index)
 

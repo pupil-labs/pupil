@@ -118,7 +118,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             marker_detector_mode = MarkerDetectorMode.from_marker(
                 first_cached_surface_marker
             )
-            self.marker_detector_modes = {marker_detector_mode}
+            self.marker_detector_mode = {marker_detector_mode}
 
     def _init_marker_cache(self):
         previous_cache = file_methods.Persistent_Dict(
@@ -167,7 +167,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.cache_filler = background_tasks.background_video_processor(
             self.g_pool.capture.source_path,
             offline_utils.marker_detection_callable(
-                marker_detector_modes=self.marker_detector_modes,
+                marker_detector_mode=self.marker_detector_mode,
                 min_marker_perimeter=self.CACHE_MIN_MARKER_PERIMETER,
                 inverted_markers=self.inverted_markers,
             ),
