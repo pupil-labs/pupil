@@ -233,10 +233,16 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def _fetch_data_from_bg_fillers(self):
         if self.gaze_on_surf_buffer_filler is not None:
+            start_time = time.perf_counter()
+            did_timeout = False
+
             for gaze in self.gaze_on_surf_buffer_filler.fetch():
                 self.gaze_on_surf_buffer.append(gaze)
+                if time.perf_counter() - start_time > 1 / 50:
+                    did_timeout = True
+                    break
 
-            if self.gaze_on_surf_buffer_filler.completed:
+            if self.gaze_on_surf_buffer_filler.completed and not did_timeout:
                 self.gaze_on_surf_buffer_filler = None
                 self._update_surface_heatmaps()
                 self.gaze_on_surf_buffer = None
