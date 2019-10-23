@@ -535,4 +535,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         )
         marker_cache_file["version"] = self.MARKER_CACHE_VERSION
         marker_cache_file["inverted_markers"] = self.inverted_markers
+        marker_cache_file["quad_decimate"] = self.quad_decimate
+        marker_cache_file["sharpening"] = self.sharpening
         marker_cache_file.save()
