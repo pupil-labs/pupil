@@ -81,7 +81,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             # instance to Surface_Marker_Detector:
             marker_detector_mode = MarkerDetectorMode.from_tuple(marker_detector_mode)
 
-        self._marker_min_perimeter = marker_min_perimeter
         self.marker_detector = MarkerDetectorController(
             marker_detector_mode=marker_detector_mode,
             marker_min_perimeter=marker_min_perimeter,
@@ -106,23 +105,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def marker_detector_mode(self, value: MarkerDetectorMode):
         self.notify_all({"subject": "surface_tracker.marker_detection_params_changed"})
         self.marker_detector.marker_detector_mode = value
-
-    @property
-    def marker_min_perimeter(self) -> int:
-        return self._marker_min_perimeter
-
-    @marker_min_perimeter.setter
-    def marker_min_perimeter(self, value: int):
-        self._marker_min_perimeter = value
-        self.marker_detector.marker_min_perimeter = value
-
-    @property
-    def inverted_markers(self) -> bool:
-        return self.marker_detector.inverted_markers
-
-    @inverted_markers.setter
-    def inverted_markers(self, value: bool):
-        self.marker_detector.inverted_markers = value
 
     @property
     def camera_model(self):
@@ -211,15 +193,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.menu.append(self._general_marker_param_menu())
 
     def _general_marker_param_menu(self):
-        def set_marker_min_perimeter(val):
-            self.marker_min_perimeter = val
-            self.notify_all(
-                {
-                    "subject": "surface_tracker.marker_min_perimeter_changed",
-                    "delay": 0.5,
-                }
-            )
-
         supported_surface_marker_detector_modes = (
             MarkerDetectorMode.all_supported_cases()
         )
@@ -237,17 +210,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 selection=[mode for mode in supported_surface_marker_detector_modes],
             )
         )
-        menu.append(
-            ui.Slider(
-                "marker_min_perimeter",
-                self,
-                label="Min Marker Perimeter",
-                setter=set_marker_min_perimeter,
-                step=1,
-                min=30,
-                max=100,
-            )
-        )
+
         menu.append(self._apriltag_marker_param_menu())
         menu.append(self._square_marker_param_menu())
         return menu
@@ -298,6 +261,15 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         return menu
 
     def _square_marker_param_menu(self):
+        def set_marker_min_perimeter(val):
+            self.marker_detector.marker_min_perimeter = val
+            self.notify_all(
+                {
+                    "subject": "surface_tracker.marker_min_perimeter_changed",
+                    "delay": 0.5,
+                }
+            )
+
         def set_inverted_markers(val):
             self.marker_detector.inverted_markers = val
             self.notify_all(
@@ -306,6 +278,19 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
         menu = ui.Growing_Menu("Legacy Marker Parameters")
         menu.collapsed = True
+
+        menu.append(
+            ui.Slider(
+                "marker_min_perimeter",
+                self.marker_detector,
+                label="Min Marker Perimeter",
+                setter=set_marker_min_perimeter,
+                step=1,
+                min=30,
+                max=100,
+            )
+        )
+
         menu.append(
             ui.Switch(
                 "inverted_markers",
@@ -456,9 +441,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         markers = self.marker_detector.detect_markers(
             gray_img=frame.gray, frame_index=frame.index
         )
-        markers = self._remove_duplicate_markers(markers)
-        self.markers_unfiltered = markers
-        self.markers = self._filter_markers(markers)
+        self.markers = self._remove_duplicate_markers(markers)
 
     def _remove_duplicate_markers(self, markers):
         # if an id shows twice use the bigger marker (usually this is a screen camera
@@ -472,14 +455,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 marker_by_uid[m.uid] = m
 
         return list(marker_by_uid.values())
-
-    def _filter_markers(self, markers):
-        markers = [
-            m
-            for m in markers
-            if m.perimeter >= self.marker_min_perimeter
-        ]
-        return markers
 
     @abstractmethod
     def _update_surface_locations(self, frame_index):
@@ -568,8 +543,8 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def get_init_dict(self):
         return {
-            "marker_min_perimeter": self.marker_min_perimeter,
-            "inverted_markers": self.inverted_markers,
+            "marker_min_perimeter": self.marker_detector.marker_min_perimeter,
+            "inverted_markers": self.marker_detector.inverted_markers,
             "marker_detector_mode": self.marker_detector_mode.as_tuple(),
             "use_high_res": self.marker_detector.apriltag_quad_decimate,
             "sharpen": self.marker_detector.apriltag_decode_sharpening,

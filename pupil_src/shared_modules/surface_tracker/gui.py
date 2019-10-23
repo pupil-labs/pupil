@@ -308,7 +308,10 @@ class GUI:
 
         for marker in self.tracker.markers:
             marker_type = marker.marker_type
-            if marker.perimeter < self.tracker.marker_min_perimeter:
+            if (
+                marker_type == Surface_Marker_Type.SQUARE
+                and marker.perimeter < self.tracker.marker_min_perimeter
+            ):
                 continue
 
             centroid = marker.centroid()

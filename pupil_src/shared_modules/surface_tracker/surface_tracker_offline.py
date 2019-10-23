@@ -30,7 +30,7 @@ from . import background_tasks, offline_utils
 from .cache import Cache
 from .gui import Heatmap_Mode
 from .surface_marker import Surface_Marker
-from .surface_marker_detector import MarkerDetectorMode
+from .surface_marker_detector import MarkerDetectorMode, MarkerType
 from .surface_offline import Surface_Offline
 from .surface_tracker import (
     Surface_Tracker,
@@ -189,12 +189,23 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         )
 
     def _filter_marker_cache(self, cache_to_filter):
+        if self.marker_detector_mode.marker_type != MarkerType.SQUARE_MARKER:
+            # We only need to filter SQUARE_MARKERs
+            return cache_to_filter
+
         marker_cache = []
         for markers in cache_to_filter:
             if markers:
                 markers = self._filter_markers(markers)
             marker_cache.append(markers)
         return Cache(marker_cache)
+
+    def _filter_markers(self, markers):
+        return [
+            m
+            for m in markers
+            if m.perimeter >= self.marker_detector.marker_min_perimeter
+        ]
 
     def init_ui(self):
         super().init_ui()
@@ -261,8 +272,11 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             if frame_index is not None:
                 markers = self._remove_duplicate_markers(markers)
                 self.marker_cache_unfiltered.update(frame_index, markers)
-                markers_filtered = self._filter_markers(markers)
-                self.marker_cache.update(frame_index, markers_filtered)
+                if self.marker_detector_mode.marker_type == MarkerType.SQUARE_MARKER:
+                    markers_filtered = self._filter_markers(markers)
+                    self.marker_cache.update(frame_index, markers_filtered)
+                # In all other cases (see _filter_marker_cache()):
+                # `self.marker_cache is self.marker_cache_unfiltered == True`
 
                 for surface in self.surfaces:
                     surface.update_location_cache(
@@ -448,9 +462,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self._recalculate_marker_cache()
 
         elif notification["subject"] == "surface_tracker.marker_min_perimeter_changed":
-            self.marker_cache = self._filter_marker_cache(self.marker_cache_unfiltered)
-            for surface in self.surfaces:
-                surface.location_cache = None
+            if self.marker_detector_mode.marker_type == MarkerType.SQUARE_MARKER:
+                self.marker_cache = self._filter_marker_cache(
+                    self.marker_cache_unfiltered
+                )
+                for surface in self.surfaces:
+                    surface.location_cache = None
 
         elif notification["subject"] == "surface_tracker.heatmap_params_changed":
             for surface in self.surfaces:
