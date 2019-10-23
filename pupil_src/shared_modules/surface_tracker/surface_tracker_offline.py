@@ -32,7 +32,7 @@ from .cache import Cache
 from .surface_tracker import Surface_Tracker
 from . import offline_utils, background_tasks
 from .surface_marker import Surface_Marker
-from .surface_marker_detector import Surface_Marker_Detector_Mode
+from .surface_marker_detector import MarkerDetectorMode
 from .gui import Heatmap_Mode
 from .surface_offline import Surface_Offline
 
@@ -115,7 +115,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         # Get the first surface marker from the sequence, and set the detection mode according to it.
         first_cached_surface_marker = next(cached_surface_marker_sequence, None)
         if first_cached_surface_marker is not None:
-            marker_detector_mode = Surface_Marker_Detector_Mode.from_marker(
+            marker_detector_mode = MarkerDetectorMode.from_marker(
                 first_cached_surface_marker
             )
             self.marker_detector_modes = {marker_detector_mode}

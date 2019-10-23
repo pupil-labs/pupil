@@ -21,8 +21,8 @@ from .surface_marker import Surface_Marker, Surface_Marker_Type
 
 
 __all__ = [
-    "Surface_Marker_Detector",
-    "Surface_Marker_Detector_Mode",
+    "MarkerDetectorController",
+    "MarkerDetectorMode",
     "MarkerType",
     "ApriltagFamily",
 ]
@@ -41,12 +41,12 @@ class ApriltagFamily(enum.Enum):
     tag36h11 = "tag36h11"
 
 
-class Surface_Marker_Detector_Mode(T.NamedTuple):
+class MarkerDetectorMode(T.NamedTuple):
     marker_type: MarkerType
     family: T.Optional[ApriltagFamily] = None
 
     @classmethod
-    def all_supported_cases(cls) -> T.Set["Surface_Marker_Detector_Mode"]:
+    def all_supported_cases(cls) -> T.Set["MarkerDetectorMode"]:
         all_square = {cls(MarkerType.SQUARE_MARKER)}
         all_apriltag = {
             cls(MarkerType.APRILTAG_MARKER, family) for family in ApriltagFamily
@@ -54,7 +54,7 @@ class Surface_Marker_Detector_Mode(T.NamedTuple):
         return all_square | all_apriltag
 
     @classmethod
-    def from_marker(cls, marker: Surface_Marker) -> "Surface_Marker_Detector_Mode":
+    def from_marker(cls, marker: Surface_Marker) -> "MarkerDetectorMode":
         marker_type = marker.marker_type
         if marker_type == Surface_Marker_Type.SQUARE:
             return cls(MarkerType.SQUARE_MARKER)
@@ -111,12 +111,12 @@ class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def marker_detector_modes(self) -> T.Set[Surface_Marker_Detector_Mode]:
+    def marker_detector_modes(self) -> T.Set[MarkerDetectorMode]:
         pass
 
     @marker_detector_modes.setter
     @abc.abstractmethod
-    def marker_detector_modes(self, value: T.Set[Surface_Marker_Detector_Mode]):
+    def marker_detector_modes(self, value: T.Set[MarkerDetectorMode]):
         pass
 
     @abc.abstractmethod
@@ -137,7 +137,7 @@ class Surface_Base_Marker_Detector(metaclass=abc.ABCMeta):
 class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
     def __init__(
         self,
-        marker_detector_modes: T.Set[Surface_Marker_Detector_Mode],
+        marker_detector_modes: T.Set[MarkerDetectorMode],
         marker_min_perimeter: int = ...,
         square_marker_inverted_markers: bool = ...,
         square_marker_use_online_mode: bool = ...,
@@ -176,11 +176,11 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         self.__marker_min_perimeter = value
 
     @property
-    def marker_detector_modes(self) -> T.Set[Surface_Marker_Detector_Mode]:
+    def marker_detector_modes(self) -> T.Set[MarkerDetectorMode]:
         return self.__marker_detector_modes
 
     @marker_detector_modes.setter
-    def marker_detector_modes(self, value: T.Set[Surface_Marker_Detector_Mode]):
+    def marker_detector_modes(self, value: T.Set[MarkerDetectorMode]):
         self.__marker_detector_modes = value
 
     def detect_markers_iter(
@@ -284,7 +284,7 @@ class Surface_Apriltag_V3_Marker_Detector(Surface_Base_Marker_Detector):
 
     def __init__(
         self,
-        marker_detector_modes: T.Set[Surface_Marker_Detector_Mode],
+        marker_detector_modes: T.Set[MarkerDetectorMode],
         marker_min_perimeter: int = ...,
         apriltag_families: T.Set[ApriltagFamily] = ...,
         apriltag_nthreads: int = ...,
@@ -323,11 +323,11 @@ class Surface_Apriltag_V3_Marker_Detector(Surface_Base_Marker_Detector):
         self.__marker_min_perimeter = value
 
     @property
-    def marker_detector_modes(self) -> T.Set[Surface_Marker_Detector_Mode]:
+    def marker_detector_modes(self) -> T.Set[MarkerDetectorMode]:
         return self.__marker_detector_modes
 
     @marker_detector_modes.setter
-    def marker_detector_modes(self, value: T.Set[Surface_Marker_Detector_Mode]):
+    def marker_detector_modes(self, value: T.Set[MarkerDetectorMode]):
         self.__marker_detector_modes = value
 
     def detect_markers_iter(
@@ -343,10 +343,10 @@ class Surface_Apriltag_V3_Marker_Detector(Surface_Base_Marker_Detector):
         return markers
 
 
-class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
+class MarkerDetectorController(Surface_Base_Marker_Detector):
     def __init__(
         self,
-        marker_detector_modes: T.Set[Surface_Marker_Detector_Mode],
+        marker_detector_modes: T.Set[MarkerDetectorMode],
         marker_min_perimeter: int = ...,
         square_marker_inverted_markers: bool = ...,
         square_marker_use_online_mode: bool = ...,
@@ -394,13 +394,13 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
         self.__apriltag_detector.marker_min_perimeter = value
 
     @property
-    def marker_detector_modes(self) -> T.Set[Surface_Marker_Detector_Mode]:
+    def marker_detector_modes(self) -> T.Set[MarkerDetectorMode]:
         marker_detector_modes = self.__apriltag_detector.marker_detector_modes
         assert marker_detector_modes == self.__square_detector.marker_detector_modes
         return marker_detector_modes
 
     @marker_detector_modes.setter
-    def marker_detector_modes(self, value: T.Set[Surface_Marker_Detector_Mode]):
+    def marker_detector_modes(self, value: T.Set[MarkerDetectorMode]):
         self.__square_detector.marker_detector_modes = value
         self.__apriltag_detector.marker_detector_modes = value
 
@@ -415,6 +415,3 @@ class Surface_Combined_Marker_Detector(Surface_Base_Marker_Detector):
                 gray_img=gray_img, frame_index=frame_index
             ),
         )
-
-
-Surface_Marker_Detector = Surface_Combined_Marker_Detector
