@@ -152,7 +152,6 @@ def world(
             Gaze_Mapping_Plugin,
         )
         from fixation_detector import Fixation_Detector
-        from eye_movement import Eye_Movement_Detector_Real_Time
         from recorder import Recorder
         from display_recent_gaze import Display_Recent_Gaze
         from time_sync import Time_Sync
@@ -232,7 +231,6 @@ def world(
             Annotation_Capture,
             Log_History,
             Fixation_Detector,
-            Eye_Movement_Detector_Real_Time,
             Blink_Detection,
             Remote_Recorder,
             Accuracy_Visualizer,
