@@ -97,15 +97,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             self.add_surface(surface)
 
     @property
-    def marker_detector_mode(self) -> MarkerDetectorMode:
-        return self.marker_detector.marker_detector_mode
-
-    @marker_detector_mode.setter
-    def marker_detector_mode(self, value: MarkerDetectorMode):
-        self.notify_all({"subject": "surface_tracker.marker_detection_params_changed"})
-        self.marker_detector.marker_detector_mode = value
-
-    @property
     def camera_model(self):
         return self.g_pool.capture.intrinsics
 
@@ -198,15 +189,23 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         supported_surface_marker_detector_modes = sorted(
             supported_surface_marker_detector_modes, key=lambda m: m.label
         )
+
+        def set_marker_detector_mode(value):
+            self.marker_detector.marker_detector_mode = value
+            self.notify_all(
+                {"subject": "surface_tracker.marker_detection_params_changed"}
+            )
+
         menu = ui.Growing_Menu("Marker Detection Parameters")
         menu.collapsed = True
         menu.append(
             ui.Selector(
                 "marker_detector_mode",
-                self,
+                self.marker_detector,
                 label="Marker type",
                 labels=[mode.label for mode in supported_surface_marker_detector_modes],
                 selection=[mode for mode in supported_surface_marker_detector_modes],
+                setter=set_marker_detector_mode,
             )
         )
 
@@ -541,10 +540,11 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.gui.on_click(pos, button, action)
 
     def get_init_dict(self):
+        marker_detector_mode = self.marker_detector.marker_detector_mode.as_tuple()
         return {
             "marker_min_perimeter": self.marker_detector.marker_min_perimeter,
             "inverted_markers": self.marker_detector.inverted_markers,
-            "marker_detector_mode": self.marker_detector_mode.as_tuple(),
+            "marker_detector_mode": marker_detector_mode,
             "use_high_res": self.marker_detector.apriltag_quad_decimate,
             "sharpen": self.marker_detector.apriltag_decode_sharpening,
         }

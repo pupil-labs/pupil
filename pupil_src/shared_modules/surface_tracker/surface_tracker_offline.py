@@ -123,7 +123,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             marker_detector_mode = MarkerDetectorMode.from_marker(
                 first_cached_surface_marker
             )
-            self.marker_detector_mode = marker_detector_mode
+            self.marker_detector.marker_detector_mode = marker_detector_mode
 
     def _init_marker_cache(self):
         previous_cache = file_methods.Persistent_Dict(
@@ -176,7 +176,7 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.cache_filler = background_tasks.background_video_processor(
             self.g_pool.capture.source_path,
             offline_utils.marker_detection_callable(
-                marker_detector_mode=self.marker_detector_mode,
+                marker_detector_mode=self.marker_detector.marker_detector_mode,
                 marker_min_perimeter=self.CACHE_MIN_MARKER_PERIMETER,
                 square_marker_inverted_markers=self.inverted_markers,
                 square_marker_use_online_mode=False,
@@ -189,7 +189,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         )
 
     def _filter_marker_cache(self, cache_to_filter):
-        if self.marker_detector_mode.marker_type != MarkerType.SQUARE_MARKER:
+        marker_type = self.marker_detector.marker_detector_mode.marker_type
+        if marker_type != MarkerType.SQUARE_MARKER:
             # We only need to filter SQUARE_MARKERs
             return cache_to_filter
 
@@ -276,7 +277,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             if frame_index is not None:
                 markers = self._remove_duplicate_markers(markers)
                 self.marker_cache_unfiltered.update(frame_index, markers)
-                if self.marker_detector_mode.marker_type == MarkerType.SQUARE_MARKER:
+                marker_type = self.marker_detector.marker_detector_mode.marker_type
+                if marker_type == MarkerType.SQUARE_MARKER:
                     markers_filtered = self._filter_markers(markers)
                     self.marker_cache.update(frame_index, markers_filtered)
                 # In all other cases (see _filter_marker_cache()):
@@ -466,7 +468,8 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self._recalculate_marker_cache()
 
         elif notification["subject"] == "surface_tracker.marker_min_perimeter_changed":
-            if self.marker_detector_mode.marker_type == MarkerType.SQUARE_MARKER:
+            marker_type = self.marker_detector.marker_detector_mode.marker_type
+            if marker_type == MarkerType.SQUARE_MARKER:
                 self.marker_cache = self._filter_marker_cache(
                     self.marker_cache_unfiltered
                 )
