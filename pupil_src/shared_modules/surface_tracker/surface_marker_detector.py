@@ -37,7 +37,6 @@ class MarkerType(enum.Enum):
 
 @enum.unique
 class ApriltagFamily(enum.Enum):
-    tag16h5 = "tag16h5"
     tag25h9 = "tag25h9"
     tag36h11 = "tag36h11"
     tagCircle21h7 = "tagCircle21h7"
