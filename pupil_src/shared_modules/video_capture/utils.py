@@ -472,7 +472,12 @@ def pi_gaze_items(root_dir):
         raw_path = find_raw_path(timestamps_path)
         timestamps = load_timestamps_data(timestamps_path)
         raw_data = load_raw_data(raw_path)
-        assert len(raw_data) == len(
-            timestamps
-        ), f"There is a mismatch between the number of raw data ({len(raw_data)}) and the number of timestamps ({len(timestamps)})"
+        if len(raw_data) != len(timestamps):
+            logger.warning(
+                f"There is a mismatch between the number of raw data ({len(raw_data)}) "
+                f"and the number of timestamps ({len(timestamps)})!"
+            )
+            size = min(len(raw_data), len(timestamps))
+            raw_data = raw_data[:size]
+            timestamps = timestamps[:size]
         yield from zip(raw_data, timestamps)
