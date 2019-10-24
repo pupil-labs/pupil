@@ -150,7 +150,24 @@ class Surface_Tracker_Online(Surface_Tracker):
         if self.freeze_scene:
             logger.warning("Surfaces cannot be added while the scene is frozen!")
         else:
-            super().on_add_surface_click()
+            # NOTE: This is slightly different than the super() implementation.
+            # We need to save the surface definition after adding it, but the Surface
+            # Store does not store undefined surfaces. Therefore, we need to call
+            # surface.update_location() once. This will define the surface and allow us
+            # to save it.
+            if self.markers and self.current_frame is not None:
+                surface = self.Surface_Class(
+                    name="Surface {:}".format(len(self.surfaces) + 1)
+                )
+                self.add_surface(surface)
+                surface.update_location(
+                    self.current_frame.index, self.markers, self.camera_model
+                )
+                self.save_surface_definitions_to_file()
+            else:
+                logger.warning(
+                    "Can not add a new surface: No markers found in the image!"
+                )
 
     def gl_display(self):
         if self.freeze_scene:
