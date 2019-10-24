@@ -168,7 +168,7 @@ elif platform.system() == "Linux":
         binaries,
         a.zipfiles,
         a.datas,
-        [("libglfw.so", "/usr/lib/x86_64-linux-gnu/libglfw.so", "BINARY")],
+        [("libglfw.so", "/usr/local/lib/libglfw.so", "BINARY")],
         [("libGLEW.so", "/usr/lib/x86_64-linux-gnu/libGLEW.so", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
