@@ -456,7 +456,8 @@ class Exporter:
                 int(round(val * scaling)) for val in export_resolution
             )
 
-            heatmap_img = surface.within_surface_heatmap
+            # throw away alpha channel for export
+            heatmap_img = surface.within_surface_heatmap[:, :, :3]
             heatmap_img = cv2.resize(
                 heatmap_img, export_resolution, interpolation=cv2.INTER_NEAREST
             )
