@@ -447,11 +447,19 @@ class Exporter:
             heatmap_path = os.path.join(self.metrics_dir, heatmap_file_name)
 
             surface_size = surface.real_world_size
-            heatmap_resolution = (int(surface_size["x"]), int(surface_size["y"]))
+            export_resolution = (surface_size["x"], surface_size["y"])
 
-            heatmap_img = surface.within_surface_heatmap
+            MIN_EXPORT_DIMENSION = 2000  # min width and height in px
+            scaling = MIN_EXPORT_DIMENSION / min(export_resolution)
+            # NOTE: cv2.resize expects a tuple of ints specifically
+            export_resolution = tuple(
+                int(round(val * scaling)) for val in export_resolution
+            )
+
+            # throw away alpha channel for export
+            heatmap_img = surface.within_surface_heatmap[:, :, :3]
             heatmap_img = cv2.resize(
-                heatmap_img, heatmap_resolution, interpolation=cv2.INTER_NEAREST
+                heatmap_img, export_resolution, interpolation=cv2.INTER_NEAREST
             )
             cv2.imwrite(heatmap_path, heatmap_img)
 
