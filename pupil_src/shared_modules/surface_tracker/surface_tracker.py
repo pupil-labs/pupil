@@ -253,7 +253,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 "apriltag_decode_sharpening",
                 getter=get_should_sharpen,
                 setter=set_should_sharpen,
-                label="Sharpe imagen",
+                label="Sharpen image",
             )
         )
         return menu
