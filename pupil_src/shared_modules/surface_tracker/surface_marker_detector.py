@@ -13,6 +13,7 @@ import abc
 import enum
 import logging
 import typing as T
+from collections import namedtuple
 
 import square_marker_detect
 import pupil_apriltags
@@ -46,13 +47,14 @@ class ApriltagFamily(enum.Enum):
     tagStandard52h13 = "tagStandard52h13"
 
 
-class MarkerDetectorMode(T.NamedTuple):
-    marker_type: MarkerType
-    family: T.Optional[ApriltagFamily] = None
+# TODO: Use T.NamedTuple as soon as we increase Python version requirement to 3.6.1+
+_MarkerDetectorMode = namedtuple("_MarkerDetectorMode", ["marker_type", "family"])
 
+
+class MarkerDetectorMode(_MarkerDetectorMode):
     @classmethod
     def all_supported_cases(cls) -> T.Set["MarkerDetectorMode"]:
-        all_square = {cls(MarkerType.SQUARE_MARKER)}
+        all_square = {cls(MarkerType.SQUARE_MARKER, None)}
         all_apriltag = {
             cls(MarkerType.APRILTAG_MARKER, family) for family in ApriltagFamily
         }
@@ -62,7 +64,7 @@ class MarkerDetectorMode(T.NamedTuple):
     def from_marker(cls, marker: Surface_Marker) -> "MarkerDetectorMode":
         marker_type = marker.marker_type
         if marker_type == Surface_Marker_Type.SQUARE:
-            return cls(MarkerType.SQUARE_MARKER)
+            return cls(MarkerType.SQUARE_MARKER, None)
         if marker_type == Surface_Marker_Type.APRILTAG_V3:
             return cls(
                 MarkerType.APRILTAG_MARKER, ApriltagFamily(marker.raw_marker.tag_family)
@@ -83,7 +85,7 @@ class MarkerDetectorMode(T.NamedTuple):
         if self.family is not None:
             return (self.marker_type.value, self.family.value)
         else:
-            return (self.marker_type.value,)
+            return (self.marker_type.value, None)
 
     @classmethod
     def from_tuple(cls, values: T.Union[T.Tuple[str], T.Tuple[str, str]]):
