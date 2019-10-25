@@ -220,7 +220,7 @@ def save_intrinsics(directory, cam_name, resolution, intrinsics):
     )
     try:
         calib_dict = load_object(save_path, allow_legacy=False)
-    except:
+    except Exception:
         calib_dict = {}
 
     calib_dict["version"] = __version__

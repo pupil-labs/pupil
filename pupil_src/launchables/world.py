@@ -714,7 +714,7 @@ def world(
         glfw.glfwDestroyWindow(main_window)
         glfw.glfwTerminate()
 
-    except:
+    except Exception:
         import traceback
 
         trace = traceback.format_exc()

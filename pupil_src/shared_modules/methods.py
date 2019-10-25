@@ -15,7 +15,7 @@ import numpy as np
 
 try:
     import numexpr as ne
-except:
+except Exception:
     ne = None
 import cv2
 import logging
@@ -231,7 +231,7 @@ def chessboard(image, pattern_size=(9, 5)):
 def curvature(c):
     try:
         from vector import Vector
-    except:
+    except Exception:
         return
     c = c[:, 0]
     curvature = []

@@ -285,7 +285,7 @@ def service(
             pupil_datum.alive = False
         g_pool.plugins.clean()
 
-    except:
+    except Exception:
         import traceback
 
         trace = traceback.format_exc()

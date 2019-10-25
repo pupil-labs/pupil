@@ -182,7 +182,7 @@ class OptimizationStorage(Markers3DModel):
         if data:
             try:
                 self.load_model(data)
-            except:
+            except Exception:
                 pass
 
     def _load_from_file(self):

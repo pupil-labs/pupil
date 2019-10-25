@@ -321,7 +321,7 @@ class Batch_Exporter(Analysis_Plugin_Base):
                     frames_to_export = len(
                         np.load(os.path.join(avail["source"], "world_timestamps.npy"))
                     )
-                except:
+                except Exception:
                     logger.error("Invalid export directory: {}".format(avail["source"]))
                     self.available_exports.remove(avail)
                     continue
@@ -422,7 +422,7 @@ def main():
                     * j.current_frame.value
                     / float(j.frames_to_export.value * no_jobs)
                 )
-            except:
+            except Exception:
                 p = 0
             string += "[" + p * "|" + (full - p) * "-" + "]"
         sys.stdout.write("\r" + string)

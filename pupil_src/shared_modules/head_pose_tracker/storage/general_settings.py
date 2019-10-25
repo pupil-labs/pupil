@@ -41,7 +41,7 @@ class SettingsStorage(abc.ABC):
         if settings_tuple:
             try:
                 self._data_from_tuple(settings_tuple)
-            except:
+            except Exception:
                 pass
 
     def _load_msgpack_from_file(self, file_path):

@@ -322,7 +322,7 @@ class NDSI_Source(Base_Source):
                     menu.append(ctrl_ui)
                 else:
                     logger.error("Did not generate UI for {}".format(ctrl_id))
-            except:
+            except Exception:
                 logger.error("Exception for control:\n{}".format(ctrl_dict))
                 import traceback as tb
 
