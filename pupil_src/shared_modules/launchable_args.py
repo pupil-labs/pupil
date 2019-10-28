@@ -32,8 +32,8 @@ def parse(running_from_bundle, **defaults):
         _setup_bundle_parsers(parser, namespace=target_ns)
     else:
         _setup_source_parsers(parser)
-    _add_debug_profile_args(parser)
-    _add_version_arg(parser)
+    _add_general_args(parser)
+    _add_main_args(parser)
 
     return parser.parse_known_args(namespace=target_ns)
 
@@ -47,20 +47,20 @@ def _setup_source_parsers(main_parser):
     parser_capture = subparsers.add_parser(
         "capture", help="Real-time processing and recording"
     )
+    _add_general_args(parser_capture)
     _add_remote_port_arg(parser_capture)
-    _add_version_arg(parser_capture)
 
     parser_service = subparsers.add_parser(
         "service", help="Real-time processing with minimal UI"
     )
+    _add_general_args(parser_service)
     _add_remote_port_arg(parser_service)
-    _add_version_arg(parser_service)
 
     parser_player = subparsers.add_parser(
         "player", help="Process, visualize, and export recordings"
     )
+    _add_general_args(parser_player)
     _add_recording_arg(parser_player)
-    _add_version_arg(parser_player)
 
 
 def _setup_bundle_parsers(main_parser, namespace):
@@ -83,7 +83,8 @@ def _add_recording_arg(parser):
     parser.add_argument("recording", default="", nargs="?", help="path to recording")
 
 
-def _add_debug_profile_args(parser):
+def _add_main_args(parser):
+    """These args will only apply to main.py, not to capture/player/service."""
     parser.add_argument(
         "--debug", help="display debug log messages", action="store_true"
     )
@@ -92,5 +93,6 @@ def _add_debug_profile_args(parser):
     )
 
 
-def _add_version_arg(parser):
+def _add_general_args(parser):
+    """These args will be used on both main.py and also on capture/player/service."""
     parser.add_argument("--version", action="store_true", help="show version")
