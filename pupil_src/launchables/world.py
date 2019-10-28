@@ -22,6 +22,7 @@ def world(
     user_dir,
     version,
     preferred_remote_port,
+    hide_ui,
 ):
     """Reads world video and runs plugins.
 
@@ -435,6 +436,8 @@ def world(
 
         # window and gl setup
         glfw.glfwInit()
+        if hide_ui:
+            glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
         window_pos = session_settings.get("window_position", window_position_default)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])

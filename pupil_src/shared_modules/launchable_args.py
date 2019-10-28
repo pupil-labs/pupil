@@ -96,4 +96,4 @@ def _add_main_args(parser):
 def _add_general_args(parser):
     """These args will be used on both main.py and also on capture/player/service."""
     parser.add_argument("--version", action="store_true", help="show version")
-    parser.add_argument("--hide-ui", action="store_true", help="hide ui on startup")
+    parser.add_argument("--hideui", action="store_true", help="hide ui on startup")

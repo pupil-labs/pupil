@@ -23,7 +23,7 @@ default_args = {
     "debug": False,
     "profile": False,
     "version": False,
-    "hide-ui": False,
+    "hideui": False,
 }
 parsed_args, unknown_args = launchable_args.parse(running_from_bundle, **default_args)
 

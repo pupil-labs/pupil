@@ -62,6 +62,7 @@ def eye(
     version,
     eye_id,
     overwrite_cap_settings=None,
+    hide_ui=False,
 ):
     """reads eye video and detects the pupil.
 
@@ -317,6 +318,8 @@ def eye(
 
         # Initialize glfw
         glfw.glfwInit()
+        if hide_ui:
+            glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         title = "Pupil Capture - eye {}".format(eye_id)
 
         width, height = session_settings.get("window_size", (640 + icon_bar_width, 480))
