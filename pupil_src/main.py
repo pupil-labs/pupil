@@ -18,7 +18,13 @@ if not running_from_bundle:
 
 import launchable_args
 
-default_args = {"app": "capture", "debug": False, "profile": False, "version": False}
+default_args = {
+    "app": "capture",
+    "debug": False,
+    "profile": False,
+    "version": False,
+    "hide-ui": False,
+}
 parsed_args, unknown_args = launchable_args.parse(running_from_bundle, **default_args)
 
 # app version
