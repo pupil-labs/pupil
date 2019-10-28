@@ -43,8 +43,10 @@ PUPIL_COLOR_RGB_SECONDARY_RETINA_RED_60P = (248, 142, 134)
 PUPIL_COLOR_RGB_SECONDARY_VITREOUS_PURPLE_60P = (206, 114, 154)
 
 
-def rgb_to_rgba(rgb: typing.Tuple[int, int, int], alpha: float = 1.0) -> typing.Tuple[float, float, float, float]:
-    return (rgb[0]/255, rgb[1]/255, rgb[2]/255, alpha)
+def rgb_to_rgba(
+    rgb: typing.Tuple[int, int, int], alpha: float = 1.0
+) -> typing.Tuple[float, float, float, float]:
+    return (rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, alpha)
 
 
 SURFACE_MARKER_COLOR_RGB_BY_TYPE = {
@@ -128,8 +130,10 @@ class GUI:
                 self.surface_windows[surface].update(self.tracker.g_pool.image_tex)
 
     def _draw_markers(self):
-        for marker in self.tracker.markers_unfiltered:
-            color = rgb_to_rgba(SURFACE_MARKER_COLOR_RGB_BY_TYPE[marker.marker_type], alpha=0.5)
+        for marker in self.tracker.markers:
+            color = rgb_to_rgba(
+                SURFACE_MARKER_COLOR_RGB_BY_TYPE[marker.marker_type], alpha=0.5
+            )
             hat = np.array(
                 [[[0, 0], [0, 1], [0.5, 1.3], [1, 1], [1, 0], [0, 0]]], dtype=np.float32
             )
@@ -138,14 +142,14 @@ class GUI:
             )
 
             # TODO: Should the had be drawn for small or low confidence markers?
-            pyglui_utils.draw_polyline(hat.reshape((6, 2)), color=pyglui_utils.RGBA(*color))
-            if (
-                marker.perimeter >= self.tracker.marker_min_perimeter
-                and marker.id_confidence > self.tracker.marker_min_confidence
-            ):
-                pyglui_utils.draw_polyline(
-                    hat.reshape((6, 2)), color=pyglui_utils.RGBA(*color), line_type=gl.GL_POLYGON
-                )
+            pyglui_utils.draw_polyline(
+                hat.reshape((6, 2)), color=pyglui_utils.RGBA(*color)
+            )
+            pyglui_utils.draw_polyline(
+                hat.reshape((6, 2)),
+                color=pyglui_utils.RGBA(*color),
+                line_type=gl.GL_POLYGON,
+            )
 
     def _draw_marker_id(self, marker):
         verts_px = np.array(marker.verts_px, dtype=np.float32)
@@ -175,8 +179,7 @@ class GUI:
             corners.reshape((5, 2)), color=pyglui_utils.RGBA(*surface_color)
         )
         pyglui_utils.draw_polyline(
-            top_indicator.reshape((4, 2)),
-            color=pyglui_utils.RGBA(*surface_color),
+            top_indicator.reshape((4, 2)), color=pyglui_utils.RGBA(*surface_color)
         )
 
         self._draw_surf_menu(
@@ -305,7 +308,10 @@ class GUI:
 
         for marker in self.tracker.markers:
             marker_type = marker.marker_type
-            if marker.perimeter < self.tracker.marker_min_perimeter:
+            if (
+                marker_type == Surface_Marker_Type.SQUARE
+                and marker.perimeter < self.tracker.marker_min_perimeter
+            ):
                 continue
 
             centroid = marker.centroid()

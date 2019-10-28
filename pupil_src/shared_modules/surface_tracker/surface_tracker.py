@@ -10,25 +10,34 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-import os
+import typing as T
 from abc import ABCMeta, abstractmethod
-import typing
+
+import numpy as np
+from pyglui import ui
+
+from plugin import Plugin
+
+from . import gui
+from .surface_file_store import Surface_File_Store
+from .surface_marker_detector import (
+    MarkerDetectorController,
+    MarkerDetectorMode,
+    MarkerType,
+    ApriltagFamily,
+)
 
 logger = logging.getLogger(__name__)
 
-import numpy as np
-import pyglui
-
-from plugin import Plugin
-import file_methods
-
-from . import gui
-from .surface_marker_detector import (
-    Surface_Marker_Detector,
-    Surface_Marker_Detector_Mode,
+DEFAULT_DETECTOR_MODE = MarkerDetectorMode(
+    MarkerType.APRILTAG_MARKER, ApriltagFamily.tag36h11
 )
 
-from .surface_file_store import Surface_File_Store
+APRILTAG_SHARPENING_ON = 1.0
+APRILTAG_SHARPENING_OFF = 0.25
+
+APRILTAG_HIGH_RES_OFF = 3.0
+APRILTAG_HIGH_RES_ON = 2.0
 
 
 class Surface_Tracker(Plugin, metaclass=ABCMeta):
@@ -49,78 +58,43 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         g_pool,
         marker_min_perimeter: int = 60,
         inverted_markers: bool = False,
-        marker_detector_mode: typing.Union[
-            Surface_Marker_Detector_Mode, str
-        ] = Surface_Marker_Detector_Mode.APRILTAG_MARKER,
+        marker_detector_mode: T.Union[
+            MarkerDetectorMode, T.Tuple
+        ] = DEFAULT_DETECTOR_MODE,
         use_online_detection: bool = False,
+        use_high_res=APRILTAG_HIGH_RES_ON,
+        sharpen=APRILTAG_SHARPENING_ON,
     ):
         super().__init__(g_pool)
 
         self.current_frame = None
         self.surfaces = []
         self.markers = []
-        self.markers_unfiltered = []
 
         self._edit_surf_verts = []
         self._last_mouse_pos = (0.0, 0.0)
         self.gui = gui.GUI(self)
 
-        if isinstance(marker_detector_mode, str):
-            # Here we ensure that we pass a proper Surface_Marker_Detector_Mode
+        if not isinstance(marker_detector_mode, MarkerDetectorMode):
+            # Here we ensure that we pass a proper MarkerDetectorMode
             # instance to Surface_Marker_Detector:
-            marker_detector_mode = Surface_Marker_Detector_Mode(marker_detector_mode)
+            marker_detector_mode = MarkerDetectorMode.from_tuple(marker_detector_mode)
 
-        # Even though the Surface_Marker_Detector class supports multiple detector
-        # modes at once, we only want one mode to be active during surface tracking.
-        marker_detector_modes = {marker_detector_mode}
-        self._marker_min_perimeter = marker_min_perimeter
-        self.marker_min_confidence = 0.0
-        self.marker_detector = Surface_Marker_Detector(
-            marker_detector_modes=marker_detector_modes,
+        self.marker_detector = MarkerDetectorController(
+            marker_detector_mode=marker_detector_mode,
             marker_min_perimeter=marker_min_perimeter,
             square_marker_inverted_markers=inverted_markers,
             square_marker_use_online_mode=use_online_detection,
+            apriltag_quad_decimate=use_high_res,
+            apriltag_decode_sharpening=sharpen,
         )
         self._surface_file_store = Surface_File_Store(parent_dir=self._save_dir)
 
         # Add surfaces from file
-        for surface in self._surface_file_store.read_surfaces_from_file(surface_class=self.Surface_Class):
+        for surface in self._surface_file_store.read_surfaces_from_file(
+            surface_class=self.Surface_Class
+        ):
             self.add_surface(surface)
-
-    @property
-    def marker_detector_modes(self) -> typing.Set[Surface_Marker_Detector_Mode]:
-        return self.marker_detector.marker_detector_modes
-
-    @marker_detector_modes.setter
-    def marker_detector_modes(self, value: typing.Set[Surface_Marker_Detector_Mode]):
-        self.marker_detector.marker_detector_modes = value
-
-    @property
-    def active_marker_detector_mode(self) -> Surface_Marker_Detector_Mode:
-        assert len(self.marker_detector_modes) == 1
-        return next(iter(self.marker_detector_modes))
-
-    @active_marker_detector_mode.setter
-    def active_marker_detector_mode(self, mode: Surface_Marker_Detector_Mode):
-        self.marker_detector_modes = {mode}
-        self.notify_all({"subject": "surface_tracker.marker_detection_params_changed"})
-
-    @property
-    def marker_min_perimeter(self) -> int:
-        return self._marker_min_perimeter
-
-    @marker_min_perimeter.setter
-    def marker_min_perimeter(self, value: int):
-        self._marker_min_perimeter = value
-        self.marker_detector.marker_min_perimeter = value
-
-    @property
-    def inverted_markers(self) -> bool:
-        return self.marker_detector.inverted_markers
-
-    @inverted_markers.setter
-    def inverted_markers(self, value: bool):
-        self.marker_detector.inverted_markers = value
 
     @property
     def camera_model(self):
@@ -159,7 +133,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def init_ui(self):
         self.add_menu()
         self.menu.label = self.pretty_class_name
-        self.add_button = pyglui.ui.Thumb(
+        self.add_button = ui.Thumb(
             "add_surface",
             setter=self.on_add_surface_click,
             getter=lambda: False,
@@ -182,20 +156,18 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self._update_ui_custom()
         self._update_ui_marker_detection_menu()
 
-        self.menu.append(pyglui.ui.Button("Add surface", self.on_add_surface_click))
+        self.menu.append(ui.Button("Add surface", self.on_add_surface_click))
         for surface in self.surfaces:
             self._per_surface_ui(surface)
 
     def _update_ui_visualization_menu(self):
-        self.menu.append(pyglui.ui.Info_Text(self.ui_info_text))
+        self.menu.append(ui.Info_Text(self.ui_info_text))
         self.menu.append(
-            pyglui.ui.Switch("show_marker_ids", self.gui, label="Show Marker IDs")
+            ui.Switch("show_marker_ids", self.gui, label="Show Marker IDs")
         )
+        self.menu.append(ui.Switch("show_heatmap", self.gui, label="Show Heatmap"))
         self.menu.append(
-            pyglui.ui.Switch("show_heatmap", self.gui, label="Show Heatmap")
-        )
-        self.menu.append(
-            pyglui.ui.Selector(
+            ui.Selector(
                 "heatmap_mode",
                 self.gui,
                 label="Heatmap Mode",
@@ -208,8 +180,87 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         pass
 
     def _update_ui_marker_detection_menu(self):
+        self.menu.append(self._general_marker_param_menu())
+
+    def _general_marker_param_menu(self):
+        supported_surface_marker_detector_modes = (
+            MarkerDetectorMode.all_supported_cases()
+        )
+        supported_surface_marker_detector_modes = sorted(
+            supported_surface_marker_detector_modes, key=lambda m: m.label
+        )
+
+        def set_marker_detector_mode(value):
+            self.marker_detector.marker_detector_mode = value
+            self.notify_all(
+                {"subject": "surface_tracker.marker_detection_params_changed"}
+            )
+
+        menu = ui.Growing_Menu("Marker Detection Parameters")
+        menu.collapsed = True
+        menu.append(
+            ui.Selector(
+                "marker_detector_mode",
+                self.marker_detector,
+                label="Marker type",
+                labels=[mode.label for mode in supported_surface_marker_detector_modes],
+                selection=[mode for mode in supported_surface_marker_detector_modes],
+                setter=set_marker_detector_mode,
+            )
+        )
+
+        menu.append(self._apriltag_marker_param_menu())
+        menu.append(self._square_marker_param_menu())
+        return menu
+
+    def _apriltag_marker_param_menu(self):
+        def get_should_use_high_res():
+            return self.marker_detector.apriltag_quad_decimate == APRILTAG_HIGH_RES_ON
+
+        def set_should_use_high_res(val):
+            scaling_val = APRILTAG_HIGH_RES_ON if val else APRILTAG_HIGH_RES_OFF
+            self.marker_detector.apriltag_quad_decimate = scaling_val
+            self.notify_all(
+                {"subject": "surface_tracker.marker_detection_params_changed"}
+            )
+
+        def get_should_sharpen():
+            return (
+                self.marker_detector.apriltag_decode_sharpening
+                == APRILTAG_SHARPENING_ON
+            )
+
+        def set_should_sharpen(val):
+            sharpening_val = APRILTAG_SHARPENING_ON if val else APRILTAG_SHARPENING_OFF
+            self.marker_detector.apriltag_decode_sharpening = sharpening_val
+            self.notify_all(
+                {"subject": "surface_tracker.marker_detection_params_changed"}
+            )
+
+        menu = ui.Growing_Menu("Apriltag Parameters")
+        menu.collapsed = True
+        menu.append(
+            ui.Switch(
+                "apriltag_quad_decimate",
+                self.marker_detector,
+                getter=get_should_use_high_res,
+                setter=set_should_use_high_res,
+                label="Use high resolution",
+            )
+        )
+        menu.append(
+            ui.Switch(
+                "apriltag_decode_sharpening",
+                getter=get_should_sharpen,
+                setter=set_should_sharpen,
+                label="Sharpen image",
+            )
+        )
+        return menu
+
+    def _square_marker_param_menu(self):
         def set_marker_min_perimeter(val):
-            self.marker_min_perimeter = val
+            self.marker_detector.marker_min_perimeter = val
             self.notify_all(
                 {
                     "subject": "surface_tracker.marker_min_perimeter_changed",
@@ -218,32 +269,18 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
 
         def set_inverted_markers(val):
-            self.inverted_markers = val
+            self.marker_detector.inverted_markers = val
             self.notify_all(
                 {"subject": "surface_tracker.marker_detection_params_changed"}
             )
 
-        supported_surface_marker_detector_modes = (
-            Surface_Marker_Detector_Mode.all_supported_cases()
-        )
-        supported_surface_marker_detector_modes = sorted(
-            supported_surface_marker_detector_modes, key=lambda m: m.value
-        )
+        menu = ui.Growing_Menu("Legacy Marker Parameters")
+        menu.collapsed = True
 
-        advanced_menu = pyglui.ui.Growing_Menu("Marker Detection Parameters")
-        advanced_menu.collapsed = True
-        advanced_menu.append(
-            pyglui.ui.Switch(
-                "inverted_markers",
-                self,
-                setter=set_inverted_markers,
-                label="Use inverted markers",
-            )
-        )
-        advanced_menu.append(
-            pyglui.ui.Slider(
+        menu.append(
+            ui.Slider(
                 "marker_min_perimeter",
-                self,
+                self.marker_detector,
                 label="Min Marker Perimeter",
                 setter=set_marker_min_perimeter,
                 step=1,
@@ -251,16 +288,16 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 max=100,
             )
         )
-        advanced_menu.append(
-            pyglui.ui.Selector(
-                "active_marker_detector_mode",
-                self,
-                label="Marker Detector Mode",
-                labels=[mode.label for mode in supported_surface_marker_detector_modes],
-                selection=[mode for mode in supported_surface_marker_detector_modes],
+
+        menu.append(
+            ui.Switch(
+                "inverted_markers",
+                self.marker_detector,
+                setter=set_inverted_markers,
+                label="Use inverted markers",
             )
         )
-        self.menu.append(advanced_menu)
+        return menu
 
     def _per_surface_ui(self, surface):
         def set_name(val):
@@ -335,33 +372,29 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         if surface.deprecated_definition:
             displayed_name = "Deprecated!! - " + displayed_name
 
-        s_menu = pyglui.ui.Growing_Menu("{}".format(displayed_name))
+        s_menu = ui.Growing_Menu("{}".format(displayed_name))
         s_menu.collapsed = True
 
         if surface.deprecated_definition:
             s_menu.append(
-                pyglui.ui.Info_Text(
+                ui.Info_Text(
                     "!!! This surface definition is old and deprecated! "
                     "Please re-define this surface for increased mapping accuracy! !!!"
                 )
             )
 
-        s_menu.append(pyglui.ui.Text_Input("name", surface, setter=set_name))
+        s_menu.append(ui.Text_Input("name", surface, setter=set_name))
         s_menu.append(
-            pyglui.ui.Text_Input(
-                "x", surface.real_world_size, label="Width", setter=set_x
-            )
+            ui.Text_Input("x", surface.real_world_size, label="Width", setter=set_x)
         )
         s_menu.append(
-            pyglui.ui.Text_Input(
-                "y", surface.real_world_size, label="Height", setter=set_y
-            )
+            ui.Text_Input("y", surface.real_world_size, label="Height", setter=set_y)
         )
 
         self._per_surface_ui_custom(surface, s_menu)
 
         s_menu.append(
-            pyglui.ui.Slider(
+            ui.Slider(
                 "_heatmap_scale",
                 surface,
                 label="Heatmap Smoothness",
@@ -372,7 +405,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             )
         )
         s_menu.append(
-            pyglui.ui.Button(
+            ui.Button(
                 "Open Surface in Window",
                 self.gui.surface_windows[surface].open_close_window,
             )
@@ -381,7 +414,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         def remove_surf():
             self.remove_surface(surface)
 
-        s_menu.append(pyglui.ui.Button("remove", remove_surf))
+        s_menu.append(ui.Button("remove", remove_surf))
         self.menu.append(s_menu)
 
     def _per_surface_ui_custom(self, surface, s_menu):
@@ -406,9 +439,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         markers = self.marker_detector.detect_markers(
             gray_img=frame.gray, frame_index=frame.index
         )
-        markers = self._remove_duplicate_markers(markers)
-        self.markers_unfiltered = markers
-        self.markers = self._filter_markers(markers)
+        self.markers = self._remove_duplicate_markers(markers)
 
     def _remove_duplicate_markers(self, markers):
         # if an id shows twice use the bigger marker (usually this is a screen camera
@@ -422,15 +453,6 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 marker_by_uid[m.uid] = m
 
         return list(marker_by_uid.values())
-
-    def _filter_markers(self, markers):
-        markers = [
-            m
-            for m in markers
-            if m.perimeter >= self.marker_min_perimeter
-            and m.id_confidence > self.marker_min_confidence
-        ]
-        return markers
 
     @abstractmethod
     def _update_surface_locations(self, frame_index):
@@ -483,7 +505,9 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def on_add_surface_click(self, _=None):
         if self.markers:
-            surface = self.Surface_Class(name="Surface {:}".format(len(self.surfaces) + 1))
+            surface = self.Surface_Class(
+                name="Surface {:}".format(len(self.surfaces) + 1)
+            )
             self.add_surface(surface)
         else:
             logger.warning("Can not add a new surface: No markers found in the image!")
@@ -516,10 +540,13 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.gui.on_click(pos, button, action)
 
     def get_init_dict(self):
+        marker_detector_mode = self.marker_detector.marker_detector_mode.as_tuple()
         return {
-            "marker_min_perimeter": self.marker_min_perimeter,
-            "inverted_markers": self.inverted_markers,
-            "marker_detector_mode": self.active_marker_detector_mode.value,
+            "marker_min_perimeter": self.marker_detector.marker_min_perimeter,
+            "inverted_markers": self.marker_detector.inverted_markers,
+            "marker_detector_mode": marker_detector_mode,
+            "use_high_res": self.marker_detector.apriltag_quad_decimate,
+            "sharpen": self.marker_detector.apriltag_decode_sharpening,
         }
 
     def save_surface_definitions_to_file(self):
