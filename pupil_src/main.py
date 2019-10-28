@@ -292,6 +292,7 @@ def launcher():
                             app_version,
                             eye_id,
                             n.get("overwrite_cap_settings"),
+                            parsed_args.hideui,
                         ),
                     ).start()
                 elif "notify.player_process.should_start" in topic:
@@ -320,6 +321,7 @@ def launcher():
                             user_dir,
                             app_version,
                             parsed_args.port,
+                            parsed_args.hideui,
                         ),
                     ).start()
                 elif "notify.clear_settings_process.should_start" in topic:
