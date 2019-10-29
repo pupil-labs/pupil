@@ -668,7 +668,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.gui.terminate()
         glfw.glfwDestroyWindow(main_window)
 
-    except:
+    except Exception:
         import traceback
 
         trace = traceback.format_exc()
@@ -833,7 +833,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
                 {"subject": "player_process.should_start", "rec_dir": rec_dir}
             )
 
-    except:
+    except Exception:
         import traceback
 
         trace = traceback.format_exc()

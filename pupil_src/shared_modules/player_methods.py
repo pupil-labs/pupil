@@ -218,7 +218,7 @@ def transparent_circle(img, center, radius, color, thickness):
             gamma=0,
             dst=img[roi],
         )
-    except:
+    except Exception:
         logger.debug(
             "transparent_circle would have been partially outside of img. Did not draw it."
         )

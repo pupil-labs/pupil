@@ -508,7 +508,7 @@ class Recorder(System_Plugin_Base):
         try:
             n_path = os.path.expanduser(val)
             logger.debug("Expanded user path.")
-        except:
+        except Exception:
             n_path = val
         if not n_path:
             logger.warning("Please specify a path.")

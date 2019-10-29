@@ -153,7 +153,7 @@ def correct_gradient(gray_img, r):
     try:
         gradient = int(gray_img[outer]) - int(gray_img[inner])
         return gradient > 20  # at least 20 shades darker inside
-    except:
+    except Exception:
         # px outside of img frame, let the other method check
         return True
 

@@ -152,7 +152,7 @@ class Pupil_Remote(Plugin):
 
             try:
                 ip = socket.gethostbyname(socket.gethostname())
-            except:
+            except Exception:
                 ip = "Your external ip"
 
         else:
@@ -272,7 +272,7 @@ class Pupil_Remote(Plugin):
         elif msg[0] == "T":
             try:
                 target = float(msg[2:])
-            except:
+            except Exception:
                 response = "'{}' cannot be converted to float.".format(msg[2:])
             else:
                 raw_time = self.g_pool.get_now()
