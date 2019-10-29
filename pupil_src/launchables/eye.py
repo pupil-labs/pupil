@@ -642,6 +642,13 @@ def eye(
                             **props,  # add properties to broadcast
                         }
                         ipc_socket.notify(properties_broadcast)
+                elif notification["subject"].startswith("ui."):
+                    if notification.get("target", g_pool.process) == g_pool.process:
+                        if notification["subject"].endswith("should_show"):
+                            glfw.glfwShowWindow(main_window)
+                        elif notification["subject"].endswith("should_hide"):
+                            glfw.glfwHideWindow(main_window)
+
                 for plugin in g_pool.plugins:
                     plugin.on_notify(notification)
 
