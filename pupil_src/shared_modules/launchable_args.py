@@ -32,14 +32,14 @@ def parse(running_from_bundle: bool, **defaults: T.Any):
     else:
         # Add explicit subparsers for all apps
         subparser = main_parser.add_subparsers(
-            dest="app", metavar="<app>", help="Application to start"
+            dest="app", metavar="<app>", help="which application to start"
         )
         subparser.required = True
 
         apps = {
-            "capture": "Real-time processing and recording",
-            "player": "Process, visualize, and export recordings",
-            "service": "Real-time processing with minimal UI",
+            "capture": "real-time processing and recording",
+            "player": "process, visualize, and export recordings",
+            "service": "real-time processing with minimal UI",
         }
 
         for app, description in apps.items():
@@ -58,16 +58,16 @@ def _add_general_args(parser: argparse.ArgumentParser):
         "--debug", action="store_true", help="display debug log messages"
     )
     parser.add_argument(
-        "--profile", help="profile the application's CPU time", action="store_true"
+        "--profile", action="store_true", help="profile the application's CPU time"
     )
 
 
 def _add_app_args(parser: argparse.ArgumentParser, app: str):
     # Add specific arguments based on app
     if app in ["capture", "service"]:
-        parser.add_argument("-P", "--port", type=int, help="Pupil Remote port")
+        parser.add_argument("-P", "--port", type=int, help="port for Pupil Remote")
 
     if app == "player":
         parser.add_argument(
-            "recording", default="", nargs="?", help="Path to Recording"
+            "recording", default="", nargs="?", help="path to recording"
         )
