@@ -156,7 +156,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
             if self.marker_mode == "Full screen":
                 try:
                     monitor = glfwGetMonitors()[self.monitor_idx]
-                except:
+                except Exception:
                     logger.warning(
                         "Monitor at index %s no longer availalbe using default" % idx
                     )

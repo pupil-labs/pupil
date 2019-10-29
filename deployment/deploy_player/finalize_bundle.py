@@ -133,7 +133,7 @@ elif platform.system() == "Linux":
         try:
             shutil.rmtree(d)
             print('removed deb structure dir: "%s"' % d)
-        except:
+        except Exception:
             pass
 
     # lets build the structure for our deb package.

@@ -582,7 +582,7 @@ class UVC_Source(Base_Source):
             for c in self.uvc_capture.controls:
                 try:
                     c.value = c.def_val
-                except:
+                except Exception:
                     pass
 
         def gui_update_from_device():
