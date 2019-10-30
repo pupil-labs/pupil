@@ -429,12 +429,6 @@ def world(
                         )
             elif subject == "world_process.adapt_window_size":
                 set_window_size()
-            elif subject.startswith("ui."):
-                if noti.get("target", g_pool.process) == g_pool.process:
-                    if subject.endswith("should_show"):
-                        glfw.glfwShowWindow(g_pool.main_window)
-                    elif subject.endswith("should_hide"):
-                        glfw.glfwHideWindow(g_pool.main_window)
 
         width, height = session_settings.get(
             "window_size", (1280 + icon_bar_width, 720)
