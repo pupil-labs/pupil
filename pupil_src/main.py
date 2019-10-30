@@ -18,11 +18,13 @@ if not running_from_bundle:
 
 from launchable_args import PupilArgParser
 
+# NOTE: hyphens (-) in the CLI args are converted to underscores (_) upon parsing, so
+# "--hide-ui" becomes "hide_ui" in python
 default_args = {
     "debug": False,
     "profile": False,
     "version": False,
-    "hideui": False,
+    "hide_ui": True,
 }
 parsed_args, unknown_args = PupilArgParser().parse(running_from_bundle, **default_args)
 
@@ -291,7 +293,7 @@ def launcher():
                             app_version,
                             eye_id,
                             n.get("overwrite_cap_settings"),
-                            parsed_args.hideui,
+                            parsed_args.hide_ui,
                         ),
                     ).start()
                 elif "notify.player_process.should_start" in topic:
@@ -320,7 +322,7 @@ def launcher():
                             user_dir,
                             app_version,
                             parsed_args.port,
-                            parsed_args.hideui,
+                            parsed_args.hide_ui,
                         ),
                     ).start()
                 elif "notify.clear_settings_process.should_start" in topic:
