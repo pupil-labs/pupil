@@ -830,7 +830,6 @@ def eye(
             g_pool.writer.release()
             g_pool.writer = None
 
-        glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         # save session persistent settings
         session_settings["gui_scale"] = g_pool.gui_user_scale
@@ -838,7 +837,6 @@ def eye(
         session_settings["flip"] = g_pool.flip
         session_settings["display_mode"] = g_pool.display_mode
         session_settings["ui_config"] = g_pool.gui.configuration
-        session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
         session_settings["version"] = str(g_pool.version)
         session_settings[
             "last_pupil_detector"
@@ -847,9 +845,12 @@ def eye(
             "pupil_detector_settings"
         ] = g_pool.pupil_detector.get_settings()
 
-        session_window_size = glfw.glfwGetWindowSize(main_window)
-        if 0 not in session_window_size:
-            session_settings["window_size"] = session_window_size
+        if not hide_ui:
+            glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
+            session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
+            session_window_size = glfw.glfwGetWindowSize(main_window)
+            if 0 not in session_window_size:
+                session_settings["window_size"] = session_window_size
 
         session_settings.close()
 

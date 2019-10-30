@@ -12,6 +12,18 @@ See COPYING and COPYING.LESSER for license details.
 import argparse
 import sys
 import typing as T
+from gettext import gettext as _
+
+
+class HelpfulArgumentParser(argparse.ArgumentParser):
+    """ArgumentParser that prints the full help message on error."""
+
+    def error(self, message: str):
+        # NOTE: This is mostly argparse source code with slight adjustments
+        args = {"prog": self.prog, "message": message}
+        self._print_message(_("%(prog)s: error: %(message)s\n") % args, sys.stderr)
+        self.print_help(sys.stderr)
+        self.exit(2)
 
 
 class PupilArgParser:
@@ -20,10 +32,10 @@ class PupilArgParser:
         self.apps = {
             "capture": "real-time processing and recording",
             "player": "process, visualize, and export recordings",
-            "service": "real-time processing with minimal UI",
+            "service": "low latency real-time processing with constrained feature set",
         }
 
-        self.main_parser = argparse.ArgumentParser(allow_abbrev=False)
+        self.main_parser = HelpfulArgumentParser(allow_abbrev=False)
 
         if running_from_bundle:
             self._init_bundle_parser(**defaults)
@@ -68,12 +80,14 @@ class PupilArgParser:
         parser.add_argument(
             "--profile", action="store_true", help="profile the application's CPU time"
         )
-        parser.add_argument("--hide-ui", action="store_true", help="hide ui on startup")
 
     def _add_app_args(self, parser: argparse.ArgumentParser, app: str):
         # Args that are app specific
         if app in ["capture", "service"]:
             parser.add_argument("-P", "--port", type=int, help="port for Pupil Remote")
+            parser.add_argument(
+                "--hide-ui", action="store_true", help="hide ui on startup"
+            )
 
         if app == "player":
             parser.add_argument(

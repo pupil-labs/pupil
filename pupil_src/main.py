@@ -261,7 +261,7 @@ def launcher():
 
     import logging
 
-    logging.debug("Unknown command-line arguments: {}".format(unknown_args))
+    logging.warning("Unknown command-line arguments: {}".format(unknown_args))
 
     if parsed_args.app == "service":
         cmd_push.notify({"subject": "service_process.should_start"})
@@ -342,6 +342,7 @@ def launcher():
                             user_dir,
                             app_version,
                             parsed_args.port,
+                            parsed_args.hide_ui,
                         ),
                     ).start()
                 elif "notify.player_drop_process.should_start" in topic:
