@@ -77,17 +77,23 @@ def _generate_pprf_2_0_info_file(rec_dir: str) -> RecordingInfoFile:
     info_csv = utils.read_info_csv_file(rec_dir)
 
     # Get information about recording from info.csv
-    recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
-    start_time_system_s = float(info_csv["Start Time (System)"])
-    start_time_synced_s = float(info_csv["Start Time (Synced)"])
-    duration_s = utils.parse_duration_string(info_csv["Duration Time"])
-    recording_software_name = info_csv["Capture Software"]
-    recording_software_version = info_csv["Capture Software Version"]
-    recording_name = info_csv.get(
-        "Recording Name", utils.default_recording_name(rec_dir)
-    )
-    system_info = info_csv.get("System Info", utils.default_system_info(rec_dir))
-
+    try:
+        recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
+        start_time_system_s = float(info_csv["Start Time (System)"])
+        start_time_synced_s = float(info_csv["Start Time (Synced)"])
+        duration_s = utils.parse_duration_string(info_csv["Duration Time"])
+        recording_software_name = info_csv["Capture Software"]
+        recording_software_version = info_csv["Capture Software Version"]
+        recording_name = info_csv.get(
+            "Recording Name", utils.default_recording_name(rec_dir)
+        )
+        system_info = info_csv.get("System Info", utils.default_system_info(rec_dir))
+    except KeyError as e:
+        logger.debug(f"KeyError while parsing mobile info.csv: {str(e)}")
+        raise InvalidRecordingException(
+            "This recording needs a data format update.\n"
+            "Open it once in Pupil Player v1.17 to perform the update."
+        )
     # Create a recording info file with the new format, fill out
     # the information, validate, and return.
     new_info_file = RecordingInfoFile.create_empty_file(rec_dir)

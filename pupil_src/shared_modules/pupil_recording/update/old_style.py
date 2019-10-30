@@ -72,7 +72,8 @@ def _generate_pprf_2_0_info_file(rec_dir):
     except KeyError as e:
         logger.debug(f"KeyError while parsing old-style info.csv: {str(e)}")
         raise InvalidRecordingException(
-            "This recording is too old to be opened with this version of Player!"
+            "This recording needs a data format update.\n"
+            "Open it once in Pupil Player v1.17 to perform the update."
         )
 
     # Create a recording info file with the new format,
