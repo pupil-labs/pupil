@@ -237,7 +237,7 @@ elif platform.system() == "Windows":
         debug=False,
         strip=None,
         upx=True,
-        console=True,
+        console=False,
         resources=["pupil-capture.ico,ICON"],
     )
 
