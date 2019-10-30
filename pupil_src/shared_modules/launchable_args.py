@@ -68,12 +68,14 @@ class PupilArgParser:
         parser.add_argument(
             "--profile", action="store_true", help="profile the application's CPU time"
         )
-        parser.add_argument("--hide-ui", action="store_true", help="hide ui on startup")
 
     def _add_app_args(self, parser: argparse.ArgumentParser, app: str):
         # Args that are app specific
         if app in ["capture", "service"]:
             parser.add_argument("-P", "--port", type=int, help="port for Pupil Remote")
+            parser.add_argument(
+                "--hide-ui", action="store_true", help="hide ui on startup"
+            )
 
         if app == "player":
             parser.add_argument(
