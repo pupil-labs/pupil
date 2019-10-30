@@ -20,14 +20,19 @@ def parse(running_from_bundle: bool, **defaults: T.Any):
 
     if running_from_bundle:
         # Infer the app from executable name and only parse those arguments
-        _add_general_args(main_parser)
         if "pupil_capture" in sys.executable:
-            _add_app_args(main_parser, "capture")
+            app = "capture"
         elif "pupil_player" in sys.executable:
-            _add_app_args(main_parser, "player")
+            app = "player"
+        elif "pupil_service" in sys.executable:
+            app = "service"
         else:
-            _add_app_args(main_parser, "service")
-        main_parser.set_defaults(**defaults)
+            raise RuntimeError(
+                f"Could not infer Pupil App from executable name: {sys.executable}"
+            )
+        _add_general_args(main_parser)
+        _add_app_args(main_parser, app)
+        main_parser.set_defaults(app=app, **defaults)
 
     else:
         # Add explicit subparsers for all apps
