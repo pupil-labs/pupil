@@ -16,10 +16,17 @@ if not running_from_bundle:
     pupil_base_dir = os.path.abspath(__file__).rsplit("pupil_src", 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, "pupil_src", "shared_modules"))
 
-import launchable_args
+from launchable_args import PupilArgParser
 
-default_args = {"app": "capture", "debug": False, "profile": False, "version": False}
-parsed_args, unknown_args = launchable_args.parse(running_from_bundle, **default_args)
+# NOTE: hyphens (-) in the CLI args are converted to underscores (_) upon parsing, so
+# "--hide-ui" becomes "hide_ui" in python
+default_args = {
+    "debug": False,
+    "profile": False,
+    "version": False,
+    "hide_ui": False,
+}
+parsed_args, unknown_args = PupilArgParser().parse(running_from_bundle, **default_args)
 
 # app version
 from version_utils import get_version
@@ -254,7 +261,8 @@ def launcher():
 
     import logging
 
-    logging.debug("Unknown command-line arguments: {}".format(unknown_args))
+    if unknown_args:
+        logging.warning(f"Unknown command-line arguments: {unknown_args}")
 
     if parsed_args.app == "service":
         cmd_push.notify({"subject": "service_process.should_start"})
@@ -286,6 +294,7 @@ def launcher():
                             app_version,
                             eye_id,
                             n.get("overwrite_cap_settings"),
+                            parsed_args.hide_ui,
                         ),
                     ).start()
                 elif "notify.player_process.should_start" in topic:
@@ -314,6 +323,7 @@ def launcher():
                             user_dir,
                             app_version,
                             parsed_args.port,
+                            parsed_args.hide_ui,
                         ),
                     ).start()
                 elif "notify.clear_settings_process.should_start" in topic:
@@ -333,6 +343,7 @@ def launcher():
                             user_dir,
                             app_version,
                             parsed_args.port,
+                            parsed_args.hide_ui,
                         ),
                     ).start()
                 elif "notify.player_drop_process.should_start" in topic:

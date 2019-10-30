@@ -22,6 +22,7 @@ def world(
     user_dir,
     version,
     preferred_remote_port,
+    hide_ui,
 ):
     """Reads world video and runs plugins.
 
@@ -435,6 +436,8 @@ def world(
 
         # window and gl setup
         glfw.glfwInit()
+        if hide_ui:
+            glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
         window_pos = session_settings.get("window_position", window_position_default)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
@@ -683,11 +686,9 @@ def world(
 
                 glfw.glfwSwapBuffers(main_window)
 
-        glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["gui_scale"] = g_pool.gui_user_scale
         session_settings["ui_config"] = g_pool.gui.configuration
-        session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
         session_settings["version"] = str(g_pool.version)
         session_settings["eye0_process_alive"] = eye_procs_alive[0].value
         session_settings["eye1_process_alive"] = eye_procs_alive[1].value
@@ -697,9 +698,12 @@ def world(
         session_settings["detection_mapping_mode"] = g_pool.detection_mapping_mode
         session_settings["audio_mode"] = audio.audio_mode
 
-        session_window_size = glfw.glfwGetWindowSize(main_window)
-        if 0 not in session_window_size:
-            session_settings["window_size"] = session_window_size
+        if not hide_ui:
+            glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
+            session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
+            session_window_size = glfw.glfwGetWindowSize(main_window)
+            if 0 not in session_window_size:
+                session_settings["window_size"] = session_window_size
 
         session_settings.close()
 
