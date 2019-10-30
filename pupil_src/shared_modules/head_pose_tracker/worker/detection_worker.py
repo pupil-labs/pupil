@@ -14,8 +14,8 @@ from types import SimpleNamespace
 
 import cv2
 import numpy as np
-
 import pupil_apriltags
+
 import file_methods as fm
 import video_capture
 from methods import normalize
@@ -23,7 +23,7 @@ from stdlib_utils import unique
 
 logger = logging.getLogger(__name__)
 
-apriltag_detector = pupil_apriltags.Detector()
+apriltag_detector = pupil_apriltags.Detector(nthreads=2)
 
 
 def get_markers_data(detection, img_size, timestamp):
@@ -70,15 +70,15 @@ def _detect(frame):
 
 def offline_detection(
     source_path,
-    timestamps,
+    all_timestamps,
     frame_index_range,
-    frame_index_to_num_markers,
+    calculated_frame_indices,
     shared_memory,
 ):
     batch_size = 30
     frame_start, frame_end = frame_index_range
     frame_indices = sorted(
-        set(range(frame_start, frame_end + 1)) - set(frame_index_to_num_markers.keys())
+        set(range(frame_start, frame_end + 1)) - calculated_frame_indices
     )
     if not frame_indices:
         return
@@ -88,26 +88,29 @@ def offline_detection(
     yield None
 
     src = video_capture.File_Source(
-        SimpleNamespace(), source_path, fill_gaps=True, timing=None
+        SimpleNamespace(), source_path, fill_gaps=False, timing=None
     )
+    timestamps_no_gaps = src.timestamps
+    uncalculated_timestamps = all_timestamps[frame_indices]
+    seek_poses = np.searchsorted(timestamps_no_gaps, uncalculated_timestamps)
 
     queue = []
-    for frame_index in frame_indices:
-        shared_memory.progress = (frame_index - frame_start + 1) / frame_count
-        timestamp = timestamps[frame_index]
-        src.seek_to_frame(frame_index)
-        frame = src.get_frame()
+    for frame_index, timestamp, target_frame_idx in zip(
+        frame_indices, uncalculated_timestamps, seek_poses
+    ):
+        detections = []
+        if timestamp in timestamps_no_gaps:
+            if target_frame_idx != src.target_frame_idx:
+                src.seek_to_frame(target_frame_idx)  # only seek frame if necessary
+            frame = src.get_frame()
+            detections = _detect(frame)
 
-        detections = _detect(frame)
-        if detections:
-            serialized_dicts = [
-                fm.Serialized_Dict(detection) for detection in detections
-            ]
-            queue.append((timestamp, serialized_dicts, frame_index, len(detections)))
-        else:
-            queue.append((timestamp, [fm.Serialized_Dict({})], frame_index, 0))
+        serialized_dicts = [fm.Serialized_Dict(d) for d in detections]
+        queue.append((timestamp, serialized_dicts, frame_index))
 
         if len(queue) >= batch_size:
+            shared_memory.progress = (frame_index - frame_start + 1) / frame_count
+
             data = queue[:batch_size]
             del queue[:batch_size]
             yield data
