@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import os
+import signal
 
 # import sys, platform
 from types import SimpleNamespace
@@ -107,6 +108,18 @@ def service(
         from background_helper import IPC_Logging_Task_Proxy
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
+        process_was_interrupted = False
+
+        def interrupt_handler(sig, frame):
+            import traceback
+
+            trace = traceback.format_stack(f=frame)
+            logger.debug(f"Caught signal {sig} in:\n" + "".join(trace))
+            nonlocal process_was_interrupted
+            process_was_interrupted = True
+
+        signal.signal(signal.SIGINT, interrupt_handler)
 
         logger.info("Application Version: {}".format(version))
         logger.info("System Info: {}".format(get_system_info()))
@@ -244,7 +257,7 @@ def service(
         )
 
         # Event loop
-        while g_pool.service_should_run:
+        while g_pool.service_should_run and not process_was_interrupted:
             socks = dict(poller.poll())
             if pupil_sub.socket in socks:
                 topic, pupil_datum = pupil_sub.recv()

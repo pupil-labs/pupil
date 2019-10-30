@@ -11,6 +11,8 @@ See COPYING and COPYING.LESSER for license details.
 
 import os
 import platform
+import signal
+import time
 from types import SimpleNamespace
 
 
@@ -41,14 +43,12 @@ class Is_Alive_Manager(object):
                 "Process Eye{} crashed with trace:\n".format(self.eye_id)
                 + "".join(tb.format_exception(etype, value, traceback))
             )
-            self.ipc_socket.notify(
-                {"subject": "eye_process.stopped", "eye_id": self.eye_id}
-            )
 
         self.is_alive.value = False
         self.ipc_socket.notify(
             {"subject": "eye_process.stopped", "eye_id": self.eye_id}
         )
+        time.sleep(1.0)
         return True  # do not propergate exception
 
 
@@ -152,6 +152,16 @@ def eye(
 
         # Pupil detectors
         from pupil_detectors import Detector_2D, Detector_3D, Detector_Dummy
+
+        def interrupt_handler(sig, frame):
+            import traceback
+
+            trace = traceback.format_stack(f=frame)
+            logger.debug(f"Caught signal {sig} in:\n" + "".join(trace))
+            # NOTE: Interrupt is handled in world/service/player which are responsible for
+            # shutting down the eye process properly
+
+        signal.signal(signal.SIGINT, interrupt_handler)
 
         pupil_detectors = {
             Detector_2D.__name__: Detector_2D,

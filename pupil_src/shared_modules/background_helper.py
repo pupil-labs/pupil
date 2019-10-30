@@ -11,8 +11,10 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import multiprocessing as mp
-import zmq
+import signal
 from ctypes import c_bool
+
+import zmq
 
 import zmq_tools
 
@@ -54,6 +56,16 @@ class Task_Proxy:
         `Task_Proxy.fetch()`. This allows users to handle failure gracefully
         as well as raising their own exceptions in the background task.
         """
+
+        def interrupt_handler(sig, frame):
+            import traceback
+
+            trace = traceback.format_stack(f=frame)
+            logger.debug(f"Caught signal {sig} in:\n" + "".join(trace))
+            # NOTE: Interrupt is handled in world/service/player which are responsible
+            # for shutting down the background process properly
+
+        signal.signal(signal.SIGINT, interrupt_handler)
         try:
             self._change_logging_behavior()
             logger.debug("Entering _wrapper")

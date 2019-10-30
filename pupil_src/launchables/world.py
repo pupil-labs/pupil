@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import os
 import platform
+import signal
 from types import SimpleNamespace
 
 
@@ -191,6 +192,18 @@ def world(
         else:
             scroll_factor = 1.0
             window_position_default = (0, 0)
+
+        process_was_interrupted = False
+
+        def interrupt_handler(sig, frame):
+            import traceback
+
+            trace = traceback.format_stack(f=frame)
+            logger.debug(f"Caught signal {sig} in:\n" + "".join(trace))
+            nonlocal process_was_interrupted
+            process_was_interrupted = True
+
+        signal.signal(signal.SIGINT, interrupt_handler)
 
         icon_bar_width = 50
         window_size = None
@@ -596,7 +609,9 @@ def world(
         logger.warning("Process started.")
 
         # Event loop
-        while not glfw.glfwWindowShouldClose(main_window):
+        while (
+            not glfw.glfwWindowShouldClose(main_window) and not process_was_interrupted
+        ):
 
             # fetch newest notifications
             new_notifications = []
