@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import tasklib.background
-from tasklib.background.patches import IPCLoggingPatch
+from tasklib.background.patches import IPCLoggingPatch, KeyboardInterruptHandlerPatch
 
 
 class PluginTaskManager:
@@ -78,7 +78,7 @@ class PluginTaskManager:
 
         """
         if patches is ...:
-            patches = (IPCLoggingPatch(),)
+            patches = (IPCLoggingPatch(), KeyboardInterruptHandlerPatch())
         task = tasklib.background.create(
             name,
             routine_or_generator_function,

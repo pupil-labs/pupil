@@ -48,3 +48,20 @@ class IPCLoggingPatch(Patch):
         handler = zmq_tools.ZMQ_handler(zmq_ctx, self.ipc_push_url_copy)
         root_logger.addHandler(handler)
         root_logger.setLevel(logging.NOTSET)
+
+
+class KeyboardInterruptHandlerPatch(Patch):
+    def apply(self):
+        import signal
+
+        signal.signal(signal.SIGINT, self._debug_log_interrupt_trace)
+
+    def _debug_log_interrupt_trace(self, sig, frame):
+        import logging
+        import traceback
+
+        logger = logging.getLogger(__name__)
+        trace = traceback.format_stack(f=frame)
+        logger.debug(f"Caught signal {sig} in:\n" + "".join(trace))
+        # NOTE: Interrupt is handled in world/service/player which are responsible for
+        # shutting down the task properly

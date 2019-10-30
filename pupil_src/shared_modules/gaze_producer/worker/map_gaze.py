@@ -44,7 +44,10 @@ def create_task(gaze_mapper, calibration):
         name,
         _map_gaze,
         args=args,
-        patches=[bg_patches.IPCLoggingPatch()],
+        patches=[
+            bg_patches.IPCLoggingPatch(),
+            bg_patches.KeyboardInterruptHandlerPatch(),
+        ],
         pass_shared_memory=True,
     )
 
