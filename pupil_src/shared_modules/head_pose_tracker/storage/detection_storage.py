@@ -118,7 +118,7 @@ class OfflineDetectionStorage(Observable, OfflineMarkerLocation):
 
     @property
     def _frame_index_to_num_markers_file_name(self):
-        return "frame_index_to_num_markers"
+        return "frame_index_to_num_markers.msgpack"
 
     @property
     def _offline_data_folder_path(self):
