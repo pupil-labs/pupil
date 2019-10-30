@@ -19,7 +19,6 @@ if not running_from_bundle:
 import launchable_args
 
 default_args = {
-    "app": "capture",
     "debug": False,
     "profile": False,
     "version": False,

@@ -11,89 +11,64 @@ See COPYING and COPYING.LESSER for license details.
 
 import argparse
 import sys
+import typing as T
 
 
-class DefaultNamespace(argparse.Namespace):
-    def __init__(self, **defaults):
-        # Caveat: We need explicit default values for app+port arguments in order to
-        # maintain the convenience to start Capture without having to pass any explicit
-        # arguments, e.g. `python3 main.py` instead of `python3 main.py capture`.
-        self.app = "capture"
-        self.port = None
-        for name, value in defaults.items():
-            setattr(self, name, value)
-
-
-def parse(running_from_bundle, **defaults):
-    parser = argparse.ArgumentParser(allow_abbrev=False)
-    target_ns = DefaultNamespace(**defaults)
+def parse(running_from_bundle: bool, **defaults: T.Any):
+    """Parse command line arguments."""
+    main_parser = argparse.ArgumentParser(allow_abbrev=False)
 
     if running_from_bundle:
-        _setup_bundle_parsers(parser, namespace=target_ns)
-    else:
-        _setup_source_parsers(parser)
-    _add_general_args(parser)
-    _add_main_args(parser)
-
-    return parser.parse_known_args(namespace=target_ns)
-
-
-def _setup_source_parsers(main_parser):
-    subparsers = main_parser.add_subparsers(
-        title="Applications",
-        description="Select which application you want to run, by default `capture`",
-        dest="app",
-    )
-    parser_capture = subparsers.add_parser(
-        "capture", help="Real-time processing and recording"
-    )
-    _add_general_args(parser_capture)
-    _add_remote_port_arg(parser_capture)
-
-    parser_service = subparsers.add_parser(
-        "service", help="Real-time processing with minimal UI"
-    )
-    _add_general_args(parser_service)
-    _add_remote_port_arg(parser_service)
-
-    parser_player = subparsers.add_parser(
-        "player", help="Process, visualize, and export recordings"
-    )
-    _add_general_args(parser_player)
-    _add_recording_arg(parser_player)
-
-
-def _setup_bundle_parsers(main_parser, namespace):
-    if "pupil_player" in sys.executable:
-        _add_recording_arg(main_parser)
-        namespace.app = "player"
-    else:
-        _add_remote_port_arg(main_parser)
+        # Infer the app from executable name and only parse those arguments
+        _add_general_args(main_parser)
         if "pupil_capture" in sys.executable:
-            namespace.app = "capture"
+            _add_app_args(main_parser, "capture")
+        elif "pupil_player" in sys.executable:
+            _add_app_args(main_parser, "player")
         else:
-            namespace.app = "service"
+            _add_app_args(main_parser, "service")
+        main_parser.set_defaults(**defaults)
+
+    else:
+        # Add explicit subparsers for all apps
+        subparser = main_parser.add_subparsers(
+            dest="app", metavar="<app>", help="which application to start"
+        )
+        subparser.required = True
+
+        apps = {
+            "capture": "real-time processing and recording",
+            "player": "process, visualize, and export recordings",
+            "service": "real-time processing with minimal UI",
+        }
+
+        for app, description in apps.items():
+            app_parser = subparser.add_parser(app, help=description)
+            _add_general_args(app_parser)
+            _add_app_args(app_parser, app)
+            app_parser.set_defaults(**defaults)
+
+    return main_parser.parse_known_args()
 
 
-def _add_remote_port_arg(parser):
-    parser.add_argument("-P", "--port", type=int, help="Pupil Remote port")
-
-
-def _add_recording_arg(parser):
-    parser.add_argument("recording", default="", nargs="?", help="path to recording")
-
-
-def _add_main_args(parser):
-    """These args will only apply to main.py, not to capture/player/service."""
+def _add_general_args(parser: argparse.ArgumentParser):
+    # Args that apply to all apps
+    parser.add_argument("--version", action="store_true", help="show version")
     parser.add_argument(
-        "--debug", help="display debug log messages", action="store_true"
+        "--debug", action="store_true", help="display debug log messages"
     )
     parser.add_argument(
         "--profile", action="store_true", help="profile the application's CPU time"
     )
-
-
-def _add_general_args(parser):
-    """These args will be used on both main.py and also on capture/player/service."""
-    parser.add_argument("--version", action="store_true", help="show version")
     parser.add_argument("--hideui", action="store_true", help="hide ui on startup")
+
+
+def _add_app_args(parser: argparse.ArgumentParser, app: str):
+    # Add specific arguments based on app
+    if app in ["capture", "service"]:
+        parser.add_argument("-P", "--port", type=int, help="port for Pupil Remote")
+
+    if app == "player":
+        parser.add_argument(
+            "recording", default="", nargs="?", help="path to recording"
+        )
