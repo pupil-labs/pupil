@@ -24,7 +24,7 @@ default_args = {
     "debug": False,
     "profile": False,
     "version": False,
-    "hide_ui": True,
+    "hide_ui": False,
 }
 parsed_args, unknown_args = PupilArgParser().parse(running_from_bundle, **default_args)
 
