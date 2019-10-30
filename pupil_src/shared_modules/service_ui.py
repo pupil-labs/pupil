@@ -49,6 +49,8 @@ class Service_UI(System_Plugin_Base):
         self.texture = np.zeros((1, 1, 3), dtype=np.uint8) + 128
 
         glfw.glfwInit()
+        if g_pool.hide_ui:
+            glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         main_window = glfw.glfwCreateWindow(*window_size, "Pupil Service")
         glfw.glfwSetWindowPos(main_window, *window_position)
         glfw.glfwMakeContextCurrent(main_window)

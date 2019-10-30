@@ -342,6 +342,7 @@ def launcher():
                             user_dir,
                             app_version,
                             parsed_args.port,
+                            parsed_args.hide_ui,
                         ),
                     ).start()
                 elif "notify.player_drop_process.should_start" in topic:

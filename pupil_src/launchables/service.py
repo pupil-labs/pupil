@@ -23,6 +23,7 @@ def service(
     user_dir,
     version,
     preferred_remote_port,
+    hide_ui,
 ):
     """Maps pupil to gaze data, can run various plug-ins.
 
@@ -125,6 +126,7 @@ def service(
         g_pool.eye_procs_alive = eye_procs_alive
         g_pool.timebase = timebase
         g_pool.preferred_remote_port = preferred_remote_port
+        g_pool.hide_ui = hide_ui
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value
