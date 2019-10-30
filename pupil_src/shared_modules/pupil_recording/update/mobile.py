@@ -9,13 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import datetime
 import logging
 import re
 import uuid
 from pathlib import Path
-
-import numpy as np
 
 from .. import Version
 from ..info import RecordingInfoFile
@@ -79,22 +76,11 @@ def _transform_mobile_v1_2_to_pprf_2_0(rec_dir: str):
 def _generate_pprf_2_0_info_file(rec_dir: str) -> RecordingInfoFile:
     info_csv = utils.read_info_csv_file(rec_dir)
 
+    # Get information about recording from info.csv
     try:
-        # Get information about recording from info.csv
         recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
-
-        # Allow inference of missing values in v1.16
-        # TODO: Remove value inference in v1.17
-        start_time_system_s = float(
-            info_csv.get(
-                "Start Time (System)", _infer_start_time_system_from_legacy(info_csv)
-            )
-        )
-        start_time_synced_s = float(
-            info_csv.get(
-                "Start Time (Synced)", _infer_start_time_synced_from_legacy(rec_dir)
-            )
-        )
+        start_time_system_s = float(info_csv["Start Time (System)"])
+        start_time_synced_s = float(info_csv["Start Time (Synced)"])
         duration_s = utils.parse_duration_string(info_csv["Duration Time"])
         recording_software_name = info_csv["Capture Software"]
         recording_software_version = info_csv["Capture Software Version"]
@@ -103,11 +89,11 @@ def _generate_pprf_2_0_info_file(rec_dir: str) -> RecordingInfoFile:
         )
         system_info = info_csv.get("System Info", utils.default_system_info(rec_dir))
     except KeyError as e:
-        logger.debug(f"KeyError while parsing old-style info.csv: {str(e)}")
+        logger.debug(f"KeyError while parsing mobile info.csv: {str(e)}")
         raise InvalidRecordingException(
-            "This recording is too old to be opened with this version of Player!"
+            "This recording needs a data format update.\n"
+            "Open it once in Pupil Player v1.17 to perform the update."
         )
-
     # Create a recording info file with the new format, fill out
     # the information, validate, and return.
     new_info_file = RecordingInfoFile.create_empty_file(rec_dir)
@@ -144,73 +130,3 @@ def _rename_mobile_files(recording: PupilRecording):
 
 def _rewrite_timestamps(recording: PupilRecording):
     update_utils._rewrite_times(recording, dtype=">f8")
-
-
-def _infer_start_time_system_from_legacy(info_csv):
-    _warn_imprecise_value_inference()
-    logger.warning(f"Missing meta info key: `Start Time (System)`.")
-
-    # Read date and time from info_csv
-    string_start_date = info_csv["Start Date"]
-    string_start_time = info_csv["Start Time"]
-
-    # Combine and parse to datetime.datetime
-    string_start_date_time = f"{string_start_date} {string_start_time}"
-    format_date_time = "%d:%m:%Y %H:%M:%S"
-    try:
-        date_time = datetime.datetime.strptime(string_start_date_time, format_date_time)
-    except ValueError as valerr:
-        raise InvalidRecordingException(
-            "Could not infer missing `Start Time (System)` value.\nUnexpected date time"
-            f" input format: {string_start_date_time}"
-        ) from valerr
-    # Convert to Unix timestamp
-    ts_start_date_time = date_time.timestamp()
-
-    logger.info(f"Using {date_time} as input for `Start Time (System)` inference.")
-    logger.info(f"Inferred `Start Time (System)`: {ts_start_date_time}")
-
-    return ts_start_date_time
-
-
-def _infer_start_time_synced_from_legacy(rec_dir):
-    _warn_imprecise_value_inference()
-    logger.warning(f"Missing meta info key: `Start Time (Synced)`.")
-
-    files = PupilRecording.FileFilter(rec_dir)
-    raw_time_files = files.mobile().raw_time()
-    first_ts_per_raw_time_file = []
-    for raw_time_file in raw_time_files:
-        raw_time = np.fromfile(str(raw_time_file), dtype=">f8")
-        if raw_time.size == 0:
-            continue
-        first_ts_per_raw_time_file.append(raw_time[0])
-    if not first_ts_per_raw_time_file:
-        raise InvalidRecordingException(
-            "Could not infer missing `Start Time (Synced)` value. No timestamps found."
-        )
-    inferred_start_time_synced = min(first_ts_per_raw_time_file)
-    logger.info(f"Inferred `Start Time (Synced)`: {inferred_start_time_synced}")
-    return inferred_start_time_synced
-
-
-# global variable to warn only once
-_SHOULD_WARN_IMPRECISE_VALUE_INFERRENCE = True
-
-
-def _warn_imprecise_value_inference():
-    global _SHOULD_WARN_IMPRECISE_VALUE_INFERRENCE
-    if not _SHOULD_WARN_IMPRECISE_VALUE_INFERRENCE:
-        return
-    logger.warning(
-        "\n\n!! Deprecation Warning !! Pupil Mobile recordings recorded with older"
-        " versions than r0.21.0 are deprecated and will not be supported by future"
-        " Pupil Player versions!\n"
-    )
-    logger.warning(
-        "\n\n!! Imprecise Value Inference !! In order to upgrade a deprecated"
-        " recording, Pupil Player needs to infer missing meta data from the existing"
-        " recording. This inference is imprecise and might cause issues when converting"
-        " recorded Pupil time to wall clock time.\n"
-    )
-    _SHOULD_WARN_IMPRECISE_VALUE_INFERRENCE = False
