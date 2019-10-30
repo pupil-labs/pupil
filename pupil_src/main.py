@@ -261,7 +261,8 @@ def launcher():
 
     import logging
 
-    logging.warning("Unknown command-line arguments: {}".format(unknown_args))
+    if unknown_args:
+        logging.warning(f"Unknown command-line arguments: {unknown_args}")
 
     if parsed_args.app == "service":
         cmd_push.notify({"subject": "service_process.should_start"})
