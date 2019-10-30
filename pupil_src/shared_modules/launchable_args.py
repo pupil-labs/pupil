@@ -32,7 +32,7 @@ class PupilArgParser:
         self.apps = {
             "capture": "real-time processing and recording",
             "player": "process, visualize, and export recordings",
-            "service": "real-time processing with minimal UI",
+            "service": "low latency real-time processing with constrained feature set",
         }
 
         self.main_parser = HelpfulArgumentParser(allow_abbrev=False)
