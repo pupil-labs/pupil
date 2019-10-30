@@ -23,7 +23,7 @@ from stdlib_utils import unique
 
 logger = logging.getLogger(__name__)
 
-apriltag_detector = pupil_apriltags.Detector()
+apriltag_detector = pupil_apriltags.Detector(nthreads=2)
 
 
 def get_markers_data(detection, img_size, timestamp):
