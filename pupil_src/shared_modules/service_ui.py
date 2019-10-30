@@ -207,7 +207,8 @@ class Service_UI(System_Plugin_Base):
         )
 
     def cleanup(self):
-        glfw.glfwRestoreWindow(self.g_pool.main_window)
+        if not self.g_pool.hide_ui:
+            glfw.glfwRestoreWindow(self.g_pool.main_window)
 
         del self.g_pool.menubar[:]
         self.g_pool.gui.remove(self.g_pool.menubar)
