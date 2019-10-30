@@ -16,7 +16,7 @@ if not running_from_bundle:
     pupil_base_dir = os.path.abspath(__file__).rsplit("pupil_src", 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, "pupil_src", "shared_modules"))
 
-import launchable_args
+from launchable_args import PupilArgParser
 
 default_args = {
     "debug": False,
@@ -24,7 +24,7 @@ default_args = {
     "version": False,
     "hideui": False,
 }
-parsed_args, unknown_args = launchable_args.parse(running_from_bundle, **default_args)
+parsed_args, unknown_args = PupilArgParser().parse(running_from_bundle, **default_args)
 
 # app version
 from version_utils import get_version
