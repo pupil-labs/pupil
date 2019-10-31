@@ -73,7 +73,7 @@ class Pupil_Remote(Plugin):
     icon_chr = chr(0xE307)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool, port=50020, host="*", use_primary_interface=True):
+    def __init__(self, g_pool, host="*", use_primary_interface=True):
         super().__init__(g_pool)
         self.order = 0.01  # excecute first
         self.context = g_pool.zmq_ctx
@@ -81,9 +81,8 @@ class Pupil_Remote(Plugin):
 
         self.use_primary_interface = use_primary_interface
         assert type(host) == str
-        assert type(port) == int
         self.host = host
-        self.port = g_pool.preferred_remote_port or port
+        self.port = g_pool.preferred_remote_port
 
         self.start_server("tcp://{}:{}".format(host, self.port))
         self.menu = None
@@ -301,7 +300,6 @@ class Pupil_Remote(Plugin):
 
     def get_init_dict(self):
         return {
-            "port": self.port,
             "host": self.host,
             "use_primary_interface": self.use_primary_interface,
         }

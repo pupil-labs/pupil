@@ -25,6 +25,7 @@ default_args = {
     "profile": False,
     "version": False,
     "hide_ui": False,
+    "port": 50020,
 }
 parsed_args, unknown_args = PupilArgParser().parse(running_from_bundle, **default_args)
 
