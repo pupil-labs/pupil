@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 from head_pose_tracker import ui as plugin_ui, controller, storage
 from tasklib.manager import PluginTaskManager
-
 from .base_head_pose_tracker import Head_Pose_Tracker_Base
 
 
@@ -31,7 +30,7 @@ class Online_Head_Pose_Tracker(Head_Pose_Tracker_Base):
         render_markers=True,
         show_marker_id_in_main_window=False,
         window_size=(1000, 1000),
-        window_position=(0, 0),
+        window_position=(90, 90),
     ):
         super().__init__(g_pool)
 

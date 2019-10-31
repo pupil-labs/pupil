@@ -244,7 +244,7 @@ def service(
                             }
                         )
 
-        if session_settings.get("eye1_process_alive", False):
+        if session_settings.get("eye1_process_alive", True):
             launch_eye_process(1, delay=0.3)
         if session_settings.get("eye0_process_alive", True):
             launch_eye_process(0, delay=0.0)

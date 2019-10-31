@@ -12,9 +12,6 @@ See COPYING and COPYING.LESSER for license details.
 import OpenGL.GL as gl
 import numpy as np
 
-from pyglui.pyfontstash import fontstash
-from pyglui.ui import get_roboto_font_path
-
 
 def set_rotate_center(matrix):
     gl.glLoadTransposeMatrixf(matrix)

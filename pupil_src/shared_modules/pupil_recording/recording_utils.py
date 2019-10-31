@@ -53,7 +53,7 @@ def get_recording_type(rec_dir: str) -> RecordingType:
     if RecordingInfoFile.does_recording_contain_info_file(rec_dir):
         return RecordingType.NEW_STYLE
 
-    elif _was_recording_opened_in_player_before(rec_dir):
+    elif _is_old_style_player_recording(rec_dir):
         return RecordingType.OLD_STYLE
 
     elif _is_pupil_invisible_recording(rec_dir):
@@ -133,9 +133,13 @@ def _is_pupil_mobile_recording(rec_dir: str) -> bool:
         return False
 
 
-def _was_recording_opened_in_player_before(rec_dir: str) -> bool:
+def _is_old_style_player_recording(rec_dir: str) -> bool:
     try:
         info_csv = recording_info_utils.read_info_csv_file(rec_dir)
     except FileNotFoundError:
         return False
-    return "Data Format Version" in info_csv
+    # We test if the "Data Format Version" or "Capture Software Version" field is
+    # present to differentiate untransformed Pupil Mobile recordings. These do not
+    # contain either of these keys. "Capture Software Version" is tested too for legacy
+    # reasons.
+    return "Data Format Version" in info_csv or "Capture Software Version" in info_csv
