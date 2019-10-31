@@ -199,10 +199,24 @@ def service(
 
         audio.audio_mode = session_settings.get("audio_mode", audio.default_audio_mode)
 
+        ipc_pub.notify({"subject": "service_process.started"})
+        logger.warning("Process started.")
+        g_pool.service_should_run = True
+
         # plugins that are loaded based on user settings from previous session
         g_pool.plugins = Plugin_List(
             g_pool, session_settings.get("loaded_plugins", default_plugins)
         )
+
+        # NOTE: The Pupil_Remote plugin fails to load when the port is already in use
+        # and will set this variable to false. Then we should not even start the eye
+        # processes. Otherwise we would have to wait for their initialization before
+        # attempting cleanup in Service.
+        if g_pool.service_should_run:
+            if session_settings.get("eye1_process_alive", True):
+                launch_eye_process(1, delay=0.3)
+            if session_settings.get("eye0_process_alive", True):
+                launch_eye_process(0, delay=0.0)
 
         def handle_notifications(n):
             subject = n["subject"]
@@ -243,15 +257,6 @@ def service(
                                 "doc": p.on_notify.__doc__,
                             }
                         )
-
-        if session_settings.get("eye1_process_alive", True):
-            launch_eye_process(1, delay=0.3)
-        if session_settings.get("eye0_process_alive", True):
-            launch_eye_process(0, delay=0.0)
-
-        ipc_pub.notify({"subject": "service_process.started"})
-        logger.warning("Process started.")
-        g_pool.service_should_run = True
 
         # initiate ui update loop
         ipc_pub.notify(
