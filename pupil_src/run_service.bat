@@ -1,2 +1,2 @@
 SET PATH=%PATH%;%~dp0..\pupil_external
-python main.py service
+python main.py service %*
