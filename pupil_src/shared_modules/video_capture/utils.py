@@ -463,10 +463,10 @@ def pi_gaze_items(root_dir):
         return np.asarray(raw_data, dtype=raw_data_dtype)
 
     # This pattern will match any filename that:
-    # - starts with "gaze"
-    # - is followed by one or more characters
+    # - starts with "gaze ps"
+    # - is followed by one or more digits
     # - is followed by "_timestamps.npy"
-    gaze_timestamp_pattern = "gaze ps?*_timestamps.npy"
+    gaze_timestamp_pattern = "gaze ps[0-9]*_timestamps.npy"
 
     for timestamps_path in pl.Path(root_dir).glob(gaze_timestamp_pattern):
         raw_path = find_raw_path(timestamps_path)
