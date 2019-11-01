@@ -466,7 +466,7 @@ def pi_gaze_items(root_dir):
     # - starts with "gaze"
     # - is followed by one or more characters
     # - is followed by "_timestamps.npy"
-    gaze_timestamp_pattern = "gaze?*_timestamps.npy"
+    gaze_timestamp_pattern = "gaze ps?*_timestamps.npy"
 
     for timestamps_path in pl.Path(root_dir).glob(gaze_timestamp_pattern):
         raw_path = find_raw_path(timestamps_path)
