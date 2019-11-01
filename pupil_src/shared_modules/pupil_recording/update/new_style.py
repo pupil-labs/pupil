@@ -19,6 +19,7 @@ from .. import Version
 from ..info import RecordingInfoFile
 from ..recording import PupilRecording
 from ..recording_utils import InvalidRecordingException
+from . import invisible
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,34 @@ def recording_update_to_latest_new_style(rec_dir: str):
             f"{info_file.min_player_version}"
         )
         raise InvalidRecordingException(reason=player_out_of_date)
+
+    if info_file.meta_version < Version("2.1"):
+        # There was a bug in v1.16 and v1.17 that caused corrupted gaze data when
+        # transforming a PI recording to new_style. Need to delete and re-transform.
+        if (
+            info_file.recording_software_name
+            == RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+        ):
+            logger.debug("Upgrading PI recording opened with pre v.1.18")
+            for path in Path(rec_dir).iterdir():
+                if not path.is_file:
+                    continue
+                if path.name in ["gaze.pldata", "gaze_timestamps.npy"]:
+                    logger.debug(
+                        f"Deleting potentially corrupted file '{path.name}'"
+                        f" from pre v1.18."
+                    )
+                    path.unlink()
+            invisible._convert_gaze(PupilRecording(rec_dir))
+            new_info_file = RecordingInfoFile.create_empty_file(
+                rec_dir, fixed_version=Version("2.1")
+            )
+            # TODO: This does not work yet! Need to build a way of upgrading the
+            # recording info to a new version! And possibly fix or delete this method
+            # which does not seem to function:
+            new_info_file.copy_from(info_file)
+            info_file = new_info_file
+            info_file.save_file()
 
     # if info_file.min_player_version < Version("1.17"):
     #     ... incremental update ...
