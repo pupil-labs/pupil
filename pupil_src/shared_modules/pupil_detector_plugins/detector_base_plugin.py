@@ -108,14 +108,11 @@ class PupilDetectorPlugin(Plugin):
             logger.error("Invalid property or value")
             logger.debug(traceback.format_exc())
 
-    def set_2d_detector_property(self, name: str, value: T.Any):
-        return self.pupil_detector.set_2d_detector_property(name=name, value=value)
-
-    def set_3d_detector_property(self, name: str, value: T.Any):
-        return self.pupil_detector.set_3d_detector_property(name=name, value=value)
+    def update_detector_property(self, namespace: str, key: str, value: T.Any):
+        return self.pupil_detector.update_property(namespace, key, value)
 
     def namespaced_detector_properties(self) -> dict:
-        return self.pupil_detector.namespaced_detector_properties()
+        return self.pupil_detector.get_properties()
 
     def on_resolution_change(self, old_size, new_size):
         return self.pupil_detector.on_resolution_change(

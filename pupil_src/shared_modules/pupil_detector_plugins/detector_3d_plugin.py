@@ -54,14 +54,6 @@ class Detector3DPlugin(PupilDetectorPlugin):
         return result
 
     @property
-    def detector_properties_2d(self) -> dict:
-        return self.detector_3d.get_properties()["2d"]
-
-    @property
-    def detector_properties_3d(self) -> dict:
-        return self.detector_3d.get_properties()["3d"]
-
-    @property
     def pupil_detector(self) -> DetectorBase:
         return self.detector_3d
 

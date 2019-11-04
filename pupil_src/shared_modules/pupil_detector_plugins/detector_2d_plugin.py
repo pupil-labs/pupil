@@ -31,10 +31,6 @@ class Detector2DPlugin(PupilDetectorPlugin):
         super().__init__(g_pool=g_pool)
         self.detector_2d = detector_2d or Detector2D(namespaced_properties or {})
 
-    @property
-    def detector_properties_2d(self) -> dict:
-        return self.detector_2d.get_properties()["2d"]
-
     def detect(self, frame):
         roi = Roi(*self.g_pool.u_r.get()[:4])
         result = self.detector_2d.detect(
@@ -50,9 +46,6 @@ class Detector2DPlugin(PupilDetectorPlugin):
         result["id"] = eye_id
         result["method"] = "2d c++"
         return result
-
-    def set_2d_detector_property(self, name, value):
-        self.detector_2d.set_2d_detector_property(name, value)
 
     @property
     def pupil_detector(self) -> DetectorBase:
