@@ -9,20 +9,20 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import abc
+
 # logging
 import logging
 import multiprocessing as mp
 import os
-import platform
-from fractions import Fraction
-import abc
 import typing as T
+from fractions import Fraction
 
+import av
 import numpy as np
+from av.packet import Packet
 
 import audio_utils
-import av
-from av.packet import Packet
 
 logger = logging.getLogger(__name__)
 
