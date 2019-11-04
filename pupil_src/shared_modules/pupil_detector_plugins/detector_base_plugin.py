@@ -123,9 +123,6 @@ class PupilDetectorPlugin(Plugin):
             logger.error("Invalid property or value")
             logger.debug(traceback.format_exc())
 
-    def update_detector_property(self, namespace: str, key: str, value: T.Any):
-        return self.pupil_detector.update_property(namespace, key, value)
-
     def namespaced_detector_properties(self) -> dict:
         return self.pupil_detector.get_properties()
 
