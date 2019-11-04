@@ -180,6 +180,10 @@ class AV_Writer(abc.ABC):
         video_packed_encoded = False
         for packet in self.encode_frame(input_frame, pts):
             if packet.stream is self.video_stream:
+                if video_packed_encoded:
+                    # NOTE: Assumption: Each frame is encoded into a single packet!
+                    # This is required for the frame.pts == packet.pts assumption below.
+                    logger.warning("Single frame yielded more than one packet")
                 video_packed_encoded = True
             self.container.mux(packet)
 
