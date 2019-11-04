@@ -76,7 +76,6 @@ class Detector2DPlugin(PupilDetectorPlugin):
             + "Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds."
         )
         self.menu.append(info)
-        # self.menu.append(ui.Switch('coarse_detection',self.detector_properties_2d,label='Use coarse detection'))
         self.menu.append(
             ui.Slider(
                 "intensity_range",
@@ -107,10 +106,6 @@ class Detector2DPlugin(PupilDetectorPlugin):
                 step=1,
             )
         )
-        # advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
-        # advanced_controls_menu.append(ui.Slider('contour_size_min',self.detector_properties_2d,label='Contour min length',min=1,max=200,step=1))
-        # advanced_controls_menu.append(ui.Slider('ellipse_true_support_min_dist',self.detector_properties_2d,label='ellipse_true_support_min_dist',min=0.1,max=7,step=0.1))
-        # self.menu.append(advanced_controls_menu)
 
     def deinit_ui(self):
         self.remove_menu()

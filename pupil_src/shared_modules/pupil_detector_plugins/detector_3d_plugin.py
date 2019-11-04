@@ -111,10 +111,6 @@ class Detector3DPlugin(PupilDetectorPlugin):
                 step=1,
             )
         )
-        # self.menu.append(ui.Slider('ellipse_roundness_ratio',self.detector_properties_2d,min=0.01,max=1.0,step=0.01))
-        # self.menu.append(ui.Slider('initial_ellipse_fit_treshhold',self.detector_properties_2d,min=0.01,max=6.0,step=0.01))
-        # self.menu.append(ui.Slider('canny_treshold',self.detector_properties_2d,min=1,max=1000,step=1))
-        # self.menu.append(ui.Slider('canny_ration',self.detector_properties_2d,min=1,max=4,step=1))
         info_3d = ui.Info_Text(
             "Open the debug window to see a visualization of the 3D pupil detection."
         )
@@ -136,15 +132,6 @@ class Detector3DPlugin(PupilDetectorPlugin):
                 "model_is_frozen", self.detector_properties_3d, label="Freeze model"
             )
         )
-        # self.menu.append(ui.Slider('pupil_radius_min',self.detector_properties_3d,label='Pupil min radius', min=1.0,max= 8.0,step=0.1))
-        # self.menu.append(ui.Slider('pupil_radius_max',self.detector_properties_3d,label='Pupil max radius', min=1.0,max=8.0,step=0.1))
-        # self.menu.append(ui.Slider('max_fit_residual',self.detector_properties_3d,label='3D fit max residual', min=0.00,max=0.1,step=0.0001))
-        # self.menu.append(ui.Slider('max_circle_variance',self.detector_properties_3d,label='3D fit max circle variance', min=0.01,max=2.0,step=0.001))
-        # self.menu.append(ui.Slider('combine_evaluation_max',self.detector_properties_3d,label='3D fit max combinations eval', min=500,max=50000,step=5000))
-        # self.menu.append(ui.Slider('combine_depth_max',self.detector_properties_3d,label='3D fit max combination depth', min=10,max=5000,step=20))
-        # advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
-        # advanced_controls_menu.append(ui.Slider('contour_size_min',self.detector_properties_2d,label='Contour min length',min=1,max=200,step=1))
-        # sidebar.append(advanced_controls_menu)
 
     def gl_display(self):
         self.debug_window_update()
