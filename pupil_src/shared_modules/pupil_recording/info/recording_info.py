@@ -206,17 +206,18 @@ class RecordingInfo(collections.abc.MutableMapping):
         except AssertionError:
             return False
 
-    def copy_from(self, other):
-        x, y = self, other
+    def update_writeable_properties_from(self, other):
+        dest, src = self, other
 
         for (
             property_name,
-            ((_, x_setter), (y_getter, _)),
-        ) in self.__matching_public_properties(x, y).items():
-            value = y_getter(y)
-            x_setter(x, value)
-
-        self._assert_property_equality(self, other)  # Sanity check
+            ((_, dest_setter), (src_getter, _)),
+        ) in self.__matching_public_properties(dest, src).items():
+            if dest_setter is None:
+                # readonly property
+                continue
+            value = src_getter(src)
+            dest_setter(dest, value)
 
     @classmethod
     def _assert_property_equality(cls, x: "RecordingInfo", y: "RecordingInfo") -> bool:
@@ -313,7 +314,7 @@ class RecordingInfo(collections.abc.MutableMapping):
         if x_property_names == y_property_names:
             property_names = x_property_names
         else:
-            property_names = x_property_names.union(y_property_names)
+            property_names = x_property_names.intersection(y_property_names)
             logger.debug(
                 "Public property mismatch; will only check the following properties: "
                 f"{property_names}"

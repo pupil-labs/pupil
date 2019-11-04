@@ -47,11 +47,11 @@ def transform_invisible_to_corresponding_new_style(rec_dir: str):
     #     ...
 
     else:
-        _transform_invisible_v1_0_to_pprf_2_0(rec_dir)
+        _transform_invisible_v1_0_to_pprf_2_1(rec_dir)
 
 
-def _transform_invisible_v1_0_to_pprf_2_0(rec_dir: str):
-    _generate_pprf_2_0_info_file(rec_dir)
+def _transform_invisible_v1_0_to_pprf_2_1(rec_dir: str):
+    _generate_pprf_2_1_info_file(rec_dir)
 
     # rename info.json file to info.invisible.json
     info_json = Path(rec_dir) / "info.json"
@@ -71,7 +71,7 @@ def _transform_invisible_v1_0_to_pprf_2_0(rec_dir: str):
     _convert_gaze(recording)
 
 
-def _generate_pprf_2_0_info_file(rec_dir: str) -> RecordingInfoFile:
+def _generate_pprf_2_1_info_file(rec_dir: str) -> RecordingInfoFile:
     info_json = utils.read_info_json_file(rec_dir)
 
     # Get information about recording from info.csv and info.json
@@ -86,7 +86,7 @@ def _generate_pprf_2_0_info_file(rec_dir: str) -> RecordingInfoFile:
 
     # Create a recording info file with the new format,
     # fill out the information, validate, and return.
-    new_info_file = RecordingInfoFile.create_empty_file(rec_dir, Version("2.0"))
+    new_info_file = RecordingInfoFile.create_empty_file(rec_dir, Version("2.1"))
     new_info_file.recording_uuid = recording_uuid
     new_info_file.start_time_system_ns = start_time_system_ns
     new_info_file.start_time_synced_ns = start_time_synced_ns
