@@ -54,13 +54,11 @@ def recording_update_to_latest_new_style(rec_dir: str):
                     )
                     path.unlink()
             invisible._convert_gaze(PupilRecording(rec_dir))
+            # Bump info file version to 2.1
             new_info_file = RecordingInfoFile.create_empty_file(
                 rec_dir, fixed_version=Version("2.1")
             )
-            # TODO: This does not work yet! Need to build a way of upgrading the
-            # recording info to a new version! And possibly fix or delete this method
-            # which does not seem to function:
-            new_info_file.copy_from(info_file)
+            new_info_file.update_writeable_properties_from(info_file)
             info_file = new_info_file
             info_file.save_file()
 

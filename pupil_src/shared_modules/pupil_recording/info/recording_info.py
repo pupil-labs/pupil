@@ -206,7 +206,7 @@ class RecordingInfo(collections.abc.MutableMapping):
         except AssertionError:
             return False
 
-    def copy_from(self, other):
+    def update_writeable_properties_from(self, other):
         dest, src = self, other
 
         for (
@@ -218,8 +218,6 @@ class RecordingInfo(collections.abc.MutableMapping):
                 continue
             value = src_getter(src)
             dest_setter(dest, value)
-
-        self._assert_property_equality(self, other)  # Sanity check
 
     @classmethod
     def _assert_property_equality(cls, x: "RecordingInfo", y: "RecordingInfo") -> bool:
