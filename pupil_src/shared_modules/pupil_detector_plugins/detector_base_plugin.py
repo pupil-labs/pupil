@@ -10,6 +10,21 @@ from plugin import Plugin
 logger = logging.getLogger(__name__)
 
 
+class PropertyProxy:
+    """Wrapper around detector properties for easy UI coupling."""
+
+    def __init__(self, detector):
+        self.__dict__["detector"] = detector
+
+    def __getattr__(self, namespaced_key):
+        namespace, key = namespaced_key.split(".")
+        return self.detector.get_properties()[namespace][key]
+
+    def __setattr__(self, namespaced_key, value):
+        namespace, key = namespaced_key.split(".")
+        self.detector.update_properties({namespace: {key: value}})
+
+
 class PupilDetectorPlugin(Plugin):
     label = "Unnamed"  # Used in eye -> general settings as selector
     # Used to select correct detector on set_detection_mapping_mode:

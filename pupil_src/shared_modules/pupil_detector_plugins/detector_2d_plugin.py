@@ -13,7 +13,7 @@ from methods import normalize
 from plugin import Plugin
 from pupil_detectors import Detector2D, DetectorBase, Roi
 
-from .detector_base_plugin import PupilDetectorPlugin
+from .detector_base_plugin import PupilDetectorPlugin, PropertyProxy
 from .visualizer_2d import draw_pupil_outline
 
 
@@ -30,6 +30,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
     ):
         super().__init__(g_pool=g_pool)
         self.detector_2d = detector_2d or Detector2D(namespaced_properties or {})
+        self.proxy = PropertyProxy(self.detector_2d)
 
     def detect(self, frame):
         roi = Roi(*self.g_pool.u_r.get()[:4])
@@ -71,8 +72,8 @@ class Detector2DPlugin(PupilDetectorPlugin):
         self.menu.append(info)
         self.menu.append(
             ui.Slider(
-                "intensity_range",
-                self.detector_properties_2d,
+                "2d.intensity_range",
+                self.proxy,
                 label="Pupil intensity range",
                 min=0,
                 max=60,
@@ -81,8 +82,8 @@ class Detector2DPlugin(PupilDetectorPlugin):
         )
         self.menu.append(
             ui.Slider(
-                "pupil_size_min",
-                self.detector_properties_2d,
+                "2d.pupil_size_min",
+                self.proxy,
                 label="Pupil min",
                 min=1,
                 max=250,
@@ -91,8 +92,8 @@ class Detector2DPlugin(PupilDetectorPlugin):
         )
         self.menu.append(
             ui.Slider(
-                "pupil_size_max",
-                self.detector_properties_2d,
+                "2d.pupil_size_max",
+                self.proxy,
                 label="Pupil max",
                 min=50,
                 max=400,

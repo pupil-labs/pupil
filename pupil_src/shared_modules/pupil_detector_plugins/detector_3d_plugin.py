@@ -12,7 +12,7 @@ from methods import normalize
 from plugin import Plugin
 from pupil_detectors import Detector3D, DetectorBase, Roi
 
-from .detector_base_plugin import PupilDetectorPlugin
+from .detector_base_plugin import PupilDetectorPlugin, PropertyProxy
 from .visualizer_2d import draw_pupil_outline, draw_eyeball_outline
 from .visualizer_3d import Eye_Visualizer
 
@@ -30,6 +30,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
     ):
         super().__init__(g_pool=g_pool)
         self.detector_3d = detector_3d or Detector3D(namespaced_properties or {})
+        self.proxy = PropertyProxy(self.detector_3d)
         # debug window
         self.debugVisualizer3D = Eye_Visualizer(g_pool, self.detector_3d.focal_length())
 
@@ -74,8 +75,8 @@ class Detector3DPlugin(PupilDetectorPlugin):
         self.menu.append(info)
         self.menu.append(
             ui.Slider(
-                "intensity_range",
-                self.detector_properties_2d,
+                "2d.intensity_range",
+                self.proxy,
                 label="Pupil intensity range",
                 min=0,
                 max=60,
@@ -84,8 +85,8 @@ class Detector3DPlugin(PupilDetectorPlugin):
         )
         self.menu.append(
             ui.Slider(
-                "pupil_size_min",
-                self.detector_properties_2d,
+                "2d.pupil_size_min",
+                self.proxy,
                 label="Pupil min",
                 min=1,
                 max=250,
@@ -94,8 +95,8 @@ class Detector3DPlugin(PupilDetectorPlugin):
         )
         self.menu.append(
             ui.Slider(
-                "pupil_size_max",
-                self.detector_properties_2d,
+                "2d.pupil_size_max",
+                self.proxy,
                 label="Pupil max",
                 min=50,
                 max=400,
@@ -109,8 +110,8 @@ class Detector3DPlugin(PupilDetectorPlugin):
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))
         self.menu.append(ui.Button("Open debug window", self.debug_window_toggle))
         model_sensitivity_slider = ui.Slider(
-            "model_sensitivity",
-            self.detector_properties_3d,
+            "3d.model_sensitivity",
+            self.proxy,
             label="Model sensitivity",
             min=0.990,
             max=1.0,
@@ -119,9 +120,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
         model_sensitivity_slider.display_format = "%0.4f"
         self.menu.append(model_sensitivity_slider)
         self.menu.append(
-            ui.Switch(
-                "model_is_frozen", self.detector_properties_3d, label="Freeze model"
-            )
+            ui.Switch("3d.model_is_frozen", self.proxy, label="Freeze model")
         )
 
     def gl_display(self):
