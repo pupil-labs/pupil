@@ -213,6 +213,9 @@ class RecordingInfo(collections.abc.MutableMapping):
             property_name,
             ((_, dest_setter), (src_getter, _)),
         ) in self.__matching_public_properties(dest, src).items():
+            if dest_setter is None:
+                # readonly property
+                continue
             value = src_getter(src)
             dest_setter(dest, value)
 
