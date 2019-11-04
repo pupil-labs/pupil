@@ -207,14 +207,14 @@ class RecordingInfo(collections.abc.MutableMapping):
             return False
 
     def copy_from(self, other):
-        x, y = self, other
+        dest, src = self, other
 
         for (
             property_name,
-            ((_, x_setter), (y_getter, _)),
-        ) in self.__matching_public_properties(x, y).items():
-            value = y_getter(y)
-            x_setter(x, value)
+            ((_, dest_setter), (src_getter, _)),
+        ) in self.__matching_public_properties(dest, src).items():
+            value = src_getter(src)
+            dest_setter(dest, value)
 
         self._assert_property_equality(self, other)  # Sanity check
 
