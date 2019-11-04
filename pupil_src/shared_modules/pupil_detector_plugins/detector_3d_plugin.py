@@ -80,7 +80,6 @@ class Detector3DPlugin(PupilDetectorPlugin):
             + "Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds."
         )
         self.menu.append(info)
-        # self.menu.append(ui.Switch('coarse_detection',self.detector_properties_2d,label='Use coarse detection'))
         self.menu.append(
             ui.Slider(
                 "intensity_range",
