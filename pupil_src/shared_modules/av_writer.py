@@ -23,6 +23,7 @@ import numpy as np
 from av.packet import Packet
 
 import audio_utils
+from video_capture.utils import Video
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ to be valid and should only now be accesed.
 """
 
 
-def write_timestamps(file_loc, timestamps, output_format="npy", pts=None):
+def write_timestamps(file_loc, timestamps, output_format="npy"):
     """
     Attritbutes:
         output_format (str): Output file format. Available values:
@@ -73,18 +74,19 @@ def write_timestamps(file_loc, timestamps, output_format="npy", pts=None):
     if output_format in ("npy", "all"):
         np.save(ts_loc + ".npy", ts)
     if output_format in ("csv", "all"):
-        if pts is None:
-            np.savetxt(ts_loc + ".csv", ts, fmt="%f", header="timestamps [seconds]")
-        else:
-            pts = np.asarray(pts)
-            ts_pts = np.vstack((ts, pts)).T
-            np.savetxt(
-                ts_loc + ".csv",
-                ts_pts,
-                fmt=["%f", "%i"],
-                delimiter=",",
-                header="timestamps [seconds],pts",
-            )
+        output_video = Video(file_loc)
+        if not output_video.is_valid:
+            logger.error(f"Failed to extract PTS frome exported video {file_loc}")
+            return
+        pts = output_video.pts
+        ts_pts = np.vstack((ts, pts)).T
+        np.savetxt(
+            ts_loc + ".csv",
+            ts_pts,
+            fmt=["%f", "%i"],
+            delimiter=",",
+            header="timestamps [seconds],pts",
+        )
 
 
 class AV_Writer(abc.ABC):
@@ -98,7 +100,6 @@ class AV_Writer(abc.ABC):
         """
 
         self.timestamps = []
-        self.pts = []
         self.start_time = start_time_synced
         self.last_video_pts = float("-inf")
 
@@ -173,21 +174,21 @@ class AV_Writer(abc.ABC):
         # ensure strong monotonic pts
         pts = max(pts, self.last_video_pts + 1)
 
-        n_frames = self.video_stream.frames
         # TODO: Use custom Frame wrapper class, that wraps backend-specific frames.
         # This way we could just attach the pts here to the frame.
         # Currently this will fail e.g. for av.VideoFrame.
+        video_packed_encoded = False
         for packet in self.encode_frame(input_frame, pts):
+            if packet.stream is self.video_stream:
+                video_packed_encoded = True
             self.container.mux(packet)
-        if self.video_stream.frames != n_frames + 1:
-            logger.warning(
-                f"Failed to write frame #{n_frames} to video file. Ignoring."
-            )
+
+        if not video_packed_encoded:
+            logger.warning(f"Encoding frame {input_frame.index} failed!")
             return
 
         self.last_video_pts = pts
         self.timestamps.append(ts)
-        self.pts.append(pts)
 
     def close(self, timestamp_export_format="npy"):
         """Close writer, triggering stream and timestamp save."""
@@ -201,16 +202,13 @@ class AV_Writer(abc.ABC):
             for packet in self.video_stream.encode(None):
                 self.container.mux(packet)
 
-            if timestamp_export_format is not None:
-                write_timestamps(
-                    self.output_file_path,
-                    self.timestamps,
-                    timestamp_export_format,
-                    pts=self.pts,
-                )
-
         self.container.close()
         self.closed = True
+
+        if timestamp_export_format is not None:
+            write_timestamps(
+                self.output_file_path, self.timestamps, timestamp_export_format
+            )
 
     def release(self):
         """Close writer, triggering stream and timestamp save."""
