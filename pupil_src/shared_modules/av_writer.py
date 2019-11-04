@@ -205,7 +205,9 @@ class AV_Writer(abc.ABC):
         self.container.close()
         self.closed = True
 
-        if timestamp_export_format is not None:
+        if self.configured and timestamp_export_format is not None:
+            # Requires self.container to be closed since we extract pts
+            # from the exported video file.
             write_timestamps(
                 self.output_file_path, self.timestamps, timestamp_export_format
             )
