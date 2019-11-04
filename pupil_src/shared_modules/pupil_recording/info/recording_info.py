@@ -313,7 +313,7 @@ class RecordingInfo(collections.abc.MutableMapping):
         if x_property_names == y_property_names:
             property_names = x_property_names
         else:
-            property_names = x_property_names.union(y_property_names)
+            property_names = x_property_names.intersection(y_property_names)
             logger.debug(
                 "Public property mismatch; will only check the following properties: "
                 f"{property_names}"
