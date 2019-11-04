@@ -127,6 +127,7 @@ class PupilDetectorPlugin(Plugin):
         return self.pupil_detector.get_properties()
 
     def on_resolution_change(self, old_size, new_size):
-        return self.pupil_detector.on_resolution_change(
-            old_size=old_size, new_size=new_size
-        )
+        properties = self.pupil_detector.get_properties()
+        properties["2d"]["pupil_size_max"] *= new_size[0] / old_size[0]
+        properties["2d"]["pupil_size_min"] *= new_size[0] / old_size[0]
+        self.pupil_detector.update_properties(properties)
