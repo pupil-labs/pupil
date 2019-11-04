@@ -29,7 +29,7 @@ class _RecordingInfoFile_2_1(_RecordingInfoFile_2_0):
     @property
     def _private_key_schema(self) -> RecordingInfoFile._KeyValueSchema:
         return {
-            **super()._private_key_schema(),
+            **super()._private_key_schema,
             # overwrite meta_version key from parent
             "meta_version": (utils.validator_version_string, lambda _: "2.1"),
         }
