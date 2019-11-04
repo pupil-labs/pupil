@@ -66,5 +66,21 @@ cd pupil_src
 python main.py capture # or player/service
 ```
 
+#### Command Line Arguments
+
+The following arguments are supported:
+
+| Flag                   | Description                              |
+| ---------------------- | ---------------------------------------- |
+| `-h, --help`           | Show help message and exit.              |
+| `--version`            | Show version and exit.                   |
+| `--debug`              | Display debug log messages.              |
+| `--profile`            | Profile the app's CPU time.              |
+| `-P PORT, --port PORT` | (Capture/Service) Port for Pupil Remote. |
+| `--hide-ui`            | (Capture/Service) Hide UI on startup.    |
+| `<recording>`          | (Player) Path to recording.              |
+
+
+
 ## License
 All source code written by Pupil Labs is open for use in compliance with the [GNU Lesser General Public License (LGPL v3.0)](http://www.gnu.org/licenses/lgpl-3.0.en.html). We want you to change and improve the code -- make a fork! Make sure to share your work with the community!
