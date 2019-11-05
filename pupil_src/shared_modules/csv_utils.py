@@ -63,7 +63,7 @@ def read_key_value_file(csvfile):
     if "key" not in first_line or "value" not in first_line:
         csvfile.seek(0)  # Seek to start if first_line is not an header
     dialect = csv.Sniffer().sniff(first_line, delimiters=",\t")
-    reader = csv.reader(csvfile, dialect)  # create reader
+    reader = csv.reader(csvfile, dialect, quoting=csv.QUOTE_NONE, escapechar='\\')  # create reader
     for row in reader:
         kvstore[row[0]] = row[1]
     return kvstore
@@ -80,7 +80,7 @@ def write_key_value_file(csvfile, dictionary, append=False):
     Returns:
         None: No return
     """
-    writer = csv.writer(csvfile, delimiter=",")
+    writer = csv.writer(csvfile, delimiter=",", quoting=csv.QUOTE_NONE, escapechar='\\')
     if not append:
         writer.writerow(["key", "value"])
     for key, val in dictionary.items():
