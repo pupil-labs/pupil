@@ -10,7 +10,9 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 from .. import Version
+from .recording_info import RecordingInfo
 from .recording_info import RecordingInfoFile
+from .recording_info import RecordingInfoInvalidError
 from .recording_info_2_0 import _RecordingInfoFile_2_0
 from .recording_info_2_1 import _RecordingInfoFile_2_1
 
