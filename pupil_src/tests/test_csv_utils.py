@@ -14,13 +14,16 @@ import pytest
 from csv_utils import read_key_value_file, write_key_value_file
 
 
-def test_read_write_key_value_file():
+@pytest.fixture
+def testfile(tmpdir):
+    return tmpdir.join("test.csv")
+
+
+def test_read_write_key_value_file(testfile):
     test = {"foo": "bar", "oh": 'rl"abc"y', "it was": "not 🚨"}
     test_append = {"jo": "ho"}
     test_updated = test.copy()
     test_updated.update(test_append)
-
-    testfile = ".test.csv"
 
     # Test write+read
     with open(testfile, "w", encoding="utf-8") as csvfile:
@@ -44,6 +47,3 @@ def test_read_write_key_value_file():
     with open(testfile, "r", encoding="utf-8") as csvfile:
         result = read_key_value_file(csvfile)
     assert test_updated == result
-
-    import os
-    os.remove(testfile)
