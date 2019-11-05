@@ -20,7 +20,7 @@ if __name__ == "__main__":
     exit(1)
 
 
-from .surface_file_store import Surface_File_Store
+from surface_tracker.surface_file_store import Surface_File_Store
 from surface_tracker.surface_offline import Surface_Offline as Any_Surface
 
 from .test_fixtures import (
