@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import pytest
 
 import av
-from common import broken_data, multiple_data, single_data
+from ..common import broken_data, multiple_data, single_data
 from video_capture.base_backend import NoMoreVideoError
 from video_capture.file_backend import Decoder, File_Source, OnDemandDecoder
 
