@@ -403,7 +403,11 @@ class VideoSet:
 
     def _fill_gaps(self, timestamps: np.ndarray) -> np.ndarray:
         time_diff = np.diff(timestamps)
-        median_time_diff = np.median(time_diff)
+        if time_diff.size > 0:
+            median_time_diff = np.median(time_diff)
+        else:
+            # TODO: Not sure if this is an acceptable value, but this is what np.median returns for an empty input
+            median_time_diff = np.nan
         gap_start_idc = np.flatnonzero(
             time_diff > self._gap_fill_threshold(median_time_diff)
         )
