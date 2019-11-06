@@ -26,24 +26,24 @@ def test_read_write_key_value_file(testfile):
     test_updated.update(test_append)
 
     # Test write+read
-    with open(testfile, "w", encoding="utf-8") as csvfile:
+    with open(testfile, "w", encoding="utf-8", newline="") as csvfile:
         write_key_value_file(csvfile, test)
-    with open(testfile, "r", encoding="utf-8") as csvfile:
+    with open(testfile, "r", encoding="utf-8", newline="") as csvfile:
         result = read_key_value_file(csvfile)
     assert test == result, (test, result)
 
     # Test write+append (same keys)+read
-    with open(testfile, "w", encoding="utf-8") as csvfile:
+    with open(testfile, "w", encoding="utf-8", newline="") as csvfile:
         write_key_value_file(csvfile, test)
         write_key_value_file(csvfile, test, append=True)
-    with open(testfile, "r", encoding="utf-8") as csvfile:
+    with open(testfile, "r", encoding="utf-8", newline="") as csvfile:
         result = read_key_value_file(csvfile)
     assert test == result
 
     # Test write+append (different keys)+read
-    with open(testfile, "w", encoding="utf-8") as csvfile:
+    with open(testfile, "w", encoding="utf-8", newline="") as csvfile:
         write_key_value_file(csvfile, test)
         write_key_value_file(csvfile, test_append, append=True)
-    with open(testfile, "r", encoding="utf-8") as csvfile:
+    with open(testfile, "r", encoding="utf-8", newline="") as csvfile:
         result = read_key_value_file(csvfile)
     assert test_updated == result
