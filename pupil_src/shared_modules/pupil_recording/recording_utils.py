@@ -134,12 +134,23 @@ def _is_pupil_mobile_recording(rec_dir: str) -> bool:
 
 
 def _is_old_style_player_recording(rec_dir: str) -> bool:
+    """Return true if this is an old-style recording.
+
+    There's two cases where we have old-style recordings:
+
+        1.  The recording has been made with Pupil Capture < v1.16
+            (and never been upgraded to new-style)
+        2.  The recording has been made with Pupil Mobile and openend
+            with Pupil Player < v1.16
+    """
     try:
         info_csv = recording_info_utils.read_info_csv_file(rec_dir)
     except FileNotFoundError:
         return False
-    # We test if the "Data Format Version" or "Capture Software Version" field is
-    # present to differentiate untransformed Pupil Mobile recordings. These do not
-    # contain either of these keys. "Capture Software Version" is tested too for legacy
-    # reasons.
-    return "Data Format Version" in info_csv or "Capture Software Version" in info_csv
+
+    # NOTE:
+    # 1. "Unopened" Pupil Mobile recordings do not have a "Data Format Version" field.
+    # 2. Very old versions of Pupil Capture also did not write "Data Format Version".
+    is_newer_old_style = "Data Format Version" in info_csv
+    is_not_pupil_mobile = info_csv.get("Capture Software", "") != "Pupil Mobile"
+    return is_newer_old_style or is_not_pupil_mobile
