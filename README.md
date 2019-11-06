@@ -38,6 +38,14 @@ All setup and dependency installation instructions are contained in this repo. A
 - [macOS](./docs/dependencies-macos.md "Pupil dependency installation for macOS")
 - [Windows 10](./docs/dependencies-windows.md "Pupil dependency installation for Windows 10")
 
+#### Intel RealSense 3D Support
+
+If you want to use an Intel RealSense 3D scene camera, please follow the additional setup instructions for the camera model you have.
+
+* **Intel RealSense R200**: Please follow our detailed [Setup Guide](./docs/dependencies-realsense-r200.md "RealSense R200 setup guide")
+* **Intel RealSense D400**: You need to install the [Python wrapper for librealsense](https://github.com/IntelRealSense/librealsense/tree/master/wrappers/python#python-wrapper "Install instructions for librealsense Python wrapper")
+
+
 ### Clone the repo
 After you have installed all dependencies, clone this repo and start Pupil software.
 
