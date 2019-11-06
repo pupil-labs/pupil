@@ -42,8 +42,8 @@ All setup and dependency installation instructions are contained in this repo. A
 
 If you want to use an Intel RealSense 3D scene camera, please follow the additional setup instructions for the camera model you have.
 
-* [Intel RealSense R200](./docs/dependencies-realsense-r200.md)
-* Intel RealSense D400 (setup documentation is not yet complete, please contact us on Discord for support)
+* **Intel RealSense R200**: Please follow our detailed [Setup Guide](./docs/dependencies-realsense-r200.md "RealSense R200 setup guide")
+* **Intel RealSense D400**: You need to install the [Python wrapper for librealsense](https://github.com/IntelRealSense/librealsense/tree/master/wrappers/python#python-wrapper "Install instructions for librealsense Python wrapper")
 
 
 ### Clone the repo
