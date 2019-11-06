@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import pytest
 
 import numpy as np
 
@@ -33,8 +34,7 @@ def nearest_linepoint_to_point( ref_point, line ):
     point  =   p1 + direction * delta
     return point
 
-if __name__ == '__main__':
-
+def test_distance_point_line():
 
     line_p1 = np.array([0.0,0.0,0.0 ])
     line_p2 = np.array([0.0,0.0,1.0 ])
@@ -101,4 +101,3 @@ if __name__ == '__main__':
     ref_point = np.array([0.0,0.0,10])
     point=  nearest_linepoint_to_point( ref_point , (line_p1, line_p2) )
     assert (point == [0,0,10]).all()
-    print 'Test ended.'

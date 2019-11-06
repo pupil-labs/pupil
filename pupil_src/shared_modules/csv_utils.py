@@ -63,7 +63,7 @@ def read_key_value_file(csvfile):
     if "key" not in first_line or "value" not in first_line:
         csvfile.seek(0)  # Seek to start if first_line is not an header
     dialect = csv.Sniffer().sniff(first_line, delimiters=",\t")
-    reader = csv.reader(csvfile, dialect)  # create reader
+    reader = csv.reader(csvfile, dialect, quoting=csv.QUOTE_NONE, escapechar='\\')  # create reader
     for row in reader:
         kvstore[row[0]] = row[1]
     return kvstore
@@ -80,45 +80,8 @@ def write_key_value_file(csvfile, dictionary, append=False):
     Returns:
         None: No return
     """
-    writer = csv.writer(csvfile, delimiter=",")
+    writer = csv.writer(csvfile, delimiter=",", quoting=csv.QUOTE_NONE, escapechar='\\')
     if not append:
         writer.writerow(["key", "value"])
     for key, val in dictionary.items():
         writer.writerow([key, val])
-
-
-if __name__ == "__main__":
-    test = {"foo": "bar", "oh": 'rl"abc"y', "it was": "not 🚨"}
-    test_append = {"jo": "ho"}
-    test_updated = test.copy()
-    test_updated.update(test_append)
-
-    testfile = ".test.csv"
-
-    # Test write+read
-    with open(testfile, "w", encoding="utf-8") as csvfile:
-        write_key_value_file(csvfile, test)
-    with open(testfile, "r", encoding="utf-8") as csvfile:
-        result = read_key_value_file(csvfile)
-    assert test == result, (test, result)
-
-    # Test write+append (same keys)+read
-    with open(testfile, "w", encoding="utf-8") as csvfile:
-        write_key_value_file(csvfile, test)
-        write_key_value_file(csvfile, test, append=True)
-    with open(testfile, "r", encoding="utf-8") as csvfile:
-        result = read_key_value_file(csvfile)
-    assert test == result
-
-    # Test write+append (different keys)+read
-    with open(testfile, "w", encoding="utf-8") as csvfile:
-        write_key_value_file(csvfile, test)
-        write_key_value_file(csvfile, test_append, append=True)
-    with open(testfile, "r", encoding="utf-8") as csvfile:
-        result = read_key_value_file(csvfile)
-    assert test_updated == result
-
-    import os
-
-    os.remove(testfile)
-    print("CSV Test: successful")

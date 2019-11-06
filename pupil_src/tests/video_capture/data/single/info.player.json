@@ -1,0 +1,8 @@
+{
+    "meta_version": "2.1",
+    "start_time_system_s": 123456.7,
+    "start_time_synced_s": 123456.7,
+    "duration_s": 123.4,
+    "recording_software_name": "Pupil Capture",
+    "recording_software_version": "1.18"
+}

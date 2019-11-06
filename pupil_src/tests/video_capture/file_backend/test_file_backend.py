@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import pytest
 
 import av
-from common import broken_data, multiple_data, single_data
+from ..common import broken_data, multiple_data, single_data
 from video_capture.base_backend import NoMoreVideoError
 from video_capture.file_backend import Decoder, File_Source, OnDemandDecoder
 
@@ -51,18 +51,8 @@ def test_file_source_recent_events():
     assert file_source.recent_events == file_source.recent_events_own_timing
 
 
-def test_file_source_not_source_path(caplog):
-    """
-    Failed if we don't pass source_path to file_source
-    """
-    caplog.set_level(logging.INFO)
-    with pytest.raises(AssertionError) as excinfo:
-        _ = File_Source(SimpleNamespace())
-    assert "Init failed. Source file could not be found at" in caplog.text
-
-
 def test_file_source_init(single_fill_gaps):
-    assert single_fill_gaps._initialised is True
+    assert single_fill_gaps.initialised is True
     assert single_fill_gaps.buffering is False
     assert single_fill_gaps.fill_gaps is True
 
@@ -73,12 +63,3 @@ def test_get_rec_set_name(single_fill_gaps):
     assert ("/foo", "eye0_timestamp") == single_fill_gaps.get_rec_set_name(
         "/foo/eye0_timestamp.npy"
     )
-
-
-def test_get_streams(single_fill_gaps, caplog):
-    caplog.set_level(logging.INFO)
-    # Normal case
-    stream = single_fill_gaps._get_streams(single_fill_gaps.container, True)
-    assert isinstance(stream[0], Decoder)
-    stream = single_fill_gaps._get_streams(single_fill_gaps.container, False)
-    assert isinstance(stream[0], OnDemandDecoder)
