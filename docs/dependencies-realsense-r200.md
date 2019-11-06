@@ -1,5 +1,6 @@
 # Intel RealSense R200 Support
 
+**Note:** Support for the Intel RealSense R200 is currently not available for **Linux**. This is due to ["librealsense" requiring kernel patches for the "Video4Linux" backend](https://github.com/IntelRealSense/librealsense/blob/66e42069837ed6e0eb46351cc4aa2acca49a4728/doc/installation.md#video4linux-backend-preparation).
 
 ## Dependencies
 

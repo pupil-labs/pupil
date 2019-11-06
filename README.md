@@ -42,8 +42,6 @@ All setup and dependency installation instructions are contained in this repo. A
 
 If you want to use an Intel RealSense 3D scene camera, please follow the additional setup instructions for the camera model you have.
 
-**Note:** Using 3D world cameras is not available for **Linux**. This is due to ["librealsense" requiring kernel patches for the "Video4Linux" backend](https://github.com/IntelRealSense/librealsense/blob/66e42069837ed6e0eb46351cc4aa2acca49a4728/doc/installation.md#video4linux-backend-preparation).
-
 * [Intel RealSense R200](./docs/dependencies-realsense-r200.md)
 * Intel RealSense D400 (setup documentation is not yet complete, please contact us on Discord for support)
 
