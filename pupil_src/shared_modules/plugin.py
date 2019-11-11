@@ -305,8 +305,9 @@ class Plugin_List(object):
         self.g_pool = g_pool
         plugin_by_name = g_pool.plugin_by_name
 
-        # add self as g_pool.plguins object to allow plugins to call the plugins list during init.
-        # this will be done again when the init returns but is kept there for readablitly.
+        # add self as g_pool.plguins object to allow plugins to call the plugins list
+        # during init. this will be done again when the init returns but is kept there
+        # for readablitly.
         self.g_pool.plugins = self
 
         # now add plugins to plugin list.
