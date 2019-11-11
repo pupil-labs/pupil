@@ -115,13 +115,18 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
                 p0 = self._caches[0].popleft()
                 p1 = self._caches[1][0]
                 older_pt = p0
+                cache_idx_not_popped = 1
             else:
                 p0 = self._caches[0][0]
                 p1 = self._caches[1].popleft()
                 older_pt = p1
+                older_cache = 1
+                cache_idx_not_popped = 0
 
             if abs(p0["timestamp"] - p1["timestamp"]) < self.temportal_cutoff:
                 gaze_datum = self._map_binocular(p0, p1)
+                # Do not reuse newer pupil position
+                self._caches[cache_idx_not_popped].popleft()
             else:
                 gaze_datum = self._map_monocular(older_pt)
 
