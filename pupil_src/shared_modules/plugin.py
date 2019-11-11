@@ -310,18 +310,35 @@ class Plugin_List(object):
         # for readablitly.
         self.g_pool.plugins = self
 
-        # now add plugins to plugin list.
-        for initializer in plugin_initializers:
-            name, args = initializer
-            logger.debug("Loading plugin: {} with settings {}".format(name, args))
+        # NOTE: we should not .add() plugins if they get removed immediately again
+        # because of uniqueness constraints. Here we are filtering the passed list first
+        # before calling .add(). This is important so we e.g. don't initialize the UVC
+        # source in player, which will try installing drivers and crash in the bundle.
+
+        # expand first for later filtering
+        expanded_initializers = []
+        for name, args in plugin_initializers:
             try:
-                plugin_by_name[name]
+                expanded_initializers.append((plugin_by_name[name], name, args))
             except KeyError:
-                logger.debug(
-                    "Plugin '{}' failed to load. Not available for import.".format(name)
-                )
+                logger.debug(f"Plugin {name} failed to load, not available for import.")
+        # only add plugins that won't be replaced by newer plugins
+        for i, (plugin, name, args) in enumerate(expanded_initializers):
+            for new_plugin, new_name, _ in expanded_initializers[i + 1 :]:
+                if (
+                    new_plugin.uniqueness == "by_base_class"
+                    and plugin.__bases__[-1] == new_plugin.__bases__[-1]
+                ) or (new_plugin.uniqueness == "by_class" and plugin == new_plugin):
+                    logger.debug(
+                        f"Skipping initialization of plugin {name} because it will be"
+                        f" replaced by newer plugin {new_name} with uniqueness"
+                        f" `{new_plugin.uniqueness}`."
+                    )
+                    break
             else:
-                self.add(plugin_by_name[name], args)
+                # no new_plugin found which would replace old_plugin
+                logger.debug(f"Loading plugin: {name} with settings {args}")
+                self.add(plugin, args)
 
     def __iter__(self):
         for p in self._plugins:
