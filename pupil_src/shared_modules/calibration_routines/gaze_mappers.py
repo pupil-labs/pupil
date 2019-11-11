@@ -120,7 +120,6 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
                 p0 = self._caches[0][0]
                 p1 = self._caches[1].popleft()
                 older_pt = p1
-                older_cache = 1
                 cache_idx_not_popped = 0
 
             if abs(p0["timestamp"] - p1["timestamp"]) < self.temportal_cutoff:
