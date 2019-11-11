@@ -167,7 +167,7 @@ Description: Pupil Player is part of the Pupil Eye Tracking Platform
 Installed-Size: %s
 """ % (
             pupil_version(),
-            dist_size / 1024,
+            round(dist_size / 1024),
         )
         f.write(content)
     os.chmod(os.path.join(DEBIAN_dir, "control"), 0o644)
