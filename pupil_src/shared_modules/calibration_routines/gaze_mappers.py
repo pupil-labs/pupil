@@ -79,7 +79,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
         self.min_pupil_confidence = 0.6
         self._caches = (deque(), deque())
-        self.default_temportal_cutoff = 0.3
+        self.default_temportal_cutoff = 1/120
         self.sample_cutoff = 10
 
     def calculate_temporal_cutoff(cache):
