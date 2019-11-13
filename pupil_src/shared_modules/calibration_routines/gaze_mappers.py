@@ -79,8 +79,13 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
         self.min_pupil_confidence = 0.6
         self._caches = (deque(), deque())
-        self.temportal_cutoff = 0.3
+        self.default_temportal_cutoff = 0.3
         self.sample_cutoff = 10
+
+    def calculate_temporal_cutoff(cache):
+        if len(cache) < 2:
+            return self.default_temportal_cutoff
+        return np.mean(np.diff([d['timestamp'] for d in cache]))
 
     def map_batch(self, pupil_list):
         current_caches = self._caches
@@ -120,7 +125,9 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
                 p1 = self._caches[1].popleft()
                 older_pt = p1
 
-            if abs(p0["timestamp"] - p1["timestamp"]) < self.temportal_cutoff:
+            temporal_cutoff = self.calculate_temporal_cutoff(self._caches[p["id"]])
+
+            if abs(p0["timestamp"] - p1["timestamp"]) < temportal_cutoff:
                 gaze_datum = self._map_binocular(p0, p1)
             else:
                 gaze_datum = self._map_monocular(older_pt)
