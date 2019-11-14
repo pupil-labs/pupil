@@ -79,13 +79,30 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
         self.min_pupil_confidence = 0.6
         self._caches = (deque(), deque())
-        self.default_temportal_cutoff = 1/120
+        self.temporal_cutoff = 1/120
+        self.temporal_cutoff_smoothing_ratio = 1/50
         self.sample_cutoff = 10
 
-    def calculate_temporal_cutoff(cache):
-        if len(cache) < 2:
-            return self.default_temportal_cutoff
+    def is_cache_valid(self, cache):
+        return len(cache) >= 2
+
+    def calculate_raw_temporal_cutoff(self, cache):
         return np.mean(np.diff([d['timestamp'] for d in cache]))
+
+    def calculate_temporal_cutoff(self, eye0_cache, eye1_cache):
+        if self.is_cache_valid(eye0_cache) and self.is_cache_valid(eye1_cache):
+            eye0_raw_cutoff = self.calculate_raw_temporal_cutoff(eye0_cache)
+            eye1_raw_cutoff = self.calculate_raw_temporal_cutoff(eye1_cache)
+            raw_cutoff = max(eye0_raw_cutoff, eye1_raw_cutoff)
+        elif self.is_cache_valid(eye0_cache):
+            raw_cutoff = self.calculate_raw_temporal_cutoff(eye0_cache)
+        elif self.is_cache_valid(eye1_cache):
+            raw_cutoff = self.calculate_raw_temporal_cutoff(eye1_cache)
+        else:
+            return self.temporal_cutoff
+
+        self.temporal_cutoff += (raw_cutoff - self.temporal_cutoff) * self.temporal_cutoff_smoothing_ratio
+        return self.temporal_cutoff
 
     def map_batch(self, pupil_list):
         current_caches = self._caches
@@ -99,6 +116,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
     def on_pupil_datum(self, p):
         self._caches[p["id"]].append(p)
+        temporal_cutoff = 2 * self.calculate_temporal_cutoff(*self._caches)
 
         # map low confidence pupil data monocularly
         if (
@@ -125,9 +143,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
                 p1 = self._caches[1].popleft()
                 older_pt = p1
 
-            temporal_cutoff = self.calculate_temporal_cutoff(self._caches[p["id"]])
-
-            if abs(p0["timestamp"] - p1["timestamp"]) < temportal_cutoff:
+            if abs(p0["timestamp"] - p1["timestamp"]) < temporal_cutoff:
                 gaze_datum = self._map_binocular(p0, p1)
             else:
                 gaze_datum = self._map_monocular(older_pt)
