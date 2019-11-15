@@ -15,16 +15,9 @@ import numpy as np
 import math_helper
 from file_methods import save_object
 
-from .optimization_calibration import bundle_adjust_calibration
-from math_helper import find_rigid_transform
-from .data_processing import (
-    match_data,
-    filter_confidence,
-    preprocess_2d_data_binocular,
-    preprocess_2d_data_monocular,
-    preprocess_3d_data,
-)
-from .calibrate_2d import fit_mapping_polynomials
+from . import optimization_calibration
+from . import data_processing
+from . import calibrate_2d
 
 import logging
 
@@ -45,7 +38,7 @@ def calibrate_3d_binocular(g_pool, matched_binocular_data, pupil0, pupil1):
     # TODO model the world as cv2 pinhole camera with distorion and focal in ceres.
     # right now we solve using a few permutations of K
 
-    ref_dir, gaze0_dir, gaze1_dir = preprocess_3d_data(matched_binocular_data, g_pool)
+    ref_dir, gaze0_dir, gaze1_dir = data_processing.preprocess_3d_data(matched_binocular_data, g_pool)
 
     if len(ref_dir) < 1 or len(gaze0_dir) < 1 or len(gaze1_dir) < 1:
         logger.error(not_enough_data_error_msg)
@@ -62,13 +55,13 @@ def calibrate_3d_binocular(g_pool, matched_binocular_data, pupil0, pupil1):
     sphere_pos0 = pupil0[-1]["sphere"]["center"]
     sphere_pos1 = pupil1[-1]["sphere"]["center"]
 
-    initial_R0, initial_t0 = find_rigid_transform(
+    initial_R0, initial_t0 = math_helper.find_rigid_transform(
         np.array(gaze0_dir) * 500, np.array(ref_dir) * 500
     )
     initial_rotation0 = math_helper.quaternion_from_rotation_matrix(initial_R0)
     # initial_translation0 = np.array(initial_t0).reshape(3)  # currently not used
 
-    initial_R1, initial_t1 = find_rigid_transform(
+    initial_R1, initial_t1 = math_helper.find_rigid_transform(
         np.array(gaze1_dir) * 500, np.array(ref_dir) * 500
     )
     initial_rotation1 = math_helper.quaternion_from_rotation_matrix(initial_R1)
@@ -96,7 +89,7 @@ def calibrate_3d_binocular(g_pool, matched_binocular_data, pupil0, pupil1):
     initial_observers = [eye0, eye1, world]
     initial_points = np.array(ref_dir) * 500
 
-    success, residual, observers, points = bundle_adjust_calibration(
+    success, residual, observers, points = optimization_calibration.bundle_adjust_calibration(
         initial_observers, initial_points, fix_points=False
     )
 
@@ -191,7 +184,7 @@ def calibrate_3d_monocular(g_pool, matched_monocular_data):
     # right now we solve using a few permutations of K
 
     # TODO do this across different scales?
-    ref_dir, gaze_dir, _ = preprocess_3d_data(matched_monocular_data, g_pool)
+    ref_dir, gaze_dir, _ = data_processing.preprocess_3d_data(matched_monocular_data, g_pool)
     # save_object((ref_dir,gaze_dir),os.path.join(g_pool.user_dir, "testdata"))
     if len(ref_dir) < 1 or len(gaze_dir) < 1:
         logger.error(not_enough_data_error_msg + " Using:" + method)
@@ -207,7 +200,7 @@ def calibrate_3d_monocular(g_pool, matched_monocular_data):
 
     # monocular calibration strategy: mimize the reprojection error by moving the world camera.
     # we fix the eye points and work in the eye coord system.
-    initial_R, initial_t = find_rigid_transform(
+    initial_R, initial_t = math_helper.find_rigid_transform(
         np.array(ref_dir) * 500, np.array(gaze_dir) * 500
     )
     initial_rotation = math_helper.quaternion_from_rotation_matrix(initial_R)
@@ -236,7 +229,7 @@ def calibrate_3d_monocular(g_pool, matched_monocular_data):
     initial_observers = [eye, world]
     initial_points = np.array(gaze_dir) * 500
 
-    success, residual, observers, points_in_eye = bundle_adjust_calibration(
+    success, residual, observers, points_in_eye = optimization_calibration.bundle_adjust_calibration(
         initial_observers, initial_points, fix_points=True
     )
 
@@ -320,11 +313,11 @@ def calibrate_2d_binocular(
 
     method = "binocular polynomial regression"
 
-    cal_pt_cloud_binocular = preprocess_2d_data_binocular(matched_binocular_data)
-    cal_pt_cloud0 = preprocess_2d_data_monocular(matched_pupil0_data)
-    cal_pt_cloud1 = preprocess_2d_data_monocular(matched_pupil1_data)
+    cal_pt_cloud_binocular = data_processing.preprocess_2d_data_binocular(matched_binocular_data)
+    cal_pt_cloud0 = data_processing.preprocess_2d_data_monocular(matched_pupil0_data)
+    cal_pt_cloud1 = data_processing.preprocess_2d_data_monocular(matched_pupil1_data)
 
-    success, params = fit_mapping_polynomials(
+    success, params = calibrate_2d.fit_mapping_polynomials(
         cal_pt_cloud_binocular,
         binocular=True,
         degree=2,
@@ -344,7 +337,7 @@ def calibrate_2d_binocular(
     if not success:
         return method, create_converge_error_msg()
 
-    success, params_eye0 = fit_mapping_polynomials(
+    success, params_eye0 = calibrate_2d.fit_mapping_polynomials(
         cal_pt_cloud0,
         binocular=False,
         degree=2,
@@ -355,7 +348,7 @@ def calibrate_2d_binocular(
     if not success:
         return method, create_converge_error_msg()
 
-    success, params_eye1 = fit_mapping_polynomials(
+    success, params_eye1 = calibrate_2d.fit_mapping_polynomials(
         cal_pt_cloud1,
         binocular=False,
         degree=2,
@@ -382,8 +375,8 @@ def calibrate_2d_binocular(
 
 def calibrate_2d_monocular(g_pool, matched_monocular_data):
     method = "monocular polynomial regression"
-    cal_pt_cloud = preprocess_2d_data_monocular(matched_monocular_data)
-    success, params = fit_mapping_polynomials(
+    cal_pt_cloud = data_processing.preprocess_2d_data_monocular(matched_monocular_data)
+    success, params = calibrate_2d.fit_mapping_polynomials(
         cal_pt_cloud,
         binocular=False,
         degree=2,
@@ -414,8 +407,8 @@ def calibrate_2d_monocular(g_pool, matched_monocular_data):
 
 def select_method_and_perform_calibration(g_pool, pupil_list, ref_list):
 
-    pupil_list = filter_confidence(pupil_list, g_pool.min_calibration_confidence)
-    matched_data = match_data(g_pool, pupil_list, ref_list)  # calculate matching data
+    pupil_list = data_processing.filter_confidence(pupil_list, g_pool.min_calibration_confidence)
+    matched_data = data_processing.match_data(g_pool, pupil_list, ref_list)  # calculate matching data
 
     if not isinstance(matched_data, tuple):
         return None, matched_data  # matched_data is an error notification
