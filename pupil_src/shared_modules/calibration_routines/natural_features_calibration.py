@@ -22,8 +22,8 @@ import audio
 from pyglui import ui
 from .calibration_plugin_base import Calibration_Plugin
 
-# logging
 import logging
+
 
 logger = logging.getLogger(__name__)
 

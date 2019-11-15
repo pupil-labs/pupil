@@ -28,10 +28,11 @@ from pyglui.ui import get_opensans_font_path
 from .calibration_plugin_base import Calibration_Plugin
 from .finish_calibration import finish_calibration
 
-# logging
 import logging
 
+
 logger = logging.getLogger(__name__)
+
 
 # window calbacks
 def on_resize(window, w, h):

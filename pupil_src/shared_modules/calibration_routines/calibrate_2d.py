@@ -13,8 +13,8 @@ import numpy as np
 import numpy.polynomial.polynomial as poly
 import scipy.optimize
 
-# logging
 import logging
+
 
 logger = logging.getLogger(__name__)
 

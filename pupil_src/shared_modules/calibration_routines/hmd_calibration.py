@@ -32,8 +32,8 @@ from .gaze_mappers import (
 from .optimization_calibration import bundle_adjust_calibration
 import math_helper
 
-# logging
 import logging
+
 
 logger = logging.getLogger(__name__)
 

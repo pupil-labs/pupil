@@ -26,9 +26,8 @@ from .data_processing import (
 )
 from .calibrate_2d import fit_mapping_polynomials
 
-
-# logging
 import logging
+
 
 logger = logging.getLogger(__name__)
 
