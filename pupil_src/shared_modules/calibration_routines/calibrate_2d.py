@@ -19,7 +19,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class PolynomialMonocular:
+class _PolynomialMonocular:
     """
     A polynomial function class based on the polyval functions from numpy.polynomial.polynomial.
 
@@ -44,7 +44,7 @@ class PolynomialMonocular:
         return self.func(*x, self.params)
 
 
-class PolynomialBinocular:
+class _PolynomialBinocular:
     """
     The average of two monocular polynomials with independent parameters.
     """
@@ -54,10 +54,10 @@ class PolynomialBinocular:
         self.dof = dof
         self.degree = degree
 
-        self.mapping_eye_0 = PolynomialMonocular(
+        self.mapping_eye_0 = _PolynomialMonocular(
             params[: len(params) // 2], self.dof, self.degree
         )
-        self.mapping_eye_1 = PolynomialMonocular(
+        self.mapping_eye_1 = _PolynomialMonocular(
             params[len(params) // 2 :], self.dof, self.degree
         )
 
@@ -77,9 +77,9 @@ class MappingFunction2D:
     def __init__(self, params_x, params_y, dof=2, degree=2, binocular=False):
 
         if binocular:
-            polynomial_type = PolynomialBinocular
+            polynomial_type = _PolynomialBinocular
         else:
-            polynomial_type = PolynomialMonocular
+            polynomial_type = _PolynomialMonocular
 
         self.map_to_world_cam_x = polynomial_type(params_x, dof, degree)
         self.map_to_world_cam_y = polynomial_type(params_y, dof, degree)
@@ -124,7 +124,7 @@ def fit_mapping_polynomials(
     dof = (calibration_data.shape[1] - 2) // dof_multiplier
     n_params = dof_multiplier * ((degree + 1) ** dof - len(ignored_terms))
 
-    success_x, params_x = optimize_parameters(
+    success_x, params_x = _optimize_parameters(
         n_params,
         calibration_data[:, :-2],
         calibration_data[:, -2],
@@ -136,7 +136,7 @@ def fit_mapping_polynomials(
         loss_scale=loss_scale,
     )
 
-    success_y, params_y = optimize_parameters(
+    success_y, params_y = _optimize_parameters(
         n_params,
         calibration_data[:, :-2],
         calibration_data[:, -1],
@@ -151,7 +151,7 @@ def fit_mapping_polynomials(
     return (success_x and success_y), (params_x, params_y, dof, degree, binocular)
 
 
-def optimize_parameters(
+def _optimize_parameters(
     n_params,
     pupil_positions,
     targets,
@@ -171,7 +171,7 @@ def optimize_parameters(
         initial_guess[n_params // 2] = initial_guess[0]
 
     fit_result = scipy.optimize.minimize(
-        calibration_cost,
+        _calibration_cost,
         initial_guess,
         args=(
             pupil_positions,
@@ -186,13 +186,13 @@ def optimize_parameters(
     )
 
     final_params = list(
-        extend_params(fit_result.x, degree, ignored_terms, 0, binocular)
+        _extend_params(fit_result.x, degree, ignored_terms, 0, binocular)
     )
 
     return fit_result.success, final_params
 
 
-def calibration_cost(
+def _calibration_cost(
     params,
     pupil_positions,
     targets,
@@ -203,19 +203,19 @@ def calibration_cost(
     regularization=0.0,
     loss_scale=-1,
 ):
-    extended_params = extend_params(params, degree, ignored_terms, 0, binocular)
+    extended_params = _extend_params(params, degree, ignored_terms, 0, binocular)
 
     if binocular:
-        polynomial_ = PolynomialBinocular(extended_params, dof, degree)
+        polynomial_ = _PolynomialBinocular(extended_params, dof, degree)
     else:
-        polynomial_ = PolynomialMonocular(extended_params, dof, degree)
+        polynomial_ = _PolynomialMonocular(extended_params, dof, degree)
 
     squared_residuals = (
         polynomial_([column for column in pupil_positions.T]) - targets
     ) ** 2
 
     if loss_scale > 0:
-        cost = 1 / 2 * np.sum(cauchy_loss(squared_residuals, loss_scale))
+        cost = 1 / 2 * np.sum(_cauchy_loss(squared_residuals, loss_scale))
     else:
         cost = 1 / 2 * np.sum(squared_residuals)
 
@@ -224,11 +224,11 @@ def calibration_cost(
     return cost
 
 
-def cauchy_loss(residuals, loss_scale):
+def _cauchy_loss(residuals, loss_scale):
     return loss_scale ** 2 * np.log(1 + residuals / loss_scale ** 2)
 
 
-def extend_params(params, degree, ignored_terms=(), fill_value=0, binocular=False):
+def _extend_params(params, degree, ignored_terms=(), fill_value=0, binocular=False):
     """
     Insert a given fill value into a parameter list at places specified by ignored terms.
 
@@ -239,26 +239,26 @@ def extend_params(params, degree, ignored_terms=(), fill_value=0, binocular=Fals
 
     if binocular:
         n_params = len(params)
-        augmented_params_0 = extend_params(
+        augmented_params_0 = _extend_params(
             list(params[: n_params // 2]), degree, ignored_terms
         )
-        augmented_params_1 = extend_params(
+        augmented_params_1 = _extend_params(
             list(params[n_params // 2 :]), degree, ignored_terms
         )
         augmented_params = np.hstack((augmented_params_0, augmented_params_1))
     else:
         ignored_terms = sorted(
             ignored_terms,
-            key=lambda multi_idx: convert_to_linear_index(multi_idx, degree + 1)
+            key=lambda multi_idx: _convert_to_linear_index(multi_idx, degree + 1)
         )
         for entry in ignored_terms:
-            params.insert(convert_to_linear_index(entry, degree + 1), fill_value)
+            params.insert(_convert_to_linear_index(entry, degree + 1), fill_value)
         augmented_params = np.asarray(params)
 
     return augmented_params
 
 
-def convert_to_linear_index(multi_idx, size_per_dim):
+def _convert_to_linear_index(multi_idx, size_per_dim):
     """
     Converts the multi-index of a multi-dimensional array to the corresponding linear index of the unraveled array.
     Assumes the array to have the same size in all dimensions.
