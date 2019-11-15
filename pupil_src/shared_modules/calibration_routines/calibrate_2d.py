@@ -26,11 +26,17 @@ class PolynomialMonocular:
     Supports 1d, 2d, and 3d polynomials.
     """
 
+    _polynomials = {
+        1: poly.polyval,
+        2: poly.polyval2d,
+        3: poly.polyval3d,
+    }
+
     def __init__(self, params, dof=2, degree=2):
 
         self.dof = dof
         self.degree = degree
-        self.func = [poly.polyval, poly.polyval2d, poly.polyval3d][self.dof - 1]
+        self.func = self._polynomials[self.dof]
         self.params = np.reshape(params, self.dof * [degree + 1])
 
     def __call__(self, x):
