@@ -253,7 +253,8 @@ def extend_params(params, degree, ignored_terms=(), fill_value=0, binocular=Fals
         )
         augmented_params = np.hstack((augmented_params_0, augmented_params_1))
     else:
-        list(ignored_terms).sort(
+        ignored_terms = sorted(
+            ignored_terms,
             key=lambda multi_idx: convert_to_linear_index(multi_idx, degree + 1)
         )
         for entry in ignored_terms:
