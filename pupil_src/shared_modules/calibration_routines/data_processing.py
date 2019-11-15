@@ -26,17 +26,6 @@ def filter_confidence(pupil_list, threshold):
     return pupil_list
 
 
-def find_nearest_idx(array, value):
-    idx = np.searchsorted(array, value, side="left")
-    try:
-        if abs(value - array[idx - 1]) < abs(value - array[idx]):
-            return idx - 1
-        else:
-            return idx
-    except IndexError:
-        return idx - 1
-
-
 def match_data(g_pool, pupil_list, ref_list):
     """
     Returns binocular and monocular matched pupil datums and ref points. Uses a dispersion criterion to
@@ -98,9 +87,9 @@ def closest_matches_binocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
     if pupil0 and pupil1:
         for r in ref_pts:
 
-            closest_p0_idx = find_nearest_idx(pupil0_ts, r["timestamp"])
+            closest_p0_idx = _find_nearest_idx(pupil0_ts, r["timestamp"])
             closest_p0 = pupil0[closest_p0_idx]
-            closest_p1_idx = find_nearest_idx(pupil1_ts, r["timestamp"])
+            closest_p1_idx = _find_nearest_idx(pupil1_ts, r["timestamp"])
             closest_p1 = pupil1[closest_p1_idx]
 
             dispersion = max(
@@ -134,7 +123,7 @@ def closest_matches_monocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
 
     if pupil0:
         for r in ref_pts:
-            closest_p0_idx = find_nearest_idx(pupil0_ts, r["timestamp"])
+            closest_p0_idx = _find_nearest_idx(pupil0_ts, r["timestamp"])
             closest_p0 = pupil0[closest_p0_idx]
             dispersion = np.abs(closest_p0["timestamp"] - r["timestamp"])
             if dispersion < max_dispersion:
@@ -145,6 +134,17 @@ def closest_matches_monocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
                 )
 
     return matched
+
+
+def _find_nearest_idx(array, value):
+    idx = np.searchsorted(array, value, side="left")
+    try:
+        if abs(value - array[idx - 1]) < abs(value - array[idx]):
+            return idx - 1
+        else:
+            return idx
+    except IndexError:
+        return idx - 1
 
 
 def preprocess_2d_data_monocular(matched_data):
