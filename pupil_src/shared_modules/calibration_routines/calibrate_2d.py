@@ -23,7 +23,7 @@ class PolynomialMonocular:
     """
     A polynomial function class based on the polyval functions from numpy.polynomial.polynomial.
 
-    Currently supports 1d, 2d, and 3d polynomials.
+    Supports 1d, 2d, and 3d polynomials.
     """
 
     def __init__(self, params, dof=2, degree=2):
