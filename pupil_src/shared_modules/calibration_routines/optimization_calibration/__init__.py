@@ -14,5 +14,6 @@ try:
 except ModuleNotFoundError:
     # when running from source compile cpp extension if necessary.
     from .build import build_cpp_extension
+
     build_cpp_extension()
     from .calibration_methods import bundle_adjust_calibration

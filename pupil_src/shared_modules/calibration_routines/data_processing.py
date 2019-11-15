@@ -194,4 +194,3 @@ def preprocess_3d_data(matched_data, g_pool):
     ref_processed = g_pool.capture.intrinsics.unprojectPoints(ref, normalize=True)
 
     return ref_processed, pupil0_processed, pupil1_processed
-

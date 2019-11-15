@@ -26,21 +26,15 @@ class _PolynomialMonocular:
     Supports 1d, 2d, and 3d polynomials.
     """
 
-    _polynomials = {
-        1: poly.polyval,
-        2: poly.polyval2d,
-        3: poly.polyval3d,
-    }
+    _polynomials = {1: poly.polyval, 2: poly.polyval2d, 3: poly.polyval3d}
 
     def __init__(self, params, dof=2, degree=2):
-
         self.dof = dof
         self.degree = degree
         self.func = self._polynomials[self.dof]
         self.params = np.reshape(params, self.dof * [degree + 1])
 
     def __call__(self, x):
-
         return self.func(*x, self.params)
 
 
@@ -50,7 +44,6 @@ class _PolynomialBinocular:
     """
 
     def __init__(self, params, dof=2, degree=2):
-
         self.dof = dof
         self.degree = degree
 
@@ -62,7 +55,6 @@ class _PolynomialBinocular:
         )
 
     def __call__(self, x):
-
         x0 = x[: self.dof]
         x1 = x[self.dof :]
 
@@ -75,7 +67,6 @@ class MappingFunction2D:
     """
 
     def __init__(self, params_x, params_y, dof=2, degree=2, binocular=False):
-
         if binocular:
             polynomial_type = _PolynomialBinocular
         else:
@@ -85,7 +76,6 @@ class MappingFunction2D:
         self.map_to_world_cam_y = polynomial_type(params_y, dof, degree)
 
     def __call__(self, pt):
-
         return self.map_to_world_cam_x(pt), self.map_to_world_cam_y(pt)
 
 
@@ -162,7 +152,6 @@ def _optimize_parameters(
     regularization=0.0,
     loss_scale=-1,
 ):
-
     initial_guess = np.zeros(n_params)
 
     if (0, 0) not in ignored_terms:
@@ -249,7 +238,7 @@ def _extend_params(params, degree, ignored_terms=(), fill_value=0, binocular=Fal
     else:
         ignored_terms = sorted(
             ignored_terms,
-            key=lambda multi_idx: _convert_to_linear_index(multi_idx, degree + 1)
+            key=lambda multi_idx: _convert_to_linear_index(multi_idx, degree + 1),
         )
         for entry in ignored_terms:
             params.insert(_convert_to_linear_index(entry, degree + 1), fill_value)

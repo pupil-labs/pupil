@@ -38,7 +38,9 @@ def calibrate_3d_binocular(g_pool, matched_binocular_data, pupil0, pupil1):
     # TODO model the world as cv2 pinhole camera with distorion and focal in ceres.
     # right now we solve using a few permutations of K
 
-    ref_dir, gaze0_dir, gaze1_dir = data_processing.preprocess_3d_data(matched_binocular_data, g_pool)
+    ref_dir, gaze0_dir, gaze1_dir = data_processing.preprocess_3d_data(
+        matched_binocular_data, g_pool
+    )
 
     if len(ref_dir) < 1 or len(gaze0_dir) < 1 or len(gaze1_dir) < 1:
         logger.error(not_enough_data_error_msg)
@@ -184,7 +186,9 @@ def calibrate_3d_monocular(g_pool, matched_monocular_data):
     # right now we solve using a few permutations of K
 
     # TODO do this across different scales?
-    ref_dir, gaze_dir, _ = data_processing.preprocess_3d_data(matched_monocular_data, g_pool)
+    ref_dir, gaze_dir, _ = data_processing.preprocess_3d_data(
+        matched_monocular_data, g_pool
+    )
     # save_object((ref_dir,gaze_dir),os.path.join(g_pool.user_dir, "testdata"))
     if len(ref_dir) < 1 or len(gaze_dir) < 1:
         logger.error(not_enough_data_error_msg + " Using:" + method)
@@ -313,7 +317,9 @@ def calibrate_2d_binocular(
 
     method = "binocular polynomial regression"
 
-    cal_pt_cloud_binocular = data_processing.preprocess_2d_data_binocular(matched_binocular_data)
+    cal_pt_cloud_binocular = data_processing.preprocess_2d_data_binocular(
+        matched_binocular_data
+    )
     cal_pt_cloud0 = data_processing.preprocess_2d_data_monocular(matched_pupil0_data)
     cal_pt_cloud1 = data_processing.preprocess_2d_data_monocular(matched_pupil1_data)
 
@@ -407,8 +413,12 @@ def calibrate_2d_monocular(g_pool, matched_monocular_data):
 
 def select_method_and_perform_calibration(g_pool, pupil_list, ref_list):
 
-    pupil_list = data_processing.filter_confidence(pupil_list, g_pool.min_calibration_confidence)
-    matched_data = data_processing.match_data(g_pool, pupil_list, ref_list)  # calculate matching data
+    pupil_list = data_processing.filter_confidence(
+        pupil_list, g_pool.min_calibration_confidence
+    )
+    matched_data = data_processing.match_data(
+        g_pool, pupil_list, ref_list
+    )  # calculate matching data
 
     if not isinstance(matched_data, tuple):
         return None, matched_data  # matched_data is an error notification
