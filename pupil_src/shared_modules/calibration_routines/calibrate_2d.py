@@ -228,18 +228,6 @@ def cauchy_loss(residuals, loss_scale):
     return loss_scale ** 2 * np.log(1 + residuals / loss_scale ** 2)
 
 
-def convert_to_linear_index(multi_idx, size_per_dim):
-    """
-    Converts the multi-index of a multi-dimensional array to the corresponding linear index of the unraveled array.
-    Assumes the array to have the same size in all dimensions.
-    """
-    dims = len(multi_idx)
-    linear_idx = 0
-    for k, idx in enumerate(multi_idx):
-        linear_idx += idx * (size_per_dim ** (dims - 1 - k))
-    return linear_idx
-
-
 def extend_params(params, degree, ignored_terms=(), fill_value=0, binocular=False):
     """
     Insert a given fill value into a parameter list at places specified by ignored terms.
@@ -269,3 +257,14 @@ def extend_params(params, degree, ignored_terms=(), fill_value=0, binocular=Fals
 
     return augmented_params
 
+
+def convert_to_linear_index(multi_idx, size_per_dim):
+    """
+    Converts the multi-index of a multi-dimensional array to the corresponding linear index of the unraveled array.
+    Assumes the array to have the same size in all dimensions.
+    """
+    dims = len(multi_idx)
+    linear_idx = 0
+    for k, idx in enumerate(multi_idx):
+        linear_idx += idx * (size_per_dim ** (dims - 1 - k))
+    return linear_idx
