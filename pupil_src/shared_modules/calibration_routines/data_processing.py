@@ -42,9 +42,7 @@ def match_data(g_pool, pupil_list, ref_list):
     Returns binocular and monocular matched pupil datums and ref points. Uses a dispersion criterion to
     dismiss matches which are too far apart.
     """
-    if pupil_list and ref_list:
-        pass
-    else:
+    if not (pupil_list or ref_list):
         not_enough_data_error_msg = (
             "Not enough ref point or pupil data available for calibration."
         )
