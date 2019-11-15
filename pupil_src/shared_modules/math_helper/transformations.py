@@ -1984,9 +1984,12 @@ def _import_module(name, package=None, warn=True, prefix="_py_", ignore="_"):
 
 
 def find_rigid_transform(A, B):
-    # we expect the shape to be of length 2
-    assert len(A.shape) == len(B.shape) == 2
-    assert A.shape[0] == B.shape[0]
+
+    if not (len(A.shape) == len(B.shape) == 2):
+        raise ValueError("Expected the shape of the arguments to be of length 2")
+
+    if A.shape[0] != B.shape[0]:
+        raise ValueError("Expected the first dimension of the arguments to be the same")
 
     centroid_A = np.mean(A, axis=0)
     centroid_B = np.mean(B, axis=0)
