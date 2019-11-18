@@ -92,9 +92,10 @@ def closest_matches_binocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
             closest_p1_idx = _find_nearest_idx(pupil1_ts, r["timestamp"])
             closest_p1 = pupil1[closest_p1_idx]
 
-            dispersion = max(
-                closest_p0["timestamp"], closest_p1["timestamp"], r["timestamp"]
-            ) - min(closest_p0["timestamp"], closest_p1["timestamp"], r["timestamp"])
+            disp_max_ = max(closest_p0["timestamp"], closest_p1["timestamp"], r["timestamp"])
+            disp_min_ = min(closest_p0["timestamp"], closest_p1["timestamp"], r["timestamp"])
+
+            dispersion = disp_max_ - disp_min_
             if dispersion < max_dispersion:
                 matched.append({"ref": r, "pupil": closest_p0, "pupil1": closest_p1})
             else:
