@@ -12,11 +12,12 @@ import glob
 import logging
 import os
 import pathlib as pl
+from pathlib import Path
 from typing import Iterator, Sequence
+
 import av
 import cv2
 import numpy as np
-
 
 logger = logging.getLogger(__name__)
 
@@ -292,12 +293,11 @@ class VideoSet:
     def fetch_videos(self) -> Iterator[Video]:
         # If self.fill_gaps, we return all videos
         # else we skip the broken videos
-        yield from (
-            Video(loc)
-            for ext in self.video_exts
-            for loc in glob.iglob(os.path.join(self.rec, f"{self.name}*.{ext}"))
-            if (self.fill_gaps or Video(loc).is_valid)
-        )
+        for ext in self.video_exts:
+            for loc in Path(self.rec).glob(f"{self.name}.{ext}"):
+                vid = Video(str(loc))
+                if self.fill_gaps or vid.is_valid:
+                    yield vid
 
     def build_lookup(self, fallback_timestamps=None):
         """
