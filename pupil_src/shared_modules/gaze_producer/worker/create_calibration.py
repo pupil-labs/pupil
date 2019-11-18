@@ -14,7 +14,6 @@ from types import SimpleNamespace
 
 import player_methods as pm
 import tasklib.background
-import tasklib.background.patches as bg_patches
 from calibration_routines.finish_calibration import select_calibration_method
 from gaze_producer import model
 from methods import normalize
@@ -53,10 +52,6 @@ def create_task(calibration, all_reference_locations):
         name,
         _create_calibration,
         args=args,
-        patches=[
-            bg_patches.IPCLoggingPatch(),
-            bg_patches.KeyboardInterruptHandlerPatch(),
-        ],
     )
 
 
