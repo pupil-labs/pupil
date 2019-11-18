@@ -191,10 +191,11 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         )
 
         def set_marker_detector_mode(value):
-            self.marker_detector.marker_detector_mode = value
-            self.notify_all(
-                {"subject": "surface_tracker.marker_detection_params_changed"}
-            )
+            if self.marker_detector.marker_detector_mode != value:
+                self.marker_detector.marker_detector_mode = value
+                self.notify_all(
+                    {"subject": "surface_tracker.marker_detection_params_changed"}
+                )
 
         menu = ui.Growing_Menu("Marker Detection Parameters")
         menu.collapsed = True
