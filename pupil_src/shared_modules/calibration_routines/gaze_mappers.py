@@ -236,7 +236,7 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
 
     def _map_binocular(self, p0, p1):
         if self.multivariate:
-            gaze_point = self.map_fn([*p0["norm_pos"]] + [*p1["norm_pos"]])
+            gaze_point = self.map_fn(list(p0["norm_pos"]) + list(p1["norm_pos"]))
         else:
             gaze_point_eye0 = self.map_fn_fallback[0](p0["norm_pos"])
             gaze_point_eye1 = self.map_fn_fallback[1](p1["norm_pos"])
