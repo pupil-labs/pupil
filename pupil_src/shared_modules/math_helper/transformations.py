@@ -2004,7 +2004,7 @@ def find_rigid_transform(A, B):
     R = Vt.T @ U.T
     # special reflection case
     if np.linalg.det(R) < 0:
-        logger.info("Reflection detected")
+        logger.debug("Reflection detected")
         Vt[2, :] *= -1
         R = Vt.T * U.T  # todo: Check!
 
