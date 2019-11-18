@@ -310,7 +310,7 @@ class GUI:
             marker_type = marker.marker_type
             if (
                 marker_type == Surface_Marker_Type.SQUARE
-                and marker.perimeter < self.tracker.marker_min_perimeter
+                and marker.perimeter < self.tracker.marker_detector.marker_min_perimeter
             ):
                 continue
 
