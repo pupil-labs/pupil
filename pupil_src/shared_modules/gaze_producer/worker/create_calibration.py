@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import player_methods as pm
 import tasklib.background
 import tasklib.background.patches as bg_patches
-from calibration_routines.finish_calibration import select_calibration_method
+from calibration_routines.finish_calibration import select_method_and_perform_calibration
 from gaze_producer import model
 from methods import normalize
 
@@ -85,7 +85,7 @@ def _setup_fake_gpool(
 
 
 def _create_calibration(fake_gpool, ref_dicts_in_calib_range, pupil_pos_in_calib_range):
-    method, result = select_calibration_method(
+    method, result = select_method_and_perform_calibration(
         fake_gpool, pupil_pos_in_calib_range, ref_dicts_in_calib_range
     )
 
