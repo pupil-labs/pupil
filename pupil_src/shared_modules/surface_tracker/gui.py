@@ -168,9 +168,13 @@ class GUI:
         if not surface.detected:
             return
 
-        corners, top_indicator, title_anchor, surface_edit_anchor, marker_edit_anchor = self._get_surface_anchor_points(
-            surface
-        )
+        (
+            corners,
+            top_indicator,
+            title_anchor,
+            surface_edit_anchor,
+            marker_edit_anchor,
+        ) = self._get_surface_anchor_points(surface)
         alpha = min(1, surface.build_up_status)
 
         surface_color = rgb_to_rgba(self.color_primary_rgb, alpha=alpha)
@@ -402,9 +406,10 @@ class GUI:
                 if not surface.detected:
                     continue
 
-                surface_edit_pressed, marker_edit_pressed = self._check_surface_button_pressed(
-                    surface, pos
-                )
+                (
+                    surface_edit_pressed,
+                    marker_edit_pressed,
+                ) = self._check_surface_button_pressed(surface, pos)
 
                 if surface_edit_pressed:
                     if surface in self._edit_surf_corners:
