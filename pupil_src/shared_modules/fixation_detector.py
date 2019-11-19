@@ -230,7 +230,7 @@ def detect_fixations(
         )
         yield "Detecting fixations...", fixation
         Q.clear()  # clear queue
-        enum.extendleft(slicable[middle_idx:])
+        enum.extendleft(reversed(to_be_placed_back))
 
     yield "Fixation detection complete", ()
 
