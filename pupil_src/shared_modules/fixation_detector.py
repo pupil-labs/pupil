@@ -685,9 +685,13 @@ class Fixation_Detector(Fixation_Detector_Base):
         events["fixations"] = []
         gaze = events["gaze"]
 
-        self.history.extend(
-            (gp for gp in gaze if gp["confidence"] >= self.confidence_threshold)
-        )
+        gaze = (gp for gp in gaze if gp["confidence"] >= self.confidence_threshold)
+        self.history.extend(gaze)
+        self.history.sort(key=lambda gp: gp["timestamp"])
+
+        if not self.history:
+            self.recent_fixation = None
+            return
 
         try:
             ts_oldest = self.history[0]["timestamp"]
