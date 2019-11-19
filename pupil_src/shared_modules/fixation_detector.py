@@ -224,16 +224,16 @@ def detect_fixations(
         right_idx = len(Q)
 
         # binary search
-        while left_idx + 1 < right_idx:
-            middle_idx = (left_idx + right_idx) // 2 + 1
             dispersion, origin, base_data = gaze_dispersion(
                 capture, slicable[:middle_idx], use_pupil=use_pupil
             )
 
+        while left_idx < right_idx - 1:
+            middle_idx = (left_idx + right_idx) // 2
             if dispersion <= max_dispersion:
-                left_idx = middle_idx - 1
+                left_idx = middle_idx
             else:
-                right_idx = middle_idx - 1
+                right_idx = middle_idx
 
         middle_idx = (left_idx + right_idx) // 2
         dispersion_result = gaze_dispersion(
