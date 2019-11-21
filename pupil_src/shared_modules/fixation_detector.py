@@ -174,45 +174,49 @@ def detect_fixations(
     logger.info(f"Starting fixation detection using {method.value} data...")
     fixation_result = Fixation_Result_Factory()
 
-    Q = deque()
-    enum = deque(gaze_data)
+    working_queue = deque()
+    remaining_gaze = deque(gaze_data)
 
-    while enum:
-        # check if Q contains enough data
-        if len(Q) < 2 or (Q[-1]["timestamp"] - Q[0]["timestamp"]) < min_duration:
-            datum = enum.popleft()
-            Q.append(datum)
+    while remaining_gaze:
+        # check if working_queue contains enough data
+        if (
+            len(working_queue) < 2
+            or (working_queue[-1]["timestamp"] - working_queue[0]["timestamp"])
+            < min_duration
+        ):
+            datum = remaining_gaze.popleft()
+            working_queue.append(datum)
             continue
 
         # min duration reached, check for fixation
-        dispersion = gaze_dispersion(capture, Q, method)
+        dispersion = gaze_dispersion(capture, working_queue, method)
         if dispersion > max_dispersion:
             # not a fixation, move forward
-            Q.popleft()
+            working_queue.popleft()
             continue
 
-        left_idx = len(Q)
+        left_idx = len(working_queue)
 
         # minimal fixation found. collect maximal data
         # to perform binary search for fixation end
-        while enum:
-            datum = enum[0]
-            if datum["timestamp"] > Q[0]["timestamp"] + max_duration:
+        while remaining_gaze:
+            datum = remaining_gaze[0]
+            if datum["timestamp"] > working_queue[0]["timestamp"] + max_duration:
                 break  # maximum data found
-            Q.append(enum.popleft())
+            working_queue.append(remaining_gaze.popleft())
 
         # check for fixation with maximum duration
-        dispersion = gaze_dispersion(capture, Q, method)
+        dispersion = gaze_dispersion(capture, working_queue, method)
         if dispersion <= max_dispersion:
             fixation = fixation_result.from_data(
-                dispersion, method, Q, capture.timestamps
+                dispersion, method, working_queue, capture.timestamps
             )
             yield "Detecting fixations...", fixation
-            Q.clear()  # discard old Q
+            working_queue.clear()  # discard old Q
             continue
 
-        slicable = list(Q)  # deque does not support slicing
-        right_idx = len(Q)
+        slicable = list(working_queue)  # deque does not support slicing
+        right_idx = len(working_queue)
 
         # binary search
         while left_idx < right_idx - 1:
@@ -232,8 +236,8 @@ def detect_fixations(
             dispersion_result, method, final_base_data, capture.timestamps
         )
         yield "Detecting fixations...", fixation
-        Q.clear()  # clear queue
-        enum.extendleft(reversed(to_be_placed_back))
+        working_queue.clear()  # clear queue
+        remaining_gaze.extendleft(reversed(to_be_placed_back))
 
     yield "Fixation detection complete", ()
 
