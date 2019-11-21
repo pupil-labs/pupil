@@ -226,9 +226,14 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     )
                     self.monitor_idx = 0
                     monitor = glfwGetMonitors()[self.monitor_idx]
-                width, height, redBits, blueBits, greenBits, refreshRate = glfwGetVideoMode(
-                    monitor
-                )
+                (
+                    width,
+                    height,
+                    redBits,
+                    blueBits,
+                    greenBits,
+                    refreshRate,
+                ) = glfwGetVideoMode(monitor)
             else:
                 monitor = None
                 width, height = 640, 360
@@ -342,11 +347,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             # Always save pupil positions
             self.pupil_list.extend(events["pupil"])
 
-            if on_position and len(self.markers) and events.get("fixations", []):
-                fixation_boost = 5
+            if on_position and len(self.markers):
                 self.screen_marker_state = min(
-                    self.sample_duration + self.lead_in,
-                    self.screen_marker_state + fixation_boost,
+                    self.sample_duration + self.lead_in, self.screen_marker_state,
                 )
 
             # Animate the screen marker

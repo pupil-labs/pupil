@@ -711,7 +711,7 @@ class Fixation_Detector(Fixation_Detector_Base):
             age_threshold = ts_newest - self.min_duration / 1000.0
             # pop elements until only one element below the age threshold remains:
             while self.history[1]["timestamp"] < age_threshold:
-                self.history.popleft()  # remove outdated gaze points
+                del self.history[0]  # remove outdated gaze points
 
         except IndexError:
             pass
