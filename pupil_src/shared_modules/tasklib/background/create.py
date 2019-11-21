@@ -13,6 +13,7 @@ import inspect
 
 from tasklib.background.task import BackgroundGeneratorFunction
 from tasklib.background.task import BackgroundRoutine
+from tasklib.background.patches import IPCLoggingPatch, KeyboardInterruptHandlerPatch
 
 
 def create(
@@ -39,7 +40,10 @@ def create(
     if kwargs is None:
         kwargs = {}
     if patches is None:
-        patches = []
+        patches = [
+            IPCLoggingPatch(),
+            KeyboardInterruptHandlerPatch(),
+        ]
 
     if inspect.isgeneratorfunction(routine_or_generator_function):
         return BackgroundGeneratorFunction(

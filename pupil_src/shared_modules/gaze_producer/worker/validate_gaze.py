@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import tasklib
-import tasklib.background.patches as bg_patches
 from accuracy_visualizer import Accuracy_Visualizer
 from methods import normalize
 

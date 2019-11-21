@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import tasklib.background
-from tasklib.background.patches import IPCLoggingPatch, KeyboardInterruptHandlerPatch
 
 
 class PluginTaskManager:
@@ -44,7 +43,7 @@ class PluginTaskManager:
         pass_shared_memory=False,
         args=None,
         kwargs=None,
-        patches=...,
+        patches=None,
     ):
         """
         Creates a managed background task.
@@ -77,8 +76,6 @@ class PluginTaskManager:
             A new task with base class TaskInterface.
 
         """
-        if patches is ...:
-            patches = (IPCLoggingPatch(), KeyboardInterruptHandlerPatch())
         task = tasklib.background.create(
             name,
             routine_or_generator_function,
