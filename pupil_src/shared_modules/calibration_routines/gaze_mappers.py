@@ -79,30 +79,32 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
         self.min_pupil_confidence = 0.6
         self._caches = (deque(), deque())
-        self.temporal_cutoff = 1/120
-        self.temporal_cutoff_smoothing_ratio = 1/50
+        self.recently_estimated_framerate = 1 / 120
+        self.framerate_estimation_smoothing_factor = 1 / 50
         self.sample_cutoff = 10
 
     def is_cache_valid(self, cache):
         return len(cache) >= 2
 
-    def calculate_raw_temporal_cutoff(self, cache):
-        return np.mean(np.diff([d['timestamp'] for d in cache]))
+    def estimate_frame_rate_raw(self, cache):
+        return np.mean(np.diff([d["timestamp"] for d in cache]))
 
-    def calculate_temporal_cutoff(self, eye0_cache, eye1_cache):
+    def estimate_framerate_smoothed(self, eye0_cache, eye1_cache):
         if self.is_cache_valid(eye0_cache) and self.is_cache_valid(eye1_cache):
-            eye0_raw_cutoff = self.calculate_raw_temporal_cutoff(eye0_cache)
-            eye1_raw_cutoff = self.calculate_raw_temporal_cutoff(eye1_cache)
-            raw_cutoff = max(eye0_raw_cutoff, eye1_raw_cutoff)
+            eye0_framerate_raw = self.estimate_frame_rate_raw(eye0_cache)
+            eye1_framerate_raw = self.estimate_frame_rate_raw(eye1_cache)
+            estimated_framerate_raw = max(eye0_framerate_raw, eye1_framerate_raw)
         elif self.is_cache_valid(eye0_cache):
-            raw_cutoff = self.calculate_raw_temporal_cutoff(eye0_cache)
+            estimated_framerate_raw = self.estimate_frame_rate_raw(eye0_cache)
         elif self.is_cache_valid(eye1_cache):
-            raw_cutoff = self.calculate_raw_temporal_cutoff(eye1_cache)
+            estimated_framerate_raw = self.estimate_frame_rate_raw(eye1_cache)
         else:
-            return self.temporal_cutoff
+            return self.recently_estimated_framerate
 
-        self.temporal_cutoff += (raw_cutoff - self.temporal_cutoff) * self.temporal_cutoff_smoothing_ratio
-        return self.temporal_cutoff
+        self.recently_estimated_framerate += (
+            estimated_framerate_raw - self.recently_estimated_framerate
+        ) * self.framerate_estimation_smoothing_factor
+        return self.recently_estimated_framerate
 
     def map_batch(self, pupil_list):
         current_caches = self._caches
@@ -116,7 +118,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
     def on_pupil_datum(self, p):
         self._caches[p["id"]].append(p)
-        temporal_cutoff = 2 * self.calculate_temporal_cutoff(*self._caches)
+        temporal_cutoff = 2 * self.estimate_framerate_smoothed(*self._caches)
 
         # map low confidence pupil data monocularly
         if (
@@ -591,9 +593,10 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plug
         gaze_line1 = [s1_center, s1_center + s1_norm_on_plane]
 
         # find the intersection of left and right line of sight.
-        nearest_intersection_point, intersection_distance = math_helper.nearest_intersection(
-            gaze_line0, gaze_line1
-        )
+        (
+            nearest_intersection_point,
+            intersection_distance,
+        ) = math_helper.nearest_intersection(gaze_line0, gaze_line1)
         if nearest_intersection_point is not None and self.backproject:
             cyclop_gaze = nearest_intersection_point - cyclop_center
             self.last_gaze_distance = np.sqrt(cyclop_gaze.dot(cyclop_gaze))
