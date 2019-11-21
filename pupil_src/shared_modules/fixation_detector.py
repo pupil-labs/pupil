@@ -10,17 +10,20 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 """
-Fixations general knowledge from literature review + Goldberg et al. - fixations rarely
-    < 100ms and range between 200ms and 400ms in duration (Irwin, 1992 - fixations
-    dependent on task between 150ms - 600ms) + Very short fixations are considered not
-    meaningful for studying behavior - eye+brain require time for info to be registered
-    (see Munn et al. APGV, 2008) + Fixations are rarely longer than 800ms in duration +
-    Smooth Pursuit is exception and different motif + If we do not set a maximum
-    duration, we will also detect smooth pursuit (which is acceptable since we
-    compensate for VOR) Terms + dispersion (spatial) = how much spatial movement is
-    allowed within one fixation (in visual angular degrees or pixels) + duration
-    (temporal) = what is the minimum time required for gaze data to be within dispersion
-    threshold?
+Fixations general knowledge from literature review
+    + Goldberg et al. - fixations rarely < 100ms and range between 200ms and 400ms in
+      duration (Irwin, 1992 - fixations dependent on task between 150ms - 600ms)
+    + Very short fixations are considered not meaningful for studying behavior
+        - eye+brain require time for info to be registered (see Munn et al. APGV, 2008)
+    + Fixations are rarely longer than 800ms in duration
+        + Smooth Pursuit is exception and different motif
+        + If we do not set a maximum duration, we will also detect smooth pursuit (which
+          is acceptable since we compensate for VOR)
+Terms
+    + dispersion (spatial) = how much spatial movement is allowed within one fixation
+      (in visual angular degrees or pixels)
+    + duration (temporal) = what is the minimum time required for gaze data to be within
+      dispersion threshold?
 """
 
 import csv
