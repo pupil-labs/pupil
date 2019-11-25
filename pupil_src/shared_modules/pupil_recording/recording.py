@@ -82,6 +82,7 @@ class PupilRecording:
             ("core", "world"): r"^world",
             ("core", "eye0"): r"^eye0",
             ("core", "eye1"): r"^eye1",
+            ("audio"): r"^audio",
             ("mobile", "world"): [
                 r"^Pupil Cam(\d) ID2",  # pupil core headset
                 r"^Logitech Webcam C930e",  # old headset with logitech webcam
@@ -92,6 +93,7 @@ class PupilRecording:
             ("pi", "eye0"): r"^PI left v(\d+) ps(\d+)",
             ("pi", "eye1"): r"^PI right v(\d+) ps(\d+)",
             ("videos",): [rf"\.{ext}$" for ext in VALID_VIDEO_EXTENSIONS],
+            ("mp4",): r"\.mp4$",
             ("rawtimes",): r"\.time$",
             ("timestamps",): r"_timestamps\.npy$",
             ("lookup",): r"_lookup\.npy$",
@@ -113,6 +115,12 @@ class PupilRecording:
 
         def videos(self) -> FilterType:
             return self.filter("videos")
+
+        def audio(self) -> FilterType:
+            return self.filter("audio")
+
+        def mp4(self) -> FilterType:
+            return self.filter("mp4")
 
         def raw_time(self) -> FilterType:
             return self.filter("rawtimes")

@@ -17,6 +17,8 @@ import numpy as np
 
 import av
 
+import pupil_recording
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -31,28 +33,29 @@ LoadedAudio = collections.namedtuple(
 
 
 def load_audio(rec_dir):
-    audio_pattern = os.path.join(rec_dir, "audio*.mp4")
-    # sort matched files in order to prefer `audio.mp4` over `audio_xxxx.mp4`
-    for audio_file in sorted(glob.glob(audio_pattern)):
-        try:
-            container = av.open(audio_file)
-            stream = next(s for s in container.streams if s.type == "audio")
-            logger.debug("Loaded audiostream: %s" % stream)
-            break
-        except (av.AVError, StopIteration):
-            logger.debug(
-                "No audiostream found in media container {}".format(audio_file)
-            )
-    else:
+    recording = pupil_recording.PupilRecording(rec_dir)
+    audio_files = sorted(recording.files().audio().mp4())
+    loaded_audio = (_load_audio_single(path) for path in audio_files)
+    loaded_audio = [aud for aud in loaded_audio if aud is not None]
+    if not loaded_audio:
         raise NoAudioLoadedError("No valid audio file found")
+    return loaded_audio
 
-    audiots_path = os.path.splitext(audio_file)[0] + "_timestamps.npy"
+
+def _load_audio_single(audio_file):
+    try:
+        container = av.open(str(audio_file))
+        stream = next(iter(container.streams.audio))
+        logger.debug("Loaded audiostream: %s" % stream)
+    except (av.AVError, StopIteration):
+        return None
+
+    audiots_path = audio_file.with_name(audio_file.stem + "_timestamps.npy")
     try:
         timestamps = np.load(audiots_path)
     except IOError:
-        raise NoAudioLoadedError(
-            "Audio file found but could not load audio timestamps.", audio_file
-        )
+        return None
+
     return LoadedAudio(container, stream, timestamps)
 
 
@@ -62,10 +65,11 @@ class Audio_Viz_Transform:
         import os
         import errno
 
-        self.audio = load_audio(rec_dir)
+        self.audio_all = iter(load_audio(rec_dir))
+        self._setup_next_audio_part()
+        self._first_part_start = self.audio.timestamps[0]
 
         self.sps_rate = sps_rate
-        self.start_ts = self.audio.timestamps[0]
 
         # Test lowpass filtering + viz
         # self.lp_graph = av.filter.Graph()
@@ -86,16 +90,20 @@ class Audio_Viz_Transform:
         # audio_resampler1 = av.audio.resampler.AudioResampler(format=av.AudioFormat('dblp'),
         #                                                     layout=audio_stream.layout,
         #                                                     rate=audio_stream.rate)
-        self.audio_resampler = av.audio.resampler.AudioResampler(
-            format=self.audio.stream.format, layout=self.audio.stream.layout, rate=60
-        )
-        self.next_audio_frame = self._next_audio_frame()
         self.all_abs_samples = None
         self.finished = False
         self.a_levels = None
         self.a_levels_log = None
         self.final_rescale = True
         self.log_scaling = False
+
+    def _setup_next_audio_part(self):
+        self.audio = next(self.audio_all)
+        self.audio_resampler = av.audio.resampler.AudioResampler(
+            format=self.audio.stream.format, layout=self.audio.stream.layout, rate=60
+        )
+        self.next_audio_frame = self._next_audio_frame()
+        self.start_ts = self.audio.timestamps[0]
 
     def _next_audio_frame(self):
         for packet in self.audio.container.demux(self.audio.stream):
@@ -141,6 +149,7 @@ class Audio_Viz_Transform:
                     allSamples = np.concatenate((allSamples, samples), axis=0)
                 else:
                     allSamples = samples
+            print(self.all_abs_samples)
             if allSamples is not None:
                 new_ts = (
                     np.arange(0, len(allSamples), 1, dtype=np.float32)
@@ -169,11 +178,8 @@ class Audio_Viz_Transform:
                     scaled_samples = abs_samples
 
             else:
-                new_ts = (
-                    np.arange(0, len(self.all_abs_samples), 1, dtype=np.float32)
-                    / self.audio_resampler.rate
-                )
-                new_ts += self.audio.timestamps[0]
+                new_ts = self.a_levels[::4]
+                print(new_ts.shape, self.all_abs_samples.size)
 
                 # self.all_abs_samples = np.log10(self.all_abs_samples)
                 self.all_abs_samples[-1] = 0.0
@@ -189,14 +195,19 @@ class Audio_Viz_Transform:
                 else:
                     scaled_samples = self.all_abs_samples
 
-                self.a_levels = None
-                self.finished = True
+                try:
+                    self._setup_next_audio_part()
+                except StopIteration:
+                    self.a_levels = None
+                    self.finished = True
             if not self.finished or self.final_rescale:
                 a_levels = self.get_verteces(new_ts, scaled_samples, height)
 
                 if self.a_levels is not None:
+                    print("append")
                     self.a_levels = np.concatenate((self.a_levels, a_levels), axis=0)
                 else:
+                    print("new")
                     self.a_levels = a_levels
 
                 a_levels_log = self.get_verteces(new_ts, scaled_samples_log, height)

@@ -68,9 +68,10 @@ class Audio_Playback(System_Plugin_Base):
         self.audio_viz_trans = None
 
         try:
-            self.audio = load_audio(self.g_pool.rec_dir)
+            self.audio_all = load_audio(self.g_pool.rec_dir)
         except NoAudioLoadedError:
             return
+        self.audio = self.audio_all[0]
 
         self.audio_bytes_fifo = []
         self.next_audio_frame = self._next_audio_frame()
