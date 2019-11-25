@@ -8,17 +8,21 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import logging
+import math
 
+import numpy as np
 import OpenGL
-
-# OpenGL.FULL_LOGGING = True
-OpenGL.ERROR_LOGGING = False
+import OpenGL.error
 from OpenGL.GL import *
 from OpenGL.GLU import gluPerspective
 
-import numpy as np
-import math
 import glfw
+
+# OpenGL.FULL_LOGGING = True
+OpenGL.ERROR_LOGGING = False
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "make_coord_system_norm_based",
@@ -31,6 +35,22 @@ __all__ = [
     "is_window_visible",
     "Coord_System",
 ]
+
+_original_gl_error_check = OpenGL.error._ErrorChecker.glCheckError
+
+
+def custom_gl_error_handling(
+    error_checker, result, baseOperation=None, cArguments=None, *args
+):
+    try:
+        return _original_gl_error_check(
+            error_checker, result, baseOperation, cArguments, *args
+        )
+    except Exception:
+        logging.exception("CUSTOM GL ERROR HANDLING")
+
+
+OpenGL.error._ErrorChecker.glCheckError = custom_gl_error_handling
 
 
 def is_window_visible(window):
@@ -78,7 +98,7 @@ def adjust_gl_view(w, h):
     """
     h = max(h, 1)
     w = max(w, 1)
-    glViewport(0, 0, w, h)
+    glViewport(0, 0, -w, h)
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     glOrtho(0, w, h, 0, -1, 1)
