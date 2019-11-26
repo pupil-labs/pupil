@@ -15,7 +15,7 @@ import numpy as np
 import OpenGL
 import OpenGL.error
 from OpenGL.GL import *
-from OpenGL.GLU import gluPerspective
+from OpenGL.GLU import gluPerspective, gluErrorString
 
 import glfw
 
@@ -46,8 +46,19 @@ def custom_gl_error_handling(
         return _original_gl_error_check(
             error_checker, result, baseOperation, cArguments, *args
         )
-    except Exception:
-        logging.exception("CUSTOM GL ERROR HANDLING")
+    except Exception as e:
+        logging.error(f"Encountered PyOpenGL error: {e}")
+        found_more_errors = False
+        while True:
+            err = glGetError()
+            if err == GL_NO_ERROR:
+                break
+            if not found_more_errors:
+                found_more_errors = True
+                logging.debug("Emptying OpenGL error queue:")
+            logging.debug(f"  glError: {err} -> {gluErrorString(err)}")
+        if not found_more_errors:
+            logging.debug("No more errors found in OpenGL error queue!")
 
 
 OpenGL.error._ErrorChecker.glCheckError = custom_gl_error_handling
@@ -98,7 +109,7 @@ def adjust_gl_view(w, h):
     """
     h = max(h, 1)
     w = max(w, 1)
-    glViewport(0, 0, -w, h)
+    glViewport(0, 0, w, h)
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     glOrtho(0, w, h, 0, -1, 1)
