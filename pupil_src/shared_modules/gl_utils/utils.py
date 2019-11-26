@@ -36,6 +36,29 @@ __all__ = [
     "Coord_System",
 ]
 
+
+########################################################################################
+# START OPENGL DEBUGGING
+
+# We are injecting a custom error handling function into PyOpenGL to better investigate
+# GLErrors that we are potentially producing in pyglui or cygl and that we don't catch
+# appropriately. You can produce OpenGL errors with the following snippets for testing:
+
+# import ctypes
+# gl = ctypes.windll.LoadLibrary("opengl32") # NOTE: this is for windows, modify if needed
+
+# # This produces `error 1281 (GL_INVALID_VALUE)`
+# gl.glViewport(0, 0, -100, 1)
+
+# # This produces `error 1280 (GL_INVALID_ENUM)` for some reason (!?)
+# gl.glBegin()
+# gl.glViewport(0, 0, -100, 1)
+# gl.glEnd()
+
+# # Check errors: (will consume flag)
+# logger.debug(gl.glGetError())
+
+
 _original_gl_error_check = OpenGL.error._ErrorChecker.glCheckError
 
 
@@ -62,6 +85,9 @@ def custom_gl_error_handling(
 
 
 OpenGL.error._ErrorChecker.glCheckError = custom_gl_error_handling
+
+# END OPENGL DEBUGGING
+########################################################################################
 
 
 def is_window_visible(window):
