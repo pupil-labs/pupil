@@ -9,13 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import collections
-import glob
 import logging
-import os
-
-import numpy as np
 
 import av
+import numpy as np
 
 import pupil_recording
 
@@ -91,35 +88,11 @@ def _load_audio_single(file_path, return_pts_based_timestamps=False):
 
 class Audio_Viz_Transform:
     def __init__(self, rec_dir, sps_rate=60):
-        import av
-        import os
-        import errno
-
         self.audio_all = iter(load_audio(rec_dir))
         self._setup_next_audio_part()
         self._first_part_start = self.audio.timestamps[0]
 
         self.sps_rate = sps_rate
-
-        # Test lowpass filtering + viz
-        # self.lp_graph = av.filter.Graph()
-        # self.lp_graph_list = []
-        # self.lp_graph_list.append(self.lp_graph.add_buffer(template=self.audio.stream))
-        # args = "f=10"
-        # print("args = {}".format(args))
-        ## lp_graph_list.append(lp_graph.add("lowpass", args))
-        ## "attacks=.1|.1:decays=.2|.2:points=.-900/-900|-50.1/-900|-50/-50:soft-knee=.01:gain=0:volume=-90:delay=.1")
-        # self.lp_graph_list.append(self.lp_graph.add("compand", ".1|.1:.2|.2:-900/-900|-50.1/-900|-50/-50:.01:0:-90:.1"))
-        # self.lp_graph_list[-2].link_to(self.lp_graph_list[-1])
-        ## lp_graph_list.append(lp_graph.add("aresample", "osr=30"))
-        ## lp_graph_list[-2].link_to(lp_graph_list[-1])
-        # self.lp_graph_list.append(self.lp_graph.add("abuffersink"))
-        # self.lp_graph_list[-2].link_to(self.lp_graph_list[-1])
-        # self.lp_graph.configure()
-
-        # audio_resampler1 = av.audio.resampler.AudioResampler(format=av.AudioFormat('dblp'),
-        #                                                     layout=audio_stream.layout,
-        #                                                     rate=audio_stream.rate)
         self.all_abs_samples = None
         self.finished = False
         self.a_levels = None
