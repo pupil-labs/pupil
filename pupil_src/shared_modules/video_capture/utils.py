@@ -294,7 +294,7 @@ class VideoSet:
         # If self.fill_gaps, we return all videos
         # else we skip the broken videos
         for ext in self.video_exts:
-            for loc in Path(self.rec).glob(f"{self.name}.{ext}"):
+            for loc in Path(self.rec).glob(f"{self.name}*.{ext}"):
                 vid = Video(str(loc))
                 if self.fill_gaps or vid.is_valid:
                     yield vid
