@@ -34,27 +34,57 @@ LoadedAudio = collections.namedtuple(
 
 def load_audio(rec_dir):
     recording = pupil_recording.PupilRecording(rec_dir)
-    audio_files = sorted(recording.files().audio().mp4())
-    loaded_audio = (_load_audio_single(path) for path in audio_files)
-    loaded_audio = [aud for aud in loaded_audio if aud is not None]
+    loaded_audio = _load_audio_from_audio_files(recording)
+    if not loaded_audio:
+        loaded_audio = _load_audio_from_world_video_files(recording)
     if not loaded_audio:
         raise NoAudioLoadedError("No valid audio file found")
     return loaded_audio
 
 
-def _load_audio_single(audio_file):
+def _load_audio_from_audio_files(recording):
+    audio_files = sorted(recording.files().audio().mp4())
+    loaded_audio = (_load_audio_single(path) for path in audio_files)
+    loaded_audio = [aud for aud in loaded_audio if aud is not None]
+    return loaded_audio
+
+
+def _load_audio_from_world_video_files(recording):
+    audio_files = sorted(recording.files().world().videos())
+    loaded_audio = (
+        _load_audio_single(path, return_pts_based_timestamps=True)
+        for path in audio_files
+    )
+    loaded_audio = [aud for aud in loaded_audio if aud is not None]
+
+    return loaded_audio
+
+
+def _load_audio_single(file_path, return_pts_based_timestamps=False):
     try:
-        container = av.open(str(audio_file))
+        container = av.open(str(file_path))
         stream = next(iter(container.streams.audio))
         logger.debug("Loaded audiostream: %s" % stream)
     except (av.AVError, StopIteration):
         return None
 
-    audiots_path = audio_file.with_name(audio_file.stem + "_timestamps.npy")
+    ts_path = file_path.with_name(file_path.stem + "_timestamps.npy")
     try:
-        timestamps = np.load(audiots_path)
+        timestamps = np.load(ts_path)
     except IOError:
         return None
+
+    if return_pts_based_timestamps:
+        start = timestamps[0]
+        timestamps = np.fromiter(
+            (
+                float(start + p.pts * p.time_base)
+                for p in container.demux(audio=0)
+                if p is not None and p.pts is not None and p.time_base is not None
+            ),
+            dtype=float,
+        )
+        container.seek(0)
 
     return LoadedAudio(container, stream, timestamps)
 
