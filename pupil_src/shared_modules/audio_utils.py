@@ -149,7 +149,6 @@ class Audio_Viz_Transform:
                     allSamples = np.concatenate((allSamples, samples), axis=0)
                 else:
                     allSamples = samples
-            print(self.all_abs_samples)
             if allSamples is not None:
                 new_ts = (
                     np.arange(0, len(allSamples), 1, dtype=np.float32)
@@ -178,8 +177,7 @@ class Audio_Viz_Transform:
                     scaled_samples = abs_samples
 
             else:
-                new_ts = self.a_levels[::4]
-                print(new_ts.shape, self.all_abs_samples.size)
+                new_ts = self.a_levels[::4]  # reconstruct correct ts
 
                 # self.all_abs_samples = np.log10(self.all_abs_samples)
                 self.all_abs_samples[-1] = 0.0
@@ -194,20 +192,18 @@ class Audio_Viz_Transform:
                     scaled_samples = self.all_abs_samples / self.all_abs_samples.max()
                 else:
                     scaled_samples = self.all_abs_samples
+                self.a_levels = None
 
                 try:
                     self._setup_next_audio_part()
                 except StopIteration:
-                    self.a_levels = None
                     self.finished = True
             if not self.finished or self.final_rescale:
                 a_levels = self.get_verteces(new_ts, scaled_samples, height)
 
                 if self.a_levels is not None:
-                    print("append")
                     self.a_levels = np.concatenate((self.a_levels, a_levels), axis=0)
                 else:
-                    print("new")
                     self.a_levels = a_levels
 
                 a_levels_log = self.get_verteces(new_ts, scaled_samples_log, height)
@@ -234,15 +230,13 @@ class Audio_Viz_Transform:
         points_y1 = scaled_samples * (-height / 2) + height / 2
         points_xy1 = np.concatenate(
             (new_ts.reshape(-1, 1), points_y1.reshape(-1, 1)), 1
-        ).reshape(-1)
+        )
         points_y2 = scaled_samples * (height / 2) + height / 2
         points_xy2 = np.concatenate(
             (new_ts.reshape(-1, 1), points_y2.reshape(-1, 1)), 1
-        ).reshape(-1)
+        )
         # a_levels = [alevel for alevel in zip(new_ts, scaled_samples)]
-        a_levels = np.concatenate(
-            (points_xy1.reshape(-1, 2), points_xy2.reshape(-1, 2)), 1
-        ).reshape(-1)
+        a_levels = np.concatenate((points_xy1, points_xy2), 1).reshape(-1)
 
         return a_levels
 
