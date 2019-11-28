@@ -103,32 +103,7 @@ class Audio_Playback(System_Plugin_Base):
                 self.audio_pts_rate, self.audio_start_pts
             )
         )
-
-        if self.check_ts_consistency:
-            print("**** Checking stream")
-            for i, af in enumerate(self.next_audio_frame):
-                fnum = i + 1
-                if af.samples != af0.samples:
-                    print("fnum {} samples = {}".format(fnum, af.samples))
-                if af.pts != self.audio_idx_to_pts(fnum):
-                    print(
-                        "af.pts = {} fnum = {} idx2pts = {}".format(
-                            af.pts, fnum, self.audio_idx_to_pts(fnum)
-                        )
-                    )
-                if (
-                    self.audio.timestamps[fnum]
-                    != self.audio.timestamps[0] + af.pts * self.audio.stream.time_base
-                ):
-                    print(
-                        "ts[0] + af.pts = {} fnum = {} timestamp = {}".format(
-                            self.audio.timestamps[0]
-                            + af.pts * self.audio.stream.time_base,
-                            fnum,
-                            self.audio.timestamps[fnum],
-                        )
-                    )
-            print("**** Done")
+        self.check_ts_consistency_if_necessary(reference_frame=af0)
         self.seek_to_audio_frame(0)
 
         logger.debug(
@@ -443,3 +418,30 @@ class Audio_Playback(System_Plugin_Base):
         if self.audio_timer is not None:
             self.audio_timer.cancel()
             self.audio_timer = None
+
+    def check_ts_consistency_if_necessary(self, reference_frame):
+        if self.check_ts_consistency:
+            print("**** Checking stream")
+            for i, af in enumerate(self.next_audio_frame):
+                fnum = i + 1
+                if af.samples != reference_frame.samples:
+                    print("fnum {} samples = {}".format(fnum, af.samples))
+                if af.pts != self.audio_idx_to_pts(fnum):
+                    print(
+                        "af.pts = {} fnum = {} idx2pts = {}".format(
+                            af.pts, fnum, self.audio_idx_to_pts(fnum)
+                        )
+                    )
+                if (
+                    self.audio.timestamps[fnum]
+                    != self.audio.timestamps[0] + af.pts * self.audio.stream.time_base
+                ):
+                    print(
+                        "ts[0] + af.pts = {} fnum = {} timestamp = {}".format(
+                            self.audio.timestamps[0]
+                            + af.pts * self.audio.stream.time_base,
+                            fnum,
+                            self.audio.timestamps[fnum],
+                        )
+                    )
+            print("**** Done")
