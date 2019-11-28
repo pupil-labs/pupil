@@ -260,19 +260,9 @@ class Audio_Playback(System_Plugin_Base):
             is_stream_paused = self.pa_stream.is_stopped() or self.audio_paused
             is_audio_delay_low_enough = self.audio_delay <= 0.001
             if is_stream_paused and is_audio_delay_low_enough:
-                start_stream = True
-                pbt = self.g_pool.seek_control.current_playback_time
-                frame_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
-                audio_idx = bisect(
-                    self.audio.timestamps, self.g_pool.timestamps[frame_idx]
-                )
-                if audio_idx < len(self.audio.timestamps):
-                    self.seek_to_audio_frame(audio_idx)
-                    if self.audio_timer is not None:
-                        self.audio_timer.cancel()
-                        self.audio_timer = None
-                else:
-                    start_stream = False
+                ts_audio_start = self.calc_audio_start_ts()
+                if ts_audio_start is not None:
+                    start_stream = True
 
             self.adjust_audio_volume_filter_if_necessary()
             self.fill_audio_queue()
@@ -284,6 +274,17 @@ class Audio_Playback(System_Plugin_Base):
             if self.pa_stream is not None and not self.pa_stream.is_stopped():
                 self.pa_stream.stop_stream()
             self.play = False
+
+    def calc_audio_start_ts(self):
+        pbt = self.g_pool.seek_control.current_playback_time
+        # frame_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
+        # current_world_ts = self.g_pool.timestamps[frame_idx]
+        audio_start, audio_end = self.audio.timestamps[[0, -1]]
+
+        if audio_start <= pbt <= audio_end:
+            audio_idx = bisect(self.audio.timestamps, pbt)
+            self.seek_to_audio_frame(audio_idx)
+            return self.audio.timestamps[audio_idx]
 
     def update_audio_viz(self):
         if self.audio_viz_trans is not None:
