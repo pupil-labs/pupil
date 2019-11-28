@@ -74,15 +74,38 @@ class Audio_Playback(System_Plugin_Base):
         except NoAudioLoadedError:
             return
 
+        self.calculate_audio_bounds()
+
         self.filter_graph = None
         self.filter_graph_list = None
         self.pa = pa.PyAudio()
 
-        self._setup_input_audio_part(3)
+        self._setup_input_audio_part(0)
+
         self._setup_output_audio()
         self._setup_audio_vis()
 
+    def check_audio_part_setup(self):
+        part_idx = self.audio_part_idx_from_playbacktime()
+        if part_idx > -1 and part_idx != self.current_audio_part_idx:
+            self._setup_input_audio_part(part_idx)
+
+    def calculate_audio_bounds(self):
+        audio_part_boundaries = (la.timestamps[[0, -1]] for la in self.audio_all)
+        audio_part_boundaries = itertools.chain.from_iterable(audio_part_boundaries)
+        self.audio_bounds = np.fromiter(audio_part_boundaries, dtype=float)
+
+    def audio_part_idx_from_playbacktime(self):
+        pbt = self.g_pool.seek_control.current_playback_time
+        bound_idx = bisect(self.audio_bounds, pbt)
+        if bound_idx % 2 == 0:
+            return -1  # pbt is between audio parts
+        else:
+            part_idx = bound_idx // 2
+            return part_idx
+
     def _setup_input_audio_part(self, part_idx):
+        self.current_audio_part_idx = part_idx
         self.audio = self.audio_all[part_idx]
         self.audio_bytes_fifo.clear()
 
@@ -94,6 +117,7 @@ class Audio_Playback(System_Plugin_Base):
         )
         self.audio_paused = False
 
+        self.audio.stream.seek(0)
         af0 = next(self.next_audio_frame)
         self.audio_pts_rate = af0.samples
         self.audio_start_pts = af0.pts
@@ -249,12 +273,12 @@ class Audio_Playback(System_Plugin_Base):
 
     def recent_events(self, events):
         self.update_audio_viz()
-        self.restart_audio_output_stream_if_necessary()
-
+        self.setup_pyaudio_output_if_necessary()
         if (
             self.g_pool.seek_control.playback_speed == 1.0
             and self.pa_stream is not None
         ):
+            self.check_audio_part_setup()
             start_stream = False
             self.play = True
             is_stream_paused = self.pa_stream.is_stopped() or self.audio_paused
@@ -294,7 +318,7 @@ class Audio_Playback(System_Plugin_Base):
             if not finished:
                 self.audio_timeline.refresh()
 
-    def restart_audio_output_stream_if_necessary(self):
+    def setup_pyaudio_output_if_necessary(self):
         if self.pa_stream is not None and not self.pa_stream.is_stopped():
             if not self.audio_paused and not self.pa_stream.is_active():
                 logger.debug("Reopening audio stream...")
