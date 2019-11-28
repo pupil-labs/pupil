@@ -278,47 +278,7 @@ class Audio_Playback(System_Plugin_Base):
             self.fill_audio_queue()
 
             if start_stream:
-                rt_delay = (
-                    self.audio.timestamps[audio_idx]
-                    - self.g_pool.seek_control.current_playback_time
-                )
-                adj_delay = rt_delay - self.pa_stream.get_output_latency()
-                self.audio_delay = 0
-                self.audio_sync = 0
-                if adj_delay > 0:
-                    self.audio_delay = adj_delay
-                    self.audio_sync = 0
-                else:
-                    self.audio_sync = -adj_delay
-
-                logger.debug(
-                    "Audio sync = {} rt_delay = {} adj_delay = {}".format(
-                        self.audio_sync, rt_delay, adj_delay
-                    )
-                )
-                self.g_pool.seek_control.time_slew = self.audio_sync
-                self.pa_stream.stop_stream()
-                self.audio_measured_latency = -1
-                if self.audio_delay < 0.001:
-                    self.audio_start_time = monotonic()
-                    self.pa_stream.start_stream()
-                else:
-
-                    def delayed_audio_start():
-                        if self.pa_stream.is_stopped():
-                            self.audio_start_time = monotonic()
-                            self.pa_stream.start_stream()
-                            self.audio_delay = 0
-                            logger.debug("<<< Started delayed audio")
-                        self.audio_timer.cancel()
-                        self.audio_timer = None
-
-                    logger.debug(">>> Starting delayed audio timer")
-                    self.audio_timer = Timer(self.audio_delay, delayed_audio_start)
-                    self.audio_timer.start()
-
-                self.audio_paused = False
-
+                self.calculate_delays(ts_audio_start)
         else:
             if self.pa_stream is not None and not self.pa_stream.is_stopped():
                 self.pa_stream.stop_stream()
@@ -337,6 +297,26 @@ class Audio_Playback(System_Plugin_Base):
             if not self.audio_paused and not self.pa_stream.is_active():
                 logger.debug("Reopening audio stream...")
                 self._setup_output_audio()
+
+    def calculate_delays(self, ts_audio_start):
+        rt_delay = ts_audio_start - self.g_pool.seek_control.current_playback_time
+        adj_delay = rt_delay - self.pa_stream.get_output_latency()
+        self.audio_delay = 0
+        self.audio_sync = 0
+        if adj_delay > 0:
+            self.audio_delay = adj_delay
+            self.audio_sync = 0
+        else:
+            self.audio_sync = -adj_delay
+
+        logger.debug(
+            "Audio sync = {} rt_delay = {} adj_delay = {}".format(
+                self.audio_sync, rt_delay, adj_delay
+            )
+        )
+        self.g_pool.seek_control.time_slew = self.audio_sync
+        self.pa_stream.stop_stream()
+        self.audio_measured_latency = -1
 
     def adjust_audio_volume_filter_if_necessary(self):
         if self.filter_graph_list is None:
