@@ -279,6 +279,7 @@ class Audio_Playback(System_Plugin_Base):
 
             if start_stream:
                 self.calculate_delays(ts_audio_start)
+                self.start_audio()
         else:
             if self.pa_stream is not None and not self.pa_stream.is_stopped():
                 self.pa_stream.stop_stream()
@@ -317,6 +318,27 @@ class Audio_Playback(System_Plugin_Base):
         self.g_pool.seek_control.time_slew = self.audio_sync
         self.pa_stream.stop_stream()
         self.audio_measured_latency = -1
+
+    def start_audio(self):
+        if self.audio_delay < 0.001:
+            self.audio_start_time = monotonic()
+            self.pa_stream.start_stream()
+        else:
+
+            def delayed_audio_start():
+                if self.pa_stream.is_stopped():
+                    self.audio_start_time = monotonic()
+                    self.pa_stream.start_stream()
+                    self.audio_delay = 0
+                    logger.debug("Started delayed audio")
+                self.audio_timer.cancel()
+                self.audio_timer = None
+
+            logger.debug("Starting delayed audio timer")
+            self.audio_timer = Timer(self.audio_delay, delayed_audio_start)
+            self.audio_timer.start()
+
+        self.audio_paused = False
 
     def adjust_audio_volume_filter_if_necessary(self):
         if self.filter_graph_list is None:
