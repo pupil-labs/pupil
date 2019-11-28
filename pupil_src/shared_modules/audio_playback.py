@@ -59,6 +59,7 @@ class Audio_Playback(System_Plugin_Base):
         self.pa_stream = None
         self.audio_sync = 0.0
         self.audio_delay = 0.0
+        self.audio_timer = None
         self.next_audio_frame = None
         self.audio_start_pts = 0
         self.check_ts_consistency = False
@@ -172,14 +173,14 @@ class Audio_Playback(System_Plugin_Base):
 
     def _setup_filter_graph(self):
         self.current_audio_volume = self.req_audio_volume
-        print("Setting volume {} ".format(self.current_audio_volume))
+        logger.debug("Setting volume {} ".format(self.current_audio_volume))
         self.filter_graph = av.filter.Graph()
         self.filter_graph_list = []
         self.filter_graph_list.append(
             self.filter_graph.add_buffer(template=self.audio.stream)
         )
         args = "volume={}:precision=float".format(self.current_audio_volume)
-        print("args = {}".format(args))
+        logger.debug("args = {}".format(args))
         self.volume_filter = self.filter_graph.add("volume", args)
         self.filter_graph_list.append(self.volume_filter)
         self.filter_graph_list[-2].link_to(self.filter_graph_list[-1])
@@ -272,23 +273,14 @@ class Audio_Playback(System_Plugin_Base):
                 self.play = False
 
     def recent_events(self, events):
-        if self.audio_viz_trans is not None:
-            self.audio_viz_data, finished = self.audio_viz_trans.get_data(
-                log_scale=self.log_scale
-            )
-            if not finished:
-                self.audio_timeline.refresh()
-
-        if self.pa_stream is not None and not self.pa_stream.is_stopped():
-            if not self.audio_paused and not self.pa_stream.is_active():
-                logger.info("Reopening audio stream...")
-                self._setup_output_audio()
-        start_stream = False
+        self.update_audio_viz()
+        self.restart_audio_output_stream_if_necessary()
 
         if (
             self.g_pool.seek_control.playback_speed == 1.0
             and self.pa_stream is not None
         ):
+            start_stream = False
             self.play = True
             is_stream_paused = self.pa_stream.is_stopped() or self.audio_paused
             is_audio_delay_low_enough = self.audio_delay <= 0.001
@@ -307,36 +299,9 @@ class Audio_Playback(System_Plugin_Base):
                 else:
                     start_stream = False
 
-            if self.filter_graph_list is None:
-                self._setup_filter_graph()
-            elif self.req_audio_volume != self.current_audio_volume:
-                self.current_audio_volume = self.req_audio_volume
-                args = "{}".format(self.current_audio_volume)
-                self.volume_filter.cmd("volume", args)
+            self.adjust_audio_volume_filter_if_necessary()
+            self.fill_audio_queue()
 
-            frames_to_fetch = self.sec_to_frames(
-                max(0, self.req_buffer_size_secs - self.buffer_len_secs())
-            )
-            if frames_to_fetch > 0:
-                frames_chunk = itertools.islice(self.next_audio_frame, frames_to_fetch)
-                for audio_frame_p in frames_chunk:
-                    pts = audio_frame_p.pts
-                    audio_frame_p.pts = None
-                    if self.filter_graph_list is not None:
-                        self.filter_graph_list[0].push(audio_frame_p)
-                        audio_frame = self.filter_graph_list[-1].pull()
-                    else:
-                        # print("No filter graph!")
-                        audio_frame = self.audio_resampler.resample(audio_frame_p)
-                    audio_frame.pts = pts
-                    self.audio_bytes_fifo.append(
-                        (
-                            bytes(audio_frame.planes[0]),
-                            self.audio.timestamps[0]
-                            + audio_frame.pts * self.audio.stream.time_base,
-                        )
-                    )
-            # print("Frames in buffer {}".format(len(self.audio_bytes_fifo)))
             if start_stream:
                 rt_delay = (
                     self.audio.timestamps[audio_idx]
@@ -371,6 +336,7 @@ class Audio_Playback(System_Plugin_Base):
                             self.audio_delay = 0
                             logger.debug("<<< Started delayed audio")
                         self.audio_timer.cancel()
+                        self.audio_timer = None
 
                     logger.debug(">>> Starting delayed audio timer")
                     self.audio_timer = Timer(self.audio_delay, delayed_audio_start)
@@ -383,23 +349,52 @@ class Audio_Playback(System_Plugin_Base):
                 self.pa_stream.stop_stream()
             self.play = False
 
-    def cache_audio_data(self):
-        if self.get_audio_data:
-            if self.audio_viz_trans is None:
-                try:
-                    self.audio_viz_trans = Audio_Viz_Transform(self.g_pool.rec_dir)
-                except FileNotFoundError:
-                    self.get_audio_data = False
-                    return False
+    def update_audio_viz(self):
+        if self.audio_viz_trans is not None:
+            self.audio_viz_data, finished = self.audio_viz_trans.get_data(
+                log_scale=self.log_scale
+            )
+            if not finished:
+                self.audio_timeline.refresh()
 
-            a_levels, finished = self.audio_viz_trans.get_data()
-            if a_levels is not None:
-                self.cache["audio_level"] = a_levels
-            if a_levels is None or finished:
-                self.get_audio_data = False
-            return True
-        else:
-            return False
+    def restart_audio_output_stream_if_necessary(self):
+        if self.pa_stream is not None and not self.pa_stream.is_stopped():
+            if not self.audio_paused and not self.pa_stream.is_active():
+                logger.debug("Reopening audio stream...")
+                self._setup_output_audio()
+
+    def adjust_audio_volume_filter_if_necessary(self):
+        if self.filter_graph_list is None:
+            self._setup_filter_graph()
+        elif self.req_audio_volume != self.current_audio_volume:
+            self.current_audio_volume = self.req_audio_volume
+            args = "{}".format(self.current_audio_volume)
+            self.volume_filter.cmd("volume", args)
+
+    def fill_audio_queue(self):
+        frames_to_fetch = self.sec_to_frames(
+            max(0, self.req_buffer_size_secs - self.buffer_len_secs())
+        )
+        if frames_to_fetch > 0:
+            frames_chunk = itertools.islice(self.next_audio_frame, frames_to_fetch)
+            for audio_frame_p in frames_chunk:
+                pts = audio_frame_p.pts
+                audio_frame_p.pts = None
+                if self.filter_graph_list is not None:
+                    self.filter_graph_list[0].push(audio_frame_p)
+                    audio_frame = self.filter_graph_list[-1].pull()
+                else:
+                    # print("No filter graph!")
+                    audio_frame = self.audio_resampler.resample(audio_frame_p)
+                audio_frame.pts = pts
+                self.audio_bytes_fifo.append(
+                    (
+                        bytes(audio_frame.planes[0]),
+                        self.audio.timestamps[0]
+                        + audio_frame.pts * self.audio.stream.time_base,
+                    )
+                )
+        # print("Frames in buffer {}".format(len(self.audio_bytes_fifo)))
 
     def draw_audio(self, width, height, scale):
         with gl_utils.Coord_System(*self.xlim, *self.ylim):
@@ -443,3 +438,8 @@ class Audio_Playback(System_Plugin_Base):
         self.audio_timeline.content_height *= 2
         self.g_pool.user_timelines.append(self.audio_timeline)
         self.menu.append(ui.Switch("log_scale", self, label="Log scale"))
+
+    def cleanup(self):
+        if self.audio_timer is not None:
+            self.audio_timer.cancel()
+            self.audio_timer = None
