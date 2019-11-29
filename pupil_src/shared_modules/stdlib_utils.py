@@ -62,3 +62,30 @@ class unique(collections.abc.Iterable):
                 by_key[key] = self._select(old_elem, new_elem)
 
         return iter(by_key.values())
+
+
+def lazy_property(init_fn, **kwargs):
+    is_readonly = kwargs.get("readonly", False)
+    assert isinstance(is_readonly, bool)
+
+    # TODO: Make this thread-safe
+
+    _storage = None
+    _did_init = False
+
+    def fget(self):
+        nonlocal _did_init, _storage, init_fn
+        if not _did_init:
+            _storage = init_fn(self)
+            _did_init = True
+        return _storage
+
+    def fset(self, value):
+        nonlocal _did_init, _storage
+        _storage = value
+        _did_init = True
+
+    if is_readonly:
+        return property(fget=fget)
+    else:
+        return property(fget=fget, fset=fset, fdel=None)
