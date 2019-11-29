@@ -14,6 +14,7 @@ import functools
 import itertools
 import operator
 import collections
+import pathlib
 
 
 is_none = functools.partial(operator.is_, None)
@@ -89,3 +90,16 @@ def lazy_property(init_fn, **kwargs):
         return property(fget=fget)
     else:
         return property(fget=fget, fset=fset, fdel=None)
+
+
+def create_temporary_unique_file_path(name=None, *, ext: str) -> pathlib.Path:
+    from uuid import uuid4
+    from tempfile import mkdtemp
+
+    path = pathlib.Path(mkdtemp())
+    assert path.is_dir
+
+    path = path.joinpath(name or uuid4())
+    path = path.with_suffix(ext)
+
+    return path
