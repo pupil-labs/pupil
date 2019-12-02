@@ -99,7 +99,10 @@ class AudioCapturePlugin(Plugin):
         self.ui_mic_check_status_text.text = self.mic_check_controller.status_string
 
     def on_notify(self, notification):
-        pass
+        if notification["subject"] == "recording.started":
+            self._on_recording_started(rec_dir=notification["rec_path"])
+        elif notification["subject"] == "recording.stopped":
+            self._on_recording_stopped()
 
     def cleanup(self):
         self.source_controller.cleanup()
@@ -115,3 +118,10 @@ class AudioCapturePlugin(Plugin):
     def _on_source_selected(self, name: T.Optional[str]):
         self.capture_controller.source_name = name
         self.mic_check_controller.source_name = name
+
+    def _on_recording_started(self, rec_dir):
+        out_path = os.path.join(rec_dir, "audio.mp4")
+        self.capture_controller.start_recording(out_path)
+
+    def _on_recording_stopped(self):
+        self.capture_controller.stop_recording()
