@@ -61,6 +61,9 @@ class AudioCaptureController(Observable):
         self._capture = None
         self._status_string = self._status_str_recording_finished()
 
+    def cleanup(self):
+        self.stop_recording()
+
     # Private
 
     def _status_str_idle(self) -> str:

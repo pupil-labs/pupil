@@ -72,6 +72,11 @@ class AudioCapturePlugin(Plugin):
     def on_notify(self, notification):
         pass
 
+    def cleanup(self):
+        self.source_controller.cleanup()
+        self.capture_controller.cleanup()
+        self.mic_check_controller.cleanup()
+
     # Private
 
     def _on_source_selected(self, name: T.Optional[str]):

@@ -60,6 +60,9 @@ class AudioMicCheckController(Observable):
         )
         self._checking_thread.start()
 
+    def cleanup(self):
+        pass
+
     # Callbacks
 
     def on_check_started(self):
