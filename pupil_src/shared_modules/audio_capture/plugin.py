@@ -43,6 +43,8 @@ class AudioCapturePlugin(Plugin):
 
         self.mic_check_controller = AudioMicCheckController()
 
+        self._on_source_selected(self.source_controller.current_source)
+
     def get_init_dict(self):
         return {"audio_src": self.source_controller.current_source}
 
