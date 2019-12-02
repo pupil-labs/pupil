@@ -16,7 +16,7 @@ from pathlib import Path
 
 from pupil_audio.nonblocking import PyAudio2PyAVCapture
 
-from stdlib_utils import _create_temporary_unique_file_path
+from stdlib_utils import create_temporary_unique_file_path
 from observable import Observable
 
 
@@ -84,7 +84,7 @@ class AudioMicCheckController(Observable):
 
     def _mic_check_fn(self, in_name, duration):
 
-        out_path = _create_temporary_unique_file_path(ext=".mp4")
+        out_path = create_temporary_unique_file_path(ext=".mp4")
         start_time = time.monotonic()
         sleep_step = 0.1
         capture = None
