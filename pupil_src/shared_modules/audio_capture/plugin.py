@@ -94,6 +94,9 @@ class AudioCapturePlugin(Plugin):
 
     def recent_events(self, events):
         self.ui_source_selector.read_only = self._is_audio_busy
+        self.ui_status_text.text = self.capture_controller.status_string
+        self.ui_mic_check_button.read_only = not self._is_audio_busy
+        self.ui_mic_check_status_text.text = self.mic_check_controller.status_string
 
     def on_notify(self, notification):
         pass
@@ -104,6 +107,10 @@ class AudioCapturePlugin(Plugin):
         self.mic_check_controller.cleanup()
 
     # Private
+
+    @property
+    def _is_audio_busy(self) -> bool:
+        return self.capture_controller.is_recording or self.mic_check_controller.is_checking
 
     def _on_source_selected(self, name: T.Optional[str]):
         print(f"===> SELECTED NEW AUDIO SOURCE: {name}") #FIXME
