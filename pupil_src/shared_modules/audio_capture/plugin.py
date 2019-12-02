@@ -57,11 +57,37 @@ class AudioCapturePlugin(Plugin):
         )
     )
 
+    ui_status_text = stdlib_utils.lazy_property(
+        lambda self: ui.Info_Text(
+            self.capture_controller.status_string,
+        )
+    )
+
+    ui_mic_check_button = stdlib_utils.lazy_property(
+        lambda self: ui.Button(
+            label="Mic Check",
+            function=self.mic_check_controller.perform_check,
+        )
+    )
+
+    ui_mic_check_status_text = stdlib_utils.lazy_property(
+        lambda self: ui.Info_Text(
+            self.mic_check_controller.status_string,
+        )
+    )
+
     def init_ui(self):
         self.add_menu()
         self.menu.label = self.parse_pretty_class_name()
         self.menu.append(ui.Info_Text(self.__doc__))
+        # Input selection section
+        self.menu.append(ui.Separator())
         self.menu.append(self.ui_source_selector)
+        self.menu.append(self.ui_status_text)
+        # Mic check section
+        self.menu.append(ui.Separator())
+        self.menu.append(self.ui_mic_check_button)
+        self.menu.append(self.ui_mic_check_status_text)
 
     def deinit_ui(self):
         self.remove_menu()
