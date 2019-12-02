@@ -18,6 +18,8 @@ from plugin import Plugin
 from pyglui import ui
 
 from .controller.source import AudioSourceController
+from .controller.capture import AudioCaptureController
+from .controller.mic_check import AudioMicCheckController
 
 
 class AudioCapturePlugin(Plugin):
@@ -33,8 +35,13 @@ class AudioCapturePlugin(Plugin):
 
     def __init__(self, g_pool, audio_src=None):
         super().__init__(g_pool)
+
         self.source_controller = AudioSourceController(audio_src)
         self.source_controller.add_observer("on_selected", self._on_source_selected)
+
+        self.capture_controller = AudioCaptureController()
+
+        self.mic_check_controller = AudioMicCheckController()
 
     def get_init_dict(self):
         return {"audio_src": self.source_controller.current_source}
