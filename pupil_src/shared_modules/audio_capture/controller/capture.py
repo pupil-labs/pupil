@@ -56,6 +56,7 @@ class AudioCaptureController(Observable):
     def stop_recording(self):
         if not self.is_recording:
             logger.debug("AudioCaptureController.stop_recording called on an already idle instance")
+            return
         self._capture.stop()
         self._capture = None
         self._status_string = self._status_str_recording_finished()
