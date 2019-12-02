@@ -756,6 +756,7 @@ def world_profiled(
     user_dir,
     version,
     preferred_remote_port,
+    hide_ui,
 ):
     import cProfile
     import subprocess
@@ -763,7 +764,7 @@ def world_profiled(
     from .world import world
 
     cProfile.runctx(
-        "world(timebase, eye_procs_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port)",
+        "world(timebase, eye_procs_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port,hide_ui)",
         {
             "timebase": timebase,
             "eye_procs_alive": eye_procs_alive,
@@ -773,6 +774,7 @@ def world_profiled(
             "user_dir": user_dir,
             "version": version,
             "preferred_remote_port": preferred_remote_port,
+            "hide_ui": hide_ui,
         },
         locals(),
         "world.pstats",
