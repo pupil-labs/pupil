@@ -127,3 +127,9 @@ class AudioCapturePlugin(Plugin):
 
     def _on_recording_stopped(self):
         self.capture_controller.stop_recording()
+
+    def _on_mic_check_started(self):
+        pass
+
+    def _on_mic_check_finished(self):
+        pass
