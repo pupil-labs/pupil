@@ -113,4 +113,5 @@ class AudioCapturePlugin(Plugin):
         return self.capture_controller.is_recording or self.mic_check_controller.is_checking
 
     def _on_source_selected(self, name: T.Optional[str]):
-        print(f"===> SELECTED NEW AUDIO SOURCE: {name}") #FIXME
+        self.capture_controller.source_name = name
+        self.mic_check_controller.source_name = name
