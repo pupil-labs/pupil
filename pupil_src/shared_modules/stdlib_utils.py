@@ -99,7 +99,7 @@ def create_temporary_unique_file_path(name=None, *, ext: str) -> pathlib.Path:
     path = pathlib.Path(mkdtemp())
     assert path.is_dir
 
-    path = path.joinpath(name or uuid4())
+    path = path.joinpath(name or str(uuid4()))
     path = path.with_suffix(ext)
 
     return path
