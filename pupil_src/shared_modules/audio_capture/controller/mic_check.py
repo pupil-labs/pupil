@@ -53,12 +53,19 @@ class AudioMicCheckController(Observable):
         if self.is_checking:
             logger.debug("AudioMicCheckController.perform_check called on an already busy instance")
             return
+        self._status_string = self._status_str_checking()
         self._checking_thread = threading.Thread(
             name=type(self).__class__.__name__,
             target=self._mic_check_fn,
             args=(self.source_name, self.mic_check_duration_sec),
+            daemon=True,
         )
         self._checking_thread.start()
+
+    def _close(self):
+        if self._checking_thread is not None:
+            self._checking_thread.join()
+            self._checking_thread = None
 
     def cleanup(self):
         pass
@@ -86,19 +93,10 @@ class AudioMicCheckController(Observable):
         return f"Mic check failed: {reason}"
 
     def _mic_check_fn(self, in_name, duration):
-
         out_path = create_temporary_unique_file_path(ext=".mp4")
         start_time = time.monotonic()
         sleep_step = 0.1
         capture = None
-
-        def _report_failure(reason):
-            self._status_string = self._status_str_failure(reason=reason)
-            self.on_check_finished()
-
-        def _report_success():
-            self._status_string = self._status_str_success()
-            self.on_check_finished()
 
         self.on_check_started()
 
@@ -110,27 +108,29 @@ class AudioMicCheckController(Observable):
             capture.start()
             while time.monotonic() - start_time < duration:
                 time.sleep(sleep_step)
+
+            self._validate_out_file(out_path)
+
+            out_path.unlink()
+
+            self._status_string = self._status_str_success()
+
         except Exception as err:
-            return _report_failure(err)
+            self._status_string = self._status_str_failure(err)
+
         finally:
-            if capture:
+            if capture is not None:
                 capture.stop()
             self._checking_thread = None
+            self.on_check_finished()
 
-        is_output_valid, failure_reason = self._validate_out_file(out_path)
-
-        if not is_output_valid:
-            return _report_failure(failure_reason)
-
-        out_path.unlink()
-        return _report_success()
 
     @staticmethod
     def _validate_out_file(out_path: Path) -> T.Tuple[bool, str]:
         if not out_path.is_file():
-            return (False, "Recorded file was not saved")
+            raise ValueError("Recorded file was not saved")
 
         if out_path.stat().st_size == 0:
-            return (False, "Recorded file is empty")
+            raise ValueError("Recorded file is empty")
 
-        return (True, "")
+        return True
