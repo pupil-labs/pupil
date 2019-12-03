@@ -42,6 +42,8 @@ class AudioCapturePlugin(Plugin):
         self.capture_controller = AudioCaptureController()
 
         self.mic_check_controller = AudioMicCheckController()
+        self.mic_check_controller.add_observer("on_check_started", self._on_mic_check_started)
+        self.mic_check_controller.add_observer("on_check_finished", self._on_mic_check_finished)
 
         self._on_source_selected(self.source_controller.current_source)
 
@@ -95,16 +97,16 @@ class AudioCapturePlugin(Plugin):
         self.remove_menu()
 
     def recent_events(self, events):
-        self.ui_source_selector.read_only = self._is_audio_busy
-        self.ui_status_text.text = self.capture_controller.status_string
-        self.ui_mic_check_button.read_only = not self._is_audio_busy
-        self.ui_mic_check_status_text.text = self.mic_check_controller.status_string
+        pass
 
     def on_notify(self, notification):
         if notification["subject"] == "recording.started":
-            self._on_recording_started(rec_dir=notification["rec_path"])
+            out_path = os.path.join(notification["rec_path"], "audio.mp4")
+            self.capture_controller.start_recording(out_path)
+            self._on_capture_started()
         elif notification["subject"] == "recording.stopped":
-            self._on_recording_stopped()
+            self.capture_controller.stop_recording()
+            self._on_capture_finished()
 
     def cleanup(self):
         self.source_controller.cleanup()
@@ -113,23 +115,29 @@ class AudioCapturePlugin(Plugin):
 
     # Private
 
-    @property
-    def _is_audio_busy(self) -> bool:
-        return self.capture_controller.is_recording or self.mic_check_controller.is_checking
-
     def _on_source_selected(self, name: T.Optional[str]):
         self.capture_controller.source_name = name
         self.mic_check_controller.source_name = name
+        self._update_ui()
 
-    def _on_recording_started(self, rec_dir):
-        out_path = os.path.join(rec_dir, "audio.mp4")
-        self.capture_controller.start_recording(out_path)
+    def _on_capture_started(self):
+        self._update_ui()
 
-    def _on_recording_stopped(self):
-        self.capture_controller.stop_recording()
+    def _on_capture_finished(self):
+        self._update_ui()
 
     def _on_mic_check_started(self):
-        pass
+        self._update_ui()
 
     def _on_mic_check_finished(self):
-        pass
+        self._update_ui()
+
+    def _update_ui(self):
+        is_audio_busy = self.capture_controller.is_recording or self.mic_check_controller.is_checking
+
+        self.ui_source_selector.read_only = is_audio_busy
+        self.ui_status_text.text = self.capture_controller.status_string
+
+        self.ui_mic_check_button.read_only = is_audio_busy or not self.mic_check_controller.can_perform_check
+        # TODO: Disable mic check button if self.mic_check_controller.source_name is None
+        self.ui_mic_check_status_text.text = self.mic_check_controller.status_string
