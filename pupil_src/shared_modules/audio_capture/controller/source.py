@@ -77,13 +77,14 @@ class AudioSourceController(Observable):
         self._update_discovered_sources()
 
     def _update_discovered_sources(self):
-        names = self._monitor.devices_by_name.keys()
-        assert _AUDIO_SOURCE_NONE_NAME not in names
+        devices_by_name = self._monitor.devices_by_name
 
-        names = list(names)
-        names.insert(0, _AUDIO_SOURCE_NONE_NAME)
+        input_names = [name for name, device_info in devices_by_name.items() if device_info.is_input]
+        assert _AUDIO_SOURCE_NONE_NAME not in input_names
 
-        self._discovered_sources = names
+        input_names.insert(0, _AUDIO_SOURCE_NONE_NAME)
+
+        self._discovered_sources = input_names
 
     def _set_source_if_valid(self, name):
         self._update_discovered_sources()
