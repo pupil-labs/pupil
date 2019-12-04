@@ -139,5 +139,4 @@ class AudioCapturePlugin(Plugin):
         self.ui_status_text.text = self.capture_controller.status_string
 
         self.ui_mic_check_button.read_only = is_audio_busy or not self.mic_check_controller.can_perform_check
-        # TODO: Disable mic check button if self.mic_check_controller.source_name is None
         self.ui_mic_check_status_text.text = self.mic_check_controller.status_string
