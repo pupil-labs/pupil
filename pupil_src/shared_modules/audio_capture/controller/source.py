@@ -8,6 +8,8 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import os
+import sys
 import time
 import logging
 import threading
@@ -15,10 +17,7 @@ import typing as T
 
 from observable import Observable
 
-from pupil_audio.utils.pyaudio import DeviceInfo
-from pupil_audio.utils.pyaudio import get_all_inputs as pyaudio_get_all_inputs
-from pupil_audio.utils.pyaudio import create_session as pyaudio_create_session
-from pupil_audio.utils.pyaudio import destroy_session as pyaudio_destroy_session
+from pupil_audio import PyAudioBackgroundDeviceMonitor, DeviceInfo
 
 
 _AUDIO_SOURCE_NONE_NAME = "No Audio"
@@ -32,11 +31,11 @@ class AudioSourceController(Observable):
         self._current_source = None
         self._discovered_sources = []
 
-        self._monitor = AudioSourceMonitor()
+        self._monitor = ObservableBackgroundDeviceMonitor()
         self._monitor.add_observer("on_device_connected", self._on_device_connected)
         self._monitor.add_observer("on_device_updated", self._on_device_updated)
         self._monitor.add_observer("on_device_disconnected", self._on_device_disconnected)
-        self._monitor.start_monitoring()
+        self._monitor.start()
 
         self._set_source_if_valid(audio_src)
 
@@ -103,24 +102,15 @@ class AudioSourceController(Observable):
             self.on_selected(new_valid_source)
 
 
-class AudioSourceMonitor(Observable):
-    def __init__(self):
-        self._session = pyaudio_create_session()
-        self._devices_by_name = self._get_input_devices_by_name()
-        self._should_run = threading.Event()
-        self._monitor_thread = None
-
-    @property
-    def is_running(self):
-        return self._should_run.is_set()
+class ObservableBackgroundDeviceMonitor(PyAudioBackgroundDeviceMonitor, Observable):
 
     @property
     def devices_by_name(self) -> T.Mapping[str, DeviceInfo]:
-        return self._devices_by_name
+        return PyAudioBackgroundDeviceMonitor.devices_by_name.fget(self)
 
     @devices_by_name.setter
-    def devices_by_name(self, new_devices_by_name: DeviceInfo):
-        old_devices_by_name = self._devices_by_name
+    def devices_by_name(self, new_devices_by_name: T.Mapping[str, DeviceInfo]):
+        old_devices_by_name = self.devices_by_name
 
         old_names = set(old_devices_by_name.keys())
         new_names = set(new_devices_by_name.keys())
@@ -145,30 +135,7 @@ class AudioSourceMonitor(Observable):
             del old_devices_by_name[name]
             self.on_device_disconnected(device_info)
 
-        self._devices_by_name = old_devices_by_name
-
-    def start_monitoring(self):
-        if self.is_running:
-            return
-        self._should_run.set()
-        self._monitor_thread = threading.Thread(
-            name=type(self).__class__.__name__,
-            target=self._monitor_loop,
-            daemon=True,
-        )
-        self._monitor_thread.start()
-
-    def stop_monitoring(self):
-        self._should_run.clear()
-        if self._monitor_thread is not None:
-            self._monitor_thread.join()
-            self._monitor_thread = None
-
-    def cleanup(self):
-        self.stop_monitoring()
-        if self._session is not None:
-            pyaudio_destroy_session(self._session)
-            self._session = None
+        PyAudioBackgroundDeviceMonitor.devices_by_name.fset(self, old_devices_by_name)
 
     def on_device_connected(self, device_info):
         pass
@@ -178,15 +145,3 @@ class AudioSourceMonitor(Observable):
 
     def on_device_disconnected(self, device_info):
         pass
-
-    def _get_input_devices_by_name(self):
-        return pyaudio_get_all_inputs(unowned_session=self._session)
-
-    def _monitor_loop(self, sleep_time=3):
-        while self.is_running:
-            try:
-                x = self._get_input_devices_by_name()
-                self.devices_by_name = x
-                time.sleep(sleep_time)
-            except Exception as err:
-                logger.error(err)
