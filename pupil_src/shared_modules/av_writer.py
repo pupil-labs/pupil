@@ -310,56 +310,61 @@ class MPEG_Audio_Writer(MPEG_Writer):
         super().__init__(*args, **kwargs)
 
         try:
-            self.audio = audio_utils.load_audio(audio_dir)
+            self.audio_parts = audio_utils.load_audio(audio_dir)
             self.audio_export_stream = self.container.add_stream(
-                template=self.audio.stream
+                template=self.audio_parts[0].stream
             )
         except audio_utils.NoAudioLoadedError:
-            logger.warning("Could not mux audio. File not found.")
-            self.audio = None
+            logger.debug("Could not mux audio. File not found.")
+            self.audio_parts = None
+            return
 
-        self.num_audio_packets_decoded = 0
-        self.last_audio_pts = float("-inf")
+        # setup stateful packet iterator
+        self.audio_packet_iterator = self.iterate_audio_packets()
 
     def encode_frame(self, input_frame, pts: int) -> T.Iterator[Packet]:
         # encode video packets from AV_Writer base first
         yield from super().encode_frame(input_frame, pts)
 
-        if self.audio is None:
+        if self.audio_parts is None:
             return
 
-        # encode audio packets
-        for audio_packet in self.audio.container.demux():
-            if self.num_audio_packets_decoded >= len(self.audio.timestamps):
-                logger.debug(
-                    "More audio frames decoded than there are timestamps: {} > {}".format(
-                        self.num_audio_packets_decoded, len(self.audio.timestamps)
-                    )
-                )
-                break
-            audio_pts = int(
-                (
-                    self.audio.timestamps[self.num_audio_packets_decoded]
-                    - self.start_time
-                )
-                / self.audio_export_stream.time_base
-            )
-            # ensure strong monotonic pts
-            pts = max(pts, self.last_audio_pts + 1)
-            self.last_audio_pts = pts
-
-            audio_packet.pts = audio_pts
-            audio_packet.dts = audio_pts
-            audio_packet.stream = self.audio_export_stream
-            self.num_audio_packets_decoded += 1
-
-            audio_ts = audio_pts * self.audio_export_stream.time_base
-            if audio_ts < 0:
-                logger.debug("Seeking: {} -> {}".format(audio_ts, self.start_time))
-                continue  # seek to start_time
+        # encode all audio packets up to current frame timestamp
+        frame_ts = self.frame.pts * self.time_base
+        for audio_packet in self.audio_packet_iterator:
+            audio_ts = audio_packet.pts * self.audio_export_stream.time_base
 
             yield audio_packet
 
-            frame_ts = self.frame.pts * self.time_base
             if audio_ts > frame_ts:
-                break  # wait for next image
+                # done for this frame, pause iteration
+                return
+
+    def iterate_audio_packets(self):
+        """Yields all audio packets from start_time to end."""
+        if self.audio_parts is None:
+            return
+
+        self.last_audio_pts = float("-inf")
+
+        for audio_part in self.audio_parts:
+            packets = audio_part.container.demux(audio=0)
+            for packet, raw_ts in zip(packets, audio_part.timestamps):
+
+                audio_ts = raw_ts - self.start_time
+                audio_pts = int(audio_ts / self.audio_export_stream.time_base)
+
+                # ensure strong monotonic pts
+                audio_pts = max(audio_pts, self.last_audio_pts + 1)
+                self.last_audio_pts = audio_pts
+
+                packet.pts = audio_pts
+                packet.dts = audio_pts
+                packet.stream = self.audio_export_stream
+
+                if audio_ts < 0:
+                    logger.debug(f"Seeking audio: {audio_ts} -> {self.start_time}")
+                    # discard all packets before start time
+                    continue
+
+                yield packet
