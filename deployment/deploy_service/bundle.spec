@@ -177,9 +177,11 @@ elif platform.system() == "Windows":
         "scipy.special._ufuncs_cxx",
     ]
 
+    external_libs_path = pathlib.Path("../../pupil_external")
+
     a = Analysis(
         ["../../pupil_src/main.py"],
-        pathex=["../../pupil_src/shared_modules/", "../../pupil_external"],
+        pathex=["../../pupil_src/shared_modules/", str(external_libs_path)],
         binaries=None,
         datas=None,
         hiddenimports=pyglui_hidden_imports + scipy_imports + av_hidden_imports,
@@ -203,6 +205,13 @@ elif platform.system() == "Windows":
         console=False,
         resources=["pupil-service.ico,ICON"],
     )
+
+    vc_redist_path = external_libs_path / "vc_redist"
+    vc_redist_libs = [
+        (lib.name, str(lib), "BINARY")
+        for lib in vs_redist_path.glob("*.dll")
+    ]
+
     coll = COLLECT(
         exe,
         a.binaries,
@@ -214,6 +223,7 @@ elif platform.system() == "Windows":
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         np_dll_list,
+        vc_redist_libs,
         strip=False,
         upx=True,
         name="Pupil Service",
