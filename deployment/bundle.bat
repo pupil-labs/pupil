@@ -43,7 +43,7 @@ call :Bundle player %current_tag%
 cd %release_dir%
 for /d %%d in (*) do (
 	echo Adding %%d
-	7z a -t7z ..\%release_dir%.7z %%d
+	7z a -tzip ..\%release_dir%.zip %%d
 )
 cd ..
 
