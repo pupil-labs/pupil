@@ -60,9 +60,12 @@ class Audio_Playback(System_Plugin_Base):
         self.audio_sync = 0.0
         self.audio_delay = 0.0
         self.audio_timer = None
-        self.next_audio_frame = None
+        self.audio_frame_iterator = None
         self.audio_start_pts = 0
-        self.check_ts_consistency = False
+
+        # debug flag. Only set if timestamp consistency should be checked
+        self.should_check_ts_consistency = False
+
         self.req_audio_volume = 1.0
         self.current_audio_volume = 1.0
         self.req_buffer_size_secs = 0.5
@@ -91,7 +94,7 @@ class Audio_Playback(System_Plugin_Base):
             self._setup_input_audio_part(part_idx)
 
     def calculate_audio_bounds(self):
-        audio_part_boundaries = (la.timestamps[[0, -1]] for la in self.audio_all)
+        audio_part_boundaries = (audio.timestamps[[0, -1]] for audio in self.audio_all)
         audio_part_boundaries = itertools.chain.from_iterable(audio_part_boundaries)
         self.audio_bounds = np.fromiter(audio_part_boundaries, dtype=float)
 
@@ -109,7 +112,7 @@ class Audio_Playback(System_Plugin_Base):
         self.audio = self.audio_all[part_idx]
         self.audio_bytes_fifo.clear()
 
-        self.next_audio_frame = self._next_audio_frame()
+        self.audio_frame_iterator = self.get_audio_frame_iterator()
         self.audio_resampler = av.audio.resampler.AudioResampler(
             format=self.audio.stream.format.packed,
             layout=self.audio.stream.layout,
@@ -118,16 +121,16 @@ class Audio_Playback(System_Plugin_Base):
         self.audio_paused = False
 
         self.audio.stream.seek(0)
-        af0 = next(self.next_audio_frame)
-        self.audio_pts_rate = af0.samples
-        self.audio_start_pts = af0.pts
+        first_frame = next(self.audio_frame_iterator)
+        self.audio_pts_rate = first_frame.samples
+        self.audio_start_pts = first_frame.pts
 
         logger.debug(
             "audio_pts_rate = {} start_pts = {}".format(
                 self.audio_pts_rate, self.audio_start_pts
             )
         )
-        self.check_ts_consistency_if_necessary(reference_frame=af0)
+        self.check_ts_consistency(reference_frame=first_frame)
         self.seek_to_audio_frame(0)
 
         logger.debug(
@@ -171,6 +174,7 @@ class Audio_Playback(System_Plugin_Base):
         self.ylim = (0, 210)
 
     def _setup_filter_graph(self):
+        """Graph: buffer -> volume filter -> resample -> buffersink"""
         self.current_audio_volume = self.req_audio_volume
         logger.debug("Setting volume {} ".format(self.current_audio_volume))
         self.filter_graph = av.filter.Graph()
@@ -240,7 +244,7 @@ class Audio_Playback(System_Plugin_Base):
         else:
             return self.audio_sync
 
-    def _next_audio_frame(self):
+    def get_audio_frame_iterator(self):
         for packet in self.audio.container.demux(self.audio.stream):
             for frame in packet.decode():
                 if frame:
@@ -257,7 +261,7 @@ class Audio_Playback(System_Plugin_Base):
         except av.AVError:
             raise FileSeekError()
         else:
-            self.next_audio_frame = self._next_audio_frame()
+            self.audio_frame_iterator = self.get_audio_frame_iterator()
             self.audio_bytes_fifo.clear()
 
     def seek_to_frame(self, frame_idx):
@@ -274,35 +278,34 @@ class Audio_Playback(System_Plugin_Base):
     def recent_events(self, events):
         self.update_audio_viz()
         self.setup_pyaudio_output_if_necessary()
-        if (
-            self.g_pool.seek_control.playback_speed == 1.0
-            and self.pa_stream is not None
-        ):
-            self.check_audio_part_setup()
-            start_stream = False
-            self.play = True
-            is_stream_paused = self.pa_stream.is_stopped() or self.audio_paused
-            is_audio_delay_low_enough = self.audio_delay <= 0.001
-            if is_stream_paused and is_audio_delay_low_enough:
-                ts_audio_start = self.calc_audio_start_ts()
-                if ts_audio_start is not None:
-                    start_stream = True
-
-            self.adjust_audio_volume_filter_if_necessary()
-            self.fill_audio_queue()
-
-            if start_stream:
-                self.calculate_delays(ts_audio_start)
-                self.start_audio()
-        else:
-            if self.pa_stream is not None and not self.pa_stream.is_stopped():
+        if self.pa_stream is None:
+            self.play = False
+            return
+        if self.g_pool.seek_control.playback_speed != 1.0:
+            if not self.pa_stream.is_stopped():
                 self.pa_stream.stop_stream()
             self.play = False
+            return
+
+        self.check_audio_part_setup()
+        start_stream = False
+        self.play = True
+        is_stream_paused = self.pa_stream.is_stopped() or self.audio_paused
+        is_audio_delay_low_enough = self.audio_delay <= 0.001
+        if is_stream_paused and is_audio_delay_low_enough:
+            ts_audio_start = self.calc_audio_start_ts()
+            if ts_audio_start is not None:
+                start_stream = True
+
+        self.adjust_audio_volume_filter_if_necessary()
+        self.fill_audio_queue()
+
+        if start_stream:
+            self.calculate_delays(ts_audio_start)
+            self.start_audio()
 
     def calc_audio_start_ts(self):
         pbt = self.g_pool.seek_control.current_playback_time
-        # frame_idx = self.g_pool.seek_control.ts_idx_from_playback_time(pbt)
-        # current_world_ts = self.g_pool.timestamps[frame_idx]
         audio_start, audio_end = self.audio.timestamps[[0, -1]]
 
         if audio_start <= pbt <= audio_end:
@@ -325,19 +328,21 @@ class Audio_Playback(System_Plugin_Base):
                 self._setup_output_audio()
 
     def calculate_delays(self, ts_audio_start):
-        rt_delay = ts_audio_start - self.g_pool.seek_control.current_playback_time
-        adj_delay = rt_delay - self.pa_stream.get_output_latency()
+        real_time_delay = (
+            ts_audio_start - self.g_pool.seek_control.current_playback_time
+        )
+        adjusted_delay = real_time_delay - self.pa_stream.get_output_latency()
         self.audio_delay = 0
         self.audio_sync = 0
-        if adj_delay > 0:
-            self.audio_delay = adj_delay
+        if adjusted_delay > 0:
+            self.audio_delay = adjusted_delay
             self.audio_sync = 0
         else:
-            self.audio_sync = -adj_delay
+            self.audio_sync = -adjusted_delay
 
         logger.debug(
             "Audio sync = {} rt_delay = {} adj_delay = {}".format(
-                self.audio_sync, rt_delay, adj_delay
+                self.audio_sync, real_time_delay, adjusted_delay
             )
         )
         self.g_pool.seek_control.time_slew = self.audio_sync
@@ -377,26 +382,24 @@ class Audio_Playback(System_Plugin_Base):
         frames_to_fetch = self.sec_to_frames(
             max(0, self.req_buffer_size_secs - self.buffer_len_secs())
         )
-        if frames_to_fetch > 0:
-            frames_chunk = itertools.islice(self.next_audio_frame, frames_to_fetch)
-            for audio_frame_p in frames_chunk:
-                pts = audio_frame_p.pts
-                audio_frame_p.pts = None
-                if self.filter_graph_list is not None:
-                    self.filter_graph_list[0].push(audio_frame_p)
-                    audio_frame = self.filter_graph_list[-1].pull()
-                else:
-                    # print("No filter graph!")
-                    audio_frame = self.audio_resampler.resample(audio_frame_p)
-                audio_frame.pts = pts
-                self.audio_bytes_fifo.append(
-                    (
-                        bytes(audio_frame.planes[0]),
-                        self.audio.timestamps[0]
-                        + audio_frame.pts * self.audio.stream.time_base,
-                    )
-                )
-        # print("Frames in buffer {}".format(len(self.audio_bytes_fifo)))
+        if frames_to_fetch <= 0:
+            return
+        frames_chunk = itertools.islice(self.audio_frame_iterator, frames_to_fetch)
+        for audio_frame_p in frames_chunk:
+            pts = audio_frame_p.pts
+            audio_frame_p.pts = None
+            if self.filter_graph_list is not None:
+                self.filter_graph_list[0].push(audio_frame_p)
+                audio_frame = self.filter_graph_list[-1].pull()
+            else:
+                audio_frame = self.audio_resampler.resample(audio_frame_p)
+            audio_frame.pts = pts
+            audio_buffer = bytes(audio_frame.planes[0])
+
+            audio_part_start_ts = self.audio.timestamps[0]
+            audio_part_progress = audio_frame.pts * self.audio.stream.time_base
+            audio_playback_time = audio_part_start_ts + audio_part_progress
+            self.audio_bytes_fifo.append((audio_buffer, audio_playback_time))
 
     def draw_audio(self, width, height, scale):
         with gl_utils.Coord_System(*self.xlim, *self.ylim):
@@ -410,25 +413,17 @@ class Audio_Playback(System_Plugin_Base):
         self.menu.label = "Audio Playback"
 
         def set_volume(val):
-            # print("set_volume!")
             self.req_audio_volume = val
 
         self.menu.append(
             ui.Slider(
-                "req_audio_volume",
-                self,
-                # setter=set_volume,
-                step=0.05,
-                min=0.0,
-                max=1.0,
-                label="Volume",
+                "req_audio_volume", self, step=0.05, min=0.0, max=1.0, label="Volume",
             )
         )
         self.menu.append(
             ui.Slider(
                 "req_buffer_size_secs",
                 self,
-                # setter=set_volume,
                 step=0.05,
                 min=0.0,
                 max=1.0,
@@ -446,10 +441,10 @@ class Audio_Playback(System_Plugin_Base):
             self.audio_timer.cancel()
             self.audio_timer = None
 
-    def check_ts_consistency_if_necessary(self, reference_frame):
-        if self.check_ts_consistency:
+    def check_ts_consistency(self, reference_frame):
+        if self.should_check_ts_consistency:
             print("**** Checking stream")
-            for i, af in enumerate(self.next_audio_frame):
+            for i, af in enumerate(self.audio_frame_iterator):
                 fnum = i + 1
                 if af.samples != reference_frame.samples:
                     print("fnum {} samples = {}".format(fnum, af.samples))
