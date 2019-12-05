@@ -1,7 +1,7 @@
 # -*- mode: python -*-
 
 
-import platform, sys, os, os.path, numpy, glob
+import platform, sys, os, os.path, numpy, glob, pathlib
 
 av_hidden_imports = [
     "av.format",
@@ -209,7 +209,7 @@ elif platform.system() == "Windows":
     vc_redist_path = external_libs_path / "vc_redist"
     vc_redist_libs = [
         (lib.name, str(lib), "BINARY")
-        for lib in vs_redist_path.glob("*.dll")
+        for lib in vc_redist_path.glob("*.dll")
     ]
 
     coll = COLLECT(
