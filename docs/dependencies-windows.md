@@ -101,11 +101,6 @@ pip install git+https://github.com/pupil-labs/nslr
 pip install git+https://github.com/pupil-labs/nslr-hmm
 ```
 
-Now install pytorch:
-- Open the pytorch website for local installation: https://pytorch.org/get-started/locally/
-- Select options: Stable, Windows, Pip, Python 3.6, CUDA 9.0.
-- You will be provided with two commands. Run them in the order given to install the wheels.
-
 ## Pupil Labs Python Wheels
 
 In addition to these libraries, you will need to install some Pupil-Labs support libraries. Since building them for Windows is also not automated yet, we provide some prebuilt wheels that you can use. If you want to build the support libraries yourself as well, you will have to look for install instructions on the respective GitHub repositories.
