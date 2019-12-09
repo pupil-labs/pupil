@@ -20,13 +20,14 @@ def available_detector_plugins() -> T.Tuple[
             Default is required to be in the list of available plugins.
     """
 
-    detector_plugins = [DetectorDummyPlugin, Detector2DPlugin, Detector3DPlugin]
+    all_plugins = [DetectorDummyPlugin, Detector2DPlugin, Detector3DPlugin]
+    default_plugin = Detector3DPlugin
 
     try:
         from py3d import Detector3DRefractionPlugin
 
-        detector_plugins.append(Detector3DRefractionPlugin)
+        all_plugins.append(Detector3DRefractionPlugin)
     except ImportError:
         logging.info("Refraction corrected 3D pupil detector not available")
 
-    return Detector3DPlugin, detector_plugins
+    return default_plugin, all_plugins
