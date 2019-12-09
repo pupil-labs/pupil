@@ -425,8 +425,12 @@ class _AudioPacketIterator:
             return
 
         for part_idx, audio_part in enumerate(audio_parts):
-            packets = audio_part.container.demux(audio=0)
-            yield from zip(packets, audio_part.timestamps)
+            frames = audio_part.container.decode(audio=0)
+            for frame, timestamp in zip(frames, audio_part.timestamps):
+                frame.pts = None
+                for packet in self.audio_export_stream.encode(frame):
+                    if packet:
+                        yield packet, timestamp
             yield self.audio_part_end_marker, 0
 
     @staticmethod
