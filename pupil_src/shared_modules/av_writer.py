@@ -453,6 +453,3 @@ class _AudioPacketIterator:
             audio_frame.pts = None
             yield from stream.encode(audio_frame)
             frame_timestamp += 1. / sample_rate
-
-        if sample_count > 0:
-            yield from stream.encode(None)
