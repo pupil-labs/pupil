@@ -208,6 +208,7 @@ elif platform.system() == "Windows":
         "scipy.integrate._dop",
         "scipy.special._ufuncs",
         "scipy.special._ufuncs_cxx",
+        "scipy.linalg.blas",
     ]
 
     external_libs_path = pathlib.Path("../../pupil_external")
