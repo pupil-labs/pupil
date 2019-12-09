@@ -10,8 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
-
-# logging
+import math
 import logging
 import multiprocessing as mp
 import os
@@ -342,29 +341,119 @@ class MPEG_Audio_Writer(MPEG_Writer):
 
     def iterate_audio_packets(self):
         """Yields all audio packets from start_time to end."""
-        if self.audio_parts is None:
+        yield from _AudioPacketIterator(
+            start_time=self.start_time,
+            audio_export_stream=self.audio_export_stream,
+            audio_parts=self.audio_parts,
+            fill_gaps=True
+        ).iterate_audio_packets()
+
+
+class _AudioPacketIterator:
+
+    audio_part_end_marker = Ellipsis
+
+    def __init__(self, start_time, audio_parts, audio_export_stream, fill_gaps=True):
+        self.start_time = start_time
+        self.audio_parts = audio_parts
+        self.audio_export_stream = audio_export_stream
+        self.fill_gaps = fill_gaps
+
+    def iterate_audio_packets(self):
+
+        last_audio_pts = float("-inf")
+
+        if self.fill_gaps:
+            packet_with_ts_iterator = self._iterate_audio_packets_filling_gaps(self.audio_parts)
+        else:
+            packet_with_ts_iterator = self._iterate_audio_packets(self.audio_parts)
+
+        for packet, raw_ts in packet_with_ts_iterator:
+            audio_ts = raw_ts - self.start_time
+            audio_pts = int(audio_ts / self.audio_export_stream.time_base)
+
+            # ensure strong monotonic pts
+            audio_pts = max(audio_pts, last_audio_pts + 1)
+            last_audio_pts = audio_pts
+
+            packet.pts = audio_pts
+            packet.dts = audio_pts
+            packet.stream = self.audio_export_stream
+
+            if audio_ts < 0:
+                logger.debug(f"Seeking audio: {audio_ts} -> {self.start_time}")
+                # discard all packets before start time
+                return None
+
+            yield packet
+
+    def _iterate_audio_packets(self, audio_parts):
+        for packet, raw_ts in self._iterate_audio_packets_with_part_marker(audio_parts):
+            if packet is not self.audio_part_end_marker:
+                yield packet, raw_ts
+
+    def _iterate_audio_packets_filling_gaps(self, audio_parts):
+
+        history = [(None, None)]
+
+        for curr_packet, curr_ts in self._iterate_audio_packets_with_part_marker(audio_parts):
+
+            prev_packet, prev_ts = history.pop()
+
+            if prev_packet is self.audio_part_end_marker:
+                prev_packet, prev_ts = history.pop()
+
+                start_ts = prev_ts + prev_packet.duration
+                duration = curr_ts - start_ts
+                silent_packets = self._generate_silence_packets(
+                    stream=self.audio_export_stream,
+                    start_ts=start_ts,
+                    duration=duration,
+                )
+                silent_packets = list(silent_packets)
+                print(f"===>>> SILENT PACKET COUNT: {len(silent_packets)}")
+                yield from silent_packets
+            else:
+                history.append((prev_packet, prev_ts))
+
+            if curr_packet is not self.audio_part_end_marker:
+                yield curr_packet, curr_ts
+
+            history.append((curr_packet, curr_ts))
+
+    def _iterate_audio_packets_with_part_marker(self, audio_parts):
+        if audio_parts is None:
             return
 
-        self.last_audio_pts = float("-inf")
-
-        for audio_part in self.audio_parts:
+        for part_idx, audio_part in enumerate(audio_parts):
             packets = audio_part.container.demux(audio=0)
-            for packet, raw_ts in zip(packets, audio_part.timestamps):
+            yield from zip(packets, audio_part.timestamps)
+            yield self.audio_part_end_marker, 0
 
-                audio_ts = raw_ts - self.start_time
-                audio_pts = int(audio_ts / self.audio_export_stream.time_base)
+    @staticmethod
+    def _generate_silence_packets(stream, start_ts, duration):
+        sample_rate = stream.codec_context.sample_rate
+        frame_size = stream.codec_context.frame_size
+        av_format = stream.codec_context.format.name
+        av_layout = stream.codec_context.layout.name
 
-                # ensure strong monotonic pts
-                audio_pts = max(audio_pts, self.last_audio_pts + 1)
-                self.last_audio_pts = audio_pts
+        sample_count = sample_rate * duration
 
-                packet.pts = audio_pts
-                packet.dts = audio_pts
-                packet.stream = self.audio_export_stream
+        assert sample_count == int(sample_count)
+        sample_count = int(sample_count)
 
-                if audio_ts < 0:
-                    logger.debug(f"Seeking audio: {audio_ts} -> {self.start_time}")
-                    # discard all packets before start time
-                    continue
+        frame_count = math.ceil(sample_count / frame_size)
 
-                yield packet
+        frame_timestamp = start_ts
+
+        for frame_idx in range(frame_count):
+            remaining_count = sample_count - (frame_idx * frame_size)
+            frame_samples = min(remaining_count, frame_size)
+            print(f"frame_idx = {frame_idx} frame_samples = {frame_samples}")
+            audio_frame = av.AudioFrame(samples=frame_samples, format=av_format, layout=av_layout)
+            audio_frame.pts = None
+            yield from stream.encode(audio_frame)
+            frame_timestamp += 1. / sample_rate
+
+        if sample_count > 0:
+            yield from stream.encode(None)
