@@ -439,7 +439,6 @@ class _AudioPacketIterator:
 
         sample_count = sample_rate * duration
 
-        assert sample_count == int(sample_count)
         sample_count = int(sample_count)
 
         frame_count = math.ceil(sample_count / frame_size)
