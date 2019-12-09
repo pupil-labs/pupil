@@ -311,7 +311,8 @@ class MPEG_Audio_Writer(MPEG_Writer):
         try:
             self.audio_parts = audio_utils.load_audio(audio_dir)
             self.audio_export_stream = self.container.add_stream(
-                template=self.audio_parts[0].stream
+                codec_name=self.audio_parts[0].stream.codec.name,
+                rate=self.audio_parts[0].stream.rate,
             )
         except audio_utils.NoAudioLoadedError:
             logger.debug("Could not mux audio. File not found.")
