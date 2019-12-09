@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import os
 import platform
+import signal
 from types import SimpleNamespace
 
 
@@ -22,6 +23,7 @@ def world(
     user_dir,
     version,
     preferred_remote_port,
+    hide_ui,
 ):
     """Reads world video and runs plugins.
 
@@ -152,7 +154,6 @@ def world(
             Gaze_Mapping_Plugin,
         )
         from fixation_detector import Fixation_Detector
-        from eye_movement import Eye_Movement_Detector_Real_Time
         from recorder import Recorder
         from display_recent_gaze import Display_Recent_Gaze
         from time_sync import Time_Sync
@@ -191,6 +192,18 @@ def world(
         else:
             scroll_factor = 1.0
             window_position_default = (0, 0)
+
+        process_was_interrupted = False
+
+        def interrupt_handler(sig, frame):
+            import traceback
+
+            trace = traceback.format_stack(f=frame)
+            logger.debug(f"Caught signal {sig} in:\n" + "".join(trace))
+            nonlocal process_was_interrupted
+            process_was_interrupted = True
+
+        signal.signal(signal.SIGINT, interrupt_handler)
 
         icon_bar_width = 50
         window_size = None
@@ -232,7 +245,6 @@ def world(
             Annotation_Capture,
             Log_History,
             Fixation_Detector,
-            Eye_Movement_Detector_Real_Time,
             Blink_Detection,
             Remote_Recorder,
             Accuracy_Visualizer,
@@ -437,6 +449,8 @@ def world(
 
         # window and gl setup
         glfw.glfwInit()
+        if hide_ui:
+            glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
         window_pos = session_settings.get("window_position", window_position_default)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
@@ -595,7 +609,9 @@ def world(
         logger.warning("Process started.")
 
         # Event loop
-        while not glfw.glfwWindowShouldClose(main_window):
+        while (
+            not glfw.glfwWindowShouldClose(main_window) and not process_was_interrupted
+        ):
 
             # fetch newest notifications
             new_notifications = []
@@ -685,11 +701,9 @@ def world(
 
                 glfw.glfwSwapBuffers(main_window)
 
-        glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["gui_scale"] = g_pool.gui_user_scale
         session_settings["ui_config"] = g_pool.gui.configuration
-        session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
         session_settings["version"] = str(g_pool.version)
         session_settings["eye0_process_alive"] = eye_procs_alive[0].value
         session_settings["eye1_process_alive"] = eye_procs_alive[1].value
@@ -699,9 +713,12 @@ def world(
         session_settings["detection_mapping_mode"] = g_pool.detection_mapping_mode
         session_settings["audio_mode"] = audio.audio_mode
 
-        session_window_size = glfw.glfwGetWindowSize(main_window)
-        if 0 not in session_window_size:
-            session_settings["window_size"] = session_window_size
+        if not hide_ui:
+            glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
+            session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
+            session_window_size = glfw.glfwGetWindowSize(main_window)
+            if 0 not in session_window_size:
+                session_settings["window_size"] = session_window_size
 
         session_settings.close()
 
@@ -714,7 +731,7 @@ def world(
         glfw.glfwDestroyWindow(main_window)
         glfw.glfwTerminate()
 
-    except:
+    except Exception:
         import traceback
 
         trace = traceback.format_exc()

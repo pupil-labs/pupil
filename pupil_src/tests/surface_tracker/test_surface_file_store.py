@@ -13,17 +13,10 @@ import os
 import sys
 import numpy as np
 
-
-if __name__ == "__main__":
-    print("Invoke tests by running:")
-    print("$ pytest -v {}".format(__file__))
-    exit(1)
-
-
-from .surface_file_store import Surface_File_Store
+from surface_tracker.surface_file_store import Surface_File_Store
 from surface_tracker.surface_offline import Surface_Offline as Any_Surface
 
-from .test_fixtures import (
+from .fixtures import (
     surface_definition_v00_dir,
     surface_definition_v01_before_update_dir,
     surface_definition_v01_after_update_dir,

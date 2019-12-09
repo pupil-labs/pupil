@@ -34,9 +34,9 @@ class GLWindow(Observable, abc.ABC):
         plugin.add_observer("deinit_ui", self._on_deinit_ui)
         plugin.add_observer("gl_display", self._on_gl_display)
 
-    def switch_visualization_window(self, new_value):
-        self._general_settings.open_visualization_window = new_value
-        if new_value:
+    def toggle_visualization_window(self):
+        self._general_settings.open_visualization_window ^= True
+        if self._general_settings.open_visualization_window:
             self._open()
         else:
             self._close()
@@ -119,7 +119,7 @@ class GLWindow(Observable, abc.ABC):
         self._trackball.zoom_to(y)
 
     def _on_set_window_close(self, window):
-        self.switch_visualization_window(False)
+        self.toggle_visualization_window()
 
     def _on_deinit_ui(self):
         self._close()

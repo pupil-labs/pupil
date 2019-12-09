@@ -176,7 +176,7 @@ class Camera_Intrinsics_Estimation(Plugin):
             if self.fullscreen:
                 try:
                     monitor = glfwGetMonitors()[self.monitor_idx]
-                except:
+                except Exception:
                     logger.warning(
                         "Monitor at index %s no longer availalbe using default" % idx
                     )

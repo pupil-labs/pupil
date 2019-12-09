@@ -38,6 +38,8 @@ if os_name == "Darwin" and mac_version >= min_version:
             self.caffeine_process.terminate()
             self.caffeine_process = None
             logger.info("Re-enabled idle sleep.")
+            # NOTE: Suppress KeyboardInterrupt
+            return etype is KeyboardInterrupt
 
 
 else:
@@ -52,7 +54,8 @@ else:
         def __exit__(self, etype, value, tb):
             if etype is not None:
                 logger.debug("".join(traceback.format_exception(etype, value, tb)))
-            pass
+            # NOTE: Suppress KeyboardInterrupt
+            return etype is KeyboardInterrupt
 
 
 if __name__ == "__main__":

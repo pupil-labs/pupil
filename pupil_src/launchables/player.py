@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import os
 import platform
+import signal
 from types import SimpleNamespace
 
 # UI Platform tweaks
@@ -102,7 +103,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
 
         # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
         from fixation_detector import Offline_Fixation_Detector
-        from eye_movement import Offline_Eye_Movement_Detector
         from log_display import Log_Display
         from annotations import Annotation_Player
         from raw_data_exporter import Raw_Data_Exporter
@@ -134,6 +134,18 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             "1.24"
         ), "pyglui out of date, please upgrade to newest version"
 
+        process_was_interrupted = False
+
+        def interrupt_handler(sig, frame):
+            import traceback
+
+            trace = traceback.format_stack(f=frame)
+            logger.debug(f"Caught signal {sig} in:\n" + "".join(trace))
+            nonlocal process_was_interrupted
+            process_was_interrupted = True
+
+        signal.signal(signal.SIGINT, interrupt_handler)
+
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, "plugins"))
         system_plugins = [
             Log_Display,
@@ -154,7 +166,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Video_Overlay,
             # Vis_Scan_Path,
             Offline_Fixation_Detector,
-            Offline_Eye_Movement_Detector,
             Offline_Blink_Detection,
             Surface_Tracker_Offline,
             Raw_Data_Exporter,
@@ -568,7 +579,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
                             }
                         )
 
-        while not glfw.glfwWindowShouldClose(main_window):
+        while (
+            not glfw.glfwWindowShouldClose(main_window) and not process_was_interrupted
+        ):
 
             # fetch newest notifications
             new_notifications = []
@@ -670,7 +683,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         g_pool.gui.terminate()
         glfw.glfwDestroyWindow(main_window)
 
-    except:
+    except Exception:
         import traceback
 
         trace = traceback.format_exc()
@@ -704,7 +717,6 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
     logger = logging.getLogger(__name__)
 
     try:
-
         import glfw
         import gl_utils
         from OpenGL.GL import glClearColor
@@ -718,6 +730,18 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
             InvalidRecordingException,
         )
         from pupil_recording.update import update_recording
+
+        process_was_interrupted = False
+
+        def interrupt_handler(sig, frame):
+            import traceback
+
+            trace = traceback.format_stack(f=frame)
+            logger.debug(f"Caught signal {sig} in:\n" + "".join(trace))
+            nonlocal process_was_interrupted
+            process_was_interrupted = True
+
+        signal.signal(signal.SIGINT, interrupt_handler)
 
         def on_drop(window, count, paths):
             nonlocal rec_dir
@@ -774,7 +798,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
             glfont.set_color_float((1.0, 1.0, 1.0, 1.0))
             glfont.draw_text(x, y, string)
 
-        while not glfw.glfwWindowShouldClose(window):
+        while not glfw.glfwWindowShouldClose(window) and not process_was_interrupted:
 
             fb_size = glfw.glfwGetFramebufferSize(window)
             hdpi_factor = glfw.getHDPIFactor(window)
@@ -835,7 +859,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
                 {"subject": "player_process.should_start", "rec_dir": rec_dir}
             )
 
-    except:
+    except Exception:
         import traceback
 
         trace = traceback.format_exc()

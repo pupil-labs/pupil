@@ -10,9 +10,8 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
-import typing
 import logging
-import operator
+import typing
 import uuid
 
 import cv2
@@ -54,24 +53,25 @@ class Surface(abc.ABC):
             build_up_status,
             deprecated_definition,
         ]
-        assert all(map(is_none, init_args)) or all(
-            map(is_not_none, init_args)
+        all_args_none = all(map(is_none, init_args))
+        no_arg_none = all(map(is_not_none, init_args))
+        assert (
+            all_args_none or no_arg_none
         ), "Either all initialization arguments are None, or they all are not None"
 
-        marker_aggregates_undist = (
-            marker_aggregates_undist if marker_aggregates_undist is not None else []
-        )
-        marker_aggregates_dist = (
-            marker_aggregates_dist if marker_aggregates_dist is not None else []
-        )
+        if marker_aggregates_undist is None:
+            marker_aggregates_undist = []
+        if marker_aggregates_dist is None:
+            marker_aggregates_dist = []
+
+        if real_world_size is None:
+            real_world_size = {"x": 1.0, "y": 1.0}
+        if deprecated_definition is None:
+            deprecated_definition = False
 
         self.name = name
-        self.real_world_size = (
-            real_world_size if real_world_size is not None else {"x": 1.0, "y": 1.0}
-        )
-        self.deprecated_definition = (
-            deprecated_definition if deprecated_definition is not None else False
-        )
+        self.real_world_size = real_world_size
+        self.deprecated_definition = deprecated_definition
 
         # We store the surface state in two versions: once computed with the
         # undistorted scene image and once with the still distorted scene image. The
@@ -94,7 +94,10 @@ class Surface(abc.ABC):
         self.surf_to_dist_img_trans = None
         self.num_detected_markers = 0
 
-        self._REQUIRED_OBS_PER_MARKER = 5
+        # TODO: The aggregation over neighbors for REQUIRED_OBS_PER_MARKER can lead to
+        # inaccurate surface definitions. By setting this to 1 we disable the
+        # aggregation for now. Need to refactor this in the future.
+        self._REQUIRED_OBS_PER_MARKER = 1
         self._avg_obs_per_marker = 0
         self.build_up_status = build_up_status if build_up_status is not None else 0
 
@@ -213,7 +216,7 @@ class Surface(abc.ABC):
 
         if compensate_distortion:
             orig_shape = points.shape
-            img_points = camera_model.distortPoints(img_points)
+            img_points = camera_model.distort_points_on_image_plane(img_points)
             img_points.shape = orig_shape
 
         return img_points
@@ -341,9 +344,29 @@ class Surface(abc.ABC):
         points_A = points_A.reshape((-1, 1, 2))
         points_B = points_B.reshape((-1, 1, 2))
 
-        B_to_A, mask = cv2.findHomography(
-            points_A, points_B, method=cv2.RANSAC, ransacReprojThreshold=100
-        )
+        B_to_A, mask = cv2.findHomography(points_A, points_B)
+        # NOTE: cv2.findHomography(A, B) will not produce the inverse of
+        # cv2.findHomography(B, A)! The errors can actually be quite large, resulting in
+        # on-screen discrepancies of up to 50 pixels. We try to find the inverse
+        # analytically instead with fallbacks.
+
+        try:
+            A_to_B = np.linalg.inv(B_to_A)
+            return A_to_B, B_to_A
+        except np.linalg.LinAlgError as e:
+            logger.debug(
+                "Failed to calculate inverse homography with np.inv()! "
+                "Trying with np.pinv() instead."
+            )
+
+        try:
+            A_to_B = np.linalg.pinv(B_to_A)
+            return A_to_B, B_to_A
+        except np.linalg.LinAlgError as e:
+            logger.warning(
+                "Failed to calculate inverse homography with np.pinv()! "
+                "Falling back to inaccurate manual computation!"
+            )
 
         A_to_B, mask = cv2.findHomography(points_B, points_A)
         return A_to_B, B_to_A
@@ -590,11 +613,7 @@ class Surface(abc.ABC):
 
     def get_uniform_heatmap(self, resolution):
         if len(resolution) != 2:
-            raise ValueError(
-                "resolution has to be two dimensional but found dimension {}!".format(
-                    len(resolution)
-                )
-            )
+            raise ValueError(f"Resolution has to be 2D! Received: ({resolution})!")
 
         hm = np.zeros((*resolution, 4), dtype=np.uint8)
         hm[:, :, :3] = cv2.applyColorMap(hm[:, :, :3], cv2.COLORMAP_JET)

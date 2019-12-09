@@ -70,7 +70,7 @@ class OfflineDetectionController(Observable):
             self._source_path,
             self._all_timestamps,
             self._general_settings.detection_frame_index_range,
-            self._detection_storage.frame_index_to_num_markers,
+            set(self._detection_storage.frame_index_to_num_markers.keys()),
         )
         return self._task_manager.create_background_task(
             name="marker detection",
@@ -80,12 +80,12 @@ class OfflineDetectionController(Observable):
         )
 
     def _insert_markers_bisector(self, data_pairs):
-        for timestamp, markers, frame_index, num_markers in data_pairs:
+        for timestamp, markers, frame_index in data_pairs:
             for marker in markers:
                 self._detection_storage.markers_bisector.insert(timestamp, marker)
-            self._detection_storage.frame_index_to_num_markers[
-                frame_index
-            ] = num_markers
+            self._detection_storage.frame_index_to_num_markers[frame_index] = len(
+                markers
+            )
         self.on_detection_yield()
 
     def cancel_task(self):

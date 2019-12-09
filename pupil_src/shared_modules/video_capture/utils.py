@@ -12,11 +12,12 @@ import glob
 import logging
 import os
 import pathlib as pl
+from pathlib import Path
 from typing import Iterator, Sequence
+
 import av
 import cv2
 import numpy as np
-
 
 logger = logging.getLogger(__name__)
 
@@ -182,8 +183,13 @@ class Video:
     def check_valid(self):
         try:
             cont = av.open(self.path)
-            n = cont.decode(video=0)
-            _ = next(n)
+            # Three failure scenarios:
+            # 1. Broken video -> AVError
+            # 2. decode() does not yield anything
+            # 3. decode() yields None
+            first_frame = next(cont.decode(video=0), None)
+            if first_frame is None:
+                raise av.AVError("Video does not contain any frames")
         except av.AVError:
             return False
         else:
@@ -292,12 +298,11 @@ class VideoSet:
     def fetch_videos(self) -> Iterator[Video]:
         # If self.fill_gaps, we return all videos
         # else we skip the broken videos
-        yield from (
-            Video(loc)
-            for ext in self.video_exts
-            for loc in glob.iglob(os.path.join(self.rec, f"{self.name}*.{ext}"))
-            if (self.fill_gaps or Video(loc).is_valid)
-        )
+        for ext in self.video_exts:
+            for loc in Path(self.rec).glob(f"{self.name}*.{ext}"):
+                vid = Video(str(loc))
+                if self.fill_gaps or vid.is_valid:
+                    yield vid
 
     def build_lookup(self, fallback_timestamps=None):
         """
@@ -403,7 +408,11 @@ class VideoSet:
 
     def _fill_gaps(self, timestamps: np.ndarray) -> np.ndarray:
         time_diff = np.diff(timestamps)
-        median_time_diff = np.median(time_diff)
+        if time_diff.size > 0:
+            median_time_diff = np.median(time_diff)
+        else:
+            # TODO: Not sure if this is an acceptable value, but this is what np.median returns for an empty input
+            median_time_diff = np.nan
         gap_start_idc = np.flatnonzero(
             time_diff > self._gap_fill_threshold(median_time_diff)
         )
@@ -463,16 +472,21 @@ def pi_gaze_items(root_dir):
         return np.asarray(raw_data, dtype=raw_data_dtype)
 
     # This pattern will match any filename that:
-    # - starts with "gaze"
-    # - is followed by one or more characters
+    # - starts with "gaze ps"
+    # - is followed by one or more digits
     # - is followed by "_timestamps.npy"
-    gaze_timestamp_pattern = "gaze?*_timestamps.npy"
+    gaze_timestamp_pattern = "gaze ps[0-9]*_timestamps.npy"
 
     for timestamps_path in pl.Path(root_dir).glob(gaze_timestamp_pattern):
         raw_path = find_raw_path(timestamps_path)
         timestamps = load_timestamps_data(timestamps_path)
         raw_data = load_raw_data(raw_path)
-        assert len(raw_data) == len(
-            timestamps
-        ), f"There is a mismatch between the number of raw data ({len(raw_data)}) and the number of timestamps ({len(timestamps)})"
+        if len(raw_data) != len(timestamps):
+            logger.warning(
+                f"There is a mismatch between the number of raw data ({len(raw_data)}) "
+                f"and the number of timestamps ({len(timestamps)})!"
+            )
+            size = min(len(raw_data), len(timestamps))
+            raw_data = raw_data[:size]
+            timestamps = timestamps[:size]
         yield from zip(raw_data, timestamps)

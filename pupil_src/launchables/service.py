@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import os
+import signal
 
 # import sys, platform
 from types import SimpleNamespace
@@ -23,6 +24,7 @@ def service(
     user_dir,
     version,
     preferred_remote_port,
+    hide_ui,
 ):
     """Maps pupil to gaze data, can run various plug-ins.
 
@@ -108,6 +110,18 @@ def service(
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
+        process_was_interrupted = False
+
+        def interrupt_handler(sig, frame):
+            import traceback
+
+            trace = traceback.format_stack(f=frame)
+            logger.debug(f"Caught signal {sig} in:\n" + "".join(trace))
+            nonlocal process_was_interrupted
+            process_was_interrupted = True
+
+        signal.signal(signal.SIGINT, interrupt_handler)
+
         logger.info("Application Version: {}".format(version))
         logger.info("System Info: {}".format(get_system_info()))
 
@@ -125,6 +139,7 @@ def service(
         g_pool.eye_procs_alive = eye_procs_alive
         g_pool.timebase = timebase
         g_pool.preferred_remote_port = preferred_remote_port
+        g_pool.hide_ui = hide_ui
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value
@@ -184,10 +199,24 @@ def service(
 
         audio.audio_mode = session_settings.get("audio_mode", audio.default_audio_mode)
 
+        ipc_pub.notify({"subject": "service_process.started"})
+        logger.warning("Process started.")
+        g_pool.service_should_run = True
+
         # plugins that are loaded based on user settings from previous session
         g_pool.plugins = Plugin_List(
             g_pool, session_settings.get("loaded_plugins", default_plugins)
         )
+
+        # NOTE: The Pupil_Remote plugin fails to load when the port is already in use
+        # and will set this variable to false. Then we should not even start the eye
+        # processes. Otherwise we would have to wait for their initialization before
+        # attempting cleanup in Service.
+        if g_pool.service_should_run:
+            if session_settings.get("eye1_process_alive", True):
+                launch_eye_process(1, delay=0.3)
+            if session_settings.get("eye0_process_alive", True):
+                launch_eye_process(0, delay=0.0)
 
         def handle_notifications(n):
             subject = n["subject"]
@@ -229,22 +258,13 @@ def service(
                             }
                         )
 
-        if session_settings.get("eye1_process_alive", False):
-            launch_eye_process(1, delay=0.3)
-        if session_settings.get("eye0_process_alive", True):
-            launch_eye_process(0, delay=0.0)
-
-        ipc_pub.notify({"subject": "service_process.started"})
-        logger.warning("Process started.")
-        g_pool.service_should_run = True
-
         # initiate ui update loop
         ipc_pub.notify(
             {"subject": "service_process.ui.should_update", "initial_delay": 1 / 40}
         )
 
         # Event loop
-        while g_pool.service_should_run:
+        while g_pool.service_should_run and not process_was_interrupted:
             socks = dict(poller.poll())
             if pupil_sub.socket in socks:
                 topic, pupil_datum = pupil_sub.recv()
@@ -285,7 +305,7 @@ def service(
             pupil_datum.alive = False
         g_pool.plugins.clean()
 
-    except:
+    except Exception:
         import traceback
 
         trace = traceback.format_exc()

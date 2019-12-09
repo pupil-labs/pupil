@@ -16,25 +16,30 @@ import os
 import platform
 import time
 
+import cv2
+import numpy as np
+import OpenGL.GL as gl
+import pyglui
+import pyglui.cygl.utils as pyglui_utils
+
+import file_methods
+import gl_utils
+from plugin import Analysis_Plugin_Base
+
+from . import background_tasks, offline_utils
+from .cache import Cache
+from .gui import Heatmap_Mode
+from .surface_marker import Surface_Marker
+from .surface_marker_detector import MarkerDetectorMode, MarkerType
+from .surface_offline import Surface_Offline
+from .surface_tracker import (
+    Surface_Tracker,
+    APRILTAG_HIGH_RES_ON,
+    APRILTAG_SHARPENING_ON,
+)
+
 logger = logging.getLogger(__name__)
 
-import numpy as np
-import cv2
-import pyglui
-import gl_utils
-import pyglui.cygl.utils as pyglui_utils
-import OpenGL.GL as gl
-
-from plugin import Analysis_Plugin_Base
-import file_methods
-
-from .cache import Cache
-from .surface_tracker import Surface_Tracker
-from . import offline_utils, background_tasks
-from .surface_marker import Surface_Marker
-from .surface_marker_detector import Surface_Marker_Detector_Mode
-from .gui import Heatmap_Mode
-from .surface_offline import Surface_Offline
 
 # On macOS, "spawn" is set as default start method in main.py. This is not required
 # here and we set it back to "fork" to improve performance.
@@ -115,10 +120,10 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         # Get the first surface marker from the sequence, and set the detection mode according to it.
         first_cached_surface_marker = next(cached_surface_marker_sequence, None)
         if first_cached_surface_marker is not None:
-            marker_detector_mode = Surface_Marker_Detector_Mode.from_marker(
+            marker_detector_mode = MarkerDetectorMode.from_marker(
                 first_cached_surface_marker
             )
-            self.marker_detector_modes = {marker_detector_mode}
+            self.marker_detector.marker_detector_mode = marker_detector_mode
 
     def _init_marker_cache(self):
         previous_cache = file_methods.Persistent_Dict(
@@ -126,12 +131,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         )
         version = previous_cache.get("version", 0)
         cache = previous_cache.get("marker_cache_unfiltered", None)
+        self._set_detector_params_from_previous_cache(previous_cache)
 
         if cache is None:
             self._recalculate_marker_cache()
         elif version != self.MARKER_CACHE_VERSION:
             logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
-            self.inverted_markers = previous_cache.get("inverted_markers", False)
             self._recalculate_marker_cache()
         else:
             marker_cache_unfiltered = []
@@ -147,8 +152,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
                 marker_cache_unfiltered.append(markers)
 
             self._recalculate_marker_cache(previous_state=marker_cache_unfiltered)
-            self.inverted_markers = previous_cache.get("inverted_markers", False)
             logger.debug("Restored previous marker cache.")
+
+    def _set_detector_params_from_previous_cache(self, previous_cache):
+        self.inverted_markers = previous_cache.get("inverted_markers", False)
+        self.quad_decimate = previous_cache.get("quad_decimate", APRILTAG_HIGH_RES_ON)
+        self.sharpening = previous_cache.get("sharpening", APRILTAG_SHARPENING_ON)
 
     def _recalculate_marker_cache(self, previous_state=None):
         if previous_state is None:
@@ -164,12 +173,17 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self.marker_cache_unfiltered = Cache(previous_state)
         self.marker_cache = self._filter_marker_cache(self.marker_cache_unfiltered)
 
+        if self.cache_filler is not None:
+            self.cache_filler.cancel()
         self.cache_filler = background_tasks.background_video_processor(
             self.g_pool.capture.source_path,
             offline_utils.marker_detection_callable(
-                marker_detector_modes=self.marker_detector_modes,
-                min_marker_perimeter=self.CACHE_MIN_MARKER_PERIMETER,
-                inverted_markers=self.inverted_markers,
+                marker_detector_mode=self.marker_detector.marker_detector_mode,
+                marker_min_perimeter=self.CACHE_MIN_MARKER_PERIMETER,
+                square_marker_inverted_markers=self.inverted_markers,
+                square_marker_use_online_mode=False,
+                apriltag_quad_decimate=self.quad_decimate,
+                apriltag_decode_sharpening=self.sharpening,
             ),
             list(self.marker_cache),
             self.cache_seek_idx,
@@ -177,12 +191,24 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         )
 
     def _filter_marker_cache(self, cache_to_filter):
+        marker_type = self.marker_detector.marker_detector_mode.marker_type
+        if marker_type != MarkerType.SQUARE_MARKER:
+            # We only need to filter SQUARE_MARKERs
+            return cache_to_filter
+
         marker_cache = []
         for markers in cache_to_filter:
             if markers:
                 markers = self._filter_markers(markers)
             marker_cache.append(markers)
         return Cache(marker_cache)
+
+    def _filter_markers(self, markers):
+        return [
+            m
+            for m in markers
+            if m.perimeter >= self.marker_detector.marker_min_perimeter
+        ]
 
     def init_ui(self):
         super().init_ui()
@@ -210,10 +236,16 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
     def _fetch_data_from_bg_fillers(self):
         if self.gaze_on_surf_buffer_filler is not None:
+            start_time = time.perf_counter()
+            did_timeout = False
+
             for gaze in self.gaze_on_surf_buffer_filler.fetch():
                 self.gaze_on_surf_buffer.append(gaze)
+                if time.perf_counter() - start_time > 1 / 50:
+                    did_timeout = True
+                    break
 
-            if self.gaze_on_surf_buffer_filler.completed:
+            if self.gaze_on_surf_buffer_filler.completed and not did_timeout:
                 self.gaze_on_surf_buffer_filler = None
                 self._update_surface_heatmaps()
                 self.gaze_on_surf_buffer = None
@@ -231,11 +263,9 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         self._update_marker_and_surface_caches()
 
         self.markers = self.marker_cache[frame.index]
-        self.markers_unfiltered = self.marker_cache_unfiltered[frame.index]
         if self.markers is None:
             # Move seek index to current frame because caches do not contain data for it
             self.markers = []
-            self.markers_unfiltered = []
             self.cache_seek_idx.value = frame.index
 
     def _update_marker_and_surface_caches(self):
@@ -249,8 +279,12 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             if frame_index is not None:
                 markers = self._remove_duplicate_markers(markers)
                 self.marker_cache_unfiltered.update(frame_index, markers)
-                markers_filtered = self._filter_markers(markers)
-                self.marker_cache.update(frame_index, markers_filtered)
+                marker_type = self.marker_detector.marker_detector_mode.marker_type
+                if marker_type == MarkerType.SQUARE_MARKER:
+                    markers_filtered = self._filter_markers(markers)
+                    self.marker_cache.update(frame_index, markers_filtered)
+                # In all other cases (see _filter_marker_cache()):
+                # `self.marker_cache is self.marker_cache_unfiltered == True`
 
                 for surface in self.surfaces:
                     surface.update_location_cache(
@@ -436,9 +470,13 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             self._recalculate_marker_cache()
 
         elif notification["subject"] == "surface_tracker.marker_min_perimeter_changed":
-            self.marker_cache = self._filter_marker_cache(self.marker_cache_unfiltered)
-            for surface in self.surfaces:
-                surface.location_cache = None
+            marker_type = self.marker_detector.marker_detector_mode.marker_type
+            if marker_type == MarkerType.SQUARE_MARKER:
+                self.marker_cache = self._filter_marker_cache(
+                    self.marker_cache_unfiltered
+                )
+                for surface in self.surfaces:
+                    surface.location_cache = None
 
         elif notification["subject"] == "surface_tracker.heatmap_params_changed":
             for surface in self.surfaces:
@@ -523,4 +561,6 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
         )
         marker_cache_file["version"] = self.MARKER_CACHE_VERSION
         marker_cache_file["inverted_markers"] = self.inverted_markers
+        marker_cache_file["quad_decimate"] = self.quad_decimate
+        marker_cache_file["sharpening"] = self.sharpening
         marker_cache_file.save()

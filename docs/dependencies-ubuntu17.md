@@ -7,6 +7,11 @@ These installation instructions are tested from **Ubuntu 16.04** to **Ubuntu 17.
 
 Pupil requires Python 3.6 or higher. Please check this [resource](https://askubuntu.com/questions/865554/how-do-i-install-python-3-6-using-apt-get) on how to install Python 3.6 on your version of Ubuntu.
 
+```sh
+sudo apt-get update
+sudo apt install -y pkg-config git cmake build-essential nasm wget python3-setuptools libusb-1.0-0-dev  python3-dev python3-pip python3-numpy python3-scipy libglew-dev libglfw3-dev libtbb-dev
+```
+
 ## ffmpeg3
 
 Install ffmpeg3 from jonathonf's ppa:

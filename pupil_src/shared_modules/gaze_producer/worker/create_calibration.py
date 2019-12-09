@@ -14,7 +14,6 @@ from types import SimpleNamespace
 
 import player_methods as pm
 import tasklib.background
-import tasklib.background.patches as bg_patches
 from calibration_routines.finish_calibration import select_calibration_method
 from gaze_producer import model
 from methods import normalize
@@ -50,7 +49,9 @@ def create_task(calibration, all_reference_locations):
     args = (fake_gpool, ref_dicts_in_calib_range, pupil_pos_in_calib_range)
     name = "Create calibration {}".format(calibration.name)
     return tasklib.background.create(
-        name, _create_calibration, args=args, patches=[bg_patches.IPCLoggingPatch()]
+        name,
+        _create_calibration,
+        args=args,
     )
 
 

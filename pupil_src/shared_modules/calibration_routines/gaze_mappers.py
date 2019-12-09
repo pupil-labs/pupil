@@ -79,8 +79,32 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
         self.min_pupil_confidence = 0.6
         self._caches = (deque(), deque())
-        self.temportal_cutoff = 0.3
+        self.recently_estimated_framerate = 1 / 120
+        self.framerate_estimation_smoothing_factor = 1 / 50
         self.sample_cutoff = 10
+
+    def is_cache_valid(self, cache):
+        return len(cache) >= 2
+
+    def estimate_frame_rate_raw(self, cache):
+        return np.mean(np.diff([d["timestamp"] for d in cache]))
+
+    def estimate_framerate_smoothed(self, eye0_cache, eye1_cache):
+        if self.is_cache_valid(eye0_cache) and self.is_cache_valid(eye1_cache):
+            eye0_framerate_raw = self.estimate_frame_rate_raw(eye0_cache)
+            eye1_framerate_raw = self.estimate_frame_rate_raw(eye1_cache)
+            estimated_framerate_raw = max(eye0_framerate_raw, eye1_framerate_raw)
+        elif self.is_cache_valid(eye0_cache):
+            estimated_framerate_raw = self.estimate_frame_rate_raw(eye0_cache)
+        elif self.is_cache_valid(eye1_cache):
+            estimated_framerate_raw = self.estimate_frame_rate_raw(eye1_cache)
+        else:
+            return self.recently_estimated_framerate
+
+        self.recently_estimated_framerate += (
+            estimated_framerate_raw - self.recently_estimated_framerate
+        ) * self.framerate_estimation_smoothing_factor
+        return self.recently_estimated_framerate
 
     def map_batch(self, pupil_list):
         current_caches = self._caches
@@ -94,6 +118,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 
     def on_pupil_datum(self, p):
         self._caches[p["id"]].append(p)
+        temporal_cutoff = 2 * self.estimate_framerate_smoothed(*self._caches)
 
         # map low confidence pupil data monocularly
         if (
@@ -120,7 +145,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
                 p1 = self._caches[1].popleft()
                 older_pt = p1
 
-            if abs(p0["timestamp"] - p1["timestamp"]) < self.temportal_cutoff:
+            if abs(p0["timestamp"] - p1["timestamp"]) < temporal_cutoff:
                 gaze_datum = self._map_binocular(p0, p1)
             else:
                 gaze_datum = self._map_monocular(older_pt)
@@ -568,9 +593,10 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plug
         gaze_line1 = [s1_center, s1_center + s1_norm_on_plane]
 
         # find the intersection of left and right line of sight.
-        nearest_intersection_point, intersection_distance = math_helper.nearest_intersection(
-            gaze_line0, gaze_line1
-        )
+        (
+            nearest_intersection_point,
+            intersection_distance,
+        ) = math_helper.nearest_intersection(gaze_line0, gaze_line1)
         if nearest_intersection_point is not None and self.backproject:
             cyclop_gaze = nearest_intersection_point - cyclop_center
             self.last_gaze_distance = np.sqrt(cyclop_gaze.dot(cyclop_gaze))

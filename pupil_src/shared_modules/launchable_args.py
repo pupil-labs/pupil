@@ -11,86 +11,85 @@ See COPYING and COPYING.LESSER for license details.
 
 import argparse
 import sys
+import typing as T
+from gettext import gettext as _
 
 
-class DefaultNamespace(argparse.Namespace):
-    def __init__(self, **defaults):
-        # Caveat: We need explicit default values for app+port arguments in order to
-        # maintain the convenience to start Capture without having to pass any explicit
-        # arguments, e.g. `python3 main.py` instead of `python3 main.py capture`.
-        self.app = "capture"
-        self.port = None
-        for name, value in defaults.items():
-            setattr(self, name, value)
+class HelpfulArgumentParser(argparse.ArgumentParser):
+    """ArgumentParser that prints the full help message on error."""
+
+    def error(self, message: str):
+        # NOTE: This is mostly argparse source code with slight adjustments
+        args = {"prog": self.prog, "message": message}
+        self._print_message(_("%(prog)s: error: %(message)s\n") % args, sys.stderr)
+        self.print_help(sys.stderr)
+        self.exit(2)
 
 
-def parse(running_from_bundle, **defaults):
-    parser = argparse.ArgumentParser(allow_abbrev=False)
-    target_ns = DefaultNamespace(**defaults)
+class PupilArgParser:
+    def parse(self, running_from_bundle: bool, **defaults: T.Any):
+        """Parse command line arguments for Pupil apps."""
+        self.apps = {
+            "capture": "real-time processing and recording",
+            "player": "process, visualize, and export recordings",
+            "service": "low latency real-time processing with constrained feature set",
+        }
 
-    if running_from_bundle:
-        _setup_bundle_parsers(parser, namespace=target_ns)
-    else:
-        _setup_source_parsers(parser)
-    _add_debug_profile_args(parser)
-    _add_version_arg(parser)
+        self.main_parser = HelpfulArgumentParser(allow_abbrev=False)
 
-    return parser.parse_known_args(namespace=target_ns)
-
-
-def _setup_source_parsers(main_parser):
-    subparsers = main_parser.add_subparsers(
-        title="Applications",
-        description="Select which application you want to run, by default `capture`",
-        dest="app",
-    )
-    parser_capture = subparsers.add_parser(
-        "capture", help="Real-time processing and recording"
-    )
-    _add_remote_port_arg(parser_capture)
-    _add_version_arg(parser_capture)
-
-    parser_service = subparsers.add_parser(
-        "service", help="Real-time processing with minimal UI"
-    )
-    _add_remote_port_arg(parser_service)
-    _add_version_arg(parser_service)
-
-    parser_player = subparsers.add_parser(
-        "player", help="Process, visualize, and export recordings"
-    )
-    _add_recording_arg(parser_player)
-    _add_version_arg(parser_player)
-
-
-def _setup_bundle_parsers(main_parser, namespace):
-    if "pupil_player" in sys.executable:
-        _add_recording_arg(main_parser)
-        namespace.app = "player"
-    else:
-        _add_remote_port_arg(main_parser)
-        if "pupil_capture" in sys.executable:
-            namespace.app = "capture"
+        if running_from_bundle:
+            self._init_bundle_parser(**defaults)
         else:
-            namespace.app = "service"
+            self._init_source_parser(**defaults)
 
+        return self.main_parser.parse_known_args()
 
-def _add_remote_port_arg(parser):
-    parser.add_argument("-P", "--port", type=int, help="Pupil Remote port")
+    def _init_bundle_parser(self, **defaults):
+        for app, description in self.apps.items():
+            if f"pupil_{app}" in sys.executable:
+                # Use main parser as a single parser for this app
+                self._add_general_args(self.main_parser)
+                self._add_app_args(self.main_parser, app)
+                self.main_parser.description = description
+                self.main_parser.set_defaults(app=app, **defaults)
+                break
+        else:
+            raise RuntimeError(
+                f"Could not infer Pupil App from executable name: {sys.executable}"
+            )
 
+    def _init_source_parser(self, **defaults):
+        # Add explicit subparsers for all apps to main parser
+        subparser = self.main_parser.add_subparsers(
+            dest="app", metavar="<app>", help="which application to start"
+        )
+        subparser.required = True
 
-def _add_recording_arg(parser):
-    parser.add_argument("recording", default="", nargs="?", help="path to recording")
+        for app, description in self.apps.items():
+            app_parser = subparser.add_parser(app, help=description)
+            self._add_general_args(app_parser)
+            self._add_app_args(app_parser, app)
+            app_parser.set_defaults(**defaults)
 
+    def _add_general_args(self, parser: argparse.ArgumentParser):
+        # Args that apply to all apps
+        parser.add_argument("--version", action="store_true", help="show version")
+        parser.add_argument(
+            "--debug", action="store_true", help="display debug log messages"
+        )
+        parser.add_argument(
+            "--profile", action="store_true", help="profile the application's CPU time"
+        )
 
-def _add_debug_profile_args(parser):
-    parser.add_argument(
-        "--debug", help="display debug log messages", action="store_true"
-    )
-    parser.add_argument(
-        "--profile", action="store_true", help="profile the application's CPU time"
-    )
+    def _add_app_args(self, parser: argparse.ArgumentParser, app: str):
+        # Args that are app specific
+        if app in ["capture", "service"]:
+            parser.add_argument("-P", "--port", type=int, help="port for Pupil Remote")
+            parser.add_argument(
+                "--hide-ui", action="store_true", help="hide ui on startup"
+            )
 
-
-def _add_version_arg(parser):
-    parser.add_argument("--version", action="store_true", help="show version")
+        if app == "player":
+            parser.add_argument(
+                "recording", default="", nargs="?", help="path to recording"
+            )

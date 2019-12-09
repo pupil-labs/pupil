@@ -12,21 +12,14 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import sys
 
+from surface_tracker.surface import Surface
+from surface_tracker.surface import Surface_Marker_Aggregate
 
-if __name__ == "__main__":
-    print("Invoke tests by running:")
-    print("$ pytest -v {}".format(__file__))
-    exit(1)
+from surface_tracker.surface_serializer import _Surface_Serializer_Base
+from surface_tracker.surface_serializer import _Surface_Serializer_V00
+from surface_tracker.surface_serializer import _Surface_Serializer_V01
 
-
-from .surface import Surface
-from .surface import Surface_Marker_Aggregate
-
-from .surface_serializer import _Surface_Serializer_Base
-from .surface_serializer import _Surface_Serializer_V00
-from .surface_serializer import _Surface_Serializer_V01
-
-from .test_fixtures import (
+from .fixtures import (
     surface_pairs_v00_square,
     surface_pairs_v01_apriltag,
     surface_pairs_v01_square,

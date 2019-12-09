@@ -11,6 +11,8 @@ See COPYING and COPYING.LESSER for license details.
 
 import os
 import platform
+import signal
+import time
 from types import SimpleNamespace
 
 
@@ -41,14 +43,12 @@ class Is_Alive_Manager(object):
                 "Process Eye{} crashed with trace:\n".format(self.eye_id)
                 + "".join(tb.format_exception(etype, value, traceback))
             )
-            self.ipc_socket.notify(
-                {"subject": "eye_process.stopped", "eye_id": self.eye_id}
-            )
 
         self.is_alive.value = False
         self.ipc_socket.notify(
             {"subject": "eye_process.stopped", "eye_id": self.eye_id}
         )
+        time.sleep(1.0)
         return True  # do not propergate exception
 
 
@@ -62,6 +62,7 @@ def eye(
     version,
     eye_id,
     overwrite_cap_settings=None,
+    hide_ui=False,
 ):
     """reads eye video and detects the pupil.
 
@@ -150,6 +151,16 @@ def eye(
         from pupil_detector_plugins.manager import PupilDetectorManager
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
+
+        def interrupt_handler(sig, frame):
+            import traceback
+
+            trace = traceback.format_stack(f=frame)
+            logger.debug(f"Caught signal {sig} in:\n" + "".join(trace))
+            # NOTE: Interrupt is handled in world/service/player which are responsible for
+            # shutting down the eye process properly
+
+        signal.signal(signal.SIGINT, interrupt_handler)
 
         # UI Platform tweaks
         if platform.system() == "Linux":
@@ -308,6 +319,8 @@ def eye(
 
         # Initialize glfw
         glfw.glfwInit()
+        if hide_ui:
+            glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         title = "Pupil Capture - eye {}".format(eye_id)
 
         width, height = session_settings.get("window_size", (640 + icon_bar_width, 480))
@@ -676,7 +689,6 @@ def eye(
             g_pool.writer.release()
             g_pool.writer = None
 
-        glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         # save session persistent settings
         session_settings["gui_scale"] = g_pool.gui_user_scale
@@ -684,12 +696,14 @@ def eye(
         session_settings["flip"] = g_pool.flip
         session_settings["display_mode"] = g_pool.display_mode
         session_settings["ui_config"] = g_pool.gui.configuration
-        session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
         session_settings["version"] = str(g_pool.version)
 
-        session_window_size = glfw.glfwGetWindowSize(main_window)
-        if 0 not in session_window_size:
-            session_settings["window_size"] = session_window_size
+        if not hide_ui:
+            glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
+            session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
+            session_window_size = glfw.glfwGetWindowSize(main_window)
+            if 0 not in session_window_size:
+                session_settings["window_size"] = session_window_size
 
         session_settings.close()
 

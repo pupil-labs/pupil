@@ -13,7 +13,6 @@ from time import time
 import file_methods as fm
 import player_methods as pm
 import tasklib
-import tasklib.background.patches as bg_patches
 from calibration_routines import gaze_mapping_plugins
 from types import SimpleNamespace
 
@@ -44,7 +43,6 @@ def create_task(gaze_mapper, calibration):
         name,
         _map_gaze,
         args=args,
-        patches=[bg_patches.IPCLoggingPatch()],
         pass_shared_memory=True,
     )
 

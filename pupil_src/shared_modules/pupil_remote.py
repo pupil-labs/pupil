@@ -73,7 +73,7 @@ class Pupil_Remote(Plugin):
     icon_chr = chr(0xE307)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool, port=50020, host="*", use_primary_interface=True):
+    def __init__(self, g_pool, host="*", use_primary_interface=True):
         super().__init__(g_pool)
         self.order = 0.01  # excecute first
         self.context = g_pool.zmq_ctx
@@ -81,9 +81,8 @@ class Pupil_Remote(Plugin):
 
         self.use_primary_interface = use_primary_interface
         assert type(host) == str
-        assert type(port) == int
         self.host = host
-        self.port = g_pool.preferred_remote_port or port
+        self.port = g_pool.preferred_remote_port
 
         self.start_server("tcp://{}:{}".format(host, self.port))
         self.menu = None
@@ -105,7 +104,11 @@ class Pupil_Remote(Plugin):
         # for service we shut down
         if self.g_pool.app == "service":
             audio.say("Error: Port already in use.")
-            self.notify_all({"subject": "service_process.should_stop"})
+            # NOTE: We don't want a should_stop notification, but a hard termination at
+            # this point, because Service is still initializing at this point. This way
+            # we can prevent the eye processes from starting, where otherwise we would
+            # have to wait for them to be started until we can close them.
+            self.g_pool.service_should_run = False
             return
 
         # for capture we try to bind to a arbitrary port on the first external interface
@@ -152,7 +155,7 @@ class Pupil_Remote(Plugin):
 
             try:
                 ip = socket.gethostbyname(socket.gethostname())
-            except:
+            except Exception:
                 ip = "Your external ip"
 
         else:
@@ -272,7 +275,7 @@ class Pupil_Remote(Plugin):
         elif msg[0] == "T":
             try:
                 target = float(msg[2:])
-            except:
+            except Exception:
                 response = "'{}' cannot be converted to float.".format(msg[2:])
             else:
                 raw_time = self.g_pool.get_now()
@@ -301,7 +304,6 @@ class Pupil_Remote(Plugin):
 
     def get_init_dict(self):
         return {
-            "port": self.port,
             "host": self.host,
             "use_primary_interface": self.use_primary_interface,
         }

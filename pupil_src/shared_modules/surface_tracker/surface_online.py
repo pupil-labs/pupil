@@ -20,7 +20,7 @@ class Surface_Online(Surface):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.GAZE_HISTORY_LENGTH = 1
+        self.gaze_history_length = 1
         self.gaze_history = collections.deque()
 
     def update_location(self, frame_idx, visible_markers, camera_model):
@@ -48,7 +48,7 @@ class Surface_Online(Surface):
         while (
             self.gaze_history
             and world_timestamp - self.gaze_history[0]["timestamp"]
-            > self.GAZE_HISTORY_LENGTH
+            > self.gaze_history_length
         ):
             self.gaze_history.popleft()
 

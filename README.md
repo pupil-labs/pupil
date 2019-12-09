@@ -19,9 +19,21 @@ Our vision is to create tools for a diverse group of people interested in learni
 Chat with us on [Discord](https://pupil-labs.com/chat "Pupil Server on Discord").
 
 ## Users
-[Download the latest apps](https://github.com/pupil-labs/pupil/releases/latest "Download Pupil Capture, Pupil Player, and Pupil Service application bundles")! 
+<a 
+href="https://github.com/pupil-labs/pupil/releases/latest"
+rel="noopener"
+target="_blank">
+	<p align="center">
+		<img 
+		src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_app_download_banner.jpg" 
+		alt="Download the latest Pupil Core Apps: Pupil Capture, Pupil Player, Pupil Service"/>
+	</p>
+</a>
 
-You don't need to know how to write code to _use_ Pupil. Read the [Pupil Core user guide](https://docs.pupil-labs.com/core/ "Pupil Core user guide"). 
+
+You don't need to know how to write code to _use_ Pupil. [Download the latest apps](https://github.com/pupil-labs/pupil/releases/latest "Download Pupil Capture, Pupil Player, and Pupil Service application bundles")! 
+
+Read the [Pupil Core user guide](https://docs.pupil-labs.com/core/ "Pupil Core user guide"). 
 
 ## Developers
 There are a number of ways you can interact with Pupil Core software as a developer:
@@ -37,6 +49,14 @@ All setup and dependency installation instructions are contained in this repo. A
 - [Ubuntu 17.10 or lower](./docs/dependencies-ubuntu17.md "Pupil dependency installation for Ubuntu 17.10 or lower")
 - [macOS](./docs/dependencies-macos.md "Pupil dependency installation for macOS")
 - [Windows 10](./docs/dependencies-windows.md "Pupil dependency installation for Windows 10")
+
+#### Intel RealSense 3D Support
+
+If you want to use an Intel RealSense 3D scene camera, please follow the additional setup instructions for the camera model you have.
+
+* **Intel RealSense R200**: Please follow our detailed [Setup Guide](./docs/dependencies-realsense-r200.md "RealSense R200 setup guide")
+* **Intel RealSense D400**: You need to install the [Python wrapper for librealsense](https://github.com/IntelRealSense/librealsense/tree/master/wrappers/python#python-wrapper "Install instructions for librealsense Python wrapper")
+
 
 ### Clone the repo
 After you have installed all dependencies, clone this repo and start Pupil software.
@@ -65,6 +85,22 @@ run_capture.bat
 cd pupil_src
 python main.py capture # or player/service
 ```
+
+#### Command Line Arguments
+
+The following arguments are supported:
+
+| Flag                   | Description                              |
+| ---------------------- | ---------------------------------------- |
+| `-h, --help`           | Show help message and exit.              |
+| `--version`            | Show version and exit.                   |
+| `--debug`              | Display debug log messages.              |
+| `--profile`            | Profile the app's CPU time.              |
+| `-P PORT, --port PORT` | (Capture/Service) Port for Pupil Remote. |
+| `--hide-ui`            | (Capture/Service) Hide UI on startup.    |
+| `<recording>`          | (Player) Path to recording.              |
+
+
 
 ## License
 All source code written by Pupil Labs is open for use in compliance with the [GNU Lesser General Public License (LGPL v3.0)](http://www.gnu.org/licenses/lgpl-3.0.en.html). We want you to change and improve the code -- make a fork! Make sure to share your work with the community!
