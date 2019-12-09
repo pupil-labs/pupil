@@ -23,7 +23,9 @@ class Remote_Recording_State:
     __slots__ = ["sensor"]
 
     def __init__(self, network, attach_event):
-        self.sensor = network.sensor(attach_event["sensor_uuid"])
+        self.sensor = network.sensor(
+            attach_event["sensor_uuid"], callbacks=(self.check_error,)
+        )
 
     def detach(self):
         self.sensor.unlink()
@@ -59,6 +61,11 @@ class Remote_Recording_State:
         while self.sensor.has_notifications:
             self.sensor.handle_notification()
 
+    def check_error(self, sensor, notification):
+        if notification["subject"] == "error":
+            logger.error(notification["error_str"].split("\n")[0])
+            logger.debug(notification["error_str"])
+
 
 class Remote_Recorder_Core:
     __slots__ = ["_attached_rec_states", "_network", "num_states_changed"]
@@ -69,8 +76,7 @@ class Remote_Recorder_Core:
 
         self._attached_rec_states = {}
         self._network = ndsi.Network(
-            formats={ndsi.DataFormat.V3},
-            callbacks=(self.on_event,)
+            formats={ndsi.DataFormat.V3, ndsi.DataFormat.V4}, callbacks=(self.on_event,)
         )
         self._network.start()
 
