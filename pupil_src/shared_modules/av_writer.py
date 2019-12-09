@@ -374,7 +374,9 @@ class _AudioPacketIterator:
         last_audio_pts = float("-inf")
 
         if self.fill_gaps:
-            packet_with_ts_iterator = self._iterate_audio_packets_filling_gaps(self.audio_parts)
+            packet_with_ts_iterator = self._iterate_audio_packets_filling_gaps(
+                self.audio_parts
+            )
         else:
             packet_with_ts_iterator = self._iterate_audio_packets(self.audio_parts)
 
@@ -471,7 +473,7 @@ class _AudioPacketIterator:
             for packet in stream.encode(audio_frame):
                 if packet:
                     yield packet, frame_timestamp
-            frame_timestamp += 1.0 / sample_rate
+            frame_timestamp += frame_samples / sample_rate
 
     # https://github.com/mikeboers/PyAV/blob/develop/av/audio/frame.pyx
     _format_dtypes = {
