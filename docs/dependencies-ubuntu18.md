@@ -62,7 +62,6 @@ pip install pyaudio
 pip install pyopengl
 pip install pyzmq
 pip install scipy
-pip install torch torchvision
 pip install git+https://github.com/zeromq/pyre
 
 pip install pupil_apriltags
