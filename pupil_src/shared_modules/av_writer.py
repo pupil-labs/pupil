@@ -411,8 +411,6 @@ class _AudioPacketIterator:
                     start_ts=start_ts,
                     duration=duration,
                 )
-                silent_packets = list(silent_packets)
-                print(f"===>>> SILENT PACKET COUNT: {len(silent_packets)}")
                 yield from silent_packets
             else:
                 history.append((prev_packet, prev_ts))
