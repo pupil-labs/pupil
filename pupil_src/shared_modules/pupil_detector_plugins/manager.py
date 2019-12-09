@@ -13,7 +13,7 @@ class PupilDetectorManager(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
-        self._available_pupil_detector_classes = available_detector_plugins()[1]
+        _, self._available_pupil_detector_classes = available_detector_plugins()
 
         self._notification_handler = {
             "set_detection_mapping_mode": self.set_detection_mode
