@@ -305,14 +305,23 @@ class JPEG_Writer(AV_Writer):
 class MPEG_Audio_Writer(MPEG_Writer):
     """Extension of MPEG_Writer with audio support."""
 
+    @staticmethod
+    def _add_stream(container, template):
+        stream = container.add_stream(
+            codec_name=template.codec.name,
+            rate=template.rate,
+        )
+        stream.layout = template.layout
+        return stream
+
     def __init__(self, *args, audio_dir: str, **kwargs):
         super().__init__(*args, **kwargs)
 
         try:
             self.audio_parts = audio_utils.load_audio(audio_dir)
-            self.audio_export_stream = self.container.add_stream(
-                codec_name=self.audio_parts[0].stream.codec.name,
-                rate=self.audio_parts[0].stream.rate,
+            self.audio_export_stream = type(self)._add_stream(
+                container=self.container,
+                template=self.audio_parts[0].stream,
             )
         except audio_utils.NoAudioLoadedError:
             logger.debug("Could not mux audio. File not found.")
