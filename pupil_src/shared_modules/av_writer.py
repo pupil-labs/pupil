@@ -437,6 +437,7 @@ class _AudioPacketIterator:
         frame_size = stream.codec_context.frame_size
         av_format = stream.codec_context.format.name
         av_layout = stream.codec_context.layout.name
+        dtype = np.dtype(_AudioPacketIterator._format_dtypes[av_format])
 
         sample_count = sample_rate * duration
 
@@ -449,14 +450,28 @@ class _AudioPacketIterator:
         for frame_idx in range(frame_count):
             remaining_count = sample_count - (frame_idx * frame_size)
             frame_samples = min(remaining_count, frame_size)
-            print(f"frame_idx = {frame_idx} frame_samples = {frame_samples}")
             audio_frame = av.AudioFrame(samples=frame_samples, format=av_format, layout=av_layout)
             audio_frame.pts = None
             audio_frame.sample_rate = sample_rate
+
             for plane in audio_frame.planes:
-                # GET DTYPE FROM FORMAT
-                buffer = np.frombuffer(plane, dtype=np.float32)
+                buffer = np.frombuffer(plane, dtype=dtype)
                 buffer[:] = 0
             for packet in stream.encode(audio_frame):
-                yield packet, frame_timestamp
+                if packet:
+                    yield packet, frame_timestamp
             frame_timestamp += 1.0 / sample_rate
+
+    # https://github.com/mikeboers/PyAV/blob/develop/av/audio/frame.pyx
+    _format_dtypes = {
+        'dbl': '<f8',
+        'dblp': '<f8',
+        'flt': '<f4',
+        'fltp': '<f4',
+        's16': '<i2',
+        's16p': '<i2',
+        's32': '<i4',
+        's32p': '<i4',
+        'u8': 'u1',
+        'u8p': 'u1',
+    }
