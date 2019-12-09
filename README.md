@@ -20,7 +20,7 @@ Chat with us on [Discord](https://pupil-labs.com/chat "Pupil Server on Discord")
 
 ## Users
 <a 
-href="https://github.com/pupil-labs/pupil/releases/latest"
+href="https://github.com/pupil-labs/pupil/releases/latest#user-content-downloads"
 rel="noopener"
 target="_blank">
 	<p align="center">
@@ -31,7 +31,7 @@ target="_blank">
 </a>
 
 
-You don't need to know how to write code to _use_ Pupil. [Download the latest apps](https://github.com/pupil-labs/pupil/releases/latest "Download Pupil Capture, Pupil Player, and Pupil Service application bundles")! 
+You don't need to know how to write code to _use_ Pupil. [Download the latest apps](https://github.com/pupil-labs/pupil/releases/latest#user-content-downloads "Download Pupil Capture, Pupil Player, and Pupil Service application bundles")! 
 
 Read the [Pupil Core user guide](https://docs.pupil-labs.com/core/ "Pupil Core user guide"). 
 
