@@ -452,5 +452,11 @@ class _AudioPacketIterator:
             print(f"frame_idx = {frame_idx} frame_samples = {frame_samples}")
             audio_frame = av.AudioFrame(samples=frame_samples, format=av_format, layout=av_layout)
             audio_frame.pts = None
-            yield from stream.encode(audio_frame)
-            frame_timestamp += 1. / sample_rate
+            audio_frame.sample_rate = sample_rate
+            for plane in audio_frame.planes:
+                # GET DTYPE FROM FORMAT
+                buffer = np.frombuffer(plane, dtype=np.float32)
+                buffer[:] = 0
+            for packet in stream.encode(audio_frame):
+                yield packet, frame_timestamp
+            frame_timestamp += 1.0 / sample_rate
