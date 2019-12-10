@@ -26,8 +26,10 @@ from pyglui import ui
 import gl_utils
 from audio_utils import Audio_Viz_Transform, NoAudioLoadedError, load_audio
 from plugin import System_Plugin_Base
+from version_utils import VersionFormat
 
-assert av.__version__ >= "0.4.0"
+
+assert VersionFormat(av.__version__) >= VersionFormat("0.4.4")
 
 
 logger = logging.getLogger(__name__)
