@@ -32,9 +32,13 @@ if not exist %release_dir% (
 	mkdir %release_dir%
 )
 
-call python ..\pupil_src\shared_modules\pupil_detectors\build.py
-call python ..\pupil_src\shared_modules\cython_methods\build.py
-call python ..\pupil_src\shared_modules\calibration_routines\optimization_calibration\build.py
+set PATH=%PATH%;C:\Python36\Lib\site-packages\scipy\.libs
+set PATH=%PATH%;C:\Python36\Lib\site-packages\torch\lib
+set PATH=%PATH%;C:\Python36\Lib\site-packages\zmq
+
+python ..\pupil_src\shared_modules\pupil_detectors\build.py
+python ..\pupil_src\shared_modules\cython_methods\build.py
+python ..\pupil_src\shared_modules\calibration_routines\optimization_calibration\build.py
 
 call :Bundle capture %current_tag%
 call :Bundle service %current_tag%
@@ -43,7 +47,7 @@ call :Bundle player %current_tag%
 cd %release_dir%
 for /d %%d in (*) do (
 	echo Adding %%d
-	7z a -t7z ..\%release_dir%.7z %%d
+	7z a -tzip ..\%release_dir%.zip %%d
 )
 cd ..
 
