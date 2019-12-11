@@ -33,7 +33,6 @@ if not exist %release_dir% (
 )
 
 set PATH=%PATH%;C:\Python36\Lib\site-packages\scipy\.libs
-set PATH=%PATH%;C:\Python36\Lib\site-packages\torch\lib
 set PATH=%PATH%;C:\Python36\Lib\site-packages\zmq
 
 python ..\pupil_src\shared_modules\pupil_detectors\build.py
