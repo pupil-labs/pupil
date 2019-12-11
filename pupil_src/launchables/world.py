@@ -756,6 +756,7 @@ def world_profiled(
     user_dir,
     version,
     preferred_remote_port,
+    hide_ui,
 ):
     import cProfile
     import subprocess
@@ -773,6 +774,7 @@ def world_profiled(
             "user_dir": user_dir,
             "version": version,
             "preferred_remote_port": preferred_remote_port,
+            "hide_ui": hide_ui,
         },
         locals(),
         "world.pstats",

@@ -878,6 +878,7 @@ def eye_profiled(
     version,
     eye_id,
     overwrite_cap_settings=None,
+    hide_ui=False,
 ):
     import cProfile
     import subprocess
@@ -896,6 +897,7 @@ def eye_profiled(
             "version": version,
             "eye_id": eye_id,
             "overwrite_cap_settings": overwrite_cap_settings,
+            "hide_ui": hide_ui,
         },
         locals(),
         "eye{}.pstats".format(eye_id),
