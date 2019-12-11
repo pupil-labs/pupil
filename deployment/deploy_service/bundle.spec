@@ -78,10 +78,6 @@ if platform.system() == "Darwin":
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
-        Tree(
-            "../../pupil_src/shared_modules/calibration_routines/fingertip_calibration/weights/",
-            prefix="weights",
-        ),
         strip=None,
         upx=True,
         name="Pupil Service",
@@ -140,10 +136,6 @@ elif platform.system() == "Linux":
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
-        Tree(
-            "../../pupil_src/shared_modules/calibration_routines/fingertip_calibration/weights/",
-            prefix="weights",
-        ),
         strip=True,
         upx=True,
         name="pupil_service",

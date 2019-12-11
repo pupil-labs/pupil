@@ -104,10 +104,6 @@ if platform.system() == "Darwin":
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         [("pyrealsense/lrs_parsed_classes", pyrealsense_path, "DATA")],
         apriltag_libs,
-        Tree(
-            "../../pupil_src/shared_modules/calibration_routines/fingertip_calibration/weights/",
-            prefix="weights",
-        ),
         strip=None,
         upx=True,
         name="Pupil Capture",
@@ -174,10 +170,6 @@ elif platform.system() == "Linux":
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         apriltag_libs,
-        Tree(
-            "../../pupil_src/shared_modules/calibration_routines/fingertip_calibration/weights/",
-            prefix="weights",
-        ),
         strip=True,
         upx=True,
         name="pupil_capture",
@@ -250,8 +242,7 @@ elif platform.system() == "Windows":
 
     vc_redist_path = external_libs_path / "vc_redist"
     vc_redist_libs = [
-        (lib.name, str(lib), "BINARY")
-        for lib in vc_redist_path.glob("*.dll")
+        (lib.name, str(lib), "BINARY") for lib in vc_redist_path.glob("*.dll")
     ]
 
     coll = COLLECT(
@@ -266,10 +257,6 @@ elif platform.system() == "Windows":
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         apriltag_libs,
         vc_redist_libs,
-        Tree(
-            "../../pupil_src/shared_modules/calibration_routines/fingertip_calibration/weights/",
-            prefix="weights",
-        ),
         np_dll_list,
         strip=False,
         upx=True,
