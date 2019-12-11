@@ -57,6 +57,13 @@ class Remote_Recording_State:
     def session_name(self, session_name):
         self.sensor.set_control_value("capture_session_name", session_name)
 
+    @property
+    def remote_version(self):
+        try:
+            return self.sensor.controls["version"]["value"]
+        except KeyError:
+            return "Undefined"
+
     def poll_updates(self):
         while self.sensor.has_notifications:
             self.sensor.handle_notification()
@@ -171,7 +178,8 @@ class Remote_Recorder(Plugin):
         )
 
     def append_rec_state_switch(self, rec_state):
-        self.menu.append(ui.Switch("is_recording", rec_state, label=rec_state.label))
+        label = f"{rec_state.label} ({rec_state.remote_version})"
+        self.menu.append(ui.Switch("is_recording", rec_state, label=label))
 
     def append_session_name_view(self, rec_state):
         view = ui.Text_Input("session_name", rec_state, label="Session name")
