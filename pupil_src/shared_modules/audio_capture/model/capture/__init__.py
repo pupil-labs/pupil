@@ -1,1 +1,2 @@
 from pupil_audio import PyAudio2PyAVCapture
+from .pyaudio2pyav_observable_multipart_capture import PyAudio2PyAVObservableMultipartCapture
