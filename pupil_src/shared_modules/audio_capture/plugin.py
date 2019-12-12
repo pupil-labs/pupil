@@ -42,6 +42,7 @@ class AudioCapturePlugin(Plugin):
         self.capture_controller = AudioCaptureController(
             device_monitor=self.source_controller.device_monitor,
         )
+        self.capture_controller.add_observer("on_status_update", self._on_capture_status_update)
 
         self.mic_check_controller = AudioMicCheckController()
         self.mic_check_controller.add_observer("on_check_started", self._on_mic_check_started)
@@ -123,6 +124,9 @@ class AudioCapturePlugin(Plugin):
         self._update_ui()
 
     def _on_capture_started(self):
+        self._update_ui()
+
+    def _on_capture_status_update(self):
         self._update_ui()
 
     def _on_capture_finished(self):
