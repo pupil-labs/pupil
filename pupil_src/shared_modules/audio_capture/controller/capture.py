@@ -11,17 +11,17 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 import typing as T
 
-from pupil_audio.nonblocking import PyAudio2PyAVCapture
-
 from observable import Observable
+from audio_capture.model.caputre import PyAudio2PyAVObservableMultipartCapture
 
 
 logger = logging.getLogger(__name__)
 
 
 class AudioCaptureController(Observable):
-    def __init__(self):
+    def __init__(self, device_monitor=None):
         self.source_name = None
+        self.device_monitor = device_monitor
         # Private
         self._status_string = self._status_str_idle()
         self._capture = None
@@ -46,12 +46,18 @@ class AudioCaptureController(Observable):
 
         self._out_path = out_path
 
-        self._capture = PyAudio2PyAVCapture(
+        self._capture = PyAudio2PyAVObservableMultipartCapture(
             in_name=self.source_name,
             out_path=self._out_path,
+            device_monitor=self.device_monitor,
         )
+
+        self._capture.add_observer("on_input_device_connected", self.on_input_device_connected)
+        self._capture.add_observer("on_input_device_disconnected", self.on_input_device_disconnected)
+
         self._capture.start()
         self._status_string = self._status_str_recording_started()
+        self.on_status_update()
 
     def stop_recording(self):
         if not self.is_recording:
@@ -59,10 +65,14 @@ class AudioCaptureController(Observable):
             return
         self._capture.stop()
         self._capture = None
-        self._status_string = self._status_str_recording_finished()
+        self._status_string = self._status_str_idle()
+        self.on_status_update()
 
     def cleanup(self):
         self.stop_recording()
+
+    def on_status_update(self):
+        pass
 
     # Private
 
@@ -72,5 +82,13 @@ class AudioCaptureController(Observable):
     def _status_str_recording_started(self) -> str:
         return f"Recording audio from {self.source_name}"
 
-    def _status_str_recording_finished(self) -> str:
-        return f"Saved audio to {self._out_path}"
+    def _status_str_recording_paused(self) -> str:
+        return f"Waiting for audio device {self.source_name}"
+
+    def on_input_device_connected(self, device_info):
+        self._status_string = self._status_str_recording_started()
+        self.on_status_update()
+
+    def on_input_device_disconnected(self):
+        self._status_string = self._status_str_recording_paused()
+        self.on_status_update()
