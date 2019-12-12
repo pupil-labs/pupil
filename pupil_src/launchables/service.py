@@ -340,7 +340,7 @@ def service_profiled(
     from .service import service
 
     cProfile.runctx(
-        "service(timebase,eye_procs_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,hide_ui)",
+        "service(timebase,eye_procs_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port,hide_ui)",
         {
             "timebase": timebase,
             "eye_procs_alive": eye_procs_alive,
