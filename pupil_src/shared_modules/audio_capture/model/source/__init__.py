@@ -1,2 +1,3 @@
 from pupil_audio import PyAudioDeviceSource
 from pupil_audio import PyAudioDelayedDeviceSource
+from .pyaudio_observable_delayed_device_source import PyAudioObservableDelayedDeviceSource
