@@ -8,16 +8,11 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import os
-import sys
-import time
 import logging
-import threading
 import typing as T
 
 from observable import Observable
-
-from pupil_audio import PyAudioBackgroundDeviceMonitor, DeviceInfo
+from pupil_capture.model.monitor import PyAudioObservableBackgroundDeviceMonitor
 
 
 _AUDIO_SOURCE_NONE_NAME = "No Audio"
@@ -31,11 +26,11 @@ class AudioSourceController(Observable):
         self._current_source = None
         self._discovered_sources = []
 
-        self._monitor = ObservableBackgroundDeviceMonitor()
-        self._monitor.add_observer("on_device_connected", self._on_device_connected)
-        self._monitor.add_observer("on_device_updated", self._on_device_updated)
-        self._monitor.add_observer("on_device_disconnected", self._on_device_disconnected)
-        self._monitor.start()
+        self.device_monitor = PyAudioObservableBackgroundDeviceMonitor()
+        self.device_monitor.add_observer("on_device_connected", self._on_device_connected)
+        self.device_monitor.add_observer("on_device_updated", self._on_device_updated)
+        self.device_monitor.add_observer("on_device_disconnected", self._on_device_disconnected)
+        self.device_monitor.start()
 
         self._set_source_if_valid(audio_src)
 
@@ -46,7 +41,7 @@ class AudioSourceController(Observable):
         return self._current_source
 
     def cleanup(self):
-        self._monitor.cleanup()
+        self.device_monitor.cleanup()
 
     # Callbacks
 
@@ -77,7 +72,7 @@ class AudioSourceController(Observable):
         self._update_discovered_sources()
 
     def _update_discovered_sources(self):
-        devices_by_name = self._monitor.devices_by_name
+        devices_by_name = self.device_monitor.devices_by_name
 
         input_names = [name for name, device_info in devices_by_name.items() if device_info.is_input]
         assert _AUDIO_SOURCE_NONE_NAME not in input_names
@@ -101,48 +96,3 @@ class AudioSourceController(Observable):
         if self._current_source != new_valid_source:
             self._current_source = new_valid_source
             self.on_selected(new_valid_source)
-
-
-class ObservableBackgroundDeviceMonitor(PyAudioBackgroundDeviceMonitor, Observable):
-
-    @property
-    def devices_by_name(self) -> T.Mapping[str, DeviceInfo]:
-        return PyAudioBackgroundDeviceMonitor.devices_by_name.fget(self)
-
-    @devices_by_name.setter
-    def devices_by_name(self, new_devices_by_name: T.Mapping[str, DeviceInfo]):
-        old_devices_by_name = self.devices_by_name
-
-        old_names = set(old_devices_by_name.keys())
-        new_names = set(new_devices_by_name.keys())
-
-        connected_names = new_names.difference(old_names)
-        existing_names = new_names.intersection(old_names)
-        disconnected_names = old_names.difference(new_names)
-
-        for name in connected_names:
-            device_info = new_devices_by_name[name]
-            old_devices_by_name[name] = device_info
-            self.on_device_connected(device_info)
-
-        for name in existing_names:
-            device_info = new_devices_by_name[name]
-            if device_info != old_devices_by_name[name]:
-                old_devices_by_name[name] = device_info
-                self.on_device_updated(device_info)
-
-        for name in disconnected_names:
-            device_info = old_devices_by_name[name]
-            del old_devices_by_name[name]
-            self.on_device_disconnected(device_info)
-
-        PyAudioBackgroundDeviceMonitor.devices_by_name.fset(self, old_devices_by_name)
-
-    def on_device_connected(self, device_info):
-        pass
-
-    def on_device_updated(self, device_info):
-        pass
-
-    def on_device_disconnected(self, device_info):
-        pass
