@@ -86,10 +86,15 @@ def lazy_property(init_fn, **kwargs):
         _storage = value
         _did_init = True
 
+    def fdel(self):
+        nonlocal _did_init, _storage
+        del _storage
+        del _did_init
+
     if is_readonly:
         return property(fget=fget)
     else:
-        return property(fget=fget, fset=fset, fdel=None)
+        return property(fget=fget, fset=fset, fdel=fdel)
 
 
 def create_temporary_unique_file_path(name=None, *, ext: str) -> pathlib.Path:
