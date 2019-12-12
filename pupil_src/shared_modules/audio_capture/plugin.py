@@ -39,7 +39,9 @@ class AudioCapturePlugin(Plugin):
         self.source_controller = AudioSourceController(audio_src)
         self.source_controller.add_observer("on_selected", self._on_source_selected)
 
-        self.capture_controller = AudioCaptureController()
+        self.capture_controller = AudioCaptureController(
+            device_monitor=self.source_controller.device_monitor,
+        )
 
         self.mic_check_controller = AudioMicCheckController()
         self.mic_check_controller.add_observer("on_check_started", self._on_mic_check_started)
