@@ -1,1 +1,2 @@
-
+from pupil_audio import PyAudioDeviceMonitor
+from pupil_audio import PyAudioBackgroundDeviceMonitor
