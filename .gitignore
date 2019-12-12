@@ -51,3 +51,8 @@ mprofile_*.dat
 .ipynb_checkpoints/
 *.dmg
 *.zip
+deployment/pupil_v*
+*.pyd
+*.dll
+win_drv
+.vs
