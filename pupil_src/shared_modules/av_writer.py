@@ -309,8 +309,7 @@ class MPEG_Audio_Writer(MPEG_Writer):
     @staticmethod
     def _add_stream(container, template):
         stream = container.add_stream(
-            codec_name=template.codec.name,
-            rate=template.rate,
+            codec_name=template.codec.name, rate=template.rate
         )
         stream.layout = template.layout
         return stream
@@ -321,8 +320,7 @@ class MPEG_Audio_Writer(MPEG_Writer):
         try:
             self.audio_parts = audio_utils.load_audio(audio_dir)
             self.audio_export_stream = type(self)._add_stream(
-                container=self.container,
-                template=self.audio_parts[0].stream,
+                container=self.container, template=self.audio_parts[0].stream
             )
         except audio_utils.NoAudioLoadedError:
             logger.debug("Could not mux audio. File not found.")
@@ -356,12 +354,11 @@ class MPEG_Audio_Writer(MPEG_Writer):
             start_time=self.start_time,
             audio_export_stream=self.audio_export_stream,
             audio_parts=self.audio_parts,
-            fill_gaps=True
+            fill_gaps=True,
         ).iterate_audio_packets()
 
 
 class _AudioPacketIterator:
-
     def __init__(self, start_time, audio_parts, audio_export_stream, fill_gaps=True):
         self.start_time = start_time
         self.audio_parts = audio_parts
@@ -413,7 +410,9 @@ class _AudioPacketIterator:
         def duration(self):
             return self.end_time - self.start_time
 
-    class _AudioFrame(collections.namedtuple("_AudioFrame", ["raw_frame", "start_time"])):
+    class _AudioFrame(
+        collections.namedtuple("_AudioFrame", ["raw_frame", "start_time"])
+    ):
         @property
         def duration(self):
             return self.raw_frame.samples / self.raw_frame.sample_rate
@@ -464,7 +463,7 @@ class _AudioPacketIterator:
                 yield from self._generate_silence_audio_frames(
                     stream=self.audio_export_stream,
                     start_ts=audio_frame.start_time,
-                    max_duration=audio_frame.duration
+                    max_duration=audio_frame.duration,
                 )
             else:
                 raise ValueError(f"Unknown audio frame type: {audio_frame}")
@@ -509,9 +508,13 @@ class _AudioPacketIterator:
     @staticmethod
     def _generate_silence_audio_frames(stream, start_ts, max_duration: float = None):
 
-        frame_sample_sizes = _AudioPacketIterator._generate_raw_frame_sample_size(stream, start_ts, max_duration)
+        frame_sample_sizes = _AudioPacketIterator._generate_raw_frame_sample_size(
+            stream, start_ts, max_duration
+        )
         raw_frame_factory = _AudioPacketIterator._create_audio_raw_frame_factory(stream)
-        timestamp_factory = _AudioPacketIterator._create_audio_timestamp_factory(stream, start_ts)
+        timestamp_factory = _AudioPacketIterator._create_audio_timestamp_factory(
+            stream, start_ts
+        )
 
         for frame_size in frame_sample_sizes:
             frame = raw_frame_factory(frame_size)
@@ -523,7 +526,9 @@ class _AudioPacketIterator:
             yield audio_frame
 
     @staticmethod
-    def _generate_raw_frame_sample_size(stream, start_ts: float, max_duration: float = None):
+    def _generate_raw_frame_sample_size(
+        stream, start_ts: float, max_duration: float = None
+    ):
         sample_rate = stream.codec_context.sample_rate
         frame_size = stream.codec_context.frame_size
 
@@ -580,14 +585,14 @@ class _AudioPacketIterator:
 
     # https://github.com/mikeboers/PyAV/blob/develop/av/audio/frame.pyx
     _format_dtypes = {
-        'dbl': '<f8',
-        'dblp': '<f8',
-        'flt': '<f4',
-        'fltp': '<f4',
-        's16': '<i2',
-        's16p': '<i2',
-        's32': '<i4',
-        's32p': '<i4',
-        'u8': 'u1',
-        'u8p': 'u1',
+        "dbl": "<f8",
+        "dblp": "<f8",
+        "flt": "<f4",
+        "fltp": "<f4",
+        "s16": "<i2",
+        "s16p": "<i2",
+        "s32": "<i4",
+        "s32p": "<i4",
+        "u8": "u1",
+        "u8p": "u1",
     }
