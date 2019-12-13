@@ -1,10 +1,17 @@
+NANOSEC_TO_SEC_FACTOR = 1e-9
+MICROSEC_TO_SEC_FACTOR = 1e-9
+
+SEC_TO_NANOSEC_FACTOR = 1e+9
+SEC_TO_MICROSEC_FACTOR = 1e+6
+
+
 class Timestamp(int):
 
     def __new__(cls, *args, nanoseconds: int = None, seconds: float = None, **kwargs):
         if nanoseconds is not None and seconds is None:
             nanoseconds = int(nanoseconds)
         elif nanoseconds is None and seconds is not None:
-            nanoseconds = int(seconds * 1000)
+            nanoseconds = int(seconds * SEC_TO_NANOSEC_FACTOR)
         else:
             raise ValueError(f"Must provide EITHER `nanoseconds` ({nanoseconds}) OR `seconds` ({seconds}) argument.")
         return  super(cls, cls).__new__(cls, nanoseconds)
@@ -15,7 +22,7 @@ class Timestamp(int):
 
     @property
     def raw_seconds(self) -> float:
-        return float(self.raw_nanoseconds / 1000)
+        return float(self.raw_nanoseconds * NANOSEC_TO_SEC_FACTOR)
 
     def __add__(self, other):
         if not isinstance(other, Timestamp):
