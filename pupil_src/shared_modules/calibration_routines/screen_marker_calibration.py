@@ -268,11 +268,13 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             # refresh speed settings
             glfwSwapInterval(0)
 
+            glfwMakeContextCurrent(active_window)
+
             if self.fullscreen:
                 # Switch to full screen here. See NOTE above at glfwCreateWindow().
-                glfwSetWindowMonitor(self._window, monitor, 0, 0, width, height)
-
-            glfwMakeContextCurrent(active_window)
+                glfwSetWindowMonitor(
+                    self._window, monitor, 0, 0, width, height, refreshRate
+                )
 
     def on_window_key(self, window, key, scancode, action, mods):
         if action == GLFW_PRESS:
