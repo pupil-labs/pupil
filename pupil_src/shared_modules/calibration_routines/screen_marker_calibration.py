@@ -422,7 +422,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     def gl_display_in_window(self):
         if glfwWindowShouldClose(self._window):
-            self.close_window()
+            self.stop()
             return
 
         p_window_size = glfwGetFramebufferSize(self._window)
