@@ -428,8 +428,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         p_window_size = glfwGetFramebufferSize(self._window)
         if p_window_size == (0, 0):
             # Might be minimized or on Windows in fullscreen mode but tabbed out
-            # (rendered only in background). Anyways we get errors when we call the code
-            # below with window size (0, 0).
+            # (rendered only in background). We get errors when we call the code below
+            # with window size (0, 0). Anyways we probably want to stop calibration in
+            # this case as it will screw up the calibration anyways.
+            self.stop()
             return
 
         active_window = glfwGetCurrentContext()
