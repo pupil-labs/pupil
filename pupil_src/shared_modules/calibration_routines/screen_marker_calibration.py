@@ -253,7 +253,12 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.window_position_default[1],
                 )
 
-            glfwSetInputMode(self._window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            # This makes it harder to accidentally tab out of fullscreen by clicking on
+            # some other window (e.g. when having two monitors). On the other hand you
+            # want a cursor to adjust the window size when not in fullscreen mode.
+            cursor = GLFW_CURSOR_DISABLED if self.fullscreen else GLFW_CURSOR_HIDDEN
+
+            glfwSetInputMode(self._window, GLFW_CURSOR, cursor)
 
             # Register callbacks
             glfwSetFramebufferSizeCallback(self._window, on_resize)
