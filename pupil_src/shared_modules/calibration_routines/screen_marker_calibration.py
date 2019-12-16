@@ -253,7 +253,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.window_position_default[1],
                 )
 
-            glfwSetInputMode(self._window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN)
+            glfwSetInputMode(self._window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
 
             # Register callbacks
             glfwSetFramebufferSizeCallback(self._window, on_resize)
