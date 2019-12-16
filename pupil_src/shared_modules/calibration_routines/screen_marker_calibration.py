@@ -238,9 +238,14 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 monitor = None
                 width, height = 640, 360
 
+            # NOTE: Always creating windowed window here, even if in fullscreen mode. On
+            # windows you might experience a black screen for up to 1 sec when creating
+            # a blank window directly in fullscreen mode. By creating it windowed and
+            # then switching to fullscreen it will stay white the entire time.
             self._window = glfwCreateWindow(
-                width, height, title, monitor=monitor, share=glfwGetCurrentContext()
+                width, height, title, share=glfwGetCurrentContext()
             )
+
             if not self.fullscreen:
                 glfwSetWindowPos(
                     self._window,
@@ -262,6 +267,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             basic_gl_setup()
             # refresh speed settings
             glfwSwapInterval(0)
+
+            if self.fullscreen:
+                # Switch to full screen here. See NOTE above at glfwCreateWindow().
+                glfwSetWindowMonitor(self._window, monitor, 0, 0, width, height)
 
             glfwMakeContextCurrent(active_window)
 
