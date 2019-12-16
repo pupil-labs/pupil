@@ -414,11 +414,18 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     )
 
     def gl_display_in_window(self):
-        active_window = glfwGetCurrentContext()
         if glfwWindowShouldClose(self._window):
             self.close_window()
             return
 
+        p_window_size = glfwGetFramebufferSize(self._window)
+        if p_window_size == (0, 0):
+            # Might be minimized or on Windows in fullscreen mode but tabbed out
+            # (rendered only in background). Anyways we get errors when we call the code
+            # below with window size (0, 0).
+            return
+
+        active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(self._window)
 
         clear_gl_screen()
@@ -427,7 +434,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         r = self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
-        p_window_size = glfwGetFramebufferSize(self._window)
         gl.glOrtho(0, p_window_size[0], p_window_size[1], 0, -1, 1)
         # Switch back to Model View Matrix
         gl.glMatrixMode(gl.GL_MODELVIEW)
