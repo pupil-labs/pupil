@@ -34,8 +34,9 @@ class Detector2DPlugin(PupilDetectorPlugin):
 
     def detect(self, frame):
         roi = Roi(*self.g_pool.u_r.get()[:4])
+        debug_img = frame.bgr if self.g_pool.display_mode == "algorithm" else None
         result = self.detector_2d.detect(
-            gray_img=frame.gray, color_img=frame.bgr, roi=roi
+            gray_img=frame.gray, color_img=debug_img, roi=roi,
         )
         eye_id = self.g_pool.eye_id
         location = result["location"]
