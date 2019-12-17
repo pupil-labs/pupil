@@ -22,22 +22,28 @@ These backends are available:
 - File: Loads video from file
 """
 
+import logging
 import os
-import numpy as np
 from glob import glob
+
+import numpy as np
+
 from camera_models import load_intrinsics
 
-import logging
+from .base_backend import (
+    Base_Manager,
+    Base_Source,
+    EndofVideoError,
+    InitialisationError,
+    StreamError,
+)
+from .fake_backend import Fake_Manager, Fake_Source
+from .file_backend import File_Manager, File_Source, FileSeekError
+from .hmd_streaming import HMD_Streaming_Source
+from .uvc_backend import UVC_Manager, UVC_Source
 
 logger = logging.getLogger(__name__)
 
-from .base_backend import InitialisationError, StreamError, EndofVideoError
-from .base_backend import Base_Source, Base_Manager
-from .fake_backend import Fake_Source, Fake_Manager
-from .file_backend import FileSeekError
-from .file_backend import File_Source, File_Manager
-from .uvc_backend import UVC_Source, UVC_Manager
-from .hmd_streaming import HMD_Streaming_Source
 
 source_classes = [File_Source, UVC_Source, Fake_Source, HMD_Streaming_Source]
 manager_classes = [File_Manager, UVC_Manager, Fake_Manager]
