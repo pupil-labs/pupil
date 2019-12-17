@@ -60,8 +60,7 @@ else:
 
 try:
     from .realsense2_backend import Realsense2_Source, Realsense2_Manager
-except ImportError as ie:
-    print(ie)
+except ImportError:
     logger.debug(
         "Install pyrealsense2 to use the Intel RealSense backend for D400 series cameras"
     )
