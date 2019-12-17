@@ -93,7 +93,7 @@ class PupilRecording:
             ("pi", "eye1"): r"^PI right v(\d+) ps(\d+)",
             ("videos",): [rf"\.{ext}$" for ext in VALID_VIDEO_EXTENSIONS],
             ("rawtimes",): r"\.time$",
-            ("timestamps",): r"_timestamps\.npy$",
+            ("timestamps",): r"_timestamps\.npy$", #TODO: Add nanosecond pattern
             ("lookup",): r"_lookup\.npy$",
         }
 

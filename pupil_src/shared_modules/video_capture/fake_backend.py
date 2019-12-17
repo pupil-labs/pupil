@@ -17,6 +17,7 @@ from time import time, sleep
 from pyglui import ui
 from camera_models import Dummy_Camera
 from file_methods import load_object
+from timestamp import legacy_timestamps_file_path_like
 
 # logging
 import logging
@@ -86,7 +87,7 @@ class Fake_Source(Playback_Source, Base_Source):
             frame_size = meta["frame_size"]
             frame_rate = meta["frame_rate"]
             self.timestamps = np.load(
-                os.path.splitext(source_path)[0] + "_timestamps.npy"
+                legacy_timestamps_file_path_like(source_path),
             )
         else:
             self.timestamps = None

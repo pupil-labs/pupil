@@ -129,4 +129,4 @@ def _rename_mobile_files(recording: PupilRecording):
 
 
 def _rewrite_timestamps(recording: PupilRecording):
-    update_utils._rewrite_times(recording, dtype=">f8")
+    update_utils._rewrite_times(recording, dtype=">f8")  #TODO: Convert to nanosec

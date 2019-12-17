@@ -33,6 +33,8 @@ from plugin import Analysis_Plugin_Base, System_Plugin_Base
 from exporter import export as export_function
 from player_methods import is_pupil_rec_dir
 
+from timestamps import legacy_timestamps_file_path_like
+
 
 def get_recording_dirs(data_dir):
     """
@@ -318,8 +320,10 @@ class Batch_Exporter(Analysis_Plugin_Base):
         for avail in self.available_exports[:]:
             if avail["selected"]:
                 try:
+                    ts_path = os.path.join(avail["source"], "world")
+                    ts_path = legacy_timestamps_file_path_like(ts_path)
                     frames_to_export = len(
-                        np.load(os.path.join(avail["source"], "world_timestamps.npy"))
+                        np.load(ts_path)
                     )
                 except Exception:
                     logger.error("Invalid export directory: {}".format(avail["source"]))

@@ -131,7 +131,7 @@ def _rewrite_timestamps(recording: PupilRecording):
         # start at 0. This is to increase precision when converting
         # timestamps to float32, e.g. for OpenGL!
         SECONDS_PER_NANOSECOND = 1e-9
-        return (timestamps - start_time) * SECONDS_PER_NANOSECOND
+        return (timestamps - start_time) * SECONDS_PER_NANOSECOND  #TODO: Don't :)
 
     update_utils._rewrite_times(recording, dtype="<u8", conversion=conversion)
 

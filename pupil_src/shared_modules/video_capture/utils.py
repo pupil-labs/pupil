@@ -18,6 +18,8 @@ from typing import Iterator, Sequence
 import av
 import cv2
 import numpy as np
+from timestamp import legacy_timestamps_file_path_like
+
 
 logger = logging.getLogger(__name__)
 
@@ -223,7 +225,7 @@ class Video:
 
     @property
     def ts_loc(self) -> str:
-        return os.path.join(self.base, f"{self.name}_timestamps.npy")
+        return legacy_timestamps_file_path_like(os.path.join(self.base, self.name))
 
     @property
     def base(self) -> str:
@@ -457,7 +459,7 @@ class VideoSet:
 def pi_gaze_items(root_dir):
     def find_raw_path(timestamps_path):
         raw_name = timestamps_path.name.replace("_timestamps", "")
-        raw_path = timestamps_path.with_name(raw_name).with_suffix(".raw")
+        raw_path = timestamps_path.with_name(raw_name).with_suffix(".raw") #TODO: legacy_timestamps_file_path_without_suffix
         assert raw_path.exists(), f"The file does not exist at path: {raw_path}"
         return raw_path
 
@@ -475,7 +477,7 @@ def pi_gaze_items(root_dir):
     # - starts with "gaze ps"
     # - is followed by one or more digits
     # - is followed by "_timestamps.npy"
-    gaze_timestamp_pattern = "gaze ps[0-9]*_timestamps.npy"
+    gaze_timestamp_pattern = "gaze ps[0-9]*_timestamps.npy" # TODO: Consolidate pattern with other patterns
 
     for timestamps_path in pl.Path(root_dir).glob(gaze_timestamp_pattern):
         raw_path = find_raw_path(timestamps_path)

@@ -21,6 +21,7 @@ from fractions import Fraction
 import av
 import numpy as np
 from av.packet import Packet
+from timestamp import legacy_timestamps_file_path_like
 
 import audio_utils
 from video_capture.utils import Video
@@ -64,10 +65,15 @@ def write_timestamps(file_loc, timestamps, output_format="npy"):
         - "csv": csv file export
         - "all": Exports in all of the above formats
     """
-    directory, video_file = os.path.split(file_loc)
-    name, ext = os.path.splitext(video_file)
-    ts_file = "{}_timestamps".format(name)
-    ts_loc = os.path.join(directory, ts_file)
+    if output_format == "npy":
+        ts_loc = legacy_timestamps_file_path_like(file_loc)
+        ts_loc, _ = os.path.splitext(ts_loc)
+    else:
+        directory, video_file = os.path.split(file_loc)
+        name, ext = os.path.splitext(video_file)
+        ts_file = "{}_timestamps".format(name)
+        ts_loc = os.path.join(directory, ts_file)
+
     ts = np.array(timestamps)
     if output_format not in ("npy", "csv", "all"):
         raise ValueError("Unknown timestamp output format `{}`".format(output_format))

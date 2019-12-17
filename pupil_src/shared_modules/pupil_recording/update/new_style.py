@@ -21,6 +21,9 @@ from ..recording import PupilRecording
 from ..recording_utils import InvalidRecordingException
 from . import invisible
 
+from timestamp import legacy_timestamps_file_path_like
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +50,7 @@ def recording_update_to_latest_new_style(rec_dir: str):
             for path in Path(rec_dir).iterdir():
                 if not path.is_file:
                     continue
-                if path.name in ["gaze.pldata", "gaze_timestamps.npy"]:
+                if path.name in ["gaze.pldata", legacy_timestamps_file_path_like("gaze")]:
                     logger.debug(
                         f"Deleting potentially corrupted file '{path.name}'"
                         f" from pre v1.18."

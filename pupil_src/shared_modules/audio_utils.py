@@ -16,6 +16,7 @@ import os
 import numpy as np
 
 import av
+from timestamp import legacy_timestamps_file_path_like
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -46,7 +47,7 @@ def load_audio(rec_dir):
     else:
         raise NoAudioLoadedError("No valid audio file found")
 
-    audiots_path = os.path.splitext(audio_file)[0] + "_timestamps.npy"
+    audiots_path = legacy_timestamps_file_path_like(audio_file)
     try:
         timestamps = np.load(audiots_path)
     except IOError:

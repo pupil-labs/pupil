@@ -22,6 +22,8 @@ from pathlib import Path
 import msgpack
 import numpy as np
 
+from timestamp import legacy_timestamps_file_path_like
+
 assert (
     msgpack.version[1] == 5
 ), "msgpack out of date, please upgrade to version (0, 5, 6 ) or later."
@@ -135,7 +137,7 @@ class Incremental_Legacy_Pupil_Data_Loader(object):
 
 
 def load_pldata_file(directory, topic):
-    ts_file = os.path.join(directory, topic + "_timestamps.npy")
+    ts_file = legacy_timestamps_file_path_like(os.path.join(directory, topic))
     msgpack_file = os.path.join(directory, topic + ".pldata")
     try:
         data = collections.deque()
@@ -180,9 +182,7 @@ class PLData_Writer(object):
     def close(self):
         self.file_handle.close()
         self.file_handle = None
-
-        ts_file = self.name + "_timestamps.npy"
-        ts_path = os.path.join(self.directory, ts_file)
+        ts_path = legacy_timestamps_file_path_like(os.path.join(self.directory, self.name))
         np.save(ts_path, self.ts_queue)
         self.ts_queue = None
 

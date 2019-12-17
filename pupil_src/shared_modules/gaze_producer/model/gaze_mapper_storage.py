@@ -19,6 +19,9 @@ from storage import SingleFileStorage
 from gaze_producer import model
 from observable import Observable
 
+from timestamp import legacy_timestamps_file_path_like
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -79,7 +82,8 @@ class GazeMapperStorage(SingleFileStorage, Observable):
         mapping_file_path = self._gaze_mapping_file_path(gaze_mapper)
         try:
             os.remove(mapping_file_path + ".pldata")
-            os.remove(mapping_file_path + "_timestamps.npy")
+            ts_path = legacy_timestamps_file_path_like(mapping_file_path)
+            os.remove(ts_path)
         except FileNotFoundError:
             pass
 
@@ -95,8 +99,8 @@ class GazeMapperStorage(SingleFileStorage, Observable):
                 old_mapping_file_path + ".pldata", new_mapping_file_path + ".pldata"
             )
             os.rename(
-                old_mapping_file_path + "_timestamps.npy",
-                new_mapping_file_path + "_timestamps.npy",
+                legacy_timestamps_file_path_like(old_mapping_file_path),
+                legacy_timestamps_file_path_like(new_mapping_file_path),
             )
         except FileNotFoundError:
             pass

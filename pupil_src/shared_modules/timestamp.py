@@ -1,8 +1,20 @@
+import os
+
+
 NANOSEC_TO_SEC_FACTOR = 1e-9
 MICROSEC_TO_SEC_FACTOR = 1e-9
 
 SEC_TO_NANOSEC_FACTOR = 1e+9
 SEC_TO_MICROSEC_FACTOR = 1e+6
+
+
+def legacy_timestamps_file_path_like(file_path: str):
+    return _create_timestamps_file_path_like(file_path, "_timestamps.npy")
+
+
+def _create_timestamps_file_path_like(file_path: str, suffix: str):
+    assert file_path[-len(suffix):] != suffix
+    return os.path.splitext(file_path)[0] + suffix
 
 
 class Timestamp(int):

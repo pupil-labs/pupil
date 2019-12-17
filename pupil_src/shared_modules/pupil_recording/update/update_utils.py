@@ -20,6 +20,9 @@ import camera_models as cm
 
 from ..recording import PupilRecording
 
+from timestamp import legacy_timestamps_file_path_like
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -70,7 +73,7 @@ def _rewrite_times(
         if conversion is not None:
             timestamps = conversion(timestamps)
 
-        new_name = f"{path.stem}_timestamps.npy"
+        new_name = legacy_timestamps_file_path_like(path.stem)
         logger.info(f"Creating {new_name}")
         timestamp_loc = path.parent / new_name
         np.save(str(timestamp_loc), timestamps)

@@ -26,6 +26,8 @@ import csv_utils
 import file_methods as fm
 from version_utils import VersionFormat
 
+from timestamp import legacy_timestamps_file_path_like
+
 from .. import Version
 from ..info import RecordingInfoFile
 from ..info import recording_info_utils as rec_info_utils
@@ -275,8 +277,10 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
 
         wav_file_loc = os.path.join(rec_dir, "audio.wav")
         aac_file_loc = os.path.join(rec_dir, "audio.mp4")
-        audio_ts_loc = os.path.join(rec_dir, "audio_timestamps.npy")
-        backup_ts_loc = os.path.join(rec_dir, "audio_timestamps_old.npy")
+
+        audio_ts_loc = legacy_timestamps_file_path_like(os.path.join(rec_dir, "audio"))
+        backup_ts_loc = os.path.join(rec_dir, "audio_timestamps_old.npy") #TODO: Add backup path contsructor
+
         if os.path.exists(wav_file_loc) and os.path.exists(audio_ts_loc):
             in_container = av.open(wav_file_loc)
             in_stream = in_container.streams.audio[0]
@@ -413,9 +417,9 @@ def update_recording_v18_v19(rec_dir):
     def copy_cached_annotations():
         cache_dir = os.path.join(rec_dir, "offline_data")
         cache_file = os.path.join(cache_dir, "annotations.pldata")
-        cache_ts_file = os.path.join(cache_dir, "annotations_timestamps.npy")
+        legacy_timestamps_file_path_like(os.path.join(cache_dir, "annotations"))
         annotation_file = os.path.join(rec_dir, "annotation.pldata")
-        annotation_ts_file = os.path.join(rec_dir, "annotation_timestamps.npy")
+        annotation_ts_file = legacy_timestamps_file_path_like(os.path.join(rec_dir, "annotation"))
         if os.path.exists(cache_file):
             logger.info("Version update: Copy annotations edited in Player.")
             copy2(cache_file, annotation_file)
@@ -718,8 +722,9 @@ def update_recording_v03_to_v074(rec_dir):
     except IOError:
         pass
 
-    ts_path = os.path.join(rec_dir, "world_timestamps.npy")
-    ts_path_old = os.path.join(rec_dir, "timestamps.npy")
+    ts_path = os.path.join(rec_dir, "world")
+    ts_path = legacy_timestamps_file_path_like(ts_path)
+    ts_path_old = os.path.join(rec_dir, "timestamps.npy") #TODO: Consider this conversion
     if not os.path.isfile(ts_path) and os.path.isfile(ts_path_old):
         os.rename(ts_path_old, ts_path)
 
