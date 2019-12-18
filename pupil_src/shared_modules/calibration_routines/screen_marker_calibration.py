@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os
 import cv2
 import numpy as np
 from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup
