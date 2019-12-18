@@ -1,3 +1,6 @@
+import logging
+
+from pupil_detectors import Detector2D, DetectorBase, Roi
 from pyglui import ui
 from pyglui.cygl.utils import draw_gl_texture
 
@@ -11,10 +14,11 @@ from gl_utils import (
 )
 from methods import normalize
 from plugin import Plugin
-from pupil_detectors import Detector2D, DetectorBase, Roi
 
-from .detector_base_plugin import PupilDetectorPlugin, PropertyProxy
+from .detector_base_plugin import PropertyProxy, PupilDetectorPlugin
 from .visualizer_2d import draw_pupil_outline
+
+logger = logging.getLogger(__name__)
 
 
 class Detector2DPlugin(PupilDetectorPlugin):
@@ -34,6 +38,17 @@ class Detector2DPlugin(PupilDetectorPlugin):
 
     def detect(self, frame):
         roi = Roi(*self.g_pool.u_r.get()[:4])
+        if (
+            not 0 <= roi.x_min <= roi.x_max < frame.width
+            or not 0 <= roi.y_min <= roi.y_max < frame.height
+        ):
+            # TODO: Invalid ROIs can occur when switching camera resolutions, because we
+            # adjust the roi only after all plugin recent_events() have been called.
+            # Optimally we make a plugin out of the ROI and call its recent_events()
+            # immediately after the backend, before the detection.
+            logger.debug(f"Invalid Roi {roi} for img {frame.width}x{frame.height}!")
+            return None
+
         result = self.detector_2d.detect(
             gray_img=frame.gray, color_img=frame.bgr, roi=roi
         )
