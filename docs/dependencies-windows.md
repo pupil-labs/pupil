@@ -8,6 +8,10 @@ Therefore we can only debug and support issues for **Windows 10**.
 
 ## Notes Before Starting
 
+### Modularization Work in Progress
+
+We are currently working on modularizing parts of Pupil, which will make running from source a lot easier on Windows, since the modules (including their dependencies) can be externalized. So far we already extracted one large module (the **pupil-detectors**). However we decided to clean up the dependency install instructions only after also having externalized the **optimization-calibration** module. This means that some of the following instructions are already not needed anymore to run Pupil from source. However, until we have cleaned up the instructions, we still recommend to go through the whole setup.
+
 ### Work Directory - Very Important!
   
 We will make a directory called `work` at `C:\work` and will use this directory for all build processes and setup scripts. Whenever we refer to the `work` directory, it will refer to `C:\work`. You can change this to whatever is convenient for you, but note that many setup files have hardcoded references to `C:\work`, so changing this won't run without a lot of adjustments.
