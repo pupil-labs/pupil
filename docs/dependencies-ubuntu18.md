@@ -52,6 +52,9 @@ sudo udevadm trigger
 We recommend using a virtual environment with a valid installation of Python 3.6 or higher.
 
 ```sh
+pip install wheel
+pip install scikit-build
+
 pip install cysignals
 pip install cython
 pip install msgpack==0.5.6
@@ -71,6 +74,9 @@ pip install git+https://github.com/pupil-labs/pyndsi
 pip install git+https://github.com/pupil-labs/pyglui
 pip install git+https://github.com/pupil-labs/nslr
 pip install git+https://github.com/pupil-labs/nslr-hmm
+
+pip install opencv-python
+pip install pupil_detectors
 ```
 
 ## Next Steps
