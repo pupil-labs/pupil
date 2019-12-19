@@ -97,6 +97,7 @@ pip install win_inet_pton
 pip install git+https://github.com/zeromq/pyre
 
 pip install pupil_apriltags
+pip install pupil-detectors
 pip install git+https://github.com/pupil-labs/nslr
 pip install git+https://github.com/pupil-labs/nslr-hmm
 ```
