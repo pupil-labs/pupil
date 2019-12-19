@@ -63,6 +63,7 @@ pip install pyopengl
 pip install pyzmq
 pip install scipy
 pip install git+https://github.com/zeromq/pyre
+pip install pupil-detectors
 
 pip install pupil_apriltags
 pip install git+https://github.com/pupil-labs/PyAV
