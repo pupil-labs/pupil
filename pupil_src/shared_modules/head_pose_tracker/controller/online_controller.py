@@ -71,7 +71,7 @@ class OnlineController:
         """
         position = {"topic": "head_position"}
         position.update(current_pose)
-        return position
+        return [position]
 
     def _save_key_markers(self):
         if self._general_settings.optimize_markers_3d_model:
