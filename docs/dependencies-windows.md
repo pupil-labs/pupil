@@ -8,6 +8,10 @@ Therefore we can only debug and support issues for **Windows 10**.
 
 ## Notes Before Starting
 
+### Modularization Work in Progress
+
+We are currently working on modularizing parts of Pupil, which will make running from source a lot easier on Windows, since the modules (including their dependencies) can be externalized. So far we already extracted one large module (the **pupil-detectors**). However we decided to clean up the dependency install instructions only after also having externalized the **optimization-calibration** module. This means that some of the following instructions may no longer be required to run Pupil from source. However, until we have cleaned up the instructions, we still recommend to go through the whole setup.
+
 ### Work Directory - Very Important!
   
 We will make a directory called `work` at `C:\work` and will use this directory for all build processes and setup scripts. Whenever we refer to the `work` directory, it will refer to `C:\work`. You can change this to whatever is convenient for you, but note that many setup files have hardcoded references to `C:\work`, so changing this won't run without a lot of adjustments.
@@ -96,7 +100,8 @@ pip install scipy
 pip install win_inet_pton
 pip install git+https://github.com/zeromq/pyre
 
-pip install pupil_apriltags
+pip install pupil-apriltags
+pip install pupil-detectors
 pip install git+https://github.com/pupil-labs/nslr
 pip install git+https://github.com/pupil-labs/nslr-hmm
 ```
@@ -183,18 +188,6 @@ The following steps require you to store dynamic libraries in the `pupil_externa
 - Download opencv 3.4.5 exe installer from [sourceforge](https://sourceforge.net/projects/opencvlibrary/files/3.4.5/opencv-3.4.5-vc14_vc15.exe/download)
 - Unzip OpenCV to your work dir and rename dir to `opencv`
 - Copy `opencv\build\x64\vc14\bin\opencv_world345.dll` to `pupil_external`
-
-### Modify pupil_detectors setup.py
-
-- Open `pupil\pupil_src\shared_modules\pupil_detectors\setup.py`
-- Go to the `if platform.system() == 'Windows'` block
-- Check that paths for `opencv`, `Eigen` and `ceres-windows` are correctly specified. The installed opencv lib is `opencv_world345.lib`.
-- Edit paths if necessary
-- Save and close setup.py
-
-**Note:** When starting run_capture.bat, it will build the pupil_detectors module. However, if you are debugging, you may want to try building explicitly. From within `pupil/pupil_src/shared_modules/pupil_detectors` run `python setup.py build` to build the pupil_detectors.
-
-In case you are using Visual Studio 2017 with v15.8 or v15.9 update, you may encounter an error regarding _ENABLE_EXTENDED_ALIGNED_STORAGE while building. Please refer to the fix [here](https://github.com/pupil-labs/pupil/issues/1331#issuecomment-430418074).
 
 ### Modify optimization_calibration setup.py
 
