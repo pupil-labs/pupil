@@ -47,7 +47,7 @@ class OnlineController:
             self._calculate_current_markers(events["frame"])
             self._calculate_current_pose(events["frame"])
             self._save_key_markers()
-            events["head_position"] = self._create_position_events(
+            events["head_pose"] = self._create_position_events(
                     self._localization_storage.current_pose)
 
     def _calculate_current_markers(self, frame):
@@ -69,7 +69,7 @@ class OnlineController:
         Args:
             current_pose: The current position of the head.
         """
-        position = {"topic": "head_position"}
+        position = {"topic": "head_pose"}
         position.update(current_pose)
         return [position]
 
