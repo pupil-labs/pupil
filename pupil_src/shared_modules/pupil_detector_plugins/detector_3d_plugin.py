@@ -36,10 +36,11 @@ class Detector3DPlugin(PupilDetectorPlugin):
 
     def detect(self, frame):
         roi = Roi(*self.g_pool.u_r.get()[:4])
+        debug_img = frame.bgr if self.g_pool.display_mode == "algorithm" else None
         result = self.detector_3d.detect(
             gray_img=frame.gray,
             timestamp=frame.timestamp,
-            color_img=frame.bgr,
+            color_img=debug_img,
             roi=roi,
             debug=self.is_debug_window_open,
         )
