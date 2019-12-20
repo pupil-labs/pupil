@@ -51,10 +51,11 @@ class Detector3DPlugin(PupilDetectorPlugin):
             logger.debug(f"Invalid Roi {roi} for img {frame.width}x{frame.height}!")
             return None
 
+        debug_img = frame.bgr if self.g_pool.display_mode == "algorithm" else None
         result = self.detector_3d.detect(
             gray_img=frame.gray,
             timestamp=frame.timestamp,
-            color_img=frame.bgr,
+            color_img=debug_img,
             roi=roi,
             debug=self.is_debug_window_open,
         )

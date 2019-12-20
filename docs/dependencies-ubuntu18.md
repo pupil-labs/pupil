@@ -64,7 +64,8 @@ pip install pyzmq
 pip install scipy
 pip install git+https://github.com/zeromq/pyre
 
-pip install pupil_apriltags
+pip install pupil-apriltags
+pip install pupil-detectors
 pip install git+https://github.com/pupil-labs/PyAV
 pip install git+https://github.com/pupil-labs/pyuvc
 pip install git+https://github.com/pupil-labs/pyndsi
