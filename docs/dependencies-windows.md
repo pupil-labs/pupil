@@ -87,6 +87,9 @@ If you downloaded to linked installer:
 ## Install Python Libraries
 
 ```sh
+# Upgrade pip to latest version. This is necessary for some dependencies.
+python -m pip install --upgrade pip
+
 pip install cython
 pip install msgpack==0.5.6
 pip install numexpr
