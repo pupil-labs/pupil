@@ -66,6 +66,9 @@ make && make install
 We recommend using a virtual environment with a valid installation of Python 3.6 or higher.
 
 ```sh
+# Upgrade pip to latest version. This is necessary for some dependencies.
+python -m pip install --upgrade pip
+
 pip install cysignals
 pip install cython
 pip install msgpack==0.5.6
