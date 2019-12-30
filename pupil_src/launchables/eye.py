@@ -666,6 +666,9 @@ def eye(
                         # Position in img pixels
                         pos = denormalize(pos, g_pool.capture.frame_size)
 
+                        # TODO: remove when ROI is plugin
+                        uroi_on_mouse_button(button, action, mods)
+
                         for plugin in g_pool.plugins:
                             if plugin.on_click(pos, button, action):
                                 break
