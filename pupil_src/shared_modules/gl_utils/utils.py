@@ -8,17 +8,21 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import logging
+import math
 
+import numpy as np
 import OpenGL
+import OpenGL.error
+from OpenGL.GL import *
+from OpenGL.GLU import gluPerspective, gluErrorString
+
+import glfw
 
 # OpenGL.FULL_LOGGING = True
 OpenGL.ERROR_LOGGING = False
-from OpenGL.GL import *
-from OpenGL.GLU import gluPerspective
 
-import numpy as np
-import math
-import glfw
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "make_coord_system_norm_based",
@@ -31,6 +35,59 @@ __all__ = [
     "is_window_visible",
     "Coord_System",
 ]
+
+
+########################################################################################
+# START OPENGL DEBUGGING
+
+# We are injecting a custom error handling function into PyOpenGL to better investigate
+# GLErrors that we are potentially producing in pyglui or cygl and that we don't catch
+# appropriately. You can produce OpenGL errors with the following snippets for testing:
+
+# import ctypes
+# gl = ctypes.windll.LoadLibrary("opengl32") # NOTE: this is for windows, modify if needed
+
+# # This produces `error 1281 (GL_INVALID_VALUE)`
+# gl.glViewport(0, 0, -100, 1)
+
+# # This produces `error 1280 (GL_INVALID_ENUM)` for some reason (!?)
+# gl.glBegin()
+# gl.glViewport(0, 0, -100, 1)
+# gl.glEnd()
+
+# # Check errors: (will consume flag)
+# logger.debug(gl.glGetError())
+
+
+_original_gl_error_check = OpenGL.error._ErrorChecker.glCheckError
+
+
+def custom_gl_error_handling(
+    error_checker, result, baseOperation=None, cArguments=None, *args
+):
+    try:
+        return _original_gl_error_check(
+            error_checker, result, baseOperation, cArguments, *args
+        )
+    except Exception as e:
+        logging.error(f"Encountered PyOpenGL error: {e}")
+        found_more_errors = False
+        while True:
+            err = glGetError()
+            if err == GL_NO_ERROR:
+                break
+            if not found_more_errors:
+                found_more_errors = True
+                logging.debug("Emptying OpenGL error queue:")
+            logging.debug(f"  glError: {err} -> {gluErrorString(err)}")
+        if not found_more_errors:
+            logging.debug("No more errors found in OpenGL error queue!")
+
+
+OpenGL.error._ErrorChecker.glCheckError = custom_gl_error_handling
+
+# END OPENGL DEBUGGING
+########################################################################################
 
 
 def is_window_visible(window):

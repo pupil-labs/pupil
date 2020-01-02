@@ -147,11 +147,10 @@ def eye(
         from video_capture import source_classes, manager_classes
 
         from background_helper import IPC_Logging_Task_Proxy
+        from pupil_detector_plugins import available_detector_plugins
+        from pupil_detector_plugins.manager import PupilDetectorManager
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
-
-        # Pupil detectors
-        from pupil_detectors import Detector_2D, Detector_3D, Detector_Dummy
 
         def interrupt_handler(sig, frame):
             import traceback
@@ -162,12 +161,6 @@ def eye(
             # shutting down the eye process properly
 
         signal.signal(signal.SIGINT, interrupt_handler)
-
-        pupil_detectors = {
-            Detector_2D.__name__: Detector_2D,
-            Detector_3D.__name__: Detector_3D,
-            Detector_Dummy.__name__: Detector_Dummy,
-        }
 
         # UI Platform tweaks
         if platform.system() == "Linux":
@@ -192,7 +185,8 @@ def eye(
         g_pool.user_dir = user_dir
         g_pool.version = version
         g_pool.app = "capture"
-        g_pool.process = "eye{}".format(eye_id)
+        g_pool.eye_id = eye_id
+        g_pool.process = f"eye{eye_id}"
         g_pool.timebase = timebase
 
         g_pool.ipc_pub = ipc_socket
@@ -203,7 +197,13 @@ def eye(
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
 
-        plugins = manager_classes + source_classes
+        default_detector_cls, available_detectors = available_detector_plugins()
+        plugins = (
+            manager_classes
+            + source_classes
+            + available_detectors
+            + [PupilDetectorManager]
+        )
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
         preferred_names = [
@@ -226,6 +226,9 @@ def eye(
             # TODO: extend with plugins
             default_capture_settings,
             ("UVC_Manager", {}),
+            # Detector needs to be loaded first to set `g_pool.pupil_detector`
+            (default_detector_cls.__name__, {}),
+            ("PupilDetectorManager", {}),
         ]
 
         # Callback functions
@@ -301,21 +304,9 @@ def eye(
             "algorithm": "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below.",
         }
 
-        pupil_detector_settings = session_settings.get("pupil_detector_settings", None)
-        last_pupil_detector = pupil_detectors[
-            session_settings.get("last_pupil_detector", Detector_2D.__name__)
-        ]
-        g_pool.pupil_detector = last_pupil_detector(g_pool, pupil_detector_settings)
-
         def set_display_mode_info(val):
             g_pool.display_mode = val
             g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
-
-        def set_detector(new_detector):
-            g_pool.pupil_detector.deinit_ui()
-            g_pool.pupil_detector.cleanup()
-            g_pool.pupil_detector = new_detector(g_pool)
-            g_pool.pupil_detector.init_ui()
 
         def toggle_general_settings(collapsed):
             # this is the menu toggle logic.
@@ -424,16 +415,6 @@ def eye(
 
         general_settings.append(g_pool.display_mode_info)
 
-        detector_selector = ui.Selector(
-            "pupil_detector",
-            getter=lambda: g_pool.pupil_detector.__class__,
-            setter=set_detector,
-            selection=[Detector_Dummy, Detector_2D, Detector_3D],
-            labels=["disabled", "C++ 2d detector", "C++ 3d detector"],
-            label="Detection method",
-        )
-        general_settings.append(detector_selector)
-
         g_pool.menubar.append(general_settings)
         icon = ui.Icon(
             "collapsed",
@@ -456,7 +437,6 @@ def eye(
 
         g_pool.plugins = Plugin_List(g_pool, plugins_to_load)
 
-        g_pool.pupil_detector.init_ui()
         g_pool.writer = None
 
         g_pool.u_r = UIRoi((g_pool.capture.frame_size[1], g_pool.capture.frame_size[0]))
@@ -520,19 +500,6 @@ def eye(
                 if subject.startswith("eye_process.should_stop"):
                     if notification["eye_id"] == eye_id:
                         break
-                elif subject == "set_detection_mapping_mode":
-                    if notification["mode"] == "3d":
-                        if not isinstance(g_pool.pupil_detector, Detector_3D):
-                            set_detector(Detector_3D)
-                        detector_selector.read_only = True
-                    elif notification["mode"] == "2d":
-                        if not isinstance(g_pool.pupil_detector, Detector_2D):
-                            set_detector(Detector_2D)
-                        detector_selector.read_only = False
-                    else:
-                        if not isinstance(g_pool.pupil_detector, Detector_Dummy):
-                            set_detector(Detector_Dummy)
-                        detector_selector.read_only = True
                 elif subject == "recording.started":
                     if notification["record_eye"] and g_pool.capture.online:
                         record_path = notification["rec_path"]
@@ -586,72 +553,7 @@ def eye(
                         )
                     except KeyError as err:
                         logger.error(f"Attempt to load unknown plugin: {err}")
-                elif notification["subject"].startswith("pupil_detector.set_property"):
-                    target_process = notification.get("target", g_pool.process)
-                    should_apply = target_process == g_pool.process
 
-                    if should_apply:
-                        try:
-                            property_name = notification["name"]
-                            property_value = notification["value"]
-                            if "2d" in notification["subject"]:
-                                g_pool.pupil_detector.set_2d_detector_property(
-                                    property_name, property_value
-                                )
-                            elif "3d" in notification["subject"]:
-                                if not isinstance(g_pool.pupil_detector, Detector_3D):
-                                    raise ValueError(
-                                        "3d properties are only available"
-                                        " if 3d detector is active"
-                                    )
-                                g_pool.pupil_detector.set_3d_detector_property(
-                                    property_name, property_value
-                                )
-                            elif property_name == "roi":
-                                try:
-                                    # Modify the ROI with the values sent over network
-                                    minX, maxX, minY, maxY = property_value
-                                    g_pool.u_r.set(
-                                        [
-                                            max(g_pool.u_r.min_x, int(minX)),
-                                            max(g_pool.u_r.min_y, int(minY)),
-                                            min(g_pool.u_r.max_x, int(maxX)),
-                                            min(g_pool.u_r.max_y, int(maxY)),
-                                        ]
-                                    )
-                                except ValueError as err:
-                                    raise ValueError(
-                                        "ROI needs to be list of 4 integers:"
-                                        "(minX, maxX, minY, maxY)"
-                                    ) from err
-                            else:
-                                raise KeyError(
-                                    "Notification subject does not "
-                                    "specifiy detector type nor modify ROI."
-                                )
-                            logger.debug(
-                                "`{}` property set to {}".format(
-                                    property_name, property_value
-                                )
-                            )
-                        except KeyError:
-                            logger.error("Malformed notification received")
-                            logger.debug(traceback.format_exc())
-                        except (ValueError, TypeError):
-                            logger.error("Invalid property or value")
-                            logger.debug(traceback.format_exc())
-                elif notification["subject"].startswith(
-                    "pupil_detector.broadcast_properties"
-                ):
-                    target_process = notification.get("target", g_pool.process)
-                    should_respond = target_process == g_pool.process
-                    if should_respond:
-                        props = g_pool.pupil_detector.get_detector_properties()
-                        properties_broadcast = {
-                            "subject": "pupil_detector.properties.{}".format(eye_id),
-                            **props,  # add properties to broadcast
-                        }
-                        ipc_socket.notify(properties_broadcast)
                 for plugin in g_pool.plugins:
                     plugin.on_notify(notification)
 
@@ -714,13 +616,8 @@ def eye(
                 if g_pool.writer:
                     g_pool.writer.write_video_frame(frame)
 
-                # pupil ellipse detection
-                result = g_pool.pupil_detector.detect(
-                    frame, g_pool.u_r, g_pool.display_mode == "algorithm"
-                )
+                result = event.get("pupil_detection_result", None)
                 if result is not None:
-                    result["id"] = eye_id
-                    result["topic"] = "pupil.{}".format(eye_id)
                     pupil_socket.send(result)
 
             cpu_graph.update()
@@ -731,92 +628,54 @@ def eye(
                     glfw.glfwMakeContextCurrent(main_window)
                     clear_gl_screen()
 
-                    if frame:
-                        # switch to work in normalized coordinate space
-                        if g_pool.display_mode == "algorithm":
-                            g_pool.image_tex.update_from_ndarray(frame.img)
-                        elif g_pool.display_mode in ("camera_image", "roi"):
-                            g_pool.image_tex.update_from_ndarray(frame.gray)
-                        else:
-                            pass
                     glViewport(0, 0, *camera_render_size)
-                    make_coord_system_norm_based(g_pool.flip)
-                    g_pool.image_tex.draw()
-
-                    f_width, f_height = g_pool.capture.frame_size
-                    make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
-                    if frame and result:
-                        if result["method"] == "3d c++":
-                            eye_ball = result["projected_sphere"]
-                            try:
-                                pts = cv2.ellipse2Poly(
-                                    (
-                                        int(eye_ball["center"][0]),
-                                        int(eye_ball["center"][1]),
-                                    ),
-                                    (
-                                        int(eye_ball["axes"][0] / 2),
-                                        int(eye_ball["axes"][1] / 2),
-                                    ),
-                                    int(eye_ball["angle"]),
-                                    0,
-                                    360,
-                                    8,
-                                )
-                            except ValueError as e:
-                                pass
-                            else:
-                                draw_polyline(
-                                    pts,
-                                    2,
-                                    RGBA(0.0, 0.9, 0.1, result["model_confidence"]),
-                                )
-                        if result["confidence"] > 0:
-                            if "ellipse" in result:
-                                pts = cv2.ellipse2Poly(
-                                    (
-                                        int(result["ellipse"]["center"][0]),
-                                        int(result["ellipse"]["center"][1]),
-                                    ),
-                                    (
-                                        int(result["ellipse"]["axes"][0] / 2),
-                                        int(result["ellipse"]["axes"][1] / 2),
-                                    ),
-                                    int(result["ellipse"]["angle"]),
-                                    0,
-                                    360,
-                                    15,
-                                )
-                                confidence = result["confidence"] * 0.7
-                                draw_polyline(pts, 1, RGBA(1.0, 0, 0, confidence))
-                                draw_points(
-                                    [result["ellipse"]["center"]],
-                                    size=20,
-                                    color=RGBA(1.0, 0.0, 0.0, confidence),
-                                    sharpness=1.0,
-                                )
+                    for p in g_pool.plugins:
+                        p.gl_display()
 
                     glViewport(0, 0, *camera_render_size)
-                    make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     # render the ROI
                     g_pool.u_r.draw(g_pool.gui.scale)
                     if g_pool.display_mode == "roi":
                         g_pool.u_r.draw_points(g_pool.gui.scale)
 
                     glViewport(0, 0, *window_size)
-                    make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
                     # render graphs
                     fps_graph.draw()
                     cpu_graph.draw()
 
                     # render GUI
-                    unused_elements = g_pool.gui.update()
-                    for butt in unused_elements.buttons:
-                        uroi_on_mouse_button(*butt)
+                    try:
+                        clipboard = glfw.glfwGetClipboardString(main_window).decode()
+                    except AttributeError:  # clipboard is None, might happen on startup
+                        clipboard = ""
+                    g_pool.gui.update_clipboard(clipboard)
+                    user_input = g_pool.gui.update()
+                    if user_input.clipboard != clipboard:
+                        # only write to clipboard if content changed
+                        glfw.glfwSetClipboardString(
+                            main_window, user_input.clipboard.encode()
+                        )
 
-                    make_coord_system_pixel_based((*window_size[::-1], 3), g_pool.flip)
+                    for button, action, mods in user_input.buttons:
+                        x, y = glfw.glfwGetCursorPos(main_window)
+                        pos = x * hdpi_factor, y * hdpi_factor
+                        pos = normalize(pos, camera_render_size)
+                        # Position in img pixels
+                        pos = denormalize(pos, g_pool.capture.frame_size)
 
-                    g_pool.pupil_detector.visualize()  # detector decides if we visualize or not
+                        for plugin in g_pool.plugins:
+                            if plugin.on_click(pos, button, action):
+                                break
+
+                    for key, scancode, action, mods in user_input.keys:
+                        for plugin in g_pool.plugins:
+                            if plugin.on_key(key, scancode, action, mods):
+                                break
+
+                    for char_ in user_input.chars:
+                        for plugin in g_pool.plugins:
+                            if plugin.on_char(char_):
+                                break
 
                     # update screen
                     glfw.glfwSwapBuffers(main_window)
@@ -838,12 +697,6 @@ def eye(
         session_settings["display_mode"] = g_pool.display_mode
         session_settings["ui_config"] = g_pool.gui.configuration
         session_settings["version"] = str(g_pool.version)
-        session_settings[
-            "last_pupil_detector"
-        ] = g_pool.pupil_detector.__class__.__name__
-        session_settings[
-            "pupil_detector_settings"
-        ] = g_pool.pupil_detector.get_settings()
 
         if not hide_ui:
             glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
@@ -857,10 +710,6 @@ def eye(
         for plugin in g_pool.plugins:
             plugin.alive = False
         g_pool.plugins.clean()
-
-        g_pool.pupil_detector.deinit_ui()
-
-        g_pool.pupil_detector.cleanup()
 
         glfw.glfwDestroyWindow(main_window)
         g_pool.gui.terminate()
@@ -878,6 +727,7 @@ def eye_profiled(
     version,
     eye_id,
     overwrite_cap_settings=None,
+    hide_ui=False,
 ):
     import cProfile
     import subprocess
@@ -885,7 +735,7 @@ def eye_profiled(
     from .eye import eye
 
     cProfile.runctx(
-        "eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings)",
+        "eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings, hide_ui)",
         {
             "timebase": timebase,
             "is_alive_flag": is_alive_flag,
@@ -896,6 +746,7 @@ def eye_profiled(
             "version": version,
             "eye_id": eye_id,
             "overwrite_cap_settings": overwrite_cap_settings,
+            "hide_ui": hide_ui,
         },
         locals(),
         "eye{}.pstats".format(eye_id),

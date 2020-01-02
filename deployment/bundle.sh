@@ -13,10 +13,6 @@ fi
 echo "release_dir:  ${release_dir}"
 mkdir ${release_dir}
 
-# build dependencies
-printf "\n##########\nBuilding pupil detector\n##########\n\n"
-python3 ../pupil_src/shared_modules/pupil_detectors/build.py
-
 printf "\n##########\nBuilding cython modules\n##########\n\n"
 python3 ../pupil_src/shared_modules/cython_methods/build.py
 

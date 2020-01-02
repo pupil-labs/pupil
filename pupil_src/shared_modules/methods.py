@@ -78,10 +78,6 @@ class Roi(object):
     def view(self):
         return slice(self.lY, self.uY), slice(self.lX, self.uX)
 
-    @view.setter
-    def view(self, value):
-        raise Exception("The view field is read-only. Use the set methods instead")
-
     def add_vector(self, vector):
         """
         adds the roi offset to a len2 vector

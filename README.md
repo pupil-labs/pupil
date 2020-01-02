@@ -19,9 +19,21 @@ Our vision is to create tools for a diverse group of people interested in learni
 Chat with us on [Discord](https://pupil-labs.com/chat "Pupil Server on Discord").
 
 ## Users
-[Download the latest apps](https://github.com/pupil-labs/pupil/releases/latest "Download Pupil Capture, Pupil Player, and Pupil Service application bundles")! 
+<a 
+href="https://github.com/pupil-labs/pupil/releases/latest#user-content-downloads"
+rel="noopener"
+target="_blank">
+	<p align="center">
+		<img 
+		src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_app_download_banner.jpg" 
+		alt="Download the latest Pupil Core Apps: Pupil Capture, Pupil Player, Pupil Service"/>
+	</p>
+</a>
 
-You don't need to know how to write code to _use_ Pupil. Read the [Pupil Core user guide](https://docs.pupil-labs.com/core/ "Pupil Core user guide"). 
+
+You don't need to know how to write code to _use_ Pupil. [Download the latest apps](https://github.com/pupil-labs/pupil/releases/latest#user-content-downloads "Download Pupil Capture, Pupil Player, and Pupil Service application bundles")! 
+
+Read the [Pupil Core user guide](https://docs.pupil-labs.com/core/ "Pupil Core user guide"). 
 
 ## Developers
 There are a number of ways you can interact with Pupil Core software as a developer:
