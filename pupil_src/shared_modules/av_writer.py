@@ -430,10 +430,16 @@ class _AudioPacketIterator:
 
         # Prologue: Yield silence frames between start_time and the first audio frame (if any)
 
-        audio_part_start_ts = [part.timestamps[0] for part in self.audio_parts]
-        first_audio_part_idx = np.searchsorted(audio_part_start_ts, self.start_time)
-        first_audio_part_ts = self.audio_parts[first_audio_part_idx].timestamps[0]
-        prologue_duration = first_audio_part_ts - self.start_time
+        audio_part_end_ts = [part.timestamps[-1] for part in self.audio_parts]
+        first_audio_part_idx = np.searchsorted(audio_part_end_ts, self.start_time)
+        try:
+            first_audio_part = self.audio_parts[first_audio_part_idx]
+        except IndexError:
+            # export start time is after last audio part, i.e. there is no audio left
+            # to export, i.e. no silence needed
+            return
+        first_audio_part_start_ts = first_audio_part.timestamps[0]
+        prologue_duration = first_audio_part_start_ts - self.start_time
 
         if prologue_duration > 0:
             yield from self._generate_silence_audio_frames(
