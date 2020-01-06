@@ -10,9 +10,9 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
-
-# logging
+import math
 import logging
+import collections
 import multiprocessing as mp
 import os
 import typing as T
@@ -306,60 +306,300 @@ class JPEG_Writer(AV_Writer):
 class MPEG_Audio_Writer(MPEG_Writer):
     """Extension of MPEG_Writer with audio support."""
 
+    @staticmethod
+    def _add_stream(container, template):
+        stream = container.add_stream(
+            codec_name=template.codec.name, rate=template.rate
+        )
+        stream.layout = template.layout
+        return stream
+
     def __init__(self, *args, audio_dir: str, **kwargs):
         super().__init__(*args, **kwargs)
 
         try:
-            self.audio = audio_utils.load_audio(audio_dir)
-            self.audio_export_stream = self.container.add_stream(
-                template=self.audio.stream
+            self.audio_parts = audio_utils.load_audio(audio_dir)
+            self.audio_export_stream = type(self)._add_stream(
+                container=self.container, template=self.audio_parts[0].stream
             )
         except audio_utils.NoAudioLoadedError:
-            logger.warning("Could not mux audio. File not found.")
-            self.audio = None
+            logger.debug("Could not mux audio. File not found.")
+            self.audio_parts = None
+            return
 
-        self.num_audio_packets_decoded = 0
-        self.last_audio_pts = float("-inf")
+        # setup stateful packet iterator
+        self.audio_packet_iterator = self.iterate_audio_packets()
 
     def encode_frame(self, input_frame, pts: int) -> T.Iterator[Packet]:
         # encode video packets from AV_Writer base first
         yield from super().encode_frame(input_frame, pts)
 
-        if self.audio is None:
+        if self.audio_parts is None:
             return
 
-        # encode audio packets
-        for audio_packet in self.audio.container.demux():
-            if self.num_audio_packets_decoded >= len(self.audio.timestamps):
-                logger.debug(
-                    "More audio frames decoded than there are timestamps: {} > {}".format(
-                        self.num_audio_packets_decoded, len(self.audio.timestamps)
-                    )
-                )
-                break
-            audio_pts = int(
-                (
-                    self.audio.timestamps[self.num_audio_packets_decoded]
-                    - self.start_time
-                )
-                / self.audio_export_stream.time_base
-            )
-            # ensure strong monotonic pts
-            pts = max(pts, self.last_audio_pts + 1)
-            self.last_audio_pts = pts
-
-            audio_packet.pts = audio_pts
-            audio_packet.dts = audio_pts
-            audio_packet.stream = self.audio_export_stream
-            self.num_audio_packets_decoded += 1
-
-            audio_ts = audio_pts * self.audio_export_stream.time_base
-            if audio_ts < 0:
-                logger.debug("Seeking: {} -> {}".format(audio_ts, self.start_time))
-                continue  # seek to start_time
+        # encode all audio packets up to current frame timestamp
+        frame_ts = self.frame.pts * self.time_base
+        for audio_packet in self.audio_packet_iterator:
+            audio_ts = audio_packet.pts * self.audio_export_stream.time_base
 
             yield audio_packet
 
-            frame_ts = self.frame.pts * self.time_base
             if audio_ts > frame_ts:
-                break  # wait for next image
+                # done for this frame, pause iteration
+                return
+
+    def iterate_audio_packets(self):
+        """Yields all audio packets from start_time to end."""
+        yield from _AudioPacketIterator(
+            start_time=self.start_time,
+            audio_export_stream=self.audio_export_stream,
+            audio_parts=self.audio_parts,
+            fill_gaps=True,
+        ).iterate_audio_packets()
+
+
+class _AudioPacketIterator:
+    def __init__(self, start_time, audio_parts, audio_export_stream, fill_gaps=True):
+        self.start_time = start_time
+        self.audio_parts = audio_parts
+        self.audio_export_stream = audio_export_stream
+        self.fill_gaps = fill_gaps
+
+    def iterate_audio_packets(self):
+
+        last_audio_pts = float("-inf")
+
+        if self.fill_gaps:
+            audio_frames_iterator = self._iterate_audio_frames_filling_gaps()
+        else:
+            audio_frames_iterator = self._iterate_audio_frames_ignoring_gaps()
+
+        for audio_frame in audio_frames_iterator:
+            frame, raw_ts = audio_frame.raw_frame, audio_frame.start_time
+
+            for packet in self.audio_export_stream.encode(frame):
+                if not packet:
+                    continue
+
+                audio_ts = raw_ts - self.start_time
+                audio_pts = int(audio_ts / self.audio_export_stream.time_base)
+
+                # ensure strong monotonic pts
+                audio_pts = max(audio_pts, last_audio_pts + 1)
+                last_audio_pts = audio_pts
+
+                packet.pts = audio_pts
+                packet.dts = audio_pts
+                packet.stream = self.audio_export_stream
+
+                if audio_ts < 0:
+                    logger.debug(f"Seeking audio: {audio_ts} -> {self.start_time}")
+                    # discard all packets before start time
+                    return None
+
+                yield packet
+
+    # Private
+
+    class _AudioGap(collections.namedtuple("_AudioGap", ["start_time", "end_time"])):
+        @property
+        def duration(self):
+            return self.end_time - self.start_time
+
+    class _AudioFrame(
+        collections.namedtuple("_AudioFrame", ["raw_frame", "start_time"])
+    ):
+        @property
+        def duration(self):
+            return self.raw_frame.samples / self.raw_frame.sample_rate
+
+        @property
+        def end_time(self):
+            return self.start_time + self.duration
+
+    def _iterate_audio_frames_ignoring_gaps(self):
+        for audio_frame in self._iterate_audio_frames_and_audio_gaps(self.audio_parts):
+            if isinstance(audio_frame, _AudioPacketIterator._AudioFrame):
+                yield audio_frame
+            elif isinstance(audio_frame, _AudioPacketIterator._AudioGap):
+                continue
+            else:
+                raise ValueError(f"Unknown audio frame type: {audio_frame}")
+
+    def _iterate_audio_frames_filling_gaps(self):
+
+        # Prologue: Yield silence frames between start_time and the first audio frame (if any)
+
+        audio_part_end_ts = [part.timestamps[-1] for part in self.audio_parts]
+        first_audio_part_idx = np.searchsorted(audio_part_end_ts, self.start_time)
+        try:
+            first_audio_part = self.audio_parts[first_audio_part_idx]
+        except IndexError:
+            # export start time is after last audio part, i.e. there is no audio left
+            # to export, i.e. no silence needed
+            return
+        first_audio_part_start_ts = first_audio_part.timestamps[0]
+        prologue_duration = first_audio_part_start_ts - self.start_time
+
+        if prologue_duration > 0:
+            yield from self._generate_silence_audio_frames(
+                stream=self.audio_export_stream,
+                start_ts=self.start_time,
+                max_duration=prologue_duration,
+            )
+
+        # Main part: Yield audio frames, replacing gaps with silence frames
+
+        last_audio_frame = None
+
+        audio_parts = self.audio_parts[first_audio_part_idx:]
+        for audio_frame in self._iterate_audio_frames_and_audio_gaps(audio_parts):
+            last_audio_frame = audio_frame
+
+            # Skip packets that are before the start_time
+            if audio_frame.start_time < self.start_time:
+                continue
+
+            if audio_frame.duration <= 0:
+                continue
+
+            if isinstance(audio_frame, _AudioPacketIterator._AudioFrame):
+                yield audio_frame
+            elif isinstance(audio_frame, _AudioPacketIterator._AudioGap):
+                yield from self._generate_silence_audio_frames(
+                    stream=self.audio_export_stream,
+                    start_ts=audio_frame.start_time,
+                    max_duration=audio_frame.duration,
+                )
+            else:
+                raise ValueError(f"Unknown audio frame type: {audio_frame}")
+
+        # Epilogue: Infinitely yield silence frames; the client is responsible to stop the iteration
+
+        yield from self._generate_silence_audio_frames(
+            stream=self.audio_export_stream,
+            start_ts=last_audio_frame.end_time,
+            max_duration=None,  # Inifinite generator
+        )
+
+    @staticmethod
+    def _iterate_audio_frames_and_audio_gaps(audio_parts):
+        if audio_parts is None:
+            return
+
+        last_part_idx = 0
+        last_part_last_frame = None
+
+        for part_idx, audio_part in enumerate(audio_parts):
+
+            frames = audio_part.container.decode(audio=0)
+            for frame, timestamp in zip(frames, audio_part.timestamps):
+                frame.pts = None
+
+                audio_frame = _AudioPacketIterator._AudioFrame(
+                    raw_frame=frame, start_time=timestamp
+                )
+
+                if part_idx != last_part_idx:
+                    audio_gap = _AudioPacketIterator._AudioGap(
+                        start_time=last_part_last_frame.end_time,
+                        end_time=audio_frame.start_time,
+                    )
+                    yield audio_gap
+
+                yield audio_frame
+
+                last_part_idx = part_idx
+                last_part_last_frame = audio_frame
+
+    @staticmethod
+    def _generate_silence_audio_frames(stream, start_ts, max_duration: float = None):
+
+        frame_sample_sizes = _AudioPacketIterator._generate_raw_frame_sample_size(
+            stream, start_ts, max_duration
+        )
+        raw_frame_factory = _AudioPacketIterator._create_audio_raw_frame_factory(stream)
+        timestamp_factory = _AudioPacketIterator._create_audio_timestamp_factory(
+            stream, start_ts
+        )
+
+        for frame_size in frame_sample_sizes:
+            frame = raw_frame_factory(frame_size)
+            timestamp = timestamp_factory(frame_size)
+
+            audio_frame = _AudioPacketIterator._AudioFrame(
+                raw_frame=frame, start_time=timestamp
+            )
+            yield audio_frame
+
+    @staticmethod
+    def _generate_raw_frame_sample_size(
+        stream, start_ts: float, max_duration: float = None
+    ):
+        sample_rate = stream.codec_context.sample_rate
+        frame_size = stream.codec_context.frame_size
+
+        def _generate_with_duration(duration: float):
+            sample_count = int(sample_rate * duration)
+            frame_count = math.floor(sample_count / frame_size)
+            for frame_idx in range(frame_count):
+                remaining_count = sample_count - (frame_idx * frame_size)
+                yield min(remaining_count, frame_size)
+
+        def _generate_infinitely():
+            while True:
+                yield frame_size
+
+        if max_duration is not None:
+            yield from _generate_with_duration(max_duration)
+        else:
+            yield from _generate_infinitely()
+
+    @staticmethod
+    def _create_audio_timestamp_factory(stream, start_ts):
+        sample_rate = stream.codec_context.sample_rate
+        frame_timestamp = start_ts
+
+        def f(frame_sample_size):
+            nonlocal frame_timestamp
+            ts = frame_timestamp
+            frame_timestamp += frame_sample_size / sample_rate
+            return ts
+
+        return f
+
+    @staticmethod
+    def _create_audio_raw_frame_factory(stream):
+        sample_rate = stream.codec_context.sample_rate
+        av_format = stream.codec_context.format.name
+        av_layout = stream.codec_context.layout.name
+        dtype = np.dtype(_AudioPacketIterator._format_dtypes[av_format])
+
+        def f(frame_sample_size):
+            frame = av.AudioFrame(
+                samples=frame_sample_size, format=av_format, layout=av_layout
+            )
+            frame.pts = None
+            frame.sample_rate = sample_rate
+
+            for plane in frame.planes:
+                buffer = np.frombuffer(plane, dtype=dtype)
+                buffer[:] = 0
+
+            return frame
+
+        return f
+
+    # https://github.com/mikeboers/PyAV/blob/develop/av/audio/frame.pyx
+    _format_dtypes = {
+        "dbl": "<f8",
+        "dblp": "<f8",
+        "flt": "<f4",
+        "fltp": "<f4",
+        "s16": "<i2",
+        "s16p": "<i2",
+        "s32": "<i4",
+        "s32p": "<i4",
+        "u8": "u1",
+        "u8p": "u1",
+    }
