@@ -66,6 +66,9 @@ make && make install
 We recommend using a virtual environment with a valid installation of Python 3.6 or higher.
 
 ```sh
+# Upgrade pip to latest version. This is necessary for some dependencies.
+python -m pip install --upgrade pip
+
 pip install cysignals
 pip install cython
 pip install msgpack==0.5.6
@@ -76,10 +79,10 @@ pip install pyaudio
 pip install pyopengl
 pip install pyzmq
 pip install scipy
-pip install torch torchvision
 pip install git+https://github.com/zeromq/pyre
 
-pip install pupil_apriltags
+pip install pupil-apriltags
+pip install pupil-detectors
 pip install git+https://github.com/pupil-labs/PyAV
 pip install git+https://github.com/pupil-labs/pyuvc
 pip install git+https://github.com/pupil-labs/pyndsi

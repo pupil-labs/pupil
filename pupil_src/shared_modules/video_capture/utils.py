@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2019 Pupil Labs
+Copyright (C) 2012-2020 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -183,8 +183,13 @@ class Video:
     def check_valid(self):
         try:
             cont = av.open(self.path)
-            n = cont.decode(video=0)
-            _ = next(n)
+            # Three failure scenarios:
+            # 1. Broken video -> AVError
+            # 2. decode() does not yield anything
+            # 3. decode() yields None
+            first_frame = next(cont.decode(video=0), None)
+            if first_frame is None:
+                raise av.AVError("Video does not contain any frames")
         except av.AVError:
             return False
         else:

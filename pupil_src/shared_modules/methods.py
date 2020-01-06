@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2019 Pupil Labs
+Copyright (C) 2012-2020 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -77,10 +77,6 @@ class Roi(object):
     @property
     def view(self):
         return slice(self.lY, self.uY), slice(self.lX, self.uX)
-
-    @view.setter
-    def view(self, value):
-        raise Exception("The view field is read-only. Use the set methods instead")
 
     def add_vector(self, vector):
         """

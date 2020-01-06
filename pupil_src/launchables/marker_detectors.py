@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2019 Pupil Labs
+Copyright (C) 2012-2020 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -38,7 +38,11 @@ def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
     from circle_detector import CircleTracker
 
     try:
-        src = File_Source(SimpleNamespace(), source_path, timing=None)
+        # TODO: we need fill_gaps=True for correct frame indices to paint the circle
+        # markers on the world stream. But actually we don't want to process gap frames
+        # with the marker detector. We should make an option to only receive non-gap
+        # frames, but with gap-like indices?
+        src = File_Source(SimpleNamespace(), source_path, timing=None, fill_gaps=True)
 
         frame = src.get_frame()
         logger.info("Starting calibration marker detection...")

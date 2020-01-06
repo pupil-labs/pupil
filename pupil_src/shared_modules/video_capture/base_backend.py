@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2019 Pupil Labs
+Copyright (C) 2012-2020 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -85,19 +85,24 @@ class Base_Source(Plugin):
     def gl_display(self):
         if self._recent_frame is not None:
             frame = self._recent_frame
-            if frame.yuv_buffer is not None:
+            if (
+                frame.yuv_buffer is not None
+                # TODO: Find a better solution than this:
+                and getattr(self.g_pool, "display_mode", "") != "algorithm"
+            ):
                 self.g_pool.image_tex.update_from_yuv_buffer(
                     frame.yuv_buffer, frame.width, frame.height
                 )
             else:
                 self.g_pool.image_tex.update_from_ndarray(frame.bgr)
             gl_utils.glFlush()
-        gl_utils.make_coord_system_norm_based()
+        should_flip = getattr(self.g_pool, "flip", False)
+        gl_utils.make_coord_system_norm_based(flip=should_flip)
         self.g_pool.image_tex.draw()
         if not self.online:
             cygl.utils.draw_gl_texture(np.zeros((1, 1, 3), dtype=np.uint8), alpha=0.4)
         gl_utils.make_coord_system_pixel_based(
-            (self.frame_size[1], self.frame_size[0], 3)
+            (self.frame_size[1], self.frame_size[0], 3), flip=should_flip
         )
 
     @property

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2019 Pupil Labs
+Copyright (C) 2012-2020 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,7 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os
 import cv2
 import numpy as np
 from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup
@@ -238,9 +237,14 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 monitor = None
                 width, height = 640, 360
 
+            # NOTE: Always creating windowed window here, even if in fullscreen mode. On
+            # windows you might experience a black screen for up to 1 sec when creating
+            # a blank window directly in fullscreen mode. By creating it windowed and
+            # then switching to fullscreen it will stay white the entire time.
             self._window = glfwCreateWindow(
-                width, height, title, monitor=monitor, share=glfwGetCurrentContext()
+                width, height, title, share=glfwGetCurrentContext()
             )
+
             if not self.fullscreen:
                 glfwSetWindowPos(
                     self._window,
@@ -248,7 +252,12 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.window_position_default[1],
                 )
 
-            glfwSetInputMode(self._window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN)
+            # This makes it harder to accidentally tab out of fullscreen by clicking on
+            # some other window (e.g. when having two monitors). On the other hand you
+            # want a cursor to adjust the window size when not in fullscreen mode.
+            cursor = GLFW_CURSOR_DISABLED if self.fullscreen else GLFW_CURSOR_HIDDEN
+
+            glfwSetInputMode(self._window, GLFW_CURSOR, cursor)
 
             # Register callbacks
             glfwSetFramebufferSizeCallback(self._window, on_resize)
@@ -264,6 +273,12 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             glfwSwapInterval(0)
 
             glfwMakeContextCurrent(active_window)
+
+            if self.fullscreen:
+                # Switch to full screen here. See NOTE above at glfwCreateWindow().
+                glfwSetWindowMonitor(
+                    self._window, monitor, 0, 0, width, height, refreshRate
+                )
 
     def on_window_key(self, window, key, scancode, action, mods):
         if action == GLFW_PRESS:
@@ -405,11 +420,21 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     )
 
     def gl_display_in_window(self):
-        active_window = glfwGetCurrentContext()
         if glfwWindowShouldClose(self._window):
-            self.close_window()
+            self.stop()
             return
 
+        p_window_size = glfwGetFramebufferSize(self._window)
+        if p_window_size == (0, 0):
+            # On Windows we get a window_size of (0, 0) when either minimizing the
+            # Window or when tabbing out (rendered only in the background). We get
+            # errors when we call the code below with window size (0, 0). Anyways we
+            # probably want to stop calibration in this case as it will screw up the
+            # calibration anyways.
+            self.stop()
+            return
+
+        active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(self._window)
 
         clear_gl_screen()
@@ -418,7 +443,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         r = self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
-        p_window_size = glfwGetFramebufferSize(self._window)
         gl.glOrtho(0, p_window_size[0], p_window_size[1], 0, -1, 1)
         # Switch back to Model View Matrix
         gl.glMatrixMode(gl.GL_MODELVIEW)

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2019 Pupil Labs
+Copyright (C) 2012-2020 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -41,7 +41,6 @@ for dirpath, dirnames, filenames in os.walk("."):
         dependencies.append(os.path.join(dirpath, filename))
 
 shared_cpp_include_path = "../../../shared_cpp/include"
-singleeyefitter_include_path = "../../pupil_detectors/singleeyefitter"
 
 if platform.system() == "Windows":
     libs = []
@@ -66,7 +65,6 @@ if platform.system() == "Windows":
 
     include_dirs = [spec[0] for spec in lib_spec]
     include_dirs.append(shared_cpp_include_path)
-    include_dirs.append(singleeyefitter_include_path)
     xtra_obj = [spec[1] for spec in lib_spec]
 
 else:
@@ -110,7 +108,6 @@ else:
         "/usr/local/include/eigen3",
         "/usr/include/eigen3",
         shared_cpp_include_path,
-        singleeyefitter_include_path,
     ] + opencv_include_dirs
     libs = ["ceres"] + opencv_libraries
     xtra_obj = []
