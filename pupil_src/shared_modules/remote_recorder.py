@@ -162,7 +162,8 @@ class Remote_Recorder(Plugin):
 
         for rec_state in self._core.rec_states_sorted():
             self.append_rec_state_switch(rec_state)
-            self.append_session_name_view(rec_state)
+            if rec_state.sensor.format is ndsi.DataFormat.V3:
+                self.append_session_name_view(rec_state)
 
     def append_preferred_session_name_setter(self):
         self.menu.append(
