@@ -370,13 +370,9 @@ class _AudioPacketIterator:
         last_audio_pts = float("-inf")
 
         if self.fill_gaps:
-            audio_frames_iterator = self._iterate_audio_frames_filling_gaps(
-                self.audio_parts
-            )
+            audio_frames_iterator = self._iterate_audio_frames_filling_gaps()
         else:
-            audio_frames_iterator = self._iterate_audio_frames_ignoring_gaps(
-                self.audio_parts
-            )
+            audio_frames_iterator = self._iterate_audio_frames_ignoring_gaps()
 
         for audio_frame in audio_frames_iterator:
             frame, raw_ts = audio_frame.raw_frame, audio_frame.start_time
@@ -421,8 +417,8 @@ class _AudioPacketIterator:
         def end_time(self):
             return self.start_time + self.duration
 
-    def _iterate_audio_frames_ignoring_gaps(self, audio_parts):
-        for audio_frame in self._iterate_audio_frames_and_audio_gaps(audio_parts):
+    def _iterate_audio_frames_ignoring_gaps(self):
+        for audio_frame in self._iterate_audio_frames_and_audio_gaps(self.audio_parts):
             if isinstance(audio_frame, _AudioPacketIterator._AudioFrame):
                 yield audio_frame
             elif isinstance(audio_frame, _AudioPacketIterator._AudioGap):
@@ -430,11 +426,14 @@ class _AudioPacketIterator:
             else:
                 raise ValueError(f"Unknown audio frame type: {audio_frame}")
 
-    def _iterate_audio_frames_filling_gaps(self, audio_parts):
+    def _iterate_audio_frames_filling_gaps(self):
 
         # Prologue: Yield silence frames between start_time and the first audio frame (if any)
 
-        prologue_duration = self.audio_parts[0].timestamps[0] - self.start_time
+        audio_part_start_ts = [part.timestamps[0] for part in self.audio_parts]
+        first_audio_part_idx = np.searchsorted(audio_part_start_ts, self.start_time)
+        first_audio_part_ts = self.audio_parts[first_audio_part_idx].timestamps[0]
+        prologue_duration = first_audio_part_ts - self.start_time
 
         if prologue_duration > 0:
             yield from self._generate_silence_audio_frames(
@@ -447,6 +446,7 @@ class _AudioPacketIterator:
 
         last_audio_frame = None
 
+        audio_parts = self.audio_parts[first_audio_part_idx:]
         for audio_frame in self._iterate_audio_frames_and_audio_gaps(audio_parts):
             last_audio_frame = audio_frame
 
@@ -476,7 +476,8 @@ class _AudioPacketIterator:
             max_duration=None,  # Inifinite generator
         )
 
-    def _iterate_audio_frames_and_audio_gaps(self, audio_parts):
+    @staticmethod
+    def _iterate_audio_frames_and_audio_gaps(audio_parts):
         if audio_parts is None:
             return
 
