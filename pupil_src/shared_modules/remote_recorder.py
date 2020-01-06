@@ -178,7 +178,7 @@ class Remote_Recorder(Plugin):
         )
 
     def append_rec_state_switch(self, rec_state):
-        label = f"{rec_state.label} ({rec_state.remote_version})"
+        label = rec_state.label
         self.menu.append(ui.Switch("is_recording", rec_state, label=label))
 
     def append_session_name_view(self, rec_state):
