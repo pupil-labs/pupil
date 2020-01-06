@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class Remote_Recording_State:
     __slots__ = ["sensor"]
+    _UNDEFINED = "Undefined"
 
     def __init__(self, network, attach_event):
         self.sensor = network.sensor(
@@ -62,7 +63,14 @@ class Remote_Recording_State:
         try:
             return self.sensor.controls["version"]["value"]
         except KeyError:
-            return "Undefined"
+            return self._UNDEFINED
+
+    @property
+    def supports_remote_control(self) -> bool:
+        is_v4_format = self.sensor.format is ndsi.DataFormat.V4
+        is_remote_version_undefined = self.remote_version == self._UNDEFINED
+        out_of_date = is_v4_format and is_remote_version_undefined
+        return not out_of_date
 
     def poll_updates(self):
         while self.sensor.has_notifications:
@@ -116,7 +124,8 @@ class Remote_Recorder_Core:
 
     def broadcast_preferred_session_name(self, preferred_session_name):
         for rec_state in self._attached_rec_states.values():
-            rec_state.session_name = preferred_session_name
+            if rec_state.sensor.format is ndsi.DataFormat.V3:
+                rec_state.session_name = preferred_session_name
 
     def cleanup(self):
         for state in self._attached_rec_states.values():
@@ -139,9 +148,13 @@ class Remote_Recorder(Plugin):
         super().__init__(g_pool)
         self._core = Remote_Recorder_Core(num_states_changed_callback=self.refresh_menu)
         self.preferred_session_name = preferred_session_name
+        self._switch_elements = {}
 
     def recent_events(self, events):
         self._core.poll_network_events()
+        for rec_state, switch in self._switch_elements.items():
+            # NOTE: triggers ui refresh if value changes
+            switch.read_only = not rec_state.supports_remote_control
 
     def init_ui(self):
         self.add_menu()
@@ -150,6 +163,7 @@ class Remote_Recorder(Plugin):
 
     def refresh_menu(self):
         del self.menu[:]
+        self._switch_elements.clear()
         self.menu.append(
             ui.Info_Text(
                 "Start and stop recording sessions remotely"
@@ -164,6 +178,14 @@ class Remote_Recorder(Plugin):
             self.append_rec_state_switch(rec_state)
             if rec_state.sensor.format is ndsi.DataFormat.V3:
                 self.append_session_name_view(rec_state)
+
+        self.menu.append(
+            ui.Info_Text(
+                "Greyed out devices are out-of-date and do not support starting/"
+                "stopping recordings remotely. Update the Pupil Invisible Companion "
+                "app to enable its support."
+            )
+        )
 
     def append_preferred_session_name_setter(self):
         self.menu.append(
@@ -180,7 +202,10 @@ class Remote_Recorder(Plugin):
 
     def append_rec_state_switch(self, rec_state):
         label = rec_state.label
-        self.menu.append(ui.Switch("is_recording", rec_state, label=label))
+        view = ui.Switch("is_recording", rec_state, label=label)
+        view.read_only = not rec_state.supports_remote_control
+        self.menu.append(view)
+        self._switch_elements[rec_state] = view
 
     def append_session_name_view(self, rec_state):
         view = ui.Text_Input("session_name", rec_state, label="Session name")
