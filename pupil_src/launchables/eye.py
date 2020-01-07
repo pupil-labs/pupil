@@ -145,6 +145,7 @@ def eye(
         from av_writer import JPEG_Writer, MPEG_Writer
         from ndsi import H264Writer
         from video_capture import source_classes, manager_classes
+        from roi import Roi
 
         from background_helper import IPC_Logging_Task_Proxy
         from pupil_detector_plugins import available_detector_plugins
@@ -202,7 +203,7 @@ def eye(
             manager_classes
             + source_classes
             + available_detectors
-            + [PupilDetectorManager]
+            + [PupilDetectorManager, Roi]
         )
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
@@ -229,6 +230,7 @@ def eye(
             # Detector needs to be loaded first to set `g_pool.pupil_detector`
             (default_detector_cls.__name__, {}),
             ("PupilDetectorManager", {}),
+            ("Roi", {}),
         ]
 
         # Callback functions
