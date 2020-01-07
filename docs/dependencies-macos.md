@@ -63,7 +63,7 @@ make && make install
 
 ### Install Python Libraries
 
-We recommend using a virtual environment with a valid installation of Python 3.6 or higher.
+We recommend using a [virtual environment](https://docs.python.org/3/tutorial/venv.html) for running Pupil.
 
 ```sh
 # Upgrade pip to latest version. This is necessary for some dependencies.
