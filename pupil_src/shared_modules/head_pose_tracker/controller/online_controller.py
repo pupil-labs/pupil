@@ -47,8 +47,7 @@ class OnlineController:
             self._calculate_current_markers(events["frame"])
             self._calculate_current_pose(events["frame"])
             self._save_key_markers()
-            events["head_pose"] = self._create_position_events(
-                    self._localization_storage.current_pose)
+            events["head_pose"] = self._create_head_pose_events()
 
     def _calculate_current_markers(self, frame):
         self._detection_storage.current_markers = worker.online_detection(frame)
@@ -62,15 +61,12 @@ class OnlineController:
             self._camera_intrinsics,
         )
 
-    def _create_position_events(self, current_pose):
+    def _create_head_pose_events(self):
         """
-        Adds position events to the current list of events.
-
-        Args:
-            current_pose: The current position of the head.
+        Creates head pose events to be added to the current list of events.
         """
         position = {"topic": "head_pose"}
-        position.update(current_pose)
+        position.update(self._localization_storage.current_pose)
         return [position]
 
     def _save_key_markers(self):
