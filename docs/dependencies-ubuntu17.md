@@ -52,7 +52,21 @@ The following errors were commonly reported:
 
 * `ImportError: No module named 'cv2'`
 
-  When you see this error, **do not install opencv-python via pip!** If you did so, uninstall it again! The error appears if the above requisites were not met. Delete the build folder, recheck the requisites and try again.
+  When you see this error, Python cannot find the bindings from your OpenCV installation.
+  
+  **We do NOT (!) recommend to install `opencv-python` via pip in that case!** 
+  
+  Installing `opencv-python` will install another full (potentially different) version of opencv to your machine, so we are not recommending this setup.
+  When you compile opencv with `-DBUILD_opencv_python3=ON` as we advise above, you should have the `cv2` package available for import in Python as this will install compatible Python bindings already.
+
+  However, you might run into these problems when using a virtual environment, as your virtual environment cannot by default access Python packages that were installed from `apt`.
+  In that case there are 2 options:
+  
+  1. Symlink or copy the Python bindings into your virtualenv. See e.g. [step 4 of this stackoverflow post](https://stackoverflow.com/a/37190408) for reference.
+  2. Create your virtualenv with the [`--system-site-packages`](https://virtualenv.pypa.io/en/latest/userguide/#the-system-site-packages-option) option, which will enable access to system-installed Python packages.
+
+  If you are still experiencing this issue, delete the OpenCV build folder, recheck the requirements and build and try again.
+
 
 * `ImportError: */detector_2d.*.so: undefined symbol: *ellipse*InputOutputArray*RotatedRect*Scalar*`
   
@@ -157,6 +171,8 @@ pip install git+https://github.com/pupil-labs/pyglui
 pip install git+https://github.com/pupil-labs/nslr
 pip install git+https://github.com/pupil-labs/nslr-hmm
 ```
+
+**NOTE**: If you get the error `ImportError: No module named 'cv2'` when trying to run Pupil, please refer to the section [OpenCV Troubleshooting](#opencv-troubleshooting) above.
 
 ## Next Steps
 
