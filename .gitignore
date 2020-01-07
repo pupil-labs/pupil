@@ -56,3 +56,4 @@ deployment/pupil_v*
 *.dll
 win_drv
 .vs
+.venv
