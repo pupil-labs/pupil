@@ -176,7 +176,6 @@ def eye(
 
         icon_bar_width = 50
         window_size = None
-        camera_render_size = None
         hdpi_factor = 1.0
 
         # g_pool holds variables for this process
@@ -189,6 +188,7 @@ def eye(
         g_pool.eye_id = eye_id
         g_pool.process = f"eye{eye_id}"
         g_pool.timebase = timebase
+        g_pool.camera_render_size = None
 
         g_pool.ipc_pub = ipc_socket
 
@@ -236,7 +236,6 @@ def eye(
         # Callback functions
         def on_resize(window, w, h):
             nonlocal window_size
-            nonlocal camera_render_size
             nonlocal hdpi_factor
 
             active_window = glfw.glfwGetCurrentContext()
@@ -244,7 +243,7 @@ def eye(
             hdpi_factor = glfw.getHDPIFactor(window)
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w, h
-            camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
+            g_pool.camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
             for g in g_pool.graphs:
@@ -266,15 +265,20 @@ def eye(
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            x *= hdpi_factor
-            y *= hdpi_factor
+            x, y = x * hdpi_factor, y * hdpi_factor
             g_pool.gui.update_mouse(x, y)
 
+            pos = x, y
+            pos = normalize(pos, g_pool.camera_render_size)
+            if g_pool.flip:
+                pos = 1 - pos[0], 1 - pos[1]
+            # Position in img pixels
+            pos = denormalize(pos, g_pool.capture.frame_size)
+
+            for p in g_pool.plugins:
+                p.on_pos(pos)
+                
             if g_pool.u_r.active_edit_pt:
-                pos = normalize((x, y), camera_render_size)
-                if g_pool.flip:
-                    pos = 1 - pos[0], 1 - pos[1]
-                pos = denormalize(pos, g_pool.capture.frame_size)
                 g_pool.u_r.move_vertex(g_pool.u_r.active_pt_idx, pos)
 
         def on_scroll(window, x, y):
@@ -385,7 +389,7 @@ def eye(
                     # pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
                     x *= hdpi_factor
                     y *= hdpi_factor
-                    pos = normalize((x, y), camera_render_size)
+                    pos = normalize((x, y), g_pool.camera_render_size)
                     if g_pool.flip:
                         pos = 1 - pos[0], 1 - pos[1]
                     # Position in img pixels
@@ -633,11 +637,11 @@ def eye(
                     glfw.glfwMakeContextCurrent(main_window)
                     clear_gl_screen()
 
-                    glViewport(0, 0, *camera_render_size)
+                    glViewport(0, 0, *g_pool.camera_render_size)
                     for p in g_pool.plugins:
                         p.gl_display()
 
-                    glViewport(0, 0, *camera_render_size)
+                    glViewport(0, 0, *g_pool.camera_render_size)
                     # render the ROI
                     g_pool.u_r.draw(g_pool.gui.scale)
                     if g_pool.display_mode == "roi":
@@ -664,7 +668,7 @@ def eye(
                     for button, action, mods in user_input.buttons:
                         x, y = glfw.glfwGetCursorPos(main_window)
                         pos = x * hdpi_factor, y * hdpi_factor
-                        pos = normalize(pos, camera_render_size)
+                        pos = normalize(pos, g_pool.camera_render_size)
                         # Position in img pixels
                         pos = denormalize(pos, g_pool.capture.frame_size)
 
