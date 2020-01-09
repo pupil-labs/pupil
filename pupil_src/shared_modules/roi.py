@@ -75,15 +75,17 @@ class RoiModel:
         Marks ROI as invalid, if size has 0 dimension.
         If old and new size are valid, scales the bounds to the same relative area.
         """
-        # if we are recovering from invalid, just re-initialize
-        if self.is_invalid():
-            RoiModel.__init__(self, value)
-            return
-
         width, height = (int(v) for v in value)
+        if (width, height) == self.frame_size:
+            return
 
         if width <= 0 or height <= 0:
             self.set_invalid()
+            return
+
+        # if we are recovering from invalid, just re-initialize
+        if self.is_invalid():
+            RoiModel.__init__(self, value)
             return
 
         # scale bounds to apply to the same relative area
@@ -96,6 +98,8 @@ class RoiModel:
 
         self.frame_width = width
         self.frame_height = height
+
+        print(str(self))
 
     @property
     def bounds(self) -> Bounds:
@@ -115,6 +119,9 @@ class RoiModel:
         self.miny = min(max(miny, 0), self.frame_height - 1)
         self.maxx = min(max(maxx, 0), self.frame_width - 1)
         self.maxy = min(max(maxy, 0), self.frame_height - 1)
+
+    def __str__(self):
+        return f"Roi(frame={self.frame_size}, bounds={self.bounds})"
 
 
 class Handle(Enum):
@@ -149,6 +156,8 @@ class Roi(Plugin):
 
         self.active_handle = Handle.NONE
         self.reset_points()
+
+        self.has_frame = False
 
     def reset_points(self) -> None:
         """Refresh cached points from underlying model."""
@@ -198,9 +207,10 @@ class Roi(Plugin):
     def recent_events(self, events: T.Dict[str, T.Any]) -> None:
         frame = events.get("frame")
         if frame is None:
-            self.model.set_invalid()
+            self.has_frame = False
             return
 
+        self.has_frame = True
         self.model.frame_size = (frame.width, frame.height)
         self.reset_points()
 
@@ -217,7 +227,11 @@ class Roi(Plugin):
         return False
 
     def gl_display(self) -> None:
-        if self.model.is_invalid():
+        if not self.has_frame or self.model.is_invalid():
+            return
+
+        # TODO: move down
+        if self.g_pool.display_mode == "roi":
             return
 
         cygl_draw_polyline(
@@ -226,9 +240,6 @@ class Roi(Plugin):
             thickness=1,
             line_type=GL_LINE_LOOP,
         )
-
-        if self.g_pool.display_mode == "roi":
-            return
 
         ui_scale = self.g_pool.gui.scale
 
@@ -262,6 +273,9 @@ class Roi(Plugin):
             )
 
     def on_pos(self, pos: Vec2) -> None:
+        if not self.has_frame or self.model.is_invalid():
+            return
+
         if self.active_handle == Handle.NONE:
             return
 
