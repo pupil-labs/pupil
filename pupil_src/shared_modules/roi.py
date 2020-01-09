@@ -103,11 +103,18 @@ class RoiModel:
 
     @bounds.setter
     def bounds(self, value: Bounds) -> None:
+        # convert to ints
         minx, miny, maxx, maxy = (int(v) for v in value)
-        self.minx = max(minx, 0)
-        self.miny = max(miny, 0)
-        self.maxx = min(maxx, self.frame_width - 1)
-        self.maxy = min(maxy, self.frame_height - 1)
+
+        # ensure min < max, move max otherwise
+        maxx = max(minx, maxx)
+        maxy = max(miny, maxy)
+
+        # ensure all 0 <= all bounds < dimension
+        self.minx = min(max(minx, 0), self.frame_width - 1)
+        self.miny = min(max(miny, 0), self.frame_height - 1)
+        self.maxx = min(max(maxx, 0), self.frame_width - 1)
+        self.maxy = min(max(maxy, 0), self.frame_height - 1)
 
 
 class Handle(Enum):
