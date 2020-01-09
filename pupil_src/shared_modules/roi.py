@@ -148,7 +148,7 @@ class Roi(Plugin):
     handle_color = cygl_rgba(0.5, 0.5, 0.9, 0.9)
     handle_color_active = cygl_rgba(0.5, 0.9, 0.9, 0.9)
     handle_color_shadow = cygl_rgba(0.0, 0.0, 0.0, 0.5)
-    outline_color = cygl_rgba(0.8, 0, 0, 0.9)
+    outline_color = cygl_rgba(0.8, 0.8, 0.8, 0.9)
 
     def __init__(
         self, g_pool, frame_size: Vec2 = (0, 0), bounds: Bounds = (0, 0, 0, 0),
