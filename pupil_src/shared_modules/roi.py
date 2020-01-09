@@ -88,18 +88,21 @@ class RoiModel:
             RoiModel.__init__(self, value)
             return
 
-        # scale bounds to apply to the same relative area
+        # calculate scale factor for scaling bounds
         fx: float = width / self.frame_width
         fy: float = height / self.frame_height
-        self.minx = int(round(self.minx * fx))
-        self.miny = int(round(self.miny * fy))
-        self.maxx = int(round(self.maxx * fx))
-        self.maxy = int(round(self.maxy * fy))
-
         self.frame_width = width
         self.frame_height = height
 
-        print(str(self))
+        # scale bounds
+        minx = int(round(self.minx * fx))
+        miny = int(round(self.miny * fy))
+        maxx = int(round(self.maxx * fx))
+        maxy = int(round(self.maxy * fy))
+        # set bounds (to also apply contrainsts)
+        self.bounds = minx, miny, maxx, maxy
+
+        logger.debug(f"Roi changed frame_size, now: {self}")
 
     @property
     def bounds(self) -> Bounds:
