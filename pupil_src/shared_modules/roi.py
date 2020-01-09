@@ -22,7 +22,21 @@ Bounds = T.Tuple[int, int, int, int]
 
 
 class RoiModel:
+    """Model for ROI masks on an image frame.
+
+    The mask has 2 primary properties:
+        - frame_size: width, height
+        - bounds: minx, miny, maxx, maxy
+
+    Some notes on behavior:
+    - Modifying bounds will always confine to the frame size.
+    - Changing the frame size will scale the bounds to the same relative area.
+    - If any frame dimension is <= 0, the ROI becomes invalid.
+    - Setting the frame size of an invalid ROI to a valid size re-initializes the ROI.
+    """
+
     def __init__(self, frame_size: Vec2) -> None:
+        """Create a new RoiModel with bounds set to the full frame."""
         width, height = (int(v) for v in frame_size)
         self.frame_width = width
         self.frame_height = height
@@ -32,9 +46,11 @@ class RoiModel:
         self.maxy = height - 1
 
     def is_invalid(self) -> bool:
+        """Returns true if the frame size has 0 dimension."""
         return self.frame_width <= 0 or self.frame_height <= 0
 
     def set_invalid(self) -> None:
+        """Set frame size to (0, 0)."""
         self.frame_width = 0
         self.frame_height = 0
 
@@ -44,6 +60,11 @@ class RoiModel:
 
     @frame_size.setter
     def frame_size(self, value: Vec2) -> None:
+        """Set frame_size.
+
+        Marks ROI as invalid, if size has 0 dimension.
+        If old and new size are valid, scales the bounds to the same relative area.
+        """
         # if we are recovering from invalid, just re-initialize
         if self.is_invalid():
             RoiModel.__init__(self, value)
@@ -79,6 +100,9 @@ class RoiModel:
         self.maxy = min(maxy, self.frame_height - 1)
 
 
+class Handle(Enum):
+    """Enum for the 4 handles of the ROI UI."""
+
     NONE = -1
     TOPLEFT = 0
     TOPRIGHT = 1
@@ -87,7 +111,9 @@ class RoiModel:
 
 
 class Roi(Plugin):
+    """Plugin for managing a ROI on the frame."""
 
+    # style definitions
     handle_size = 35
     handle_size_shadow = 45
     handle_size_active = 45
@@ -108,6 +134,8 @@ class Roi(Plugin):
         self.reset_points()
 
     def reset_points(self) -> None:
+        """Refresh cached points from underlying model."""
+        # all points are in image coordinates
         self._all_points = {
             Handle.TOPLEFT: (self.model.minx, self.model.miny),
             Handle.TOPRIGHT: (self.model.maxx, self.model.miny),
@@ -121,6 +149,31 @@ class Roi(Plugin):
                 self._active_points.append(point)
             else:
                 self._inactive_points.append(point)
+
+    def get_handle_at(self, pos: Vec2) -> Handle:
+        """Returns which handle is rendered at that position."""
+        for handle in self._all_points.keys():
+            if self.is_point_on_handle(handle, pos):
+                return handle
+        return Handle.NONE
+
+    def is_point_on_handle(self, handle: Handle, point: Vec2) -> bool:
+        """Returns if point is within the rendered handle."""
+        # NOTE: point and all stored points are in image coordinates. The render sizes
+        # for the handles are in display coordinates! So we need to convert the points
+        # in order for the distances to be correct.
+        point_display = self.image_to_display_coordinates(point)
+        center = self._all_points[handle]
+        center_display = self.image_to_display_coordinates(center)
+        distance = np.linalg.norm(
+            (center_display[0] - point_display[0], center_display[1] - point_display[1])
+        )
+        handle_radius = self.g_pool.gui.scale * self.handle_size_shadow_active / 2
+        return distance <= handle_radius
+
+    def image_to_display_coordinates(self, point: Vec2) -> Vec2:
+        norm_pos = normalize(point, self.g_pool.capture.frame_size)
+        return denormalize(norm_pos, self.g_pool.camera_render_size)
 
     def recent_events(self, events: T.Dict[str, T.Any]) -> None:
         frame = events.get("frame")
@@ -142,26 +195,6 @@ class Roi(Plugin):
                 self.active_handle = Handle.NONE
                 return True
         return False
-
-    def get_handle_at(self, pos: Vec2) -> Handle:
-        for handle in self._all_points.keys():
-            if self.is_point_on_handle(handle, pos):
-                return handle
-        return Handle.NONE
-
-    def is_point_on_handle(self, handle: Handle, point: Vec2) -> bool:
-        point_display = self.image_to_display_coordinates(point)
-        center = self._all_points[handle]
-        center_display = self.image_to_display_coordinates(center)
-        distance = np.linalg.norm(
-            (center_display[0] - point_display[0], center_display[1] - point_display[1])
-        )
-        handle_radius = self.g_pool.gui.scale * self.handle_size_shadow_active / 2
-        return distance <= handle_radius
-
-    def image_to_display_coordinates(self, point: Vec2) -> Vec2:
-        norm_pos = normalize(point, self.g_pool.capture.frame_size)
-        return denormalize(norm_pos, self.g_pool.camera_render_size)
 
     def gl_display(self) -> None:
         if self.model.is_invalid():
