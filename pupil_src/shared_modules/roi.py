@@ -47,6 +47,11 @@ class RoiModel:
 
     def __init__(self, frame_size: Vec2) -> None:
         """Create a new RoiModel with bounds set to the full frame."""
+        self._change_callbacks = []
+        self._set_to_full_frame(frame_size)
+
+    def _set_to_full_frame(self, frame_size: Vec2) -> None:
+        """Initialize to full frame for given frame_size."""
         width, height = (int(v) for v in frame_size)
         self._frame_width = width
         self._frame_height = height
@@ -54,6 +59,7 @@ class RoiModel:
         self._miny = 0
         self._maxx = width - 1
         self._maxy = height - 1
+        self._changed()
 
     def is_invalid(self) -> bool:
         """Returns true if the frame size has 0 dimension."""
@@ -63,6 +69,7 @@ class RoiModel:
         """Set frame size to (0, 0)."""
         self._frame_width = 0
         self._frame_height = 0
+        self._changed()
 
     @property
     def frame_size(self) -> Vec2:
@@ -85,7 +92,7 @@ class RoiModel:
 
         # if we are recovering from invalid, just re-initialize
         if self.is_invalid():
-            RoiModel.__init__(self, value)
+            self._set_to_full_frame(value)
             return
 
         # calculate scale factor for scaling bounds
@@ -102,6 +109,7 @@ class RoiModel:
         # set bounds (to also apply contrainsts)
         self.bounds = minx, miny, maxx, maxy
 
+        self._changed()
         logger.debug(f"Roi changed frame_size, now: {self}")
 
     @property
@@ -123,8 +131,22 @@ class RoiModel:
         self._maxx = min(max(maxx, 0), self._frame_width - 1)
         self._maxy = min(max(maxy, 0), self._frame_height - 1)
 
+        self._changed()
+
     def __str__(self):
         return f"Roi(frame={self.frame_size}, bounds={self.bounds})"
+
+    def on_change(self, callback: T.Callable[[], None]) -> None:
+        """Register callback to be called when model changes."""
+        self._change_callbacks.append(callback)
+
+    def _changed(self) -> None:
+        """Notify callbacks for change."""
+        for callback in self._change_callbacks:
+            try:
+                callback()
+            except Exception as e:
+                logger.debug(f"Failed to call callback {callback}: {e}")
 
 
 class Handle(Enum):
@@ -156,17 +178,21 @@ class Roi(Plugin):
         super().__init__(g_pool)
         self.model = RoiModel(frame_size)
         self.model.bounds = bounds
-
-        # Expose roi model to outside. This is read-only! Do not change this!
-        self.g_pool.roi = self.model
-
         self.active_handle = Handle.NONE
         self.reset_points()
+        self.model.on_change(self.reset_points)
 
+        # Need to keep track of whether we have a valid frame to work with. Otherwise
+        # don't render UI.
         self.has_frame = False
+
+        # Expose roi model to outside.
+        self.g_pool.roi = self.model
 
     def reset_points(self) -> None:
         """Refresh cached points from underlying model."""
+        if self.model.is_invalid():
+            return
         # all points are in image coordinates
         # NOTE: for right/bottom points, we need to draw 1 behind the actual value. This
         # is because the outline is supposed to visually contain all pixels that are
@@ -222,7 +248,6 @@ class Roi(Plugin):
 
         self.has_frame = True
         self.model.frame_size = (frame.width, frame.height)
-        self.reset_points()
 
     def on_click(self, pos: Vec2, button: int, action: int) -> bool:
         if action == glfw.GLFW_PRESS:
@@ -307,4 +332,3 @@ class Roi(Plugin):
             maxy = max(miny + min_size, y)
 
         self.model.bounds = minx, miny, maxx, maxy
-        self.reset_points()
