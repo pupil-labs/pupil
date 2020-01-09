@@ -1,3 +1,13 @@
+"""
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2020 Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+"""
 import logging
 import typing as T
 from enum import Enum
@@ -172,8 +182,11 @@ class Roi(Plugin):
         return distance <= handle_radius
 
     def image_to_display_coordinates(self, point: Vec2) -> Vec2:
+        """Convert image coordinates to display coordinates."""
         norm_pos = normalize(point, self.g_pool.capture.frame_size)
         return denormalize(norm_pos, self.g_pool.camera_render_size)
+
+    # --- inherited from Plugin base class ---
 
     def recent_events(self, events: T.Dict[str, T.Any]) -> None:
         frame = events.get("frame")
