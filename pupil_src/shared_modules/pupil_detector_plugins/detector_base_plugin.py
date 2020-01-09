@@ -115,11 +115,7 @@ class PupilDetectorPlugin(Plugin):
                     ) from err
                 if minX > maxX or minY > maxY:
                     raise ValueError("ROI malformed: minX > maxX or minY > maxY!")
-                ui_roi = self.g_pool.u_r
-                ui_roi.lX = max(ui_roi.min_x, int(minX))
-                ui_roi.lY = max(ui_roi.min_y, int(minY))
-                ui_roi.uX = min(ui_roi.max_x, int(maxX))
-                ui_roi.uY = min(ui_roi.max_y, int(maxY))
+                self.g_pool.roi.bounds = (minX, maxX, minY, maxY)
             else:
                 raise KeyError(
                     "Notification subject does not "

@@ -157,6 +157,9 @@ class Roi(Plugin):
         self.model = RoiModel(frame_size)
         self.model.bounds = bounds
 
+        # Expose roi model to outside. This is read-only! Do not change this!
+        self.g_pool.roi = self.model
+
         self.active_handle = Handle.NONE
         self.reset_points()
 
