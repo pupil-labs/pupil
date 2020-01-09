@@ -1,6 +1,6 @@
 import logging
 import typing as T
-from enum import IntEnum
+from enum import Enum
 
 import numpy as np
 from OpenGL.GL import GL_LINE_LOOP
@@ -79,7 +79,6 @@ class RoiModel:
         self.maxy = min(maxy, self.frame_height - 1)
 
 
-class Handle(IntEnum):
     NONE = -1
     TOPLEFT = 0
     TOPRIGHT = 1
