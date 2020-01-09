@@ -48,25 +48,25 @@ class RoiModel:
     def __init__(self, frame_size: Vec2) -> None:
         """Create a new RoiModel with bounds set to the full frame."""
         width, height = (int(v) for v in frame_size)
-        self.frame_width = width
-        self.frame_height = height
-        self.minx = 0
-        self.miny = 0
-        self.maxx = width - 1
-        self.maxy = height - 1
+        self._frame_width = width
+        self._frame_height = height
+        self._minx = 0
+        self._miny = 0
+        self._maxx = width - 1
+        self._maxy = height - 1
 
     def is_invalid(self) -> bool:
         """Returns true if the frame size has 0 dimension."""
-        return self.frame_width <= 0 or self.frame_height <= 0
+        return self._frame_width <= 0 or self._frame_height <= 0
 
     def set_invalid(self) -> None:
         """Set frame size to (0, 0)."""
-        self.frame_width = 0
-        self.frame_height = 0
+        self._frame_width = 0
+        self._frame_height = 0
 
     @property
     def frame_size(self) -> Vec2:
-        return self.frame_width, self.frame_height
+        return self._frame_width, self._frame_height
 
     @frame_size.setter
     def frame_size(self, value: Vec2) -> None:
@@ -89,16 +89,16 @@ class RoiModel:
             return
 
         # calculate scale factor for scaling bounds
-        fx: float = width / self.frame_width
-        fy: float = height / self.frame_height
-        self.frame_width = width
-        self.frame_height = height
+        fx: float = width / self._frame_width
+        fy: float = height / self._frame_height
+        self._frame_width = width
+        self._frame_height = height
 
         # scale bounds
-        minx = int(round(self.minx * fx))
-        miny = int(round(self.miny * fy))
-        maxx = int(round(self.maxx * fx))
-        maxy = int(round(self.maxy * fy))
+        minx = int(round(self._minx * fx))
+        miny = int(round(self._miny * fy))
+        maxx = int(round(self._maxx * fx))
+        maxy = int(round(self._maxy * fy))
         # set bounds (to also apply contrainsts)
         self.bounds = minx, miny, maxx, maxy
 
@@ -106,7 +106,7 @@ class RoiModel:
 
     @property
     def bounds(self) -> Bounds:
-        return self.minx, self.miny, self.maxx, self.maxy
+        return self._minx, self._miny, self._maxx, self._maxy
 
     @bounds.setter
     def bounds(self, value: Bounds) -> None:
@@ -118,10 +118,10 @@ class RoiModel:
         maxy = max(miny, maxy)
 
         # ensure all 0 <= all bounds < dimension
-        self.minx = min(max(minx, 0), self.frame_width - 1)
-        self.miny = min(max(miny, 0), self.frame_height - 1)
-        self.maxx = min(max(maxx, 0), self.frame_width - 1)
-        self.maxy = min(max(maxy, 0), self.frame_height - 1)
+        self._minx = min(max(minx, 0), self._frame_width - 1)
+        self._miny = min(max(miny, 0), self._frame_height - 1)
+        self._maxx = min(max(maxx, 0), self._frame_width - 1)
+        self._maxy = min(max(maxy, 0), self._frame_height - 1)
 
     def __str__(self):
         return f"Roi(frame={self.frame_size}, bounds={self.bounds})"
@@ -171,11 +171,12 @@ class Roi(Plugin):
         # NOTE: for right/bottom points, we need to draw 1 behind the actual value. This
         # is because the outline is supposed to visually contain all pixels that are
         # masked.
+        minx, miny, maxx, maxy = self.model.bounds
         self._all_points = {
-            Handle.TOPLEFT: (self.model.minx, self.model.miny),
-            Handle.TOPRIGHT: (self.model.maxx + 1, self.model.miny),
-            Handle.BOTTOMRIGHT: (self.model.maxx + 1, self.model.maxy + 1),
-            Handle.BOTTOMLEFT: (self.model.minx, self.model.maxy + 1),
+            Handle.TOPLEFT: (minx, miny),
+            Handle.TOPRIGHT: (maxx + 1, miny),
+            Handle.BOTTOMRIGHT: (maxx + 1, maxy + 1),
+            Handle.BOTTOMLEFT: (minx, maxy + 1),
         }
         self._active_points = []
         self._inactive_points = []
