@@ -15,12 +15,14 @@ from plugin import Plugin
 logger = logging.getLogger(__name__)
 
 
-Size = T.Tuple[int, int]
+# Type aliases
+# Note that this version of Vec2 is immutable! We don't need mutability here.
+Vec2 = T.Tuple[int, int]
 Bounds = T.Tuple[int, int, int, int]
 
 
 class RoiModel:
-    def __init__(self, frame_size: Size):
+    def __init__(self, frame_size: Vec2) -> None:
         width, height = (int(v) for v in frame_size)
         self.frame_width = width
         self.frame_height = height
@@ -29,22 +31,22 @@ class RoiModel:
         self.maxx = width - 1
         self.maxy = height - 1
 
-    def is_invalid(self):
+    def is_invalid(self) -> bool:
         return self.frame_width <= 0 or self.frame_height <= 0
 
-    def set_invalid(self):
+    def set_invalid(self) -> None:
         self.frame_width = 0
         self.frame_height = 0
 
     @property
-    def frame_size(self) -> Size:
+    def frame_size(self) -> Vec2:
         return self.frame_width, self.frame_height
 
     @frame_size.setter
-    def frame_size(self, value: Size):
+    def frame_size(self, value: Vec2) -> None:
         # if we are recovering from invalid, just re-initialize
         if self.is_invalid():
-            self.__init__(value)
+            RoiModel.__init__(self, value)
             return
 
         width, height = (int(v) for v in value)
@@ -69,12 +71,20 @@ class RoiModel:
         return self.minx, self.miny, self.maxx, self.maxy
 
     @bounds.setter
-    def bounds(self, value: Bounds):
+    def bounds(self, value: Bounds) -> None:
         minx, miny, maxx, maxy = (int(v) for v in value)
         self.minx = max(minx, 0)
         self.miny = max(miny, 0)
         self.maxx = min(maxx, self.frame_width - 1)
         self.maxy = min(maxy, self.frame_height - 1)
+
+
+class Handle(IntEnum):
+    NONE = -1
+    TOPLEFT = 0
+    TOPRIGHT = 1
+    BOTTOMRIGHT = 2
+    BOTTOMLEFT = 3
 
 
 class Roi(Plugin):
@@ -88,29 +98,22 @@ class Roi(Plugin):
     handle_color_shadow = cygl_rgba(0.0, 0.0, 0.0, 0.5)
     outline_color = cygl_rgba(0.8, 0, 0, 0.9)
 
-    class Handles(IntEnum):
-        NONE = -1
-        TOPLEFT = 0
-        TOPRIGHT = 1
-        BOTTOMRIGHT = 2
-        BOTTOMLEFT = 3
-
     def __init__(
-        self, g_pool, frame_size: Size = (0, 0), bounds: Bounds = (0, 0, 0, 0),
-    ):
+        self, g_pool, frame_size: Vec2 = (0, 0), bounds: Bounds = (0, 0, 0, 0),
+    ) -> None:
         super().__init__(g_pool)
         self.model = RoiModel(frame_size)
         self.model.bounds = bounds
 
-        self.active_handle = self.Handles.NONE
+        self.active_handle = Handle.NONE
         self.reset_points()
 
-    def reset_points(self):
+    def reset_points(self) -> None:
         self._all_points = {
-            self.Handles.TOPLEFT: [self.model.minx, self.model.miny],
-            self.Handles.TOPRIGHT: [self.model.maxx, self.model.miny],
-            self.Handles.BOTTOMRIGHT: [self.model.maxx, self.model.maxy],
-            self.Handles.BOTTOMLEFT: [self.model.minx, self.model.maxy],
+            Handle.TOPLEFT: (self.model.minx, self.model.miny),
+            Handle.TOPRIGHT: (self.model.maxx, self.model.miny),
+            Handle.BOTTOMRIGHT: (self.model.maxx, self.model.maxy),
+            Handle.BOTTOMLEFT: (self.model.minx, self.model.maxy),
         }
         self._active_points = []
         self._inactive_points = []
@@ -120,7 +123,7 @@ class Roi(Plugin):
             else:
                 self._inactive_points.append(point)
 
-    def recent_events(self, events):
+    def recent_events(self, events: T.Dict[str, T.Any]) -> None:
         frame = events.get("frame")
         if frame is None:
             self.model.set_invalid()
@@ -129,24 +132,25 @@ class Roi(Plugin):
         self.model.frame_size = (frame.width, frame.height)
         self.reset_points()
 
-    def on_click(self, pos, button, action):
+    def on_click(self, pos: Vec2, button: int, action: int) -> bool:
         if action == glfw.GLFW_PRESS:
             clicked_handle = self.get_handle_at(pos)
             if clicked_handle != self.active_handle:
                 self.active_handle = clicked_handle
                 return True
         elif action == glfw.GLFW_RELEASE:
-            if self.active_handle != self.Handles.NONE:
-                self.active_handle = self.Handles.NONE
+            if self.active_handle != Handle.NONE:
+                self.active_handle = Handle.NONE
                 return True
         return False
 
-    def get_handle_at(self, pos):
+    def get_handle_at(self, pos: Vec2) -> Handle:
         for handle in self._all_points.keys():
             if self.is_point_on_handle(handle, pos):
                 return handle
+        return Handle.NONE
 
-    def is_point_on_handle(self, handle, point):
+    def is_point_on_handle(self, handle: Handle, point: Vec2) -> bool:
         point_display = self.image_to_display_coordinates(point)
         center = self._all_points[handle]
         center_display = self.image_to_display_coordinates(center)
@@ -156,11 +160,11 @@ class Roi(Plugin):
         handle_radius = self.g_pool.gui.scale * self.handle_size_shadow_active / 2
         return distance <= handle_radius
 
-    def image_to_display_coordinates(self, point):
+    def image_to_display_coordinates(self, point: Vec2) -> Vec2:
         norm_pos = normalize(point, self.g_pool.capture.frame_size)
         return denormalize(norm_pos, self.g_pool.camera_render_size)
 
-    def gl_display(self):
+    def gl_display(self) -> None:
         if self.model.is_invalid():
             return
 
@@ -205,24 +209,24 @@ class Roi(Plugin):
                 sharpness=0.9,
             )
 
-    def on_pos(self, pos):
-        if self.active_handle == self.Handles.NONE:
+    def on_pos(self, pos: Vec2) -> None:
+        if self.active_handle == Handle.NONE:
             return
 
         x, y = pos
         minx, miny, maxx, maxy = self.model.bounds
 
         min_size = 45
-        if self.active_handle == self.Handles.TOPLEFT:
+        if self.active_handle == Handle.TOPLEFT:
             minx = min(x, maxx - min_size)
             miny = min(y, maxy - min_size)
-        elif self.active_handle == self.Handles.TOPRIGHT:
+        elif self.active_handle == Handle.TOPRIGHT:
             maxx = max(minx + min_size, x)
             miny = min(y, maxy - min_size)
-        elif self.active_handle == self.Handles.BOTTOMRIGHT:
+        elif self.active_handle == Handle.BOTTOMRIGHT:
             maxx = max(minx + min_size, x)
             maxy = max(miny + min_size, y)
-        elif self.active_handle == self.Handles.BOTTOMLEFT:
+        elif self.active_handle == Handle.BOTTOMLEFT:
             minx = min(x, maxx - min_size)
             maxy = max(miny + min_size, y)
 
