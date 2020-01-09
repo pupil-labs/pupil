@@ -165,11 +165,14 @@ class Roi(Plugin):
     def reset_points(self) -> None:
         """Refresh cached points from underlying model."""
         # all points are in image coordinates
+        # NOTE: for right/bottom points, we need to draw 1 behind the actual value. This
+        # is because the outline is supposed to visually contain all pixels that are
+        # masked.
         self._all_points = {
             Handle.TOPLEFT: (self.model.minx, self.model.miny),
-            Handle.TOPRIGHT: (self.model.maxx, self.model.miny),
-            Handle.BOTTOMRIGHT: (self.model.maxx, self.model.maxy),
-            Handle.BOTTOMLEFT: (self.model.minx, self.model.maxy),
+            Handle.TOPRIGHT: (self.model.maxx + 1, self.model.miny),
+            Handle.BOTTOMRIGHT: (self.model.maxx + 1, self.model.maxy + 1),
+            Handle.BOTTOMLEFT: (self.model.minx, self.model.maxy + 1),
         }
         self._active_points = []
         self._inactive_points = []
