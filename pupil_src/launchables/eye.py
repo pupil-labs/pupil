@@ -277,7 +277,7 @@ def eye(
 
             for p in g_pool.plugins:
                 p.on_pos(pos)
-                
+
             if g_pool.u_r.active_edit_pt:
                 g_pool.u_r.move_vertex(g_pool.u_r.active_pt_idx, pos)
 
@@ -669,6 +669,8 @@ def eye(
                         x, y = glfw.glfwGetCursorPos(main_window)
                         pos = x * hdpi_factor, y * hdpi_factor
                         pos = normalize(pos, g_pool.camera_render_size)
+                        if g_pool.flip:
+                            pos = 1 - pos[0], 1 - pos[1]
                         # Position in img pixels
                         pos = denormalize(pos, g_pool.capture.frame_size)
 
