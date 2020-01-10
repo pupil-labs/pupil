@@ -39,7 +39,7 @@ class RoiModel:
         - bounds: minx, miny, maxx, maxy
 
     Some notes on behavior:
-    - Modifying bounds will always confine to the frame size.
+    - Modifying bounds will always confine to the frame size and keep and area of >= 1.
     - Changing the frame size will scale the bounds to the same relative area.
     - If any frame dimension is <= 0, the ROI becomes invalid.
     - Setting the frame size of an invalid ROI to a valid size re-initializes the ROI.
@@ -121,15 +121,26 @@ class RoiModel:
         # convert to ints
         minx, miny, maxx, maxy = (int(v) for v in value)
 
-        # ensure min < max, move max otherwise
-        maxx = max(minx, maxx)
-        maxy = max(miny, maxy)
-
         # ensure all 0 <= all bounds < dimension
-        self._minx = min(max(minx, 0), self._frame_width - 1)
-        self._miny = min(max(miny, 0), self._frame_height - 1)
-        self._maxx = min(max(maxx, 0), self._frame_width - 1)
-        self._maxy = min(max(maxy, 0), self._frame_height - 1)
+        minx = min(max(minx, 0), self._frame_width - 1)
+        miny = min(max(miny, 0), self._frame_height - 1)
+        maxx = min(max(maxx, 0), self._frame_width - 1)
+        maxy = min(max(maxy, 0), self._frame_height - 1)
+
+        # ensure min < max
+        # tries move max behind min first, otherwise moves min before max
+        if maxx <= minx:
+            if minx < self._frame_width - 1:
+                maxx = minx + 1
+            else:
+                minx = maxx - 1
+        if maxy <= miny:
+            if miny < self._frame_height - 1:
+                maxy = miny + 1
+            else:
+                minx = maxy - 1
+
+        self._minx, self._miny, self._maxx, self._maxy = minx, miny, maxx, maxy
 
         self._changed()
 
