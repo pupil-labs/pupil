@@ -129,7 +129,6 @@ def eye(
         from gl_utils import make_coord_system_pixel_based
         from gl_utils import make_coord_system_norm_based
         from gl_utils import is_window_visible, glViewport
-        from ui_roi import UIRoi
 
         # monitoring
         import psutil
