@@ -535,19 +535,6 @@ def eye(
 
             frame = event.get("frame")
             if frame:
-                f_width, f_height = g_pool.capture.frame_size
-                # TODO: Roi should be its own plugin. This way we could put it at the
-                # appropriate order for recent_events() to process frame resolution
-                # changes immediately after the backend.
-                if (g_pool.u_r.array_shape[0], g_pool.u_r.array_shape[1]) != (
-                    f_height,
-                    f_width,
-                ):
-                    g_pool.pupil_detector.on_resolution_change(
-                        (g_pool.u_r.array_shape[1], g_pool.u_r.array_shape[0]),
-                        g_pool.capture.frame_size,
-                    )
-                    g_pool.u_r = UIRoi((f_height, f_width))
                 if should_publish_frames:
                     try:
                         if frame_publish_format == "jpeg":

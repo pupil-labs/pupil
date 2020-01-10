@@ -54,12 +54,19 @@ class PupilDetectorPlugin(Plugin):
             "pupil_detector.broadcast_properties": self.handle_broadcast_properties_notification,
             "pupil_detector.set_property": self.handle_set_property_notification,
         }
+        self._last_frame_size = None
 
     def recent_events(self, event):
         frame = event.get("frame")
         if not frame:
             self._recent_detection_result = None
             return
+
+        frame_size = (frame.width, frame.height)
+        if frame_size != self._last_frame_size:
+            if self._last_frame_size is not None:
+                self.on_resolution_change(self._last_frame_size, frame_size)
+            self._last_frame_size = frame_size
 
         detection_result = self.detect(frame=frame)
         event["pupil_detection_result"] = detection_result
