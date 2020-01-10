@@ -77,7 +77,7 @@ def test_model_init_bounds():
 def test_model_revalidation_bounds(invalid_model):
     # revalidation should set bounds to full frame
     invalid_model.frame_size = (100, 200)
-    assert invalid_model.bounds == (0, 0, 99, 199,)
+    assert invalid_model.bounds == (0, 0, 99, 199)
 
 
 def test_bounds_cutoff():
@@ -104,6 +104,6 @@ def test_frame_size_bounds_scaling():
 
     # bounds should be scaled by frame_size changes
     model.frame_size = (800, 400)
-    assert model.bounds == (200, 100, 600, 200,)
+    assert model.bounds == (200, 100, 600, 200)
     model.frame_size = (400, 800)
-    assert model.bounds == (100, 200, 300, 400,)
+    assert model.bounds == (100, 200, 300, 400)
