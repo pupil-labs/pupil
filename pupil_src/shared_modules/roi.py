@@ -189,7 +189,7 @@ class Roi(Plugin):
         super().__init__(g_pool)
         self.model = RoiModel(frame_size)
         self.model.bounds = bounds
-        self.active_handle = Handle.NONE
+        self._active_handle = Handle.NONE
         self.reset_points()
         self.model.on_change(self.reset_points)
 
@@ -222,6 +222,18 @@ class Roi(Plugin):
                 self._active_points.append(point)
             else:
                 self._inactive_points.append(point)
+
+    @property
+    def active_handle(self) -> Handle:
+        return self._active_handle
+
+    @active_handle.setter
+    def active_handle(self, value: Handle):
+        """Set active handle. Will reset points when changed."""
+        if value == self._active_handle:
+            return
+        self._active_handle = value
+        self.reset_points()
 
     def get_handle_at(self, pos: Vec2) -> Handle:
         """Returns which handle is rendered at that position."""
