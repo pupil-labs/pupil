@@ -297,16 +297,16 @@ class Roi(Plugin):
         if not self.has_frame or self.model.is_invalid():
             return
 
-        # TODO: move down
-        if self.g_pool.display_mode == "roi":
-            return
-
         cygl_draw_polyline(
             self._all_points.values(),
             color=self.outline_color,
             thickness=1,
             line_type=GL_LINE_LOOP,
         )
+
+        # only display rest of the UI when we're in ROI mode
+        if self.g_pool.display_mode != "roi":
+            return
 
         ui_scale = self.g_pool.gui.scale
 
