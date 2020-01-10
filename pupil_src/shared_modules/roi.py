@@ -228,7 +228,7 @@ class Roi(Plugin):
         return self._active_handle
 
     @active_handle.setter
-    def active_handle(self, value: Handle):
+    def active_handle(self, value: Handle) -> None:
         """Set active handle. Will reset points when changed."""
         if value == self._active_handle:
             return
