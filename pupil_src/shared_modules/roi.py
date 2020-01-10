@@ -340,18 +340,56 @@ class Roi(Plugin):
         x, y = pos
         minx, miny, maxx, maxy = self.model.bounds
 
+        # Try to ensure that the roi has min_size in both dimensions. This is important
+        # because otherwise the handles might overlap and the user cannot control the
+        # ROI anymore. Keep in mind that we cannot assume that the ROI had min_size
+        # before, since you can also modify from the network. This is purely a UI issue.
+        # You can test this by e.g. setting the ROI over the network to (0, 0, 1, 1) or
+        # to (190, 190, 191, 191) for the 192x192 image.
+        # For every point we:
+        #   1. Set corresponding coordinate pair
+        #   2. Push other coordinate pair away to ensure min_size
+        #   3. Other pair might have been pushed to frame bounds, if so push current
+        #      pair back into the other direction.
+        # If the frame_size is greater than min_size, we ensure a min_size ROI,
+        # otherwise we ensure that ROI is the full frame_size.
         min_size = 45
+        width, height = self.model.frame_size
         if self.active_handle == Handle.TOPLEFT:
-            minx = min(x, maxx - min_size)
-            miny = min(y, maxy - min_size)
+            # 1.
+            minx, miny = x, y
+            # 2.
+            maxx = max(maxx, min(minx + min_size, width - 1))
+            maxy = max(maxy, min(miny + min_size, height - 1))
+            # 3.
+            minx = min(minx, max(maxx - min_size, 0))
+            miny = min(miny, max(maxy - min_size, 0))
         elif self.active_handle == Handle.TOPRIGHT:
-            maxx = max(minx + min_size, x)
-            miny = min(y, maxy - min_size)
+            # 1.
+            maxx, miny = x, y
+            # 2.
+            minx = min(minx, max(maxx - min_size, 0))
+            maxy = max(maxy, min(miny + min_size, height - 1))
+            # 3.
+            maxx = max(maxx, min(minx + min_size, width - 1))
+            miny = min(miny, max(maxy - min_size, 0))
         elif self.active_handle == Handle.BOTTOMRIGHT:
-            maxx = max(minx + min_size, x)
-            maxy = max(miny + min_size, y)
+            # 1.
+            maxx, maxy = x, y
+            # 2.
+            minx = min(minx, max(maxx - min_size, 0))
+            miny = min(miny, max(maxy - min_size, 0))
+            # 3.
+            maxx = max(maxx, min(minx + min_size, width - 1))
+            maxy = max(maxy, min(miny + min_size, height - 1))
         elif self.active_handle == Handle.BOTTOMLEFT:
-            minx = min(x, maxx - min_size)
-            maxy = max(miny + min_size, y)
+            # 1.
+            minx, maxy = x, y
+            # 2.
+            maxx = max(maxx, min(minx + min_size, width - 1))
+            miny = min(miny, max(maxy - min_size, 0))
+            # 3.
+            minx = min(minx, max(maxx - min_size, 0))
+            maxy = max(maxy, min(miny + min_size, height - 1))
 
         self.model.bounds = minx, miny, maxx, maxy
