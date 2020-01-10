@@ -173,6 +173,9 @@ class Handle(Enum):
 class Roi(Plugin):
     """Plugin for managing a ROI on the frame."""
 
+    # Needs to be after base_backend and before detector_base_plugin!
+    order = 0.05
+
     # style definitions
     handle_size = 35
     handle_size_shadow = 45
