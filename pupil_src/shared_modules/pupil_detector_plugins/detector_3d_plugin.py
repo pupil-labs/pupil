@@ -51,16 +51,6 @@ class Detector3DPlugin(PupilDetectorPlugin):
     def detect(self, frame):
         # convert roi-plugin to detector roi
         roi = Roi(*self.g_pool.roi.bounds)
-        if (
-            not 0 <= roi.x_min <= roi.x_max < frame.width
-            or not 0 <= roi.y_min <= roi.y_max < frame.height
-        ):
-            # TODO: Invalid ROIs can occur when switching camera resolutions, because we
-            # adjust the roi only after all plugin recent_events() have been called.
-            # Optimally we make a plugin out of the ROI and call its recent_events()
-            # immediately after the backend, before the detection.
-            logger.debug(f"Invalid Roi {roi} for img {frame.width}x{frame.height}!")
-            return None
 
         debug_img = frame.bgr if self.g_pool.display_mode == "algorithm" else None
         result = self.detector_3d.detect(
