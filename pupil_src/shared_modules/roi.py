@@ -200,6 +200,12 @@ class Roi(Plugin):
         # Expose roi model to outside.
         self.g_pool.roi = self.model
 
+    def get_init_dict(self) -> T.Dict[str, T.Any]:
+        return {
+            "frame_size": self.model.frame_size,
+            "bounds": self.model.bounds,
+        }
+
     def reset_points(self) -> None:
         """Refresh cached points from underlying model."""
         if self.model.is_invalid():
