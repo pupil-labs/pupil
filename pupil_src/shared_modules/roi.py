@@ -138,7 +138,7 @@ class RoiModel:
             if miny < self._frame_height - 1:
                 maxy = miny + 1
             else:
-                minx = maxy - 1
+                miny = maxy - 1
 
         self._minx, self._miny, self._maxx, self._maxy = minx, miny, maxx, maxy
 
