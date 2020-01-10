@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # Note that this version of Vec2 is immutable! We don't need mutability here.
 Vec2 = T.Tuple[int, int]
 Bounds = T.Tuple[int, int, int, int]
+ChangeCallback = T.Callable[[], None]
 
 
 class RoiModel:
@@ -47,7 +48,7 @@ class RoiModel:
 
     def __init__(self, frame_size: Vec2) -> None:
         """Create a new RoiModel with bounds set to the full frame."""
-        self._change_callbacks = []
+        self._change_callbacks: T.List[ChangeCallback] = []
         self._set_to_full_frame(frame_size)
 
     def _set_to_full_frame(self, frame_size: Vec2) -> None:
@@ -147,7 +148,7 @@ class RoiModel:
     def __str__(self):
         return f"Roi(frame={self.frame_size}, bounds={self.bounds})"
 
-    def on_change(self, callback: T.Callable[[], None]) -> None:
+    def on_change(self, callback: ChangeCallback) -> None:
         """Register callback to be called when model changes."""
         self._change_callbacks.append(callback)
 
