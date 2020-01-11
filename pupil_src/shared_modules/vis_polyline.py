@@ -38,11 +38,7 @@ class Vis_Polyline(Visualizer_Plugin_Base):
         frame = events.get("frame")
         if not frame:
             return
-        pts = [
-            denormalize(pt["norm_pos"], frame.img.shape[:-1][::-1], flip_y=True)
-            for pt in events.get("gaze", [])
-            if pt["confidence"] >= self.g_pool.min_data_confidence
-        ]
+        pts = self.previous_points(frame, events)
         bgra = (self.b * 255, self.g * 255, self.r * 255, self.a * 255)
         if pts:
             pts = np.array([pts], dtype=np.int32)
@@ -54,6 +50,17 @@ class Vis_Polyline(Visualizer_Plugin_Base):
                 thickness=self.thickness,
                 lineType=cv2.LINE_AA,
             )
+
+    def previous_points(self, frame, events):
+        gaze_datums = []
+        gaze_datums = gaze_datums or events.get("scan_path_gaze", [])
+        gaze_datums = gaze_datums or events.get("gaze", [])
+
+        return [
+            denormalize(pt["norm_pos"], frame.img.shape[:-1][::-1], flip_y=True)
+            for pt in gaze_datums
+            if pt["confidence"] >= self.g_pool.min_data_confidence
+        ]
 
     def init_ui(self):
         self.add_menu()
