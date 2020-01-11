@@ -124,7 +124,6 @@ def _export_world_video(
     from vis_cross import Vis_Cross
     from vis_light_points import Vis_Light_Points
     from vis_polyline import Vis_Polyline
-    from vis_scan_path import Vis_Scan_Path
     from vis_watermark import Vis_Watermark
 
     PID = str(os.getpid())
@@ -141,7 +140,6 @@ def _export_world_video(
                 Vis_Polyline,
                 Vis_Light_Points,
                 Vis_Watermark,
-                Vis_Scan_Path,
                 Eye_Overlay,
                 Video_Overlay,
             ],
