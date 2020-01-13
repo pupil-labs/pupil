@@ -103,7 +103,7 @@ When you see this error, Python cannot find the bindings from your OpenCV instal
 Installing `opencv-python` will install another full (potentially different) version of opencv to your machine, so we are not recommending this setup.
 When you install opencv with `brew install opencv` as we advise above, you should have the `cv2` package available for import in Python as this will install compatible Python bindings already.
 
-However, you might run into these problems when using a virtual environment, as your virtual environment cannot by default access Python packages that were installed from `apt`.
+However, you might run into these problems when using a virtual environment, as your virtual environment cannot by default access Python packages that were installed from `brew`.
 In that case there are 2 options:
 
 1. Symlink or copy the Python bindings into your virtualenv. See e.g. [step 4 of this stackoverflow post](https://stackoverflow.com/a/37190408) for reference.
