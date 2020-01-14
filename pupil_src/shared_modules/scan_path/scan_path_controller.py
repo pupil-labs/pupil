@@ -168,7 +168,7 @@ class ScanPathController(Observable):
     def _on_bg_task_updated(self, update_data):
         logger.debug("ScanPathController._on_bg_task_updated")
         item = ScanPathItem(update_data.frame_index, update_data.gaze_data)
-        self._status_str = f"Calculation {int(self._preproc.progress * 100)}%..."
+        self._status_str = f"Calculation {int(self._bg_task.progress * 100)}%..."
         self._computed_storage.add(item)
         self.on_update_ui()
 
