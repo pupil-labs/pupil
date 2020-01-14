@@ -91,7 +91,7 @@ class ScanPathPreprocessingTask(Observable, _BaseTask):
                 break
 
         if generator_is_done:
-            self._progress = 0.0
+            self._progress = 1.0
             self._state = CompletedState(self.g_pool)
             self.on_completed()
 
