@@ -180,5 +180,6 @@ class ScanPathController(Observable):
 
     def _on_bg_task_completed(self):
         logger.debug("ScanPathController._on_bg_task_completed")
+        self._computed_storage.is_completed = True
         self._status_str = "Calculation completed"
         self.on_update_ui()

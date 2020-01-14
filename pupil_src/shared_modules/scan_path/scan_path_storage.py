@@ -52,15 +52,11 @@ class ScanPathStorage(SingleFileStorage, Observable):
         super().__init__(rec_dir, plugin)
         self._cache = {}
         self._load_from_disk()
-
-    @property
-    def is_completed(self) -> bool:
-        return False #FIXME
-
-    def mark_completed(self):
-        pass #FIXME
+        self.is_completed = len(self._cache) > 0
 
     def get(self, frame_index):
+        if not self.is_completed:
+            return None
         try:
             return self._cache[frame_index].data
         except KeyError:
@@ -68,12 +64,9 @@ class ScanPathStorage(SingleFileStorage, Observable):
 
     def clear(self):
         self._cache = {}
+        self.is_completed = False
 
-    # SingleFileStorage
-
-    @property
-    def _storage_file_name(self):
-        return "scan_path_cache.msgpack"
+    # Storage
 
     def add(self, item):
         self._cache[item.index] = item
@@ -83,8 +76,17 @@ class ScanPathStorage(SingleFileStorage, Observable):
 
     @property
     def items(self):
-        return sorted(self._cache.values(), key=lambda item: item.index)
+        if self.is_completed:
+            return sorted(self._cache.values(), key=lambda item: item.index)
+        else:
+            return []
 
     @property
     def _item_class(self):
         return ScanPathItem
+
+    # SingleFileStorage
+
+    @property
+    def _storage_file_name(self):
+        return "scan_path_cache.msgpack"
