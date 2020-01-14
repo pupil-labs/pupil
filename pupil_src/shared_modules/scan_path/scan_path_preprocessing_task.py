@@ -56,6 +56,10 @@ class ScanPathPreprocessingTask(Observable, _BaseTask):
     # _BaseTask
 
     @property
+    def is_active(self) -> bool:
+        return isinstance(self._state, ActiveState)
+
+    @property
     def progress(self) -> float:
         return self._progress
 
