@@ -59,7 +59,7 @@ class Vis_Polyline(Visualizer_Plugin_Base):
         return [
             denormalize(pt["norm_pos"], frame.img.shape[:-1][::-1], flip_y=True)
             for pt in gaze_datums
-            if pt["confidence"] >= self.g_pool.min_data_confidence
+            if pt.get("confidence", 1.0) >= self.g_pool.min_data_confidence
         ]
 
     def init_ui(self):
