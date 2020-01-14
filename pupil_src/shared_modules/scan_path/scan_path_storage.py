@@ -48,6 +48,29 @@ class ScanPathItem(StorageItem):
 
 class ScanPathStorage(SingleFileStorage, Observable):
 
+    def __init__(self, rec_dir, plugin):
+        super().__init__(rec_dir, plugin)
+        self._cache = {}
+        self._load_from_disk()
+
+    @property
+    def is_completed(self) -> bool:
+        return False #FIXME
+
+    def mark_completed(self):
+        pass #FIXME
+
+    def get(self, frame_index):
+        try:
+            return self._cache[frame_index].data
+        except KeyError:
+            return None
+
+    def clear(self):
+        self._cache = {}
+
+    # SingleFileStorage
+
     @property
     def _storage_file_name(self):
         return "scan_path_cache.msgpack"
@@ -65,14 +88,3 @@ class ScanPathStorage(SingleFileStorage, Observable):
     @property
     def _item_class(self):
         return ScanPathItem
-
-    def __init__(self, rec_dir, plugin):
-        super().__init__(rec_dir, plugin)
-        self._cache = {}
-        self._load_from_disk()
-
-    def get(self, frame_index):
-        try:
-            return self._cache[frame_index].data
-        except KeyError:
-            return None
