@@ -8,43 +8,47 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import os
-from types import SimpleNamespace
+from collections import namedtuple
 
 from observable import Observable
 from background_helper import IPC_Logging_Task_Proxy
-from video_capture.file_backend import File_Source, EndofVideoError
-from gaze_producer.gaze_from_recording import GazeFromRecording
-import methods as m
-import player_methods as pm
 
+from .base_task import _BaseTask
+from .scan_path_utils import FakeGPool, generate_frames
 from .scan_path_algorithm import ScanPathAlgorithm
 
 
-class ScanPathBackgroundTask(Observable):
+CorrectedGazeData = namedtuple("CorrectedGazeData", ["frame_index", "gaze_data"])
+
+
+class ScanPathBackgroundTask(Observable, _BaseTask):
 
     def __init__(self, g_pool):
         self.g_pool = g_pool
         self._bg_task = None
+        self._progress = 0.0
 
-    def start(self, timeframe):
-        self.cleanup()
+    # _BaseTask
 
-        g_pool = SimpleNamespace()
-        g_pool.rec_dir = self.g_pool.rec_dir
-        g_pool.app = self.g_pool.app
-        g_pool.ipc_pub = self.g_pool.ipc_pub
-        g_pool.min_data_confidence = self.g_pool.min_data_confidence
+    @property
+    def progress(self) -> float:
+        return self._progress
+
+    @property
+    def is_active(self) -> bool:
+        return self._bg_task is not None
+
+    def start(self, timeframe, deserialized_gaze):
+        if self.is_active:
+            return
+
+        g_pool = FakeGPool(self.g_pool)
 
         self._bg_task = IPC_Logging_Task_Proxy(
             "Scan path",
             generate_frames_with_corrected_gaze,
-            args=(g_pool, timeframe),
+            args=(g_pool, timeframe, deserialized_gaze),
         )
-
-    @property
-    def is_running(self) -> bool:
-        return self._bg_task is not None
 
     def process(self):
         if self._bg_task:
@@ -53,61 +57,32 @@ class ScanPathBackgroundTask(Observable):
             except Exception as err:
                 self._bg_task.cancel()
                 self._bg_task = None
-                self.on_task_failed(err)
+                self.on_failed(err)
 
-            for data in task_data:
-                self.on_task_updated(*data)
+            for progress, frame_index, gaze_data in task_data:
+                update_data = CorrectedGazeData(frame_index, gaze_data)
+                self._progress = progress
+                self.on_updated(update_data)
 
             if self._bg_task.completed:
                 self._bg_task = None
-                self.on_task_completed()
+                self.on_completed()
 
-    def cleanup(self):
+    def cancel(self):
         if self._bg_task is not None:
             self._bg_task.cancel()
             self._bg_task = None
+            self._progress = 0.0
+            self.on_canceled()
 
-    def on_task_started(self):
-        pass
-
-    def on_task_updated(self, progress, frame_index, gaze_datums, corrected_gaze_datums):
-        pass
-
-    def on_task_failed(self, error):
-        pass
-
-    def on_task_completed(self):
-        pass
+    def cleanup(self):
+        self.cancel()
 
 
-def generate_frames_with_corrected_gaze(g_pool, timeframe):
+def generate_frames_with_corrected_gaze(g_pool, timeframe, deserialized_gaze):
     sp = ScanPathAlgorithm(timeframe)
 
-    for progress, frame, gaze_datums in generate_frames_with_gaze(g_pool):
+    for progress, frame in generate_frames(g_pool):
+        gaze_datums = deserialized_gaze[frame.index]
         corrected_gaze_datums = sp.update_from_frame(frame, gaze_datums)
-        yield progress, frame.index, gaze_datums, corrected_gaze_datums
-
-
-def generate_frames_with_gaze(g_pool):
-
-    video_path = os.path.join(g_pool.rec_dir, "world.mp4") #TODO: Use PupilRecording
-
-    fs = File_Source(g_pool, source_path=video_path)
-    
-    gp = GazeFromRecording(g_pool)
-
-    total_frame_count = fs.get_frame_count()
-
-    while True:
-        try:
-            current_frame = fs.get_frame()
-        except EndofVideoError:
-            break
-
-        progress = current_frame.index / total_frame_count
-
-        frame_ts_window = pm.enclosing_window(g_pool.gaze_positions.timestamps, current_frame.index)
-        gaze_datums = g_pool.gaze_positions.by_ts_window(frame_ts_window)
-        gaze_datums = [g for g in gaze_datums if g["confidence"] >= g_pool.min_data_confidence]
-
-        yield progress, current_frame, gaze_datums
+        yield progress, frame.index, corrected_gaze_datums

@@ -43,6 +43,7 @@ class ScanPathAlgorithm:
         )
 
     def update_from_raw_data(self, frame_index, gaze_datums, image_size, gray_image):
+        gaze_datums = [{"norm_pos": (gd["norm_x"], gd["norm_y"]), "timestamp": gd["timestamp"]} for gd in gaze_datums]
 
         is_succeeding_frame = frame_index - self._prev_frame_index == 1
         assert is_succeeding_frame, "Must provide succeeding frames"
@@ -82,7 +83,7 @@ class ScanPathAlgorithm:
             pass #TODO: Handle case for first frame passed with no previous history
 
         # trim gaze that is too old
-        if gaze_datums:
+        if len(gaze_datums) > 0:
             now = gaze_datums[0]["timestamp"]
             cutoff = now - self.timeframe
             updated_prev_gaze_datums = [g for g in updated_prev_gaze_datums if g["timestamp"] > cutoff]
