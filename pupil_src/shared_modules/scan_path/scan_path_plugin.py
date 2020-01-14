@@ -14,8 +14,7 @@ from observable import Observable
 from plugin import Plugin
 from pyglui import ui
 
-from .scan_path_storage import ScanPathItem, ScanPathStorage
-from .scan_path_background_task import ScanPathBackgroundTask
+from .scan_path_controller import ScanPathController
 
 
 logger = logging.getLogger(__name__)
@@ -31,62 +30,67 @@ class ScanPathPlugin(Plugin, Observable):
     def parse_pretty_class_name(cls) -> str:
         return "Scan Path"
 
-    def __init__(self, g_pool, timeframe=0.5):
+    def __init__(self, g_pool, scan_path_init_dict={}):
         super().__init__(g_pool)
-
-        self._timeframe = timeframe
-
-        self._bg_task = ScanPathBackgroundTask(g_pool)
-        self._bg_task.add_observer("on_task_started", self.on_scan_path_task_started)
-        self._bg_task.add_observer("on_task_updated", self.on_scan_path_task_updated)
-        self._bg_task.add_observer("on_task_failed", self.on_scan_path_task_failed)
-        self._bg_task.add_observer("on_task_completed", self.on_scan_path_task_completed)
-
-        self._recalculate()
+        self._scan_path_controller = ScanPathController(g_pool, **scan_path_init_dict)
+        self._scan_path_controller.add_observer("on_update_ui", self._update_scan_path_ui)
 
     def get_init_dict(self):
-        return {"timeframe": self._timeframe}
+        return {"scan_path_init_dict": self._scan_path_controller.get_init_dict()}
 
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Scan Path"
+        self.scan_path_status = ui.Info_Text("")
+        self.menu.append(self.scan_path_status)
+        self._update_scan_path_ui()
 
     def deinit_ui(self):
         self.remove_menu()
 
     def recent_events(self, events):
-        self._bg_task.process()
+        self._scan_path_controller.process()
 
         frame = events.get("frame", None)
 
         if not frame:
             return
 
-        if self._bg_task.is_running:
-            # Don't publish results until the whole task is finished
+        events["scan_path_gaze"] = self._scan_path_controller.gaze_data_at_frame_index(frame.index)
+
+        self._debug_draw_scan_path(events)
+
+    def _debug_draw_scan_path(self, events):
+        from methods import denormalize
+        from player_methods import transparent_circle
+
+        frame = events["frame"]
+        gaze_datums = events["scan_path_gaze"]
+
+        if not gaze_datums:
             return
 
-        events["scan_path_gaze"] = self._storage.get(frame.index)
+        points_to_draw = [
+            denormalize(pt["norm_pos"], frame.img.shape[:-1][::-1], flip_y=True)
+            for pt in gaze_datums
+            # if pt["confidence"] >= self.g_pool.min_data_confidence
+        ]
+
+        points_to_draw_count = len(points_to_draw)
+
+        for idx, pt in enumerate(points_to_draw):
+            gray = float(idx) / points_to_draw_count
+            transparent_circle(
+                frame.img,
+                pt,
+                radius=20,
+                color=(gray, gray, gray, 0.9),
+                thickness=2,
+            )
 
     def on_notify(self, notification):
-        pass
+        self._scan_path_controller.on_notify(notification)
 
-    def _recalculate(self):
-        self._storage = ScanPathStorage(self.g_pool.rec_dir, self)
-        self._bg_task.start(self._timeframe)
-
-    def on_scan_path_task_started(self):
-        self.menu_icon.indicator_stop = 0.0
-
-    def on_scan_path_task_updated(self, progress, frame_index, gaze_datums, corrected_gaze_datums):
-        self.menu_icon.indicator_stop = progress
-
-        item = ScanPathItem(frame_index, corrected_gaze_datums)
-        self._storage.add(item)
-
-    def on_scan_path_task_failed(self, error):
-        self.menu_icon.indicator_stop = 0.0
-        raise error #FIXME
-
-    def on_scan_path_task_completed(self):
-        self.menu_icon.indicator_stop = 0.0
+    def _update_scan_path_ui(self):
+        self.menu_icon.indicator_stop = self._scan_path_controller.progress
+        self.scan_path_status.text = self._scan_path_controller.status_string
