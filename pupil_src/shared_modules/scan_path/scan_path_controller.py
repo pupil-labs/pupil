@@ -28,6 +28,7 @@ class ScanPathController(Observable):
 
     min_timeframe = 1.0
     max_timeframe = 5.0
+    timeframe_step = 0.05
 
     def __init__(self, g_pool, timeframe=3.0):
         self.g_pool = g_pool
@@ -82,11 +83,18 @@ class ScanPathController(Observable):
         self._preproc.process()
         self._bg_task.process()
 
-    def gaze_data_at_frame_index(self, frame_index):
-        if self.is_active:
+    def scan_path_gaze_for_frame(self, frame):
+        gaze_data = self._computed_storage.get(frame.index)
+
+        if gaze_data is None:
             return None
-        else:
-            return self._computed_storage.get(frame_index)
+
+        if len(gaze_data) > 0:
+            now = frame.timestamp
+            cutoff = now - self.timeframe
+            gaze_data = [g for g in gaze_data if g["timestamp"] > cutoff]
+
+        return gaze_data
 
     def cleanup(self):
         self._preproc.cleanup()

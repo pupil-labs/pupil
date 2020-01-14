@@ -41,12 +41,24 @@ class ScanPathPlugin(Plugin, Observable):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Scan Path"
+
         self.scan_path_status = ui.Info_Text("")
+        self.scan_path_timeframe_range = ui.Slider(
+            "timeframe",
+            self._scan_path_controller,
+            min=self._scan_path_controller.min_timeframe,
+            max=self._scan_path_controller.max_timeframe,
+            step=self._scan_path_controller.timeframe_step,
+            label="Timeframe"
+        )
+
+        self.menu.append(self.scan_path_timeframe_range)
         self.menu.append(self.scan_path_status)
         self._update_scan_path_ui()
 
     def deinit_ui(self):
         self.remove_menu()
+        self.scan_path_status = None
 
     def recent_events(self, events):
         self._scan_path_controller.process()
@@ -56,7 +68,7 @@ class ScanPathPlugin(Plugin, Observable):
         if not frame:
             return
 
-        events["scan_path_gaze"] = self._scan_path_controller.gaze_data_at_frame_index(frame.index)
+        events["scan_path_gaze"] = self._scan_path_controller.scan_path_gaze_for_frame(frame)
 
         self._debug_draw_scan_path(events)
 
@@ -95,5 +107,7 @@ class ScanPathPlugin(Plugin, Observable):
         self._scan_path_controller.cleanup()
 
     def _update_scan_path_ui(self):
-        self.menu_icon.indicator_stop = self._scan_path_controller.progress
-        self.scan_path_status.text = self._scan_path_controller.status_string
+        if self.menu_icon:
+            self.menu_icon.indicator_stop = self._scan_path_controller.progress
+        if self.scan_path_status:
+            self.scan_path_status.text = self._scan_path_controller.status_string
