@@ -91,35 +91,41 @@ class ScanPathController(Observable):
     def cleanup(self):
         pass
 
-    def on_update_ui(self):
-        pass
-
-    # Private - helpers
-
-    def _trigger_immediate_scan_path_calculation(self):
-        # Cancel old tasks
-        self._preproc.cancel()
-        self._bg_task.cancel()
-        # Start new tasks
-        self._preproc.start()
-
-    _recalculate_scan_path_notification_subject = "scan_path.should_recalculate"
-
-    def _trigger_delayed_scan_path_calculation(self, delay=1.0):
-        Plugin.notify_all(self, {"subject": self._recalculate_scan_path_notification_subject, "delay": delay})
-
     def on_notify(self, notification):
         if notification["subject"] == self._recalculate_scan_path_notification_subject:
             self._trigger_immediate_scan_path_calculation()
         elif notification["subject"] == "gaze_positions_changed":
             self._trigger_immediate_scan_path_calculation()
 
+    def on_update_ui(self):
+        pass
+
+    # Private - helpers
+
+    _recalculate_scan_path_notification_subject = "scan_path.should_recalculate"
+
+    def _trigger_delayed_scan_path_calculation(self, delay=1.0):
+        Plugin.notify_all(self, {"subject": self._recalculate_scan_path_notification_subject, "delay": delay})
+
+    def _trigger_immediate_scan_path_calculation(self):
+        # Cancel old tasks
+        self._preproc.cancel()
+        self._bg_task.cancel()
+        # Clear old data
+        self._clear_data()
+        # Start new tasks
+        self._preproc.start()
+
+    def _clear_data(self):
+        self._preproc_data = []
+        self._computed_storage.clear()
+
     # Private - preprocessing callbacks
 
     def _on_preproc_started(self):
         logger.debug("ScanPathController._on_preproc_started")
-        self._preproc_data = []
         self._status_str = "Preprocessing started..."
+        self._clear_data()
         self.on_update_ui()
 
     def _on_preproc_updated(self, update_data):
@@ -133,13 +139,13 @@ class ScanPathController(Observable):
         logger.debug("ScanPathController._on_preproc_failed")
         logger.error(f"Scan path preprocessing failed: {error}")
         self._status_str = "Preprocessing failed"
-        self._preproc_data = []
+        self._clear_data()
         self.on_update_ui()
 
     def _on_preproc_canceled(self):
         logger.debug("ScanPathController._on_preproc_canceled")
         self._status_str = "Preprocessing canceled"
-        self._preproc_data = []
+        self._clear_data()
         self.on_update_ui()
 
     def _on_preproc_completed(self):
@@ -156,7 +162,7 @@ class ScanPathController(Observable):
     def _on_bg_task_started(self):
         logger.debug("ScanPathController._on_bg_task_started")
         self._status_str = "Calculation started..."
-        self._computed_storage.clear()
+        self._clear_data()
         self.on_update_ui()
 
     def _on_bg_task_updated(self, update_data):
@@ -170,12 +176,13 @@ class ScanPathController(Observable):
         logger.debug("ScanPathController._on_bg_task_failed")
         logger.error(f"Scan path calculation failed: {error}")
         self._status_str = "Calculation failed"
+        self._clear_data()
         self.on_update_ui()
 
     def _on_bg_task_canceled(self):
         logger.debug("ScanPathController._on_bg_task_canceled")
         self._status_str = "Calculation canceled"
-        self._computed_storage.clear()
+        self._clear_data()
         self.on_update_ui()
 
     def _on_bg_task_completed(self):
