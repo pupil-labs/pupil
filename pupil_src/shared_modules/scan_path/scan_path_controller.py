@@ -69,7 +69,7 @@ class ScanPathController(Observable):
     @property
     def progress(self) -> float:
         if self.is_active:
-            ratio = 0.9
+            ratio = 0.85
             return (1.0-ratio) * self._preproc.progress + ratio * self._bg_task.progress
         else:
             return 0.0  #idle
