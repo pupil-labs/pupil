@@ -89,7 +89,8 @@ class ScanPathController(Observable):
             return self._computed_storage.get(frame_index)
 
     def cleanup(self):
-        pass
+        self._preproc.cleanup()
+        self._bg_task.cleanup()
 
     def on_notify(self, notification):
         if notification["subject"] == self._recalculate_scan_path_notification_subject:

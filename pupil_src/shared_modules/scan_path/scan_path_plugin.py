@@ -91,6 +91,9 @@ class ScanPathPlugin(Plugin, Observable):
     def on_notify(self, notification):
         self._scan_path_controller.on_notify(notification)
 
+    def cleanup(self):
+        self._scan_path_controller.cleanup()
+
     def _update_scan_path_ui(self):
         self.menu_icon.indicator_stop = self._scan_path_controller.progress
         self.scan_path_status.text = self._scan_path_controller.status_string
