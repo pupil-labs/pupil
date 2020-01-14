@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+from time import monotonic
 from types import SimpleNamespace
 
 import numpy as np
@@ -33,6 +34,20 @@ class FakeGPool(SimpleNamespace):
         self.ipc_pub = g_pool.ipc_pub
         self.min_data_confidence = g_pool.min_data_confidence
         self.timestamps = g_pool.timestamps
+
+def timestamp_ns() -> int:
+    """
+    Returns a monotonic timestamp in nanoseconds.
+    """
+    return sec_to_ns(monotonic())
+
+
+def sec_to_ns(sec: float) -> int:
+    return int(sec * 10E9)
+
+
+def ns_to_sec(ns: int) -> float:
+    return float(ns) / 10E9
 
 
 def generate_frames_with_deserialized_gaze(g_pool):
