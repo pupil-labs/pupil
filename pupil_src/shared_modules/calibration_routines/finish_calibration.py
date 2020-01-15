@@ -15,7 +15,7 @@ import os
 import cv2
 import numpy as np
 
-from calibration_routines import calibrate
+from calibration_routines import calibrate_2d, data_processing
 from calibration_routines.optimization_calibration import utils, BundleAdjustment
 from file_methods import save_object
 
@@ -46,9 +46,8 @@ def calibrate_3d_binocular(
 ):
     method = "binocular 3d model"
 
-    unprojected_ref_points, pupil0_normals, pupil1_normals = calibrate.preprocess_3d_data(
-        matched_binocular_data, g_pool
-    )
+    preprocessed_data = data_processing.extract_3d_data(matched_binocular_data, g_pool)
+    unprojected_ref_points, pupil0_normals, pupil1_normals = preprocessed_data
     if (
         len(unprojected_ref_points) < 1
         or len(pupil0_normals) < 1
@@ -158,7 +157,7 @@ def calibrate_3d_monocular(g_pool, matched_monocular_data, initial_depth=500):
 
     method = "monocular 3d model"
 
-    unprojected_ref_points, pupil_normals, _ = calibrate.preprocess_3d_data(
+    unprojected_ref_points, pupil_normals, _ = data_processing.extract_3d_data(
         matched_monocular_data, g_pool
     )
 
@@ -263,13 +262,13 @@ def calibrate_2d_binocular(
     g_pool, matched_binocular_data, matched_pupil0_data, matched_pupil1_data
 ):
     method = "binocular polynomial regression"
-    cal_pt_cloud_binocular = calibrate.preprocess_2d_data_binocular(
+    cal_pt_cloud_binocular = data_processing.extract_2d_data_binocular(
         matched_binocular_data
     )
-    cal_pt_cloud0 = calibrate.preprocess_2d_data_monocular(matched_pupil0_data)
-    cal_pt_cloud1 = calibrate.preprocess_2d_data_monocular(matched_pupil1_data)
+    cal_pt_cloud0 = data_processing.extract_2d_data_monocular(matched_pupil0_data)
+    cal_pt_cloud1 = data_processing.extract_2d_data_monocular(matched_pupil1_data)
 
-    map_fn, inliers, params = calibrate.calibrate_2d_polynomial(
+    map_fn, inliers, params = calibrate_2d.calibrate_2d_polynomial(
         cal_pt_cloud_binocular, g_pool.capture.frame_size, binocular=True
     )
 
@@ -284,13 +283,13 @@ def calibrate_2d_binocular(
     if not inliers.any():
         return method, create_converge_error_msg()
 
-    map_fn, inliers, params_eye0 = calibrate.calibrate_2d_polynomial(
+    map_fn, inliers, params_eye0 = calibrate_2d.calibrate_2d_polynomial(
         cal_pt_cloud0, g_pool.capture.frame_size, binocular=False
     )
     if not inliers.any():
         return method, create_converge_error_msg()
 
-    map_fn, inliers, params_eye1 = calibrate.calibrate_2d_polynomial(
+    map_fn, inliers, params_eye1 = calibrate_2d.calibrate_2d_polynomial(
         cal_pt_cloud1, g_pool.capture.frame_size, binocular=False
     )
     if not inliers.any():
@@ -312,8 +311,8 @@ def calibrate_2d_binocular(
 
 def calibrate_2d_monocular(g_pool, matched_monocular_data):
     method = "monocular polynomial regression"
-    cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_monocular_data)
-    map_fn, inliers, params = calibrate.calibrate_2d_polynomial(
+    cal_pt_cloud = data_processing.extract_2d_data_monocular(matched_monocular_data)
+    map_fn, inliers, params = calibrate_2d.calibrate_2d_polynomial(
         cal_pt_cloud, g_pool.capture.frame_size, binocular=False
     )
     if not inliers.any():
@@ -337,70 +336,15 @@ def calibrate_2d_monocular(g_pool, matched_monocular_data):
     )
 
 
-def match_data(g_pool, pupil_list, ref_list):
-    if pupil_list and ref_list:
-        pass
-    else:
-        logger.error(not_enough_data_error_msg)
-        return {
-            "subject": "calibration.failed",
-            "reason": not_enough_data_error_msg,
-            "timestamp": g_pool.get_timestamp(),
-            "record": True,
-        }
-
-    # match eye data and check if biocular and or monocular
-    pupil0 = [p for p in pupil_list if p["id"] == 0]
-    pupil1 = [p for p in pupil_list if p["id"] == 1]
-
-    # TODO unify this and don't do both
-    matched_binocular_data = calibrate.closest_matches_binocular(ref_list, pupil_list)
-    matched_pupil0_data = calibrate.closest_matches_monocular(ref_list, pupil0)
-    matched_pupil1_data = calibrate.closest_matches_monocular(ref_list, pupil1)
-
-    if len(matched_pupil0_data) > len(matched_pupil1_data):
-        matched_monocular_data = matched_pupil0_data
-    else:
-        matched_monocular_data = matched_pupil1_data
-
-    logger.info(
-        "Collected {} monocular calibration data.".format(len(matched_monocular_data))
-    )
-    logger.info(
-        "Collected {} binocular calibration data.".format(len(matched_binocular_data))
-    )
-    return (
-        matched_binocular_data,
-        matched_monocular_data,
-        matched_pupil0_data,
-        matched_pupil1_data,
-        pupil0,
-        pupil1,
+def select_method_and_perform_calibration(g_pool, pupil_list, ref_list):
+    pupil_list = data_processing.filter_confidence(
+        pupil_list, g_pool.min_calibration_confidence
     )
 
-
-def select_calibration_method(g_pool, pupil_list, ref_list):
-    len_pre_filter = len(pupil_list)
-    pupil_list = [
-        p for p in pupil_list if p["confidence"] >= g_pool.min_calibration_confidence
-    ]
-    len_post_filter = len(pupil_list)
-    try:
-        dismissed_percentage = 100 * (1.0 - len_post_filter / len_pre_filter)
-    except ZeroDivisionError:
-        pass  # empty pupil_list, is being handled in match_data
-    else:
-        logger.info(
-            "Dismissing {:.2f}% pupil data due to confidence < {:.2f}".format(
-                dismissed_percentage, g_pool.min_calibration_confidence
-            )
-        )
-
-    matched_data = match_data(g_pool, pupil_list, ref_list)  # calculate matching data
+    matched_data = data_processing.match_data(g_pool, pupil_list, ref_list)
     if not isinstance(matched_data, tuple):
         return None, matched_data  # matched_data is an error notification
 
-    # unpack matching data
     (
         matched_binocular_data,
         matched_monocular_data,
@@ -417,7 +361,8 @@ def select_calibration_method(g_pool, pupil_list, ref_list):
     ):
         mode = "2d"
         logger.warning(
-            "Please calibrate your world camera using 'camera intrinsics estimation' for 3d gaze mapping."
+            "Please calibrate your world camera using 'camera intrinsics estimation' "
+            "for 3d gaze mapping."
         )
 
     if mode == "3d":
@@ -460,7 +405,7 @@ def select_calibration_method(g_pool, pupil_list, ref_list):
 
 
 def finish_calibration(g_pool, pupil_list, ref_list):
-    method, result = select_calibration_method(g_pool, pupil_list, ref_list)
+    method, result = select_method_and_perform_calibration(g_pool, pupil_list, ref_list)
     g_pool.active_calibration_plugin.notify_all(result)
     if result["subject"] != "calibration.failed":
         ts = g_pool.get_timestamp()

@@ -16,7 +16,7 @@ import numpy as np
 from pyglui import ui
 
 import audio
-from calibration_routines import calibrate
+from calibration_routines import calibrate_2d, data_processing
 from calibration_routines.calibration_plugin_base import Calibration_Plugin
 from calibration_routines.finish_calibration import (
     SphericalCamera,
@@ -129,12 +129,14 @@ class HMD_Calibration(Calibration_Plugin):
         ref0 = [r for r in ref_list if r["id"] == 0]
         ref1 = [r for r in ref_list if r["id"] == 1]
 
-        matched_pupil0_data = calibrate.closest_matches_monocular(ref0, pupil0)
-        matched_pupil1_data = calibrate.closest_matches_monocular(ref1, pupil1)
+        matched_pupil0_data = data_processing.closest_matches_monocular(ref0, pupil0)
+        matched_pupil1_data = data_processing.closest_matches_monocular(ref1, pupil1)
 
         if matched_pupil0_data:
-            cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil0_data)
-            map_fn0, inliers0, params0 = calibrate.calibrate_2d_polynomial(
+            cal_pt_cloud = data_processing.extract_2d_data_monocular(
+                matched_pupil0_data
+            )
+            map_fn0, inliers0, params0 = calibrate_2d.calibrate_2d_polynomial(
                 cal_pt_cloud, hmd_video_frame_size, binocular=False
             )
             if not inliers0.any():
@@ -150,8 +152,10 @@ class HMD_Calibration(Calibration_Plugin):
             params0 = None
 
         if matched_pupil1_data:
-            cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil1_data)
-            map_fn1, inliers1, params1 = calibrate.calibrate_2d_polynomial(
+            cal_pt_cloud = data_processing.extract_2d_data_monocular(
+                matched_pupil1_data
+            )
+            map_fn1, inliers1, params1 = calibrate_2d.calibrate_2d_polynomial(
                 cal_pt_cloud, hmd_video_frame_size, binocular=False
             )
             if not inliers1.any():
@@ -276,7 +280,7 @@ class HMD_Calibration_3D(HMD_Calibration, Calibration_Plugin):
         ref_list = self.ref_list
         g_pool = self.g_pool
 
-        matched_data = calibrate.closest_matches_binocular(ref_list, pupil_list)
+        matched_data = data_processing.closest_matches_binocular(ref_list, pupil_list)
         save_object(matched_data, "hmd_cal_data")
 
         ref_points_3d_unscaled = [d["ref"]["mm_pos"] for d in matched_data]
