@@ -148,13 +148,11 @@ class ScanPathController(Observable):
         logger.debug("ScanPathController._on_preproc_failed")
         logger.error(f"Scan path preprocessing failed: {error}")
         self._status_str = "Preprocessing failed"
-        self._clear_data()
         self.on_update_ui()
 
     def _on_preproc_canceled(self):
         logger.debug("ScanPathController._on_preproc_canceled")
         self._status_str = "Preprocessing canceled"
-        self._clear_data()
         self.on_update_ui()
 
     def _on_preproc_completed(self):
@@ -171,7 +169,6 @@ class ScanPathController(Observable):
     def _on_bg_task_started(self):
         logger.debug("ScanPathController._on_bg_task_started")
         self._status_str = "Calculation started..."
-        self._clear_data()
         self.on_update_ui()
 
     def _on_bg_task_updated(self, update_data):
@@ -185,13 +182,11 @@ class ScanPathController(Observable):
         logger.debug("ScanPathController._on_bg_task_failed")
         logger.error(f"Scan path calculation failed: {error}")
         self._status_str = "Calculation failed"
-        self._clear_data()
         self.on_update_ui()
 
     def _on_bg_task_canceled(self):
         logger.debug("ScanPathController._on_bg_task_canceled")
         self._status_str = "Calculation canceled"
-        self._clear_data()
         self.on_update_ui()
 
     def _on_bg_task_completed(self):
