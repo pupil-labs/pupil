@@ -37,8 +37,7 @@ class ScanPathController(Observable):
         self.timeframe = timeframe
 
         self._status_str = ""
-        self._preproc_data = []
-        self._computed_storage = ScanPathStorage(self.g_pool.rec_dir, self)
+        self._computed_gaze_data = None
 
         self._preproc = ScanPathPreprocessingTask(g_pool)
         self._preproc.add_observer("on_started", self._on_preproc_started)
@@ -54,10 +53,12 @@ class ScanPathController(Observable):
         self._preproc.add_observer("on_canceled", self._on_bg_task_canceled)
         self._bg_task.add_observer("on_completed", self._on_bg_task_completed)
 
-        if self._computed_storage.is_completed:
+        # TODO: Try to load self._computed_gaze_data
+
+        if self._computed_gaze_data is not None: # TODO: And self._computed_gaze_data is complete...
             self._status_str = "Loaded from cache"
         else:
-            self._computed_storage.clear()
+            # TODO: Try to resume from where self._computed_gaze_data left off
             self._trigger_delayed_scan_path_calculation()
 
     def get_init_dict(self):
@@ -84,15 +85,14 @@ class ScanPathController(Observable):
         self._bg_task.process()
 
     def scan_path_gaze_for_frame(self, frame):
-        gaze_data = self._computed_storage.get(frame.index)
-
-        if gaze_data is None:
+        if self._computed_gaze_data is None:
             return None
 
-        if len(gaze_data) > 0:
-            now = frame.timestamp
-            cutoff = now - self.timeframe
-            gaze_data = [g for g in gaze_data if g["timestamp"] > cutoff]
+        timestamp_cutoff = frame.timestamp - self.timeframe
+
+        gaze_data = self._computed_gaze_data
+        gaze_data = gaze_data[gaze_data.frame_index == frame.index]
+        gaze_data = gaze_data[gaze_data.timestamp > timestamp_cutoff]
 
         return gaze_data
 
@@ -120,27 +120,19 @@ class ScanPathController(Observable):
         # Cancel old tasks
         self._preproc.cancel()
         self._bg_task.cancel()
-        # Clear old data
-        self._clear_data()
         # Start new tasks
         self._preproc.start()
-
-    def _clear_data(self):
-        self._preproc_data = []
-        self._computed_storage.clear()
 
     # Private - preprocessing callbacks
 
     def _on_preproc_started(self):
         logger.debug("ScanPathController._on_preproc_started")
         self._status_str = "Preprocessing started..."
-        self._clear_data()
+        self._computed_gaze_data = None
         self.on_update_ui()
 
-    def _on_preproc_updated(self, update_data):
+    def _on_preproc_updated(self, gaze_datum):
         logger.debug("ScanPathController._on_preproc_updated")
-        assert len(self._preproc_data) == update_data.frame.index, "Frames must be processed consecutively"
-        self._preproc_data.append(update_data.gaze_data)
         self._status_str = f"Preprocessing {int(self._preproc.progress * 100)}%..."
         self.on_update_ui()
 
@@ -155,10 +147,9 @@ class ScanPathController(Observable):
         self._status_str = "Preprocessing canceled"
         self.on_update_ui()
 
-    def _on_preproc_completed(self):
+    def _on_preproc_completed(self, gaze_data):
         logger.debug("ScanPathController._on_preproc_completed")
         self._status_str = "Preprocessing completed"
-        gaze_data = np.array(self._preproc_data)
         # Start the background task with max_timeframe
         # The current timeframe will be used only for visualization
         self._bg_task.start(self.max_timeframe, gaze_data)
@@ -173,9 +164,8 @@ class ScanPathController(Observable):
 
     def _on_bg_task_updated(self, update_data):
         logger.debug("ScanPathController._on_bg_task_updated")
-        item = ScanPathItem(update_data.frame_index, update_data.gaze_data)
         self._status_str = f"Calculation {int(self._bg_task.progress * 100)}%..."
-        self._computed_storage.add(item)
+        # TODO: Save intermediary data
         self.on_update_ui()
 
     def _on_bg_task_failed(self, error):
@@ -189,8 +179,10 @@ class ScanPathController(Observable):
         self._status_str = "Calculation canceled"
         self.on_update_ui()
 
-    def _on_bg_task_completed(self):
+    def _on_bg_task_completed(self, complete_data):
         logger.debug("ScanPathController._on_bg_task_completed")
-        self._computed_storage.is_completed = True
+        self._computed_gaze_data = complete_data
+        filename = os.path.join(self.g_pool.rec_dir, "offline_data", "scan_path_cache.npy")
+        np.save(filename, complete_data) #TODO: Refactor
         self._status_str = "Calculation completed"
         self.on_update_ui()

@@ -70,31 +70,29 @@ class ScanPathPlugin(Plugin, Observable):
 
         events["scan_path_gaze"] = self._scan_path_controller.scan_path_gaze_for_frame(frame)
 
-        self._debug_draw_scan_path(events)
+        # self._debug_draw_scan_path(events)
 
     def _debug_draw_scan_path(self, events):
         from methods import denormalize
         from player_methods import transparent_circle
 
         frame = events["frame"]
-        gaze_datums = events["scan_path_gaze"]
+        gaze_data = events["scan_path_gaze"]
 
-        if not gaze_datums:
+        if gaze_data is None:
             return
 
-        points_to_draw = [
-            denormalize(pt["norm_pos"], frame.img.shape[:-1][::-1], flip_y=True)
-            for pt in gaze_datums
-            # if pt["confidence"] >= self.g_pool.min_data_confidence
-        ]
+        points_to_draw_count = len(gaze_data)
+        image_size = frame.img.shape[:-1][::-1]
 
-        points_to_draw_count = len(points_to_draw)
+        for idx, datum in enumerate(gaze_data):
+            point = (datum["norm_x"], datum["norm_y"])
+            point = denormalize(point, image_size, flip_y=True)
 
-        for idx, pt in enumerate(points_to_draw):
             gray = float(idx) / points_to_draw_count
             transparent_circle(
                 frame.img,
-                pt,
+                point,
                 radius=20,
                 color=(gray, gray, gray, 0.9),
                 thickness=2,

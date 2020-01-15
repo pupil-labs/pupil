@@ -52,15 +52,28 @@ class Vis_Polyline(Visualizer_Plugin_Base):
             )
 
     def previous_points(self, frame, events):
-        gaze_datums = []
-        gaze_datums = gaze_datums or events.get("scan_path_gaze", [])
-        gaze_datums = gaze_datums or events.get("gaze", [])
+        if self._scan_path_is_available(events):
+            gaze_points = self._scan_path_norm_points(events)
+        else:
+            gaze_points = self._gaze_norm_points(events)
 
-        return [
-            denormalize(pt["norm_pos"], frame.img.shape[:-1][::-1], flip_y=True)
-            for pt in gaze_datums
-            if pt.get("confidence", 1.0) >= self.g_pool.min_data_confidence
-        ]
+        image_size = frame.img.shape[:-1][::-1]
+
+        return [denormalize(point, image_size, flip_y=True) for point in gaze_points]
+
+    def _scan_path_is_available(self, events):
+        return events.get("scan_path_gaze", None) is not None
+
+    def _scan_path_norm_points(self, events):
+        if not self._scan_path_is_available(events):
+            return []
+        for datum in events["scan_path_gaze"]:
+            yield (datum["norm_x"], datum["norm_y"])
+
+    def _gaze_norm_points(self, events):
+        for datum in events.get("gaze", []):
+            if datum["confidence"] >= self.g_pool.min_data_confidence:
+                yield datum["norm_pos"]
 
     def init_ui(self):
         self.add_menu()

@@ -10,15 +10,14 @@ See COPYING and COPYING.LESSER for license details.
 """
 from collections import namedtuple
 
+import numpy as np
+
 from observable import Observable
 from background_helper import IPC_Logging_Task_Proxy
 
 from .base_task import _BaseTask
-from .scan_path_utils import FakeGPool, generate_frames
+from .scan_path_utils import FakeGPool, generate_frames, SCAN_PATH_GAZE_DATUM_DTYPE, scan_path_zeros_numpy_array, scan_path_numpy_array_from
 from .scan_path_algorithm import ScanPathAlgorithm
-
-
-CorrectedGazeData = namedtuple("CorrectedGazeData", ["frame_index", "gaze_data"])
 
 
 class ScanPathBackgroundTask(Observable, _BaseTask):
@@ -27,6 +26,7 @@ class ScanPathBackgroundTask(Observable, _BaseTask):
         self.g_pool = g_pool
         self._bg_task = None
         self._progress = 0.0
+        self._gaze_data = None
 
     # _BaseTask
 
@@ -38,16 +38,18 @@ class ScanPathBackgroundTask(Observable, _BaseTask):
     def is_active(self) -> bool:
         return self._bg_task is not None
 
-    def start(self, timeframe, deserialized_gaze):
+    def start(self, timeframe, preprocessed_data):
         if self.is_active:
             return
 
         g_pool = FakeGPool(self.g_pool)
 
+        self._gaze_data = scan_path_zeros_numpy_array()
+
         self._bg_task = IPC_Logging_Task_Proxy(
             "Scan path",
             generate_frames_with_corrected_gaze,
-            args=(g_pool, timeframe, deserialized_gaze),
+            args=(g_pool, timeframe, preprocessed_data),
         )
 
     def process(self):
@@ -59,14 +61,16 @@ class ScanPathBackgroundTask(Observable, _BaseTask):
                 self._bg_task = None
                 self.on_failed(err)
 
-            for progress, frame_index, gaze_data in task_data:
-                update_data = CorrectedGazeData(frame_index, gaze_data)
+            for progress, gaze_data in task_data:
+                gaze_data = scan_path_numpy_array_from(gaze_data)
+                self._gaze_data = np.append(self._gaze_data, gaze_data)
                 self._progress = progress
-                self.on_updated(update_data)
+                self.on_updated(gaze_data)
 
             if self._bg_task.completed:
                 self._bg_task = None
-                self.on_completed()
+                self._gaze_data = scan_path_numpy_array_from(self._gaze_data)
+                self.on_completed(self._gaze_data)
 
     def cancel(self):
         if self._bg_task is not None:
@@ -79,10 +83,10 @@ class ScanPathBackgroundTask(Observable, _BaseTask):
         self.cancel()
 
 
-def generate_frames_with_corrected_gaze(g_pool, timeframe, deserialized_gaze):
+def generate_frames_with_corrected_gaze(g_pool, timeframe, preprocessed_data):
     sp = ScanPathAlgorithm(timeframe)
 
     for progress, frame in generate_frames(g_pool):
-        gaze_datums = deserialized_gaze[frame.index]
-        corrected_gaze_datums = sp.update_from_frame(frame, gaze_datums)
-        yield progress, frame.index, corrected_gaze_datums
+        gaze_data = preprocessed_data[preprocessed_data.frame_index == frame.index]
+        gaze_data = sp.update_from_frame(frame, gaze_data)
+        yield progress, gaze_data

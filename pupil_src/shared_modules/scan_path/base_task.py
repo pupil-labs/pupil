@@ -51,5 +51,5 @@ class _BaseTask:
     def on_failed(self, error):
         pass
 
-    def on_completed(self):
+    def on_completed(self, data):
         pass

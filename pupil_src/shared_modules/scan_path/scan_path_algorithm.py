@@ -17,6 +17,8 @@ import cv2
 import methods as m
 import file_methods as fm
 
+from .scan_path_utils import scan_path_numpy_array_from, scan_path_zeros_numpy_array
+
 
 class ScanPathAlgorithm:
     def __init__(self, timeframe: float):
@@ -31,33 +33,27 @@ class ScanPathAlgorithm:
     def reset(self):
         self._prev_frame_index = -1
         self._prev_gray_image = None
-        self._prev_gaze_datums = []
+        self._prev_gaze_datums = scan_path_zeros_numpy_array()
 
-    def update_from_frame(self, frame, gaze_datums):
+    def update_from_frame(self, frame, preprocessed_data):
         width, height = frame.width, frame.height
         return self.update_from_raw_data(
             frame_index=frame.index,
-            gaze_datums=gaze_datums,
+            preprocessed_data=preprocessed_data,
             image_size=(width, height),
             gray_image=frame.gray,
         )
 
-    def update_from_raw_data(self, frame_index, gaze_datums, image_size, gray_image):
-        gaze_datums = [{"norm_pos": (gd["norm_x"], gd["norm_y"]), "timestamp": gd["timestamp"]} for gd in gaze_datums]
-
-        is_succeeding_frame = frame_index - self._prev_frame_index == 1
-        assert is_succeeding_frame, "Must provide succeeding frames"
-
-        normalize_point = functools.partial(m.normalize, size=image_size, flip_y=True)
-
-        denormalize_point = functools.partial(m.denormalize, size=image_size, flip_y=True)
-
-        updated_prev_gaze_datums = []
+    def update_from_raw_data(self, frame_index, preprocessed_data, image_size, gray_image):
+        if self._prev_frame_index + 1 != frame_index:
+            self.reset()
 
         # lets update past gaze using optical flow: this is like sticking the gaze points onto the pixels of the img.
-        if self._prev_gaze_datums:
-            prev_gaze_points = [denormalize_point(ng["norm_pos"]) for ng in self._prev_gaze_datums]
-            prev_gaze_points = np.asarray(prev_gaze_points, dtype=np.float32)
+        if len(self._prev_gaze_datums) > 0:
+            prev_gaze_points = np.zeros((self._prev_gaze_datums.shape[0], 2), dtype=np.float32)
+            prev_gaze_points[:, 0] = self._prev_gaze_datums["norm_x"]
+            prev_gaze_points[:, 1] = self._prev_gaze_datums["norm_y"]
+            prev_gaze_points = np_denormalize(prev_gaze_points, size=image_size)
 
             new_gaze_points, status, err = cv2.calcOpticalFlowPyrLK(
                 self._prev_gray_image,
@@ -67,32 +63,30 @@ class ScanPathAlgorithm:
                 **self._lk_params
             )
 
-            results = zip(self._prev_gaze_datums, new_gaze_points, status, err)
+            new_gaze_points = np_normalize(new_gaze_points, size=image_size)
 
-            for gaze_datum, new_gaze_point, s, e in results:
-                if s:
-                    new_gaze_datum = fm._recursive_deep_copy(gaze_datum) #TODO: Maybe not that efficient
-                    new_gaze_datum["norm_pos"] = normalize_point(new_gaze_point)
-                    updated_prev_gaze_datums.append(new_gaze_datum)
-                else:
-                    # logger.debug("dropping gaze")
-                    # Since we will replace self.past_gaze_positions later,
-                    # not appedning tu updated_prev_gaze_datums is like deliting this data point.
-                    pass
+            new_gaze_data = scan_path_zeros_numpy_array(new_gaze_points.shape[0])
+            new_gaze_data["frame_index"] = self._prev_gaze_datums["frame_index"]
+            new_gaze_data["timestamp"] = self._prev_gaze_datums["timestamp"]
+            new_gaze_data["norm_x"] = new_gaze_points[:, 0]
+            new_gaze_data["norm_y"] = new_gaze_points[:, 1]
+
+            # Only keep gaze data where the status is 1
+            status = np.array(status, dtype=bool).squeeze()
+            new_gaze_data = new_gaze_data[status]
         else:
-            pass #TODO: Handle case for first frame passed with no previous history
+            new_gaze_data = scan_path_zeros_numpy_array()
 
         # trim gaze that is too old
-        if len(gaze_datums) > 0:
-            now = gaze_datums[0]["timestamp"]
+        if len(preprocessed_data) > 0:
+            now = preprocessed_data[0]["timestamp"]
             cutoff = now - self.timeframe
-            updated_prev_gaze_datums = [g for g in updated_prev_gaze_datums if g["timestamp"] > cutoff]
+            new_gaze_data = new_gaze_data[new_gaze_data["timestamp"] > cutoff]
 
         # inject the scan path gaze points into recent_gaze_positions
-        all_gaze_datums = updated_prev_gaze_datums + gaze_datums
-        all_gaze_datums = list(map(dict, all_gaze_datums))
-        all_gaze_datums.sort(key=lambda x: x["timestamp"])  # this may be redundant...
-        all_gaze_datums = fm._recursive_deep_copy(all_gaze_datums)
+        all_gaze_datums = np.concatenate([new_gaze_data, preprocessed_data])
+        # all_gaze_datums = np_sort_by_named_columns(all_gaze_datums, ["frame_index", "timestamp"])
+        all_gaze_datums = np_sort_by_named_columns(all_gaze_datums, ["timestamp"])
 
         # update info for next frame.
         self._prev_gray_image = gray_image
@@ -110,3 +104,30 @@ class ScanPathAlgorithm:
         criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 20, 0.03),
         minEigThreshold=0.005,
     )
+
+
+def np_sort_by_named_columns(array, colums_by_priority):
+    for col_name in reversed(colums_by_priority):
+        array = array[array[col_name].argsort(kind='mergesort')]
+    return array
+
+
+def np_normalize(array, size):
+    return _np_points_transform(array, m.normalize, size=size, flip_y=True)
+
+
+def np_denormalize(array, size):
+    return _np_points_transform(array, m.denormalize, size=size, flip_y=True)
+
+
+def _np_points_transform(array, transform_f, **kwargs):
+    assert len(array.shape) == 2
+    assert array.shape[1] == 2
+    xs = array[:, 0]
+    ys = array[:, 1]
+    xs, ys = transform_f((xs, ys), **kwargs)
+    # Axis in squueze is important to avoid squeezing arrays with N=1
+    array = np.dstack((xs, ys)).squeeze(axis=0)
+    assert len(array.shape) == 2
+    assert array.shape[1] == 2
+    return array
