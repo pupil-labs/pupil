@@ -9,29 +9,22 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import logging
 import os
-import audio
+
 import numpy as np
-from file_methods import save_object
-
-
 from pyglui import ui
-from .calibration_plugin_base import Calibration_Plugin
-from .finish_calibration import (
+
+import audio
+from calibration_routines import calibrate
+from calibration_routines.calibration_plugin_base import Calibration_Plugin
+from calibration_routines.finish_calibration import (
+    SphericalCamera,
     not_enough_data_error_msg,
     solver_failed_to_converge_error_msg,
 )
-from . import calibrate
-from .gaze_mappers import (
-    Monocular_Gaze_Mapper,
-    Dual_Monocular_Gaze_Mapper,
-    Binocular_Vector_Gaze_Mapper,
-)
-from .optimization_calibration import bundle_adjust_calibration
-import math_helper
-
-# logging
-import logging
+from calibration_routines.optimization_calibration import utils, BundleAdjustment
+from file_methods import save_object
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +84,7 @@ class HMD_Calibration(Calibration_Plugin):
                     self.ref_list += notification["ref_data"]
                 else:
                     logger.error(
-                        "Ref data can only be added when calibratio is runnings."
+                        "Ref data can only be added when calibration is running."
                     )
         except KeyError as e:
             logger.error(
@@ -271,7 +264,7 @@ class HMD_Calibration_3D(HMD_Calibration, Calibration_Plugin):
                     self.ref_list += notification["ref_data"]
                 else:
                     logger.error(
-                        "Ref data can only be added when calibratio is running."
+                        "Ref data can only be added when calibration is running."
                     )
         except KeyError as e:
             logger.error(
@@ -281,31 +274,29 @@ class HMD_Calibration_3D(HMD_Calibration, Calibration_Plugin):
     def finish_calibration(self):
         pupil_list = self.pupil_list
         ref_list = self.ref_list
-
         g_pool = self.g_pool
 
-        not_enough_data_error_msg = "Did not collect enough data during calibration."
-        solver_failed_to_converge_error_msg = (
-            "Paramters could not be estimated from data."
-        )
-
         matched_data = calibrate.closest_matches_binocular(ref_list, pupil_list)
-
         save_object(matched_data, "hmd_cal_data")
 
-        ref_points_3d_unscaled = np.array([d["ref"]["mm_pos"] for d in matched_data])
-        gaze0_dir = [
+        ref_points_3d_unscaled = [d["ref"]["mm_pos"] for d in matched_data]
+        pupil0_normals = [
             d["pupil"]["circle_3d"]["normal"]
             for d in matched_data
             if "3d" in d["pupil"]["method"]
         ]
-        gaze1_dir = [
+        pupil1_normals = [
             d["pupil1"]["circle_3d"]["normal"]
             for d in matched_data
             if "3d" in d["pupil"]["method"]
         ]
 
-        if len(ref_points_3d_unscaled) < 1 or len(gaze0_dir) < 1 or len(gaze1_dir) < 1:
+        not_enough_data_error_msg = "Did not collect enough data during calibration."
+        if (
+            len(ref_points_3d_unscaled) < 1
+            or len(pupil0_normals) < 1
+            or len(pupil1_normals) < 1
+        ):
             logger.error(not_enough_data_error_msg)
             self.notify_all(
                 {
@@ -317,48 +308,46 @@ class HMD_Calibration_3D(HMD_Calibration, Calibration_Plugin):
             )
             return
 
+        ref_points_3d_unscaled = np.asarray(ref_points_3d_unscaled)
+        pupil0_normals = np.asarray(pupil0_normals)
+        pupil1_normals = np.asarray(pupil1_normals)
+        initial_translation0, initial_translation1 = np.asarray(self.eye_translations)
+
         smallest_residual = 1000
         scales = list(np.linspace(0.7, 10, 50))
         for s in scales:
-
             ref_points_3d = ref_points_3d_unscaled * (1, -1, s)
 
-            initial_translation0 = np.array(self.eye_translations[0])
-            initial_translation1 = np.array(self.eye_translations[1])
-            method = "binocular 3d model hmd"
-
-            sphere_pos0 = matched_data[-1]["pupil"]["sphere"]["center"]
-            sphere_pos1 = matched_data[-1]["pupil1"]["sphere"]["center"]
-
-            initial_R0, initial_t0 = calibrate.find_rigid_transform(
-                np.array(gaze0_dir) * 500, np.array(ref_points_3d) * 1
+            # initial_rotation and initial_translation are eye pose in world coordinates
+            initial_rotation0 = utils.get_initial_eye_camera_rotation(
+                pupil0_normals, ref_points_3d
             )
-            initial_rotation0 = math_helper.quaternion_from_rotation_matrix(initial_R0)
-
-            initial_R1, initial_t1 = calibrate.find_rigid_transform(
-                np.array(gaze1_dir) * 500, np.array(ref_points_3d) * 1
-            )
-            initial_rotation1 = math_helper.quaternion_from_rotation_matrix(initial_R1)
-
-            eye0 = {
-                "observations": gaze0_dir,
-                "translation": initial_translation0,
-                "rotation": initial_rotation0,
-                "fix": ["translation"],
-            }
-            eye1 = {
-                "observations": gaze1_dir,
-                "translation": initial_translation1,
-                "rotation": initial_rotation1,
-                "fix": ["translation"],
-            }
-            initial_observers = [eye0, eye1]
-            initial_points = np.array(ref_points_3d)
-
-            success, residual, observers, points = bundle_adjust_calibration(
-                initial_observers, initial_points, fix_points=True
+            initial_rotation1 = utils.get_initial_eye_camera_rotation(
+                pupil1_normals, ref_points_3d
             )
 
+            eye0 = SphericalCamera(
+                observations=pupil0_normals,
+                rotation=initial_rotation0,
+                translation=initial_translation0,
+                fix_rotation=False,
+                fix_translation=True,
+            )
+            eye1 = SphericalCamera(
+                observations=pupil1_normals,
+                rotation=initial_rotation1,
+                translation=initial_translation1,
+                fix_rotation=False,
+                fix_translation=True,
+            )
+
+            initial_spherical_cameras = eye0, eye1
+            initial_gaze_targets = ref_points_3d
+
+            ba = BundleAdjustment(fix_gaze_targets=True)
+            success, residual, poses_in_world, gaze_targets_in_world = ba.calculate(
+                initial_spherical_cameras, initial_gaze_targets
+            )
             if residual <= smallest_residual:
                 smallest_residual = residual
                 scales[-1] = s
@@ -372,62 +361,21 @@ class HMD_Calibration_3D(HMD_Calibration, Calibration_Plugin):
                     "record": True,
                 }
             )
-            logger.error("Calibration solver faild to converge.")
+            logger.error("Calibration solver failed to converge.")
             return
 
-        eye0, eye1 = observers
+        eye0_pose, eye1_pose = poses_in_world
 
-        t_world0 = np.array(eye0["translation"])
-        R_world0 = math_helper.quaternion_rotation_matrix(np.array(eye0["rotation"]))
-        t_world1 = np.array(eye1["translation"])
-        R_world1 = math_helper.quaternion_rotation_matrix(np.array(eye1["rotation"]))
+        sphere_pos0 = matched_data[-1]["pupil"]["sphere"]["center"]
+        sphere_pos1 = matched_data[-1]["pupil1"]["sphere"]["center"]
+        eye0_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye0_pose, sphere_pos0)
+        eye1_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye1_pose, sphere_pos1)
 
-        def toWorld0(p):
-            return np.dot(R_world0, p) + t_world0
-
-        def toWorld1(p):
-            return np.dot(R_world1, p) + t_world1
-
-        points_a = points  # world coords
-        points_b = []  # eye0 coords
-        points_c = []  # eye1 coords
-
-        for a, b, c, point in zip(
-            points, eye0["observations"], eye1["observations"], points
-        ):
-            line_a = np.array([0, 0, 0]), np.array(a)  # observation as line
-            line_b = (
-                toWorld0(np.array([0, 0, 0])),
-                toWorld0(b),
-            )  # eye0 observation line in world coords
-            line_c = (
-                toWorld1(np.array([0, 0, 0])),
-                toWorld1(c),
-            )  # eye1 observation line in world coords
-            close_point_a, _ = math_helper.nearest_linepoint_to_point(point, line_a)
-            close_point_b, _ = math_helper.nearest_linepoint_to_point(point, line_b)
-            close_point_c, _ = math_helper.nearest_linepoint_to_point(point, line_c)
-            points_a.append(close_point_a.tolist())
-            points_b.append(close_point_b.tolist())
-            points_c.append(close_point_c.tolist())
-
-        # we need to take the sphere position into account
-        # orientation and translation are referring to the sphere center.
-        # but we want to have it referring to the camera center
-        # since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
-        sphere_translation = np.array(sphere_pos0)
-        sphere_translation_world = np.dot(R_world0, sphere_translation)
-        camera_translation = t_world0 - sphere_translation_world
-        eye_camera_to_world_matrix0 = np.eye(4)
-        eye_camera_to_world_matrix0[:3, :3] = R_world0
-        eye_camera_to_world_matrix0[:3, 3:4] = np.reshape(camera_translation, (3, 1))
-
-        sphere_translation = np.array(sphere_pos1)
-        sphere_translation_world = np.dot(R_world1, sphere_translation)
-        camera_translation = t_world1 - sphere_translation_world
-        eye_camera_to_world_matrix1 = np.eye(4)
-        eye_camera_to_world_matrix1[:3, :3] = R_world1
-        eye_camera_to_world_matrix1[:3, 3:4] = np.reshape(camera_translation, (3, 1))
+        observed_normals = [gaze_targets_in_world, eye0.observations, eye1.observations]
+        nearest_points = utils.calculate_nearest_points_to_targets(
+            observed_normals, [np.zeros(6), *poses_in_world], gaze_targets_in_world
+        )
+        nearest_points_world, nearest_points_eye0, nearest_points_eye1 = nearest_points
 
         method = "hmd binocular 3d model"
         ts = g_pool.get_timestamp()
@@ -450,7 +398,7 @@ class HMD_Calibration_3D(HMD_Calibration, Calibration_Plugin):
             }
         )
 
-        # this is only used by show calibration. TODO: rewrite show calibraiton.
+        # this is only used by show calibration. TODO: rewrite show calibration.
         user_calibration_data = {
             "timestamp": ts,
             "pupil_list": pupil_list,
@@ -466,12 +414,12 @@ class HMD_Calibration_3D(HMD_Calibration, Calibration_Plugin):
             "subject": "start_plugin",
             "name": "Binocular_Vector_Gaze_Mapper",
             "args": {
-                "eye_camera_to_world_matrix0": eye_camera_to_world_matrix0.tolist(),
-                "eye_camera_to_world_matrix1": eye_camera_to_world_matrix1.tolist(),
-                "cal_points_3d": points,
-                "cal_ref_points_3d": points_a,
-                "cal_gaze_points0_3d": points_b,
-                "cal_gaze_points1_3d": points_c,
+                "eye_camera_to_world_matrix0": eye0_cam_pose_in_world.tolist(),
+                "eye_camera_to_world_matrix1": eye1_cam_pose_in_world.tolist(),
+                "cal_points_3d": gaze_targets_in_world.tolist(),
+                "cal_ref_points_3d": nearest_points_world.tolist(),
+                "cal_gaze_points0_3d": nearest_points_eye0.tolist(),
+                "cal_gaze_points1_3d": nearest_points_eye1.tolist(),
                 "backproject": hasattr(self.g_pool, "capture"),
             },
         }
