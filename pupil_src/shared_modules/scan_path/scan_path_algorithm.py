@@ -66,7 +66,6 @@ class ScanPathAlgorithm:
             new_gaze_points = np_normalize(new_gaze_points, size=image_size)
 
             new_gaze_data = scan_path_zeros_numpy_array(new_gaze_points.shape[0])
-            new_gaze_data["frame_index"] = self._prev_gaze_datums["frame_index"]
             new_gaze_data["timestamp"] = self._prev_gaze_datums["timestamp"]
             new_gaze_data["norm_x"] = new_gaze_points[:, 0]
             new_gaze_data["norm_y"] = new_gaze_points[:, 1]
@@ -85,7 +84,7 @@ class ScanPathAlgorithm:
 
         # inject the scan path gaze points into recent_gaze_positions
         all_gaze_datums = np.concatenate([new_gaze_data, preprocessed_data])
-        # all_gaze_datums = np_sort_by_named_columns(all_gaze_datums, ["frame_index", "timestamp"])
+        all_gaze_datums["frame_index"] = frame_index
         all_gaze_datums = np_sort_by_named_columns(all_gaze_datums, ["timestamp"])
 
         # update info for next frame.
