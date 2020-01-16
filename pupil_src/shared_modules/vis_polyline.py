@@ -17,6 +17,8 @@ import cv2
 from pyglui import ui
 from methods import denormalize
 
+from scan_path.scan_path_utils import np_denormalize
+
 
 class Vis_Polyline(Visualizer_Plugin_Base):
     uniqueness = "not_unique"
@@ -52,28 +54,19 @@ class Vis_Polyline(Visualizer_Plugin_Base):
             )
 
     def previous_points(self, frame, events):
-        if self._scan_path_is_available(events):
-            gaze_points = self._scan_path_norm_points(events)
-        else:
-            gaze_points = self._gaze_norm_points(events)
-
         image_size = frame.img.shape[:-1][::-1]
 
-        return [denormalize(point, image_size, flip_y=True) for point in gaze_points]
+        if self._scan_path_is_available(events):
+            gaze_data = events["scan_path_gaze"]
+            gaze_points = gaze_data[["norm_x", "norm_y"]]
+            gaze_points = np.array(gaze_points.tolist(), dtype=gaze_points.dtype[0]) #FIXME: This is a workaround
+            gaze_points = np_denormalize(gaze_points, image_size, flip_y=True)
+            return gaze_points.tolist()
+        else:
+            return [denormalize(datum["norm_pos"], image_size, flip_y=True) for datum in events.get("gaze", [])]
 
     def _scan_path_is_available(self, events):
         return events.get("scan_path_gaze", None) is not None
-
-    def _scan_path_norm_points(self, events):
-        if not self._scan_path_is_available(events):
-            return []
-        for datum in events["scan_path_gaze"]:
-            yield (datum["norm_x"], datum["norm_y"])
-
-    def _gaze_norm_points(self, events):
-        for datum in events.get("gaze", []):
-            if datum["confidence"] >= self.g_pool.min_data_confidence:
-                yield datum["norm_pos"]
 
     def init_ui(self):
         self.add_menu()
