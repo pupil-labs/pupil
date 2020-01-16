@@ -28,6 +28,34 @@ SCAN_PATH_GAZE_DATUM_DTYPE = np.dtype([
 ])
 
 
+def np_normalize(array, size, flip_y=True):
+    """
+    normalize return as float
+    """
+    assert len(array.shape) == 2
+    assert array.shape[1] == 2
+    width, height = size
+    array[:, 0] /= float(width)
+    array[:, 1] /= float(height)
+    if flip_y:
+        array[:, 1] = 1 - array[:, 1]
+    return array
+
+
+def np_denormalize(array, size, flip_y=True):
+    """
+    denormalize
+    """
+    assert len(array.shape) == 2
+    assert array.shape[1] == 2
+    width, height = size
+    if flip_y:
+        array[:, 1] = 1 - array[:, 1]
+    array[:, 0] *= width
+    array[:, 1] *= height
+    return array
+
+
 def scan_path_zeros_numpy_array(n=0):
     new_array = np.zeros(n, dtype=SCAN_PATH_GAZE_DATUM_DTYPE)
     new_array = new_array.view(np.recarray)

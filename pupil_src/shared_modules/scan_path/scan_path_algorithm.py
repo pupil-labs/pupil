@@ -17,7 +17,7 @@ import cv2
 import methods as m
 import file_methods as fm
 
-from .scan_path_utils import scan_path_numpy_array_from, scan_path_zeros_numpy_array
+from .scan_path_utils import scan_path_numpy_array_from, scan_path_zeros_numpy_array, np_denormalize, np_normalize
 
 
 class ScanPathAlgorithm:
@@ -111,23 +111,3 @@ def np_sort_by_named_columns(array, colums_by_priority):
         array = array[array[col_name].argsort(kind='mergesort')]
     return array
 
-
-def np_normalize(array, size):
-    return _np_points_transform(array, m.normalize, size=size, flip_y=True)
-
-
-def np_denormalize(array, size):
-    return _np_points_transform(array, m.denormalize, size=size, flip_y=True)
-
-
-def _np_points_transform(array, transform_f, **kwargs):
-    assert len(array.shape) == 2
-    assert array.shape[1] == 2
-    xs = array[:, 0]
-    ys = array[:, 1]
-    xs, ys = transform_f((xs, ys), **kwargs)
-    # Axis in squueze is important to avoid squeezing arrays with N=1
-    array = np.dstack((xs, ys)).squeeze(axis=0)
-    assert len(array.shape) == 2
-    assert array.shape[1] == 2
-    return array
