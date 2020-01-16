@@ -32,6 +32,8 @@ def np_normalize(array, size, flip_y=True):
     """
     normalize return as float
     """
+    if len(array) == 0:
+        return array
     assert len(array.shape) == 2
     assert array.shape[1] == 2
     width, height = size
@@ -46,6 +48,8 @@ def np_denormalize(array, size, flip_y=True):
     """
     denormalize
     """
+    if len(array) == 0:
+        return array
     assert len(array.shape) == 2
     assert array.shape[1] == 2
     width, height = size
