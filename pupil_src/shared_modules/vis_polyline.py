@@ -57,9 +57,11 @@ class Vis_Polyline(Visualizer_Plugin_Base):
         image_size = frame.img.shape[:-1][::-1]
 
         if self._scan_path_is_available(events):
+            points_fields = ["norm_x", "norm_y"]
             gaze_data = events["scan_path_gaze"]
-            gaze_points = gaze_data[["norm_x", "norm_y"]]
+            gaze_points = gaze_data[points_fields]
             gaze_points = np.array(gaze_points.tolist(), dtype=gaze_points.dtype[0]) #FIXME: This is a workaround
+            gaze_points = gaze_points.reshape((-1, len(points_fields)))
             gaze_points = np_denormalize(gaze_points, image_size, flip_y=True)
             return gaze_points.tolist()
         else:
