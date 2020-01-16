@@ -17,9 +17,9 @@ import numpy as np
 from observable import Observable
 from plugin import Plugin
 
-from .scan_path_storage import ScanPathItem, ScanPathStorage
 from .scan_path_preprocessing_task import ScanPathPreprocessingTask
 from .scan_path_background_task import ScanPathBackgroundTask
+from .scan_path_storage import ScanPathStorage
 
 
 logger = logging.getLogger(__name__)
@@ -27,18 +27,17 @@ logger = logging.getLogger(__name__)
 
 class ScanPathController(Observable):
 
-    min_timeframe = 1.0
+    min_timeframe = 0.0
     max_timeframe = 5.0
     timeframe_step = 0.05
 
-    def __init__(self, g_pool, timeframe=3.0):
+    def __init__(self, g_pool, timeframe=None):
         self.g_pool = g_pool
 
-        assert self.min_timeframe <= timeframe <= self.max_timeframe
-        self.timeframe = timeframe
+        self.timeframe = timeframe if timeframe is not None else self.min_timeframe
+        assert self.min_timeframe <= self.timeframe <= self.max_timeframe
 
         self._status_str = ""
-        self._computed_gaze_data = None
 
         self._preproc = ScanPathPreprocessingTask(g_pool)
         self._preproc.add_observer("on_started", self._on_preproc_started)
@@ -54,16 +53,11 @@ class ScanPathController(Observable):
         self._preproc.add_observer("on_canceled", self._on_bg_task_canceled)
         self._bg_task.add_observer("on_completed", self._on_bg_task_completed)
 
-        # TODO: Try to load self._computed_gaze_data
-
-        if self._computed_gaze_data is not None: # TODO: And self._computed_gaze_data is complete...
-            self._status_str = "Loaded from cache"
-        else:
-            # TODO: Try to resume from where self._computed_gaze_data left off
-            self._trigger_delayed_scan_path_calculation()
+        self._gaze_data_store = ScanPathStorage(g_pool.rec_dir)
+        self._trigger_delayed_loading_from_disk()
 
     def get_init_dict(self):
-        return {"timeframe": self.timeframe}
+        return {} #Don't save the current timeframe; always set to 0.0 on startup.
 
     @property
     def is_active(self) -> bool:
@@ -86,12 +80,17 @@ class ScanPathController(Observable):
         self._bg_task.process()
 
     def scan_path_gaze_for_frame(self, frame):
-        if self._computed_gaze_data is None:
+        if self.timeframe == 0.0:
+            return self._gaze_data_store.empty_gaze_data()
+
+        if not self._gaze_data_store.is_valid or not self._gaze_data_store.is_complete:
+            if not self.is_active:
+                self._trigger_immediate_scan_path_calculation()
             return None
 
         timestamp_cutoff = frame.timestamp - self.timeframe
 
-        gaze_data = self._computed_gaze_data
+        gaze_data = self._gaze_data_store.gaze_data
         gaze_data = gaze_data[gaze_data.frame_index == frame.index]
         gaze_data = gaze_data[gaze_data.timestamp > timestamp_cutoff]
 
@@ -104,8 +103,10 @@ class ScanPathController(Observable):
     def on_notify(self, notification):
         if notification["subject"] == self._recalculate_scan_path_notification_subject:
             self._trigger_immediate_scan_path_calculation()
+        elif notification["subject"] == self._load_from_disk_scan_path_notification_subject:
+            self._gaze_data_store.load_from_disk()
         elif notification["subject"] == "gaze_positions_changed":
-            self._trigger_immediate_scan_path_calculation()
+            self._gaze_data_store.mark_invalid()
 
     def on_update_ui(self):
         pass
@@ -113,6 +114,11 @@ class ScanPathController(Observable):
     # Private - helpers
 
     _recalculate_scan_path_notification_subject = "scan_path.should_recalculate"
+
+    _load_from_disk_scan_path_notification_subject = "scan_path.should_load_from_disk"
+
+    def _trigger_delayed_loading_from_disk(self, delay=0.5):
+        Plugin.notify_all(self, {"subject": self._load_from_disk_scan_path_notification_subject, "delay": delay})
 
     def _trigger_delayed_scan_path_calculation(self, delay=1.0):
         Plugin.notify_all(self, {"subject": self._recalculate_scan_path_notification_subject, "delay": delay})
@@ -129,7 +135,6 @@ class ScanPathController(Observable):
     def _on_preproc_started(self):
         logger.debug("ScanPathController._on_preproc_started")
         self._status_str = "Preprocessing started..."
-        self._computed_gaze_data = None
         self.on_update_ui()
 
     def _on_preproc_updated(self, gaze_datum):
@@ -182,8 +187,7 @@ class ScanPathController(Observable):
 
     def _on_bg_task_completed(self, complete_data):
         logger.debug("ScanPathController._on_bg_task_completed")
-        self._computed_gaze_data = complete_data
-        filename = os.path.join(self.g_pool.rec_dir, "offline_data", "scan_path_cache.npy")
-        np.save(filename, complete_data) #TODO: Refactor
+        self._gaze_data_store.gaze_data = complete_data
+        self._gaze_data_store.mark_complete()
         self._status_str = "Calculation completed"
         self.on_update_ui()
