@@ -14,6 +14,7 @@ from types import SimpleNamespace
 import numpy as np
 
 from pupil_recording import PupilRecording
+from video_capture.utils import VideoSet
 from video_capture.file_backend import File_Source, EndofVideoError
 from gaze_producer.gaze_from_recording import GazeFromRecording
 import methods as m
@@ -114,11 +115,26 @@ def ns_to_sec(ns: int) -> float:
 
 
 def generate_frame_indices_with_deserialized_gaze(g_pool):
-    # TODO: Don't use generate_frames_with_gaze; Instead use VideoSet's lookup to get the number of frames/timestamps
-    for progress, current_frame, gaze_datums in generate_frames_with_gaze(g_pool):
-        deserialized_gaze = [(current_frame.index, g["timestamp"], g["norm_pos"][0], g["norm_pos"][1]) for g in gaze_datums]
-        deserialized_gaze = scan_path_numpy_array_from(deserialized_gaze)
-        yield progress, deserialized_gaze
+    recording = PupilRecording(g_pool.rec_dir)
+    video_name = recording.files().world().videos()[0].stem
+
+    videoset = VideoSet(rec=g_pool.rec_dir, name=video_name, fill_gaps=True)
+    videoset.load_or_build_lookup()
+
+    frame_indices = np.flatnonzero(videoset.lookup.container_idx > -1)
+    frame_count = len(frame_indices)
+
+    for frame_index in frame_indices:
+        progress = (frame_index+1) / frame_count
+        frame_ts_window = pm.enclosing_window(g_pool.timestamps, frame_index)
+        gaze_data = g_pool.gaze_positions.by_ts_window(frame_ts_window)
+        gaze_data = [
+            (frame_index, g["timestamp"], g["norm_pos"][0], g["norm_pos"][1])
+            for g in gaze_data
+            if g["confidence"] >= g_pool.min_data_confidence
+        ]
+        gaze_data = scan_path_numpy_array_from(gaze_data)
+        yield progress, gaze_data
 
 
 def generate_frames_with_gaze(g_pool):
