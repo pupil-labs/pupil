@@ -229,9 +229,8 @@ class BundleAdjustment:
         gaze_targets = self._current_values[-self._gaze_targets_size :].reshape(-1, 3)
         return rotations, translations, gaze_targets
 
-    def _get_final_output(self, result, residual_threshold=1e3):
+    def _get_final_output(self, result):
         residual = result.cost
-        success = residual < residual_threshold
         rotations, translations, final_gaze_targets = self._decompose_variables(
             result.x
         )
@@ -239,4 +238,4 @@ class BundleAdjustment:
             utils.merge_extrinsic(rotation, translation)
             for rotation, translation in zip(rotations, translations)
         ]
-        return success, residual, final_poses, final_gaze_targets
+        return residual, final_poses, final_gaze_targets

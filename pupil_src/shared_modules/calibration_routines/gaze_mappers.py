@@ -16,7 +16,7 @@ import numpy as np
 from pyglui import ui
 
 import math_helper
-from calibration_routines import calibrate_2d
+from calibration_routines.optimization_calibration import calibrate_2d
 from methods import normalize
 from plugin import Plugin
 from .visualizer_calibration import Calibration_Visualizer
