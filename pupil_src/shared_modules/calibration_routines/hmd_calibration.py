@@ -85,9 +85,7 @@ class HMD_Calibration(Calibration_Plugin):
                         "Ref data can only be added when calibration is running."
                     )
         except KeyError as e:
-            logger.error(
-                "Notification: {} not conform. Raised error {}".format(notification, e)
-            )
+            logger.error(f"Notification: {notification} not conform. Raised error {e}")
 
     def start(self, hmd_video_frame_size, outlier_threshold):
         audio.say("Starting Calibration")

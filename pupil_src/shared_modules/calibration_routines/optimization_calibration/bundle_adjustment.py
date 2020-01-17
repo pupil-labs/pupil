@@ -17,7 +17,7 @@ from calibration_routines.optimization_calibration import utils
 
 
 # BundleAdjustment is a class instead of functions, since passing all the parameters
-# would be inefficient. # (especially true for _compute_residuals as a callback)
+# would be inefficient. (especially true for _compute_residuals as a callback)
 class BundleAdjustment:
     def __init__(self, fix_gaze_targets):
         self._fix_gaze_targets = bool(fix_gaze_targets)
@@ -43,7 +43,7 @@ class BundleAdjustment:
         initial_translation = self._toarray(
             [o.translation for o in initial_spherical_cameras]
         )
-        observed_normals = self._toarray(
+        all_observations = self._toarray(
             [o.observations for o in initial_spherical_cameras]
         )
         initial_gaze_targets = self._toarray(initial_gaze_targets)
@@ -61,12 +61,11 @@ class BundleAdjustment:
         )
         self._row_ind, self._col_ind = self._get_ind_for_jacobian_matrix()
 
-        result = self._least_squares(initial_guess, observed_normals)
+        result = self._least_squares(initial_guess, all_observations)
         return self._get_final_output(result)
 
     def _get_indices(self):
-        """ get the indices of the parameters for the optimization
-        """
+        """Get the indices of the parameters for the optimization"""
 
         to_be_opt = np.repeat(self._opt_items, 3)
         if not self._fix_gaze_targets:
@@ -124,7 +123,7 @@ class BundleAdjustment:
 
         return row_ind, col_ind
 
-    def _calculate_jacobian_matrix(self, variables, observed_normals):
+    def _calculate_jacobian_matrix(self, variables, all_observations):
         def get_jac_rot(normals, rotation):
             jacobian = cv2.Rodrigues(rotation)[1].reshape(3, 3, 3)
             return np.einsum("mk,ijk->mji", normals, jacobian)
@@ -143,7 +142,7 @@ class BundleAdjustment:
         data_rot = [
             get_jac_rot(normals, rotation)
             for normals, rotation, opt in zip(
-                observed_normals,
+                all_observations,
                 rotations,
                 self._opt_items[: self._n_spherical_cameras],
             )
@@ -172,7 +171,7 @@ class BundleAdjustment:
         )
         return jacobian_matrix
 
-    def _least_squares(self, initial_guess, observed_normals, tol=1e-8, max_nfev=100):
+    def _least_squares(self, initial_guess, all_observations, tol=1e-8, max_nfev=100):
         x_scale = np.ones(self._n_poses_variables)
         if not self._fix_gaze_targets:
             x_scale = np.append(x_scale, np.ones(self._gaze_targets_size) * 500) / 20
@@ -180,7 +179,7 @@ class BundleAdjustment:
         result = scipy_optimize.least_squares(
             fun=self._compute_residuals,
             x0=initial_guess,
-            args=(observed_normals,),
+            args=(all_observations,),
             jac=self._calculate_jacobian_matrix,
             ftol=tol,
             xtol=tol,
@@ -191,27 +190,27 @@ class BundleAdjustment:
         )
         return result
 
-    def _compute_residuals(self, variables, observed_normals):
+    def _compute_residuals(self, variables, all_observations):
         rotations, translations, gaze_targets = self._decompose_variables(variables)
 
-        observed_normals_world = self._transform_observed_normals_to_world(
-            rotations, observed_normals
+        all_observations_world = self._transform_all_observations_to_world(
+            rotations, all_observations
         )
         projected_gaze_targets = self._project_gaze_targets(translations, gaze_targets)
-        residuals = observed_normals_world - projected_gaze_targets
+        residuals = all_observations_world - projected_gaze_targets
         return residuals.ravel()
 
-    def _transform_observed_normals_to_world(self, rotations, observed_normals):
+    def _transform_all_observations_to_world(self, rotations, all_observations):
         rotation_matrices = [cv2.Rodrigues(r)[0] for r in rotations]
-        observed_normals_world = [
+        all_observations_world = [
             np.dot(matrix, observations.T).T
-            for matrix, observations in zip(rotation_matrices, observed_normals)
+            for matrix, observations in zip(rotation_matrices, all_observations)
         ]
-        return self._toarray(observed_normals_world)
+        return self._toarray(all_observations_world)
 
     @staticmethod
     def _project_gaze_targets(translations, gaze_targets):
-        """ project gaze targets onto the spherical cameras
+        """Project gaze targets onto the spherical cameras
         (where projection simply means normalization)
         """
 

@@ -138,10 +138,10 @@ def calculate_nearest_linepoints_to_points(ref_points, lines):
 
 
 def calculate_nearest_points_to_targets(
-    observed_normals, poses_in_world, gaze_targets_in_world
+    all_observations, poses_in_world, gaze_targets_in_world
 ):
     all_nearest_points = []
-    for observations, pose in zip(observed_normals, poses_in_world):
+    for observations, pose in zip(all_observations, poses_in_world):
         lines_start = transform_points_by_extrinsic(np.zeros(3), pose)
         lines_end = transform_points_by_extrinsic(observations, pose)
         nearest_points = calculate_nearest_linepoints_to_points(
