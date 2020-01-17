@@ -132,6 +132,7 @@ def calculate_nearest_linepoints_to_points(ref_points, lines):
     p1, p2 = lines
     direction = p2 - p1
     denom = np.linalg.norm(direction, axis=1)
+    denom[denom == 0] = 1
     delta = np.diag(np.dot(ref_points - p1, direction.T)) / (denom * denom)
     nearest_linepoints = p1 + direction * delta[:, np.newaxis]
     return nearest_linepoints

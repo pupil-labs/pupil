@@ -165,7 +165,7 @@ def calibrate_3d_hmd(
     eye0_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye0_pose, sphere_pos0)
     eye1_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye1_pose, sphere_pos1)
 
-    all_observations = [pupil0_normals, pupil1_normals]
+    all_observations = [gaze_targets_in_world, pupil0_normals, pupil1_normals]
     nearest_points = utils.calculate_nearest_points_to_targets(
         all_observations, [np.zeros(6), *poses_in_world], gaze_targets_in_world
     )
