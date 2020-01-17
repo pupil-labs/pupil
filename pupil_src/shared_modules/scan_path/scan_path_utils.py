@@ -150,7 +150,7 @@ def generate_frames(g_pool):
     recording = PupilRecording(g_pool.rec_dir)
     video_path = recording.files().world()[0]
 
-    fs = File_Source(g_pool, source_path=video_path)
+    fs = File_Source(g_pool, source_path=video_path, fill_gaps=True)
 
     total_frame_count = fs.get_frame_count()
 
@@ -159,6 +159,8 @@ def generate_frames(g_pool):
             current_frame = fs.get_frame()
         except EndofVideoError:
             break
+
+        # TODO: Yield None instead of current_frame if current_frame is a gap frame
 
         progress = current_frame.index / total_frame_count
 
