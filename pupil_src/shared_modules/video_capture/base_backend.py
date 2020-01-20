@@ -86,7 +86,7 @@ class Base_Source(Plugin):
         self.remove_menu()
 
     def update_menu(self):
-        pass
+        del self.menu[:]
 
     def recent_events(self, events):
         """Returns None

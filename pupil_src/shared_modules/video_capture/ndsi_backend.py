@@ -251,10 +251,6 @@ class NDSI_Source(Base_Source):
         self.has_ui = True
         super().init_ui()
 
-    def update_menu(self):
-        # TODO: Refactor this to be more uniform across sources
-        self.update_control_menu()
-
     def deinit_ui(self):
         super().deinit_ui()
         # TODO: Refactor this to be more uniform across sources
@@ -330,10 +326,15 @@ class NDSI_Source(Base_Source):
         return menu
 
     def update_control_menu(self):
+        # TODO: Refactor this to be more uniform across sources
         if not self.has_ui:
             return
 
-        del self.menu[:]
+        self.update_menu()
+
+    def update_menu(self):
+        # TODO: Refactor this to be more uniform across sources
+        super().update_menu()
 
         self.menu.append(
             ui.Info_Text(f"NDSI Source: {self._sensor_name} @ {self._host_name}")

@@ -565,7 +565,6 @@ class UVC_Source(Base_Source):
 
     def update_menu(self):
         super().update_menu()
-        del self.menu[:]
         self.menu.append(ui.Info_Text(f"Local USB Source: {self.name}"))
 
         ui_elements = []

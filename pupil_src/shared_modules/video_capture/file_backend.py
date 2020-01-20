@@ -513,7 +513,6 @@ class File_Source(Playback_Source, Base_Source):
 
     def update_menu(self):
         super().update_menu()
-        del self.menu[:]
         self.menu.append(
             ui.Info_Text(f"File Source: {os.path.split(self.source_path)[-1]}")
         )
