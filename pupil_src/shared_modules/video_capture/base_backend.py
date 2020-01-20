@@ -13,7 +13,7 @@ import logging
 from time import monotonic, sleep
 
 import numpy as np
-from pyglui import cygl
+from pyglui import cygl, ui
 
 import gl_utils
 from plugin import Plugin
@@ -85,8 +85,31 @@ class Base_Source(Plugin):
     def deinit_ui(self):
         self.remove_menu()
 
+    def device_list(self):
+        return zip(
+            *[
+                (None, "... select to activate ..."),
+                ("test key 1", "test value 1"),
+                ("test key 2", "test value 2"),
+            ]
+        )
+
+    def on_activate(self, arg):
+        print(arg)
+
     def update_menu(self):
         del self.menu[:]
+        self.menu.append(ui.Info_Text("Select your video input source."))
+
+        self.menu.append(
+            ui.Selector(
+                "selected_source",
+                selection_getter=self.device_list,
+                getter=lambda: None,
+                setter=self.on_activate,
+                label="Activate Source:",
+            )
+        )
 
     def recent_events(self, events):
         """Returns None
