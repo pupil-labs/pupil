@@ -54,21 +54,3 @@ except ImportError:
 else:
     source_classes.append(NDSI_Source)
     manager_classes.append(NDSI_Manager)
-
-try:
-    from .realsense_backend import Realsense_Source, Realsense_Manager
-except ImportError:
-    logger.debug("Install pyrealsense to use the Intel RealSense backend")
-else:
-    source_classes.append(Realsense_Source)
-    manager_classes.append(Realsense_Manager)
-
-try:
-    from .realsense2_backend import Realsense2_Source, Realsense2_Manager
-except ImportError:
-    logger.debug(
-        "Install pyrealsense2 to use the Intel RealSense backend for D400 series cameras"
-    )
-else:
-    source_classes.append(Realsense2_Source)
-    manager_classes.append(Realsense2_Manager)
