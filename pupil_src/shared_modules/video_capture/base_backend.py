@@ -63,6 +63,10 @@ class Base_Source(Plugin):
     icon_chr = chr(0xE412)
     icon_font = "pupil_icons"
 
+    @property
+    def pretty_class_name(self):
+        return "Video Source"
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.g_pool.capture = self
