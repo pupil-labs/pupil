@@ -563,16 +563,10 @@ class UVC_Source(Base_Source):
     def online(self):
         return bool(self.uvc_capture)
 
-    def deinit_ui(self):
-        self.remove_menu()
-
-    def init_ui(self):
-        self.add_menu()
-        self.menu.label = "Local USB Source: {}".format(self.name)
-        self.update_menu()
-
     def update_menu(self):
+        super().update_menu()
         del self.menu[:]
+        self.menu.append(ui.Info_Text(f"Local USB Source: {self.name}"))
 
         ui_elements = []
 

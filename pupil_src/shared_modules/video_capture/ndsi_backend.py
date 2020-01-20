@@ -248,19 +248,16 @@ class NDSI_Source(Base_Source):
         return settings
 
     def init_ui(self):
-        self.add_menu()
-        self.menu.label = "NDSI Source: {} @ {}".format(
-            self._sensor_name, self._host_name
-        )
-
-
         self.has_ui = True
-        self.uvc_menu = ui.Growing_Menu("UVC Controls")
+        super().init_ui()
+
+    def update_menu(self):
+        # TODO: Refactor this to be more uniform across sources
         self.update_control_menu()
 
     def deinit_ui(self):
-        self.uvc_menu = None
-        self.remove_menu()
+        super().deinit_ui()
+        # TODO: Refactor this to be more uniform across sources
         self.has_ui = False
 
     def add_controls_to_menu(self, menu, controls):
@@ -337,7 +334,13 @@ class NDSI_Source(Base_Source):
             return
 
         del self.menu[:]
-        del self.uvc_menu[:]
+
+        self.menu.append(
+            ui.Info_Text(f"NDSI Source: {self._sensor_name} @ {self._host_name}")
+        )
+
+        self.uvc_menu = ui.Growing_Menu("UVC Controls")
+
         self.control_id_ui_mapping = {}
         if not self.sensor:
             self.menu.append(
@@ -383,8 +386,7 @@ class NDSI_Manager(Base_Manager):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.network = ndsi.Network(
-            formats={ndsi.DataFormat.V3, ndsi.DataFormat.V4},
-            callbacks=(self.on_event,)
+            formats={ndsi.DataFormat.V3, ndsi.DataFormat.V4}, callbacks=(self.on_event,)
         )
         self.network.start()
         self.selected_host = None
@@ -613,4 +615,3 @@ class NDSI_Manager(Base_Manager):
 
         else:
             self.should_select_host = selected_host
-

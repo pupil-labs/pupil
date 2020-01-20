@@ -511,9 +511,12 @@ class File_Source(Playback_Source, Base_Source):
         ):
             self.play = False
 
-    def init_ui(self):
-        self.add_menu()
-        self.menu.label = "File Source: {}".format(os.path.split(self.source_path)[-1])
+    def update_menu(self):
+        super().update_menu()
+        del self.menu[:]
+        self.menu.append(
+            ui.Info_Text(f"File Source: {os.path.split(self.source_path)[-1]}")
+        )
 
         self.menu.append(
             ui.Info_Text(

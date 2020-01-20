@@ -77,6 +77,17 @@ class Base_Source(Plugin):
         super().add_menu()
         self.menu_icon.order = 0.2
 
+    def init_ui(self):
+        self.add_menu()
+        self.menu.label = "Video Source"
+        self.update_menu()
+
+    def deinit_ui(self):
+        self.remove_menu()
+
+    def update_menu(self):
+        pass
+
     def recent_events(self, events):
         """Returns None
 
