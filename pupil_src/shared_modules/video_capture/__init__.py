@@ -37,7 +37,6 @@ from .base_backend import (
     InitialisationError,
     StreamError,
 )
-from .fake_backend import Fake_Manager, Fake_Source
 from .file_backend import File_Manager, File_Source, FileSeekError
 from .hmd_streaming import HMD_Streaming_Source
 from .uvc_backend import UVC_Manager, UVC_Source
@@ -45,8 +44,8 @@ from .uvc_backend import UVC_Manager, UVC_Source
 logger = logging.getLogger(__name__)
 
 
-source_classes = [File_Source, UVC_Source, Fake_Source, HMD_Streaming_Source]
-manager_classes = [File_Manager, UVC_Manager, Fake_Manager]
+source_classes = [File_Source, UVC_Source, HMD_Streaming_Source]
+manager_classes = [File_Manager, UVC_Manager]
 
 try:
     from .ndsi_backend import NDSI_Source, NDSI_Manager

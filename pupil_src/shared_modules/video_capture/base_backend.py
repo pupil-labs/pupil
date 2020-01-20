@@ -78,7 +78,7 @@ class Base_Source(Plugin):
 
         Adds events['frame']=Frame(args)
             Frame: Object containing image and time information of the current
-            source frame. See `fake_source.py` for a minimal implementation.
+            source frame.
         """
         raise NotImplementedError()
 
