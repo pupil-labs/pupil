@@ -15,7 +15,7 @@ import numpy as np
 from pyglui import ui
 
 import zmq_tools
-from camera_models import Radial_Dist_Camera, Dummy_Camera
+from camera_models import Dummy_Camera, Radial_Dist_Camera
 from video_capture.base_backend import Base_Manager, Base_Source
 
 logger = logging.getLogger(__name__)

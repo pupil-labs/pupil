@@ -16,7 +16,7 @@ import re
 import time
 
 import numpy as np
-from pyglui import cygl
+from pyglui import cygl, ui
 
 import gl_utils
 import uvc
@@ -573,7 +573,6 @@ class UVC_Source(Base_Source):
 
     def update_menu(self):
         del self.menu[:]
-        from pyglui import ui
 
         ui_elements = []
 

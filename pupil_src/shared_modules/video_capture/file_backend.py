@@ -13,19 +13,21 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 import os
 import os.path
+import typing as T
+from abc import ABC, abstractmethod
+from multiprocessing import cpu_count
+from time import sleep
+
 import av
 import numpy as np
-import typing as T
-
-from multiprocessing import cpu_count
-from abc import ABC, abstractmethod
-from time import sleep
-from camera_models import load_intrinsics
-from .utils import VideoSet
+from pyglui import ui
 
 import player_methods as pm
-from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
+from camera_models import load_intrinsics
 from pupil_recording import PupilRecording
+
+from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
+from .utils import VideoSet
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -512,7 +514,6 @@ class File_Source(Playback_Source, Base_Source):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "File Source: {}".format(os.path.split(self.source_path)[-1])
-        from pyglui import ui
 
         self.menu.append(
             ui.Info_Text(

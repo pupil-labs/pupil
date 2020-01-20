@@ -9,14 +9,16 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import time
 import logging
-from packaging.version import Version
+import time
 
 import ndsi
+from packaging.version import Version
+from pyglui import ui
 
-from .base_backend import Base_Source, Base_Manager
 from camera_models import load_intrinsics
+
+from .base_backend import Base_Manager, Base_Source
 
 try:
     from ndsi import __version__
@@ -251,7 +253,6 @@ class NDSI_Source(Base_Source):
             self._sensor_name, self._host_name
         )
 
-        from pyglui import ui
 
         self.has_ui = True
         self.uvc_menu = ui.Growing_Menu("UVC Controls")
@@ -334,7 +335,6 @@ class NDSI_Source(Base_Source):
     def update_control_menu(self):
         if not self.has_ui:
             return
-        from pyglui import ui
 
         del self.menu[:]
         del self.uvc_menu[:]
