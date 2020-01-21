@@ -101,16 +101,23 @@ class Base_Source(Plugin):
         self.remove_menu()
 
     def device_list(self):
-        return zip(
-            *[
-                (None, "... select to activate ..."),
-                ("test key 1", "test value 1"),
-                ("test key 2", "test value 2"),
-            ]
-        )
+        entries = [(None, "... select to activate ...")]
 
-    def on_activate(self, arg):
-        print(arg)
+        try:
+            for manager in self.g_pool.source_managers:
+                for info in manager.get_cameras():
+                    entries.append((info, info.name))
+        except AttributeError:
+            # TODO: If no manager has been instantiated yet, g_pool.source_managers does
+            # not exist. Find a better way for this, probably ensure that the list
+            # exists?
+            pass
+
+        return zip(*entries)
+
+    def activate_source(self, source_info):
+        print(source_info)
+        source_info.activate()
 
     @property
     def auto_mode(self) -> bool:
@@ -154,7 +161,7 @@ class Base_Source(Plugin):
                 "selected_source",
                 selection_getter=self.device_list,
                 getter=lambda: None,
-                setter=self.on_activate,
+                setter=self.activate_source,
                 label="Activate Source:",
             )
         )
@@ -366,6 +373,24 @@ class Base_Manager(Plugin):
 
         # here is where you add all your menu entries.
         self.menu.label = "Backend Manager"
+
+    def get_devices(self) -> T.Sequence["Base_Manager.SourceInfo"]:
+        return []
+
+    def get_cameras(self) -> T.Sequence["Base_Manager.SourceInfo"]:
+        return []
+
+    class SourceInfo:
+        def __init__(self, name, manager, key):
+            self.name = name
+            self.manager = manager
+            self.key = key
+
+        def activate(self):
+            self.manager.activate(self.key)
+
+        def __str__(self):
+            return f"{self.name} - {self.manager.class_name}({self.key})"
 
 
 class Playback_Source(Base_Source):
