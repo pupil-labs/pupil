@@ -872,6 +872,13 @@ class UVC_Manager(Base_Manager):
         )
         self.menu.extend(ui_elements)
 
+    def get_cameras(self):
+        self.devices.update()
+        return [
+            self.SourceInfo(device["name"], self, device["uid"])
+            for device in self.devices
+        ]
+
     def activate(self, source_uid):
         if not source_uid:
             return
