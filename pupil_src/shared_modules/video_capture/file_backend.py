@@ -192,6 +192,8 @@ class OnDemandDecoder(Decoder):
                     yield frame
 
 
+# NOTE:Base_Source is included as base class for uniqueness:by_base_class to work
+# correctly with other Source plugins.
 class File_Source(Playback_Source, Base_Source):
     """Simple file capture.
 
