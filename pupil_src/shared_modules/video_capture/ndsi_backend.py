@@ -47,8 +47,10 @@ class NDSI_Source(Base_Source):
         source_id=None,
         host_name=None,
         sensor_name=None,
+        *args,
+        **kwargs,
     ):
-        super().__init__(g_pool)
+        super().__init__(g_pool, *args, **kwargs)
         self.sensor = None
         self._source_id = source_id
         self._sensor_name = sensor_name

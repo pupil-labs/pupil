@@ -169,4 +169,4 @@ class HMD_Streaming_Manager(Base_Manager):
         pass
 
     def get_init_dict(self):
-        return {}
+        return super().get_init_dict()

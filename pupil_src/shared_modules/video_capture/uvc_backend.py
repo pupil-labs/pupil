@@ -61,9 +61,11 @@ class UVC_Source(Base_Source):
         uvc_controls={},
         check_stripes=True,
         exposure_mode="manual",
+        *args,
+        **kwargs,
     ):
 
-        super().__init__(g_pool)
+        super().__init__(g_pool, *args, **kwargs)
         self.uvc_capture = None
         self._restart_in = 3
         assert name or preferred_names or uid

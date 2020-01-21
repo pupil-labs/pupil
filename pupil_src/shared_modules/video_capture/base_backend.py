@@ -74,7 +74,7 @@ class Base_Source(Plugin):
     def pretty_class_name(self):
         return "Video Source"
 
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, *args, **kwargs):
         super().__init__(g_pool)
         self.g_pool.capture = self
         # TODO: serialize source mode
@@ -370,7 +370,7 @@ class Playback_Source(Base_Source):
                     most appropriate frame; does not wait on its own
             None: Simply returns next frame as fast as possible; used for detectors
         """
-        super().__init__(g_pool)
+        super().__init__(g_pool, *args, **kwargs)
         assert timing in (
             "external",
             "own",
