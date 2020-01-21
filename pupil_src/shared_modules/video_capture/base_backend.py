@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
+from enum import Enum, auto
 from time import monotonic, sleep
 
 import numpy as np
@@ -35,6 +36,11 @@ class EndofVideoError(Exception):
 
 class NoMoreVideoError(Exception):
     pass
+
+
+class SourceMode(Enum):
+    AUTO = auto()
+    MANUAL = auto()
 
 
 class Base_Source(Plugin):
@@ -70,6 +76,8 @@ class Base_Source(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.g_pool.capture = self
+        # TODO: serialize source mode
+        self.g_pool.source_mode = SourceMode.AUTO
         self._recent_frame = None
         self._intrinsics = None
 
@@ -97,6 +105,18 @@ class Base_Source(Plugin):
     def on_activate(self, arg):
         print(arg)
 
+    @property
+    def auto_mode(self) -> bool:
+        return self.g_pool.source_mode == SourceMode.AUTO
+
+    @auto_mode.setter
+    def auto_mode(self, enable) -> None:
+        new_mode = SourceMode.AUTO if enable else SourceMode.MANUAL
+        if new_mode != self.g_pool.source_mode:
+            logger.debug(f"Setting source mode: {new_mode}")
+            self.g_pool.source_mode = new_mode
+            # TODO: broadcast
+
     def update_menu(self):
         del self.menu[:]
         self.menu.append(ui.Info_Text("Select your video input source."))
@@ -113,6 +133,10 @@ class Base_Source(Plugin):
                 setter=self.on_activate,
                 label="Activate Source:",
             )
+        )
+
+        self.menu.append(
+            ui.Switch("auto_mode", self, label="Automatic Camera Selection")
         )
 
     def recent_events(self, events):
