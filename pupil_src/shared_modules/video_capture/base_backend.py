@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
+import typing as T
 from enum import IntEnum, auto
 from time import monotonic, sleep
 
@@ -74,13 +75,18 @@ class Base_Source(Plugin):
     def pretty_class_name(self):
         return "Video Source"
 
-    def __init__(self, g_pool, *args, **kwargs):
+    def __init__(self, g_pool, *, source_mode: T.Optional[SourceMode] = None, **kwargs):
         super().__init__(g_pool)
         self.g_pool.capture = self
-        # TODO: serialize source mode
-        self.g_pool.source_mode = SourceMode.AUTO
         self._recent_frame = None
         self._intrinsics = None
+
+        # Three relevant cases for initializing source_mode:
+        #   - Plugin started at runtime: use existing source mode in g_pool
+        #   - Fresh start without settings: initialize to auto
+        #   - Start with settings: will be passed as parameter, use those
+        if not hasattr(self.g_pool, "source_mode"):
+            self.g_pool.source_mode = source_mode or SourceMode.AUTO
 
     def add_menu(self):
         super().add_menu()
@@ -194,7 +200,7 @@ class Base_Source(Plugin):
         raise NotImplementedError()
 
     def get_init_dict(self):
-        return {}
+        return {"source_mode": self.g_pool.source_mode}
 
     @property
     def frame_size(self):
