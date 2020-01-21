@@ -27,6 +27,13 @@ try:
     from ndsi import __protocol_version__
 except (ImportError, AssertionError):
     raise Exception("pyndsi version is to old. Please upgrade") from None
+
+# TODO: This is a quick hack to limit pyre log floods when running with --debug. Think
+# about whether we need this?
+for namespace, logger in logging.root.manager.loggerDict.items():
+    if isinstance(logger, logging.Logger) and namespace.startswith("pyre"):
+        logger.setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 
