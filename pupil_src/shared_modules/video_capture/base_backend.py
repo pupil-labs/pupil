@@ -264,6 +264,13 @@ class Base_Manager(Plugin):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
+        if not hasattr(g_pool, "source_managers"):
+            g_pool.source_managers = []
+
+        if self not in g_pool.source_managers:
+            g_pool.source_managers.append(self)
+
+        # TODO: cleanup this
         from . import manager_classes
 
         self.manager_classes = {m.__name__: m for m in manager_classes}
