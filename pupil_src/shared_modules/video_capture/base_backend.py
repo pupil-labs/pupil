@@ -261,11 +261,6 @@ class Base_Manager(Plugin):
         gui_name (str): String used for manager selector labels
     """
 
-    uniqueness = "by_base_class"
-    gui_name = "Base Manager"
-    icon_chr = chr(0xEC01)
-    icon_font = "pupil_icons"
-
     def __init__(self, g_pool):
         super().__init__(g_pool)
 

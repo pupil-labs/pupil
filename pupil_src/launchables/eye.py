@@ -226,6 +226,9 @@ def eye(
             # TODO: extend with plugins
             default_capture_settings,
             ("UVC_Manager", {}),
+            ("NDSI_Manager", {}),
+            ("HMD_Streaming_Manager", {}),
+            ("File_Manager", {}),
             # Detector needs to be loaded first to set `g_pool.pupil_detector`
             (default_detector_cls.__name__, {}),
             ("PupilDetectorManager", {}),
