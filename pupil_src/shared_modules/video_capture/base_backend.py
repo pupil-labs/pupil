@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-from enum import Enum, auto
+from enum import IntEnum, auto
 from time import monotonic, sleep
 
 import numpy as np
@@ -38,7 +38,8 @@ class NoMoreVideoError(Exception):
     pass
 
 
-class SourceMode(Enum):
+class SourceMode(IntEnum):
+    # NOTE: IntEnum is serializable with msgpack
     AUTO = auto()
     MANUAL = auto()
 
@@ -113,9 +114,18 @@ class Base_Source(Plugin):
     def auto_mode(self, enable) -> None:
         new_mode = SourceMode.AUTO if enable else SourceMode.MANUAL
         if new_mode != self.g_pool.source_mode:
-            logger.debug(f"Setting source mode: {new_mode}")
+            logger.debug(f"Setting source mode: {new_mode.name}")
             self.g_pool.source_mode = new_mode
-            # TODO: broadcast
+            self.notify_all({"subject": "backend.change_mode", "mode": new_mode})
+
+    def on_notify(self, notification):
+        subject = notification["subject"]
+
+        if subject == "backend.change_mode":
+            mode = SourceMode(notification["mode"])
+            if mode != self.g_pool.source_mode:
+                logger.debug(f"Setting source mode from network: {mode.name}")
+                self.g_pool.source_mode = mode
 
     def update_menu(self):
         del self.menu[:]
