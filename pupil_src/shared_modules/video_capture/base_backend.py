@@ -127,6 +127,14 @@ class Base_Source(Plugin):
                 logger.debug(f"Setting source mode from network: {mode.name}")
                 self.g_pool.source_mode = mode
 
+        elif subject == "eye_process.started":
+            # Make sure to broadcast current source mode once to newly started eyes so
+            # they are always in sync!
+            if self.g_pool.process == "world":
+                self.notify_all(
+                    {"subject": "backend.change_mode", "mode": self.g_pool.source_mode}
+                )
+
     def update_menu(self):
         del self.menu[:]
         self.menu.append(ui.Info_Text("Select your video input source."))
