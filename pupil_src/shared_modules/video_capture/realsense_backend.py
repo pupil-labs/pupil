@@ -555,6 +555,11 @@ class Realsense_Source(Base_Source):
             ]
             return avail_fps, [str(fps) for fps in avail_fps]
 
+        # TODO: potential race condition through selection_getter. Should ensure that
+        # current selection will always be present in the list returned by the
+        # selection_getter. Highly unlikely though as this needs to happen between
+        # having clicked the Selector and the next redraw.
+        # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
         selector = ui.Selector(
             "frame_rate",
             self,
@@ -588,7 +593,12 @@ class Realsense_Source(Base_Source):
                 if fps % self.frame_rate == 0
             ]
             return avail_fps, [str(fps) for fps in avail_fps]
-
+        
+        # TODO: potential race condition through selection_getter. Should ensure that
+        # current selection will always be present in the list returned by the
+        # selection_getter. Highly unlikely though as this needs to happen between
+        # having clicked the Selector and the next redraw.
+        # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
         selector = ui.Selector(
             "depth_frame_rate",
             self,

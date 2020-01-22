@@ -122,6 +122,11 @@ class Single_Marker_Calibration(Calibration_Plugin):
             )
         )
         self.menu.append(
+            # TODO: potential race condition through selection_getter. Should ensure
+            # that current selection will always be present in the list returned by the
+            # selection_getter. Highly unlikely though as this needs to happen between
+            # having clicked the Selector and the next redraw.
+            # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
             ui.Selector(
                 "monitor_idx",
                 self,
