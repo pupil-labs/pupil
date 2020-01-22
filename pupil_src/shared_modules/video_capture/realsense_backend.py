@@ -789,7 +789,9 @@ class Realsense_Source(Base_Source):
             del kwargs["topic"]
             self._initialize_device(**kwargs)
         elif notification["subject"] == "recording.started":
-            self.start_depth_recording(notification["rec_path"], notification["start_time_synced"])
+            self.start_depth_recording(
+                notification["rec_path"], notification["start_time_synced"]
+            )
         elif notification["subject"] == "recording.stopped":
             self.stop_depth_recording()
 
@@ -930,7 +932,7 @@ class Realsense_Manager(Base_Manager):
                         "args": settings,
                     }
                 )
-
+        
         self.menu.append(
             ui.Selector(
                 "selected_source",

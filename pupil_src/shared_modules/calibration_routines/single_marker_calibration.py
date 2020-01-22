@@ -167,9 +167,14 @@ class Single_Marker_Calibration(Calibration_Plugin):
                     )
                     self.monitor_idx = 0
                     monitor = glfwGetMonitors()[self.monitor_idx]
-                width, height, redBits, blueBits, greenBits, refreshRate = glfwGetVideoMode(
-                    monitor
-                )
+                (
+                    width,
+                    height,
+                    redBits,
+                    blueBits,
+                    greenBits,
+                    refreshRate,
+                ) = glfwGetVideoMode(monitor)
             else:
                 monitor = None
                 width, height = 640, 360
@@ -379,9 +384,7 @@ class Single_Marker_Calibration(Calibration_Plugin):
             map_value(self.display_pos[0], out_range=(pad, p_window_size[0] - pad)),
             map_value(self.display_pos[1], out_range=(p_window_size[1] - pad, pad)),
         )
-        alpha = (
-            1.0
-        )  # interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
+        alpha = 1.0  # interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
         r2 = 2 * r
         draw_points(

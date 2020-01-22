@@ -716,7 +716,9 @@ class Realsense2_Source(Base_Source):
             del kwargs["topic"]
             self._initialize_device(**kwargs)
         elif notification["subject"] == "recording.started":
-            self.start_depth_recording(notification["rec_path"], notification["start_time_synced"])
+            self.start_depth_recording(
+                notification["rec_path"], notification["start_time_synced"]
+            )
         elif notification["subject"] == "recording.stopped":
             self.stop_depth_recording()
 
