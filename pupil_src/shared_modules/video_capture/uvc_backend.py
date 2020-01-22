@@ -873,12 +873,16 @@ class UVC_Manager(Base_Manager):
         self.menu.extend(ui_elements)
 
     def get_devices(self):
-        return [self.SourceInfo("Local USB", self, "usb")]
+        return [self.SourceInfo(label="Local USB", manager=self, key="usb")]
 
     def get_cameras(self):
         self.devices.update()
         return [
-            self.SourceInfo(device["name"], self, f"cam.{device['uid']}")
+            self.SourceInfo(
+                label=f"{device['name']} @ Local USB",
+                manager=self,
+                key=f"cam.{device['uid']}",
+            )
             for device in self.devices
         ]
 
