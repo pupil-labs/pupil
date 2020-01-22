@@ -31,7 +31,7 @@ assert VersionFormat(uvc.__version__) >= VersionFormat("0.13")
 
 # logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 class TJSAMP(enum.IntEnum):
@@ -872,14 +872,23 @@ class UVC_Manager(Base_Manager):
         )
         self.menu.extend(ui_elements)
 
+    def get_devices(self):
+        return [self.SourceInfo("Local USB", self, "usb")]
+
     def get_cameras(self):
         self.devices.update()
         return [
-            self.SourceInfo(device["name"], self, device["uid"])
+            self.SourceInfo(device["name"], self, f"cam.{device['uid']}")
             for device in self.devices
         ]
 
     def activate(self, source_uid):
+        if source_uid == "usb":
+            logger.debug("AUTO ACTIVATE USB")
+            return
+
+        source_uid = source_uid[4:]
+
         if not source_uid:
             return
 
