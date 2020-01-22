@@ -199,6 +199,7 @@ class NDSI_Source(Base_Source):
 
     # local notifications
     def on_notify(self, notification):
+        super().on_notify(notification)
         subject = notification["subject"]
         if subject.startswith("remote_recording.") and self.online:
             if "should_start" in subject and self.online:
