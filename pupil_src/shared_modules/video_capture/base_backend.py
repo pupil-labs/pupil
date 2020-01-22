@@ -122,7 +122,8 @@ class Base_Source(Plugin):
 
     def activate_source(self, source_info):
         print(source_info)
-        source_info.activate()
+        if source_info is not None:
+            source_info.activate()
 
     @property
     def auto_mode(self) -> bool:
