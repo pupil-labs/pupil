@@ -159,10 +159,6 @@ class Base_Source(Plugin):
         self.menu.append(ui.Info_Text("Select your video input source."))
 
         self.menu.append(
-            # TODO: why can't we keep the selection? Even if the device/camera
-            # disconnects, we also don't change the source, so maybe just keep it as it
-            # is?
-            # TODO: selector does not jump back to first field! pyglui bug?
             ui.Selector(
                 "selected_source",
                 selection_getter=self.device_list,
