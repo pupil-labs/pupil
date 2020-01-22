@@ -105,7 +105,12 @@ class Base_Source(Plugin):
 
         try:
             for manager in self.g_pool.source_managers:
-                for info in manager.get_cameras():
+                if self.auto_mode:
+                    sources = manager.get_devices()
+                else:
+                    sources = manager.get_cameras()
+
+                for info in sources:
                     entries.append((info, info.name))
         except AttributeError:
             # TODO: If no manager has been instantiated yet, g_pool.source_managers does
