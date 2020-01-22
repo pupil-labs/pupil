@@ -111,7 +111,7 @@ class Base_Source(Plugin):
                     sources = manager.get_cameras()
 
                 for info in sources:
-                    entries.append((info, info.name))
+                    entries.append((info, info.label))
         except AttributeError:
             # TODO: If no manager has been instantiated yet, g_pool.source_managers does
             # not exist. Find a better way for this, probably ensure that the list
@@ -383,8 +383,8 @@ class Base_Manager(Plugin):
         return []
 
     class SourceInfo:
-        def __init__(self, name, manager, key):
-            self.name = name
+        def __init__(self, label, manager, key):
+            self.label = label
             self.manager = manager
             self.key = key
 
@@ -392,7 +392,7 @@ class Base_Manager(Plugin):
             self.manager.activate(self.key)
 
         def __str__(self):
-            return f"{self.name} - {self.manager.class_name}({self.key})"
+            return f"{self.label} - {self.manager.class_name}({self.key})"
 
 
 class Playback_Source(Base_Source):
