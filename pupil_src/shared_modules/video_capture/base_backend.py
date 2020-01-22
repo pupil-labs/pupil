@@ -143,6 +143,8 @@ class Base_Source(Plugin):
             mode = SourceMode(notification["mode"])
             if mode != self.g_pool.source_mode:
                 self.g_pool.source_mode = mode
+                # redraw menu to close potentially open (and now incorrect) dropdown
+                self.update_menu()
 
         elif subject == "eye_process.started":
             # Make sure to broadcast current source mode once to newly started eyes so
