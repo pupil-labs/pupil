@@ -665,16 +665,13 @@ class UVC_Source(Base_Source):
                 )
                 self.update_menu()
 
-            def exposure_mode_getter():
-                return ["manual", "auto"], ["manual mode", "auto mode"]
-
             sensor_control.append(
                 ui.Selector(
                     "exposure_mode",
                     self,
                     setter=set_exposure_mode,
-                    selection_getter=exposure_mode_getter,
-                    selection=self.exposure_mode,
+                    selection=["manual", "auto"],
+                    labels=["manual mode", "auto mode"],
                     label="Exposure Mode",
                 )
             )
