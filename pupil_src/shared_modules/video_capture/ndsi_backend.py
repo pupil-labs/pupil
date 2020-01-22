@@ -425,6 +425,29 @@ class NDSI_Manager(Base_Manager):
             self.selected_host = host_uuid
             self.re_build_ndsi_menu()
 
+    def get_devices(self):
+        # store hosts in dict to remove duplicates from multiple sensors
+        active_hosts = {
+            s["host_uuid"]: s["host_name"]
+            for s in self.network.sensors.values()
+            if s["sensor_type"] == "video"
+        }
+        return [
+            self.SourceInfo(label=host_name, manager=self, key=f"host.{host_uuid}")
+            for host_uuid, host_name in active_hosts.items()
+        ]
+
+    def get_cameras(self):
+        return [
+            self.SourceInfo(
+                label=f"{s['sensor_name']} @ PM {s['host_name']}",
+                manager=self,
+                key=f"sensor.{s['sensor_uuid']}",
+            )
+            for s in self.network.sensors.values()
+            if s["sensor_type"] == "video"
+        ]
+
     def host_selection_list(self):
         devices = {
             s["host_uuid"]: s["host_name"]  # removes duplicates
@@ -492,6 +515,12 @@ class NDSI_Manager(Base_Manager):
         self.menu.extend(ui_elements)
 
     def activate(self, source_uid):
+        source_type, uid = source_uid.split(".", maxsplit=1)
+        if source_type == "host":
+            logger.debug("AUTO ACTIVATE HOST")
+            return
+        source_uid = uid
+
         if not source_uid:
             return
         settings = {
