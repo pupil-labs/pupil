@@ -890,13 +890,15 @@ class UVC_Manager(Base_Manager):
             for device in self.devices
         ]
 
-    def activate(self, source_uid):
-        if source_uid == "usb":
-            logger.debug("AUTO ACTIVATE USB")
+    def activate(self, key):
+        if key == "usb":
+            self.notify_all({"subject": "backend.uvc.auto_activate_source"})
             return
 
-        source_uid = source_uid[4:]
+        source_uid = key[4:]
+        self.activate_source(source_uid)
 
+    def activate_source(self, source_uid):
         if not source_uid:
             return
 
@@ -927,22 +929,30 @@ class UVC_Manager(Base_Manager):
                 }
             )
 
+    def on_notify(self, notification):
+        super().on_notify(notification)
+
+        if notification["subject"] == "backend.uvc.auto_activate_source":
+            self.auto_activate_source()
+
     def auto_activate_source(self):
+        logger.debug("Auto activating USB source.")
+        self.devices.update()
         if not self.devices or len(self.devices) == 0:
             logger.warning("No default device is available.")
             return
 
-        cam_ids = self.cam_selection_lut[self.g_pool.process]
+        name_patterns = self.cam_selection_lut[self.g_pool.process]
+        matching_cams_ids = [
+            device["uid"]
+            for device in self.devices
+            if any(pattern in device["name"] for pattern in name_patterns)
+        ]
 
-        for cam_id in cam_ids:
-            try:
-                source_id = next(d["uid"] for d in self.devices if cam_id in d["name"])
-                self.activate(source_id)
-                break
-            except StopIteration:
-                source_id = None
+        if matching_cams_ids:
+            self.activate_source(matching_cams_ids[0])
         else:
-            logger.warning("The default device is not found.")
+            logger.warning("Could not find default device.")
 
     def deinit_ui(self):
         self.remove_menu()
