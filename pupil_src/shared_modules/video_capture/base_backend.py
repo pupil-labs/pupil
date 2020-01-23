@@ -219,10 +219,6 @@ class Base_Source(Plugin):
         """
         raise NotImplementedError()
 
-    @frame_size.setter
-    def frame_size(self, new_size):
-        raise NotImplementedError()
-
     @property
     def frame_rate(self):
         """
@@ -230,10 +226,6 @@ class Base_Source(Plugin):
             int/float: Frame rate
         """
         raise NotImplementedError()
-
-    @frame_rate.setter
-    def frame_rate(self, new_rate):
-        pass
 
     @property
     def jpeg_support(self):
