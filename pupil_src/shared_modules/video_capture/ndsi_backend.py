@@ -18,7 +18,7 @@ from pyglui import ui
 
 from camera_models import load_intrinsics
 
-from .base_backend import Base_Manager, Base_Source
+from .base_backend import Base_Manager, Base_Source, SourceInfo
 
 try:
     from ndsi import __version__
@@ -434,13 +434,13 @@ class NDSI_Manager(Base_Manager):
             if s["sensor_type"] == "video"
         }
         return [
-            self.SourceInfo(label=host_name, manager=self, key=f"host.{host_uuid}")
+            SourceInfo(label=host_name, manager=self, key=f"host.{host_uuid}")
             for host_uuid, host_name in active_hosts.items()
         ]
 
     def get_cameras(self):
         return [
-            self.SourceInfo(
+            SourceInfo(
                 label=f"{s['sensor_name']} @ PM {s['host_name']}",
                 manager=self,
                 key=f"sensor.{s['sensor_uuid']}",

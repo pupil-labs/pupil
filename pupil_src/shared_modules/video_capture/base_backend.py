@@ -376,23 +376,27 @@ class Base_Manager(Plugin):
         # here is where you add all your menu entries.
         self.menu.label = "Backend Manager"
 
-    def get_devices(self) -> T.Sequence["Base_Manager.SourceInfo"]:
+    def get_devices(self) -> T.Sequence["SourceInfo"]:
         return []
 
-    def get_cameras(self) -> T.Sequence["Base_Manager.SourceInfo"]:
+    def get_cameras(self) -> T.Sequence["SourceInfo"]:
         return []
 
-    class SourceInfo:
-        def __init__(self, label, manager, key):
-            self.label = label
-            self.manager = manager
-            self.key = key
+    def activate(self, key: T.Any) -> None:
+        pass
 
-        def activate(self):
-            self.manager.activate(self.key)
 
-        def __str__(self):
-            return f"{self.label} - {self.manager.class_name}({self.key})"
+class SourceInfo:
+    def __init__(self, label: str, manager: Base_Manager, key: T.Any):
+        self.label = label
+        self.manager = manager
+        self.key = key
+
+    def activate(self) -> None:
+        self.manager.activate(self.key)
+
+    def __str__(self) -> str:
+        return f"{self.label} - {self.manager.class_name}({self.key})"
 
 
 class Playback_Source(Base_Source):

@@ -16,14 +16,14 @@ import re
 import time
 
 import numpy as np
+import uvc
 from pyglui import cygl, ui
 
 import gl_utils
-import uvc
 from camera_models import load_intrinsics
 from version_utils import VersionFormat
 
-from .base_backend import Base_Manager, Base_Source, InitialisationError
+from .base_backend import Base_Manager, Base_Source, InitialisationError, SourceInfo
 from .utils import Check_Frame_Stripes, Exposure_Time
 
 # check versions for our own depedencies as they are fast-changing
@@ -873,12 +873,12 @@ class UVC_Manager(Base_Manager):
         self.menu.extend(ui_elements)
 
     def get_devices(self):
-        return [self.SourceInfo(label="Local USB", manager=self, key="usb")]
+        return [SourceInfo(label="Local USB", manager=self, key="usb")]
 
     def get_cameras(self):
         self.devices.update()
         return [
-            self.SourceInfo(
+            SourceInfo(
                 label=f"{device['name']} @ Local USB",
                 manager=self,
                 key=f"cam.{device['uid']}",
