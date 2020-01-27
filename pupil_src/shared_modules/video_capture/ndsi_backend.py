@@ -50,7 +50,6 @@ class NDSI_Source(Base_Source):
         g_pool,
         frame_size,
         frame_rate,
-        network=None,
         source_id=None,
         host_name=None,
         sensor_name=None,
@@ -71,6 +70,12 @@ class NDSI_Source(Base_Source):
         self._initial_refresh = True
         self.last_update = self.g_pool.get_timestamp()
 
+        manager = next((p for p in g_pool.plugins if isinstance(p, NDSI_Manager)), None)
+        if not manager:
+            logger.error("Error connecting to Pupil Mobile: NDSI Manager not found!")
+            return
+
+        network = manager.network
         if not network:
             logger.debug(
                 "No network reference provided. Capture is started "
@@ -515,13 +520,16 @@ class NDSI_Manager(Base_Manager):
 
         self.menu.extend(ui_elements)
 
-    def activate(self, source_uid):
-        source_type, uid = source_uid.split(".", maxsplit=1)
+    def activate(self, key):
+        source_type, uid = key.split(".", maxsplit=1)
         if source_type == "host":
-            logger.debug("AUTO ACTIVATE HOST")
-            return
-        source_uid = uid
+            self.notify_all(
+                {"subject": "backend.ndsi.auto_activate_source", "host_uid": uid}
+            )
+        elif source_type == "sensor":
+            self.activate_source(source_uid=uid)
 
+    def activate_source(self, source_uid):
         if not source_uid:
             return
         settings = {
@@ -529,7 +537,19 @@ class NDSI_Manager(Base_Manager):
             "frame_rate": self.g_pool.capture.frame_rate,
             "source_id": source_uid,
         }
-        self.activate_source(settings)
+        if self.g_pool.process == "world":
+            self.notify_all(
+                {"subject": "start_plugin", "name": "NDSI_Source", "args": settings}
+            )
+        else:
+            self.notify_all(
+                {
+                    "subject": "start_eye_plugin",
+                    "target": self.g_pool.process,
+                    "name": "NDSI_Source",
+                    "args": settings,
+                }
+            )
 
     def auto_select_manager(self):
         super().auto_select_manager()
@@ -541,28 +561,30 @@ class NDSI_Manager(Base_Manager):
             }
         )
 
-    def auto_activate_source(self):
-        if not self.selected_host:
+    def auto_activate_source(self, host_uid):
+        host_sensors = [
+            sensor
+            for sensor in self.network.sensors.values()
+            if (sensor["sensor_type"] == "video" and sensor["host_uuid"] == host_uid)
+        ]
+
+        if not host_sensors:
+            logger.warning("No devices available on the remote host.")
             return
 
-        src_sel, src_sel_labels = self.source_selection_list()
-        if len(src_sel) < 2:  # "Select to Activate" is always presenet as first element
-            logger.warning("No device is available on the remote host.")
-            return
+        name_patterns = self.cam_selection_lut[self.g_pool.process]
+        matching_cams = [
+            sensor
+            for sensor in host_sensors
+            if any(pattern in sensor["sensor_name"] for pattern in name_patterns)
+        ]
 
-        cam_ids = self.cam_selection_lut[self.g_pool.process]
-
-        for cam_id in cam_ids:
-            try:
-                source_id = next(
-                    src_sel[i] for i, lab in enumerate(src_sel_labels) if cam_id in lab
-                )
-                self.activate(source_id)
-                break
-            except StopIteration:
-                source_id = None
-        else:
+        if not matching_cams:
             logger.warning("The default device was not found on the remote host.")
+            return
+
+        cam = matching_cams[0]
+        self.activate_source(cam["sensor_uuid"])
 
     def poll_events(self):
         while self.network.has_events:
@@ -611,10 +633,6 @@ class NDSI_Manager(Base_Manager):
 
             self.re_build_ndsi_menu()
 
-    def activate_source(self, settings={}):
-        settings["network"] = self.network
-        self.g_pool.plugins.add(NDSI_Source, args=settings)
-
     def recover(self):
         self.g_pool.capture.recover(self.network)
 
@@ -641,6 +659,9 @@ class NDSI_Manager(Base_Manager):
 
         if n["subject"].startswith("backend.ndsi_do_select_host"):
             self.select_host(n["target_host"])
+
+        if n["subject"] == "backend.ndsi.auto_activate_source":
+            self.auto_activate_source(n["host_uid"])
 
     def select_host(self, selected_host):
         host_sel, _ = self.host_selection_list()
