@@ -22,8 +22,10 @@ import OpenGL.GL as gl
 import pyglui
 import pyglui.cygl.utils as pyglui_utils
 
+import data_changed
 import file_methods
 import gl_utils
+from observable import Observable
 from plugin import Analysis_Plugin_Base
 
 from . import background_tasks, offline_utils
@@ -49,7 +51,7 @@ else:
     mp_context = multiprocessing.get_context()
 
 
-class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
+class Surface_Tracker_Offline(Observable, Surface_Tracker, Analysis_Plugin_Base):
     """
     The Surface_Tracker_Offline does marker based AOI tracking in a recording. All
     marker and surface detections are calculated in the background and cached to reduce
@@ -80,6 +82,13 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
 
         self._heatmap_update_requests = set()
         self.export_proxies = set()
+
+        self._gaze_changed_listener = data_changed.Listener(
+            "gaze_positions", g_pool.rec_dir, plugin=self
+        )
+        self._gaze_changed_listener.add_observer(
+            "on_data_changed", self._on_gaze_positions_changed
+        )
 
     @property
     def Surface_Class(self):
@@ -513,17 +522,17 @@ class Surface_Tracker_Offline(Surface_Tracker, Analysis_Plugin_Base):
             )
             self.export_proxies.add(proxy)
 
-        elif notification["subject"] == "gaze_positions_changed":
-            for surface in self.surfaces:
-                self._heatmap_update_requests.add(surface)
-                surface.within_surface_heatmap = surface.get_placeholder_heatmap()
-            self._fill_gaze_on_surf_buffer()
-
         elif (
             notification["subject"]
             == "surface_tracker_offline._should_fill_gaze_on_surf_buffer"
         ):
             self._fill_gaze_on_surf_buffer()
+
+    def _on_gaze_positions_changed(self):
+        for surface in self.surfaces:
+            self._heatmap_update_requests.add(surface)
+            surface.within_surface_heatmap = surface.get_placeholder_heatmap()
+        self._fill_gaze_on_surf_buffer()
 
     def on_surface_change(self, surface):
         self.save_surface_definitions_to_file()
