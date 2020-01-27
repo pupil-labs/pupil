@@ -73,7 +73,7 @@ class ScanPathAlgorithm:
                 gray_image,
                 prev_gaze_points,
                 None,
-                **self._lk_params
+                **self._lk_params,
             )
 
             new_gaze_points = np_normalize(new_gaze_points, size=image_size)
@@ -84,7 +84,8 @@ class ScanPathAlgorithm:
             new_gaze_data["norm_y"] = new_gaze_points[:, 1]
 
             # Only keep gaze data where the status is 1
-            status = np.array(status, dtype=bool).squeeze()
+            status = np.array(status, dtype=bool)
+            status.shape = -1  # flatten to keep dimensionality below
             new_gaze_data = new_gaze_data[status]
         else:
             new_gaze_data = scan_path_zeros_numpy_array()
