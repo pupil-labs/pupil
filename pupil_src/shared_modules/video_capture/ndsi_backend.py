@@ -77,10 +77,7 @@ class NDSI_Source(Base_Source):
 
         network = manager.network
         if not network:
-            logger.debug(
-                "No network reference provided. Capture is started "
-                + "in ghost mode. No images will be supplied."
-            )
+            logger.error("Error connecting to Pupil Mobile: No NDSI network!")
             return
 
         self.recover(network)
@@ -89,7 +86,9 @@ class NDSI_Source(Base_Source):
             logger.error("Could not connect to device! No images will be supplied.")
             self.cleanup()
 
-        logger.debug("NDSI Source Sensor: %s" % self.sensor)
+        logger.warning(
+            "Make sure to enable the Time_Sync plugin for recording with Pupil Mobile!"
+        )
 
     def recover(self, network):
         logger.debug(
@@ -398,9 +397,6 @@ class NDSI_Manager(Base_Manager):
             "eye1": ["ID1", "PI left"],
             "world": ["ID2", "Logitech", "PI world"],
         }
-
-        # TODO: this is now useless here!
-        logger.warning("Make sure the `time_sync` plugin is loaded!")
 
     def cleanup(self):
         self.network.stop()
