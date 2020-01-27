@@ -100,9 +100,9 @@ class Base_Source(Plugin):
     def deinit_ui(self):
         self.remove_menu()
 
-    def device_list(self):
-        label = "Activate Camera" if self.manual_mode else "Activate Device"
-        entries = [(None, label)]
+    def source_list(self):
+        source_type = "Camera" if self.manual_mode else "Device"
+        entries = [(None, f"Activate {source_type}")]
 
         for manager in self.g_pool.source_managers:
             if self.manual_mode:
@@ -112,6 +112,9 @@ class Base_Source(Plugin):
 
             for info in sources:
                 entries.append((info, info.label))
+
+        if len(entries) == 1:
+            entries.append((None, f"No {source_type}s Found!"))
 
         return zip(*entries)
 
@@ -167,7 +170,7 @@ class Base_Source(Plugin):
         self.menu.append(
             ui.Selector(
                 "selected_source",
-                selection_getter=self.device_list,
+                selection_getter=self.source_list,
                 getter=lambda: None,
                 setter=self.activate_source,
                 label=" ",  # TODO: Hide label completely
