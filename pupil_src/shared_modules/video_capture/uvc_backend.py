@@ -126,9 +126,7 @@ class UVC_Source(Base_Source):
 
         # check if we were sucessfull
         if not self.uvc_capture:
-            logger.error(
-                "Init failed. Capture is started in ghost mode. No images will be supplied."
-            )
+            logger.error("Could not connect to device! No images will be supplied.")
             self.name_backup = preferred_names
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
@@ -453,7 +451,7 @@ class UVC_Source(Base_Source):
         if self.uvc_capture:
             return self.uvc_capture.name
         else:
-            return "Ghost capture"
+            return "(disconnected)"
 
     @property
     def frame_size(self):
@@ -568,6 +566,10 @@ class UVC_Source(Base_Source):
     def settings_ui_elements(self):
         ui_elements = []
 
+        if self.uvc_capture is None:
+            ui_elements.append(ui.Info_Text("Local USB: camera disconnected!"))
+            return ui_elements
+
         ui_elements.append(ui.Info_Text(f"Camera: {self.name} @ Local USB"))
 
         # lets define some  helper functions:
@@ -588,10 +590,6 @@ class UVC_Source(Base_Source):
         def set_frame_rate(new_rate):
             self.frame_rate = new_rate
             self.update_menu()
-
-        if self.uvc_capture is None:
-            ui_elements.append(ui.Info_Text("Capture initialization failed."))
-            return ui_elements
 
         sensor_control = ui.Growing_Menu(label="Sensor Settings")
         sensor_control.append(

@@ -86,10 +86,7 @@ class NDSI_Source(Base_Source):
         self.recover(network)
 
         if not self.sensor or not self.sensor.supports_data_subscription:
-            logger.error(
-                "Init failed. Capture is started in ghost mode. "
-                + "No images will be supplied."
-            )
+            logger.error("Could not connect to device! No images will be supplied.")
             self.cleanup()
 
         logger.debug("NDSI Source Sensor: %s" % self.sensor)
@@ -172,7 +169,7 @@ class NDSI_Source(Base_Source):
             elif (
                 self.g_pool.get_timestamp() - self.last_update > self.ghost_mode_timeout
             ):
-                logger.info("Entering ghost mode")
+                logger.info("Device disconnected.")
                 if self.online:
                     self.sensor.unlink()
                 self.sensor = None
@@ -351,16 +348,8 @@ class NDSI_Source(Base_Source):
             ui.Info_Text(f"Camera: {self._sensor_name} @ {self._host_name}")
         )
 
-        uvc_menu = ui.Growing_Menu("UVC Controls")
-
-        self.control_id_ui_mapping = {}
         if not self.sensor:
-            ui_elements.append(
-                ui.Info_Text(
-                    ("Sensor %s @ %s not available. " + "Running in ghost mode.")
-                    % (self._sensor_name, self._host_name)
-                )
-            )
+            ui_elements.append(ui.Info_Text("Camera disconnected!"))
             return ui_elements
 
         uvc_controls = []
@@ -371,14 +360,14 @@ class NDSI_Source(Base_Source):
             else:
                 other_controls.append(entry)
 
+        uvc_menu = ui.Growing_Menu("UVC Controls")
+        self.control_id_ui_mapping = {}
         if other_controls:
             self.add_controls_to_menu(ui_elements, other_controls)
-
         if uvc_controls:
             self.add_controls_to_menu(uvc_menu, uvc_controls)
         else:
             uvc_menu.append(ui.Info_Text("No UVC settings found."))
-
         ui_elements.append(uvc_menu)
 
         ui_elements.append(

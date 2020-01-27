@@ -189,7 +189,6 @@ class Base_Source(Plugin):
         source_settings = self.settings_ui_elements()
         if source_settings:
             settings_menu = ui.Growing_Menu(f"Settings")
-            settings_menu.collapsed = True
             settings_menu.extend(source_settings)
             self.menu.append(settings_menu)
 

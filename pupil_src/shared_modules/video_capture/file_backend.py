@@ -349,7 +349,7 @@ class File_Source(Playback_Source, Base_Source):
         if self.source_path:
             return os.path.splitext(self.source_path)[0]
         else:
-            return "File source in ghost mode"
+            return "File source (no file loaded)"
 
     def get_frame_index(self):
         return int(self.current_frame_idx)
