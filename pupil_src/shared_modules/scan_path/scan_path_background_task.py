@@ -23,7 +23,7 @@ from .utils import (
     scan_path_zeros_numpy_array,
     scan_path_numpy_array_from,
 )
-from .scan_path_algorithm import ScanPathAlgorithm
+from .algorithm import ScanPathAlgorithm
 
 
 class ScanPathBackgroundTask(Observable, _BaseTask):
