@@ -96,7 +96,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from vis_light_points import Vis_Light_Points
         from vis_watermark import Vis_Watermark
         from vis_fixation import Vis_Fixation
-        from scan_path import ScanPathPlugin
 
         from seek_control import Seek_Control
         from surface_tracker import Surface_Tracker_Offline
@@ -159,7 +158,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Vis_Circle,
             Vis_Fixation,
             Vis_Polyline,
-            ScanPathPlugin,
             Vis_Light_Points,
             Vis_Cross,
             Vis_Watermark,
