@@ -30,7 +30,6 @@ from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_S
 from .utils import VideoSet
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 av.logging.set_level(av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
 
