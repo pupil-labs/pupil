@@ -63,7 +63,7 @@ make && make install
 
 ### Install Python Libraries
 
-We recommend using a virtual environment with a valid installation of Python 3.6 or higher.
+We recommend using a [virtual environment](https://docs.python.org/3/tutorial/venv.html) for running Pupil.
 
 ```sh
 # Upgrade pip to latest version. This is necessary for some dependencies.
@@ -92,6 +92,22 @@ pip install git+https://github.com/pupil-labs/nslr-hmm
 ```
 
 **NOTE:** Installing **pyglui** might fail on newer versions of **macOS** due to missing OpenGL headers. In this case, you need to install Xcode which comes with the required header files.
+
+### OpenCV Troubleshooting
+`ImportError: No module named 'cv2'`
+  
+When you see this error, Python cannot find the bindings from your OpenCV installation.
+
+**We do NOT (!) recommend to install `opencv-python` via pip in that case!** 
+
+Installing `opencv-python` will install another full (potentially different) version of opencv to your machine, so we are not recommending this setup.
+When you install opencv with `brew install opencv` as we advise above, you should have the `cv2` package available for import in Python as this will install compatible Python bindings already.
+
+However, you might run into these problems when using a virtual environment, as your virtual environment cannot by default access Python packages that were installed from `brew`.
+In that case there are 2 options:
+
+1. Symlink or copy the Python bindings into your virtualenv. See e.g. [step 4 of this stackoverflow post](https://stackoverflow.com/a/37190408) for reference.
+2. Create your virtualenv with the [`--system-site-packages`](https://virtualenv.pypa.io/en/latest/userguide/#the-system-site-packages-option) option, which will enable access to system-installed Python packages.
 
 ## Next Steps
 
