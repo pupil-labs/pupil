@@ -43,6 +43,7 @@ class ScanPathStorage:
         with self._locked():
             if gaze_data is not None:
                 self._validate_gaze_data(gaze_data)
+                gaze_data = gaze_data.view(np.recarray)
             self._gaze_data = gaze_data
 
     @property
