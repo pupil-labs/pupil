@@ -20,7 +20,7 @@ from tasklib.manager import PluginTaskManager
 
 # IMPORTANT: GazeProducerBase needs to be THE LAST in the list of bases, otherwise
 # uniqueness by base class does not work
-class GazeFromOfflineCalibration(Observable, GazeProducerBase):
+class GazeFromOfflineCalibration(GazeProducerBase):
     pretty_class_name = "Gaze From Offline Calibration"
     icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"
@@ -180,7 +180,7 @@ class GazeFromOfflineCalibration(Observable, GazeProducerBase):
 
     def _publish_gaze(self, gaze_bisector):
         self.g_pool.gaze_positions = gaze_bisector
-        self.notify_all({"subject": "gaze_positions_changed", "delay": 1})
+        self._gaze_changed_announcer.announce_new()
 
     def _seek_to_frame(self, frame_index):
         self.notify_all({"subject": "seek_control.should_seek", "index": frame_index})

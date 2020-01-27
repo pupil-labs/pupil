@@ -393,7 +393,7 @@ class UVC_Source(Base_Source):
 
             if np.isclose(frame.timestamp, 0):
                 # sometimes (probably only on windows) after disconnections, the first frame has 0 ts
-                logger.warning(
+                logger.debug(
                     "Received frame with invalid timestamp."
                     " This can happen after a disconnect."
                     " Frame will be dropped!"
@@ -626,6 +626,11 @@ class UVC_Source(Base_Source):
                 [str(fr) for fr in self.uvc_capture.frame_rates],
             )
 
+        # TODO: potential race condition through selection_getter. Should ensure that
+        # current selection will always be present in the list returned by the
+        # selection_getter. Highly unlikely though as this needs to happen between
+        # having clicked the Selector and the next redraw.
+        # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
         sensor_control.append(
             ui.Selector(
                 "frame_rate",
@@ -660,16 +665,13 @@ class UVC_Source(Base_Source):
                 )
                 self.update_menu()
 
-            def exposure_mode_getter():
-                return ["manual", "auto"], ["manual mode", "auto mode"]
-
             sensor_control.append(
                 ui.Selector(
                     "exposure_mode",
                     self,
                     setter=set_exposure_mode,
-                    selection_getter=exposure_mode_getter,
-                    selection=self.exposure_mode,
+                    selection=["manual", "auto"],
+                    labels=["manual mode", "auto mode"],
                     label="Exposure Mode",
                 )
             )
@@ -867,6 +869,11 @@ class UVC_Manager(Base_Manager):
             ]
             return zip(*dev_pairs)
 
+        # TODO: potential race condition through selection_getter. Should ensure that
+        # current selection will always be present in the list returned by the
+        # selection_getter. Highly unlikely though as this needs to happen between
+        # having clicked the Selector and the next redraw.
+        # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
         ui_elements.append(
             ui.Selector(
                 "selected_source",

@@ -529,6 +529,11 @@ class Realsense2_Source(Base_Source):
                 else:
                     return [self.frame_size_backup], [str(self.frame_size_backup)]
 
+            # TODO: potential race condition through selection_getter. Should ensure
+            # that current selection will always be present in the list returned by the
+            # selection_getter. Highly unlikely though as this needs to happen between
+            # having clicked the Selector and the next redraw.
+            # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
             selector = ui.Selector(
                 "frame_size",
                 self,
@@ -549,6 +554,11 @@ class Realsense2_Source(Base_Source):
                 else:
                     return [self.frame_rate_backup], [str(self.frame_rate_backup)]
 
+            # TODO: potential race condition through selection_getter. Should ensure
+            # that current selection will always be present in the list returned by the
+            # selection_getter. Highly unlikely though as this needs to happen between
+            # having clicked the Selector and the next redraw.
+            # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
             selector = ui.Selector(
                 "frame_rate",
                 self,
@@ -570,6 +580,11 @@ class Realsense2_Source(Base_Source):
                         [str(self.depth_frame_size_backup)],
                     )
 
+            # TODO: potential race condition through selection_getter. Should ensure
+            # that current selection will always be present in the list returned by the
+            # selection_getter. Highly unlikely though as this needs to happen between
+            # having clicked the Selector and the next redraw.
+            # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
             selector = ui.Selector(
                 "depth_frame_size",
                 self,
@@ -593,6 +608,11 @@ class Realsense2_Source(Base_Source):
                         [str(self.depth_frame_rate_backup)],
                     )
 
+            # TODO: potential race condition through selection_getter. Should ensure
+            # that current selection will always be present in the list returned by the
+            # selection_getter. Highly unlikely though as this needs to happen between
+            # having clicked the Selector and the next redraw.
+            # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
             selector = ui.Selector(
                 "depth_frame_rate",
                 self,
@@ -696,7 +716,9 @@ class Realsense2_Source(Base_Source):
             del kwargs["topic"]
             self._initialize_device(**kwargs)
         elif notification["subject"] == "recording.started":
-            self.start_depth_recording(notification["rec_path"], notification["start_time_synced"])
+            self.start_depth_recording(
+                notification["rec_path"], notification["start_time_synced"]
+            )
         elif notification["subject"] == "recording.stopped":
             self.stop_depth_recording()
 

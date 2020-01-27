@@ -28,7 +28,7 @@ from . import update_utils
 
 logger = logging.getLogger(__name__)
 
-NEWEST_SUPPORTED_VERSION = Version("1.1")
+NEWEST_SUPPORTED_VERSION = Version("1.2")
 
 
 def transform_invisible_to_corresponding_new_style(rec_dir: str):
@@ -38,7 +38,7 @@ def transform_invisible_to_corresponding_new_style(rec_dir: str):
 
     if pi_version > NEWEST_SUPPORTED_VERSION:
         raise InvalidRecordingException(
-            f"This version of Pupil Invisible is too new : {pi_version}"
+            f"This version of player is too old! Please upgrade."
         )
 
     # elif pi_version > 3.0:

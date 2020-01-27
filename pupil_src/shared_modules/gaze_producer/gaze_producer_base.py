@@ -11,15 +11,23 @@ See COPYING and COPYING.LESSER for license details.
 
 from pyglui import ui
 
+import data_changed
+from observable import Observable
 import player_methods as pm
 from plugin import Producer_Plugin_Base
 
 
-class GazeProducerBase(Producer_Plugin_Base):
+class GazeProducerBase(Observable, Producer_Plugin_Base):
     uniqueness = "by_base_class"
     order = 0.02
     icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"
+
+    def __init__(self, g_pool):
+        super().__init__(g_pool)
+        self._gaze_changed_announcer = data_changed.Announcer(
+            "gaze_positions", g_pool.rec_dir, plugin=self
+        )
 
     def init_ui(self):
         self.add_menu()
