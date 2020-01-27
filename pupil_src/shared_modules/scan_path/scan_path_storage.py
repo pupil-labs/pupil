@@ -25,7 +25,7 @@ class ScanPathStorage:
 
     version = 1
 
-    def __init__(self, rec_dir, gaze_data = ...):
+    def __init__(self, rec_dir, gaze_data=...):
         self.__lock = threading.RLock()
         self.rec_dir = rec_dir
         if gaze_data is ...:

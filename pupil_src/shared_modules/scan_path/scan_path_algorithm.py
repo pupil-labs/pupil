@@ -17,7 +17,12 @@ import cv2
 import methods as m
 import file_methods as fm
 
-from .scan_path_utils import scan_path_numpy_array_from, scan_path_zeros_numpy_array, np_denormalize, np_normalize
+from .scan_path_utils import (
+    scan_path_numpy_array_from,
+    scan_path_zeros_numpy_array,
+    np_denormalize,
+    np_normalize,
+)
 
 
 class ScanPathAlgorithm:
@@ -48,13 +53,17 @@ class ScanPathAlgorithm:
             gray_image=frame.gray,
         )
 
-    def update_from_raw_data(self, frame_index, preprocessed_data, image_size, gray_image):
+    def update_from_raw_data(
+        self, frame_index, preprocessed_data, image_size, gray_image
+    ):
         if self._prev_frame_index + 1 != frame_index:
             self.reset()
 
         # lets update past gaze using optical flow: this is like sticking the gaze points onto the pixels of the img.
         if len(self._prev_gaze_datums) > 0:
-            prev_gaze_points = np.zeros((self._prev_gaze_datums.shape[0], 2), dtype=np.float32)
+            prev_gaze_points = np.zeros(
+                (self._prev_gaze_datums.shape[0], 2), dtype=np.float32
+            )
             prev_gaze_points[:, 0] = self._prev_gaze_datums["norm_x"]
             prev_gaze_points[:, 1] = self._prev_gaze_datums["norm_y"]
             prev_gaze_points = np_denormalize(prev_gaze_points, size=image_size)
@@ -111,6 +120,5 @@ class ScanPathAlgorithm:
 
 def np_sort_by_named_columns(array, colums_by_priority):
     for col_name in reversed(colums_by_priority):
-        array = array[array[col_name].argsort(kind='mergesort')]
+        array = array[array[col_name].argsort(kind="mergesort")]
     return array
-

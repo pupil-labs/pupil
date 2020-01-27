@@ -12,7 +12,6 @@ import abc
 
 
 class _BaseTask:
-
     @property
     @abc.abstractmethod
     def progress(self) -> float:

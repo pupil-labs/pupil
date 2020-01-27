@@ -16,7 +16,14 @@ import numpy as np
 from observable import Observable
 
 from .base_task import _BaseTask
-from .scan_path_utils import timestamp_ns, sec_to_ns, generate_frame_indices_with_deserialized_gaze, SCAN_PATH_GAZE_DATUM_DTYPE, scan_path_zeros_numpy_array, scan_path_numpy_array_from
+from .scan_path_utils import (
+    timestamp_ns,
+    sec_to_ns,
+    generate_frame_indices_with_deserialized_gaze,
+    SCAN_PATH_GAZE_DATUM_DTYPE,
+    scan_path_zeros_numpy_array,
+    scan_path_numpy_array_from,
+)
 
 
 class _BaseState:
@@ -47,7 +54,6 @@ class CanceledState(_BaseState):
 
 
 class ScanPathPreprocessingTask(Observable, _BaseTask):
-
     def __init__(self, g_pool):
         self.g_pool = g_pool
         self._progress = 0.0

@@ -21,12 +21,14 @@ import methods as m
 import player_methods as pm
 
 
-SCAN_PATH_GAZE_DATUM_DTYPE = np.dtype([
-    ("frame_index", np.int64),
-    ("timestamp", np.float64),
-    ("norm_x", np.float32),
-    ("norm_y", np.float32),
-])
+SCAN_PATH_GAZE_DATUM_DTYPE = np.dtype(
+    [
+        ("frame_index", np.int64),
+        ("timestamp", np.float64),
+        ("norm_x", np.float32),
+        ("norm_y", np.float32),
+    ]
+)
 
 
 def np_normalize(array, size, flip_y=True):
@@ -107,11 +109,11 @@ def timestamp_ns() -> int:
 
 
 def sec_to_ns(sec: float) -> int:
-    return int(sec * 10E9)
+    return int(sec * 10e9)
 
 
 def ns_to_sec(ns: int) -> float:
-    return float(ns) / 10E9
+    return float(ns) / 10e9
 
 
 def generate_frame_indices_with_deserialized_gaze(g_pool):
@@ -125,7 +127,7 @@ def generate_frame_indices_with_deserialized_gaze(g_pool):
     frame_count = len(frame_indices)
 
     for frame_index in frame_indices:
-        progress = (frame_index+1) / frame_count
+        progress = (frame_index + 1) / frame_count
         frame_ts_window = pm.enclosing_window(g_pool.timestamps, frame_index)
         gaze_data = g_pool.gaze_positions.by_ts_window(frame_ts_window)
         gaze_data = [
@@ -141,7 +143,9 @@ def generate_frames_with_gaze(g_pool):
     for progress, current_frame in generate_frames(g_pool):
         frame_ts_window = pm.enclosing_window(g_pool.timestamps, current_frame.index)
         gaze_datums = g_pool.gaze_positions.by_ts_window(frame_ts_window)
-        gaze_datums = [g for g in gaze_datums if g["confidence"] >= g_pool.min_data_confidence]
+        gaze_datums = [
+            g for g in gaze_datums if g["confidence"] >= g_pool.min_data_confidence
+        ]
 
         yield progress, current_frame, gaze_datums
 

@@ -33,7 +33,9 @@ class ScanPathPlugin(Plugin, Observable):
     def __init__(self, g_pool, scan_path_init_dict={}):
         super().__init__(g_pool)
         self._scan_path_controller = ScanPathController(g_pool, **scan_path_init_dict)
-        self._scan_path_controller.add_observer("on_update_ui", self._update_scan_path_ui)
+        self._scan_path_controller.add_observer(
+            "on_update_ui", self._update_scan_path_ui
+        )
 
     def get_init_dict(self):
         return {"scan_path_init_dict": self._scan_path_controller.get_init_dict()}
@@ -49,7 +51,7 @@ class ScanPathPlugin(Plugin, Observable):
             min=self._scan_path_controller.min_timeframe,
             max=self._scan_path_controller.max_timeframe,
             step=self._scan_path_controller.timeframe_step,
-            label="Timeframe"
+            label="Timeframe",
         )
 
         self.menu.append(self.scan_path_timeframe_range)
@@ -68,7 +70,9 @@ class ScanPathPlugin(Plugin, Observable):
         if not frame:
             return
 
-        events["scan_path_gaze"] = self._scan_path_controller.scan_path_gaze_for_frame(frame)
+        events["scan_path_gaze"] = self._scan_path_controller.scan_path_gaze_for_frame(
+            frame
+        )
 
         # self._debug_draw_scan_path(events)
 
@@ -91,11 +95,7 @@ class ScanPathPlugin(Plugin, Observable):
 
             gray = float(idx) / points_to_draw_count
             transparent_circle(
-                frame.img,
-                point,
-                radius=20,
-                color=(gray, gray, gray, 0.9),
-                thickness=2,
+                frame.img, point, radius=20, color=(gray, gray, gray, 0.9), thickness=2,
             )
 
     def on_notify(self, notification):
