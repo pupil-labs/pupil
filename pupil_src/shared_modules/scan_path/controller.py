@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class ScanPathController(Observable):
 
     min_timeframe = 0.0
-    max_timeframe = 5.0
+    max_timeframe = 3.0
     timeframe_step = 0.05
 
     def __init__(self, g_pool, timeframe=None):
