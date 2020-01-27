@@ -15,13 +15,15 @@ import numpy as np
 import cv2
 
 from pyglui import ui
+from observable import Observable
 from methods import denormalize
+from data_changed import Listener
 
 from scan_path import ScanPathController
 from scan_path.utils import np_denormalize
 
 
-class Vis_Polyline(Visualizer_Plugin_Base):
+class Vis_Polyline(Visualizer_Plugin_Base, Observable):
     order = 0.9
     uniqueness = "not_unique"
     icon_chr = chr(0xE922)
@@ -34,6 +36,13 @@ class Vis_Polyline(Visualizer_Plugin_Base):
 
         self.scan_path_controller = ScanPathController(g_pool, **scan_path_init_dict)
         self.scan_path_controller.add_observer("on_update_ui", self._update_scan_path_ui)
+
+        self._gaze_changed_listener = Listener(
+            plugin=self, topic="gaze_positions", rec_dir=g_pool.rec_dir
+        )
+        self._gaze_changed_listener.add_observer(
+            method_name="on_data_changed", observer=self.scan_path_controller.invalidate_data
+        )
 
     def get_init_dict(self):
         return {
@@ -130,9 +139,6 @@ class Vis_Polyline(Visualizer_Plugin_Base):
 
     def cleanup(self):
         self.scan_path_controller.cleanup()
-
-    def on_notify(self, notification):
-        self.scan_path_controller.on_notify(notification)
 
     def _update_scan_path_ui(self):
         if self.menu_icon:

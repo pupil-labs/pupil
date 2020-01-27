@@ -53,7 +53,7 @@ class ScanPathController(Observable):
         self._bg_task.add_observer("on_completed", self._on_bg_task_completed)
 
         self._gaze_data_store = ScanPathStorage(g_pool.rec_dir)
-        self._trigger_delayed_loading_from_disk()
+        self._gaze_data_store.load_from_disk()
 
     def get_init_dict(self):
         return {}  # Don't save the current timeframe; always set to 0.0 on startup.
@@ -80,9 +80,12 @@ class ScanPathController(Observable):
         self._preproc.process()
         self._bg_task.process()
 
+    def invalidate_data(self):
+        self._gaze_data_store.mark_invalid()
+
     def scan_path_gaze_for_frame(self, frame):
         if self.timeframe == 0.0:
-            return self._gaze_data_store.empty_gaze_data()
+            return None
 
         if not self._gaze_data_store.is_valid or not self._gaze_data_store.is_complete:
             if not self.is_active:
@@ -101,43 +104,10 @@ class ScanPathController(Observable):
         self._preproc.cleanup()
         self._bg_task.cleanup()
 
-    def on_notify(self, notification):
-        if notification["subject"] == self._recalculate_scan_path_notification_subject:
-            self._trigger_immediate_scan_path_calculation()
-        elif (
-            notification["subject"]
-            == self._load_from_disk_scan_path_notification_subject
-        ):
-            self._gaze_data_store.load_from_disk()
-        elif notification["subject"] == "gaze_positions_changed":
-            self._gaze_data_store.mark_invalid()
-
     def on_update_ui(self):
         pass
 
     # Private - helpers
-
-    _recalculate_scan_path_notification_subject = "scan_path.should_recalculate"
-
-    _load_from_disk_scan_path_notification_subject = "scan_path.should_load_from_disk"
-
-    def _trigger_delayed_loading_from_disk(self, delay=0.5):
-        Plugin.notify_all(
-            self,
-            {
-                "subject": self._load_from_disk_scan_path_notification_subject,
-                "delay": delay,
-            },
-        )
-
-    def _trigger_delayed_scan_path_calculation(self, delay=1.0):
-        Plugin.notify_all(
-            self,
-            {
-                "subject": self._recalculate_scan_path_notification_subject,
-                "delay": delay,
-            },
-        )
 
     def _trigger_immediate_scan_path_calculation(self):
         # Cancel old tasks
