@@ -487,7 +487,6 @@ class NDSI_Manager(Base_Manager):
     def recent_events(self, events):
         self.poll_events()
 
-        # TODO: Move to source
         if (
             isinstance(self.g_pool.capture, NDSI_Source)
             and not self.g_pool.capture.sensor
@@ -501,6 +500,7 @@ class NDSI_Manager(Base_Manager):
             if self._rejoin_in <= 0:
                 logger.debug("Rejoining network...")
                 self.network.rejoin()
+                # frame-timeout independent timer
                 self._rejoin_in = int(10 * 1e3 / self.g_pool.capture.get_frame_timeout)
             else:
                 self._rejoin_in -= 1
@@ -516,7 +516,8 @@ class NDSI_Manager(Base_Manager):
                 self.notify_all({"subject": "backend.ndsi_source_found"})
 
     def recover(self):
-        self.g_pool.capture.recover(self.network)
+        if isinstance(self.g_pool.capture, NDSI_Source):
+            self.g_pool.capture.recover(self.network)
 
     def on_notify(self, n):
         """Provides UI for the capture selection
@@ -530,7 +531,6 @@ class NDSI_Manager(Base_Manager):
 
         super().on_notify(n)
 
-        # TODO: move to source
         if (
             n["subject"].startswith("backend.ndsi_source_found")
             and isinstance(self.g_pool.capture, NDSI_Source)
