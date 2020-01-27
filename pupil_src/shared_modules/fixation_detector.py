@@ -44,7 +44,9 @@ from pyglui.pyfontstash import fontstash
 from scipy.spatial.distance import pdist
 
 import background_helper as bh
+import data_changed
 import file_methods as fm
+from observable import Observable
 import player_methods as pm
 from eye_movement.utils import can_use_3d_gaze_mapping
 from methods import denormalize
@@ -242,7 +244,7 @@ def detect_fixations(
     yield "Fixation detection complete", ()
 
 
-class Offline_Fixation_Detector(Fixation_Detector_Base):
+class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
     """Dispersion-duration-based fixation detector.
 
     This plugin detects fixations based on a dispersion threshold in terms of
@@ -279,6 +281,12 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         self.prev_index = -1
         self.bg_task = None
         self.status = ""
+        self._gaze_changed_listener = data_changed.Listener(
+            "gaze_positions", g_pool.rec_dir, plugin=self
+        )
+        self._gaze_changed_listener.add_observer(
+            "on_data_changed", self._classify
+        )
         self.notify_all(
             {"subject": "fixation_detector.should_recalculate", "delay": 0.5}
         )
@@ -428,9 +436,6 @@ class Offline_Fixation_Detector(Fixation_Detector_Base):
         }
 
     def on_notify(self, notification):
-        if notification["subject"] == "gaze_positions_changed":
-            logger.info("Gaze postions changed. Recalculating.")
-            self._classify()
         if notification["subject"] == "min_data_confidence_changed":
             logger.info("Minimal data confidence changed. Recalculating.")
             self._classify()
