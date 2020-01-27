@@ -565,11 +565,10 @@ class UVC_Source(Base_Source):
     def online(self):
         return bool(self.uvc_capture)
 
-    def update_menu(self):
-        super().update_menu()
-        self.menu.append(ui.Info_Text(f"Local USB Source: {self.name}"))
-
+    def settings_ui_elements(self):
         ui_elements = []
+
+        ui_elements.append(ui.Info_Text(f"Camera: {self.name} @ Local USB"))
 
         # lets define some  helper functions:
         def gui_load_defaults():
@@ -592,10 +591,8 @@ class UVC_Source(Base_Source):
 
         if self.uvc_capture is None:
             ui_elements.append(ui.Info_Text("Capture initialization failed."))
-            self.menu.extend(ui_elements)
-            return
+            return ui_elements
 
-        ui_elements.append(ui.Info_Text("{} Controls".format(self.name)))
         sensor_control = ui.Growing_Menu(label="Sensor Settings")
         sensor_control.append(
             ui.Info_Text("Do not change these during calibration or recording!")
@@ -783,7 +780,8 @@ class UVC_Source(Base_Source):
                     label="Check Stripes",
                 )
             )
-        self.menu.extend(ui_elements)
+
+        return ui_elements
 
     def cleanup(self):
         self.devices.cleanup()

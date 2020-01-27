@@ -336,36 +336,32 @@ class NDSI_Source(Base_Source):
                 import traceback as tb
 
                 tb.print_exc()
-        if len(menu) == 0:
-            menu.append(ui.Info_Text("No {} settings found".format(menu.label)))
         return menu
 
     def update_control_menu(self):
         # TODO: Refactor this to be more uniform across sources
         if not self.has_ui:
             return
-
         self.update_menu()
 
-    def update_menu(self):
-        # TODO: Refactor this to be more uniform across sources
-        super().update_menu()
+    def settings_ui_elements(self):
 
-        self.menu.append(
-            ui.Info_Text(f"NDSI Source: {self._sensor_name} @ {self._host_name}")
+        ui_elements = []
+        ui_elements.append(
+            ui.Info_Text(f"Camera: {self._sensor_name} @ {self._host_name}")
         )
 
-        self.uvc_menu = ui.Growing_Menu("UVC Controls")
+        uvc_menu = ui.Growing_Menu("UVC Controls")
 
         self.control_id_ui_mapping = {}
         if not self.sensor:
-            self.menu.append(
+            ui_elements.append(
                 ui.Info_Text(
                     ("Sensor %s @ %s not available. " + "Running in ghost mode.")
                     % (self._sensor_name, self._host_name)
                 )
             )
-            return
+            return ui_elements
 
         uvc_controls = []
         other_controls = []
@@ -375,13 +371,21 @@ class NDSI_Source(Base_Source):
             else:
                 other_controls.append(entry)
 
-        self.add_controls_to_menu(self.menu, other_controls)
-        self.add_controls_to_menu(self.uvc_menu, uvc_controls)
-        self.menu.append(self.uvc_menu)
+        if other_controls:
+            self.add_controls_to_menu(ui_elements, other_controls)
 
-        self.menu.append(
+        if uvc_controls:
+            self.add_controls_to_menu(uvc_menu, uvc_controls)
+        else:
+            uvc_menu.append(ui.Info_Text("No UVC settings found."))
+
+        ui_elements.append(uvc_menu)
+
+        ui_elements.append(
             ui.Button("Reset to default values", self.sensor.reset_all_control_values)
         )
+
+        return ui_elements
 
     def cleanup(self):
         if self.online:

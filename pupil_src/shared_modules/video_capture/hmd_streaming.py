@@ -52,9 +52,6 @@ class HMD_Streaming_Source(Base_Source):
             topics=("hmd_streaming.world",),
         )
 
-    def update_menu(self):
-        self.menu.append(ui.Info_Text(f"HMD Streaming"))
-
     def cleanup(self):
         self.frame_sub = None
 

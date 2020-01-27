@@ -512,17 +512,10 @@ class File_Source(Playback_Source, Base_Source):
         ):
             self.play = False
 
-    def update_menu(self):
-        super().update_menu()
-        self.menu.append(
+    def settings_ui_elements(self):
+        ui_elements = []
+        ui_elements.append(
             ui.Info_Text(f"File Source: {os.path.split(self.source_path)[-1]}")
-        )
-
-        self.menu.append(
-            ui.Info_Text(
-                "The file source plugin loads and "
-                + "displays video from a given file."
-            )
         )
 
         if self.g_pool.app == "capture":
@@ -532,13 +525,13 @@ class File_Source(Playback_Source, Base_Source):
                 if val:
                     self.play = True
 
-            self.menu.append(ui.Switch("loop", self, setter=toggle_looping))
+            ui_elements.append(ui.Switch("loop", self, setter=toggle_looping))
 
-        self.menu.append(
+        ui_elements.append(
             ui.Text_Input("source_path", self, label="Full path", setter=lambda x: None)
         )
 
-        self.menu.append(
+        ui_elements.append(
             ui.Text_Input(
                 "frame_size",
                 label="Frame size",
@@ -547,7 +540,7 @@ class File_Source(Playback_Source, Base_Source):
             )
         )
 
-        self.menu.append(
+        ui_elements.append(
             ui.Text_Input(
                 "frame_rate",
                 label="Frame rate",
@@ -556,7 +549,7 @@ class File_Source(Playback_Source, Base_Source):
             )
         )
 
-        self.menu.append(
+        ui_elements.append(
             ui.Text_Input(
                 "frame_num",
                 label="Number of frames",
@@ -564,6 +557,7 @@ class File_Source(Playback_Source, Base_Source):
                 getter=lambda: self.get_frame_count(),
             )
         )
+        return ui_elements
 
     def deinit_ui(self):
         self.remove_menu()

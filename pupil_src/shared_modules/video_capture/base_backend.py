@@ -101,14 +101,15 @@ class Base_Source(Plugin):
         self.remove_menu()
 
     def device_list(self):
-        entries = [(None, "Activate Source")]
+        label = "Activate Camera" if self.manual_mode else "Activate Device"
+        entries = [(None, label)]
 
         try:
             for manager in self.g_pool.source_managers:
-                if self.auto_mode:
-                    sources = manager.get_devices()
-                else:
+                if self.manual_mode:
                     sources = manager.get_cameras()
+                else:
+                    sources = manager.get_devices()
 
                 for info in sources:
                     entries.append((info, info.label))
@@ -126,12 +127,12 @@ class Base_Source(Plugin):
             source_info.activate()
 
     @property
-    def auto_mode(self) -> bool:
-        return self.g_pool.source_mode == SourceMode.AUTO
+    def manual_mode(self) -> bool:
+        return self.g_pool.source_mode == SourceMode.MANUAL
 
-    @auto_mode.setter
-    def auto_mode(self, enable) -> None:
-        new_mode = SourceMode.AUTO if enable else SourceMode.MANUAL
+    @manual_mode.setter
+    def manual_mode(self, enable) -> None:
+        new_mode = SourceMode.MANUAL if enable else SourceMode.AUTO
         if new_mode != self.g_pool.source_mode:
             logger.debug(f"Setting source mode: {new_mode.name}")
             self.notify_all({"subject": "backend.change_mode", "mode": new_mode})
@@ -156,7 +157,18 @@ class Base_Source(Plugin):
 
     def update_menu(self):
         del self.menu[:]
-        self.menu.append(ui.Info_Text("Select your video input source."))
+
+        if self.manual_mode:
+            self.menu.append(
+                ui.Info_Text("Select a camera to use as input for this window.")
+            )
+        else:
+            self.menu.append(
+                ui.Info_Text(
+                    "Select a device to use as video input."
+                    " The best matching cameras will be automatically selected."
+                )
+            )
 
         self.menu.append(
             ui.Selector(
@@ -168,9 +180,27 @@ class Base_Source(Plugin):
             )
         )
 
+        if not self.manual_mode:
+            self.menu.append(
+                ui.Info_Text(
+                    "Enable manual camera selection to choose a specific camera"
+                    " as input for every window."
+                )
+            )
+
         self.menu.append(
-            ui.Switch("auto_mode", self, label="Automatic Camera Selection")
+            ui.Switch("manual_mode", self, label="Enable Manual Camera Selection")
         )
+
+        source_settings = self.settings_ui_elements()
+        if source_settings:
+            settings_menu = ui.Growing_Menu(f"Settings")
+            settings_menu.collapsed = True
+            settings_menu.extend(source_settings)
+            self.menu.append(settings_menu)
+
+    def settings_ui_elements(self) -> T.List[ui.UI_element]:
+        return []
 
     def recent_events(self, events):
         """Returns None
