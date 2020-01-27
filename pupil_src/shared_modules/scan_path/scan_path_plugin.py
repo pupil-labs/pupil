@@ -14,7 +14,7 @@ from observable import Observable
 from plugin import Plugin
 from pyglui import ui
 
-from .scan_path_controller import ScanPathController
+from .controller import ScanPathController
 
 
 logger = logging.getLogger(__name__)
