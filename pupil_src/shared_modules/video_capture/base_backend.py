@@ -262,6 +262,8 @@ class Base_Manager(Plugin):
         gui_name (str): String used for manager selector labels
     """
 
+    order = -1
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
