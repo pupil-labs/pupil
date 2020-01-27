@@ -20,7 +20,7 @@ from tasklib.manager import PluginTaskManager
 
 # IMPORTANT: GazeProducerBase needs to be THE LAST in the list of bases, otherwise
 # uniqueness by base class does not work
-class GazeFromOfflineCalibration(Observable, GazeProducerBase):
+class GazeFromOfflineCalibration(GazeProducerBase):
     pretty_class_name = "Gaze From Offline Calibration"
     icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"

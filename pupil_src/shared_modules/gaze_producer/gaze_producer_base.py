@@ -11,11 +11,12 @@ See COPYING and COPYING.LESSER for license details.
 
 from pyglui import ui
 
+from observable import Observable
 import player_methods as pm
 from plugin import Producer_Plugin_Base
 
 
-class GazeProducerBase(Producer_Plugin_Base):
+class GazeProducerBase(Observable, Producer_Plugin_Base):
     uniqueness = "by_base_class"
     order = 0.02
     icon_chr = chr(0xEC14)
