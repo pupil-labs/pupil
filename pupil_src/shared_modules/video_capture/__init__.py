@@ -38,14 +38,14 @@ from .base_backend import (
     StreamError,
 )
 from .file_backend import File_Manager, File_Source, FileSeekError
-from .hmd_streaming import HMD_Streaming_Source, HMD_Streaming_Manager
+from .hmd_streaming import HMD_Streaming_Source
 from .uvc_backend import UVC_Manager, UVC_Source
 
 logger = logging.getLogger(__name__)
 
 
 source_classes = [File_Source, UVC_Source, HMD_Streaming_Source]
-manager_classes = [File_Manager, UVC_Manager, HMD_Streaming_Manager]
+manager_classes = [File_Manager, UVC_Manager]
 
 try:
     from .ndsi_backend import NDSI_Source, NDSI_Manager

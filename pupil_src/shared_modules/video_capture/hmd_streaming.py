@@ -16,7 +16,7 @@ from pyglui import ui
 
 import zmq_tools
 from camera_models import Dummy_Camera, Radial_Dist_Camera
-from video_capture.base_backend import Base_Manager, Base_Source
+from video_capture.base_backend import Base_Source
 
 logger = logging.getLogger(__name__)
 
@@ -127,43 +127,3 @@ class HMD_Streaming_Source(Base_Source):
         logger.error(
             "HMD Streaming backend does not support setting intrinsics manually"
         )
-
-
-class HMD_Streaming_Manager(Base_Manager):
-    """Simple manager to explicitly activate a fake source"""
-
-    gui_name = "HMD Streaming"
-
-    def __init__(self, g_pool):
-        super().__init__(g_pool)
-
-    # Initiates the UI for starting the webcam.
-    def init_ui(self):
-        self.add_menu()
-        from pyglui import ui
-
-        self.menu.append(ui.Info_Text("Backend for HMD Streaming"))
-        self.menu.append(ui.Button("Activate HMD Streaming", self.activate_source))
-
-    def activate_source(self):
-        settings = {}
-        # if the user set fake capture, we dont want it to auto jump back to the old capture.
-        if self.g_pool.process == "world":
-            self.notify_all(
-                {
-                    "subject": "start_plugin",
-                    "name": "HMD_Streaming_Source",
-                    "args": settings,
-                }
-            )
-        else:
-            logger.warning("HMD Streaming backend is not supported in the eye process.")
-
-    def deinit_ui(self):
-        self.remove_menu()
-
-    def recent_events(self, events):
-        pass
-
-    def get_init_dict(self):
-        return super().get_init_dict()

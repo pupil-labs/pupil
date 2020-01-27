@@ -591,67 +591,9 @@ class File_Manager(Base_Manager):
 
     Attributes:
         file_exts (list): File extensions to filter displayed files
-        root_folder (str): Folder path, which includes file sources
     """
 
-    gui_name = "Video File Source"
     file_exts = [".mp4", ".mkv", ".mov", ".mjpeg"]
-
-    def __init__(self, g_pool, root_folder=None):
-        super().__init__(g_pool)
-        base_dir = self.g_pool.user_dir.rsplit(os.path.sep, 1)[0]
-        default_rec_dir = os.path.join(base_dir, "recordings")
-        self.root_folder = root_folder or default_rec_dir
-
-    def init_ui(self):
-        self.add_menu()
-        from pyglui import ui
-
-        self.add_auto_select_button()
-        self.menu.append(
-            ui.Info_Text(
-                "Enter a folder to enumerate all eligible video files. "
-                + "Be aware that entering folders with a lot of files can "
-                + "slow down Pupil Capture."
-            )
-        )
-
-        def set_root(folder):
-            if not os.path.isdir(folder):
-                logger.error("`%s` is not a valid folder path." % folder)
-            else:
-                self.root_folder = folder
-
-        self.menu.append(
-            ui.Text_Input("root_folder", self, label="Source Folder", setter=set_root)
-        )
-
-        def split_enumeration():
-            eligible_files = self.enumerate_folder(self.root_folder)
-            eligible_files.insert(0, (None, "Select to activate"))
-            return zip(*eligible_files)
-
-        self.menu.append(
-            ui.Selector(
-                "selected_file",
-                selection_getter=split_enumeration,
-                getter=lambda: None,
-                setter=self.activate,
-                label="Video File",
-            )
-        )
-
-    def deinit_ui(self):
-        self.remove_menu()
-
-    def activate(self, full_path):
-        if not full_path:
-            return
-        settings = {"source_path": full_path, "timing": "own"}
-        self.activate_source(settings)
-
-    def auto_activate_source(self):
-        self.activate(None)
 
     def on_drop(self, paths):
         for p in paths:
@@ -660,25 +602,11 @@ class File_Manager(Base_Manager):
                 return True
         return False
 
-    def enumerate_folder(self, path):
-        eligible_files = []
-        is_eligible = lambda f: os.path.splitext(f)[-1] in self.file_exts
-        path = os.path.abspath(os.path.expanduser(path))
-        for root, dirs, files in os.walk(path):
+    def activate(self, full_path):
+        if not full_path:
+            return
 
-            def root_split(file):
-                full_p = os.path.join(root, file)
-                disp_p = full_p.replace(path, "")
-                return (full_p, disp_p)
-
-            eligible_files.extend(map(root_split, filter(is_eligible, files)))
-        eligible_files.sort(key=lambda x: x[1])
-        return eligible_files
-
-    def get_init_dict(self):
-        return {"root_folder": self.root_folder}
-
-    def activate_source(self, settings={}):
+        settings = {"source_path": full_path, "timing": "own"}
         if self.g_pool.process == "world":
             self.notify_all(
                 {"subject": "start_plugin", "name": "File_Source", "args": settings}
@@ -692,6 +620,3 @@ class File_Manager(Base_Manager):
                     "args": settings,
                 }
             )
-
-    def recent_events(self, events):
-        pass

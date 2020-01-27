@@ -394,14 +394,7 @@ class NDSI_Source(Base_Source):
 
 
 class NDSI_Manager(Base_Manager):
-    """Enumerates and activates Pupil Mobile video sources
-
-    Attributes:
-        network (ndsi.Network): NDSI Network backend
-        selected_host (unicode): Selected host uuid
-    """
-
-    gui_name = "Pupil Mobile"
+    """Enumerates and activates Pupil Mobile video sources"""
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -409,31 +402,19 @@ class NDSI_Manager(Base_Manager):
             formats={ndsi.DataFormat.V3, ndsi.DataFormat.V4}, callbacks=(self.on_event,)
         )
         self.network.start()
-        self.selected_host = None
         self._recover_in = 3
         self._rejoin_in = 400
-        self.should_select_host = None
         self.cam_selection_lut = {
             "eye0": ["ID0", "PI right"],
             "eye1": ["ID1", "PI left"],
             "world": ["ID2", "Logitech", "PI world"],
         }
+
+        # TODO: this is now useless here!
         logger.warning("Make sure the `time_sync` plugin is loaded!")
 
     def cleanup(self):
         self.network.stop()
-
-    def init_ui(self):
-        self.add_menu()
-        self.re_build_ndsi_menu()
-
-    def deinit_ui(self):
-        self.remove_menu()
-
-    def view_host(self, host_uuid):
-        if self.selected_host != host_uuid:
-            self.selected_host = host_uuid
-            self.re_build_ndsi_menu()
 
     def get_devices(self):
         # store hosts in dict to remove duplicates from multiple sensors
@@ -457,72 +438,6 @@ class NDSI_Manager(Base_Manager):
             for s in self.network.sensors.values()
             if s["sensor_type"] == "video"
         ]
-
-    def host_selection_list(self):
-        devices = {
-            s["host_uuid"]: s["host_name"]  # removes duplicates
-            for s in self.network.sensors.values()
-        }
-
-        if devices:
-            return list(devices.keys()), list(devices.values())
-        else:
-            return [None], ["No hosts found"]
-
-    def source_selection_list(self):
-        default = (None, "Select to activate")
-        sources = [default] + [
-            (s["sensor_uuid"], s["sensor_name"])
-            for s in self.network.sensors.values()
-            if (s["sensor_type"] == "video" and s["host_uuid"] == self.selected_host)
-        ]
-        return zip(*sources)
-
-    def re_build_ndsi_menu(self):
-        del self.menu[1:]
-        from pyglui import ui
-
-        ui_elements = []
-        ui_elements.append(ui.Info_Text("Remote Pupil Mobile sources"))
-        ui_elements.append(
-            ui.Info_Text("Pupil Mobile Commspec v{}".format(__protocol_version__))
-        )
-
-        host_sel, host_sel_labels = self.host_selection_list()
-        ui_elements.append(
-            ui.Selector(
-                "selected_host",
-                self,
-                selection=host_sel,
-                labels=host_sel_labels,
-                setter=self.view_host,
-                label="Remote host",
-            )
-        )
-
-        self.menu.extend(ui_elements)
-        self.add_auto_select_button()
-
-        if not self.selected_host:
-            return
-        ui_elements = []
-
-        host_menu = ui.Growing_Menu("Remote Host Information")
-        ui_elements.append(host_menu)
-
-        src_sel, src_sel_labels = self.source_selection_list()
-        host_menu.append(
-            ui.Selector(
-                "selected_source",
-                selection=src_sel,
-                labels=src_sel_labels,
-                getter=lambda: None,
-                setter=self.activate,
-                label="Source",
-            )
-        )
-
-        self.menu.extend(ui_elements)
 
     def activate(self, key):
         source_type, uid = key.split(".", maxsplit=1)
@@ -554,16 +469,6 @@ class NDSI_Manager(Base_Manager):
                     "args": settings,
                 }
             )
-
-    def auto_select_manager(self):
-        super().auto_select_manager()
-        self.notify_all(
-            {
-                "subject": "backend.ndsi_do_select_host",
-                "target_host": self.selected_host,
-                "delay": 0.4,
-            }
-        )
 
     def auto_activate_source(self, host_uid):
         host_sensors = [
@@ -597,6 +502,7 @@ class NDSI_Manager(Base_Manager):
     def recent_events(self, events):
         self.poll_events()
 
+        # TODO: Move to source
         if (
             isinstance(self.g_pool.capture, NDSI_Source)
             and not self.g_pool.capture.sensor
@@ -618,24 +524,11 @@ class NDSI_Manager(Base_Manager):
         if event["subject"] == "detach":
             logger.debug("detached: %s" % event)
             sensors = [s for s in self.network.sensors.values()]
-            if self.selected_host == event["host_uuid"]:
-                if sensors:
-                    self.selected_host = sensors[0]["host_uuid"]
-                else:
-                    self.selected_host = None
-                self.re_build_ndsi_menu()
 
         elif event["subject"] == "attach":
             if event["sensor_type"] == "video":
                 logger.debug("attached: {}".format(event))
                 self.notify_all({"subject": "backend.ndsi_source_found"})
-
-            if not self.selected_host and not self.should_select_host:
-                self.selected_host = event["host_uuid"]
-            elif self.should_select_host and event["sensor_type"] == "video":
-                self.select_host(self.should_select_host)
-
-            self.re_build_ndsi_menu()
 
     def recover(self):
         self.g_pool.capture.recover(self.network)
@@ -645,15 +538,14 @@ class NDSI_Manager(Base_Manager):
 
         Reacts to notification:
             ``backend.ndsi_source_found``: Check if recovery is possible
-            ``backend.ndsi_do_select_host``: Switches to selected host from other process
 
         Emmits notifications:
             ``backend.ndsi_source_found``
-            ``backend.ndsi_do_select_host`
         """
 
         super().on_notify(n)
 
+        # TODO: move to source
         if (
             n["subject"].startswith("backend.ndsi_source_found")
             and isinstance(self.g_pool.capture, NDSI_Source)
@@ -661,22 +553,5 @@ class NDSI_Manager(Base_Manager):
         ):
             self.recover()
 
-        if n["subject"].startswith("backend.ndsi_do_select_host"):
-            self.select_host(n["target_host"])
-
         if n["subject"] == "backend.ndsi.auto_activate_source":
             self.auto_activate_source(n["host_uid"])
-
-    def select_host(self, selected_host):
-        host_sel, _ = self.host_selection_list()
-        if selected_host in host_sel:
-            self.view_host(selected_host)
-            self.should_select_host = None
-            self.re_build_ndsi_menu()
-            src_sel, _ = self.source_selection_list()
-            # "Select to Activate" is always presenet as first element
-            if len(src_sel) >= 2:
-                self.auto_activate_source()
-
-        else:
-            self.should_select_host = selected_host

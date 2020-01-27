@@ -820,13 +820,7 @@ class UVC_Source(Base_Source):
 
 
 class UVC_Manager(Base_Manager):
-    """Manages local USB sources
-
-    Attributes:
-        check_intervall (float): Intervall in which to look for new UVC devices
-    """
-
-    gui_name = "Local USB"
+    """Manages local USB sources"""
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -836,39 +830,6 @@ class UVC_Manager(Base_Manager):
             "eye1": ["ID1"],
             "world": ["ID2", "Logitech"],
         }
-
-    def get_init_dict(self):
-        return {}
-
-    def init_ui(self):
-        self.add_menu()
-
-        from pyglui import ui
-
-        self.add_auto_select_button()
-        ui_elements = []
-        ui_elements.append(ui.Info_Text("Local UVC sources"))
-
-        def dev_selection_list():
-            default = (None, "Select to activate")
-            self.devices.update()
-            dev_pairs = [default] + [
-                (d["uid"], d["name"])
-                for d in self.devices
-                if "RealSense" not in d["name"]
-            ]
-            return zip(*dev_pairs)
-
-        ui_elements.append(
-            ui.Selector(
-                "selected_source",
-                selection_getter=dev_selection_list,
-                getter=lambda: None,
-                setter=self.activate,
-                label="Activate source",
-            )
-        )
-        self.menu.extend(ui_elements)
 
     def get_devices(self):
         self.devices.update()
@@ -928,8 +889,6 @@ class UVC_Manager(Base_Manager):
             )
 
     def on_notify(self, notification):
-        super().on_notify(notification)
-
         if notification["subject"] == "backend.uvc.auto_activate_source":
             self.auto_activate_source()
 
@@ -959,12 +918,6 @@ class UVC_Manager(Base_Manager):
         )
         self.activate_source(cam["uid"])
 
-    def deinit_ui(self):
-        self.remove_menu()
-
     def cleanup(self):
         self.devices.cleanup()
         self.devices = None
-
-    def recent_events(self, events):
-        pass
