@@ -19,7 +19,7 @@ from plugin import Plugin
 
 from .scan_path_preprocessing_task import ScanPathPreprocessingTask
 from .scan_path_background_task import ScanPathBackgroundTask
-from .scan_path_storage import ScanPathStorage
+from .storage import ScanPathStorage
 
 
 logger = logging.getLogger(__name__)
