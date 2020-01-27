@@ -150,7 +150,7 @@ def generate_frames_with_gaze(g_pool):
 
 def generate_frames(g_pool):
     recording = PupilRecording(g_pool.rec_dir)
-    video_path = recording.files().world()[0]
+    video_path = recording.files().world().videos()[0]
 
     fs = File_Source(g_pool, source_path=video_path, fill_gaps=True)
 
