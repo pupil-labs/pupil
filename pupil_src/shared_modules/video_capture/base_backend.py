@@ -101,7 +101,7 @@ class Base_Source(Plugin):
         self.remove_menu()
 
     def device_list(self):
-        entries = [(None, "... select to activate ...")]
+        entries = [(None, "Activate Source")]
 
         try:
             for manager in self.g_pool.source_managers:
@@ -164,7 +164,7 @@ class Base_Source(Plugin):
                 selection_getter=self.device_list,
                 getter=lambda: None,
                 setter=self.activate_source,
-                label="Activate Source:",
+                label=" ",  # TODO: Hide label completely
             )
         )
 
