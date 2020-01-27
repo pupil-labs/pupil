@@ -382,12 +382,13 @@ class UVC_Source(Base_Source):
                 )
             except (InitialisationError, uvc.InitError):
                 time.sleep(0.02)
-                self.update_menu()
             self._restart_in = int(5 / 0.02)
         else:
             self._restart_in -= 1
 
     def recent_events(self, events):
+        was_online = self.online
+
         try:
             frame = self.uvc_capture.get_frame(0.05)
 
@@ -425,6 +426,9 @@ class UVC_Source(Base_Source):
             self._recent_frame = frame
             events["frame"] = frame
             self._restart_in = 3
+
+        if was_online != self.online:
+            self.update_menu()
 
     def _get_uvc_controls(self):
         d = {}
