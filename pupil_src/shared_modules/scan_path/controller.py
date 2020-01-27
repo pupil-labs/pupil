@@ -17,9 +17,8 @@ import numpy as np
 from observable import Observable
 from plugin import Plugin
 
-from .scan_path_preprocessing_task import ScanPathPreprocessingTask
-from .scan_path_background_task import ScanPathBackgroundTask
 from .storage import ScanPathStorage
+from .tasks import ScanPathBackgroundTask, ScanPathPreprocessingTask
 
 
 logger = logging.getLogger(__name__)

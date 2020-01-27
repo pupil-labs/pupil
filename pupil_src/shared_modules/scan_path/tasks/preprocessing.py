@@ -15,7 +15,7 @@ import numpy as np
 
 from observable import Observable
 
-from .base_task import _BaseTask
+from .base import _BaseTask
 from .utils import (
     timestamp_ns,
     sec_to_ns,

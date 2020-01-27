@@ -15,7 +15,7 @@ import numpy as np
 from observable import Observable
 from background_helper import IPC_Logging_Task_Proxy
 
-from .base_task import _BaseTask
+from .base import _BaseTask
 from .utils import (
     FakeGPool,
     generate_frames,
