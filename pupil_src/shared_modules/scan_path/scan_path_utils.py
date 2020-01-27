@@ -91,12 +91,10 @@ def scan_path_numpy_array_from(it):
     return new_array
 
 
-class FakeGPool(SimpleNamespace):
+class FakeGPool:
     def __init__(self, g_pool):
         self.rec_dir = g_pool.rec_dir
         self.app = g_pool.app
-        self.ipc_pub = g_pool.ipc_pub
-        # self.ipc_pub = None
         self.min_data_confidence = g_pool.min_data_confidence
         self.timestamps = g_pool.timestamps
 
