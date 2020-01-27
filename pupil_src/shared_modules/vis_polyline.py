@@ -167,6 +167,7 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
             return [
                 denormalize(datum["norm_pos"], image_size, flip_y=True)
                 for datum in base_gaze_data
+                if datum["confidence"] >= self.g_pool.min_data_confidence
             ]
 
     def _draw_polyline_path(self, frame, events):
