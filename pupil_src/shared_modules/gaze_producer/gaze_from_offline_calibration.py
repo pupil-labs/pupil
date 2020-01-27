@@ -180,7 +180,7 @@ class GazeFromOfflineCalibration(GazeProducerBase):
 
     def _publish_gaze(self, gaze_bisector):
         self.g_pool.gaze_positions = gaze_bisector
-        self._gaze_changed_announcer.announce_new()
+        self._gaze_changed_announcer.announce_new(delay=1)
 
     def _seek_to_frame(self, frame_index):
         self.notify_all({"subject": "seek_control.should_seek", "index": frame_index})
