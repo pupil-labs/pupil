@@ -104,20 +104,14 @@ class Base_Source(Plugin):
         label = "Activate Camera" if self.manual_mode else "Activate Device"
         entries = [(None, label)]
 
-        try:
-            for manager in self.g_pool.source_managers:
-                if self.manual_mode:
-                    sources = manager.get_cameras()
-                else:
-                    sources = manager.get_devices()
+        for manager in self.g_pool.source_managers:
+            if self.manual_mode:
+                sources = manager.get_cameras()
+            else:
+                sources = manager.get_devices()
 
-                for info in sources:
-                    entries.append((info, info.label))
-        except AttributeError:
-            # TODO: If no manager has been instantiated yet, g_pool.source_managers does
-            # not exist. Find a better way for this, probably ensure that the list
-            # exists?
-            pass
+            for info in sources:
+                entries.append((info, info.label))
 
         return zip(*entries)
 
