@@ -29,19 +29,26 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
     icon_chr = chr(0xE922)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool, polyline_style_init_dict={}, scan_path_init_dict={}, **kwargs):
+    def __init__(
+        self, g_pool, polyline_style_init_dict={}, scan_path_init_dict={}, **kwargs
+    ):
         super().__init__(g_pool)
 
-        self.polyline_style_controller = PolylineStyleController(**polyline_style_init_dict)
+        self.polyline_style_controller = PolylineStyleController(
+            **polyline_style_init_dict
+        )
 
         self.scan_path_controller = ScanPathController(g_pool, **scan_path_init_dict)
-        self.scan_path_controller.add_observer("on_update_ui", self._update_scan_path_ui)
+        self.scan_path_controller.add_observer(
+            "on_update_ui", self._update_scan_path_ui
+        )
 
         self._gaze_changed_listener = Listener(
             plugin=self, topic="gaze_positions", rec_dir=g_pool.rec_dir
         )
         self._gaze_changed_listener.add_observer(
-            method_name="on_data_changed", observer=self.scan_path_controller.invalidate_data
+            method_name="on_data_changed",
+            observer=self.scan_path_controller.invalidate_data,
         )
 
     def get_init_dict(self):
@@ -69,7 +76,7 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
             min=self.polyline_style_controller.rgba_min,
             max=self.polyline_style_controller.rgba_max,
             step=self.polyline_style_controller.rgba_step,
-            label="Red"
+            label="Red",
         )
         polyline_style_color_g_slider = ui.Slider(
             "g",
@@ -77,7 +84,7 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
             min=self.polyline_style_controller.rgba_min,
             max=self.polyline_style_controller.rgba_max,
             step=self.polyline_style_controller.rgba_step,
-            label="Green"
+            label="Green",
         )
         polyline_style_color_b_slider = ui.Slider(
             "b",
@@ -85,7 +92,7 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
             min=self.polyline_style_controller.rgba_min,
             max=self.polyline_style_controller.rgba_max,
             step=self.polyline_style_controller.rgba_step,
-            label="Blue"
+            label="Blue",
         )
 
         scan_path_timeframe_range = ui.Slider(
@@ -94,11 +101,11 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
             min=self.scan_path_controller.min_timeframe,
             max=self.scan_path_controller.max_timeframe,
             step=self.scan_path_controller.timeframe_step,
-            label="Timeframe"
+            label="Timeframe",
         )
-        
+
         scan_path_status = ui.Info_Text("")
-        
+
         polyline_style_color_menu = ui.Growing_Menu("Color")
         polyline_style_color_menu.collapsed = True
         polyline_style_color_menu.append(polyline_style_color_info_text)
@@ -110,7 +117,7 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
         scan_path_menu.collapsed = False
         scan_path_menu.append(scan_path_timeframe_range)
         scan_path_menu.append(scan_path_status)
-        
+
         self.add_menu()
         self.menu.label = "Gaze Polyline"
         self.menu.append(polyline_style_thickness_slider)
@@ -119,7 +126,7 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
 
         self.scan_path_timeframe_range = scan_path_timeframe_range
         self.scan_path_status = scan_path_status
-        
+
         self._update_scan_path_ui()
 
     def deinit_ui(self):
@@ -150,18 +157,25 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
         if scan_path_gaze_data is not None:
             points_fields = ["norm_x", "norm_y"]
             gaze_points = scan_path_gaze_data[points_fields]
-            gaze_points = np.array(gaze_points.tolist(), dtype=gaze_points.dtype[0]) #FIXME: This is a workaround
+            gaze_points = np.array(
+                gaze_points.tolist(), dtype=gaze_points.dtype[0]
+            )  # FIXME: This is a workaround
             gaze_points = gaze_points.reshape((-1, len(points_fields)))
             gaze_points = np_denormalize(gaze_points, image_size, flip_y=True)
             return gaze_points.tolist()
         else:
-            return [denormalize(datum["norm_pos"], image_size, flip_y=True) for datum in base_gaze_data]
+            return [
+                denormalize(datum["norm_pos"], image_size, flip_y=True)
+                for datum in base_gaze_data
+            ]
 
     def _draw_polyline_path(self, frame, events):
         pts = self._polyline_points(
             image_size=frame.img.shape[:-1][::-1],
             base_gaze_data=events.get("gaze", []),
-            scan_path_gaze_data=self.scan_path_controller.scan_path_gaze_for_frame(frame),
+            scan_path_gaze_data=self.scan_path_controller.scan_path_gaze_for_frame(
+                frame
+            ),
         )
 
         if not pts:
@@ -195,11 +209,7 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
 
             gray = float(idx) / points_to_draw_count
             transparent_circle(
-                frame.img,
-                point,
-                radius=20,
-                color=(gray, gray, gray, 0.9),
-                thickness=2,
+                frame.img, point, radius=20, color=(gray, gray, gray, 0.9), thickness=2
             )
 
 
@@ -233,4 +243,4 @@ class PolylineStyleController:
 
     @property
     def cv2_bgra(self):
-        return (self.b*255, self.g*255, self.r*255, self.a*255)
+        return (self.b * 255, self.g * 255, self.r * 255, self.a * 255)
