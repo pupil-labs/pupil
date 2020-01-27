@@ -16,14 +16,14 @@ from observable import Observable
 from background_helper import IPC_Logging_Task_Proxy
 
 from .base import _BaseTask
-from .utils import (
+from scan_path.algorithm import ScanPathAlgorithm
+from scan_path.utils import (
     FakeGPool,
     generate_frames,
     SCAN_PATH_GAZE_DATUM_DTYPE,
     scan_path_zeros_numpy_array,
     scan_path_numpy_array_from,
 )
-from .algorithm import ScanPathAlgorithm
 
 
 class ScanPathBackgroundTask(Observable, _BaseTask):

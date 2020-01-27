@@ -16,7 +16,7 @@ import numpy as np
 from observable import Observable
 
 from .base import _BaseTask
-from .utils import (
+from scan_path.utils import (
     timestamp_ns,
     sec_to_ns,
     generate_frame_indices_with_deserialized_gaze,
