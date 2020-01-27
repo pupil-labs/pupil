@@ -17,7 +17,7 @@ import cv2
 from pyglui import ui
 from methods import denormalize
 
-from scan_path.scan_path_utils import np_denormalize
+from scan_path.utils import np_denormalize
 
 
 class Vis_Polyline(Visualizer_Plugin_Base):

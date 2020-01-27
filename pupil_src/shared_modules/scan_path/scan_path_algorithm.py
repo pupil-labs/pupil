@@ -17,7 +17,7 @@ import cv2
 import methods as m
 import file_methods as fm
 
-from .scan_path_utils import (
+from .utils import (
     scan_path_numpy_array_from,
     scan_path_zeros_numpy_array,
     np_denormalize,

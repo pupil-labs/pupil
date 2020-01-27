@@ -16,7 +16,7 @@ from observable import Observable
 from background_helper import IPC_Logging_Task_Proxy
 
 from .base_task import _BaseTask
-from .scan_path_utils import (
+from .utils import (
     FakeGPool,
     generate_frames,
     SCAN_PATH_GAZE_DATUM_DTYPE,

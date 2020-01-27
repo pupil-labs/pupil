@@ -15,7 +15,7 @@ import contextlib
 
 import numpy as np
 
-from .scan_path_utils import scan_path_zeros_numpy_array, SCAN_PATH_GAZE_DATUM_DTYPE
+from .utils import scan_path_zeros_numpy_array, SCAN_PATH_GAZE_DATUM_DTYPE
 
 
 logger = logging.getLogger(__name__)
