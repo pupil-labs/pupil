@@ -36,6 +36,10 @@ class ScanPathAlgorithm:
         self._prev_gaze_datums = scan_path_zeros_numpy_array()
 
     def update_from_frame(self, frame, preprocessed_data):
+        if frame.is_fake:
+            self.reset()
+            return scan_path_numpy_array_from(preprocessed_data)
+
         width, height = frame.width, frame.height
         return self.update_from_raw_data(
             frame_index=frame.index,

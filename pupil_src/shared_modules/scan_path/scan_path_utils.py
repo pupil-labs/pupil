@@ -160,8 +160,6 @@ def generate_frames(g_pool):
         except EndofVideoError:
             break
 
-        # TODO: Yield None instead of current_frame if current_frame is a gap frame
-
         progress = current_frame.index / total_frame_count
 
         yield progress, current_frame
