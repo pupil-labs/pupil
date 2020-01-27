@@ -943,16 +943,23 @@ class UVC_Manager(Base_Manager):
             return
 
         name_patterns = self.cam_selection_lut[self.g_pool.process]
-        matching_cams_ids = [
-            device["uid"]
+        matching_cams = [
+            device
             for device in self.devices
             if any(pattern in device["name"] for pattern in name_patterns)
         ]
 
-        if matching_cams_ids:
-            self.activate_source(matching_cams_ids[0])
-        else:
+        if not matching_cams:
             logger.warning("Could not find default device.")
+            return
+
+        # Sorting cams by bus_number increases chances of selecting only cams from the
+        # same headset when having multiple headsets connected. Note that two headsets
+        # might have the same bus_number when they share an internal USB bus.
+        cam = min(
+            matching_cams, key=lambda device: device.get("bus_number", float("inf"))
+        )
+        self.activate_source(cam["uid"])
 
     def deinit_ui(self):
         self.remove_menu()
