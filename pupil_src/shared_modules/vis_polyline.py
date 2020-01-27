@@ -21,35 +21,31 @@ from scan_path.utils import np_denormalize
 
 
 class Vis_Polyline(Visualizer_Plugin_Base):
+    order = 0.9
     uniqueness = "not_unique"
     icon_chr = chr(0xE922)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool, color=(1.0, 0.0, 0.4, 1.0), thickness=2):
+    def __init__(self, g_pool, polyline_style_init_dict={}, **kwargs):
         super().__init__(g_pool)
-        self.order = 0.9
-        self.menu = None
+        self.polyline_style_controller = PolylineStyleController(**polyline_style_init_dict)
 
-        self.r = color[0]
-        self.g = color[1]
-        self.b = color[2]
-        self.a = color[3]
-        self.thickness = thickness
+    def get_init_dict(self):
+        return {"polyline_style_init_dict": self.polyline_style_controller.get_init_dict()}
 
     def recent_events(self, events):
         frame = events.get("frame")
         if not frame:
             return
         pts = self.previous_points(frame, events)
-        bgra = (self.b * 255, self.g * 255, self.r * 255, self.a * 255)
         if pts:
             pts = np.array([pts], dtype=np.int32)
             cv2.polylines(
                 frame.img,
                 pts,
                 isClosed=False,
-                color=bgra,
-                thickness=self.thickness,
+                color=self.polyline_style_controller.cv2_bgra,
+                thickness=self.polyline_style_controller.thickness,
                 lineType=cv2.LINE_AA,
             )
 
@@ -71,28 +67,86 @@ class Vis_Polyline(Visualizer_Plugin_Base):
         return events.get("scan_path_gaze", None) is not None
 
     def init_ui(self):
-        self.add_menu()
-        self.menu.label = "Gaze Polyline"
-        self.menu.append(
-            ui.Slider("thickness", self, min=1, step=1, max=15, label="Line thickness")
+
+        polyline_style_thickness_slider = ui.Slider(
+            "thickness",
+            self.polyline_style_controller,
+            min=self.polyline_style_controller.thickness_min,
+            max=self.polyline_style_controller.thickness_max,
+            step=self.polyline_style_controller.thickness_step,
+            label="Line thickness",
         )
 
-        color_menu = ui.Growing_Menu("Color")
-        color_menu.collapsed = True
-        color_menu.append(ui.Info_Text("Set RGB color component values."))
-        color_menu.append(
-            ui.Slider("r", self, min=0.0, step=0.05, max=1.0, label="Red")
+        polyline_style_color_info_text = ui.Info_Text("Set RGB color component values.")
+
+        polyline_style_color_r_slider = ui.Slider(
+            "r",
+            self.polyline_style_controller,
+            min=self.polyline_style_controller.rgba_min,
+            max=self.polyline_style_controller.rgba_max,
+            step=self.polyline_style_controller.rgba_step,
+            label="Red"
         )
-        color_menu.append(
-            ui.Slider("g", self, min=0.0, step=0.05, max=1.0, label="Green")
+        polyline_style_color_g_slider = ui.Slider(
+            "g",
+            self.polyline_style_controller,
+            min=self.polyline_style_controller.rgba_min,
+            max=self.polyline_style_controller.rgba_max,
+            step=self.polyline_style_controller.rgba_step,
+            label="Green"
         )
-        color_menu.append(
-            ui.Slider("b", self, min=0.0, step=0.05, max=1.0, label="Blue")
+        polyline_style_color_b_slider = ui.Slider(
+            "b",
+            self.polyline_style_controller,
+            min=self.polyline_style_controller.rgba_min,
+            max=self.polyline_style_controller.rgba_max,
+            step=self.polyline_style_controller.rgba_step,
+            label="Blue"
         )
-        self.menu.append(color_menu)
+
+        polyline_style_color_menu = ui.Growing_Menu("Color")
+        polyline_style_color_menu.collapsed = True
+        polyline_style_color_menu.append(polyline_style_color_info_text)
+        polyline_style_color_menu.append(polyline_style_color_r_slider)
+        polyline_style_color_menu.append(polyline_style_color_g_slider)
+        polyline_style_color_menu.append(polyline_style_color_b_slider)
+
+        self.menu.label = "Gaze Polyline"
+        self.menu.append(polyline_style_thickness_slider)
+        self.menu.append(polyline_style_color_menu)
 
     def deinit_ui(self):
         self.remove_menu()
 
+
+class PolylineStyleController:
+
+    rgba_min = 0.0
+    rgba_max = 1.0
+    rgba_step = 0.05
+
+    thickness_min = 1
+    thickness_max = 15
+    thickness_step = 1
+
+    def __init__(self, rgba=(1.0, 0.0, 0.4, 1.0), thickness=2):
+        self.rgba = rgba
+        self.thickness = thickness
+
+    @property
+    def rgba(self):
+        return (self.r, self.g, self.b, self.a)
+
+    @rgba.setter
+    def rgba(self, rgba):
+        self.r = rgba[0]
+        self.g = rgba[1]
+        self.b = rgba[2]
+        self.a = rgba[3]
+
     def get_init_dict(self):
-        return {"color": (self.r, self.g, self.b, self.a), "thickness": self.thickness}
+        return {"rgba": self.rgba, "thickness": self.thickness}
+
+    @property
+    def cv2_bgra(self):
+        return (self.b*255, self.g*255, self.r*255, self.a*255)
