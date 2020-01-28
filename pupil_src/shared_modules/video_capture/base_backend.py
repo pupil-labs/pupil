@@ -119,7 +119,6 @@ class Base_Source(Plugin):
         return zip(*entries)
 
     def activate_source(self, source_info):
-        print(source_info)
         if source_info is not None:
             source_info.activate()
 
