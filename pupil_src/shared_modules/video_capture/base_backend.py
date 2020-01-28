@@ -64,6 +64,7 @@ class Base_Source(Plugin):
 
     Attributes:
         g_pool (object): Global container, see `Plugin.g_pool`
+        allow_source_selection (bool): if False, no Selector will be drawn, only source info
     """
 
     uniqueness = "by_base_class"
@@ -75,11 +76,19 @@ class Base_Source(Plugin):
     def pretty_class_name(self):
         return "Video Source"
 
-    def __init__(self, g_pool, *, source_mode: T.Optional[SourceMode] = None, **kwargs):
+    def __init__(
+        self,
+        g_pool,
+        *,
+        allow_source_selection: bool = True,
+        source_mode: T.Optional[SourceMode] = None,
+        **kwargs,
+    ):
         super().__init__(g_pool)
         self.g_pool.capture = self
         self._recent_frame = None
         self._intrinsics = None
+        self.allow_source_selection = allow_source_selection
 
         # Three relevant cases for initializing source_mode:
         #   - Plugin started at runtime: use existing source mode in g_pool
@@ -162,6 +171,11 @@ class Base_Source(Plugin):
         """
 
         del self.menu[:]
+
+        if not self.allow_source_selection:
+            # only render source info/settings
+            self.menu.extend(self.ui_elements())
+            return
 
         if self.manual_mode:
             self.menu.append(

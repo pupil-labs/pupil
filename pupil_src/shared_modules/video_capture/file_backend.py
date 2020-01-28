@@ -212,10 +212,16 @@ class File_Source(Playback_Source, Base_Source):
         loop=False,
         buffered_decoding=False,
         fill_gaps=False,
+        allow_source_selection=False,
         *args,
         **kwargs,
     ):
-        super().__init__(g_pool, *args, **kwargs)
+        # NOTE: File_Source is normally not intended to be used as capture source, so we
+        # just want to render info in the menu. When used as capture source, need to
+        # specify allow_source_selection=True.
+        super().__init__(
+            g_pool, *args, allow_source_selection=allow_source_selection, **kwargs
+        )
         if self.timing == "external":
             self.recent_events = self.recent_events_external_timing
         else:
@@ -558,9 +564,6 @@ class File_Source(Playback_Source, Base_Source):
         )
         return ui_elements
 
-    def deinit_ui(self):
-        self.remove_menu()
-
     def cleanup(self):
         try:
             self.video_stream.cleanup()
@@ -605,7 +608,11 @@ class File_Manager(Base_Manager):
         if not full_path:
             return
 
-        settings = {"source_path": full_path, "timing": "own"}
+        settings = {
+            "source_path": full_path,
+            "timing": "own",
+            "allow_source_selection": True,
+        }
         if self.g_pool.process == "world":
             self.notify_all(
                 {"subject": "start_plugin", "name": "File_Source", "args": settings}
