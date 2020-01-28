@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 # Suppress pyre debug logs (except beacon)
 logger.debug("Suppressing pyre debug logs (except zbeacon)")
 logging.getLogger("pyre").setLevel(logging.WARNING)
-logging.getLogger("pyre.zbeacon").setLevel(logging.WARNING)
+logging.getLogger("pyre.zbeacon").setLevel(logging.DEBUG)
 
 
 class NDSI_Source(Base_Source):
