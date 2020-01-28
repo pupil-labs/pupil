@@ -80,9 +80,6 @@ class ScanPathController(Observable):
         self._preproc.process()
         self._bg_task.process()
 
-    def invalidate_data(self):
-        self._gaze_data_store.mark_invalid()
-
     def scan_path_gaze_for_frame(self, frame):
         if self.timeframe == 0.0:
             return None
@@ -103,6 +100,11 @@ class ScanPathController(Observable):
     def cleanup(self):
         self._preproc.cleanup()
         self._bg_task.cleanup()
+
+    def on_gaze_data_changed(self):
+        self._preproc.cancel()
+        self._bg_task.cancel()
+        self._gaze_data_store.mark_invalid()
 
     def on_update_ui(self):
         pass

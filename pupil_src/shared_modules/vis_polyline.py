@@ -48,7 +48,7 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
         )
         self._gaze_changed_listener.add_observer(
             method_name="on_data_changed",
-            observer=self.scan_path_controller.invalidate_data,
+            observer=self.scan_path_controller.on_gaze_data_changed,
         )
 
     def get_init_dict(self):
