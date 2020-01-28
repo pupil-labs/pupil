@@ -567,7 +567,7 @@ class UVC_Source(Base_Source):
     def online(self):
         return bool(self.uvc_capture)
 
-    def settings_ui_elements(self):
+    def ui_elements(self):
         ui_elements = []
 
         if self.uvc_capture is None:

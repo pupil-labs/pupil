@@ -189,13 +189,13 @@ class Base_Source(Plugin):
             ui.Switch("manual_mode", self, label="Enable Manual Camera Selection")
         )
 
-        source_settings = self.settings_ui_elements()
+        source_settings = self.ui_elements()
         if source_settings:
             settings_menu = ui.Growing_Menu(f"Settings")
             settings_menu.extend(source_settings)
             self.menu.append(settings_menu)
 
-    def settings_ui_elements(self) -> T.List[ui.UI_element]:
+    def ui_elements(self) -> T.List[ui.UI_element]:
         return []
 
     def recent_events(self, events):

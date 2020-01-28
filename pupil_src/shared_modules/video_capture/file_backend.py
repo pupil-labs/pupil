@@ -512,7 +512,7 @@ class File_Source(Playback_Source, Base_Source):
         ):
             self.play = False
 
-    def settings_ui_elements(self):
+    def ui_elements(self):
         ui_elements = []
         ui_elements.append(
             ui.Info_Text(f"File Source: {os.path.split(self.source_path)[-1]}")

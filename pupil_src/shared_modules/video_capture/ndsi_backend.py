@@ -340,7 +340,7 @@ class NDSI_Source(Base_Source):
             return
         self.update_menu()
 
-    def settings_ui_elements(self):
+    def ui_elements(self):
 
         ui_elements = []
         ui_elements.append(
