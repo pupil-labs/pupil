@@ -127,3 +127,8 @@ class HMD_Streaming_Source(Base_Source):
         logger.error(
             "HMD Streaming backend does not support setting intrinsics manually"
         )
+
+    def ui_elements(self):
+        ui_elements = []
+        ui_elements.append(ui.Info_Text(f"HMD Streaming"))
+        return ui_elements
