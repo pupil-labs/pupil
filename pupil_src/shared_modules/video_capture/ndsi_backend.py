@@ -63,7 +63,7 @@ class NDSI_Source(Base_Source):
         self._host_name = host_name
         self._frame_size = frame_size
         self._frame_rate = frame_rate
-        self.has_ui = False
+        self.ui_initialized = False
         self.control_id_ui_mapping = {}
         self.get_frame_timeout = 100  # ms
         self.ghost_mode_timeout = 10  # sec
@@ -191,7 +191,7 @@ class NDSI_Source(Base_Source):
             logger.warning("Error {}".format(event["error_str"]))
             if "control_id" in event and event["control_id"] in self.sensor.controls:
                 logger.debug(str(self.sensor.controls[event["control_id"]]))
-        elif self.has_ui and (
+        elif self.ui_initialized and (
             event["control_id"] not in self.control_id_ui_mapping
             or event["changes"].get("dtype") == "strmapping"
             or event["changes"].get("dtype") == "intmapping"
@@ -260,10 +260,10 @@ class NDSI_Source(Base_Source):
 
     def init_ui(self):
         super().init_ui()
-        self.has_ui = True
+        self.ui_initialized = True
 
     def deinit_ui(self):
-        self.has_ui = False
+        self.ui_initialized = False
         super().deinit_ui()
 
     def add_controls_to_menu(self, menu, controls):
