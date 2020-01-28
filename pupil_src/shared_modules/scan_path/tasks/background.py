@@ -81,8 +81,8 @@ class ScanPathBackgroundTask(Observable, _BaseTask):
         if self._bg_task is not None:
             self._bg_task.cancel()
             self._bg_task = None
-            self._progress = 0.0
             self.on_canceled()
+        self._progress = 0.0
 
     def cleanup(self):
         self.cancel()

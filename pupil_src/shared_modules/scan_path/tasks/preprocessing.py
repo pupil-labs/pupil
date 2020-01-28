@@ -111,9 +111,9 @@ class ScanPathPreprocessingTask(Observable, _BaseTask):
 
     def cancel(self):
         if isinstance(self._state, ActiveState):
-            self._progress = 0.0
             self._state = CanceledState(self.g_pool)
             self.on_canceled()
+        self._progress = 0.0
 
     def cleanup(self):
         self.cancel()
