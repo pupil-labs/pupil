@@ -53,7 +53,7 @@ if platform.system() == "Darwin":
         hiddenimports=[] + av_hidden_imports + pyglui_hidden_imports,
         hookspath=None,
         runtime_hooks=None,
-        excludes=["matplotlib", "pyrealsense"],
+        excludes=["matplotlib"],
     )
     pyz = PYZ(a.pure)
     exe = EXE(
@@ -99,7 +99,7 @@ elif platform.system() == "Linux":
         hiddenimports=[] + av_hidden_imports + pyglui_hidden_imports,
         hookspath=None,
         runtime_hooks=None,
-        excludes=["matplotlib", "pyrealsense"],
+        excludes=["matplotlib"],
     )
 
     pyz = PYZ(a.pure)
@@ -181,7 +181,7 @@ elif platform.system() == "Windows":
         runtime_hooks=None,
         win_no_prefer_redirects=False,
         win_private_assemblies=False,
-        excludes=["matplotlib", "pyrealsense"],
+        excludes=["matplotlib"],
     )
 
     pyz = PYZ(a.pure)
