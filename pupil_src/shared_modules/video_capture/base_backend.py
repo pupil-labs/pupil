@@ -88,6 +88,10 @@ class Base_Source(Plugin):
         if not hasattr(self.g_pool, "source_mode"):
             self.g_pool.source_mode = source_mode or SourceMode.AUTO
 
+        if not hasattr(self.g_pool, "source_managers"):
+            # If for some reason no manager is loaded, we initialize this ourselves.
+            self.g_pool.source_managers = []
+
     def add_menu(self):
         super().add_menu()
         self.menu_icon.order = 0.2
