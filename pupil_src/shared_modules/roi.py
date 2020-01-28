@@ -20,6 +20,7 @@ from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
 
 import glfw
 from methods import denormalize, normalize
+from observable import Observable
 from plugin import Plugin
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ Bounds = T.Tuple[int, int, int, int]
 ChangeCallback = T.Callable[[], None]
 
 
-class RoiModel:
+class RoiModel(Observable):
     """Model for ROI masks on an image frame.
 
     The mask has 2 primary properties:
@@ -60,7 +61,7 @@ class RoiModel:
         self._miny = 0
         self._maxx = width - 1
         self._maxy = height - 1
-        self._changed()
+        self.on_changed()
 
     def is_invalid(self) -> bool:
         """Returns true if the frame size has 0 dimension."""
@@ -70,7 +71,7 @@ class RoiModel:
         """Set frame size to (0, 0)."""
         self._frame_width = 0
         self._frame_height = 0
-        self._changed()
+        self.on_changed()
 
     @property
     def frame_size(self) -> Vec2:
@@ -110,7 +111,7 @@ class RoiModel:
         # set bounds (to also apply contrainsts)
         self.bounds = minx, miny, maxx, maxy
 
-        self._changed()
+        self.on_changed()
         logger.debug(f"Roi changed frame_size, now: {self}")
 
     @property
@@ -143,7 +144,7 @@ class RoiModel:
 
         self._minx, self._miny, self._maxx, self._maxy = minx, miny, maxx, maxy
 
-        self._changed()
+        self.on_changed()
 
     def __str__(self):
         return f"Roi(frame={self.frame_size}, bounds={self.bounds})"
@@ -152,13 +153,12 @@ class RoiModel:
         """Register callback to be called when model changes."""
         self._change_callbacks.append(callback)
 
-    def _changed(self) -> None:
-        """Notify callbacks for change."""
-        for callback in self._change_callbacks:
-            try:
-                callback()
-            except Exception as e:
-                logger.debug(f"Failed to call callback {callback}: {e}")
+    def on_changed(self) -> None:
+        """Called when the model changes.
+        
+        Observe this method to be notified of any changes.
+        """
+        pass
 
 
 class Handle(Enum):
@@ -195,7 +195,7 @@ class Roi(Plugin):
         self.model.bounds = bounds
         self._active_handle = Handle.NONE
         self.reset_points()
-        self.model.on_change(self.reset_points)
+        self.model.add_observer("on_changed", self.reset_points)
 
         # Need to keep track of whether we have a valid frame to work with. Otherwise
         # don't render UI.
