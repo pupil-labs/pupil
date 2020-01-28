@@ -16,10 +16,10 @@ import re
 import time
 
 import numpy as np
-import uvc
 from pyglui import cygl, ui
 
 import gl_utils
+import uvc
 from camera_models import load_intrinsics
 from version_utils import VersionFormat
 
@@ -822,7 +822,7 @@ class UVC_Source(Base_Source):
 
 
 class UVC_Manager(Base_Manager):
-    """Manages local USB sources"""
+    """Manages local USB sources."""
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -891,6 +891,15 @@ class UVC_Manager(Base_Manager):
             )
 
     def on_notify(self, notification):
+        """Starts appropriate UVC sources.
+
+        Emits notifications:
+            ``backend.uvc.auto_activate_source``: All UVC managers should auto activate a source
+            ``start_(eye_)plugin``: Starts UVC sources
+
+        Reacts to notifications:
+            ``backend.uvc.auto_activate_source``: Auto activate best source for process
+        """
         if notification["subject"] == "backend.uvc.auto_activate_source":
             self.auto_activate_source()
 

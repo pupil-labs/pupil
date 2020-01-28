@@ -174,7 +174,7 @@ class NDSI_Source(Base_Source):
                 self.sensor = None
                 self._source_id = None
                 self._initial_refresh = True
-                self.update_control_menu()
+                self.update_menu()
                 self.last_update = self.g_pool.get_timestamp()
         else:
             time.sleep(self.get_frame_timeout / 1e3)
@@ -196,7 +196,7 @@ class NDSI_Source(Base_Source):
             or event["changes"].get("dtype") == "strmapping"
             or event["changes"].get("dtype") == "intmapping"
         ):
-            self.update_control_menu()
+            self.update_menu()
 
     # local notifications
     def on_notify(self, notification):
@@ -259,13 +259,12 @@ class NDSI_Source(Base_Source):
         return settings
 
     def init_ui(self):
-        self.has_ui = True
         super().init_ui()
+        self.has_ui = True
 
     def deinit_ui(self):
-        super().deinit_ui()
-        # TODO: Refactor this to be more uniform across sources
         self.has_ui = False
+        super().deinit_ui()
 
     def add_controls_to_menu(self, menu, controls):
         from pyglui import ui
@@ -334,12 +333,6 @@ class NDSI_Source(Base_Source):
                 tb.print_exc()
         return menu
 
-    def update_control_menu(self):
-        # TODO: Refactor this to be more uniform across sources
-        if not self.has_ui:
-            return
-        self.update_menu()
-
     def ui_elements(self):
 
         ui_elements = []
@@ -382,7 +375,7 @@ class NDSI_Source(Base_Source):
 
 
 class NDSI_Manager(Base_Manager):
-    """Enumerates and activates Pupil Mobile video sources"""
+    """Enumerates and activates NDSI video sources"""
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -520,13 +513,16 @@ class NDSI_Manager(Base_Manager):
             self.g_pool.capture.recover(self.network)
 
     def on_notify(self, n):
-        """Provides UI for the capture selection
+        """Starts appropriate NDSI sources.
 
         Reacts to notification:
             ``backend.ndsi_source_found``: Check if recovery is possible
+            ``backend.ndsi.auto_activate_source``: Auto activate best source for process
 
         Emmits notifications:
-            ``backend.ndsi_source_found``
+            ``backend.ndsi_source_found``: New NDSI source available
+            ``backend.ndsi.auto_activate_source``: All NDSI managers should auto activate a source
+            ``start_(eye_)plugin``: Starts NDSI sources
         """
 
         super().on_notify(n)

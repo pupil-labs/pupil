@@ -152,7 +152,12 @@ class Base_Source(Plugin):
                     {"subject": "backend.change_mode", "mode": self.g_pool.source_mode}
                 )
 
-    def update_menu(self):
+    def update_menu(self) -> None:
+        """Update the UI for the source.
+
+        Do not overwrite this in inherited classes. Use ui_elements() instead.
+        """
+
         del self.menu[:]
 
         if self.manual_mode:
@@ -173,7 +178,7 @@ class Base_Source(Plugin):
                 selection_getter=self.source_list,
                 getter=lambda: None,
                 setter=self.activate_source,
-                label=" ",  # TODO: Hide label completely
+                label=" ",  # TODO: pyglui does not allow using no label at all
             )
         )
 
@@ -196,6 +201,7 @@ class Base_Source(Plugin):
             self.menu.append(settings_menu)
 
     def ui_elements(self) -> T.List[ui.UI_element]:
+        """Returns a list of ui elements with info and settings for the source."""
         return []
 
     def recent_events(self, events):
@@ -281,10 +287,14 @@ class Base_Source(Plugin):
 class Base_Manager(Plugin):
     """Abstract base class for source managers.
 
-    Managers are plugins that enumerate and load accessible sources from
-    different backends, e.g. locally USB-connected cameras.
+    Managers are plugins that enumerate and load accessible sources from different
+    backends, e.g. locally USB-connected cameras.
+
+    Supported sources can be either single cameras or whole devices. Identification and
+    activation of sources works via SourceInfo (see below).
     """
 
+    # backend managers are always loaded and need to be loaded before the sources
     order = -1
 
     def __init__(self, g_pool):
@@ -298,16 +308,25 @@ class Base_Manager(Plugin):
             g_pool.source_managers.append(self)
 
     def get_devices(self) -> T.Sequence["SourceInfo"]:
+        """Return source infos for all devices that the backend supports."""
         return []
 
     def get_cameras(self) -> T.Sequence["SourceInfo"]:
+        """Return source infos for all cameras that the backend supports."""
         return []
 
     def activate(self, key: T.Any) -> None:
+        """Activate a source (device or camera) by key from source info."""
         pass
 
 
 class SourceInfo:
+    """SourceInfo is a proxy for a source (camera or device) from a manager.
+
+    Managers hand out source infos that can be activated from other places in the code.
+    A manager needs to identify a source uniquely by a key.
+    """
+
     def __init__(self, label: str, manager: Base_Manager, key: T.Any):
         self.label = label
         self.manager = manager

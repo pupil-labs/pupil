@@ -22,7 +22,6 @@ import av
 import numpy as np
 from pyglui import ui
 
-import player_methods as pm
 from camera_models import load_intrinsics
 from pupil_recording import PupilRecording
 
