@@ -196,7 +196,7 @@ class ScanPathController(Observable):
 
 class ScanPathParams(Persistent_Dict):
 
-    file_name = "scan_path_params_v1.meta"
+    version = 1
 
     default_params = {
         "timeframe": ScanPathController.min_timeframe
@@ -204,9 +204,13 @@ class ScanPathParams(Persistent_Dict):
 
     def __init__(self, rec_dir, **kwargs):
         self.rec_dir = rec_dir
-        file_path = os.path.join(self.rec_dir, self.file_name)
-        super().__init__(file_path, **self.default_params)
+        super().__init__(self.__file_path, **self.default_params)
         self.update(**kwargs)
 
     def cleanup(self):
         self.close()
+
+    @property
+    def __file_path(self):
+        filename = f"scan_path_params_v{self.version}.meta"
+        return os.path.join(self.rec_dir, "offline_data", filename)
