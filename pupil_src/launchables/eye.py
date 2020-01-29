@@ -129,7 +129,6 @@ def eye(
         from gl_utils import make_coord_system_pixel_based
         from gl_utils import make_coord_system_norm_based
         from gl_utils import is_window_visible, glViewport
-        from ui_roi import UIRoi
 
         # monitoring
         import psutil
@@ -145,6 +144,7 @@ def eye(
         from av_writer import JPEG_Writer, MPEG_Writer
         from ndsi import H264Writer
         from video_capture import source_classes, manager_classes
+        from roi import Roi
 
         from background_helper import IPC_Logging_Task_Proxy
         from pupil_detector_plugins import available_detector_plugins
@@ -175,7 +175,6 @@ def eye(
 
         icon_bar_width = 50
         window_size = None
-        camera_render_size = None
         hdpi_factor = 1.0
 
         # g_pool holds variables for this process
@@ -188,6 +187,7 @@ def eye(
         g_pool.eye_id = eye_id
         g_pool.process = f"eye{eye_id}"
         g_pool.timebase = timebase
+        g_pool.camera_render_size = None
 
         g_pool.ipc_pub = ipc_socket
 
@@ -202,7 +202,7 @@ def eye(
             manager_classes
             + source_classes
             + available_detectors
-            + [PupilDetectorManager]
+            + [PupilDetectorManager, Roi]
         )
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
@@ -231,12 +231,12 @@ def eye(
             # Detector needs to be loaded first to set `g_pool.pupil_detector`
             (default_detector_cls.__name__, {}),
             ("PupilDetectorManager", {}),
+            ("Roi", {}),
         ]
 
         # Callback functions
         def on_resize(window, w, h):
             nonlocal window_size
-            nonlocal camera_render_size
             nonlocal hdpi_factor
 
             active_window = glfw.glfwGetCurrentContext()
@@ -244,7 +244,7 @@ def eye(
             hdpi_factor = glfw.getHDPIFactor(window)
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w, h
-            camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
+            g_pool.camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
             for g in g_pool.graphs:
@@ -266,16 +266,18 @@ def eye(
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            x *= hdpi_factor
-            y *= hdpi_factor
+            x, y = x * hdpi_factor, y * hdpi_factor
             g_pool.gui.update_mouse(x, y)
 
-            if g_pool.u_r.active_edit_pt:
-                pos = normalize((x, y), camera_render_size)
-                if g_pool.flip:
-                    pos = 1 - pos[0], 1 - pos[1]
-                pos = denormalize(pos, g_pool.capture.frame_size)
-                g_pool.u_r.move_vertex(g_pool.u_r.active_pt_idx, pos)
+            pos = x, y
+            pos = normalize(pos, g_pool.camera_render_size)
+            if g_pool.flip:
+                pos = 1 - pos[0], 1 - pos[1]
+            # Position in img pixels
+            pos = denormalize(pos, g_pool.capture.frame_size)
+
+            for p in g_pool.plugins:
+                p.on_pos(pos)
 
         def on_scroll(window, x, y):
             g_pool.gui.update_scroll(x, y * scroll_factor)
@@ -373,32 +375,6 @@ def eye(
             f_width += int(icon_bar_width * g_pool.gui.scale)
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
 
-        def uroi_on_mouse_button(button, action, mods):
-            if g_pool.display_mode == "roi":
-                if action == glfw.GLFW_RELEASE and g_pool.u_r.active_edit_pt:
-                    g_pool.u_r.active_edit_pt = False
-                    # if the roi interacts we dont want
-                    # the gui to interact as well
-                    return
-                elif action == glfw.GLFW_PRESS:
-                    x, y = glfw.glfwGetCursorPos(main_window)
-                    # pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
-                    x *= hdpi_factor
-                    y *= hdpi_factor
-                    pos = normalize((x, y), camera_render_size)
-                    if g_pool.flip:
-                        pos = 1 - pos[0], 1 - pos[1]
-                    # Position in img pixels
-                    pos = denormalize(
-                        pos, g_pool.capture.frame_size
-                    )  # Position in img pixels
-                    if g_pool.u_r.mouse_over_edit_pt(
-                        pos, g_pool.u_r.handle_size, g_pool.u_r.handle_size
-                    ):
-                        # if the roi interacts we dont want
-                        # the gui to interact as well
-                        return
-
         general_settings.append(ui.Button("Reset window size", set_window_size))
         general_settings.append(ui.Switch("flip", g_pool, label="Flip image display"))
         general_settings.append(
@@ -447,11 +423,6 @@ def eye(
             )
 
         g_pool.writer = None
-
-        g_pool.u_r = UIRoi((g_pool.capture.frame_size[1], g_pool.capture.frame_size[0]))
-        roi_user_settings = session_settings.get("roi")
-        if roi_user_settings and tuple(roi_user_settings[-1]) == g_pool.u_r.get()[-1]:
-            g_pool.u_r.set(roi_user_settings)
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -572,19 +543,6 @@ def eye(
 
             frame = event.get("frame")
             if frame:
-                f_width, f_height = g_pool.capture.frame_size
-                # TODO: Roi should be its own plugin. This way we could put it at the
-                # appropriate order for recent_events() to process frame resolution
-                # changes immediately after the backend.
-                if (g_pool.u_r.array_shape[0], g_pool.u_r.array_shape[1]) != (
-                    f_height,
-                    f_width,
-                ):
-                    g_pool.pupil_detector.on_resolution_change(
-                        (g_pool.u_r.array_shape[1], g_pool.u_r.array_shape[0]),
-                        g_pool.capture.frame_size,
-                    )
-                    g_pool.u_r = UIRoi((f_height, f_width))
                 if should_publish_frames:
                     try:
                         if frame_publish_format == "jpeg":
@@ -640,15 +598,9 @@ def eye(
                     glfw.glfwMakeContextCurrent(main_window)
                     clear_gl_screen()
 
-                    glViewport(0, 0, *camera_render_size)
+                    glViewport(0, 0, *g_pool.camera_render_size)
                     for p in g_pool.plugins:
                         p.gl_display()
-
-                    glViewport(0, 0, *camera_render_size)
-                    # render the ROI
-                    g_pool.u_r.draw(g_pool.gui.scale)
-                    if g_pool.display_mode == "roi":
-                        g_pool.u_r.draw_points(g_pool.gui.scale)
 
                     glViewport(0, 0, *window_size)
                     # render graphs
@@ -671,12 +623,11 @@ def eye(
                     for button, action, mods in user_input.buttons:
                         x, y = glfw.glfwGetCursorPos(main_window)
                         pos = x * hdpi_factor, y * hdpi_factor
-                        pos = normalize(pos, camera_render_size)
+                        pos = normalize(pos, g_pool.camera_render_size)
+                        if g_pool.flip:
+                            pos = 1 - pos[0], 1 - pos[1]
                         # Position in img pixels
                         pos = denormalize(pos, g_pool.capture.frame_size)
-
-                        # TODO: remove when ROI is plugin
-                        uroi_on_mouse_button(button, action, mods)
 
                         for plugin in g_pool.plugins:
                             if plugin.on_click(pos, button, action):
@@ -707,7 +658,6 @@ def eye(
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         # save session persistent settings
         session_settings["gui_scale"] = g_pool.gui_user_scale
-        session_settings["roi"] = g_pool.u_r.get()
         session_settings["flip"] = g_pool.flip
         session_settings["display_mode"] = g_pool.display_mode
         session_settings["ui_config"] = g_pool.gui.configuration

@@ -137,17 +137,7 @@ class Offline_Eye_Movement_Detector(Observable, Eye_Movement_Detector_Base):
         return {"show_segmentation": self.menu_content.show_segmentation}
 
     def on_notify(self, notification):
-        if notification["subject"] == "gaze_positions_changed":
-            # TODO: Remove when gaze_positions will be announced with `data_changed.Announcer`
-            note = notification.copy()
-            note["subject"] = "data_changed.{}.announce_token".format(
-                self._gaze_changed_listener._topic
-            )
-            note["token"] = notification.get(
-                "token", "{:0>8x}".format(random.getrandbits(32))
-            )
-            self._gaze_changed_listener._on_notify(note)
-        elif notification["subject"] in (
+        if notification["subject"] in (
             Notification_Subject.SHOULD_RECALCULATE,
             Notification_Subject.MIN_DATA_CONFIDENCE_CHANGED,
         ):

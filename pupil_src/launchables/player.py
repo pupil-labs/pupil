@@ -131,7 +131,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         )
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
-            "1.24"
+            "1.27"
         ), "pyglui out of date, please upgrade to newest version"
 
         process_was_interrupted = False
