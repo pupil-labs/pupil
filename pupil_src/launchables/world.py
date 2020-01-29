@@ -288,6 +288,7 @@ def world(
         ]
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
+        default_capture = "UVC_Source"
         default_capture_settings = {
             "preferred_names": [
                 "Pupil Cam1 ID2",
@@ -305,7 +306,7 @@ def world(
         }
 
         default_plugins = [
-            ("UVC_Source", default_capture_settings),
+            (default_capture, default_capture_settings),
             ("Pupil_Data_Relay", {}),
             ("UVC_Manager", {}),
             ("NDSI_Manager", {}),
@@ -575,6 +576,13 @@ def world(
         g_pool.plugins = Plugin_List(
             g_pool, session_settings.get("loaded_plugins", default_plugins)
         )
+
+        if not g_pool.capture:
+            # Make sure we always have a capture running. Important if there was no
+            # capture stored in session settings.
+            g_pool.plugins.add(
+                g_pool.plugin_by_name[default_capture], default_capture_settings
+            )
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)

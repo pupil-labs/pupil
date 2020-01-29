@@ -195,6 +195,9 @@ class OnDemandDecoder(Decoder):
 class File_Source(Playback_Source, Base_Source):
     """Simple file capture.
 
+    Note that File_Source is special since it is usually not intended to be used as
+    capture plugin. Therefore it hides it's UI by default.
+
     Playback_Source arguments:
         timing (str): "external", "own" (default), None
 
@@ -203,6 +206,7 @@ class File_Source(Playback_Source, Base_Source):
         loop (bool): loop video set if timing!="external"
         buffered_decoding (bool): use buffered decode
         fill_gaps (bool): fill gaps with static frames
+        show_plugin_menu (bool): enable to show regular capture UI with source selection
     """
 
     def __init__(
@@ -212,16 +216,11 @@ class File_Source(Playback_Source, Base_Source):
         loop=False,
         buffered_decoding=False,
         fill_gaps=False,
-        allow_source_selection=False,
+        show_plugin_menu=False,
         *args,
         **kwargs,
     ):
-        # NOTE: File_Source is normally not intended to be used as capture source, so we
-        # just want to render info in the menu. When used as capture source, need to
-        # specify allow_source_selection=True.
-        super().__init__(
-            g_pool, *args, allow_source_selection=allow_source_selection, **kwargs
-        )
+        super().__init__(g_pool, *args, **kwargs)
         if self.timing == "external":
             self.recent_events = self.recent_events_external_timing
         else:
@@ -246,6 +245,8 @@ class File_Source(Playback_Source, Base_Source):
         # Load video split for first frame
         self.reset_video()
         self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
+
+        self.show_plugin_menu = show_plugin_menu
 
     def get_rec_set_name(self, source_path):
         """
@@ -340,14 +341,18 @@ class File_Source(Playback_Source, Base_Source):
     def frame_rate(self):
         return self._frame_rate
 
+    def init_ui(self):
+        if self.show_plugin_menu:
+            super().init_ui()
+
+    def deinit_ui(self):
+        if self.show_plugin_menu:
+            super().deinit_ui()
+
     def get_init_dict(self):
-        if self.g_pool.app == "capture":
-            settings = super().get_init_dict()
-            settings["source_path"] = self.source_path
-            settings["loop"] = self.loop
-            return settings
-        else:
-            raise NotImplementedError()
+        # We do not want to store file capture as selected plugin since we would have to
+        # do a lot of validation on opening.
+        raise NotImplementedError()
 
     @property
     def name(self):
@@ -611,7 +616,7 @@ class File_Manager(Base_Manager):
         settings = {
             "source_path": full_path,
             "timing": "own",
-            "allow_source_selection": True,
+            "show_plugin_menu": True,
         }
         if self.g_pool.process == "world":
             self.notify_all(
