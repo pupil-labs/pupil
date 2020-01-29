@@ -14,6 +14,7 @@ import logging
 
 import numpy as np
 
+from file_methods import Persistent_Dict
 from observable import Observable
 from plugin import Plugin
 
@@ -30,10 +31,10 @@ class ScanPathController(Observable):
     max_timeframe = 3.0
     timeframe_step = 0.05
 
-    def __init__(self, g_pool, timeframe=None):
+    def __init__(self, g_pool, **kwargs):
         self.g_pool = g_pool
 
-        self.timeframe = timeframe if timeframe is not None else self.min_timeframe
+        self._params = ScanPathParams(g_pool.rec_dir, **kwargs)
         assert self.min_timeframe <= self.timeframe <= self.max_timeframe
 
         self._status_str = ""
@@ -56,7 +57,15 @@ class ScanPathController(Observable):
         self._gaze_data_store.load_from_disk()
 
     def get_init_dict(self):
-        return {}  # Don't save the current timeframe; always set to 0.0 on startup.
+        return {}  # Don't save current params for session; Save them for recording.
+
+    @property
+    def timeframe(self) -> float:
+        return self._params["timeframe"]
+
+    @timeframe.setter
+    def timeframe(self, value: float):
+        self._params["timeframe"] = value
 
     @property
     def is_active(self) -> bool:
@@ -100,6 +109,7 @@ class ScanPathController(Observable):
     def cleanup(self):
         self._preproc.cleanup()
         self._bg_task.cleanup()
+        self._params.cleanup()
 
     def on_gaze_data_changed(self):
         self._preproc.cancel()
@@ -179,3 +189,21 @@ class ScanPathController(Observable):
         self._gaze_data_store.mark_complete()
         self._status_str = "Calculation completed"
         self.on_update_ui()
+
+
+class ScanPathParams(Persistent_Dict):
+
+    file_name = "scan_path_params_v1.meta"
+
+    default_params = {
+        "timeframe": ScanPathController.min_timeframe
+    }
+
+    def __init__(self, rec_dir, **kwargs):
+        self.rec_dir = rec_dir
+        file_path = os.path.join(self.rec_dir, self.file_name)
+        super().__init__(file_path, **self.default_params)
+        self.update(**kwargs)
+
+    def cleanup(self):
+        self.close()
