@@ -26,6 +26,9 @@ logger = logging.getLogger(__name__)
 
 
 class ScanPathController(Observable):
+    """
+    Enables previous gaze history to be visible for the timeframe specified by the user.
+    """
 
     min_timeframe = 0.0
     max_timeframe = 3.0

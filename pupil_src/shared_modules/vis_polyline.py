@@ -104,6 +104,7 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
             label="Timeframe",
         )
 
+        scan_path_doc = ui.Info_Text(self.scan_path_controller.__doc__.strip())
         scan_path_status = ui.Info_Text("")
 
         polyline_style_color_menu = ui.Growing_Menu("Color")
@@ -115,6 +116,7 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
 
         scan_path_menu = ui.Growing_Menu("Scan path")
         scan_path_menu.collapsed = False
+        scan_path_menu.append(scan_path_doc)
         scan_path_menu.append(scan_path_timeframe_range)
         scan_path_menu.append(scan_path_status)
 
