@@ -56,7 +56,23 @@ class PupilDetectorPlugin(Plugin):
             "set_detection_mapping_mode": self.handle_set_detection_mapping_mode_notification,
         }
         self._last_frame_size = None
-        self.enabled = True
+        self._enabled = True
+
+    def init_ui(self):
+        self.add_menu()
+
+    def deinit_ui(self):
+        self.remove_menu()
+
+    @property
+    def enabled(self):
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, value):
+        self._enabled = value
+        for elem in self.menu:
+            elem.read_only = not self.enabled
 
     def recent_events(self, event):
         if not self.enabled:

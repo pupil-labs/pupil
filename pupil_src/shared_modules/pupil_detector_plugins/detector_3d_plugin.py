@@ -82,7 +82,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
         return "Pupil Detector 3D"
 
     def init_ui(self):
-        self.add_menu()
+        super().init_ui()
         self.menu.label = self.pretty_class_name
         info = ui.Info_Text(
             "Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "
@@ -145,9 +145,6 @@ class Detector3DPlugin(PupilDetectorPlugin):
         if self._recent_detection_result:
             draw_eyeball_outline(self._recent_detection_result)
             draw_pupil_outline(self._recent_detection_result)
-
-    def deinit_ui(self):
-        self.remove_menu()
 
     def cleanup(self):
         self.debug_window_close()  # if we change detectors, be sure debug window is also closed

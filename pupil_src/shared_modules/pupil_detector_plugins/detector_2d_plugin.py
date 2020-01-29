@@ -78,7 +78,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
             draw_pupil_outline(self._recent_detection_result)
 
     def init_ui(self):
-        self.add_menu()
+        super().init_ui()
         self.menu.label = self.pretty_class_name
         self.menu_icon.label_font = "pupil_icons"
         info = ui.Info_Text(
@@ -117,6 +117,3 @@ class Detector2DPlugin(PupilDetectorPlugin):
                 step=1,
             )
         )
-
-    def deinit_ui(self):
-        self.remove_menu()
