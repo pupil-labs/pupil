@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 class Detector3DPlugin(PupilDetectorPlugin):
-    uniqueness = "by_base_class"
+    uniqueness = "by_class"
     icon_font = "pupil_icons"
     icon_chr = chr(0xEC19)
 

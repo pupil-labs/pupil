@@ -197,7 +197,7 @@ def eye(
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
 
-        default_detector_cls, available_detectors = available_detector_plugins()
+        default_2d, default_3d, available_detectors = available_detector_plugins()
         plugins = (
             manager_classes
             + source_classes
@@ -226,8 +226,9 @@ def eye(
             # TODO: extend with plugins
             default_capture_settings,
             ("UVC_Manager", {}),
-            # Detector needs to be loaded first to set `g_pool.pupil_detector`
-            (default_detector_cls.__name__, {}),
+            # Detectors needs to be loaded first to set `g_pool.pupil_detector`
+            (default_2d.__name__, {}),
+            (default_3d.__name__, {}),
             ("PupilDetectorManager", {}),
             ("Roi", {}),
         ]
