@@ -506,6 +506,7 @@ class File_Source(Playback_Source, Base_Source):
         self.target_frame_idx = seek_pos
 
     def on_notify(self, notification):
+        super().on_notify(notification)
         if (
             notification["subject"] == "file_source.seek"
             and notification.get("source_path") == self.source_path
