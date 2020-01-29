@@ -38,6 +38,9 @@ class PupilDetectorManager(Plugin):
     def set_detection_mode(self, notification):
         mode = notification["mode"]
 
+        if mode == "disabled":
+            return
+
         for detector_cls in self._available_pupil_detector_classes:
             if detector_cls.identifier == mode:
                 props = notification.get("properties", None)

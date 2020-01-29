@@ -14,7 +14,6 @@ import typing as T
 from .detector_2d_plugin import Detector2DPlugin
 from .detector_3d_plugin import Detector3DPlugin
 from .detector_base_plugin import PupilDetectorPlugin
-from .detector_dummy_plugin import DetectorDummyPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +29,7 @@ def available_detector_plugins() -> T.Tuple[
             Default is required to be in the list of available plugins.
     """
 
-    all_plugins = [DetectorDummyPlugin, Detector2DPlugin, Detector3DPlugin]
+    all_plugins = [Detector2DPlugin, Detector3DPlugin]
     default_plugin = Detector3DPlugin
 
     try:
