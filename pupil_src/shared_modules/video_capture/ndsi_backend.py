@@ -154,6 +154,13 @@ class NDSI_Source(Base_Source):
                 )
             except ndsi.StreamError:
                 frame = None
+            except ndsi.sensor.NotDataSubSupportedError:
+                # NOTE: This (most likely) is a race-condition in NDSI initialization
+                # that is waiting to be fixed for Pupil Mobile. It happens rarely and
+                # can be solved by simply reconnecting the headset to the mobile phone.
+                # Preventing traceback logfloods here and displaying more helpful
+                # message to the user.
+                logger.warning("Connection problem! Please reconnect headset to phone!")
             except Exception:
                 frame = None
                 import traceback
