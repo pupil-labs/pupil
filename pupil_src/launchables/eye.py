@@ -148,7 +148,6 @@ def eye(
 
         from background_helper import IPC_Logging_Task_Proxy
         from pupil_detector_plugins import available_detector_plugins
-        from pupil_detector_plugins.manager import PupilDetectorManager
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
@@ -198,12 +197,7 @@ def eye(
         g_pool.get_now = get_time_monotonic
 
         default_2d, default_3d, available_detectors = available_detector_plugins()
-        plugins = (
-            manager_classes
-            + source_classes
-            + available_detectors
-            + [PupilDetectorManager, Roi]
-        )
+        plugins = manager_classes + source_classes + available_detectors + [Roi]
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
         preferred_names = [
@@ -229,7 +223,6 @@ def eye(
             # Detectors needs to be loaded first to set `g_pool.pupil_detector`
             (default_2d.__name__, {}),
             (default_3d.__name__, {}),
-            ("PupilDetectorManager", {}),
             ("Roi", {}),
         ]
 
