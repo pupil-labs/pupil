@@ -53,10 +53,16 @@ class PupilDetectorPlugin(Plugin):
         self._notification_handler = {
             "pupil_detector.broadcast_properties": self.handle_broadcast_properties_notification,
             "pupil_detector.set_property": self.handle_set_property_notification,
+            "set_detection_mapping_mode": self.handle_set_detection_mapping_mode_notification,
         }
         self._last_frame_size = None
+        self.enabled = True
 
     def recent_events(self, event):
+        if not self.enabled:
+            self._recent_detection_result = None
+            return
+
         frame = event.get("frame")
         if not frame:
             self._recent_detection_result = None
@@ -147,6 +153,10 @@ class PupilDetectorPlugin(Plugin):
         except (ValueError, TypeError):
             logger.error("Invalid property or value")
             logger.debug(traceback.format_exc())
+
+    def handle_set_detection_mapping_mode_notification(self, notification):
+        mode = notification["mode"]
+        self.enabled = mode != "disabled"
 
     def namespaced_detector_properties(self) -> dict:
         return self.pupil_detector.get_properties()
