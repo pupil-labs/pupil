@@ -101,10 +101,10 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
             min=self.scan_path_controller.min_timeframe,
             max=self.scan_path_controller.max_timeframe,
             step=self.scan_path_controller.timeframe_step,
-            label="Timeframe",
+            label="Duration",
         )
 
-        scan_path_doc = ui.Info_Text(self.scan_path_controller.__doc__.strip())
+        scan_path_doc = ui.Info_Text("Duration of past gaze to include in polyline.")
         scan_path_status = ui.Info_Text("")
 
         polyline_style_color_menu = ui.Growing_Menu("Color")
@@ -114,7 +114,7 @@ class Vis_Polyline(Visualizer_Plugin_Base, Observable):
         polyline_style_color_menu.append(polyline_style_color_g_slider)
         polyline_style_color_menu.append(polyline_style_color_b_slider)
 
-        scan_path_menu = ui.Growing_Menu("Scan path")
+        scan_path_menu = ui.Growing_Menu("Gaze History")
         scan_path_menu.collapsed = False
         scan_path_menu.append(scan_path_doc)
         scan_path_menu.append(scan_path_timeframe_range)
