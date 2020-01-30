@@ -334,6 +334,10 @@ class File_Source(Playback_Source, Base_Source):
         return not self.videoset.is_empty()
 
     @property
+    def online(self):
+        return not self.videoset.is_empty()
+
+    @property
     def frame_size(self):
         return self.video_stream.frame_size
 
@@ -350,9 +354,14 @@ class File_Source(Playback_Source, Base_Source):
             super().deinit_ui()
 
     def get_init_dict(self):
-        # We do not want to store file capture as selected plugin since we would have to
-        # do a lot of validation on opening.
-        raise NotImplementedError()
+        return dict(
+            **super().get_init_dict(),
+            source_path=self.source_path,
+            loop=self.loop,
+            buffered_decoding=self.buffering,
+            fill_gaps=self.fill_gaps,
+            show_plugin_menu=self.show_plugin_menu,
+        )
 
     @property
     def name(self):
@@ -529,14 +538,21 @@ class File_Source(Playback_Source, Base_Source):
             ui.Info_Text(f"File Source: {os.path.split(self.source_path)[-1]}")
         )
 
-        if self.g_pool.app == "capture":
+        if not self.online:
+            ui_elements.append(
+                ui.Info_Text(
+                    "Could not playback file! Check if file exists and if"
+                    " corresponding timestamps file is present."
+                )
+            )
+            return ui_elements
 
-            def toggle_looping(val):
-                self.loop = val
-                if val:
-                    self.play = True
+        def toggle_looping(val):
+            self.loop = val
+            if val:
+                self.play = True
 
-            ui_elements.append(ui.Switch("loop", self, setter=toggle_looping))
+        ui_elements.append(ui.Switch("loop", self, setter=toggle_looping))
 
         ui_elements.append(
             ui.Text_Input("source_path", self, label="Full path", setter=lambda x: None)

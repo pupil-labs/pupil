@@ -389,3 +389,6 @@ class Playback_Source(Base_Source):
                 sleep(target_wait_time)
         self._recent_wait_ts = timestamp
         self.finished_sleep = monotonic()
+
+    def get_init_dict(self):
+        return dict(**super().get_init_dict(), timing=self.timing)
