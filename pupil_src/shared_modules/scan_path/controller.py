@@ -37,7 +37,7 @@ class ScanPathController(Observable):
     def __init__(self, g_pool, **kwargs):
         self.g_pool = g_pool
 
-        self._params = ScanPathParams(g_pool.rec_dir, **kwargs)
+        self._params = ScanPathParams(**kwargs)
         assert self.min_timeframe <= self.timeframe <= self.max_timeframe
 
         self._status_str = ""
@@ -60,7 +60,7 @@ class ScanPathController(Observable):
         self._gaze_data_store.load_from_disk()
 
     def get_init_dict(self):
-        return {}  # Don't save current params for session; Save them for recording.
+        return self._params.copy()
 
     @property
     def timeframe(self) -> float:
@@ -194,7 +194,7 @@ class ScanPathController(Observable):
         self.on_update_ui()
 
 
-class ScanPathParams(Persistent_Dict):
+class ScanPathParams(dict):
 
     version = 1
 
@@ -202,15 +202,9 @@ class ScanPathParams(Persistent_Dict):
         "timeframe": ScanPathController.min_timeframe
     }
 
-    def __init__(self, rec_dir, **kwargs):
-        self.rec_dir = rec_dir
-        super().__init__(self.__file_path, **self.default_params)
+    def __init__(self, **kwargs):
+        super().__init__(**self.default_params)
         self.update(**kwargs)
 
     def cleanup(self):
-        self.close()
-
-    @property
-    def __file_path(self):
-        filename = f"scan_path_params_v{self.version}.meta"
-        return os.path.join(self.rec_dir, "offline_data", filename)
+        pass
