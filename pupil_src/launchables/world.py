@@ -288,7 +288,7 @@ def world(
         ]
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
-        default_capture = "UVC_Source"
+        default_capture_name = "UVC_Source"
         default_capture_settings = {
             "preferred_names": [
                 "Pupil Cam1 ID2",
@@ -306,7 +306,7 @@ def world(
         }
 
         default_plugins = [
-            (default_capture, default_capture_settings),
+            (default_capture_name, default_capture_settings),
             ("Pupil_Data_Relay", {}),
             ("UVC_Manager", {}),
             ("NDSI_Manager", {}),
@@ -581,7 +581,7 @@ def world(
             # Make sure we always have a capture running. Important if there was no
             # capture stored in session settings.
             g_pool.plugins.add(
-                g_pool.plugin_by_name[default_capture], default_capture_settings
+                g_pool.plugin_by_name[default_capture_name], default_capture_settings
             )
 
         # Register callbacks main_window
