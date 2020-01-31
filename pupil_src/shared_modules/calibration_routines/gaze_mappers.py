@@ -16,10 +16,9 @@ import numpy as np
 from pyglui import ui
 
 import math_helper
-from plugin import Plugin
+from calibration_routines.optimization_calibration import calibrate_2d
 from methods import normalize
-
-from . import calibrate
+from plugin import Plugin
 from .visualizer_calibration import Calibration_Visualizer
 
 
@@ -195,7 +194,7 @@ class Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
     def __init__(self, g_pool, params):
         super().__init__(g_pool)
         self.params = params
-        self.map_fn = calibrate.make_map_function(*self.params)
+        self.map_fn = calibrate_2d.make_map_function(*self.params)
 
     def _map_monocular(self, p):
         gaze_point = self.map_fn(p["norm_pos"])
@@ -220,8 +219,8 @@ class Dual_Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin
         self.params0 = params0
         self.params1 = params1
         self.map_fns = (
-            calibrate.make_map_function(*self.params0),
-            calibrate.make_map_function(*self.params1),
+            calibrate_2d.make_map_function(*self.params0),
+            calibrate_2d.make_map_function(*self.params1),
         )
 
     def _map_monocular(self, p):
@@ -246,10 +245,10 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base, Gaze_Mapping_Plugin):
         self.params_eye0 = params_eye0
         self.params_eye1 = params_eye1
         self.multivariate = True
-        self.map_fn = calibrate.make_map_function(*self.params)
+        self.map_fn = calibrate_2d.make_map_function(*self.params)
         self.map_fn_fallback = []
-        self.map_fn_fallback.append(calibrate.make_map_function(*self.params_eye0))
-        self.map_fn_fallback.append(calibrate.make_map_function(*self.params_eye1))
+        self.map_fn_fallback.append(calibrate_2d.make_map_function(*self.params_eye0))
+        self.map_fn_fallback.append(calibrate_2d.make_map_function(*self.params_eye1))
 
     def init_ui(self):
         self.add_menu()

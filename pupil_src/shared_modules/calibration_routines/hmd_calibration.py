@@ -9,29 +9,20 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import logging
 import os
-import audio
-import numpy as np
-from file_methods import save_object
-
 
 from pyglui import ui
-from .calibration_plugin_base import Calibration_Plugin
-from .finish_calibration import (
-    not_enough_data_error_msg,
-    solver_failed_to_converge_error_msg,
-)
-from . import calibrate
-from .gaze_mappers import (
-    Monocular_Gaze_Mapper,
-    Dual_Monocular_Gaze_Mapper,
-    Binocular_Vector_Gaze_Mapper,
-)
-from .optimization_calibration import bundle_adjust_calibration
-import math_helper
 
-# logging
-import logging
+import audio
+import file_methods as fm
+from calibration_routines import data_processing
+from calibration_routines.calibration_plugin_base import Calibration_Plugin
+from calibration_routines.finish_calibration import (
+    create_converge_error_msg,
+    create_not_enough_data_error_msg,
+)
+from calibration_routines.optimization_calibration import calibration_methods
 
 logger = logging.getLogger(__name__)
 
@@ -91,12 +82,10 @@ class HMD_Calibration(Calibration_Plugin):
                     self.ref_list += notification["ref_data"]
                 else:
                     logger.error(
-                        "Ref data can only be added when calibratio is runnings."
+                        "Ref data can only be added when calibration is running."
                     )
         except KeyError as e:
-            logger.error(
-                "Notification: {} not conform. Raised error {}".format(notification, e)
-            )
+            logger.error(f"Notification: {notification} not conform. Raised error {e}")
 
     def start(self, hmd_video_frame_size, outlier_threshold):
         audio.say("Starting Calibration")
@@ -126,97 +115,48 @@ class HMD_Calibration(Calibration_Plugin):
     def finish_calibration(self):
         pupil_list = self.pupil_list
         ref_list = self.ref_list
-        hmd_video_frame_size = self.hmd_video_frame_size
-
         g_pool = self.g_pool
 
-        pupil0 = [p for p in pupil_list if p["id"] == 0]
-        pupil1 = [p for p in pupil_list if p["id"] == 1]
+        extracted_data = data_processing.get_data_for_calibration_hmd(
+            pupil_list, ref_list, mode="2d"
+        )
+        if not extracted_data:
+            self.notify_all(create_not_enough_data_error_msg(g_pool))
+            return
 
-        ref0 = [r for r in ref_list if r["id"] == 0]
-        ref1 = [r for r in ref_list if r["id"] == 1]
+        method, result = calibration_methods.calibrate_2d_hmd(
+            self.hmd_video_frame_size, *extracted_data
+        )
+        if result is None:
+            self.notify_all(create_converge_error_msg(g_pool))
+            return
 
-        matched_pupil0_data = calibrate.closest_matches_monocular(ref0, pupil0)
-        matched_pupil1_data = calibrate.closest_matches_monocular(ref1, pupil1)
+        ts = g_pool.get_timestamp()
 
-        if matched_pupil0_data:
-            cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil0_data)
-            map_fn0, inliers0, params0 = calibrate.calibrate_2d_polynomial(
-                cal_pt_cloud, hmd_video_frame_size, binocular=False
-            )
-            if not inliers0.any():
-                self.notify_all(
-                    {
-                        "subject": "calibration.failed",
-                        "reason": solver_failed_to_converge_error_msg,
-                    }
-                )
-                return
-        else:
-            logger.warning("No matched ref<->pupil data collected for id0")
-            params0 = None
+        # Announce success
+        self.notify_all(
+            {
+                "subject": "calibration.successful",
+                "method": method,
+                "timestamp": ts,
+                "record": True,
+            }
+        )
 
-        if matched_pupil1_data:
-            cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil1_data)
-            map_fn1, inliers1, params1 = calibrate.calibrate_2d_polynomial(
-                cal_pt_cloud, hmd_video_frame_size, binocular=False
-            )
-            if not inliers1.any():
-                self.notify_all(
-                    {
-                        "subject": "calibration.failed",
-                        "reason": solver_failed_to_converge_error_msg,
-                    }
-                )
-                return
-        else:
-            logger.warning("No matched ref<->pupil data collected for id1")
-            params1 = None
+        # Announce calibration data
+        self.notify_all(
+            {
+                "subject": "calibration.calibration_data",
+                "timestamp": ts,
+                "pupil_list": pupil_list,
+                "ref_list": ref_list,
+                "calibration_method": method,
+                "record": True,
+            }
+        )
 
-        if params0 or params1:
-            ts = g_pool.get_timestamp()
-            if params0 and params1:
-                method = "dual monocular polynomial regression"
-                mapper = "Dual_Monocular_Gaze_Mapper"
-                args = {"params0": params0, "params1": params1}
-            elif params0:
-                method = "monocular polynomial regression"
-                mapper = "Monocular_Gaze_Mapper"
-                args = {"params": params0}
-            elif params1:
-                method = "monocular polynomial regression"
-                mapper = "Monocular_Gaze_Mapper"
-                args = {"params": params1}
-
-            # Announce success
-            self.notify_all(
-                {
-                    "subject": "calibration.successful",
-                    "method": method,
-                    "timestamp": ts,
-                    "record": True,
-                }
-            )
-
-            # Announce calibration data
-            self.notify_all(
-                {
-                    "subject": "calibration.calibration_data",
-                    "timestamp": ts,
-                    "pupil_list": pupil_list,
-                    "ref_list": ref_list,
-                    "calibration_method": method,
-                    "record": True,
-                }
-            )
-
-            # Start mapper
-            self.notify_all({"subject": "start_plugin", "name": mapper, "args": args})
-        else:
-            logger.error("Calibration failed for both eyes. No data found")
-            self.notify_all(
-                {"subject": "calibration.failed", "reason": not_enough_data_error_msg}
-            )
+        # Start mapper
+        self.notify_all(result)
 
     def recent_events(self, events):
         if self.active:
@@ -271,7 +211,7 @@ class HMD_Calibration_3D(HMD_Calibration, Calibration_Plugin):
                     self.ref_list += notification["ref_data"]
                 else:
                     logger.error(
-                        "Ref data can only be added when calibratio is running."
+                        "Ref data can only be added when calibration is running."
                     )
         except KeyError as e:
             logger.error(
@@ -281,156 +221,25 @@ class HMD_Calibration_3D(HMD_Calibration, Calibration_Plugin):
     def finish_calibration(self):
         pupil_list = self.pupil_list
         ref_list = self.ref_list
-
         g_pool = self.g_pool
 
-        not_enough_data_error_msg = "Did not collect enough data during calibration."
-        solver_failed_to_converge_error_msg = (
-            "Paramters could not be estimated from data."
+        extracted_data = data_processing.get_data_for_calibration_hmd(
+            pupil_list, ref_list, mode="3d"
         )
-
-        matched_data = calibrate.closest_matches_binocular(ref_list, pupil_list)
-
-        save_object(matched_data, "hmd_cal_data")
-
-        ref_points_3d_unscaled = np.array([d["ref"]["mm_pos"] for d in matched_data])
-        gaze0_dir = [
-            d["pupil"]["circle_3d"]["normal"]
-            for d in matched_data
-            if "3d" in d["pupil"]["method"]
-        ]
-        gaze1_dir = [
-            d["pupil1"]["circle_3d"]["normal"]
-            for d in matched_data
-            if "3d" in d["pupil"]["method"]
-        ]
-
-        if len(ref_points_3d_unscaled) < 1 or len(gaze0_dir) < 1 or len(gaze1_dir) < 1:
-            logger.error(not_enough_data_error_msg)
-            self.notify_all(
-                {
-                    "subject": "calibration.failed",
-                    "reason": not_enough_data_error_msg,
-                    "timestamp": self.g_pool.get_timestamp(),
-                    "record": True,
-                }
-            )
+        if not extracted_data:
+            self.notify_all(create_not_enough_data_error_msg(g_pool))
             return
 
-        smallest_residual = 1000
-        scales = list(np.linspace(0.7, 10, 50))
-        for s in scales:
-
-            ref_points_3d = ref_points_3d_unscaled * (1, -1, s)
-
-            initial_translation0 = np.array(self.eye_translations[0])
-            initial_translation1 = np.array(self.eye_translations[1])
-            method = "binocular 3d model hmd"
-
-            sphere_pos0 = matched_data[-1]["pupil"]["sphere"]["center"]
-            sphere_pos1 = matched_data[-1]["pupil1"]["sphere"]["center"]
-
-            initial_R0, initial_t0 = calibrate.find_rigid_transform(
-                np.array(gaze0_dir) * 500, np.array(ref_points_3d) * 1
-            )
-            initial_rotation0 = math_helper.quaternion_from_rotation_matrix(initial_R0)
-
-            initial_R1, initial_t1 = calibrate.find_rigid_transform(
-                np.array(gaze1_dir) * 500, np.array(ref_points_3d) * 1
-            )
-            initial_rotation1 = math_helper.quaternion_from_rotation_matrix(initial_R1)
-
-            eye0 = {
-                "observations": gaze0_dir,
-                "translation": initial_translation0,
-                "rotation": initial_rotation0,
-                "fix": ["translation"],
-            }
-            eye1 = {
-                "observations": gaze1_dir,
-                "translation": initial_translation1,
-                "rotation": initial_rotation1,
-                "fix": ["translation"],
-            }
-            initial_observers = [eye0, eye1]
-            initial_points = np.array(ref_points_3d)
-
-            success, residual, observers, points = bundle_adjust_calibration(
-                initial_observers, initial_points, fix_points=True
-            )
-
-            if residual <= smallest_residual:
-                smallest_residual = residual
-                scales[-1] = s
-
-        if not success:
-            self.notify_all(
-                {
-                    "subject": "calibration.failed",
-                    "reason": solver_failed_to_converge_error_msg,
-                    "timestamp": self.g_pool.get_timestamp(),
-                    "record": True,
-                }
-            )
-            logger.error("Calibration solver faild to converge.")
+        method, result = calibration_methods.calibrate_3d_hmd(
+            *extracted_data, self.eye_translations
+        )
+        if result is None:
+            self.notify_all(create_converge_error_msg(g_pool))
             return
 
-        eye0, eye1 = observers
-
-        t_world0 = np.array(eye0["translation"])
-        R_world0 = math_helper.quaternion_rotation_matrix(np.array(eye0["rotation"]))
-        t_world1 = np.array(eye1["translation"])
-        R_world1 = math_helper.quaternion_rotation_matrix(np.array(eye1["rotation"]))
-
-        def toWorld0(p):
-            return np.dot(R_world0, p) + t_world0
-
-        def toWorld1(p):
-            return np.dot(R_world1, p) + t_world1
-
-        points_a = points  # world coords
-        points_b = []  # eye0 coords
-        points_c = []  # eye1 coords
-
-        for a, b, c, point in zip(
-            points, eye0["observations"], eye1["observations"], points
-        ):
-            line_a = np.array([0, 0, 0]), np.array(a)  # observation as line
-            line_b = (
-                toWorld0(np.array([0, 0, 0])),
-                toWorld0(b),
-            )  # eye0 observation line in world coords
-            line_c = (
-                toWorld1(np.array([0, 0, 0])),
-                toWorld1(c),
-            )  # eye1 observation line in world coords
-            close_point_a, _ = math_helper.nearest_linepoint_to_point(point, line_a)
-            close_point_b, _ = math_helper.nearest_linepoint_to_point(point, line_b)
-            close_point_c, _ = math_helper.nearest_linepoint_to_point(point, line_c)
-            points_a.append(close_point_a.tolist())
-            points_b.append(close_point_b.tolist())
-            points_c.append(close_point_c.tolist())
-
-        # we need to take the sphere position into account
-        # orientation and translation are referring to the sphere center.
-        # but we want to have it referring to the camera center
-        # since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
-        sphere_translation = np.array(sphere_pos0)
-        sphere_translation_world = np.dot(R_world0, sphere_translation)
-        camera_translation = t_world0 - sphere_translation_world
-        eye_camera_to_world_matrix0 = np.eye(4)
-        eye_camera_to_world_matrix0[:3, :3] = R_world0
-        eye_camera_to_world_matrix0[:3, 3:4] = np.reshape(camera_translation, (3, 1))
-
-        sphere_translation = np.array(sphere_pos1)
-        sphere_translation_world = np.dot(R_world1, sphere_translation)
-        camera_translation = t_world1 - sphere_translation_world
-        eye_camera_to_world_matrix1 = np.eye(4)
-        eye_camera_to_world_matrix1[:3, :3] = R_world1
-        eye_camera_to_world_matrix1[:3, 3:4] = np.reshape(camera_translation, (3, 1))
-
-        method = "hmd binocular 3d model"
         ts = g_pool.get_timestamp()
+
+        # Announce success
         g_pool.active_calibration_plugin.notify_all(
             {
                 "subject": "calibration.successful",
@@ -439,40 +248,27 @@ class HMD_Calibration_3D(HMD_Calibration, Calibration_Plugin):
                 "record": True,
             }
         )
-        g_pool.active_calibration_plugin.notify_all(
-            {
-                "subject": "calibration.calibration_data",
-                "timestamp": ts,
-                "pupil_list": pupil_list,
-                "ref_list": ref_list,
-                "calibration_method": method,
-                "record": True,
-            }
-        )
 
-        # this is only used by show calibration. TODO: rewrite show calibraiton.
+        # Announce calibration data
+        # this is only used by show calibration. TODO: rewrite show calibration.
         user_calibration_data = {
             "timestamp": ts,
             "pupil_list": pupil_list,
             "ref_list": ref_list,
             "calibration_method": method,
         }
-        save_object(
+        fm.save_object(
             user_calibration_data,
             os.path.join(g_pool.user_dir, "user_calibration_data"),
         )
+        g_pool.active_calibration_plugin.notify_all(
+            {
+                "subject": "calibration.calibration_data",
+                "record": True,
+                **user_calibration_data,
+            }
+        )
 
-        mapper_args = {
-            "subject": "start_plugin",
-            "name": "Binocular_Vector_Gaze_Mapper",
-            "args": {
-                "eye_camera_to_world_matrix0": eye_camera_to_world_matrix0.tolist(),
-                "eye_camera_to_world_matrix1": eye_camera_to_world_matrix1.tolist(),
-                "cal_points_3d": points,
-                "cal_ref_points_3d": points_a,
-                "cal_gaze_points0_3d": points_b,
-                "cal_gaze_points1_3d": points_c,
-                "backproject": hasattr(self.g_pool, "capture"),
-            },
-        }
-        self.g_pool.active_calibration_plugin.notify_all(mapper_args)
+        # Start mapper
+        result["args"]["backproject"] = hasattr(g_pool, "capture")
+        self.g_pool.active_calibration_plugin.notify_all(result)
