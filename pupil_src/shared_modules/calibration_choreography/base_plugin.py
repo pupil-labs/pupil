@@ -132,8 +132,8 @@ class CalibrationChoreographyPlugin(Plugin):
         pass
 
     @property
-    def current_mode_label(self):
-        return self.__current_mode.label
+    def current_mode(self) -> ChoreographyMode:
+        return self.__current_mode
 
     @property
     def current_mode_ui_button(self):
@@ -172,6 +172,26 @@ class CalibrationChoreographyPlugin(Plugin):
                 action=ChoreograthyAction.STOPPED,
             ).to_dict()
         )
+
+    # TODO: Replace with a callback
+    def finish_calibration(self, pupil_list, ref_list):
+        # finish_calibration(self.g_pool, pupil_list, ref_list)
+        print(f"===>>> CALIBRATION FINISHED: {len(pupil_list)} pupil datums, {len(ref_list)} ref locations")
+
+    # TODO: Replace with a callback
+    def finish_accuracy_test(self, pupil_list, ref_list):
+        # ts = self.g_pool.get_timestamp()
+        # self.notify_all({"subject": "start_plugin", "name": "Accuracy_Visualizer"})
+        # self.notify_all(
+        #     {
+        #         "subject": "accuracy_test.data",
+        #         "timestamp": ts,
+        #         "pupil_list": pupil_list,
+        #         "ref_list": ref_list,
+        #         "record": True,
+        #     }
+        # )
+        print(f"===>>> ACCURACY TEST FINISHED: {len(pupil_list)} pupil datums, {len(ref_list)} ref locations")
 
     # Private
 
