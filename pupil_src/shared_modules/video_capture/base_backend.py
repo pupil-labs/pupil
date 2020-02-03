@@ -172,8 +172,8 @@ class Base_Source(Plugin):
         else:
             self.menu.append(
                 ui.Info_Text(
-                    "Select a device to use as video input."
-                    " The best matching cameras will be automatically selected."
+                    "Select a Pupil Core headset from the list."
+                    " Cameras will be automatically selected for world and eye windows."
                 )
             )
 
