@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import enum
 import logging
+import typing as T
 
 from pyglui import ui
 from plugin import Plugin
@@ -38,7 +39,7 @@ class ChoreographyMode(enum.Enum):
 
     @property
     def label(self) -> str:
-        return self.value().replace("_", " ").title()
+        return self.value.replace("_", " ").title()
 
 
 class ChoreograthyAction(enum.Enum):
@@ -53,7 +54,7 @@ class ChoreograthyNotification:
     __slots__ = ("mode", "action")
 
     _REQUIRED_KEYS = {"subject"}
-    _OPTIONAL_KEYS = set()
+    _OPTIONAL_KEYS = {"topic"}
 
     def __init__(self, mode: ChoreographyMode, action: ChoreograthyAction):
         self.mode = mode
@@ -61,20 +62,21 @@ class ChoreograthyNotification:
 
     @property
     def subject(self) -> str:
-        return f"{self.mode.value()}.{self.action.value()}"
+        return f"{self.mode.value}.{self.action.value}"
 
     def to_dict(self) -> dict:
         return {"subject": self.subject}
 
     @staticmethod
     def from_dict(note: dict) -> "ChoreographyNotification":
-        keys = set(note.key())
+        cls = ChoreograthyNotification
+        keys = set(note.keys())
 
-        missing_required_keys = self._REQUIRED_KEYS.diference(keys)
+        missing_required_keys = cls._REQUIRED_KEYS.difference(keys)
         if missing_required_keys:
             raise ValueError(f"Notification missing required keys: {missing_required_keys}")
 
-        valid_keys = self._REQUIRED_KEYS.union(self._OPTIONAL_KEYS)
+        valid_keys = cls._REQUIRED_KEYS.union(cls._OPTIONAL_KEYS)
         invalid_keys = keys.difference(valid_keys)
         if invalid_keys:
             raise ValueError(f"Notification contains invalid keys: {invalid_keys}")
@@ -154,9 +156,9 @@ class CalibrationChoreographyPlugin(Plugin):
 
     def start(self):
         self.__is_active = True
-        if self.__current_mode == ChoreographyMode.CALIBRATION
+        if self.__current_mode == ChoreographyMode.CALIBRATION:
             self.__ui_button_accuracy_test_disable()
-        if self.__current_mode == ChoreographyMode.ACCURACY_TEST
+        if self.__current_mode == ChoreographyMode.ACCURACY_TEST:
             self.__ui_button_calibation_disable()
         self.notify_all(
             ChoreograthyNotification(
@@ -164,7 +166,7 @@ class CalibrationChoreographyPlugin(Plugin):
                 # mode=self.__current_mode,
                 mode=ChoreographyMode.CALIBRATION,
                 action=ChoreograthyAction.STARTED,
-            )
+            ).to_dict()
         )
 
     def stop(self):
@@ -209,7 +211,7 @@ class CalibrationChoreographyPlugin(Plugin):
         return dimensions_and_gazers
 
     def __available_choreography_labels_and_plugins(self):
-        labels_and_plugins = _CALIBRATION_CHOREOGRAPHY_PLUGINS.items()
+        labels_and_plugins = CalibrationChoreographyPlugin.registered_choreographies().items()
         labels_and_plugins = filter(lambda pair: pair[1].is_user_selectable, labels_and_plugins)
         labels_and_plugins = sorted(labels_and_plugins, key=lambda pair: pair[0])
         return labels_and_plugins
@@ -311,14 +313,14 @@ class CalibrationChoreographyPlugin(Plugin):
 
         if note.action == ChoreograthyAction.SHOULD_START:
             if self.is_active:
-                logger.warning(f"{self.current_mode_label} already running.")
+                logger.warning(f"{self.current_mode.label} already running.")
             else:
                 self.__current_mode = note.mode
                 self.start()
 
         if note.action == ChoreograthyAction.SHOULD_STOP:
             if not self.is_active:
-                logger.warning(f"{self.current_mode_label} already stopped.")
+                logger.warning(f"{self.current_mode.label} already stopped.")
             else:
                 self.stop()
 
@@ -351,7 +353,7 @@ class CalibrationChoreographyPlugin(Plugin):
     def __ui_selector_dimensionality_setter(self, value):
         self.__selected_dimensionality = value
 
-    def __ui_button_calibration_toggle(self):
+    def __ui_button_calibration_toggle(self, _=None):
         self.__toggle_mode_action(mode=ChoreographyMode.CALIBRATION)
 
     def __ui_button_calibation_enable(self):
@@ -364,7 +366,7 @@ class CalibrationChoreographyPlugin(Plugin):
         if self.__ui_button_calibration in self.g_pool.quickbar:
             self.g_pool.quickbar.remove(self.__ui_button_calibration)
 
-    def __ui_button_accuracy_test_toggle(self):
+    def __ui_button_accuracy_test_toggle(self, _=None):
         self.__toggle_mode_action(mode=ChoreographyMode.ACCURACY_TEST)
 
     def __ui_button_accuracy_test_enable(self):
@@ -372,7 +374,7 @@ class CalibrationChoreographyPlugin(Plugin):
             return
         if self.__ui_button_accuracy_test not in self.g_pool.quickbar:
             # Always place the accuracy test button first, but after the calibration button
-            index = 1 if self.__ui_button_calibration in self.pool.quickbar else 0
+            index = 1 if self.__ui_button_calibration in self.g_pool.quickbar else 0
             self.g_pool.quickbar.insert(index, self.__ui_button_accuracy_test)
 
     def __ui_button_accuracy_test_disable(self):
