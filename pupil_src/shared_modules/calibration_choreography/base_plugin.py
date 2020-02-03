@@ -20,8 +20,33 @@ from plugin import Plugin
 logger = logging.getLogger(__name__)
 
 
+# TODO: Move to gazer module
+class Gazer(Plugin, abc.ABC):
+    label = None
+
+    @staticmethod
+    def registered_gazers() -> T.Mapping[str, "Gazer"]:
+        return dict(Gazer.__registered_choreography_plugins)
+
+    def __init_subclass__(cls, *args, **kwargs):
+        super().__init_subclass__(*args, **kwargs)
+        try:
+            store = Gazer.__registered_choreography_plugins
+        except AttributeError:
+            Gazer.__registered_choreography_plugins = {}
+            store = Gazer.__registered_choreography_plugins
+        assert isinstance(cls.label, str), f"Gazer subclass {cls.__name__} must overwrite string class property \"label\""
+        store[cls.label] = cls
 
 
+# TODO: Move to gazer module
+class Gazer2D(Gazer):
+    label = "2D"
+
+
+# TODO: Move to gazer module
+class Gazer3D(Gazer):
+    label = "3D"
 
 
 class GazeDimensionality(enum.Enum):
