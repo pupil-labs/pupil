@@ -147,6 +147,8 @@ def world(
             import_runtime_plugins,
         )
         from plugin_manager import Plugin_Manager
+        from calibration_choreography import available_calibration_choreography_plugins
+        default_choreography_plugin, available_choreography_plugins = available_calibration_choreography_plugins()
         from calibration_routines import (
             calibration_plugins,
             gaze_mapping_plugins,
@@ -271,6 +273,7 @@ def world(
             + user_plugins
             + runtime_plugins
             + calibration_plugins
+            + available_choreography_plugins
             + gaze_mapping_plugins
             + registered_gazer_classes
         )
