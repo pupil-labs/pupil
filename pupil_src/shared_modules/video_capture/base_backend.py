@@ -152,7 +152,7 @@ class Base_Source(Plugin):
         elif subject == "eye_process.started":
             # Make sure to broadcast current source mode once to newly started eyes so
             # they are always in sync!
-            if self.g_pool.process == "world":
+            if self.g_pool.app == "capture" and self.g_pool.process == "world":
                 self.notify_all(
                     {"subject": "backend.change_mode", "mode": self.g_pool.source_mode}
                 )
