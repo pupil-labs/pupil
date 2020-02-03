@@ -46,7 +46,7 @@ class Model2D_v1x(Model):
             p0, p1 = x
             return self._map_fn(p0["norm_pos"], p1["norm_pos"])
         else:
-            return self._map_fn(x["norm_pos"])
+            return self._map_fn(x[0]["norm_pos"])
 
     def set_params(self, params, map_fn=None):
         self._map_fn = map_fn or make_map_function(*params)
@@ -81,30 +81,31 @@ class Gazer2D_v1x(GazerBase):
         model.fit(point_cloud)
 
     def predict(
-        self, matched_pupil_data: T.List[T.List["Pupil"]]
-    ) -> T.Iterable["Gaze"]:
+        self, matched_pupil_data: T.Iterator[T.List["Pupil"]]
+    ) -> T.Iterator["Gaze"]:
         for pupil_match in matched_pupil_data:
             num_matched = len(pupil_match)
 
             if num_matched == 2:
-                gaze_pos = self.binocular_model.predict([pupil_match])
+                gaze_positions = self.binocular_model.predict([pupil_match])
                 topic = "gaze.2d.01."
             elif num_matched == 1:
                 if pupil_match[0]["id"] == 0:
-                    gaze_pos = self.right_model.predict([pupil_match])
+                    gaze_positions = self.right_model.predict([pupil_match])
                     topic = "gaze.2d.0."
                 else:
-                    gaze_pos = self.left_model.predict([pupil_match])
+                    gaze_positions = self.left_model.predict([pupil_match])
                     topic = "gaze.2d.1."
 
-            gaze_datum = {
-                "topic": topic,
-                "norm_pos": gaze_pos,
-                "confidence": np.mean([p["confidence"] for p in pupil_match]),
-                "timestamp": np.mean([p["timestamp"] for p in pupil_match]),
-                "base_data": pupil_match,
-            }
-            yield gaze_datum
+            for gaze_pos in gaze_positions:
+                gaze_datum = {
+                    "topic": topic,
+                    "norm_pos": gaze_pos,
+                    "confidence": np.mean([p["confidence"] for p in pupil_match]),
+                    "timestamp": np.mean([p["timestamp"] for p in pupil_match]),
+                    "base_data": pupil_match,
+                }
+                yield gaze_datum
 
     def filter_pupil_data(
         self, pupil_data: T.Iterable, confidence_threshold: T.Optional[float] = None
