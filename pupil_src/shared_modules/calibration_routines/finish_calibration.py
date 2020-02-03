@@ -20,6 +20,14 @@ logger = logging.getLogger(__name__)
 
 
 def finish_calibration(g_pool, pupil_list, ref_list):
+    # TODO: REMOVE
+    g_pool.active_calibration_plugin.notify_all(
+        {
+            "subject": "start_plugin",
+            "name": "Gazer2D_v1x",
+            "args": {"calib_data": {"ref_list": ref_list, "pupil_list": pupil_list}},
+        }
+    )
     method, result = select_method_and_perform_calibration(g_pool, pupil_list, ref_list)
 
     # Start mapper / announce error
