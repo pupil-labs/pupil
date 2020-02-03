@@ -153,6 +153,7 @@ def world(
             Calibration_Plugin,
             Gaze_Mapping_Plugin,
         )
+        from gaze_mapping import registered_gazer_classes
         from fixation_detector import Fixation_Detector
         from recorder import Recorder
         from display_recent_gaze import Display_Recent_Gaze
@@ -271,6 +272,7 @@ def world(
             + runtime_plugins
             + calibration_plugins
             + gaze_mapping_plugins
+            + registered_gazer_classes
         )
         user_plugins += [
             p
