@@ -114,7 +114,7 @@ class CalibrationChoreographyPlugin(Plugin):
 
     @classmethod
     def parse_pretty_class_name(cls) -> str:
-        return "Calibration Choreography"
+        return cls.label
 
     @staticmethod
     def registered_choreographies() -> T.Mapping[str, "CalibrationChoreographyPlugin"]:
@@ -268,7 +268,7 @@ class CalibrationChoreographyPlugin(Plugin):
         )
 
         self.add_menu()
-        self.menu.label = "Calibration Choreography"
+        self.menu.label = self.label
         self.menu.append(self.__ui_selector_choreography)
         self.menu.append(self.__ui_selector_dimensionality)
 
