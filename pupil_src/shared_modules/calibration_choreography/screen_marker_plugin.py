@@ -182,7 +182,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         """gets called when the plugin get terminated.
            either voluntarily or forced.
         """
-        if self.active:
+        if self.is_active:
             self.stop()
         if self._window:
             self.close_window()
@@ -190,7 +190,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
 
     def recent_events(self, events):
         frame = events.get("frame")
-        if self.active and frame:
+        if self.is_active and frame:
             gray_img = frame.gray
 
             if self.clicks_to_close <= 0:
@@ -277,7 +277,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         """
 
         # debug mode within world will show green ellipses around detected ellipses
-        if self.active:
+        if self.is_active:
             for marker in self.markers:
                 e = marker["ellipses"][-1]  # outermost ellipse
                 pts = cv2.ellipse2Poly(
