@@ -136,6 +136,12 @@ class GazerBase(abc.ABC, Plugin):
         else:
             raise ValueError("Requires either `calib_data` or `params`")
 
+    def init_ui(self):
+        self.add_menu()
+
+    def deinit_ui(self):
+        self.remove_menu()
+
     def get_init_dict(self):
         return {"params": self.get_params()}
 
