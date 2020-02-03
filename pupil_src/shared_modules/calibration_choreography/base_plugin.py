@@ -53,10 +53,6 @@ class GazeDimensionality(enum.Enum):
     GAZE_2D = "2d"
     GAZE_3D = "3d"
 
-    @property
-    def label(self) -> str:
-        return self.value().upper()
-
 
 class ChoreographyMode(enum.Enum):
     CALIBRATION = "calibration"
@@ -134,7 +130,7 @@ class CalibrationChoreographyPlugin(Plugin):
     shows_action_buttons = True
 
     @abc.abstractmethod
-    def gazer_for_dimensionality(self, dimensionality: GazeDimensionality):
+    def supported_gazers(self):
         pass
 
     @classmethod
@@ -157,8 +153,8 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__is_active = False
         self.__current_mode = ChoreographyMode.CALIBRATION
         self.__choreography_ui_selector = None
-        self.__dimensionality_ui_selector = None
-        self.__selected_dimensionality = self.__ui_selector_dimensionality_selection()[0]
+        self.__gazer_ui_selector = None
+        self.__selected_gazer = self.__ui_selector_gazer_selection()[0]
 
     def cleanup(self):
         pass
@@ -227,19 +223,16 @@ class CalibrationChoreographyPlugin(Plugin):
 
     # Private
 
-    def __available_dimensions_and_gazers(self):
-        dimensions = sorted(GazeDimensionality, key=lambda dim: dim.value)
-        gazers = map(self.gazer_for_dimensionality, dimensions)
-        dimensions_and_gazers = zip(dimensions, gazers)
-        dimensions_and_gazers = filter(lambda pair: pair[1] is not None, dimensions_and_gazers)
-        dimensions_and_gazers = list(dimensions_and_gazers)
-        return dimensions_and_gazers
-
     def __available_choreography_labels_and_plugins(self):
         labels_and_plugins = CalibrationChoreographyPlugin.registered_choreographies().items()
         labels_and_plugins = filter(lambda pair: pair[1].is_user_selectable, labels_and_plugins)
         labels_and_plugins = sorted(labels_and_plugins, key=lambda pair: pair[0])
         return labels_and_plugins
+
+    def __available_gazers_labels_and_plugins(self):
+        pairs = [(g.label, g) for g in self.supported_gazers()]
+        pairs = sorted(pairs, key=lambda pair: pair[0])
+        return pairs
 
     def __toggle_mode_action(self, mode: ChoreographyMode):
         action = ChoreograthyAction.SHOULD_START if not self.is_active else ChoreograthyAction.SHOULD_STOP
@@ -265,13 +258,13 @@ class CalibrationChoreographyPlugin(Plugin):
             setter=self.__ui_selector_choreography_setter,
         )
 
-        self.__ui_selector_dimensionality = ui.Selector(
-            "dimensionality_selector",
-            label="Dimensionality",
-            labels=self.__ui_selector_dimensionality_labels(),
-            selection=self.__ui_selector_dimensionality_selection(),
-            getter=self.__ui_selector_dimensionality_getter,
-            setter=self.__ui_selector_dimensionality_setter,
+        self.__ui_selector_gazer = ui.Selector(
+            "gazer_selector",
+            label="Gazer",
+            labels=self.__ui_selector_gazer_labels(),
+            selection=self.__ui_selector_gazer_selection(),
+            getter=self.__ui_selector_gazer_getter,
+            setter=self.__ui_selector_gazer_setter,
         )
 
         self.__ui_button_calibration = ui.Thumb(
@@ -295,13 +288,13 @@ class CalibrationChoreographyPlugin(Plugin):
         self.add_menu()
         self.menu.label = self.label
         self.menu.append(self.__ui_selector_choreography)
-        self.menu.append(self.__ui_selector_dimensionality)
+        self.menu.append(self.__ui_selector_gazer)
 
         self.__ui_button_calibation_enable()
         self.__ui_button_accuracy_test_enable()
 
     def update_ui(self):
-        self.__ui_selector_dimensionality.read_only = not self.__ui_selector_dimensionality_enabled()
+        self.__ui_selector_gazer.read_only = not self.__ui_selector_gazer_enabled()
 
     def deinit_ui(self):
         self.__ui_button_calibation_disable()
@@ -310,7 +303,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_button_calibration = None
         self.__ui_button_accuracy_test = None
         self.__ui_selector_choreography = None
-        self.__ui_selector_dimensionality = None
+        self.__ui_selector_gazer = None
 
     def recent_events(self, events):
         self.update_ui()
@@ -363,20 +356,20 @@ class CalibrationChoreographyPlugin(Plugin):
     def __ui_selector_choreography_setter(self, value):
         self.__start_plugin(value)
 
-    def __ui_selector_dimensionality_enabled(self):
-        return len(self.__ui_selector_dimensionality_labels()) > 1
+    def __ui_selector_gazer_enabled(self):
+        return len(self.__ui_selector_gazer_labels()) > 1
 
-    def __ui_selector_dimensionality_labels(self):
-        return [dimension.label for dimension, _ in self.__available_dimensions_and_gazers()]
+    def __ui_selector_gazer_labels(self):
+        return [label for label, _ in self.__available_gazers_labels_and_plugins()]
 
-    def __ui_selector_dimensionality_selection(self):
-        return [gazer for _, gazer in self.__available_dimensions_and_gazers()]
+    def __ui_selector_gazer_selection(self):
+        return [gazer for _, gazer in self.__available_gazers_labels_and_plugins()]
 
-    def __ui_selector_dimensionality_getter(self):
-        return self.__selected_dimensionality
+    def __ui_selector_gazer_getter(self):
+        return self.__selected_gazer
 
-    def __ui_selector_dimensionality_setter(self, value):
-        self.__selected_dimensionality = value
+    def __ui_selector_gazer_setter(self, value):
+        self.__selected_gazer = value
 
     def __ui_button_calibration_toggle(self, _=None):
         self.__toggle_mode_action(mode=ChoreographyMode.CALIBRATION)
