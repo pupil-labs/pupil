@@ -252,7 +252,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_button_calibration = ui.Thumb(
             "is_active",
             self,
-            label="C",
+            label="C+",
             hotkey="c",
             setter=self.__ui_button_calibration_toggle,
             on_color=self._THUMBNAIL_COLOR_ON,
@@ -261,7 +261,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_button_accuracy_test = ui.Thumb(
             "is_active",
             self,
-            label="T",
+            label="T+",
             hotkey="t",
             setter=self.__ui_button_accuracy_test_toggle,
             on_color=self._THUMBNAIL_COLOR_ON
