@@ -97,27 +97,27 @@ class Calibration_Plugin(Plugin):
         Args:
             notification (dictionary): Notification dictionary
         """
-        if notification["subject"].endswith(".should_start"):
-            if self.active:
-                logger.warning("{} already running.".format(self.mode_pretty))
-            else:
-                if notification["subject"].startswith("calibration"):
-                    self.mode = "calibration"
-                elif notification["subject"].startswith("accuracy_test"):
-                    self.mode = "accuracy_test"
-                else:
-                    return
-                self.start()
-        elif notification["subject"].endswith("should_stop"):
-            if not (
-                notification["subject"].startswith("calibration")
-                or notification["subject"].startswith("accuracy_test")
-            ):
-                return
-            if self.active:
-                self.stop()
-            else:
-                logger.warning("{} already stopped.".format(self.mode_pretty))
+        # if notification["subject"].endswith(".should_start"):
+        #     if self.active:
+        #         logger.warning("{} already running.".format(self.mode_pretty))
+        #     else:
+        #         if notification["subject"].startswith("calibration"):
+        #             self.mode = "calibration"
+        #         elif notification["subject"].startswith("accuracy_test"):
+        #             self.mode = "accuracy_test"
+        #         else:
+        #             return
+        #         self.start()
+        # elif notification["subject"].endswith("should_stop"):
+        #     if not (
+        #         notification["subject"].startswith("calibration")
+        #         or notification["subject"].startswith("accuracy_test")
+        #     ):
+        #         return
+        #     if self.active:
+        #         self.stop()
+        #     else:
+        #         logger.warning("{} already stopped.".format(self.mode_pretty))
 
     def init_ui(self):
         self.add_menu()
