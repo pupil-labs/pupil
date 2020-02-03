@@ -19,17 +19,8 @@ from plugin import Plugin
 logger = logging.getLogger(__name__)
 
 
-_CALIBRATION_CHOREOGRAPHY_PLUGINS = {}
 
 
-def register_calibration_choreography_plugin(label):
-    def _register(cls):
-        supercls = CalibrationChoreographyPlugin
-        assert issubclass(cls, supercls) and cls != supercls, f"Calibration choreography plugin must be a subclass of \"{supercls.__name__}\""
-        assert label not in _CALIBRATION_CHOREOGRAPHY_PLUGINS.keys(), f"Calibration choreography plugin already exists for label \"{label}\""
-        _CALIBRATION_CHOREOGRAPHY_PLUGINS[label] = cls
-        return cls
-    return _register
 
 
 class GazeDimensionality(enum.Enum):
@@ -99,10 +90,13 @@ class CalibrationChoreographyPlugin(Plugin):
     """base class for all calibration routines"""
 
     _THUMBNAIL_COLOR_ON = (0.3, 0.2, 1.0, 0.9)
+    __registered_choreography_plugins = {}
 
     icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"
     uniqueness = "by_base_class"
+
+    label = None
 
     """Controlls wheather the choreography plugin is shown in the user selection list.
     """
@@ -119,6 +113,17 @@ class CalibrationChoreographyPlugin(Plugin):
     @classmethod
     def parse_pretty_class_name(cls) -> str:
         return "Calibration Choreography"
+
+    @staticmethod
+    def registered_choreographies() -> T.Mapping[str, "CalibrationChoreographyPlugin"]:
+        return dict(CalibrationChoreographyPlugin.__registered_choreography_plugins)
+
+    def __init_subclass__(cls, *args, **kwargs):
+        super().__init_subclass__(*args, **kwargs)
+        store = CalibrationChoreographyPlugin.__registered_choreography_plugins
+        assert isinstance(cls.label, str), f"Calibration choreography plugin subclass {cls.__name__} must overwrite string class property \"label\""
+        assert cls.label not in store.keys(), f"Calibration choreography plugin already exists for label \"{cls.label}\""
+        store[cls.label] = cls
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
