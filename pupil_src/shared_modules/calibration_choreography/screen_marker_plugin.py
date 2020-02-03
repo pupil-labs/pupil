@@ -24,13 +24,13 @@ from pyglui import ui
 from pyglui.cygl.utils import draw_points, draw_polyline, RGBA
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-from .base_plugin import CalibrationChoreographyPlugin, GazeDimensionality, ChoreographyMode, ChoreograthyAction, register_calibration_choreography_plugin
+from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreograthyAction
+from .base_plugin import Gazer3D, GazeDimensionality  # FIXME: Import from gazer
 
 
 logger = logging.getLogger(__name__)
 
 
-@register_calibration_choreography_plugin("Screen Marker Calibration")
 class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
@@ -38,9 +38,10 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
 
     """
 
-    def gazer_for_dimensionality(self, dimensionality: GazeDimensionality):
-        if dimensionality == GazeDimensionality.GAZE_3D:
-            return int  # FIXME
+    label = "Screen Marker Calibration Choreography"
+
+    def supported_gazers(self):
+        return [Gazer3D]  # FIXME: Provide complete list of supported gazers
 
     @staticmethod
     def __site_locations(dim: GazeDimensionality, mode: ChoreographyMode) -> list:
@@ -137,7 +138,6 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
 
     def init_ui(self):
         super().init_ui()
-        self.menu.label = "Screen Marker Calibration"
 
         def get_monitors_idx_list():
             monitors = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
@@ -262,7 +262,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
             # use np.arrays for per element wise math
             self.display_pos = np.array(self.active_site)
             self.on_position = on_position
-            self.button.status_text = "{}".format(self.active_site)
+            self.current_mode_ui_button.status_text = "{}".format(self.active_site)
 
         if self._window:
             self.gl_display_in_window()
@@ -296,7 +296,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
 
     def start(self):
         if not self.g_pool.capture.online:
-            logger.error(f"{self.current_mode_label} requiers world capture video input.")
+            logger.error(f"{self.current_mode.label} requiers world capture video input.")
             return
 
         super().start()
@@ -319,7 +319,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         self.smooth_pos = 0, 0
         self.counter = 0
         self.close_window()
-        self.button.status_text = ""
+        self.current_mode_ui_button.status_text = ""
 
         # TODO: This part seems redundant
         if self.current_mode == ChoreographyMode.CALIBRATION:
