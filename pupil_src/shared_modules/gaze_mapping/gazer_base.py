@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import abc
+import itertools
 import typing as T
 
 from plugin import Plugin
@@ -195,6 +196,7 @@ class GazerBase(abc.ABC, Plugin):
             pupil_data.sort(key=lambda p: p["timestamp"])
 
         matches = (self.matcher.on_pupil_datum(datum) for datum in pupil_data)
+        matches = itertools.chain.from_iterable(matches)
         yield from self.predict(matches)
 
 
