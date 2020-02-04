@@ -49,11 +49,6 @@ class Gazer3D(Gazer):
     label = "3D"
 
 
-class GazeDimensionality(enum.Enum):
-    GAZE_2D = "2d"
-    GAZE_3D = "3d"
-
-
 class ChoreographyMode(enum.Enum):
     CALIBRATION = "calibration"
     ACCURACY_TEST = "accuracy_test"

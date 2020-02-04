@@ -25,7 +25,7 @@ from pyglui.cygl.utils import draw_points, draw_polyline, RGBA
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreograthyAction
-from .base_plugin import Gazer3D, GazeDimensionality  # FIXME: Import from gazer
+from .base_plugin import Gazer3D  # FIXME: Import from gazer
 
 
 logger = logging.getLogger(__name__)
@@ -44,8 +44,8 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         return [Gazer3D]  # FIXME: Provide complete list of supported gazers
 
     @staticmethod
-    def __site_locations(dim: GazeDimensionality, mode: ChoreographyMode) -> list:
-        if dim == GazeDimensionality.GAZE_3D and mode == ChoreographyMode.CALIBRATION:
+    def __site_locations(mode: ChoreographyMode, is_2d: bool, is_3d: bool) -> list:
+        if is_3d and mode == ChoreographyMode.CALIBRATION:
             return [
                 (0.5, 0.5),
                 (0.0, 1.0),
@@ -53,14 +53,14 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
                 (1.0, 0.0),
                 (0.0, 0.0),
             ]
-        if dim == GazeDimensionality.GAZE_3D and mode == ChoreographyMode.ACCURACY_TEST:
+        if is_3d and mode == ChoreographyMode.ACCURACY_TEST:
             return [
                 (0.25, 0.5),
                 (0.5, 0.25),
                 (0.75, 0.5),
                 (0.5, 0.75)
             ]
-        if dim == GazeDimensionality.GAZE_2D and mode == ChoreographyMode.CALIBRATION:
+        if is_2d and mode == ChoreographyMode.CALIBRATION:
             return [
                 (0.25, 0.5),
                 (0, 0.5),
@@ -73,7 +73,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
                 (0.0, 0.0),
                 (0.75, 0.5),
             ]
-        if dim == GazeDimensionality.GAZE_2D and mode == ChoreographyMode.ACCURACY_TEST:
+        if is_2d and mode == ChoreographyMode.ACCURACY_TEST:
             return [
                 (0.5, 0.5),
                 (0.25, 0.25),
@@ -303,8 +303,11 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         audio.say(f"Starting {self.current_mode.label}")
         logger.info(f"Starting {self.current_mode.label}")
 
-        dim = GazeDimensionality.GAZE_3D if self.g_pool.detection_mapping_mode == "3d" else GazeDimensionality.GAZE_2D
-        self.sites = self.__site_locations(dim=dim, mode=self.current_mode)
+        self.sites = self.__site_locations(
+            mode=self.current_mode,
+            is_2d=self.g_pool.detection_mapping_mode == "2d",
+            is_3d=self.g_pool.detection_mapping_mode == "3d",
+        )
         self.active_site = self.sites.pop(0)
 
         self.ref_list = []
