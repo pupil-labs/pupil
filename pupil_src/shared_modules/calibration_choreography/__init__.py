@@ -1,6 +1,6 @@
 from .base_plugin import CalibrationChoreographyPlugin
 from .screen_marker_plugin import ScreenMarkerChoreographyPlugin
-# from .single_marker_plugin import SingleMarkerChoreographyPlugin
+from .single_marker_plugin import SingleMarkerChoreographyPlugin
 # from .hmd_plugin import HMDChoreographyPlugin
 
 
