@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import logging
+import typing as T
 
 import cv2
 import numpy as np
@@ -24,6 +25,8 @@ from pyglui import ui
 from pyglui.cygl.utils import draw_points, draw_polyline, RGBA
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
+
+from .controller import GUIMonitor
 from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreographyAction
 from gaze_mapping import Gazer2D_v1x
 
@@ -87,7 +90,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         fullscreen=True,
         marker_scale=1.0,
         sample_duration=40,
-        monitor_idx=0,
+        monitor_name=None,
     ):
         super().__init__(g_pool)
         self.screen_marker_state = 0.0
@@ -107,7 +110,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
 
         self.menu = None
 
-        self.monitor_idx = monitor_idx
+        self.__ui_selector_monitor_setter(monitor_name)
         self.fullscreen = fullscreen
         self.clicks_to_close = 5
 
@@ -132,50 +135,52 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         d = {}
         d["fullscreen"] = self.fullscreen
         d["marker_scale"] = self.marker_scale
-        d["monitor_idx"] = self.monitor_idx
+        d["monitor_name"] = self.monitor_name
         return d
 
     def init_ui(self):
+
+        desc_text = ui.Info_Text("Calibrate gaze parameters using a screen based animation.")
+
+        self.__ui_selector_monitor = ui.Selector(
+            "monitor",
+            label="Monitor",
+            labels=self.__ui_selector_monitor_labels(),
+            selection=self.__ui_selector_monitor_selection(),
+            getter=self.__ui_selector_monitor_getter,
+            setter=self.__ui_selector_monitor_setter,
+        )
+
+        self.__ui_switch_is_fullscreen = ui.Switch(
+            "fullscreen",
+            self,
+            label="Use fullscreen"
+        )
+
+        self.__ui_slider_marker_scale = ui.Slider(
+            "marker_scale",
+            self,
+            label="Marker size",
+            min=0.5,
+            max=2.0,
+            step=0.1,
+        )
+
+        self.__ui_slider_sample_duration = ui.Slider(
+            "sample_duration",
+            self,
+            label="Sample duration",
+            min=10,
+            max=100,
+            step=1,
+        )
+
         super().init_ui()
-
-        def get_monitors_idx_list():
-            monitors = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
-            return range(len(monitors)), monitors
-
-        if self.monitor_idx not in get_monitors_idx_list()[0]:
-            logger.warning(
-                "Monitor at index %s no longer availalbe using default"
-                % self.monitor_idx
-            )
-            self.monitor_idx = 0
-
-        self.menu.append(
-            ui.Info_Text("Calibrate gaze parameters using a screen based animation.")
-        )
-        self.menu.append(
-            ui.Selector(
-                "monitor_idx",
-                self,
-                selection_getter=get_monitors_idx_list,
-                label="Monitor",
-            )
-        )
-        self.menu.append(ui.Switch("fullscreen", self, label="Use fullscreen"))
-        self.menu.append(
-            ui.Slider(
-                "marker_scale", self, step=0.1, min=0.5, max=2.0, label="Marker size"
-            )
-        )
-        self.menu.append(
-            ui.Slider(
-                "sample_duration",
-                self,
-                step=1,
-                min=10,
-                max=100,
-                label="Sample duration",
-            )
-        )
+        self.menu.append(desc_text)
+        self.menu.append(self.__ui_selector_monitor)
+        self.menu.append(self.__ui_switch_is_fullscreen)
+        self.menu.append(self.__ui_slider_marker_scale)
+        self.menu.append(self.__ui_slider_sample_duration)
 
     def deinit_ui(self):
         """gets called when the plugin get terminated.
@@ -186,6 +191,30 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         if self._window:
             self.close_window()
         super().deinit_ui()
+
+    # Private - UI
+
+    def __ui_selector_monitor_labels(self) -> T.List[str]:
+        return list(GUIMonitor.currently_connected_monitors_by_name().keys())
+
+    def __ui_selector_monitor_selection(self) -> T.List[str]:
+        return list(GUIMonitor.currently_connected_monitors_by_name().keys())
+
+    def __ui_selector_monitor_getter(self) -> str:
+        if self.monitor_name not in GUIMonitor.currently_connected_monitors_by_name():
+            old_name = self.monitor_name
+            new_name = GUIMonitor.primary_monitor().name
+            logger.warning(f"Monitor \"{old_name}\" no longer availalbe using \"{new_name}\"")
+            self.monitor_name = new_name
+        return self.monitor_name
+
+    def __ui_selector_monitor_setter(self, monitor_name: str):
+        self.monitor_name = monitor_name
+        if self.monitor_name not in GUIMonitor.currently_connected_monitors_by_name():
+            old_name = self.monitor_name
+            new_name = GUIMonitor.primary_monitor().name
+            logger.warning(f"Monitor \"{old_name}\" no longer availalbe using \"{new_name}\"")
+            self.monitor_name = new_name
 
     def recent_events(self, events):
         frame = events.get("frame")
@@ -334,25 +363,10 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
     def open_window(self, title="new_window"):
         if not self._window:
             if self.fullscreen:
-                try:
-                    monitor = glfwGetMonitors()[self.monitor_idx]
-                except Exception:
-                    logger.warning(
-                        "Monitor at index %s no longer availalbe using default"
-                        % self.monitor_idx
-                    )
-                    self.monitor_idx = 0
-                    monitor = glfwGetMonitors()[self.monitor_idx]
-                (
-                    width,
-                    height,
-                    redBits,
-                    blueBits,
-                    greenBits,
-                    refreshRate,
-                ) = glfwGetVideoMode(monitor)
+                gui_monitor = GUIMonitor.find_monitor_by_name(self.monitor_name)
+                gui_monitor = gui_monitor or GUIMonitor.primary_monitor()
+                width, height = gui_monitor.size
             else:
-                monitor = None
                 width, height = 640, 360
 
             # NOTE: Always creating windowed window here, even if in fullscreen mode. On
@@ -378,10 +392,10 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
             glfwSetInputMode(self._window, GLFW_CURSOR, cursor)
 
             # Register callbacks
-            glfwSetFramebufferSizeCallback(self._window, on_resize)
+            glfwSetFramebufferSizeCallback(self._window, self.on_resize)
             glfwSetKeyCallback(self._window, self.on_window_key)
             glfwSetMouseButtonCallback(self._window, self.on_window_mouse_button)
-            on_resize(self._window, *glfwGetFramebufferSize(self._window))
+            self.on_resize(self._window, *glfwGetFramebufferSize(self._window))
 
             # gl_state settings
             active_window = glfwGetCurrentContext()
@@ -395,7 +409,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
             if self.fullscreen:
                 # Switch to full screen here. See NOTE above at glfwCreateWindow().
                 glfwSetWindowMonitor(
-                    self._window, monitor, 0, 0, width, height, refreshRate
+                    self._window, gui_monitor.unsafe_handle, 0, 0, width, height, gui_monitor.refresh_rate
                 )
 
     def close_window(self):
@@ -484,6 +498,12 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
 
+    def on_resize(self, window, w, h):
+        active_window = glfwGetCurrentContext()
+        glfwMakeContextCurrent(window)
+        adjust_gl_view(w, h)
+        glfwMakeContextCurrent(active_window)
+
     def on_window_key(self, window, key, scancode, action, mods):
         if action == GLFW_PRESS:
             if key == GLFW_KEY_ESCAPE:
@@ -492,14 +512,6 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
     def on_window_mouse_button(self, window, button, action, mods):
         if action == GLFW_PRESS:
             self.clicks_to_close -= 1
-
-
-# window calbacks
-def on_resize(window, w, h):
-    active_window = glfwGetCurrentContext()
-    glfwMakeContextCurrent(window)
-    adjust_gl_view(w, h)
-    glfwMakeContextCurrent(active_window)
 
 
 # easing functions for animation of the marker fade in/out
