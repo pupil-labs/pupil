@@ -25,7 +25,7 @@ from pyglui.cygl.utils import draw_points, draw_polyline, RGBA
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreograthyAction
-from .base_plugin import Gazer3D  # FIXME: Import from gazer
+from gaze_mapping import Gazer2D_v1x
 
 
 logger = logging.getLogger(__name__)
@@ -35,13 +35,12 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites - not between
-
     """
 
     label = "Screen Marker Calibration Choreography"
 
     def supported_gazers(self):
-        return [Gazer3D]  # FIXME: Provide complete list of supported gazers
+        return [Gazer2D_v1x]  # FIXME: Provide complete list of supported gazers
 
     @staticmethod
     def __site_locations(mode: ChoreographyMode, is_2d: bool, is_3d: bool) -> list:

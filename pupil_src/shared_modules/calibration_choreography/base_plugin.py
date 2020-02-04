@@ -16,37 +16,10 @@ import typing as T
 from pyglui import ui
 from plugin import Plugin
 
+from gaze_mapping.gazer_base import GazerBase
+
 
 logger = logging.getLogger(__name__)
-
-
-# TODO: Move to gazer module
-class Gazer(Plugin, abc.ABC):
-    label = None
-
-    @staticmethod
-    def registered_gazers() -> T.Mapping[str, "Gazer"]:
-        return dict(Gazer.__registered_choreography_plugins)
-
-    def __init_subclass__(cls, *args, **kwargs):
-        super().__init_subclass__(*args, **kwargs)
-        try:
-            store = Gazer.__registered_choreography_plugins
-        except AttributeError:
-            Gazer.__registered_choreography_plugins = {}
-            store = Gazer.__registered_choreography_plugins
-        assert isinstance(cls.label, str), f"Gazer subclass {cls.__name__} must overwrite string class property \"label\""
-        store[cls.label] = cls
-
-
-# TODO: Move to gazer module
-class Gazer2D(Gazer):
-    label = "2D"
-
-
-# TODO: Move to gazer module
-class Gazer3D(Gazer):
-    label = "3D"
 
 
 class ChoreographyMode(enum.Enum):
@@ -167,6 +140,10 @@ class CalibrationChoreographyPlugin(Plugin):
         raise NotImplementedError(f"Unsupported choreography mode: {self.__current_mode}")
 
     @property
+    def current_gazer(self) -> GazerBase:
+        return self.__selected_gazer
+
+    @property
     def is_active(self) -> bool:
         return self.__is_active
 
@@ -198,8 +175,8 @@ class CalibrationChoreographyPlugin(Plugin):
 
     # TODO: Replace with a callback
     def finish_calibration(self, pupil_list, ref_list):
-        # finish_calibration(self.g_pool, pupil_list, ref_list)
-        print(f"===>>> CALIBRATION FINISHED: {len(pupil_list)} pupil datums, {len(ref_list)} ref locations")
+        calib_data = {"ref_list": ref_list, "pupil_list": pupil_list}
+        self.__start_plugin(self.current_gazer, calib_data=calib_data)
 
     # TODO: Replace with a callback
     def finish_accuracy_test(self, pupil_list, ref_list):
