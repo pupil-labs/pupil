@@ -24,7 +24,7 @@ from pyglui import ui
 from pyglui.cygl.utils import draw_points, draw_polyline, RGBA
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreograthyAction
+from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreographyAction
 from gaze_mapping import Gazer2D_v1x
 
 

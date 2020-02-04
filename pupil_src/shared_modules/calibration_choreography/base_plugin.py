@@ -31,7 +31,7 @@ class ChoreographyMode(enum.Enum):
         return self.value.replace("_", " ").title()
 
 
-class ChoreograthyAction(enum.Enum):
+class ChoreographyAction(enum.Enum):
     SHOULD_START = "should_start"
     SHOULD_STOP = "should_stop"
     STARTED = "started"
@@ -39,13 +39,13 @@ class ChoreograthyAction(enum.Enum):
     FAILED = "failed"
     SUCCEEDED = "successful"
 
-class ChoreograthyNotification:
+class ChoreographyNotification:
     __slots__ = ("mode", "action")
 
     _REQUIRED_KEYS = {"subject"}
     _OPTIONAL_KEYS = {"topic"}
 
-    def __init__(self, mode: ChoreographyMode, action: ChoreograthyAction):
+    def __init__(self, mode: ChoreographyMode, action: ChoreographyAction):
         self.mode = mode
         self.action = action
 
@@ -58,7 +58,7 @@ class ChoreograthyNotification:
 
     @staticmethod
     def from_dict(note: dict) -> "ChoreographyNotification":
-        cls = ChoreograthyNotification
+        cls = ChoreographyNotification
         keys = set(note.keys())
 
         missing_required_keys = cls._REQUIRED_KEYS.difference(keys)
@@ -71,9 +71,9 @@ class ChoreograthyNotification:
             raise ValueError(f"Notification contains invalid keys: {invalid_keys}")
 
         mode, action = note["subject"].split(".")
-        return ChoreograthyNotification(
+        return ChoreographyNotification(
             mode=ChoreographyMode(mode),
-            action=ChoreograthyAction(action),
+            action=ChoreographyAction(action),
         )
 
 
@@ -154,11 +154,11 @@ class CalibrationChoreographyPlugin(Plugin):
         if self.__current_mode == ChoreographyMode.ACCURACY_TEST:
             self.__ui_button_calibation_disable()
         self.notify_all(
-            ChoreograthyNotification(
+            ChoreographyNotification(
                 # TODO: Why the subject is always "calibration.started", and not "accuracy_test.started" for accuracy test mode?
                 # mode=self.__current_mode,
                 mode=ChoreographyMode.CALIBRATION,
-                action=ChoreograthyAction.STARTED,
+                action=ChoreographyAction.STARTED,
             ).to_dict()
         )
 
@@ -167,9 +167,9 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_button_calibation_enable()
         self.__ui_button_accuracy_test_enable()
         self.notify_all(
-            ChoreograthyNotification(
+            ChoreographyNotification(
                 mode=self.__current_mode,
-                action=ChoreograthyAction.STOPPED,
+                action=ChoreographyAction.STOPPED,
             ).to_dict()
         )
 
@@ -207,9 +207,9 @@ class CalibrationChoreographyPlugin(Plugin):
         return pairs
 
     def __toggle_mode_action(self, mode: ChoreographyMode):
-        action = ChoreograthyAction.SHOULD_START if not self.is_active else ChoreograthyAction.SHOULD_STOP
+        action = ChoreographyAction.SHOULD_START if not self.is_active else ChoreographyAction.SHOULD_STOP
         self.notify_all(
-            ChoreograthyNotification(
+            ChoreographyNotification(
                 mode=mode, action=action
             ).to_dict()
         )
@@ -297,18 +297,18 @@ class CalibrationChoreographyPlugin(Plugin):
             note_dict (dict): Notification dictionary
         """
         try:
-            note = ChoreograthyNotification.from_dict(note_dict)
+            note = ChoreographyNotification.from_dict(note_dict)
         except ValueError:
             return  # Disregard notifications other than choreography notifications
 
-        if note.action == ChoreograthyAction.SHOULD_START:
+        if note.action == ChoreographyAction.SHOULD_START:
             if self.is_active:
                 logger.warning(f"{self.current_mode.label} already running.")
             else:
                 self.__current_mode = note.mode
                 self.start()
 
-        if note.action == ChoreograthyAction.SHOULD_STOP:
+        if note.action == ChoreographyAction.SHOULD_STOP:
             if not self.is_active:
                 logger.warning(f"{self.current_mode.label} already stopped.")
             else:
