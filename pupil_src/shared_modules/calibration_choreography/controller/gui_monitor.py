@@ -1,3 +1,4 @@
+import collections
 import typing as T
 
 from glfw import (
@@ -6,6 +7,12 @@ from glfw import (
     glfwGetPrimaryMonitor,
     glfwGetVideoMode,
 )
+
+try:
+    from typing import OrderedDict as T_OrderedDict  # Python 3.7.2
+except ImportError:
+    class T_OrderedDict(collections.OrderedDict, T.MutableMapping[T.KT, T.VT]):
+        pass
 
 
 class GUIMonitor:
@@ -22,13 +29,12 @@ class GUIMonitor:
         ("refresh_rate", int),
     ])
 
-    __slots__ = ("__gl_handle", "__name")
+    __slots__ = ("__gl_handle", "__name", "__index")
 
     def __init__(self, index, gl_handle):
-        name = glfwGetMonitorName(gl_handle).decode("utf-8")
-        tag = "PRIMARY" if index == 0 else str(index)
         self.__gl_handle = gl_handle
-        self.__name = f"{name} [{tag}]"
+        self.__name = glfwGetMonitorName(gl_handle).decode("utf-8")
+        self.__index = index
 
     @property
     def unsafe_handle(self):
@@ -36,7 +42,8 @@ class GUIMonitor:
 
     @property
     def name(self) -> str:
-        return self.__name
+        tag = "PRIMARY" if self.__index == 0 else str(self.__index)
+        return f"{self.__name} [{tag}]"
 
     @property
     def size(self) -> T.Tuple[int, int]:
@@ -62,9 +69,8 @@ class GUIMonitor:
         return [GUIMonitor(i, h) for i, h in enumerate(glfwGetMonitors())]
 
     @staticmethod
-    def currently_connected_monitors_by_name() -> T.Mapping[str, "GUIMonitor"]:
-
-        return {m.name: m for m in GUIMonitor.currently_connected_monitors()}
+    def currently_connected_monitors_by_name() -> T_OrderedDict[str, "GUIMonitor"]:
+        return collections.OrderedDict((m.name, m) for m in GUIMonitor.currently_connected_monitors())
 
     @staticmethod
     def primary_monitor() -> "GUIMonitor":
