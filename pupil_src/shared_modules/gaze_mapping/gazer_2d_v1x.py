@@ -28,6 +28,11 @@ class Model2D_v1x(Model):
     def __init__(self, *, binocular, screen_size=(1, 1)):
         self.binocular = binocular
         self.screen_size = screen_size
+        self._is_fitted = False
+
+    @property
+    def is_fitted(self) -> bool:
+        return self._is_fitted
 
     def fit(self, point_cloud):  # NOTE: breaks api due to legacy reasons
         map_fn, inliers, params = calibrate_2d_polynomial(
@@ -37,6 +42,7 @@ class Model2D_v1x(Model):
             raise NotEnoughDataError
 
         self.set_params(map_fn=map_fn, params=params)
+        self._is_fitted = True
 
     def predict(self, X):
         return [self._predict_single(x) for x in X]
@@ -86,14 +92,14 @@ class Gazer2D_v1x(GazerBase):
         for pupil_match in matched_pupil_data:
             num_matched = len(pupil_match)
 
-            if num_matched == 2:
+            if num_matched == 2 and self.binocular_model.is_fitted:
                 gaze_positions = self.binocular_model.predict([pupil_match])
                 topic = "gaze.2d.01."
             elif num_matched == 1:
-                if pupil_match[0]["id"] == 0:
+                if pupil_match[0]["id"] == 0 and self.right_model.is_fitted:
                     gaze_positions = self.right_model.predict([pupil_match])
                     topic = "gaze.2d.0."
-                else:
+                elif pupil_match[0]["id"] == 1 and self.left_model.is_fitted:
                     gaze_positions = self.left_model.predict([pupil_match])
                     topic = "gaze.2d.1."
 
@@ -110,6 +116,6 @@ class Gazer2D_v1x(GazerBase):
     def filter_pupil_data(
         self, pupil_data: T.Iterable, confidence_threshold: T.Optional[float] = None
     ) -> T.Iterable:
-        # TODO: Filter 2D data
+        pupil_data = list(filter(lambda p: "2d" in p["topic"], pupil_data))
         pupil_data = super().filter_pupil_data(pupil_data, confidence_threshold)
         return pupil_data

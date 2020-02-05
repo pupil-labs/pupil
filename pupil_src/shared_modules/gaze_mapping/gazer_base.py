@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import abc
 import itertools
+import logging
 import typing as T
 
 from plugin import Plugin
@@ -17,12 +18,27 @@ from calibration_routines import data_processing
 
 from .matching import RealtimeMatcher
 
+logger = logging.getLogger(__name__)
 
-class NotEnoughDataError(Exception):
+
+class CalibrationError(Exception):
+    pass
+
+
+class NotEnoughDataError(CalibrationError):
+    pass
+
+
+class FitDidNotConvergeError(CalibrationError):
     pass
 
 
 class Model(abc.ABC):
+    @property
+    @abc.abstractmethod
+    def is_fitted(self) -> bool:
+        pass
+
     @abc.abstractmethod
     def fit(self, X, y):
         """Fit model with input `X` to targets `y`
@@ -111,6 +127,7 @@ class GazerBase(abc.ABC, Plugin):
         Returns:
             T.Iterable -- Subset of `pupil_data`
         """
+        # TODO: make this a generator
         if confidence_threshold is not None:
             pupil_data = data_processing._filter_pupil_list_by_confidence(
                 pupil_data, confidence_threshold
@@ -130,7 +147,11 @@ class GazerBase(abc.ABC, Plugin):
         self.init_matcher()
 
         if calib_data is not None:
-            self.fit_on_calib_data(calib_data)
+            try:
+                self.fit_on_calib_data(calib_data)
+            except CalibrationError:
+                logger.error("Calibration Failed!")
+                self.alive = False
         elif params is not None:
             self.set_params(params)
         else:
@@ -185,10 +206,16 @@ class GazerBase(abc.ABC, Plugin):
         )
         # match pupil to reference data (left, right, and binocular)
         matches = self.match_pupil_to_ref(pupil_data, ref_data)
-
-        self._fit_monocular_model(self.left_model, matches.left)
-        self._fit_monocular_model(self.right_model, matches.right)
-        self._fit_binocular_model(self.binocular_model, matches.binocular)
+        if matches.binocular:
+            self._fit_monocular_model(self.left_model, matches.left)
+            self._fit_monocular_model(self.right_model, matches.right)
+            self._fit_binocular_model(self.binocular_model, matches.binocular)
+        elif matches.right:
+            self._fit_monocular_model(self.right_model, matches.right)
+        elif matches.left:
+            self._fit_monocular_model(self.left_model, matches.left)
+        else:
+            raise NotEnoughDataError
 
     def match_pupil_to_ref(self, pupil_data, ref_data) -> "Matches":
         matches = data_processing._match_data(pupil_data, ref_data)
