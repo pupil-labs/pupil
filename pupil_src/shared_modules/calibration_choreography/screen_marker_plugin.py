@@ -28,7 +28,7 @@ from pyglui.ui import get_opensans_font_path
 
 from .controller import GUIMonitor
 from .controller import MarkerWindow
-from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreographyAction
+from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreographyAction, ChoreographyNotification
 from gaze_mapping import Gazer2D_v1x
 
 
