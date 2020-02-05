@@ -75,7 +75,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
             marker_scale=marker_scale,
             sample_duration=sample_duration,
         )
-        self.__marker_window.add_observer("on_did_close", self.__on_window_did_close)
+        self.__marker_window.add_observer("on_did_close", self._on_window_did_close)
 
         self.__ui_selector_monitor_setter(monitor_name)
 
@@ -296,9 +296,9 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
             is_fullscreen=self.fullscreen,
         )
 
-    def __on_window_did_close(self):
+    def _on_window_did_close(self):
         # TODO: Refactor this...
-        self.on_notify_all(
+        self.notify_all(
             ChoreographyNotification(
                 mode=self.current_mode,
                 action=ChoreographyAction.SHOULD_STOP,
