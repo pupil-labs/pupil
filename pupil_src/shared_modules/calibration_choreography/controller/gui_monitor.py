@@ -24,9 +24,11 @@ class GUIMonitor:
 
     __slots__ = ("__gl_handle", "__name")
 
-    def __init__(self, gl_handle):
+    def __init__(self, index, gl_handle):
+        name = glfwGetMonitorName(gl_handle).decode("utf-8")
+        tag = "PRIMARY" if index == 0 else str(index)
         self.__gl_handle = gl_handle
-        self.__name = glfwGetMonitorName(gl_handle)
+        self.__name = f"{name} [{tag}]"
 
     @property
     def unsafe_handle(self):
@@ -57,16 +59,17 @@ class GUIMonitor:
 
     @staticmethod
     def currently_connected_monitors() -> T.List["GUIMonitor"]:
-        return [GUIMonitor(h) for h in glfwGetMonitors()]
+        return [GUIMonitor(i, h) for i, h in enumerate(glfwGetMonitors())]
 
     @staticmethod
     def currently_connected_monitors_by_name() -> T.Mapping[str, "GUIMonitor"]:
+
         return {m.name: m for m in GUIMonitor.currently_connected_monitors()}
 
     @staticmethod
     def primary_monitor() -> "GUIMonitor":
         gl_handle = glfwGetPrimaryMonitor()
-        return GUIMonitor(gl_handle)
+        return GUIMonitor(0, gl_handle)
 
     @staticmethod
     def find_monitor_by_name(name: str) -> T.Optional["GUIMonitor"]:
