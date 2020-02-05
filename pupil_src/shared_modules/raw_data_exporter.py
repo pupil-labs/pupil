@@ -428,8 +428,20 @@ class Gaze_Positions_Exporter(_Base_Positions_Exporter):
                 gaze_normals1_3d = raw_value["gaze_normals_3d"].get(1, [None, None, None])
             # monocular
             elif raw_value.get("eye_center_3d", None) is not None:
-                eye_centers0_3d = raw_value["eye_center_3d"]
-                gaze_normals0_3d = raw_value["gaze_normal_3d"]
+                try:
+                    eye_id = raw_value["base_data"][0]["id"]
+                except (KeyError, IndexError):
+                    logger.warning(
+                        f"Unexpected raw base_data for monocular gaze!"
+                        f" Data: {raw_value.get('base_data', None)}"
+                    )
+                else:
+                    if str(eye_id) == "0":
+                        eye_centers0_3d = raw_value["eye_center_3d"]
+                        gaze_normals0_3d = raw_value["gaze_normal_3d"]
+                    elif str(eye_id) == "1":
+                        eye_centers1_3d = raw_value["eye_center_3d"]
+                        gaze_normals1_3d = raw_value["gaze_normal_3d"]
 
         return {
             "gaze_timestamp": gaze_timestamp,
