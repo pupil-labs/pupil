@@ -47,42 +47,13 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
 
     @staticmethod
     def __site_locations(mode: ChoreographyMode, is_2d: bool, is_3d: bool) -> list:
-        if is_3d and mode == ChoreographyMode.CALIBRATION:
-            return [
-                (0.5, 0.5),
-                (0.0, 1.0),
-                (1.0, 1.0),
-                (1.0, 0.0),
-                (0.0, 0.0),
-            ]
-        if is_3d and mode == ChoreographyMode.ACCURACY_TEST:
-            return [
-                (0.25, 0.5),
-                (0.5, 0.25),
-                (0.75, 0.5),
-                (0.5, 0.75)
-            ]
-        if is_2d and mode == ChoreographyMode.CALIBRATION:
-            return [
-                (0.25, 0.5),
-                (0, 0.5),
-                (0.0, 1.0),
-                (0.5, 1.0),
-                (1.0, 1.0),
-                (1.0, 0.5),
-                (1.0, 0.0),
-                (0.5, 0.0),
-                (0.0, 0.0),
-                (0.75, 0.5),
-            ]
-        if is_2d and mode == ChoreographyMode.ACCURACY_TEST:
-            return [
-                (0.5, 0.5),
-                (0.25, 0.25),
-                (0.25, 0.75),
-                (0.75, 0.75),
-                (0.75, 0.25),
-            ]
+        return [
+            (0.5, 0.5),
+            (0.0, 1.0),
+            (1.0, 1.0),
+            (1.0, 0.0),
+            (0.0, 0.0),
+        ]
 
     def __init__(
         self,
