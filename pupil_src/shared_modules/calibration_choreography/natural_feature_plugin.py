@@ -34,7 +34,7 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
         Features are selected by a user by clicking on
     """
 
-    label = "Manual Calibration Choreography"
+    label = "Natural Feature Calibration Choreography"
 
     def supported_gazers(self):
         return [Gazer2D_v1x]  # FIXME: Provide complete list of supported gazers
