@@ -9,6 +9,9 @@ from glfw import (
 
 
 class GUIMonitor:
+    """
+    Wrapper class for monitor related GLFW API.
+    """
 
     VideoMode = T.NamedTuple("VideoMode", [
         ("width", int),
