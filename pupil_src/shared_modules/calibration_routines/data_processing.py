@@ -38,10 +38,14 @@ def get_data_for_calibration(g_pool, pupil_list, ref_list, mode):
     if mode == "3d":
         if matched_binocular_data:
             binocular = True
-            extracted_data = _extract_3d_data(g_pool, matched_binocular_data)
+            extracted_data = _extract_3d_data(
+                matched_binocular_data, g_pool.capture.intrinsics
+            )
         elif matched_monocular_data:
             binocular = False
-            extracted_data = _extract_3d_data(g_pool, matched_monocular_data)
+            extracted_data = _extract_3d_data(
+                matched_monocular_data, g_pool.capture.intrinsics
+            )
 
     elif mode == "2d":
         if matched_binocular_data:
@@ -164,7 +168,7 @@ def _find_nearest_idx(array, value):
         return idx - 1
 
 
-def _extract_3d_data(g_pool, matched_data):
+def _extract_3d_data(matched_data, intrinsics):
     """Takes matched data, splits into ref, pupil0, pupil1.
     Return unprojections of ref, normals of pupil0 and pupil1 and last pupils
     """
@@ -173,9 +177,7 @@ def _extract_3d_data(g_pool, matched_data):
         return None
 
     ref = np.array([dp["ref"]["screen_pos"] for dp in matched_data])
-    ref_points_unprojected = g_pool.capture.intrinsics.unprojectPoints(
-        ref, normalize=True
-    )
+    ref_points_unprojected = intrinsics.unprojectPoints(ref, normalize=True)
 
     pupil0_normals = [
         dp["pupil"]["circle_3d"]["normal"]
