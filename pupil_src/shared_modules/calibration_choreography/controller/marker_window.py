@@ -170,7 +170,7 @@ class MarkerWindow(GUIWindow):
 
     def __gl_draw_closing_text(self):
         window_width, window_height = self.window_size
-        closing_text = f"Touch {self.__current_clicks_to_close} more times to cancel.",
+        closing_text = f"Touch {self.__current_clicks_to_close} more times to cancel."
         if self.__current_clicks_to_close < self._CLICKS_TO_CLOSE:
             self.__glfont.set_size(int(window_width / 30.0))
             self.__glfont.draw_text(
