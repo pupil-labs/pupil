@@ -22,7 +22,11 @@ from glfw import GLFW_PRESS
 import audio
 
 from .controller import GUIMonitor
-from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreographyAction
+from .base_plugin import (
+    CalibrationChoreographyPlugin,
+    ChoreographyMode,
+    ChoreographyAction,
+)
 from gaze_mapping import Gazer2D_v1x
 
 

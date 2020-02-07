@@ -37,7 +37,12 @@ from .controller import (
     MarkerWindowStateAnimatingOutMarker,
     UnhandledMarkerWindowStateError,
 )
-from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreographyAction, ChoreographyNotification
+from .base_plugin import (
+    CalibrationChoreographyPlugin,
+    ChoreographyMode,
+    ChoreographyAction,
+    ChoreographyNotification,
+)
 from gaze_mapping import Gazer2D_v1x
 
 
@@ -58,13 +63,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
     @staticmethod
     def __site_locations(mode: ChoreographyMode, is_2d: bool, is_3d: bool) -> list:
         assert is_2d != is_3d  # sanity check
-        return [
-            (0.5, 0.5),
-            (0.0, 1.0),
-            (1.0, 1.0),
-            (1.0, 0.0),
-            (0.0, 0.0),
-        ]
+        return [(0.5, 0.5), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
 
     def __init__(
         self,
@@ -84,7 +83,9 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         self.sample_duration = sample_duration
 
         self.__marker_window = MarkerWindowController(marker_scale=marker_scale)
-        self.__marker_window.add_observer("on_window_did_close", self._on_window_did_close)
+        self.__marker_window.add_observer(
+            "on_window_did_close", self._on_window_did_close
+        )
 
         self.__ui_selector_monitor_setter(monitor_name)
 
@@ -100,7 +101,9 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
 
     def init_ui(self):
 
-        desc_text = ui.Info_Text("Calibrate gaze parameters using a screen based animation.")
+        desc_text = ui.Info_Text(
+            "Calibrate gaze parameters using a screen based animation."
+        )
 
         self.__ui_selector_monitor = ui.Selector(
             "monitor",
@@ -112,9 +115,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         )
 
         self.__ui_switch_is_fullscreen = ui.Switch(
-            "fullscreen",
-            self,
-            label="Use fullscreen"
+            "fullscreen", self, label="Use fullscreen"
         )
 
         self.__ui_slider_marker_scale = ui.Slider(
@@ -127,12 +128,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         )
 
         self.__ui_slider_sample_duration = ui.Slider(
-            "sample_duration",
-            self,
-            label="Sample duration",
-            min=10,
-            max=100,
-            step=1,
+            "sample_duration", self, label="Sample duration", min=10, max=100, step=1
         )
 
         super().init_ui()
@@ -163,7 +159,9 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         if self.monitor_name not in GUIMonitor.currently_connected_monitors_by_name():
             old_name = self.monitor_name
             new_name = GUIMonitor.primary_monitor().name
-            logger.warning(f"Monitor \"{old_name}\" no longer availalbe using \"{new_name}\"")
+            logger.warning(
+                f'Monitor "{old_name}" no longer availalbe using "{new_name}"'
+            )
             self.monitor_name = new_name
         return self.monitor_name
 
@@ -172,7 +170,9 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         if self.monitor_name not in GUIMonitor.currently_connected_monitors_by_name():
             old_name = self.monitor_name
             new_name = GUIMonitor.primary_monitor().name
-            logger.warning(f"Monitor \"{old_name}\" no longer availalbe using \"{new_name}\"")
+            logger.warning(
+                f'Monitor "{old_name}" no longer availalbe using "{new_name}"'
+            )
             self.monitor_name = new_name
 
     def recent_events(self, events):
@@ -205,7 +205,9 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
             if self.sites:
                 self.active_site = self.sites.pop(0)
                 logger.debug(f"Moving screen marker to site at {self.active_site}")
-                self.__marker_window.show_marker(self.active_site, should_animate=should_animate)
+                self.__marker_window.show_marker(
+                    self.active_site, should_animate=should_animate
+                )
                 return
             else:
                 # No more markers to show; stop calibration choreography.
@@ -226,7 +228,9 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
                 ref["timestamp"] = frame.timestamp
                 self.ref_list.append(ref)
 
-            should_move_to_next_marker = len(self.ref_list) == self.sample_duration * (self.collected_site_count + 1)
+            should_move_to_next_marker = len(self.ref_list) == self.sample_duration * (
+                self.collected_site_count + 1
+            )
 
             if should_move_to_next_marker:
                 # Finished collecting samples for current active site
@@ -270,13 +274,13 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
             )
             draw_polyline(pts, 1, RGBA(0.0, 1.0, 0.0, 1.0))
             if len(self.markers) > 1:
-                draw_polyline(
-                    pts, 1, RGBA(1.0, 0.0, 0.0, 0.5), line_type=gl.GL_POLYGON
-                )
+                draw_polyline(pts, 1, RGBA(1.0, 0.0, 0.0, 0.5), line_type=gl.GL_POLYGON)
 
     def start(self):
         if not self.g_pool.capture.online:
-            logger.error(f"{self.current_mode.label} requiers world capture video input.")
+            logger.error(
+                f"{self.current_mode.label} requiers world capture video input."
+            )
             return
 
         logger.info(f"Starting {self.current_mode.label}")
@@ -323,8 +327,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         # TODO: Refactor this...
         self.notify_all(
             ChoreographyNotification(
-                mode=self.current_mode,
-                action=ChoreographyAction.SHOULD_STOP,
+                mode=self.current_mode, action=ChoreographyAction.SHOULD_STOP
             ).to_dict()
         )
 
@@ -350,5 +353,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         elif len(self.markers) == 1:
             return circle_markers[0]
         else:
-            logger.warning(f"{len(circle_markers)} markers detected. Please remove all the other markers")
+            logger.warning(
+                f"{len(circle_markers)} markers detected. Please remove all the other markers"
+            )
             return circle_markers[0]

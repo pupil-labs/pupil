@@ -11,6 +11,7 @@ from glfw import (
 try:
     from typing import OrderedDict as T_OrderedDict  # Python 3.7.2
 except ImportError:
+
     class T_OrderedDict(collections.OrderedDict, T.MutableMapping[T.KT, T.VT]):
         pass
 
@@ -20,14 +21,17 @@ class GUIMonitor:
     Wrapper class for monitor related GLFW API.
     """
 
-    VideoMode = T.NamedTuple("VideoMode", [
-        ("width", int),
-        ("height", int),
-        ("red_bits", int),
-        ("green_bits", int),
-        ("blue_bits", int),
-        ("refresh_rate", int),
-    ])
+    VideoMode = T.NamedTuple(
+        "VideoMode",
+        [
+            ("width", int),
+            ("height", int),
+            ("red_bits", int),
+            ("green_bits", int),
+            ("blue_bits", int),
+            ("refresh_rate", int),
+        ],
+    )
 
     __slots__ = ("__gl_handle", "__name", "__index")
 
@@ -70,7 +74,9 @@ class GUIMonitor:
 
     @staticmethod
     def currently_connected_monitors_by_name() -> T_OrderedDict[str, "GUIMonitor"]:
-        return collections.OrderedDict((m.name, m) for m in GUIMonitor.currently_connected_monitors())
+        return collections.OrderedDict(
+            (m.name, m) for m in GUIMonitor.currently_connected_monitors()
+        )
 
     @staticmethod
     def primary_monitor() -> "GUIMonitor":

@@ -43,12 +43,23 @@ class GUIWindow(Observable):
         return self.__gl_handle is not None
 
     def cursor_hide(self):
-        glfw.glfwSetInputMode(self.__gl_handle, glfw.GLFW_CURSOR, glfw.GLFW_CURSOR_HIDDEN)
+        glfw.glfwSetInputMode(
+            self.__gl_handle, glfw.GLFW_CURSOR, glfw.GLFW_CURSOR_HIDDEN
+        )
 
     def cursor_disable(self):
-        glfw.glfwSetInputMode(self.__gl_handle, glfw.GLFW_CURSOR, glfw.GLFW_CURSOR_DISABLED)
+        glfw.glfwSetInputMode(
+            self.__gl_handle, glfw.GLFW_CURSOR, glfw.GLFW_CURSOR_DISABLED
+        )
 
-    def open(self, gui_monitor: GUIMonitor, title: str, is_fullscreen:bool=False, size:T.Tuple[int, int]=None, position:T.Tuple[int, int]=None):
+    def open(
+        self,
+        gui_monitor: GUIMonitor,
+        title: str,
+        is_fullscreen: bool = False,
+        size: T.Tuple[int, int] = None,
+        position: T.Tuple[int, int] = None,
+    ):
         if self.is_open:
             # TODO: Warn that the window is already open
             return
@@ -56,9 +67,13 @@ class GUIWindow(Observable):
         if not gui_monitor.is_available:
             raise ValueError(f"Window requires an available monitor.")
 
-        has_fixed_size = (size is not None) and (len(size) == 2) and (size[0] > 0) and (size[1] > 0)
+        has_fixed_size = (
+            (size is not None) and (len(size) == 2) and (size[0] > 0) and (size[1] > 0)
+        )
         if is_fullscreen and has_fixed_size:
-            raise ValueError(f"Fullscreen is mutually exclusive to having a fixed size.")
+            raise ValueError(
+                f"Fullscreen is mutually exclusive to having a fixed size."
+            )
 
         if position is None:
             if platform.system() == "Windows":
@@ -73,7 +88,9 @@ class GUIWindow(Observable):
         # windows you might experience a black screen for up to 1 sec when creating
         # a blank window directly in fullscreen mode. By creating it windowed and
         # then switching to fullscreen it will stay white the entire time.
-        self.__gl_handle = glfw.glfwCreateWindow(*size, title, share=glfw.glfwGetCurrentContext())
+        self.__gl_handle = glfw.glfwCreateWindow(
+            *size, title, share=glfw.glfwGetCurrentContext()
+        )
 
         if not is_fullscreen:
             glfw.glfwSetWindowPos(self.__gl_handle, *position)
@@ -92,14 +109,21 @@ class GUIWindow(Observable):
         if is_fullscreen:
             # Switch to full screen here. See NOTE above at glfwCreateWindow().
             glfw.glfwSetWindowMonitor(
-                self.__gl_handle, gui_monitor.unsafe_handle, 0, 0, *gui_monitor.size, gui_monitor.refresh_rate
+                self.__gl_handle,
+                gui_monitor.unsafe_handle,
+                0,
+                0,
+                *gui_monitor.size,
+                gui_monitor.refresh_rate,
             )
 
     def close(self):
         if not self.is_open:
             return
         with self._switch_to_current_context():
-            glfw.glfwSetInputMode(self.__gl_handle, glfw.GLFW_CURSOR, glfw.GLFW_CURSOR_NORMAL)
+            glfw.glfwSetInputMode(
+                self.__gl_handle, glfw.GLFW_CURSOR, glfw.GLFW_CURSOR_NORMAL
+            )
             glfw.glfwDestroyWindow(self.__gl_handle)
         self.__gl_handle = None
 

@@ -25,7 +25,11 @@ from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
 
-from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreographyAction
+from .base_plugin import (
+    CalibrationChoreographyPlugin,
+    ChoreographyMode,
+    ChoreographyAction,
+)
 from gaze_mapping import Gazer2D_v1x
 
 
@@ -108,7 +112,9 @@ class SingleMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
             return range(len(monitors)), monitors
 
         if self.monitor_idx not in get_monitors_idx_list()[0]:
-            logger.warning(f"Monitor at index {self.monitor_idx} no longer availalbe using default")
+            logger.warning(
+                f"Monitor at index {self.monitor_idx} no longer availalbe using default"
+            )
             self.monitor_idx = 0
 
         desc_text = ui.Info_Text(
@@ -128,19 +134,11 @@ class SingleMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         # having clicked the Selector and the next redraw.
         # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
         self.__ui_selector_monitor_idx = ui.Selector(
-            "monitor_idx",
-            self,
-            selection_getter=get_monitors_idx_list,
-            label="Monitor",
+            "monitor_idx", self, selection_getter=get_monitors_idx_list, label="Monitor"
         )
 
         self.__ui_selector_marker_scale = ui.Slider(
-            "marker_scale",
-            self,
-            step=0.1,
-            min=0.5,
-            max=2.0,
-            label="Marker size",
+            "marker_scale", self, step=0.1, min=0.5, max=2.0, label="Marker size"
         )
 
         super().init_ui()
@@ -398,7 +396,9 @@ class SingleMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
             map_value(self.display_pos[0], out_range=(pad, p_window_size[0] - pad)),
             map_value(self.display_pos[1], out_range=(p_window_size[1] - pad, pad)),
         )
-        alpha = 1.0  # interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
+        alpha = (
+            1.0
+        )  # interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
         r2 = 2 * r
         draw_points(

@@ -30,8 +30,10 @@ class MarkerWindowController(observable.Observable):
 
     _CLICKS_NEEDED_TO_CLOSE = 5
 
-    _MARKER_ANIMATION_DURATION_IN = 25 # frames of marker shown before starting to sample
-    _MARKER_ANIMATION_DURATION_OUT = 5 # frames of markers shown after sampling is done
+    _MARKER_ANIMATION_DURATION_IN = (
+        25
+    )  # frames of marker shown before starting to sample
+    _MARKER_ANIMATION_DURATION_OUT = 5  # frames of markers shown after sampling is done
 
     _MARKER_CIRCLE_RGB_OUTER = (0.0, 0.0, 0.0)
     _MARKER_CIRCLE_RGB_MIDDLE = (1.0, 1.0, 1.0)
@@ -67,7 +69,9 @@ class MarkerWindowController(observable.Observable):
     # Public - Marker Management
 
     def show_marker(self, marker_position: T.Tuple[float, float], should_animate: bool):
-        log_ignored_call = lambda: logger.debug(f"show_marker called for state {type(self.__state)}; ignoring the call.")
+        log_ignored_call = lambda: logger.debug(
+            f"show_marker called for state {type(self.__state)}; ignoring the call."
+        )
 
         if isinstance(self.__state, MarkerWindowStateClosed):
             log_ignored_call()
@@ -98,7 +102,9 @@ class MarkerWindowController(observable.Observable):
         raise UnhandledMarkerWindowStateError(self.__state)
 
     def hide_marker(self, should_animate: bool):
-        log_ignored_call = lambda: logger.debug(f"hide_marker called for state {type(self.__state)}; ignoring the call.")
+        log_ignored_call = lambda: logger.debug(
+            f"hide_marker called for state {type(self.__state)}; ignoring the call."
+        )
 
         if isinstance(self.__state, MarkerWindowStateClosed):
             log_ignored_call()
@@ -130,7 +136,9 @@ class MarkerWindowController(observable.Observable):
         return self.__state
 
     def open_window(self, monitor_name: str, title: str, is_fullscreen: bool):
-        log_ignored_call = lambda: logger.debug(f"open_window called for state {type(self.__state)}; ignoring the call.")
+        log_ignored_call = lambda: logger.debug(
+            f"open_window called for state {type(self.__state)}; ignoring the call."
+        )
 
         if isinstance(self.__state, MarkerWindowStateOpened):
             log_ignored_call()
@@ -139,7 +147,9 @@ class MarkerWindowController(observable.Observable):
             gui_monitor = GUIMonitor.find_monitor_by_name(monitor_name)
             if gui_monitor is None:
                 gui_monitor = GUIMonitor.primary_monitor()
-                logger.warning(f"Monitor named \"{monitor_name}\" no longer available. Using primary monitor \"{gui_monitor.name}\"")
+                logger.warning(
+                    f'Monitor named "{monitor_name}" no longer available. Using primary monitor "{gui_monitor.name}"'
+                )
             window_size = None if is_fullscreen else (640, 360)
             self.__window.open(
                 gui_monitor=gui_monitor,
@@ -154,12 +164,16 @@ class MarkerWindowController(observable.Observable):
                 self.__window.cursor_disable()
             else:
                 self.__window.cursor_hide()
-            self.__state = MarkerWindowStateIdle(clicks_needed=self._CLICKS_NEEDED_TO_CLOSE)
+            self.__state = MarkerWindowStateIdle(
+                clicks_needed=self._CLICKS_NEEDED_TO_CLOSE
+            )
             return
         raise UnhandledMarkerWindowStateError(self.__state)
 
     def close_window(self):
-        log_ignored_call = lambda: logger.debug(f"open_window called for state {type(self.__state)}; ignoring the call.")
+        log_ignored_call = lambda: logger.debug(
+            f"open_window called for state {type(self.__state)}; ignoring the call."
+        )
 
         if isinstance(self.__state, MarkerWindowStateClosed):
             log_ignored_call()
@@ -223,10 +237,14 @@ class MarkerWindowController(observable.Observable):
                     is_animating = True
                     if self.__state.is_complete:
                         self.__state = MarkerWindowStateIdle(
-                            clicks_needed=self.__state.clicks_needed,
+                            clicks_needed=self.__state.clicks_needed
                         )
 
-                self.__draw_circle_marker(position=marker_position, is_animating=is_animating, alpha=marker_alpha)
+                self.__draw_circle_marker(
+                    position=marker_position,
+                    is_animating=is_animating,
+                    alpha=marker_alpha,
+                )
                 self.__draw_status_text(clicks_needed=clicks_needed)
 
             self.__state.update_state()
@@ -252,10 +270,15 @@ class MarkerWindowController(observable.Observable):
         if isinstance(self.__state, MarkerWindowStateOpened):
             self.__state.clicks_needed = 0
 
-    def __draw_circle_marker(self, position: T.Optional[T.Tuple[float, float]], is_animating: bool, alpha: float):
+    def __draw_circle_marker(
+        self,
+        position: T.Optional[T.Tuple[float, float]],
+        is_animating: bool,
+        alpha: float,
+    ):
         if position is None:
             return
-        
+
         r2 = 2 * self.__marker_radius
         screen_point = self.__marker_position_on_screen(position)
 
@@ -296,9 +319,7 @@ class MarkerWindowController(observable.Observable):
         closing_text = f"Touch {clicks_needed} more times to cancel."
         self.__glfont.set_size(int(window_size[0] / 30.0))
         self.__glfont.draw_text(
-            window_size[0] / 2.0,
-            window_size[1] / 4.0,
-            closing_text
+            window_size[0] / 2.0, window_size[1] / 4.0, closing_text
         )
 
     @property
@@ -309,8 +330,12 @@ class MarkerWindowController(observable.Observable):
         padding = 90 * self.__marker_radius
         window_size = self.__window.window_size
         return (
-            _map_value(marker_position[0], out_range=(padding, window_size[0] - padding)),
-            _map_value(marker_position[1], out_range=(window_size[1] - padding, padding)),
+            _map_value(
+                marker_position[0], out_range=(padding, window_size[0] - padding)
+            ),
+            _map_value(
+                marker_position[1], out_range=(window_size[1] - padding, padding)
+            ),
         )
 
 
@@ -332,7 +357,9 @@ class MarkerWindowStateClosed(_MarkerWindowState):
 
 
 class MarkerWindowStateOpened(_MarkerWindowState, abc.ABC):
-    def __init__(self, marker_position: T.Optional[T.Tuple[float, float]], clicks_needed: int):
+    def __init__(
+        self, marker_position: T.Optional[T.Tuple[float, float]], clicks_needed: int
+    ):
         self.marker_position = marker_position
         self.clicks_needed = clicks_needed
         self.__total_clicks_needed = clicks_needed
@@ -342,7 +369,7 @@ class MarkerWindowStateOpened(_MarkerWindowState, abc.ABC):
 
     def _repr_items(self):
         return [
-            f"clicks_needed={self.clicks_needed}/{self.__total_clicks_needed}",
+            f"clicks_needed={self.clicks_needed}/{self.__total_clicks_needed}"
         ] + super()._repr_items()
 
 
@@ -352,7 +379,12 @@ class MarkerWindowStateIdle(MarkerWindowStateOpened):
 
 
 class MarkerWindowStateAnimatingMarker(MarkerWindowStateOpened, abc.ABC):
-    def __init__(self, marker_position: T.Tuple[float, float], clicks_needed: int, animation_duration: int):
+    def __init__(
+        self,
+        marker_position: T.Tuple[float, float],
+        clicks_needed: int,
+        animation_duration: int,
+    ):
         super().__init__(marker_position=marker_position, clicks_needed=clicks_needed)
         self.__current_duration = 0
         self.__animation_duration = animation_duration
@@ -389,9 +421,7 @@ class MarkerWindowStateShowingMarker(MarkerWindowStateOpened):
         super().__init__(marker_position=marker_position, clicks_needed=clicks_needed)
 
     def _repr_items(self):
-        return [
-            f"{self.marker_position}",
-        ] + super()._repr_items()
+        return [f"{self.marker_position}"] + super()._repr_items()
 
 
 class MarkerWindowStateAnimatingOutMarker(MarkerWindowStateAnimatingMarker):

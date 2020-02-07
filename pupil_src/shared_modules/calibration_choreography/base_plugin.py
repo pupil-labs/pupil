@@ -39,6 +39,7 @@ class ChoreographyAction(enum.Enum):
     FAILED = "failed"
     SUCCEEDED = "successful"
 
+
 class ChoreographyNotification:
     __slots__ = ("mode", "action")
 
@@ -63,7 +64,9 @@ class ChoreographyNotification:
 
         missing_required_keys = cls._REQUIRED_KEYS.difference(keys)
         if missing_required_keys:
-            raise ValueError(f"Notification missing required keys: {missing_required_keys}")
+            raise ValueError(
+                f"Notification missing required keys: {missing_required_keys}"
+            )
 
         valid_keys = cls._REQUIRED_KEYS.union(cls._OPTIONAL_KEYS)
         invalid_keys = keys.difference(valid_keys)
@@ -72,8 +75,7 @@ class ChoreographyNotification:
 
         mode, action = note["subject"].split(".")
         return ChoreographyNotification(
-            mode=ChoreographyMode(mode),
-            action=ChoreographyAction(action),
+            mode=ChoreographyMode(mode), action=ChoreographyAction(action)
         )
 
 
@@ -112,8 +114,12 @@ class CalibrationChoreographyPlugin(Plugin):
     def __init_subclass__(cls, *args, **kwargs):
         super().__init_subclass__(*args, **kwargs)
         store = CalibrationChoreographyPlugin.__registered_choreography_plugins
-        assert isinstance(cls.label, str), f"Calibration choreography plugin subclass {cls.__name__} must overwrite string class property \"label\""
-        assert cls.label not in store.keys(), f"Calibration choreography plugin already exists for label \"{cls.label}\""
+        assert isinstance(
+            cls.label, str
+        ), f'Calibration choreography plugin subclass {cls.__name__} must overwrite string class property "label"'
+        assert (
+            cls.label not in store.keys()
+        ), f'Calibration choreography plugin already exists for label "{cls.label}"'
         store[cls.label] = cls
 
     def __init__(self, g_pool):
@@ -137,7 +143,9 @@ class CalibrationChoreographyPlugin(Plugin):
             return self.__ui_button_calibration
         if self.__current_mode == ChoreographyMode.ACCURACY_TEST:
             return self.__ui_button_accuracy_test
-        raise NotImplementedError(f"Unsupported choreography mode: {self.__current_mode}")
+        raise NotImplementedError(
+            f"Unsupported choreography mode: {self.__current_mode}"
+        )
 
     @property
     def current_gazer(self) -> GazerBase:
@@ -168,8 +176,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_button_accuracy_test_enable()
         self.notify_all(
             ChoreographyNotification(
-                mode=self.__current_mode,
-                action=ChoreographyAction.STOPPED,
+                mode=self.__current_mode, action=ChoreographyAction.STOPPED
             ).to_dict()
         )
 
@@ -191,13 +198,19 @@ class CalibrationChoreographyPlugin(Plugin):
         #         "record": True,
         #     }
         # )
-        print(f"===>>> ACCURACY TEST FINISHED: {len(pupil_list)} pupil datums, {len(ref_list)} ref locations")
+        print(
+            f"===>>> ACCURACY TEST FINISHED: {len(pupil_list)} pupil datums, {len(ref_list)} ref locations"
+        )
 
     # Private
 
     def __available_choreography_labels_and_plugins(self):
-        labels_and_plugins = CalibrationChoreographyPlugin.registered_choreographies().items()
-        labels_and_plugins = filter(lambda pair: pair[1].is_user_selectable, labels_and_plugins)
+        labels_and_plugins = (
+            CalibrationChoreographyPlugin.registered_choreographies().items()
+        )
+        labels_and_plugins = filter(
+            lambda pair: pair[1].is_user_selectable, labels_and_plugins
+        )
         labels_and_plugins = sorted(labels_and_plugins, key=lambda pair: pair[0])
         return labels_and_plugins
 
@@ -207,15 +220,17 @@ class CalibrationChoreographyPlugin(Plugin):
         return pairs
 
     def __toggle_mode_action(self, mode: ChoreographyMode):
-        action = ChoreographyAction.SHOULD_START if not self.is_active else ChoreographyAction.SHOULD_STOP
-        self.notify_all(
-            ChoreographyNotification(
-                mode=mode, action=action
-            ).to_dict()
+        action = (
+            ChoreographyAction.SHOULD_START
+            if not self.is_active
+            else ChoreographyAction.SHOULD_STOP
         )
+        self.notify_all(ChoreographyNotification(mode=mode, action=action).to_dict())
 
     def __start_plugin(self, plugin_cls, **kwargs):
-        self.notify_all({"subject": "start_plugin", "name": plugin_cls.__name__, "args": kwargs})
+        self.notify_all(
+            {"subject": "start_plugin", "name": plugin_cls.__name__, "args": kwargs}
+        )
 
     # Public - Plugin
 
@@ -254,7 +269,7 @@ class CalibrationChoreographyPlugin(Plugin):
             label="T+",
             hotkey="t",
             setter=self.__ui_button_accuracy_test_toggle,
-            on_color=self._THUMBNAIL_COLOR_ON
+            on_color=self._THUMBNAIL_COLOR_ON,
         )
 
         self.add_menu()
@@ -317,10 +332,15 @@ class CalibrationChoreographyPlugin(Plugin):
     # Private - UI
 
     def __ui_selector_choreography_labels(self):
-        return [label for label, _ in self.__available_choreography_labels_and_plugins()]
+        return [
+            label for label, _ in self.__available_choreography_labels_and_plugins()
+        ]
 
     def __ui_selector_choreography_selection(self):
-        return [plugin_cls for _, plugin_cls in self.__available_choreography_labels_and_plugins()]
+        return [
+            plugin_cls
+            for _, plugin_cls in self.__available_choreography_labels_and_plugins()
+        ]
 
     def __ui_selector_choreography_getter(self):
         return self.__class__
