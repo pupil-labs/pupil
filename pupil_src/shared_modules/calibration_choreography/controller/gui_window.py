@@ -22,6 +22,9 @@ class GUIWindow(Observable):
 
     @property
     def unsafe_handle(self):
+        """
+        Raw pointer to the GL window context.
+        """
         return self.__gl_handle
 
     @property

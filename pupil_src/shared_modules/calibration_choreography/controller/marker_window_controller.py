@@ -30,16 +30,16 @@ class MarkerWindowController(observable.Observable):
 
     _CLICKS_NEEDED_TO_CLOSE = 5
 
-    _MARKER_ANIMATION_DURATION_IN = (
-        25
-    )  # frames of marker shown before starting to sample
-    _MARKER_ANIMATION_DURATION_OUT = 5  # frames of markers shown after sampling is done
+    # frames of marker shown before starting to sample
+    _MARKER_ANIMATION_DURATION_IN = 25
+    # frames of markers shown after sampling is done
+    _MARKER_ANIMATION_DURATION_OUT = 5
 
     _MARKER_CIRCLE_RGB_OUTER = (0.0, 0.0, 0.0)
     _MARKER_CIRCLE_RGB_MIDDLE = (1.0, 1.0, 1.0)
     _MARKER_CIRCLE_RGB_INNER = (0.0, 0.0, 0.0)
-    _MARKER_CIRCLE_RGB_FEEDBACK_ANIMATING = (0.8, 0.0, 0.0)
-    _MARKER_CIRCLE_RGB_FEEDBACK_SHOWING = (0.0, 0.8, 0.0)
+    _MARKER_CIRCLE_RGB_FEEDBACK_INVALID = (0.8, 0.0, 0.0)
+    _MARKER_CIRCLE_RGB_FEEDBACK_VALID = (0.0, 0.8, 0.0)
 
     _MARKER_CIRCLE_SIZE_OUTER = 60
     _MARKER_CIRCLE_SIZE_MIDDLE = 38
@@ -54,6 +54,7 @@ class MarkerWindowController(observable.Observable):
     def __init__(self, marker_scale: float):
         # Public properties
         self.marker_scale = marker_scale
+        self.is_marker_detected = False
         # Private state
         self.__state: _MarkerWindowState = MarkerWindowStateClosed()
         self.__window = GUIWindow()
@@ -172,7 +173,7 @@ class MarkerWindowController(observable.Observable):
 
     def close_window(self):
         log_ignored_call = lambda: logger.debug(
-            f"open_window called for state {type(self.__state)}; ignoring the call."
+            f"close_window called for state {type(self.__state)}; ignoring the call."
         )
 
         if isinstance(self.__state, MarkerWindowStateClosed):
@@ -188,6 +189,34 @@ class MarkerWindowController(observable.Observable):
 
         raise UnhandledMarkerWindowStateError(self.__state)
 
+    def update_state(self):
+        self.__state.update_state()
+
+        if isinstance(self.__state, MarkerWindowStateClosed):
+            return  # No-op
+
+        elif isinstance(self.__state, MarkerWindowStateIdle):
+            return  # No-op
+
+        elif isinstance(self.__state, MarkerWindowStateAnimatingInMarker):
+            if self.__state.is_complete:
+                self.__state = MarkerWindowStateShowingMarker(
+                    marker_position=self.__state.marker_position,
+                    clicks_needed=self.__state.clicks_needed,
+                )
+
+        elif isinstance(self.__state, MarkerWindowStateShowingMarker):
+            return  # No-op
+
+        elif isinstance(self.__state, MarkerWindowStateAnimatingOutMarker):
+            if self.__state.is_complete:
+                self.__state = MarkerWindowStateIdle(
+                    clicks_needed=self.__state.clicks_needed
+                )
+
+        else:
+            raise UnhandledMarkerWindowStateError(self.__state)
+
     def draw_window(self):
 
         if self.__window.window_size == (0, 0):
@@ -202,55 +231,24 @@ class MarkerWindowController(observable.Observable):
         if isinstance(self.__state, MarkerWindowStateClosed):
             return
 
-        if isinstance(self.__state, MarkerWindowStateOpened):
+        elif isinstance(self.__state, MarkerWindowStateOpened):
             clicks_needed = self.__state.clicks_needed
+            marker_position = self.__state.marker_position
+            marker_alpha = self.__state.marker_color_alpha
+            is_valid = (not self.__state.is_animating) and self.is_marker_detected
 
             if clicks_needed == 0:
                 self.close_window()
                 return
 
             with self.__window.drawing_context() as gl_context:
-
-                if isinstance(self.__state, MarkerWindowStateIdle):
-                    marker_position = None
-                    marker_alpha = 0.0
-                    is_animating = False
-
-                if isinstance(self.__state, MarkerWindowStateAnimatingInMarker):
-                    marker_position = self.__state.marker_position
-                    marker_alpha = self.__state.progress
-                    is_animating = True
-                    if self.__state.is_complete:
-                        self.__state = MarkerWindowStateShowingMarker(
-                            marker_position=self.__state.marker_position,
-                            clicks_needed=self.__state.clicks_needed,
-                        )
-
-                if isinstance(self.__state, MarkerWindowStateShowingMarker):
-                    marker_position = self.__state.marker_position
-                    marker_alpha = 1.0
-                    is_animating = False
-
-                if isinstance(self.__state, MarkerWindowStateAnimatingOutMarker):
-                    marker_position = self.__state.marker_position
-                    marker_alpha = 1.0 - self.__state.progress
-                    is_animating = True
-                    if self.__state.is_complete:
-                        self.__state = MarkerWindowStateIdle(
-                            clicks_needed=self.__state.clicks_needed
-                        )
-
                 self.__draw_circle_marker(
-                    position=marker_position,
-                    is_animating=is_animating,
-                    alpha=marker_alpha,
+                    position=marker_position, is_valid=is_valid, alpha=marker_alpha
                 )
                 self.__draw_status_text(clicks_needed=clicks_needed)
 
-            self.__state.update_state()
-            return
-
-        raise UnhandledMarkerWindowStateError(self.__state)
+        else:
+            raise UnhandledMarkerWindowStateError(self.__state)
 
     # Public - Callbacks
 
@@ -271,10 +269,7 @@ class MarkerWindowController(observable.Observable):
             self.__state.clicks_needed = 0
 
     def __draw_circle_marker(
-        self,
-        position: T.Optional[T.Tuple[float, float]],
-        is_animating: bool,
-        alpha: float,
+        self, position: T.Optional[T.Tuple[float, float]], is_valid: bool, alpha: float
     ):
         if position is None:
             return
@@ -282,10 +277,10 @@ class MarkerWindowController(observable.Observable):
         r2 = 2 * self.__marker_radius
         screen_point = self.__marker_position_on_screen(position)
 
-        if is_animating:
-            marker_circle_rgb_feedback = self._MARKER_CIRCLE_RGB_FEEDBACK_ANIMATING
+        if is_valid:
+            marker_circle_rgb_feedback = self._MARKER_CIRCLE_RGB_FEEDBACK_VALID
         else:
-            marker_circle_rgb_feedback = self._MARKER_CIRCLE_RGB_FEEDBACK_SHOWING
+            marker_circle_rgb_feedback = self._MARKER_CIRCLE_RGB_FEEDBACK_INVALID
 
         draw_points(
             [screen_point],
@@ -343,6 +338,9 @@ class MarkerWindowController(observable.Observable):
 
 
 class _MarkerWindowState(abc.ABC):
+    def update_state(self):
+        pass
+
     def _repr_items(self):
         return []
 
@@ -360,11 +358,22 @@ class MarkerWindowStateOpened(_MarkerWindowState, abc.ABC):
     def __init__(
         self, marker_position: T.Optional[T.Tuple[float, float]], clicks_needed: int
     ):
-        self.marker_position = marker_position
         self.clicks_needed = clicks_needed
+        self.__marker_position = marker_position
         self.__total_clicks_needed = clicks_needed
 
-    def update_state(self):
+    @property
+    def marker_position(self) -> T.Optional[T.Tuple[float, float]]:
+        return self.__marker_position
+
+    @property
+    @abc.abstractmethod
+    def is_animating(self) -> bool:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def marker_color_alpha(self) -> float:
         pass
 
     def _repr_items(self):
@@ -377,6 +386,14 @@ class MarkerWindowStateIdle(MarkerWindowStateOpened):
     def __init__(self, clicks_needed: int):
         super().__init__(marker_position=None, clicks_needed=clicks_needed)
 
+    @property
+    def is_animating(self) -> bool:
+        return False
+
+    @property
+    def marker_color_alpha(self) -> float:
+        return 0.0
+
 
 class MarkerWindowStateAnimatingMarker(MarkerWindowStateOpened, abc.ABC):
     def __init__(
@@ -388,6 +405,10 @@ class MarkerWindowStateAnimatingMarker(MarkerWindowStateOpened, abc.ABC):
         super().__init__(marker_position=marker_position, clicks_needed=clicks_needed)
         self.__current_duration = 0
         self.__animation_duration = animation_duration
+
+    @property
+    def is_animating(self) -> bool:
+        return True
 
     @property
     def is_complete(self) -> bool:
@@ -413,19 +434,31 @@ class MarkerWindowStateAnimatingMarker(MarkerWindowStateOpened, abc.ABC):
 
 
 class MarkerWindowStateAnimatingInMarker(MarkerWindowStateAnimatingMarker):
-    pass
+    @property
+    def marker_color_alpha(self) -> float:
+        return self.progress
 
 
 class MarkerWindowStateShowingMarker(MarkerWindowStateOpened):
     def __init__(self, marker_position: T.Tuple[float, float], clicks_needed: int):
         super().__init__(marker_position=marker_position, clicks_needed=clicks_needed)
 
+    @property
+    def is_animating(self) -> bool:
+        return False
+
+    @property
+    def marker_color_alpha(self) -> float:
+        return 1.0
+
     def _repr_items(self):
         return [f"{self.marker_position}"] + super()._repr_items()
 
 
 class MarkerWindowStateAnimatingOutMarker(MarkerWindowStateAnimatingMarker):
-    pass
+    @property
+    def marker_color_alpha(self) -> float:
+        return 1.0 - self.progress
 
 
 class UnhandledMarkerWindowStateError(NotImplementedError):

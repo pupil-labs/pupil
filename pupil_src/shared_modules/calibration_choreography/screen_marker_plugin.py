@@ -183,6 +183,8 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         if not frame:
             return
 
+        self.__marker_window.update_state()
+
         if isinstance(state, MarkerWindowStateClosed):
             assert not self.is_active  # Sanity check
             return
@@ -199,6 +201,9 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
 
         # Detect reference circle marker
         detected_marker = self.__detect_reference_circle_marker(frame.gray)
+
+        # Signal marker window controller that a marker was detected (for feedback)
+        self.__marker_window.is_marker_detected = detected_marker is not None
 
         if isinstance(state, MarkerWindowStateIdle):
             assert self.active_site is None  # Sanity check
