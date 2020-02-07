@@ -3,9 +3,11 @@ import platform
 import typing as T
 import contextlib
 
+import OpenGL.GL as gl
+import glfw
 from gl_utils import adjust_gl_view
 from gl_utils import basic_gl_setup
-from glfw import *
+from gl_utils import clear_gl_screen
 
 from pyglui.cygl.utils import draw_polyline
 
@@ -25,13 +27,26 @@ class GUIWindow(Observable):
     @property
     def hdpi_factor(self) -> float:
         if self.__gl_handle is not None:
-            return getHDPIFactor(self.__gl_handle)
+            return glfw.getHDPIFactor(self.__gl_handle)
         else:
             return 1.0
 
     @property
+    def window_size(self) -> T.Tuple[int, int]:
+        if self.__gl_handle is not None:
+            return glfw.glfwGetFramebufferSize(self.__gl_handle)
+        else:
+            return (0, 0)
+
+    @property
     def is_open(self) -> bool:
         return self.__gl_handle is not None
+
+    def cursor_hide(self):
+        glfw.glfwSetInputMode(self.__gl_handle, glfw.GLFW_CURSOR, glfw.GLFW_CURSOR_HIDDEN)
+
+    def cursor_disable(self):
+        glfw.glfwSetInputMode(self.__gl_handle, glfw.GLFW_CURSOR, glfw.GLFW_CURSOR_DISABLED)
 
     def open(self, gui_monitor: GUIMonitor, title: str, is_fullscreen:bool=False, size:T.Tuple[int, int]=None, position:T.Tuple[int, int]=None):
         if self.is_open:
@@ -58,74 +73,83 @@ class GUIWindow(Observable):
         # windows you might experience a black screen for up to 1 sec when creating
         # a blank window directly in fullscreen mode. By creating it windowed and
         # then switching to fullscreen it will stay white the entire time.
-        self.__gl_handle = glfwCreateWindow(*size, title, share=glfwGetCurrentContext())
+        self.__gl_handle = glfw.glfwCreateWindow(*size, title, share=glfw.glfwGetCurrentContext())
 
         if not is_fullscreen:
-            glfwSetWindowPos(self.__gl_handle, *position)
+            glfw.glfwSetWindowPos(self.__gl_handle, *position)
 
         # Register callbacks
-        glfwSetFramebufferSizeCallback(self.__gl_handle, self.on_resize)
-        glfwSetKeyCallback(self.__gl_handle, self.on_key)
-        glfwSetMouseButtonCallback(self.__gl_handle, self.on_mouse_button)
-        self.on_resize(self.__gl_handle, *glfwGetFramebufferSize(self.__gl_handle))
+        glfw.glfwSetFramebufferSizeCallback(self.__gl_handle, self.on_resize)
+        glfw.glfwSetKeyCallback(self.__gl_handle, self.on_key)
+        glfw.glfwSetMouseButtonCallback(self.__gl_handle, self.on_mouse_button)
+        self.on_resize(self.__gl_handle, *glfw.glfwGetFramebufferSize(self.__gl_handle))
 
         # gl_state settings
         with self._switch_to_current_context():
             basic_gl_setup()
-            glfwSwapInterval(0)
+            glfw.glfwSwapInterval(0)
 
         if is_fullscreen:
             # Switch to full screen here. See NOTE above at glfwCreateWindow().
-            glfwSetWindowMonitor(
+            glfw.glfwSetWindowMonitor(
                 self.__gl_handle, gui_monitor.unsafe_handle, 0, 0, *gui_monitor.size, gui_monitor.refresh_rate
             )
 
     def close(self):
         if not self.is_open:
             return
-        self.on_will_close()
         with self._switch_to_current_context():
-            glfwSetInputMode(self.__gl_handle, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-            glfwDestroyWindow(self.__gl_handle)
+            glfw.glfwSetInputMode(self.__gl_handle, glfw.GLFW_CURSOR, glfw.GLFW_CURSOR_NORMAL)
+            glfw.glfwDestroyWindow(self.__gl_handle)
         self.__gl_handle = None
-        self.on_did_close()
 
-    def gl_display(self):
+    @contextlib.contextmanager
+    def drawing_context(self):
         if self.__gl_handle is None:
             return
 
-        if glfwWindowShouldClose(self.__gl_handle):
+        if glfw.glfwWindowShouldClose(self.__gl_handle):
             self.close()
             return
 
-    @property
-    def window_size(self) -> T.Tuple[int, int]:
-        if self.__gl_handle is not None:
-            return glfwGetFramebufferSize(self.__gl_handle)
-        else:
-            return (0, 0)
+        with self._switch_to_current_context():
+            clear_gl_screen()
 
-    def on_will_close(self):
-        pass
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glLoadIdentity()
+            gl.glOrtho(0, self.window_size[0], self.window_size[1], 0, -1, 1)
+            # Switch back to Model View Matrix
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+            gl.glLoadIdentity()
 
-    def on_did_close(self):
-        pass
+            yield self.unsafe_handle
+
+            glfw.glfwSwapBuffers(self.unsafe_handle)
 
     def on_resize(self, gl_handle, w, h):
         with self._switch_to_current_context():
             adjust_gl_view(w, h)
 
     def on_key(self, gl_handle, key, scancode, action, mods):
-        pass
+        if action == glfw.GLFW_PRESS:
+            if key == glfw.GLFW_KEY_ESCAPE:
+                self.on_key_press_escape()
 
     def on_mouse_button(self, gl_handle, button, action, mods):
+        if action == glfw.GLFW_PRESS:
+            self.on_left_click()
+
+    def on_left_click(self):
+        pass
+
+    def on_key_press_escape(self):
         pass
 
     @contextlib.contextmanager
     def _switch_to_current_context(self):
-        previous_context = glfwGetCurrentContext()
-        glfwMakeContextCurrent(self.__gl_handle)
+        previous_context = glfw.glfwGetCurrentContext()
+        glfw.glfwMakeContextCurrent(self.__gl_handle)
         try:
             yield
         finally:
-            glfwMakeContextCurrent(previous_context)
+            glfw.glfwMakeContextCurrent(previous_context)

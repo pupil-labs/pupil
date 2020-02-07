@@ -26,8 +26,17 @@ from pyglui.cygl.utils import draw_points, draw_polyline, RGBA
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 
-from .controller import GUIMonitor
-from .controller import MarkerWindow
+from .controller import (
+    GUIMonitor,
+    MarkerWindowController,
+    MarkerWindowStateClosed,
+    MarkerWindowStateOpened,
+    MarkerWindowStateIdle,
+    MarkerWindowStateShowingMarker,
+    MarkerWindowStateAnimatingInMarker,
+    MarkerWindowStateAnimatingOutMarker,
+    UnhandledMarkerWindowStateError,
+)
 from .base_plugin import CalibrationChoreographyPlugin, ChoreographyMode, ChoreographyAction, ChoreographyNotification
 from gaze_mapping import Gazer2D_v1x
 
@@ -68,14 +77,14 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         super().__init__(g_pool)
 
         self.active_site = None
+        self.collected_site_count = 0
         self.sites = []
 
         self.fullscreen = fullscreen
-        self.__marker_window = MarkerWindow(
-            marker_scale=marker_scale,
-            sample_duration=sample_duration,
-        )
-        self.__marker_window.add_observer("on_did_close", self._on_window_did_close)
+        self.sample_duration = sample_duration
+
+        self.__marker_window = MarkerWindowController(marker_scale=marker_scale)
+        self.__marker_window.add_observer("on_window_did_close", self._on_window_did_close)
 
         self.__ui_selector_monitor_setter(monitor_name)
 
@@ -119,7 +128,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
 
         self.__ui_slider_sample_duration = ui.Slider(
             "sample_duration",
-            self.__marker_window,
+            self,
             label="Sample duration",
             min=10,
             max=100,
@@ -139,7 +148,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
         """
         if self.is_active:
             self.stop()
-        self.__marker_window.close()
+        self.__marker_window.close_window()
         super().deinit_ui()
 
     # Private - UI
@@ -168,79 +177,73 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
 
     def recent_events(self, events):
         frame = events.get("frame")
+        state = self.__marker_window.window_state
+        should_animate = True
 
-        if not self.is_active or not frame:
+        if not frame:
             return
 
-        gray_img = frame.gray
+        if isinstance(state, MarkerWindowStateClosed):
+            assert not self.is_active  # Sanity check
+            return
 
-        # Update the marker
-        self.markers = self.circle_tracker.update(gray_img)
-        # Screen marker takes only Ref marker
-        self.markers = [
-            marker for marker in self.markers if marker["marker_type"] == "Ref"
-        ]
+        elif isinstance(state, MarkerWindowStateOpened):
+            assert self.is_active  # Sanity check
+            pass  # Continue with processing the frame
 
-        if len(self.markers):
-            # Set the pos to be the center of the first detected marker
-            marker_screen_position = self.markers[0]["img_pos"]
-            marker_normal_position = self.markers[0]["norm_pos"]
         else:
-            marker_screen_position = None
-            marker_normal_position = None  # indicate that no reference is detected
-
-        # Check if there are more than one markers
-        if len(self.markers) > 1:
-            logger.warning(f"{len(self.markers)} markers detected. Please remove all the other markers")
-
-        # FIXME: Move to marker_window
-        self.__marker_window._marker_state_valid_range = range(
-            self.__marker_window._MARKER_ANIMATION_LEAD_IN_FRAMES+1,
-            self.__marker_window._MARKER_ANIMATION_LEAD_IN_FRAMES + self.__marker_window.sample_duration
-        )
-        self.__marker_window._marker_state_animation_range = range(
-            0,
-            self.__marker_window.sample_duration + self.__marker_window._MARKER_ANIMATION_LEAD_IN_FRAMES + self.__marker_window._MARKER_ANIMATION_LEAD_OUT_FRAMES
-        )
-
-        # only save a valid ref position if within sample window of calibration routine
-        on_position = (self.__marker_window.marker_state in self.__marker_window._marker_state_valid_range) #FIXME: Move on_position calculation to marker window
-
-        if on_position and len(self.markers):
-            ref = {}
-            ref["norm_pos"] = marker_normal_position
-            ref["screen_pos"] = marker_screen_position
-            ref["timestamp"] = frame.timestamp
-            self.ref_list.append(ref)
+            raise UnhandledMarkerWindowStateError(state)
 
         # Always save pupil positions
         self.pupil_list.extend(events["pupil"])
 
-        # TODO: This seems redundant, since on_position makes sure the marker_state is within the valid range
-        if on_position and len(self.markers):
-            #FIXME: Move marker_state calculation to marker window
-            # self.__marker_window.marker_state = max(self.__marker_window.marker_state, self.__marker_window._marker_state_valid_range.start)
-            self.__marker_window.marker_state = min(self.__marker_window.marker_state, self.__marker_window._marker_state_valid_range.stop-1)
+        # Detect reference circle marker
+        detected_marker = self.__detect_reference_circle_marker(frame.gray)
 
-        # Animate the screen marker
-        if (self.__marker_window.marker_state in self.__marker_window._marker_state_animation_range): #FIXME: Move animation code to marker window
-            if len(self.markers) or not on_position:
-                self.__marker_window.marker_state += 1  # TODO: Move to marker_window as marker_state_increment()
-        else:
-            self.__marker_window.marker_state = self.__marker_window._marker_state_animation_range.start  #FIXME: Move to marker_window as marker_state_reset()
+        if isinstance(state, MarkerWindowStateIdle):
+            assert self.active_site is None  # Sanity check
             if self.sites:
                 self.active_site = self.sites.pop(0)
                 logger.debug(f"Moving screen marker to site at {self.active_site}")
+                self.__marker_window.show_marker(self.active_site, should_animate=should_animate)
+                return
             else:
-                self.stop()
+                # No more markers to show; stop calibration choreography.
+                self.__should_stop()
                 return
 
-        # use np.arrays for per element wise math
-        # self.display_pos = np.array(self.active_site)
-        self.__marker_window.marker_point = np.array(self.active_site)
-        self.__marker_window.gl_display()
+        if isinstance(state, MarkerWindowStateAnimatingInMarker):
+            assert self.active_site is not None  # Sanity check
+            pass  # No-op
 
-        self.current_mode_ui_button.status_text = "{}".format(self.active_site)
+        elif isinstance(state, MarkerWindowStateShowingMarker):
+            assert self.active_site is not None  # Sanity check
+
+            if detected_marker is not None:
+                ref = {}
+                ref["norm_pos"] = detected_marker["norm_pos"]
+                ref["screen_pos"] = detected_marker["img_pos"]
+                ref["timestamp"] = frame.timestamp
+                self.ref_list.append(ref)
+
+            should_move_to_next_marker = len(self.ref_list) == self.sample_duration * (self.collected_site_count + 1)
+
+            if should_move_to_next_marker:
+                # Finished collecting samples for current active site
+                self.active_site = None
+                self.collected_site_count += 1
+                self.__marker_window.hide_marker(should_animate=should_animate)
+
+        elif isinstance(state, MarkerWindowStateAnimatingOutMarker):
+            assert self.active_site is None  # Sanity check
+            pass  # No-op
+
+        else:
+            raise UnhandledMarkerWindowStateError(state)
+
+        # Update UI
+        self.__marker_window.draw_window()
+        self.current_mode_ui_button.status_text = self.__current_status_text
 
     def gl_display(self):
         """
@@ -283,26 +286,18 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
             is_2d=self.g_pool.detection_mapping_mode == "2d",
             is_3d=self.g_pool.detection_mapping_mode == "3d",
         )
-        self.active_site = self.sites.pop(0)
+        self.active_site = None
+        self.collected_site_count = 0
 
         self.ref_list = []
         self.pupil_list = []
 
         super().start()
 
-        self.__marker_window.open(
+        self.__marker_window.open_window(
             title=self.current_mode.label,
             monitor_name=self.monitor_name,
             is_fullscreen=self.fullscreen,
-        )
-
-    def _on_window_did_close(self):
-        # TODO: Refactor this...
-        self.notify_all(
-            ChoreographyNotification(
-                mode=self.current_mode,
-                action=ChoreographyAction.SHOULD_STOP,
-            ).to_dict()
         )
 
     def stop(self):
@@ -310,7 +305,7 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
 
         logger.info(f"Stopping {self.current_mode.label}")
 
-        self.__marker_window.close()
+        self.__marker_window.close_window()
         self.current_mode_ui_button.status_text = ""
 
         # TODO: This part seems redundant
@@ -320,3 +315,40 @@ class ScreenMarkerChoreographyPlugin(CalibrationChoreographyPlugin):
             self.finish_accuracy_test(self.pupil_list, self.ref_list)
 
         super().stop()
+
+    def _on_window_did_close(self):
+        self.__should_stop()
+
+    def __should_stop(self):
+        # TODO: Refactor this...
+        self.notify_all(
+            ChoreographyNotification(
+                mode=self.current_mode,
+                action=ChoreographyAction.SHOULD_STOP,
+            ).to_dict()
+        )
+
+    @property
+    def __current_status_text(self) -> str:
+        return "" if self.active_site is None else f"{self.active_site}"
+
+    def __detect_reference_circle_marker(self, gray_img):
+
+        # Detect all circular markers
+        circle_markers = self.circle_tracker.update(gray_img)
+
+        # Only keep Ref markers
+        circle_markers = [
+            marker for marker in circle_markers if marker["marker_type"] == "Ref"
+        ]
+
+        # Store detected Ref markers for debugging/visualization
+        self.markers = circle_markers
+
+        if len(circle_markers) == 0:
+            return None
+        elif len(self.markers) == 1:
+            return circle_markers[0]
+        else:
+            logger.warning(f"{len(circle_markers)} markers detected. Please remove all the other markers")
+            return circle_markers[0]
