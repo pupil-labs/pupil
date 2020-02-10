@@ -4,8 +4,6 @@ from .single_marker_plugin import SingleMarkerChoreographyPlugin
 from .natural_feature_plugin import NaturalFeatureChoreographyPlugin
 from .hmd_plugin import HMD2DChoreographyPlugin, HMD3DChoreographyPlugin
 
-# from .hmd_plugin import HMDChoreographyPlugin
-
 
 def available_calibration_choreography_plugins():
     default_plugin = ScreenMarkerChoreographyPlugin
