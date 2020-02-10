@@ -105,6 +105,82 @@ def _match_data(pupil_list, ref_list):
     )
 
 
+def _match_data_batch(pupil_list, ref_list):
+    pupil0 = [p for p in pupil_list if p["id"] == 0]
+    pupil1 = [p for p in pupil_list if p["id"] == 1]
+
+    matched_binocular_data = closest_matches_binocular_batch(ref_list, pupil0, pupil1)
+    matched_pupil0_data = closest_matches_monocular_batch(ref_list, pupil0)
+    matched_pupil1_data = closest_matches_monocular_batch(ref_list, pupil1)
+
+    num_bino = len(matched_binocular_data[0])
+    num_mono_right = len(matched_pupil0_data[0])
+    num_mono_left = len(matched_pupil1_data[0])
+
+    logger.info(f"Collected {num_bino} binocular references.")
+    logger.info(f"Collected {num_mono_right} right eye monocular references.")
+    logger.info(f"Collected {num_mono_left} left eye monocular references.")
+
+    return (
+        matched_binocular_data,
+        matched_pupil0_data,
+        matched_pupil1_data,
+    )
+
+
+def closest_matches_binocular_batch(ref_pts, pupil0, pupil1, max_dispersion=1 / 15.0):
+    """Get pupil positions closest in time to ref points.
+    Return list of dict with matching ref, pupil0 and pupil1 data triplets.
+    """
+
+    matched = [[], [], []]
+    if not (ref_pts and pupil0 and pupil1):
+        return matched
+
+    pupil0_ts = np.array([p["timestamp"] for p in pupil0])
+    pupil1_ts = np.array([p["timestamp"] for p in pupil1])
+
+    for r in ref_pts:
+        closest_p0_idx = _find_nearest_idx(pupil0_ts, r["timestamp"])
+        closest_p0 = pupil0[closest_p0_idx]
+        closest_p1_idx = _find_nearest_idx(pupil1_ts, r["timestamp"])
+        closest_p1 = pupil1[closest_p1_idx]
+
+        dispersion = max(
+            closest_p0["timestamp"], closest_p1["timestamp"], r["timestamp"]
+        ) - min(closest_p0["timestamp"], closest_p1["timestamp"], r["timestamp"])
+        if dispersion < max_dispersion:
+            matched[0].append(r)
+            matched[1].append(closest_p0)
+            matched[2].append(closest_p1)
+        else:
+            logger.debug("Binocular match rejected due to time dispersion criterion")
+    return matched
+
+
+def closest_matches_monocular_batch(ref_pts, pupil, max_dispersion=1 / 15.0):
+    """Get pupil positions closest in time to ref points.
+    Return list of dict with matching ref and pupil datum.
+    """
+
+    matched = [[], []]
+    if not (ref_pts and pupil):
+        return []
+
+    pupil_ts = np.array([p["timestamp"] for p in pupil])
+
+    for r in ref_pts:
+        closest_p_idx = _find_nearest_idx(pupil_ts, r["timestamp"])
+        closest_p = pupil[closest_p_idx]
+        dispersion = max(closest_p["timestamp"], r["timestamp"]) - min(
+            closest_p["timestamp"], r["timestamp"]
+        )
+        if dispersion < max_dispersion:
+            matched[0].append(r)
+            matched[1].append(closest_p)
+    return matched
+
+
 def closest_matches_binocular(ref_pts, pupil0, pupil1, max_dispersion=1 / 15.0):
     """Get pupil positions closest in time to ref points.
     Return list of dict with matching ref, pupil0 and pupil1 data triplets.
