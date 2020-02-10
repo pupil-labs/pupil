@@ -19,6 +19,8 @@ from plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
+EVENT_KEY = "pupil_detection_results"
+
 
 class PropertyProxy:
     """Wrapper around detector properties for easy UI coupling."""
@@ -91,7 +93,11 @@ class PupilDetectorPlugin(Plugin):
             self._last_frame_size = frame_size
 
         detection_result = self.detect(frame=frame)
-        event["pupil_detection_result"] = detection_result
+        if EVENT_KEY in event:
+            event[EVENT_KEY].append(detection_result)
+        else:
+            event[EVENT_KEY] = [detection_result]
+
         self._recent_detection_result = detection_result
 
     @abc.abstractmethod

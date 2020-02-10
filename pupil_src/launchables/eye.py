@@ -147,7 +147,7 @@ def eye(
         from roi import Roi
 
         from background_helper import IPC_Logging_Task_Proxy
-        from pupil_detector_plugins import available_detector_plugins
+        from pupil_detector_plugins import available_detector_plugins, EVENT_KEY
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
@@ -571,8 +571,7 @@ def eye(
                 if g_pool.writer:
                     g_pool.writer.write_video_frame(frame)
 
-                result = event.get("pupil_detection_result", None)
-                if result is not None:
+                for result in event.get(EVENT_KEY, ()):
                     pupil_socket.send(result)
 
             cpu_graph.update()
