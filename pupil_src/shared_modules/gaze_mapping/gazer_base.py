@@ -13,6 +13,8 @@ import itertools
 import logging
 import typing as T
 
+import numpy as np
+
 from plugin import Plugin
 from calibration_routines import data_processing
 
@@ -72,6 +74,7 @@ class Model(abc.ABC):
 
 class GazerBase(abc.ABC, Plugin):
     label: str = ...  # Subclasses should set this to a meaningful name
+    uniqueness = "by_base_class"
 
     @abc.abstractmethod
     def _init_left_model(self) -> Model:
@@ -86,23 +89,11 @@ class GazerBase(abc.ABC, Plugin):
         pass
 
     @abc.abstractmethod
-    def _fit_monocular_model(self, model: Model, matched_data: T.Iterable):
-        """Calls `model.fit()` with appropriate data from `matched_data`
-
-        Arguments:
-            model {Model} -- Model to fit
-            matched_data {T.Iterable} -- List of matched data
-        """
+    def _extract_pupil_features(self, pupil_data) -> np.ndarray:
         pass
 
     @abc.abstractmethod
-    def _fit_binocular_model(self, model: Model, matched_data: T.Iterable):
-        """Calls `model.fit()` with appropriate data from `matched_data`
-
-        Arguments:
-            model {Model} -- Model to fit
-            matched_data {T.Iterable} -- List of matched data
-        """
+    def _extract_reference_features(self, ref_data) -> np.ndarray:
         pass
 
     @abc.abstractmethod
@@ -206,22 +197,44 @@ class GazerBase(abc.ABC, Plugin):
         )
         # match pupil to reference data (left, right, and binocular)
         matches = self.match_pupil_to_ref(pupil_data, ref_data)
-        if matches.binocular:
-            self._fit_monocular_model(self.left_model, matches.left)
-            self._fit_monocular_model(self.right_model, matches.right)
+        if matches.binocular[0]:
             self._fit_binocular_model(self.binocular_model, matches.binocular)
-        elif matches.right:
             self._fit_monocular_model(self.right_model, matches.right)
-        elif matches.left:
+            self._fit_monocular_model(self.left_model, matches.left)
+        elif matches.right[0]:
+            self._fit_monocular_model(self.right_model, matches.right)
+        elif matches.left[0]:
             self._fit_monocular_model(self.left_model, matches.left)
         else:
             raise NotEnoughDataError
 
+    def _fit_binocular_model(self, model: Model, matched_data: T.Iterable):
+        X, Y = self.extract_features_from_matches_binocular(matched_data)
+        model.fit(X, Y)
+
+    def _fit_monocular_model(self, model: Model, matched_data: T.Iterable):
+        X, Y = self.extract_features_from_matches_monocular(matched_data)
+        model.fit(X, Y)
+
     def match_pupil_to_ref(self, pupil_data, ref_data) -> "Matches":
-        matches = data_processing._match_data(pupil_data, ref_data)
-        bino, _, right, left = matches
+        matches = data_processing._match_data_batch(pupil_data, ref_data)
+        bino, right, left = matches
         matches = Matches(left, right, bino)
         return matches
+
+    def extract_features_from_matches_binocular(self, binocular_matches):
+        ref, pupil_right, pupil_left = binocular_matches
+        Y = self._extract_reference_features(ref)
+        X_right = self._extract_pupil_features(pupil_right)
+        X_left = self._extract_pupil_features(pupil_left)
+        X = np.hstack([X_left, X_right])
+        return X, Y
+
+    def extract_features_from_matches_monocular(self, monocular_matches):
+        ref, pupil = monocular_matches
+        Y = self._extract_reference_features(ref)
+        X = self._extract_pupil_features(pupil)
+        return X, Y
 
     def map_pupil_to_gaze(self, pupil_data, sort_by_creation_time=True):
         pupil_data = self.filter_pupil_data(pupil_data)
@@ -230,6 +243,7 @@ class GazerBase(abc.ABC, Plugin):
 
         matches = (self.matcher.on_pupil_datum(datum) for datum in pupil_data)
         matches = itertools.chain.from_iterable(matches)
+
         yield from self.predict(matches)
 
 
