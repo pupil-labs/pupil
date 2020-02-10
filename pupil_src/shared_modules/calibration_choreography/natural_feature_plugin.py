@@ -40,24 +40,22 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
 
     label = "Natural Feature Calibration Choreography"
 
-    def supported_gazers(self):
+    _NUMBER_OF_REF_POINTS_TO_CAPTURE = 30
+    _RADIUS_OF_CIRCLE_DISPLAYED = 40.0
+
+    @classmethod
+    def supported_gazer_classes(cls):
         return [Gazer2D_v1x]  # FIXME: Provide complete list of supported gazers
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.first_img = None
-        self.point = None
-        self.count = 0
-        self.detected = False
-        self.pos = None
-        self.r = 40.0  # radius of circle displayed
-        self.ref_list = []
-        self.pupil_list = []
-        self.menu = None
-        self.order = 0.5
+        self.__previously_detected_feature = None
+        self.__feature_tracker = NaturalFeatureTracker()
 
     def get_init_dict(self):
         return {}
+
+    ### Public - Plugin
 
     def init_ui(self):
 
@@ -68,79 +66,102 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
         super().init_ui()
         self.menu.append(desc_text)
 
-    def deinit_ui(self):
-        """gets called when the plugin get terminated.
-        This happens either voluntarily or forced.
-        if you have an atb bar or glfw window destroy it here.
-        """
-        if self.is_active:
-            self.stop()
-        super().deinit_ui()
-
-    def start(self):
-        super().start()
-        self.ref_list = []
-        self.pupil_list = []
-
-    def stop(self):
-        audio.say(f"Stopping {self.current_mode.label}")
-        logger.info(f"Stopping {self.current_mode.label}")
-        self.current_mode_ui_button.status_text = ""
-        if self.current_mode == ChoreographyMode.CALIBRATION:
-            self.finish_calibration(self.pupil_list, self.ref_list)
-        if self.current_mode == ChoreographyMode.ACCURACY_TEST:
-            self.finish_accuracy_test(self.pupil_list, self.ref_list)
-        super().stop()
-
     def recent_events(self, events):
         frame = events.get("frame")
+
         if not frame:
             return
-        if self.is_active:
-            if self.first_img is None:
-                self.first_img = frame.gray.copy()
 
-            self.detected = False
+        if not self.is_active:
+            return
 
-            if self.count:
-                gray = frame.gray
-                # in cv2.3 nextPts is falsly required as an argument.
-                nextPts_dummy = self.point.copy()
-                nextPts, status, err = cv2.calcOpticalFlowPyrLK(
-                    self.first_img, gray, self.point, nextPts_dummy, winSize=(100, 100)
-                )
-                if status[0]:
-                    self.detected = True
-                    self.point = nextPts
-                    self.first_img = gray.copy()
-                    nextPts = nextPts[0].tolist()  # we prefer python types.
-                    self.pos = normalize(
-                        nextPts, (gray.shape[1], gray.shape[0]), flip_y=True
-                    )
-                    self.count -= 1
+        # Always save pupil positions
+        self.pupil_list.extend(events["pupil"])
 
-                    ref = {}
-                    ref["screen_pos"] = nextPts
-                    ref["norm_pos"] = self.pos
-                    ref["timestamp"] = frame.timestamp
-                    self.ref_list.append(ref)
+        need_more_ref_points = (
+            len(self.ref_list) < self._NUMBER_OF_REF_POINTS_TO_CAPTURE
+        )
 
-            # Always save pupil positions
-            self.pupil_list.extend(events["pupil"])
+        detected_feature = self.__feature_tracker.update(frame.gray)
 
-            if self.count:
-                self.current_mode_ui_button.status_text = "Sampling Gaze Data"
-            else:
-                self.current_mode_ui_button.status_text = "Click to Sample at Location"
+        if need_more_ref_points and detected_feature:
+            ref = {}
+            ref["screen_pos"] = detected_feature["img_pos"]
+            ref["norm_pos"] = detected_feature["norm_pos"]
+            ref["timestamp"] = frame.timestamp
+            self.ref_list.append(ref)
+            self.__previously_detected_feature = detected_feature
+        else:
+            self.__previously_detected_feature = None
+
+        # Update UI
+        self.status_text = (
+            "Sampling Gaze Data"
+            if len(self.ref_list)
+            else "Click to Sample at Location"
+        )
 
     def gl_display(self):
-        if self.detected:
-            draw_points_norm([self.pos], size=self.r, color=RGBA(0.0, 1.0, 0.0, 0.5))
+        feature = self.__previously_detected_feature
+        if feature:
+            draw_points_norm(
+                [feature["norm_pos"]],
+                size=self._RADIUS_OF_CIRCLE_DISPLAYED,
+                color=RGBA(0.0, 1.0, 0.0, 0.5),
+            )
 
     def on_click(self, pos, button, action):
         if action == GLFW_PRESS and self.is_active:
-            self.first_img = None
-            self.point = np.array([pos], dtype=np.float32)
-            self.count = 30
+            self.__feature_tracker.reset(pos)
             return True  # click consumed
         return False  # click not consumed
+
+
+class NaturalFeatureTracker:
+    def __init__(self):
+        self.reset(detection_point=None)
+
+    def reset(self, detection_point: T.Optional[T.Tuple[float, float]]):
+        points = (
+            np.array([detection_point], dtype=np.float32) if detection_point else None
+        )
+        self.__previous_gray_image = None
+        self.__previous_detected_points = points
+        self.__was_detected_on_last_update = False
+
+    def update(self, gray_img) -> T.Optional[dict]:
+
+        # No starting point was selected yet
+        if self.__previous_detected_points is None:
+            return None
+
+        if self.__previous_gray_image is None:
+            self.__previous_gray_image = gray_img.copy()
+
+        self.__was_detected_on_last_update = False
+
+        # in cv2.3 nextPts is falsly required as an argument.
+        next_points_dummy = self.__previous_detected_points.copy()
+        next_points, status, err = cv2.calcOpticalFlowPyrLK(
+            self.__previous_gray_image,
+            gray_img,
+            self.__previous_detected_points,
+            next_points_dummy,
+            winSize=(100, 100),
+        )
+
+        if status[0]:
+            self.__was_detected_on_last_update = True
+            self.__previous_gray_image = gray_img.copy()
+            self.__previous_detected_points = next_points
+
+            screen_point = next_points[0].tolist()  # we prefer python types.
+
+            normal_point = normalize(
+                screen_point, (gray_img.shape[1], gray_img.shape[0]), flip_y=True
+            )
+
+            return {"img_pos": screen_point, "norm_pos": normal_point}
+
+        else:
+            return None
