@@ -9,6 +9,6 @@ from .natural_feature_plugin import NaturalFeatureChoreographyPlugin
 def available_calibration_choreography_plugins():
     default_plugin = ScreenMarkerChoreographyPlugin
     available_plugins = list(
-        CalibrationChoreographyPlugin.registered_choreographies().values()
+        CalibrationChoreographyPlugin.registered_choreographies_by_label().values()
     )
     return default_plugin, available_plugins
