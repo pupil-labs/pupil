@@ -44,13 +44,14 @@ class ChoreographyAction(enum.Enum):
     STOPPED = "stopped"
     FAILED = "failed"
     SUCCEEDED = "successful"
+    ADD_REF_DATA = "add_ref_data"
 
 
 class ChoreographyNotification:
     __slots__ = ("mode", "action")
 
     _REQUIRED_KEYS = {"subject"}
-    _OPTIONAL_KEYS = {"topic"}
+    _OPTIONAL_KEYS = {"topic", "ref_data"}
 
     def __init__(self, mode: ChoreographyMode, action: ChoreographyAction):
         self.mode = mode
@@ -64,7 +65,9 @@ class ChoreographyNotification:
         return {"subject": self.subject}
 
     @staticmethod
-    def from_dict(note: dict) -> "ChoreographyNotification":
+    def from_dict(
+        note: dict, allow_extra_keys: bool = False
+    ) -> "ChoreographyNotification":
         cls = ChoreographyNotification
         keys = set(note.keys())
 
@@ -76,13 +79,16 @@ class ChoreographyNotification:
 
         valid_keys = cls._REQUIRED_KEYS.union(cls._OPTIONAL_KEYS)
         invalid_keys = keys.difference(valid_keys)
-        if invalid_keys:
+        if invalid_keys and not allow_extra_keys:
             raise ValueError(f"Notification contains invalid keys: {invalid_keys}")
 
         mode, action = note["subject"].split(".")
         return ChoreographyNotification(
             mode=ChoreographyMode(mode), action=ChoreographyAction(action)
         )
+
+
+CHOREOGRAPHY_PLUGIN_DONT_REGISTER_LABEL = "CalibrationChoreographyPlugin.DONT_REGISTER"
 
 
 class CalibrationChoreographyPlugin(Plugin):
@@ -155,6 +161,10 @@ class CalibrationChoreographyPlugin(Plugin):
         assert (
             cls.label not in store.keys()
         ), f'Calibration choreography plugin already exists for label "{cls.label}"'
+        if cls.label == CHOREOGRAPHY_PLUGIN_DONT_REGISTER_LABEL:
+            # If the class label is explicitly saying that it shouldn't be registered,
+            # Skip the class registration; this is usefull for abstract superclasses.
+            return
         store[cls.label] = cls
 
     def __init__(self, g_pool):
@@ -340,6 +350,7 @@ class CalibrationChoreographyPlugin(Plugin):
         Reacts to notifications:
            ``calibration.should_start``: Starts the calibration procedure
            ``calibration.should_stop``: Stops the calibration procedure
+           ``calibration.add_ref_data``: Adds reference data
 
         Emits notifications:
             ``calibration.started``: Calibration procedure started
@@ -361,6 +372,12 @@ class CalibrationChoreographyPlugin(Plugin):
             else:
                 self.__current_mode = note.mode
                 self._perform_start()
+
+        if note.action == ChoreographyAction.ADD_REF_DATA:
+            if self.is_active:
+                pass  # No-op; each choreography should handle it independently
+            else:
+                logger.error("Ref data can only be added when calibration is running.")
 
         if note.action == ChoreographyAction.SHOULD_STOP:
             if not self.is_active:

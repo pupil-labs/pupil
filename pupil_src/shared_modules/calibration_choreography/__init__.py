@@ -2,6 +2,7 @@ from .base_plugin import CalibrationChoreographyPlugin
 from .screen_marker_plugin import ScreenMarkerChoreographyPlugin
 from .single_marker_plugin import SingleMarkerChoreographyPlugin
 from .natural_feature_plugin import NaturalFeatureChoreographyPlugin
+from .hmd_plugin import HMD2DChoreographyPlugin, HMD3DChoreographyPlugin
 
 # from .hmd_plugin import HMDChoreographyPlugin
 
