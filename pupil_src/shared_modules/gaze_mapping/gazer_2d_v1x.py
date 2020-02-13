@@ -22,6 +22,14 @@ from calibration_routines.optimization_calibration.calibrate_2d import (
     make_map_function,
 )
 
+_REFERENCE_FEATURE_COUNT = 2
+
+_MONOCULAR_FEATURE_COUNT = 2
+_MONOCULAR_PUPIL_NORM_POS = slice(0, 2)
+
+_BINOCULAR_FEATURE_COUNT = 4
+_BINOCULAR_PUPIL_NORM_POS = slice(2, 4)
+
 
 class Model2D_v1x(Model):
     def __init__(self, *, screen_size=(1, 1)):
@@ -44,7 +52,11 @@ class Model2D_v1x_Binocular(Model2D_v1x):
     def fit(self, X, Y):
         assert X.ndim == Y.ndim == 2, "Required shape: (n_samples, n_features)"
         assert X.shape[0] == Y.shape[0], "Requires same number of samples in X and Y"
-        point_cloud = np.hstack([X, Y])
+
+        point_cloud = np.hstack([X, Y])  # specific to calibrate_2d_polynomial
+        num_expecte_features = _BINOCULAR_FEATURE_COUNT + _REFERENCE_FEATURE_COUNT
+        assert point_cloud.shape[1] == num_expecte_features
+
         map_fn, inliers, params = calibrate_2d_polynomial(
             point_cloud, self.screen_size, binocular=True
         )
@@ -55,9 +67,12 @@ class Model2D_v1x_Binocular(Model2D_v1x):
         self._is_fitted = True
 
     def predict(self, X):
-        # X[:, :2] -> norm_pos left
-        # X[:, 2:] -> norm_pos right
-        return [self._map_fn(x[:2], x[2:]) for x in X]
+        # X[:, _MONOCULAR_PUPIL_NORM_POS] -> norm_pos left
+        # X[:, _BINOCULAR_PUPIL_NORM_POS] -> norm_pos right
+        return [
+            self._map_fn(x[_MONOCULAR_PUPIL_NORM_POS], x[_BINOCULAR_PUPIL_NORM_POS])
+            for x in X
+        ]
 
 
 class Model2D_v1x_Monocular(Model2D_v1x):
@@ -75,8 +90,8 @@ class Model2D_v1x_Monocular(Model2D_v1x):
         self._is_fitted = True
 
     def predict(self, X):
-        # X[:, 0:2] -> monocular norm_pos
-        return [self._map_fn(x) for x in X]
+        # X[:, _MONOCULAR_PUPIL_NORM_POS] -> monocular norm_pos
+        return [self._map_fn(x[_MONOCULAR_PUPIL_NORM_POS]) for x in X]
 
 
 class Gazer2D_v1x(GazerBase):
@@ -93,12 +108,12 @@ class Gazer2D_v1x(GazerBase):
 
     def _extract_pupil_features(self, pupil_data) -> np.ndarray:
         pupil_features = np.array([p["norm_pos"] for p in pupil_data])
-        assert pupil_features.shape == (len(pupil_data), 2)
+        assert pupil_features.shape == (len(pupil_data), _MONOCULAR_FEATURE_COUNT)
         return pupil_features
 
     def _extract_reference_features(self, ref_data) -> np.ndarray:
         ref_features = np.array([r["norm_pos"] for r in ref_data])
-        assert ref_features.shape == (len(ref_data), 2)
+        assert ref_features.shape == (len(ref_data), _REFERENCE_FEATURE_COUNT)
         return ref_features
 
     def predict(
@@ -111,10 +126,12 @@ class Gazer2D_v1x(GazerBase):
                 right = self._extract_pupil_features([pupil_match[0]])
                 left = self._extract_pupil_features([pupil_match[1]])
                 X = np.hstack([left, right])
+                assert X.shape[1] == _BINOCULAR_FEATURE_COUNT
                 gaze_positions = self.binocular_model.predict(X)
                 topic = "gaze.2d.01."
             elif num_matched == 1:
                 X = self._extract_pupil_features([pupil_match[0]])
+                assert X.shape[1] == _MONOCULAR_FEATURE_COUNT
                 if pupil_match[0]["id"] == 0 and self.right_model.is_fitted:
                     gaze_positions = self.right_model.predict(X)
                     topic = "gaze.2d.0."
@@ -135,6 +152,7 @@ class Gazer2D_v1x(GazerBase):
     def filter_pupil_data(
         self, pupil_data: T.Iterable, confidence_threshold: T.Optional[float] = None
     ) -> T.Iterable:
+        # TODO: Use topic to filter
         pupil_data = list(filter(lambda p: "2d" in p["method"], pupil_data))
         pupil_data = super().filter_pupil_data(pupil_data, confidence_threshold)
         return pupil_data
