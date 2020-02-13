@@ -47,7 +47,7 @@ class Model(abc.ABC):
 
         Arguments:
             X {array-like} -- of shape (n_samples, n_features)
-            y {array-like} -- of shape (n_samples,) or (n_samples, n_targets)
+            y {array-like} -- of shape (n_samples, n_targets)
         """
         pass
 

@@ -14,6 +14,8 @@ import typing as T
 import cv2
 import numpy as np
 
+import math_helper
+
 from gaze_mapping.gazer_base import (
     GazerBase,
     Model,
@@ -29,6 +31,18 @@ from calibration_routines.optimization_calibration.calibrate_3d import (
     calibrate_monocular,
 )
 
+_REFERENCE_FEATURE_COUNT = 3
+
+_MONOCULAR_FEATURE_COUNT = 7
+_MONOCULAR_EYEID = 0
+_MONOCULAR_SPHERE_CENTER = slice(1, 4)
+_MONOCULAR_PUPIL_NORMAL = slice(4, 7)
+
+_BINOCULAR_FEATURE_COUNT = 14
+_BINOCULAR_EYEID = 7
+_BINOCULAR_SPHERE_CENTER = slice(8, 11)
+_BINOCULAR_PUPIL_NORMAL = slice(11, 14)
+
 
 class Model3D_v1x(Model):
     @abc.abstractmethod
@@ -39,20 +53,25 @@ class Model3D_v1x(Model):
     def _predict_single(self, x):
         pass
 
-    def __init__(self, *, intrinsics):
+    def __init__(self, *, intrinsics, initial_depth=500):
         self.intrinsics = intrinsics
+        self.initial_depth = initial_depth
         self._is_fitted = False
 
     @property
     def is_fitted(self) -> bool:
         return self._is_fitted
 
-    def fit(self, extracted_data):  # NOTE: breaks api due to legacy reasons
-        params = self._fit(*extracted_data)
+    def fit(self, X, Y):
+        assert X.ndim == Y.ndim == 2, (X.ndim, Y.ndim)
+        assert X.shape[0] == Y.shape[0]
+        assert Y.shape[1] == _REFERENCE_FEATURE_COUNT
+        params = self._fit(X, Y)
         self.set_params(**params)
         self._is_fitted = True
 
     def predict(self, X):
+        assert X.ndim == 2
         predictions = (self._predict_single(x) for x in X)
         predictions = filter(bool, predictions)
         return predictions
@@ -65,12 +84,16 @@ class Model3D_v1x(Model):
 
 
 class Model3D_v1x_Monocular(Model3D_v1x):
-    def _fit(
-        self, unprojected_ref_points, pupil_normals, last_pupil, initial_depth=500
-    ):
-        pupil_id = last_pupil["id"]
+    def _fit(self, X, Y):
+        assert X.shape[1] == _MONOCULAR_FEATURE_COUNT
+        unprojected_ref_points = Y
+        pupil_normals = X[:, _MONOCULAR_PUPIL_NORMAL]
+
+        pupil_id = X[-1, _MONOCULAR_EYEID]  # last pupil eye id
+        sphere_pos = X[-1, _MONOCULAR_SPHERE_CENTER]  # last pupil sphere center
+
         result = calibrate_monocular(
-            unprojected_ref_points, pupil_normals, pupil_id, initial_depth
+            unprojected_ref_points, pupil_normals, pupil_id, self.initial_depth
         )
         success, poses_in_world, gaze_targets_in_world = result
         if not success:
@@ -78,7 +101,6 @@ class Model3D_v1x_Monocular(Model3D_v1x):
 
         world_pose, eye_pose = poses_in_world
 
-        sphere_pos = last_pupil["sphere"]["center"]
         eye_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye_pose, sphere_pos)
 
         all_observations = [unprojected_ref_points, pupil_normals]
@@ -92,7 +114,7 @@ class Model3D_v1x_Monocular(Model3D_v1x):
             "cal_points_3d": gaze_targets_in_world.tolist(),
             "cal_ref_points_3d": nearest_points_world.tolist(),
             "cal_gaze_points_3d": nearest_points_eye.tolist(),
-            "gaze_distance": initial_depth,
+            "gaze_distance": self.initial_depth,
         }
         return params
 
@@ -110,21 +132,23 @@ class Model3D_v1x_Monocular(Model3D_v1x):
         self.rotation_vector = cv2.Rodrigues(self.rotation_matrix)[0]
         self.translation_vector = self.eye_camera_to_world_matrix[:3, 3]
 
-    def _predict_single(self, p):
-        gaze_point = np.array(p["circle_3d"]["normal"]) * self.gaze_distance + np.array(
-            p["sphere"]["center"]
-        )
+    def _predict_single(self, x):
+        assert x.ndim == 1, x
+        assert x.shape[0] == _MONOCULAR_FEATURE_COUNT, x
+        pupil_normal = x[_MONOCULAR_PUPIL_NORMAL]
+        sphere_center = x[_MONOCULAR_SPHERE_CENTER]
+        gaze_point = pupil_normal * self.gaze_distance + sphere_center
 
         image_point = self.intrinsics.projectPoints(
-            np.array([gaze_point]), self.rotation_vector, self.translation_vector
+            gaze_point[np.newaxis], self.rotation_vector, self.translation_vector
         )
         image_point = image_point.reshape(-1, 2)
         image_point = normalize(image_point[0], self.intrinsics.resolution, flip_y=True)
         image_point = _clamp_norm_point(image_point)
 
-        eye_center = self._toWorld(p["sphere"]["center"])
+        eye_center = self._toWorld(sphere_center)
         gaze_3d = self._toWorld(gaze_point)
-        normal_3d = np.dot(self.rotation_matrix, np.array(p["circle_3d"]["normal"]))
+        normal_3d = np.dot(self.rotation_matrix, pupil_normal)
 
         g = {
             "norm_pos": image_point,
@@ -141,18 +165,25 @@ class Model3D_v1x_Monocular(Model3D_v1x):
 
 
 class Model3D_v1x_Binocular(Model3D_v1x):
-    def _fit(
-        self,
-        unprojected_ref_points,
-        pupil0_normals,
-        pupil1_normals,
-        last_pupil0,
-        last_pupil1,
-        initial_depth=500,
-    ):
+    def _fit(self, X, Y):
+        assert X.shape[1] == _BINOCULAR_FEATURE_COUNT, X
+        unprojected_ref_points = Y
+
+        eyeid_left = X[:, _MONOCULAR_EYEID]
+        sphere_pos1 = X[-1, _MONOCULAR_SPHERE_CENTER]  # last pupil sphere center
+        pupil1_normals = X[:, _MONOCULAR_PUPIL_NORMAL]
+
+        eyeid_right = X[:, _BINOCULAR_EYEID]
+        sphere_pos0 = X[-1, _BINOCULAR_SPHERE_CENTER]  # last pupil sphere center
+        pupil0_normals = X[:, _BINOCULAR_PUPIL_NORMAL]
+
+        assert (eyeid_left == 1).all(), eyeid_left
+        assert (eyeid_right == 0).all(), eyeid_right
+        assert sphere_pos1.shape == (3,), sphere_pos1
+        assert sphere_pos0.shape == (3,), sphere_pos0
 
         res = calibrate_binocular(
-            unprojected_ref_points, pupil0_normals, pupil1_normals, initial_depth
+            unprojected_ref_points, pupil0_normals, pupil1_normals, self.initial_depth
         )
         success, poses_in_world, gaze_targets_in_world = res
         if not success:
@@ -160,8 +191,6 @@ class Model3D_v1x_Binocular(Model3D_v1x):
 
         world_pose, eye0_pose, eye1_pose = poses_in_world
 
-        sphere_pos0 = last_pupil0["sphere"]["center"]
-        sphere_pos1 = last_pupil1["sphere"]["center"]
         eye0_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye0_pose, sphere_pos0)
         eye1_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye1_pose, sphere_pos1)
 
@@ -209,18 +238,16 @@ class Model3D_v1x_Binocular(Model3D_v1x):
             self.eye_camera_to_world_matricies[1][:3, 3],
         )
 
-    def _predict_single(self, p):
+    def _predict_single(self, x):
+        assert x.ndim == 1, x
+        assert x.shape[0] == _BINOCULAR_FEATURE_COUNT, x
         # find the nearest intersection point of the two gaze lines
         # eye ball centers in world coords
-        s0_center = self._eye0_to_World(np.array(p0["sphere"]["center"]))
-        s1_center = self._eye1_to_World(np.array(p1["sphere"]["center"]))
+        s1_center = self._eye1_to_World(x[_MONOCULAR_SPHERE_CENTER])
+        s0_center = self._eye0_to_World(x[_BINOCULAR_SPHERE_CENTER])
         # eye line of sight in world coords
-        s0_normal = np.dot(
-            self.rotation_matricies[0], np.array(p0["circle_3d"]["normal"])
-        )
-        s1_normal = np.dot(
-            self.rotation_matricies[1], np.array(p1["circle_3d"]["normal"])
-        )
+        s1_normal = np.dot(self.rotation_matricies[1], x[_MONOCULAR_PUPIL_NORMAL])
+        s0_normal = np.dot(self.rotation_matricies[0], x[_BINOCULAR_PUPIL_NORMAL])
 
         # See Lech Swirski: "Gaze estimation on glasses-based stereoscopic displays"
         # Chapter: 7.4.2 Cyclopean gaze estimate
@@ -249,12 +276,12 @@ class Model3D_v1x_Binocular(Model3D_v1x):
         if nearest_intersection_point is not None and self.backproject:
             cyclop_gaze = nearest_intersection_point - cyclop_center
             self.last_gaze_distance = np.sqrt(cyclop_gaze.dot(cyclop_gaze))
-            image_point = self.g_pool.capture.intrinsics.projectPoints(
+            image_point = self.intrinsics.projectPoints(
                 np.array([nearest_intersection_point])
             )
             image_point = image_point.reshape(-1, 2)
             image_point = normalize(
-                image_point[0], self.g_pool.capture.intrinsics.resolution, flip_y=True
+                image_point[0], self.intrinsics.resolution, flip_y=True
             )
             image_point = _clamp_norm_point(image_point)
 
@@ -295,20 +322,26 @@ class Gazer3D_v1x(GazerBase):
     def _init_binocular_model(self) -> Model:
         return Model3D_v1x_Binocular(intrinsics=self.g_pool.capture.intrinsics)
 
-    def _fit_monocular_model(self, model: Model, matched_data: T.Iterable):
-        self._fit_model(model, matched_data)
-
-    def _fit_binocular_model(self, model: Model, matched_data: T.Iterable):
-        self._fit_model(model, matched_data)
-
-    def _fit_model(self, model: Model, matched_data: T.Iterable):
-        # 3d monocular/binocular calls the same function for data extraction
-        extracted_data = data_processing._extract_3d_data(
-            matched_data, self.g_pool.capture.intrinsics
+    def _extract_pupil_features(self, pupil_data) -> np.ndarray:
+        pupil_features = np.array(
+            [
+                [p["id"], *p["sphere"]["center"], *p["circle_3d"]["normal"]]
+                for p in pupil_data
+            ]
         )
-        if not extracted_data:
-            raise NotEnoughDataError
-        model.fit(extracted_data)
+        # pupil_features[:, _MONOCULAR_EYEID]: eye id
+        # pupil_features[:, _MONOCULAR_SPHERE_CENTER]: sphere center x/y/z
+        # pupil_features[:, _MONOCULAR_PUPIL_NORMAL]: pupil normal x/y/z
+        expected_shaped = len(pupil_data), _MONOCULAR_FEATURE_COUNT
+        assert pupil_features.shape == expected_shaped, pupil_features
+        return pupil_features
+
+    def _extract_reference_features(self, ref_data) -> np.ndarray:
+        ref_2d = np.array([ref["screen_pos"] for ref in ref_data])
+        assert ref_2d.shape == (len(ref_data), 2), ref_2d
+        ref_3d = self.g_pool.capture.intrinsics.unprojectPoints(ref_2d, normalize=True)
+        assert ref_3d.shape == (len(ref_data), 3), ref_3d
+        return ref_3d
 
     def predict(
         self, matched_pupil_data: T.Iterator[T.List["Pupil"]]
@@ -317,14 +350,18 @@ class Gazer3D_v1x(GazerBase):
             num_matched = len(pupil_match)
 
             if num_matched == 2 and self.binocular_model.is_fitted:
-                gaze_positions = self.binocular_model.predict([pupil_match])
+                right = self._extract_pupil_features([pupil_match[0]])
+                left = self._extract_pupil_features([pupil_match[1]])
+                X = np.hstack([left, right])
+                gaze_positions = self.binocular_model.predict(X)
                 topic = "gaze.3d.01."
             elif num_matched == 1:
+                X = self._extract_pupil_features([pupil_match[0]])
                 if pupil_match[0]["id"] == 0 and self.right_model.is_fitted:
-                    gaze_positions = self.right_model.predict([pupil_match])
+                    gaze_positions = self.right_model.predict(X)
                     topic = "gaze.3d.0."
                 elif pupil_match[0]["id"] == 1 and self.left_model.is_fitted:
-                    gaze_positions = self.left_model.predict([pupil_match])
+                    gaze_positions = self.left_model.predict(X)
                     topic = "gaze.3d.1."
 
             for gaze_pos in gaze_positions:
@@ -341,6 +378,7 @@ class Gazer3D_v1x(GazerBase):
     def filter_pupil_data(
         self, pupil_data: T.Iterable, confidence_threshold: T.Optional[float] = None
     ) -> T.Iterable:
-        # TODO: Filter 3D data
+        # TODO: Use topic to filter
+        pupil_data = list(filter(lambda p: "3d" in p["method"], pupil_data))
         pupil_data = super().filter_pupil_data(pupil_data, confidence_threshold)
         return pupil_data
