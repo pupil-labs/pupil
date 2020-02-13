@@ -48,7 +48,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
         # debug window
         self.debugVisualizer3D = Eye_Visualizer(g_pool, self.detector_3d.focal_length())
 
-    def detect(self, frame):
+    def detect(self, frame, pupil_data):
         # convert roi-plugin to detector roi
         roi = Roi(*self.g_pool.roi.bounds)
 

@@ -92,16 +92,18 @@ class PupilDetectorPlugin(Plugin):
                 self.on_resolution_change(self._last_frame_size, frame_size)
             self._last_frame_size = frame_size
 
-        detection_result = self.detect(frame=frame)
+        detection_result = self.detect(frame=frame, pupil_data=event.get(EVENT_KEY, []))
+        self._recent_detection_result = detection_result
+        if detection_result is None:
+            return
+
         if EVENT_KEY in event:
             event[EVENT_KEY].append(detection_result)
         else:
             event[EVENT_KEY] = [detection_result]
 
-        self._recent_detection_result = detection_result
-
     @abc.abstractmethod
-    def detect(self, frame):
+    def detect(self, frame, pupil_data):
         pass
 
     def on_notify(self, notification):
