@@ -10,7 +10,8 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 
-from pye3d.eyemodel import EyeModel
+from pye3d.eyemodel import EyeModel_V2 as EyeModel
+
 
 from .detector_base_plugin import PupilDetectorPlugin
 

@@ -13,7 +13,7 @@ import typing as T
 
 from .detector_2d_plugin import Detector2DPlugin
 from .detector_3d_plugin import Detector3DPlugin
-from .detector_base_plugin import PupilDetectorPlugin
+from .detector_base_plugin import PupilDetectorPlugin, EVENT_KEY
 from .pye3d_plugin import Pye3DPlugin
 
 logger = logging.getLogger(__name__)
