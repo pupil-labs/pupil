@@ -10,12 +10,12 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 
-from pye3d.eyemodel import EyeModel_V2 as EyeModel
+from pye3d.eyemodel import EyeModel
 from pyglui import ui
 
 from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_2d import draw_eyeball_outline, draw_pupil_outline
-from .visualizer_3d import Eye_Visualizer
+from .visualizer_pye3d import Eye_Visualizer
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +41,6 @@ class Pye3DPlugin(PupilDetectorPlugin):
                 break
         else:
             return None
-
-        return None
 
         datum_2d["raw_edges"] = []
         result = self.detector.update_and_detect(
@@ -84,7 +82,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
     # Public
 
     def reset_model(self):
-        self.detector.reset_model()
+        self.detector.reset()
 
     # Debug window management
 
@@ -108,8 +106,6 @@ class Pye3DPlugin(PupilDetectorPlugin):
 
     def debug_window_update(self):
         if self.is_debug_window_open:
-            pass
-            # TODO
-            # self.debugVisualizer3D.update_window(
-            #     self.g_pool, self.detector_3d.debug_result
-            # )
+            self.debugVisualizer3D.update_window(
+                self.g_pool, self.detector.debug_result
+            )
