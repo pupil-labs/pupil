@@ -83,6 +83,24 @@ class PupilRenderer(ImageManipulator):
             thickness=-1,
         )
 
+        eye_ball = pupil_position.get("projected_sphere", None)
+        if eye_ball is not None:
+            try:
+                cv2.ellipse(
+                    image,
+                    center=tuple(int(v) for v in eye_ball["center"]),
+                    axes=tuple(int(v / 2) for v in eye_ball["axes"]),
+                    angle=int(eye_ball["angle"]),
+                    startAngle=0,
+                    endAngle=360,
+                    color=(26, 230, 0, 255 * pupil_position["model_confidence"]),
+                    thickness=2,
+                )
+            except ValueError:
+                # Happens when converting 'nan' to int
+                # TODO: Investigate why results are sometimes 'nan'
+                pass
+
     @staticmethod
     def get_ellipse_points(e, num_pts=10):
         c1 = e[0][0]
