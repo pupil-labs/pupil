@@ -21,7 +21,6 @@ from pye3d.geometry.eye import LeGrandEye
 
 from collections import deque
 
-
 class Eye_Visualizer(Visualizer):
     def __init__(self, g_pool, focal_length):
         super().__init__(g_pool, "Debug Visualizer", False)
