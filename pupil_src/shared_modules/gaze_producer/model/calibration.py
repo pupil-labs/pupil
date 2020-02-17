@@ -14,9 +14,7 @@ from storage import StorageItem
 
 # this plugin does not care about the content of the result, it just receives it from
 # the calibration routine and handles it to the gaze mapper
-CalibrationResult = namedtuple(
-    "CalibrationResult", ["mapping_plugin_name", "mapper_args"]
-)
+CalibrationResult = namedtuple("CalibrationResult", ["gazer_class_name", "calib_data"])
 
 
 class Calibration(StorageItem):
@@ -27,7 +25,7 @@ class Calibration(StorageItem):
         unique_id,
         name,
         recording_uuid,
-        mapping_method,
+        gazer_class_name,
         frame_index_range,
         minimum_confidence,
         status="Not calculated yet",
@@ -37,7 +35,7 @@ class Calibration(StorageItem):
         self.unique_id = unique_id
         self.name = name
         self.recording_uuid = recording_uuid
-        self.mapping_method = mapping_method
+        self.gazer_class_name = gazer_class_name
         self.frame_index_range = frame_index_range
         self.minimum_confidence = minimum_confidence
         self.status = status
@@ -60,7 +58,7 @@ class Calibration(StorageItem):
             self.unique_id,
             self.name,
             self.recording_uuid,
-            self.mapping_method,
+            self.gazer_class_name,
             self.frame_index_range,
             self.minimum_confidence,
             self.status,

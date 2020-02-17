@@ -199,15 +199,17 @@ On_Exception = typing.Callable[[Exception], None]
 On_Canceled_Or_Killed = typing.Callable[[], None]
 
 
-class TypedBackgroundGeneratorFunction(BackgroundGeneratorFunction, typing.Generic[GFY, GFS, GFR]):
+class TypedBackgroundGeneratorFunction(
+    BackgroundGeneratorFunction, typing.Generic[GFY, GFS, GFR]
+):
     def __init__(
-            self,
-            name: str,
-            generator_function: typing.Callable[..., typing.Generator[GFY, GFS, GFR]],
-            args: typing.List[typing.Any] = [],
-            kwargs: typing.Mapping[str, typing.Any] = {},
-            pass_shared_memory: bool = False,
-            patches: typing.Iterable[typing.Type[Patch]] = tuple(),
+        self,
+        name: str,
+        generator_function: typing.Callable[..., typing.Generator[GFY, GFS, GFR]],
+        args: typing.List[typing.Any] = [],
+        kwargs: typing.Mapping[str, typing.Any] = {},
+        pass_shared_memory: bool = False,
+        patches: typing.Iterable[typing.Type[Patch]] = tuple(),
     ):
         super().__init__(
             name=name,
