@@ -118,7 +118,7 @@ class Eye_Visualizer(Visualizer):
                 gaze_vector_refraction_corrected[1],
                 gaze_vector_refraction_corrected[2],
                 pupil_radius * 2,
-                len(result["debug_info"]["unprojected_circles"]),
+                len(result["debug_info"]["Dierkes_lines"]),
             )
         )
 
@@ -172,17 +172,17 @@ class Eye_Visualizer(Visualizer):
 
             vertices = list(
                 zip(
-                    np.clip(np.asarray(result["debug_info"]["angles"]) / 60.0, 0, 1),
+                    np.clip((np.asarray(result["debug_info"]["angles"]) - 10 ) / 40.0 , 0, 1),
                     np.clip(
-                        np.log10(np.array(result["debug_info"]["residuals"])) + 3,
+                        np.log10(np.array(result["debug_info"]["residuals"])) + 2,
                         0.1,
-                        2.9,
+                        3.9,
                     ),
                 )
             )
 
-            alpha = 0.8 / (len(result["debug_info"]["angles"]) ** 0.2)
-            size = 4 + 10 / (len(result["debug_info"]["angles"]) ** 0.1)
+            alpha = 0.2 / (len(result["debug_info"]["angles"]) ** 0.2)
+            size = 2 + 10 / (len(result["debug_info"]["angles"]) ** 0.1)
 
             glutils.draw_points(
                 vertices, size=size, color=RGBA(255 / 255, 165 / 255, 0, alpha)
@@ -196,13 +196,13 @@ class Eye_Visualizer(Visualizer):
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
 
-    def draw_dierkes_lines(self, result):
+    def draw_Dierkes_lines(self, result):
 
         glPushMatrix()
         glMatrixMode(GL_MODELVIEW)
         glColor4f(1.0, 0., 0., 0.1)
         glLineWidth(1.0)
-        for line in result["debug_info"]["unprojected_circles"]:
+        for line in result["debug_info"]["Dierkes_lines"][::4]:
             glBegin(GL_LINES)
             glVertex3f(line[0], line[1], line[2])
             glVertex3f(line[3], line[4], line[5])
@@ -242,7 +242,7 @@ class Eye_Visualizer(Visualizer):
 
         self.draw_coordinate_system(4)
         self.draw_eye(result)
-        self.draw_dierkes_lines(result)
+        self.draw_Dierkes_lines(result)
         self.trackball.pop()
 
         self.draw_debug_info(result)

@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 
-from pye3d.eyemodel import EyeModel
+from pye3d.detector_3d import Detector3D
 from pyglui import ui
 
 from .detector_base_plugin import PupilDetectorPlugin
@@ -29,7 +29,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.detector = EyeModel()
+        self.detector = Detector3D()
         self.debugVisualizer3D = Eye_Visualizer(
             g_pool, self.detector.settings["focal_length"]
         )
