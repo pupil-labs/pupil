@@ -40,8 +40,13 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
 
     shows_action_buttons = False
 
+    is_session_persistent = False
+
     def get_init_dict(self):
-        return {}
+        # Disable plugin persistance for HMD choreographies
+        raise NotImplementedError(
+            "HMD calibration choreography plugin is not persistent"
+        )
 
     ### Public - Plugin
 
