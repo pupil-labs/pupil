@@ -97,6 +97,7 @@ class CalibrationChoreographyPlugin(Plugin):
     _THUMBNAIL_COLOR_ON = (0.3, 0.2, 1.0, 0.9)
     __registered_choreography_plugins = {}
 
+    order = 0.3
     icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"
     uniqueness = "by_base_class"
@@ -112,6 +113,10 @@ class CalibrationChoreographyPlugin(Plugin):
     """Controlls wheather calibration and accuracy test buttons are visible.
     """
     shows_action_buttons = True
+
+    """Controlls wheather the choreography plugin is persistent across sessions.
+    """
+    is_session_persistent = True
 
     @classmethod
     @abc.abstractmethod
@@ -281,10 +286,12 @@ class CalibrationChoreographyPlugin(Plugin):
             selection=self.user_selectable_gazer_classes(),
         )
 
+        super().init_ui()
         self.add_menu()
         self.menu.label = self.label
         self.menu.append(self.__ui_selector_choreography)
         self.menu.append(self.__ui_selector_gazer)
+        self.menu_icon.order = self.order
 
         if self.shows_action_buttons:
 
