@@ -116,6 +116,14 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
             return True  # click consumed
         return False  # click not consumed
 
+    def _perform_start(self):
+        if not self.g_pool.capture.online:
+            logger.error(
+                f"{self.current_mode.label} requiers world capture video input."
+            )
+            return
+        return super()._perform_start()
+
 
 class NaturalFeatureTracker:
     def __init__(self):

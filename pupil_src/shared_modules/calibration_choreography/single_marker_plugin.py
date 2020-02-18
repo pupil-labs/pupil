@@ -298,7 +298,6 @@ class SingleMarkerChoreographyPlugin(
     ### Internal
 
     def _perform_start(self):
-        # TODO: Is this check duplicated for all calibration choreographies?
         if not self.g_pool.capture.online:
             logger.error(
                 f"{self.current_mode.label} requiers world capture video input."
