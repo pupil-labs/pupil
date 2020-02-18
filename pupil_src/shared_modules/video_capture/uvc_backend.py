@@ -423,6 +423,17 @@ class UVC_Source(Base_Source):
                 # c930 timestamps need to be set here. The camera does not provide valid pts from device
                 frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
             frame.timestamp -= self.g_pool.timebase.value
+
+            if (
+                self._recent_frame is not None
+                and frame.timestamp < self._recent_frame.timestamp
+            ):
+                logger.debug(
+                    "Received non-monotonic timestamps from UVC! Dropping frame."
+                    f" Last: {self._recent_frame.timestamp}, current: {frame.timestamp}"
+                )
+                return
+
             self._recent_frame = frame
             events["frame"] = frame
             self._restart_in = 3
