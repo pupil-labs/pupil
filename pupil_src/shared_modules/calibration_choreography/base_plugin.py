@@ -228,9 +228,7 @@ class CalibrationChoreographyPlugin(Plugin):
     def on_choreography_started(self, mode: ChoreographyMode):
         self.notify_all(
             ChoreographyNotification(
-                # TODO: Why the subject is always "calibration.started", and not "accuracy_test.started" for accuracy test mode?
-                # mode=mode,
-                mode=ChoreographyMode.CALIBRATION,
+                mode=mode,
                 action=ChoreographyAction.STARTED,
             ).to_dict()
         )
