@@ -213,19 +213,21 @@ def eye(
         ]
         if eye_id == 0:
             preferred_names += ["HD-6000"]
-        default_capture_settings = (
-            "UVC_Source",
-            {
-                "preferred_names": preferred_names,
-                "frame_size": (320, 240),
-                "frame_rate": 120,
-            },
-        )
+
+        default_capture_name = "UVC_Source"
+        default_capture_settings = {
+            "preferred_names": preferred_names,
+            "frame_size": (320, 240),
+            "frame_rate": 120,
+        }
 
         default_plugins = [
             # TODO: extend with plugins
-            default_capture_settings,
+            (default_capture_name, default_capture_settings),
             ("UVC_Manager", {}),
+            ("NDSI_Manager", {}),
+            ("HMD_Streaming_Manager", {}),
+            ("File_Manager", {}),
             # Detector needs to be loaded first to set `g_pool.pupil_detector`
             (default_detector_cls.__name__, {}),
             ("PupilDetectorManager", {}),
@@ -412,6 +414,13 @@ def eye(
             plugins_to_load.append(overwrite_cap_settings)
 
         g_pool.plugins = Plugin_List(g_pool, plugins_to_load)
+
+        if not g_pool.capture:
+            # Make sure we always have a capture running. Important if there was no
+            # capture stored in session settings.
+            g_pool.plugins.add(
+                g_pool.plugin_by_name[default_capture_name], default_capture_settings
+            )
 
         g_pool.writer = None
 

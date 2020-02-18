@@ -69,7 +69,7 @@ if platform.system() == "Darwin":
         ),
         hookspath=None,
         runtime_hooks=None,
-        excludes=["matplotlib", "pyrealsense"],
+        excludes=["matplotlib"],
     )
 
     pyz = PYZ(a.pure)
@@ -126,7 +126,7 @@ elif platform.system() == "Linux":
         + apriltag_hidden_imports,
         hookspath=None,
         runtime_hooks=None,
-        excludes=["matplotlib", "pyrealsense"],
+        excludes=["matplotlib"],
     )
 
     pyz = PYZ(a.pure)
@@ -214,7 +214,7 @@ elif platform.system() == "Windows":
         + apriltag_hidden_imports,
         hookspath=None,
         runtime_hooks=None,
-        excludes=["matplotlib", "pyrealsense"],
+        excludes=["matplotlib"],
     )
 
     pyz = PYZ(a.pure)

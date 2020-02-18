@@ -56,10 +56,6 @@ if platform.system() == "Darwin":
     sys.path.append(".")
     from version import pupil_version
 
-    import pyrealsense
-
-    pyrealsense_path = pathlib.Path(pyrealsense.__file__).parent / "lrs_parsed_classes"
-
     del sys.path[-1]
     a = Analysis(
         ["../../pupil_src/main.py"],
@@ -98,11 +94,9 @@ if platform.system() == "Darwin":
         a.datas,
         [("libuvc.0.dylib", "/usr/local/lib/libuvc.0.dylib", "BINARY")],
         [("libglfw.dylib", "/usr/local/lib/libglfw.dylib", "BINARY")],
-        [("librealsense.dylib", "/usr/local/lib/librealsense.dylib", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
-        [("pyrealsense/lrs_parsed_classes", pyrealsense_path, "DATA")],
         apriltag_libs,
         strip=None,
         upx=True,
@@ -127,7 +121,7 @@ elif platform.system() == "Linux":
         + apriltag_hidden_imports,
         hookspath=None,
         runtime_hooks=None,
-        excludes=["matplotlib", "pyrealsense"],
+        excludes=["matplotlib"],
     )
 
     pyz = PYZ(a.pure)
