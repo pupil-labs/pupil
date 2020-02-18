@@ -163,10 +163,9 @@ class AV_Writer(abc.ABC):
         if self.timestamps:
             last_ts = self.timestamps[-1]
             if ts < last_ts:
-                self.release()
-                raise ValueError(
-                    "Non-monotonic timestamps!"
-                    f"Last timestamp: {last_ts}. Given timestamp: {ts}"
+                logger.debug(
+                    "Non-monotonic timestamps! Skipping frame!"
+                    f" Last timestamp: {last_ts}. Given timestamp: {ts}"
                 )
 
         pts = int((input_frame.timestamp - self.start_time) / self.time_base)
