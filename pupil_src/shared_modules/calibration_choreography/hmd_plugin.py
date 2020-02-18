@@ -108,7 +108,7 @@ class HMD2DChoreographyPlugin(_BaseHMDChoreographyPlugin):
                 outlier_threshold=self.__outlier_threshold,
                 calib_data={"ref_list": ref_list, "pupil_list": pupil_list},
             )
-        elif mode == ChoreographyMode.ACCURACY_TEST:
+        elif mode == ChoreographyMode.VALIDATION:
             raise NotImplementedError()
         else:
             raise UnsupportedChoreographyModeError(mode)
@@ -143,7 +143,7 @@ class HMD3DChoreographyPlugin(_BaseHMDChoreographyPlugin):
                 eye_translations=self.__eye_translations,
                 calib_data={"ref_list": ref_list, "pupil_list": pupil_list},
             )
-        elif mode == ChoreographyMode.ACCURACY_TEST:
+        elif mode == ChoreographyMode.VALIDATION:
             raise NotImplementedError()
         else:
             raise UnsupportedChoreographyModeError(mode)

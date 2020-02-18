@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 class ChoreographyMode(enum.Enum):
     CALIBRATION = "calibration"
-    ACCURACY_TEST = "accuracy_test"
+    VALIDATION = "validation"
 
     @property
     def label(self) -> str:
@@ -185,7 +185,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__choreography_ui_selector = None
         self.__gazer_ui_selector = None
         self.__ui_button_calibration = None
-        self.__ui_button_accuracy_test = None
+        self.__ui_button_validation = None
 
     def cleanup(self):
         pass
@@ -246,12 +246,12 @@ class CalibrationChoreographyPlugin(Plugin):
         if mode == ChoreographyMode.CALIBRATION:
             calib_data = {"ref_list": ref_list, "pupil_list": pupil_list}
             self.__start_plugin(self.selected_gazer_class, calib_data=calib_data)
-        elif mode == ChoreographyMode.ACCURACY_TEST:
+        elif mode == ChoreographyMode.VALIDATION:
             # ts = self.g_pool.get_timestamp()
             # self.notify_all({"subject": "start_plugin", "name": "Accuracy_Visualizer"})
             # self.notify_all(
             #     {
-            #         "subject": "accuracy_test.data",
+            #         "subject": "validation.data",
             #         "timestamp": ts,
             #         "pupil_list": pupil_list,
             #         "ref_list": ref_list,
@@ -298,9 +298,9 @@ class CalibrationChoreographyPlugin(Plugin):
                     should_be_on=should_be_on, mode=ChoreographyMode.CALIBRATION
                 )
 
-            def accuracy_test_setter(should_be_on):
+            def validation_setter(should_be_on):
                 self.__signal_should_toggle_processing(
-                    should_be_on=should_be_on, mode=ChoreographyMode.ACCURACY_TEST
+                    should_be_on=should_be_on, mode=ChoreographyMode.VALIDATION
                 )
 
             self.__ui_button_calibration = ui.Thumb(
@@ -312,12 +312,12 @@ class CalibrationChoreographyPlugin(Plugin):
                 on_color=self._THUMBNAIL_COLOR_ON,
             )
 
-            self.__ui_button_accuracy_test = ui.Thumb(
+            self.__ui_button_validation = ui.Thumb(
                 "is_active",
                 self,
                 label="T+",
                 hotkey="t",
-                setter=accuracy_test_setter,
+                setter=validation_setter,
                 on_color=self._THUMBNAIL_COLOR_ON,
             )
 
@@ -325,7 +325,7 @@ class CalibrationChoreographyPlugin(Plugin):
                 is_visible=True, mode=ChoreographyMode.CALIBRATION
             )
             self.__toggle_mode_button_visibility(
-                is_visible=True, mode=ChoreographyMode.ACCURACY_TEST
+                is_visible=True, mode=ChoreographyMode.VALIDATION
             )
 
     def update_ui(self):
@@ -344,7 +344,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__choreography_ui_selector = None
         self.__gazer_ui_selector = None
         self.__ui_button_calibration = None
-        self.__ui_button_accuracy_test = None
+        self.__ui_button_validation = None
 
     def recent_events(self, events):
         self.update_ui()
@@ -470,10 +470,10 @@ class CalibrationChoreographyPlugin(Plugin):
             # If the button should be visible, but it's not - add to quickbar
             if mode == ChoreographyMode.CALIBRATION:
                 self.g_pool.quickbar.insert(0, self.__ui_button_calibration)
-            elif mode == ChoreographyMode.ACCURACY_TEST:
+            elif mode == ChoreographyMode.VALIDATION:
                 # Always place the accuracy test button first, but after the calibration button
                 index = 1 if self.__ui_button_calibration in self.g_pool.quickbar else 0
-                self.g_pool.quickbar.insert(index, self.__ui_button_accuracy_test)
+                self.g_pool.quickbar.insert(index, self.__ui_button_validation)
             else:
                 raise UnsupportedChoreographyModeError(mode)
 
@@ -496,6 +496,6 @@ class CalibrationChoreographyPlugin(Plugin):
     def __mode_button(self, mode: ChoreographyMode):
         if mode == ChoreographyMode.CALIBRATION:
             return self.__ui_button_calibration
-        if mode == ChoreographyMode.ACCURACY_TEST:
-            return self.__ui_button_accuracy_test
+        if mode == ChoreographyMode.VALIDATION:
+            return self.__ui_button_validation
         raise UnsupportedChoreographyModeError(mode)
