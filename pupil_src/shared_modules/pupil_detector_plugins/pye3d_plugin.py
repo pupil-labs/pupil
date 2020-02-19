@@ -44,7 +44,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
 
         datum_2d["raw_edges"] = []
         result = self.detector.update_and_detect(
-            datum_2d, debug_toggle=self.is_debug_window_open
+            datum_2d, frame.gray, debug_toggle=self.is_debug_window_open
         )
 
         eye_id = self.g_pool.eye_id
@@ -54,6 +54,9 @@ class Pye3DPlugin(PupilDetectorPlugin):
         result["method"] = "3d c++"
 
         return result
+
+    def customize_menu(self):
+        pass
 
     @classmethod
     def parse_pretty_class_name(cls) -> str:
