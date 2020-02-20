@@ -306,7 +306,7 @@ class CalibrationChoreographyPlugin(Plugin):
             self.__ui_button_calibration = ui.Thumb(
                 "is_active",
                 self,
-                label="C+",
+                label="C",
                 hotkey="c",
                 setter=calibration_setter,
                 on_color=self._THUMBNAIL_COLOR_ON,
@@ -315,7 +315,7 @@ class CalibrationChoreographyPlugin(Plugin):
             self.__ui_button_validation = ui.Thumb(
                 "is_active",
                 self,
-                label="T+",
+                label="T",
                 hotkey="t",
                 setter=validation_setter,
                 on_color=self._THUMBNAIL_COLOR_ON,
