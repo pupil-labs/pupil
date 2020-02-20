@@ -35,9 +35,6 @@ if not exist %release_dir% (
 set PATH=%PATH%;C:\Python36\Lib\site-packages\scipy\.libs
 set PATH=%PATH%;C:\Python36\Lib\site-packages\zmq
 
-python ..\pupil_src\shared_modules\cython_methods\build.py
-python ..\pupil_src\shared_modules\calibration_routines\optimization_calibration\build.py
-
 call :Bundle capture %current_tag%
 call :Bundle service %current_tag%
 call :Bundle player %current_tag%

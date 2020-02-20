@@ -36,7 +36,9 @@ class Eye_Video_Exporter(IsolatedFrameExporter):
 
     def customize_menu(self):
         self.menu.label = "Eye Video Exporter"
-        self.menu.append(ui.Switch("render_pupil", self, label="Render detected pupil"))
+        self.menu.append(
+            ui.Switch("render_pupil", self, label="Visualize Pupil Detection")
+        )
         super().customize_menu()
 
     def _export_eye_video(self, export_range, export_dir, eye_id):

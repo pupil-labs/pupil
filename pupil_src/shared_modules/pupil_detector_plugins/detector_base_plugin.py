@@ -54,12 +54,19 @@ class PupilDetectorPlugin(Plugin):
             "pupil_detector.broadcast_properties": self.handle_broadcast_properties_notification,
             "pupil_detector.set_property": self.handle_set_property_notification,
         }
+        self._last_frame_size = None
 
     def recent_events(self, event):
         frame = event.get("frame")
         if not frame:
             self._recent_detection_result = None
             return
+
+        frame_size = (frame.width, frame.height)
+        if frame_size != self._last_frame_size:
+            if self._last_frame_size is not None:
+                self.on_resolution_change(self._last_frame_size, frame_size)
+            self._last_frame_size = frame_size
 
         detection_result = self.detect(frame=frame)
         event["pupil_detection_result"] = detection_result
@@ -105,27 +112,35 @@ class PupilDetectorPlugin(Plugin):
                 )
             elif property_name == "roi":
                 # Modify the ROI with the values sent over network
+
                 try:
-                    minX, maxX, minY, maxY = property_value
+                    minX, minY, maxX, maxY = property_value
                 except (ValueError, TypeError) as err:
                     # NOTE: ValueError gets throws when length of the tuple does not
                     # match. TypeError gets thrown when it is not a tuple.
                     raise ValueError(
-                        "ROI needs to be 4 integers: (minX, maxX, minY, maxY)"
+                        "ROI needs to be 4 integers: (minX, minY, maxX, maxY)"
                     ) from err
-                if minX > maxX or minY > maxY:
-                    raise ValueError("ROI malformed: minX > maxX or minY > maxY!")
-                ui_roi = self.g_pool.u_r
-                ui_roi.lX = max(ui_roi.min_x, int(minX))
-                ui_roi.lY = max(ui_roi.min_y, int(minY))
-                ui_roi.uX = min(ui_roi.max_x, int(maxX))
-                ui_roi.uY = min(ui_roi.max_y, int(maxY))
+
+                # Apply very strict error checking here, although roi deal with invalid
+                # values, so the user gets immediate feedback and does not wonder why
+                # something did not work as expected.
+                width, height = self.g_pool.roi.frame_size
+                if not ((0 <= minX < maxX < width) and (0 <= minY < maxY <= height)):
+                    raise ValueError(
+                        "Received ROI with invalid dimensions!"
+                        f" (minX={minX}, minY={minY}, maxX={maxX}, maxY={maxY})"
+                        f" for frame size ({width} x {height})"
+                    )
+
+                self.g_pool.roi.bounds = (minX, minY, maxX, maxY)
+
             else:
                 raise KeyError(
                     "Notification subject does not "
                     "specifiy detector type nor modify ROI."
                 )
-            logger.debug(f"`{property_name}` property set to {property_value}")
+            logger.debug(f"'{property_name}' property set to {property_value}")
         except KeyError:
             logger.error("Malformed notification received")
             logger.debug(traceback.format_exc())

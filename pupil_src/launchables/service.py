@@ -93,11 +93,6 @@ def service(
         import audio
         from uvc import get_time_monotonic
 
-        # trigger pupil detector cpp build:
-        import pupil_detectors
-
-        del pupil_detectors
-
         # Plug-ins
         from plugin import Plugin, Plugin_List, import_runtime_plugins
         from calibration_routines import calibration_plugins, gaze_mapping_plugins

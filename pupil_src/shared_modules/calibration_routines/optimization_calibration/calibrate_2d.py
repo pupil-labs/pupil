@@ -9,11 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import numpy as np
-import cv2
-
-# logging
 import logging
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -48,15 +46,15 @@ def calibrate_2d_polynomial(
             "first iteration. root-mean-square residuals: {}, in pixel".format(err_rms)
         )
         logger.info(
-            "second iteration: ignoring outliers. root-mean-square residuals: {} in pixel".format(
-                new_err_rms
-            )
+            "second iteration: ignoring outliers. root-mean-square residuals: {} "
+            "in pixel".format(new_err_rms)
         )
 
         used_num = cal_pt_cloud[err_dist <= threshold].shape[0]
         complete_num = cal_pt_cloud.shape[0]
         logger.info(
-            "used {} data points out of the full dataset {}: subset is {:.2f} percent".format(
+            "used {} data points out of the full dataset {}: "
+            "subset is {:.2f} percent".format(
                 used_num, complete_num, 100 * float(used_num) / complete_num
             )
         )
@@ -67,12 +65,12 @@ def calibrate_2d_polynomial(
             ([p.tolist() for p in cx], [p.tolist() for p in cy], model_n),
         )
 
-    else:  # did disregard all points. The data cannot be represented by the model in a meaningful way:
+    else:  # did disregard all points. The data cannot be represented by the model in
+        # a meaningful way:
         map_fn = make_map_function(cx, cy, model_n)
         logger.error(
-            "First iteration. root-mean-square residuals: {} in pixel, this is bad!".format(
-                err_rms
-            )
+            "First iteration. root-mean-square residuals: {} in pixel, "
+            "this is bad!".format(err_rms)
         )
         logger.error(
             "The data cannot be represented by the model in a meaningfull way."
@@ -102,15 +100,6 @@ def fit_error_screen(err_x, err_y, screen_pos):
     screen_x, screen_y = screen_pos
     err_x *= screen_x / 2.0
     err_y *= screen_y / 2.0
-    err_dist = np.sqrt(err_x * err_x + err_y * err_y)
-    err_mean = np.sum(err_dist) / len(err_dist)
-    err_rms = np.sqrt(np.sum(err_dist * err_dist) / len(err_dist))
-    return err_dist, err_mean, err_rms
-
-
-def fit_error_angle(err_x, err_y):
-    err_x *= 2.0 * np.pi
-    err_y *= 2.0 * np.pi
     err_dist = np.sqrt(err_x * err_x + err_y * err_y)
     err_mean = np.sum(err_dist) / len(err_dist)
     err_rms = np.sqrt(np.sum(err_dist * err_dist) / len(err_dist))
@@ -396,177 +385,3 @@ def make_map_function(cx, cy, n):
         raise Exception("ERROR: unsopported number of coefficiants.")
 
     return fn
-
-
-def closest_matches_binocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
-    """
-    get pupil positions closest in time to ref points.
-    return list of dict with matching ref, pupil0 and pupil1 data triplets.
-    """
-    pupil0 = [p for p in pupil_pts if p["id"] == 0]
-    pupil1 = [p for p in pupil_pts if p["id"] == 1]
-
-    pupil0_ts = np.array([p["timestamp"] for p in pupil0])
-    pupil1_ts = np.array([p["timestamp"] for p in pupil1])
-
-    def find_nearest_idx(array, value):
-        idx = np.searchsorted(array, value, side="left")
-        try:
-            if abs(value - array[idx - 1]) < abs(value - array[idx]):
-                return idx - 1
-            else:
-                return idx
-        except IndexError:
-            return idx - 1
-
-    matched = []
-
-    if pupil0 and pupil1:
-        for r in ref_pts:
-            closest_p0_idx = find_nearest_idx(pupil0_ts, r["timestamp"])
-            closest_p0 = pupil0[closest_p0_idx]
-            closest_p1_idx = find_nearest_idx(pupil1_ts, r["timestamp"])
-            closest_p1 = pupil1[closest_p1_idx]
-
-            dispersion = max(
-                closest_p0["timestamp"], closest_p1["timestamp"], r["timestamp"]
-            ) - min(closest_p0["timestamp"], closest_p1["timestamp"], r["timestamp"])
-            if dispersion < max_dispersion:
-                matched.append({"ref": r, "pupil": closest_p0, "pupil1": closest_p1})
-            else:
-                logger.debug(
-                    "Binocular match rejected due to time dispersion criterion"
-                )
-    return matched
-
-
-def closest_matches_monocular(ref_pts, pupil_pts, max_dispersion=1 / 15.0):
-    """
-    get pupil positions closest in time to ref points.
-    return list of dict with matching ref and pupil datum.
-
-    if your data is binocular use:
-    pupil0 = [p for p in pupil_pts if p['id']==0]
-    pupil1 = [p for p in pupil_pts if p['id']==1]
-    to get the desired eye and pass it as pupil_pts
-    """
-
-    ref = ref_pts
-    pupil0 = pupil_pts
-    pupil0_ts = np.array([p["timestamp"] for p in pupil0])
-
-    def find_nearest_idx(array, value):
-        idx = np.searchsorted(array, value, side="left")
-        try:
-            if abs(value - array[idx - 1]) < abs(value - array[idx]):
-                return idx - 1
-            else:
-                return idx
-        except IndexError:
-            return idx - 1
-
-    matched = []
-    if pupil0:
-        for r in ref_pts:
-            closest_p0_idx = find_nearest_idx(pupil0_ts, r["timestamp"])
-            closest_p0 = pupil0[closest_p0_idx]
-            dispersion = max(closest_p0["timestamp"], r["timestamp"]) - min(
-                closest_p0["timestamp"], r["timestamp"]
-            )
-            if dispersion < max_dispersion:
-                matched.append({"ref": r, "pupil": closest_p0})
-            else:
-                pass
-    return matched
-
-
-def preprocess_2d_data_monocular(matched_data):
-    cal_data = [
-        (*pair["pupil"]["norm_pos"], *pair["ref"]["norm_pos"]) for pair in matched_data
-    ]
-    return cal_data
-
-
-def preprocess_2d_data_binocular(matched_data):
-    cal_data = [
-        (
-            *triplet["pupil"]["norm_pos"],
-            *triplet["pupil1"]["norm_pos"],
-            *triplet["ref"]["norm_pos"],
-        )
-        for triplet in matched_data
-    ]
-    return cal_data
-
-
-def preprocess_3d_data(matched_data, g_pool):
-    pupil0_processed = [
-        dp["pupil"]["circle_3d"]["normal"]
-        for dp in matched_data
-        if "circle_3d" in dp["pupil"]
-    ]
-
-    pupil1_processed = [
-        dp["pupil1"]["circle_3d"]["normal"]
-        for dp in matched_data
-        if "pupil1" in dp and "circle_3d" in dp["pupil1"]
-    ]
-
-    ref = np.array([dp["ref"]["screen_pos"] for dp in matched_data])
-    ref_processed = g_pool.capture.intrinsics.unprojectPoints(ref, normalize=True)
-
-    return ref_processed, pupil0_processed, pupil1_processed
-
-
-def find_rigid_transform(A, B):
-    # we expect the shape to be of length 2
-    assert len(A.shape) == len(B.shape) == 2
-    assert A.shape[0] == B.shape[0]
-
-    centroid_A = np.mean(A, axis=0)
-    centroid_B = np.mean(B, axis=0)
-
-    # centre the points
-    A -= centroid_A
-    B -= centroid_B
-
-    # dot is matrix multiplication for array
-    H = A.T @ B
-    U, S, Vt = np.linalg.svd(H)
-    R = Vt.T @ U.T
-    # special reflection case
-    if np.linalg.det(R) < 0:
-        logger.info("Reflection detected")
-        Vt[2, :] *= -1
-        R = Vt.T * U.T
-
-    t = -R @ centroid_A.T + centroid_B.T
-
-    return R, t.reshape(3)
-
-
-def calculate_residual_3D_Points(ref_points, gaze_points, eye_to_world_matrix):
-
-    average_distance = 0.0
-    distance_variance = 0.0
-    transformed_gaze_points = []
-
-    for p in gaze_points:
-        point = np.zeros(4)
-        point[:3] = p
-        point[3] = 1.0
-        point = eye_to_world_matrix.dot(point)
-        point = np.squeeze(np.asarray(point))
-        transformed_gaze_points.append(point[:3])
-
-    for (a, b) in zip(ref_points, transformed_gaze_points):
-        average_distance += np.linalg.norm(a - b)
-
-    average_distance /= len(ref_points)
-
-    for (a, b) in zip(ref_points, transformed_gaze_points):
-        distance_variance += (np.linalg.norm(a - b) - average_distance) ** 2
-
-    distance_variance /= len(ref_points)
-
-    return average_distance, distance_variance

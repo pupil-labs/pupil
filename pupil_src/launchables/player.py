@@ -97,7 +97,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         from vis_watermark import Vis_Watermark
         from vis_fixation import Vis_Fixation
 
-        # from vis_scan_path import Vis_Scan_Path
         from seek_control import Seek_Control
         from surface_tracker import Surface_Tracker_Offline
 
@@ -131,7 +130,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         )
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
-            "1.24"
+            "1.27"
         ), "pyglui out of date, please upgrade to newest version"
 
         process_was_interrupted = False
@@ -164,7 +163,6 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
             Vis_Watermark,
             Eye_Overlay,
             Video_Overlay,
-            # Vis_Scan_Path,
             Offline_Fixation_Detector,
             Offline_Blink_Detection,
             Surface_Tracker_Offline,

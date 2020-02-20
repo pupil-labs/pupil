@@ -119,7 +119,7 @@ def world(
         from pyglui import ui, cygl, __version__ as pyglui_version
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
-            "1.24"
+            "1.27"
         ), "pyglui out of date, please upgrade to newest version"
         from pyglui.cygl.utils import Named_Texture
         import gl_utils
@@ -133,11 +133,6 @@ def world(
         logger.info("System Info: {}".format(get_system_info()))
 
         import audio
-
-        # trigger pupil detector cpp build:
-        import pupil_detectors
-
-        del pupil_detectors
 
         # Plug-ins
         from plugin import (
@@ -288,6 +283,7 @@ def world(
         ]
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
+        default_capture_name = "UVC_Source"
         default_capture_settings = {
             "preferred_names": [
                 "Pupil Cam1 ID2",
@@ -305,9 +301,12 @@ def world(
         }
 
         default_plugins = [
-            ("UVC_Source", default_capture_settings),
+            (default_capture_name, default_capture_settings),
             ("Pupil_Data_Relay", {}),
             ("UVC_Manager", {}),
+            ("NDSI_Manager", {}),
+            ("HMD_Streaming_Manager", {}),
+            ("File_Manager", {}),
             ("Log_Display", {}),
             ("Dummy_Gaze_Mapper", {}),
             ("Display_Recent_Gaze", {}),
@@ -572,6 +571,13 @@ def world(
         g_pool.plugins = Plugin_List(
             g_pool, session_settings.get("loaded_plugins", default_plugins)
         )
+
+        if not g_pool.capture:
+            # Make sure we always have a capture running. Important if there was no
+            # capture stored in session settings.
+            g_pool.plugins.add(
+                g_pool.plugin_by_name[default_capture_name], default_capture_settings
+            )
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)

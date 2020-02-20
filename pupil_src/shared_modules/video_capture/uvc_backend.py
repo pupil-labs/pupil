@@ -16,14 +16,14 @@ import re
 import time
 
 import numpy as np
-from pyglui import cygl
+from pyglui import cygl, ui
 
 import gl_utils
 import uvc
 from camera_models import load_intrinsics
 from version_utils import VersionFormat
 
-from .base_backend import Base_Manager, Base_Source, InitialisationError
+from .base_backend import Base_Manager, Base_Source, InitialisationError, SourceInfo
 from .utils import Check_Frame_Stripes, Exposure_Time
 
 # check versions for our own depedencies as they are fast-changing
@@ -31,7 +31,7 @@ assert VersionFormat(uvc.__version__) >= VersionFormat("0.13")
 
 # logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 class TJSAMP(enum.IntEnum):
@@ -61,9 +61,11 @@ class UVC_Source(Base_Source):
         uvc_controls={},
         check_stripes=True,
         exposure_mode="manual",
+        *args,
+        **kwargs,
     ):
 
-        super().__init__(g_pool)
+        super().__init__(g_pool, *args, **kwargs)
         self.uvc_capture = None
         self._restart_in = 3
         assert name or preferred_names or uid
@@ -124,9 +126,7 @@ class UVC_Source(Base_Source):
 
         # check if we were sucessfull
         if not self.uvc_capture:
-            logger.error(
-                "Init failed. Capture is started in ghost mode. No images will be supplied."
-            )
+            logger.error("Could not connect to device! No images will be supplied.")
             self.name_backup = preferred_names
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
@@ -382,12 +382,13 @@ class UVC_Source(Base_Source):
                 )
             except (InitialisationError, uvc.InitError):
                 time.sleep(0.02)
-                self.update_menu()
             self._restart_in = int(5 / 0.02)
         else:
             self._restart_in -= 1
 
     def recent_events(self, events):
+        was_online = self.online
+
         try:
             frame = self.uvc_capture.get_frame(0.05)
 
@@ -422,9 +423,23 @@ class UVC_Source(Base_Source):
                 # c930 timestamps need to be set here. The camera does not provide valid pts from device
                 frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
             frame.timestamp -= self.g_pool.timebase.value
+
+            if (
+                self._recent_frame is not None
+                and frame.timestamp <= self._recent_frame.timestamp
+            ):
+                logger.debug(
+                    "Received non-monotonic timestamps from UVC! Dropping frame."
+                    f" Last: {self._recent_frame.timestamp}, current: {frame.timestamp}"
+                )
+                return
+
             self._recent_frame = frame
             events["frame"] = frame
             self._restart_in = 3
+
+        if was_online != self.online:
+            self.update_menu()
 
     def _get_uvc_controls(self):
         d = {}
@@ -451,7 +466,7 @@ class UVC_Source(Base_Source):
         if self.uvc_capture:
             return self.uvc_capture.name
         else:
-            return "Ghost capture"
+            return "(disconnected)"
 
     @property
     def frame_size(self):
@@ -563,19 +578,14 @@ class UVC_Source(Base_Source):
     def online(self):
         return bool(self.uvc_capture)
 
-    def deinit_ui(self):
-        self.remove_menu()
-
-    def init_ui(self):
-        self.add_menu()
-        self.menu.label = "Local USB Source: {}".format(self.name)
-        self.update_menu()
-
-    def update_menu(self):
-        del self.menu[:]
-        from pyglui import ui
-
+    def ui_elements(self):
         ui_elements = []
+
+        if self.uvc_capture is None:
+            ui_elements.append(ui.Info_Text("Local USB: camera disconnected!"))
+            return ui_elements
+
+        ui_elements.append(ui.Info_Text(f"Camera: {self.name} @ Local USB"))
 
         # lets define some  helper functions:
         def gui_load_defaults():
@@ -596,12 +606,6 @@ class UVC_Source(Base_Source):
             self.frame_rate = new_rate
             self.update_menu()
 
-        if self.uvc_capture is None:
-            ui_elements.append(ui.Info_Text("Capture initialization failed."))
-            self.menu.extend(ui_elements)
-            return
-
-        ui_elements.append(ui.Info_Text("{} Controls".format(self.name)))
         sensor_control = ui.Growing_Menu(label="Sensor Settings")
         sensor_control.append(
             ui.Info_Text("Do not change these during calibration or recording!")
@@ -626,6 +630,11 @@ class UVC_Source(Base_Source):
                 [str(fr) for fr in self.uvc_capture.frame_rates],
             )
 
+        # TODO: potential race condition through selection_getter. Should ensure that
+        # current selection will always be present in the list returned by the
+        # selection_getter. Highly unlikely though as this needs to happen between
+        # having clicked the Selector and the next redraw.
+        # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
         sensor_control.append(
             ui.Selector(
                 "frame_rate",
@@ -660,16 +669,13 @@ class UVC_Source(Base_Source):
                 )
                 self.update_menu()
 
-            def exposure_mode_getter():
-                return ["manual", "auto"], ["manual mode", "auto mode"]
-
             sensor_control.append(
                 ui.Selector(
                     "exposure_mode",
                     self,
                     setter=set_exposure_mode,
-                    selection_getter=exposure_mode_getter,
-                    selection=self.exposure_mode,
+                    selection=["manual", "auto"],
+                    labels=["manual mode", "auto mode"],
                     label="Exposure Mode",
                 )
             )
@@ -789,7 +795,8 @@ class UVC_Source(Base_Source):
                     label="Check Stripes",
                 )
             )
-        self.menu.extend(ui_elements)
+
+        return ui_elements
 
     def cleanup(self):
         self.devices.cleanup()
@@ -828,13 +835,7 @@ class UVC_Source(Base_Source):
 
 
 class UVC_Manager(Base_Manager):
-    """Manages local USB sources
-
-    Attributes:
-        check_intervall (float): Intervall in which to look for new UVC devices
-    """
-
-    gui_name = "Local USB"
+    """Manages local USB sources."""
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -845,40 +846,33 @@ class UVC_Manager(Base_Manager):
             "world": ["ID2", "Logitech"],
         }
 
-    def get_init_dict(self):
-        return {}
+    def get_devices(self):
+        self.devices.update()
+        if len(self.devices) == 0:
+            return []
+        else:
+            return [SourceInfo(label="Local USB", manager=self, key="usb")]
 
-    def init_ui(self):
-        self.add_menu()
-
-        from pyglui import ui
-
-        self.add_auto_select_button()
-        ui_elements = []
-        ui_elements.append(ui.Info_Text("Local UVC sources"))
-
-        def dev_selection_list():
-            default = (None, "Select to activate")
-            self.devices.update()
-            dev_pairs = [default] + [
-                (d["uid"], d["name"])
-                for d in self.devices
-                if "RealSense" not in d["name"]
-            ]
-            return zip(*dev_pairs)
-
-        ui_elements.append(
-            ui.Selector(
-                "selected_source",
-                selection_getter=dev_selection_list,
-                getter=lambda: None,
-                setter=self.activate,
-                label="Activate source",
+    def get_cameras(self):
+        self.devices.update()
+        return [
+            SourceInfo(
+                label=f"{device['name']} @ Local USB",
+                manager=self,
+                key=f"cam.{device['uid']}",
             )
-        )
-        self.menu.extend(ui_elements)
+            for device in self.devices
+        ]
 
-    def activate(self, source_uid):
+    def activate(self, key):
+        if key == "usb":
+            self.notify_all({"subject": "backend.uvc.auto_activate_source"})
+            return
+
+        source_uid = key[4:]
+        self.activate_source(source_uid)
+
+    def activate_source(self, source_uid):
         if not source_uid:
             return
 
@@ -909,29 +903,45 @@ class UVC_Manager(Base_Manager):
                 }
             )
 
+    def on_notify(self, notification):
+        """Starts appropriate UVC sources.
+
+        Emits notifications:
+            ``backend.uvc.auto_activate_source``: All UVC managers should auto activate a source
+            ``start_(eye_)plugin``: Starts UVC sources
+
+        Reacts to notifications:
+            ``backend.uvc.auto_activate_source``: Auto activate best source for process
+        """
+        if notification["subject"] == "backend.uvc.auto_activate_source":
+            self.auto_activate_source()
+
     def auto_activate_source(self):
+        logger.debug("Auto activating USB source.")
+        self.devices.update()
         if not self.devices or len(self.devices) == 0:
             logger.warning("No default device is available.")
             return
 
-        cam_ids = self.cam_selection_lut[self.g_pool.process]
+        name_patterns = self.cam_selection_lut[self.g_pool.process]
+        matching_cams = [
+            device
+            for device in self.devices
+            if any(pattern in device["name"] for pattern in name_patterns)
+        ]
 
-        for cam_id in cam_ids:
-            try:
-                source_id = next(d["uid"] for d in self.devices if cam_id in d["name"])
-                self.activate(source_id)
-                break
-            except StopIteration:
-                source_id = None
-        else:
-            logger.warning("The default device is not found.")
+        if not matching_cams:
+            logger.warning("Could not find default device.")
+            return
 
-    def deinit_ui(self):
-        self.remove_menu()
+        # Sorting cams by bus_number increases chances of selecting only cams from the
+        # same headset when having multiple headsets connected. Note that two headsets
+        # might have the same bus_number when they share an internal USB bus.
+        cam = min(
+            matching_cams, key=lambda device: device.get("bus_number", float("inf"))
+        )
+        self.activate_source(cam["uid"])
 
     def cleanup(self):
         self.devices.cleanup()
         self.devices = None
-
-    def recent_events(self, events):
-        pass

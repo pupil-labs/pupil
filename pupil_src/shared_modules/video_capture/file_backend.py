@@ -13,22 +13,22 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 import os
 import os.path
+import typing as T
+from abc import ABC, abstractmethod
+from multiprocessing import cpu_count
+from time import sleep
+
 import av
 import numpy as np
-import typing as T
+from pyglui import ui
 
-from multiprocessing import cpu_count
-from abc import ABC, abstractmethod
-from time import sleep
 from camera_models import load_intrinsics
-from .utils import VideoSet
-
-import player_methods as pm
-from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
 from pupil_recording import PupilRecording
 
+from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
+from .utils import VideoSet
+
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 av.logging.set_level(av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
 
@@ -190,8 +190,13 @@ class OnDemandDecoder(Decoder):
                     yield frame
 
 
+# NOTE:Base_Source is included as base class for uniqueness:by_base_class to work
+# correctly with other Source plugins.
 class File_Source(Playback_Source, Base_Source):
     """Simple file capture.
+
+    Note that File_Source is special since it is usually not intended to be used as
+    capture plugin. Therefore it hides it's UI by default.
 
     Playback_Source arguments:
         timing (str): "external", "own" (default), None
@@ -201,6 +206,7 @@ class File_Source(Playback_Source, Base_Source):
         loop (bool): loop video set if timing!="external"
         buffered_decoding (bool): use buffered decode
         fill_gaps (bool): fill gaps with static frames
+        show_plugin_menu (bool): enable to show regular capture UI with source selection
     """
 
     def __init__(
@@ -210,6 +216,7 @@ class File_Source(Playback_Source, Base_Source):
         loop=False,
         buffered_decoding=False,
         fill_gaps=False,
+        show_plugin_menu=False,
         *args,
         **kwargs,
     ):
@@ -238,6 +245,8 @@ class File_Source(Playback_Source, Base_Source):
         # Load video split for first frame
         self.reset_video()
         self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
+
+        self.show_plugin_menu = show_plugin_menu
 
     def get_rec_set_name(self, source_path):
         """
@@ -325,6 +334,10 @@ class File_Source(Playback_Source, Base_Source):
         return not self.videoset.is_empty()
 
     @property
+    def online(self):
+        return not self.videoset.is_empty()
+
+    @property
     def frame_size(self):
         return self.video_stream.frame_size
 
@@ -332,21 +345,30 @@ class File_Source(Playback_Source, Base_Source):
     def frame_rate(self):
         return self._frame_rate
 
+    def init_ui(self):
+        if self.show_plugin_menu:
+            super().init_ui()
+
+    def deinit_ui(self):
+        if self.show_plugin_menu:
+            super().deinit_ui()
+
     def get_init_dict(self):
-        if self.g_pool.app == "capture":
-            settings = super().get_init_dict()
-            settings["source_path"] = self.source_path
-            settings["loop"] = self.loop
-            return settings
-        else:
-            raise NotImplementedError()
+        return dict(
+            **super().get_init_dict(),
+            source_path=self.source_path,
+            loop=self.loop,
+            buffered_decoding=self.buffering,
+            fill_gaps=self.fill_gaps,
+            show_plugin_menu=self.show_plugin_menu,
+        )
 
     @property
     def name(self):
         if self.source_path:
             return os.path.splitext(self.source_path)[0]
         else:
-            return "File source in ghost mode"
+            return "File source (no file loaded)"
 
     def get_frame_index(self):
         return int(self.current_frame_idx)
@@ -493,6 +515,7 @@ class File_Source(Playback_Source, Base_Source):
         self.target_frame_idx = seek_pos
 
     def on_notify(self, notification):
+        super().on_notify(notification)
         if (
             notification["subject"] == "file_source.seek"
             and notification.get("source_path") == self.source_path
@@ -509,32 +532,33 @@ class File_Source(Playback_Source, Base_Source):
         ):
             self.play = False
 
-    def init_ui(self):
-        self.add_menu()
-        self.menu.label = "File Source: {}".format(os.path.split(self.source_path)[-1])
-        from pyglui import ui
-
-        self.menu.append(
-            ui.Info_Text(
-                "The file source plugin loads and "
-                + "displays video from a given file."
-            )
+    def ui_elements(self):
+        ui_elements = []
+        ui_elements.append(
+            ui.Info_Text(f"File Source: {os.path.split(self.source_path)[-1]}")
         )
 
-        if self.g_pool.app == "capture":
+        if not self.online:
+            ui_elements.append(
+                ui.Info_Text(
+                    "Could not playback file! Check if file exists and if"
+                    " corresponding timestamps file is present."
+                )
+            )
+            return ui_elements
 
-            def toggle_looping(val):
-                self.loop = val
-                if val:
-                    self.play = True
+        def toggle_looping(val):
+            self.loop = val
+            if val:
+                self.play = True
 
-            self.menu.append(ui.Switch("loop", self, setter=toggle_looping))
+        ui_elements.append(ui.Switch("loop", self, setter=toggle_looping))
 
-        self.menu.append(
+        ui_elements.append(
             ui.Text_Input("source_path", self, label="Full path", setter=lambda x: None)
         )
 
-        self.menu.append(
+        ui_elements.append(
             ui.Text_Input(
                 "frame_size",
                 label="Frame size",
@@ -543,7 +567,7 @@ class File_Source(Playback_Source, Base_Source):
             )
         )
 
-        self.menu.append(
+        ui_elements.append(
             ui.Text_Input(
                 "frame_rate",
                 label="Frame rate",
@@ -552,7 +576,7 @@ class File_Source(Playback_Source, Base_Source):
             )
         )
 
-        self.menu.append(
+        ui_elements.append(
             ui.Text_Input(
                 "frame_num",
                 label="Number of frames",
@@ -560,9 +584,7 @@ class File_Source(Playback_Source, Base_Source):
                 getter=lambda: self.get_frame_count(),
             )
         )
-
-    def deinit_ui(self):
-        self.remove_menu()
+        return ui_elements
 
     def cleanup(self):
         try:
@@ -593,67 +615,9 @@ class File_Manager(Base_Manager):
 
     Attributes:
         file_exts (list): File extensions to filter displayed files
-        root_folder (str): Folder path, which includes file sources
     """
 
-    gui_name = "Video File Source"
     file_exts = [".mp4", ".mkv", ".mov", ".mjpeg"]
-
-    def __init__(self, g_pool, root_folder=None):
-        super().__init__(g_pool)
-        base_dir = self.g_pool.user_dir.rsplit(os.path.sep, 1)[0]
-        default_rec_dir = os.path.join(base_dir, "recordings")
-        self.root_folder = root_folder or default_rec_dir
-
-    def init_ui(self):
-        self.add_menu()
-        from pyglui import ui
-
-        self.add_auto_select_button()
-        self.menu.append(
-            ui.Info_Text(
-                "Enter a folder to enumerate all eligible video files. "
-                + "Be aware that entering folders with a lot of files can "
-                + "slow down Pupil Capture."
-            )
-        )
-
-        def set_root(folder):
-            if not os.path.isdir(folder):
-                logger.error("`%s` is not a valid folder path." % folder)
-            else:
-                self.root_folder = folder
-
-        self.menu.append(
-            ui.Text_Input("root_folder", self, label="Source Folder", setter=set_root)
-        )
-
-        def split_enumeration():
-            eligible_files = self.enumerate_folder(self.root_folder)
-            eligible_files.insert(0, (None, "Select to activate"))
-            return zip(*eligible_files)
-
-        self.menu.append(
-            ui.Selector(
-                "selected_file",
-                selection_getter=split_enumeration,
-                getter=lambda: None,
-                setter=self.activate,
-                label="Video File",
-            )
-        )
-
-    def deinit_ui(self):
-        self.remove_menu()
-
-    def activate(self, full_path):
-        if not full_path:
-            return
-        settings = {"source_path": full_path, "timing": "own"}
-        self.activate_source(settings)
-
-    def auto_activate_source(self):
-        self.activate(None)
 
     def on_drop(self, paths):
         for p in paths:
@@ -662,25 +626,15 @@ class File_Manager(Base_Manager):
                 return True
         return False
 
-    def enumerate_folder(self, path):
-        eligible_files = []
-        is_eligible = lambda f: os.path.splitext(f)[-1] in self.file_exts
-        path = os.path.abspath(os.path.expanduser(path))
-        for root, dirs, files in os.walk(path):
+    def activate(self, full_path):
+        if not full_path:
+            return
 
-            def root_split(file):
-                full_p = os.path.join(root, file)
-                disp_p = full_p.replace(path, "")
-                return (full_p, disp_p)
-
-            eligible_files.extend(map(root_split, filter(is_eligible, files)))
-        eligible_files.sort(key=lambda x: x[1])
-        return eligible_files
-
-    def get_init_dict(self):
-        return {"root_folder": self.root_folder}
-
-    def activate_source(self, settings={}):
+        settings = {
+            "source_path": full_path,
+            "timing": "own",
+            "show_plugin_menu": True,
+        }
         if self.g_pool.process == "world":
             self.notify_all(
                 {"subject": "start_plugin", "name": "File_Source", "args": settings}
@@ -694,6 +648,3 @@ class File_Manager(Base_Manager):
                     "args": settings,
                 }
             )
-
-    def recent_events(self, events):
-        pass
