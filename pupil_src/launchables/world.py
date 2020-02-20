@@ -134,11 +134,6 @@ def world(
 
         import audio
 
-        # trigger pupil detector cpp build:
-        import pupil_detectors
-
-        del pupil_detectors
-
         # Plug-ins
         from plugin import (
             Plugin,

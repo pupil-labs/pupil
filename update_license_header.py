@@ -45,7 +45,6 @@ excludes = [
     "glfw.py",
     "version_utils.py",
     "update_license_header.py",
-    "shared_cpp*",
 ]
 
 # transform glob patterns to regular expressions
