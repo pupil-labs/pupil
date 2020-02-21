@@ -26,6 +26,43 @@ from .gui_window import GUIWindow
 logger = logging.getLogger(__name__)
 
 
+"""
+To visualize the state machine that MarkerWindowController is running,
+visit https://planttext.com and use the following PlantUML script:
+
+```
+@startuml
+
+[*] --> Closed
+Closed --> Open : open_window()
+Closed --> [*]
+Open --> Closed
+
+state Open {
+  [*] --> Idle
+
+  Idle --> AnimatingIn : show_marker(marker_position, should_animate=True)
+  Idle --> Showing : show_marker(marker_position, should_animate=False)
+  Idle --> [*] : close_window()
+
+  AnimatingIn --> AnimatingIn
+  AnimatingIn --> Showing : <animating_in_complete>
+  AnimatingIn --> [*] : close_window()
+
+  Showing --> AnimatingOut : hide_marker(should_animate=True)
+  Showing --> Idle : hide_marker(should_animate=False)
+  Showing --> [*] : close_window()
+
+  AnimatingOut --> AnimatingOut
+  AnimatingOut --> Idle : <animating_out_complete>
+  AnimatingOut --> [*] : close_window()
+}
+
+@enduml
+```
+"""
+
+
 class MarkerWindowController(observable.Observable):
 
     _CLICKS_NEEDED_TO_CLOSE = 5
