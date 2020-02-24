@@ -9,7 +9,11 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from gaze_producer.model.calibration import Calibration, CalibrationResult
+from gaze_producer.model.calibration import (
+    Calibration,
+    CalibrationSetup,
+    CalibrationResult,
+)
 from gaze_producer.model.calibration_storage import CalibrationStorage
 
 from gaze_producer.model.gaze_mapper import GazeMapper

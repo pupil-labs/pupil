@@ -125,9 +125,8 @@ class CalibrationStorage(Storage, Observable):
         for topic, data in zip(notifications.topics, notifications.data):
             if topic == "notify.calibration.calibration_data":
                 try:
-                    calib_result = model.CalibrationResult(
-                        mapping_plugin_name=data["gazer_class_name"],
-                        mapper_args=dict(data["calib_data"]),
+                    calib_result = model.CalibrationSetup(
+                        data["gazer_class_name"], dict(data["calib_data"]),
                     )
                 except KeyError:
                     # notifications from old recordings will not have these fields!

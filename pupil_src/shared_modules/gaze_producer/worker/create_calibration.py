@@ -66,16 +66,13 @@ def _create_ref_dict(ref):
     }
 
 
-def _setup_fake_gpool(
-    frame_size, intrinsics, detection_mapping_mode, rec_dir, min_calibration_confidence
-):
+def _setup_fake_gpool(frame_size, intrinsics, rec_dir, min_calibration_confidence):
     cap = SimpleNamespace()
     cap.frame_size = frame_size
     cap.intrinsics = intrinsics
     pool = SimpleNamespace()
     pool.capture = cap
     pool.get_timestamp = time
-    pool.detection_mapping_mode = detection_mapping_mode
     pool.min_calibration_confidence = min_calibration_confidence
     pool.rec_dir = rec_dir
     pool.app = "player"

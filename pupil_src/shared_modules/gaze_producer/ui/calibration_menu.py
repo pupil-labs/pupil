@@ -104,7 +104,7 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
 
     def _create_calculate_button(self, calibration):
         return ui.Button(
-            label="Recalculate" if calibration.result else "Calculate",
+            label="Recalculate" if calibration.params else "Calculate",
             function=self._on_click_calculate,
         )
 

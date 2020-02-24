@@ -14,7 +14,8 @@ from storage import StorageItem
 
 # this plugin does not care about the content of the result, it just receives it from
 # the calibration routine and handles it to the gaze mapper
-CalibrationResult = namedtuple("CalibrationResult", ["gazer_class_name", "calib_data"])
+CalibrationSetup = namedtuple("CalibrationResult", ["gazer_class_name", "calib_data"])
+CalibrationResult = namedtuple("CalibrationResult", ["gazer_class_name", "params"])
 
 
 class Calibration(StorageItem):
@@ -40,13 +41,15 @@ class Calibration(StorageItem):
         self.minimum_confidence = minimum_confidence
         self.status = status
         self.is_offline_calibration = is_offline_calibration
-        if result is None or isinstance(result, CalibrationResult):
-            self.result = result
+        if result is None:
+            self.params = result
+        elif isinstance(result, CalibrationResult):
+            self.params = result.params
         else:
             # when reading from files, we receive a list with the result data.
             # This logic actually belongs to 'from_tuple', but it's here because
             # otherwise 'from_tuple' would become much uglier
-            self.result = CalibrationResult(*result)
+            self.params = CalibrationResult(*result).params
 
     @staticmethod
     def from_tuple(tuple_):

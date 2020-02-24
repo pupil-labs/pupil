@@ -80,7 +80,7 @@ class Model3D_v1x(Model):
         self._params = params
 
     def get_params(self):
-        return {"params": self._params}
+        return self._params
 
 
 class Model3D_v1x_Monocular(Model3D_v1x):
