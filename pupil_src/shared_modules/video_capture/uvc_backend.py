@@ -67,6 +67,7 @@ class UVC_Source(Base_Source):
 
         super().__init__(g_pool, *args, **kwargs)
         self.uvc_capture = None
+        self._last_ts = None
         self._restart_in = 3
         assert name or preferred_names or uid
 
@@ -422,20 +423,17 @@ class UVC_Source(Base_Source):
             if self.ts_offset is not None:
                 # c930 timestamps need to be set here. The camera does not provide valid pts from device
                 frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
-            frame.timestamp -= self.g_pool.timebase.value
 
-            if (
-                self._recent_frame is not None
-                and frame.timestamp <= self._recent_frame.timestamp
-            ):
+            if self._last_ts is not None and frame.timestamp <= self._last_ts:
                 logger.debug(
                     "Received non-monotonic timestamps from UVC! Dropping frame."
-                    f" Last: {self._recent_frame.timestamp}, current: {frame.timestamp}"
+                    f" Last: {self._latest_ts}, current: {frame.timestamp}"
                 )
-                return
-
-            self._recent_frame = frame
-            events["frame"] = frame
+            else:
+                self._last_ts = frame.timestamp
+                frame.timestamp -= self.g_pool.timebase.value
+                self._recent_frame = frame
+                events["frame"] = frame
             self._restart_in = 3
 
         if was_online != self.online:
