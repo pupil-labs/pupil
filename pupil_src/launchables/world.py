@@ -147,12 +147,15 @@ def world(
             import_runtime_plugins,
         )
         from plugin_manager import Plugin_Manager
-        from calibration_choreography import available_calibration_choreography_plugins
-        default_choreography_plugin, available_choreography_plugins = available_calibration_choreography_plugins()
+        from calibration_choreography import (
+            available_calibration_choreography_plugins,
+            CalibrationChoreographyPlugin,
+            patch_loaded_plugins_with_choreography_plugin,
+        )
+
+        available_choreography_plugins = available_calibration_choreography_plugins()
         from calibration_routines import (
-            calibration_plugins,
             gaze_mapping_plugins,
-            Calibration_Plugin,
             Gaze_Mapping_Plugin,
         )
         from gaze_mapping import registered_gazer_classes
@@ -272,7 +275,6 @@ def world(
             system_plugins
             + user_plugins
             + runtime_plugins
-            + calibration_plugins
             + available_choreography_plugins
             + gaze_mapping_plugins
             + registered_gazer_classes
@@ -286,7 +288,7 @@ def world(
                     Base_Manager,
                     Base_Source,
                     System_Plugin_Base,
-                    Calibration_Plugin,
+                    CalibrationChoreographyPlugin,
                     Gaze_Mapping_Plugin,
                 ),
             )
@@ -316,7 +318,8 @@ def world(
             ("Log_Display", {}),
             ("Dummy_Gaze_Mapper", {}),
             ("Display_Recent_Gaze", {}),
-            ("Screen_Marker_Calibration", {}),
+            # Calibration choreography plugin is added bellow by calling
+            # patch_world_session_settings_with_choreography_plugin
             ("Recorder", {}),
             ("Pupil_Remote", {}),
             ("Accuracy_Visualizer", {}),
@@ -390,7 +393,6 @@ def world(
         g_pool.detection_mapping_mode = session_settings.get(
             "detection_mapping_mode", "3d"
         )
-        g_pool.active_calibration_plugin = None
         g_pool.active_gaze_mapping_plugin = None
         g_pool.capture = None
 
@@ -573,10 +575,16 @@ def world(
         user_plugin_separator.order = 0.35
         g_pool.iconbar.append(user_plugin_separator)
 
-        # plugins that are loaded based on user settings from previous session
-        g_pool.plugins = Plugin_List(
-            g_pool, session_settings.get("loaded_plugins", default_plugins)
+        loaded_plugins = session_settings.get("loaded_plugins", default_plugins)
+
+        # Resolve the active calibration choreography plugin
+        loaded_plugins = patch_loaded_plugins_with_choreography_plugin(
+            loaded_plugins, app=g_pool.app
         )
+        session_settings["loaded_plugins"] = loaded_plugins
+
+        # plugins that are loaded based on user settings from previous session
+        g_pool.plugins = Plugin_List(g_pool, loaded_plugins)
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)

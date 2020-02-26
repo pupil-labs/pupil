@@ -100,7 +100,11 @@ def service(
 
         # Plug-ins
         from plugin import Plugin, Plugin_List, import_runtime_plugins
-        from calibration_routines import calibration_plugins, gaze_mapping_plugins
+        from calibration_routines import gaze_mapping_plugins
+        from calibration_choreography import (
+            available_calibration_choreography_plugins,
+            patch_loaded_plugins_with_choreography_plugin,
+        )
         from pupil_remote import Pupil_Remote
         from pupil_groups import Pupil_Groups
         from frame_publisher import Frame_Publisher
@@ -146,6 +150,8 @@ def service(
 
         g_pool.get_timestamp = get_timestamp
 
+        available_choreography_plugins = available_calibration_choreography_plugins()
+
         # manage plugins
         runtime_plugins = import_runtime_plugins(
             os.path.join(g_pool.user_dir, "plugins")
@@ -159,7 +165,7 @@ def service(
         ] + runtime_plugins
         plugin_by_index = (
             runtime_plugins
-            + calibration_plugins
+            + available_choreography_plugins
             + gaze_mapping_plugins
             + user_launchable_plugins
         )
@@ -168,7 +174,8 @@ def service(
         default_plugins = [
             ("Service_UI", {}),
             ("Dummy_Gaze_Mapper", {}),
-            ("HMD_Calibration", {}),
+            # Calibration choreography plugin is added bellow by calling
+            # patch_world_session_settings_with_choreography_plugin
             ("Pupil_Remote", {}),
         ]
         g_pool.plugin_by_name = plugin_by_name
@@ -194,7 +201,7 @@ def service(
         g_pool.detection_mapping_mode = session_settings.get(
             "detection_mapping_mode", "2d"
         )
-        g_pool.active_calibration_plugin = None
+
         g_pool.active_gaze_mapping_plugin = None
 
         audio.audio_mode = session_settings.get("audio_mode", audio.default_audio_mode)
@@ -203,10 +210,16 @@ def service(
         logger.warning("Process started.")
         g_pool.service_should_run = True
 
-        # plugins that are loaded based on user settings from previous session
-        g_pool.plugins = Plugin_List(
-            g_pool, session_settings.get("loaded_plugins", default_plugins)
+        loaded_plugins = session_settings.get("loaded_plugins", default_plugins)
+
+        # Resolve the active calibration choreography plugin
+        loaded_plugins = patch_loaded_plugins_with_choreography_plugin(
+            loaded_plugins, app=g_pool.app
         )
+        session_settings["loaded_plugins"] = loaded_plugins
+
+        # plugins that are loaded based on user settings from previous session
+        g_pool.plugins = Plugin_List(g_pool, loaded_plugins)
 
         # NOTE: The Pupil_Remote plugin fails to load when the port is already in use
         # and will set this variable to false. Then we should not even start the eye

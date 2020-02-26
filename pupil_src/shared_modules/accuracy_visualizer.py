@@ -169,7 +169,7 @@ class Accuracy_Visualizer(Plugin):
     def on_notify(self, notification):
         if notification["subject"] in (
             "calibration.calibration_data",
-            "accuracy_test.data",
+            "validation.data",
         ):
             if "hmd" in notification.get("calibration_method", ""):
                 logger.error(

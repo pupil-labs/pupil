@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import abc
 import enum
+import functools as F
 import logging
 import typing as T
 
@@ -24,11 +25,16 @@ logger = logging.getLogger(__name__)
 
 class ChoreographyMode(enum.Enum):
     CALIBRATION = "calibration"
-    ACCURACY_TEST = "accuracy_test"
+    VALIDATION = "validation"
 
     @property
     def label(self) -> str:
         return self.value.replace("_", " ").title()
+
+
+class UnsupportedChoreographyModeError(NotImplementedError):
+    def __init__(self, mode: ChoreographyMode):
+        super().__init__(f"Unknown mode {mode}")
 
 
 class ChoreographyAction(enum.Enum):
@@ -38,13 +44,15 @@ class ChoreographyAction(enum.Enum):
     STOPPED = "stopped"
     FAILED = "failed"
     SUCCEEDED = "successful"
+    ADD_REF_DATA = "add_ref_data"
+
 
 
 class ChoreographyNotification:
     __slots__ = ("mode", "action")
 
     _REQUIRED_KEYS = {"subject"}
-    _OPTIONAL_KEYS = {"topic"}
+    _OPTIONAL_KEYS = {"topic", "ref_data"}
 
     def __init__(self, mode: ChoreographyMode, action: ChoreographyAction):
         self.mode = mode
@@ -58,7 +66,9 @@ class ChoreographyNotification:
         return {"subject": self.subject}
 
     @staticmethod
-    def from_dict(note: dict) -> "ChoreographyNotification":
+    def from_dict(
+        note: dict, allow_extra_keys: bool = False
+    ) -> "ChoreographyNotification":
         cls = ChoreographyNotification
         keys = set(note.keys())
 
@@ -70,7 +80,7 @@ class ChoreographyNotification:
 
         valid_keys = cls._REQUIRED_KEYS.union(cls._OPTIONAL_KEYS)
         invalid_keys = keys.difference(valid_keys)
-        if invalid_keys:
+        if invalid_keys and not allow_extra_keys:
             raise ValueError(f"Notification contains invalid keys: {invalid_keys}")
 
         mode, action = note["subject"].split(".")
@@ -79,15 +89,21 @@ class ChoreographyNotification:
         )
 
 
+CHOREOGRAPHY_PLUGIN_DONT_REGISTER_LABEL = "CalibrationChoreographyPlugin.DONT_REGISTER"
+
+
 class CalibrationChoreographyPlugin(Plugin):
-    """base class for all calibration routines"""
+    """Base class for all calibration routines"""
 
     _THUMBNAIL_COLOR_ON = (0.3, 0.2, 1.0, 0.9)
     __registered_choreography_plugins = {}
 
+    order = 0.3
     icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"
     uniqueness = "by_base_class"
+
+    ### Public
 
     label = None
 
@@ -99,17 +115,48 @@ class CalibrationChoreographyPlugin(Plugin):
     """
     shows_action_buttons = True
 
+    """Controlls wheather the choreography plugin is persistent across sessions.
+    """
+    is_session_persistent = True
+
+    @classmethod
     @abc.abstractmethod
-    def supported_gazers(self):
+    def supported_gazer_classes(cls):
         pass
 
     @classmethod
+    def user_selectable_gazer_classes(cls):
+        gazer_classes = cls.supported_gazer_classes()
+        gazer_classes = sorted(gazer_classes, key=lambda g: g.label)
+        return gazer_classes
+
+    @classmethod
+    def is_user_selection_for_gazer_enabled(cls) -> bool:
+        return len(cls.user_selectable_gazer_classes()) > 1
+
+    @classmethod
+    def default_selected_gazer_class(cls):
+        return cls.user_selectable_gazer_classes()[0]
+
+    @classmethod
     def parse_pretty_class_name(cls) -> str:
-        return cls.label
+        if cls.label:
+            return cls.label
+        else:
+            raise NotImplementedError(f'{cls} must implement a "label" class property')
 
     @staticmethod
-    def registered_choreographies() -> T.Mapping[str, "CalibrationChoreographyPlugin"]:
+    def registered_choreographies_by_label() -> T.Mapping[
+        str, "CalibrationChoreographyPlugin"
+    ]:
         return dict(CalibrationChoreographyPlugin.__registered_choreography_plugins)
+
+    @classmethod
+    def user_selectable_choreography_classes(cls):
+        choreo_classes = cls.registered_choreographies_by_label().values()
+        choreo_classes = filter(lambda c: c.is_user_selectable, choreo_classes)
+        choreo_classes = sorted(choreo_classes, key=lambda c: c.label)
+        return choreo_classes
 
     def __init_subclass__(cls, *args, **kwargs):
         super().__init_subclass__(*args, **kwargs)
@@ -120,15 +167,26 @@ class CalibrationChoreographyPlugin(Plugin):
         assert (
             cls.label not in store.keys()
         ), f'Calibration choreography plugin already exists for label "{cls.label}"'
+        if cls.label == CHOREOGRAPHY_PLUGIN_DONT_REGISTER_LABEL:
+            # If the class label is explicitly saying that it shouldn't be registered,
+            # Skip the class registration; this is usefull for abstract superclasses.
+            return
         store[cls.label] = cls
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
+
         self.__is_active = False
+        self.__ref_list = []
+        self.__pupil_list = []
+
         self.__current_mode = ChoreographyMode.CALIBRATION
+        self.selected_gazer_class = self.default_selected_gazer_class()
+
         self.__choreography_ui_selector = None
         self.__gazer_ui_selector = None
-        self.__selected_gazer = self.__ui_selector_gazer_selection()[0]
+        self.__ui_button_calibration = None
+        self.__ui_button_validation = None
 
     def cleanup(self):
         pass
@@ -138,159 +196,157 @@ class CalibrationChoreographyPlugin(Plugin):
         return self.__current_mode
 
     @property
-    def current_mode_ui_button(self):
-        if self.__current_mode == ChoreographyMode.CALIBRATION:
-            return self.__ui_button_calibration
-        if self.__current_mode == ChoreographyMode.ACCURACY_TEST:
-            return self.__ui_button_accuracy_test
-        raise NotImplementedError(
-            f"Unsupported choreography mode: {self.__current_mode}"
-        )
-
-    @property
-    def current_gazer(self) -> GazerBase:
-        return self.__selected_gazer
-
-    @property
     def is_active(self) -> bool:
         return self.__is_active
 
-    def start(self):
-        self.__is_active = True
-        if self.__current_mode == ChoreographyMode.CALIBRATION:
-            self.__ui_button_accuracy_test_disable()
-        if self.__current_mode == ChoreographyMode.ACCURACY_TEST:
-            self.__ui_button_calibation_disable()
+    @property
+    def selected_choreography_class(self):
+        return self.__class__
+
+    @selected_choreography_class.setter
+    def selected_choreography_class(self, cls):
+        self.__start_plugin(cls)
+
+    @property
+    def status_text(self) -> str:
+        ui_button = self.__mode_button(self.current_mode)
+        return ui_button.status_text or ""
+
+    @status_text.setter
+    def status_text(self, value: T.Any):
+        value = str(value).strip() if value else ""
+        ui_button = self.__mode_button(self.current_mode)
+        ui_button.status_text = value
+
+    @property
+    def pupil_list(self) -> T.List[dict]:
+        return self.__pupil_list
+
+    @property
+    def ref_list(self) -> T.List[dict]:
+        return self.__ref_list
+
+    def on_choreography_started(self, mode: ChoreographyMode):
         self.notify_all(
             ChoreographyNotification(
-                # TODO: Why the subject is always "calibration.started", and not "accuracy_test.started" for accuracy test mode?
-                # mode=self.__current_mode,
-                mode=ChoreographyMode.CALIBRATION,
+                mode=mode,
                 action=ChoreographyAction.STARTED,
             ).to_dict()
         )
 
-    def stop(self):
-        self.__is_active = False
-        self.__ui_button_calibation_enable()
-        self.__ui_button_accuracy_test_enable()
+    def on_choreography_stopped(self, mode: ChoreographyMode):
         self.notify_all(
             ChoreographyNotification(
-                mode=self.__current_mode, action=ChoreographyAction.STOPPED,
+                mode=mode, action=ChoreographyAction.STOPPED
             ).to_dict()
-        )
-
-    # TODO: Replace with a callback
-    def finish_calibration(self, pupil_list, ref_list):
-        calib_data = {"ref_list": ref_list, "pupil_list": pupil_list}
-        self.__start_plugin(self.current_gazer, calib_data=calib_data)
-
-    # TODO: Replace with a callback
-    def finish_accuracy_test(self, pupil_list, ref_list):
-        # ts = self.g_pool.get_timestamp()
-        # self.notify_all({"subject": "start_plugin", "name": "Accuracy_Visualizer"})
-        # self.notify_all(
-        #     {
-        #         "subject": "accuracy_test.data",
-        #         "timestamp": ts,
-        #         "pupil_list": pupil_list,
-        #         "ref_list": ref_list,
-        #         "record": True,
-        #     }
-        # )
-        print(
-            f"===>>> ACCURACY TEST FINISHED: {len(pupil_list)} pupil datums, {len(ref_list)} ref locations"
-        )
-
-    # Private
-
-    def __available_choreography_labels_and_plugins(self):
-        labels_and_plugins = (
-            CalibrationChoreographyPlugin.registered_choreographies().items()
-        )
-        labels_and_plugins = filter(
-            lambda pair: pair[1].is_user_selectable, labels_and_plugins
-        )
-        labels_and_plugins = sorted(labels_and_plugins, key=lambda pair: pair[0])
-        return labels_and_plugins
-
-    def __available_gazers_labels_and_plugins(self):
-        pairs = [(g.label, g) for g in self.supported_gazers()]
-        pairs = sorted(pairs, key=lambda pair: pair[0])
-        return pairs
-
-    def __toggle_mode_action(self, mode: ChoreographyMode):
-        action = (
-            ChoreographyAction.SHOULD_START
-            if not self.is_active
-            else ChoreographyAction.SHOULD_STOP
         )
         self.notify_all(ChoreographyNotification(mode=mode, action=action).to_dict())
 
-    def __start_plugin(self, plugin_cls, **kwargs):
-        self.notify_all(
-            {"subject": "start_plugin", "name": plugin_cls.__name__, "args": kwargs}
-        )
+    def on_choreography_successfull(
+        self, mode: ChoreographyMode, pupil_list: list, ref_list: list
+    ):
+        if mode == ChoreographyMode.CALIBRATION:
+            calib_data = {"ref_list": ref_list, "pupil_list": pupil_list}
+            self.__start_plugin(self.selected_gazer_class, calib_data=calib_data)
+        elif mode == ChoreographyMode.VALIDATION:
+            # ts = self.g_pool.get_timestamp()
+            # self.notify_all({"subject": "start_plugin", "name": "Accuracy_Visualizer"})
+            # self.notify_all(
+            #     {
+            #         "subject": "validation.data",
+            #         "timestamp": ts,
+            #         "pupil_list": pupil_list,
+            #         "ref_list": ref_list,
+            #         "record": True,
+            #     }
+            # )
+            print(
+                f"===>>> ACCURACY TEST FINISHED: {len(pupil_list)} pupil datums, {len(ref_list)} ref locations"
+            )
+        else:
+            raise UnsupportedChoreographyModeError(mode)
 
-    # Public - Plugin
+    ### Public - Plugin
 
     def init_ui(self):
 
         self.__ui_selector_choreography = ui.Selector(
-            "choreography_selector",
+            "selected_choreography_class",
+            self,
             label="Choreography",
-            labels=self.__ui_selector_choreography_labels(),
-            selection=self.__ui_selector_choreography_selection(),
-            getter=self.__ui_selector_choreography_getter,
-            setter=self.__ui_selector_choreography_setter,
+            labels=[c.label for c in self.user_selectable_choreography_classes()],
+            selection=self.user_selectable_choreography_classes(),
         )
 
         self.__ui_selector_gazer = ui.Selector(
-            "gazer_selector",
-            label="Mapping Method",
-            labels=self.__ui_selector_gazer_labels(),
-            selection=self.__ui_selector_gazer_selection(),
-            getter=self.__ui_selector_gazer_getter,
-            setter=self.__ui_selector_gazer_setter,
-        )
-
-        self.__ui_button_calibration = ui.Thumb(
-            "is_active",
+            "selected_gazer_class",
             self,
-            label="C+",
-            hotkey="c",
-            setter=self.__ui_button_calibration_toggle,
-            on_color=self._THUMBNAIL_COLOR_ON,
+            label="Gazer",
+            labels=[g.label for g in self.user_selectable_gazer_classes()],
+            selection=self.user_selectable_gazer_classes(),
         )
 
-        self.__ui_button_accuracy_test = ui.Thumb(
-            "is_active",
-            self,
-            label="T+",
-            hotkey="t",
-            setter=self.__ui_button_accuracy_test_toggle,
-            on_color=self._THUMBNAIL_COLOR_ON,
-        )
-
+        super().init_ui()
         self.add_menu()
         self.menu.label = self.label
         self.menu.append(self.__ui_selector_choreography)
         self.menu.append(self.__ui_selector_gazer)
+        self.menu_icon.order = self.order
 
-        self.__ui_button_calibation_enable()
-        self.__ui_button_accuracy_test_enable()
+        if self.shows_action_buttons:
+
+            def calibration_setter(should_be_on):
+                self.__signal_should_toggle_processing(
+                    should_be_on=should_be_on, mode=ChoreographyMode.CALIBRATION
+                )
+
+            def validation_setter(should_be_on):
+                self.__signal_should_toggle_processing(
+                    should_be_on=should_be_on, mode=ChoreographyMode.VALIDATION
+                )
+
+            self.__ui_button_calibration = ui.Thumb(
+                "is_active",
+                self,
+                label="C",
+                hotkey="c",
+                setter=calibration_setter,
+                on_color=self._THUMBNAIL_COLOR_ON,
+            )
+
+            self.__ui_button_validation = ui.Thumb(
+                "is_active",
+                self,
+                label="T",
+                hotkey="t",
+                setter=validation_setter,
+                on_color=self._THUMBNAIL_COLOR_ON,
+            )
+
+            self.__toggle_mode_button_visibility(
+                is_visible=True, mode=ChoreographyMode.CALIBRATION
+            )
+            self.__toggle_mode_button_visibility(
+                is_visible=True, mode=ChoreographyMode.VALIDATION
+            )
 
     def update_ui(self):
-        self.__ui_selector_gazer.read_only = not self.__ui_selector_gazer_enabled()
+        self.__ui_selector_gazer.read_only = (
+            not self.is_user_selection_for_gazer_enabled()
+        )
 
     def deinit_ui(self):
-        self.__ui_button_calibation_disable()
-        self.__ui_button_accuracy_test_disable()
+        """Gets called when the plugin get terminated, either voluntarily or forced.
+        """
+        if self.is_active:
+            self._perform_stop()
         self.remove_menu()
+        for mode in ChoreographyMode:
+            self.__toggle_mode_button_visibility(is_visible=False, mode=mode)
+        self.__choreography_ui_selector = None
+        self.__gazer_ui_selector = None
         self.__ui_button_calibration = None
-        self.__ui_button_accuracy_test = None
-        self.__ui_selector_choreography = None
-        self.__ui_selector_gazer = None
+        self.__ui_button_validation = None
 
     def recent_events(self, events):
         self.update_ui()
@@ -301,6 +357,7 @@ class CalibrationChoreographyPlugin(Plugin):
         Reacts to notifications:
            ``calibration.should_start``: Starts the calibration procedure
            ``calibration.should_stop``: Stops the calibration procedure
+           ``calibration.add_ref_data``: Adds reference data
 
         Emits notifications:
             ``calibration.started``: Calibration procedure started
@@ -321,72 +378,126 @@ class CalibrationChoreographyPlugin(Plugin):
                 logger.warning(f"{self.current_mode.label} already running.")
             else:
                 self.__current_mode = note.mode
-                self.start()
+                self._perform_start()
+
+        if note.action == ChoreographyAction.ADD_REF_DATA:
+            if self.is_active:
+                pass  # No-op; each choreography should handle it independently
+            else:
+                logger.error("Ref data can only be added when calibration is running.")
 
         if note.action == ChoreographyAction.SHOULD_STOP:
             if not self.is_active:
                 logger.warning(f"{self.current_mode.label} already stopped.")
             else:
-                self.stop()
+                self._perform_stop()
 
-    # Private - UI
+    ### Internal
 
-    def __ui_selector_choreography_labels(self):
-        return [
-            label for label, _ in self.__available_choreography_labels_and_plugins()
-        ]
+    def _signal_should_start(self, mode: ChoreographyMode):
+        self.notify_all(
+            ChoreographyNotification(
+                mode=mode, action=ChoreographyAction.SHOULD_START
+            ).to_dict()
+        )
 
-    def __ui_selector_choreography_selection(self):
-        return [
-            plugin_cls
-            for _, plugin_cls in self.__available_choreography_labels_and_plugins()
-        ]
+    def _signal_should_stop(self, mode: ChoreographyMode):
+        self.notify_all(
+            ChoreographyNotification(
+                mode=mode, action=ChoreographyAction.SHOULD_STOP
+            ).to_dict()
+        )
 
-    def __ui_selector_choreography_getter(self):
-        return self.__class__
+    def _perform_start(self):
+        current_mode = self.__current_mode
 
-    def __ui_selector_choreography_setter(self, value):
-        self.__start_plugin(value)
+        logger.info(f"Starting  {current_mode.label}")
 
-    def __ui_selector_gazer_enabled(self):
-        return len(self.__ui_selector_gazer_labels()) > 1
+        ### Set the calibration choreography state
 
-    def __ui_selector_gazer_labels(self):
-        return [label for label, _ in self.__available_gazers_labels_and_plugins()]
+        self.__is_active = True
+        self.__ref_list = []
+        self.__pupil_list = []
 
-    def __ui_selector_gazer_selection(self):
-        return [gazer for _, gazer in self.__available_gazers_labels_and_plugins()]
+        ### Set the calibration choreography UI
 
-    def __ui_selector_gazer_getter(self):
-        return self.__selected_gazer
+        # Hide all buttons for the mode buttons that are not currently used
+        for mode in list(ChoreographyMode):
+            if self.__current_mode != mode:
+                self.__toggle_mode_button_visibility(is_visible=False, mode=mode)
 
-    def __ui_selector_gazer_setter(self, value):
-        self.__selected_gazer = value
+        ### Call relevant callbacks
 
-    def __ui_button_calibration_toggle(self, _=None):
-        self.__toggle_mode_action(mode=ChoreographyMode.CALIBRATION)
+        self.on_choreography_started(mode=current_mode)
 
-    def __ui_button_calibation_enable(self):
-        if not self.shows_action_buttons:
+    def _perform_stop(self):
+        current_mode = self.__current_mode
+        pupil_list = self.__pupil_list
+        ref_list = self.__ref_list
+
+        logger.info(f"Stopping  {current_mode.label}")
+
+        ### Set the calibration choreography state
+
+        self.__is_active = False
+        self.__ref_list = []
+        self.__pupil_list = []
+
+        ### Set the calibration choreography UI
+
+        self.status_text = None
+
+        # Show all buttons for all the modes
+        for mode in list(ChoreographyMode):
+            self.__toggle_mode_button_visibility(is_visible=True, mode=mode)
+
+        ### Call relevant callbacks
+
+        self.on_choreography_stopped(mode=current_mode)
+
+        if pupil_list and ref_list:
+            self.on_choreography_successfull(
+                mode=current_mode, pupil_list=pupil_list, ref_list=ref_list
+            )
+
+    ### Private
+
+    def __toggle_mode_button_visibility(self, is_visible: bool, mode: ChoreographyMode):
+        ui_button = self.__mode_button(mode=mode)
+
+        if ui_button is None:
             return
-        if self.__ui_button_calibration not in self.g_pool.quickbar:
-            self.g_pool.quickbar.insert(0, self.__ui_button_calibration)
 
-    def __ui_button_calibation_disable(self):
-        if self.__ui_button_calibration in self.g_pool.quickbar:
-            self.g_pool.quickbar.remove(self.__ui_button_calibration)
+        if is_visible and (ui_button not in self.g_pool.quickbar):
+            # If the button should be visible, but it's not - add to quickbar
+            if mode == ChoreographyMode.CALIBRATION:
+                self.g_pool.quickbar.insert(0, self.__ui_button_calibration)
+            elif mode == ChoreographyMode.VALIDATION:
+                # Always place the accuracy test button first, but after the calibration button
+                index = 1 if self.__ui_button_calibration in self.g_pool.quickbar else 0
+                self.g_pool.quickbar.insert(index, self.__ui_button_validation)
+            else:
+                raise UnsupportedChoreographyModeError(mode)
 
-    def __ui_button_accuracy_test_toggle(self, _=None):
-        self.__toggle_mode_action(mode=ChoreographyMode.ACCURACY_TEST)
+        if (not is_visible) and (ui_button in self.g_pool.quickbar):
+            # If the button should not be visible, but it is - remove from quickbar
+            self.g_pool.quickbar.remove(ui_button)
 
-    def __ui_button_accuracy_test_enable(self):
-        if not self.shows_action_buttons:
-            return
-        if self.__ui_button_accuracy_test not in self.g_pool.quickbar:
-            # Always place the accuracy test button first, but after the calibration button
-            index = 1 if self.__ui_button_calibration in self.g_pool.quickbar else 0
-            self.g_pool.quickbar.insert(index, self.__ui_button_accuracy_test)
+    def __signal_should_toggle_processing(self, should_be_on, mode: ChoreographyMode):
+        assert bool(self.is_active) != bool(should_be_on)  # Sanity check
+        if should_be_on:
+            self._signal_should_start(mode=mode)
+        else:
+            self._signal_should_stop(mode=mode)
 
-    def __ui_button_accuracy_test_disable(self):
-        if self.__ui_button_accuracy_test in self.g_pool.quickbar:
-            self.g_pool.quickbar.remove(self.__ui_button_accuracy_test)
+    def __start_plugin(self, plugin_cls, **kwargs):
+        self.notify_all(
+            {"subject": "start_plugin", "name": plugin_cls.__name__, "args": kwargs}
+        )
+
+    def __mode_button(self, mode: ChoreographyMode):
+        if mode == ChoreographyMode.CALIBRATION:
+            return self.__ui_button_calibration
+        if mode == ChoreographyMode.VALIDATION:
+            return self.__ui_button_validation
+        raise UnsupportedChoreographyModeError(mode)
