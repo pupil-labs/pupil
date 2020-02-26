@@ -240,7 +240,6 @@ class CalibrationChoreographyPlugin(Plugin):
                 mode=mode, action=ChoreographyAction.STOPPED
             ).to_dict()
         )
-        self.notify_all(ChoreographyNotification(mode=mode, action=action).to_dict())
 
     def on_choreography_successfull(
         self, mode: ChoreographyMode, pupil_list: list, ref_list: list

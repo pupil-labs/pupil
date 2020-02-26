@@ -25,7 +25,6 @@ from calibration_routines.optimization_calibration.calibrate_2d import (
 
 # TODO: See if any calibration_routines dependency can be removed
 from calibration_routines import data_processing
-from calibration_routines.calibration_plugin_base import Calibration_Plugin
 from calibration_routines.finish_calibration import (
     create_converge_error_msg,
     create_not_enough_data_error_msg,
