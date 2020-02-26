@@ -44,7 +44,7 @@ from .base_plugin import (
     ChoreographyMode,
     ChoreographyAction,
 )
-from gaze_mapping import Gazer2D_v1x
+from gaze_mapping import Gazer2D_v1x, Gazer3D_v1x
 
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ class SingleMarkerChoreographyPlugin(
 
     @classmethod
     def supported_gazer_classes(cls):
-        return [Gazer2D_v1x]  # FIXME: Provide complete list of supported gazers
+        return [Gazer2D_v1x, Gazer3D_v1x]
 
     def __init__(
         self,
