@@ -51,6 +51,18 @@ class Calibration(StorageItem):
             # otherwise 'from_tuple' would become much uglier
             self.params = CalibrationResult(*result).params
 
+    @property
+    def result(self):
+        return CalibrationResult(
+            gazer_class_name=self.gazer_class_name,
+            params=self.params,
+        )
+
+    @result.setter
+    def result(self, value: CalibrationResult):
+        self.gazer_class_name = value.gazer_class_name
+        self.params = value.params
+
     @staticmethod
     def from_tuple(tuple_):
         return Calibration(*tuple_)
