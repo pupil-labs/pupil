@@ -121,6 +121,7 @@ class Gazer2D_v1x(GazerBase):
     ) -> T.Iterator["Gaze"]:
         for pupil_match in matched_pupil_data:
             num_matched = len(pupil_match)
+            gaze_positions = ...  # Placeholder for gaze_positions
 
             if num_matched == 2 and self.binocular_model.is_fitted:
                 right = self._extract_pupil_features([pupil_match[0]])
@@ -138,6 +139,11 @@ class Gazer2D_v1x(GazerBase):
                 elif pupil_match[0]["id"] == 1 and self.left_model.is_fitted:
                     gaze_positions = self.left_model.predict(X)
                     topic = "gaze.2d.1."
+
+            if gaze_positions is ...:
+                # Catch-all branch if none of the branches above assigned a valid value to gaze_positions
+                # This indicates a programming error; either the passed data is corrupt/invalid, or the models are not in the correct state.
+                raise ValueError(f"Invalid matched pupil data: {pupil_match}, left_model: {self.left_model}, right_model: {self.right_model}, binocular_model: {self.binocular_model}")
 
             for gaze_pos in gaze_positions:
                 gaze_datum = {
