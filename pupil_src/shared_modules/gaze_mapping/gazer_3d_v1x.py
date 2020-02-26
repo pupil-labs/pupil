@@ -78,6 +78,7 @@ class Model3D_v1x(Model):
 
     def set_params(self, **params):
         self._params = params
+        self._is_fitted = True
 
     def get_params(self):
         return self._params

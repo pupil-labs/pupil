@@ -43,6 +43,7 @@ class Model2D_v1x(Model):
     def set_params(self, params, map_fn=None):
         self._map_fn = map_fn or make_map_function(*params)
         self._params = params
+        self._is_fitted = True
 
     def get_params(self):
         return {"params": self._params}
