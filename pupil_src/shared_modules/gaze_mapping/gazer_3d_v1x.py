@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import abc
+import logging
 import typing as T
 
 import cv2
@@ -30,6 +31,10 @@ from calibration_routines.optimization_calibration.calibrate_3d import (
     calibrate_binocular,
     calibrate_monocular,
 )
+
+
+logger = logging.getLogger(__name__)
+
 
 _REFERENCE_FEATURE_COUNT = 3
 
@@ -351,25 +356,34 @@ class Gazer3D_v1x(GazerBase):
             num_matched = len(pupil_match)
             gaze_positions = ...  # Placeholder for gaze_positions
 
-            if num_matched == 2 and self.binocular_model.is_fitted:
-                right = self._extract_pupil_features([pupil_match[0]])
-                left = self._extract_pupil_features([pupil_match[1]])
-                X = np.hstack([left, right])
-                gaze_positions = self.binocular_model.predict(X)
-                topic = "gaze.3d.01."
+            if num_matched == 2:
+                if self.binocular_model.is_fitted:
+                    right = self._extract_pupil_features([pupil_match[0]])
+                    left = self._extract_pupil_features([pupil_match[1]])
+                    X = np.hstack([left, right])
+                    gaze_positions = self.binocular_model.predict(X)
+                    topic = "gaze.3d.01."
+                else:
+                    logger.debug("Prediction failed because binocular model is not fitted")
             elif num_matched == 1:
                 X = self._extract_pupil_features([pupil_match[0]])
-                if pupil_match[0]["id"] == 0 and self.right_model.is_fitted:
-                    gaze_positions = self.right_model.predict(X)
-                    topic = "gaze.3d.0."
-                elif pupil_match[0]["id"] == 1 and self.left_model.is_fitted:
-                    gaze_positions = self.left_model.predict(X)
-                    topic = "gaze.3d.1."
+                if pupil_match[0]["id"] == 0:
+                    if self.right_model.is_fitted:
+                        gaze_positions = self.right_model.predict(X)
+                        topic = "gaze.3d.0."
+                    else:
+                        logger.debug("Prediction failed because right model is not fitted")
+                elif pupil_match[0]["id"] == 1:
+                    if self.left_model.is_fitted:
+                        gaze_positions = self.left_model.predict(X)
+                        topic = "gaze.3d.1."
+                    else:
+                        logger.debug("Prediction failed because left model is not fitted")
+            else:
+                raise ValueError(f"Unexpected number of matched pupil_data: {num_matched}")
 
             if gaze_positions is ...:
-                # Catch-all branch if none of the branches above assigned a valid value to gaze_positions
-                # This indicates a programming error; either the passed data is corrupt/invalid, or the models are not in the correct state.
-                raise ValueError(f"Invalid matched pupil data: {pupil_match}, left_model: {self.left_model}, right_model: {self.right_model}, binocular_model: {self.binocular_model}")
+                return  # Prediction failed and the reason was logged
 
             for gaze_pos in gaze_positions:
                 gaze_pos.update(
