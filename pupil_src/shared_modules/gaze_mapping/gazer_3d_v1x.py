@@ -364,7 +364,9 @@ class Gazer3D_v1x(GazerBase):
                     gaze_positions = self.binocular_model.predict(X)
                     topic = "gaze.3d.01."
                 else:
-                    logger.debug("Prediction failed because binocular model is not fitted")
+                    logger.debug(
+                        "Prediction failed because binocular model is not fitted"
+                    )
             elif num_matched == 1:
                 X = self._extract_pupil_features([pupil_match[0]])
                 if pupil_match[0]["id"] == 0:
@@ -372,15 +374,21 @@ class Gazer3D_v1x(GazerBase):
                         gaze_positions = self.right_model.predict(X)
                         topic = "gaze.3d.0."
                     else:
-                        logger.debug("Prediction failed because right model is not fitted")
+                        logger.debug(
+                            "Prediction failed because right model is not fitted"
+                        )
                 elif pupil_match[0]["id"] == 1:
                     if self.left_model.is_fitted:
                         gaze_positions = self.left_model.predict(X)
                         topic = "gaze.3d.1."
                     else:
-                        logger.debug("Prediction failed because left model is not fitted")
+                        logger.debug(
+                            "Prediction failed because left model is not fitted"
+                        )
             else:
-                raise ValueError(f"Unexpected number of matched pupil_data: {num_matched}")
+                raise ValueError(
+                    f"Unexpected number of matched pupil_data: {num_matched}"
+                )
 
             if gaze_positions is ...:
                 return  # Prediction failed and the reason was logged
