@@ -427,7 +427,7 @@ class UVC_Source(Base_Source):
             if self._last_ts is not None and frame.timestamp <= self._last_ts:
                 logger.debug(
                     "Received non-monotonic timestamps from UVC! Dropping frame."
-                    f" Last: {self._latest_ts}, current: {frame.timestamp}"
+                    f" Last: {self._last_ts}, current: {frame.timestamp}"
                 )
             else:
                 self._last_ts = frame.timestamp
