@@ -166,7 +166,7 @@ class Gazer2D_v1x(GazerBase):
                 )
 
             if gaze_positions is ...:
-                return  # Prediction failed and the reason was logged
+                continue  # Prediction failed and the reason was logged
 
             for gaze_pos in gaze_positions:
                 gaze_datum = {
