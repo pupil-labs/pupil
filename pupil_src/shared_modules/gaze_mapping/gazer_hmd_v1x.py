@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import logging
 import typing as T
 import numpy as np
 
@@ -17,6 +18,8 @@ from gaze_mapping.gazer_base import (
     data_processing,
     NotEnoughDataError,
 )
+from .gazer_2d_v1x import Gazer2D_v1x
+from .gazer_3d_v1x import Gazer3D_v1x
 
 from calibration_routines.optimization_calibration.calibrate_2d import (
     calibrate_2d_polynomial,
@@ -25,7 +28,6 @@ from calibration_routines.optimization_calibration.calibrate_2d import (
 
 # TODO: See if any calibration_routines dependency can be removed
 from calibration_routines import data_processing
-from calibration_routines.calibration_plugin_base import Calibration_Plugin
 from calibration_routines.finish_calibration import (
     create_converge_error_msg,
     create_not_enough_data_error_msg,
@@ -33,13 +35,16 @@ from calibration_routines.finish_calibration import (
 from calibration_routines.optimization_calibration import calibration_methods
 
 
-class GazerHMD2D_v1x(GazerBase):
+logger = logging.getLogger(__name__)
+
+
+class GazerHMD2D_v1x(Gazer2D_v1x):
     label = "HMD 2D (v1)"
 
     def __init__(self, g_pool, *, hmd_video_frame_size, outlier_threshold, calib_data=None, params=None):
-        super().__init__(g_pool, calib_data=calib_data, params=params)
         self.__hmd_video_frame_size = hmd_video_frame_size
         self.__outlier_threshold = outlier_threshold
+        super().__init__(g_pool, calib_data=calib_data, params=params)
 
     # TODO: Implement model fitting based on the legacy code bellow
     # def finish_calibration(self):
@@ -89,12 +94,13 @@ class GazerHMD2D_v1x(GazerBase):
     #     self.notify_all(result)
 
 
-class GazerHMD3D_v1x(GazerBase):
+class GazerHMD3D_v1x(Gazer3D_v1x):
     label = "HMD 3D (v1)"
 
     def __init__(self, g_pool, *, eye_translations, calib_data=None, params=None):
-        super().__init__(g_pool, calib_data=calib_data, params=params)
+        logger.info(f"==> GAZE INIT: {self.__class__.__name__} {__name__}")
         self.__eye_translations = eye_translations
+        super().__init__(g_pool, calib_data=calib_data, params=params)
 
     # TODO: Implement model fitting based on the legacy code bellow
     # def finish_calibration(self):

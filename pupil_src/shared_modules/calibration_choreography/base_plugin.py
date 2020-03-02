@@ -51,7 +51,7 @@ class ChoreographyNotification:
     __slots__ = ("mode", "action")
 
     _REQUIRED_KEYS = {"subject"}
-    _OPTIONAL_KEYS = {"topic", "ref_data"}
+    _OPTIONAL_KEYS = {"topic", "ref_data", "record", 'translation_eye0', 'translation_eye1', 'outlier_threshold', 'hmd_video_frame_size'}
 
     def __init__(self, mode: ChoreographyMode, action: ChoreographyAction):
         self.mode = mode
@@ -153,7 +153,7 @@ class CalibrationChoreographyPlugin(Plugin):
     @classmethod
     def user_selectable_choreography_classes(cls):
         choreo_classes = cls.registered_choreographies_by_label().values()
-        choreo_classes = filter(lambda c: c.is_user_selectable, choreo_classes)
+        # choreo_classes = filter(lambda c: c.is_user_selectable, choreo_classes) ###FIXME
         choreo_classes = sorted(choreo_classes, key=lambda c: c.label)
         return choreo_classes
 
@@ -215,7 +215,8 @@ class CalibrationChoreographyPlugin(Plugin):
     def status_text(self, value: T.Any):
         value = str(value).strip() if value else ""
         ui_button = self.__mode_button(self.current_mode)
-        ui_button.status_text = value
+        if ui_button:
+            ui_button.status_text = value
 
     @property
     def pupil_list(self) -> T.List[dict]:
@@ -224,6 +225,14 @@ class CalibrationChoreographyPlugin(Plugin):
     @property
     def ref_list(self) -> T.List[dict]:
         return self.__ref_list
+
+    @pupil_list.setter
+    def pupil_list(self, value):
+        self.__pupil_list = value
+
+    @ref_list.setter
+    def ref_list(self, value):
+        self.__ref_list = value
 
     def on_choreography_started(self, mode: ChoreographyMode):
         self.notify_all(
@@ -368,7 +377,9 @@ class CalibrationChoreographyPlugin(Plugin):
         """
         try:
             note = ChoreographyNotification.from_dict(note_dict)
-        except ValueError:
+            logger.info(f"ChoreographyNotification.action = {note.action}")
+        except ValueError as err:
+            logger.error(str(err))
             return  # Disregard notifications other than choreography notifications
 
         if note.action == ChoreographyAction.SHOULD_START:

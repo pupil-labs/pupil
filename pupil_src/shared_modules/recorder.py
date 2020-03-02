@@ -239,14 +239,15 @@ class Recorder(System_Plugin_Base):
         if notification.get("record", False) and self.running:
             if "timestamp" not in notification:
                 logger.error("Notification without timestamp will not be saved.")
-            else:
-                notification["topic"] = "notify." + notification["subject"]
-                try:
-                    writer = self.pldata_writers["notify"]
-                except KeyError:
-                    writer = PLData_Writer(self.rec_path, "notify")
-                    self.pldata_writers["notify"] = writer
-                writer.append(notification)
+                notification["timestamp"] = self.g_pool.get_timestamp()
+            # else:
+            notification["topic"] = "notify." + notification["subject"]
+            try:
+                writer = self.pldata_writers["notify"]
+            except KeyError:
+                writer = PLData_Writer(self.rec_path, "notify")
+                self.pldata_writers["notify"] = writer
+            writer.append(notification)
 
         elif notification["subject"] == "recording.should_start":
             if self.running:
