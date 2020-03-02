@@ -176,7 +176,7 @@ def calibrate_hmd(ref_points_3d, pupil0_normals, pupil1_normals, eye_translation
     initial_translation0, initial_translation1 = np.asarray(eye_translations)
 
     smallest_residual = 1000
-    scales = list(np.linspace(0.7, 10, 50))
+    scales = list(np.linspace(0.7, 10, 5))  # TODO: change back to 50
     for s in scales:
         scaled_ref_points_3d = ref_points_3d * (1, -1, s)
 
