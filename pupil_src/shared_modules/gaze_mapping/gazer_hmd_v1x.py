@@ -110,6 +110,11 @@ class GazerHMD3D_v1x(Gazer3D_v1x):
         self.__eye_translations = eye_translations
         super().__init__(g_pool, calib_data=calib_data, params=params)
 
+    def _extract_reference_features(self, ref_data) -> np.ndarray:
+        ref_3d = np.array([ref["mm_pos"] for ref in ref_data])
+        assert ref_3d.shape == (len(ref_data), 3), ref_3d
+        return ref_3d
+
     # TODO: Implement model fitting based on the legacy code bellow
     # def finish_calibration(self):
     #     pupil_list = self.pupil_list
