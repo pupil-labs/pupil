@@ -41,7 +41,15 @@ logger = logging.getLogger(__name__)
 class GazerHMD2D_v1x(Gazer2D_v1x):
     label = "HMD 2D (v1)"
 
-    def __init__(self, g_pool, *, hmd_video_frame_size, outlier_threshold, calib_data=None, params=None):
+    def __init__(
+        self,
+        g_pool,
+        *,
+        hmd_video_frame_size,
+        outlier_threshold,
+        calib_data=None,
+        params=None,
+    ):
         self.__hmd_video_frame_size = hmd_video_frame_size
         self.__outlier_threshold = outlier_threshold
         super().__init__(g_pool, calib_data=calib_data, params=params)
