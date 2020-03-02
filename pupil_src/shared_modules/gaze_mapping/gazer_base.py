@@ -140,19 +140,14 @@ class GazerBase(abc.ABC, Plugin):
 
         if calib_data is not None:
             try:
-                logger.info(f"BEFORE FIT_ON_CALIB_DATA")
                 self.fit_on_calib_data(calib_data)
-                logger.info(f"AFTER FIT_ON_CALIB_DATA")
-            except CalibrationError:
-                logger.error("Calibration Failed!")
+            except CalibrationError as err:
                 self.alive = False
-                note = self.create_not_enough_data_error_msg(self.g_pool)
+                note = self.create_calibration_failed_notification(err)
                 self.notify_all(note)
             else:
-                logger.info(f"NOTIFY_SUCCESS FIT_ON_CALIB_DATA")
                 self.notify_all(self.create_successful_notification())
         elif params is not None:
-            logger.info(f"SET_PARAMS FIT_ON_CALIB_DATA")
             self.set_params(params)
         else:
             raise ValueError("Requires either `calib_data` or `params`")
@@ -165,14 +160,13 @@ class GazerBase(abc.ABC, Plugin):
             "record": True,
         }
 
-    @staticmethod
-    def create_not_enough_data_error_msg(g_pool):
-        msg = "Not enough ref points or pupil data available for calibration."
+    def create_calibration_failed_notification(self, error):
+        msg = error.__class__.__name__
         logger.error(msg)
         return {
             "subject": "calibration.failed",
             "reason": msg,
-            "timestamp": g_pool.get_timestamp(),
+            "timestamp": self.g_pool.get_timestamp(),
             "record": True,
         }
 
@@ -220,28 +214,21 @@ class GazerBase(abc.ABC, Plugin):
         ref_data = calib_data["ref_list"]
         # extract and filter pupil data
         pupil_data = calib_data["pupil_list"]
-        logger.info(f"--> BEFORE FILTER PUPIL DATA")
         pupil_data = self.filter_pupil_data(
             pupil_data, self.g_pool.min_calibration_confidence
         )
-        logger.info(f"--> BEFORE MATCH PUPIL TO REF")
         # match pupil to reference data (left, right, and binocular)
         matches = self.match_pupil_to_ref(pupil_data, ref_data)
         if matches.binocular[0]:
-            logger.info(f"--> BEFORE BINOCULAR FIT")
             self._fit_binocular_model(self.binocular_model, matches.binocular)
             self._fit_monocular_model(self.right_model, matches.right)
             self._fit_monocular_model(self.left_model, matches.left)
         elif matches.right[0]:
-            logger.info(f"--> BEFORE RIGHT FIT")
             self._fit_monocular_model(self.right_model, matches.right)
         elif matches.left[0]:
-            logger.info(f"--> BEFORE LEFT FIT")
             self._fit_monocular_model(self.left_model, matches.left)
         else:
-            logger.info(f"--> BEFORE FIT FAILED")
             raise NotEnoughDataError
-        logger.info(f"--> AFTER FIT")
 
     def _fit_binocular_model(self, model: Model, matched_data: T.Iterable):
         X, Y = self.extract_features_from_matches_binocular(matched_data)

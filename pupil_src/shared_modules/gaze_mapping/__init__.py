@@ -12,9 +12,9 @@ from . import matching
 from . import gazer_base
 from .gazer_2d_v1x import Gazer2D_v1x
 from .gazer_3d_v1x import Gazer3D_v1x
-from .gazer_hmd_v1x import GazerHMD2D_v1x, GazerHMD3D_v1x
+from .gazer_hmd_v1x import GazerHMD3D_v1x
 
-registered_gazer_classes = [Gazer2D_v1x, Gazer3D_v1x, GazerHMD2D_v1x, GazerHMD3D_v1x]
+registered_gazer_classes = [Gazer2D_v1x, Gazer3D_v1x, GazerHMD3D_v1x]
 
 registered_gazer_class_names = {
     cls.label: cls.__name__ for cls in registered_gazer_classes

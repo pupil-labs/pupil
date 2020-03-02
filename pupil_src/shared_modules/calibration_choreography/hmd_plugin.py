@@ -15,7 +15,7 @@ import typing as T
 
 import file_methods as fm
 from pyglui import ui
-from gaze_mapping import GazerHMD2D_v1x, GazerHMD3D_v1x
+from gaze_mapping import GazerHMD3D_v1x
 
 from .base_plugin import (
     CalibrationChoreographyPlugin,
@@ -75,7 +75,9 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
                 self.ref_list += note_dict["ref_data"]
 
         except (ValueError, KeyError) as err:
-            logger.error(f"Notification: {note_dict.keys()} not conform. Raised error {err}")
+            logger.error(
+                f"Notification: {note_dict.keys()} not conform. Raised error {err}"
+            )
 
         else:
             super().on_notify(note_dict)
