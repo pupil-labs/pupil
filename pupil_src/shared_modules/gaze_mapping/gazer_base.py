@@ -145,6 +145,8 @@ class GazerBase(abc.ABC, Plugin):
                 self.alive = False
                 note = self.create_calibration_failed_notification(err)
                 self.notify_all(note)
+            except Exception as err:
+                raise CalibrationError from err
             else:
                 self.notify_all(self.create_successful_notification())
         elif params is not None:
