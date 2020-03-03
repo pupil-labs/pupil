@@ -51,7 +51,15 @@ class ChoreographyNotification:
     __slots__ = ("mode", "action")
 
     _REQUIRED_KEYS = {"subject"}
-    _OPTIONAL_KEYS = {"topic", "ref_data"}
+    _OPTIONAL_KEYS = {
+        "topic",
+        "ref_data",
+        "record",
+        "translation_eye0",
+        "translation_eye1",
+        "outlier_threshold",
+        "hmd_video_frame_size",
+    }
 
     def __init__(self, mode: ChoreographyMode, action: ChoreographyAction):
         self.mode = mode
@@ -153,7 +161,7 @@ class CalibrationChoreographyPlugin(Plugin):
     @classmethod
     def user_selectable_choreography_classes(cls):
         choreo_classes = cls.registered_choreographies_by_label().values()
-        choreo_classes = filter(lambda c: c.is_user_selectable, choreo_classes)
+        # choreo_classes = filter(lambda c: c.is_user_selectable, choreo_classes) ###FIXME
         choreo_classes = sorted(choreo_classes, key=lambda c: c.label)
         return choreo_classes
 
@@ -204,7 +212,7 @@ class CalibrationChoreographyPlugin(Plugin):
 
     @selected_choreography_class.setter
     def selected_choreography_class(self, cls):
-        self.__start_plugin(cls)
+        self._start_plugin(cls)
 
     @property
     def status_text(self) -> str:
@@ -215,7 +223,8 @@ class CalibrationChoreographyPlugin(Plugin):
     def status_text(self, value: T.Any):
         value = str(value).strip() if value else ""
         ui_button = self.__mode_button(self.current_mode)
-        ui_button.status_text = value
+        if ui_button:
+            ui_button.status_text = value
 
     @property
     def pupil_list(self) -> T.List[dict]:
@@ -224,6 +233,14 @@ class CalibrationChoreographyPlugin(Plugin):
     @property
     def ref_list(self) -> T.List[dict]:
         return self.__ref_list
+
+    @pupil_list.setter
+    def pupil_list(self, value):
+        self.__pupil_list = value
+
+    @ref_list.setter
+    def ref_list(self, value):
+        self.__ref_list = value
 
     def on_choreography_started(self, mode: ChoreographyMode):
         self.notify_all(
@@ -244,7 +261,7 @@ class CalibrationChoreographyPlugin(Plugin):
     ):
         if mode == ChoreographyMode.CALIBRATION:
             calib_data = {"ref_list": ref_list, "pupil_list": pupil_list}
-            self.__start_plugin(self.selected_gazer_class, calib_data=calib_data)
+            self._start_plugin(self.selected_gazer_class, calib_data=calib_data)
         elif mode == ChoreographyMode.VALIDATION:
             # ts = self.g_pool.get_timestamp()
             # self.notify_all({"subject": "start_plugin", "name": "Accuracy_Visualizer"})
@@ -368,7 +385,9 @@ class CalibrationChoreographyPlugin(Plugin):
         try:
             note = ChoreographyNotification.from_dict(note_dict)
         except ValueError:
-            return  # Disregard notifications other than choreography notifications
+            note_name = note_dict.get("topic", None) or note_dict.get("subject", None)
+            logger.debug(f"Disregarding notification: {note_name}")
+            return
 
         if note.action == ChoreographyAction.SHOULD_START:
             if self.is_active:
@@ -457,6 +476,11 @@ class CalibrationChoreographyPlugin(Plugin):
                 mode=current_mode, pupil_list=pupil_list, ref_list=ref_list
             )
 
+    def _start_plugin(self, plugin_cls, **kwargs):
+        self.notify_all(
+            {"subject": "start_plugin", "name": plugin_cls.__name__, "args": kwargs}
+        )
+
     ### Private
 
     def __toggle_mode_button_visibility(self, is_visible: bool, mode: ChoreographyMode):
@@ -486,11 +510,6 @@ class CalibrationChoreographyPlugin(Plugin):
             self._signal_should_start(mode=mode)
         else:
             self._signal_should_stop(mode=mode)
-
-    def __start_plugin(self, plugin_cls, **kwargs):
-        self.notify_all(
-            {"subject": "start_plugin", "name": plugin_cls.__name__, "args": kwargs}
-        )
 
     def __mode_button(self, mode: ChoreographyMode):
         if mode == ChoreographyMode.CALIBRATION:

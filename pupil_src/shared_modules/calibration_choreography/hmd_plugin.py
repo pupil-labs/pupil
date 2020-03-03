@@ -15,7 +15,7 @@ import typing as T
 
 import file_methods as fm
 from pyglui import ui
-from gaze_mapping import GazerHMD2D_v1x, GazerHMD3D_v1x
+from gaze_mapping import GazerHMD3D_v1x
 
 from .base_plugin import (
     CalibrationChoreographyPlugin,
@@ -62,18 +62,18 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
 
     def on_notify(self, note_dict):
         try:
-            note = ChoreographyNotification.from_dict(note_dict, allow_extra_keys=True)
-
+            note = ChoreographyNotification.from_dict(note_dict)
+        except ValueError:
+            note_name = note_dict.get("topic", None) or note_dict.get("subject", None)
+            logger.debug(f"Disregarding notification: {note_name}")
+            return
+        else:
             if note.action == ChoreographyAction.SHOULD_START and not self.is_active:
                 self._prepare_perform_start_from_notification(note_dict)
 
             elif note.action == ChoreographyAction.ADD_REF_DATA and self.is_active:
                 self.ref_list += note_dict["ref_data"]
 
-        except (ValueError, KeyError) as err:
-            logger.error(f"Notification: {note_dict} not conform. Raised error {err}")
-
-        else:
             super().on_notify(note_dict)
 
     ### Internal
@@ -102,7 +102,7 @@ class HMD2DChoreographyPlugin(_BaseHMDChoreographyPlugin):
         self, mode: ChoreographyMode, pupil_list: list, ref_list: list
     ):
         if mode == ChoreographyMode.CALIBRATION:
-            self.__start_plugin(
+            self._start_plugin(
                 self.selected_gazer_class,
                 hmd_video_frame_size=self.__hmd_video_frame_size,
                 outlier_threshold=self.__outlier_threshold,
@@ -138,7 +138,7 @@ class HMD3DChoreographyPlugin(_BaseHMDChoreographyPlugin):
         self, mode: ChoreographyMode, pupil_list: list, ref_list: list
     ):
         if mode == ChoreographyMode.CALIBRATION:
-            self.__start_plugin(
+            self._start_plugin(
                 self.selected_gazer_class,
                 eye_translations=self.__eye_translations,
                 calib_data={"ref_list": ref_list, "pupil_list": pupil_list},

@@ -147,10 +147,34 @@ class GazerBase(abc.ABC, Plugin):
                     raise  # Let offline calibration handle this one!
                 logger.error("Calibration Failed!")
                 self.alive = False
+                note = self.create_calibration_failed_notification(err)
+                self.notify_all(note)
+            except Exception as err:
+                raise CalibrationError from err
+            else:
+                self.notify_all(self.create_successful_notification())
         elif params is not None:
             self.set_params(params)
         else:
             raise ValueError("Requires either `calib_data` or `params`")
+
+    def create_successful_notification(self):
+        return {
+            "subject": "calibration.successful",
+            "method": self.__class__.__name__,
+            "timestamp": self.g_pool.get_timestamp(),
+            "record": True,
+        }
+
+    def create_calibration_failed_notification(self, error):
+        msg = error.__class__.__name__
+        logger.error(msg)
+        return {
+            "subject": "calibration.failed",
+            "reason": msg,
+            "timestamp": self.g_pool.get_timestamp(),
+            "record": True,
+        }
 
     def init_ui(self):
         self.add_menu()

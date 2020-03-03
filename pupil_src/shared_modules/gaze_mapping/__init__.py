@@ -13,10 +13,10 @@ from . import gazer_base
 from .gazer_base import CalibrationError
 from .gazer_2d_v1x import Gazer2D_v1x
 from .gazer_3d_v1x import Gazer3D_v1x
-from .gazer_hmd_v1x import GazerHMD2D_v1x, GazerHMD3D_v1x
+from .gazer_hmd_v1x import GazerHMD3D_v1x
 
+registered_gazer_classes = [Gazer2D_v1x, Gazer3D_v1x, GazerHMD3D_v1x]
 
-registered_gazer_classes = [Gazer2D_v1x, Gazer3D_v1x, GazerHMD2D_v1x, GazerHMD3D_v1x]
 registered_gazer_labels_by_class_names = {
     cls.__name__: cls.label for cls in registered_gazer_classes
 }
