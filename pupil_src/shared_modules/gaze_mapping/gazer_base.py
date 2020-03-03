@@ -130,7 +130,6 @@ class GazerBase(abc.ABC, Plugin):
     # -- Plugin Functions
 
     def __init__(self, g_pool, *, calib_data=None, params=None):
-        logger.info(f"==> GAZE INIT: {self.__class__.__name__} {__name__}")
         super().__init__(g_pool)
         if None not in (calib_data, params):
             raise ValueError("`calib_data` and `params` are mutually exclusive")

@@ -61,27 +61,20 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
             self.pupil_list.extend(events["pupil"])
 
     def on_notify(self, note_dict):
-        logger.info(note_dict.get("topic", None) or note_dict.get("subject", None))
-
         try:
-            note = ChoreographyNotification.from_dict(note_dict, allow_extra_keys=True)
-
+            note = ChoreographyNotification.from_dict(note_dict)
+        except ValueError:
+            note_name = note_dict.get("topic", None) or note_dict.get("subject", None)
+            logger.debug(f"Disregarding notification: {note_name}")
+            return
+        else:
             if note.action == ChoreographyAction.SHOULD_START and not self.is_active:
                 self._prepare_perform_start_from_notification(note_dict)
 
             elif note.action == ChoreographyAction.ADD_REF_DATA and self.is_active:
-                logger.info(f"ADDING REF DATA, LEN = {len(self.ref_list)}")
-                logger.info(f"ADDING REF DATA, IS ACTIVE = {self.is_active}")
                 self.ref_list += note_dict["ref_data"]
 
-        except (ValueError, KeyError) as err:
-            logger.error(
-                f"Notification: {note_dict.keys()} not conform. Raised error {err}"
-            )
-
-        else:
             super().on_notify(note_dict)
-            logger.info(f"IS ACTIVE = {self.is_active}")
 
     ### Internal
 
