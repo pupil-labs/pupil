@@ -47,7 +47,6 @@ class ChoreographyAction(enum.Enum):
     ADD_REF_DATA = "add_ref_data"
 
 
-
 class ChoreographyNotification:
     __slots__ = ("mode", "action")
 
@@ -229,8 +228,7 @@ class CalibrationChoreographyPlugin(Plugin):
     def on_choreography_started(self, mode: ChoreographyMode):
         self.notify_all(
             ChoreographyNotification(
-                mode=mode,
-                action=ChoreographyAction.STARTED,
+                mode=mode, action=ChoreographyAction.STARTED,
             ).to_dict()
         )
 

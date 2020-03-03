@@ -35,7 +35,15 @@ from calibration_routines.optimization_calibration import calibration_methods
 class GazerHMD2D_v1x(GazerBase):
     label = "HMD 2D (v1)"
 
-    def __init__(self, g_pool, *, hmd_video_frame_size, outlier_threshold, calib_data=None, params=None):
+    def __init__(
+        self,
+        g_pool,
+        *,
+        hmd_video_frame_size,
+        outlier_threshold,
+        calib_data=None,
+        params=None
+    ):
         super().__init__(g_pool, calib_data=calib_data, params=params)
         self.__hmd_video_frame_size = hmd_video_frame_size
         self.__outlier_threshold = outlier_threshold

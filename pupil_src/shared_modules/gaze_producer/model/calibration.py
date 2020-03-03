@@ -54,8 +54,7 @@ class Calibration(StorageItem):
     @property
     def result(self):
         return CalibrationResult(
-            gazer_class_name=self.gazer_class_name,
-            params=self.params,
+            gazer_class_name=self.gazer_class_name, params=self.params,
         )
 
     @result.setter

@@ -21,4 +21,3 @@ from gaze_producer.model.gaze_mapper_storage import GazeMapperStorage
 
 from gaze_producer.model.reference_location import ReferenceLocation
 from gaze_producer.model.reference_location_storage import ReferenceLocationStorage
-
