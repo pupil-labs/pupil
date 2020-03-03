@@ -51,7 +51,15 @@ class ChoreographyNotification:
     __slots__ = ("mode", "action")
 
     _REQUIRED_KEYS = {"subject"}
-    _OPTIONAL_KEYS = {"topic", "ref_data", "record", 'translation_eye0', 'translation_eye1', 'outlier_threshold', 'hmd_video_frame_size'}
+    _OPTIONAL_KEYS = {
+        "topic",
+        "ref_data",
+        "record",
+        "translation_eye0",
+        "translation_eye1",
+        "outlier_threshold",
+        "hmd_video_frame_size",
+    }
 
     def __init__(self, mode: ChoreographyMode, action: ChoreographyAction):
         self.mode = mode
@@ -237,8 +245,7 @@ class CalibrationChoreographyPlugin(Plugin):
     def on_choreography_started(self, mode: ChoreographyMode):
         self.notify_all(
             ChoreographyNotification(
-                mode=mode,
-                action=ChoreographyAction.STARTED,
+                mode=mode, action=ChoreographyAction.STARTED,
             ).to_dict()
         )
 
