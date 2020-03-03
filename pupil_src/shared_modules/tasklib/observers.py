@@ -35,11 +35,11 @@ def raise_exception(exception):
     "on_exception" for tasks.
     """
     if exception:
+        # TODO Ensure the exception's traceback is forwarded correctly
         raise exception
     else:
         stack_trace_str = "".join(traceback.format_stack())
         logger.error(
             "A background task raised an unknown exception! You might find the "
-            "causing task in this stacktrace:\n"
-            + stack_trace_str
+            "causing task in this stacktrace:\n" + stack_trace_str
         )

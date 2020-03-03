@@ -28,11 +28,11 @@ class CalibrationError(Exception):
 
 
 class NotEnoughDataError(CalibrationError):
-    pass
+    message = "Not sufficient data available."
 
 
 class FitDidNotConvergeError(CalibrationError):
-    pass
+    message = "Model fit did not converge."
 
 
 class Model(abc.ABC):
@@ -129,7 +129,9 @@ class GazerBase(abc.ABC, Plugin):
 
     # -- Plugin Functions
 
-    def __init__(self, g_pool, *, calib_data=None, params=None):
+    def __init__(
+        self, g_pool, *, calib_data=None, params=None, raise_calibration_error=False
+    ):
         super().__init__(g_pool)
         if None not in (calib_data, params):
             raise ValueError("`calib_data` and `params` are mutually exclusive")
@@ -140,7 +142,10 @@ class GazerBase(abc.ABC, Plugin):
         if calib_data is not None:
             try:
                 self.fit_on_calib_data(calib_data)
-            except CalibrationError as err:
+            except CalibrationError:
+                if raise_calibration_error:
+                    raise  # Let offline calibration handle this one!
+                logger.error("Calibration Failed!")
                 self.alive = False
                 note = self.create_calibration_failed_notification(err)
                 self.notify_all(note)

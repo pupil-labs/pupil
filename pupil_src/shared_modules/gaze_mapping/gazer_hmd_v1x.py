@@ -12,36 +12,23 @@ import logging
 import typing as T
 import numpy as np
 
-from gaze_mapping.gazer_base import (
-    GazerBase,
-    data_processing,
-    NotEnoughDataError,
-)
-from .gazer_3d_v1x import Gazer3D_v1x, Model3D_v1x_Binocular
-
-
 # TODO: See if any calibration_routines dependency can be removed
 from calibration_routines import data_processing
-from calibration_routines.finish_calibration import (
-    create_converge_error_msg,
-    create_not_enough_data_error_msg,
-)
+from calibration_routines.finish_calibration import create_converge_error_msg
+from calibration_routines.finish_calibration import create_not_enough_data_error_msg
+from calibration_routines.gaze_mappers import _clamp_norm_point, normalize
 from calibration_routines.optimization_calibration import calibration_methods
-
-
-logger = logging.getLogger(__name__)
+from calibration_routines.optimization_calibration import utils
+from calibration_routines.optimization_calibration.calibrate_3d import calibrate_hmd
 
 from gaze_mapping.gazer_base import (
     GazerBase,
     Model,
-    data_processing,
     NotEnoughDataError,
     FitDidNotConvergeError,
 )
+from .gazer_3d_v1x import Gazer3D_v1x, Model3D_v1x_Binocular
 
-from calibration_routines.gaze_mappers import _clamp_norm_point, normalize
-from calibration_routines.optimization_calibration import utils
-from calibration_routines.optimization_calibration.calibrate_3d import calibrate_hmd
 
 _REFERENCE_FEATURE_COUNT = 3
 
@@ -54,6 +41,9 @@ _BINOCULAR_FEATURE_COUNT = 14
 _BINOCULAR_EYEID = 7
 _BINOCULAR_SPHERE_CENTER = slice(8, 11)
 _BINOCULAR_PUPIL_NORMAL = slice(11, 14)
+
+
+logger = logging.getLogger(__name__)
 
 
 class ModelHMD3D_v1x(Model3D_v1x_Binocular):

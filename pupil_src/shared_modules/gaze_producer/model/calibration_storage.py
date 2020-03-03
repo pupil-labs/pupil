@@ -18,6 +18,7 @@ import make_unique
 from storage import Storage
 from gaze_producer import model
 from observable import Observable
+from gaze_mapping import default_gazer_class
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class CalibrationStorage(Storage, Observable):
             unique_id=model.Calibration.create_new_unique_id(),
             name=make_unique.by_number_at_end("Default Calibration", self.item_names),
             recording_uuid=self._recording_uuid,
-            mapping_method="3d",
+            gazer_class_name=default_gazer_class.__name__,
             frame_index_range=self._get_recording_index_range(),
             minimum_confidence=0.8,
         )
@@ -124,14 +125,12 @@ class CalibrationStorage(Storage, Observable):
         for topic, data in zip(notifications.topics, notifications.data):
             if topic == "notify.calibration.calibration_data":
                 try:
-                    calib_result = model.CalibrationResult(
-                        mapping_plugin_name=data["mapper_name"],
-                        mapper_args=dict(data["mapper_args"]),
+                    calib_result = model.CalibrationSetup(
+                        data["gazer_class_name"], dict(data["calib_data"]),
                     )
                 except KeyError:
                     # notifications from old recordings will not have these fields!
                     continue
-                mapping_method = "2d" if "2d" in data["calibration_method"] else "3d"
                 # the unique id needs to be the same at every start or otherwise the
                 # same calibrations would be added again and again. The timestamp is
                 # the easiest datum that differs between calibrations but is the same
@@ -145,7 +144,7 @@ class CalibrationStorage(Storage, Observable):
                         "Recorded Calibration", self.item_names
                     ),
                     recording_uuid=self._recording_uuid,
-                    mapping_method=mapping_method,
+                    gazer_class_name=gazer_class_name,
                     frame_index_range=self._get_recording_index_range(),
                     minimum_confidence=0.8,
                     is_offline_calibration=False,

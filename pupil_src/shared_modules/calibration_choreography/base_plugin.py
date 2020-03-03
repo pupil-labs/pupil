@@ -92,7 +92,7 @@ class ChoreographyNotification:
 
         mode, action = note["subject"].split(".")
         return ChoreographyNotification(
-            mode=ChoreographyMode(mode), action=ChoreographyAction(action)
+            mode=ChoreographyMode(mode), action=ChoreographyAction(action),
         )
 
 

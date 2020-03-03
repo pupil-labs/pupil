@@ -91,7 +91,7 @@ class HMD2DChoreographyPlugin(_BaseHMDChoreographyPlugin):
 
     @classmethod
     def supported_gazer_classes(cls):
-        return [GazerHMD3D_v1x]
+        return [GazerHMD2D_v1x]
 
     def __init__(self, g_pool):
         super().__init__(g_pool)

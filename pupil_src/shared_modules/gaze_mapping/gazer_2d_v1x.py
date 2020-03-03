@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import logging
 import typing as T
 import numpy as np
 
@@ -21,6 +22,10 @@ from calibration_routines.optimization_calibration.calibrate_2d import (
     calibrate_2d_polynomial,
     make_map_function,
 )
+
+
+logger = logging.getLogger(__name__)
+
 
 _REFERENCE_FEATURE_COUNT = 2
 
@@ -43,6 +48,7 @@ class Model2D_v1x(Model):
     def set_params(self, params, map_fn=None):
         self._map_fn = map_fn or make_map_function(*params)
         self._params = params
+        self._is_fitted = True
 
     def get_params(self):
         return {"params": self._params}
@@ -121,23 +127,46 @@ class Gazer2D_v1x(GazerBase):
     ) -> T.Iterator["Gaze"]:
         for pupil_match in matched_pupil_data:
             num_matched = len(pupil_match)
+            gaze_positions = ...  # Placeholder for gaze_positions
 
-            if num_matched == 2 and self.binocular_model.is_fitted:
-                right = self._extract_pupil_features([pupil_match[0]])
-                left = self._extract_pupil_features([pupil_match[1]])
-                X = np.hstack([left, right])
-                assert X.shape[1] == _BINOCULAR_FEATURE_COUNT
-                gaze_positions = self.binocular_model.predict(X)
-                topic = "gaze.2d.01."
+            if num_matched == 2:
+                if self.binocular_model.is_fitted:
+                    right = self._extract_pupil_features([pupil_match[0]])
+                    left = self._extract_pupil_features([pupil_match[1]])
+                    X = np.hstack([left, right])
+                    assert X.shape[1] == _BINOCULAR_FEATURE_COUNT
+                    gaze_positions = self.binocular_model.predict(X)
+                    topic = "gaze.2d.01."
+                else:
+                    logger.debug(
+                        "Prediction failed because binocular model is not fitted"
+                    )
             elif num_matched == 1:
                 X = self._extract_pupil_features([pupil_match[0]])
                 assert X.shape[1] == _MONOCULAR_FEATURE_COUNT
-                if pupil_match[0]["id"] == 0 and self.right_model.is_fitted:
-                    gaze_positions = self.right_model.predict(X)
-                    topic = "gaze.2d.0."
-                elif pupil_match[0]["id"] == 1 and self.left_model.is_fitted:
-                    gaze_positions = self.left_model.predict(X)
-                    topic = "gaze.2d.1."
+                if pupil_match[0]["id"] == 0:
+                    if self.right_model.is_fitted:
+                        gaze_positions = self.right_model.predict(X)
+                        topic = "gaze.2d.0."
+                    else:
+                        logger.debug(
+                            "Prediction failed because right model is not fitted"
+                        )
+                elif pupil_match[0]["id"] == 1:
+                    if self.left_model.is_fitted:
+                        gaze_positions = self.left_model.predict(X)
+                        topic = "gaze.2d.1."
+                    else:
+                        logger.debug(
+                            "Prediction failed because left model is not fitted"
+                        )
+            else:
+                raise ValueError(
+                    f"Unexpected number of matched pupil_data: {num_matched}"
+                )
+
+            if gaze_positions is ...:
+                continue  # Prediction failed and the reason was logged
 
             for gaze_pos in gaze_positions:
                 gaze_datum = {

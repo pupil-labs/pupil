@@ -14,9 +14,8 @@ from storage import StorageItem
 
 # this plugin does not care about the content of the result, it just receives it from
 # the calibration routine and handles it to the gaze mapper
-CalibrationResult = namedtuple(
-    "CalibrationResult", ["mapping_plugin_name", "mapper_args"]
-)
+CalibrationSetup = namedtuple("CalibrationResult", ["gazer_class_name", "calib_data"])
+CalibrationResult = namedtuple("CalibrationResult", ["gazer_class_name", "params"])
 
 
 class Calibration(StorageItem):
@@ -27,7 +26,7 @@ class Calibration(StorageItem):
         unique_id,
         name,
         recording_uuid,
-        mapping_method,
+        gazer_class_name,
         frame_index_range,
         minimum_confidence,
         status="Not calculated yet",
@@ -37,18 +36,31 @@ class Calibration(StorageItem):
         self.unique_id = unique_id
         self.name = name
         self.recording_uuid = recording_uuid
-        self.mapping_method = mapping_method
+        self.gazer_class_name = gazer_class_name
         self.frame_index_range = frame_index_range
         self.minimum_confidence = minimum_confidence
         self.status = status
         self.is_offline_calibration = is_offline_calibration
-        if result is None or isinstance(result, CalibrationResult):
-            self.result = result
+        if result is None:
+            self.params = result
+        elif isinstance(result, CalibrationResult):
+            self.params = result.params
         else:
             # when reading from files, we receive a list with the result data.
             # This logic actually belongs to 'from_tuple', but it's here because
             # otherwise 'from_tuple' would become much uglier
-            self.result = CalibrationResult(*result)
+            self.params = CalibrationResult(*result).params
+
+    @property
+    def result(self):
+        return CalibrationResult(
+            gazer_class_name=self.gazer_class_name, params=self.params,
+        )
+
+    @result.setter
+    def result(self, value: CalibrationResult):
+        self.gazer_class_name = value.gazer_class_name
+        self.params = value.params
 
     @staticmethod
     def from_tuple(tuple_):
@@ -60,7 +72,7 @@ class Calibration(StorageItem):
             self.unique_id,
             self.name,
             self.recording_uuid,
-            self.mapping_method,
+            self.gazer_class_name,
             self.frame_index_range,
             self.minimum_confidence,
             self.status,
