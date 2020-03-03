@@ -109,7 +109,7 @@ class HMD2DChoreographyPlugin(_BaseHMDChoreographyPlugin):
         self, mode: ChoreographyMode, pupil_list: list, ref_list: list
     ):
         if mode == ChoreographyMode.CALIBRATION:
-            self.__start_plugin(
+            self._start_plugin(
                 self.selected_gazer_class,
                 hmd_video_frame_size=self.__hmd_video_frame_size,
                 outlier_threshold=self.__outlier_threshold,
@@ -145,7 +145,7 @@ class HMD3DChoreographyPlugin(_BaseHMDChoreographyPlugin):
         self, mode: ChoreographyMode, pupil_list: list, ref_list: list
     ):
         if mode == ChoreographyMode.CALIBRATION:
-            self.__start_plugin(
+            self._start_plugin(
                 self.selected_gazer_class,
                 eye_translations=self.__eye_translations,
                 calib_data={"ref_list": ref_list, "pupil_list": pupil_list},
@@ -154,11 +154,6 @@ class HMD3DChoreographyPlugin(_BaseHMDChoreographyPlugin):
             raise NotImplementedError()
         else:
             raise UnsupportedChoreographyModeError(mode)
-
-    def __start_plugin(self, plugin_cls, **kwargs):
-        self.notify_all(
-            {"subject": "start_plugin", "name": plugin_cls.__name__, "args": kwargs}
-        )
 
     ### Internal
 

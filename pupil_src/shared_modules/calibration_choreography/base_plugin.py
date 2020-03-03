@@ -204,7 +204,7 @@ class CalibrationChoreographyPlugin(Plugin):
 
     @selected_choreography_class.setter
     def selected_choreography_class(self, cls):
-        self.__start_plugin(cls)
+        self._start_plugin(cls)
 
     @property
     def status_text(self) -> str:
@@ -254,7 +254,7 @@ class CalibrationChoreographyPlugin(Plugin):
     ):
         if mode == ChoreographyMode.CALIBRATION:
             calib_data = {"ref_list": ref_list, "pupil_list": pupil_list}
-            self.__start_plugin(self.selected_gazer_class, calib_data=calib_data)
+            self._start_plugin(self.selected_gazer_class, calib_data=calib_data)
         elif mode == ChoreographyMode.VALIDATION:
             # ts = self.g_pool.get_timestamp()
             # self.notify_all({"subject": "start_plugin", "name": "Accuracy_Visualizer"})
@@ -469,6 +469,11 @@ class CalibrationChoreographyPlugin(Plugin):
                 mode=current_mode, pupil_list=pupil_list, ref_list=ref_list
             )
 
+    def _start_plugin(self, plugin_cls, **kwargs):
+        self.notify_all(
+            {"subject": "start_plugin", "name": plugin_cls.__name__, "args": kwargs}
+        )
+
     ### Private
 
     def __toggle_mode_button_visibility(self, is_visible: bool, mode: ChoreographyMode):
@@ -498,11 +503,6 @@ class CalibrationChoreographyPlugin(Plugin):
             self._signal_should_start(mode=mode)
         else:
             self._signal_should_stop(mode=mode)
-
-    def __start_plugin(self, plugin_cls, **kwargs):
-        self.notify_all(
-            {"subject": "start_plugin", "name": plugin_cls.__name__, "args": kwargs}
-        )
 
     def __mode_button(self, mode: ChoreographyMode):
         if mode == ChoreographyMode.CALIBRATION:
