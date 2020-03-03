@@ -161,7 +161,7 @@ class CalibrationChoreographyPlugin(Plugin):
     @classmethod
     def user_selectable_choreography_classes(cls):
         choreo_classes = cls.registered_choreographies_by_label().values()
-        # choreo_classes = filter(lambda c: c.is_user_selectable, choreo_classes) ###FIXME
+        choreo_classes = filter(lambda c: c.is_user_selectable, choreo_classes)
         choreo_classes = sorted(choreo_classes, key=lambda c: c.label)
         return choreo_classes
 
