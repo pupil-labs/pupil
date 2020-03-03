@@ -55,7 +55,7 @@ class GazeMapperController(Observable):
                 "please select a different calibration!".format(gaze_mapper.name),
             )
             return None
-        if calibration.result is None:
+        if calibration.params is None:
             self._abort_calculation(
                 gaze_mapper,
                 "You first need to calculate calibration '{}' before calculating the "

@@ -42,8 +42,10 @@ class GazeMapperMenu(plugin_ui.StorageEditMenu):
         gaze_mapper_controller.add_observer(
             "on_gaze_mapping_calculated", self._on_gaze_mapping_calculated
         )
-        gaze_mapper_controller.add_observer("on_calculation_could_not_be_started",
-                                            self._on_calculation_could_not_be_started)
+        gaze_mapper_controller.add_observer(
+            "on_calculation_could_not_be_started",
+            self._on_calculation_could_not_be_started,
+        )
 
     def _item_label(self, gaze_mapper):
         return gaze_mapper.name
