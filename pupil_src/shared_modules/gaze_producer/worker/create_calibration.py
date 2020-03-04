@@ -92,7 +92,7 @@ def _create_calibration(
             f"Calibration failed! {gazer_class_name} is not in list of known gazers: "
             f"{list(registered_gazer_classes_by_name.keys())}"
         )
-        status = "Unknown mapping method"
+        status = f"Unknown gazer class: {gazer_class_name}"
         calibration_result = None
         return status, calibration_result
 
