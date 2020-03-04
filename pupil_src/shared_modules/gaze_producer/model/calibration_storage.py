@@ -18,7 +18,9 @@ import make_unique
 from storage import Storage
 from gaze_producer import model
 from observable import Observable
-from gaze_mapping import default_gazer_class
+from gaze_mapping import default_gazer_class, registered_gazer_labels_by_class_names
+from gaze_mapping.notifications import CalibrationSetupNotification, CalibrationResultNotification
+
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +49,33 @@ class CalibrationStorage(Storage, Observable):
             gazer_class_name=default_gazer_class.__name__,
             frame_index_range=self._get_recording_index_range(),
             minimum_confidence=0.8,
+            is_offline_calibration=True,
+            status="Not calculated yet",
+        )
+
+    def __create_prerecorded_calibration(self, result_notification: CalibrationResultNotification):
+        timestamp = result_notification.timestamp
+
+        # the unique id needs to be the same at every start or otherwise the
+        # same calibrations would be added again and again. The timestamp is
+        # the easiest datum that differs between calibrations but is the same
+        # for every start
+        unique_id = model.Calibration.create_unique_id_from_string(
+            str(timestamp)
+        )
+        name = make_unique.by_number_at_end(
+            "Recorded Calibration", self.item_names
+        )
+        return model.Calibration(
+            unique_id=unique_id,
+            name=name,
+            recording_uuid=self._recording_uuid,
+            gazer_class_name=result_notification.gazer_class_name,
+            frame_index_range=self._get_recording_index_range(),
+            minimum_confidence=0.8,
+            is_offline_calibration=True,
+            status="Not calculated yet",
+            calib_params=result_notification.params,
         )
 
     def duplicate_calibration(self, calibration):
@@ -111,46 +140,40 @@ class CalibrationStorage(Storage, Observable):
 
     def _load_calibration_from_file(self, file_name):
         file_path = os.path.join(self._calibration_folder, file_name)
-        calibration_tuple = self._load_data_from_file(file_path)
-        if calibration_tuple:
-            calibration = model.Calibration.from_tuple(calibration_tuple)
-            if not self._from_same_recording(calibration):
-                # the index range from another recording is useless and can lead
-                # to confusion if it is rendered somewhere
-                calibration.frame_index_range = [0, 0]
-            self.add(calibration)
+        calibration_dict = self._load_data_from_file(file_path)
+        if not calibration_dict:
+            return
+        try:
+            calibration = model.Calibration.from_dict(calibration_dict)
+        except ValueError as err:
+            logger.debug(str(err))
+            return
+        if not self._from_same_recording(calibration):
+            # the index range from another recording is useless and can lead
+            # to confusion if it is rendered somewhere
+            calibration.frame_index_range = [0, 0]
+        self.add(calibration)
 
     def _load_recorded_calibrations(self):
         notifications = fm.load_pldata_file(self._rec_dir, "notify")
         for topic, data in zip(notifications.topics, notifications.data):
-            if topic == "notify.calibration.calibration_data":
-                try:
-                    calib_result = model.CalibrationSetup(
-                        data["gazer_class_name"], dict(data["calib_data"]),
-                    )
-                except KeyError:
-                    # notifications from old recordings will not have these fields!
-                    continue
-                # the unique id needs to be the same at every start or otherwise the
-                # same calibrations would be added again and again. The timestamp is
-                # the easiest datum that differs between calibrations but is the same
-                # for every start
-                unique_id = model.Calibration.create_unique_id_from_string(
-                    str(data["timestamp"])
-                )
-                calibration = model.Calibration(
-                    unique_id=unique_id,
-                    name=make_unique.by_number_at_end(
-                        "Recorded Calibration", self.item_names
-                    ),
-                    recording_uuid=self._recording_uuid,
-                    gazer_class_name=gazer_class_name,
-                    frame_index_range=self._get_recording_index_range(),
-                    minimum_confidence=0.8,
-                    is_offline_calibration=False,
-                    result=calib_result,
-                )
-                self.add(calibration)
+            if topic.startswith("notify."):
+                # Remove "notify." prefix
+                data = dict(data)
+                data["subject"] = data["topic"][len("notify."):]
+                del data["topic"]
+            else:
+                continue
+            if CalibrationResultNotification.calibration_format_version() != model.Calibration.version:
+                logger.debug(f"Must update CalibrationResultNotification to match Calibration version")
+                continue
+            try:
+                note = CalibrationResultNotification.from_dict(data)
+            except ValueError as err:
+                logger.debug(str(err))
+                continue
+            calibration = self.__create_prerecorded_calibration(result_notification=note)
+            self.add(calibration)
 
     def save_to_disk(self):
         os.makedirs(self._calibration_folder, exist_ok=True)
