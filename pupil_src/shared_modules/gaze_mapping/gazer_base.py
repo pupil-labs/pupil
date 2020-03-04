@@ -11,14 +11,23 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import itertools
 import logging
+import os
 import typing as T
 
 import numpy as np
 
 from plugin import Plugin
 from calibration_routines import data_processing
+import file_methods as fm
 
 from .matching import RealtimeMatcher
+from .notifications import (
+    CalibrationSuccessNotification,
+    CalibrationFailureNotification,
+    CalibrationSetupNotification,
+    CalibrationResultNotification,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -140,41 +149,27 @@ class GazerBase(abc.ABC, Plugin):
         self.init_matcher()
 
         if calib_data is not None:
+            self._announce_calibration_setup(calib_data=calib_data)
             try:
                 self.fit_on_calib_data(calib_data)
             except CalibrationError:
+                # self._announce_calibration_failure(reason=)  #TODO: Does this go here???
                 if raise_calibration_error:
                     raise  # Let offline calibration handle this one!
                 logger.error("Calibration Failed!")
                 self.alive = False
-                note = self.create_calibration_failed_notification(err)
-                self.notify_all(note)
+                self._announce_calibration_failure(reason=CalibrationError.__name__)
             except Exception as err:
+                self._announce_calibration_failure(reason=err.__class__.__name__)
                 raise CalibrationError from err
             else:
-                self.notify_all(self.create_successful_notification())
+                self._announce_calibration_success()
+                self._announce_calibration_result(params=self.get_params())
         elif params is not None:
             self.set_params(params)
+            # TODO: Do we need to announce calibration result here?
         else:
             raise ValueError("Requires either `calib_data` or `params`")
-
-    def create_successful_notification(self):
-        return {
-            "subject": "calibration.successful",
-            "method": self.__class__.__name__,
-            "timestamp": self.g_pool.get_timestamp(),
-            "record": True,
-        }
-
-    def create_calibration_failed_notification(self, error):
-        msg = error.__class__.__name__
-        logger.error(msg)
-        return {
-            "subject": "calibration.failed",
-            "reason": msg,
-            "timestamp": self.g_pool.get_timestamp(),
-            "record": True,
-        }
 
     def init_ui(self):
         self.add_menu()
@@ -235,6 +230,52 @@ class GazerBase(abc.ABC, Plugin):
             self._fit_monocular_model(self.left_model, matches.left)
         else:
             raise NotEnoughDataError
+
+    def _announce_calibration_success(self):
+        self.notify_all(
+            CalibrationSuccessNotification(
+                gazer_class_name=self.__class__.__name__,
+                timestamp=self.g_pool.get_timestamp(),
+                record=True,
+            ).as_dict()
+        )
+
+    def _announce_calibration_failure(self, reason: str):
+        logger.error(reason)
+        self.notify_all(
+            CalibrationFailureNotification(
+                reason=reason,
+                gazer_class_name=self.__class__.__name__,
+                timestamp=self.g_pool.get_timestamp(),
+                record=True,
+            ).as_dict()
+        )
+
+    def _announce_calibration_setup(self, calib_data):
+        note = CalibrationSetupNotification(
+            calib_data=calib_data,
+            gazer_class_name=self.__class__.__name__,
+            timestamp=self.g_pool.get_timestamp(),
+            record=True,
+        )
+        note_dict = note.as_dict()
+        if hasattr(self.g_pool, "user_dir"):
+            file_path = os.path.join(self.g_pool.user_dir, note.file_name())
+            fm.save_object(note_dict, file_path)
+        self.notify_all(note_dict)
+
+    def _announce_calibration_result(self, params):
+        note = CalibrationResultNotification(
+            params=params,
+            gazer_class_name=self.__class__.__name__,
+            timestamp=self.g_pool.get_timestamp(),
+            record=True,
+        )
+        note_dict = note.as_dict()
+        if hasattr(self.g_pool, "user_dir"):
+            file_path = os.path.join(self.g_pool.user_dir, note.file_name())
+            fm.save_object(note_dict, file_path)
+        self.notify_all(note_dict)
 
     def _fit_binocular_model(self, model: Model, matched_data: T.Iterable):
         X, Y = self.extract_features_from_matches_binocular(matched_data)
