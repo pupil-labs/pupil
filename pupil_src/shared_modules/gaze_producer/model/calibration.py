@@ -12,6 +12,8 @@ from collections import namedtuple
 import copy
 import typing as T
 
+import file_methods as fm
+
 from storage import StorageItem
 
 # this plugin does not care about the content of the result, it just receives it from
@@ -79,7 +81,9 @@ class Calibration(StorageItem):
     @property
     def as_dict(self) -> dict:
         self.__assert_property_consistency()  #sanity check
-        return {k: v(self) for (k, v) in self.__schema}
+        dict_ = {k: v(self) for (k, v) in self.__schema}
+        dict_ = fm._recursive_deep_copy(dict_)
+        return dict_
 
     @staticmethod
     def from_tuple(tuple_):

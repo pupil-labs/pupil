@@ -182,7 +182,7 @@ class CalibrationStorage(Storage, Observable):
         )
         for calibration in calibrations_from_same_recording:
             self._save_data_to_file(
-                self._calibration_file_path(calibration), calibration.as_tuple
+                self._calibration_file_path(calibration), calibration.as_dict
             )
 
     def _from_same_recording(self, calibration):
