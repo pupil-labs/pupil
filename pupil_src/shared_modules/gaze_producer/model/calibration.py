@@ -9,6 +9,8 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 from collections import namedtuple
+import copy
+import typing as T
 
 from storage import StorageItem
 
@@ -19,63 +21,100 @@ CalibrationResult = namedtuple("CalibrationResult", ["gazer_class_name", "params
 
 
 class Calibration(StorageItem):
-    version = 1
+    version = 2
 
     def __init__(
         self,
+        *,
         unique_id,
         name,
         recording_uuid,
         gazer_class_name,
         frame_index_range,
         minimum_confidence,
-        status="Not calculated yet",
-        is_offline_calibration=True,
-        result=None,
+        status: str,
+        is_offline_calibration: bool,
+        calib_data: T.Optional[T.Any] = None,
+        calib_params: T.Optional[T.Any] = None,
     ):
-        self.unique_id = unique_id
+        # Set arbitrarily mutable properties
         self.name = name
+        self.unique_id = unique_id
         self.recording_uuid = recording_uuid
         self.gazer_class_name = gazer_class_name
         self.frame_index_range = frame_index_range
         self.minimum_confidence = minimum_confidence
         self.status = status
-        self.is_offline_calibration = is_offline_calibration
-        if result is None:
-            self.params = result
-        elif isinstance(result, CalibrationResult):
-            self.params = result.params
-        else:
-            # when reading from files, we receive a list with the result data.
-            # This logic actually belongs to 'from_tuple', but it's here because
-            # otherwise 'from_tuple' would become much uglier
-            self.params = CalibrationResult(*result).params
+
+        # Set immutable properties or properties that must be mutated in a consistent way
+        self.__is_offline_calibration = is_offline_calibration
+        self.__calib_data = calib_data
+        self.__calib_params = calib_params
+
+        # Assert all properties are consistent
+        self.__assert_property_consistency()
 
     @property
-    def result(self):
-        return CalibrationResult(
-            gazer_class_name=self.gazer_class_name, params=self.params,
-        )
+    def is_offline_calibration(self) -> bool:
+        return self.__is_offline_calibration
 
-    @result.setter
-    def result(self, value: CalibrationResult):
-        self.gazer_class_name = value.gazer_class_name
-        self.params = value.params
+    @property
+    def calib_data(self) -> T.Optional[T.Any]:
+        return self.__calib_data
+
+    @property
+    def params(self) -> T.Optional[T.Any]:
+        return self.__calib_params
+
+    @staticmethod
+    def from_dict(dict_: dict) -> "Calibration":
+        try:
+            if dict_["version"] != Calibration.version:
+                raise ValueError(f"Model version missmatch")
+            del dict_["version"]
+            return Calibration(**dict_)
+        except (KeyError, ValueError, TypeError) as err:
+            raise ValueError(str(err))
+
+    @property
+    def as_dict(self) -> dict:
+        self.__assert_property_consistency()  #sanity check
+        return {k: v(self) for (k, v) in self.__schema}
 
     @staticmethod
     def from_tuple(tuple_):
-        return Calibration(*tuple_)
+        keys = [k for (k, _) in Calibration.__schema]
+        dict_ = dict(zip(keys, tuple_))
+        return Calibration.from_dict(dict_)
 
     @property
     def as_tuple(self):
-        return (
-            self.unique_id,
-            self.name,
-            self.recording_uuid,
-            self.gazer_class_name,
-            self.frame_index_range,
-            self.minimum_confidence,
-            self.status,
-            self.is_offline_calibration,
-            self.result,
-        )
+        keys = [k for (k, _) in Calibration.__schema]
+        dict_ = self.as_dict
+        return tuple(dict_[k] for k in keys)
+
+    ### Private
+
+    __schema = (
+        ("version", lambda self: self.version),
+        ("unique_id", lambda self: self.unique_id),
+        ("name", lambda self: self.name),
+        ("recording_uuid", lambda self: self.recording_uuid),
+        ("gazer_class_name", lambda self: self.gazer_class_name),
+        ("frame_index_range", lambda self: self.frame_index_range),
+        ("minimum_confidence", lambda self: self.minimum_confidence),
+        ("status", lambda self: self.status),
+        ("is_offline_calibration", lambda self: self.__is_offline_calibration),
+        ("calib_data", lambda self: self.__calib_data),
+        ("calib_params", lambda self: self.__calib_params),
+    )
+
+    def __assert_property_consistency(self):
+        if self.__is_offline_calibration:
+            if self.__calib_data is not None:
+                raise ValueError(f"Unexpected calib_data argument for offline calibration")
+        else:
+            if self.__calib_params is not None:
+                raise ValueError(f"Unexpected calib_params argument for pre-recorded calibration")
+            if self.__calib_data is None:
+                raise ValueError(f"Expected calib_data argument for pre-recorded calibration")
