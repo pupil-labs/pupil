@@ -197,9 +197,9 @@ class GazerBase(abc.ABC, Plugin):
 
     def get_params(self):
         return {
-            "left_model": self.left_model.get_params(),
-            "right_model": self.right_model.get_params(),
-            "binocular_model": self.binocular_model.get_params(),
+            "left_model": dict(self.left_model.get_params()),
+            "right_model": dict(self.right_model.get_params()),
+            "binocular_model": dict(self.binocular_model.get_params()),
         }
 
     def set_params(self, params):
