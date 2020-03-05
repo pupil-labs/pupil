@@ -54,7 +54,12 @@ class Calibration(StorageItem):
         self.__calib_params = calib_params
 
         # Assert all properties are consistent
-        self.__assert_property_consistency()
+        try:
+            self.__assert_property_consistency()
+        except ValueError:
+            raise
+        except Exception as err:
+            raise ValueError(str(err))
 
     @property
     def is_offline_calibration(self) -> bool:
@@ -65,8 +70,13 @@ class Calibration(StorageItem):
         return self.__calib_data
 
     @property
-    def params(self) -> T.Optional[T.Any]:
+    def calib_params(self) -> T.Optional[T.Any]:
         return self.__calib_params
+
+    @property
+    def params(self) -> T.Optional[T.Any]:
+        """Alias for calib_params"""
+        return self.calib_params
 
     @staticmethod
     def from_dict(dict_: dict) -> "Calibration":
