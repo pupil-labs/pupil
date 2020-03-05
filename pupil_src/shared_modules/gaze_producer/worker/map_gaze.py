@@ -29,7 +29,8 @@ def create_task(gaze_mapper, calibration):
     )
 
     # Make a copy of params to ensure there are no mappingproxy instances
-    calibration_params = fm._recursive_deep_copy(calibration.params)
+    # calibration_params = fm._recursive_deep_copy(calibration.params)
+    calibration_params = calibration.params
 
     args = (
         calibration.gazer_class_name,

@@ -111,7 +111,7 @@ class Calibration(StorageItem):
     def as_dict(self) -> dict:
         self.__assert_property_consistency()  # sanity check
         dict_ = {k: v(self) for (k, v) in self.__schema}
-        dict_ = fm._recursive_deep_copy(dict_)
+        # dict_ = fm._recursive_deep_copy(dict_)
         return dict_
 
     @staticmethod
