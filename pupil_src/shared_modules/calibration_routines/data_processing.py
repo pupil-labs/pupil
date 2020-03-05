@@ -106,6 +106,8 @@ def _match_data(pupil_list, ref_list):
 
 
 def _match_data_batch(pupil_list, ref_list):
+    assert pupil_list
+    assert ref_list
     pupil0 = [p for p in pupil_list if p["id"] == 0]
     pupil1 = [p for p in pupil_list if p["id"] == 1]
 
