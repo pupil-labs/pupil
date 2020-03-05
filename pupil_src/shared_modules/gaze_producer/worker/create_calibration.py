@@ -66,7 +66,7 @@ def _create_ref_dict(ref):
     }
 
 
-class _FakeGpool(SimpleNamespace):
+class _FakeGpool:
 
     class _FakeIPC(SimpleNamespace):
         def notify(self, notification, *args, **kwargs):
@@ -84,7 +84,6 @@ class _FakeGpool(SimpleNamespace):
         self.rec_dir = rec_dir
         self.app = "player"
         self.ipc_pub = _FakeGpool._FakeIPC()
-
 
 
 def _create_calibration(
