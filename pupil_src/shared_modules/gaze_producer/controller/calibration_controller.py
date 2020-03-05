@@ -32,10 +32,11 @@ class CalibrationController(Observable):
     def calculate(self, calibration):
         def on_calibration_completed(status_and_result):
             calibration.status, result = status_and_result
-            calibration.gazer_class_name = result.gazer_class_name
-            calibration.update(calib_params=result.params, calib_data=None)
-            self._calibration_storage.save_to_disk()
-            self.on_calibration_computed(calibration)
+            if result is not None:
+                calibration.gazer_class_name = result.gazer_class_name
+                calibration.update(calib_params=result.params, calib_data=None)
+                self._calibration_storage.save_to_disk()
+                self.on_calibration_computed(calibration)
 
         task = worker.create_calibration.create_task(
             calibration, all_reference_locations=self._reference_location_storage
