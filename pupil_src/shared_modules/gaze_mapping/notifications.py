@@ -92,6 +92,7 @@ class _CalibrationSuccessFields(T.NamedTuple):
 
 
 class _CalibrationFailureFields(T.NamedTuple):
+    reason: str
     gazer_class_name: str
     timestamp: float
     record: bool = False
