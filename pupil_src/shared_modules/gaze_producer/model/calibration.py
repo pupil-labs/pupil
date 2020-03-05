@@ -80,7 +80,7 @@ class Calibration(StorageItem):
 
     def update(
         self,
-        is_offline_calibration: bool = ..., 
+        is_offline_calibration: bool = ...,
         calib_data: T.Optional[T.Any] = ...,
         calib_params: T.Optional[T.Any] = ...,
     ):
@@ -109,7 +109,7 @@ class Calibration(StorageItem):
 
     @property
     def as_dict(self) -> dict:
-        self.__assert_property_consistency()  #sanity check
+        self.__assert_property_consistency()  # sanity check
         dict_ = {k: v(self) for (k, v) in self.__schema}
         dict_ = fm._recursive_deep_copy(dict_)
         return dict_
@@ -145,9 +145,15 @@ class Calibration(StorageItem):
     def __assert_property_consistency(self):
         if self.__is_offline_calibration:
             if self.__calib_data is not None:
-                raise ValueError(f"Unexpected calib_data argument for offline calibration")
+                raise ValueError(
+                    f"Unexpected calib_data argument for offline calibration"
+                )
         else:
             if self.__calib_params is not None:
-                raise ValueError(f"Unexpected calib_params argument for pre-recorded calibration")
+                raise ValueError(
+                    f"Unexpected calib_params argument for pre-recorded calibration"
+                )
             if self.__calib_data is None:
-                raise ValueError(f"Expected calib_data argument for pre-recorded calibration")
+                raise ValueError(
+                    f"Expected calib_data argument for pre-recorded calibration"
+                )

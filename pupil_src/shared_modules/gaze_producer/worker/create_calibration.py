@@ -67,11 +67,12 @@ def _create_ref_dict(ref):
 
 
 class _FakeGpool:
-
     class _FakeIPC(SimpleNamespace):
         def notify(self, notification, *args, **kwargs):
             name = notification.get("subject", None) or notification.get("topic", None)
-            logger.debug(f'Received background notification "{name}"; it will be ignored.')
+            logger.debug(
+                f'Received background notification "{name}"; it will be ignored.'
+            )
 
     def __init__(self, frame_size, intrinsics, rec_dir, min_calibration_confidence):
         cap = SimpleNamespace()
