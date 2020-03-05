@@ -78,6 +78,25 @@ class Calibration(StorageItem):
         """Alias for calib_params"""
         return self.calib_params
 
+    def update(
+        self,
+        is_offline_calibration: bool = ..., 
+        calib_data: T.Optional[T.Any] = ...,
+        calib_params: T.Optional[T.Any] = ...,
+    ):
+        if is_offline_calibration is not ...:
+            self.__is_offline_calibration = is_offline_calibration
+        if calib_data is not ...:
+            self.__calib_data = calib_data
+        if calib_params is not ...:
+            self.__calib_params = calib_params
+        try:
+            self.__assert_property_consistency()
+        except ValueError:
+            raise
+        except Exception as err:
+            raise ValueError(str(err))
+
     @staticmethod
     def from_dict(dict_: dict) -> "Calibration":
         try:
