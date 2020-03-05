@@ -28,9 +28,12 @@ def create_task(gaze_mapper, calibration):
         g_pool.capture.frame_size, g_pool.capture.intrinsics, g_pool.rec_dir,
     )
 
+    # Make a copy of params to ensure there are no mappingproxy instances
+    calibration_params = fm._recursive_deep_copy(calibration.params)
+
     args = (
         calibration.gazer_class_name,
-        calibration.params,
+        calibration_params,
         fake_gpool,
         pupil_pos_in_mapping_range,
         gaze_mapper.manual_correction_x,
