@@ -159,7 +159,7 @@ class CalibrationStorage(Storage, Observable):
         for topic, data in zip(notifications.topics, notifications.data):
             if topic.startswith("notify."):
                 # Remove "notify." prefix
-                data = dict(data)
+                data = data._deep_copy_dict()
                 data["subject"] = data["topic"][len("notify."):]
                 del data["topic"]
             else:
