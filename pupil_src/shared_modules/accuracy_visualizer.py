@@ -271,14 +271,21 @@ class Accuracy_Visualizer(Plugin):
                 pass
 
     def recalculate(self):
-        assert self.recent_input and self.recent_labels
-        prediction = self.g_pool.active_gaze_mapping_plugin.map_batch(self.recent_input)
+        if not self.recent_input.is_complete:
+            logger.error(
+                "Did not collect enough data to estimate gaze mapping accuracy."
+            )
+            return
+
         results = self.calc_acc_prec_errlines(
-            prediction,
-            self.recent_labels,
-            self.g_pool.capture.intrinsics,
-            self.outlier_threshold,
-            self.succession_threshold,
+            gazer_class=self.recent_input.gazer_class,
+            g_pool=self.g_pool,
+            gazer_params=self.recent_input.gazer_params,
+            pupil_list=self.recent_input.pupil_list,
+            ref_list=self.recent_input.ref_list,
+            intrinsics=self.g_pool.capture.intrinsics,
+            outlier_threshold=self.outlier_threshold,
+            succession_threshold=self.succession_threshold,
         )
         logger.info("Angular accuracy: {}. Used {} of {} samples.".format(*results[0]))
         logger.info("Angular precision: {}. Used {} of {} samples.".format(*results[1]))
@@ -286,19 +293,27 @@ class Accuracy_Visualizer(Plugin):
         self.precision = results[1].result
         self.error_lines = results[2]
 
-        ref_locations = [loc["norm_pos"] for loc in self.recent_labels]
+        ref_locations = [loc["norm_pos"] for loc in self.recent_input.ref_list]
         if len(ref_locations) >= 3:
             hull = ConvexHull(ref_locations)  # requires at least 3 points
             self.calibration_area = hull.points[hull.vertices, :]
 
     @staticmethod
     def calc_acc_prec_errlines(
-        gaze_pos,
-        ref_pos,
+        g_pool,
+        gazer_class,
+        gazer_params,
+        pupil_list,
+        ref_list,
         intrinsics,
         outlier_threshold,
         succession_threshold=np.cos(np.deg2rad(0.5)),
     ):
+        gazer = gazer_class(g_pool, params=gazer_params)
+
+        gaze_pos = gazer.map_pupil_to_gaze(pupil_list)
+        ref_pos = ref_list
+
         width, height = intrinsics.resolution
 
         # reuse closest_matches_monocular to correlate one label to each prediction
