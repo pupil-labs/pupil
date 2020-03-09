@@ -41,6 +41,7 @@ class CalibrationController(Observable):
                 calibration.update(calib_params=result.params)
                 self._calibration_storage.save_to_disk()
                 self.on_calibration_computed(calibration)
+
         if len(self._reference_location_storage.items) == 0:
             error_message = f"You first need to detect reference before calculating the calibration '{calibration.name}'"
             self._abort_calculation(calibration, error_message)

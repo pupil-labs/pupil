@@ -36,7 +36,8 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
             "on_calibration_computed", self._on_calibration_computed
         )
         calibration_controller.add_observer(
-            "on_calculation_could_not_be_started", self._on_calculation_could_not_be_started
+            "on_calculation_could_not_be_started",
+            self._on_calculation_could_not_be_started,
         )
 
     def _item_label(self, calibration):
