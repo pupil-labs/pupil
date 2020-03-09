@@ -45,6 +45,7 @@ class ChoreographyAction(enum.Enum):
     FAILED = "failed"
     SUCCEEDED = "successful"
     ADD_REF_DATA = "add_ref_data"
+    DATA = "data"
 
 
 class ChoreographyNotification:
@@ -53,6 +54,8 @@ class ChoreographyNotification:
     _REQUIRED_KEYS = {"subject"}
     _OPTIONAL_KEYS = {
         "topic",
+        "timestamp",
+        "pupil_list",
         "ref_data",
         "record",
         "translation_eye0",
@@ -263,19 +266,16 @@ class CalibrationChoreographyPlugin(Plugin):
             calib_data = {"ref_list": ref_list, "pupil_list": pupil_list}
             self._start_plugin(self.selected_gazer_class, calib_data=calib_data)
         elif mode == ChoreographyMode.VALIDATION:
-            # ts = self.g_pool.get_timestamp()
-            # self.notify_all({"subject": "start_plugin", "name": "Accuracy_Visualizer"})
-            # self.notify_all(
-            #     {
-            #         "subject": "validation.data",
-            #         "timestamp": ts,
-            #         "pupil_list": pupil_list,
-            #         "ref_list": ref_list,
-            #         "record": True,
-            #     }
-            # )
-            print(
-                f"===>>> ACCURACY TEST FINISHED: {len(pupil_list)} pupil datums, {len(ref_list)} ref locations"
+            self.notify_all({"subject": "start_plugin", "name": "Accuracy_Visualizer"})
+            self.notify_all(
+                {
+                    "subject": f"{mode.VALIDATION}.data",
+                    "gazer_class_name": self.selected_gazer_class.__name__,
+                    "pupil_list": pupil_list,
+                    "ref_list": ref_list,
+                    "timestamp": self.g_pool.get_timestamp(),
+                    "record": True,
+                }
             )
         else:
             raise UnsupportedChoreographyModeError(mode)
