@@ -36,7 +36,6 @@ class Calibration(StorageItem):
         minimum_confidence,
         status: str,
         is_offline_calibration: bool,
-        calib_data: T.Optional[T.Any] = None,
         calib_params: T.Optional[T.Any] = None,
     ):
         # Set arbitrarily mutable properties
@@ -50,7 +49,6 @@ class Calibration(StorageItem):
 
         # Set immutable properties or properties that must be mutated in a consistent way
         self.__is_offline_calibration = is_offline_calibration
-        self.__calib_data = calib_data
         self.__calib_params = calib_params
 
         # Assert all properties are consistent
@@ -66,10 +64,6 @@ class Calibration(StorageItem):
         return self.__is_offline_calibration
 
     @property
-    def calib_data(self) -> T.Optional[T.Any]:
-        return self.__calib_data
-
-    @property
     def calib_params(self) -> T.Optional[T.Any]:
         return self.__calib_params
 
@@ -81,13 +75,10 @@ class Calibration(StorageItem):
     def update(
         self,
         is_offline_calibration: bool = ...,
-        calib_data: T.Optional[T.Any] = ...,
         calib_params: T.Optional[T.Any] = ...,
     ):
         if is_offline_calibration is not ...:
             self.__is_offline_calibration = is_offline_calibration
-        if calib_data is not ...:
-            self.__calib_data = calib_data
         if calib_params is not ...:
             self.__calib_params = calib_params
         try:
@@ -111,7 +102,6 @@ class Calibration(StorageItem):
     def as_dict(self) -> dict:
         self.__assert_property_consistency()  # sanity check
         dict_ = {k: v(self) for (k, v) in self.__schema}
-        # dict_ = fm._recursive_deep_copy(dict_)
         return dict_
 
     @staticmethod
@@ -138,22 +128,14 @@ class Calibration(StorageItem):
         ("minimum_confidence", lambda self: self.minimum_confidence),
         ("status", lambda self: self.status),
         ("is_offline_calibration", lambda self: self.__is_offline_calibration),
-        ("calib_data", lambda self: self.__calib_data),
         ("calib_params", lambda self: self.__calib_params),
     )
 
     def __assert_property_consistency(self):
         if self.__is_offline_calibration:
-            if self.__calib_data is not None:
-                raise ValueError(
-                    f"Unexpected calib_data argument for offline calibration"
-                )
+            pass
         else:
             if self.__calib_params is not None:
                 raise ValueError(
                     f"Unexpected calib_params argument for pre-recorded calibration"
-                )
-            if self.__calib_data is None:
-                raise ValueError(
-                    f"Expected calib_data argument for pre-recorded calibration"
                 )

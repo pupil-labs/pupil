@@ -34,7 +34,7 @@ class CalibrationController(Observable):
             calibration.status, result = status_and_result
             if result is not None:
                 calibration.gazer_class_name = result.gazer_class_name
-                calibration.update(calib_params=result.params, calib_data=None)
+                calibration.update(calib_params=result.params)
                 self._calibration_storage.save_to_disk()
                 self.on_calibration_computed(calibration)
 
