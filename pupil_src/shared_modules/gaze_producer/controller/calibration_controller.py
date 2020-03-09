@@ -8,10 +8,14 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import logging
 
 import tasklib
 from gaze_producer import worker
 from observable import Observable
+
+
+logger = logging.getLogger(__name__)
 
 
 class CalibrationController(Observable):
@@ -37,7 +41,10 @@ class CalibrationController(Observable):
                 calibration.update(calib_params=result.params)
                 self._calibration_storage.save_to_disk()
                 self.on_calibration_computed(calibration)
-
+        if len(self._reference_location_storage.items) == 0:
+            error_message = f"You first need to detect reference before calculating the calibration '{calibration.name}'"
+            self._abort_calculation(calibration, error_message)
+            return None
         task = worker.create_calibration.create_task(
             calibration, all_reference_locations=self._reference_location_storage
         )
@@ -47,6 +54,9 @@ class CalibrationController(Observable):
         return task
 
     def on_calibration_computed(self, calibration):
+        pass
+
+    def on_calculation_could_not_be_started(self):
         pass
 
     def set_calibration_range_from_current_trim_marks(self, calibration):
@@ -60,3 +70,8 @@ class CalibrationController(Observable):
             calibration is not None
             and calibration.recording_uuid == self._recording_uuid
         )
+
+    def _abort_calculation(self, calibration, error_message):
+        logger.error(error_message)
+        calibration.status = error_message
+        self.on_calculation_could_not_be_started()

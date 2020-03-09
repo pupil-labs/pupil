@@ -35,6 +35,9 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         calibration_controller.add_observer(
             "on_calibration_computed", self._on_calibration_computed
         )
+        calibration_controller.add_observer(
+            "on_calculation_could_not_be_started", self._on_calculation_could_not_be_started
+        )
 
     def _item_label(self, calibration):
         return calibration.name
@@ -167,3 +170,6 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         if calibration == self.current_item:
             # mostly to change button "calculate" -> "recalculate"
             self.render()
+
+    def _on_calculation_could_not_be_started(self):
+        self.render()
