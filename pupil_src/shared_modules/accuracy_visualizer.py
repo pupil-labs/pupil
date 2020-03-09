@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 from collections import namedtuple
+import typing as T
 
 import OpenGL.GL as gl
 import numpy as np
@@ -21,11 +22,88 @@ from scipy.spatial import ConvexHull
 from calibration_routines.data_processing import closest_matches_monocular
 from plugin import Plugin
 
+from gaze_mapping import registered_gazer_classes
+from gaze_mapping.notifications import CalibrationSetupNotification, CalibrationResultNotification
+
+
 logger = logging.getLogger(__name__)
 
 Calculation_Result = namedtuple(
     "Calculation_Result", ["result", "num_used", "num_total"]
 )
+
+
+class ValidationInput:
+    def __init__(self):
+        self.clear()
+
+    @property
+    def gazer_class(self) -> T.Optional[T.Any]:
+        return self.__gazer_class
+
+    @property
+    def gazer_params(self) -> T.Optional[T.Any]:
+        return self.__gazer_params
+
+    @property
+    def gazer_class_name(self) -> T.Optional[str]:
+        return self.__gazer_class.__name__ if self.__gazer_class is not None else None
+
+    @property
+    def pupil_list(self) -> T.Optional[T.Any]:
+        return self.__pupil_list
+
+    @property
+    def ref_list(self) -> T.Optional[T.Any]:
+        return self.__ref_list
+
+    @property
+    def is_complete(self) -> bool:
+        return None not in (
+            self.pupil_list,
+            self.ref_list,
+            self.gazer_class,
+            self.gazer_params
+        )
+
+    def clear(self):
+        self.__pupil_list = None
+        self.__ref_list = None
+        self.__gazer_class = None
+        self.__gazer_params = None
+
+    def update(self, gazer_class_name: str, pupil_list = ..., ref_list = ..., params = ...):
+        if self.gazer_class_name is not None and self.gazer_class_name != gazer_class_name:
+            logger.debug(f'Overwriting gazer_class_name from "{self.gazer_class_name}" to "{gazer_class_name}" and resetting the input.')
+            self.clear()
+
+        self.__gazer_class = self.__gazer_class_from_name(gazer_class_name)
+
+        if params is not ...:
+            self.__gazer_params = params
+
+        if pupil_list is not ...:
+            self.__pupil_list = pupil_list
+
+        if ref_list is not ...:
+            self.__ref_list = ref_list
+
+    @staticmethod
+    def __gazer_class_from_name(gazer_class_name: str) -> T.Optional[T.Any]:
+        if "HMD" in gazer_class_name:
+            logger.error("Accuracy visualization is disabled for HMD calibration")
+            return None
+
+        gazers_by_name = {p.__name__: p for p in registered_gazer_classes}
+
+        try:
+            gazer_cls = gazers_by_name[gazer_class_name]
+        except KeyError:
+            logger.error(f'Unknown gazer "{gazer_class_name}"')
+            return None
+
+        return gazer_cls
+
 
 
 class Accuracy_Visualizer(Plugin):
@@ -52,8 +130,9 @@ class Accuracy_Visualizer(Plugin):
         self.accuracy = None
         self.precision = None
         self.error_lines = None
-        self.recent_input = None
-        self.recent_labels = None
+
+        self.recent_input = ValidationInput()
+
         # .5 degrees, used to remove outliers from precision calculation
         self.succession_threshold = np.cos(np.deg2rad(0.5))
         self._outlier_threshold = outlier_threshold  # in degrees
