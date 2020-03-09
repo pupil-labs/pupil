@@ -246,29 +246,59 @@ class Accuracy_Visualizer(Plugin):
         )
 
     def on_notify(self, notification):
-        if notification["subject"] in (
-            "calibration.calibration_data",
-            "validation.data",
-        ):
-            if "hmd" in notification.get("calibration_method", ""):
-                logger.error(
-                    "Accuracy visualization is disabled for 3d hmd calibration"
-                )
-                return
-            self.recent_input = notification["pupil_list"]
-            self.recent_labels = notification["ref_list"]
-            if self.recent_input and self.recent_labels:
-                self.recalculate()
-            else:
-                logger.error(
-                    "Did not collect enough data to estimate gaze mapping accuracy."
-                )
+        if self.__handle_calibration_setup_notification(notification):
+            return
 
-        elif notification["subject"] == "accuracy_visualizer.outlier_threshold_changed":
-            if self.recent_input and self.recent_labels:
+        if self.__handle_calibration_result_notification(notification):
+            return
+
+        if self.__handle_validation_data_notification(notification):
+            return
+
+        if notification["subject"] == "accuracy_visualizer.outlier_threshold_changed":
+            if self.recent_input.is_complete:
                 self.recalculate()
-            else:
-                pass
+
+    def __handle_calibration_setup_notification(self, note_dict: dict) -> bool:
+        try:
+            note = CalibrationSetupNotification.from_dict(note_dict)
+        except ValueError:
+            return False
+
+        self.recent_input.update(
+            gazer_class_name=note.gazer_class_name,
+            pupil_list=note.calib_data["pupil_list"],
+            ref_list=note.calib_data["ref_list"],
+        )
+        return True
+
+
+    def __handle_calibration_result_notification(self, note_dict: dict) -> bool:
+        try:
+            note = CalibrationResultNotification.from_dict(note_dict)
+        except ValueError:
+            return False
+
+        self.recent_input.update(
+            gazer_class_name=note.gazer_class_name,
+            params=note.params,
+        )
+
+        self.recalculate()
+        return True
+
+    def __handle_validation_data_notification(self, note_dict: dict) -> bool:
+        if note_dict["subject"] != "validation.data":
+            return False
+
+        self.recent_input.update(
+            gazer_class_name=note_dict["gazer_class_name"],
+            pupil_list=note_dict["pupil_list"],
+            ref_list=note_dict["ref_list"],
+        )
+
+        self.recalculate()
+        return True
 
     def recalculate(self):
         if not self.recent_input.is_complete:
