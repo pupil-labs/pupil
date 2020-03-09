@@ -69,6 +69,8 @@ class _NotificationMixin(_SerializedNamedTupleMixin):
     @classmethod
     def sanitize_serialized_dict(cls, dict_: dict) -> dict:
         cls._assert_static_property_matches_dict(dict_, "subject", str)
+        if "topic" in dict_:
+            del dict_["topic"]
         return super().sanitize_serialized_dict(dict_)
 
 
