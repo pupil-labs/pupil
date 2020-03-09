@@ -118,7 +118,7 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
     def _info_text_for_calibration_from_other_recording(self, calibration):
         gazer_class_name = calibration.gazer_class_name
         gazer_label = registered_gazer_labels_by_class_names[gazer_class_name]
-        if calibration.result:
+        if calibration.params:
             return (
                 f"This {gazer_label} calibration was copied from another recording. "
                 "It is ready to be used in gaze mappers."
