@@ -19,7 +19,10 @@ from storage import Storage
 from gaze_producer import model
 from observable import Observable
 from gaze_mapping import default_gazer_class, registered_gazer_labels_by_class_names
-from gaze_mapping.notifications import CalibrationSetupNotification, CalibrationResultNotification
+from gaze_mapping.notifications import (
+    CalibrationSetupNotification,
+    CalibrationResultNotification,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -53,19 +56,17 @@ class CalibrationStorage(Storage, Observable):
             status="Not calculated yet",
         )
 
-    def __create_prerecorded_calibration(self, result_notification: CalibrationResultNotification):
+    def __create_prerecorded_calibration(
+        self, result_notification: CalibrationResultNotification
+    ):
         timestamp = result_notification.timestamp
 
         # the unique id needs to be the same at every start or otherwise the
         # same calibrations would be added again and again. The timestamp is
         # the easiest datum that differs between calibrations but is the same
         # for every start
-        unique_id = model.Calibration.create_unique_id_from_string(
-            str(timestamp)
-        )
-        name = make_unique.by_number_at_end(
-            "Recorded Calibration", self.item_names
-        )
+        unique_id = model.Calibration.create_unique_id_from_string(str(timestamp))
+        name = make_unique.by_number_at_end("Recorded Calibration", self.item_names)
         return model.Calibration(
             unique_id=unique_id,
             name=name,
@@ -160,19 +161,26 @@ class CalibrationStorage(Storage, Observable):
             if topic.startswith("notify."):
                 # Remove "notify." prefix
                 data = data._deep_copy_dict()
-                data["subject"] = data["topic"][len("notify."):]
+                data["subject"] = data["topic"][len("notify.") :]
                 del data["topic"]
             else:
                 continue
-            if CalibrationResultNotification.calibration_format_version() != model.Calibration.version:
-                logger.debug(f"Must update CalibrationResultNotification to match Calibration version")
+            if (
+                CalibrationResultNotification.calibration_format_version()
+                != model.Calibration.version
+            ):
+                logger.debug(
+                    f"Must update CalibrationResultNotification to match Calibration version"
+                )
                 continue
             try:
                 note = CalibrationResultNotification.from_dict(data)
             except ValueError as err:
                 logger.debug(str(err))
                 continue
-            calibration = self.__create_prerecorded_calibration(result_notification=note)
+            calibration = self.__create_prerecorded_calibration(
+                result_notification=note
+            )
             self.add(calibration)
 
     def save_to_disk(self):
