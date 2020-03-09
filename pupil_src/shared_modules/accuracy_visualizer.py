@@ -23,7 +23,10 @@ from calibration_routines.data_processing import closest_matches_monocular
 from plugin import Plugin
 
 from gaze_mapping import registered_gazer_classes
-from gaze_mapping.notifications import CalibrationSetupNotification, CalibrationResultNotification
+from gaze_mapping.notifications import (
+    CalibrationSetupNotification,
+    CalibrationResultNotification,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -63,7 +66,7 @@ class ValidationInput:
             self.pupil_list,
             self.ref_list,
             self.gazer_class,
-            self.gazer_params
+            self.gazer_params,
         )
 
     def clear(self):
@@ -72,9 +75,14 @@ class ValidationInput:
         self.__gazer_class = None
         self.__gazer_params = None
 
-    def update(self, gazer_class_name: str, pupil_list = ..., ref_list = ..., params = ...):
-        if self.gazer_class_name is not None and self.gazer_class_name != gazer_class_name:
-            logger.debug(f'Overwriting gazer_class_name from "{self.gazer_class_name}" to "{gazer_class_name}" and resetting the input.')
+    def update(self, gazer_class_name: str, pupil_list=..., ref_list=..., params=...):
+        if (
+            self.gazer_class_name is not None
+            and self.gazer_class_name != gazer_class_name
+        ):
+            logger.debug(
+                f'Overwriting gazer_class_name from "{self.gazer_class_name}" to "{gazer_class_name}" and resetting the input.'
+            )
             self.clear()
 
         self.__gazer_class = self.__gazer_class_from_name(gazer_class_name)
@@ -103,7 +111,6 @@ class ValidationInput:
             return None
 
         return gazer_cls
-
 
 
 class Accuracy_Visualizer(Plugin):
@@ -272,7 +279,6 @@ class Accuracy_Visualizer(Plugin):
         )
         return True
 
-
     def __handle_calibration_result_notification(self, note_dict: dict) -> bool:
         try:
             note = CalibrationResultNotification.from_dict(note_dict)
@@ -280,8 +286,7 @@ class Accuracy_Visualizer(Plugin):
             return False
 
         self.recent_input.update(
-            gazer_class_name=note.gazer_class_name,
-            params=note.params,
+            gazer_class_name=note.gazer_class_name, params=note.params,
         )
 
         self.recalculate()
