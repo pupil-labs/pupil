@@ -51,37 +51,34 @@ class ChoreographyAction(enum.Enum):
 
 
 class ChoreographyNotification:
-    __slots__ = ("mode", "action")
+    __slots__ = ("mode", "action", "payload")
 
     _REQUIRED_KEYS = {"subject"}
-    _OPTIONAL_KEYS = {
-        "topic",
-        "timestamp",
-        "pupil_list",
-        "ref_data",
-        "record",
-        "translation_eye0",
-        "translation_eye1",
-        "outlier_threshold",
-        "hmd_video_frame_size",
-    }
 
-    def __init__(self, mode: ChoreographyMode, action: ChoreographyAction):
+    def __init__(self, mode: ChoreographyMode, action: ChoreographyAction, **payload):
         self.mode = mode
         self.action = action
+        self.payload = payload
 
     @property
     def subject(self) -> str:
         return f"{self.mode.value}.{self.action.value}"
 
+    def __getitem__(self, key: str) -> T.Any:
+        return self.payload.__getitem__(key)
+
+    def get(self, key: str, default_value) -> T.Any:
+        return self.payload.get(key, default_value)
+
     def to_dict(self) -> dict:
-        return {"subject": self.subject}
+        return {"subject": self.subject, **self.payload}
 
     @staticmethod
     def from_dict(
         note: dict, allow_extra_keys: bool = False
     ) -> "ChoreographyNotification":
         cls = ChoreographyNotification
+        note = note.copy()
         keys = set(note.keys())
 
         missing_required_keys = cls._REQUIRED_KEYS.difference(keys)
@@ -90,14 +87,10 @@ class ChoreographyNotification:
                 f"Notification missing required keys: {missing_required_keys}"
             )
 
-        valid_keys = cls._REQUIRED_KEYS.union(cls._OPTIONAL_KEYS)
-        invalid_keys = keys.difference(valid_keys)
-        if invalid_keys and not allow_extra_keys:
-            raise ValueError(f"Notification contains invalid keys: {invalid_keys}")
-
         mode, action = note["subject"].split(".")
+        del note["subject"]
         return ChoreographyNotification(
-            mode=ChoreographyMode(mode), action=ChoreographyAction(action),
+            mode=ChoreographyMode(mode), action=ChoreographyAction(action), **note
         )
 
 
