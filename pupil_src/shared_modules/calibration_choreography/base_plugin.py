@@ -268,16 +268,17 @@ class CalibrationChoreographyPlugin(Plugin):
             calib_data = {"ref_list": ref_list, "pupil_list": pupil_list}
             self._start_plugin(self.selected_gazer_class, calib_data=calib_data)
         elif mode == ChoreographyMode.VALIDATION:
-            self.notify_all({"subject": "start_plugin", "name": "Accuracy_Visualizer"})
+            self._start_plugin("Accuracy_Visualizer")
             self.notify_all(
-                {
-                    "subject": f"{mode.VALIDATION}.data",
-                    "gazer_class_name": self.selected_gazer_class.__name__,
-                    "pupil_list": pupil_list,
-                    "ref_list": ref_list,
-                    "timestamp": self.g_pool.get_timestamp(),
-                    "record": True,
-                }
+                ChoreographyNotification(
+                    mode=ChoreographyMode.VALIDATION,
+                    action=ChoreographyAction.DATA,
+                    gazer_class_name=self.selected_gazer_class.__name__,
+                    pupil_list=pupil_list,
+                    ref_list=ref_list,
+                    timestamp=self.g_pool.get_timestamp(),
+                    record=True,
+                ).to_dict()
             )
         else:
             raise UnsupportedChoreographyModeError(mode)
