@@ -23,7 +23,6 @@ from .base_plugin import (
     ChoreographyAction,
     ChoreographyMode,
     UnsupportedChoreographyModeError,
-    CHOREOGRAPHY_PLUGIN_DONT_REGISTER_LABEL,
 )
 
 
@@ -34,7 +33,11 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
 
     ### Public
 
-    label = CHOREOGRAPHY_PLUGIN_DONT_REGISTER_LABEL
+    @classmethod
+    def should_register(cls) -> bool:
+        if cls.__name__ == "_BaseHMDChoreographyPlugin":
+            return False
+        return super().should_register()
 
     is_user_selectable = False
 

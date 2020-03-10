@@ -101,9 +101,6 @@ class ChoreographyNotification:
         )
 
 
-CHOREOGRAPHY_PLUGIN_DONT_REGISTER_LABEL = "CalibrationChoreographyPlugin.DONT_REGISTER"
-
-
 class CalibrationChoreographyPlugin(Plugin):
     """Base class for all calibration routines"""
 
@@ -172,19 +169,27 @@ class CalibrationChoreographyPlugin(Plugin):
         choreo_classes = sorted(choreo_classes, key=lambda c: c.label)
         return choreo_classes
 
+    @classmethod
+    def should_register(cls) -> bool:
+        return True
+
     def __init_subclass__(cls, *args, **kwargs):
         super().__init_subclass__(*args, **kwargs)
-        store = CalibrationChoreographyPlugin.__registered_choreography_plugins
-        assert isinstance(
-            cls.label, str
-        ), f'Calibration choreography plugin subclass {cls.__name__} must overwrite string class property "label"'
-        assert (
-            cls.label not in store.keys()
-        ), f'Calibration choreography plugin already exists for label "{cls.label}"'
-        if cls.label == CHOREOGRAPHY_PLUGIN_DONT_REGISTER_LABEL:
+        if not cls.should_register():
             # If the class label is explicitly saying that it shouldn't be registered,
             # Skip the class registration; this is usefull for abstract superclasses.
             return
+
+        store = CalibrationChoreographyPlugin.__registered_choreography_plugins
+
+        assert isinstance(
+            cls.label, str
+        ), f'Calibration choreography plugin subclass {cls.__name__} must overwrite string class property "label"'
+
+        assert (
+            cls.label not in store.keys()
+        ), f'Calibration choreography plugin already exists for label "{cls.label}"'
+
         store[cls.label] = cls
 
     def __init__(self, g_pool):
