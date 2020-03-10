@@ -485,9 +485,15 @@ class CalibrationChoreographyPlugin(Plugin):
                 mode=current_mode, pupil_list=pupil_list, ref_list=ref_list
             )
 
-    def _start_plugin(self, plugin_cls, **kwargs):
+    def _start_plugin(self, plugin_cls_or_name, **kwargs):
+        if isinstance(plugin_cls_or_name, object.__class__):
+            plugin_name = plugin_cls_or_name.__name__
+        elif isinstance(plugin_cls_or_name, str):
+            plugin_name = plugin_cls_or_name
+        else:
+            raise ValueError(f"Expected instance of type or str, but got {plugin_cls_or_name.__class__.__name__}")
         self.notify_all(
-            {"subject": "start_plugin", "name": plugin_cls.__name__, "args": kwargs}
+            {"subject": "start_plugin", "name": plugin_name, "args": kwargs}
         )
 
     ### Private
