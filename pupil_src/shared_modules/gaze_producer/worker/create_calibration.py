@@ -21,6 +21,9 @@ from gaze_producer import model
 from gaze_mapping import registered_gazer_classes_by_class_name, CalibrationError
 from methods import normalize
 
+from .fake_gpool import FakeGPool
+
+
 logger = logging.getLogger(__name__)
 
 g_pool = None  # set by the plugin
@@ -41,12 +44,7 @@ def create_task(calibration, all_reference_locations):
         if frame_start <= ref.frame_index <= frame_end
     ]
 
-    fake_gpool = _FakeGpool(
-        g_pool.capture.frame_size,
-        g_pool.capture.intrinsics,
-        g_pool.rec_dir,
-        calibration.minimum_confidence,
-    )
+    fake_gpool = FakeGPool.from_g_pool(g_pool)
 
     args = (
         fake_gpool,
@@ -64,27 +62,6 @@ def _create_ref_dict(ref):
         "norm_pos": normalize(ref.screen_pos, g_pool.capture.frame_size, flip_y=True),
         "timestamp": ref.timestamp,
     }
-
-
-class _FakeGpool:
-    class _FakeIPC(SimpleNamespace):
-        def notify(self, notification, *args, **kwargs):
-            name = notification.get("subject", None) or notification.get("topic", None)
-            logger.debug(
-                f'Received background notification "{name}"; it will be ignored.'
-            )
-
-    def __init__(self, frame_size, intrinsics, rec_dir, min_calibration_confidence):
-        cap = SimpleNamespace()
-        cap.frame_size = frame_size
-        cap.intrinsics = intrinsics
-
-        self.capture = cap
-        self.get_timestamp = time
-        self.min_calibration_confidence = min_calibration_confidence
-        self.rec_dir = rec_dir
-        self.app = "player"
-        self.ipc_pub = _FakeGpool._FakeIPC()
 
 
 def _create_calibration(
