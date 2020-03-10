@@ -277,7 +277,7 @@ def world(
             + runtime_plugins
             + available_choreography_plugins
             + gaze_mapping_plugins
-            + registered_gazer_classes
+            + registered_gazer_classes()
         )
         user_plugins += [
             p
