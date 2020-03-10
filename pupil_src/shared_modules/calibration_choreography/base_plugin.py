@@ -220,6 +220,19 @@ class CalibrationChoreographyPlugin(Plugin):
         self._start_plugin(cls)
 
     @property
+    def selected_gazer_class(self):
+        return self.__selected_gazer_class
+
+    @selected_gazer_class.setter
+    def selected_gazer_class(self, cls):
+        if (cls is None) or (cls not in self.supported_gazer_classes()):
+            default_cls = self.default_selected_gazer_class()
+            if cls is not None:
+                logger.debug(f'Selected gazer "{cls.__name__}" not supported by {self.__class__.__name__} choreography; using default gazer "{default_cls.__name__}"')
+            cls = default_cls
+        self.__selected_gazer_class = cls
+
+    @property
     def status_text(self) -> str:
         ui_button = self.__mode_button(self.current_mode)
         return ui_button.status_text or ""
