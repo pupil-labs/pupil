@@ -89,8 +89,8 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
             "gazer_class_name",
             calibration,
             label="Mapping Method",
-            labels=list(registered_gazer_labels_by_class_names.values()),
-            selection=list(registered_gazer_labels_by_class_names.keys()),
+            labels=list(registered_gazer_labels_by_class_names().values()),
+            selection=list(registered_gazer_labels_by_class_names().keys()),
         )
 
     def _create_min_confidence_slider(self, calibration):
@@ -121,7 +121,7 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
 
     def _info_text_for_calibration_from_other_recording(self, calibration):
         gazer_class_name = calibration.gazer_class_name
-        gazer_label = registered_gazer_labels_by_class_names[gazer_class_name]
+        gazer_label = registered_gazer_labels_by_class_names()[gazer_class_name]
         if calibration.params:
             return (
                 f"This {gazer_label} calibration was copied from another recording. "
@@ -140,7 +140,7 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
 
     def _info_text_for_online_calibration(self, calibration):
         gazer_class_name = calibration.gazer_class_name
-        gazer_label = registered_gazer_labels_by_class_names[gazer_class_name]
+        gazer_label = registered_gazer_labels_by_class_names()[gazer_class_name]
         return (
             f"This {gazer_label} calibration was created before or during the "
             "recording. It is ready to be used in gaze mappers."
