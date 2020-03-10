@@ -26,5 +26,11 @@ def registered_gazer_labels_by_class_names() -> dict:
     }
 
 
+def registered_gazer_classes_by_class_name() -> dict:
+    return {
+        cls.__name__: cls for cls in registered_gazer_classes()
+    }
+
+
 default_gazer_class = Gazer3D_v1x
 assert default_gazer_class in registered_gazer_classes()

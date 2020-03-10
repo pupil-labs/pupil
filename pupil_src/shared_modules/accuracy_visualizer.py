@@ -22,7 +22,7 @@ from scipy.spatial import ConvexHull
 from calibration_routines.data_processing import closest_matches_monocular
 from plugin import Plugin
 
-from gaze_mapping import registered_gazer_classes
+from gaze_mapping import registered_gazer_classes_by_class_name
 from gaze_mapping.notifications import (
     CalibrationSetupNotification,
     CalibrationResultNotification,
@@ -102,7 +102,7 @@ class ValidationInput:
             logger.error("Accuracy visualization is disabled for HMD calibration")
             return None
 
-        gazers_by_name = {p.__name__: p for p in registered_gazer_classes}
+        gazers_by_name = registered_gazer_classes_by_class_name()
 
         try:
             gazer_cls = gazers_by_name[gazer_class_name]

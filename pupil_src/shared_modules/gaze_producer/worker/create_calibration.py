@@ -18,7 +18,7 @@ from calibration_routines.finish_calibration import (
     select_method_and_perform_calibration,
 )
 from gaze_producer import model
-from gaze_mapping import registered_gazer_classes, CalibrationError
+from gaze_mapping import registered_gazer_classes_by_class_name, CalibrationError
 from methods import normalize
 
 logger = logging.getLogger(__name__)
@@ -90,15 +90,14 @@ class _FakeGpool:
 def _create_calibration(
     fake_gpool, gazer_class_name, ref_dicts_in_calib_range, pupil_pos_in_calib_range
 ):
-    registered_gazer_classes_by_name = {
-        cls.__name__: cls for cls in registered_gazer_classes
-    }
+    gazers_by_name = registered_gazer_classes_by_class_name()
+
     try:
-        gazer_class = registered_gazer_classes_by_name[gazer_class_name]
+        gazer_class = gazers_by_name[gazer_class_name]
     except KeyError:
         logger.debug(
             f"Calibration failed! {gazer_class_name} is not in list of known gazers: "
-            f"{list(registered_gazer_classes_by_name.keys())}"
+            f"{list(gazers_by_name.keys())}"
         )
         status = f"Unknown gazer class: {gazer_class_name}"
         calibration_result = None

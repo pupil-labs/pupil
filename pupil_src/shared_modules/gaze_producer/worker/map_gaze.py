@@ -13,7 +13,7 @@ from time import time
 import file_methods as fm
 import player_methods as pm
 import tasklib
-from gaze_mapping import registered_gazer_classes
+from gaze_mapping import registered_gazer_classes_by_class_name
 from types import SimpleNamespace
 
 g_pool = None  # set by the plugin
@@ -67,7 +67,7 @@ def _map_gaze(
     manual_correction_y,
     shared_memory,
 ):
-    gazers_by_name = {p.__name__: p for p in registered_gazer_classes}
+    gazers_by_name = registered_gazer_classes_by_class_name()
     gazer_cls = gazers_by_name[gazer_class_name]
     gazer = gazer_cls(fake_gpool, params=gazer_params)
 
