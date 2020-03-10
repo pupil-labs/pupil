@@ -225,7 +225,7 @@ class CalibrationChoreographyPlugin(Plugin):
 
     @selected_choreography_class.setter
     def selected_choreography_class(self, cls):
-        self._start_plugin(cls)
+        self._start_plugin(cls, selected_gazer_class_name=self.selected_gazer_class.__name__)
 
     @property
     def selected_gazer_class(self):
