@@ -43,8 +43,8 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
     _NUMBER_OF_REF_POINTS_TO_CAPTURE = 30
     _RADIUS_OF_CIRCLE_DISPLAYED = 40.0
 
-    def __init__(self, g_pool):
-        super().__init__(g_pool)
+    def __init__(self, g_pool, **kwargs):
+        super().__init__(g_pool, **kwargs)
         self.__previously_detected_feature = None
         self.__feature_tracker = NaturalFeatureTracker()
 

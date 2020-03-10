@@ -67,8 +67,9 @@ class ScreenMarkerChoreographyPlugin(
         marker_scale=1.0,
         sample_duration=40,
         monitor_name=None,
+        **kwargs,
     ):
-        super().__init__(g_pool)
+        super().__init__(g_pool, **kwargs)
 
         # Public properties
         self.selected_monitor_name = monitor_name

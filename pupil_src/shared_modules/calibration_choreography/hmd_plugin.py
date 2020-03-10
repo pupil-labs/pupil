@@ -96,8 +96,8 @@ class HMD3DChoreographyPlugin(_BaseHMDChoreographyPlugin):
     def supported_gazer_classes(cls):
         return [GazerHMD3D_v1x]
 
-    def __init__(self, g_pool):
-        super().__init__(g_pool)
+    def __init__(self, g_pool, **kwargs):
+        super().__init__(g_pool, **kwargs)
         self.__eye_translations = [0, 0, 0], [0, 0, 0]
 
     def on_choreography_successfull(

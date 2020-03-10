@@ -185,7 +185,15 @@ class CalibrationChoreographyPlugin(Plugin):
 
         store[cls.label] = cls
 
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, selected_gazer_class_name=None):
+        if selected_gazer_class_name is not None:
+            supported_gazers_by_name = {g.__name__: g for g in self.supported_gazer_classes()}
+            selected_gazer_class = supported_gazers_by_name.get(selected_gazer_class_name, None)
+            if selected_gazer_class is None:
+                logger.debug(f'Selected gazer class "{selected_gazer_class_name}" is not supported by "{self.__class__.__name__}" choreography')
+        else:
+            selected_gazer_class = None
+
         super().__init__(g_pool)
 
         self.__is_active = False
@@ -193,7 +201,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__pupil_list = []
 
         self.__current_mode = ChoreographyMode.CALIBRATION
-        self.selected_gazer_class = self.default_selected_gazer_class()
+        self.selected_gazer_class = selected_gazer_class
 
         self.__choreography_ui_selector = None
         self.__gazer_ui_selector = None
