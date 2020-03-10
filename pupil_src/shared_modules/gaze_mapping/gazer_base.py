@@ -147,18 +147,22 @@ class GazerBase(abc.ABC, Plugin):
 
     def __init_subclass__(cls, *args, **kwargs):
         super().__init_subclass__(*args, **kwargs)
+
+        if not cls.should_register():
+            # If the gazer class explicitly opted-out of being registered, skip registration
+            return
+
         store = GazerBase.__registered_gazer_plugins
 
         assert isinstance(
             cls.label, str
         ), f'Gazer plugin subclass {cls.__name__} must overwrite string class property "label"'
+
         assert (
             cls.label not in store.keys()
         ), f'Gazer plugin already exists for label "{cls.label}"'
 
-        if cls.should_register():
-            # Only register classes that opt-in to registering
-            store[cls.label] = cls
+        store[cls.label] = cls
 
     # ------------ Base Implementation
 
