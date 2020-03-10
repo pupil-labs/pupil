@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import abc
+import collections
 import itertools
 import logging
 import os
@@ -133,6 +134,27 @@ class GazerBase(abc.ABC, Plugin):
                 pupil_data, confidence_threshold
             )
         return pupil_data
+
+    @classmethod
+    def should_register(cls) -> bool:
+        return True
+
+    @staticmethod
+    def registered_gazer_classes() -> T.List["GazerBase"]:
+        return list(GazerBase.__registered_gazer_plugins.values())
+
+    __registered_gazer_plugins = collections.OrderedDict()
+
+    def __init_subclass__(cls, *args, **kwargs):
+        super().__init_subclass__(*args, **kwargs)
+        store = GazerBase.__registered_gazer_plugins
+
+        assert isinstance(cls.label, str), f'Gazer plugin subclass {cls.__name__} must overwrite string class property "label"'
+        assert cls.label not in store.keys(), f'Gazer plugin already exists for label "{cls.label}"'
+
+        if cls.should_register():
+            # Only register classes that opt-in to registering
+            store[cls.label] = cls
 
     # ------------ Base Implementation
 
