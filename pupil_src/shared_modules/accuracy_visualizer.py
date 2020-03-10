@@ -20,7 +20,11 @@ from pyglui.cygl.utils import draw_points_norm, draw_polyline_norm, RGBA
 from scipy.spatial import ConvexHull
 
 from calibration_routines.data_processing import closest_matches_monocular
-from calibration_choreography import ChoreographyAction, ChoreographyMode, ChoreographyNotification
+from calibration_choreography import (
+    ChoreographyAction,
+    ChoreographyMode,
+    ChoreographyNotification,
+)
 from plugin import Plugin
 
 from gaze_mapping import registered_gazer_classes_by_class_name

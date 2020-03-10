@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class FakeGPool:
-
     @staticmethod
     def from_g_pool(g_pool):
         return FakeGPool(
@@ -34,6 +33,4 @@ class FakeIPC:
     @staticmethod
     def notify(notification, *args, **kwargs):
         name = notification.get("subject", None) or notification.get("topic", None)
-        logger.debug(
-            f'Received background notification "{name}"; it will be ignored.'
-        )
+        logger.debug(f'Received background notification "{name}"; it will be ignored.')

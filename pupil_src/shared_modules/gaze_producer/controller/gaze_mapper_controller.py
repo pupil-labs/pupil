@@ -149,11 +149,15 @@ class GazeMapperController(Observable):
         calibration = self.get_valid_calibration_or_none(gaze_mapper)
 
         if calibration is None:
-            logger.error(f"Could not validate gaze mapper {gaze_mapper.name}; Calibration was not found, please select a different calibration.")
+            logger.error(
+                f"Could not validate gaze mapper {gaze_mapper.name}; Calibration was not found, please select a different calibration."
+            )
             return
 
         if calibration.params is None:
-            logger.error(f"Could not validate gaze mapper {gaze_mapper.name}; You first need to calculate calibration '{calibration.name}'")
+            logger.error(
+                f"Could not validate gaze mapper {gaze_mapper.name}; You first need to calculate calibration '{calibration.name}'"
+            )
             return
 
         task = worker.validate_gaze.create_bg_task(

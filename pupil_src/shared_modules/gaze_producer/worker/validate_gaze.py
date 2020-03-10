@@ -27,7 +27,9 @@ def create_bg_task(gaze_mapper, calibration, reference_location_storage):
         gaze_mapper.validation_index_range
     )
 
-    validation_window = pm.exact_window(g_pool.timestamps, gaze_mapper.validation_index_range)
+    validation_window = pm.exact_window(
+        g_pool.timestamps, gaze_mapper.validation_index_range
+    )
     pupils_in_validation_range = g_pool.pupil_positions.by_ts_window(validation_window)
 
     # Make a copy of params to ensure there are no mappingproxy instances
@@ -46,18 +48,26 @@ def create_bg_task(gaze_mapper, calibration, reference_location_storage):
     )
 
     return tasklib.background.create(
-        "validate gaze mapper '{}'".format(gaze_mapper.name),
-        validate,
-        args=args,
+        "validate gaze mapper '{}'".format(gaze_mapper.name), validate, args=args,
     )
 
 
-def validate(g_pool, gazer_class_name, gazer_params, gaze_mapper, pupils_in_validation_range, refs_in_validation_range):
+def validate(
+    g_pool,
+    gazer_class_name,
+    gazer_params,
+    gaze_mapper,
+    pupils_in_validation_range,
+    refs_in_validation_range,
+):
     gazers_by_name = registered_gazer_classes_by_class_name()
     gazer_class = gazers_by_name[gazer_class_name]
 
     pupil_list = pupils_in_validation_range
-    ref_list = [_create_ref_dict(ref, g_pool.capture.frame_size) for ref in refs_in_validation_range]
+    ref_list = [
+        _create_ref_dict(ref, g_pool.capture.frame_size)
+        for ref in refs_in_validation_range
+    ]
 
     accuracy_result, precision_result, _ = Accuracy_Visualizer.calc_acc_prec_errlines(
         g_pool=g_pool,

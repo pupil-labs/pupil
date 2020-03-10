@@ -1,4 +1,9 @@
-from .base_plugin import CalibrationChoreographyPlugin, ChoreographyAction, ChoreographyMode, ChoreographyNotification
+from .base_plugin import (
+    CalibrationChoreographyPlugin,
+    ChoreographyAction,
+    ChoreographyMode,
+    ChoreographyNotification,
+)
 from .screen_marker_plugin import ScreenMarkerChoreographyPlugin
 from .single_marker_plugin import SingleMarkerChoreographyPlugin
 from .natural_feature_plugin import NaturalFeatureChoreographyPlugin

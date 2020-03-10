@@ -187,10 +187,16 @@ class CalibrationChoreographyPlugin(Plugin):
 
     def __init__(self, g_pool, selected_gazer_class_name=None):
         if selected_gazer_class_name is not None:
-            supported_gazers_by_name = {g.__name__: g for g in self.supported_gazer_classes()}
-            selected_gazer_class = supported_gazers_by_name.get(selected_gazer_class_name, None)
+            supported_gazers_by_name = {
+                g.__name__: g for g in self.supported_gazer_classes()
+            }
+            selected_gazer_class = supported_gazers_by_name.get(
+                selected_gazer_class_name, None
+            )
             if selected_gazer_class is None:
-                logger.debug(f'Selected gazer class "{selected_gazer_class_name}" is not supported by "{self.__class__.__name__}" choreography')
+                logger.debug(
+                    f'Selected gazer class "{selected_gazer_class_name}" is not supported by "{self.__class__.__name__}" choreography'
+                )
         else:
             selected_gazer_class = None
 
@@ -225,7 +231,9 @@ class CalibrationChoreographyPlugin(Plugin):
 
     @selected_choreography_class.setter
     def selected_choreography_class(self, cls):
-        self._start_plugin(cls, selected_gazer_class_name=self.selected_gazer_class.__name__)
+        self._start_plugin(
+            cls, selected_gazer_class_name=self.selected_gazer_class.__name__
+        )
 
     @property
     def selected_gazer_class(self):
@@ -236,7 +244,9 @@ class CalibrationChoreographyPlugin(Plugin):
         if (cls is None) or (cls not in self.supported_gazer_classes()):
             default_cls = self.default_selected_gazer_class()
             if cls is not None:
-                logger.debug(f'Selected gazer "{cls.__name__}" not supported by {self.__class__.__name__} choreography; using default gazer "{default_cls.__name__}"')
+                logger.debug(
+                    f'Selected gazer "{cls.__name__}" not supported by {self.__class__.__name__} choreography; using default gazer "{default_cls.__name__}"'
+                )
             cls = default_cls
         self.__selected_gazer_class = cls
 
@@ -506,7 +516,9 @@ class CalibrationChoreographyPlugin(Plugin):
         elif isinstance(plugin_cls_or_name, str):
             plugin_name = plugin_cls_or_name
         else:
-            raise ValueError(f"Expected instance of type or str, but got {plugin_cls_or_name.__class__.__name__}")
+            raise ValueError(
+                f"Expected instance of type or str, but got {plugin_cls_or_name.__class__.__name__}"
+            )
         self.notify_all(
             {"subject": "start_plugin", "name": plugin_name, "args": kwargs}
         )
