@@ -86,43 +86,6 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
         pass
 
 
-class HMD2DChoreographyPlugin(_BaseHMDChoreographyPlugin):
-
-    ### Public
-
-    label = "HMD 2D Calibration"
-
-    @classmethod
-    def supported_gazer_classes(cls):
-        return [GazerHMD2D_v1x]
-
-    def __init__(self, g_pool):
-        super().__init__(g_pool)
-        self.__hmd_video_frame_size = None
-        self.__outlier_threshold = None
-
-    def on_choreography_successfull(
-        self, mode: ChoreographyMode, pupil_list: list, ref_list: list
-    ):
-        if mode == ChoreographyMode.CALIBRATION:
-            self._start_plugin(
-                self.selected_gazer_class,
-                hmd_video_frame_size=self.__hmd_video_frame_size,
-                outlier_threshold=self.__outlier_threshold,
-                calib_data={"ref_list": ref_list, "pupil_list": pupil_list},
-            )
-        elif mode == ChoreographyMode.VALIDATION:
-            raise NotImplementedError()
-        else:
-            raise UnsupportedChoreographyModeError(mode)
-
-    ### Internal
-
-    def _prepare_perform_start_from_notification(self, note_dict):
-        self.__hmd_video_frame_size = note_dict["hmd_video_frame_size"]
-        self.__outlier_threshold = note_dict["outlier_threshold"]
-
-
 class HMD3DChoreographyPlugin(_BaseHMDChoreographyPlugin):
 
     ### Public

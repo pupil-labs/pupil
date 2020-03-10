@@ -2,7 +2,7 @@ from .base_plugin import CalibrationChoreographyPlugin, ChoreographyAction, Chor
 from .screen_marker_plugin import ScreenMarkerChoreographyPlugin
 from .single_marker_plugin import SingleMarkerChoreographyPlugin
 from .natural_feature_plugin import NaturalFeatureChoreographyPlugin
-from .hmd_plugin import HMD2DChoreographyPlugin, HMD3DChoreographyPlugin
+from .hmd_plugin import HMD3DChoreographyPlugin
 
 
 def available_calibration_choreography_plugins():
@@ -15,7 +15,7 @@ def default_calibration_choreography_plugin(app: str):
     if app == "capture":
         return ScreenMarkerChoreographyPlugin
     if app == "service":
-        return HMD2DChoreographyPlugin
+        return HMD3DChoreographyPlugin
     if app == "player":
         raise NotImplementedError()
     raise ValueError(f'Unknown app "{app}"')
