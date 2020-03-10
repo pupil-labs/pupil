@@ -60,10 +60,6 @@ class ScreenMarkerChoreographyPlugin(
 
     label = "Screen Marker Calibration Choreography"
 
-    @classmethod
-    def supported_gazer_classes(cls):
-        return [Gazer2D_v1x, Gazer3D_v1x]
-
     def __init__(
         self,
         g_pool,

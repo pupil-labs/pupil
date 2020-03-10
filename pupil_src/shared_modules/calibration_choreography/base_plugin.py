@@ -18,6 +18,8 @@ from pyglui import ui
 from plugin import Plugin
 
 from gaze_mapping.gazer_base import GazerBase
+from gaze_mapping import GazerHMD3D_v1x
+from gaze_mapping import registered_gazer_classes
 
 
 logger = logging.getLogger(__name__)
@@ -130,9 +132,11 @@ class CalibrationChoreographyPlugin(Plugin):
     is_session_persistent = True
 
     @classmethod
-    @abc.abstractmethod
     def supported_gazer_classes(cls):
-        pass
+        gazers = registered_gazer_classes()
+        # By default, HMD gazers are not supported by regular choreographies
+        gazers = [g for g in gazers if not issubclass(g, GazerHMD3D_v1x)]
+        return gazers
 
     @classmethod
     def user_selectable_gazer_classes(cls):

@@ -81,10 +81,6 @@ class SingleMarkerChoreographyPlugin(
     _STOP_MARKER_FRAMES_NEEDED_TO_STOP = 30
     _FIXED_MARKER_POSITION = (0.5, 0.5)
 
-    @classmethod
-    def supported_gazer_classes(cls):
-        return [Gazer2D_v1x, Gazer3D_v1x]
-
     def __init__(
         self,
         g_pool,

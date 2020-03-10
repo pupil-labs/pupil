@@ -43,10 +43,6 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
     _NUMBER_OF_REF_POINTS_TO_CAPTURE = 30
     _RADIUS_OF_CIRCLE_DISPLAYED = 40.0
 
-    @classmethod
-    def supported_gazer_classes(cls):
-        return [Gazer2D_v1x, Gazer3D_v1x]
-
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.__previously_detected_feature = None
