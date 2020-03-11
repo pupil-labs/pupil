@@ -43,7 +43,7 @@ class CalibrationController(Observable):
                 self.on_calibration_computed(calibration)
 
         if len(self._reference_location_storage.items) == 0:
-            error_message = f"You first need to detect reference before calculating the calibration '{calibration.name}'"
+            error_message = f"You first need to detect reference locations before calculating the calibration '{calibration.name}'"
             self._abort_calculation(calibration, error_message)
             return None
         task = worker.create_calibration.create_task(
