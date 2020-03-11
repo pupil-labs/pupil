@@ -223,20 +223,20 @@ class Plugin(object):
         """
         return self.__class__.__name__
 
-    @property
-    def base_class(self):
+    @classmethod
+    def base_class(cls):
         """
-        rightmost base class of this instance's class
+        rightmost base class of this class
         this way you can inherit from muliple classes and use the rightmost as your plugin group classifier
         """
-        return self.__class__.__bases__[-1]
+        return cls.__bases__[-1]
 
-    @property
-    def base_class_name(self):
+    @classmethod
+    def base_class_name(cls):
         """
-        base class name of this instance's class
+        base class name of this class
         """
-        return self.base_class.__name__
+        return cls.base_class().__name__
 
     @property
     def pretty_class_name(self):
@@ -353,10 +353,10 @@ class Plugin_List(object):
         """
         if new_plugin.uniqueness == "by_base_class":
             for p in self._plugins:
-                if p.base_class == new_plugin.__bases__[-1]:
+                if p.base_class() == new_plugin.base_class():
                     replc_str = "Plugin {} of base class {} will be replaced by {}."
                     logger.debug(
-                        replc_str.format(p, p.base_class_name, new_plugin.__name__)
+                        replc_str.format(p, p.base_class_name(), new_plugin.__name__)
                     )
                     p.alive = False
                     self.clean()
