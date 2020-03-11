@@ -168,6 +168,12 @@ class GazerBase(abc.ABC, Plugin):
 
     # -- Plugin Functions
 
+    @classmethod
+    def base_class(cls):
+        # This ensures that all gazer plugins return the same base class,
+        # even gazers that subclass concrete gazer implementations.
+        return GazerBase
+
     def __init__(
         self, g_pool, *, calib_data=None, params=None, raise_calibration_error=False
     ):

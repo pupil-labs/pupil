@@ -316,6 +316,12 @@ class CalibrationChoreographyPlugin(Plugin):
 
     ### Public - Plugin
 
+    @classmethod
+    def base_class(cls):
+        # This ensures that all choreography plugins return the same base class,
+        # even choreographies that subclass concrete choreography implementations.
+        return CalibrationChoreographyPlugin
+
     def init_ui(self):
 
         self.__ui_selector_choreography = ui.Selector(
