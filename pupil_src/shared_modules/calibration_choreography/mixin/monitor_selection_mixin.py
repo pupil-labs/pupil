@@ -40,8 +40,8 @@ class MonitorSelectionMixin:
         ):
             primary_name = GUIMonitor.primary_monitor().name
             if monitor_name is not None:
-                logger.warning(
-                    f'Monitor "{monitor_name}" no longer availalbe using "{primary_name}"'
+                logger.info(
+                    f'Monitor "{monitor_name}" no longer available. Using "{primary_name}" instead.'
                 )
             monitor_name = primary_name
         self.__selected_monitor_name = monitor_name
