@@ -104,7 +104,7 @@ class ValidationInput:
     @staticmethod
     def __gazer_class_from_name(gazer_class_name: str) -> T.Optional[T.Any]:
         if "HMD" in gazer_class_name:
-            logger.error("Accuracy visualization is disabled for HMD calibration")
+            logger.info("Accuracy visualization is disabled for HMD calibration")
             return None
 
         gazers_by_name = registered_gazer_classes_by_class_name()
