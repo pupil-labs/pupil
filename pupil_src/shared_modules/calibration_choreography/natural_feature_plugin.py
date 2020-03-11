@@ -45,6 +45,7 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
 
     def __init__(self, g_pool, **kwargs):
         super().__init__(g_pool, **kwargs)
+        self.__number_of_ref_points_gathered_from_last_click = 0
         self.__previously_detected_feature = None
         self.__feature_tracker = NaturalFeatureTracker()
 
@@ -75,7 +76,8 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
         self.pupil_list.extend(events["pupil"])
 
         need_more_ref_points = (
-            len(self.ref_list) < self._NUMBER_OF_REF_POINTS_TO_CAPTURE
+            self.__number_of_ref_points_gathered_from_last_click
+            < self._NUMBER_OF_REF_POINTS_TO_CAPTURE
         )
 
         detected_feature = self.__feature_tracker.update(frame.gray)
@@ -87,6 +89,7 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
             ref["timestamp"] = frame.timestamp
             self.ref_list.append(ref)
             self.__previously_detected_feature = detected_feature
+            self.__number_of_ref_points_gathered_from_last_click += 1
         else:
             self.__previously_detected_feature = None
 
@@ -109,6 +112,7 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
     def on_click(self, pos, button, action):
         if action == GLFW_PRESS and self.is_active:
             self.__feature_tracker.reset(pos)
+            self.__number_of_ref_points_gathered_from_last_click = 0
             return True  # click consumed
         return False  # click not consumed
 
