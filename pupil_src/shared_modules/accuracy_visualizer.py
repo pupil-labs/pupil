@@ -316,7 +316,7 @@ class Accuracy_Visualizer(Plugin):
 
     def recalculate(self):
         if not self.recent_input.is_complete:
-            logger.error(
+            logger.info(
                 "Did not collect enough data to estimate gaze mapping accuracy."
             )
             return
