@@ -167,7 +167,7 @@ def closest_matches_monocular_batch(ref_pts, pupil, max_dispersion=1 / 15.0):
 
     matched = [[], []]
     if not (ref_pts and pupil):
-        return []
+        return matched
 
     pupil_ts = np.array([p["timestamp"] for p in pupil])
 
