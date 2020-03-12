@@ -328,8 +328,7 @@ class CalibrationChoreographyPlugin(Plugin):
             "selected_choreography_class",
             self,
             label="Choreography",
-            labels=[c.label for c in self.user_selectable_choreography_classes()],
-            selection=self.user_selectable_choreography_classes(),
+            selection_getter=self.__choreography_selection_getter
         )
 
         self.__ui_selector_gazer = ui.Selector(
@@ -530,6 +529,12 @@ class CalibrationChoreographyPlugin(Plugin):
         )
 
     ### Private
+
+    @classmethod
+    def __choreography_selection_getter(cls):
+        selection = cls.user_selectable_choreography_classes()
+        labels = [c.label for c in selection]
+        return selection, labels
 
     def __toggle_mode_button_visibility(self, is_visible: bool, mode: ChoreographyMode):
         ui_button = self.__mode_button(mode=mode)
