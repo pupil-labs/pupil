@@ -93,10 +93,6 @@ class ModelHMD3D_v1x(Model3D_v1x_Binocular):
         params = {
             "eye_camera_to_world_matrix0": eye0_cam_pose_in_world.tolist(),
             "eye_camera_to_world_matrix1": eye1_cam_pose_in_world.tolist(),
-            "cal_points_3d": gaze_targets_in_world.tolist(),
-            "cal_ref_points_3d": nearest_points_world.tolist(),
-            "cal_gaze_points0_3d": nearest_points_eye0.tolist(),
-            "cal_gaze_points1_3d": nearest_points_eye1.tolist(),
         }
         return params
 

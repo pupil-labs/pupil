@@ -117,18 +117,13 @@ class Model3D_v1x_Monocular(Model3D_v1x):
 
         params = {
             "eye_camera_to_world_matrix": eye_cam_pose_in_world.tolist(),
-            "cal_points_3d": gaze_targets_in_world.tolist(),
-            "cal_ref_points_3d": nearest_points_world.tolist(),
-            "cal_gaze_points_3d": nearest_points_eye.tolist(),
             "gaze_distance": self.initial_depth,
         }
         return params
 
     def set_params(self, **params):
         super().set_params(**params)
-        self.cal_points_3d = params["cal_points_3d"]
-        self.cal_ref_points_3d = params["cal_ref_points_3d"]
-        self.cal_gaze_points_3d = params["cal_gaze_points_3d"]
+        self._gaze_distance = params["gaze_distance"]
         self.gaze_distance = params["gaze_distance"]
 
         self.eye_camera_to_world_matrix = np.asarray(
@@ -209,22 +204,12 @@ class Model3D_v1x_Binocular(Model3D_v1x):
         params = {
             "eye_camera_to_world_matrix0": eye0_cam_pose_in_world.tolist(),
             "eye_camera_to_world_matrix1": eye1_cam_pose_in_world.tolist(),
-            "cal_points_3d": gaze_targets_in_world.tolist(),
-            "cal_ref_points_3d": nearest_points_world.tolist(),
-            "cal_gaze_points0_3d": nearest_points_eye0.tolist(),
-            "cal_gaze_points1_3d": nearest_points_eye1.tolist(),
         }
         return params
 
     def set_params(self, **params):
         super().set_params(**params)
         self.last_gaze_distance = 500.0
-
-        # save for debug window
-        self.cal_points_3d = params["cal_points_3d"]
-        self.cal_ref_points_3d = params["cal_ref_points_3d"]
-        self.cal_gaze_points0_3d = params["cal_gaze_points0_3d"]
-        self.cal_gaze_points1_3d = params["cal_gaze_points1_3d"]
 
         self.backproject = params.get("backproject", True)
         self.eye_camera_to_world_matricies = (
