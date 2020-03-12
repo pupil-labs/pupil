@@ -321,6 +321,11 @@ class Gazer3D_v1x(GazerBase):
     def _init_binocular_model(self) -> Model:
         return Model3D_v1x_Binocular(intrinsics=self.g_pool.capture.intrinsics)
 
+    def fit_on_calib_data(self, calib_data):
+        super().fit_on_calib_data(calib_data)
+        self.left_model.binocular_model = self.binocular_model
+        self.right_model.binocular_model = self.binocular_model
+
     def _extract_pupil_features(self, pupil_data) -> np.ndarray:
         pupil_features = np.array(
             [
