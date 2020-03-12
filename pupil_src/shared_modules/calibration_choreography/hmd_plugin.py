@@ -53,6 +53,14 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
 
     ### Public - Plugin
 
+    def __init__(self, *args, **kwargs):
+        type(self).is_user_selectable = True
+        super().__init__(*args, **kwargs)
+
+    def cleanup(self):
+        type(self).is_user_selectable = False
+        super().cleanup()
+
     def init_ui(self):
         desc_text = ui.Info_Text("Calibrate gaze parameters to map onto an HMD.")
 
