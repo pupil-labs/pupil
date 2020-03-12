@@ -8,9 +8,11 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+from collections import namedtuple
 import copy
 import logging
 import os
+from pathlib import Path
 
 import file_methods as fm
 import make_unique
@@ -189,9 +191,7 @@ class CalibrationStorage(Storage, Observable):
             calib for calib in self._calibrations if self._from_same_recording(calib)
         )
         for calibration in calibrations_from_same_recording:
-            self._save_data_to_file(
-                self._calibration_file_path(calibration), calibration.as_dict
-            )
+            self.__save_calibration_to_file(self._rec_dir, calibration)
 
     def _from_same_recording(self, calibration):
         # There is a very similar, but public method in the CalibrationController.
@@ -209,19 +209,53 @@ class CalibrationStorage(Storage, Observable):
 
     @property
     def _item_class(self):
-        return model.Calibration
+        return type(self).__calibration_model_class()
 
     @property
     def _calibration_folder(self):
-        return os.path.join(self._rec_dir, "calibrations")
+        # TODO: Backwards compatibility; remove in favor of class method
+        return str(self.__calibration_directory_from_recording(self._rec_dir))
 
     def _calibration_file_name(self, calibration):
-        file_name = "{}-{}.{}".format(
-            calibration.name, calibration.unique_id, self._calibration_suffix
-        )
-        return self.get_valid_filename(file_name)
+        # TODO: Backwards compatibility; remove in favor of class method
+        return type(self).__calibration_file_name(calibration)
 
     def _calibration_file_path(self, calibration):
-        return os.path.join(
-            self._calibration_folder, self._calibration_file_name(calibration)
-        )
+        # TODO: Backwards compatibility; remove in favor of class method
+        return str(self.__calibration_file_path_in_recording(self._rec_dir, calibration))
+
+    ### Private
+
+    @staticmethod
+    def __calibration_model_class():
+        return model.Calibration
+
+    @staticmethod
+    def __calibration_directory_from_recording(rec_dir) -> Path:
+        return Path(rec_dir).joinpath("calibrations")
+
+    @classmethod
+    def __calibration_file_name(cls, calibration) -> str:
+        file_name = f"{calibration.name}-{calibration.unique_id}.{cls._calibration_suffix}"
+        return cls.get_valid_filename(file_name)
+
+    @classmethod
+    def __calibration_file_path_in_recording(cls, rec_dir, calibration) -> Path:
+        file_name = cls.__calibration_file_name(calibration)
+        calib_dir = cls.__calibration_directory_from_recording(rec_dir)
+        return calib_dir.joinpath(file_name)
+
+    @classmethod
+    def __save_calibration_to_file(cls, rec_dir, calibration: model.Calibration):
+        # Sanity check
+        assert cls.__calibration_model_class() == calibration.__class__
+
+        # Get all properties needed to save calibration
+        version = calibration.__class__.version
+        data = calibration.as_dict
+        path = str(cls.__calibration_file_path_in_recording(rec_dir, calibration))
+
+        # Save a dictionary representation of the calibration
+        dict_representation = {"version": version, "data": data}
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        fm.save_object(dict_representation, path)
