@@ -27,7 +27,7 @@ from gaze_mapping.gazer_base import (
     NotEnoughDataError,
     FitDidNotConvergeError,
 )
-from .gazer_3d_v1x import Gazer3D_v1x, Model3D_v1x_Binocular
+from .gazer_3d_v1x import Gazer3D_v1x, Model3D_v1x_Binocular, Model3D_v1x_Monocular
 
 
 _REFERENCE_FEATURE_COUNT = 3
@@ -46,7 +46,7 @@ _BINOCULAR_PUPIL_NORMAL = slice(11, 14)
 logger = logging.getLogger(__name__)
 
 
-class ModelHMD3D_v1x(Model3D_v1x_Binocular):
+class ModelHMD3D_v1x_Binocular(Model3D_v1x_Binocular):
     def __init__(self, *, intrinsics, eye_translations):
         self.intrinsics = intrinsics
         self.eye_translations = eye_translations
@@ -97,6 +97,11 @@ class ModelHMD3D_v1x(Model3D_v1x_Binocular):
         return params
 
 
+class ModelHMD3D_v1x_Monocular(Model3D_v1x_Monocular):
+    def _fit(self, X, Y):
+        return NotImplemented
+
+
 class GazerHMD3D_v1x(Gazer3D_v1x):
     label = "HMD 3D (v1)"
 
@@ -105,22 +110,16 @@ class GazerHMD3D_v1x(Gazer3D_v1x):
         super().__init__(g_pool, calib_data=calib_data, params=params)
 
     def _init_binocular_model(self) -> Model:
-        return ModelHMD3D_v1x(
+        return ModelHMD3D_v1x_Binocular(
             intrinsics=self.g_pool.capture.intrinsics,
             eye_translations=self.__eye_translations,
         )
 
     def _init_left_model(self) -> Model:
-        return ModelHMD3D_v1x(
-            intrinsics=self.g_pool.capture.intrinsics,
-            eye_translations=self.__eye_translations,
-        )
+        return ModelHMD3D_v1x_Monocular(intrinsics=self.g_pool.capture.intrinsics)
 
     def _init_right_model(self) -> Model:
-        return ModelHMD3D_v1x(
-            intrinsics=self.g_pool.capture.intrinsics,
-            eye_translations=self.__eye_translations,
-        )
+        return ModelHMD3D_v1x_Monocular(intrinsics=self.g_pool.capture.intrinsics)
 
     def fit_on_calib_data(self, calib_data):
         # extract reference data
@@ -135,8 +134,16 @@ class GazerHMD3D_v1x(Gazer3D_v1x):
         if matches.binocular[0]:
             self._fit_binocular_model(self.binocular_model, matches.binocular)
             params = self.binocular_model.get_params()
-            self.left_model.set_params(**params)
-            self.right_model.set_params(**params)
+            self.left_model.set_params(
+                eye_camera_to_world_matrix=params["eye_camera_to_world_matrix1"],
+                gaze_distance=self.binocular_model.last_gaze_distance,
+            )
+            self.right_model.set_params(
+                eye_camera_to_world_matrix=params["eye_camera_to_world_matrix0"],
+                gaze_distance=self.binocular_model.last_gaze_distance,
+            )
+            self.left_model.binocular_model = self.binocular_model
+            self.right_model.binocular_model = self.binocular_model
         else:
             raise NotEnoughDataError
 
