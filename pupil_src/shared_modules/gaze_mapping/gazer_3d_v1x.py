@@ -90,6 +90,15 @@ class Model3D_v1x(Model):
 
 
 class Model3D_v1x_Monocular(Model3D_v1x):
+    # optional access to binocular_model.last_gaze_distance
+    binocular_model: "Model3D_v1x_Binocular" = None
+
+    @property
+    def gaze_distance(self):
+        if self.binocular_model is not None and self.binocular_model.is_fitted:
+            return self.binocular_model.last_gaze_distance
+        return self._gaze_distance
+
     def _fit(self, X, Y):
         assert X.shape[1] == _MONOCULAR_FEATURE_COUNT
         unprojected_ref_points = Y
@@ -124,7 +133,6 @@ class Model3D_v1x_Monocular(Model3D_v1x):
     def set_params(self, **params):
         super().set_params(**params)
         self._gaze_distance = params["gaze_distance"]
-        self.gaze_distance = params["gaze_distance"]
 
         self.eye_camera_to_world_matrix = np.asarray(
             params["eye_camera_to_world_matrix"]
