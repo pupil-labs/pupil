@@ -191,7 +191,7 @@ class CalibrationStorage(Storage, Observable):
             calib for calib in self._calibrations if self._from_same_recording(calib)
         )
         for calibration in calibrations_from_same_recording:
-            self.__save_calibration_to_file(self._rec_dir, calibration)
+            self._save_calibration_to_file(self._rec_dir, calibration)
 
     def _from_same_recording(self, calibration):
         # There is a very similar, but public method in the CalibrationController.
@@ -214,7 +214,7 @@ class CalibrationStorage(Storage, Observable):
     @property
     def _calibration_folder(self):
         # TODO: Backwards compatibility; remove in favor of class method
-        return str(self.__calibration_directory_from_recording(self._rec_dir))
+        return str(self._calibration_directory_from_recording(self._rec_dir))
 
     def _calibration_file_name(self, calibration):
         # TODO: Backwards compatibility; remove in favor of class method
@@ -231,7 +231,7 @@ class CalibrationStorage(Storage, Observable):
         return model.Calibration
 
     @staticmethod
-    def __calibration_directory_from_recording(rec_dir) -> Path:
+    def _calibration_directory_from_recording(rec_dir) -> Path:
         return Path(rec_dir).joinpath("calibrations")
 
     @classmethod
@@ -242,11 +242,11 @@ class CalibrationStorage(Storage, Observable):
     @classmethod
     def __calibration_file_path_in_recording(cls, rec_dir, calibration) -> Path:
         file_name = cls.__calibration_file_name(calibration)
-        calib_dir = cls.__calibration_directory_from_recording(rec_dir)
+        calib_dir = cls._calibration_directory_from_recording(rec_dir)
         return calib_dir.joinpath(file_name)
 
     @classmethod
-    def __save_calibration_to_file(cls, rec_dir, calibration: model.Calibration):
+    def _save_calibration_to_file(cls, rec_dir, calibration: model.Calibration):
         # Sanity check
         assert cls.__calibration_model_class() == calibration.__class__
 
