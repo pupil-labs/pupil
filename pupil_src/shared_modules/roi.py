@@ -283,6 +283,9 @@ class Roi(Plugin):
         self.model.frame_size = (frame.width, frame.height)
 
     def on_click(self, pos: Vec2, button: int, action: int) -> bool:
+        if not self.has_frame or self.model.is_invalid():
+            return False
+
         if action == glfw.GLFW_PRESS:
             clicked_handle = self.get_handle_at(pos)
             if clicked_handle != self.active_handle:
