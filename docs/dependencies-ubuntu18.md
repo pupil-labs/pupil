@@ -73,8 +73,6 @@ pip install git+https://github.com/pupil-labs/PyAV
 pip install git+https://github.com/pupil-labs/pyuvc
 pip install git+https://github.com/pupil-labs/pyndsi
 pip install git+https://github.com/pupil-labs/pyglui
-pip install git+https://github.com/pupil-labs/nslr
-pip install git+https://github.com/pupil-labs/nslr-hmm
 ```
 
 ### OpenCV Troubleshooting

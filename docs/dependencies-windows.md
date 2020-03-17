@@ -107,8 +107,6 @@ pip install git+https://github.com/zeromq/pyre
 
 pip install pupil-apriltags
 pip install pupil-detectors
-pip install git+https://github.com/pupil-labs/nslr
-pip install git+https://github.com/pupil-labs/nslr-hmm
 ```
 
 ## Pupil Labs Python Wheels
