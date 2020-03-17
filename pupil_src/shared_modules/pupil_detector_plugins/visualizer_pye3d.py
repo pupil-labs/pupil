@@ -21,6 +21,7 @@ from pye3d.geometry.eye import LeGrandEye
 
 from collections import deque
 
+
 class Eye_Visualizer(Visualizer):
     def __init__(self, g_pool, focal_length):
         super().__init__(g_pool, "Debug Visualizer", False)
@@ -68,22 +69,22 @@ class Eye_Visualizer(Visualizer):
 
     def draw_eye(self, result):
 
-        self.eye.pupil_radius = result["circle_3d_refraction"]["radius"]
+        self.eye.pupil_radius = result["circle_3d"]["radius"]
         self.eye.move_to_point(
             [
-                result["sphere_refraction_corrected"]["center"][0],
-                -result["sphere_refraction_corrected"]["center"][1],
-                -result["sphere_refraction_corrected"]["center"][2],
+                result["sphere"]["center"][0],
+                -result["sphere"]["center"][1],
+                -result["sphere"]["center"][2],
             ]
         )
         if result["confidence"] > 0.0 and not np.isnan(
-            result["circle_3d_refraction"]["normal"][0]
+            result["circle_3d"]["normal"][0]
         ):
             self.eye.update_from_gaze_vector(
                 [
-                    result["circle_3d_refraction"]["normal"][0],
-                    -result["circle_3d_refraction"]["normal"][1],
-                    result["circle_3d_refraction"]["normal"][2],
+                    result["circle_3d"]["normal"][0],
+                    -result["circle_3d"]["normal"][1],
+                    result["circle_3d"]["normal"][2],
                 ]
             )
             self.eye.draw_gl(alpha=0.7)
@@ -91,31 +92,21 @@ class Eye_Visualizer(Visualizer):
     def draw_debug_info(self, result):
 
         sphere_center = result["sphere"]["center"]
-        sphere_center_refraction_corrected = result["sphere_refraction_corrected"]["center"]
         gaze_vector = result["circle_3d"]["normal"]
-        gaze_vector_refraction_corrected = result["circle_3d_refraction"]["normal"]
         pupil_radius = result["circle_3d"]["radius"]
 
         status = (
             "Eyeball center : X: %.2fmm Y: %.2fmm Z: %.2fmm \n"
-            "Eyeball center - Refraction corrected: X: %.2fmm Y: %.2fmm Z: %.2fmm \n"
             "Gaze vector:  X: %.2f Y: %.2f Z: %.2f\n"
-            "Gaze vector - Refraction corrected:  X: %.2f Y: %.2f Z: %.2f\n"
             "Pupil Diameter: %.2fmm\n"
-            "Supporting pupils: %i\n"
+            "No. of supporting pupil observations: %i\n"
             % (
                 sphere_center[0],
                 sphere_center[1],
                 sphere_center[2],
-                sphere_center_refraction_corrected[0],
-                sphere_center_refraction_corrected[1],
-                sphere_center_refraction_corrected[2],
                 gaze_vector[0],
                 gaze_vector[1],
                 gaze_vector[2],
-                gaze_vector_refraction_corrected[0],
-                gaze_vector_refraction_corrected[1],
-                gaze_vector_refraction_corrected[2],
                 pupil_radius * 2,
                 len(result["debug_info"]["Dierkes_lines"]),
             )
