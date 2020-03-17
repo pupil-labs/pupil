@@ -135,12 +135,6 @@ The following steps require you to store dynamic libraries in the `pupil_externa
     - `swresample-3.dll`
     - `swscale-5.dll`
 
-#### OpenCV
-
-- Download opencv 3.4.5 exe installer from [sourceforge](https://sourceforge.net/projects/opencvlibrary/files/3.4.5/opencv-3.4.5-vc14_vc15.exe/download)
-- Unzip OpenCV to your work dir and rename dir to `opencv`
-- Copy `opencv\build\x64\vc14\bin\opencv_world345.dll` to `pupil_external`
-
 ## Start Pupil
 
 To start either of the applications -- Capture, Player, or Service -- you can to execute the respective `run_*.bat` file (e.g. by double clicking), i.e. `run_capture.bat`, `run_player.bat`, or `run_service.bat`.
