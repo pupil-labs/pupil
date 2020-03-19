@@ -103,7 +103,7 @@ git clone https://github.com/pupil-labs/pupil.git
 ### Include pupil_external in PATH Variable
 
 - Follow the instructions under the System Environment Variables section above to add a new environment variable to PATH
-- Add the full path the `pupil_external` folder of the repository that you just cloned, e.g. `C:\work\pupil\pupil_external`
+- Add the full path to the `pupil_external` folder of the repository that you just cloned, e.g. `C:\work\pupil\pupil_external`
 - You might have to restart your computer so that the PATH variable is refreshed
 
 ### Setup pupil_external Dependencies
