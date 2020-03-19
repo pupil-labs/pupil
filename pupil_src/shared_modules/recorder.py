@@ -23,7 +23,7 @@ from ndsi import H264Writer
 from pyglui import ui
 
 import csv_utils
-from av_writer import MPEG_Writer, JPEG_Writer, NonMonotonicError
+from av_writer import MPEG_Writer, JPEG_Writer, NonMonotonicTimestampError
 from file_methods import PLData_Writer, load_object
 from methods import get_system_info, timer
 from video_capture.ndsi_backend import NDSI_Source
@@ -439,7 +439,7 @@ class Recorder(System_Plugin_Base):
                 try:
                     self.writer.write_video_frame(frame)
                     self.frame_count += 1
-                except NonMonotonicError as e:
+                except NonMonotonicTimestampError as e:
                     logger.error(
                         "Recorder received non-monotonic timestamp!"
                         " Stopping the recording!"

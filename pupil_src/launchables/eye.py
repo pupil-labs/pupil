@@ -141,7 +141,7 @@ def eye(
         from file_methods import Persistent_Dict
         from version_utils import VersionFormat
         from methods import normalize, denormalize, timer
-        from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicError
+        from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicTimestampError
         from ndsi import H264Writer
         from video_capture import source_classes, manager_classes
         from roi import Roi
@@ -586,7 +586,7 @@ def eye(
                 if g_pool.writer:
                     try:
                         g_pool.writer.write_video_frame(frame)
-                    except NonMonotonicError as e:
+                    except NonMonotonicTimestampError as e:
                         logger.error(
                             "Recorder received non-monotonic timestamp!"
                             " Stopping the recording!"
