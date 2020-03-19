@@ -141,7 +141,7 @@ def eye(
         from file_methods import Persistent_Dict
         from version_utils import VersionFormat
         from methods import normalize, denormalize, timer
-        from av_writer import JPEG_Writer, MPEG_Writer
+        from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicError
         from ndsi import H264Writer
         from video_capture import source_classes, manager_classes
         from roi import Roi
@@ -584,7 +584,18 @@ def eye(
                     pass
 
                 if g_pool.writer:
-                    g_pool.writer.write_video_frame(frame)
+                    try:
+                        g_pool.writer.write_video_frame(frame)
+                    except NonMonotonicError as e:
+                        logger.error(
+                            "Recorder received non-monotonic timestamp!"
+                            " Stopping the recording!"
+                        )
+                        logger.debug(str(e))
+                        ipc_socket.notify({"subject": "recording.should_stop"})
+                        ipc_socket.notify(
+                            {"subject": "recording.should_stop", "remote_notify": "all"}
+                        )
 
                 result = event.get("pupil_detection_result", None)
                 if result is not None:
