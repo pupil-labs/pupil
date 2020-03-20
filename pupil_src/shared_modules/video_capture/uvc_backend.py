@@ -167,30 +167,41 @@ class UVC_Source(Base_Source):
         ids_present = 0
         ids_to_install = []
         for id in DEV_HW_IDS:
-            cmd_str_query = "PupilDrvInst.exe --vid {} --pid {}".format(id[0], id[1])
-            print("Running ", cmd_str_query)
+            cmd_str_query = f"PupilDrvInst.exe --vid {id[0]} --pid {id[1]}"
+            print(f"Running {cmd_str_query}")
+            logger.debug(f"Running {cmd_str_query}")
             proc = subprocess.Popen(cmd_str_query)
             proc.wait()
             if proc.returncode == 2:
                 ids_present += 1
                 ids_to_install.append(id)
-        cmd_str_inst = 'Start-Process PupilDrvInst.exe -Wait -WorkingDirectory \\"{}\\"  -ArgumentList \'--vid {} --pid {} --desc \\"{}\\" --vendor \\"Pupil Labs\\" --inst\' -Verb runas;'
         work_dir = os.getcwd()
-        # print('work_dir = ', work_dir)
         if ids_present > 0:
             try:
                 os.mkdir(os.path.join(work_dir, "win_drv"))
             except FileExistsError:
                 pass
             cmd_str = ""
-            rmdir_str = "Remove-Item {}\\win_drv -recurse -Force;".format(work_dir)
             for id in ids_to_install:
-                cmd_str += rmdir_str + cmd_str_inst.format(
-                    work_dir, id[0], id[1], id[2]
+                # using ''' here to be able to use both " and ' without escaping
+                # Note: ArgumentList needs quotes ordered this way (' outer, " inner),
+                # otherwise it won't work
+                cmd_str += f'''Remove-Item "{work_dir}\win_drv" -recurse -Force; '''
+                cmd_str += (
+                    f'''Start-Process PupilDrvInst.exe -Wait -Verb runas'''
+                    f''' -WorkingDirectory "{work_dir}"'''
+                    f''' -ArgumentList '--vid {id[0]} --pid {id[1]} --desc "{id[2]}" --vendor "Pupil Labs" --inst'; '''
                 )
+
+            # We now have strings with both " and ' used for quoting. For passing this
+            # as command to powershell.exe below, we need to wrap the whole string in
+            # one set of "". In order for this to work, we need to escape all " again:
+            cmd_str = cmd_str.replace('"', r'\"')
+
             logger.warning("Updating drivers, please wait...")
-            elevation_cmd = 'powershell.exe -version 5 -Command "{}"'.format(cmd_str)
+            elevation_cmd = f'powershell.exe -version 5 -Command "{cmd_str}"'
             print(elevation_cmd)
+            logger.debug(elevation_cmd)
             proc = subprocess.Popen(elevation_cmd)
             proc.wait()
             logger.warning("Done updating drivers!")
