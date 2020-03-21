@@ -237,6 +237,7 @@ class Serialized_Dict(object):
                 self._ser_data,
                 raw=False,
                 use_list=False,
+                strict_map_key=False,
                 object_hook=self.unpacking_object_hook,
                 ext_hook=self.unpacking_ext_hook,
             )
