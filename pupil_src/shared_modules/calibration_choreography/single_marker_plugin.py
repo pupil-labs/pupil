@@ -180,11 +180,17 @@ class SingleMarkerChoreographyPlugin(
 
         self.__marker_window.update_state()
 
+        if not self.is_active:
+            # If the plugin is not active, just return
+            return
+
+        if self.marker_mode == SingleMarkerMode.MANUAL:
+            assert isinstance(state, MarkerWindowStateClosed), "In manual mode, window should be closed at all times."
+
         if isinstance(state, MarkerWindowStateClosed):
-            if self.marker_mode == SingleMarkerMode.MANUAL:
-                assert not self.is_active  # Sanity check
-                pass  # Continue with processing the frame
-            else:
+            if self.marker_mode != SingleMarkerMode.MANUAL:
+                # This state should be unreachable, since there is an early return if the plugin is inactive
+                assert not self.is_active
                 return
 
         elif isinstance(state, MarkerWindowStateOpened):
