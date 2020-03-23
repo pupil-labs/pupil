@@ -203,29 +203,43 @@ class UVC_Source(Base_Source):
                 temp_path = None
 
             for id in ids_to_install:
-                # Create a new temp dir for every driver for easy cleanup of
-                # admin-created files.
-                with tempfile.TemporaryDirectory(dir=temp_path) as work_dir:
-                    # Using """ here to be able to use both " and ' without escaping
-                    # Note: ArgumentList needs quotes ordered this way (' outer, "
-                    # inner), otherwise it won't work
-                    cmd = (
-                        f"""Start-Process PupilDrvInst.exe -Wait -Verb runas"""
-                        f""" -WorkingDirectory '{work_dir}'"""
-                        f""" -ArgumentList '--vid {id[0]} --pid {id[1]} --desc "{id[2]}" --vendor "Pupil Labs" --inst'"""
+                # Create a new temp dir for every driver so even when experiencing
+                # PermissionErrors, we can just continue installing all necessary
+                # drivers.
+                try:
+                    with tempfile.TemporaryDirectory(dir=temp_path) as work_dir:
+                        # Using """ here to be able to use both " and ' without escaping
+                        # Note: ArgumentList needs quotes ordered this way (' outer, "
+                        # inner), otherwise it won't work
+                        cmd = (
+                            f"""Start-Process PupilDrvInst.exe -Wait -Verb runas"""
+                            f""" -WorkingDirectory '{work_dir}'"""
+                            f""" -ArgumentList '--vid {id[0]} --pid {id[1]} --desc "{id[2]}" --vendor "Pupil Labs" --inst'"""
+                        )
+
+                        # We now have strings with both " and ' used for quoting. For
+                        # passing this as command to powershell.exe below, we need to
+                        # wrap the whole string in one set of "". In order for this to
+                        # work, we need to escape all " again:
+                        cmd = cmd.replace('"', '\\"')
+
+                        elevation_cmd = f'powershell.exe -version 5 -Command "{cmd}"'
+
+                        print(elevation_cmd)
+                        logger.debug(elevation_cmd)
+                        subprocess.Popen(elevation_cmd).wait()
+                except PermissionError as e:
+                    # This can be raised when cleaning up the TemporaryDirectory, if the
+                    # process was started from a non-admin shell for a non-admin user
+                    # and has only been elevated for the powershell commands. The files
+                    # then belong to a different user and cannot be deleted. We can
+                    # ignore this, as temp dirs will be cleaned up on shutdown anyways.
+                    logger.warning(
+                        "Received a PermissionError while trying to install drivers. "
+                        "If the driver do not work, please try running from an "
+                        "administrator shell again!"
                     )
-
-                    # We now have strings with both " and ' used for quoting. For
-                    # passing this as command to powershell.exe below, we need to wrap
-                    # the whole string in one set of "". In order for this to work, we
-                    # need to escape all " again:
-                    cmd = cmd.replace('"', '\\"')
-
-                    elevation_cmd = f'powershell.exe -version 5 -Command "{cmd}"'
-
-                    print(elevation_cmd)
-                    logger.debug(elevation_cmd)
-                    subprocess.Popen(elevation_cmd).wait()
+                    logger.debug(e)
 
             logger.warning("Done updating drivers!")
 
