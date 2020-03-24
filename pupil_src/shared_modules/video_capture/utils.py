@@ -25,10 +25,6 @@ VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi", "fake")
 VIDEO_TIME_EXTS = VIDEO_EXTS + ("time",)
 
 
-class VideoDoesNotContainFramesError(ValueError):
-    pass
-
-
 class Exposure_Time(object):
     def __init__(self, max_ET, frame_rate, mode="manual"):
         self.mode = mode
@@ -193,8 +189,8 @@ class Video:
             # 3. decode() yields None
             first_frame = next(cont.decode(video=0), None)
             if first_frame is None:
-                raise VideoDoesNotContainFramesError()
-        except (av.AVError, VideoDoesNotContainFramesError):
+                return False  # container does not contain frames
+        except av.AVError:
             return False
         else:
             cont.seek(0)
