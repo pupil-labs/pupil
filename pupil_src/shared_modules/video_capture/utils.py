@@ -189,7 +189,7 @@ class Video:
             # 3. decode() yields None
             first_frame = next(cont.decode(video=0), None)
             if first_frame is None:
-                raise av.AVError("Video does not contain any frames")
+                return False  # container does not contain frames
         except av.AVError:
             return False
         else:
