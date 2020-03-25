@@ -8,12 +8,12 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import glob
 import logging
 import os
 import pathlib as pl
+import typing as T
 from pathlib import Path
-from typing import Iterator, Sequence
+
 
 import av
 import cv2
@@ -174,34 +174,33 @@ class Video:
         self.path = path
         self.ts = None
         self._pts = None
-        self._is_valid = self.check_valid()
+        self._is_valid = None  # calculated on demand
 
     @property
     def is_valid(self):
+        if self._is_valid is None:
+            self._is_valid = self.load_valid_container() is not None
         return self._is_valid
 
-    def check_valid(self):
+    def load_valid_container(self):
         try:
-            cont = av.open(self.path)
+            cont = self.attempt_open_container()
             # Three failure scenarios:
             # 1. Broken video -> AVError
             # 2. decode() does not yield anything
             # 3. decode() yields None
             first_frame = next(cont.decode(video=0), None)
             if first_frame is None:
-                return False  # container does not contain frames
+                return None  # container does not contain frames
         except av.AVError:
-            return False
+            return None
         else:
             cont.seek(0)
-            self.cont = cont
-            return True
+            return cont
 
-    def load_valid_container(self):
-        if self.is_valid:
-            return self.cont
-        else:
-            return None
+    def attempt_open_container(self):
+        cont = av.open(self.path)
+        return cont
 
     def load_ts(self):
         try:
@@ -211,10 +210,13 @@ class Video:
             return
         self.ts = self._fix_negative_time_jumps(self.ts)
 
-    def load_pts(self):
-        packets = self.cont.demux(video=0)
+    def load_pts(self, container=None):
+        if container is None:
+            container = self.attempt_open_container()
+        packets = container.demux(video=0)
         # last pts is invalid
         self._pts = np.array([packet.pts for packet in packets][:-1])
+        return self._pts
 
     @property
     def name(self) -> str:
@@ -271,7 +273,6 @@ class VideoSet:
         self.fill_gaps = fill_gaps
         self.video_exts = set(VIDEO_EXTS) - {"fake"}
         self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
-        self._containers = [vid.load_valid_container() for vid in self.videos]
 
     def is_empty(self) -> bool:
         try:
@@ -284,18 +285,17 @@ class VideoSet:
             )
 
     @property
-    def videos(self) -> Sequence[Video]:
+    def videos(self) -> T.List[Video]:
         return self._videos
 
-    @property
-    def containers(self) -> Sequence[Video]:
-        return self._containers
+    def get_container(self, index) -> T.Optional[av.container.input.InputContainer]:
+        return self.videos[index].load_valid_container()
 
     @property
     def lookup_loc(self) -> str:
         return os.path.join(self.rec, f"{self.name}_lookup.npy")
 
-    def fetch_videos(self) -> Iterator[Video]:
+    def fetch_videos(self) -> T.Iterator[Video]:
         for ext in self.video_exts:
             for loc in Path(self.rec).glob(f"{self.name}*.{ext}"):
                 yield Video(str(loc))
@@ -344,7 +344,8 @@ class VideoSet:
 
         lookup = self._setup_lookup(loaded_ts)
         for container_idx, vid in enumerate(self.videos):
-            if not vid.is_valid:
+            container = vid.load_valid_container()
+            if container is None:
                 # For invalid videos, we still try to load the timestamps (might be empty)
                 lookup_mask = np.isin(lookup.timestamp, vid.timestamps)
                 lookup.container_frame_idx[lookup_mask] = np.arange(vid.timestamps.size)
@@ -354,7 +355,8 @@ class VideoSet:
                 # pts, so we might introduce a systematic bias when fixing this! The
                 # idea is to keep only data for timestamps that were recorded, but
                 # leave frames blank if we don't have frame information.
-                npts = vid.pts.size
+                vid_pts = vid.load_pts(container)
+                npts = vid_pts.size
                 ntime = vid.timestamps.size
                 if npts < ntime:
                     logger.warning(
@@ -368,7 +370,7 @@ class VideoSet:
                     )
                 data_size = min(npts, ntime)
                 vid_timestamps = vid.timestamps[:data_size]
-                vid_pts = vid.pts[:data_size]
+                vid_pts = vid_pts[:data_size]
 
                 lookup_mask = np.isin(lookup.timestamp, vid_timestamps)
                 lookup.container_frame_idx[lookup_mask] = np.arange(vid_timestamps.size)
