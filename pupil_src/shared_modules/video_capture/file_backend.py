@@ -299,8 +299,6 @@ class File_Source(Playback_Source, Base_Source):
             # setup a 'valid' broken stream
             self.video_stream = BrokenStream()
         else:
-                # TODO: Shouldn't this be caught through an invalid container_index?
-                logger.warning("Video container is broken, although it appeared valid.")
             try:
                 container = self.videoset.get_container(container_index)
                 self.video_stream = self._get_streams(container, self.buffering)
