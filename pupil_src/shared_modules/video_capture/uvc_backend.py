@@ -190,16 +190,16 @@ class UVC_Source(Base_Source):
                 temp_path = Path("C:\\Windows\\Temp")
                 if not temp_path.exists():
                     raise RuntimeError(
-                        "Username contains Unicode characters and default Temp folder "
-                        "location could not be found. Please use a different username "
-                        "which only uses english characters!"
+                        "Your path to Pupil contains Unicode characters and the "
+                        "default Temp folder location could not be found. Please place "
+                        "Pupil on a path which only contains english characters!"
                     )
                 logger.debug(
                     "Detected Unicode characters in working directory! "
                     "Switching temporary driver install location to C:\\Windows\\Temp"
                 )
             else:
-                # if pwd has only ascii characters: use default temp location
+                # if cwd has only ascii characters: use default temp location
                 temp_path = None
 
             for id in ids_to_install:
@@ -235,9 +235,8 @@ class UVC_Source(Base_Source):
                     # then belong to a different user and cannot be deleted. We can
                     # ignore this, as temp dirs will be cleaned up on shutdown anyways.
                     logger.warning(
-                        "Received a PermissionError while trying to install drivers. "
-                        "If the driver do not work, please try running from an "
-                        "administrator shell again!"
+                        "Pupil was not run as administrator. If the drivers do not "
+                        "work, please try running as administrator again!"
                     )
                     logger.debug(e)
 
