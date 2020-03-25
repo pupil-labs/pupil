@@ -296,13 +296,9 @@ class VideoSet:
         return os.path.join(self.rec, f"{self.name}_lookup.npy")
 
     def fetch_videos(self) -> Iterator[Video]:
-        # If self.fill_gaps, we return all videos
-        # else we skip the broken videos
         for ext in self.video_exts:
             for loc in Path(self.rec).glob(f"{self.name}*.{ext}"):
-                vid = Video(str(loc))
-                if self.fill_gaps or vid.is_valid:
-                    yield vid
+                yield Video(str(loc))
 
     def build_lookup(self, fallback_timestamps=None):
         """
