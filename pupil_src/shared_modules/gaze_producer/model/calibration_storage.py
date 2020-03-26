@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import copy
 import logging
 import os
+import pathlib
 
 import file_methods as fm
 import make_unique
@@ -101,9 +102,11 @@ class CalibrationStorage(Storage, Observable):
     def _load_from_disk(self):
         try:
             # we sort because listdir sometimes returns files in weird order
-            for file_name in sorted(os.listdir(self._calibration_folder)):
-                if file_name.endswith(self._calibration_suffix):
-                    self._load_calibration_from_file(file_name)
+            folder_path = pathlib.Path(self._calibration_folder)
+            # pattern `[!.]`: exclude OS-specific meta-data files
+            pattern = f"[!.]*{self._calibration_suffix}"
+            for file_name in sorted(folder_path.glob(pattern)):
+                self._load_calibration_from_file(file_name)
         except FileNotFoundError:
             pass
         self._load_recorded_calibrations()
