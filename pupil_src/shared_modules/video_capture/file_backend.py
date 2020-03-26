@@ -31,6 +31,7 @@ from .utils import VideoSet
 logger = logging.getLogger(__name__)
 av.logging.set_level(av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
+logging.getLogger("av.buffered_decoder").setLevel(logging.WARNING)
 
 assert av.__version__ >= "0.4.3", "pyav is out-of-date, please update"
 
