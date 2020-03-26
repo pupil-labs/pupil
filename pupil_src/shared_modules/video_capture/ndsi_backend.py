@@ -26,7 +26,7 @@ try:
     assert Version(__version__) >= Version("1.3")
     from ndsi import __protocol_version__
 except (ImportError, AssertionError):
-    raise Exception("pyndsi version is to old. Please upgrade") from None
+    raise Exception("pyndsi version is too old. Please upgrade!") from None
 
 
 logger = logging.getLogger(__name__)
