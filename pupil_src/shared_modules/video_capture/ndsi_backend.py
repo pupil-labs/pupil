@@ -23,10 +23,10 @@ from .base_backend import Base_Manager, Base_Source, SourceInfo
 try:
     from ndsi import __version__
 
-    assert Version(__version__) >= Version("1.0.dev0")
+    assert Version(__version__) >= Version("1.3")
     from ndsi import __protocol_version__
 except (ImportError, AssertionError):
-    raise Exception("pyndsi version is to old. Please upgrade") from None
+    raise Exception("pyndsi version is too old. Please upgrade!") from None
 
 
 logger = logging.getLogger(__name__)

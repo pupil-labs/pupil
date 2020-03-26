@@ -91,6 +91,12 @@ def write_timestamps(file_loc, timestamps, output_format="npy"):
             return
 
 
+class NonMonotonicTimestampError(ValueError):
+    """Indicates that a Writer received non-monotonic data to write."""
+
+    pass
+
+
 class AV_Writer(abc.ABC):
     def __init__(self, output_file_path: str, start_time_synced: int):
         """
@@ -166,7 +172,7 @@ class AV_Writer(abc.ABC):
             last_ts = self.timestamps[-1]
             if ts < last_ts:
                 self.release()
-                raise ValueError(
+                raise NonMonotonicTimestampError(
                     "Non-monotonic timestamps!"
                     f"Last timestamp: {last_ts}. Given timestamp: {ts}"
                 )

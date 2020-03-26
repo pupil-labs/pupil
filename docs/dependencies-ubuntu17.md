@@ -168,8 +168,6 @@ pip install git+https://github.com/pupil-labs/PyAV
 pip install git+https://github.com/pupil-labs/pyuvc
 pip install git+https://github.com/pupil-labs/pyndsi
 pip install git+https://github.com/pupil-labs/pyglui
-pip install git+https://github.com/pupil-labs/nslr
-pip install git+https://github.com/pupil-labs/nslr-hmm
 ```
 
 **NOTE**: If you get the error `ImportError: No module named 'cv2'` when trying to run Pupil, please refer to the section [OpenCV Troubleshooting](#opencv-troubleshooting) above.

@@ -38,7 +38,11 @@ class ScanPathController(Observable):
         self.g_pool = g_pool
 
         self._params = ScanPathParams(**kwargs)
-        assert self.min_timeframe <= self.timeframe <= self.max_timeframe
+        assert self.min_timeframe <= self.timeframe <= self.max_timeframe, (
+            f"min_timeframe={self.min_timeframe}, "
+            f"timeframe={self.timeframe}, "
+            f"max_timeframe={self.max_timeframe}, "
+        )
 
         self._status_str = ""
 
@@ -68,7 +72,11 @@ class ScanPathController(Observable):
 
     @timeframe.setter
     def timeframe(self, value: float):
-        self._params["timeframe"] = value
+        # It is possible that pyglui.ui.Slider sets this value to a float slighty larger
+        # than self.max_timeframe which will trigger the assertion on restoring session
+        # settings.
+        clipped = max(self.min_timeframe, min(value, self.max_timeframe))
+        self._params["timeframe"] = clipped
 
     @property
     def is_active(self) -> bool:
@@ -198,9 +206,7 @@ class ScanPathParams(dict):
 
     version = 1
 
-    default_params = {
-        "timeframe": ScanPathController.min_timeframe
-    }
+    default_params = {"timeframe": ScanPathController.min_timeframe}
 
     def __init__(self, **kwargs):
         super().__init__(**self.default_params)

@@ -99,7 +99,7 @@ class Storage(abc.ABC):
 
     def _load_data_from_file(self, filepath):
         try:
-            dict_representation = fm.load_object(filepath)
+            dict_representation = fm.load_object(filepath, allow_legacy=False)
         except FileNotFoundError:
             return None
         if dict_representation.get("version", None) != self._item_class.version:

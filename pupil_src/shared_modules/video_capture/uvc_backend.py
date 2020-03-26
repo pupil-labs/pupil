@@ -13,7 +13,9 @@ import enum
 import logging
 import platform
 import re
+import tempfile
 import time
+from pathlib import Path
 
 import numpy as np
 from pyglui import cygl, ui
@@ -167,32 +169,77 @@ class UVC_Source(Base_Source):
         ids_present = 0
         ids_to_install = []
         for id in DEV_HW_IDS:
-            cmd_str_query = "PupilDrvInst.exe --vid {} --pid {}".format(id[0], id[1])
-            print("Running ", cmd_str_query)
+            cmd_str_query = f"PupilDrvInst.exe --vid {id[0]} --pid {id[1]}"
+            print(f"Running {cmd_str_query}")
+            logger.debug(f"Running {cmd_str_query}")
             proc = subprocess.Popen(cmd_str_query)
             proc.wait()
             if proc.returncode == 2:
                 ids_present += 1
                 ids_to_install.append(id)
-        cmd_str_inst = 'Start-Process PupilDrvInst.exe -Wait -WorkingDirectory \\"{}\\"  -ArgumentList \'--vid {} --pid {} --desc \\"{}\\" --vendor \\"Pupil Labs\\" --inst\' -Verb runas;'
-        work_dir = os.getcwd()
-        # print('work_dir = ', work_dir)
+
         if ids_present > 0:
-            try:
-                os.mkdir(os.path.join(work_dir, "win_drv"))
-            except FileExistsError:
-                pass
-            cmd_str = ""
-            rmdir_str = "Remove-Item {}\\win_drv -recurse -Force;".format(work_dir)
-            for id in ids_to_install:
-                cmd_str += rmdir_str + cmd_str_inst.format(
-                    work_dir, id[0], id[1], id[2]
-                )
             logger.warning("Updating drivers, please wait...")
-            elevation_cmd = 'powershell.exe -version 5 -Command "{}"'.format(cmd_str)
-            print(elevation_cmd)
-            proc = subprocess.Popen(elevation_cmd)
-            proc.wait()
+
+            # NOTE: libwdi in PupilDrvIns.exe cannot deal with unicode characters in the
+            # temporary path where the drivers will be installed. Check for non-ascii in
+            # current working directory and use C:\Windows\Temp as fallback.
+            try:
+                str(Path.cwd().resolve()).encode("ascii")
+            except UnicodeEncodeError:
+                temp_path = Path("C:\\Windows\\Temp")
+                if not temp_path.exists():
+                    raise RuntimeError(
+                        "Your path to Pupil contains Unicode characters and the "
+                        "default Temp folder location could not be found. Please place "
+                        "Pupil on a path which only contains english characters!"
+                    )
+                logger.debug(
+                    "Detected Unicode characters in working directory! "
+                    "Switching temporary driver install location to C:\\Windows\\Temp"
+                )
+            else:
+                # if cwd has only ascii characters: use default temp location
+                temp_path = None
+
+            for id in ids_to_install:
+                # Create a new temp dir for every driver so even when experiencing
+                # PermissionErrors, we can just continue installing all necessary
+                # drivers.
+                try:
+                    with tempfile.TemporaryDirectory(dir=temp_path) as work_dir:
+                        # Using """ here to be able to use both " and ' without escaping
+                        # Note: ArgumentList needs quotes ordered this way (' outer, "
+                        # inner), otherwise it won't work
+                        cmd = (
+                            f"""Start-Process PupilDrvInst.exe -Wait -Verb runas"""
+                            f""" -WorkingDirectory '{work_dir}'"""
+                            f""" -ArgumentList '--vid {id[0]} --pid {id[1]} --desc "{id[2]}" --vendor "Pupil Labs" --inst'"""
+                        )
+
+                        # We now have strings with both " and ' used for quoting. For
+                        # passing this as command to powershell.exe below, we need to
+                        # wrap the whole string in one set of "". In order for this to
+                        # work, we need to escape all " again:
+                        cmd = cmd.replace('"', '\\"')
+
+                        elevation_cmd = f'powershell.exe -version 5 -Command "{cmd}"'
+
+                        print(elevation_cmd)
+                        logger.debug(elevation_cmd)
+                        subprocess.Popen(elevation_cmd).wait()
+                except PermissionError as e:
+                    # This can be raised when cleaning up the TemporaryDirectory, if the
+                    # process was started from a non-admin shell for a non-admin user
+                    # and has only been elevated for the powershell commands. The files
+                    # then belong to a different user and cannot be deleted. We can
+                    # ignore this, as temp dirs will be cleaned up on shutdown anyways.
+                    logger.warning(
+                        "Pupil was not run as administrator. If the drivers do not "
+                        "work, please try running as administrator again!"
+                    )
+                    logger.debug(e)
+
             logger.warning("Done updating drivers!")
 
     def configure_capture(self, frame_size, frame_rate, uvc_controls):
