@@ -147,7 +147,6 @@ class ScanPathController(Observable):
         self.on_update_ui()
 
     def _on_preproc_updated(self, gaze_datum):
-        logger.debug("ScanPathController._on_preproc_updated")
         self._status_str = f"Preprocessing {int(self._preproc.progress * 100)}%..."
         self.on_update_ui()
 
@@ -178,7 +177,6 @@ class ScanPathController(Observable):
         self.on_update_ui()
 
     def _on_bg_task_updated(self, update_data):
-        logger.debug("ScanPathController._on_bg_task_updated")
         self._status_str = f"Calculation {int(self._bg_task.progress * 100)}%..."
         # TODO: Save intermediary data
         self.on_update_ui()
