@@ -181,11 +181,12 @@ class UVC_Source(Base_Source):
         if ids_present > 0:
             logger.warning("Updating drivers, please wait...")
 
+            pupil_capture_install_loc = Path.cwd()
             # NOTE: libwdi in PupilDrvIns.exe cannot deal with unicode characters in the
             # temporary path where the drivers will be installed. Check for non-ascii in
             # current working directory and use C:\Windows\Temp as fallback.
             try:
-                str(Path.cwd().resolve()).encode("ascii")
+                str(pupil_capture_install_loc.resolve()).encode("ascii")
             except UnicodeEncodeError:
                 temp_path = Path("C:\\Windows\\Temp")
                 if not temp_path.exists():
@@ -211,8 +212,10 @@ class UVC_Source(Base_Source):
                         # Using """ here to be able to use both " and ' without escaping
                         # Note: ArgumentList needs quotes ordered this way (' outer, "
                         # inner), otherwise it won't work
+
+                        driver_exe = pupil_capture_install_loc / "PupilDrvInst.exe"
                         cmd = (
-                            f"""Start-Process PupilDrvInst.exe -Wait -Verb runas"""
+                            f"""Start-Process '{driver_exe}' -Wait -Verb runas"""
                             f""" -WorkingDirectory '{work_dir}'"""
                             f""" -ArgumentList '--vid {id[0]} --pid {id[1]} --desc "{id[2]}" --vendor "Pupil Labs" --inst'"""
                         )
