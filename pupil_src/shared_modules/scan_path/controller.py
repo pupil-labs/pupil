@@ -105,7 +105,7 @@ class ScanPathController(Observable):
             return None
 
         if not self._gaze_data_store.is_valid or not self._gaze_data_store.is_complete:
-            if not self.is_active:
+            if not self.is_active and self.g_pool.app == "player":
                 self._trigger_immediate_scan_path_calculation()
             return None
 
