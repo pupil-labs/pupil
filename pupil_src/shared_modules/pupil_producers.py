@@ -425,6 +425,16 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.eye_video_loc[eye_id] = video_loc
         self.detection_status[eye_id] = "Detecting..."
 
+    @property
+    def detection_progress(self) -> float:
+        total = sum(self.eye_frame_num)
+        if total:
+            # TODO: Replace hardcoded 2 (nr. of detection methods)
+            # with nicer way to calculate the progress with variable number of detection methods
+            return len(self._pupil_data_store) / total / 2
+        else:
+            return 0.0
+
     def stop_eye_process(self, eye_id):
         self.notify_all({"subject": "eye_process.should_stop", "eye_id": eye_id})
         self.eye_video_loc[eye_id] = None
@@ -452,10 +462,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                             break
                     if self.eye_video_loc == [None, None]:
                         self.correlate_publish()
-        total = sum(self.eye_frame_num)
-        self.menu_icon.indicator_stop = (
-            len(self.pupil_positions) / total if total else 0.0
-        )
+        self.menu_icon.indicator_stop = self.detection_progress
 
     def correlate_publish(self):
         bisectors = self._pupil_data_store.create_bisectors()
@@ -537,14 +544,10 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             )
         )
 
-        def detection_progress():
-            total = sum(self.eye_frame_num)
-            return 100 * len(self.pupil_positions) / total if total else 0.0
-
         progress_slider = ui.Slider(
             "detection_progress",
             label="Detection Progress",
-            getter=detection_progress,
+            getter=lambda: 100 * self.detection_progress,
             setter=lambda _: _,
         )
         progress_slider.display_format = "%3.0f%%"
