@@ -284,8 +284,9 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             assert session_meta_data.get("version") == self.session_data_version
         except (AssertionError, FileNotFoundError):
             session_meta_data = {}
-            session_meta_data["detection_method"] = "3d"
             session_meta_data["detection_status"] = ["unknown", "unknown"]
+
+        session_meta_data["detection_method"] = "3d" # Force 3D detection method, since the detectors produce both
         self.detection_method = session_meta_data["detection_method"]
         self.detection_status = session_meta_data["detection_status"]
 
@@ -451,15 +452,6 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.menu.label = "Offline Pupil Detector"
         self.menu.append(
             ui.Info_Text("Detects pupil positions from the recording's eye videos.")
-        )
-        self.menu.append(
-            ui.Selector(
-                "detection_method",
-                self,
-                label="Detection Method",
-                selection=["2d", "3d"],
-                setter=self.set_detection_mapping_mode,
-            )
         )
         self.menu.append(ui.Switch("detection_paused", self, label="Pause detection"))
         self.menu.append(ui.Button("Redetect", self.redetect))
