@@ -13,6 +13,7 @@ import collections
 import logging
 import os
 from itertools import chain
+import typing as T
 
 import numpy as np
 import OpenGL.GL as gl
@@ -259,6 +260,86 @@ class Pupil_From_Recording(Pupil_Producer_Base):
         )
 
 
+class PupilDataStore:
+
+    @classmethod
+    def load_from_file(cls, dir_path, filename) -> "PupilDataSource":
+        pupil = fm.load_pldata_file(dir_path, filename)
+        return cls(
+            topics=pupil.topics,
+            data=pupil.data,
+            timestamps=pupil.timestamps,
+        )
+
+    def save_to_file(self, dir_path, filename):
+        with fm.PLData_Writer(dir_path, filename) as writer:
+            for (topic, _, timestamp), datum in self._data_by_method_and_ts.items():
+                writer.append_serialized(timestamp, topic, datum.serialized)
+
+    def __init__(self, topics, data, timestamps):
+        assert len(topics) == len(data) == len(timestamps)
+
+        method_fn = self.__method_from_data
+        methods = (method_fn(d) for d in data)
+
+        self._data_by_method_and_ts = collections.OrderedDict(
+            zip(
+                zip(topics, methods, timestamps),
+                data,
+            )
+        )
+    
+    def append(self, topic: str, pupil_datum: dict, timestamp: float):
+        method = self.__method_from_data(pupil_datum)
+        key = (topic, method, timestamp)
+        self._data_by_method_and_ts[key] = pupil_datum
+
+    def clear(self):
+        self._data_by_method_and_ts.clear()
+
+    def __len__(self):
+        return len(self._data_by_method_and_ts)
+
+    Bisectors = collections.namedtuple("Bisectors", ["eye0", "eye1", "combined"])
+
+    def create_bisectors(self) -> "PupilDataStore.Bisectors":
+        eye0_data, eye0_time = collections.deque(), collections.deque()
+        eye1_data, eye1_time = collections.deque(), collections.deque()
+        both_data, both_time = collections.deque(), collections.deque()
+
+        for (topic, _, timestamp), datum in self._data_by_method_and_ts.items():
+            if topic[-1] == "0":
+                eye0_data.append(datum)
+                eye0_time.append(timestamp)
+            elif topic[-1] == "1":
+                eye1_data.append(datum)
+                eye1_time.append(timestamp)
+            else:
+                raise ValueError(f"Invalid pupil data topic: {topic}")
+
+            both_data.append(datum)
+            both_time.append(timestamp)
+
+        return PupilDataStore.Bisectors(
+            eye0=pm.Bisector(eye0_data, eye0_time),
+            eye1=pm.Bisector(eye1_data, eye1_time),
+            combined=pm.Bisector(both_data, both_time)
+        )
+
+    def legacy_topics(self) -> T.Iterable[str]:
+        for (topic, _, _), _ in self._data_by_method_and_ts.items():
+            yield topic
+
+    @staticmethod
+    def __method_from_data(data: dict) -> str:
+        if "2d" in data["method"]:
+            return "2d"
+        if "3d" in data["method"]:
+            return "3d"
+        raise ValueError(f"Unknown detection method: {data['method']}")
+
+
+
 class Offline_Pupil_Detection(Pupil_Producer_Base):
     """docstring for Offline_Pupil_Detection"""
 
@@ -290,15 +371,11 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.detection_method = session_meta_data["detection_method"]
         self.detection_status = session_meta_data["detection_status"]
 
-        pupil = fm.load_pldata_file(self.data_dir, self.session_data_name)
-        ts_data_zip = zip(pupil.timestamps, pupil.data)
-        ts_topic_zip = zip(pupil.timestamps, pupil.topics)
-        self.pupil_positions = collections.OrderedDict(ts_data_zip)
-        self.id_topics = collections.OrderedDict(ts_topic_zip)
+        self._pupil_data_store = PupilDataStore.load_from_file(self.data_dir, self.session_data_name)
 
         self.eye_video_loc = [None, None]
         self.eye_frame_num = [0, 0]
-        for topic in self.id_topics.values():
+        for topic in self._pupil_data_store.legacy_topics():
             eye_id = int(topic[-1])
             self.eye_frame_num[eye_id] += 1
 
@@ -362,8 +439,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 payload_serialized = next(remaining_frames)
                 pupil_datum = fm.Serialized_Dict(msgpack_bytes=payload_serialized)
                 assert int(topic[-1]) == pupil_datum["id"]
-                self.pupil_positions[pupil_datum["timestamp"]] = pupil_datum
-                self.id_topics[pupil_datum["timestamp"]] = topic
+                timestamp = pupil_datum["timestamp"]
+                self._pupil_data_store.append(topic, pupil_datum, timestamp)
             else:
                 payload = self.data_sub.deserialize_payload(*remaining_frames)
                 if payload["subject"] == "file_source.video_finished":
@@ -381,13 +458,9 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         )
 
     def correlate_publish(self):
-        self.g_pool.pupil_positions = pm.Bisector(
-            tuple(self.pupil_positions.values()), tuple(self.pupil_positions.keys())
-        )
-        self.g_pool.pupil_positions_by_id = self.create_pupil_positions_by_id(
-            self.pupil_positions, self.id_topics
-        )
-
+        bisectors = self._pupil_data_store.create_bisectors()
+        self.g_pool.pupil_positions = bisectors.combined
+        self.g_pool.pupil_positions_by_id = (bisectors.eye0, bisectors.eye1)
         self._pupil_changed_announcer.announce_new()
         logger.debug("pupil positions changed")
         self.save_offline_data()
@@ -407,14 +480,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.save_offline_data()
 
     def save_offline_data(self):
-        topic_data_ts = (
-            (self.id_topics[ts], datum, ts)
-            for ts, datum in self.pupil_positions.items()
-        )
-        with fm.PLData_Writer(self.data_dir, "offline_pupil") as writer:
-            for topic, datum, timestamp in topic_data_ts:
-                writer.append_serialized(timestamp, topic, datum.serialized)
-
+        self._pupil_data_store.save_to_file(self.data_dir, "offline_pupil")
         session_data = {}
         session_data["detection_method"] = self.detection_method
         session_data["detection_status"] = self.detection_status
@@ -424,8 +490,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         logger.info("Cached detected pupil data to {}".format(cache_path))
 
     def redetect(self):
-        self.pupil_positions.clear()  # delete previously detected pupil positions
-        self.id_topics.clear()
+        self._pupil_data_store.clear()
         self.g_pool.pupil_positions = pm.Bisector([], [])
         self.detection_finished_flag = False
         self.detection_paused = False
