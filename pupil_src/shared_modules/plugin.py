@@ -376,7 +376,7 @@ class Plugin_List(object):
 
         plugin_instance = new_plugin(self.g_pool, **args)
         if not plugin_instance.alive:
-            logger.warning("plugin failed to initialize")
+            logger.warning(f"Plugin {new_plugin.__name__} failed to initialize")
             return
 
         self._plugins.append(plugin_instance)
@@ -447,6 +447,9 @@ def import_runtime_plugins(plugin_dir):
                         runtime_plugins.append(member)
             except Exception as e:
                 logger.warning("Failed to load '{}'. Reason: '{}' ".format(d, e))
+                import traceback
+
+                logger.debug(traceback.format_exc())
     return runtime_plugins
 
 
