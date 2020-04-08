@@ -236,7 +236,7 @@ class CalibrationStorage(Storage, Observable):
 
     @staticmethod
     def _calibration_directory_from_recording(rec_dir) -> pathlib.Path:
-        returnpathlib.Path(rec_dir).joinpath("calibrations")
+        return pathlib.Path(rec_dir).joinpath("calibrations")
 
     @classmethod
     def __calibration_file_name(cls, calibration) -> str:
