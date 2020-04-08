@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2018 Pupil Labs
+Copyright (C) 2012-2020 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -45,7 +45,6 @@ excludes = [
     "glfw.py",
     "version_utils.py",
     "update_license_header.py",
-    "shared_cpp*",
 ]
 
 # transform glob patterns to regular expressions

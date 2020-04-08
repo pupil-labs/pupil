@@ -12,7 +12,7 @@ from collections import namedtuple
 import copy
 import logging
 import os
-from pathlib import Path
+import pathlib
 
 import file_methods as fm
 import make_unique
@@ -134,9 +134,11 @@ class CalibrationStorage(Storage, Observable):
     def _load_from_disk(self):
         try:
             # we sort because listdir sometimes returns files in weird order
-            for file_name in sorted(os.listdir(self._calibration_folder)):
-                if file_name.endswith(self._calibration_suffix):
-                    self._load_calibration_from_file(file_name)
+            folder_path = pathlib.Path(self._calibration_folder)
+            # pattern `[!.]`: exclude OS-specific meta-data files
+            pattern = f"[!.]*{self._calibration_suffix}"
+            for file_name in sorted(folder_path.glob(pattern)):
+                self._load_calibration_from_file(file_name)
         except FileNotFoundError:
             pass
         self._load_recorded_calibrations()
@@ -222,7 +224,9 @@ class CalibrationStorage(Storage, Observable):
 
     def _calibration_file_path(self, calibration):
         # TODO: Backwards compatibility; remove in favor of class method
-        return str(self.__calibration_file_path_in_recording(self._rec_dir, calibration))
+        return str(
+            self.__calibration_file_path_in_recording(self._rec_dir, calibration)
+        )
 
     ### Private
 
@@ -231,16 +235,18 @@ class CalibrationStorage(Storage, Observable):
         return model.Calibration
 
     @staticmethod
-    def _calibration_directory_from_recording(rec_dir) -> Path:
-        return Path(rec_dir).joinpath("calibrations")
+    def _calibration_directory_from_recording(rec_dir) -> pathlib.Path:
+        returnpathlib.Path(rec_dir).joinpath("calibrations")
 
     @classmethod
     def __calibration_file_name(cls, calibration) -> str:
-        file_name = f"{calibration.name}-{calibration.unique_id}.{cls._calibration_suffix}"
+        file_name = (
+            f"{calibration.name}-{calibration.unique_id}.{cls._calibration_suffix}"
+        )
         return cls.get_valid_filename(file_name)
 
     @classmethod
-    def __calibration_file_path_in_recording(cls, rec_dir, calibration) -> Path:
+    def __calibration_file_path_in_recording(cls, rec_dir, calibration) -> pathlib.Path:
         file_name = cls.__calibration_file_name(calibration)
         calib_dir = cls._calibration_directory_from_recording(rec_dir)
         return calib_dir.joinpath(file_name)

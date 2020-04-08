@@ -38,7 +38,11 @@ class ScanPathController(Observable):
         self.g_pool = g_pool
 
         self._params = ScanPathParams(**kwargs)
-        assert self.min_timeframe <= self.timeframe <= self.max_timeframe
+        assert self.min_timeframe <= self.timeframe <= self.max_timeframe, (
+            f"min_timeframe={self.min_timeframe}, "
+            f"timeframe={self.timeframe}, "
+            f"max_timeframe={self.max_timeframe}, "
+        )
 
         self._status_str = ""
 
@@ -68,7 +72,11 @@ class ScanPathController(Observable):
 
     @timeframe.setter
     def timeframe(self, value: float):
-        self._params["timeframe"] = value
+        # It is possible that pyglui.ui.Slider sets this value to a float slighty larger
+        # than self.max_timeframe which will trigger the assertion on restoring session
+        # settings.
+        clipped = max(self.min_timeframe, min(value, self.max_timeframe))
+        self._params["timeframe"] = clipped
 
     @property
     def is_active(self) -> bool:
@@ -139,7 +147,6 @@ class ScanPathController(Observable):
         self.on_update_ui()
 
     def _on_preproc_updated(self, gaze_datum):
-        logger.debug("ScanPathController._on_preproc_updated")
         self._status_str = f"Preprocessing {int(self._preproc.progress * 100)}%..."
         self.on_update_ui()
 
@@ -170,7 +177,6 @@ class ScanPathController(Observable):
         self.on_update_ui()
 
     def _on_bg_task_updated(self, update_data):
-        logger.debug("ScanPathController._on_bg_task_updated")
         self._status_str = f"Calculation {int(self._bg_task.progress * 100)}%..."
         # TODO: Save intermediary data
         self.on_update_ui()
@@ -198,9 +204,7 @@ class ScanPathParams(dict):
 
     version = 1
 
-    default_params = {
-        "timeframe": ScanPathController.min_timeframe
-    }
+    default_params = {"timeframe": ScanPathController.min_timeframe}
 
     def __init__(self, **kwargs):
         super().__init__(**self.default_params)

@@ -48,7 +48,6 @@ import data_changed
 import file_methods as fm
 from observable import Observable
 import player_methods as pm
-from eye_movement.utils import can_use_3d_gaze_mapping
 from methods import denormalize
 from plugin import Analysis_Plugin_Base
 
@@ -152,6 +151,10 @@ def gaze_dispersion(capture, gaze_subset, method: FixationDetectionMethod) -> fl
 
     dist = vector_dispersion(vectors)
     return dist
+
+
+def can_use_3d_gaze_mapping(gaze_data) -> bool:
+    return all("gaze_point_3d" in gp for gp in gaze_data)
 
 
 def detect_fixations(

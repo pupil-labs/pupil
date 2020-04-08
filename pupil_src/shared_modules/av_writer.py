@@ -23,7 +23,7 @@ import numpy as np
 from av.packet import Packet
 
 import audio_utils
-from video_capture.utils import Video
+from video_capture.utils import Video, InvalidContainerError
 
 logger = logging.getLogger(__name__)
 
@@ -75,18 +75,26 @@ def write_timestamps(file_loc, timestamps, output_format="npy"):
         np.save(ts_loc + ".npy", ts)
     if output_format in ("csv", "all"):
         output_video = Video(file_loc)
-        if not output_video.is_valid:
+        try:
+            container = output_video.load_container()
+            pts = output_video.load_pts(container)
+            ts_pts = np.vstack((ts, pts)).T
+            np.savetxt(
+                ts_loc + ".csv",
+                ts_pts,
+                fmt=["%f", "%i"],
+                delimiter=",",
+                header="timestamps [seconds],pts",
+            )
+        except InvalidContainerError:
             logger.error(f"Failed to extract PTS frome exported video {file_loc}")
             return
-        pts = output_video.pts
-        ts_pts = np.vstack((ts, pts)).T
-        np.savetxt(
-            ts_loc + ".csv",
-            ts_pts,
-            fmt=["%f", "%i"],
-            delimiter=",",
-            header="timestamps [seconds],pts",
-        )
+
+
+class NonMonotonicTimestampError(ValueError):
+    """Indicates that a Writer received non-monotonic data to write."""
+
+    pass
 
 
 class AV_Writer(abc.ABC):
@@ -164,7 +172,7 @@ class AV_Writer(abc.ABC):
             last_ts = self.timestamps[-1]
             if ts < last_ts:
                 self.release()
-                raise ValueError(
+                raise NonMonotonicTimestampError(
                     "Non-monotonic timestamps!"
                     f"Last timestamp: {last_ts}. Given timestamp: {ts}"
                 )

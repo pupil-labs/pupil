@@ -69,7 +69,7 @@ if platform.system() == "Darwin":
         ),
         hookspath=None,
         runtime_hooks=None,
-        excludes=["matplotlib", "pyrealsense"],
+        excludes=["matplotlib"],
     )
 
     pyz = PYZ(a.pure)
@@ -96,6 +96,7 @@ if platform.system() == "Darwin":
         a.binaries - libSystem,
         a.zipfiles,
         a.datas,
+        [("libuvc.0.dylib", "/usr/local/lib/libuvc.0.dylib", "BINARY")],
         [("libglfw.dylib", "/usr/local/lib/libglfw.dylib", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
@@ -126,7 +127,7 @@ elif platform.system() == "Linux":
         + apriltag_hidden_imports,
         hookspath=None,
         runtime_hooks=None,
-        excludes=["matplotlib", "pyrealsense"],
+        excludes=["matplotlib"],
     )
 
     pyz = PYZ(a.pure)
@@ -214,7 +215,7 @@ elif platform.system() == "Windows":
         + apriltag_hidden_imports,
         hookspath=None,
         runtime_hooks=None,
-        excludes=["matplotlib", "pyrealsense"],
+        excludes=["matplotlib"],
     )
 
     pyz = PYZ(a.pure)

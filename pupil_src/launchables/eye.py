@@ -141,7 +141,7 @@ def eye(
         from file_methods import Persistent_Dict
         from version_utils import VersionFormat
         from methods import normalize, denormalize, timer
-        from av_writer import JPEG_Writer, MPEG_Writer
+        from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicTimestampError
         from ndsi import H264Writer
         from video_capture import source_classes, manager_classes
         from roi import Roi
@@ -207,22 +207,25 @@ def eye(
         ]
         if eye_id == 0:
             preferred_names += ["HD-6000"]
-        default_capture_settings = (
-            "UVC_Source",
-            {
-                "preferred_names": preferred_names,
-                "frame_size": (320, 240),
-                "frame_rate": 120,
-            },
-        )
+
+        default_capture_name = "UVC_Source"
+        default_capture_settings = {
+            "preferred_names": preferred_names,
+            "frame_size": (320, 240),
+            "frame_rate": 120,
+        }
 
         default_plugins = [
             # TODO: extend with plugins
-            default_capture_settings,
+            (default_capture_name, default_capture_settings),
             ("UVC_Manager", {}),
             # Detectors needs to be loaded first to set `g_pool.pupil_detector`
             (default_2d.__name__, {}),
             (default_3d.__name__, {}),
+            ("NDSI_Manager", {}),
+            ("HMD_Streaming_Manager", {}),
+            ("File_Manager", {}),
+            ("PupilDetectorManager", {}),
             ("Roi", {}),
         ]
 
@@ -407,6 +410,13 @@ def eye(
 
         g_pool.plugins = Plugin_List(g_pool, plugins_to_load)
 
+        if not g_pool.capture:
+            # Make sure we always have a capture running. Important if there was no
+            # capture stored in session settings.
+            g_pool.plugins.add(
+                g_pool.plugin_by_name[default_capture_name], default_capture_settings
+            )
+
         g_pool.writer = None
 
         # Register callbacks main_window
@@ -569,7 +579,18 @@ def eye(
                     pass
 
                 if g_pool.writer:
-                    g_pool.writer.write_video_frame(frame)
+                    try:
+                        g_pool.writer.write_video_frame(frame)
+                    except NonMonotonicTimestampError as e:
+                        logger.error(
+                            "Recorder received non-monotonic timestamp!"
+                            " Stopping the recording!"
+                        )
+                        logger.debug(str(e))
+                        ipc_socket.notify({"subject": "recording.should_stop"})
+                        ipc_socket.notify(
+                            {"subject": "recording.should_stop", "remote_notify": "all"}
+                        )
 
                 for result in event.get(EVENT_KEY, ()):
                     pupil_socket.send(result)
