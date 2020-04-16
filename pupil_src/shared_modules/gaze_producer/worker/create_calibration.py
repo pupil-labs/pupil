@@ -67,6 +67,9 @@ def _create_ref_dict(ref):
 def _create_calibration(
     fake_gpool, gazer_class_name, ref_dicts_in_calib_range, pupil_pos_in_calib_range
 ):
+    # This is needed to support user-provided gazers
+    fake_gpool.import_runtime_plugins()
+
     gazers_by_name = registered_gazer_classes_by_class_name()
 
     try:

@@ -1,3 +1,4 @@
+import os
 import logging
 from time import time
 from types import SimpleNamespace
@@ -11,12 +12,13 @@ class FakeGPool:
     def from_g_pool(g_pool):
         return FakeGPool(
             rec_dir=g_pool.rec_dir,
+            user_dir=g_pool.user_dir,
             min_calibration_confidence=g_pool.min_calibration_confidence,
             frame_size=g_pool.capture.frame_size,
             intrinsics=g_pool.capture.intrinsics,
         )
 
-    def __init__(self, frame_size, intrinsics, rec_dir, min_calibration_confidence):
+    def __init__(self, frame_size, intrinsics, rec_dir, user_dir, min_calibration_confidence):
         cap = SimpleNamespace()
         cap.frame_size = frame_size
         cap.intrinsics = intrinsics
@@ -25,9 +27,13 @@ class FakeGPool:
         self.get_timestamp = time
         self.min_calibration_confidence = min_calibration_confidence
         self.rec_dir = rec_dir
+        self.user_dir = user_dir
         self.app = "player"
         self.ipc_pub = FakeIPC()
 
+    def import_runtime_plugins(self):
+        from plugin import import_runtime_plugins
+        import_runtime_plugins(os.path.join(self.user_dir, "plugins"))
 
 class FakeIPC:
     @staticmethod
