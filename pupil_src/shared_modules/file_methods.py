@@ -348,6 +348,10 @@ class Serialized_Dict(object):
         self._deser()
         return iter(self._data)
 
+    def _deep_copy_serialized_dict(self):
+        dict_copy = self._deep_copy_dict()
+        return Serialized_Dict(python_dict=dict_copy)
+
     def _deep_copy_dict(self):
 
         def unpacking_ext_hook(self, code, data):

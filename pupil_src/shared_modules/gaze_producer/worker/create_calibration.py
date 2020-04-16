@@ -83,6 +83,9 @@ def _create_calibration(
         calibration_result = None
         return status, calibration_result
 
+    # Deep copy dicts of pupil positions, to pass to the gazer init
+    pupil_pos_in_calib_range = [p._deep_copy_dict() for p in pupil_pos_in_calib_range]
+
     try:
         calib_data = {
             "ref_list": ref_dicts_in_calib_range,
