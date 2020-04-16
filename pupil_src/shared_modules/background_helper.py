@@ -75,13 +75,13 @@ class Task_Proxy:
                     raise EarlyCancellationError("Task was cancelled")
                 pipe.send(datum)
             pipe.send(StopIteration())
-        except BrokenPipeError as e:
+        except BrokenPipeError:
             # process canceled from outside
             pass
         except Exception as e:
             try:
                 pipe.send(e)
-            except BrokenPipeError as e:
+            except BrokenPipeError:
                 # process canceled from outside
                 pass
             if not isinstance(e, EarlyCancellationError):
