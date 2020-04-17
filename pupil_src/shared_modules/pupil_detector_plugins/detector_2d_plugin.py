@@ -38,6 +38,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
 
     label = "C++ 2d detector"
     identifier = "2d"
+    order = 0.100
 
     def __init__(
         self, g_pool=None, namespaced_properties=None, detector_2d: Detector2D = None

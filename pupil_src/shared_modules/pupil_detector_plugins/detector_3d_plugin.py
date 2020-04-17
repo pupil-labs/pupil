@@ -38,6 +38,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
 
     label = "C++ 3d detector"
     identifier = "3d"
+    order = 0.101
 
     def __init__(
         self, g_pool=None, namespaced_properties=None, detector_3d: Detector3D = None
