@@ -92,7 +92,20 @@ class PupilDetectorPlugin(Plugin):
                 self.on_resolution_change(self._last_frame_size, frame_size)
             self._last_frame_size = frame_size
 
-        detection_result = self.detect(frame=frame)
+        # TODO: The following sections with internal_2d_raw_data are for allowing dual
+        # detectors until pye3d is finished. Then we should cleanup this section!
+
+        # this is only revelant when running the 3D detector, for 2D we just ignore the
+        # additional parameter
+        detection_result = self.detect(
+            frame=frame, internal_raw_2d_data=event.get("internal_2d_raw_data", None)
+        )
+
+        # if we are running the 2D detector, we might get internal data that we don't
+        # want published, so we remove it from the dict 
+        if "internal_2d_raw_data" in detection_result:
+            event["internal_2d_raw_data"] = detection_result.pop("internal_2d_raw_data")
+
         if EVENT_KEY in event:
             event[EVENT_KEY].append(detection_result)
         else:

@@ -47,7 +47,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         self.detector_2d = detector_2d or Detector2D(namespaced_properties or {})
         self.proxy = PropertyProxy(self.detector_2d)
 
-    def detect(self, frame):
+    def detect(self, frame, **kwargs):
         # convert roi-plugin to detector roi
         roi = Roi(*self.g_pool.roi.bounds)
 
