@@ -66,7 +66,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
         result["norm_pos"] = normalize(
             location, (frame.width, frame.height), flip_y=True
         )
-        result["topic"] = f"pupil.{eye_id}"
+        result["topic"] = f"pupil.{eye_id}.{self.identifier}"
         result["id"] = eye_id
         result["method"] = "3d c++"
         return result
