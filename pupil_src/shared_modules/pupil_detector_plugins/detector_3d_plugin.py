@@ -9,7 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import logging
+from distutils.version import LooseVersion as VersionFormat
 
+import pupil_detectors
 from pupil_detectors import Detector3D, DetectorBase, Roi
 from pyglui import ui
 from pyglui.cygl.utils import draw_gl_texture
@@ -29,6 +31,15 @@ from .visualizer_2d import draw_eyeball_outline, draw_pupil_outline
 from .visualizer_3d import Eye_Visualizer
 
 logger = logging.getLogger(__name__)
+
+if VersionFormat(pupil_detectors.__version__) < VersionFormat("1.0.5"):
+    msg = (
+        f"This version of Pupil requires pupil_detectors >= 1.0.5."
+        f" You are running with pupil_detectors == {pupil_detectors.__version__}."
+        f" Please upgrade to a newer version!"
+    )
+    logger.error(msg)
+    raise RuntimeError(msg)
 
 
 class Detector3DPlugin(PupilDetectorPlugin):
