@@ -241,16 +241,14 @@ class Pupil_From_Recording(Pupil_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
-        pupil_data_file = fm.load_pldata_file(g_pool.rec_dir, "pupil")
-        g_pool.pupil_positions = pm.Bisector(
-            pupil_data_file.data, pupil_data_file.timestamps
-        )
         g_pool.pupil_positions_by_id = self.create_pupil_positions_by_id_iterative(
             zip(
                 pupil_data_file.topics, pupil_data_file.data, pupil_data_file.timestamps
             )
         )
 
+        pupil_data = PupilDataBisector.load_from_file(g_pool.rec_dir, "pupil")
+        g_pool.pupil_positions = pupil_data
         self._pupil_changed_announcer.announce_existing()
         logger.debug("pupil positions changed")
 
@@ -533,12 +531,11 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.menu_icon.indicator_stop = self.detection_progress
 
     def correlate_publish(self):
-        bisector_both = self._pupil_data_store[:, self.detection_method]
         bisector_eye0 = self._pupil_data_store[0, self.detection_method]
         bisector_eye1 = self._pupil_data_store[1, self.detection_method]
 
-        self.g_pool.pupil_positions = bisector_both
         self.g_pool.pupil_positions_by_id = (bisector_eye0, bisector_eye1)
+        self.g_pool.pupil_positions = self._pupil_data_store.copy()
         self._pupil_changed_announcer.announce_new()
         logger.debug("pupil positions changed")
         self.save_offline_data()
@@ -569,7 +566,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def redetect(self):
         self._pupil_data_store.clear()
-        self.g_pool.pupil_positions = pm.Bisector([], [])
+        self.g_pool.pupil_positions = self._pupil_data_store.copy()
         self.detection_finished_flag = False
         self.detection_paused = False
         for eye_id in range(2):
