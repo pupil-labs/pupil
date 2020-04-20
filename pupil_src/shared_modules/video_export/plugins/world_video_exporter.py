@@ -74,8 +74,6 @@ class World_Video_Exporter(VideoExporter):
         pre_computed = {
             "gaze": self.g_pool.gaze_positions,
             "pupil": self.g_pool.pupil_positions,
-            "pupil_by_id_0": self.g_pool.pupil_positions_by_id[0],
-            "pupil_by_id_1": self.g_pool.pupil_positions_by_id[1],
             "fixations": self.g_pool.fixations,
         }
 

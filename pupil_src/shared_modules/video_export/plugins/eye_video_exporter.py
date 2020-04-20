@@ -44,7 +44,7 @@ class Eye_Video_Exporter(IsolatedFrameExporter):
     def _export_eye_video(self, export_range, export_dir, eye_id):
         if self.render_pupil:
             process_frame = _add_pupil_ellipse(
-                self.g_pool.pupil_positions_by_id[eye_id]
+                self.g_pool.pupil_positions[eye_id, "3d"]  # TODO pass 2d/3d
             )
         else:
             process_frame = _no_change
@@ -93,6 +93,7 @@ class _add_pupil_ellipse:
     def __call__(self, _, frame):
         eye_image = frame.img
         try:
+            # TODO: handle 2d and 3d data
             pupil_datum = self._pupil_positions_of_eye.by_ts(frame.timestamp)
             self.renderer.render_pupil(eye_image, pupil_datum)
         except ValueError:
