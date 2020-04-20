@@ -267,11 +267,13 @@ class PupilTopic:
     EyeIdFilterKey = T.Union[WildcardKey, int, str, T.Iterable[int], T.Iterable[str]]
     DetectorTagFilterKey = T.Union[WildcardKey, str, T.Iterable[str]]
 
-    _FORMAT_STRING_V1 = 'pupil.{eye_id}'
-    _FORMAT_STRING_V2 = 'pupil.{eye_id}.{detector_tag}'
+    _FORMAT_STRING_V1 = "pupil.{eye_id}"
+    _FORMAT_STRING_V2 = "pupil.{eye_id}.{detector_tag}"
 
-    _MATCH_FORMAT_STRING_V1 = r'^pupil\.(?P<eye_id>{eye_id})$'
-    _MATCH_FORMAT_STRING_V2 = r'^pupil\.(?P<eye_id>{eye_id}).(?P<detector_tag>{detector_tag})$'
+    _MATCH_FORMAT_STRING_V1 = r"^pupil\.(?P<eye_id>{eye_id})$"
+    _MATCH_FORMAT_STRING_V2 = (
+        r"^pupil\.(?P<eye_id>{eye_id}).(?P<detector_tag>{detector_tag})$"
+    )
 
     _legacy_method_to_detector_tag = {
         "2d c++": "2d",
@@ -287,8 +289,7 @@ class PupilTopic:
             if detector_tag in PupilTopic._legacy_method_to_detector_tag:
                 detector_tag = PupilTopic._legacy_method_to_detector_tag[detector_tag]
             return PupilTopic._FORMAT_STRING_V2.format(
-                eye_id=match_v1.group("eye_id"),
-                detector_tag=detector_tag,
+                eye_id=match_v1.group("eye_id"), detector_tag=detector_tag,
             )
         regex_v2 = PupilTopic._match_regex_v2()
         match_v2 = re.match(regex_v2, topic)
@@ -319,16 +320,17 @@ class PupilTopic:
 
     @staticmethod
     @functools.lru_cache(128)
-    def _match_regex_v2(eye_id: T.Optional[str] = None, detector_tag: T.Optional[str] = None):
+    def _match_regex_v2(
+        eye_id: T.Optional[str] = None, detector_tag: T.Optional[str] = None
+    ):
         if eye_id is None:
-            eye_id = '[01]'
+            eye_id = "[01]"
 
         if detector_tag is None:
-            detector_tag = '[^\.]+'
+            detector_tag = "[^\.]+"
 
         pattern = PupilTopic._MATCH_FORMAT_STRING_V2.format(
-            eye_id=eye_id,
-            detector_tag=detector_tag,
+            eye_id=eye_id, detector_tag=detector_tag,
         )
 
         return re.compile(pattern)
@@ -337,17 +339,14 @@ class PupilTopic:
     @functools.lru_cache(32)
     def _match_regex_v1(eye_id: T.Optional[str] = None):
         if eye_id is None:
-            eye_id = '[01]'
+            eye_id = "[01]"
 
-        pattern = PupilTopic._MATCH_FORMAT_STRING_V1.format(
-            eye_id=eye_id,
-        )
+        pattern = PupilTopic._MATCH_FORMAT_STRING_V1.format(eye_id=eye_id,)
 
         return re.compile(pattern)
 
 
 class PupilDataBisector:
-
     def __init__(self, data: fm.PLData = fm.PLData([], [], [])):
         self._bisectors = collections.defaultdict(pm.Mutable_Bisector)
         self._init_from_data(data)
@@ -359,8 +358,12 @@ class PupilDataBisector:
             bisector = pm.Mutable_Bisector(data.data, data.timestamps)
             self._bisectors[pupil_topic] = bisector
 
-    def __getitem__(self, key: T.Tuple[PupilTopic.EyeIdFilterKey, PupilTopic.DetectorTagFilterKey]) -> pm.Bisector:
-        bisectors = [B for topic, B in self._bisectors.items() if PupilTopic.match(topic, *key)]
+    def __getitem__(
+        self, key: T.Tuple[PupilTopic.EyeIdFilterKey, PupilTopic.DetectorTagFilterKey]
+    ) -> pm.Bisector:
+        bisectors = [
+            B for topic, B in self._bisectors.items() if PupilTopic.match(topic, *key)
+        ]
         return self.combine_bisectors(bisectors)
 
     def append(self, topic, datum, timestamp):
@@ -401,8 +404,6 @@ class PupilDataBisector:
         return data_by_topic
 
 
-
-
 class Offline_Pupil_Detection(Pupil_Producer_Base):
     """docstring for Offline_Pupil_Detection"""
 
@@ -430,11 +431,15 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             session_meta_data = {}
             session_meta_data["detection_status"] = ["unknown", "unknown"]
 
-        session_meta_data["detection_method"] = "3d" # Force 3D detection method, since the detectors produce both
+        session_meta_data[
+            "detection_method"
+        ] = "3d"  # Force 3D detection method, since the detectors produce both
         self.detection_method = session_meta_data["detection_method"]
         self.detection_status = session_meta_data["detection_status"]
 
-        self._pupil_data_store = PupilDataBisector.load_from_file(self.data_dir, self.session_data_name)
+        self._pupil_data_store = PupilDataBisector.load_from_file(
+            self.data_dir, self.session_data_name
+        )
 
         self.eye_video_loc = [None, None]
 
@@ -492,7 +497,9 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     def detection_progress(self) -> float:
         total = sum(self.eye_frame_num)
         if total:
-            return min(len(self._pupil_data_store[:, self.detection_method]) / total, 1.0)
+            return min(
+                len(self._pupil_data_store[:, self.detection_method]) / total, 1.0
+            )
         else:
             return 0.0
 
