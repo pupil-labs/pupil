@@ -60,7 +60,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
             location, (frame.width, frame.height), flip_y=True
         )
         result["timestamp"] = frame.timestamp
-        result["topic"] = f"pupil.{eye_id}"
+        result["topic"] = f"pupil.{eye_id}.{self.identifier}"
         result["id"] = eye_id
         result["method"] = "2d c++"
         return result
