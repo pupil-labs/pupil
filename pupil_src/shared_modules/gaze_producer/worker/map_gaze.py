@@ -53,6 +53,7 @@ def _map_gaze(
     manual_correction_y,
     shared_memory,
 ):
+    fake_gpool.import_runtime_plugins()
     gazers_by_name = registered_gazer_classes_by_class_name()
     gazer_cls = gazers_by_name[gazer_class_name]
     gazer = gazer_cls(fake_gpool, params=gazer_params)
