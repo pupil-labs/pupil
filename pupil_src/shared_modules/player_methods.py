@@ -52,6 +52,13 @@ class Bisector(object):
             self.data_ts = self.data_ts[self.sorted_idc]
             self.data = self.data[self.sorted_idc].tolist()
 
+    def copy(self):
+        copy = type(self)()
+        copy.data = self.data.copy()
+        copy.data_ts = self.data_ts.copy()
+        copy.sorted_idc = self.sorted_idc.copy()
+        return copy
+
     def by_ts(self, ts):
         """
         :param ts: timestamp to extract.
