@@ -62,7 +62,11 @@ class GazeMapperController(Observable):
                 "mapper '{}'".format(calibration.name, gaze_mapper.name),
             )
             return None
-        task = self._create_mapping_task(gaze_mapper, calibration)
+        try:
+            task = self._create_mapping_task(gaze_mapper, calibration)
+        except worker.map_gaze.NotEnoughPupilData:
+            self._abort_calculation(gaze_mapper, "There is no pupil data to be mapped!")
+            return None
         self._task_manager.add_task(task)
         logger.info("Start gaze mapping for '{}'".format(gaze_mapper.name))
 

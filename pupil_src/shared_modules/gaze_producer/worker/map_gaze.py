@@ -19,10 +19,16 @@ from .fake_gpool import FakeGPool
 g_pool = None  # set by the plugin
 
 
+class NotEnoughPupilData(ValueError):
+    pass
+
+
 def create_task(gaze_mapper, calibration):
     assert g_pool, "You forgot to set g_pool by the plugin"
     mapping_window = pm.exact_window(g_pool.timestamps, gaze_mapper.mapping_index_range)
     pupil_pos_in_mapping_range = g_pool.pupil_positions.by_ts_window(mapping_window)
+    if not pupil_pos_in_mapping_range:
+        raise NotEnoughPupilData
 
     fake_gpool = FakeGPool.from_g_pool(g_pool)
 
