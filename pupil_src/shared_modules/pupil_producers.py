@@ -272,7 +272,7 @@ class PupilTopic:
 
     _MATCH_FORMAT_STRING_V1 = r"^pupil\.(?P<eye_id>{eye_id})$"
     _MATCH_FORMAT_STRING_V2 = (
-        r"^pupil\.(?P<eye_id>{eye_id}).(?P<detector_tag>{detector_tag})$"
+        r"^pupil\.(?P<eye_id>{eye_id})\.(?P<detector_tag>{detector_tag})$"
     )
 
     _legacy_method_to_detector_tag = {
@@ -327,7 +327,7 @@ class PupilTopic:
             eye_id = "[01]"
 
         if detector_tag is None:
-            detector_tag = "[^\.]+"
+            detector_tag = r"[^\.]+"
 
         pattern = PupilTopic._MATCH_FORMAT_STRING_V2.format(
             eye_id=eye_id, detector_tag=detector_tag,
