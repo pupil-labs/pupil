@@ -6,6 +6,12 @@ from pathlib import Path
 from typing import List
 from uuid import uuid4 as new_guid
 
+# NOTE: you will need to have the WiX Toolset installed in order to run this script!
+# 1. Download `wix311.exe` from https://github.com/wixtoolset/wix3/releases/tag/wix3112rtm
+# 2. Then install, e.g. to default location.
+# 3. Now add the binaries to the PATH. For default installation, they should be in
+# C:\Program Files (x86)\WiX Toolset v3.11\bin
+
 for child in Path(".").iterdir():
     if child.is_dir():
         match = re.search(
