@@ -371,6 +371,12 @@ class PupilDataBisector:
     def clear(self):
         self._bisectors.clear()
 
+    def copy(self):
+        copy = type(self)()
+        for topic, bisector in self._bisectors.items():
+            copy._bisectors[topic] = bisector.copy()
+        return copy
+
     @staticmethod
     def combine_bisectors(bisectors: T.Iterable[pm.Bisector]) -> pm.Bisector:
         data = list(chain.from_iterable(b.data for b in bisectors))
