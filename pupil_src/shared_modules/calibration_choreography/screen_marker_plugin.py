@@ -286,7 +286,7 @@ class ScreenMarkerChoreographyPlugin(
     def __get_list_of_markers_to_show(
         mode: ChoreographyMode, is_2d: bool, is_3d: bool
     ) -> list:
-        assert is_2d != is_3d  # Sanity check
+        assert not (is_2d and is_3d)  # Sanity check
         return [(0.5, 0.5), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
 
     def _on_window_did_close(self):
