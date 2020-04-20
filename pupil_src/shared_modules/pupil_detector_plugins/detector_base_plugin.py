@@ -102,7 +102,7 @@ class PupilDetectorPlugin(Plugin):
         )
 
         # if we are running the 2D detector, we might get internal data that we don't
-        # want published, so we remove it from the dict 
+        # want published, so we remove it from the dict
         if "internal_2d_raw_data" in detection_result:
             event["internal_2d_raw_data"] = detection_result.pop("internal_2d_raw_data")
 

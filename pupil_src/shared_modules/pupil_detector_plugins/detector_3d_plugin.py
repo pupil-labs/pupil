@@ -60,7 +60,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
             color_img=debug_img,
             roi=roi,
             debug=self.is_debug_window_open,
-            internal_raw_2d_data=kwargs.get("internal_raw_2d_data", None)
+            internal_raw_2d_data=kwargs.get("internal_raw_2d_data", None),
         )
 
         eye_id = self.g_pool.eye_id
