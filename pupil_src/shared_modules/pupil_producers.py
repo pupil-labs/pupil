@@ -364,6 +364,30 @@ class PupilDataBisector:
         ]
         return self.combine_bisectors(bisectors)
 
+    def by_ts_window(self, ts_window):
+        bisectors = self._bisectors.values()
+        init_dicts = [b.init_dict_for_window(ts_window) for b in bisectors]
+        bisectors = [pm.Bisector(**init_dict) for init_dict in init_dicts]
+        combined = self.combine_bisectors(bisectors)
+        return combined
+
+    def by_ts(self, ts):
+        # Returns datum for first bisector that contains it
+        # TODO: Might require rework depending on where/how it is used
+        for bisector in self._bisectors.values():
+            try:
+                return bisector.by_ts(ts)
+            except ValueError:
+                continue
+        raise ValueError
+
+    def init_dict_for_window(self, ts_window):
+        init_dict = collections.defaultdict(list)
+        for bisector in self._bisectors.values():
+            for key, values in bisector.init_dict_for_window(ts_window).items():
+                init_dict[key].extend(values)
+        return init_dict
+
     def append(self, topic, datum, timestamp):
         pupil_topic = PupilTopic.create(topic, datum)
         self._bisectors[pupil_topic].insert(timestamp, datum)
