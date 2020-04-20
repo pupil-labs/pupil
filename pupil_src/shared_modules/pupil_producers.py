@@ -86,8 +86,8 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         )
 
         self.cache = {}
-        self.cache_pupil_timeline_data("diameter")
-        self.cache_pupil_timeline_data("confidence")
+        self.cache_pupil_timeline_data("diameter", detector_tag="3d")
+        self.cache_pupil_timeline_data("confidence", detector_tag="2d")
 
         self.glfont = fs.Context()
         self.glfont.add_font("opensans", ui.get_opensans_font_path())
@@ -103,8 +103,8 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         self.g_pool.user_timelines.append(self.conf_timeline)
 
     def _refresh_timelines(self):
-        self.cache_pupil_timeline_data("diameter")
-        self.cache_pupil_timeline_data("confidence")
+        self.cache_pupil_timeline_data("diameter", detector_tag="3d")
+        self.cache_pupil_timeline_data("confidence", detector_tag="2d")
         self.dia_timeline.refresh()
         self.conf_timeline.refresh()
 
@@ -121,7 +121,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             window = pm.enclosing_window(self.g_pool.timestamps, frm_idx)
             events["pupil"] = self.g_pool.pupil_positions.by_ts_window(window)
 
-    def cache_pupil_timeline_data(self, key):
+    def cache_pupil_timeline_data(self, key: str, detector_tag: str):
         world_start_stop_ts = [self.g_pool.timestamps[0], self.g_pool.timestamps[-1]]
         if not self.g_pool.pupil_positions:
             self.cache[key] = {
@@ -133,7 +133,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         else:
             ts_data_pairs_right_left = [], []
             for eye_id in (0, 1):
-                pupil_positions = self.g_pool.pupil_positions_by_id[eye_id]
+                pupil_positions = self.g_pool.pupil_positions[eye_id, detector_tag]
                 if pupil_positions:
                     t0, t1 = (
                         pupil_positions.timestamps[0],
