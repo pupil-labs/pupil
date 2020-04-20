@@ -125,6 +125,7 @@ def _export_world_video(
     from vis_light_points import Vis_Light_Points
     from vis_polyline import Vis_Polyline
     from vis_watermark import Vis_Watermark
+    from pupil_producers import PupilDataBisector
 
     PID = str(os.getpid())
     logger = logging.getLogger(__name__ + " with pid: " + PID)
@@ -234,10 +235,8 @@ def _export_world_video(
                 for serialized in initializers["data"]
             ]
 
-        g_pool.pupil_positions = pm.Bisector(**pre_computed_eye_data["pupil"])
-        g_pool.pupil_positions_by_id = (
-            pm.Bisector(**pre_computed_eye_data["pupil_by_id_0"]),
-            pm.Bisector(**pre_computed_eye_data["pupil_by_id_1"]),
+        g_pool.pupil_positions = PupilDataBisector.from_init_dict(
+            pre_computed_eye_data["pupil"]
         )
         g_pool.gaze_positions = pm.Bisector(**pre_computed_eye_data["gaze"])
         g_pool.fixations = pm.Affiliator(**pre_computed_eye_data["fixations"])

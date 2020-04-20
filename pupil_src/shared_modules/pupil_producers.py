@@ -356,6 +356,22 @@ class PupilDataBisector:
             bisector = pm.Mutable_Bisector(data.data, data.timestamps)
             self._bisectors[pupil_topic] = bisector
 
+    def init_dict_for_window(self, ts_window):
+        init_dict = collections.defaultdict(list)
+        for topic, bisector in self._bisectors.items():
+            _init_dict = bisector.init_dict_for_window(ts_window)
+            for key, values in _init_dict.items():
+                init_dict[key].extend(values)
+            topics = [topic] * len(_init_dict["data"])
+            init_dict["topics"].extend(topics)
+
+        return init_dict
+
+    @staticmethod
+    def from_init_dict(init_dict):
+        data = fm.PLData(init_dict["data"], init_dict["data_ts"], init_dict["topics"])
+        return PupilDataBisector(data)
+
     def __getitem__(
         self, key: T.Tuple[PupilTopic.EyeIdFilterKey, PupilTopic.DetectorTagFilterKey]
     ) -> pm.Bisector:
@@ -380,13 +396,6 @@ class PupilDataBisector:
             except ValueError:
                 continue
         raise ValueError
-
-    def init_dict_for_window(self, ts_window):
-        init_dict = collections.defaultdict(list)
-        for bisector in self._bisectors.values():
-            for key, values in bisector.init_dict_for_window(ts_window).items():
-                init_dict[key].extend(values)
-        return init_dict
 
     def append(self, topic, datum, timestamp):
         pupil_topic = PupilTopic.create(topic, datum)
