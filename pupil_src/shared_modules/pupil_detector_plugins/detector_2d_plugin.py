@@ -38,6 +38,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
 
     label = "C++ 2d detector"
     identifier = "2d"
+    order = 0.100
 
     def __init__(
         self, g_pool=None, namespaced_properties=None, detector_2d: Detector2D = None
@@ -46,7 +47,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         self.detector_2d = detector_2d or Detector2D(namespaced_properties or {})
         self.proxy = PropertyProxy(self.detector_2d)
 
-    def detect(self, frame):
+    def detect(self, frame, **kwargs):
         # convert roi-plugin to detector roi
         roi = Roi(*self.g_pool.roi.bounds)
 
