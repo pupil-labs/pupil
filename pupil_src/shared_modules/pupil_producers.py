@@ -375,7 +375,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 # pupil data only has one remaining frame
                 payload_serialized = next(remaining_frames)
                 pupil_datum = fm.Serialized_Dict(msgpack_bytes=payload_serialized)
-                assert int(topic[-1]) == pupil_datum["id"]
+                assert pm.PupilTopic.match(topic, eye_id=pupil_datum["id"])
                 timestamp = pupil_datum["timestamp"]
                 self._pupil_data_store.append(topic, pupil_datum, timestamp)
             else:
