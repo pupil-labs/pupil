@@ -126,12 +126,11 @@ class Service_UI(System_Plugin_Base):
         )
 
         g_pool.menubar.append(
-            ui.Selector(
-                "detection_mapping_mode",
-                g_pool,
-                label="Detection & mapping mode",
-                setter=self.set_detection_mapping_mode,
-                selection=["disabled", "2d", "3d"],
+            ui.Switch(
+                "pupil_detection_enabled",
+                label="Pupil detection",
+                getter=self.detection_enabled_getter,
+                setter=self.detection_enabled_setter,
             )
         )
         g_pool.menubar.append(
@@ -248,5 +247,10 @@ class Service_UI(System_Plugin_Base):
             }
         self.notify_all(n)
 
-    def set_detection_mapping_mode(self, new_mode):
+    def detection_enabled_getter(self) -> bool:
+        return self.g_pool.detection_mapping_mode != "disabled"
+
+    def detection_enabled_setter(self, is_on: bool):
+        # TODO: Refactor to remove all references to "set_detection_mapping_mode" from codebase
+        new_mode = "3d" if is_on else "disabled"
         self.notify_all({"subject": "set_detection_mapping_mode", "mode": new_mode})

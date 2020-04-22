@@ -442,6 +442,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 )
 
     def set_detection_mapping_mode(self, new_mode):
+        # TODO: Refactor to remove all "set_detection_mapping_mode" references from codebase
         n = {"subject": "set_detection_mapping_mode", "mode": new_mode}
         self.notify_all(n)
         self.redetect()

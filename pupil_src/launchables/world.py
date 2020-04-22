@@ -100,7 +100,12 @@ def world(
         else:
             stop_eye_process(eye_id)
 
-    def set_detection_mapping_mode(new_mode):
+    def detection_enabled_getter() -> bool:
+        return g_pool.detection_mapping_mode != "disabled"
+
+    def detection_enabled_setter(is_on: bool):
+        # TODO: Refactor to remove all references to "set_detection_mapping_mode" from codebase
+        new_mode = "3d" if is_on else "disabled"
         n = {"subject": "set_detection_mapping_mode", "mode": new_mode}
         ipc_pub.notify(n)
 
@@ -524,13 +529,13 @@ def world(
         general_settings.append(
             ui.Selector("audio_mode", audio, selection=audio.audio_modes)
         )
+
         general_settings.append(
-            ui.Selector(
-                "detection_mapping_mode",
-                g_pool,
-                label="detection & mapping mode",
-                setter=set_detection_mapping_mode,
-                selection=["disabled", "2d", "3d"],
+            ui.Switch(
+                "pupil_detection_enabled",
+                label="Pupil detection",
+                getter=detection_enabled_getter,
+                setter=detection_enabled_setter,
             )
         )
         general_settings.append(
