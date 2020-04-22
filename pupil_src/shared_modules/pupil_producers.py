@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import os
+from contextlib import contextmanager
 from itertools import chain
 
 import numpy as np
@@ -34,6 +35,9 @@ logger = logging.getLogger(__name__)
 COLOR_LEGEND_EYE_RIGHT = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.0)
 COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.0)
 NUMBER_SAMPLES_TIMELINE = 4000
+
+DATA_KEY_CONFIDENCE = "confidence"
+DATA_KEY_DIAMETER = "diameter_3d"
 
 
 class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
@@ -82,15 +86,20 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         )
 
         self.cache = {}
-        self.cache_pupil_timeline_data("diameter", detector_tag="3d")
-        self.cache_pupil_timeline_data("confidence", detector_tag="2d")
+        self.cache_pupil_timeline_data(DATA_KEY_DIAMETER, detector_tag="3d")
+        self.cache_pupil_timeline_data(
+            DATA_KEY_CONFIDENCE, detector_tag="2d", ylim=(0.0, 1.0)
+        )
 
         self.glfont = fs.Context()
         self.glfont.add_font("opensans", ui.get_opensans_font_path())
         self.glfont.set_font("opensans")
 
         self.dia_timeline = ui.Timeline(
-            "Pupil Diameter [px]", self.draw_pupil_diameter, self.draw_dia_legend
+            label="Pupil Diameter 3D",
+            draw_data_callback=self.draw_pupil_diameter,
+            draw_label_callback=self.draw_dia_legend,
+            content_height=40.0,
         )
         self.conf_timeline = ui.Timeline(
             "Pupil Confidence", self.draw_pupil_conf, self.draw_conf_legend
@@ -99,8 +108,10 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         self.g_pool.user_timelines.append(self.conf_timeline)
 
     def _refresh_timelines(self):
-        self.cache_pupil_timeline_data("diameter", detector_tag="3d")
-        self.cache_pupil_timeline_data("confidence", detector_tag="2d")
+        self.cache_pupil_timeline_data(DATA_KEY_DIAMETER, detector_tag="3d")
+        self.cache_pupil_timeline_data(
+            DATA_KEY_CONFIDENCE, detector_tag="2d", ylim=(0.0, 1.0)
+        )
         self.dia_timeline.refresh()
         self.conf_timeline.refresh()
 
@@ -117,7 +128,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             window = pm.enclosing_window(self.g_pool.timestamps, frm_idx)
             events["pupil"] = self.g_pool.pupil_positions.by_ts_window(window)
 
-    def cache_pupil_timeline_data(self, key: str, detector_tag: str):
+    def cache_pupil_timeline_data(self, key: str, detector_tag: str, ylim=None):
         world_start_stop_ts = [self.g_pool.timestamps[0], self.g_pool.timestamps[-1]]
         if not self.g_pool.pupil_positions:
             self.cache[key] = {
@@ -150,25 +161,34 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
                         )
                         ts_data_pairs_right_left[eye_id].append(ts_data_pair)
 
-            # max_val must not be 0, else gl will crash
-            all_pupil_data_chained = chain.from_iterable(ts_data_pairs_right_left)
-            try:
-                max_val = max((pd[1] for pd in all_pupil_data_chained))
-            except ValueError:  # max() arg is an empty sequence
-                max_val = 1
+            if ylim is None:
+                # max_val must not be 0, else gl will crash
+                all_pupil_data_chained = chain.from_iterable(ts_data_pairs_right_left)
+                try:
+                    # Outlier removal based on:
+                    # https://en.wikipedia.org/wiki/Outlier#Tukey's_fences
+                    min_val, max_val = np.quantile(
+                        [pd[1] for pd in all_pupil_data_chained], [0.25, 0.75]
+                    )
+                    iqr = max_val - min_val
+                    min_val -= 1.5 * iqr
+                    max_val += 1.5 * iqr
+                    ylim = min_val, max_val
+                except IndexError:  # no pupil data available
+                    ylim = 0.0, 1.0
 
             self.cache[key] = {
                 "right": ts_data_pairs_right_left[0],
                 "left": ts_data_pairs_right_left[1],
                 "xlim": world_start_stop_ts,
-                "ylim": [0, max_val],
+                "ylim": ylim,
             }
 
     def draw_pupil_diameter(self, width, height, scale):
-        self.draw_pupil_data("diameter", width, height, scale)
+        self.draw_pupil_data(DATA_KEY_DIAMETER, width, height, scale)
 
     def draw_pupil_conf(self, width, height, scale):
-        self.draw_pupil_data("confidence", width, height, scale)
+        self.draw_pupil_data(DATA_KEY_CONFIDENCE, width, height, scale)
 
     def draw_pupil_data(self, key, width, height, scale):
         right = self.cache[key]["right"]
@@ -183,21 +203,23 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
     def draw_dia_legend(self, width, height, scale):
         self.draw_legend(self.dia_timeline.label, width, height, scale)
 
+        ylim = self.cache[DATA_KEY_DIAMETER]["ylim"]
+        ylim_legend_text = f"Range: {ylim[0]:.1f} - {ylim[1]:.1f} mm"
+        ylim_legend_pos = 26.0 * scale
+        with self._legend_font(scale) as font:
+            font.draw_text(width, ylim_legend_pos, ylim_legend_text)
+
     def draw_conf_legend(self, width, height, scale):
         self.draw_legend(self.conf_timeline.label, width, height, scale)
 
     def draw_legend(self, label, width, height, scale):
-        self.glfont.push_state()
-        self.glfont.set_align_string(v_align="right", h_align="top")
-        self.glfont.set_size(15.0 * scale)
-        self.glfont.draw_text(width, 0, label)
-
         legend_height = 13.0 * scale
         pad = 10 * scale
-        self.glfont.draw_text(width / 2, legend_height, "left")
-        self.glfont.draw_text(width, legend_height, "right")
 
-        self.glfont.pop_state()
+        with self._legend_font(scale) as font:
+            font.draw_text(width, 0, label)
+            font.draw_text(width / 2, legend_height, "left")
+            font.draw_text(width, legend_height, "right")
 
         cygl_utils.draw_polyline(
             [(pad, 1.5 * legend_height), (width / 4, 1.5 * legend_height)],
@@ -214,6 +236,16 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             line_type=gl.GL_LINES,
             thickness=4.0 * scale,
         )
+
+    @contextmanager
+    def _legend_font(self, scale):
+        self.glfont.push_state()
+        try:
+            self.glfont.set_align_string(v_align="right", h_align="top")
+            self.glfont.set_size(15.0 * scale)
+            yield self.glfont
+        finally:
+            self.glfont.pop_state()
 
 
 class Pupil_From_Recording(Pupil_Producer_Base):
@@ -345,7 +377,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 # pupil data only has one remaining frame
                 payload_serialized = next(remaining_frames)
                 pupil_datum = fm.Serialized_Dict(msgpack_bytes=payload_serialized)
-                assert int(topic[-1]) == pupil_datum["id"]
+                assert pm.PupilTopic.match(topic, eye_id=pupil_datum["id"])
                 timestamp = pupil_datum["timestamp"]
                 self._pupil_data_store.append(topic, pupil_datum, timestamp)
             else:
