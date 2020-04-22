@@ -295,6 +295,9 @@ class PupilDataBisector:
             copy._bisectors[topic] = bisector.copy()
         return copy
 
+    def __bool__(self):
+        return any(self._bisectors.values())
+
     @staticmethod
     def combine_bisectors(bisectors: T.Iterable[pm.Bisector]) -> pm.Bisector:
         data = list(chain.from_iterable(b.data for b in bisectors))
