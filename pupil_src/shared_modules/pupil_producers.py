@@ -83,7 +83,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
 
         self.cache = {}
         self.cache_pupil_timeline_data("diameter", detector_tag="3d")
-        self.cache_pupil_timeline_data("confidence", detector_tag="2d")
+        self.cache_pupil_timeline_data("confidence", detector_tag="2d", ylim=(0.0, 1.0))
 
         self.glfont = fs.Context()
         self.glfont.add_font("opensans", ui.get_opensans_font_path())
@@ -100,7 +100,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
 
     def _refresh_timelines(self):
         self.cache_pupil_timeline_data("diameter", detector_tag="3d")
-        self.cache_pupil_timeline_data("confidence", detector_tag="2d")
+        self.cache_pupil_timeline_data("confidence", detector_tag="2d", ylim=(0.0, 1.0))
         self.dia_timeline.refresh()
         self.conf_timeline.refresh()
 
@@ -117,7 +117,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             window = pm.enclosing_window(self.g_pool.timestamps, frm_idx)
             events["pupil"] = self.g_pool.pupil_positions.by_ts_window(window)
 
-    def cache_pupil_timeline_data(self, key: str, detector_tag: str):
+    def cache_pupil_timeline_data(self, key: str, detector_tag: str, ylim=None):
         world_start_stop_ts = [self.g_pool.timestamps[0], self.g_pool.timestamps[-1]]
         if not self.g_pool.pupil_positions:
             self.cache[key] = {
@@ -150,18 +150,25 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
                         )
                         ts_data_pairs_right_left[eye_id].append(ts_data_pair)
 
-            # max_val must not be 0, else gl will crash
-            all_pupil_data_chained = chain.from_iterable(ts_data_pairs_right_left)
-            try:
-                max_val = max((pd[1] for pd in all_pupil_data_chained))
-            except ValueError:  # max() arg is an empty sequence
-                max_val = 1
+            if ylim is None:
+                # max_val must not be 0, else gl will crash
+                all_pupil_data_chained = chain.from_iterable(ts_data_pairs_right_left)
+                try:
+                    min_val, max_val = np.quantile(
+                        [pd[1] for pd in all_pupil_data_chained], [0.25, 0.75]
+                    )
+                    iqr = max_val - min_val
+                    min_val -= 1.5 * iqr
+                    max_val += 1.5 * iqr
+                    ylim = min_val, max_val
+                except IndexError:  # no pupil data available
+                    ylim = 0.0, 1.0
 
             self.cache[key] = {
                 "right": ts_data_pairs_right_left[0],
                 "left": ts_data_pairs_right_left[1],
                 "xlim": world_start_stop_ts,
-                "ylim": [0, max_val],
+                "ylim": ylim,
             }
 
     def draw_pupil_diameter(self, width, height, scale):
