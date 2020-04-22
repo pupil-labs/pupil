@@ -165,6 +165,8 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
                 # max_val must not be 0, else gl will crash
                 all_pupil_data_chained = chain.from_iterable(ts_data_pairs_right_left)
                 try:
+                    # Outlier removal based on:
+                    # https://en.wikipedia.org/wiki/Outlier#Tukey's_fences
                     min_val, max_val = np.quantile(
                         [pd[1] for pd in all_pupil_data_chained], [0.25, 0.75]
                     )
