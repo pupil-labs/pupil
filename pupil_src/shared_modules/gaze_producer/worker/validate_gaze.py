@@ -60,6 +60,7 @@ def validate(
     pupils_in_validation_range,
     refs_in_validation_range,
 ):
+    g_pool.import_runtime_plugins()
     gazers_by_name = registered_gazer_classes_by_class_name()
     gazer_class = gazers_by_name[gazer_class_name]
 

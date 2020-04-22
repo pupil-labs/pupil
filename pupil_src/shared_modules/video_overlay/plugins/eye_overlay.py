@@ -116,7 +116,8 @@ class Eye_Overlay(Observable, Plugin):
     def make_current_pupil_datum_getter(self, eye_id):
         def _pupil_getter():
             try:
-                pupil_data = self.g_pool.pupil_positions_by_id[eye_id]
+                # TODO: handle 2d and 3d data
+                pupil_data = self.g_pool.pupil_positions[eye_id, "3d"]
                 closest_pupil_idx = pm.find_closest(
                     pupil_data.data_ts, self.current_frame_ts
                 )

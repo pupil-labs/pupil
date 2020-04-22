@@ -9,13 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import collections
 import logging
 import os
 from itertools import chain
-import re
-import functools
-import typing as T
 
 import numpy as np
 import OpenGL.GL as gl
@@ -86,8 +82,8 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         )
 
         self.cache = {}
-        self.cache_pupil_timeline_data("diameter")
-        self.cache_pupil_timeline_data("confidence")
+        self.cache_pupil_timeline_data("diameter", detector_tag="3d")
+        self.cache_pupil_timeline_data("confidence", detector_tag="2d")
 
         self.glfont = fs.Context()
         self.glfont.add_font("opensans", ui.get_opensans_font_path())
@@ -103,8 +99,8 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         self.g_pool.user_timelines.append(self.conf_timeline)
 
     def _refresh_timelines(self):
-        self.cache_pupil_timeline_data("diameter")
-        self.cache_pupil_timeline_data("confidence")
+        self.cache_pupil_timeline_data("diameter", detector_tag="3d")
+        self.cache_pupil_timeline_data("confidence", detector_tag="2d")
         self.dia_timeline.refresh()
         self.conf_timeline.refresh()
 
@@ -121,7 +117,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             window = pm.enclosing_window(self.g_pool.timestamps, frm_idx)
             events["pupil"] = self.g_pool.pupil_positions.by_ts_window(window)
 
-    def cache_pupil_timeline_data(self, key):
+    def cache_pupil_timeline_data(self, key: str, detector_tag: str):
         world_start_stop_ts = [self.g_pool.timestamps[0], self.g_pool.timestamps[-1]]
         if not self.g_pool.pupil_positions:
             self.cache[key] = {
@@ -133,7 +129,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         else:
             ts_data_pairs_right_left = [], []
             for eye_id in (0, 1):
-                pupil_positions = self.g_pool.pupil_positions_by_id[eye_id]
+                pupil_positions = self.g_pool.pupil_positions[eye_id, detector_tag]
                 if pupil_positions:
                     t0, t1 = (
                         pupil_positions.timestamps[0],
@@ -156,7 +152,10 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
 
             # max_val must not be 0, else gl will crash
             all_pupil_data_chained = chain.from_iterable(ts_data_pairs_right_left)
-            max_val = max((pd[1] for pd in all_pupil_data_chained)) or 1
+            try:
+                max_val = max((pd[1] for pd in all_pupil_data_chained))
+            except ValueError:  # max() arg is an empty sequence
+                max_val = 1
 
             self.cache[key] = {
                 "right": ts_data_pairs_right_left[0],
@@ -216,41 +215,13 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             thickness=4.0 * scale,
         )
 
-    def create_pupil_positions_by_id(self, ts_to_datum, ts_to_topic):
-        topic_data_ts = (
-            (ts_to_topic[ts], datum, ts) for ts, datum in ts_to_datum.items()
-        )
-        return self.create_pupil_positions_by_id_iterative(topic_data_ts)
-
-    def create_pupil_positions_by_id_iterative(self, topic_data_ts):
-        id0_id1_data = collections.deque(), collections.deque()
-        id0_id1_time = collections.deque(), collections.deque()
-
-        for topic, datum, timestamp in topic_data_ts:
-            eye_id = int(topic[-1])  # use topic to identify eye
-            assert eye_id == datum["id"]
-            id0_id1_data[eye_id].append(datum)
-            id0_id1_time[eye_id].append(timestamp)
-
-        bisector_id0 = pm.Bisector(id0_id1_data[0], id0_id1_time[0])
-        bisector_id1 = pm.Bisector(id0_id1_data[1], id0_id1_time[1])
-        return (bisector_id0, bisector_id1)
-
 
 class Pupil_From_Recording(Pupil_Producer_Base):
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
-        pupil_data_file = fm.load_pldata_file(g_pool.rec_dir, "pupil")
-        g_pool.pupil_positions = pm.Bisector(
-            pupil_data_file.data, pupil_data_file.timestamps
-        )
-        g_pool.pupil_positions_by_id = self.create_pupil_positions_by_id_iterative(
-            zip(
-                pupil_data_file.topics, pupil_data_file.data, pupil_data_file.timestamps
-            )
-        )
-
+        pupil_data = pm.PupilDataBisector.load_from_file(g_pool.rec_dir, "pupil")
+        g_pool.pupil_positions = pupil_data
         self._pupil_changed_announcer.announce_existing()
         logger.debug("pupil positions changed")
 
@@ -260,148 +231,6 @@ class Pupil_From_Recording(Pupil_Producer_Base):
         self.menu.append(
             ui.Info_Text("Currently, pupil positions are loaded from the recording.")
         )
-
-
-class PupilTopic:
-    WildcardKey = T.Union[type(...), slice]
-    EyeIdFilterKey = T.Union[WildcardKey, int, str, T.Iterable[int], T.Iterable[str]]
-    DetectorTagFilterKey = T.Union[WildcardKey, str, T.Iterable[str]]
-
-    _FORMAT_STRING_V1 = "pupil.{eye_id}"
-    _FORMAT_STRING_V2 = "pupil.{eye_id}.{detector_tag}"
-
-    _MATCH_FORMAT_STRING_V1 = r"^pupil\.(?P<eye_id>{eye_id})$"
-    _MATCH_FORMAT_STRING_V2 = (
-        r"^pupil\.(?P<eye_id>{eye_id}).(?P<detector_tag>{detector_tag})$"
-    )
-
-    _legacy_method_to_detector_tag = {
-        "2d c++": "2d",
-        "3d c++": "3d",
-    }
-
-    @staticmethod
-    def create(topic: str, pupil_datum: dict) -> str:
-        regex_v1 = PupilTopic._match_regex_v1()
-        match_v1 = re.match(regex_v1, topic)
-        if match_v1:
-            detector_tag = pupil_datum["method"]
-            if detector_tag in PupilTopic._legacy_method_to_detector_tag:
-                detector_tag = PupilTopic._legacy_method_to_detector_tag[detector_tag]
-            return PupilTopic._FORMAT_STRING_V2.format(
-                eye_id=match_v1.group("eye_id"), detector_tag=detector_tag,
-            )
-        regex_v2 = PupilTopic._match_regex_v2()
-        match_v2 = re.match(regex_v2, topic)
-        if match_v2:
-            return PupilTopic._FORMAT_STRING_V2.format(
-                eye_id=match_v2.group("eye_id"),
-                detector_tag=match_v2.group("detector_tag"),
-            )
-        raise ValueError(f'Invalid pupil topic: "{topic}"')
-
-    @staticmethod
-    def match(topic: str, eye_id=None, detector_tag=None):
-        eye_id = PupilTopic._canonical_subpattern(eye_id)
-        detector_tag = PupilTopic._canonical_subpattern(detector_tag)
-        regex_v2 = PupilTopic._match_regex_v2(eye_id=eye_id, detector_tag=detector_tag)
-        return re.match(regex_v2, topic)
-
-    @staticmethod
-    def _canonical_subpattern(key) -> str:
-        if isinstance(key, slice) and key != slice(None, None, None):
-            raise ValueError("Only unconstrained slices (`:`, `::`) allowed")
-        elif key is None or key is ... or isinstance(key, slice):
-            return None
-        elif isinstance(key, str) or isinstance(key, int):
-            return str(key)
-        else:
-            return f'({"|".join(map(str, key))})'
-
-    @staticmethod
-    @functools.lru_cache(128)
-    def _match_regex_v2(
-        eye_id: T.Optional[str] = None, detector_tag: T.Optional[str] = None
-    ):
-        if eye_id is None:
-            eye_id = "[01]"
-
-        if detector_tag is None:
-            detector_tag = "[^\.]+"
-
-        pattern = PupilTopic._MATCH_FORMAT_STRING_V2.format(
-            eye_id=eye_id, detector_tag=detector_tag,
-        )
-
-        return re.compile(pattern)
-
-    @staticmethod
-    @functools.lru_cache(32)
-    def _match_regex_v1(eye_id: T.Optional[str] = None):
-        if eye_id is None:
-            eye_id = "[01]"
-
-        pattern = PupilTopic._MATCH_FORMAT_STRING_V1.format(eye_id=eye_id,)
-
-        return re.compile(pattern)
-
-
-class PupilDataBisector:
-    def __init__(self, data: fm.PLData = fm.PLData([], [], [])):
-        self._bisectors = collections.defaultdict(pm.Mutable_Bisector)
-        self._init_from_data(data)
-
-    def _init_from_data(self, data: fm.PLData):
-        for pupil_topic, data in self._group_data_by_pupil_topic(data).items():
-            assert pupil_topic not in self._bisectors
-            assert len(data.topics) == len(data.data) == len(data.timestamps)
-            bisector = pm.Mutable_Bisector(data.data, data.timestamps)
-            self._bisectors[pupil_topic] = bisector
-
-    def __getitem__(
-        self, key: T.Tuple[PupilTopic.EyeIdFilterKey, PupilTopic.DetectorTagFilterKey]
-    ) -> pm.Bisector:
-        bisectors = [
-            B for topic, B in self._bisectors.items() if PupilTopic.match(topic, *key)
-        ]
-        return self.combine_bisectors(bisectors)
-
-    def append(self, topic, datum, timestamp):
-        pupil_topic = PupilTopic.create(topic, datum)
-        self._bisectors[pupil_topic].insert(timestamp, datum)
-
-    def clear(self):
-        self._bisectors.clear()
-
-    @staticmethod
-    def combine_bisectors(bisectors: T.Iterable[pm.Bisector]) -> pm.Bisector:
-        data = list(chain.from_iterable(b.data for b in bisectors))
-        data_ts = list(chain.from_iterable(b.data_ts for b in bisectors))
-        return pm.Bisector(data, data_ts)
-
-    @classmethod
-    def load_from_file(cls, dir_path, filename) -> "PupilDataBisector":
-        data = fm.load_pldata_file(dir_path, filename)
-        return cls(data=data)
-
-    def save_to_file(self, dir_path, filename):
-        with fm.PLData_Writer(dir_path, filename) as writer:
-            for topic, bisector in self._bisectors.items():
-                for timestamp, datum in zip(bisector.timestamps, bisector.data):
-                    writer.append_serialized(timestamp, topic, datum.serialized)
-
-    ### PRIVATE
-
-    @staticmethod
-    def _group_data_by_pupil_topic(data: fm.PLData) -> T.Dict[str, fm.PLData]:
-        assert len(data.topics) == len(data.data) == len(data.timestamps)
-        data_by_topic = collections.defaultdict(lambda: fm.PLData([], [], []))
-        for raw_topic, datum, ts in zip(data.topics, data.data, data.timestamps):
-            pupil_topic = PupilTopic.create(raw_topic, datum)
-            data_by_topic[pupil_topic].data.append(datum)
-            data_by_topic[pupil_topic].timestamps.append(ts)
-            data_by_topic[pupil_topic].topics.append(raw_topic)
-        return data_by_topic
 
 
 class Offline_Pupil_Detection(Pupil_Producer_Base):
@@ -437,7 +266,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.detection_method = session_meta_data["detection_method"]
         self.detection_status = session_meta_data["detection_status"]
 
-        self._pupil_data_store = PupilDataBisector.load_from_file(
+        self._pupil_data_store = pm.PupilDataBisector.load_from_file(
             self.data_dir, self.session_data_name
         )
 
@@ -533,12 +362,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.menu_icon.indicator_stop = self.detection_progress
 
     def correlate_publish(self):
-        bisector_both = self._pupil_data_store[:, self.detection_method]
-        bisector_eye0 = self._pupil_data_store[0, self.detection_method]
-        bisector_eye1 = self._pupil_data_store[1, self.detection_method]
-
-        self.g_pool.pupil_positions = bisector_both
-        self.g_pool.pupil_positions_by_id = (bisector_eye0, bisector_eye1)
+        self.g_pool.pupil_positions = self._pupil_data_store.copy()
         self._pupil_changed_announcer.announce_new()
         logger.debug("pupil positions changed")
         self.save_offline_data()
@@ -569,7 +393,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def redetect(self):
         self._pupil_data_store.clear()
-        self.g_pool.pupil_positions = pm.Bisector([], [])
+        self.g_pool.pupil_positions = self._pupil_data_store.copy()
+        self._pupil_changed_announcer.announce_new()
         self.detection_finished_flag = False
         self.detection_paused = False
         for eye_id in range(2):
