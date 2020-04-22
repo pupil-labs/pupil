@@ -40,6 +40,7 @@ class Model2D_v1x(Model):
     def __init__(self, *, screen_size=(1, 1)):
         self.screen_size = screen_size
         self._is_fitted = False
+        self._params = {}
 
     @property
     def is_fitted(self) -> bool:

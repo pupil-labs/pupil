@@ -62,6 +62,7 @@ class Model3D_v1x(Model):
         self.intrinsics = intrinsics
         self.initial_depth = initial_depth
         self._is_fitted = False
+        self._params = {}
 
     @property
     def is_fitted(self) -> bool:
