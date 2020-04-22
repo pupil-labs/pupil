@@ -18,6 +18,7 @@ from pyglui import ui
 from plugin import Plugin
 
 from gaze_mapping.gazer_base import GazerBase
+from gaze_mapping import Gazer3D_v1x
 from gaze_mapping import GazerHMD3D_v1x
 from gaze_mapping import registered_gazer_classes
 
@@ -140,7 +141,10 @@ class CalibrationChoreographyPlugin(Plugin):
 
     @classmethod
     def default_selected_gazer_class(cls):
-        return cls.user_selectable_gazer_classes()[0]
+        if Gazer3D_v1x in cls.user_selectable_gazer_classes():
+            return Gazer3D_v1x
+        else:
+            return cls.user_selectable_gazer_classes()[0]
 
     @classmethod
     def parse_pretty_class_name(cls) -> str:
