@@ -237,9 +237,15 @@ class GazerBase(abc.ABC, Plugin):
         }
 
     def set_params(self, params):
-        self.left_model.set_params(**params["left_model"])
-        self.right_model.set_params(**params["right_model"])
-        self.binocular_model.set_params(**params["binocular_model"])
+        left_params = params.get("left_model", {})
+        right_params = params.get("right_model", {})
+        binocular_params = params.get("binocular_model", {})
+        if left_params:
+            self.left_model.set_params(**left_params)
+        if right_params:
+            self.right_model.set_params(**right_params)
+        if binocular_params:
+            self.binocular_model.set_params(**binocular_params)
 
     def init_models(self):
         self.left_model: Model = self._init_left_model()
