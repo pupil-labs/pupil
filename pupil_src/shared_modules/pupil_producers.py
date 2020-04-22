@@ -90,7 +90,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         self.glfont.set_font("opensans")
 
         self.dia_timeline = ui.Timeline(
-            "Pupil Diameter [px]", self.draw_pupil_diameter, self.draw_dia_legend
+            "Pupil Diameter [mm]", self.draw_pupil_diameter, self.draw_dia_legend
         )
         self.conf_timeline = ui.Timeline(
             "Pupil Confidence", self.draw_pupil_conf, self.draw_conf_legend
