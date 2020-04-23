@@ -34,7 +34,9 @@ _BINOCULAR_PUPIL_NORM_POS = slice(2, 4)
 
 
 class Model2D_v2(Model):
-    def __init__(self):
+    def __init__(self, screen_size=(1, 1), outlier_threshold_pixel=70):
+        self.screen_size = screen_size
+        self.outlier_threshold_pixel = outlier_threshold_pixel
         self._is_fitted = False
         self._regressor = LinearRegression(fit_intercept=True)
 
@@ -53,7 +55,7 @@ class Model2D_v2(Model):
             "intercept_": self._regressor.intercept_.tolist(),
         }
 
-    def fit(self, X, Y):
+    def fit(self, X, Y, outlier_removal_iterations=1):
         assert X.shape[0] == Y.shape[0], "Required shape: (n_samples, n_features)"
         self._validate_feature_dimensionality(X)
         self._validate_reference_dimensionality(Y)
@@ -63,7 +65,39 @@ class Model2D_v2(Model):
 
         polynomial_features = self._polynomial_features(X)
         self._regressor.fit(polynomial_features, Y)
+
+        # iteratively remove outliers and refit the model on a subset of the data
+        errors_px, rmse = self._test_pixel_error(X, Y)
+        if outlier_removal_iterations > 0:
+            filter_mask = errors_px < self.outlier_threshold_pixel
+            X_filtered = X[filter_mask]
+            Y_filtered = Y[filter_mask]
+            n_filtered_out = X.shape[0] - X_filtered.shape[0]
+
+            if n_filtered_out > 0:
+                # if we don't filter anything, we can skip refitting the model here
+                logger.debug(
+                    f"Fitting. RMSE = {rmse:>7.2f}px ..."
+                    f" discarding {n_filtered_out}/{X.shape[0]}"
+                    f" ({100 * (n_filtered_out) / X.shape[0]:.2f}%)"
+                    f" data points as outliers."
+                )
+                # recursively remove outliers
+                return self.fit(
+                    X_filtered,
+                    Y_filtered,
+                    outlier_removal_iterations=outlier_removal_iterations - 1,
+                )
+
+        logger.debug(f"Fitting. RMSE = {rmse:>7.2f}px in final iteration.")
         self._is_fitted = True
+
+    def _test_pixel_error(self, X, Y):
+        Y_predict = self.predict(X)
+        difference_px = (Y_predict - Y) * self.screen_size
+        errors_px = np.linalg.norm(difference_px, axis=1)
+        root_mean_squared_error_px = np.sqrt(np.mean(np.square(errors_px)))
+        return errors_px, root_mean_squared_error_px
 
     def predict(self, X):
         self._validate_feature_dimensionality(X)
@@ -129,13 +163,13 @@ class Gazer2D(GazerBase):
     label = "2D (polynomial)"
 
     def _init_left_model(self) -> Model:
-        return Model2D_v2_Monocular()
+        return Model2D_v2_Monocular(screen_size=self.g_pool.capture.frame_size)
 
     def _init_right_model(self) -> Model:
-        return Model2D_v2_Monocular()
+        return Model2D_v2_Monocular(screen_size=self.g_pool.capture.frame_size)
 
     def _init_binocular_model(self) -> Model:
-        return Model2D_v2_Binocular()
+        return Model2D_v2_Binocular(screen_size=self.g_pool.capture.frame_size)
 
     def _extract_pupil_features(self, pupil_data) -> np.ndarray:
         pupil_features = np.array([p["norm_pos"] for p in pupil_data])
