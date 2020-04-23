@@ -514,10 +514,9 @@ class CalibrationChoreographyPlugin(Plugin):
 
         self.on_choreography_stopped(mode=current_mode)
 
-        if pupil_list and ref_list:
-            self.on_choreography_successfull(
-                mode=current_mode, pupil_list=pupil_list, ref_list=ref_list
-            )
+        self.on_choreography_successfull(
+            mode=current_mode, pupil_list=pupil_list, ref_list=ref_list
+        )
 
     def _start_plugin(self, plugin_cls_or_name, **kwargs):
         if isinstance(plugin_cls_or_name, object.__class__):
