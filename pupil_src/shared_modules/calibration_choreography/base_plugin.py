@@ -18,7 +18,7 @@ from pyglui import ui
 from plugin import Plugin
 
 from gaze_mapping.gazer_base import GazerBase
-from gaze_mapping import Gazer3D_v1x
+from gaze_mapping import default_gazer_class
 from gaze_mapping import GazerHMD3D_v1x
 from gaze_mapping import registered_gazer_classes
 
