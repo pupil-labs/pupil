@@ -141,8 +141,8 @@ class CalibrationChoreographyPlugin(Plugin):
 
     @classmethod
     def default_selected_gazer_class(cls):
-        if Gazer3D_v1x in cls.user_selectable_gazer_classes():
-            return Gazer3D_v1x
+        if default_gazer_class in cls.user_selectable_gazer_classes():
+            return default_gazer_class
         else:
             return cls.user_selectable_gazer_classes()[0]
 
