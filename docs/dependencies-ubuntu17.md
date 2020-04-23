@@ -159,6 +159,7 @@ pip install psutil
 pip install pyaudio
 pip install pyopengl
 pip install pyzmq
+pip install scikit-learn
 pip install scipy
 pip install git+https://github.com/zeromq/pyre
 
