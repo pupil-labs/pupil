@@ -287,7 +287,11 @@ class ScreenMarkerChoreographyPlugin(
         mode: ChoreographyMode, is_2d: bool, is_3d: bool
     ) -> list:
         assert not (is_2d and is_3d)  # Sanity check
-        return [(0.5, 0.5), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
+        if ChoreographyMode.CALIBRATION == mode:
+            return [(0.5, 0.5), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
+        if ChoreographyMode.VALIDATION == mode:
+            return [(0.5, 1.0), (1.0, 0.5), (0.5, 0.0), (0.0, 0.5)]
+        raise ValueError(f"Unknown mode {mode}")
 
     def _on_window_did_close(self):
         self._signal_should_stop(mode=self.current_mode)
