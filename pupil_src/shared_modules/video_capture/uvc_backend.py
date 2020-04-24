@@ -181,12 +181,13 @@ class UVC_Source(Base_Source):
         if ids_present > 0:
             logger.warning("Updating drivers, please wait...")
 
-            pupil_capture_install_loc = Path.cwd()
             # NOTE: libwdi in PupilDrvIns.exe cannot deal with unicode characters in the
             # temporary path where the drivers will be installed. Check for non-ascii in
-            # current working directory and use C:\Windows\Temp as fallback.
+            # the default tempdir location and use C:\Windows\Temp as fallback.
+            temp_path = None  # use default temp_path
             try:
-                str(pupil_capture_install_loc.resolve()).encode("ascii")
+                with tempfile.TemporaryDirectory(dir=temp_path) as work_dir:
+                    work_dir.encode("ascii")
             except UnicodeEncodeError:
                 temp_path = Path("C:\\Windows\\Temp")
                 if not temp_path.exists():
@@ -199,11 +200,9 @@ class UVC_Source(Base_Source):
                     "Detected Unicode characters in working directory! "
                     "Switching temporary driver install location to C:\\Windows\\Temp"
                 )
-            else:
-                # if cwd has only ascii characters: use default temp location
-                temp_path = None
 
             for id in ids_to_install:
+                pupil_capture_install_loc = Path.cwd()
                 # Create a new temp dir for every driver so even when experiencing
                 # PermissionErrors, we can just continue installing all necessary
                 # drivers.
