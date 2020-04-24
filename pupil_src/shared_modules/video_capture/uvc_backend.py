@@ -13,6 +13,7 @@ import enum
 import logging
 import platform
 import re
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -181,12 +182,13 @@ class UVC_Source(Base_Source):
         if ids_present > 0:
             logger.warning("Updating drivers, please wait...")
 
-            pupil_capture_install_loc = Path.cwd()
             # NOTE: libwdi in PupilDrvIns.exe cannot deal with unicode characters in the
             # temporary path where the drivers will be installed. Check for non-ascii in
-            # current working directory and use C:\Windows\Temp as fallback.
+            # the default tempdir location and use C:\Windows\Temp as fallback.
+            temp_path = None  # use default temp_path
             try:
-                str(pupil_capture_install_loc.resolve()).encode("ascii")
+                with tempfile.TemporaryDirectory(dir=temp_path) as work_dir:
+                    work_dir.encode("ascii")
             except UnicodeEncodeError:
                 temp_path = Path("C:\\Windows\\Temp")
                 if not temp_path.exists():
@@ -199,9 +201,6 @@ class UVC_Source(Base_Source):
                     "Detected Unicode characters in working directory! "
                     "Switching temporary driver install location to C:\\Windows\\Temp"
                 )
-            else:
-                # if cwd has only ascii characters: use default temp location
-                temp_path = None
 
             for id in ids_to_install:
                 # Create a new temp dir for every driver so even when experiencing
@@ -209,11 +208,27 @@ class UVC_Source(Base_Source):
                 # drivers.
                 try:
                     with tempfile.TemporaryDirectory(dir=temp_path) as work_dir:
+                        # Need to resolve PupilDrvInst.exe location, which is on PATH
+                        # only for running from source. For bundle, the most stable
+                        # solution is to use sys._MEIPASS. Note that Path.cwd() can e.g.
+                        # return wrong results!
+                        if getattr(sys, "frozen", False):
+                            bundle_dir = sys._MEIPASS
+                            driver_exe = Path(bundle_dir) / "PupilDrvInst.exe"
+                            logger.debug(
+                                f"Detected running from bundle."
+                                f" Using full path to PupilDrvInst.exe at: {driver_exe}"
+                            )
+                        else:
+                            driver_exe = "PupilDrvInst.exe"
+                            logger.debug(
+                                f"Detected running from source."
+                                f" Assuming PupilDrvInst.exe is available on PATH!"
+                            )
+
                         # Using """ here to be able to use both " and ' without escaping
                         # Note: ArgumentList needs quotes ordered this way (' outer, "
                         # inner), otherwise it won't work
-
-                        driver_exe = pupil_capture_install_loc / "PupilDrvInst.exe"
                         cmd = (
                             f"""Start-Process '{driver_exe}' -Wait -Verb runas"""
                             f""" -WorkingDirectory '{work_dir}'"""
