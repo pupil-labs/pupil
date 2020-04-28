@@ -63,7 +63,13 @@ class CalibrationV1:
     def updated(self) -> Calibration:
 
         gazer_class, gazer_params = _gazer_class_and_params_from_gaze_mapper_result(self.result)
-        is_offline_calibration = gazer_params is not None
+
+        if gazer_params is not None:
+            is_offline_calibration = True
+            status = self.status
+        else:
+            is_offline_calibration = True
+            status = "Not calculated yet"
 
         return Calibration(
             unique_id=self.unique_id,
@@ -72,7 +78,7 @@ class CalibrationV1:
             gazer_class_name=gazer_class.__name__,
             frame_index_range=self.frame_index_range,
             minimum_confidence=self.minimum_confidence,
-            status=self.status,
+            status=status,
             is_offline_calibration=is_offline_calibration,
             calib_params=gazer_params,
         )
