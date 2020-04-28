@@ -27,7 +27,8 @@ from .base_plugin import (
     ChoreographyMode,
     ChoreographyAction,
 )
-from gaze_mapping import Gazer2D_v1x, Gazer3D_v1x
+from gaze_mapping import Gazer2D
+from gaze_mapping import Gazer3D_v1x
 
 
 logger = logging.getLogger(__name__)
