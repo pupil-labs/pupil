@@ -17,7 +17,7 @@ sudo apt install -y pkg-config git cmake build-essential nasm wget python3-setup
 Install ffmpeg3 from jonathonf's ppa:
 
 ```sh
-sudo add-apt-repository ppa:jonathonf/ffmpeg-3
+sudo add-apt-repository ppa:jonathonf/ffmpeg-4
 sudo apt-get update
 sudo apt install -y libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libavresample-dev ffmpeg libav-tools x264 x265 libportaudio2 portaudio19-dev
 ```
