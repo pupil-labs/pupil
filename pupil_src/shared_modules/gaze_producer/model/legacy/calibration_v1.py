@@ -60,10 +60,17 @@ class CalibrationV1:
     def updated_name(self) -> str:
         return f"{self.name} [UPDATED v{Calibration.version}]"
 
-    def updated(self) -> Calibration:
+    def updated(self) -> T.Optional[Calibration]:
+        from gaze_mapping import Gazer2D, Gazer3D_v1x
 
         gazer_class, gazer_params = _gazer_class_and_params_from_gaze_mapper_result(self.result)
+
+        if not self.is_offline_calibration and gazer_class is Gazer2D:
+            # Currently, recorded (read-only) 2d calibrations are not supported
+            return None
+
         is_offline_calibration = gazer_params is not None
+        status = self.status if gazer_params is not None else "Not calculated yet"
 
         return Calibration(
             unique_id=self.unique_id,
@@ -72,14 +79,14 @@ class CalibrationV1:
             gazer_class_name=gazer_class.__name__,
             frame_index_range=self.frame_index_range,
             minimum_confidence=self.minimum_confidence,
-            status=self.status,
+            status=status,
             is_offline_calibration=is_offline_calibration,
             calib_params=gazer_params,
         )
 
 
 def _gazer_class_and_params_from_gaze_mapper_result(gaze_mapper_result):
-    from gaze_mapping import Gazer2D_v1x, Gazer3D_v1x
+    from gaze_mapping import Gazer2D, Gazer3D_v1x
 
     gazer_class = None
     gazer_params = None
@@ -124,46 +131,19 @@ def _gazer_class_and_params_from_gaze_mapper_result(gaze_mapper_result):
             }
 
     elif gaze_mapper_name == "Binocular_Gaze_Mapper":
-        gazer_class = Gazer2D_v1x
-
-        if gaze_mapper_args is not None:
-            assert set(gaze_mapper_args.keys()).issuperset({
-            "params",
-            "params_eye0",
-            "params_eye1",
-        })
-        gazer_params = {
-            "binocular_model": {"params": gaze_mapper_args["params"]},
-            "left_model": {"params": gaze_mapper_args["params_eye1"]},
-            "right_model": {"params": gaze_mapper_args["params_eye0"]},
-        }
+        gazer_class = Gazer2D
+        # No way to extract the params from old calibration
+        gazer_params = None
 
     elif gaze_mapper_name == "Monocular_Gaze_Mapper":
-        gazer_class = Gazer2D_v1x
-
-        if gaze_mapper_args is not None:
-            assert set(gaze_mapper_args.keys()).issuperset({
-                "params",
-            })
-            # Since there is no way to know which eye the mapper belongs to,
-            # we use the arguments as the parameters for both eye models.
-            gazer_params = {
-                "left_model": {"params": gaze_mapper_args["params"].copy()},
-                "right_model": {"params": gaze_mapper_args["params"].copy()},
-            }
+        gazer_class = Gazer2D
+        # No way to extract the params from old calibration
+        gazer_params = None
 
     elif gaze_mapper_name == "Dual_Monocular_Gaze_Mapper":
-        gazer_class = Gazer2D_v1x
-
-        if gaze_mapper_args is not None:
-            assert set(gaze_mapper_args.keys()).issuperset({
-                "params0",
-                "params1",
-            })
-            gazer_params = {
-                "left_model": {"params": gaze_mapper_args["params1"].copy()},
-                "right_model": {"params": gaze_mapper_args["params0"].copy()},
-            }
+        gazer_class = Gazer2D
+        # No way to extract the params from old calibration
+        gazer_params = None
 
     else:
         logger.debug(f'Unable extract gazer class and params from gaze mapper "{gaze_mapper_name}"')
