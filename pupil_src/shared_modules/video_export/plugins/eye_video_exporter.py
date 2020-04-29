@@ -94,8 +94,8 @@ class _add_pupil_ellipse:
         eye_image = frame.img
         try:
             # TODO: handle 2d and 3d data
-            pupil_datum = self._pupil_positions_of_eye.by_ts(frame.timestamp)
-            self.renderer.render_pupil(eye_image, pupil_datum)
+            pupil_datum_3d = self._pupil_positions_of_eye.by_ts(frame.timestamp)
+            self.renderer.render_pupil_3d(eye_image, pupil_datum_3d)
         except ValueError:
             if not self._warned_once_data_not_found:
                 logger.warning("Could not draw pupil visualization. No data found.")
