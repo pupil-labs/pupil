@@ -146,7 +146,7 @@ class Affiliator(Bisector):
 
 
 class PupilTopic:
-    WildcardKey = T.Union[type(...), slice]
+    WildcardKey = type(...)
     EyeIdFilterKey = T.Union[WildcardKey, int, str, T.Iterable[int], T.Iterable[str]]
     DetectorTagFilterKey = T.Union[WildcardKey, str, T.Iterable[str]]
 
@@ -257,6 +257,7 @@ class PupilDataBisector:
         data = fm.PLData(init_dict["data"], init_dict["data_ts"], init_dict["topics"])
         return PupilDataBisector(data)
 
+    @functools.lru_cache(32)
     def __getitem__(
         self, key: T.Tuple[PupilTopic.EyeIdFilterKey, PupilTopic.DetectorTagFilterKey]
     ) -> pm.Bisector:

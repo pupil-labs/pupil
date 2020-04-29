@@ -231,10 +231,10 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
         )
 
     def _pupil_data(self):
-        data = self.g_pool.pupil_positions[:, "2d"]
+        data = self.g_pool.pupil_positions[..., "2d"]
         if not data:
             # Fall back to 3d data
-            data = self.g_pool.pupil_positions[:, "3d"]
+            data = self.g_pool.pupil_positions[..., "3d"]
         return data
 
     def init_ui(self):
