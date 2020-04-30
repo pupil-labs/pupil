@@ -60,14 +60,13 @@ class CalibrationV1:
     def updated_name(self) -> str:
         return f"{self.name} [UPDATED v{Calibration.version}]"
 
-    def updated(self) -> T.Optional[Calibration]:
+    def updated(self) -> Calibration:
         from gaze_mapping import Gazer2D, Gazer3D_v1x
 
         gazer_class, gazer_params = _gazer_class_and_params_from_gaze_mapper_result(self.result)
 
-        if not self.is_offline_calibration and gazer_class is Gazer2D:
-            # Currently, recorded (read-only) 2d calibrations are not supported
-            return None
+        if not self.is_offline_calibration:
+            raise ValueError(f'Updating pre-recorded (read-only) calibrations is not supported. {self.name}')
 
         is_offline_calibration = gazer_params is not None
         status = self.status if gazer_params is not None else "Not calculated yet"

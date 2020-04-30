@@ -61,6 +61,4 @@ class CalibrationStorageUpdater(CalibrationStorage):
     def __update_and_save_calibration_v1_as_latest_verson(cls, rec_dir, data):
         legacy_calibration = CalibrationV1.from_tuple(data)
         updated_calibration = legacy_calibration.updated()
-        if updated_calibration is None:
-            raise ValueError(f'Unable to update v1 calibration {legacy_calibration.name}')
         cls._save_calibration_to_file(rec_dir, updated_calibration, overwrite_if_exists=False)
