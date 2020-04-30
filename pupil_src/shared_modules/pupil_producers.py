@@ -359,7 +359,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         total = sum(self.eye_frame_num)
         if total:
             return min(
-                len(self._pupil_data_store[:, self.detection_method]) / total, 1.0
+                len(self._pupil_data_store[..., self.detection_method]) / total, 1.0
             )
         else:
             return 0.0
@@ -380,6 +380,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 assert pm.PupilTopic.match(topic, eye_id=pupil_datum["id"])
                 timestamp = pupil_datum["timestamp"]
                 self._pupil_data_store.append(topic, pupil_datum, timestamp)
+                self._pupil_data_store.__getitem__.cache_clear()
             else:
                 payload = self.data_sub.deserialize_payload(*remaining_frames)
                 if payload["subject"] == "file_source.video_finished":
@@ -425,6 +426,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def redetect(self):
         self._pupil_data_store.clear()
+        self._pupil_data_store.__getitem__.cache_clear()
         self.g_pool.pupil_positions = self._pupil_data_store.copy()
         self._pupil_changed_announcer.announce_new()
         self.detection_finished_flag = False

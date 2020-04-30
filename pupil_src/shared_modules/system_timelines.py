@@ -54,8 +54,8 @@ class System_Timelines(Observable, System_Plugin_Base):
 
     def cache_fps_data(self):
         fps_world = self.calculate_fps(self.g_pool.timestamps)
-        fps_eye0 = self.calculate_fps(self.g_pool.pupil_positions[0, :].timestamps)
-        fps_eye1 = self.calculate_fps(self.g_pool.pupil_positions[1, :].timestamps)
+        fps_eye0 = self.calculate_fps(self.g_pool.pupil_positions[0, ...].timestamps)
+        fps_eye1 = self.calculate_fps(self.g_pool.pupil_positions[1, ...].timestamps)
 
         t0, t1 = self.g_pool.timestamps[0], self.g_pool.timestamps[-1]
         self.cache = {

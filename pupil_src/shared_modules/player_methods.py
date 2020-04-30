@@ -47,7 +47,7 @@ class Bisector(object):
                     " timestamp in `data_ts`"
                 )
             )
-        elif not data:
+        elif not len(data):
             self.data = []
             self.data_ts = np.asarray([])
             self.sorted_idc = []
@@ -58,7 +58,7 @@ class Bisector(object):
             # Find correct order once and reorder both lists in-place
             self.sorted_idc = np.argsort(self.data_ts)
             self.data_ts = self.data_ts[self.sorted_idc]
-            self.data = self.data[self.sorted_idc].tolist()
+            self.data = self.data[self.sorted_idc]
 
     def copy(self):
         copy = type(self)()
@@ -102,7 +102,7 @@ class Bisector(object):
         return iter(self.data)
 
     def __bool__(self):
-        return bool(self.data)
+        return bool(len(self.data))
 
     @property
     def timestamps(self):
@@ -146,7 +146,7 @@ class Affiliator(Bisector):
 
 
 class PupilTopic:
-    WildcardKey = T.Union[type(...), slice]
+    WildcardKey = type(...)
     EyeIdFilterKey = T.Union[WildcardKey, int, str, T.Iterable[int], T.Iterable[str]]
     DetectorTagFilterKey = T.Union[WildcardKey, str, T.Iterable[str]]
 
@@ -257,6 +257,7 @@ class PupilDataBisector:
         data = fm.PLData(init_dict["data"], init_dict["data_ts"], init_dict["topics"])
         return PupilDataBisector(data)
 
+    @functools.lru_cache(32)
     def __getitem__(
         self, key: T.Tuple[PupilTopic.EyeIdFilterKey, PupilTopic.DetectorTagFilterKey]
     ) -> pm.Bisector:
