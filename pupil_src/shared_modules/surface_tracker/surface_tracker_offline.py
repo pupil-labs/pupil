@@ -559,7 +559,7 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Analysis_Plugin_Base)
         super().cleanup()
         self._save_marker_cache()
 
-        for proxy in self.export_proxies:
+        for proxy in self.export_proxies.copy():
             proxy.cancel()
             self.export_proxies.remove(proxy)
 

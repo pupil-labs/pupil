@@ -74,14 +74,20 @@ class Task_Proxy:
                 if _should_terminate_flag.value:
                     raise EarlyCancellationError("Task was cancelled")
                 pipe.send(datum)
+            pipe.send(StopIteration())
+        except BrokenPipeError:
+            # process canceled from outside
+            pass
         except Exception as e:
-            pipe.send(e)
+            try:
+                pipe.send(e)
+            except BrokenPipeError:
+                # process canceled from outside
+                pass
             if not isinstance(e, EarlyCancellationError):
                 import traceback
 
                 logger.info(traceback.format_exc())
-        else:
-            pipe.send(StopIteration())
         finally:
             pipe.close()
             logger.debug("Exiting _wrapper")
