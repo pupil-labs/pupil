@@ -14,9 +14,6 @@ from types import SimpleNamespace
 
 import player_methods as pm
 import tasklib.background
-from calibration_routines.finish_calibration import (
-    select_method_and_perform_calibration,
-)
 from gaze_producer import model
 from gaze_mapping import registered_gazer_classes_by_class_name, CalibrationError
 from methods import normalize
