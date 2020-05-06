@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import os
+import typing as T
 from contextlib import contextmanager
 from itertools import chain
 
@@ -88,7 +89,10 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         self.cache = {}
         self.cache_pupil_timeline_data(DATA_KEY_DIAMETER, detector_tag="3d")
         self.cache_pupil_timeline_data(
-            DATA_KEY_CONFIDENCE, detector_tag="2d", ylim=(0.0, 1.0)
+            DATA_KEY_CONFIDENCE,
+            detector_tag="2d",
+            ylim=(0.0, 1.0),
+            fallback_detector_tag="3d",
         )
 
         self.glfont = fs.Context()
@@ -110,7 +114,10 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
     def _refresh_timelines(self):
         self.cache_pupil_timeline_data(DATA_KEY_DIAMETER, detector_tag="3d")
         self.cache_pupil_timeline_data(
-            DATA_KEY_CONFIDENCE, detector_tag="2d", ylim=(0.0, 1.0)
+            DATA_KEY_CONFIDENCE,
+            detector_tag="2d",
+            ylim=(0.0, 1.0),
+            fallback_detector_tag="3d",
         )
         self.dia_timeline.refresh()
         self.conf_timeline.refresh()
@@ -128,7 +135,13 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             window = pm.enclosing_window(self.g_pool.timestamps, frm_idx)
             events["pupil"] = self.g_pool.pupil_positions.by_ts_window(window)
 
-    def cache_pupil_timeline_data(self, key: str, detector_tag: str, ylim=None):
+    def cache_pupil_timeline_data(
+        self,
+        key: str,
+        detector_tag: str,
+        ylim=None,
+        fallback_detector_tag: T.Optional[str] = None,
+    ):
         world_start_stop_ts = [self.g_pool.timestamps[0], self.g_pool.timestamps[-1]]
         if not self.g_pool.pupil_positions:
             self.cache[key] = {
@@ -141,6 +154,10 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             ts_data_pairs_right_left = [], []
             for eye_id in (0, 1):
                 pupil_positions = self.g_pool.pupil_positions[eye_id, detector_tag]
+                if not pupil_positions and fallback_detector_tag is not None:
+                    pupil_positions = self.g_pool.pupil_positions[
+                        eye_id, fallback_detector_tag
+                    ]
                 if pupil_positions:
                     t0, t1 = (
                         pupil_positions.timestamps[0],
