@@ -14,8 +14,8 @@ import numpy as np
 
 from methods import normalize
 
-from .optimization_calibration.calibrate_3d import calibrate_hmd
-from .optimization_calibration.utils import (
+from .calibrate_3d import calibrate_hmd
+from .utils import (
     calculate_nearest_points_to_targets,
     get_eye_cam_pose_in_world,
 )
@@ -26,7 +26,7 @@ from gaze_mapping.gazer_base import (
     NotEnoughDataError,
     FitDidNotConvergeError,
 )
-from .gazer_3d_v1x import Gazer3D_v1x, Model3D_v1x_Binocular, Model3D_v1x_Monocular
+from .gazer_headset import Gazer3D_v1x, Model3D_v1x_Binocular, Model3D_v1x_Monocular
 
 from .utils import _clamp_norm_point
 

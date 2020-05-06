@@ -25,11 +25,11 @@ from gaze_mapping.gazer_base import (
 )
 
 from methods import normalize
-from .optimization_calibration.calibrate_3d import (
+from .calibrate_3d import (
     calibrate_binocular,
     calibrate_monocular,
 )
-from .optimization_calibration.utils import (
+from .utils import (
     calculate_nearest_points_to_targets,
     get_eye_cam_pose_in_world,
 )

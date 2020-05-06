@@ -7,3 +7,6 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
+from .gazer_headset import Gazer3D_v1x
+from .gazer_hmd import GazerHMD3D_v1x

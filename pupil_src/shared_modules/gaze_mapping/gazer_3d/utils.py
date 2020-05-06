@@ -151,3 +151,11 @@ def calculate_nearest_points_to_targets(
         all_nearest_points.append(nearest_points)
 
     return all_nearest_points
+
+
+def _clamp_norm_point(pos):
+    """realistic numbers for norm pos should be in this range.
+        Grossly bigger or smaller numbers are results bad exrapolation
+        and can cause overflow erorr when denormalized and cast as int32.
+    """
+    return min(100.0, max(-100.0, pos[0])), min(100.0, max(-100.0, pos[1]))
