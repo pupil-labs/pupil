@@ -8,5 +8,5 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from .gazer_headset import Gazer3D_v1x
-from .gazer_hmd import GazerHMD3D_v1x
+from .gazer_headset import Gazer3D
+from .gazer_hmd import GazerHMD3D

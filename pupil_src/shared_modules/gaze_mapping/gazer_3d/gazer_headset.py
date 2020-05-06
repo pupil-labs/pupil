@@ -53,7 +53,7 @@ _BINOCULAR_SPHERE_CENTER = slice(8, 11)
 _BINOCULAR_PUPIL_NORMAL = slice(11, 14)
 
 
-class Model3D_v1x(Model):
+class Model3D(Model):
     @abc.abstractmethod
     def _fit(self, *args, **kwargs):
         pass
@@ -94,9 +94,9 @@ class Model3D_v1x(Model):
         return self._params
 
 
-class Model3D_v1x_Monocular(Model3D_v1x):
+class Model3D_Monocular(Model3D):
     # optional access to binocular_model.last_gaze_distance
-    binocular_model: "Model3D_v1x_Binocular" = None
+    binocular_model: "Model3D_Binocular" = None
 
     @property
     def gaze_distance(self):
@@ -178,7 +178,7 @@ class Model3D_v1x_Monocular(Model3D_v1x):
         return np.dot(self.eye_camera_to_world_matrix, point)[:3]
 
 
-class Model3D_v1x_Binocular(Model3D_v1x):
+class Model3D_Binocular(Model3D):
     def _fit(self, X, Y):
         assert X.shape[1] == _BINOCULAR_FEATURE_COUNT, X
         unprojected_ref_points = Y
@@ -314,17 +314,17 @@ class Model3D_v1x_Binocular(Model3D_v1x):
         return np.dot(self.eye_camera_to_world_matricies[1], point)[:3]
 
 
-class Gazer3D_v1x(GazerBase):
+class Gazer3D(GazerBase):
     label = "3D (v1)"
 
     def _init_left_model(self) -> Model:
-        return Model3D_v1x_Monocular(intrinsics=self.g_pool.capture.intrinsics)
+        return Model3D_Monocular(intrinsics=self.g_pool.capture.intrinsics)
 
     def _init_right_model(self) -> Model:
-        return Model3D_v1x_Monocular(intrinsics=self.g_pool.capture.intrinsics)
+        return Model3D_Monocular(intrinsics=self.g_pool.capture.intrinsics)
 
     def _init_binocular_model(self) -> Model:
-        return Model3D_v1x_Binocular(intrinsics=self.g_pool.capture.intrinsics)
+        return Model3D_Binocular(intrinsics=self.g_pool.capture.intrinsics)
 
     def fit_on_calib_data(self, calib_data):
         super().fit_on_calib_data(calib_data)

@@ -12,7 +12,7 @@ from . import matching
 from . import gazer_base
 from .gazer_base import CalibrationError
 from .gazer_2d import Gazer2D
-from .gazer_3d import Gazer3D_v1x, GazerHMD3D_v1x
+from .gazer_3d import Gazer3D, GazerHMD3D
 
 
 def registered_gazer_classes() -> list:
@@ -27,5 +27,5 @@ def registered_gazer_classes_by_class_name() -> dict:
     return {cls.__name__: cls for cls in registered_gazer_classes()}
 
 
-default_gazer_class = Gazer3D_v1x
+default_gazer_class = Gazer3D
 assert default_gazer_class in registered_gazer_classes()

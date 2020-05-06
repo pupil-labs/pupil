@@ -19,7 +19,7 @@ from plugin import Plugin
 
 from gaze_mapping.gazer_base import GazerBase
 from gaze_mapping import default_gazer_class
-from gaze_mapping import GazerHMD3D_v1x
+from gaze_mapping import GazerHMD3D
 from gaze_mapping import registered_gazer_classes
 
 
@@ -126,7 +126,7 @@ class CalibrationChoreographyPlugin(Plugin):
     def supported_gazer_classes(cls):
         gazers = registered_gazer_classes()
         # By default, HMD gazers are not supported by regular choreographies
-        gazers = [g for g in gazers if not issubclass(g, GazerHMD3D_v1x)]
+        gazers = [g for g in gazers if not issubclass(g, GazerHMD3D)]
         return gazers
 
     @classmethod
@@ -332,7 +332,7 @@ class CalibrationChoreographyPlugin(Plugin):
             "selected_choreography_class",
             self,
             label="Choreography",
-            selection_getter=self.__choreography_selection_getter
+            selection_getter=self.__choreography_selection_getter,
         )
 
         self.__ui_selector_gazer = ui.Selector(

@@ -15,7 +15,7 @@ import typing as T
 
 import file_methods as fm
 from pyglui import ui
-from gaze_mapping import GazerHMD3D_v1x
+from gaze_mapping import GazerHMD3D
 
 from .base_plugin import (
     CalibrationChoreographyPlugin,
@@ -102,7 +102,7 @@ class HMD3DChoreographyPlugin(_BaseHMDChoreographyPlugin):
 
     @classmethod
     def supported_gazer_classes(cls):
-        return [GazerHMD3D_v1x]
+        return [GazerHMD3D]
 
     def __init__(self, g_pool, **kwargs):
         super().__init__(g_pool, **kwargs)
