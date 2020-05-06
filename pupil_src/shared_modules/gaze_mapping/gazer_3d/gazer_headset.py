@@ -315,7 +315,7 @@ class Model3D_Binocular(Model3D):
 
 
 class Gazer3D(GazerBase):
-    label = "3D (v1)"
+    label = "3D (bundle adjustment)"
 
     def _init_left_model(self) -> Model:
         return Model3D_Monocular(intrinsics=self.g_pool.capture.intrinsics)

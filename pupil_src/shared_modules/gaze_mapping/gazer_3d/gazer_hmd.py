@@ -103,7 +103,7 @@ class ModelHMD3D_Monocular(Model3D_Monocular):
 
 
 class GazerHMD3D(Gazer3D):
-    label = "HMD 3D (v1)"
+    label = "HMD 3D (bundle adjustment)"
 
     def __init__(self, g_pool, *, eye_translations, calib_data=None, params=None):
         self.__eye_translations = eye_translations
