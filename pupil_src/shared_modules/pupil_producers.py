@@ -16,18 +16,18 @@ from itertools import chain
 
 import numpy as np
 import OpenGL.GL as gl
-import pyglui.cygl.utils as cygl_utils
 import zmq
-from pyglui import ui
-from pyglui.pyfontstash import fontstash as fs
 
 import data_changed
 import file_methods as fm
 import gl_utils
 import player_methods as pm
+import pyglui.cygl.utils as cygl_utils
 import zmq_tools
 from observable import Observable
 from plugin import Producer_Plugin_Base
+from pyglui import ui
+from pyglui.pyfontstash import fontstash as fs
 from video_capture.utils import VideoSet
 
 logger = logging.getLogger(__name__)
