@@ -12,14 +12,13 @@ import logging
 import typing as T
 import numpy as np
 
-# TODO: See if any calibration_routines dependency can be removed
-from calibration_routines import data_processing
-from calibration_routines.finish_calibration import create_converge_error_msg
-from calibration_routines.finish_calibration import create_not_enough_data_error_msg
-from calibration_routines.gaze_mappers import _clamp_norm_point, normalize
-from calibration_routines.optimization_calibration import calibration_methods
-from calibration_routines.optimization_calibration import utils
-from calibration_routines.optimization_calibration.calibrate_3d import calibrate_hmd
+from methods import normalize
+
+from .optimization_calibration.calibrate_3d import calibrate_hmd
+from .optimization_calibration.utils import (
+    calculate_nearest_points_to_targets,
+    get_eye_cam_pose_in_world,
+)
 
 from gaze_mapping.gazer_base import (
     GazerBase,
@@ -29,6 +28,7 @@ from gaze_mapping.gazer_base import (
 )
 from .gazer_3d_v1x import Gazer3D_v1x, Model3D_v1x_Binocular, Model3D_v1x_Monocular
 
+from .utils import _clamp_norm_point
 
 _REFERENCE_FEATURE_COUNT = 3
 
@@ -81,11 +81,11 @@ class ModelHMD3D_v1x_Binocular(Model3D_v1x_Binocular):
 
         eye0_pose, eye1_pose = poses_in_world
 
-        eye0_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye0_pose, sphere_pos0)
-        eye1_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye1_pose, sphere_pos1)
+        eye0_cam_pose_in_world = get_eye_cam_pose_in_world(eye0_pose, sphere_pos0)
+        eye1_cam_pose_in_world = get_eye_cam_pose_in_world(eye1_pose, sphere_pos1)
 
         all_observations = [unprojected_ref_points, pupil0_normals, pupil1_normals]
-        nearest_points = utils.calculate_nearest_points_to_targets(
+        nearest_points = calculate_nearest_points_to_targets(
             all_observations, [np.zeros(6), *poses_in_world], gaze_targets_in_world
         )
         nearest_points_world, nearest_points_eye0, nearest_points_eye1 = nearest_points

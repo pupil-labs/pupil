@@ -12,7 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import cv2
 import numpy as np
 
-from calibration_routines.optimization_calibration import utils, bundle_adjustment
+from . import utils, bundle_adjustment
 
 # Fixed eyeball positions are assumed for all users
 eye0_hardcoded_translation = np.array([20, 15, -20])

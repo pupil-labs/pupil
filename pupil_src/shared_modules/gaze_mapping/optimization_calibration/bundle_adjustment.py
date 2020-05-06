@@ -13,8 +13,9 @@ import cv2
 import numpy as np
 from scipy import optimize as scipy_optimize, sparse as scipy_sparse
 
-from calibration_routines.optimization_calibration import utils
+from . import utils
 
+# TODO: What is the difference between this class and head_pose_tracker/function/bundle_adjustment.py?
 
 # BundleAdjustment is a class instead of functions, since passing all the parameters
 # would be inefficient. (especially true for _compute_residuals as a callback)
