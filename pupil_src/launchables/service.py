@@ -95,11 +95,11 @@ def service(
 
         # Plug-ins
         from plugin import Plugin, Plugin_List, import_runtime_plugins
-        from calibration_routines import gaze_mapping_plugins
         from calibration_choreography import (
             available_calibration_choreography_plugins,
             patch_loaded_plugins_with_choreography_plugin,
         )
+        from gaze_mapping import registered_gazer_classes
         from pupil_remote import Pupil_Remote
         from pupil_groups import Pupil_Groups
         from frame_publisher import Frame_Publisher
@@ -161,7 +161,7 @@ def service(
         plugin_by_index = (
             runtime_plugins
             + available_choreography_plugins
-            + gaze_mapping_plugins
+            + registered_gazer_classes()
             + user_launchable_plugins
         )
         name_by_index = [pupil_datum.__name__ for pupil_datum in plugin_by_index]

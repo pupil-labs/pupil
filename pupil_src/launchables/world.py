@@ -154,11 +154,9 @@ def world(
         )
 
         available_choreography_plugins = available_calibration_choreography_plugins()
-        from calibration_routines import (
-            gaze_mapping_plugins,
-            Gaze_Mapping_Plugin,
-        )
+
         from gaze_mapping import registered_gazer_classes
+        from gaze_mapping.gazer_base import GazerBase
         from fixation_detector import Fixation_Detector
         from recorder import Recorder
         from display_recent_gaze import Display_Recent_Gaze
@@ -276,7 +274,6 @@ def world(
             + user_plugins
             + runtime_plugins
             + available_choreography_plugins
-            + gaze_mapping_plugins
             + registered_gazer_classes()
         )
         user_plugins += [
@@ -289,7 +286,7 @@ def world(
                     Base_Source,
                     System_Plugin_Base,
                     CalibrationChoreographyPlugin,
-                    Gaze_Mapping_Plugin,
+                    GazerBase,
                 ),
             )
         ]

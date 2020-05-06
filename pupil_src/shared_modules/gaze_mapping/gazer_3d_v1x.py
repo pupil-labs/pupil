@@ -20,7 +20,6 @@ import math_helper
 from gaze_mapping.gazer_base import (
     GazerBase,
     Model,
-    data_processing,
     NotEnoughDataError,
     FitDidNotConvergeError,
 )
