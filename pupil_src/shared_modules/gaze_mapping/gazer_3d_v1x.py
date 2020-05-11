@@ -20,17 +20,21 @@ import math_helper
 from gaze_mapping.gazer_base import (
     GazerBase,
     Model,
-    data_processing,
     NotEnoughDataError,
     FitDidNotConvergeError,
 )
 
-from calibration_routines.gaze_mappers import _clamp_norm_point, normalize
-from calibration_routines.optimization_calibration import utils
-from calibration_routines.optimization_calibration.calibrate_3d import (
+from methods import normalize
+from .optimization_calibration.calibrate_3d import (
     calibrate_binocular,
     calibrate_monocular,
 )
+from .optimization_calibration.utils import (
+    calculate_nearest_points_to_targets,
+    get_eye_cam_pose_in_world,
+)
+
+from .utils import _clamp_norm_point
 
 
 logger = logging.getLogger(__name__)
@@ -117,10 +121,10 @@ class Model3D_v1x_Monocular(Model3D_v1x):
 
         world_pose, eye_pose = poses_in_world
 
-        eye_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye_pose, sphere_pos)
+        eye_cam_pose_in_world = get_eye_cam_pose_in_world(eye_pose, sphere_pos)
 
         all_observations = [unprojected_ref_points, pupil_normals]
-        nearest_points = utils.calculate_nearest_points_to_targets(
+        nearest_points = calculate_nearest_points_to_targets(
             all_observations, poses_in_world, gaze_targets_in_world
         )
         nearest_points_world, nearest_points_eye = nearest_points
@@ -201,11 +205,11 @@ class Model3D_v1x_Binocular(Model3D_v1x):
 
         world_pose, eye0_pose, eye1_pose = poses_in_world
 
-        eye0_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye0_pose, sphere_pos0)
-        eye1_cam_pose_in_world = utils.get_eye_cam_pose_in_world(eye1_pose, sphere_pos1)
+        eye0_cam_pose_in_world = get_eye_cam_pose_in_world(eye0_pose, sphere_pos0)
+        eye1_cam_pose_in_world = get_eye_cam_pose_in_world(eye1_pose, sphere_pos1)
 
         all_observations = [unprojected_ref_points, pupil0_normals, pupil1_normals]
-        nearest_points = utils.calculate_nearest_points_to_targets(
+        nearest_points = calculate_nearest_points_to_targets(
             all_observations, poses_in_world, gaze_targets_in_world
         )
         nearest_points_world, nearest_points_eye0, nearest_points_eye1 = nearest_points

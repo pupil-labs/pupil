@@ -18,7 +18,6 @@ import typing as T
 import numpy as np
 
 from plugin import Plugin
-from calibration_routines import data_processing
 import file_methods as fm
 
 from .matching import RealtimeMatcher
@@ -27,6 +26,10 @@ from .notifications import (
     CalibrationFailureNotification,
     CalibrationSetupNotification,
     CalibrationResultNotification,
+)
+from .utils import (
+    _filter_pupil_list_by_confidence,
+    _match_data_batch,
 )
 
 
@@ -130,7 +133,7 @@ class GazerBase(abc.ABC, Plugin):
         """
         # TODO: make this a generator
         if confidence_threshold is not None:
-            pupil_data = data_processing._filter_pupil_list_by_confidence(
+            pupil_data = _filter_pupil_list_by_confidence(
                 pupil_data, confidence_threshold
             )
         return pupil_data
@@ -333,7 +336,7 @@ class GazerBase(abc.ABC, Plugin):
         model.fit(X, Y)
 
     def match_pupil_to_ref(self, pupil_data, ref_data) -> "Matches":
-        matches = data_processing._match_data_batch(pupil_data, ref_data)
+        matches = _match_data_batch(pupil_data, ref_data)
         bino, right, left = matches
         matches = Matches(left, right, bino)
         return matches
