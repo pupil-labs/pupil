@@ -309,10 +309,6 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             session_meta_data = {}
             session_meta_data["detection_status"] = ["unknown", "unknown"]
 
-        session_meta_data[
-            "detection_method"
-        ] = "3d"  # Force 3D detection method, since the detectors produce both
-        self.detection_method = session_meta_data["detection_method"]
         self.detection_status = session_meta_data["detection_status"]
 
         self._pupil_data_store = pm.PupilDataBisector.load_from_file(
@@ -322,8 +318,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.eye_video_loc = [None, None]
 
         self.eye_frame_num = [0, 0]
-        self.eye_frame_num[0] = len(self._pupil_data_store[0, self.detection_method])
-        self.eye_frame_num[1] = len(self._pupil_data_store[1, self.detection_method])
+        self.eye_frame_num[0] = len(self._pupil_data_store[0, "3d"]) #TODO: Figure out the number of frames independent of 3d detection
+        self.eye_frame_num[1] = len(self._pupil_data_store[1, "3d"]) #TODO: Figure out the number of frames independent of 3d detection
 
         self.pause_switch = None
         self.detection_paused = False
@@ -376,7 +372,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         total = sum(self.eye_frame_num)
         if total:
             return min(
-                len(self._pupil_data_store[..., self.detection_method]) / total, 1.0
+                #TODO: Figure out the number of frames independent of 3d detection
+                len(self._pupil_data_store[..., "3d"]) / total, 1.0
             )
         else:
             return 0.0
@@ -420,7 +417,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     def on_notify(self, notification):
         super().on_notify(notification)
         if notification["subject"] == "eye_process.started":
-            self.set_detection_mapping_mode(self.detection_method)
+            pass
         elif notification["subject"] == "eye_process.stopped":
             self.eye_video_loc[notification["eye_id"]] = None
 
@@ -434,7 +431,6 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     def save_offline_data(self):
         self._pupil_data_store.save_to_file(self.data_dir, "offline_pupil")
         session_data = {}
-        session_data["detection_method"] = self.detection_method
         session_data["detection_status"] = self.detection_status
         session_data["version"] = self.session_data_version
         cache_path = os.path.join(self.data_dir, "offline_pupil.meta")
@@ -459,13 +455,6 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                         "source_path": self.eye_video_loc[eye_id],
                     }
                 )
-
-    def set_detection_mapping_mode(self, new_mode):
-        # TODO: Refactor to remove all "set_detection_mapping_mode" references from codebase
-        n = {"subject": "set_detection_mapping_mode", "mode": new_mode}
-        self.notify_all(n)
-        self.redetect()
-        self.detection_method = new_mode
 
     def init_ui(self):
         super().init_ui()
