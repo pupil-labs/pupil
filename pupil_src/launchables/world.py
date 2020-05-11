@@ -33,14 +33,12 @@ def world(
     Can run various plug-ins.
 
     Reacts to notifications:
-        ``set_detection_mapping_mode``
         ``eye_process.started``
         ``start_plugin``
 
     Emits notifications:
         ``eye_process.should_start``
         ``eye_process.should_stop``
-        ``set_detection_mapping_mode``
         ``world_process.started``
         ``world_process.stopped``
         ``recording.should_stop``: Emits on camera failure
@@ -101,12 +99,11 @@ def world(
             stop_eye_process(eye_id)
 
     def detection_enabled_getter() -> bool:
-        return g_pool.detection_mapping_mode != "disabled"
+        return g_pool.pupil_detection_enabled
 
     def detection_enabled_setter(is_on: bool):
-        # TODO: Refactor to remove all references to "set_detection_mapping_mode" from codebase
-        new_mode = "3d" if is_on else "disabled"
-        n = {"subject": "set_detection_mapping_mode", "mode": new_mode}
+        g_pool.pupil_detection_enabled = is_on
+        n = {"subject": "set_pupil_detection_enabled", "value": is_on}
         ipc_pub.notify(n)
 
     try:
@@ -391,8 +388,8 @@ def world(
         g_pool.min_calibration_confidence = session_settings.get(
             "min_calibration_confidence", 0.8
         )
-        g_pool.detection_mapping_mode = session_settings.get(
-            "detection_mapping_mode", "3d"
+        g_pool.pupil_detection_enabled = session_settings.get(
+            "pupil_detection_enabled", True
         )
         g_pool.active_gaze_mapping_plugin = None
         g_pool.capture = None
@@ -401,17 +398,8 @@ def world(
 
         def handle_notifications(noti):
             subject = noti["subject"]
-            if subject == "set_detection_mapping_mode":
-                if noti["mode"] == "2d":
-                    if (
-                        "Vector_Gaze_Mapper"
-                        in g_pool.active_gaze_mapping_plugin.class_name
-                    ):
-                        logger.warning(
-                            "The gaze mapper is not supported in 2d mode. Please recalibrate."
-                        )
-                        g_pool.plugins.add(g_pool.plugin_by_name["Dummy_Gaze_Mapper"])
-                g_pool.detection_mapping_mode = noti["mode"]
+            if subject == "set_pupil_detection_enabled":
+                g_pool.pupil_detection_enabled = noti["value"]
             elif subject == "start_plugin":
                 try:
                     g_pool.plugins.add(
@@ -426,8 +414,8 @@ def world(
                         g_pool.plugins.clean()
             elif subject == "eye_process.started":
                 noti = {
-                    "subject": "set_detection_mapping_mode",
-                    "mode": g_pool.detection_mapping_mode,
+                    "subject": "set_pupil_detection_enabled",
+                    "value": g_pool.pupil_detection_enabled,
                 }
                 ipc_pub.notify(noti)
             elif subject == "set_min_calibration_confidence":
@@ -731,7 +719,7 @@ def world(
         session_settings[
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
-        session_settings["detection_mapping_mode"] = g_pool.detection_mapping_mode
+        session_settings["pupil_detection_enabled"] = g_pool.pupil_detection_enabled
         session_settings["audio_mode"] = audio.audio_mode
 
         if not hide_ui:

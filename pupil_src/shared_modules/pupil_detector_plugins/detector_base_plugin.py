@@ -39,7 +39,7 @@ class PropertyProxy:
 
 class PupilDetectorPlugin(Plugin):
     label = "Unnamed"  # Used in eye -> general settings as selector
-    # Used to select correct detector on set_detection_mapping_mode:
+    # Used to select correct detector on set_pupil_detection_enabled:
     identifier = "unnamed"
     order = 0.1
 
@@ -55,7 +55,7 @@ class PupilDetectorPlugin(Plugin):
         self._notification_handler = {
             "pupil_detector.broadcast_properties": self.handle_broadcast_properties_notification,
             "pupil_detector.set_property": self.handle_set_property_notification,
-            "set_detection_mapping_mode": self.handle_set_detection_mapping_mode_notification,
+            "set_pupil_detection_enabled": self.handle_set_pupil_detection_enabled_notification,
         }
         self._last_frame_size = None
         self._enabled = True
@@ -189,9 +189,9 @@ class PupilDetectorPlugin(Plugin):
             logger.error("Invalid property or value")
             logger.debug(traceback.format_exc())
 
-    def handle_set_detection_mapping_mode_notification(self, notification):
-        mode = notification["mode"]
-        self.enabled = mode != "disabled"
+    def handle_set_pupil_detection_enabled_notification(self, notification):
+        is_on = notification["value"]
+        self.enabled = is_on
 
     def namespaced_detector_properties(self) -> dict:
         return self.pupil_detector.get_properties()
