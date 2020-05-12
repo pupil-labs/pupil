@@ -40,17 +40,6 @@ class System_Graphs(System_Plugin_Base):
         self.idx = None
 
     def init_ui(self):
-        self.add_menu()
-        self.menu_icon.order = 0.01
-        self.menu.label = "System Graphs"
-        self.menu.append(ui.Switch("show_cpu", self, label="Display CPU usage"))
-        self.menu.append(ui.Switch("show_fps", self, label="Display frames per second"))
-        self.menu.append(
-            ui.Switch("show_conf0", self, label="Display confidence for eye 0")
-        )
-        self.menu.append(
-            ui.Switch("show_conf1", self, label="Display confidence for eye 1")
-        )
         # set up performace graphs:
         pid = os.getpid()
         ps = psutil.Process(pid)
@@ -150,7 +139,6 @@ class System_Graphs(System_Plugin_Base):
             self.idx = events["frame"].index  # required for eye graph logic in player
 
     def deinit_ui(self):
-        self.remove_menu()
         self.cpu_graph = None
         self.fps_graph = None
         self.conf0_graph = None
