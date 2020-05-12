@@ -28,20 +28,13 @@ class System_Graphs(System_Plugin_Base):
         show_fps=True,
         show_conf0=True,
         show_conf1=True,
-        show_dia0=False,
-        show_dia1=False,
-        dia_min=0.0,
-        dia_max=8.0,
+        **kwargs,
     ):
         super().__init__(g_pool)
         self.show_cpu = show_cpu
         self.show_fps = show_fps
         self.show_conf0 = show_conf0
         self.show_conf1 = show_conf1
-        self.show_dia0 = show_dia0
-        self.show_dia1 = show_dia1
-        self.dia_min = dia_min
-        self.dia_max = dia_max
         self.conf_grad_limits = 0.0, 1.0
         self.ts = None
         self.idx = None
@@ -58,13 +51,6 @@ class System_Graphs(System_Plugin_Base):
         self.menu.append(
             ui.Switch("show_conf1", self, label="Display confidence for eye 1")
         )
-        self.menu.append(
-            ui.Switch("show_dia0", self, label="Display pupil diameter for eye 0")
-        )
-        self.menu.append(
-            ui.Switch("show_dia1", self, label="Display pupil diameter for eye 1")
-        )
-
         # set up performace graphs:
         pid = os.getpid()
         ps = psutil.Process(pid)
@@ -89,50 +75,9 @@ class System_Graphs(System_Plugin_Base):
         self.conf1_graph.update_rate = 5
         self.conf1_graph.label = "id1 conf: %0.2f"
 
-        self.dia0_graph = graph.Bar_Graph(min_val=self.dia_min, max_val=self.dia_max)
-        self.dia0_graph.pos = (260, 100)
-        self.dia0_graph.update_rate = 5
-        self.dia0_graph.label = "id0 dia: %0.2f"
-
-        self.dia1_graph = graph.Bar_Graph(min_val=self.dia_min, max_val=self.dia_max)
-        self.dia1_graph.pos = (380, 100)
-        self.dia1_graph.update_rate = 5
-        self.dia1_graph.label = "id1 dia: %0.2f"
-
         self.conf_grad = (
             RGBA(1.0, 0.0, 0.0, self.conf0_graph.color[3]),
             self.conf0_graph.color,
-        )
-
-        def set_dia_min(val):
-            self.dia0_graph.min_val = val
-            self.dia1_graph.min_val = val
-
-        def set_dia_max(val):
-            self.dia0_graph.max_val = val
-            self.dia1_graph.max_val = val
-
-        self.menu.append(
-            ui.Slider(
-                "min_val",
-                self.dia0_graph,
-                label="Minimum pupil diameter",
-                setter=set_dia_min,
-                min=0.0,
-                max=15.0,
-                step=0.1,
-            )
-        )
-        self.menu.append(
-            ui.Slider(
-                "max_val",
-                self.dia0_graph,
-                label="Maximum pupil diameter",
-                setter=set_dia_max,
-                min=1.0,
-                max=15.0,
-                step=0.1,
-            )
         )
 
         self.on_window_resize(self.g_pool.main_window)
@@ -145,15 +90,11 @@ class System_Graphs(System_Plugin_Base):
         self.fps_graph.scale = hdpi_factor
         self.conf0_graph.scale = hdpi_factor
         self.conf1_graph.scale = hdpi_factor
-        self.dia0_graph.scale = hdpi_factor
-        self.dia1_graph.scale = hdpi_factor
 
         self.cpu_graph.adjust_window_size(*fb_size)
         self.fps_graph.adjust_window_size(*fb_size)
         self.conf0_graph.adjust_window_size(*fb_size)
         self.conf1_graph.adjust_window_size(*fb_size)
-        self.dia0_graph.adjust_window_size(*fb_size)
-        self.dia1_graph.adjust_window_size(*fb_size)
 
     def gl_display(self):
         if self.show_cpu:
@@ -178,10 +119,6 @@ class System_Graphs(System_Plugin_Base):
                 self.conf_grad_limits[1],
             )
             self.conf1_graph.draw()
-        if self.show_dia0:
-            self.dia0_graph.draw()
-        if self.show_dia1:
-            self.dia1_graph.draw()
 
     def recent_events(self, events):
         # update cpu graph
@@ -218,8 +155,6 @@ class System_Graphs(System_Plugin_Base):
         self.fps_graph = None
         self.conf0_graph = None
         self.conf1_graph = None
-        self.dia0_graph = None
-        self.dia1_graph = None
 
     def get_init_dict(self):
         return {
@@ -227,6 +162,4 @@ class System_Graphs(System_Plugin_Base):
             "show_fps": self.show_fps,
             "show_conf0": self.show_conf0,
             "show_conf1": self.show_conf1,
-            "show_dia0": self.show_dia0,
-            "show_dia1": self.show_dia1,
         }
