@@ -100,6 +100,7 @@ def service(
         from pupil_groups import Pupil_Groups
         from frame_publisher import Frame_Publisher
         from blink_detection import Blink_Detection
+        from fixation_detector import Fixation_Detector
         from service_ui import Service_UI
         from background_helper import IPC_Logging_Task_Proxy
 
@@ -165,6 +166,8 @@ def service(
             ("Dummy_Gaze_Mapper", {}),
             ("HMD_Calibration", {}),
             ("Pupil_Remote", {}),
+            ("Blink_Detection", {}),
+            ("Fixation_Detector", {}),
         ]
         g_pool.plugin_by_name = plugin_by_name
 
