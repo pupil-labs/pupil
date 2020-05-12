@@ -174,7 +174,6 @@ def world(
         )
         from pupil_data_relay import Pupil_Data_Relay
         from remote_recorder import Remote_Recorder
-        from audio_capture import Audio_Capture
         from accuracy_visualizer import Accuracy_Visualizer
 
         # from saccade_detector import Saccade_Detector
@@ -237,7 +236,6 @@ def world(
             os.path.join(g_pool.user_dir, "plugins")
         )
         user_plugins = [
-            Audio_Capture,
             Pupil_Groups,
             Frame_Publisher,
             Pupil_Remote,
