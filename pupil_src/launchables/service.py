@@ -29,7 +29,7 @@ def service(
     """Maps pupil to gaze data, can run various plug-ins.
 
     Reacts to notifications:
-       ``set_detection_mapping_mode``: Sets detection method
+       ``set_pupil_detection_enabled``: Sets detection enabled
        ``start_plugin``: Starts given plugin with the given arguments
        ``eye_process.started``: Sets the detection method eye process
        ``service_process.should_stop``: Stops the service process
@@ -37,7 +37,7 @@ def service(
     Emits notifications:
         ``eye_process.should_start``
         ``eye_process.should_stop``
-        ``set_detection_mapping_mode``
+        ``set_pupil_detection_enabled``
         ``service_process.started``
         ``service_process.stopped``
         ``launcher_process.should_stop``
@@ -193,8 +193,8 @@ def service(
         g_pool.min_calibration_confidence = session_settings.get(
             "min_calibration_confidence", 0.8
         )
-        g_pool.detection_mapping_mode = session_settings.get(
-            "detection_mapping_mode", "2d"
+        g_pool.pupil_detection_enabled = session_settings.get(
+            "pupil_detection_enabled", True
         )
 
         g_pool.active_gaze_mapping_plugin = None
@@ -228,23 +228,14 @@ def service(
 
         def handle_notifications(n):
             subject = n["subject"]
-            if subject == "set_detection_mapping_mode":
-                if n["mode"] == "2d":
-                    if (
-                        "Vector_Gaze_Mapper"
-                        in g_pool.active_gaze_mapping_plugin.class_name
-                    ):
-                        logger.warning(
-                            "The gaze mapper is not supported in 2d mode. Please recalibrate."
-                        )
-                        g_pool.plugins.add(plugin_by_name["Dummy_Gaze_Mapper"])
-                g_pool.detection_mapping_mode = n["mode"]
+            if subject == "set_pupil_detection_enabled":
+                g_pool.pupil_detection_enabled = n["mode"]
             elif subject == "start_plugin":
                 g_pool.plugins.add(plugin_by_name[n["name"]], args=n.get("args", {}))
             elif subject == "eye_process.started":
                 n = {
-                    "subject": "set_detection_mapping_mode",
-                    "mode": g_pool.detection_mapping_mode,
+                    "subject": "set_pupil_detection_enabled",
+                    "value": g_pool.pupil_detection_enabled,
                 }
                 ipc_pub.notify(n)
             elif subject == "service_process.should_stop":
@@ -304,7 +295,7 @@ def service(
         session_settings[
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
-        session_settings["detection_mapping_mode"] = g_pool.detection_mapping_mode
+        session_settings["pupil_detection_enabled"] = g_pool.pupil_detection_enabled
         session_settings["audio_mode"] = audio.audio_mode
         session_settings.close()
 

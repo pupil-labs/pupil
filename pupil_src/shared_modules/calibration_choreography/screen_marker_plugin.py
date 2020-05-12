@@ -261,8 +261,6 @@ class ScreenMarkerChoreographyPlugin(
 
         self.__current_list_of_markers_to_show = self.__get_list_of_markers_to_show(
             mode=self.current_mode,
-            is_2d=self.g_pool.detection_mapping_mode == "2d",
-            is_3d=self.g_pool.detection_mapping_mode == "3d",
         )
         self.__currently_shown_marker_position = None
         self.__ref_count_for_current_marker_position = 0
@@ -283,9 +281,8 @@ class ScreenMarkerChoreographyPlugin(
 
     @staticmethod
     def __get_list_of_markers_to_show(
-        mode: ChoreographyMode, is_2d: bool, is_3d: bool
+        mode: ChoreographyMode,
     ) -> list:
-        assert not (is_2d and is_3d)  # Sanity check
         if ChoreographyMode.CALIBRATION == mode:
             return [(0.5, 0.5), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
         if ChoreographyMode.VALIDATION == mode:

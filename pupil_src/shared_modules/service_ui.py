@@ -248,9 +248,8 @@ class Service_UI(System_Plugin_Base):
         self.notify_all(n)
 
     def detection_enabled_getter(self) -> bool:
-        return self.g_pool.detection_mapping_mode != "disabled"
+        return self.g_pool.pupil_detection_enabled
 
     def detection_enabled_setter(self, is_on: bool):
-        # TODO: Refactor to remove all references to "set_detection_mapping_mode" from codebase
-        new_mode = "3d" if is_on else "disabled"
-        self.notify_all({"subject": "set_detection_mapping_mode", "mode": new_mode})
+        n = {"subject": "set_pupil_detection_enabled", "value": is_on}
+        self.notify_all(n)

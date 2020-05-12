@@ -386,15 +386,13 @@ class Hololens_Relay(Plugin):
 
             init_2d = mode == b"2"
             if init_2d:
-                detection_mode = "2d"
                 calib_method = "HMD_Calibration"
             else:
-                detection_mode = "3d"
                 calib_method = "HMD_Calibration_3D"
 
             ipc_pub.notify({"subject": "start_plugin", "name": calib_method})
             ipc_pub.notify(
-                {"subject": "set_detection_mapping_mode", "mode": detection_mode}
+                {"subject": "set_pupil_detection_enabled", "value": True}
             )
             ipc_pub.notify(
                 {
