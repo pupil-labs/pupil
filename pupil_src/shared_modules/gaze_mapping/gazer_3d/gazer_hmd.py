@@ -14,8 +14,8 @@ import numpy as np
 
 from methods import normalize
 
-from .optimization_calibration.calibrate_3d import calibrate_hmd
-from .optimization_calibration.utils import (
+from .calibrate_3d import calibrate_hmd
+from .utils import (
     calculate_nearest_points_to_targets,
     get_eye_cam_pose_in_world,
 )
@@ -26,7 +26,7 @@ from gaze_mapping.gazer_base import (
     NotEnoughDataError,
     FitDidNotConvergeError,
 )
-from .gazer_3d_v1x import Gazer3D_v1x, Model3D_v1x_Binocular, Model3D_v1x_Monocular
+from .gazer_headset import Gazer3D, Model3D_Binocular, Model3D_Monocular
 
 from .utils import _clamp_norm_point
 
@@ -46,7 +46,7 @@ _BINOCULAR_PUPIL_NORMAL = slice(11, 14)
 logger = logging.getLogger(__name__)
 
 
-class ModelHMD3D_v1x_Binocular(Model3D_v1x_Binocular):
+class ModelHMD3D_Binocular(Model3D_Binocular):
     def __init__(self, *, intrinsics, eye_translations):
         self.intrinsics = intrinsics
         self.eye_translations = eye_translations
@@ -97,29 +97,29 @@ class ModelHMD3D_v1x_Binocular(Model3D_v1x_Binocular):
         return params
 
 
-class ModelHMD3D_v1x_Monocular(Model3D_v1x_Monocular):
+class ModelHMD3D_Monocular(Model3D_Monocular):
     def _fit(self, X, Y):
         return NotImplemented
 
 
-class GazerHMD3D_v1x(Gazer3D_v1x):
-    label = "HMD 3D (v1)"
+class GazerHMD3D(Gazer3D):
+    label = "HMD 3D (bundle adjustment)"
 
     def __init__(self, g_pool, *, eye_translations, calib_data=None, params=None):
         self.__eye_translations = eye_translations
         super().__init__(g_pool, calib_data=calib_data, params=params)
 
     def _init_binocular_model(self) -> Model:
-        return ModelHMD3D_v1x_Binocular(
+        return ModelHMD3D_Binocular(
             intrinsics=self.g_pool.capture.intrinsics,
             eye_translations=self.__eye_translations,
         )
 
     def _init_left_model(self) -> Model:
-        return ModelHMD3D_v1x_Monocular(intrinsics=self.g_pool.capture.intrinsics)
+        return ModelHMD3D_Monocular(intrinsics=self.g_pool.capture.intrinsics)
 
     def _init_right_model(self) -> Model:
-        return ModelHMD3D_v1x_Monocular(intrinsics=self.g_pool.capture.intrinsics)
+        return ModelHMD3D_Monocular(intrinsics=self.g_pool.capture.intrinsics)
 
     def fit_on_calib_data(self, calib_data):
         # extract reference data

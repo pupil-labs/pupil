@@ -33,7 +33,7 @@ _BINOCULAR_FEATURE_COUNT = 4
 _BINOCULAR_PUPIL_NORM_POS = slice(2, 4)
 
 
-class Model2D_v2(Model):
+class Model2D(Model):
     def __init__(self, screen_size=(1, 1), outlier_threshold_pixel=70):
         self.screen_size = screen_size
         self.outlier_threshold_pixel = outlier_threshold_pixel
@@ -134,7 +134,7 @@ class Model2D_v2(Model):
         raise NotImplementedError
 
 
-class Model2D_v2_Binocular(Model2D_v2):
+class Model2D_Binocular(Model2D):
     def _polynomial_features(self, norm_xy):
         left = super()._polynomial_features(norm_xy[:, _MONOCULAR_PUPIL_NORM_POS])
         right = super()._polynomial_features(norm_xy[:, _BINOCULAR_PUPIL_NORM_POS])
@@ -149,7 +149,7 @@ class Model2D_v2_Binocular(Model2D_v2):
         )
 
 
-class Model2D_v2_Monocular(Model2D_v2):
+class Model2D_Monocular(Model2D):
     @staticmethod
     def _validate_feature_dimensionality(X):
         assert X.ndim == 2, "Required shape: (n_samples, n_features)"
@@ -163,13 +163,13 @@ class Gazer2D(GazerBase):
     label = "2D (polynomial)"
 
     def _init_left_model(self) -> Model:
-        return Model2D_v2_Monocular(screen_size=self.g_pool.capture.frame_size)
+        return Model2D_Monocular(screen_size=self.g_pool.capture.frame_size)
 
     def _init_right_model(self) -> Model:
-        return Model2D_v2_Monocular(screen_size=self.g_pool.capture.frame_size)
+        return Model2D_Monocular(screen_size=self.g_pool.capture.frame_size)
 
     def _init_binocular_model(self) -> Model:
-        return Model2D_v2_Binocular(screen_size=self.g_pool.capture.frame_size)
+        return Model2D_Binocular(screen_size=self.g_pool.capture.frame_size)
 
     def _extract_pupil_features(self, pupil_data) -> np.ndarray:
         pupil_features = np.array([p["norm_pos"] for p in pupil_data])
