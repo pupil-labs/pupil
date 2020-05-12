@@ -394,7 +394,9 @@ def world(
         g_pool.active_gaze_mapping_plugin = None
         g_pool.capture = None
 
-        audio.audio_mode = session_settings.get("audio_mode", audio.default_audio_mode)
+        audio.set_audio_mode(
+            session_settings.get("audio_mode", audio.get_default_audio_mode())
+        )
 
         def handle_notifications(noti):
             subject = noti["subject"]
@@ -512,7 +514,13 @@ def world(
 
         general_settings.append(ui.Button("Reset window size", set_window_size))
         general_settings.append(
-            ui.Selector("audio_mode", audio, selection=audio.audio_modes)
+            ui.Selector(
+                "Audio mode",
+                None,
+                getter=audio.get_audio_mode,
+                setter=audio.set_audio_mode,
+                selection=audio.get_audio_mode_list(),
+            )
         )
 
         general_settings.append(
@@ -720,7 +728,7 @@ def world(
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
         session_settings["pupil_detection_enabled"] = g_pool.pupil_detection_enabled
-        session_settings["audio_mode"] = audio.audio_mode
+        session_settings["audio_mode"] = audio.get_audio_mode()
 
         if not hide_ui:
             glfw.glfwRestoreWindow(main_window)  # need to do this for windows os

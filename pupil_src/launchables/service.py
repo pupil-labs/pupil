@@ -202,7 +202,9 @@ def service(
 
         g_pool.active_gaze_mapping_plugin = None
 
-        audio.audio_mode = session_settings.get("audio_mode", audio.default_audio_mode)
+        audio.set_audio_mode(
+            session_settings.get("audio_mode", audio.get_default_audio_mode())
+        )
 
         ipc_pub.notify({"subject": "service_process.started"})
         logger.warning("Process started.")
@@ -299,7 +301,7 @@ def service(
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
         session_settings["pupil_detection_enabled"] = g_pool.pupil_detection_enabled
-        session_settings["audio_mode"] = audio.audio_mode
+        session_settings["audio_mode"] = audio.get_audio_mode()
         session_settings.close()
 
         # de-init all running plugins
