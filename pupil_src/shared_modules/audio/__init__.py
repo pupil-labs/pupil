@@ -12,6 +12,7 @@ import logging
 import platform, sys, os
 import subprocess as sp
 from time import sleep
+import typing as T
 
 
 logger = logging.getLogger(__name__)
@@ -62,95 +63,117 @@ def is_sound_enabled() -> bool:
     return "sound" in get_audio_mode()
 
 
-# OS specific audio players via terminal
-os_name = platform.system()
+def beep():
+    if is_sound_enabled():
+        _platform_specific_switch(
+            linux_fn=_linux_beep,
+            darwin_fn=_darwin_beep,
+            windows_fn=_windows_beep,
+            unknown_fn=_unknown_beep,
+        )
 
-if os_name == "Linux":
 
-    if platform.linux_distribution()[0] in ("Ubuntu", "debian"):
+def tink():
+    if is_sound_enabled():
+        _platform_specific_switch(
+            linux_fn=_linux_tink,
+            darwin_fn=_darwin_tink,
+            windows_fn=_windows_tink,
+            unknown_fn=_unknown_tink,
+        )
 
-        def beep():
-            if is_sound_enabled():
-                try:
-                    sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
-                except OSError:
-                    logger.warning("Soundfile not found.")
 
-        def tink():
-            if is_sound_enabled():
-                try:
-                    sp.Popen(
-                        ["paplay", "/usr/share/sounds/ubuntu/stereo/button-pressed.ogg"]
-                    )
-                except OSError:
-                    logger.warning("Soundfile not found.")
+def say(message):
+    if is_voice_enabled():
+        _platform_specific_switch(
+            linux_fn=_linux_say,
+            darwin_fn=_darwin_say,
+            windows_fn=_windows_say,
+            unknown_fn=_unknown_say,
+            message=message,
+        )
 
-        def say(message):
-            if is_voice_enabled():
-                try:
-                    sp.Popen(["spd-say", message])
-                except OSError:
-                    install_warning = "could not say: '{}'. Please install spd-say if you want Pupil capture to speek to you."
-                    logger.warning(install_warning.format(message))
 
+def _platform_specific_switch(linux_fn, darwin_fn, windows_fn, unknown_fn, **kwargs):
+    os_name = platform.system()
+    if os_name == "Linux":
+        linux_fn(**kwargs)
+    elif os_name == "Darwin":
+        darwin_fn(**kwargs)
+    elif os_name == "Windows":
+        windows_fn(**kwargs)
     else:
+        unknown_fn(**kwargs)
 
-        def beep():
-            if is_sound_enabled():
-                print("\a")
 
-        def tink():
-            if is_sound_enabled():
-                print("\a")
+def _linux_beep():
+    if platform.linux_distribution()[0] in ("Ubuntu", "debian"):
+        try:
+            sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
+        except OSError:
+            logger.warning("Soundfile not found.")
+    else:
+        print("\a")
 
-        def say(message):
-            if is_voice_enabled():
-                print("\a")
-                print(message)
 
-elif os_name == "Darwin":
+def _linux_tink():
+    if platform.linux_distribution()[0] in ("Ubuntu", "debian"):
+        try:
+            sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/button-pressed.ogg"])
+        except OSError:
+            logger.warning("Soundfile not found.")
+    else:
+        print("\a")
 
-    def beep():
-        if is_sound_enabled():
-            sp.Popen(["afplay", "/System/Library/Sounds/Pop.aiff"])
 
-    def tink():
-        if is_sound_enabled():
-            sp.Popen(["afplay", "/System/Library/Sounds/Tink.aiff"])
+def _linux_say(message):
+    if platform.linux_distribution()[0] in ("Ubuntu", "debian"):
+        try:
+            sp.Popen(["spd-say", message])
+        except OSError:
+            install_warning = "could not say: '{}'. Please install spd-say if you want Pupil capture to speek to you."
+            logger.warning(install_warning.format(message))
+    else:
+        print("\a")
+        print(message)
 
-    def say(message):
-        if is_voice_enabled():
-            sp.Popen(["say", message, "-v" "Victoria"])
 
-elif os_name == "Windows":
+def _darwin_beep():
+    sp.Popen(["afplay", "/System/Library/Sounds/Pop.aiff"])
 
-    def beep():
-        if is_sound_enabled():
-            print("\a")
 
-    def tink():
-        if is_sound_enabled():
-            print("\a")
+def _darwin_tink():
+    sp.Popen(["afplay", "/System/Library/Sounds/Tink.aiff"])
 
-    def say(message):
-        if is_voice_enabled():
-            print("\a")
-            print(message)
 
-else:
+def _darwin_say(message):
+    sp.Popen(["say", message, "-v" "Victoria"])
 
-    def beep():
-        if is_sound_enabled():
-            print("\a")
 
-    def tink():
-        if is_sound_enabled():
-            print("\a")
+def _windows_beep():
+    print("\a")
 
-    def say(message):
-        if is_voice_enabled():
-            print("\a")
-            print(message)
+
+def _windows_tink():
+    print("\a")
+
+
+def _windows_say(message):
+    print("\a")
+    print(message)
+
+
+def _unknown_beep():
+    print("\a")
+
+
+def _unknown_tink():
+    print("\a")
+
+
+def _unknown_say(message):
+    print("\a")
+    print(message)
 
 
 if __name__ == "__main__":
