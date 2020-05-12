@@ -313,6 +313,8 @@ def world(
             ("Screen_Marker_Calibration", {}),
             ("Recorder", {}),
             ("Pupil_Remote", {}),
+            ("Fixation_Detector", {}),
+            ("Blink_Detection", {}),
             ("Accuracy_Visualizer", {}),
             ("Plugin_Manager", {}),
             ("System_Graphs", {}),
