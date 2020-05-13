@@ -99,9 +99,9 @@ def service(
             patch_loaded_plugins_with_choreography_plugin,
         )
         from gaze_mapping import registered_gazer_classes
-        from pupil_remote import Pupil_Remote
+        from data_api.frame_publisher import Frame_Publisher
+        from data_api.pupil_remote import Pupil_Remote
         from pupil_groups import Pupil_Groups
-        from frame_publisher import Frame_Publisher
         from blink_detection import Blink_Detection
         from fixation_detector import Fixation_Detector
         from service_ui import Service_UI

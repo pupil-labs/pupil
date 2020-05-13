@@ -160,13 +160,13 @@ def world(
         from recorder import Recorder
         from display_recent_gaze import Display_Recent_Gaze
         from time_sync import Time_Sync
-        from pupil_remote import Pupil_Remote
+        from data_api.frame_publisher import Frame_Publisher
+        from data_api.pupil_remote import Pupil_Remote
         from pupil_groups import Pupil_Groups
         from surface_tracker import Surface_Tracker_Online
         from log_display import Log_Display
         from annotations import Annotation_Capture
         from log_history import Log_History
-        from frame_publisher import Frame_Publisher
         from blink_detection import Blink_Detection
         from video_capture import (
             source_classes,
