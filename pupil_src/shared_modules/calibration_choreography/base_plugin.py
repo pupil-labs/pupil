@@ -14,6 +14,7 @@ import functools as F
 import logging
 import typing as T
 
+import audio
 from pyglui import ui
 from plugin import Plugin
 
@@ -471,6 +472,7 @@ class CalibrationChoreographyPlugin(Plugin):
         current_mode = self.__current_mode
 
         logger.info(f"Starting  {current_mode.label}")
+        audio.tink()
 
         ### Set the calibration choreography state
 
@@ -495,6 +497,7 @@ class CalibrationChoreographyPlugin(Plugin):
         ref_list = self.__ref_list
 
         logger.info(f"Stopping  {current_mode.label}")
+        audio.tink()
 
         ### Set the calibration choreography state
 
