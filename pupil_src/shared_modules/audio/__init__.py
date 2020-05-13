@@ -83,17 +83,6 @@ def tink():
         )
 
 
-def say(message):
-    if is_voice_enabled():
-        _platform_specific_switch(
-            linux_fn=_linux_say,
-            darwin_fn=_darwin_say,
-            windows_fn=_windows_say,
-            unknown_fn=_unknown_say,
-            message=message,
-        )
-
-
 def _platform_specific_switch(linux_fn, darwin_fn, windows_fn, unknown_fn, **kwargs):
     os_name = platform.system()
     if os_name == "Linux":
@@ -126,28 +115,12 @@ def _linux_tink():
         print("\a")
 
 
-def _linux_say(message):
-    if platform.linux_distribution()[0] in ("Ubuntu", "debian"):
-        try:
-            sp.Popen(["spd-say", message])
-        except OSError:
-            install_warning = "could not say: '{}'. Please install spd-say if you want Pupil capture to speek to you."
-            logger.warning(install_warning.format(message))
-    else:
-        print("\a")
-        print(message)
-
-
 def _darwin_beep():
     sp.Popen(["afplay", "/System/Library/Sounds/Pop.aiff"])
 
 
 def _darwin_tink():
     sp.Popen(["afplay", "/System/Library/Sounds/Tink.aiff"])
-
-
-def _darwin_say(message):
-    sp.Popen(["say", message, "-v" "Victoria"])
 
 
 def _windows_beep():
@@ -158,22 +131,12 @@ def _windows_tink():
     print("\a")
 
 
-def _windows_say(message):
-    print("\a")
-    print(message)
-
-
 def _unknown_beep():
     print("\a")
 
 
 def _unknown_tink():
     print("\a")
-
-
-def _unknown_say(message):
-    print("\a")
-    print(message)
 
 
 if __name__ == "__main__":
@@ -184,6 +147,3 @@ if __name__ == "__main__":
 
     tink()
     sleep(1)
-
-    say("Hello, I am Pupil's audio module.")
-    sleep(3)
