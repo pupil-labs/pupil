@@ -18,23 +18,19 @@ import typing as T
 logger = logging.getLogger(__name__)
 
 
-AUDIO_MODE_VOICE_AND_SOUND = "voice and sound"
 AUDIO_MODE_SOUND_ONLY = "sound only"
-AUDIO_MODE_VOICE_ONLY = "voice only"
 AUDIO_MODE_SILENT = "silent"
 
 
 def get_audio_mode_list():
     return (
-        AUDIO_MODE_VOICE_AND_SOUND,
         AUDIO_MODE_SOUND_ONLY,
-        AUDIO_MODE_VOICE_ONLY,
         AUDIO_MODE_SILENT,
     )
 
 
 def get_default_audio_mode():
-    return AUDIO_MODE_VOICE_AND_SOUND
+    return AUDIO_MODE_SOUND_ONLY
 
 
 _audio_mode = get_default_audio_mode()
