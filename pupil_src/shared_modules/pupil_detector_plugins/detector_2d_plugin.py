@@ -76,7 +76,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
 
     def gl_display(self):
         if self._recent_detection_result:
-            draw_pupil_outline(self._recent_detection_result)
+            draw_pupil_outline(self._recent_detection_result, color_rgb=(0, 0.5, 1))
 
     def init_ui(self):
         super().init_ui()
