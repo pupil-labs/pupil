@@ -97,46 +97,11 @@ class Detector3DPlugin(PupilDetectorPlugin):
     def init_ui(self):
         super().init_ui()
         self.menu.label = self.pretty_class_name
-        info = ui.Info_Text(
-            "Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "
-            + "Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "
-            + "Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds."
-        )
-        self.menu.append(info)
         self.menu.append(
-            ui.Slider(
-                "2d.intensity_range",
-                self.proxy,
-                label="Pupil intensity range",
-                min=0,
-                max=60,
-                step=1,
+            ui.Info_Text(
+                "Open the debug window to see a visualization of the 3D pupil detection."
             )
         )
-        self.menu.append(
-            ui.Slider(
-                "2d.pupil_size_min",
-                self.proxy,
-                label="Pupil min",
-                min=1,
-                max=250,
-                step=1,
-            )
-        )
-        self.menu.append(
-            ui.Slider(
-                "2d.pupil_size_max",
-                self.proxy,
-                label="Pupil max",
-                min=50,
-                max=400,
-                step=1,
-            )
-        )
-        info_3d = ui.Info_Text(
-            "Open the debug window to see a visualization of the 3D pupil detection."
-        )
-        self.menu.append(info_3d)
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))
         self.menu.append(ui.Button("Open debug window", self.debug_window_toggle))
         model_sensitivity_slider = ui.Slider(
