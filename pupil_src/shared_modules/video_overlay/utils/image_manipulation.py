@@ -65,7 +65,7 @@ class PupilRenderer(ImageManipulator):
         el = pupil_position["ellipse"]
 
         conf = int(pupil_position["confidence"] * 255)
-        self.render_ellipse(image, el, color=(255, 0, 0, conf))
+        self.render_ellipse(image, el, color=(255, 127, 0, conf))
 
     def render_pupil_3d(self, image, pupil_position):
         el = pupil_position["ellipse"]
