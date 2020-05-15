@@ -354,19 +354,31 @@ class Surface(abc.ABC):
             A_to_B = np.linalg.inv(B_to_A)
             return A_to_B, B_to_A
         except np.linalg.LinAlgError as e:
-            logger.debug(
-                "Failed to calculate inverse homography with np.inv()! "
-                "Trying with np.pinv() instead."
-            )
+            pass
+        except Exception as e:
+            import traceback
+            exception_msg = traceback.format_exc()
+            logger.error(exception_msg)
+
+        logger.debug(
+            "Failed to calculate inverse homography with np.inv()! "
+            "Trying with np.pinv() instead."
+        )
 
         try:
             A_to_B = np.linalg.pinv(B_to_A)
             return A_to_B, B_to_A
         except np.linalg.LinAlgError as e:
-            logger.warning(
-                "Failed to calculate inverse homography with np.pinv()! "
-                "Falling back to inaccurate manual computation!"
-            )
+            pass
+        except Exception as e:
+            import traceback
+            exception_msg = traceback.format_exc()
+            logger.error(exception_msg)
+
+        logger.warning(
+            "Failed to calculate inverse homography with np.pinv()! "
+            "Falling back to inaccurate manual computation!"
+        )
 
         A_to_B, mask = cv2.findHomography(points_B, points_A)
         return A_to_B, B_to_A
