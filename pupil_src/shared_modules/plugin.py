@@ -350,13 +350,13 @@ class Plugin_List(object):
     def __str__(self):
         return "Plugin List: {}".format(self._plugins)
 
-    def add(self, new_plugin, args={}):
+    def add(self, new_plugin_cls, args={}):
         """
         add a plugin instance to the list.
         """
-        self._avoid_duplication(new_plugin)
+        self._find_and_remove_duplicates(new_plugin_cls)
 
-        plugin_instance = new_plugin(self.g_pool, **args)
+        plugin_instance = new_plugin_cls(self.g_pool, **args)
         if not plugin_instance.alive:
             logger.warning("plugin failed to initialize")
             return
@@ -367,9 +367,9 @@ class Plugin_List(object):
         if self.g_pool.app in ("capture", "player"):
             plugin_instance.init_ui()
 
-    def _avoid_duplication(self, new_plugin_cls):
+    def _find_and_remove_duplicates(self, new_plugin_cls):
         for duplicate in self._duplicates(new_plugin_cls):
-            self._remove_duplicate(duplicate)
+            self._remove_duplicated_instance(duplicate)
 
     def _duplicates(self, new_plugin_cls):
         if new_plugin_cls.uniqueness == "by_base_class":
@@ -387,7 +387,7 @@ class Plugin_List(object):
         )
         yield from duplicates
 
-    def _remove_duplicate(self, duplicated_plugin_inst):
+    def _remove_duplicated_instance(self, duplicated_plugin_inst):
         name = duplicated_plugin_inst.pretty_class_name
         uniq = duplicated_plugin_inst.uniqueness
         message = f"Replacing {name} due to '{uniq}' uniqueness"
