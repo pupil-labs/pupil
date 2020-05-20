@@ -28,7 +28,9 @@ MIN_DATA_CONFIDENCE_DEFAULT = 0.6
 MIN_CALIBRATION_CONFIDENCE_DEFAULT = 0.8
 
 
-def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version):
+def player(
+    rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version, debug
+):
     # general imports
     from time import sleep
     import logging
@@ -250,6 +252,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         # log info about Pupil Platform and Platform in player.log
         logger.info("Application Version: {}".format(app_version))
         logger.info("System Info: {}".format(get_system_info()))
+        logger.debug(f"Debug flag: {debug}")
 
         icon_bar_width = 50
         window_size = None
@@ -692,7 +695,9 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         sleep(1.0)
 
 
-def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version):
+def player_drop(
+    rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version, debug
+):
     # general imports
     import logging
 
@@ -868,7 +873,7 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_v
 
 
 def player_profiled(
-    rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version
+    rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version, debug
 ):
     import cProfile
     import subprocess
@@ -876,7 +881,7 @@ def player_profiled(
     from .player import player
 
     cProfile.runctx(
-        "player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version)",
+        "player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version, debug)",
         {
             "rec_dir": rec_dir,
             "ipc_pub_url": ipc_pub_url,
@@ -884,6 +889,7 @@ def player_profiled(
             "ipc_push_url": ipc_push_url,
             "user_dir": user_dir,
             "app_version": app_version,
+            "debug": debug,
         },
         locals(),
         "player.pstats",
