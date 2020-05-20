@@ -57,13 +57,8 @@ class Plugin(object):
     def __init__(self, g_pool):
         self.g_pool = g_pool
 
-        # Monkeypatch potentially overwritten gl_display functions to include
-        # error checking. This is because we often receive OpenGL errors as
-        # results of buggy pyglui code that gets called in gl_display. Since
-        # pyglui does not check glGetError(), we run into these errors at other
-        # places at the code when e.g. using pyopengl. By checking after every
-        # plugin we can at least partially localize the error!
-        self.__monkeypatch_gl_display_error_checking()
+        if getattr(g_pool, "debug", False):
+            self.__monkeypatch_gl_display_error_checking()
 
     def init_ui(self):
         """
@@ -305,6 +300,12 @@ class Plugin(object):
         self.menu_icon = None
 
     def __monkeypatch_gl_display_error_checking(self):
+        # Monkeypatch gl_display functions to include error checking. This is because we
+        # often receive OpenGL errors as results of buggy pyglui code that gets called
+        # in gl_display. Since pyglui does not check glGetError(), we run into these
+        # errors at other places at the code when e.g. using pyopengl. By checking after
+        # every plugin we can at least partially localize the error!
+
         # Take gl_display function prototype from class, i.e. not bound to an
         # instance. This will return potentially overwritten implementations
         # from child classes.
