@@ -63,6 +63,12 @@ class PupilRemoteController(Observable):
         print socket.recv()
     """
 
+    def on_pupil_remote_server_did_start(self, address: str):
+        logger.debug(f"on_pupil_remote_server_did_start({address})")
+
+    def on_pupil_remote_server_did_stop(self):
+        logger.debug(f"on_pupil_remote_server_did_stop")
+
     def __init__(self, g_pool, host="*", use_primary_interface=True, **kwargs):
         assert type(host) == str
         port = int(g_pool.preferred_remote_port)
@@ -70,7 +76,7 @@ class PupilRemoteController(Observable):
         # Global state
         self.g_pool = g_pool
 
-        # Private background thread pipe
+        # Private state
         self.__primary_port = port
         self.__custom_port = port
         self.__custom_host = host
@@ -82,9 +88,32 @@ class PupilRemoteController(Observable):
 
     def get_init_dict(self):
         return {
-            "host": self.host,
-            "use_primary_interface": self.use_primary_interface,
+            "host": self.__custom_host,
+            "use_primary_interface": self.__use_primary_interface,
         }
+
+    @property
+    def primary_port(self) -> int:
+        return self.__primary_port
+
+    @primary_port.setter
+    def primary_port(self, port: int):
+        self.__primary_port = port
+        self._restart_with_primary_interface()
+
+    @property
+    def use_primary_interface(self) -> bool:
+        return self.__use_primary_interface
+
+    @use_primary_interface.setter
+    def use_primary_interface(self, value: bool):
+        if self.__use_primary_interface == value:
+            return #No change
+        self.__use_primary_interface = value
+        if self.__use_primary_interface:
+            self._restart_with_primary_interface()
+        else:
+            self._restart_with_custom_interface()
 
     @property
     def local_address(self) -> str:
@@ -102,32 +131,14 @@ class PupilRemoteController(Observable):
     def custom_address(self) -> str:
         return f"{self.__custom_host}:{self.__custom_port}"
 
-    @property
-    def use_primary_interface(self) -> bool:
-        return self.__use_primary_interface
-
-    @use_primary_interface.setter
-    def use_primary_interface(self, value: bool):
-        if self.__use_primary_interface == value:
-            return #No change
-        self.__use_primary_interface = value
-        if self.__use_primary_interface:
-            self.update_primary_port(
-                port=self.__primary_port
-            )
-        else:
-            self.update_custom_host_and_port(
-                host=self.__custom_host, port=self.__custom_port
-            )
-
-    def update_primary_port(self, port: int):
-        self.__primary_port = port
-        self.restart_server(host="*", port=port)
-
-    def update_custom_host_and_port(self, host: str, port: int):
-        self.__custom_host = host
-        self.__custom_port = port
-        self.restart_server(host=host, port=port)
+    @custom_address.setter
+    def custom_address(self, address: str):
+        if address.count(":") != 1:
+            logger.error("address format not correct")
+            return
+        self.__custom_host = address.split(":")[0]
+        self.__custom_port = int(address.split(":")[1])
+        self._restart_with_custom_interface()
 
     def restart_server(self, host: str, port: int):
         self.__stop_server()
@@ -141,21 +152,28 @@ class PupilRemoteController(Observable):
 
     ### PRIVATE
 
+    def _restart_with_primary_interface(self):
+        assert self.use_primary_interface #sanity check
+        self.restart_server(host="*", port=self.__primary_port)
+
+    def _restart_with_custom_interface(self):
+        assert not self.use_primary_interface #sanity check
+        self.restart_server(host=self.__custom_host, port=self.__custom_port)
+
     def __start_server(self, host: str, port: int):
         if self.__thread_pipe is not None:
             logger.warning("Pupil remote server already started")
             return
 
-        new_address = f"tcp://{host}:{port}"
+        new_address = f"{host}:{port}"
         self.__thread_pipe = zhelper.zthread_fork(self.g_pool.zmq_ctx, self.__thread_loop)
         self.__thread_pipe.send_string("Bind", flags=zmq.SNDMORE)
-        self.__thread_pipe.send_string(new_address)
+        self.__thread_pipe.send_string(f"tcp://{new_address}")
         response = self.__thread_pipe.recv_string()
         msg = self.__thread_pipe.recv_string()
         if response == "Bind OK":
-            host, port = msg.split(":")
-            self.host = host
-            self.port = int(port)
+            #TODO: Do we need to verify msg == new_address?
+            self.on_pupil_remote_server_did_start(address=new_address)
             return
 
         # fail logic
@@ -192,6 +210,7 @@ class PupilRemoteController(Observable):
         self.__thread_pipe.send_string("Exit")
         while self.__thread_pipe:
             sleep(0.1)
+        self.on_pupil_remote_server_did_stop()
 
     def __thread_loop(self, context, pipe):
         poller = zmq.Poller()
