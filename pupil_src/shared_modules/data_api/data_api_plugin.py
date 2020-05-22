@@ -29,6 +29,10 @@ class DataApiPlugin(Plugin):
     icon_font = "pupil_icons"
     order = 0.01  # excecute first
 
+    @property
+    def pretty_class_name(self):
+        return self.menu_label
+
     def __init__(self, g_pool, **kwargs):
         super().__init__(g_pool)
         self.__frame_publisher = FramePublisherController(**kwargs)
