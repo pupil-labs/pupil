@@ -87,13 +87,13 @@ class PupilRemoteMenu(Observable):
             ui.Info_Text("Pupil Remote using ZeroMQ REQ REP scheme.")
         )
         self.__sub_menu.append(
-            ui.Switch("_use_primary_interface", self, label="Use primary network interface")
+            ui.Switch(
+                "_use_primary_interface", self, label="Use primary network interface"
+            )
         )
 
         if self._use_primary_interface:
-            self.__sub_menu.append(
-                ui.Text_Input("_primary_port", self, label="Port")
-            )
+            self.__sub_menu.append(ui.Text_Input("_primary_port", self, label="Port"))
             self.__sub_menu.append(
                 ui.Info_Text(f'Connect locally:   "tcp://{self._local_address}"')
             )

@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 class FramePublisherController(Observable):
-
     def on_frame_publisher_did_start(self, format: FrameFormat):
         logger.debug(f"on_frame_publisher_did_start({format})")
 

@@ -108,7 +108,7 @@ class PupilRemoteController(Observable):
     @use_primary_interface.setter
     def use_primary_interface(self, value: bool):
         if self.__use_primary_interface == value:
-            return #No change
+            return  # No change
         self.__use_primary_interface = value
         if self.__use_primary_interface:
             self._restart_with_primary_interface()
@@ -153,11 +153,11 @@ class PupilRemoteController(Observable):
     ### PRIVATE
 
     def _restart_with_primary_interface(self):
-        assert self.use_primary_interface #sanity check
+        assert self.use_primary_interface  # sanity check
         self.restart_server(host="*", port=self.__primary_port)
 
     def _restart_with_custom_interface(self):
-        assert not self.use_primary_interface #sanity check
+        assert not self.use_primary_interface  # sanity check
         self.restart_server(host=self.__custom_host, port=self.__custom_port)
 
     def __start_server(self, host: str, port: int):
@@ -166,13 +166,15 @@ class PupilRemoteController(Observable):
             return
 
         new_address = f"{host}:{port}"
-        self.__thread_pipe = zhelper.zthread_fork(self.g_pool.zmq_ctx, self.__thread_loop)
+        self.__thread_pipe = zhelper.zthread_fork(
+            self.g_pool.zmq_ctx, self.__thread_loop
+        )
         self.__thread_pipe.send_string("Bind", flags=zmq.SNDMORE)
         self.__thread_pipe.send_string(f"tcp://{new_address}")
         response = self.__thread_pipe.recv_string()
         msg = self.__thread_pipe.recv_string()
         if response == "Bind OK":
-            #TODO: Do we need to verify msg == new_address?
+            # TODO: Do we need to verify msg == new_address?
             self.on_pupil_remote_server_did_start(address=new_address)
             return
 

@@ -38,13 +38,21 @@ class NetworkApiPlugin(Plugin):
 
         # Frame Publisher setup
         self.__frame_publisher = FramePublisherController(**kwargs)
-        self.__frame_publisher.add_observer("on_frame_publisher_did_start", self.on_frame_publisher_did_start)
-        self.__frame_publisher.add_observer("on_frame_publisher_did_stop", self.on_frame_publisher_did_stop)
+        self.__frame_publisher.add_observer(
+            "on_frame_publisher_did_start", self.on_frame_publisher_did_start
+        )
+        self.__frame_publisher.add_observer(
+            "on_frame_publisher_did_stop", self.on_frame_publisher_did_stop
+        )
 
         # Pupil Remote setup
         self.__pupil_remote = PupilRemoteController(g_pool, **kwargs)
-        self.__pupil_remote.add_observer("on_pupil_remote_server_did_start", self.on_pupil_remote_server_did_start)
-        self.__pupil_remote.add_observer("on_pupil_remote_server_did_stop", self.on_pupil_remote_server_did_stop)
+        self.__pupil_remote.add_observer(
+            "on_pupil_remote_server_did_start", self.on_pupil_remote_server_did_start
+        )
+        self.__pupil_remote.add_observer(
+            "on_pupil_remote_server_did_stop", self.on_pupil_remote_server_did_stop
+        )
 
         # UI components setup (not initialized yet)
         self.__frame_publisher_ui_menu = FramePublisherMenu(self.__frame_publisher)
@@ -74,7 +82,9 @@ class NetworkApiPlugin(Plugin):
     def recent_events(self, events):
         frame = events.get("frame")
         if frame:
-            world_frame_dicts = self.__frame_publisher.create_world_frame_dicts_from_frame(frame)
+            world_frame_dicts = self.__frame_publisher.create_world_frame_dicts_from_frame(
+                frame
+            )
             if world_frame_dicts:
                 events["frame.world"] = world_frame_dicts
 
