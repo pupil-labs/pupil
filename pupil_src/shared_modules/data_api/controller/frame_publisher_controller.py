@@ -28,39 +28,36 @@ class FramePublisherController(Observable):
         pass
 
     def __init__(self, format="jpeg", **kwargs):
-        self.__format = None
+        self.__frame_format = FrameFormat(format)
         self.__did_warn_recently = False
 
-        # TODO: Replace format str with FrameFormat
-        self.format = format
-
     def get_init_dict(self):
-        return {"format": self.format}
+        return {"format": self.__frame_format.value}
 
     def cleanup(self):
         self.on_frame_publisher_did_stop()
 
     @property
-    def format(self):
-        return self.__format
+    def frame_format(self):
+        return self.__frame_format
 
-    @format.setter
-    def format(self, value):
-        self.__format = value #TODO: Validate type and value of new `value`
-        self.on_frame_publisher_did_start(format=self.__format)
+    @frame_format.setter
+    def frame_format(self, value):
+        self.__frame_format = FrameFormat(value)
+        self.on_frame_publisher_did_start(format=self.__frame_format)
 
     def create_world_frame_dicts_from_frame(self, frame) -> T.List[dict]:
         if not frame:
             return []
 
         try:
-            if self.format == "jpeg":
+            if self.__frame_format == FrameFormat.JPEG:
                 data = frame.jpeg_buffer
-            elif self.format == "yuv":
+            elif self.__frame_format == FrameFormat.YUV:
                 data = frame.yuv_buffer
-            elif self.format == "bgr":
+            elif self.__frame_format == FrameFormat.BGR:
                 data = frame.bgr
-            elif self.format == "gray":
+            elif self.__frame_format == FrameFormat.GRAY:
                 data = frame.gray
             assert data is not None
 
@@ -68,7 +65,7 @@ class FramePublisherController(Observable):
             if not self.__did_warn_recently:
                 logger.warning(
                     '{}s are not compatible with format "{}"'.format(
-                        type(frame), self.format
+                        type(frame), self.__frame_format
                     )
                 )
                 self.__did_warn_recently = True
@@ -88,7 +85,7 @@ class FramePublisherController(Observable):
                 "height": frame.height,
                 "index": frame.index,
                 "timestamp": frame.timestamp,
-                "format": self.format,
+                "format": self.__frame_format.value,
                 "__raw_data__": [blob],
             }
         ]
