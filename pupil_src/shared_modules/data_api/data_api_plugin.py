@@ -35,29 +35,38 @@ class DataApiPlugin(Plugin):
 
     def __init__(self, g_pool, **kwargs):
         super().__init__(g_pool)
+
+        # Frame Publisher setup
         self.__frame_publisher = FramePublisherController(**kwargs)
+        self.__frame_publisher.add_observer("on_frame_publisher_did_start", self.on_frame_publisher_did_start)
         self.__frame_publisher.add_observer("on_frame_publisher_did_stop", self.on_frame_publisher_did_stop)
 
-
+        # Pupil Remote setup
         self.__pupil_remote = PupilRemoteController(g_pool, **kwargs)
+        self.__pupil_remote.add_observer("on_pupil_remote_server_did_start", self.on_pupil_remote_server_did_start)
+        self.__pupil_remote.add_observer("on_pupil_remote_server_did_stop", self.on_pupil_remote_server_did_stop)
 
-        # UI
+        # UI components setup (not initialized yet)
         self.__frame_publisher_ui_menu = FramePublisherMenu(self.__frame_publisher)
-        self.__pupil_remote_ui_menu = PupilRemoteMenu()
+        self.__pupil_remote_ui_menu = PupilRemoteMenu(self.__pupil_remote)
 
     def get_init_dict(self):
         return {
             **self.__frame_publisher.get_init_dict(),
+            **self.__pupil_remote.get_init_dict(),
         }
 
     def cleanup(self):
         self.__frame_publisher.cleanup()
         self.__frame_publisher = None
+        self.__pupil_remote.cleanup()
+        self.__pupil_remote = None
 
     def init_ui(self):
         self.add_menu()
         self.menu.label = self.menu_label
-        self.frame_publisher_ui_menu.append_to_menu(self.menu)
+        self.__frame_publisher_ui_menu.append_to_menu(self.menu)
+        self.__pupil_remote_ui_menu.append_to_menu(self.menu)
 
     def deinit_ui(self):
         self.remove_menu()
@@ -87,13 +96,19 @@ class DataApiPlugin(Plugin):
         """
         if notification["subject"].startswith("eye_process.started"):
             # trigger notification
-            self.__frame_publisher.format = self.__frame_publisher.format
+            self.__frame_publisher.frame_format = self.__frame_publisher.frame_format
         elif notification["subject"] == "frame_publishing.set_format":
             # update format and trigger notification
-            self.__frame_publisher.format = notification["format"]
+            self.__frame_publisher.frame_format = notification["format"]
 
     def on_frame_publisher_did_start(self, format: FrameFormat):
         self.notify_all({"subject": "frame_publishing.started", "format": format.value})
 
     def on_frame_publisher_did_stop(self):
         self.notify_all({"subject": "frame_publishing.stopped"})
+
+    def on_pupil_remote_server_did_start(self, address: str):
+        pass
+
+    def on_pupil_remote_server_did_stop(self):
+        pass
