@@ -13,8 +13,8 @@ import logging
 from observable import Observable
 from pyglui import ui
 
-from data_api.model import FrameFormat
-from data_api.controller import FramePublisherController
+from network_api.model import FrameFormat
+from network_api.controller import FramePublisherController
 
 
 logger = logging.getLogger(__name__)

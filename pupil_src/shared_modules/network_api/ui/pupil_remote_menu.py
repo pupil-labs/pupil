@@ -14,7 +14,7 @@ import socket
 from observable import Observable
 from pyglui import ui
 
-from data_api.controller import PupilRemoteController
+from network_api.controller import PupilRemoteController
 
 
 logger = logging.getLogger(__name__)

@@ -13,7 +13,7 @@ import typing as T
 
 from observable import Observable
 
-from data_api.model import FrameFormat
+from network_api.model import FrameFormat
 
 
 logger = logging.getLogger(__name__)

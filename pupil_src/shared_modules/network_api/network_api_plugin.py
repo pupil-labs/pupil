@@ -23,8 +23,8 @@ from .ui import PupilRemoteMenu
 logger = logging.getLogger(__name__)
 
 
-class DataApiPlugin(Plugin):
-    menu_label = "Data API"
+class NetworkApiPlugin(Plugin):
+    menu_label = "Network API"
     icon_chr = chr(0xE307)
     icon_font = "pupil_icons"
     order = 0.01  # excecute first
