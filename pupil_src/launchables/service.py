@@ -99,8 +99,7 @@ def service(
             patch_loaded_plugins_with_choreography_plugin,
         )
         from gaze_mapping import registered_gazer_classes
-        from data_api.frame_publisher import Frame_Publisher
-        from data_api.pupil_remote import Pupil_Remote
+        from data_api import DataApiPlugin
         from pupil_groups import Pupil_Groups
         from blink_detection import Blink_Detection
         from fixation_detector import Fixation_Detector
@@ -154,8 +153,7 @@ def service(
         user_launchable_plugins = [
             Service_UI,
             Pupil_Groups,
-            Pupil_Remote,
-            Frame_Publisher,
+            DataApiPlugin,
             Blink_Detection,
         ] + runtime_plugins
         plugin_by_index = (
@@ -170,7 +168,7 @@ def service(
             ("Service_UI", {}),
             # Calibration choreography plugin is added bellow by calling
             # patch_world_session_settings_with_choreography_plugin
-            ("Pupil_Remote", {}),
+            ("DataApiPlugin", {}),
             ("Blink_Detection", {}),
             ("Fixation_Detector", {}),
         ]
@@ -215,7 +213,7 @@ def service(
         # plugins that are loaded based on user settings from previous session
         g_pool.plugins = Plugin_List(g_pool, loaded_plugins)
 
-        # NOTE: The Pupil_Remote plugin fails to load when the port is already in use
+        # NOTE: The DataApiPlugin plugin fails to load when the port is already in use
         # and will set this variable to false. Then we should not even start the eye
         # processes. Otherwise we would have to wait for their initialization before
         # attempting cleanup in Service.

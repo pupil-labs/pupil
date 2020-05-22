@@ -160,8 +160,7 @@ def world(
         from recorder import Recorder
         from display_recent_gaze import Display_Recent_Gaze
         from time_sync import Time_Sync
-        from data_api.frame_publisher import Frame_Publisher
-        from data_api.pupil_remote import Pupil_Remote
+        from data_api import DataApiPlugin
         from pupil_groups import Pupil_Groups
         from surface_tracker import Surface_Tracker_Online
         from log_display import Log_Display
@@ -239,8 +238,7 @@ def world(
         )
         user_plugins = [
             Pupil_Groups,
-            Frame_Publisher,
-            Pupil_Remote,
+            DataApiPlugin,
             Time_Sync,
             Surface_Tracker_Online,
             Annotation_Capture,
@@ -319,7 +317,7 @@ def world(
             # Calibration choreography plugin is added bellow by calling
             # patch_world_session_settings_with_choreography_plugin
             ("Recorder", {}),
-            ("Pupil_Remote", {}),
+            ("DataApiPlugin", {}),
             ("Fixation_Detector", {}),
             ("Blink_Detection", {}),
             ("Accuracy_Visualizer", {}),
