@@ -285,7 +285,7 @@ class Pupil_From_Recording(Pupil_Producer_Base):
 class Offline_Pupil_Detection(Pupil_Producer_Base):
     """docstring for Offline_Pupil_Detection"""
 
-    session_data_version = 3
+    session_data_version = 4
     session_data_name = "offline_pupil"
 
     def __init__(self, g_pool):
