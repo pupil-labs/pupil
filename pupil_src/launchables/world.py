@@ -320,6 +320,8 @@ def world(
             # patch_world_session_settings_with_choreography_plugin
             ("Recorder", {}),
             ("Pupil_Remote", {}),
+            ("Fixation_Detector", {}),
+            ("Blink_Detection", {}),
             ("Accuracy_Visualizer", {}),
             ("Plugin_Manager", {}),
             ("System_Graphs", {}),

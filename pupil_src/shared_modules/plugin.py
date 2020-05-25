@@ -9,11 +9,11 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import importlib
+import logging
 import os
 import sys
-import importlib
 from time import time
-import logging
 
 logger = logging.getLogger(__name__)
 """
@@ -350,33 +350,15 @@ class Plugin_List(object):
     def __str__(self):
         return "Plugin List: {}".format(self._plugins)
 
-    def add(self, new_plugin, args={}):
+    def add(self, new_plugin_cls, args={}):
         """
         add a plugin instance to the list.
         """
-        if new_plugin.uniqueness == "by_base_class":
-            for p in self._plugins:
-                if p.base_class() == new_plugin.base_class():
-                    replc_str = "Plugin {} of base class {} will be replaced by {}."
-                    logger.debug(
-                        replc_str.format(p, p.base_class_name(), new_plugin.__name__)
-                    )
-                    p.alive = False
-                    self.clean()
+        self._find_and_remove_duplicates(new_plugin_cls)
 
-        elif new_plugin.uniqueness == "by_class":
-            for p in self._plugins:
-                if p.this_class == new_plugin:
-                    logger.warning(
-                        "Plugin '{}' is already loaded . Did not add it.".format(
-                            new_plugin.__name__
-                        )
-                    )
-                    return
-
-        plugin_instance = new_plugin(self.g_pool, **args)
+        plugin_instance = new_plugin_cls(self.g_pool, **args)
         if not plugin_instance.alive:
-            logger.warning(f"Plugin {new_plugin.__name__} failed to initialize")
+            logger.warning(f"Plugin {new_plugin_cls.__name__} failed to initialize")
             return
 
         self._plugins.append(plugin_instance)
@@ -384,6 +366,42 @@ class Plugin_List(object):
 
         if self.g_pool.app in ("capture", "player"):
             plugin_instance.init_ui()
+
+    def _find_and_remove_duplicates(self, new_plugin_cls):
+        for duplicate in self._duplicates(new_plugin_cls):
+            self._remove_duplicated_instance(duplicate)
+
+    def _duplicates(self, new_plugin_cls):
+        if new_plugin_cls.uniqueness == "by_base_class":
+            yield from self._duplicates_by_rule(
+                self._has_same_base_class, new_plugin_cls
+            )
+        elif new_plugin_cls.uniqueness == "by_class":
+            yield from self._duplicates_by_rule(self._is_same_class, new_plugin_cls)
+
+    def _duplicates_by_rule(self, is_duplicate_rule, new_plugin_cls):
+        duplicates = (
+            old_plugin_inst
+            for old_plugin_inst in self._plugins
+            if is_duplicate_rule(old_plugin_inst, new_plugin_cls)
+        )
+        yield from duplicates
+
+    def _remove_duplicated_instance(self, duplicated_plugin_inst):
+        name = duplicated_plugin_inst.pretty_class_name
+        uniq = duplicated_plugin_inst.uniqueness
+        message = f"Replacing {name} due to '{uniq}' uniqueness"
+        logger.debug(message)
+        duplicated_plugin_inst.alive = False
+        self.clean()
+
+    @staticmethod
+    def _has_same_base_class(old_plugin_inst, new_plugin_cls):
+        return old_plugin_inst.base_class == new_plugin_cls.__bases__[-1]
+
+    @staticmethod
+    def _is_same_class(old_plugin_inst, new_plugin_cls):
+        return old_plugin_inst.this_class == new_plugin_cls
 
     def clean(self):
         """
