@@ -71,7 +71,6 @@ def eye(
     Streams Pupil coordinates.
 
     Reacts to notifications:
-        ``set_detection_mapping_mode``: Sets detection method
         ``eye_process.should_stop``: Stops the eye process
         ``recording.started``: Starts recording eye video
         ``recording.stopped``: Stops recording eye video
@@ -147,8 +146,7 @@ def eye(
         from roi import Roi
 
         from background_helper import IPC_Logging_Task_Proxy
-        from pupil_detector_plugins import available_detector_plugins
-        from pupil_detector_plugins.manager import PupilDetectorManager
+        from pupil_detector_plugins import available_detector_plugins, EVENT_KEY
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
@@ -197,13 +195,8 @@ def eye(
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
 
-        default_detector_cls, available_detectors = available_detector_plugins()
-        plugins = (
-            manager_classes
-            + source_classes
-            + available_detectors
-            + [PupilDetectorManager, Roi]
-        )
+        default_2d, default_3d, available_detectors = available_detector_plugins()
+        plugins = manager_classes + source_classes + available_detectors + [Roi]
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
         preferred_names = [
@@ -225,11 +218,12 @@ def eye(
             # TODO: extend with plugins
             (default_capture_name, default_capture_settings),
             ("UVC_Manager", {}),
+            # Detectors needs to be loaded first to set `g_pool.pupil_detector`
+            (default_2d.__name__, {}),
+            (default_3d.__name__, {}),
             ("NDSI_Manager", {}),
             ("HMD_Streaming_Manager", {}),
             ("File_Manager", {}),
-            # Detector needs to be loaded first to set `g_pool.pupil_detector`
-            (default_detector_cls.__name__, {}),
             ("PupilDetectorManager", {}),
             ("Roi", {}),
         ]
@@ -598,8 +592,7 @@ def eye(
                             {"subject": "recording.should_stop", "remote_notify": "all"}
                         )
 
-                result = event.get("pupil_detection_result", None)
-                if result is not None:
+                for result in event.get(EVENT_KEY, ()):
                     pupil_socket.send(result)
 
             cpu_graph.update()

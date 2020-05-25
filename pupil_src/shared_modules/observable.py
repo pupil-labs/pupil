@@ -293,12 +293,16 @@ class _WeakReferenceToMethod:
     def __init__(self, observer):
         self._obj_ref = weakref.ref(observer.__self__)
         self._func_ref = weakref.ref(observer.__func__)
+        # Sanity check. Try to dereference method, to make sure that the arguments
+        # are valid. Otherwise, in some cases (e.g. methods starting with '__')
+        # trying to call the method will fail with _ReferenceNoLongerValidError,
+        # and the observer will get silently removed. This check ensures that
+        # the method is valid on creation.
+        _ = self._deref_method()
 
     def __call__(self, *args, **kwargs):
-        obj_deref = self._obj_ref()
-        func_deref = self._func_ref()
         try:
-            method = getattr(obj_deref, func_deref.__name__)
+            method = self._deref_method()
         except AttributeError:
             raise _ReferenceNoLongerValidError
         return method(*args, **kwargs)
@@ -315,6 +319,11 @@ class _WeakReferenceToMethod:
                 return False
         else:
             return False
+
+    def _deref_method(self):
+        obj_deref = self._obj_ref()
+        func_deref = self._func_ref()
+        return getattr(obj_deref, func_deref.__name__)
 
     @staticmethod
     def _method_still_exists(func_deref, obj_deref):

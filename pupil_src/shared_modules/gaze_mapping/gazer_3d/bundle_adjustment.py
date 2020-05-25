@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 from scipy import optimize as scipy_optimize, sparse as scipy_sparse
 
-from calibration_routines.optimization_calibration import utils
+from . import utils
 
 
 # BundleAdjustment is a class instead of functions, since passing all the parameters

@@ -165,7 +165,7 @@ class GazeFromOfflineCalibration(GazeProducerBase):
 
         from gaze_producer.worker import validate_gaze
 
-        validate_gaze.file_source = self.g_pool.capture
+        validate_gaze.g_pool = self.g_pool
 
     def init_ui(self):
         super().init_ui()

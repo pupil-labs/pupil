@@ -190,12 +190,14 @@ class System_Graphs(System_Plugin_Base):
         # update pupil graphs
         if "frame" not in events or self.idx != events["frame"].index:
             for p in events["pupil"]:
-                # update confidence graph
-                cg = self.conf0_graph if p["id"] == 0 else self.conf1_graph
-                cg.add(p["confidence"])
-                # update diameter graph
-                dg = self.dia0_graph if p["id"] == 0 else self.dia1_graph
-                dg.add(p.get("diameter_3d", 0.0))
+                if "2d" in p["method"]:  # TODO: Use detector topic tag
+                    # update confidence graph
+                    cg = self.conf0_graph if p["id"] == 0 else self.conf1_graph
+                    cg.add(p["confidence"])
+                if "3d" in p["method"]:  # TODO: Use detector topic tag
+                    # update diameter graph
+                    dg = self.dia0_graph if p["id"] == 0 else self.dia1_graph
+                    dg.add(p.get("diameter_3d", 0.0))
 
         # update wprld fps graph
         if "frame" in events:

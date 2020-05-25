@@ -103,7 +103,6 @@ class Surface(abc.ABC):
 
         self.within_surface_heatmap = self.get_placeholder_heatmap()
         self.across_surface_heatmap = self.get_placeholder_heatmap()
-        self._HEATMAP_MIN_DATA_CONFIDENCE = 0.6
         self._heatmap_scale = 0.5
         self._heatmap_resolution = 31
         self._heatmap_blur_factor = 0.0
@@ -597,7 +596,7 @@ class Surface(abc.ABC):
         heatmap_data = [
             g["norm_pos"]
             for g in gaze_on_surf
-            if g["on_surf"] and g["confidence"] >= self._HEATMAP_MIN_DATA_CONFIDENCE
+            if g["on_surf"]
         ]
         aspect_ratio = self.real_world_size["y"] / self.real_world_size["x"]
         grid = (

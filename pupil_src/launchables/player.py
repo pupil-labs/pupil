@@ -323,8 +323,7 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_versio
         )
 
         # populated by producers
-        g_pool.pupil_positions = pm.Bisector()
-        g_pool.pupil_positions_by_id = (pm.Bisector(), pm.Bisector())
+        g_pool.pupil_positions = pm.PupilDataBisector()
         g_pool.gaze_positions = pm.Bisector()
         g_pool.fixations = pm.Affiliator()
         g_pool.eye_movements = pm.Affiliator()

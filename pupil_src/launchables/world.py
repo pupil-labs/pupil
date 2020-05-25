@@ -33,14 +33,12 @@ def world(
     Can run various plug-ins.
 
     Reacts to notifications:
-        ``set_detection_mapping_mode``
         ``eye_process.started``
         ``start_plugin``
 
     Emits notifications:
         ``eye_process.should_start``
         ``eye_process.should_stop``
-        ``set_detection_mapping_mode``
         ``world_process.started``
         ``world_process.stopped``
         ``recording.should_stop``: Emits on camera failure
@@ -100,8 +98,12 @@ def world(
         else:
             stop_eye_process(eye_id)
 
-    def set_detection_mapping_mode(new_mode):
-        n = {"subject": "set_detection_mapping_mode", "mode": new_mode}
+    def detection_enabled_getter() -> bool:
+        return g_pool.pupil_detection_enabled
+
+    def detection_enabled_setter(is_on: bool):
+        g_pool.pupil_detection_enabled = is_on
+        n = {"subject": "set_pupil_detection_enabled", "value": is_on}
         ipc_pub.notify(n)
 
     try:
@@ -142,12 +144,16 @@ def world(
             import_runtime_plugins,
         )
         from plugin_manager import Plugin_Manager
-        from calibration_routines import (
-            calibration_plugins,
-            gaze_mapping_plugins,
-            Calibration_Plugin,
-            Gaze_Mapping_Plugin,
+        from calibration_choreography import (
+            available_calibration_choreography_plugins,
+            CalibrationChoreographyPlugin,
+            patch_loaded_plugins_with_choreography_plugin,
         )
+
+        available_choreography_plugins = available_calibration_choreography_plugins()
+
+        from gaze_mapping import registered_gazer_classes
+        from gaze_mapping.gazer_base import GazerBase
         from fixation_detector import Fixation_Detector
         from recorder import Recorder
         from display_recent_gaze import Display_Recent_Gaze
@@ -264,8 +270,8 @@ def world(
             system_plugins
             + user_plugins
             + runtime_plugins
-            + calibration_plugins
-            + gaze_mapping_plugins
+            + available_choreography_plugins
+            + registered_gazer_classes()
         )
         user_plugins += [
             p
@@ -276,8 +282,8 @@ def world(
                     Base_Manager,
                     Base_Source,
                     System_Plugin_Base,
-                    Calibration_Plugin,
-                    Gaze_Mapping_Plugin,
+                    CalibrationChoreographyPlugin,
+                    GazerBase,
                 ),
             )
         ]
@@ -310,7 +316,8 @@ def world(
             ("Log_Display", {}),
             ("Dummy_Gaze_Mapper", {}),
             ("Display_Recent_Gaze", {}),
-            ("Screen_Marker_Calibration", {}),
+            # Calibration choreography plugin is added bellow by calling
+            # patch_world_session_settings_with_choreography_plugin
             ("Recorder", {}),
             ("Pupil_Remote", {}),
             ("Fixation_Detector", {}),
@@ -383,10 +390,9 @@ def world(
         g_pool.min_calibration_confidence = session_settings.get(
             "min_calibration_confidence", 0.8
         )
-        g_pool.detection_mapping_mode = session_settings.get(
-            "detection_mapping_mode", "3d"
+        g_pool.pupil_detection_enabled = session_settings.get(
+            "pupil_detection_enabled", True
         )
-        g_pool.active_calibration_plugin = None
         g_pool.active_gaze_mapping_plugin = None
         g_pool.capture = None
 
@@ -394,17 +400,8 @@ def world(
 
         def handle_notifications(noti):
             subject = noti["subject"]
-            if subject == "set_detection_mapping_mode":
-                if noti["mode"] == "2d":
-                    if (
-                        "Vector_Gaze_Mapper"
-                        in g_pool.active_gaze_mapping_plugin.class_name
-                    ):
-                        logger.warning(
-                            "The gaze mapper is not supported in 2d mode. Please recalibrate."
-                        )
-                        g_pool.plugins.add(g_pool.plugin_by_name["Dummy_Gaze_Mapper"])
-                g_pool.detection_mapping_mode = noti["mode"]
+            if subject == "set_pupil_detection_enabled":
+                g_pool.pupil_detection_enabled = noti["value"]
             elif subject == "start_plugin":
                 try:
                     g_pool.plugins.add(
@@ -419,8 +416,8 @@ def world(
                         g_pool.plugins.clean()
             elif subject == "eye_process.started":
                 noti = {
-                    "subject": "set_detection_mapping_mode",
-                    "mode": g_pool.detection_mapping_mode,
+                    "subject": "set_pupil_detection_enabled",
+                    "value": g_pool.pupil_detection_enabled,
                 }
                 ipc_pub.notify(noti)
             elif subject == "set_min_calibration_confidence":
@@ -519,13 +516,13 @@ def world(
         general_settings.append(
             ui.Selector("audio_mode", audio, selection=audio.audio_modes)
         )
+
         general_settings.append(
-            ui.Selector(
-                "detection_mapping_mode",
-                g_pool,
-                label="detection & mapping mode",
-                setter=set_detection_mapping_mode,
-                selection=["disabled", "2d", "3d"],
+            ui.Switch(
+                "pupil_detection_enabled",
+                label="Pupil detection",
+                getter=detection_enabled_getter,
+                setter=detection_enabled_setter,
             )
         )
         general_settings.append(
@@ -569,10 +566,16 @@ def world(
         user_plugin_separator.order = 0.35
         g_pool.iconbar.append(user_plugin_separator)
 
-        # plugins that are loaded based on user settings from previous session
-        g_pool.plugins = Plugin_List(
-            g_pool, session_settings.get("loaded_plugins", default_plugins)
+        loaded_plugins = session_settings.get("loaded_plugins", default_plugins)
+
+        # Resolve the active calibration choreography plugin
+        loaded_plugins = patch_loaded_plugins_with_choreography_plugin(
+            loaded_plugins, app=g_pool.app
         )
+        session_settings["loaded_plugins"] = loaded_plugins
+
+        # plugins that are loaded based on user settings from previous session
+        g_pool.plugins = Plugin_List(g_pool, loaded_plugins)
 
         if not g_pool.capture:
             # Make sure we always have a capture running. Important if there was no
@@ -718,7 +721,7 @@ def world(
         session_settings[
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
-        session_settings["detection_mapping_mode"] = g_pool.detection_mapping_mode
+        session_settings["pupil_detection_enabled"] = g_pool.pupil_detection_enabled
         session_settings["audio_mode"] = audio.audio_mode
 
         if not hide_ui:

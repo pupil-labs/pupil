@@ -223,20 +223,20 @@ class Plugin(object):
         """
         return self.__class__.__name__
 
-    @property
-    def base_class(self):
+    @classmethod
+    def base_class(cls):
         """
-        rightmost base class of this instance's class
+        rightmost base class of this class
         this way you can inherit from muliple classes and use the rightmost as your plugin group classifier
         """
-        return self.__class__.__bases__[-1]
+        return cls.__bases__[-1]
 
-    @property
-    def base_class_name(self):
+    @classmethod
+    def base_class_name(cls):
         """
-        base class name of this instance's class
+        base class name of this class
         """
-        return self.base_class.__name__
+        return cls.base_class().__name__
 
     @property
     def pretty_class_name(self):
@@ -358,7 +358,7 @@ class Plugin_List(object):
 
         plugin_instance = new_plugin_cls(self.g_pool, **args)
         if not plugin_instance.alive:
-            logger.warning("plugin failed to initialize")
+            logger.warning(f"Plugin {new_plugin_cls.__name__} failed to initialize")
             return
 
         self._plugins.append(plugin_instance)
@@ -465,6 +465,9 @@ def import_runtime_plugins(plugin_dir):
                         runtime_plugins.append(member)
             except Exception as e:
                 logger.warning("Failed to load '{}'. Reason: '{}' ".format(d, e))
+                import traceback
+
+                logger.debug(traceback.format_exc())
     return runtime_plugins
 
 

@@ -32,12 +32,13 @@ logger = logging.getLogger(__name__)
 
 
 class Detector2DPlugin(PupilDetectorPlugin):
-    uniqueness = "by_base_class"
+    uniqueness = "by_class"
     icon_font = "pupil_icons"
     icon_chr = chr(0xEC18)
 
     label = "C++ 2d detector"
     identifier = "2d"
+    order = 0.100
 
     def __init__(
         self, g_pool=None, namespaced_properties=None, detector_2d: Detector2D = None
@@ -46,7 +47,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         self.detector_2d = detector_2d or Detector2D(namespaced_properties or {})
         self.proxy = PropertyProxy(self.detector_2d)
 
-    def detect(self, frame):
+    def detect(self, frame, **kwargs):
         # convert roi-plugin to detector roi
         roi = Roi(*self.g_pool.roi.bounds)
 
@@ -60,7 +61,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
             location, (frame.width, frame.height), flip_y=True
         )
         result["timestamp"] = frame.timestamp
-        result["topic"] = f"pupil.{eye_id}"
+        result["topic"] = f"pupil.{eye_id}.{self.identifier}"
         result["id"] = eye_id
         result["method"] = "2d c++"
         return result
@@ -75,10 +76,10 @@ class Detector2DPlugin(PupilDetectorPlugin):
 
     def gl_display(self):
         if self._recent_detection_result:
-            draw_pupil_outline(self._recent_detection_result)
+            draw_pupil_outline(self._recent_detection_result, color_rgb=(0, 0.5, 1))
 
     def init_ui(self):
-        self.add_menu()
+        super().init_ui()
         self.menu.label = self.pretty_class_name
         self.menu_icon.label_font = "pupil_icons"
         info = ui.Info_Text(
@@ -117,6 +118,3 @@ class Detector2DPlugin(PupilDetectorPlugin):
                 step=1,
             )
         )
-
-    def deinit_ui(self):
-        self.remove_menu()

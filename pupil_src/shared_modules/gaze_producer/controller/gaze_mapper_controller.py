@@ -55,14 +55,18 @@ class GazeMapperController(Observable):
                 "please select a different calibration!".format(gaze_mapper.name),
             )
             return None
-        if calibration.result is None:
+        if calibration.params is None:
             self._abort_calculation(
                 gaze_mapper,
                 "You first need to calculate calibration '{}' before calculating the "
                 "mapper '{}'".format(calibration.name, gaze_mapper.name),
             )
             return None
-        task = self._create_mapping_task(gaze_mapper, calibration)
+        try:
+            task = self._create_mapping_task(gaze_mapper, calibration)
+        except worker.map_gaze.NotEnoughPupilData:
+            self._abort_calculation(gaze_mapper, "There is no pupil data to be mapped!")
+            return None
         self._task_manager.add_task(task)
         logger.info("Start gaze mapping for '{}'".format(gaze_mapper.name))
 
@@ -146,8 +150,22 @@ class GazeMapperController(Observable):
                 precision.result, precision.num_used, precision.num_total
             )
 
+        calibration = self.get_valid_calibration_or_none(gaze_mapper)
+
+        if calibration is None:
+            logger.error(
+                f"Could not validate gaze mapper {gaze_mapper.name}; Calibration was not found, please select a different calibration."
+            )
+            return
+
+        if calibration.params is None:
+            logger.error(
+                f"Could not validate gaze mapper {gaze_mapper.name}; You first need to calculate calibration '{calibration.name}'"
+            )
+            return
+
         task = worker.validate_gaze.create_bg_task(
-            gaze_mapper, self._reference_location_storage
+            gaze_mapper, calibration, self._reference_location_storage
         )
         task.add_observer("on_completed", validation_completed)
         task.add_observer("on_exception", tasklib.raise_exception)

@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+from collections import namedtuple
 import copy
 import logging
 import os
@@ -19,6 +20,12 @@ import make_unique
 from storage import Storage
 from gaze_producer import model
 from observable import Observable
+from gaze_mapping import default_gazer_class, registered_gazer_labels_by_class_names
+from gaze_mapping.notifications import (
+    CalibrationSetupNotification,
+    CalibrationResultNotification,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +51,34 @@ class CalibrationStorage(Storage, Observable):
             unique_id=model.Calibration.create_new_unique_id(),
             name=make_unique.by_number_at_end("Default Calibration", self.item_names),
             recording_uuid=self._recording_uuid,
-            mapping_method="3d",
+            gazer_class_name=default_gazer_class.__name__,
             frame_index_range=self._get_recording_index_range(),
             minimum_confidence=0.8,
+            is_offline_calibration=True,
+            status="Not calculated yet",
+        )
+
+    def __create_prerecorded_calibration(
+        self, result_notification: CalibrationResultNotification
+    ):
+        timestamp = result_notification.timestamp
+
+        # the unique id needs to be the same at every start or otherwise the
+        # same calibrations would be added again and again. The timestamp is
+        # the easiest datum that differs between calibrations but is the same
+        # for every start
+        unique_id = model.Calibration.create_unique_id_from_string(str(timestamp))
+        name = make_unique.by_number_at_end("Recorded Calibration", self.item_names)
+        return model.Calibration(
+            unique_id=unique_id,
+            name=name,
+            recording_uuid=self._recording_uuid,
+            gazer_class_name=result_notification.gazer_class_name,
+            frame_index_range=self._get_recording_index_range(),
+            minimum_confidence=0.8,
+            is_offline_calibration=True,
+            status="Not calculated yet",
+            calib_params=result_notification.params,
         )
 
     def duplicate_calibration(self, calibration):
@@ -113,48 +145,47 @@ class CalibrationStorage(Storage, Observable):
 
     def _load_calibration_from_file(self, file_name):
         file_path = os.path.join(self._calibration_folder, file_name)
-        calibration_tuple = self._load_data_from_file(file_path)
-        if calibration_tuple:
-            calibration = model.Calibration.from_tuple(calibration_tuple)
-            if not self._from_same_recording(calibration):
-                # the index range from another recording is useless and can lead
-                # to confusion if it is rendered somewhere
-                calibration.frame_index_range = [0, 0]
-            self.add(calibration)
+        calibration_dict = self._load_data_from_file(file_path)
+        if not calibration_dict:
+            return
+        try:
+            calibration = model.Calibration.from_dict(calibration_dict)
+        except ValueError as err:
+            logger.debug(str(err))
+            return
+        if not self._from_same_recording(calibration):
+            # the index range from another recording is useless and can lead
+            # to confusion if it is rendered somewhere
+            calibration.frame_index_range = [0, 0]
+        self.add(calibration)
 
     def _load_recorded_calibrations(self):
         notifications = fm.load_pldata_file(self._rec_dir, "notify")
         for topic, data in zip(notifications.topics, notifications.data):
-            if topic == "notify.calibration.calibration_data":
-                try:
-                    calib_result = model.CalibrationResult(
-                        mapping_plugin_name=data["mapper_name"],
-                        mapper_args=dict(data["mapper_args"]),
-                    )
-                except KeyError:
-                    # notifications from old recordings will not have these fields!
-                    continue
-                mapping_method = "2d" if "2d" in data["calibration_method"] else "3d"
-                # the unique id needs to be the same at every start or otherwise the
-                # same calibrations would be added again and again. The timestamp is
-                # the easiest datum that differs between calibrations but is the same
-                # for every start
-                unique_id = model.Calibration.create_unique_id_from_string(
-                    str(data["timestamp"])
+            if topic.startswith("notify."):
+                # Remove "notify." prefix
+                data = data._deep_copy_dict()
+                data["subject"] = data["topic"][len("notify.") :]
+                del data["topic"]
+            else:
+                continue
+            if (
+                CalibrationResultNotification.calibration_format_version()
+                != model.Calibration.version
+            ):
+                logger.debug(
+                    f"Must update CalibrationResultNotification to match Calibration version"
                 )
-                calibration = model.Calibration(
-                    unique_id=unique_id,
-                    name=make_unique.by_number_at_end(
-                        "Recorded Calibration", self.item_names
-                    ),
-                    recording_uuid=self._recording_uuid,
-                    mapping_method=mapping_method,
-                    frame_index_range=self._get_recording_index_range(),
-                    minimum_confidence=0.8,
-                    is_offline_calibration=False,
-                    result=calib_result,
-                )
-                self.add(calibration)
+                continue
+            try:
+                note = CalibrationResultNotification.from_dict(data)
+            except ValueError as err:
+                logger.debug(str(err))
+                continue
+            calibration = self.__create_prerecorded_calibration(
+                result_notification=note
+            )
+            self.add(calibration)
 
     def save_to_disk(self):
         os.makedirs(self._calibration_folder, exist_ok=True)
@@ -162,9 +193,7 @@ class CalibrationStorage(Storage, Observable):
             calib for calib in self._calibrations if self._from_same_recording(calib)
         )
         for calibration in calibrations_from_same_recording:
-            self._save_data_to_file(
-                self._calibration_file_path(calibration), calibration.as_tuple
-            )
+            self._save_calibration_to_file(self._rec_dir, calibration)
 
     def _from_same_recording(self, calibration):
         # There is a very similar, but public method in the CalibrationController.
@@ -182,19 +211,65 @@ class CalibrationStorage(Storage, Observable):
 
     @property
     def _item_class(self):
-        return model.Calibration
+        return type(self).__calibration_model_class()
 
     @property
     def _calibration_folder(self):
-        return os.path.join(self._rec_dir, "calibrations")
+        # TODO: Backwards compatibility; remove in favor of class method
+        return str(self._calibration_directory_from_recording(self._rec_dir))
 
     def _calibration_file_name(self, calibration):
-        file_name = "{}-{}.{}".format(
-            calibration.name, calibration.unique_id, self._calibration_suffix
-        )
-        return self.get_valid_filename(file_name)
+        # TODO: Backwards compatibility; remove in favor of class method
+        return type(self).__calibration_file_name(calibration)
 
     def _calibration_file_path(self, calibration):
-        return os.path.join(
-            self._calibration_folder, self._calibration_file_name(calibration)
+        # TODO: Backwards compatibility; remove in favor of class method
+        return str(
+            self.__calibration_file_path_in_recording(self._rec_dir, calibration)
         )
+
+    ### Private
+
+    @staticmethod
+    def __calibration_model_class():
+        return model.Calibration
+
+    @staticmethod
+    def _calibration_directory_from_recording(rec_dir) -> pathlib.Path:
+        return pathlib.Path(rec_dir).joinpath("calibrations")
+
+    @classmethod
+    def __calibration_file_name(cls, calibration) -> str:
+        file_name = (
+            f"{calibration.name}-{calibration.unique_id}.{cls._calibration_suffix}"
+        )
+        return cls.get_valid_filename(file_name)
+
+    @classmethod
+    def __calibration_file_path_in_recording(cls, rec_dir, calibration) -> pathlib.Path:
+        file_name = cls.__calibration_file_name(calibration)
+        calib_dir = cls._calibration_directory_from_recording(rec_dir)
+        return calib_dir.joinpath(file_name)
+
+    @classmethod
+    def _save_calibration_to_file(cls, rec_dir, calibration: model.Calibration, overwrite_if_exists=True):
+        # Sanity check
+        assert cls.__calibration_model_class() == calibration.__class__
+
+        # Get all properties needed to save calibration
+        version = calibration.__class__.version
+        data = calibration.as_dict
+        path = str(cls.__calibration_file_path_in_recording(rec_dir, calibration))
+
+        # Save a dictionary representation of the calibration
+        dict_representation = {"version": version, "data": data}
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        if os.path.isfile(path):
+            if not overwrite_if_exists:
+                logger.debug(f'Calibration file already exists, won\'t overwrite. "{path}"')
+                return
+            else:
+                logger.debug(f'Calibration file already exists, overwriting new version. "{path}"')
+
+        fm.save_object(dict_representation, path)
