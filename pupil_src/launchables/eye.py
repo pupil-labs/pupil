@@ -63,6 +63,7 @@ def eye(
     eye_id,
     overwrite_cap_settings=None,
     hide_ui=False,
+    debug=False,
 ):
     """reads eye video and detects the pupil.
 
@@ -179,6 +180,7 @@ def eye(
         g_pool = SimpleNamespace()
 
         # make some constants avaiable
+        g_pool.debug = debug
         g_pool.user_dir = user_dir
         g_pool.version = version
         g_pool.app = "capture"
@@ -698,6 +700,7 @@ def eye_profiled(
     eye_id,
     overwrite_cap_settings=None,
     hide_ui=False,
+    debug=False,
 ):
     import cProfile
     import subprocess
@@ -705,7 +708,7 @@ def eye_profiled(
     from .eye import eye
 
     cProfile.runctx(
-        "eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings, hide_ui)",
+        "eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings, hide_ui, debug)",
         {
             "timebase": timebase,
             "is_alive_flag": is_alive_flag,
@@ -717,6 +720,7 @@ def eye_profiled(
             "eye_id": eye_id,
             "overwrite_cap_settings": overwrite_cap_settings,
             "hide_ui": hide_ui,
+            "debug": debug,
         },
         locals(),
         "eye{}.pstats".format(eye_id),

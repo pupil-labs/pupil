@@ -25,6 +25,7 @@ def service(
     version,
     preferred_remote_port,
     hide_ui,
+    debug,
 ):
     """Maps pupil to gaze data, can run various plug-ins.
 
@@ -124,9 +125,11 @@ def service(
 
         logger.info("Application Version: {}".format(version))
         logger.info("System Info: {}".format(get_system_info()))
+        logger.debug(f"Debug flag: {debug}")
 
         # g_pool holds variables for this process they are accesible to all plugins
         g_pool = SimpleNamespace()
+        g_pool.debug = debug
         g_pool.app = "service"
         g_pool.user_dir = user_dir
         g_pool.version = version
@@ -339,12 +342,13 @@ def service_profiled(
     version,
     preferred_remote_port,
     hide_ui,
+    debug,
 ):
     import cProfile, subprocess, os
     from .service import service
 
     cProfile.runctx(
-        "service(timebase,eye_procs_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port,hide_ui)",
+        "service(timebase,eye_procs_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port,hide_ui,debug)",
         {
             "timebase": timebase,
             "eye_procs_alive": eye_procs_alive,
@@ -355,6 +359,7 @@ def service_profiled(
             "version": version,
             "preferred_remote_port": preferred_remote_port,
             "hide_ui": hide_ui,
+            "debug": debug,
         },
         locals(),
         "service.pstats",

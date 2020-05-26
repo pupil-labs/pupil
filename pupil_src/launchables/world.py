@@ -24,6 +24,7 @@ def world(
     version,
     preferred_remote_port,
     hide_ui,
+    debug,
 ):
     """Reads world video and runs plugins.
 
@@ -133,6 +134,7 @@ def world(
 
         logger.info("Application Version: {}".format(version))
         logger.info("System Info: {}".format(get_system_info()))
+        logger.debug(f"Debug flag: {debug}")
 
         import audio
 
@@ -212,6 +214,7 @@ def world(
 
         # g_pool holds variables for this process they are accessible to all plugins
         g_pool = SimpleNamespace()
+        g_pool.debug = debug
         g_pool.app = "capture"
         g_pool.process = "world"
         g_pool.user_dir = user_dir
@@ -774,6 +777,7 @@ def world_profiled(
     version,
     preferred_remote_port,
     hide_ui,
+    debug,
 ):
     import cProfile
     import subprocess
@@ -781,7 +785,7 @@ def world_profiled(
     from .world import world
 
     cProfile.runctx(
-        "world(timebase, eye_procs_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port, hide_ui)",
+        "world(timebase, eye_procs_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port, hide_ui, debug)",
         {
             "timebase": timebase,
             "eye_procs_alive": eye_procs_alive,
@@ -792,6 +796,7 @@ def world_profiled(
             "version": version,
             "preferred_remote_port": preferred_remote_port,
             "hide_ui": hide_ui,
+            "debug": debug,
         },
         locals(),
         "world.pstats",

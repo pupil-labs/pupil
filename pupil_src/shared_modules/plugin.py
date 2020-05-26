@@ -13,7 +13,11 @@ import importlib
 import logging
 import os
 import sys
+import types
 from time import time
+
+from OpenGL.GL import glGetError
+from OpenGL.GLU import gluErrorString
 
 logger = logging.getLogger(__name__)
 """
@@ -52,6 +56,9 @@ class Plugin(object):
 
     def __init__(self, g_pool):
         self.g_pool = g_pool
+
+        if getattr(g_pool, "debug", False):
+            self.__monkeypatch_gl_display_error_checking()
 
     def init_ui(self):
         """
@@ -291,6 +298,31 @@ class Plugin(object):
         self.g_pool.iconbar.remove(self.menu_icon)
         self.menu = None
         self.menu_icon = None
+
+    def __monkeypatch_gl_display_error_checking(self):
+        # Monkeypatch gl_display functions to include error checking. This is because we
+        # often receive OpenGL errors as results of buggy pyglui code that gets called
+        # in gl_display. Since pyglui does not check glGetError(), we run into these
+        # errors at other places at the code when e.g. using pyopengl. By checking after
+        # every plugin we can at least partially localize the error!
+
+        # Take gl_display function prototype from class, i.e. not bound to an
+        # instance. This will return potentially overwritten implementations
+        # from child classes.
+        unpatched_gl_display = self.__class__.gl_display
+
+        # Create wrapper method including a glGetError check
+        def wrapper(_self):
+            unpatched_gl_display(_self)
+            err = glGetError()
+            if err != 0:
+                logger.error(
+                    f"Encountered OpenGL Error in Plugin '{_self.class_name}'!"
+                    f" Error code: {err}, msg: {gluErrorString(err)}"
+                )
+
+        # Bind wrapper to current instance
+        self.gl_display = types.MethodType(wrapper, self)
 
 
 # Plugin manager classes and fns
