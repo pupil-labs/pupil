@@ -172,7 +172,6 @@ def service(
         plugin_by_name = dict(zip(name_by_index, plugin_by_index))
         default_plugins = [
             ("Service_UI", {}),
-            ("Dummy_Gaze_Mapper", {}),
             # Calibration choreography plugin is added bellow by calling
             # patch_world_session_settings_with_choreography_plugin
             ("Pupil_Remote", {}),
@@ -203,7 +202,6 @@ def service(
             "pupil_detection_enabled", True
         )
 
-        g_pool.active_gaze_mapping_plugin = None
 
         audio.set_audio_mode(
             session_settings.get("audio_mode", audio.get_default_audio_mode())
@@ -275,17 +273,12 @@ def service(
             socks = dict(poller.poll())
             if pupil_sub.socket in socks:
                 topic, pupil_datum = pupil_sub.recv()
-                new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(
-                    pupil_datum
-                )
-                for gaze_datum in new_gaze_data:
-                    gaze_pub.send(gaze_datum)
-
                 events = {}
-                events["gaze"] = new_gaze_data
                 events["pupil"] = [pupil_datum]
                 for plugin in g_pool.plugins:
                     plugin.recent_events(events=events)
+                for gaze_datum in events.get("gaze", []):
+                    gaze_pub.send(gaze_datum)
 
             if notify_sub.socket in socks:
                 topic, n = notify_sub.recv()
