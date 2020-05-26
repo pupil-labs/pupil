@@ -30,7 +30,6 @@ def service(
     """Maps pupil to gaze data, can run various plug-ins.
 
     Reacts to notifications:
-       ``set_pupil_detection_enabled``: Sets detection enabled
        ``start_plugin``: Starts given plugin with the given arguments
        ``eye_process.started``: Sets the detection method eye process
        ``service_process.should_stop``: Stops the service process
@@ -38,7 +37,6 @@ def service(
     Emits notifications:
         ``eye_process.should_start``
         ``eye_process.should_stop``
-        ``set_pupil_detection_enabled``
         ``service_process.started``
         ``service_process.stopped``
         ``launcher_process.should_stop``
@@ -198,9 +196,6 @@ def service(
         g_pool.min_calibration_confidence = session_settings.get(
             "min_calibration_confidence", 0.8
         )
-        g_pool.pupil_detection_enabled = session_settings.get(
-            "pupil_detection_enabled", True
-        )
 
 
         audio.set_audio_mode(
@@ -234,16 +229,8 @@ def service(
 
         def handle_notifications(n):
             subject = n["subject"]
-            if subject == "set_pupil_detection_enabled":
-                g_pool.pupil_detection_enabled = n["mode"]
-            elif subject == "start_plugin":
+            if subject == "start_plugin":
                 g_pool.plugins.add(plugin_by_name[n["name"]], args=n.get("args", {}))
-            elif subject == "eye_process.started":
-                n = {
-                    "subject": "set_pupil_detection_enabled",
-                    "value": g_pool.pupil_detection_enabled,
-                }
-                ipc_pub.notify(n)
             elif subject == "service_process.should_stop":
                 g_pool.service_should_run = False
             elif subject.startswith("meta.should_doc"):
@@ -296,7 +283,6 @@ def service(
         session_settings[
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
-        session_settings["pupil_detection_enabled"] = g_pool.pupil_detection_enabled
         session_settings["audio_mode"] = audio.get_audio_mode()
         session_settings.close()
 
