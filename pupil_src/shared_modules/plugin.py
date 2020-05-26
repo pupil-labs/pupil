@@ -362,7 +362,7 @@ class Plugin_List(object):
             for new_plugin, new_name, _ in expanded_initializers[i + 1 :]:
                 if (
                     new_plugin.uniqueness == "by_base_class"
-                    and plugin.__bases__[-1] == new_plugin.__bases__[-1]
+                    and plugin.base_class() == new_plugin.base_class()
                 ) or (new_plugin.uniqueness == "by_class" and plugin == new_plugin):
                     logger.debug(
                         f"Skipping initialization of plugin {name} because it will be"
@@ -429,7 +429,7 @@ class Plugin_List(object):
 
     @staticmethod
     def _has_same_base_class(old_plugin_inst, new_plugin_cls):
-        return old_plugin_inst.base_class == new_plugin_cls.__bases__[-1]
+        return old_plugin_inst.base_class() == new_plugin_cls.base_class()
 
     @staticmethod
     def _is_same_class(old_plugin_inst, new_plugin_cls):
