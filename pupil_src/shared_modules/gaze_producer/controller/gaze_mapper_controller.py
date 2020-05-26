@@ -36,6 +36,8 @@ class GazeMapperController(Observable):
         self._get_current_trim_mark_range = get_current_trim_mark_range
         self._publish_gaze_bisector = publish_gaze_bisector
 
+        self._gaze_mapper_storage.add_observer("delete", self.on_gaze_mapper_deleted)
+
         # make mappings loaded from disk known to Player
         self.publish_all_enabled_mappers()
 
@@ -173,3 +175,6 @@ class GazeMapperController(Observable):
 
     def get_valid_calibration_or_none(self, gaze_mapper):
         return self._calibration_storage.get_or_none(gaze_mapper.calibration_unique_id)
+
+    def on_gaze_mapper_deleted(self, *args, **kwargs):
+        self.publish_all_enabled_mappers()
