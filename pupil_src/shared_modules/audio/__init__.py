@@ -9,10 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import logging
-import platform, sys, os
+import platform
 import subprocess as sp
 from time import sleep
-import typing as T
 
 
 logger = logging.getLogger(__name__)
