@@ -429,7 +429,7 @@ class Plugin_List(object):
 
     @staticmethod
     def _has_same_base_class(old_plugin_inst, new_plugin_cls):
-        return old_plugin_inst.base_class == new_plugin_cls.__bases__[-1]
+        return old_plugin_inst.base_class() == new_plugin_cls.base_class()
 
     @staticmethod
     def _is_same_class(old_plugin_inst, new_plugin_cls):
