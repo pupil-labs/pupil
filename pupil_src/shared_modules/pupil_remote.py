@@ -103,7 +103,7 @@ class Pupil_Remote(Plugin):
 
         # for service we shut down
         if self.g_pool.app == "service":
-            audio.say("Error: Port already in use.")
+            logger.error("Error: Port already in use.")
             # NOTE: We don't want a should_stop notification, but a hard termination at
             # this point, because Service is still initializing at this point. This way
             # we can prevent the eye processes from starting, where otherwise we would
