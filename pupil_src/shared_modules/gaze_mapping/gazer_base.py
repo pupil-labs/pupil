@@ -210,6 +210,9 @@ class GazerBase(abc.ABC, Plugin):
         else:
             raise ValueError("Requires either `calib_data` or `params`")
 
+        # used by pupil_data_relay for gaze mapping
+        g_pool.active_gaze_mapping_plugin = self
+
     def init_ui(self):
         self.add_menu()
 
@@ -218,14 +221,6 @@ class GazerBase(abc.ABC, Plugin):
 
     def get_init_dict(self):
         return {"params": self.get_params()}
-
-    def recent_events(self, events):
-        pupil_data = events["pupil"]
-        recent_gaze_data = []
-        for gaze in self.map_pupil_to_gaze(pupil_data):
-            # TODO: publish on network
-            recent_gaze_data.append(gaze)
-        events["gaze"] = recent_gaze_data
 
     # -- Core Functionality
 
