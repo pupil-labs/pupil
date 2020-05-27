@@ -318,22 +318,23 @@ class Surface(abc.ABC):
         registered_verts_undist.shape = (-1, 2)
         registered_verts_dist.shape = (-1, 2)
 
-        dist_img_to_surf_trans, surf_to_dist_img_trans = Surface._find_homographies(
+        homographies_dist = Surface._find_homographies(
             registered_verts_dist, visible_verts_dist
         )
-
-        if None in (dist_img_to_surf_trans, surf_to_dist_img_trans):
+        if any(matrix is None for matrix in homographies_dist):
             return Surface_Location(detected=False)
 
         visible_verts_undist = camera_model.undistort_points_on_image_plane(
             visible_verts_dist
         )
-        img_to_surf_trans, surf_to_img_trans = Surface._find_homographies(
+        homographies_undist = Surface._find_homographies(
             registered_verts_undist, visible_verts_undist
         )
-
-        if None in (img_to_surf_trans, surf_to_img_trans):
+        if any(matrix is None for matrix in homographies_undist):
             return Surface_Location(detected=False)
+
+        dist_img_to_surf_trans, surf_to_dist_img_trans = homographies_dist
+        img_to_surf_trans, surf_to_img_trans = homographies_undist
 
         return Surface_Location(
             True,
