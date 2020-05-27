@@ -80,7 +80,7 @@ class GazeMapperMenu(plugin_ui.StorageEditMenu):
 
     def _create_calculate_button(self, gaze_mapper):
         return ui.Button(
-            label="Recalculate" if gaze_mapper.calculate_complete else "Calculate",
+            label="Calculate" if gaze_mapper.empty() else "Recalculate",
             function=self._on_click_calculate,
         )
 

@@ -98,12 +98,20 @@ class GazeMapperController(Observable):
                 gaze_mapper.gaze_ts.append(timestamp)
 
         def on_completed_mapping(_):
-            gaze_mapper.status = "Successfully completed mapping"
+            if gaze_mapper.empty():
+                gaze_mapper.status = "No data mapped!"
+                logger.warning(
+                    f"Gaze mapper {gaze_mapper.name} produced no data."
+                    f" Please check the quality of your Pupil data"
+                    f" and ensure you are using the appropriate pipeline!"
+                )
+            else:
+                gaze_mapper.status = "Successfully completed mapping"
             self.publish_all_enabled_mappers()
             self.validate_gaze_mapper(gaze_mapper)
             self._gaze_mapper_storage.save_to_disk()
             self.on_gaze_mapping_calculated(gaze_mapper)
-            logger.info("Complete gaze mapping for '{}'".format(gaze_mapper.name))
+            logger.info(f"Completed gaze mapping for '{gaze_mapper.name}'")
 
         task.add_observer("on_yield", on_yield_gaze)
         task.add_observer("on_completed", on_completed_mapping)
