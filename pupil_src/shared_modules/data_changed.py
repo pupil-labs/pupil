@@ -72,10 +72,14 @@ class Announcer:
         Announce that new data is available for the topic. New means that is has
         never been broadcasted before (not even in a previous run of the software).
         """
-        token = _normalize_token(token_data)
-        self._notify_all(token, delay=delay)
+        self._current_token = _normalize_token(token_data)
+        self._notify_all(self._current_token, delay=delay)
         _write_token_to_file(
-            token, self._plugin_role, self._topic, self._plugin_name, self._rec_dir
+            self._current_token,
+            self._plugin_role,
+            self._topic,
+            self._plugin_name,
+            self._rec_dir,
         )
 
     def announce_existing(self, delay=None):
