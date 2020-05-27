@@ -362,6 +362,7 @@ class Surface(abc.ABC):
             pass
         except Exception as e:
             import traceback
+
             exception_msg = traceback.format_exc()
             logger.error(exception_msg)
 
@@ -377,6 +378,7 @@ class Surface(abc.ABC):
             pass
         except Exception as e:
             import traceback
+
             exception_msg = traceback.format_exc()
             logger.error(exception_msg)
 
@@ -593,11 +595,7 @@ class Surface(abc.ABC):
     def update_heatmap(self, gaze_on_surf):
         """Compute the gaze distribution heatmap based on given gaze events."""
 
-        heatmap_data = [
-            g["norm_pos"]
-            for g in gaze_on_surf
-            if g["on_surf"]
-        ]
+        heatmap_data = [g["norm_pos"] for g in gaze_on_surf if g["on_surf"]]
         aspect_ratio = self.real_world_size["y"] / self.real_world_size["x"]
         grid = (
             max(1, int(self._heatmap_resolution * aspect_ratio)),
