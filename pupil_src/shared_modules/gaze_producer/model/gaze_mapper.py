@@ -47,10 +47,8 @@ class GazeMapper(StorageItem):
         self.gaze = gaze
         self.gaze_ts = gaze_ts
 
-    @property
-    def calculate_complete(self):
-        # we cannot just use `self.gaze and self.gaze_ts` because this ands the arrays
-        return len(self.gaze) > 0 and len(self.gaze_ts) > 0
+    def empty(self):
+        return len(self.gaze) == 0 and len(self.gaze_ts) == 0
 
     @staticmethod
     def from_tuple(tuple_):
