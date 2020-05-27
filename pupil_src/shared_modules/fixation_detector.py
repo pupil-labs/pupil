@@ -286,9 +286,7 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
         self._gaze_changed_listener = data_changed.Listener(
             "gaze_positions", g_pool.rec_dir, plugin=self
         )
-        self._gaze_changed_listener.add_observer(
-            "on_data_changed", self._classify
-        )
+        self._gaze_changed_listener.add_observer("on_data_changed", self._classify)
         self.notify_all(
             {"subject": "fixation_detector.should_recalculate", "delay": 0.5}
         )
@@ -685,9 +683,7 @@ class Fixation_Detector(Fixation_Detector_Base):
 
     order = 0.19
 
-    def __init__(
-        self, g_pool, max_dispersion=3.0, min_duration=300, **kwargs
-    ):
+    def __init__(self, g_pool, max_dispersion=3.0, min_duration=300, **kwargs):
         super().__init__(g_pool)
         self.history = []
         self.min_duration = min_duration
@@ -698,7 +694,9 @@ class Fixation_Detector(Fixation_Detector_Base):
         events["fixations"] = []
         gaze = events["gaze"]
 
-        gaze = (gp for gp in gaze if gp["confidence"] >= self.g_pool.min_data_confidence)
+        gaze = (
+            gp for gp in gaze if gp["confidence"] >= self.g_pool.min_data_confidence
+        )
         self.history.extend(gaze)
         self.history.sort(key=lambda gp: gp["timestamp"])
 
