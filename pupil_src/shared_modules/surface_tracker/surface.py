@@ -318,22 +318,23 @@ class Surface(abc.ABC):
         registered_verts_undist.shape = (-1, 2)
         registered_verts_dist.shape = (-1, 2)
 
-        dist_img_to_surf_trans, surf_to_dist_img_trans = Surface._find_homographies(
+        homographies_dist = Surface._find_homographies(
             registered_verts_dist, visible_verts_dist
         )
-
-        if None in (dist_img_to_surf_trans, surf_to_dist_img_trans):
+        if any(matrix is None for matrix in homographies_dist):
             return Surface_Location(detected=False)
 
         visible_verts_undist = camera_model.undistort_points_on_image_plane(
             visible_verts_dist
         )
-        img_to_surf_trans, surf_to_img_trans = Surface._find_homographies(
+        homographies_undist = Surface._find_homographies(
             registered_verts_undist, visible_verts_undist
         )
-
-        if None in (img_to_surf_trans, surf_to_img_trans):
+        if any(matrix is None for matrix in homographies_undist):
             return Surface_Location(detected=False)
+
+        dist_img_to_surf_trans, surf_to_dist_img_trans = homographies_dist
+        img_to_surf_trans, surf_to_img_trans = homographies_undist
 
         return Surface_Location(
             True,
@@ -362,6 +363,7 @@ class Surface(abc.ABC):
             pass
         except Exception as e:
             import traceback
+
             exception_msg = traceback.format_exc()
             logger.error(exception_msg)
 
@@ -377,6 +379,7 @@ class Surface(abc.ABC):
             pass
         except Exception as e:
             import traceback
+
             exception_msg = traceback.format_exc()
             logger.error(exception_msg)
 
@@ -593,11 +596,7 @@ class Surface(abc.ABC):
     def update_heatmap(self, gaze_on_surf):
         """Compute the gaze distribution heatmap based on given gaze events."""
 
-        heatmap_data = [
-            g["norm_pos"]
-            for g in gaze_on_surf
-            if g["on_surf"]
-        ]
+        heatmap_data = [g["norm_pos"] for g in gaze_on_surf if g["on_surf"]]
         aspect_ratio = self.real_world_size["y"] / self.real_world_size["x"]
         grid = (
             max(1, int(self._heatmap_resolution * aspect_ratio)),
