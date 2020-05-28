@@ -147,8 +147,6 @@ def service(
 
         g_pool.get_timestamp = get_timestamp
 
-        available_choreography_plugins = available_calibration_choreography_plugins()
-
         # manage plugins
         runtime_plugins = import_runtime_plugins(
             os.path.join(g_pool.user_dir, "plugins")
@@ -162,7 +160,7 @@ def service(
         ] + runtime_plugins
         plugin_by_index = (
             runtime_plugins
-            + available_choreography_plugins
+            + available_calibration_choreography_plugins()
             + registered_gazer_classes()
             + user_launchable_plugins
         )
