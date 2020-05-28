@@ -178,7 +178,6 @@ def world(
         from remote_recorder import Remote_Recorder
         from accuracy_visualizer import Accuracy_Visualizer
 
-        # from saccade_detector import Saccade_Detector
         from system_graphs import System_Graphs
         from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
         from hololens_relay import Hololens_Relay
