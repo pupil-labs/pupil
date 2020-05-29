@@ -131,7 +131,6 @@ class GazerBase(abc.ABC, Plugin):
         Returns:
             T.Iterable -- Subset of `pupil_data`
         """
-        # TODO: make this a generator
         if confidence_threshold is not None:
             pupil_data = _filter_pupil_list_by_confidence(
                 pupil_data, confidence_threshold
@@ -188,7 +187,6 @@ class GazerBase(abc.ABC, Plugin):
         self.init_matcher()
 
         if calib_data is not None:
-            # TODO: Do not announce in Player
             self._announce_calibration_setup(calib_data=calib_data)
             try:
                 self.fit_on_calib_data(calib_data)
@@ -209,7 +207,6 @@ class GazerBase(abc.ABC, Plugin):
                 self._announce_calibration_result(params=self.get_params())
         elif params is not None:
             self.set_params(params)
-            # TODO: Do we need to announce calibration result here?
         else:
             raise ValueError("Requires either `calib_data` or `params`")
 
@@ -224,14 +221,6 @@ class GazerBase(abc.ABC, Plugin):
 
     def get_init_dict(self):
         return {"params": self.get_params()}
-
-    def recent_events(self, events):
-        pupil_data = events["pupil"]
-        recent_gaze_data = []
-        for gaze in self.map_pupil_to_gaze(pupil_data):
-            # TODO: publish on network
-            recent_gaze_data.append(gaze)
-        events["gaze"] = recent_gaze_data
 
     # -- Core Functionality
 

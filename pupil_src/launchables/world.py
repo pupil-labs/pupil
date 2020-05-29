@@ -387,6 +387,7 @@ def world(
             )
             session_settings.clear()
 
+        g_pool.min_data_confidence = 0.6
         g_pool.min_calibration_confidence = session_settings.get(
             "min_calibration_confidence", 0.8
         )

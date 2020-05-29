@@ -37,10 +37,9 @@ class Pupil_Data_Relay(System_Plugin_Base):
             gazer = self.g_pool.active_gaze_mapping_plugin
             if gazer is None:
                 continue
-            new_gaze_data = gazer.on_pupil_datum(pupil_datum)
-            for gaze_datum in new_gaze_data:
+            for gaze_datum in gazer.map_pupil_to_gaze([pupil_datum]):
                 self.gaze_pub.send(gaze_datum)
-            recent_gaze_data.extend(new_gaze_data)
+                recent_gaze_data.append(gaze_datum)
 
         events["pupil"] = recent_pupil_data
         events["gaze"] = recent_gaze_data
