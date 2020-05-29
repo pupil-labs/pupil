@@ -253,17 +253,30 @@ def service(
             {"subject": "service_process.ui.should_update", "initial_delay": 1 / 40}
         )
 
+        g_pool.active_gaze_mapping_plugin = None
+
         # Event loop
         while g_pool.service_should_run and not process_was_interrupted:
             socks = dict(poller.poll())
             if pupil_sub.socket in socks:
                 topic, pupil_datum = pupil_sub.recv()
+
                 events = {}
                 events["pupil"] = [pupil_datum]
+
+                if g_pool.active_gaze_mapping_plugin:
+                    new_gaze_data = g_pool.active_gaze_mapping_plugin.map_pupil_to_gaze(
+                        [pupil_datum]
+                    )
+                    events["gaze"] = []
+
+                    for gaze_datum in new_gaze_data:
+                        gaze_pub.send(gaze_datum)
+                        events["gaze"].append(gaze_datum)
+
+
                 for plugin in g_pool.plugins:
                     plugin.recent_events(events=events)
-                for gaze_datum in events.get("gaze", []):
-                    gaze_pub.send(gaze_datum)
 
             if notify_sub.socket in socks:
                 topic, n = notify_sub.recv()
