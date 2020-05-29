@@ -30,7 +30,6 @@ def service(
     """Maps pupil to gaze data, can run various plug-ins.
 
     Reacts to notifications:
-       ``set_pupil_detection_enabled``: Sets detection enabled
        ``start_plugin``: Starts given plugin with the given arguments
        ``eye_process.started``: Sets the detection method eye process
        ``service_process.should_stop``: Stops the service process
@@ -38,7 +37,6 @@ def service(
     Emits notifications:
         ``eye_process.should_start``
         ``eye_process.should_stop``
-        ``set_pupil_detection_enabled``
         ``service_process.started``
         ``service_process.stopped``
         ``launcher_process.should_stop``
@@ -149,8 +147,6 @@ def service(
 
         g_pool.get_timestamp = get_timestamp
 
-        available_choreography_plugins = available_calibration_choreography_plugins()
-
         # manage plugins
         runtime_plugins = import_runtime_plugins(
             os.path.join(g_pool.user_dir, "plugins")
@@ -164,7 +160,7 @@ def service(
         ] + runtime_plugins
         plugin_by_index = (
             runtime_plugins
-            + available_choreography_plugins
+            + available_calibration_choreography_plugins()
             + registered_gazer_classes()
             + user_launchable_plugins
         )
@@ -172,7 +168,6 @@ def service(
         plugin_by_name = dict(zip(name_by_index, plugin_by_index))
         default_plugins = [
             ("Service_UI", {}),
-            ("Dummy_Gaze_Mapper", {}),
             # Calibration choreography plugin is added bellow by calling
             # patch_world_session_settings_with_choreography_plugin
             ("Pupil_Remote", {}),
@@ -199,11 +194,7 @@ def service(
         g_pool.min_calibration_confidence = session_settings.get(
             "min_calibration_confidence", 0.8
         )
-        g_pool.pupil_detection_enabled = session_settings.get(
-            "pupil_detection_enabled", True
-        )
 
-        g_pool.active_gaze_mapping_plugin = None
 
         audio.set_audio_mode(
             session_settings.get("audio_mode", audio.get_default_audio_mode())
@@ -236,16 +227,8 @@ def service(
 
         def handle_notifications(n):
             subject = n["subject"]
-            if subject == "set_pupil_detection_enabled":
-                g_pool.pupil_detection_enabled = n["mode"]
-            elif subject == "start_plugin":
+            if subject == "start_plugin":
                 g_pool.plugins.add(plugin_by_name[n["name"]], args=n.get("args", {}))
-            elif subject == "eye_process.started":
-                n = {
-                    "subject": "set_pupil_detection_enabled",
-                    "value": g_pool.pupil_detection_enabled,
-                }
-                ipc_pub.notify(n)
             elif subject == "service_process.should_stop":
                 g_pool.service_should_run = False
             elif subject.startswith("meta.should_doc"):
@@ -270,20 +253,28 @@ def service(
             {"subject": "service_process.ui.should_update", "initial_delay": 1 / 40}
         )
 
+        g_pool.active_gaze_mapping_plugin = None
+
         # Event loop
         while g_pool.service_should_run and not process_was_interrupted:
             socks = dict(poller.poll())
             if pupil_sub.socket in socks:
                 topic, pupil_datum = pupil_sub.recv()
-                new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(
-                    pupil_datum
-                )
-                for gaze_datum in new_gaze_data:
-                    gaze_pub.send(gaze_datum)
 
                 events = {}
-                events["gaze"] = new_gaze_data
                 events["pupil"] = [pupil_datum]
+
+                if g_pool.active_gaze_mapping_plugin:
+                    new_gaze_data = g_pool.active_gaze_mapping_plugin.map_pupil_to_gaze(
+                        [pupil_datum]
+                    )
+                    events["gaze"] = []
+
+                    for gaze_datum in new_gaze_data:
+                        gaze_pub.send(gaze_datum)
+                        events["gaze"].append(gaze_datum)
+
+
                 for plugin in g_pool.plugins:
                     plugin.recent_events(events=events)
 
@@ -303,7 +294,6 @@ def service(
         session_settings[
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
-        session_settings["pupil_detection_enabled"] = g_pool.pupil_detection_enabled
         session_settings["audio_mode"] = audio.get_audio_mode()
         session_settings.close()
 

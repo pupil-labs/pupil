@@ -62,7 +62,7 @@ class Model3D(Model):
     def _predict_single(self, x):
         pass
 
-    def __init__(self, *, intrinsics, initial_depth=500):
+    def __init__(self, *, intrinsics: T.Optional[T.Any], initial_depth=500):
         self.intrinsics = intrinsics
         self.initial_depth = initial_depth
         self._is_fitted = False
@@ -153,23 +153,25 @@ class Model3D_Monocular(Model3D):
         sphere_center = x[_MONOCULAR_SPHERE_CENTER]
         gaze_point = pupil_normal * self.gaze_distance + sphere_center
 
-        image_point = self.intrinsics.projectPoints(
-            gaze_point[np.newaxis], self.rotation_vector, self.translation_vector
-        )
-        image_point = image_point.reshape(-1, 2)
-        image_point = normalize(image_point[0], self.intrinsics.resolution, flip_y=True)
-        image_point = _clamp_norm_point(image_point)
-
         eye_center = self._toWorld(sphere_center)
         gaze_3d = self._toWorld(gaze_point)
         normal_3d = np.dot(self.rotation_matrix, pupil_normal)
 
         g = {
-            "norm_pos": image_point,
             "eye_center_3d": eye_center.tolist(),
             "gaze_normal_3d": normal_3d.tolist(),
             "gaze_point_3d": gaze_3d.tolist(),
         }
+
+        if self.intrinsics is not None:
+            image_point = self.intrinsics.projectPoints(
+                gaze_point[np.newaxis], self.rotation_vector, self.translation_vector
+            )
+            image_point = image_point.reshape(-1, 2)
+            image_point = normalize(image_point[0], self.intrinsics.resolution, flip_y=True)
+            image_point = _clamp_norm_point(image_point)
+            g["norm_pos"] = image_point
+
         return g
 
     def _toWorld(self, p):
@@ -224,7 +226,6 @@ class Model3D_Binocular(Model3D):
         super().set_params(**params)
         self.last_gaze_distance = 500.0
 
-        self.backproject = params.get("backproject", True)
         self.eye_camera_to_world_matricies = (
             np.asarray(params["eye_camera_to_world_matrix0"]),
             np.asarray(params["eye_camera_to_world_matrix1"]),
@@ -277,17 +278,6 @@ class Model3D_Binocular(Model3D):
             nearest_intersection_point,
             intersection_distance,
         ) = math_helper.nearest_intersection(gaze_line0, gaze_line1)
-        if nearest_intersection_point is not None and self.backproject:
-            cyclop_gaze = nearest_intersection_point - cyclop_center
-            self.last_gaze_distance = np.sqrt(cyclop_gaze.dot(cyclop_gaze))
-            image_point = self.intrinsics.projectPoints(
-                np.array([nearest_intersection_point])
-            )
-            image_point = image_point.reshape(-1, 2)
-            image_point = normalize(
-                image_point[0], self.intrinsics.resolution, flip_y=True
-            )
-            image_point = _clamp_norm_point(image_point)
 
         if nearest_intersection_point is None:
             return None
@@ -298,7 +288,17 @@ class Model3D_Binocular(Model3D):
             "gaze_point_3d": nearest_intersection_point.tolist(),
         }
 
-        if self.backproject:
+        if self.intrinsics is not None:
+            cyclop_gaze = nearest_intersection_point - cyclop_center
+            self.last_gaze_distance = np.sqrt(cyclop_gaze.dot(cyclop_gaze))
+            image_point = self.intrinsics.projectPoints(
+                np.array([nearest_intersection_point])
+            )
+            image_point = image_point.reshape(-1, 2)
+            image_point = normalize(
+                image_point[0], self.intrinsics.resolution, flip_y=True
+            )
+            image_point = _clamp_norm_point(image_point)
             g["norm_pos"] = image_point
 
         return g

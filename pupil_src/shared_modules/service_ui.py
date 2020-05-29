@@ -124,15 +124,6 @@ class Service_UI(System_Plugin_Base):
                 label="Pupil Remote address",
             )
         )
-
-        g_pool.menubar.append(
-            ui.Switch(
-                "pupil_detection_enabled",
-                label="Pupil detection",
-                getter=self.detection_enabled_getter,
-                setter=self.detection_enabled_setter,
-            )
-        )
         g_pool.menubar.append(
             ui.Switch(
                 "eye0_process",
@@ -245,11 +236,4 @@ class Service_UI(System_Plugin_Base):
                 "eye_id": eye_id,
                 "delay": 0.2,
             }
-        self.notify_all(n)
-
-    def detection_enabled_getter(self) -> bool:
-        return self.g_pool.pupil_detection_enabled
-
-    def detection_enabled_setter(self, is_on: bool):
-        n = {"subject": "set_pupil_detection_enabled", "value": is_on}
         self.notify_all(n)

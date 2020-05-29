@@ -109,17 +109,24 @@ class GazerHMD3D(Gazer3D):
         self.__eye_translations = eye_translations
         super().__init__(g_pool, calib_data=calib_data, params=params)
 
+    @property
+    def _gpool_capture_intrinsics_if_available(self) -> T.Optional[T.Any]:
+        if hasattr(self.g_pool, "capture"):
+            return self.g_pool.capture.intrinsics
+        else:
+            return None
+
     def _init_binocular_model(self) -> Model:
         return ModelHMD3D_Binocular(
-            intrinsics=self.g_pool.capture.intrinsics,
+            intrinsics=self._gpool_capture_intrinsics_if_available,
             eye_translations=self.__eye_translations,
         )
 
     def _init_left_model(self) -> Model:
-        return ModelHMD3D_Monocular(intrinsics=self.g_pool.capture.intrinsics)
+        return ModelHMD3D_Monocular(intrinsics=self._gpool_capture_intrinsics_if_available)
 
     def _init_right_model(self) -> Model:
-        return ModelHMD3D_Monocular(intrinsics=self.g_pool.capture.intrinsics)
+        return ModelHMD3D_Monocular(intrinsics=self._gpool_capture_intrinsics_if_available)
 
     def fit_on_calib_data(self, calib_data):
         # extract reference data
