@@ -46,4 +46,6 @@ for /d %%d in (*) do (
 )
 cd ..
 
+python create_msi_installer.py
+
 exit /B 0
