@@ -318,8 +318,12 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.eye_video_loc = [None, None]
 
         self.eye_frame_num = [0, 0]
-        self.eye_frame_num[0] = len(self._pupil_data_store[0, "3d"]) #TODO: Figure out the number of frames independent of 3d detection
-        self.eye_frame_num[1] = len(self._pupil_data_store[1, "3d"]) #TODO: Figure out the number of frames independent of 3d detection
+        self.eye_frame_num[0] = len(
+            self._pupil_data_store[0, "3d"]
+        )  # TODO: Figure out the number of frames independent of 3d detection
+        self.eye_frame_num[1] = len(
+            self._pupil_data_store[1, "3d"]
+        )  # TODO: Figure out the number of frames independent of 3d detection
 
         self.pause_switch = None
         self.detection_paused = False
@@ -332,7 +336,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         # either we did not start them or they failed to start (mono setup etc)
         # either way we are done and can publish
         if self.eye_video_loc == [None, None]:
-            self.correlate_publish()
+            self.publish_existing()
 
     def start_eye_process(self, eye_id):
         potential_locs = [
@@ -372,8 +376,9 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         total = sum(self.eye_frame_num)
         if total:
             return min(
-                #TODO: Figure out the number of frames independent of 3d detection
-                len(self._pupil_data_store[..., "3d"]) / total, 1.0
+                # TODO: Figure out the number of frames independent of 3d detection
+                len(self._pupil_data_store[..., "3d"]) / total,
+                1.0,
             )
         else:
             return 0.0
@@ -405,10 +410,15 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                             self.stop_eye_process(eyeid)
                             break
                     if self.eye_video_loc == [None, None]:
-                        self.correlate_publish()
+                        self.publish_new()
+
         self.menu_icon.indicator_stop = self.detection_progress
 
-    def correlate_publish(self):
+    def publish_existing(self):
+        self.g_pool.pupil_positions = self._pupil_data_store.copy()
+        self._pupil_changed_announcer.announce_existing()
+
+    def publish_new(self):
         self.g_pool.pupil_positions = self._pupil_data_store.copy()
         self._pupil_changed_announcer.announce_new()
         logger.debug("pupil positions changed")
