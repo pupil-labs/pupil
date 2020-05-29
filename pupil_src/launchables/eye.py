@@ -63,6 +63,7 @@ def eye(
     eye_id,
     overwrite_cap_settings=None,
     hide_ui=False,
+    hwm=None,
 ):
     """reads eye video and detects the pupil.
 
@@ -95,7 +96,7 @@ def eye(
 
     zmq_ctx = zmq.Context()
     ipc_socket = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
-    pupil_socket = zmq_tools.Msg_Streamer(zmq_ctx, ipc_pub_url)
+    pupil_socket = zmq_tools.Msg_Streamer(zmq_ctx, ipc_pub_url, hwm)
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url, topics=("notify",))
 
     # logging setup
@@ -376,6 +377,13 @@ def eye(
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
 
         general_settings.append(ui.Button("Reset window size", set_window_size))
+
+        g_pool.hwm = pupil_socket.get_hwm()
+        def update_hwm(new_hwm):
+            g_pool.hwm = new_hwm
+            pupil_socket.set_hwm(new_hwm)
+
+        general_settings.append(ui.Text_Input("hwm", g_pool, setter=update_hwm, label="ZMQ High Water Mark"))
         general_settings.append(ui.Switch("flip", g_pool, label="Flip image display"))
         general_settings.append(
             ui.Selector(
@@ -533,6 +541,9 @@ def eye(
                         )
                     except KeyError as err:
                         logger.error(f"Attempt to load unknown plugin: {err}")
+                elif subject.startswith("eye_stream.set_zmq_option.hwm"):
+                    if notification["eye_id"] == eye_id:
+                        update_hwm(notification['hwm'])
 
                 for plugin in g_pool.plugins:
                     plugin.on_notify(notification)
@@ -704,6 +715,7 @@ def eye_profiled(
     eye_id,
     overwrite_cap_settings=None,
     hide_ui=False,
+    hwm=None,
 ):
     import cProfile
     import subprocess
@@ -723,6 +735,7 @@ def eye_profiled(
             "eye_id": eye_id,
             "overwrite_cap_settings": overwrite_cap_settings,
             "hide_ui": hide_ui,
+            "hwm": hwm,
         },
         locals(),
         "eye{}.pstats".format(eye_id),

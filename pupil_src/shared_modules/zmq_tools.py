@@ -134,8 +134,12 @@ class Msg_Streamer(ZMQ_Socket):
     Not threadsave. Make a new one for each thread
     """
 
-    def __init__(self, ctx, url):
+    def __init__(self, ctx, url, hwm=None):
+        self.url = url
         self.socket = zmq.Socket(ctx, zmq.PUB)
+        if hwm is not None:
+            self.socket.set_hwm(hwm)
+
         self.socket.connect(url)
 
     def send(self, payload, deprecated=()):
@@ -168,6 +172,21 @@ class Msg_Streamer(ZMQ_Socket):
             for frame in extra_frames[:-1]:
                 self.socket.send(frame, flags=zmq.SNDMORE, copy=True)
             self.socket.send(extra_frames[-1], copy=True)
+
+    def get_hwm(self):
+        """
+        Read the High Water Mark (HWM) value from the socket and return it.
+        """
+        return self.socket.hwm
+
+    def set_hwm(self, hwm):
+        """
+        Disconnect the socket, set a new High Water Mark (HWM) value and
+        reconnect the socket.
+        """
+        self.socket.disconnect(self.url)
+        self.socket.set_hwm(hwm)
+        self.socket.connect(self.url)
 
 
 class Msg_Dispatcher(Msg_Streamer):
