@@ -323,6 +323,35 @@ class PupilDataBisector:
         return data_by_topic
 
 
+class PupilDataCollector:
+    def __init__(self):
+        self._collection = collections.defaultdict(dict)
+
+    def append(self, topic, datum, timestamp):
+        pupil_topic = PupilTopic.create(topic, datum)
+        self._collection[pupil_topic][timestamp] = datum
+
+    def clear(self):
+        self._collection.clear()
+
+    def as_pupil_data_bisector(self) -> PupilDataBisector:
+        bisectors = {}
+        for topic, timestamps_data in self._collection.items():
+            timestamps = list(timestamps_data.keys())
+            data = list(timestamps_data.values())
+            bisector = Bisector(data, timestamps)
+            bisectors[topic] = bisector
+        pupil_data_bisector = PupilDataBisector(bisectors=bisectors)
+        return pupil_data_bisector
+
+    def count_collected(self, eye_id=None, detector_tag=None):
+        num_collected = 0
+        for topic, values in self._collection.items():
+            if PupilTopic.match(topic, eye_id, detector_tag):
+                num_collected += len(values)
+        return num_collected
+
+
 def find_closest(target, source):
     """Find indeces of closest `target` elements for elements in `source`.
     -
