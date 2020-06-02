@@ -230,16 +230,22 @@ class PupilTopic:
 
 
 class PupilDataBisector:
-    def __init__(self, data: fm.PLData = fm.PLData([], [], [])):
-        self._bisectors = collections.defaultdict(pm.Mutable_Bisector)
-        self._init_from_data(data)
+    def __init__(self, data: T.Optional[fm.PLData] = None, bisectors=None):
+        if bisectors is not None:
+            self._bisectors = bisectors
+        else:
+            if data is None:
+                data = fm.PLData([], [], [])
+            self._bisectors = self._bisectors_from_data(data)
 
-    def _init_from_data(self, data: fm.PLData):
+    def _bisectors_from_data(self, data: fm.PLData):
+        _bisectors = {}
         for pupil_topic, data in self._group_data_by_pupil_topic(data).items():
-            assert pupil_topic not in self._bisectors
+            assert pupil_topic not in _bisectors
             assert len(data.topics) == len(data.data) == len(data.timestamps)
-            bisector = pm.Mutable_Bisector(data.data, data.timestamps)
-            self._bisectors[pupil_topic] = bisector
+            bisector = pm.Bisector(data.data, data.timestamps)
+            _bisectors[pupil_topic] = bisector
+        return _bisectors
 
     def init_dict_for_window(self, ts_window):
         init_dict = collections.defaultdict(list)
