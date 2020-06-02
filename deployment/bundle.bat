@@ -32,6 +32,7 @@ if not exist %release_dir% (
 	mkdir %release_dir%
 )
 
+set PATH=%PATH%;%~dp0..\pupil_external
 set PATH=%PATH%;C:\Python36\Lib\site-packages\scipy\.libs
 set PATH=%PATH%;C:\Python36\Lib\site-packages\zmq
 
