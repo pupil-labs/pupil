@@ -53,3 +53,6 @@ deployment/pupil_v*
 win_drv
 .vs
 .venv
+
+# pyenv local config
+.python-version
