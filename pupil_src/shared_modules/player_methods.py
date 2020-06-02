@@ -289,19 +289,6 @@ class PupilDataBisector:
                 continue
         raise ValueError
 
-    def append(self, topic, datum, timestamp):
-        pupil_topic = PupilTopic.create(topic, datum)
-        self._bisectors[pupil_topic].insert(timestamp, datum)
-
-    def clear(self):
-        self._bisectors.clear()
-
-    def copy(self):
-        copy = type(self)()
-        for topic, bisector in self._bisectors.items():
-            copy._bisectors[topic] = bisector.copy()
-        return copy
-
     def __bool__(self):
         return any(self._bisectors.values())
 
