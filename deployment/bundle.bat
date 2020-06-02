@@ -48,5 +48,6 @@ for /d %%d in (*) do (
 cd ..
 
 python generate_msi_installer.py
+7z a -tzip %release_dir%.msi.zip %release_dir%.msi
 
 exit /B 0
