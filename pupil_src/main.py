@@ -297,6 +297,7 @@ def launcher():
                             n.get("overwrite_cap_settings"),
                             parsed_args.hide_ui,
                             parsed_args.debug,
+                            n.get("pub_socket_hwm"),
                         ),
                     ).start()
                 elif "notify.player_process.should_start" in topic:

@@ -64,6 +64,7 @@ def eye(
     overwrite_cap_settings=None,
     hide_ui=False,
     debug=False,
+    pub_socket_hwm=None,
 ):
     """reads eye video and detects the pupil.
 
@@ -95,7 +96,7 @@ def eye(
 
     zmq_ctx = zmq.Context()
     ipc_socket = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
-    pupil_socket = zmq_tools.Msg_Streamer(zmq_ctx, ipc_pub_url)
+    pupil_socket = zmq_tools.Msg_Streamer(zmq_ctx, ipc_pub_url, pub_socket_hwm)
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url, topics=("notify",))
 
     # logging setup
@@ -701,6 +702,7 @@ def eye_profiled(
     overwrite_cap_settings=None,
     hide_ui=False,
     debug=False,
+    pub_socket_hwm=None,
 ):
     import cProfile
     import subprocess
@@ -721,6 +723,7 @@ def eye_profiled(
             "overwrite_cap_settings": overwrite_cap_settings,
             "hide_ui": hide_ui,
             "debug": debug,
+            "pub_socket_hwm": pub_socket_hwm,
         },
         locals(),
         "eye{}.pstats".format(eye_id),
