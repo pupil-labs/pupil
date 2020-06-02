@@ -90,7 +90,7 @@ class SingleMarkerChoreographyPlugin(
         **kwargs,
     ):
         if marker_mode is None:
-            marker_mode = SingleMarkerMode.FULL_SCREEN
+            marker_mode = SingleMarkerMode.MANUAL
         else:
             marker_mode = SingleMarkerMode.from_label(marker_mode)
 
