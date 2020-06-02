@@ -31,6 +31,8 @@ from video_capture.ndsi_backend import NDSI_Source
 from pupil_recording.info import Version
 from pupil_recording.info import RecordingInfoFile
 
+from gaze_mapping.notifications import CalibrationSetupNotification, CalibrationResultNotification
+
 # from scipy.interpolate import UnivariateSpline
 from plugin import System_Plugin_Base
 
@@ -239,14 +241,15 @@ class Recorder(System_Plugin_Base):
         if notification.get("record", False) and self.running:
             if "timestamp" not in notification:
                 logger.error("Notification without timestamp will not be saved.")
-            else:
-                notification["topic"] = "notify." + notification["subject"]
-                try:
-                    writer = self.pldata_writers["notify"]
-                except KeyError:
-                    writer = PLData_Writer(self.rec_path, "notify")
-                    self.pldata_writers["notify"] = writer
-                writer.append(notification)
+                notification["timestamp"] = self.g_pool.get_timestamp()
+            # else:
+            notification["topic"] = "notify." + notification["subject"]
+            try:
+                writer = self.pldata_writers["notify"]
+            except KeyError:
+                writer = PLData_Writer(self.rec_path, "notify")
+                self.pldata_writers["notify"] = writer
+            writer.append(notification)
 
         elif notification["subject"] == "recording.should_start":
             if self.running:
@@ -347,18 +350,21 @@ class Recorder(System_Plugin_Base):
         else:
             self.writer = MPEG_Writer(self.video_path, start_time_synced)
 
-        try:
-            cal_pt_path = os.path.join(self.g_pool.user_dir, "user_calibration_data")
-            cal_data = load_object(cal_pt_path)
-            notification = {"subject": "calibration.calibration_data", "record": True}
-            notification.update(cal_data)
-            notification["topic"] = "notify." + notification["subject"]
+        calibration_data_notification_classes = [CalibrationSetupNotification, CalibrationResultNotification]
+        writer = PLData_Writer(self.rec_path, "notify")
 
-            writer = PLData_Writer(self.rec_path, "notify")
-            writer.append(notification)
-            self.pldata_writers["notify"] = writer
-        except FileNotFoundError:
-            pass
+        for note_class in calibration_data_notification_classes:
+            try:
+                file_path = os.path.join(self.g_pool.user_dir, note_class.file_name())
+                note = note_class.from_dict(load_object(file_path))
+                note_dict = note.as_dict()
+
+                note_dict["topic"] = "notify." + note_dict["subject"]
+                writer.append(note_dict)
+            except FileNotFoundError:
+                continue
+
+        self.pldata_writers["notify"] = writer
 
         if self.show_info_menu:
             self.open_info_menu()

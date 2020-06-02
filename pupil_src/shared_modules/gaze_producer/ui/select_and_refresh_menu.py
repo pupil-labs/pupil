@@ -22,6 +22,7 @@ class SelectAndRefreshMenu(abc.ABC):
     You can also render elements above the selector that do not change when the
     current item changes.
     """
+
     selector_label = "Current:"
 
     def __init__(self):

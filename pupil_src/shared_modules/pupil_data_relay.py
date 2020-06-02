@@ -33,12 +33,13 @@ class Pupil_Data_Relay(System_Plugin_Base):
         while self.pupil_sub.new_data:
             topic, pupil_datum = self.pupil_sub.recv()
             recent_pupil_data.append(pupil_datum)
-            new_gaze_data = self.g_pool.active_gaze_mapping_plugin.on_pupil_datum(
-                pupil_datum
-            )
-            for gaze_datum in new_gaze_data:
+
+            gazer = self.g_pool.active_gaze_mapping_plugin
+            if gazer is None:
+                continue
+            for gaze_datum in gazer.map_pupil_to_gaze([pupil_datum]):
                 self.gaze_pub.send(gaze_datum)
-            recent_gaze_data.extend(new_gaze_data)
+                recent_gaze_data.append(gaze_datum)
 
         events["pupil"] = recent_pupil_data
         events["gaze"] = recent_gaze_data

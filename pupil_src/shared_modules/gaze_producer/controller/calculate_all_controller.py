@@ -60,6 +60,8 @@ class CalculateAllController:
             )
             if calculation_possible:
                 task = self._calibration_controller.calculate(calibration)
+                if not task:
+                    continue
                 task.add_observer(
                     "on_completed",
                     self._create_calibration_complete_handler(calibration),

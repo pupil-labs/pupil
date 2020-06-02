@@ -124,16 +124,6 @@ class Service_UI(System_Plugin_Base):
                 label="Pupil Remote address",
             )
         )
-
-        g_pool.menubar.append(
-            ui.Selector(
-                "detection_mapping_mode",
-                g_pool,
-                label="Detection & mapping mode",
-                setter=self.set_detection_mapping_mode,
-                selection=["disabled", "2d", "3d"],
-            )
-        )
         g_pool.menubar.append(
             ui.Switch(
                 "eye0_process",
@@ -247,6 +237,3 @@ class Service_UI(System_Plugin_Base):
                 "delay": 0.2,
             }
         self.notify_all(n)
-
-    def set_detection_mapping_mode(self, new_mode):
-        self.notify_all({"subject": "set_detection_mapping_mode", "mode": new_mode})

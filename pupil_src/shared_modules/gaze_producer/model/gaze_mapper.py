@@ -29,8 +29,8 @@ class GazeMapper(StorageItem):
         status="Not calculated yet",
         accuracy_result="",
         precision_result="",
-        gaze=[],
-        gaze_ts=[],
+        gaze=None,
+        gaze_ts=None,
     ):
         self.unique_id = unique_id
         self.name = name
@@ -44,13 +44,11 @@ class GazeMapper(StorageItem):
         self.status = status
         self.accuracy_result = accuracy_result
         self.precision_result = precision_result
-        self.gaze = gaze
-        self.gaze_ts = gaze_ts
+        self.gaze = gaze if gaze is not None else []
+        self.gaze_ts = gaze_ts if gaze_ts is not None else []
 
-    @property
-    def calculate_complete(self):
-        # we cannot just use `self.gaze and self.gaze_ts` because this ands the arrays
-        return len(self.gaze) > 0 and len(self.gaze_ts) > 0
+    def empty(self):
+        return len(self.gaze) == 0 and len(self.gaze_ts) == 0
 
     @staticmethod
     def from_tuple(tuple_):

@@ -111,16 +111,16 @@ class UVC_Source(Base_Source):
                         uid_for_name = devices_by_name[d_name]["uid"]
                         try:
                             self.uvc_capture = uvc.Capture(uid_for_name)
+                            break
                         except uvc.OpenError:
                             logger.info(
-                                "{} matches {} but is already in use or blocked.".format(
-                                    uid_for_name, name
-                                )
+                                f"{uid_for_name} matches {name} but is already in use "
+                                "or blocked."
                             )
                         except uvc.InitError:
                             logger.error("Camera failed to initialize.")
-                        else:
-                            break
+                if self.uvc_capture:
+                    break
 
         # checkframestripes will be initialized accordingly in configure_capture()
         self.enable_stripe_checks = check_stripes
@@ -908,6 +908,9 @@ class UVC_Manager(Base_Manager):
             "eye1": ["ID1"],
             "world": ["ID2", "Logitech"],
         }
+        # Do not show RealSense cameras in selection, since they are not supported
+        # anymore in Pupil Capture since v1.22 and won't work.
+        self.ignore_patterns = ["RealSense"]
 
     def get_devices(self):
         self.devices.update()
@@ -925,6 +928,7 @@ class UVC_Manager(Base_Manager):
                 key=f"cam.{device['uid']}",
             )
             for device in self.devices
+            if not any(pattern in device["name"] for pattern in self.ignore_patterns)
         ]
 
     def activate(self, key):
