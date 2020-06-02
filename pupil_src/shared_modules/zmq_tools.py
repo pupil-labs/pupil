@@ -135,7 +135,6 @@ class Msg_Streamer(ZMQ_Socket):
     """
 
     def __init__(self, ctx, url, hwm=None):
-        self.url = url
         self.socket = zmq.Socket(ctx, zmq.PUB)
         if hwm is not None:
             self.socket.set_hwm(hwm)
