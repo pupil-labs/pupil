@@ -48,7 +48,7 @@ class Bisector(object):
                 )
             )
         elif not len(data):
-            self.data = []
+            self.data = np.asarray([])
             self.data_ts = np.asarray([])
             self.sorted_idc = []
         else:
@@ -120,7 +120,7 @@ class Mutable_Bisector(Bisector):
     def insert(self, timestamp, datum):
         insert_idx = np.searchsorted(self.data_ts, timestamp)
         self.data_ts = np.insert(self.data_ts, insert_idx, timestamp)
-        self.data.insert(insert_idx, datum)
+        self.data = np.insert(self.data, insert_idx, datum)
 
 
 class Affiliator(Bisector):
