@@ -173,21 +173,6 @@ class Msg_Streamer(ZMQ_Socket):
                 self.socket.send(frame, flags=zmq.SNDMORE, copy=True)
             self.socket.send(extra_frames[-1], copy=True)
 
-    def get_hwm(self):
-        """
-        Read the High Water Mark (HWM) value from the socket and return it.
-        """
-        return self.socket.hwm
-
-    def set_hwm(self, hwm):
-        """
-        Disconnect the socket, set a new High Water Mark (HWM) value and
-        reconnect the socket.
-        """
-        self.socket.disconnect(self.url)
-        self.socket.set_hwm(hwm)
-        self.socket.connect(self.url)
-
 
 class Msg_Dispatcher(Msg_Streamer):
     """

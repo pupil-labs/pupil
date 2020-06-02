@@ -377,13 +377,6 @@ def eye(
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
 
         general_settings.append(ui.Button("Reset window size", set_window_size))
-
-        g_pool.hwm = pupil_socket.get_hwm()
-        def update_hwm(new_hwm):
-            g_pool.hwm = new_hwm
-            pupil_socket.set_hwm(new_hwm)
-
-        general_settings.append(ui.Text_Input("hwm", g_pool, setter=update_hwm, label="ZMQ High Water Mark"))
         general_settings.append(ui.Switch("flip", g_pool, label="Flip image display"))
         general_settings.append(
             ui.Selector(
@@ -541,9 +534,6 @@ def eye(
                         )
                     except KeyError as err:
                         logger.error(f"Attempt to load unknown plugin: {err}")
-                elif subject.startswith("eye_stream.set_zmq_option.hwm"):
-                    if notification["eye_id"] == eye_id:
-                        update_hwm(notification['hwm'])
 
                 for plugin in g_pool.plugins:
                     plugin.on_notify(notification)
