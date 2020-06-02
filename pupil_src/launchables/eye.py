@@ -63,7 +63,7 @@ def eye(
     eye_id,
     overwrite_cap_settings=None,
     hide_ui=False,
-    hwm=None,
+    pub_socket_hwm=None,
 ):
     """reads eye video and detects the pupil.
 
