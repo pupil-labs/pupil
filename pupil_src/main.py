@@ -282,7 +282,7 @@ def launcher():
                 topic, n = cmd_sub.recv()
                 if "notify.eye_process.should_start" in topic:
                     eye_id = n["eye_id"]
-                    hwm = n["hwm"] if "hwm" in n else None
+                    pub_socket_hwm = n.get("pub_socket_hwm")
                     Process(
                         target=eye,
                         name="eye{}".format(eye_id),
@@ -297,7 +297,7 @@ def launcher():
                             eye_id,
                             n.get("overwrite_cap_settings"),
                             parsed_args.hide_ui,
-                            hwm,
+                            pub_socket_hwm,
                         ),
                     ).start()
                 elif "notify.player_process.should_start" in topic:

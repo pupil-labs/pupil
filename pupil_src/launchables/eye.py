@@ -715,7 +715,7 @@ def eye_profiled(
     eye_id,
     overwrite_cap_settings=None,
     hide_ui=False,
-    hwm=None,
+    pub_socket_hwm=None,
 ):
     import cProfile
     import subprocess
@@ -735,7 +735,7 @@ def eye_profiled(
             "eye_id": eye_id,
             "overwrite_cap_settings": overwrite_cap_settings,
             "hide_ui": hide_ui,
-            "hwm": hwm,
+            "pub_socket_hwm": pub_socket_hwm,
         },
         locals(),
         "eye{}.pstats".format(eye_id),
