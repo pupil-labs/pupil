@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 class SingleMarkerMode(enum.Enum):
     FULL_SCREEN = "Full screen"
     WINDOW = "Window"
-    MANUAL = "Manual"
+    MANUAL = "Physical Marker"
 
     @staticmethod
     def all_modes() -> T.List["SingleMarkerMode"]:
