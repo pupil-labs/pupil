@@ -213,12 +213,6 @@ class GazerBase(abc.ABC, Plugin):
         # used by pupil_data_relay for gaze mapping
         g_pool.active_gaze_mapping_plugin = self
 
-    def init_ui(self):
-        self.add_menu()
-
-    def deinit_ui(self):
-        self.remove_menu()
-
     def get_init_dict(self):
         return {"params": self.get_params()}
 
