@@ -29,28 +29,23 @@ cd deploy_player
 mv dist/*.$ext ../$release_dir
 cd ..
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    printf "\n##########\nCreating dmg file\n##########\n"
-    ln -s /Applications/ $release_dir/Applications
-    size_in_k=$(du -sk $release_dir | cut -f1)
-    let "size_in_b = $size_in_k * 1024"
-    hdiutil create \
-        -volname 'Install Pupil' \
-        -srcfolder $release_dir \
-        -format UDZO \
-        -size "$size_in_b"b \
-        $release_dir.dmg
-    
-    printf "\n##########\nSigning dmg file\n##########\n"
-    sign = "Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
-    codesign \
-        --force \
-        --verify \
-        --verbose \
-        --s $sign \
-        --deep \
-        $release_dir.dmg
-else
-    printf "\n##########\nzipping release\n##########\n\n"
-    zip -r $release_dir.zip $release_dir
-fi
+printf "\n##########\nCreating dmg file\n##########\n"
+ln -s /Applications/ $release_dir/Applications
+size_in_k=$(du -sk $release_dir | cut -f1)
+let "size_in_b = $size_in_k * 1024"
+hdiutil create \
+    -volname 'Install Pupil' \
+    -srcfolder $release_dir \
+    -format UDZO \
+    -size "$size_in_b"b \
+    $release_dir.dmg
+
+printf "\n##########\nSigning dmg file\n##########\n"
+sign = "Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
+codesign \
+    --force \
+    --verify \
+    --verbose \
+    --s $sign \
+    --deep \
+    $release_dir.dmg
