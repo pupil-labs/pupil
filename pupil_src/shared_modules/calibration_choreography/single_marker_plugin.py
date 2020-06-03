@@ -56,7 +56,9 @@ class SingleMarkerMode(enum.Enum):
 
     @staticmethod
     def all_modes() -> T.List["SingleMarkerMode"]:
-        return list(SingleMarkerMode)
+        modes = list(SingleMarkerMode)
+        modes = sorted(modes, key=lambda m: m.order)
+        return list(modes)
 
     @staticmethod
     def from_label(label: str) -> "SingleMarkerMode":
@@ -66,6 +68,16 @@ class SingleMarkerMode(enum.Enum):
     def label(self) -> str:
         return self.value
 
+    @property
+    def order(self) -> float:
+        if self == SingleMarkerMode.MANUAL:
+            return 1.0
+        elif self == SingleMarkerMode.FULL_SCREEN:
+            return 2.0
+        elif self == SingleMarkerMode.WINDOW:
+            return 3.0
+        else:
+            return float("inf")
 
 class SingleMarkerChoreographyPlugin(
     MonitorSelectionMixin, CalibrationChoreographyPlugin
