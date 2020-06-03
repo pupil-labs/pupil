@@ -1,5 +1,15 @@
 #!/bin/bash
 
+pl_codesign () {
+    sign="Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
+    codesign \
+        --force \
+        --verify \
+        --verbose \
+        -s "$sign" \
+        --deep "$1"
+}
+
 # get most major.minor tag, without trailing count
 current_tag=$(git describe --tags --long)
 release_dir=$(echo "pupil_${current_tag}_macos_x64")
@@ -29,6 +39,11 @@ cd deploy_player
 mv dist/*.$ext ../$release_dir
 cd ..
 
+printf "\n##########\nSigning applications\n##########\n"
+for application in $release_dir/*.$ext; do
+    pl_codesign $application
+done
+
 printf "\n##########\nCreating dmg file\n##########\n"
 ln -s /Applications/ $release_dir/Applications
 size_in_k=$(du -sk $release_dir | cut -f1)
@@ -41,11 +56,4 @@ hdiutil create \
     $release_dir.dmg
 
 printf "\n##########\nSigning dmg file\n##########\n"
-sign = "Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
-codesign \
-    --force \
-    --verify \
-    --verbose \
-    --s $sign \
-    --deep \
-    $release_dir.dmg
+pl_codesign "$release_dir.dmg"
