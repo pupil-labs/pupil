@@ -79,6 +79,7 @@ class SingleMarkerMode(enum.Enum):
         else:
             return float("inf")
 
+
 class SingleMarkerChoreographyPlugin(
     MonitorSelectionMixin, CalibrationChoreographyPlugin
 ):
@@ -148,7 +149,7 @@ class SingleMarkerChoreographyPlugin(
     @marker_mode.setter
     def marker_mode(self, value: SingleMarkerMode):
         self.__marker_mode = value
-        self._ui_slider_marker_scale_update_visibility()
+        self._ui_update_visibility_digital_marker_config()
 
     ### Public - Plugin
 
@@ -190,12 +191,12 @@ class SingleMarkerChoreographyPlugin(
 
         super().init_ui()
         self.menu.append(desc_text)
-        self.menu.append(self.__ui_selector_monitor_name)
         self.menu.append(self.__ui_selector_marker_mode)
+        self.menu.append(self.__ui_selector_monitor_name)
         self.menu.append(self.__ui_slider_marker_scale)
-        self._ui_slider_marker_scale_update_visibility()
+        self._ui_update_visibility_digital_marker_config()
 
-    def _ui_slider_marker_scale_update_visibility(self):
+    def _ui_update_visibility_digital_marker_config(self):
         try:
             if self.__ui_slider_marker_scale is None or self.menu is None:
                 return
@@ -205,9 +206,11 @@ class SingleMarkerChoreographyPlugin(
         is_visible = self.marker_mode != SingleMarkerMode.MANUAL
 
         if is_visible and self.__ui_slider_marker_scale not in self.menu:
+            self.menu.append(self.__ui_selector_monitor_name)
             self.menu.append(self.__ui_slider_marker_scale)
             return
         if not is_visible and self.__ui_slider_marker_scale in self.menu:
+            self.menu.remove(self.__ui_selector_monitor_name)
             self.menu.remove(self.__ui_slider_marker_scale)
             return
 
@@ -230,7 +233,9 @@ class SingleMarkerChoreographyPlugin(
             return
 
         if self.marker_mode == SingleMarkerMode.MANUAL:
-            assert isinstance(state, MarkerWindowStateClosed), "In manual mode, window should be closed at all times."
+            assert isinstance(
+                state, MarkerWindowStateClosed
+            ), "In manual mode, window should be closed at all times."
 
         if isinstance(state, MarkerWindowStateClosed):
             if self.marker_mode != SingleMarkerMode.MANUAL:
