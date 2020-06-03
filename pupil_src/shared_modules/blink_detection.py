@@ -115,7 +115,10 @@ class Blink_Detection(Analysis_Plugin_Base):
     def recent_events(self, events={}):
         events["blinks"] = []
         self._recent_blink = None
-        self.history.extend(events.get("pupil", []))
+
+        pupil = events.get("pupil", [])
+        pupil = filter(lambda p: "2d" in p["topic"], pupil)
+        self.history.extend(pupil)
 
         try:
             ts_oldest = self.history[0]["timestamp"]
