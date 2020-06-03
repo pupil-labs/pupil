@@ -360,6 +360,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.menu.append(self.__ui_selector_choreography)
         self.menu.append(self.__ui_selector_gazer)
         self.menu_icon.order = self.order
+        self.menu_icon.tooltip = "Calibration"
 
         if self.shows_action_buttons:
 
