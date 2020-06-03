@@ -7,7 +7,7 @@ pl_codesign () {
         --verify \
         --verbose \
         -s "$sign" \
-        --deep "$1"
+        --deep "$@"
 }
 
 # get most major.minor tag, without trailing count
@@ -40,9 +40,7 @@ mv dist/*.$ext ../$release_dir
 cd ..
 
 printf "\n##########\nSigning applications\n##########\n"
-for application in $release_dir/*.$ext; do
-    pl_codesign $application
-done
+pl_codesign $release_dir/*.$ext
 
 printf "\n##########\nCreating dmg file\n##########\n"
 ln -s /Applications/ $release_dir/Applications
