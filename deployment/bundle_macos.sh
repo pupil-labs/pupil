@@ -48,7 +48,7 @@ ln -s /Applications/ $release_dir/Applications
 size_in_k=$(du -sk $release_dir | cut -f1)
 let "size_in_b = $size_in_k * 1024"
 hdiutil create \
-    -volname 'Install Pupil' \
+    -volname "Install Pupil $current_tag" \
     -srcfolder $release_dir \
     -format UDZO \
     -size "$size_in_b"b \
