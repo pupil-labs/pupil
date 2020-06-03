@@ -57,7 +57,7 @@ class ScreenMarkerChoreographyPlugin(
     Points are collected at sites - not between
     """
 
-    label = "Screen Marker Calibration Choreography"
+    label = "Screen Marker Calibration"
 
     def __init__(
         self,

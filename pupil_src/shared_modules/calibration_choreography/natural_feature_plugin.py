@@ -37,7 +37,7 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
         Features are selected by a user by clicking on
     """
 
-    label = "Natural Feature Calibration Choreography"
+    label = "Natural Feature Calibration"
 
     _NUMBER_OF_REF_POINTS_TO_CAPTURE = 30
     _RADIUS_OF_CIRCLE_DISPLAYED = 40.0

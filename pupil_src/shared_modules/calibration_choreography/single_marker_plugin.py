@@ -75,7 +75,7 @@ class SingleMarkerChoreographyPlugin(
        at the marker to quickly sample a wide range gaze angles.
     """
 
-    label = "Single Marker Calibration Choreography"
+    label = "Single Marker Calibration"
 
     _STOP_MARKER_FRAMES_NEEDED_TO_STOP = 30
     _FIXED_MARKER_POSITION = (0.5, 0.5)
