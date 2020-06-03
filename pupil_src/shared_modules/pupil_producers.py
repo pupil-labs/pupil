@@ -290,6 +290,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
+        self._detection_paused = False
+
         zmq_ctx = zmq.Context()
         self.data_sub = zmq_tools.Msg_Receiver(
             zmq_ctx,
@@ -311,28 +313,20 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
         self.detection_status = session_meta_data["detection_status"]
 
-        self._pupil_data_store = pm.PupilDataBisector.load_from_file(
+        self._pupil_data_store = pm.PupilDataCollector()
+        pupil_data_from_cache = pm.PupilDataBisector.load_from_file(
             self.data_dir, self.session_data_name
         )
+        self.publish_existing(pupil_data_from_cache)
 
+        # Start offline pupil detection if not complete yet:
         self.eye_video_loc = [None, None]
-
         self.eye_frame_num = [0, 0]
-        self.eye_frame_num[0] = len(self._pupil_data_store[0, "3d"]) #TODO: Figure out the number of frames independent of 3d detection
-        self.eye_frame_num[1] = len(self._pupil_data_store[1, "3d"]) #TODO: Figure out the number of frames independent of 3d detection
-
-        self.pause_switch = None
-        self.detection_paused = False
 
         # start processes
         for eye_id in range(2):
             if self.detection_status[eye_id] != "complete":
                 self.start_eye_process(eye_id)
-
-        # either we did not start them or they failed to start (mono setup etc)
-        # either way we are done and can publish
-        if self.eye_video_loc == [None, None]:
-            self.correlate_publish()
 
     def start_eye_process(self, eye_id):
         potential_locs = [
@@ -370,11 +364,10 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     @property
     def detection_progress(self) -> float:
         total = sum(self.eye_frame_num)
+        # TODO: Figure out the number of frames independent of 3d detection
+        detected = self._pupil_data_store.count_collected(detector_tag="3d")
         if total:
-            return min(
-                #TODO: Figure out the number of frames independent of 3d detection
-                len(self._pupil_data_store[..., "3d"]) / total, 1.0
-            )
+            return min(detected / total, 1.0,)
         else:
             return 0.0
 
@@ -394,7 +387,6 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 assert pm.PupilTopic.match(topic, eye_id=pupil_datum["id"])
                 timestamp = pupil_datum["timestamp"]
                 self._pupil_data_store.append(topic, pupil_datum, timestamp)
-                self._pupil_data_store.__getitem__.cache_clear()
             else:
                 payload = self.data_sub.deserialize_payload(*remaining_frames)
                 if payload["subject"] == "file_source.video_finished":
@@ -405,11 +397,17 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                             self.stop_eye_process(eyeid)
                             break
                     if self.eye_video_loc == [None, None]:
-                        self.correlate_publish()
+                        data = self._pupil_data_store.as_pupil_data_bisector()
+                        self.publish_new(pupil_data_bisector=data)
+
         self.menu_icon.indicator_stop = self.detection_progress
 
-    def correlate_publish(self):
-        self.g_pool.pupil_positions = self._pupil_data_store.copy()
+    def publish_existing(self, pupil_data_bisector):
+        self.g_pool.pupil_positions = pupil_data_bisector
+        self._pupil_changed_announcer.announce_existing()
+
+    def publish_new(self, pupil_data_bisector):
+        self.g_pool.pupil_positions = pupil_data_bisector
         self._pupil_changed_announcer.announce_new()
         logger.debug("pupil positions changed")
         self.save_offline_data()
@@ -429,7 +427,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.save_offline_data()
 
     def save_offline_data(self):
-        self._pupil_data_store.save_to_file(self.data_dir, "offline_pupil")
+        self.g_pool.pupil_positions.save_to_file(self.data_dir, "offline_pupil")
         session_data = {}
         session_data["detection_status"] = self.detection_status
         session_data["version"] = self.session_data_version
@@ -439,8 +437,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def redetect(self):
         self._pupil_data_store.clear()
-        self._pupil_data_store.__getitem__.cache_clear()
-        self.g_pool.pupil_positions = self._pupil_data_store.copy()
+        self.g_pool.pupil_positions = self._pupil_data_store.as_pupil_data_bisector()
         self._pupil_changed_announcer.announce_new()
         self.detection_finished_flag = False
         self.detection_paused = False
