@@ -59,6 +59,10 @@ class ScreenMarkerChoreographyPlugin(
 
     label = "Screen Marker Calibration"
 
+    @classmethod
+    def selection_label(cls) -> str:
+        return "Screen Marker"
+
     def __init__(
         self,
         g_pool,

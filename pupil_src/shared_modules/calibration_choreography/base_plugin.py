@@ -124,6 +124,10 @@ class CalibrationChoreographyPlugin(Plugin):
     is_session_persistent = True
 
     @classmethod
+    def selection_label(cls) -> str:
+        return self.label
+
+    @classmethod
     def supported_gazer_classes(cls):
         gazers = registered_gazer_classes()
         # By default, HMD gazers are not supported by regular choreographies
@@ -539,7 +543,7 @@ class CalibrationChoreographyPlugin(Plugin):
     @classmethod
     def __choreography_selection_getter(cls):
         selection = cls.user_selectable_choreography_classes()
-        labels = [c.label for c in selection]
+        labels = [c.selection_label() for c in selection]
         return selection, labels
 
     def __toggle_mode_button_visibility(self, is_visible: bool, mode: ChoreographyMode):

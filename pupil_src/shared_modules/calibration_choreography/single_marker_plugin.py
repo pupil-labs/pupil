@@ -77,6 +77,10 @@ class SingleMarkerChoreographyPlugin(
 
     label = "Single Marker Calibration"
 
+    @classmethod
+    def selection_label(cls) -> str:
+        return "Single Marker"
+
     _STOP_MARKER_FRAMES_NEEDED_TO_STOP = 30
     _FIXED_MARKER_POSITION = (0.5, 0.5)
 
