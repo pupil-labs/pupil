@@ -32,7 +32,7 @@ cd ..
 if [[ "$OSTYPE" == "darwin"* ]]; then
     printf "\n########## Creating dmg file"
     ln -s /Applications/ $release_dir/Applications
-    dir_size = $(du -m -d 0 $release_dir | cut -f1)
+    dir_size=$(du -m -d 0 $release_dir | cut -f1)
     hdiutil create \
         -volname 'Install Pupil' \
         -srcfolder $release_dir \
