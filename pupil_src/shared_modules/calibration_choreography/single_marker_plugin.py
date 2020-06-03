@@ -141,6 +141,15 @@ class SingleMarkerChoreographyPlugin(
     def cleanup(self):
         super().cleanup()
 
+    @property
+    def marker_mode(self) -> SingleMarkerMode:
+        return self.__marker_mode
+
+    @marker_mode.setter
+    def marker_mode(self, value: SingleMarkerMode):
+        self.__marker_mode = value
+        self._ui_slider_marker_scale_update_visibility()
+
     ### Public - Plugin
 
     def init_ui(self):
@@ -184,6 +193,23 @@ class SingleMarkerChoreographyPlugin(
         self.menu.append(self.__ui_selector_monitor_name)
         self.menu.append(self.__ui_selector_marker_mode)
         self.menu.append(self.__ui_slider_marker_scale)
+        self._ui_slider_marker_scale_update_visibility()
+
+    def _ui_slider_marker_scale_update_visibility(self):
+        try:
+            if self.__ui_slider_marker_scale is None or self.menu is None:
+                return
+        except AttributeError:
+            return
+
+        is_visible = self.marker_mode != SingleMarkerMode.MANUAL
+
+        if is_visible and self.__ui_slider_marker_scale not in self.menu:
+            self.menu.append(self.__ui_slider_marker_scale)
+            return
+        if not is_visible and self.__ui_slider_marker_scale in self.menu:
+            self.menu.remove(self.__ui_slider_marker_scale)
+            return
 
     def deinit_ui(self):
         self.__marker_window.close_window()
