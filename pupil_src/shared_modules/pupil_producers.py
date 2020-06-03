@@ -322,9 +322,6 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         # Start offline pupil detection if not complete yet:
         self.eye_video_loc = [None, None]
         self.eye_frame_num = [0, 0]
-        # TODO: Figure out the number of frames independent of cached 3d detection
-        # self.eye_frame_num[0] = len(pupil_data_from_cache[0, "3d"])
-        # self.eye_frame_num[1] = len(pupil_data_from_cache[1, "3d"])
 
         # start processes
         for eye_id in range(2):
