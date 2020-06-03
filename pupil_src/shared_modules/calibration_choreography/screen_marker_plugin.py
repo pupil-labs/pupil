@@ -63,6 +63,10 @@ class ScreenMarkerChoreographyPlugin(
     def selection_label(cls) -> str:
         return "Screen Marker"
 
+    @classmethod
+    def selection_order(cls) -> float:
+        return 1.0
+
     def __init__(
         self,
         g_pool,

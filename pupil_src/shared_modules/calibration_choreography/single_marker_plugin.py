@@ -81,6 +81,10 @@ class SingleMarkerChoreographyPlugin(
     def selection_label(cls) -> str:
         return "Single Marker"
 
+    @classmethod
+    def selection_order(cls) -> float:
+        return 2.0
+
     _STOP_MARKER_FRAMES_NEEDED_TO_STOP = 30
     _FIXED_MARKER_POSITION = (0.5, 0.5)
 

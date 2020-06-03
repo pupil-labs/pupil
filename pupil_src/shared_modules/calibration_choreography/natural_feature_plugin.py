@@ -43,6 +43,10 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
     def selection_label(cls) -> str:
         return "Natural Feature"
 
+    @classmethod
+    def selection_order(cls) -> float:
+        return 3.0
+
     _NUMBER_OF_REF_POINTS_TO_CAPTURE = 30
     _RADIUS_OF_CIRCLE_DISPLAYED = 40.0
 
