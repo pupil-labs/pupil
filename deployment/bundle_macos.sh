@@ -3,7 +3,7 @@
 pl_codesign () {
     sign="Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
     codesign \
-        --force \
+        --continue \
         --verify \
         --verbose \
         -s "$sign" \
