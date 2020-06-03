@@ -30,7 +30,7 @@ mv dist/*.$ext ../$release_dir
 cd ..
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    printf "\n########## Creating dmg file"
+    printf "\n##########\nCreating dmg file\n##########\n"
     ln -s /Applications/ $release_dir/Applications
     dir_size=$(du -m -d 0 $release_dir | cut -f1)
     hdiutil create \
@@ -40,7 +40,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
         -megabytes $dir_size \
         $release_dir.dmg
     
-    printf "\n########## Signing dmg file"
+    printf "\n##########\nSigning dmg file\n##########\n"
     sign = "Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
     codesign \
         --force \
