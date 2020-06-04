@@ -98,8 +98,8 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
                 setter=open_plugin,
                 getter=lambda: self.__class__,
                 selection=pupil_producer_plugins,
-                label="Pupil Producers",
                 labels=pupil_producer_labels,
+                label="Data Source",
             )
         )
 
