@@ -32,6 +32,7 @@ class GazeProducerBase(Observable, Producer_Plugin_Base):
     def init_ui(self):
         self.add_menu()
         self.menu_icon.order = 0.3
+        self.menu_icon.tooltip = "Gaze Data"
 
         self.menu.append(self._create_plugin_selector())
 

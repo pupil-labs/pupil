@@ -86,6 +86,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
 
         self.menu.label = self.plugin_menu_label()
         self.menu_icon.order = 0.29
+        self.menu_icon.tooltip = "Pupil Data"
 
         def open_plugin(p):
             self.notify_all({"subject": "start_plugin", "name": p.__name__})
