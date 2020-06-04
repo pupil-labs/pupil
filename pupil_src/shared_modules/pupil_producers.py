@@ -56,6 +56,10 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
     def pupil_data_source_selection_label(cls) -> str:
         return cls.plugin_menu_label()
 
+    @classmethod
+    def pupil_data_source_selection_order(cls) -> float:
+        return float("inf")
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self._pupil_changed_announcer = data_changed.Announcer(
@@ -77,6 +81,7 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             if issubclass(p, Pupil_Producer_Base)
         ]
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_label())
+        pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_order())
         pupil_producer_labels = [p.pupil_data_source_selection_label() for p in pupil_producer_plugins]
 
         self.menu.label = self.plugin_menu_label()
@@ -282,6 +287,10 @@ class Pupil_From_Recording(Pupil_Producer_Base):
     def plugin_menu_label(cls) -> str:
         return "Pupil From Recording"
 
+    @classmethod
+    def pupil_data_source_selection_order(cls) -> float:
+        return 1.0
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
@@ -306,6 +315,10 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     @classmethod
     def plugin_menu_label(cls) -> str:
         return "Post-Hoc Pupil Detection"
+
+    @classmethod
+    def pupil_data_source_selection_order(cls) -> float:
+        return 2.0
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
