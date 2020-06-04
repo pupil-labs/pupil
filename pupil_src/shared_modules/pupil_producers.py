@@ -302,7 +302,7 @@ class Pupil_From_Recording(Pupil_Producer_Base):
     def init_ui(self):
         super().init_ui()
         self.menu.append(
-            ui.Info_Text("Currently, pupil positions are loaded from the recording.")
+            ui.Info_Text("Using pupil data recorded by Pupil Capture.")
         )
 
 
@@ -491,7 +491,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     def init_ui(self):
         super().init_ui()
         self.menu.append(
-            ui.Info_Text("Detects pupil positions from the recording's eye videos.")
+            ui.Info_Text("Detect pupil positions from eye videos.")
         )
         self.menu.append(ui.Switch("detection_paused", self, label="Pause detection"))
         self.menu.append(ui.Button("Redetect", self.redetect))
