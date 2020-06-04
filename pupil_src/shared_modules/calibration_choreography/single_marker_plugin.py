@@ -56,9 +56,7 @@ class SingleMarkerMode(enum.Enum):
 
     @staticmethod
     def all_modes() -> T.List["SingleMarkerMode"]:
-        modes = list(SingleMarkerMode)
-        modes = sorted(modes, key=lambda m: m.order)
-        return list(modes)
+        return sorted(SingleMarkerMode, key=lambda m: m.order)
 
     @staticmethod
     def from_label(label: str) -> "SingleMarkerMode":
