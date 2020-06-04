@@ -151,11 +151,10 @@ class SingleMarkerChoreographyPlugin(
 
     ### Public - Plugin
 
-    def init_ui(self):
+    def _gazer_description_text(self) -> str:
+        return "Calibrate using a single marker. Gaze at the center of the marker and move your head (e.g. in a slow spiral movement). This calibration method enables you to quickly sample a wide range of gaze angles and cover a large range of your FOV."
 
-        desc_text = ui.Info_Text(
-            "Calibrate using a single marker. Gaze at the center of the marker and move your head (e.g. in a slow spiral movement). This calibration method enables you to quickly sample a wide range of gaze angles and cover a large range of your FOV."
-        )
+    def _init_custom_menu_ui_elements(self) -> list:
 
         self.__ui_selector_marker_mode = ui.Selector(
             "marker_mode",
@@ -187,30 +186,43 @@ class SingleMarkerChoreographyPlugin(
             step=0.1,
         )
 
+        return [
+            self.__ui_selector_marker_mode,
+            self.__ui_selector_monitor_name,
+            self.__ui_slider_marker_scale,
+        ]
+
+    def init_ui(self):
         super().init_ui()
-        self.menu.append(desc_text)
-        self.menu.append(self.__ui_selector_marker_mode)
-        self.menu.append(self.__ui_selector_monitor_name)
-        self.menu.append(self.__ui_slider_marker_scale)
+        # Save UI elements that are part of the digital marker config
+        self.__ui_digital_marker_config_elements = [
+            self.__ui_selector_monitor_name,
+            self.__ui_slider_marker_scale,
+        ]
+        # Save start index of the UI elements of digital marker config
+        self.__ui_digital_marker_config_start_index = min(
+            self.menu.elements.index(elem) for elem in self.__ui_digital_marker_config_elements
+        )
         self._ui_update_visibility_digital_marker_config()
 
     def _ui_update_visibility_digital_marker_config(self):
         try:
-            if self.__ui_slider_marker_scale is None or self.menu is None:
-                return
+            ui_menu = self.menu
+            ui_elements = self.__ui_digital_marker_config_elements
+            start_index = self.__ui_digital_marker_config_start_index
         except AttributeError:
             return
 
         is_visible = self.marker_mode != SingleMarkerMode.MANUAL
 
-        if is_visible and self.__ui_slider_marker_scale not in self.menu:
-            self.menu.append(self.__ui_selector_monitor_name)
-            self.menu.append(self.__ui_slider_marker_scale)
-            return
-        if not is_visible and self.__ui_slider_marker_scale in self.menu:
-            self.menu.remove(self.__ui_selector_monitor_name)
-            self.menu.remove(self.__ui_slider_marker_scale)
-            return
+        for i, ui_element in enumerate(ui_elements):
+            index = start_index + i
+            if is_visible and ui_element not in ui_menu:
+                ui_menu.insert(index, ui_element)
+                continue
+            if not is_visible and ui_element in ui_menu:
+                ui_menu.remove(ui_element)
+                continue
 
     def deinit_ui(self):
         self.__marker_window.close_window()

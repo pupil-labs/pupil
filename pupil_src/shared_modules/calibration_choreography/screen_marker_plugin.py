@@ -104,11 +104,10 @@ class ScreenMarkerChoreographyPlugin(
 
     ### Public - Plugin
 
-    def init_ui(self):
+    def _gazer_description_text(self) -> str:
+        return "Calibrate gaze parameters using a screen based animation."
 
-        desc_text = ui.Info_Text(
-            "Calibrate gaze parameters using a screen based animation."
-        )
+    def _init_custom_menu_ui_elements(self) -> list:
 
         self.__ui_selector_monitor_name = ui.Selector(
             "selected_monitor_name",
@@ -135,12 +134,12 @@ class ScreenMarkerChoreographyPlugin(
             "sample_duration", self, label="Sample duration", min=10, max=100, step=1
         )
 
-        super().init_ui()
-        self.menu.append(desc_text)
-        self.menu.append(self.__ui_selector_monitor_name)
-        self.menu.append(self.__ui_switch_is_fullscreen)
-        self.menu.append(self.__ui_slider_marker_scale)
-        self.menu.append(self.__ui_slider_sample_duration)
+        return [
+            self.__ui_selector_monitor_name,
+            self.__ui_switch_is_fullscreen,
+            self.__ui_slider_marker_scale,
+            self.__ui_slider_sample_duration,
+        ]
 
     def deinit_ui(self):
         self.__marker_window.close_window()

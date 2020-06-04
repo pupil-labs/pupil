@@ -337,7 +337,17 @@ class CalibrationChoreographyPlugin(Plugin):
         # even choreographies that subclass concrete choreography implementations.
         return CalibrationChoreographyPlugin
 
+    def _gazer_description_text(self) -> str:
+        return ""
+
+    def _init_custom_menu_ui_elements(self) -> list:
+        return []
+
     def init_ui(self):
+
+        desc_text = ui.Info_Text(
+            self._gazer_description_text()
+        )
 
         self.__ui_selector_choreography = ui.Selector(
             "selected_choreography_class",
@@ -354,13 +364,25 @@ class CalibrationChoreographyPlugin(Plugin):
             selection=self.user_selectable_gazer_classes(),
         )
 
+        custom_ui_elements = self._init_custom_menu_ui_elements()
+
         super().init_ui()
         self.add_menu()
         self.menu.label = self.label
-        self.menu.append(self.__ui_selector_choreography)
-        self.menu.append(self.__ui_selector_gazer)
         self.menu_icon.order = self.order
         self.menu_icon.tooltip = "Calibration"
+
+        # Construct menu UI
+        self.menu.append(self.__ui_selector_choreography)
+        self.menu.append(desc_text)
+        if len(custom_ui_elements) > 0:
+            self.menu.append(ui.Separator())
+            for ui_elem in custom_ui_elements:
+                self.menu.append(ui_elem)
+            self.menu.append(ui.Separator())
+        else:
+            self.menu.append(ui.Separator())
+        self.menu.append(self.__ui_selector_gazer)
 
         if self.shows_action_buttons:
 
