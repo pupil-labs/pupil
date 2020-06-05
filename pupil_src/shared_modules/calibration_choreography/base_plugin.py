@@ -354,9 +354,7 @@ class CalibrationChoreographyPlugin(Plugin):
 
     def init_ui(self):
 
-        desc_text = ui.Info_Text(
-            self._choreography_description_text()
-        )
+        desc_text = ui.Info_Text(self._choreography_description_text())
 
         self.__ui_selector_choreography = ui.Selector(
             "selected_choreography_class",
@@ -376,7 +374,9 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_gazer_description_text = ui.Info_Text("")
         self._update_gazer_description_ui_text()
 
-        best_practices_text = ui.Info_Text("Read more about best practices at docs.pupil-labs.com")
+        best_practices_text = ui.Info_Text(
+            "Read more about best practices at docs.pupil-labs.com"
+        )
 
         custom_ui_elements = self._init_custom_menu_ui_elements()
 

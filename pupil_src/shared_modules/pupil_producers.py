@@ -82,7 +82,9 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         ]
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_label())
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_order())
-        pupil_producer_labels = [p.pupil_data_source_selection_label() for p in pupil_producer_plugins]
+        pupil_producer_labels = [
+            p.pupil_data_source_selection_label() for p in pupil_producer_plugins
+        ]
 
         self.menu.label = self.plugin_menu_label()
         self.menu_icon.order = 0.29
@@ -283,7 +285,6 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
 
 
 class Pupil_From_Recording(Pupil_Producer_Base):
-
     @classmethod
     def plugin_menu_label(cls) -> str:
         return "Pupil Data From Recording"
@@ -302,9 +303,7 @@ class Pupil_From_Recording(Pupil_Producer_Base):
 
     def init_ui(self):
         super().init_ui()
-        self.menu.append(
-            ui.Info_Text("Using pupil data recorded by Pupil Capture.")
-        )
+        self.menu.append(ui.Info_Text("Using pupil data recorded by Pupil Capture."))
 
 
 class Offline_Pupil_Detection(Pupil_Producer_Base):
@@ -351,8 +350,12 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.eye_video_loc = [None, None]
 
         self.eye_frame_num = [0, 0]
-        self.eye_frame_num[0] = len(self._pupil_data_store[0, "3d"]) #TODO: Figure out the number of frames independent of 3d detection
-        self.eye_frame_num[1] = len(self._pupil_data_store[1, "3d"]) #TODO: Figure out the number of frames independent of 3d detection
+        self.eye_frame_num[0] = len(
+            self._pupil_data_store[0, "3d"]
+        )  # TODO: Figure out the number of frames independent of 3d detection
+        self.eye_frame_num[1] = len(
+            self._pupil_data_store[1, "3d"]
+        )  # TODO: Figure out the number of frames independent of 3d detection
 
         self.pause_switch = None
         self.detection_paused = False
@@ -405,8 +408,9 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         total = sum(self.eye_frame_num)
         if total:
             return min(
-                #TODO: Figure out the number of frames independent of 3d detection
-                len(self._pupil_data_store[..., "3d"]) / total, 1.0
+                # TODO: Figure out the number of frames independent of 3d detection
+                len(self._pupil_data_store[..., "3d"]) / total,
+                1.0,
             )
         else:
             return 0.0
@@ -491,9 +495,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def init_ui(self):
         super().init_ui()
-        self.menu.append(
-            ui.Info_Text("Detect pupil positions from eye videos.")
-        )
+        self.menu.append(ui.Info_Text("Detect pupil positions from eye videos."))
         self.menu.append(ui.Switch("detection_paused", self, label="Pause detection"))
         self.menu.append(ui.Button("Redetect", self.redetect))
         self.menu.append(

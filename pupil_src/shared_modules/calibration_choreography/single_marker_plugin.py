@@ -202,7 +202,8 @@ class SingleMarkerChoreographyPlugin(
         ]
         # Save start index of the UI elements of digital marker config
         self.__ui_digital_marker_config_start_index = min(
-            self.menu.elements.index(elem) for elem in self.__ui_digital_marker_config_elements
+            self.menu.elements.index(elem)
+            for elem in self.__ui_digital_marker_config_elements
         )
         self._ui_update_visibility_digital_marker_config()
 

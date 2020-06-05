@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 class CalibrationStorageUpdater(CalibrationStorage):
-
     @classmethod
     def update_offline_calibrations_to_latest_version(cls, rec_dir):
         calib_dir = cls._calibration_directory_from_recording(rec_dir)
@@ -49,16 +48,22 @@ class CalibrationStorageUpdater(CalibrationStorage):
             elif data is not None:
                 try:
                     if version == CalibrationV1.version == 1:
-                        cls.__update_and_save_calibration_v1_as_latest_verson(rec_dir, data)
+                        cls.__update_and_save_calibration_v1_as_latest_verson(
+                            rec_dir, data
+                        )
                         continue  # Success
                 except Exception as err:
                     logger.debug(str(err))
 
             # Failed to update
-            logger.warning(f'Unable to update calibration "{calib_path.name}" from version {version} to the current version {Calibration.version}')
+            logger.warning(
+                f'Unable to update calibration "{calib_path.name}" from version {version} to the current version {Calibration.version}'
+            )
 
     @classmethod
     def __update_and_save_calibration_v1_as_latest_verson(cls, rec_dir, data):
         legacy_calibration = CalibrationV1.from_tuple(data)
         updated_calibration = legacy_calibration.updated()
-        cls._save_calibration_to_file(rec_dir, updated_calibration, overwrite_if_exists=False)
+        cls._save_calibration_to_file(
+            rec_dir, updated_calibration, overwrite_if_exists=False
+        )

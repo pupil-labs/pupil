@@ -252,7 +252,9 @@ class CalibrationStorage(Storage, Observable):
         return calib_dir.joinpath(file_name)
 
     @classmethod
-    def _save_calibration_to_file(cls, rec_dir, calibration: model.Calibration, overwrite_if_exists=True):
+    def _save_calibration_to_file(
+        cls, rec_dir, calibration: model.Calibration, overwrite_if_exists=True
+    ):
         # Sanity check
         assert cls.__calibration_model_class() == calibration.__class__
 
@@ -267,9 +269,13 @@ class CalibrationStorage(Storage, Observable):
 
         if os.path.isfile(path):
             if not overwrite_if_exists:
-                logger.debug(f'Calibration file already exists, won\'t overwrite. "{path}"')
+                logger.debug(
+                    f'Calibration file already exists, won\'t overwrite. "{path}"'
+                )
                 return
             else:
-                logger.debug(f'Calibration file already exists, overwriting new version. "{path}"')
+                logger.debug(
+                    f'Calibration file already exists, overwriting new version. "{path}"'
+                )
 
         fm.save_object(dict_representation, path)

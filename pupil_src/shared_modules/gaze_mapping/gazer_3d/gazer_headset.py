@@ -168,7 +168,9 @@ class Model3D_Monocular(Model3D):
                 gaze_point[np.newaxis], self.rotation_vector, self.translation_vector
             )
             image_point = image_point.reshape(-1, 2)
-            image_point = normalize(image_point[0], self.intrinsics.resolution, flip_y=True)
+            image_point = normalize(
+                image_point[0], self.intrinsics.resolution, flip_y=True
+            )
             image_point = _clamp_norm_point(image_point)
             g["norm_pos"] = image_point
 
