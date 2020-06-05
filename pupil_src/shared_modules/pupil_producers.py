@@ -286,7 +286,7 @@ class Pupil_From_Recording(Pupil_Producer_Base):
 
     @classmethod
     def plugin_menu_label(cls) -> str:
-        return "Pupil From Recording"
+        return "Pupil Data From Recording"
 
     @classmethod
     def pupil_data_source_selection_order(cls) -> float:
