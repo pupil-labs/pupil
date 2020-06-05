@@ -317,6 +317,10 @@ class Model3D_Binocular(Model3D):
 class Gazer3D(GazerBase):
     label = "3D (bundle adjustment)"
 
+    @classmethod
+    def _gazer_description_text(cls) -> str:
+        return "3D gaze mapping: default method; able to compensate for small movements of the headset (slippage); uses 3d eye model as input."
+
     def _init_left_model(self) -> Model:
         return Model3D_Monocular(intrinsics=self.g_pool.capture.intrinsics)
 
