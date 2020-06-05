@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-
+import abc
 from pyglui import ui
 
 import data_changed
@@ -23,6 +23,19 @@ class GazeProducerBase(Observable, Producer_Plugin_Base):
     icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"
 
+    @classmethod
+    @abc.abstractmethod
+    def plugin_menu_label(cls) -> str:
+        raise NotImplementedError()
+
+    @classmethod
+    def gaze_data_source_selection_label(cls) -> str:
+        return cls.plugin_menu_label()
+
+    @classmethod
+    def gaze_data_source_selection_order(cls) -> float:
+        return float("inf")
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self._gaze_changed_announcer = data_changed.Announcer(
@@ -31,6 +44,7 @@ class GazeProducerBase(Observable, Producer_Plugin_Base):
 
     def init_ui(self):
         self.add_menu()
+        self.menu.label = self.plugin_menu_label()
         self.menu_icon.order = 0.3
         self.menu_icon.tooltip = "Gaze Data"
 
@@ -42,7 +56,11 @@ class GazeProducerBase(Observable, Producer_Plugin_Base):
             for p in self.g_pool.plugin_by_name.values()
             if issubclass(p, GazeProducerBase)
         ]
-        gaze_producer_plugins.sort(key=lambda p: p.__name__)
+        gaze_producer_plugins.sort(key=lambda p: p.gaze_data_source_selection_label())
+        gaze_producer_plugins.sort(key=lambda p: p.gaze_data_source_selection_order())
+        gaze_producer_labels = [
+            p.gaze_data_source_selection_label() for p in gaze_producer_plugins
+        ]
 
         def open_plugin(p):
             self.notify_all({"subject": "start_plugin", "name": p.__name__})
@@ -53,8 +71,8 @@ class GazeProducerBase(Observable, Producer_Plugin_Base):
             setter=open_plugin,
             getter=lambda: self.__class__,
             selection=gaze_producer_plugins,
-            labels=[p.pretty_class_name for p in gaze_producer_plugins],
-            label="Gaze Producers",
+            labels=gaze_producer_labels,
+            label="Data Source",
         )
 
     def deinit_ui(self):

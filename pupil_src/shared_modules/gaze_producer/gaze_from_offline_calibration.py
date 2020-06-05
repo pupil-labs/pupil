@@ -21,9 +21,16 @@ from tasklib.manager import PluginTaskManager
 # IMPORTANT: GazeProducerBase needs to be THE LAST in the list of bases, otherwise
 # uniqueness by base class does not work
 class GazeFromOfflineCalibration(GazeProducerBase):
-    pretty_class_name = "Gaze From Offline Calibration"
     icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"
+
+    @classmethod
+    def plugin_menu_label(cls) -> str:
+        return "Post-Hoc Gaze Calibration"
+
+    @classmethod
+    def gaze_data_source_selection_order(cls) -> float:
+        return 2.0
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -169,7 +176,6 @@ class GazeFromOfflineCalibration(GazeProducerBase):
 
     def init_ui(self):
         super().init_ui()
-        self.menu.label = "Gaze From Offline Calibration"
         self._on_top_menu.render(self.menu)
         self._reference_location_menu.render()
         self.menu.append(self._reference_location_menu.menu)
