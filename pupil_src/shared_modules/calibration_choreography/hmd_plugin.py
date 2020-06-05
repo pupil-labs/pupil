@@ -61,7 +61,8 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
         type(self).is_user_selectable = False
         super().cleanup()
 
-    def _choreography_description_text(self) -> str:
+    @classmethod
+    def _choreography_description_text(cls) -> str:
         return "Calibrate gaze parameters to map onto an HMD."
 
     def recent_events(self, events):

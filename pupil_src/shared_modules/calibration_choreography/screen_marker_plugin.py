@@ -104,7 +104,8 @@ class ScreenMarkerChoreographyPlugin(
 
     ### Public - Plugin
 
-    def _choreography_description_text(self) -> str:
+    @classmethod
+    def _choreography_description_text(cls) -> str:
         return "Calibrate gaze parameters using a screen based animation."
 
     def _init_custom_menu_ui_elements(self) -> list:

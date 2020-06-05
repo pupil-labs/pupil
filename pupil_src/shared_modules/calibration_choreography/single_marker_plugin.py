@@ -151,7 +151,8 @@ class SingleMarkerChoreographyPlugin(
 
     ### Public - Plugin
 
-    def _choreography_description_text(self) -> str:
+    @classmethod
+    def _choreography_description_text(cls) -> str:
         return "Calibrate using a single marker. Gaze at the center of the marker and move your head (e.g. in a slow spiral movement). This calibration method enables you to quickly sample a wide range of gaze angles and cover a large range of your FOV."
 
     def _init_custom_menu_ui_elements(self) -> list:

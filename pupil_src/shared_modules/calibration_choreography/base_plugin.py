@@ -337,7 +337,8 @@ class CalibrationChoreographyPlugin(Plugin):
         # even choreographies that subclass concrete choreography implementations.
         return CalibrationChoreographyPlugin
 
-    def _choreography_description_text(self) -> str:
+    @classmethod
+    def _choreography_description_text(cls) -> str:
         return ""
 
     def _init_custom_menu_ui_elements(self) -> list:
