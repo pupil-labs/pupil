@@ -337,7 +337,7 @@ class CalibrationChoreographyPlugin(Plugin):
         # even choreographies that subclass concrete choreography implementations.
         return CalibrationChoreographyPlugin
 
-    def _gazer_description_text(self) -> str:
+    def _choreography_description_text(self) -> str:
         return ""
 
     def _init_custom_menu_ui_elements(self) -> list:
@@ -346,7 +346,7 @@ class CalibrationChoreographyPlugin(Plugin):
     def init_ui(self):
 
         desc_text = ui.Info_Text(
-            self._gazer_description_text()
+            self._choreography_description_text()
         )
 
         self.__ui_selector_choreography = ui.Selector(

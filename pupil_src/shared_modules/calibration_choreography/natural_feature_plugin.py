@@ -61,7 +61,7 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
 
     ### Public - Plugin
 
-    def _gazer_description_text(self) -> str:
+    def _choreography_description_text(self) -> str:
         return "Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window."
 
     def recent_events(self, events):
