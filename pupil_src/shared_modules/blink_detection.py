@@ -57,10 +57,8 @@ class Blink_Detection(Analysis_Plugin_Base):
         history_length=0.2,
         onset_confidence_threshold=0.5,
         offset_confidence_threshold=0.5,
-        visualize=True,
     ):
         super().__init__(g_pool)
-        self.visualize = visualize
         self.history_length = history_length  # unit: seconds
         self.onset_confidence_threshold = onset_confidence_threshold
         self.offset_confidence_threshold = offset_confidence_threshold
@@ -74,10 +72,10 @@ class Blink_Detection(Analysis_Plugin_Base):
         self.menu.label = "Blink Detector"
         self.menu.append(
             ui.Info_Text(
-                "This plugin detects blink onsets and offsets based on confidence drops."
+                "This plugin detects blink onsets and "
+                "offsets based on confidence drops."
             )
         )
-        self.menu.append(ui.Switch("visualize", self, label="Visualize"))
         self.menu.append(
             ui.Slider(
                 "history_length",
@@ -115,7 +113,10 @@ class Blink_Detection(Analysis_Plugin_Base):
     def recent_events(self, events={}):
         events["blinks"] = []
         self._recent_blink = None
-        self.history.extend(events.get("pupil", []))
+
+        pupil = events.get("pupil", [])
+        pupil = filter(lambda p: "2d" in p["topic"], pupil)
+        self.history.extend(pupil)
 
         try:
             ts_oldest = self.history[0]["timestamp"]
@@ -178,20 +179,9 @@ class Blink_Detection(Analysis_Plugin_Base):
         logger.debug("Resetting history")
         self.history.clear()
 
-    def gl_display(self):
-        if self._recent_blink and self.visualize:
-            if self._recent_blink["type"] == "onset":
-                cygl_utils.push_ortho(1, 1)
-                cygl_utils.draw_gl_texture(
-                    np.zeros((1, 1, 3), dtype=np.uint8),
-                    alpha=self._recent_blink["confidence"] * 0.5,
-                )
-                cygl_utils.pop_ortho()
-
     def get_init_dict(self):
         return {
             "history_length": self.history_length,
-            "visualize": self.visualize,
             "onset_confidence_threshold": self.onset_confidence_threshold,
             "offset_confidence_threshold": self.offset_confidence_threshold,
         }
@@ -204,7 +194,6 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
         history_length=0.2,
         onset_confidence_threshold=0.5,
         offset_confidence_threshold=0.5,
-        visualize=True,
     ):
         self._history_length = None
         self._onset_confidence_threshold = None
@@ -215,7 +204,6 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
             history_length,
             onset_confidence_threshold,
             offset_confidence_threshold,
-            visualize,
         )
         self.filter_response = []
         self.response_classification = []

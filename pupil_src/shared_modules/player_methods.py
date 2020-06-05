@@ -48,8 +48,8 @@ class Bisector(object):
                 )
             )
         elif not len(data):
-            self.data = []
-            self.data_ts = np.asarray([])
+            self.data = np.array([])
+            self.data_ts = np.array([])
             self.sorted_idc = []
         else:
             self.data_ts = np.asarray(data_ts)
@@ -120,7 +120,7 @@ class Mutable_Bisector(Bisector):
     def insert(self, timestamp, datum):
         insert_idx = np.searchsorted(self.data_ts, timestamp)
         self.data_ts = np.insert(self.data_ts, insert_idx, timestamp)
-        self.data.insert(insert_idx, datum)
+        self.data = np.insert(self.data, insert_idx, datum)
 
 
 class Affiliator(Bisector):
@@ -230,16 +230,22 @@ class PupilTopic:
 
 
 class PupilDataBisector:
-    def __init__(self, data: fm.PLData = fm.PLData([], [], [])):
-        self._bisectors = collections.defaultdict(pm.Mutable_Bisector)
-        self._init_from_data(data)
+    def __init__(self, data: T.Optional[fm.PLData] = None, bisectors=None):
+        if bisectors is not None:
+            self._bisectors = bisectors
+        else:
+            if data is None:
+                data = fm.PLData([], [], [])
+            self._bisectors = self._bisectors_from_data(data)
 
-    def _init_from_data(self, data: fm.PLData):
+    def _bisectors_from_data(self, data: fm.PLData):
+        _bisectors = {}
         for pupil_topic, data in self._group_data_by_pupil_topic(data).items():
-            assert pupil_topic not in self._bisectors
+            assert pupil_topic not in _bisectors
             assert len(data.topics) == len(data.data) == len(data.timestamps)
-            bisector = pm.Mutable_Bisector(data.data, data.timestamps)
-            self._bisectors[pupil_topic] = bisector
+            bisector = pm.Bisector(data.data, data.timestamps)
+            _bisectors[pupil_topic] = bisector
+        return _bisectors
 
     def init_dict_for_window(self, ts_window):
         init_dict = collections.defaultdict(list)
@@ -283,19 +289,6 @@ class PupilDataBisector:
                 continue
         raise ValueError
 
-    def append(self, topic, datum, timestamp):
-        pupil_topic = PupilTopic.create(topic, datum)
-        self._bisectors[pupil_topic].insert(timestamp, datum)
-
-    def clear(self):
-        self._bisectors.clear()
-
-    def copy(self):
-        copy = type(self)()
-        for topic, bisector in self._bisectors.items():
-            copy._bisectors[topic] = bisector.copy()
-        return copy
-
     def __bool__(self):
         return any(self._bisectors.values())
 
@@ -328,6 +321,35 @@ class PupilDataBisector:
             data_by_topic[pupil_topic].timestamps.append(ts)
             data_by_topic[pupil_topic].topics.append(raw_topic)
         return data_by_topic
+
+
+class PupilDataCollector:
+    def __init__(self):
+        self._collection = collections.defaultdict(dict)
+
+    def append(self, topic, datum, timestamp):
+        pupil_topic = PupilTopic.create(topic, datum)
+        self._collection[pupil_topic][timestamp] = datum
+
+    def clear(self):
+        self._collection.clear()
+
+    def as_pupil_data_bisector(self) -> PupilDataBisector:
+        bisectors = {}
+        for topic, timestamps_data in self._collection.items():
+            timestamps = list(timestamps_data.keys())
+            data = list(timestamps_data.values())
+            bisector = Bisector(data, timestamps)
+            bisectors[topic] = bisector
+        pupil_data_bisector = PupilDataBisector(bisectors=bisectors)
+        return pupil_data_bisector
+
+    def count_collected(self, eye_id=None, detector_tag=None):
+        num_collected = 0
+        for topic, values in self._collection.items():
+            if PupilTopic.match(topic, eye_id, detector_tag):
+                num_collected += len(values)
+        return num_collected
 
 
 def find_closest(target, source):
