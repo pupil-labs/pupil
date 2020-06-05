@@ -89,6 +89,10 @@ class GazerBase(abc.ABC, Plugin):
     label: str = ...  # Subclasses should set this to a meaningful name
     uniqueness = "by_base_class"
 
+    @classmethod
+    def _gazer_description_text(cls) -> str:
+        return ""
+
     @abc.abstractmethod
     def _init_left_model(self) -> Model:
         pass

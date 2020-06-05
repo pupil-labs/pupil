@@ -264,6 +264,7 @@ class CalibrationChoreographyPlugin(Plugin):
                 )
             cls = default_cls
         self.__selected_gazer_class = cls
+        self._update_gazer_description_ui_text()
 
     @property
     def status_text(self) -> str:
@@ -344,6 +345,13 @@ class CalibrationChoreographyPlugin(Plugin):
     def _init_custom_menu_ui_elements(self) -> list:
         return []
 
+    def _update_gazer_description_ui_text(self):
+        try:
+            ui_text = self.__ui_gazer_description_text
+        except AttributeError:
+            return
+        ui_text.text = self.selected_gazer_class._gazer_description_text()
+
     def init_ui(self):
 
         desc_text = ui.Info_Text(
@@ -365,6 +373,11 @@ class CalibrationChoreographyPlugin(Plugin):
             selection=self.user_selectable_gazer_classes(),
         )
 
+        self.__ui_gazer_description_text = ui.Info_Text("")
+        self._update_gazer_description_ui_text()
+
+        best_practices_text = ui.Info_Text("Read more about best practices at docs.pupil-labs.com")
+
         custom_ui_elements = self._init_custom_menu_ui_elements()
 
         super().init_ui()
@@ -384,6 +397,8 @@ class CalibrationChoreographyPlugin(Plugin):
         else:
             self.menu.append(ui.Separator())
         self.menu.append(self.__ui_selector_gazer)
+        self.menu.append(self.__ui_gazer_description_text)
+        self.menu.append(best_practices_text)
 
         if self.shows_action_buttons:
 
