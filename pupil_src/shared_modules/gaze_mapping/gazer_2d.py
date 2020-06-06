@@ -162,6 +162,10 @@ class Model2D_Monocular(Model2D):
 class Gazer2D(GazerBase):
     label = "2D (polynomial)"
 
+    @classmethod
+    def _gazer_description_text(cls) -> str:
+        return "2D gaze mapping: use only in controlled conditions; sensitive to movement of the headset (slippage); uses 2d pupil detection result as input."
+
     def _init_left_model(self) -> Model:
         return Model2D_Monocular(screen_size=self.g_pool.capture.frame_size)
 

@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-
+import abc
 import logging
 import os
 import typing as T
@@ -47,6 +47,19 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
     icon_chr = chr(0xEC12)
     icon_font = "pupil_icons"
 
+    @classmethod
+    @abc.abstractmethod
+    def plugin_menu_label(cls) -> str:
+        raise NotImplementedError()
+
+    @classmethod
+    def pupil_data_source_selection_label(cls) -> str:
+        return cls.plugin_menu_label()
+
+    @classmethod
+    def pupil_data_source_selection_order(cls) -> float:
+        return float("inf")
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self._pupil_changed_announcer = data_changed.Announcer(
@@ -67,9 +80,15 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             for p in self.g_pool.plugin_by_name.values()
             if issubclass(p, Pupil_Producer_Base)
         ]
-        pupil_producer_plugins.sort(key=lambda p: p.__name__)
+        pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_label())
+        pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_order())
+        pupil_producer_labels = [
+            p.pupil_data_source_selection_label() for p in pupil_producer_plugins
+        ]
 
+        self.menu.label = self.plugin_menu_label()
         self.menu_icon.order = 0.29
+        self.menu_icon.tooltip = "Pupil Data"
 
         def open_plugin(p):
             self.notify_all({"subject": "start_plugin", "name": p.__name__})
@@ -81,8 +100,8 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
                 setter=open_plugin,
                 getter=lambda: self.__class__,
                 selection=pupil_producer_plugins,
-                labels=[p.__name__.replace("_", " ") for p in pupil_producer_plugins],
-                label="Pupil Producers",
+                labels=pupil_producer_labels,
+                label="Data Source",
             )
         )
 
@@ -266,6 +285,14 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
 
 
 class Pupil_From_Recording(Pupil_Producer_Base):
+    @classmethod
+    def plugin_menu_label(cls) -> str:
+        return "Pupil Data From Recording"
+
+    @classmethod
+    def pupil_data_source_selection_order(cls) -> float:
+        return 1.0
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
@@ -276,10 +303,7 @@ class Pupil_From_Recording(Pupil_Producer_Base):
 
     def init_ui(self):
         super().init_ui()
-        self.menu.label = "Pupil Data From Recording"
-        self.menu.append(
-            ui.Info_Text("Currently, pupil positions are loaded from the recording.")
-        )
+        self.menu.append(ui.Info_Text("Using pupil data recorded by Pupil Capture."))
 
 
 class Offline_Pupil_Detection(Pupil_Producer_Base):
@@ -287,6 +311,14 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     session_data_version = 4
     session_data_name = "offline_pupil"
+
+    @classmethod
+    def plugin_menu_label(cls) -> str:
+        return "Post-Hoc Pupil Detection"
+
+    @classmethod
+    def pupil_data_source_selection_order(cls) -> float:
+        return 2.0
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -455,10 +487,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def init_ui(self):
         super().init_ui()
-        self.menu.label = "Offline Pupil Detector"
-        self.menu.append(
-            ui.Info_Text("Detects pupil positions from the recording's eye videos.")
-        )
+        self.menu.append(ui.Info_Text("Detect pupil positions from eye videos."))
         self.menu.append(ui.Switch("detection_paused", self, label="Pause detection"))
         self.menu.append(ui.Button("Redetect", self.redetect))
         self.menu.append(

@@ -73,8 +73,8 @@ class NetworkApiPlugin(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = self.menu_label
-        self.__frame_publisher_ui_menu.append_to_menu(self.menu)
         self.__pupil_remote_ui_menu.append_to_menu(self.menu)
+        self.__frame_publisher_ui_menu.append_to_menu(self.menu)
 
     def deinit_ui(self):
         self.remove_menu()

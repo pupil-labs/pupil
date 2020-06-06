@@ -61,11 +61,9 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
         type(self).is_user_selectable = False
         super().cleanup()
 
-    def init_ui(self):
-        desc_text = ui.Info_Text("Calibrate gaze parameters to map onto an HMD.")
-
-        super().init_ui()
-        self.menu.append(desc_text)
+    @classmethod
+    def _choreography_description_text(cls) -> str:
+        return "Calibrate gaze parameters to map onto an HMD."
 
     def recent_events(self, events):
         if self.is_active:

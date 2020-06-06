@@ -123,10 +123,14 @@ class GazerHMD3D(Gazer3D):
         )
 
     def _init_left_model(self) -> Model:
-        return ModelHMD3D_Monocular(intrinsics=self._gpool_capture_intrinsics_if_available)
+        return ModelHMD3D_Monocular(
+            intrinsics=self._gpool_capture_intrinsics_if_available
+        )
 
     def _init_right_model(self) -> Model:
-        return ModelHMD3D_Monocular(intrinsics=self._gpool_capture_intrinsics_if_available)
+        return ModelHMD3D_Monocular(
+            intrinsics=self._gpool_capture_intrinsics_if_available
+        )
 
     def fit_on_calib_data(self, calib_data):
         # extract reference data

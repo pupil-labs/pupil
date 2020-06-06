@@ -124,6 +124,14 @@ class CalibrationChoreographyPlugin(Plugin):
     is_session_persistent = True
 
     @classmethod
+    def selection_label(cls) -> str:
+        return self.label
+
+    @classmethod
+    def selection_order(cls) -> float:
+        return float("inf")
+
+    @classmethod
     def supported_gazer_classes(cls):
         gazers = registered_gazer_classes()
         # By default, HMD gazers are not supported by regular choreographies
@@ -164,7 +172,9 @@ class CalibrationChoreographyPlugin(Plugin):
     def user_selectable_choreography_classes(cls):
         choreo_classes = cls.registered_choreographies_by_label().values()
         choreo_classes = filter(lambda c: c.is_user_selectable, choreo_classes)
-        choreo_classes = sorted(choreo_classes, key=lambda c: c.label)
+        # First sort alphabetically by selection_label, then sort by selection_order
+        choreo_classes = sorted(choreo_classes, key=lambda c: c.selection_label())
+        choreo_classes = sorted(choreo_classes, key=lambda c: c.selection_order())
         return choreo_classes
 
     @classmethod
@@ -254,6 +264,7 @@ class CalibrationChoreographyPlugin(Plugin):
                 )
             cls = default_cls
         self.__selected_gazer_class = cls
+        self._update_gazer_description_ui_text()
 
     @property
     def status_text(self) -> str:
@@ -327,7 +338,23 @@ class CalibrationChoreographyPlugin(Plugin):
         # even choreographies that subclass concrete choreography implementations.
         return CalibrationChoreographyPlugin
 
+    @classmethod
+    def _choreography_description_text(cls) -> str:
+        return ""
+
+    def _init_custom_menu_ui_elements(self) -> list:
+        return []
+
+    def _update_gazer_description_ui_text(self):
+        try:
+            ui_text = self.__ui_gazer_description_text
+        except AttributeError:
+            return
+        ui_text.text = self.selected_gazer_class._gazer_description_text()
+
     def init_ui(self):
+
+        desc_text = ui.Info_Text(self._choreography_description_text())
 
         self.__ui_selector_choreography = ui.Selector(
             "selected_choreography_class",
@@ -339,17 +366,39 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_selector_gazer = ui.Selector(
             "selected_gazer_class",
             self,
-            label="Gazer",
+            label="Method",
             labels=[g.label for g in self.user_selectable_gazer_classes()],
             selection=self.user_selectable_gazer_classes(),
         )
 
+        self.__ui_gazer_description_text = ui.Info_Text("")
+        self._update_gazer_description_ui_text()
+
+        best_practices_text = ui.Info_Text(
+            "Read more about best practices at docs.pupil-labs.com"
+        )
+
+        custom_ui_elements = self._init_custom_menu_ui_elements()
+
         super().init_ui()
         self.add_menu()
         self.menu.label = self.label
-        self.menu.append(self.__ui_selector_choreography)
-        self.menu.append(self.__ui_selector_gazer)
         self.menu_icon.order = self.order
+        self.menu_icon.tooltip = "Calibration"
+
+        # Construct menu UI
+        self.menu.append(self.__ui_selector_choreography)
+        self.menu.append(desc_text)
+        if len(custom_ui_elements) > 0:
+            self.menu.append(ui.Separator())
+            for ui_elem in custom_ui_elements:
+                self.menu.append(ui_elem)
+            self.menu.append(ui.Separator())
+        else:
+            self.menu.append(ui.Separator())
+        self.menu.append(self.__ui_selector_gazer)
+        self.menu.append(self.__ui_gazer_description_text)
+        self.menu.append(best_practices_text)
 
         if self.shows_action_buttons:
 
@@ -539,7 +588,7 @@ class CalibrationChoreographyPlugin(Plugin):
     @classmethod
     def __choreography_selection_getter(cls):
         selection = cls.user_selectable_choreography_classes()
-        labels = [c.label for c in selection]
+        labels = [c.selection_label() for c in selection]
         return selection, labels
 
     def __toggle_mode_button_visibility(self, is_visible: bool, mode: ChoreographyMode):

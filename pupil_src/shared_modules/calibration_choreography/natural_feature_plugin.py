@@ -37,7 +37,15 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
         Features are selected by a user by clicking on
     """
 
-    label = "Natural Feature Calibration Choreography"
+    label = "Natural Feature Calibration"
+
+    @classmethod
+    def selection_label(cls) -> str:
+        return "Natural Feature"
+
+    @classmethod
+    def selection_order(cls) -> float:
+        return 3.0
 
     _NUMBER_OF_REF_POINTS_TO_CAPTURE = 30
     _RADIUS_OF_CIRCLE_DISPLAYED = 40.0
@@ -53,14 +61,9 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
 
     ### Public - Plugin
 
-    def init_ui(self):
-
-        desc_text = ui.Info_Text(
-            "Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window."
-        )
-
-        super().init_ui()
-        self.menu.append(desc_text)
+    @classmethod
+    def _choreography_description_text(cls) -> str:
+        return "Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window."
 
     def recent_events(self, events):
         frame = events.get("frame")

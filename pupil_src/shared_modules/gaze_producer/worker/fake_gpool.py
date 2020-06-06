@@ -18,7 +18,9 @@ class FakeGPool:
             intrinsics=g_pool.capture.intrinsics,
         )
 
-    def __init__(self, frame_size, intrinsics, rec_dir, user_dir, min_calibration_confidence):
+    def __init__(
+        self, frame_size, intrinsics, rec_dir, user_dir, min_calibration_confidence
+    ):
         cap = SimpleNamespace()
         cap.frame_size = frame_size
         cap.intrinsics = intrinsics
@@ -33,7 +35,9 @@ class FakeGPool:
 
     def import_runtime_plugins(self):
         from plugin import import_runtime_plugins
+
         import_runtime_plugins(os.path.join(self.user_dir, "plugins"))
+
 
 class FakeIPC:
     @staticmethod

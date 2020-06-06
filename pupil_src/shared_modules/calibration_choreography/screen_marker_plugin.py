@@ -57,7 +57,15 @@ class ScreenMarkerChoreographyPlugin(
     Points are collected at sites - not between
     """
 
-    label = "Screen Marker Calibration Choreography"
+    label = "Screen Marker Calibration"
+
+    @classmethod
+    def selection_label(cls) -> str:
+        return "Screen Marker"
+
+    @classmethod
+    def selection_order(cls) -> float:
+        return 1.0
 
     def __init__(
         self,
@@ -96,11 +104,11 @@ class ScreenMarkerChoreographyPlugin(
 
     ### Public - Plugin
 
-    def init_ui(self):
+    @classmethod
+    def _choreography_description_text(cls) -> str:
+        return "Calibrate gaze parameters using a screen based animation."
 
-        desc_text = ui.Info_Text(
-            "Calibrate gaze parameters using a screen based animation."
-        )
+    def _init_custom_menu_ui_elements(self) -> list:
 
         self.__ui_selector_monitor_name = ui.Selector(
             "selected_monitor_name",
@@ -127,12 +135,12 @@ class ScreenMarkerChoreographyPlugin(
             "sample_duration", self, label="Sample duration", min=10, max=100, step=1
         )
 
-        super().init_ui()
-        self.menu.append(desc_text)
-        self.menu.append(self.__ui_selector_monitor_name)
-        self.menu.append(self.__ui_switch_is_fullscreen)
-        self.menu.append(self.__ui_slider_marker_scale)
-        self.menu.append(self.__ui_slider_sample_duration)
+        return [
+            self.__ui_selector_monitor_name,
+            self.__ui_switch_is_fullscreen,
+            self.__ui_slider_marker_scale,
+            self.__ui_slider_sample_duration,
+        ]
 
     def deinit_ui(self):
         self.__marker_window.close_window()
@@ -280,9 +288,7 @@ class ScreenMarkerChoreographyPlugin(
     ### Private
 
     @staticmethod
-    def __get_list_of_markers_to_show(
-        mode: ChoreographyMode,
-    ) -> list:
+    def __get_list_of_markers_to_show(mode: ChoreographyMode,) -> list:
         if ChoreographyMode.CALIBRATION == mode:
             return [(0.5, 0.5), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
         if ChoreographyMode.VALIDATION == mode:
