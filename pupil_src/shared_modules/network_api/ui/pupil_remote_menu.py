@@ -84,7 +84,11 @@ class PupilRemoteMenu(Observable):
             return
 
         self.__sub_menu.append(
-            ui.Info_Text("Pupil Remote using ZeroMQ REQ REP scheme.")
+            ui.Info_Text(
+                "Pupil Remote provides a simple, text-based API to remote control the "
+                "Pupil Core software, as well as access to the realtime data API. Read "
+                "more about it in our developer documentation on docs.pupil-labs.com."
+            )
         )
         self.__sub_menu.append(
             ui.Switch(
