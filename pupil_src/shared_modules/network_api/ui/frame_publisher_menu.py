@@ -52,7 +52,8 @@ class FramePublisherMenu(Observable):
         format_labels = [f.label for f in format_values]
 
         ui_info_text = ui.Info_Text(
-            'Publishes frame data in different formats under the topic "frame.world".'
+            'Publishes frame data in different formats under the topics "frame.world", '
+            '"frame.eye.0", and "frame.eye.1".'
         )
         ui_selector_format = ui.Selector(
             "frame_format",
