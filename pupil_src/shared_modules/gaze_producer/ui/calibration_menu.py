@@ -13,6 +13,7 @@ import logging
 from pyglui import ui
 
 from gaze_producer import ui as plugin_ui
+from gaze_mapping import registered_gazer_labels_by_class_names
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,10 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
 
         calibration_controller.add_observer(
             "on_calibration_computed", self._on_calibration_computed
+        )
+        calibration_controller.add_observer(
+            "on_calculation_could_not_be_started",
+            self._on_calculation_could_not_be_started,
         )
 
     def _item_label(self, calibration):
@@ -81,10 +86,11 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
 
     def _create_mapping_method_selector(self, calibration):
         return ui.Selector(
-            "mapping_method",
+            "gazer_class_name",
             calibration,
             label="Mapping Method",
-            selection=["2d", "3d"],
+            labels=list(registered_gazer_labels_by_class_names().values()),
+            selection=list(registered_gazer_labels_by_class_names().keys()),
         )
 
     def _create_min_confidence_slider(self, calibration):
@@ -102,7 +108,7 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
 
     def _create_calculate_button(self, calibration):
         return ui.Button(
-            label="Recalculate" if calibration.result else "Calculate",
+            label="Recalculate" if calibration.params else "Calculate",
             function=self._on_click_calculate,
         )
 
@@ -114,12 +120,12 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         )
 
     def _info_text_for_calibration_from_other_recording(self, calibration):
-        if calibration.result:
+        gazer_class_name = calibration.gazer_class_name
+        gazer_label = registered_gazer_labels_by_class_names()[gazer_class_name]
+        if calibration.params:
             return (
-                "This {} calibration was copied from another recording. "
-                "It is ready to be used in gaze mappers.".format(
-                    calibration.mapping_method.upper()
-                )
+                f"This {gazer_label} calibration was copied from another recording. "
+                "It is ready to be used in gaze mappers."
             )
         else:
             return (
@@ -133,11 +139,11 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         menu.append(ui.Info_Text(self._info_text_for_online_calibration(calibration)))
 
     def _info_text_for_online_calibration(self, calibration):
+        gazer_class_name = calibration.gazer_class_name
+        gazer_label = registered_gazer_labels_by_class_names()[gazer_class_name]
         return (
-            "This {} calibration was created before or during the recording. "
-            "It is ready to be used in gaze mappers.".format(
-                calibration.mapping_method.upper()
-            )
+            f"This {gazer_label} calibration was created before or during the "
+            "recording. It is ready to be used in gaze mappers."
         )
 
     def _on_click_duplicate_button(self):
@@ -165,3 +171,6 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         if calibration == self.current_item:
             # mostly to change button "calculate" -> "recalculate"
             self.render()
+
+    def _on_calculation_could_not_be_started(self):
+        self.render()

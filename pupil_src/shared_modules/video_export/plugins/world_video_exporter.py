@@ -74,8 +74,6 @@ class World_Video_Exporter(VideoExporter):
         pre_computed = {
             "gaze": self.g_pool.gaze_positions,
             "pupil": self.g_pool.pupil_positions,
-            "pupil_by_id_0": self.g_pool.pupil_positions_by_id[0],
-            "pupil_by_id_1": self.g_pool.pupil_positions_by_id[1],
             "fixations": self.g_pool.fixations,
         }
 
@@ -234,10 +232,8 @@ def _export_world_video(
                 for serialized in initializers["data"]
             ]
 
-        g_pool.pupil_positions = pm.Bisector(**pre_computed_eye_data["pupil"])
-        g_pool.pupil_positions_by_id = (
-            pm.Bisector(**pre_computed_eye_data["pupil_by_id_0"]),
-            pm.Bisector(**pre_computed_eye_data["pupil_by_id_1"]),
+        g_pool.pupil_positions = pm.PupilDataBisector.from_init_dict(
+            pre_computed_eye_data["pupil"]
         )
         g_pool.gaze_positions = pm.Bisector(**pre_computed_eye_data["gaze"])
         g_pool.fixations = pm.Affiliator(**pre_computed_eye_data["fixations"])

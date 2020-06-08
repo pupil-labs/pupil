@@ -44,7 +44,8 @@ class Eye_Video_Exporter(IsolatedFrameExporter):
     def _export_eye_video(self, export_range, export_dir, eye_id):
         if self.render_pupil:
             process_frame = _add_pupil_ellipse(
-                self.g_pool.pupil_positions_by_id[eye_id]
+                self.g_pool.pupil_positions[eye_id, "2d"],
+                self.g_pool.pupil_positions[eye_id, "3d"],
             )
         else:
             process_frame = _no_change
@@ -84,19 +85,35 @@ class _add_pupil_ellipse:
     pupil positions for rendering.
     """
 
-    _warned_once_data_not_found = False
+    _2D = "2d"
+    _3D = "3d"
 
-    def __init__(self, pupil_positions_of_eye):
+    def __init__(self, pupil_positions_of_eye_2d, pupil_positions_of_eye_3d):
+        self._warned_once_data_not_found = {self._2D: False, self._3D: False}
+
         self.renderer = PupilRenderer(pupil_getter=None)
-        self._pupil_positions_of_eye = pupil_positions_of_eye
+        self._render_functions = {
+            self._2D: self.renderer.render_pupil_2d,
+            self._3D: self.renderer.render_pupil_3d,
+        }
+
+        self._pupil_positions_of_eye = {
+            self._2D: pupil_positions_of_eye_2d,
+            self._3D: pupil_positions_of_eye_3d,
+        }
 
     def __call__(self, _, frame):
         eye_image = frame.img
-        try:
-            pupil_datum = self._pupil_positions_of_eye.by_ts(frame.timestamp)
-            self.renderer.render_pupil(eye_image, pupil_datum)
-        except ValueError:
-            if not self._warned_once_data_not_found:
-                logger.warning("Could not draw pupil visualization. No data found.")
-                self._warned_once_data_not_found = True
+        timestamp = frame.timestamp
+        self._render(eye_image, timestamp, self._2D)
+        self._render(eye_image, timestamp, self._3D)
         return eye_image
+
+    def _render(self, image, timestamp, mode):
+        try:
+            pupil_datum = self._pupil_positions_of_eye[mode].by_ts(timestamp)
+            self._render_functions[mode](image, pupil_datum)
+        except ValueError:
+            if not self._warned_once_data_not_found[mode]:
+                logger.warning(f"No {mode} data for pupil visualization found.")
+                self._warned_once_data_not_found[mode] = True

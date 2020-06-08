@@ -274,7 +274,6 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
         show_fixations=True,
     ):
         super().__init__(g_pool)
-        # g_pool.min_data_confidence
         self.max_dispersion = max_dispersion
         self.min_duration = min_duration
         self.max_duration = max_duration
@@ -287,9 +286,7 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
         self._gaze_changed_listener = data_changed.Listener(
             "gaze_positions", g_pool.rec_dir, plugin=self
         )
-        self._gaze_changed_listener.add_observer(
-            "on_data_changed", self._classify
-        )
+        self._gaze_changed_listener.add_observer("on_data_changed", self._classify)
         self.notify_all(
             {"subject": "fixation_detector.should_recalculate", "delay": 0.5}
         )
@@ -686,21 +683,20 @@ class Fixation_Detector(Fixation_Detector_Base):
 
     order = 0.19
 
-    def __init__(
-        self, g_pool, max_dispersion=3.0, min_duration=300, confidence_threshold=0.75
-    ):
+    def __init__(self, g_pool, max_dispersion=3.0, min_duration=300, **kwargs):
         super().__init__(g_pool)
         self.history = []
         self.min_duration = min_duration
         self.max_dispersion = max_dispersion
-        self.confidence_threshold = confidence_threshold
         self.id_counter = 0
 
     def recent_events(self, events):
         events["fixations"] = []
         gaze = events["gaze"]
 
-        gaze = (gp for gp in gaze if gp["confidence"] >= self.confidence_threshold)
+        gaze = (
+            gp for gp in gaze if gp["confidence"] >= self.g_pool.min_data_confidence
+        )
         self.history.extend(gaze)
         self.history.sort(key=lambda gp: gp["timestamp"])
 
@@ -801,16 +797,6 @@ class Fixation_Detector(Fixation_Detector_Base):
             )
         )
 
-        self.menu.append(
-            ui.Slider(
-                "confidence_threshold",
-                self,
-                min=0.0,
-                max=1.0,
-                label="Confidence Threshold",
-            )
-        )
-
         self.glfont = fontstash.Context()
         self.glfont.add_font("opensans", ui.get_opensans_font_path())
         self.glfont.set_size(22)
@@ -824,5 +810,4 @@ class Fixation_Detector(Fixation_Detector_Base):
         return {
             "max_dispersion": self.max_dispersion,
             "min_duration": self.min_duration,
-            "confidence_threshold": self.confidence_threshold,
         }

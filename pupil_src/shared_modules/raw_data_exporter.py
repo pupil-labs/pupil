@@ -161,7 +161,7 @@ class Raw_Data_Exporter(Analysis_Plugin_Base):
         if self.should_export_pupil_positions:
             pupil_positions_exporter = Pupil_Positions_Exporter()
             pupil_positions_exporter.csv_export_write(
-                positions_bisector=self.g_pool.pupil_positions,
+                positions_bisector=self.g_pool.pupil_positions[..., ...],
                 timestamps=self.g_pool.timestamps,
                 export_window=export_window,
                 export_dir=export_dir,

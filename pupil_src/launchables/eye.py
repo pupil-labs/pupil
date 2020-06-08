@@ -63,6 +63,8 @@ def eye(
     eye_id,
     overwrite_cap_settings=None,
     hide_ui=False,
+    debug=False,
+    pub_socket_hwm=None,
 ):
     """reads eye video and detects the pupil.
 
@@ -71,7 +73,6 @@ def eye(
     Streams Pupil coordinates.
 
     Reacts to notifications:
-        ``set_detection_mapping_mode``: Sets detection method
         ``eye_process.should_stop``: Stops the eye process
         ``recording.started``: Starts recording eye video
         ``recording.stopped``: Stops recording eye video
@@ -95,7 +96,7 @@ def eye(
 
     zmq_ctx = zmq.Context()
     ipc_socket = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
-    pupil_socket = zmq_tools.Msg_Streamer(zmq_ctx, ipc_pub_url)
+    pupil_socket = zmq_tools.Msg_Streamer(zmq_ctx, ipc_pub_url, pub_socket_hwm)
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url, topics=("notify",))
 
     # logging setup
@@ -147,8 +148,7 @@ def eye(
         from roi import Roi
 
         from background_helper import IPC_Logging_Task_Proxy
-        from pupil_detector_plugins import available_detector_plugins
-        from pupil_detector_plugins.manager import PupilDetectorManager
+        from pupil_detector_plugins import available_detector_plugins, EVENT_KEY
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
@@ -181,6 +181,7 @@ def eye(
         g_pool = SimpleNamespace()
 
         # make some constants avaiable
+        g_pool.debug = debug
         g_pool.user_dir = user_dir
         g_pool.version = version
         g_pool.app = "capture"
@@ -197,13 +198,8 @@ def eye(
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
 
-        default_detector_cls, available_detectors = available_detector_plugins()
-        plugins = (
-            manager_classes
-            + source_classes
-            + available_detectors
-            + [PupilDetectorManager, Roi]
-        )
+        default_2d, default_3d, available_detectors = available_detector_plugins()
+        plugins = manager_classes + source_classes + available_detectors + [Roi]
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
         preferred_names = [
@@ -225,11 +221,12 @@ def eye(
             # TODO: extend with plugins
             (default_capture_name, default_capture_settings),
             ("UVC_Manager", {}),
+            # Detectors needs to be loaded first to set `g_pool.pupil_detector`
+            (default_2d.__name__, {}),
+            (default_3d.__name__, {}),
             ("NDSI_Manager", {}),
             ("HMD_Streaming_Manager", {}),
             ("File_Manager", {}),
-            # Detector needs to be loaded first to set `g_pool.pupil_detector`
-            (default_detector_cls.__name__, {}),
             ("PupilDetectorManager", {}),
             ("Roi", {}),
         ]
@@ -298,9 +295,10 @@ def eye(
             )
             session_settings.clear()
 
+        camera_is_physically_flipped = eye_id == 0
         g_pool.iconified = False
         g_pool.capture = None
-        g_pool.flip = session_settings.get("flip", False)
+        g_pool.flip = session_settings.get("flip", camera_is_physically_flipped)
         g_pool.display_mode = session_settings.get("display_mode", "camera_image")
         g_pool.display_mode_info_text = {
             "camera_image": "Raw eye camera image. This uses the least amount of CPU power",
@@ -597,8 +595,7 @@ def eye(
                             {"subject": "recording.should_stop", "remote_notify": "all"}
                         )
 
-                result = event.get("pupil_detection_result", None)
-                if result is not None:
+                for result in event.get(EVENT_KEY, ()):
                     pupil_socket.send(result)
 
             cpu_graph.update()
@@ -704,6 +701,8 @@ def eye_profiled(
     eye_id,
     overwrite_cap_settings=None,
     hide_ui=False,
+    debug=False,
+    pub_socket_hwm=None,
 ):
     import cProfile
     import subprocess
@@ -711,7 +710,7 @@ def eye_profiled(
     from .eye import eye
 
     cProfile.runctx(
-        "eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings, hide_ui)",
+        "eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings, hide_ui, debug)",
         {
             "timebase": timebase,
             "is_alive_flag": is_alive_flag,
@@ -723,6 +722,8 @@ def eye_profiled(
             "eye_id": eye_id,
             "overwrite_cap_settings": overwrite_cap_settings,
             "hide_ui": hide_ui,
+            "debug": debug,
+            "pub_socket_hwm": pub_socket_hwm,
         },
         locals(),
         "eye{}.pstats".format(eye_id),

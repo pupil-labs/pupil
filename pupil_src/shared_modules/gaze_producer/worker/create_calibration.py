@@ -14,11 +14,12 @@ from types import SimpleNamespace
 
 import player_methods as pm
 import tasklib.background
-from calibration_routines.finish_calibration import (
-    select_method_and_perform_calibration,
-)
 from gaze_producer import model
+from gaze_mapping import registered_gazer_classes_by_class_name, CalibrationError
 from methods import normalize
+
+from .fake_gpool import FakeGPool
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,15 +41,14 @@ def create_task(calibration, all_reference_locations):
         if frame_start <= ref.frame_index <= frame_end
     ]
 
-    fake_gpool = _setup_fake_gpool(
-        g_pool.capture.frame_size,
-        g_pool.capture.intrinsics,
-        calibration.mapping_method,
-        g_pool.rec_dir,
-        calibration.minimum_confidence,
-    )
+    fake_gpool = FakeGPool.from_g_pool(g_pool)
 
-    args = (fake_gpool, ref_dicts_in_calib_range, pupil_pos_in_calib_range)
+    args = (
+        fake_gpool,
+        calibration.gazer_class_name,
+        ref_dicts_in_calib_range,
+        pupil_pos_in_calib_range,
+    )
     name = "Create calibration {}".format(calibration.name)
     return tasklib.background.create(name, _create_calibration, args=args)
 
@@ -61,36 +61,46 @@ def _create_ref_dict(ref):
     }
 
 
-def _setup_fake_gpool(
-    frame_size, intrinsics, detection_mapping_mode, rec_dir, min_calibration_confidence
+def _create_calibration(
+    fake_gpool, gazer_class_name, ref_dicts_in_calib_range, pupil_pos_in_calib_range
 ):
-    cap = SimpleNamespace()
-    cap.frame_size = frame_size
-    cap.intrinsics = intrinsics
-    pool = SimpleNamespace()
-    pool.capture = cap
-    pool.get_timestamp = time
-    pool.detection_mapping_mode = detection_mapping_mode
-    pool.min_calibration_confidence = min_calibration_confidence
-    pool.rec_dir = rec_dir
-    pool.app = "player"
-    return pool
+    # This is needed to support user-provided gazers
+    fake_gpool.import_runtime_plugins()
 
+    gazers_by_name = registered_gazer_classes_by_class_name()
 
-def _create_calibration(fake_gpool, ref_dicts_in_calib_range, pupil_pos_in_calib_range):
-    method, result = select_method_and_perform_calibration(
-        fake_gpool, pupil_pos_in_calib_range, ref_dicts_in_calib_range
-    )
+    try:
+        gazer_class = gazers_by_name[gazer_class_name]
+    except KeyError:
+        logger.debug(
+            f"Calibration failed! {gazer_class_name} is not in list of known gazers: "
+            f"{list(gazers_by_name.keys())}"
+        )
+        status = f"Unknown gazer class: {gazer_class_name}"
+        calibration_result = None
+        return status, calibration_result
 
-    if result["subject"] == "start_plugin":
-        calibration_result = model.CalibrationResult(result["name"], result["args"])
+    # Deep copy dicts of pupil positions, to pass to the gazer init
+    pupil_pos_in_calib_range = [p._deep_copy_dict() for p in pupil_pos_in_calib_range]
+
+    try:
+        calib_data = {
+            "ref_list": ref_dicts_in_calib_range,
+            "pupil_list": pupil_pos_in_calib_range,
+        }
+        gazer = gazer_class(
+            fake_gpool, calib_data=calib_data, raise_calibration_error=True
+        )
+        calibration_result = model.CalibrationResult(
+            gazer_class_name, gazer.get_params()
+        )
         status = "Calibration successful"
-    elif result["subject"] == "calibration.failed":
-        logger.error("Calibration failed: {}".format(result["reason"]))
+        return status, calibration_result
+
+    except CalibrationError as err:
+        from traceback import format_exc
+
+        logger.debug(f"Calibration failed! Traceback:\n{format_exc()}")
+        status = f"Calibration failed: {err.message}"
         calibration_result = None
-        status = result["reason"]
-    else:
-        logger.error("Unknown calibration result: {}".format(result))
-        calibration_result = None
-        status = "Unknown calibration result"
-    return status, calibration_result
+        return status, calibration_result

@@ -2,44 +2,17 @@
 
 
 import platform, sys, os, os.path, numpy, glob, pathlib
+from PyInstaller.utils.hooks import collect_submodules
 
-av_hidden_imports = [
-    "av.format",
-    "av.packet",
-    "av.buffer",
-    "av.bytesource",
-    "av.frame",
-    "av.stream",
-    "av.descriptor",
-    "av.plane",
-    "av.audio.plane",
-    "av.container.streams",
-    "av.dictionary",
-    "av.audio.stream",
-    "av.subtitles",
-    "av.subtitles.stream",
-    "av.subtitles.subtitle",
-    "av.video.reformatter",
-    "av.video.plane",
-    "av.option",
-    "av.container.pyio",
-    "av.video.codeccontext",
-    "av.audio.codeccontext",
-    "av.filter.context",
-    "av.filter.link",
-    "av.filter.pad",
-    "av.buffered_decoder",
-]
+hidden_imports = []
+hidden_imports += collect_submodules("av")
+
 if platform.system() != "Windows":
-    av_hidden_imports.append("cysignals")
+    hidden_imports.append("cysignals")
 
-pyglui_hidden_imports = [
-    "pyglui.pyfontstash.fontstash",
-    "pyglui.cygl.shader",
-    "pyglui.cygl.utils",
-]
-apriltag_hidden_imports = ["pupil_apriltags"]
-
+hidden_imports += collect_submodules("pyglui")
+hidden_imports += collect_submodules("pupil_apriltags")
+hidden_imports += collect_submodules("sklearn")
 
 from pyglui import ui
 import pupil_apriltags
@@ -60,9 +33,7 @@ if platform.system() == "Darwin":
     a = Analysis(
         ["../../pupil_src/main.py"],
         pathex=["../../pupil_src/shared_modules/"],
-        hiddenimports=(
-            av_hidden_imports + pyglui_hidden_imports + apriltag_hidden_imports
-        ),
+        hiddenimports=hidden_imports,
         hookspath=None,
         runtime_hooks=None,
         excludes=["matplotlib"],
@@ -92,7 +63,6 @@ if platform.system() == "Darwin":
         a.binaries - libSystem,
         a.zipfiles,
         a.datas,
-        [("libuvc.0.dylib", "/usr/local/lib/libuvc.0.dylib", "BINARY")],
         [("libglfw.dylib", "/usr/local/lib/libglfw.dylib", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
@@ -115,10 +85,7 @@ elif platform.system() == "Linux":
     a = Analysis(
         ["../../pupil_src/main.py"],
         pathex=["../../pupil_src/shared_modules/"],
-        hiddenimports=[]
-        + av_hidden_imports
-        + pyglui_hidden_imports
-        + apriltag_hidden_imports,
+        hiddenimports=hidden_imports,
         hookspath=None,
         runtime_hooks=None,
         excludes=["matplotlib"],
@@ -180,22 +147,7 @@ elif platform.system() == "Windows":
         dll_p, dll_f = os.path.split(dll_path)
         np_dll_list += [(dll_f, dll_path, "BINARY")]
 
-    scipy_imports = ["scipy.integrate"]
-    scipy_imports += [
-        "scipy.integrate._ode",
-        "scipy.integrate.quadrature",
-        "scipy.integrate.odepack",
-        "scipy.integrate._odepack",
-        "scipy.integrate.quadpack",
-        "scipy.integrate._quadpack",
-    ]
-    scipy_imports += [
-        "scipy.integrate.vode",
-        "scipy.integrate.lsoda",
-        "scipy.integrate._dop",
-        "scipy.special._ufuncs",
-        "scipy.special._ufuncs_cxx",
-    ]
+    hidden_imports += collect_submodules("scipy")
 
     external_libs_path = pathlib.Path("../../pupil_external")
 
@@ -204,10 +156,7 @@ elif platform.system() == "Windows":
         pathex=["../../pupil_src/shared_modules/", str(external_libs_path)],
         binaries=None,
         datas=None,
-        hiddenimports=pyglui_hidden_imports
-        + scipy_imports
-        + av_hidden_imports
-        + apriltag_hidden_imports,
+        hiddenimports=hidden_imports,
         hookspath=None,
         runtime_hooks=None,
         win_no_prefer_redirects=False,

@@ -36,6 +36,8 @@ class GazeMapperController(Observable):
         self._get_current_trim_mark_range = get_current_trim_mark_range
         self._publish_gaze_bisector = publish_gaze_bisector
 
+        self._gaze_mapper_storage.add_observer("delete", self.on_gaze_mapper_deleted)
+
         # make mappings loaded from disk known to Player
         self.publish_all_enabled_mappers()
 
@@ -55,14 +57,18 @@ class GazeMapperController(Observable):
                 "please select a different calibration!".format(gaze_mapper.name),
             )
             return None
-        if calibration.result is None:
+        if calibration.params is None:
             self._abort_calculation(
                 gaze_mapper,
                 "You first need to calculate calibration '{}' before calculating the "
                 "mapper '{}'".format(calibration.name, gaze_mapper.name),
             )
             return None
-        task = self._create_mapping_task(gaze_mapper, calibration)
+        try:
+            task = self._create_mapping_task(gaze_mapper, calibration)
+        except worker.map_gaze.NotEnoughPupilData:
+            self._abort_calculation(gaze_mapper, "There is no pupil data to be mapped!")
+            return None
         self._task_manager.add_task(task)
         logger.info("Start gaze mapping for '{}'".format(gaze_mapper.name))
 
@@ -92,12 +98,20 @@ class GazeMapperController(Observable):
                 gaze_mapper.gaze_ts.append(timestamp)
 
         def on_completed_mapping(_):
-            gaze_mapper.status = "Successfully completed mapping"
+            if gaze_mapper.empty():
+                gaze_mapper.status = "No data mapped!"
+                logger.warning(
+                    f"Gaze mapper {gaze_mapper.name} produced no data."
+                    f" Please check the quality of your Pupil data"
+                    f" and ensure you are using the appropriate pipeline!"
+                )
+            else:
+                gaze_mapper.status = "Successfully completed mapping"
             self.publish_all_enabled_mappers()
             self.validate_gaze_mapper(gaze_mapper)
             self._gaze_mapper_storage.save_to_disk()
             self.on_gaze_mapping_calculated(gaze_mapper)
-            logger.info("Complete gaze mapping for '{}'".format(gaze_mapper.name))
+            logger.info(f"Completed gaze mapping for '{gaze_mapper.name}'")
 
         task.add_observer("on_yield", on_yield_gaze)
         task.add_observer("on_completed", on_completed_mapping)
@@ -146,8 +160,22 @@ class GazeMapperController(Observable):
                 precision.result, precision.num_used, precision.num_total
             )
 
+        calibration = self.get_valid_calibration_or_none(gaze_mapper)
+
+        if calibration is None:
+            logger.error(
+                f"Could not validate gaze mapper {gaze_mapper.name}; Calibration was not found, please select a different calibration."
+            )
+            return
+
+        if calibration.params is None:
+            logger.error(
+                f"Could not validate gaze mapper {gaze_mapper.name}; You first need to calculate calibration '{calibration.name}'"
+            )
+            return
+
         task = worker.validate_gaze.create_bg_task(
-            gaze_mapper, self._reference_location_storage
+            gaze_mapper, calibration, self._reference_location_storage
         )
         task.add_observer("on_completed", validation_completed)
         task.add_observer("on_exception", tasklib.raise_exception)
@@ -155,3 +183,6 @@ class GazeMapperController(Observable):
 
     def get_valid_calibration_or_none(self, gaze_mapper):
         return self._calibration_storage.get_or_none(gaze_mapper.calibration_unique_id)
+
+    def on_gaze_mapper_deleted(self, *args, **kwargs):
+        self.publish_all_enabled_mappers()

@@ -9,7 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import logging
+from distutils.version import LooseVersion as VersionFormat
 
+import pupil_detectors
 from pupil_detectors import Detector3D, DetectorBase, Roi
 from pyglui import ui
 from pyglui.cygl.utils import draw_gl_texture
@@ -30,14 +32,24 @@ from .visualizer_3d import Eye_Visualizer
 
 logger = logging.getLogger(__name__)
 
+if VersionFormat(pupil_detectors.__version__) < VersionFormat("1.0.5"):
+    msg = (
+        f"This version of Pupil requires pupil_detectors >= 1.0.5."
+        f" You are running with pupil_detectors == {pupil_detectors.__version__}."
+        f" Please upgrade to a newer version!"
+    )
+    logger.error(msg)
+    raise RuntimeError(msg)
+
 
 class Detector3DPlugin(PupilDetectorPlugin):
-    uniqueness = "by_base_class"
+    uniqueness = "by_class"
     icon_font = "pupil_icons"
     icon_chr = chr(0xEC19)
 
     label = "C++ 3d detector"
     identifier = "3d"
+    order = 0.101
 
     def __init__(
         self, g_pool=None, namespaced_properties=None, detector_3d: Detector3D = None
@@ -48,7 +60,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
         # debug window
         self.debugVisualizer3D = Eye_Visualizer(g_pool, self.detector_3d.focal_length())
 
-    def detect(self, frame):
+    def detect(self, frame, **kwargs):
         # convert roi-plugin to detector roi
         roi = Roi(*self.g_pool.roi.bounds)
 
@@ -59,6 +71,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
             color_img=debug_img,
             roi=roi,
             debug=self.is_debug_window_open,
+            internal_raw_2d_data=kwargs.get("internal_raw_2d_data", None),
         )
 
         eye_id = self.g_pool.eye_id
@@ -66,7 +79,7 @@ class Detector3DPlugin(PupilDetectorPlugin):
         result["norm_pos"] = normalize(
             location, (frame.width, frame.height), flip_y=True
         )
-        result["topic"] = f"pupil.{eye_id}"
+        result["topic"] = f"pupil.{eye_id}.{self.identifier}"
         result["id"] = eye_id
         result["method"] = "3d c++"
         return result
@@ -82,48 +95,13 @@ class Detector3DPlugin(PupilDetectorPlugin):
         return "Pupil Detector 3D"
 
     def init_ui(self):
-        self.add_menu()
+        super().init_ui()
         self.menu.label = self.pretty_class_name
-        info = ui.Info_Text(
-            "Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "
-            + "Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "
-            + "Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds."
-        )
-        self.menu.append(info)
         self.menu.append(
-            ui.Slider(
-                "2d.intensity_range",
-                self.proxy,
-                label="Pupil intensity range",
-                min=0,
-                max=60,
-                step=1,
+            ui.Info_Text(
+                "Open the debug window to see a visualization of the 3D pupil detection."
             )
         )
-        self.menu.append(
-            ui.Slider(
-                "2d.pupil_size_min",
-                self.proxy,
-                label="Pupil min",
-                min=1,
-                max=250,
-                step=1,
-            )
-        )
-        self.menu.append(
-            ui.Slider(
-                "2d.pupil_size_max",
-                self.proxy,
-                label="Pupil max",
-                min=50,
-                max=400,
-                step=1,
-            )
-        )
-        info_3d = ui.Info_Text(
-            "Open the debug window to see a visualization of the 3D pupil detection."
-        )
-        self.menu.append(info_3d)
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))
         self.menu.append(ui.Button("Open debug window", self.debug_window_toggle))
         model_sensitivity_slider = ui.Slider(
@@ -145,9 +123,6 @@ class Detector3DPlugin(PupilDetectorPlugin):
         if self._recent_detection_result:
             draw_eyeball_outline(self._recent_detection_result)
             draw_pupil_outline(self._recent_detection_result)
-
-    def deinit_ui(self):
-        self.remove_menu()
 
     def cleanup(self):
         self.debug_window_close()  # if we change detectors, be sure debug window is also closed
