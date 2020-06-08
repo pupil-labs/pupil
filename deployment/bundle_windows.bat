@@ -32,6 +32,7 @@ if not exist %release_dir% (
 	mkdir %release_dir%
 )
 
+set PATH=%PATH%;%~dp0..\pupil_external
 set PATH=%PATH%;C:\Python36\Lib\site-packages\scipy\.libs
 set PATH=%PATH%;C:\Python36\Lib\site-packages\zmq
 
@@ -45,5 +46,8 @@ for /d %%d in (*) do (
 	7z a -tzip ..\%release_dir%.zip %%d
 )
 cd ..
+
+python generate_msi_installer.py
+7z a -tzip %release_dir%.msi.zip %release_dir%.msi
 
 exit /B 0
