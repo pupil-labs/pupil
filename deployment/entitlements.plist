@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<!-- These are required for binaries built by PyInstaller -->
-	<key>com.apple.security.cs.allow-jit</key>
+	<key>com.apple.security.cs.disable-library-validation</key>
 	<true/>
 	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
 	<true/>
