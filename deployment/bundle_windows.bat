@@ -40,14 +40,8 @@ call :Bundle capture %current_tag%
 call :Bundle service %current_tag%
 call :Bundle player %current_tag%
 
-cd %release_dir%
-for /d %%d in (*) do (
-	echo Adding %%d
-	7z a -tzip ..\%release_dir%.zip %%d
-)
-cd ..
 
 python generate_msi_installer.py
-7z a -tzip %release_dir%.msi.zip %release_dir%.msi
+rar a %release_dir%.msi.rar %release_dir%.msi
 
 exit /B 0
