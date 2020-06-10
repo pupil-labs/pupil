@@ -317,7 +317,7 @@ class Model3D_Binocular(Model3D):
 
 
 class Gazer3D(GazerBase):
-    label = "3D (bundle adjustment)"
+    label = "3D"
 
     @classmethod
     def _gazer_description_text(cls) -> str:
