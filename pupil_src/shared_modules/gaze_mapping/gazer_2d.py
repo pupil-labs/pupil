@@ -160,7 +160,7 @@ class Model2D_Monocular(Model2D):
 
 
 class Gazer2D(GazerBase):
-    label = "2D (polynomial)"
+    label = "2D"
 
     @classmethod
     def _gazer_description_text(cls) -> str:
