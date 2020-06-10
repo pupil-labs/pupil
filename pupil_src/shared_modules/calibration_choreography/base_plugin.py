@@ -366,7 +366,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_selector_gazer = ui.Selector(
             "selected_gazer_class",
             self,
-            label="Method",
+            label="Gaze Mapping",
             labels=[g.label for g in self.user_selectable_gazer_classes()],
             selection=self.user_selectable_gazer_classes(),
         )

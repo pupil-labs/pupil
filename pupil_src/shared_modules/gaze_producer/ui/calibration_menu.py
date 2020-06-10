@@ -88,7 +88,7 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         return ui.Selector(
             "gazer_class_name",
             calibration,
-            label="Mapping Method",
+            label="Gaze Mapping",
             labels=list(registered_gazer_labels_by_class_names().values()),
             selection=list(registered_gazer_labels_by_class_names().keys()),
         )
