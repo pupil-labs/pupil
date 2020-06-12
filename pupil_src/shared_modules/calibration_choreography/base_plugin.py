@@ -125,7 +125,7 @@ class CalibrationChoreographyPlugin(Plugin):
 
     @classmethod
     def selection_label(cls) -> str:
-        return self.label
+        return cls.label
 
     @classmethod
     def selection_order(cls) -> float:
