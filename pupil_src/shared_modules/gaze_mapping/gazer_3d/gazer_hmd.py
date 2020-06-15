@@ -105,6 +105,10 @@ class ModelHMD3D_Monocular(Model3D_Monocular):
 class GazerHMD3D(Gazer3D):
     label = "HMD 3D"
 
+    @classmethod
+    def _gazer_description_text(cls) -> str:
+        return "Gaze mapping built specifically for HMD-Eyes."
+
     def __init__(self, g_pool, *, eye_translations, calib_data=None, params=None):
         self.__eye_translations = eye_translations
         super().__init__(g_pool, calib_data=calib_data, params=params)
