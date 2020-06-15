@@ -162,3 +162,9 @@ class GazerHMD3D(Gazer3D):
         ref_3d = np.array([ref["mm_pos"] for ref in ref_data])
         assert ref_3d.shape == (len(ref_data), 3), ref_3d
         return ref_3d
+
+    def get_init_dict(self):
+        return {
+            **super().get_init_dict(),
+            "eye_translations": self.__eye_translations,
+        }
