@@ -518,6 +518,10 @@ class CalibrationChoreographyPlugin(Plugin):
         )
 
     def _perform_start(self):
+        if self.__is_active:
+            logger.debug("[PROGRAMMING ERROR] Called _perform_start on an already active calibration choreography.")
+            return
+
         current_mode = self.__current_mode
 
         logger.info(f"Starting  {current_mode.label}")
@@ -541,6 +545,10 @@ class CalibrationChoreographyPlugin(Plugin):
         self.on_choreography_started(mode=current_mode)
 
     def _perform_stop(self):
+        if not self.__is_active:
+            logger.debug("[PROGRAMMING ERROR] Called _perform_stop on an already inactive calibration choreography.")
+            return
+
         current_mode = self.__current_mode
         pupil_list = self.__pupil_list
         ref_list = self.__ref_list
