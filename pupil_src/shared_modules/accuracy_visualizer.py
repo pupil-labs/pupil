@@ -305,8 +305,10 @@ class Accuracy_Visualizer(Plugin):
         except (AssertionError, ValueError):
             return False
 
+        self.recent_input.clear()
         self.recent_input.update(
             gazer_class_name=note_dict["gazer_class_name"],
+            gazer_params=note_dict["gazer_params"],
             pupil_list=note_dict["pupil_list"],
             ref_list=note_dict["ref_list"],
         )

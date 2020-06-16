@@ -315,12 +315,17 @@ class CalibrationChoreographyPlugin(Plugin):
             calib_data = {"ref_list": ref_list, "pupil_list": pupil_list}
             self._start_plugin(self.selected_gazer_class, calib_data=calib_data)
         elif mode == ChoreographyMode.VALIDATION:
+            gazer_class = self.g_pool.active_gaze_mapping_plugin.__class__
+            assert gazer_class == self.selected_gazer_class
+            gazer_params = self.g_pool.active_gaze_mapping_plugin.get_params()
+
             self._start_plugin("Accuracy_Visualizer")
             self.notify_all(
                 ChoreographyNotification(
                     mode=ChoreographyMode.VALIDATION,
                     action=ChoreographyAction.DATA,
-                    gazer_class_name=self.selected_gazer_class.__name__,
+                    gazer_class_name=gazer_class.__name__,
+                    gazer_params=gazer_params,
                     pupil_list=pupil_list,
                     ref_list=ref_list,
                     timestamp=self.g_pool.get_timestamp(),
