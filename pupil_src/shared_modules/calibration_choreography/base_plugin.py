@@ -441,6 +441,10 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_selector_gazer.read_only = (
             not self.is_user_selection_for_gazer_enabled()
         )
+        if self.shows_action_buttons:
+            self.__ui_button_validation.read_only = (
+                self.selected_gazer_class is not self.g_pool.active_gaze_mapping_plugin.__class__
+            )
 
     def deinit_ui(self):
         """Gets called when the plugin get terminated, either voluntarily or forced.
