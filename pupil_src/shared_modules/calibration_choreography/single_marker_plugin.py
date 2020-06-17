@@ -231,6 +231,8 @@ class SingleMarkerChoreographyPlugin(
         super().deinit_ui()
 
     def recent_events(self, events):
+        super().recent_events(events)
+
         frame = events.get("frame")
         should_animate = True
         state = self.__marker_window.window_state

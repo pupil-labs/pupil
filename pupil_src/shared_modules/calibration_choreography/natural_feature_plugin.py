@@ -66,6 +66,8 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
         return "Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window."
 
     def recent_events(self, events):
+        super().recent_events(events)
+
         frame = events.get("frame")
 
         if not frame:

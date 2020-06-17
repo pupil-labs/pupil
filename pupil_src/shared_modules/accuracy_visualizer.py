@@ -80,7 +80,7 @@ class ValidationInput:
         self.__gazer_class = None
         self.__gazer_params = None
 
-    def update(self, gazer_class_name: str, pupil_list=..., ref_list=..., params=...):
+    def update(self, gazer_class_name: str, gazer_params=..., pupil_list=..., ref_list=...):
         if (
             self.gazer_class_name is not None
             and self.gazer_class_name != gazer_class_name
@@ -92,8 +92,8 @@ class ValidationInput:
 
         self.__gazer_class = self.__gazer_class_from_name(gazer_class_name)
 
-        if params is not ...:
-            self.__gazer_params = params
+        if gazer_params is not ...:
+            self.__gazer_params = gazer_params
 
         if pupil_list is not ...:
             self.__pupil_list = pupil_list
@@ -291,7 +291,7 @@ class Accuracy_Visualizer(Plugin):
             return False
 
         self.recent_input.update(
-            gazer_class_name=note.gazer_class_name, params=note.params,
+            gazer_class_name=note.gazer_class_name, gazer_params=note.params,
         )
 
         self.recalculate()
@@ -305,8 +305,10 @@ class Accuracy_Visualizer(Plugin):
         except (AssertionError, ValueError):
             return False
 
+        self.recent_input.clear()
         self.recent_input.update(
             gazer_class_name=note_dict["gazer_class_name"],
+            gazer_params=note_dict["gazer_params"],
             pupil_list=note_dict["pupil_list"],
             ref_list=note_dict["ref_list"],
         )

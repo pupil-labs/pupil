@@ -315,12 +315,17 @@ class CalibrationChoreographyPlugin(Plugin):
             calib_data = {"ref_list": ref_list, "pupil_list": pupil_list}
             self._start_plugin(self.selected_gazer_class, calib_data=calib_data)
         elif mode == ChoreographyMode.VALIDATION:
+            gazer_class = self.g_pool.active_gaze_mapping_plugin.__class__
+            assert gazer_class == self.selected_gazer_class
+            gazer_params = self.g_pool.active_gaze_mapping_plugin.get_params()
+
             self._start_plugin("Accuracy_Visualizer")
             self.notify_all(
                 ChoreographyNotification(
                     mode=ChoreographyMode.VALIDATION,
                     action=ChoreographyAction.DATA,
-                    gazer_class_name=self.selected_gazer_class.__name__,
+                    gazer_class_name=gazer_class.__name__,
+                    gazer_params=gazer_params,
                     pupil_list=pupil_list,
                     ref_list=ref_list,
                     timestamp=self.g_pool.get_timestamp(),
@@ -441,6 +446,10 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_selector_gazer.read_only = (
             not self.is_user_selection_for_gazer_enabled()
         )
+        if self.shows_action_buttons:
+            self.__ui_button_validation.read_only = (
+                self.selected_gazer_class is not self.g_pool.active_gaze_mapping_plugin.__class__
+            )
 
     def deinit_ui(self):
         """Gets called when the plugin get terminated, either voluntarily or forced.
@@ -518,6 +527,10 @@ class CalibrationChoreographyPlugin(Plugin):
         )
 
     def _perform_start(self):
+        if self.__is_active:
+            logger.debug("[PROGRAMMING ERROR] Called _perform_start on an already active calibration choreography.")
+            return
+
         current_mode = self.__current_mode
 
         logger.info(f"Starting  {current_mode.label}")
@@ -541,6 +554,10 @@ class CalibrationChoreographyPlugin(Plugin):
         self.on_choreography_started(mode=current_mode)
 
     def _perform_stop(self):
+        if not self.__is_active:
+            logger.debug("[PROGRAMMING ERROR] Called _perform_stop on an already inactive calibration choreography.")
+            return
+
         current_mode = self.__current_mode
         pupil_list = self.__pupil_list
         ref_list = self.__ref_list

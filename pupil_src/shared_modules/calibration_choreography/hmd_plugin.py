@@ -66,6 +66,8 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
         return "Calibrate gaze parameters to map onto an HMD."
 
     def recent_events(self, events):
+        super().recent_events(events)
+
         if self.is_active:
             self.pupil_list.extend(events["pupil"])
 
