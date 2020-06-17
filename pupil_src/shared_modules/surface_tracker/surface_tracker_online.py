@@ -13,6 +13,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+import numpy as np
+import cv2
+
 import pyglui
 import pyglui.cygl.utils as pyglui_utils
 import gl_utils
@@ -130,11 +133,38 @@ class Surface_Tracker_Online(Surface_Tracker):
                 )
 
     def _update_surface_heatmaps(self):
+        self._compute_across_surfaces_heatmap()
+
         for surface in self.surfaces:
             gaze_on_surf = surface.gaze_history
             gaze_on_surf = (g for g in gaze_on_surf if g["confidence"] >= self.g_pool.min_data_confidence)
             gaze_on_surf = list(gaze_on_surf)
             surface.update_heatmap(gaze_on_surf)
+
+    def _compute_across_surfaces_heatmap(self):
+        gaze_counts_per_surf = []
+
+        for surface in self.surfaces:
+            gaze_on_surf = surface.gaze_history
+            gaze_on_surf = (g for g in gaze_on_surf if g["confidence"] >= self.g_pool.min_data_confidence)
+            gaze_on_surf = list(gaze_on_surf)
+            gaze_counts_per_surf.append(len(gaze_on_surf))
+
+        if gaze_counts_per_surf:
+            max_count = max(gaze_counts_per_surf)
+            results = np.array(gaze_counts_per_surf, dtype=np.float32)
+            if max_count > 0:
+                results *= 255.0 / max_count
+            results = np.uint8(results)
+            results_color_maps = cv2.applyColorMap(results, cv2.COLORMAP_JET)
+
+            for surface, color_map in zip(self.surfaces, results_color_maps):
+                heatmap = np.ones((1, 1, 4), dtype=np.uint8) * 125
+                heatmap[:, :, :3] = color_map
+                surface.across_surface_heatmap = heatmap
+        else:
+            for surface in self.surfaces:
+                surface.across_surface_heatmap = surface.get_uniform_heatmap((1, 1))
 
     def _update_surface_gaze_history(self, events, world_timestamp):
         surfaces_gaze_dict = {
