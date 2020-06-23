@@ -13,7 +13,7 @@ import logging
 from pyglui import ui
 
 from gaze_producer import ui as plugin_ui
-from gaze_mapping import gazer_labels_by_class_names, registered_gazer_classes
+from gaze_mapping import gazer_labels_by_class_names, registered_gazer_classes, user_selectable_gazer_classes
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         )
 
     def _create_mapping_method_selector(self, calibration):
-        gazers = registered_gazer_classes()
+        gazers = user_selectable_gazer_classes()
         gazers_map = gazer_labels_by_class_names(gazers)
 
         return ui.Selector(
