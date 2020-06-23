@@ -315,8 +315,8 @@ class CalibrationChoreographyPlugin(Plugin):
             calib_data = {"ref_list": ref_list, "pupil_list": pupil_list}
             self._start_plugin(self.selected_gazer_class, calib_data=calib_data)
         elif mode == ChoreographyMode.VALIDATION:
+            assert self.g_pool.active_gaze_mapping_plugin is not None
             gazer_class = self.g_pool.active_gaze_mapping_plugin.__class__
-            assert gazer_class == self.selected_gazer_class
             gazer_params = self.g_pool.active_gaze_mapping_plugin.get_params()
 
             self._start_plugin("Accuracy_Visualizer")
@@ -448,7 +448,7 @@ class CalibrationChoreographyPlugin(Plugin):
         )
         if self.shows_action_buttons:
             self.__ui_button_validation.read_only = (
-                self.selected_gazer_class is not self.g_pool.active_gaze_mapping_plugin.__class__
+                self.g_pool.active_gaze_mapping_plugin is None
             )
 
     def deinit_ui(self):
