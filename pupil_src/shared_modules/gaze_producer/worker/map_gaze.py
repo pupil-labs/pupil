@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import file_methods as fm
 import player_methods as pm
 import tasklib
-from gaze_mapping import registered_gazer_classes_by_class_name
+from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes
 
 from .fake_gpool import FakeGPool
 
@@ -60,7 +60,7 @@ def _map_gaze(
     shared_memory,
 ):
     fake_gpool.import_runtime_plugins()
-    gazers_by_name = registered_gazer_classes_by_class_name()
+    gazers_by_name = gazer_classes_by_class_name(registered_gazer_classes())
     gazer_cls = gazers_by_name[gazer_class_name]
     gazer = gazer_cls(fake_gpool, params=gazer_params)
 

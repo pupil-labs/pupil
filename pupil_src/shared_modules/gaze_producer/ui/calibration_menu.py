@@ -13,7 +13,7 @@ import logging
 from pyglui import ui
 
 from gaze_producer import ui as plugin_ui
-from gaze_mapping import registered_gazer_labels_by_class_names
+from gaze_mapping import gazer_labels_by_class_names, registered_gazer_classes
 
 logger = logging.getLogger(__name__)
 
@@ -85,12 +85,15 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         )
 
     def _create_mapping_method_selector(self, calibration):
+        gazers = registered_gazer_classes()
+        gazers_map = gazer_labels_by_class_names(gazers)
+
         return ui.Selector(
             "gazer_class_name",
             calibration,
             label="Gaze Mapping",
-            labels=list(registered_gazer_labels_by_class_names().values()),
-            selection=list(registered_gazer_labels_by_class_names().keys()),
+            labels=list(gazers_map.values()),
+            selection=list(gazers_map.keys()),
         )
 
     def _create_min_confidence_slider(self, calibration):
@@ -120,8 +123,10 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         )
 
     def _info_text_for_calibration_from_other_recording(self, calibration):
+        gazers = registered_gazer_classes()
         gazer_class_name = calibration.gazer_class_name
-        gazer_label = registered_gazer_labels_by_class_names()[gazer_class_name]
+        gazer_label = gazer_labels_by_class_names(gazers)[gazer_class_name]
+
         if calibration.params:
             return (
                 f"This {gazer_label} calibration was copied from another recording. "
@@ -139,8 +144,10 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         menu.append(ui.Info_Text(self._info_text_for_online_calibration(calibration)))
 
     def _info_text_for_online_calibration(self, calibration):
+        gazers = registered_gazer_classes()
         gazer_class_name = calibration.gazer_class_name
-        gazer_label = registered_gazer_labels_by_class_names()[gazer_class_name]
+        gazer_label = gazer_labels_by_class_names(gazers)[gazer_class_name]
+
         return (
             f"This {gazer_label} calibration was created before or during the "
             "recording. It is ready to be used in gaze mappers."

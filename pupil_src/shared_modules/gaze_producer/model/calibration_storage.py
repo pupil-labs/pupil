@@ -20,7 +20,7 @@ import make_unique
 from storage import Storage
 from gaze_producer import model
 from observable import Observable
-from gaze_mapping import default_gazer_class, registered_gazer_labels_by_class_names
+from gaze_mapping import default_gazer_class
 from gaze_mapping.notifications import (
     CalibrationSetupNotification,
     CalibrationResultNotification,
