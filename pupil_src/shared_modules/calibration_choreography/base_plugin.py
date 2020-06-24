@@ -448,7 +448,8 @@ class CalibrationChoreographyPlugin(Plugin):
         )
         if self.shows_action_buttons:
             self.__ui_button_validation.read_only = (
-                self.selected_gazer_class is not self.g_pool.active_gaze_mapping_plugin.__class__
+                self.selected_gazer_class
+                is not self.g_pool.active_gaze_mapping_plugin.__class__
             )
 
     def deinit_ui(self):
@@ -531,7 +532,10 @@ class CalibrationChoreographyPlugin(Plugin):
 
     def _perform_start(self):
         if self.__is_active:
-            logger.debug("[PROGRAMMING ERROR] Called _perform_start on an already active calibration choreography.")
+            logger.debug(
+                "[PROGRAMMING ERROR] Called _perform_start on an already active "
+                "calibration choreography."
+            )
             return
 
         current_mode = self.__current_mode
@@ -558,7 +562,10 @@ class CalibrationChoreographyPlugin(Plugin):
 
     def _perform_stop(self):
         if not self.__is_active:
-            logger.debug("[PROGRAMMING ERROR] Called _perform_stop on an already inactive calibration choreography.")
+            logger.debug(
+                "[PROGRAMMING ERROR] Called _perform_stop on an already inactive "
+                "calibration choreography."
+            )
             return
 
         current_mode = self.__current_mode
