@@ -95,12 +95,13 @@ class _Surface_Serializer_Base(abc.ABC):
             for d in surface_definition["registered_markers_dist"]
         ]
 
-        deprecated_definition = None
+        deprecated_definition = True
         try:
             deprecated_definition = surface_definition["deprecated"]
         except KeyError:
             pass
-        else:
+
+        if deprecated_definition:
             logger.warning(
                 "You have loaded an old and deprecated surface definition! "
                 "Please re-define this surface for increased mapping accuracy!"
