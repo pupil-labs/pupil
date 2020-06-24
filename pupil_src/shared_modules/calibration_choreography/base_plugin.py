@@ -465,7 +465,10 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_button_validation = None
 
     def recent_events(self, events):
-        self.update_ui()
+        if self.g_pool.app == "capture":
+            # UI is only initialized in Capture. In other applications, i.e. Service,
+            # calling this function will crash with an AttributeError.
+            self.update_ui()
 
     def on_notify(self, note_dict):
         """Handles choreography notifications
