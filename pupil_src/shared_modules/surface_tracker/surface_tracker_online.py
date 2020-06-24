@@ -132,7 +132,11 @@ class Surface_Tracker_Online(Surface_Tracker):
     def _update_surface_heatmaps(self):
         for surface in self.surfaces:
             gaze_on_surf = surface.gaze_history
-            gaze_on_surf = (g for g in gaze_on_surf if g["confidence"] >= self.g_pool.min_data_confidence)
+            gaze_on_surf = (
+                g
+                for g in gaze_on_surf
+                if g["confidence"] >= self.g_pool.min_data_confidence
+            )
             gaze_on_surf = list(gaze_on_surf)
             surface.update_heatmap(gaze_on_surf)
 

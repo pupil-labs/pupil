@@ -152,7 +152,7 @@ class _Surface_Serializer_V00(_Surface_Serializer_Base):
         # The format of v00 doesn't store any value for "version" key
         surface_definition["version"] = surface_definition.get("version", self.version)
         return super().surface_from_dict(
-            surface_class=surface_class, surface_definition=surface_definition,
+            surface_class=surface_class, surface_definition=surface_definition
         )
 
 
