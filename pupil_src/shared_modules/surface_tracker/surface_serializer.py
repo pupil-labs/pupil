@@ -95,11 +95,7 @@ class _Surface_Serializer_Base(abc.ABC):
             for d in surface_definition["registered_markers_dist"]
         ]
 
-        deprecated_definition = True
-        try:
-            deprecated_definition = surface_definition["deprecated"]
-        except KeyError:
-            pass
+        deprecated_definition = surface_definition.get("deprecated", True)
 
         if deprecated_definition:
             logger.warning(
