@@ -48,7 +48,7 @@ class Bisector(object):
                 )
             )
         elif not len(data):
-            self.data = np.array([])
+            self.data = np.array([], dtype=object)
             self.data_ts = np.array([])
             self.sorted_idc = []
         else:
