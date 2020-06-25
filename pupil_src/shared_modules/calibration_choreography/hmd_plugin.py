@@ -75,9 +75,7 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
         try:
             note = ChoreographyNotification.from_dict(note_dict)
         except ValueError:
-            note_name = note_dict.get("topic", None) or note_dict.get("subject", None)
-            logger.debug(f"Disregarding notification: {note_name}")
-            return
+            return  # Unknown/unexpected notification, not handling it
         else:
             if note.action == ChoreographyAction.SHOULD_START and not self.is_active:
                 self._prepare_perform_start_from_notification(note_dict)
