@@ -448,7 +448,8 @@ class CalibrationChoreographyPlugin(Plugin):
         )
         if self.shows_action_buttons:
             self.__ui_button_validation.read_only = (
-                self.selected_gazer_class is not self.g_pool.active_gaze_mapping_plugin.__class__
+                self.selected_gazer_class
+                is not self.g_pool.active_gaze_mapping_plugin.__class__
             )
 
     def deinit_ui(self):
@@ -465,7 +466,10 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__ui_button_validation = None
 
     def recent_events(self, events):
-        self.update_ui()
+        if self.g_pool.app == "capture":
+            # UI is only initialized in Capture. In other applications, i.e. Service,
+            # calling this function will crash with an AttributeError.
+            self.update_ui()
 
     def on_notify(self, note_dict):
         """Handles choreography notifications
@@ -487,9 +491,7 @@ class CalibrationChoreographyPlugin(Plugin):
         try:
             note = ChoreographyNotification.from_dict(note_dict)
         except ValueError:
-            note_name = note_dict.get("topic", None) or note_dict.get("subject", None)
-            logger.debug(f"Disregarding notification: {note_name}")
-            return
+            return  # Unknown/unexpected notification, not handling it
 
         if note.action == ChoreographyAction.SHOULD_START:
             if self.is_active:
@@ -528,7 +530,10 @@ class CalibrationChoreographyPlugin(Plugin):
 
     def _perform_start(self):
         if self.__is_active:
-            logger.debug("[PROGRAMMING ERROR] Called _perform_start on an already active calibration choreography.")
+            logger.debug(
+                "[PROGRAMMING ERROR] Called _perform_start on an already active "
+                "calibration choreography."
+            )
             return
 
         current_mode = self.__current_mode
@@ -555,7 +560,10 @@ class CalibrationChoreographyPlugin(Plugin):
 
     def _perform_stop(self):
         if not self.__is_active:
-            logger.debug("[PROGRAMMING ERROR] Called _perform_stop on an already inactive calibration choreography.")
+            logger.debug(
+                "[PROGRAMMING ERROR] Called _perform_stop on an already inactive "
+                "calibration choreography."
+            )
             return
 
         current_mode = self.__current_mode
