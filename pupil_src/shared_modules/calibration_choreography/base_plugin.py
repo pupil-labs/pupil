@@ -491,9 +491,7 @@ class CalibrationChoreographyPlugin(Plugin):
         try:
             note = ChoreographyNotification.from_dict(note_dict)
         except ValueError:
-            note_name = note_dict.get("topic", None) or note_dict.get("subject", None)
-            logger.debug(f"Disregarding notification: {note_name}")
-            return
+            return  # Unknown/unexpected notification, not handling it
 
         if note.action == ChoreographyAction.SHOULD_START:
             if self.is_active:
