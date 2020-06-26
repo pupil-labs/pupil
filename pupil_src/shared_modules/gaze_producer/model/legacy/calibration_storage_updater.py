@@ -48,7 +48,7 @@ class CalibrationStorageUpdater(CalibrationStorage):
             elif data is not None:
                 try:
                     if version == CalibrationV1.version == 1:
-                        cls.__update_and_save_calibration_v1_as_latest_verson(
+                        cls.__update_and_save_calibration_v1_as_latest_version(
                             rec_dir, data
                         )
                         continue  # Success
@@ -61,7 +61,7 @@ class CalibrationStorageUpdater(CalibrationStorage):
             )
 
     @classmethod
-    def __update_and_save_calibration_v1_as_latest_verson(cls, rec_dir, data):
+    def __update_and_save_calibration_v1_as_latest_version(cls, rec_dir, data):
         legacy_calibration = CalibrationV1.from_tuple(data)
         updated_calibration = legacy_calibration.updated()
         cls._save_calibration_to_file(
