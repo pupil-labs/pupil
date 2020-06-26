@@ -14,6 +14,7 @@ import typing as T
 import file_methods as fm
 from gaze_producer.model.calibration import Calibration
 from gaze_producer.model.calibration_storage import CalibrationStorage
+from pupil_recording import PupilRecording
 
 from .calibration_v1 import CalibrationV1
 
@@ -53,7 +54,7 @@ class CalibrationStorageUpdater(CalibrationStorage):
                         )
                         continue  # Success
                 except Exception as err:
-                    logger.debug(str(err))
+                    logger.warning(str(err))
 
             # Failed to update
             logger.warning(
@@ -63,6 +64,15 @@ class CalibrationStorageUpdater(CalibrationStorage):
     @classmethod
     def __update_and_save_calibration_v1_as_latest_version(cls, rec_dir, data):
         legacy_calibration = CalibrationV1.from_tuple(data)
+
+        recording_uuid = str(PupilRecording(rec_dir).meta_info.recording_uuid)
+        is_imported = legacy_calibration.recording_uuid != recording_uuid
+        if is_imported:
+            raise ValueError(
+                "Updating imported (read-only) calibrations is not supported. "
+                f"{legacy_calibration.name}"
+            )
+
         updated_calibration = legacy_calibration.updated()
         cls._save_calibration_to_file(
             rec_dir, updated_calibration, overwrite_if_exists=False
