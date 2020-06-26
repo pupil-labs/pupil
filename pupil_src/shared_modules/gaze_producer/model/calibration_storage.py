@@ -76,7 +76,7 @@ class CalibrationStorage(Storage, Observable):
             gazer_class_name=result_notification.gazer_class_name,
             frame_index_range=self._get_recording_index_range(),
             minimum_confidence=0.8,
-            is_offline_calibration=True,
+            is_offline_calibration=False,
             status="Not calculated yet",
             calib_params=result_notification.params,
         )
