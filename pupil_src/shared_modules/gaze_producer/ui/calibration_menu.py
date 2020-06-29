@@ -152,6 +152,17 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         else:
             logger.error("Cannot duplicate calibrations from other recordings!")
 
+    def _on_click_delete(self):
+        if not self._calibration_controller.is_from_same_recording(self.current_item):
+            logger.error("Cannot delete calibrations from other recordings!")
+            return
+
+        if not self.current_item.is_offline_calibration:
+            logger.error("Cannot delete pre-recorded calibrations!")
+            return
+
+        super()._on_click_delete()
+
     def _on_name_change(self, new_name):
         self._calibration_storage.rename(self.current_item, new_name)
         # we need to render the menu again because otherwise the name in the selector
