@@ -130,10 +130,7 @@ class Calibration(StorageItem):
     )
 
     def __assert_property_consistency(self):
-        if self.__is_offline_calibration:
-            pass
-        else:
-            if self.__calib_params is not None:
-                raise ValueError(
-                    f"Unexpected calib_params argument for pre-recorded calibration"
-                )
+        if not self.__is_offline_calibration and self.__calib_params is None:
+            raise ValueError(
+                f"Missing calib_params for pre-recorded calibration '{self.name}'"
+            )
