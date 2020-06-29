@@ -68,7 +68,20 @@ class CalibrationStorage(Storage, Observable):
         # the easiest datum that differs between calibrations but is the same
         # for every start
         unique_id = model.Calibration.create_unique_id_from_string(str(timestamp))
-        name = make_unique.by_number_at_end("Recorded Calibration", self.item_names)
+
+        # for creating the new name, we should only take into account
+        # non-imported recorded calibrations, otherwise importing recorded
+        # calibrations could result in different names for existing calibrations
+        prerecorded_calibration_names = [
+            calibration.name
+            for calibration in self.items
+            if not calibration.is_offline_calibration
+            and self._from_same_recording(calibration)
+        ]
+        name = make_unique.by_number_at_end(
+            "Recorded Calibration", prerecorded_calibration_names
+        )
+
         return model.Calibration(
             unique_id=unique_id,
             name=name,
