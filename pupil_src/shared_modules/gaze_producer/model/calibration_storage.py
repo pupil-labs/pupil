@@ -33,8 +33,7 @@ logger = logging.getLogger(__name__)
 class CalibrationStorage(Storage, Observable):
     _calibration_suffix = "plcal"
 
-    def __init__(self, rec_dir, plugin, get_recording_index_range, recording_uuid):
-        super().__init__(plugin)
+    def __init__(self, rec_dir, get_recording_index_range, recording_uuid):
         self._rec_dir = rec_dir
         self._get_recording_index_range = get_recording_index_range
         self._recording_uuid = str(recording_uuid)
