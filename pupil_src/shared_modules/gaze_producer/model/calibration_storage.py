@@ -102,14 +102,20 @@ class CalibrationStorage(Storage, Observable):
         new_calibration.unique_id = model.Calibration.create_new_unique_id()
         return new_calibration
 
-    def add(self, calibration):
-        if any(c.unique_id == calibration.unique_id for c in self._calibrations):
+    def add(self, calibration, overwrite=False):
+        for calib in self._calibrations.copy():
+            if calib.unique_id != calibration.unique_id:
+                continue
+            if overwrite:
+                self._calibrations.remove(calib)
+                break
             logger.warning(
                 f"Did not add calibration {calibration.name} ({calibration.unique_id})"
                 " because it is already in the storage. Currently in storage:\n"
                 + "\n".join(f"- {c.name} ({c.unique_id})" for c in self._calibrations)
             )
             return
+
         self._calibrations.append(calibration)
         self._calibrations.sort(key=lambda c: c.name)
 
@@ -198,7 +204,7 @@ class CalibrationStorage(Storage, Observable):
             calibration = self.__create_prerecorded_calibration(
                 result_notification=note
             )
-            self.add(calibration)
+            self.add(calibration, overwrite=True)
 
     def save_to_disk(self):
         os.makedirs(self._calibration_folder, exist_ok=True)
