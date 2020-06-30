@@ -113,3 +113,25 @@ class PluginTaskManager:
         for task in self._tasks:
             if task.running:
                 task.kill(grace_period=grace_period_per_task)
+
+
+class UniqueTaskManager(PluginTaskManager):
+    """TaskManager ensuring tasks are unique by identifier"""
+
+    def add_task(self, task_new, identifier: str):
+        UniqueTaskManager._patch_task(task_new, identifier)
+        task_duplicated = self._get_duplicated_task(identifier)
+        if task_duplicated is not None:
+            if task_duplicated.running:
+                task_duplicated.kill(grace_period=None)
+            self._tasks.remove(task_duplicated)
+        super().add_task(task_new)
+
+    def _get_duplicated_task(self, identifier):
+        for task_prev in self._tasks:
+            if task_prev._unique_task_identifier == identifier:
+                return task_prev
+
+    @staticmethod
+    def _patch_task(task, identifier: str):
+        task._unique_task_identifier = identifier
