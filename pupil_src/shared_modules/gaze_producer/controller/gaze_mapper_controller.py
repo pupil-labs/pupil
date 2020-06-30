@@ -69,7 +69,7 @@ class GazeMapperController(Observable):
         except worker.map_gaze.NotEnoughPupilData:
             self._abort_calculation(gaze_mapper, "There is no pupil data to be mapped!")
             return None
-        self._task_manager.add_task(task, identifier=gaze_mapper.unique_id)
+        self._task_manager.add_task(task, identifier=f"{gaze_mapper.unique_id}-mapping")
         logger.info("Start gaze mapping for '{}'".format(gaze_mapper.name))
 
     def _abort_calculation(self, gaze_mapper, error_message):
@@ -179,7 +179,9 @@ class GazeMapperController(Observable):
         )
         task.add_observer("on_completed", validation_completed)
         task.add_observer("on_exception", tasklib.raise_exception)
-        self._task_manager.add_task(task)
+        self._task_manager.add_task(
+            task, identifier=f"{gaze_mapper.unique_id}-validating"
+        )
 
     def get_valid_calibration_or_none(self, gaze_mapper):
         return self._calibration_storage.get_or_none(gaze_mapper.calibration_unique_id)
