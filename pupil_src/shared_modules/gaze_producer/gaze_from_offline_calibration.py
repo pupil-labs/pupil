@@ -203,8 +203,9 @@ class GazeFromOfflineCalibration(GazeProducerBase):
 
     def _index_range_as_str(self, index_range):
         from_index, to_index = index_range
-        return "{} - {}".format(
-            self._index_time_as_str(from_index), self._index_time_as_str(to_index)
+        return (
+            f"{self._index_time_as_str(from_index)} - "
+            f"{self._index_time_as_str(to_index)}"
         )
 
     def _index_time_as_str(self, index):
@@ -213,4 +214,4 @@ class GazeFromOfflineCalibration(GazeProducerBase):
         time = ts - min_ts
         minutes = abs(time // 60)  # abs because it's sometimes -0
         seconds = round(time % 60)
-        return "{:02.0f}:{:02.0f}".format(minutes, seconds)
+        return f"{minutes:02.0f}:{seconds:02.0f}"
