@@ -95,6 +95,8 @@ class Surface_Tracker_Online(Surface_Tracker):
         )
 
     def recent_events(self, events):
+        if self._ui_heatmap_mode_selector:
+            self._ui_heatmap_mode_selector.read_only = True
         if self.freeze_scene:
             # If frozen, we overwrite the frame event with the last frame we have saved
             current_frame = events.get("frame")
