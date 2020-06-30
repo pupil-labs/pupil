@@ -100,9 +100,9 @@ class PluginTaskManager:
         for task in self._tasks.copy():
             if not task.started:
                 task.start()
-            elif task.running:
+            if task.running:
                 task.update()
-            elif task.ended:
+            if task.ended:
                 self._tasks.remove(task)
 
     def on_cleanup(self):
