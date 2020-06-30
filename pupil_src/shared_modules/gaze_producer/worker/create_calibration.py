@@ -42,6 +42,7 @@ def create_task(calibration, all_reference_locations):
     ]
 
     fake_gpool = FakeGPool.from_g_pool(g_pool)
+    fake_gpool.min_calibration_confidence = calibration.minimum_confidence
 
     args = (
         fake_gpool,
