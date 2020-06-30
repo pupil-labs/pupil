@@ -12,7 +12,6 @@ import data_changed
 from gaze_producer import controller, model
 from gaze_producer import ui as plugin_ui
 from gaze_producer.gaze_producer_base import GazeProducerBase
-from observable import Observable
 from plugin_timeline import PluginTimeline
 from pupil_recording import PupilRecording
 from tasklib.manager import UniqueTaskManager
