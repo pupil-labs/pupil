@@ -68,18 +68,21 @@ class CalibrationStorage(Storage, Observable):
         # for every start
         unique_id = model.Calibration.create_unique_id_from_string(str(timestamp))
 
-        # for creating the new name, we should only take into account
-        # non-imported recorded calibrations, otherwise importing recorded
-        # calibrations could result in different names for existing calibrations
-        prerecorded_calibration_names = [
-            calibration.name
+        # For creating the new name, we should only take into account non-imported
+        # recorded calibrations, otherwise importing recorded calibrations could result
+        # in different names for existing calibrations. Also we want to re-use the name
+        # if the ID matches.
+        prerecorded_calibration_names = {
+            calibration.unique_id: calibration.name
             for calibration in self.items
             if not calibration.is_offline_calibration
             and self._from_same_recording(calibration)
-        ]
-        name = make_unique.by_number_at_end(
-            "Recorded Calibration", prerecorded_calibration_names
-        )
+        }
+        name = prerecorded_calibration_names.get(unique_id, None)
+        if name is None:
+            name = make_unique.by_number_at_end(
+                "Recorded Calibration", list(prerecorded_calibration_names.values()),
+            )
 
         return model.Calibration(
             unique_id=unique_id,
