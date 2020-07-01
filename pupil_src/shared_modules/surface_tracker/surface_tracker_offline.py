@@ -340,7 +340,11 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Analysis_Plugin_Base)
             surf_idx = self.surfaces.index(surface)
             gaze_on_surf = self.gaze_on_surf_buffer[surf_idx]
             gaze_on_surf = itertools.chain.from_iterable(gaze_on_surf)
-            gaze_on_surf = (g for g in gaze_on_surf if g["confidence"] >= self.g_pool.min_data_confidence)
+            gaze_on_surf = (
+                g
+                for g in gaze_on_surf
+                if g["confidence"] >= self.g_pool.min_data_confidence
+            )
             gaze_on_surf = list(gaze_on_surf)
             surface.update_heatmap(gaze_on_surf)
 
