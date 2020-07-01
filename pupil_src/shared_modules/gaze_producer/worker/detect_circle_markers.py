@@ -95,12 +95,10 @@ class CircleMarkerDetectionTask(TaskInterface):
                 return
             elif topic == "exception":
                 logger.warning(
-                    "Calibration marker detection raised exception:\n{}".format(
-                        msg["reason"]
-                    )
+                    f"Calibration marker detection raised exception:\n{msg['reason']}"
                 )
                 logger.info("Marker detection was interrupted")
-                logger.debug("Reason: {}".format(msg.get("reason", "n/a")))
+                logger.debug(f"Reason: {msg.get('reason', 'n/a')}")
                 self.on_canceled_or_killed()
                 return
 
