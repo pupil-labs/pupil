@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 
 class GazeMapperStorage(SingleFileStorage, Observable):
-    def __init__(self, calibration_storage, rec_dir, plugin, get_recording_index_range):
-        super().__init__(rec_dir, plugin)
+    def __init__(self, calibration_storage, rec_dir, get_recording_index_range):
+        super().__init__(rec_dir)
         self._calibration_storage = calibration_storage
         self._get_recording_index_range = get_recording_index_range
         self._gaze_mappers = []

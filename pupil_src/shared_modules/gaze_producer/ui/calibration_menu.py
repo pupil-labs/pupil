@@ -147,10 +147,26 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         )
 
     def _on_click_duplicate_button(self):
-        if self._calibration_controller.is_from_same_recording(self.current_item):
-            super()._on_click_duplicate_button()
-        else:
+        if not self._calibration_controller.is_from_same_recording(self.current_item):
             logger.error("Cannot duplicate calibrations from other recordings!")
+            return
+
+        if not self.current_item.is_offline_calibration:
+            logger.error("Cannot duplicate pre-recorded calibrations!")
+            return
+
+        super()._on_click_duplicate_button()
+
+    def _on_click_delete(self):
+        if not self._calibration_controller.is_from_same_recording(self.current_item):
+            logger.error("Cannot delete calibrations from other recordings!")
+            return
+
+        if not self.current_item.is_offline_calibration:
+            logger.error("Cannot delete pre-recorded calibrations!")
+            return
+
+        super()._on_click_delete()
 
     def _on_name_change(self, new_name):
         self._calibration_storage.rename(self.current_item, new_name)

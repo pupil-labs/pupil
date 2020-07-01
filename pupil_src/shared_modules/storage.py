@@ -60,9 +60,6 @@ class StorageItem(abc.ABC):
 
 
 class Storage(abc.ABC):
-    def __init__(self, plugin):
-        plugin.add_observer("cleanup", self._on_cleanup)
-
     def __iter__(self):
         return iter(self.items)
 
@@ -111,9 +108,6 @@ class Storage(abc.ABC):
             return None
         return dict_representation.get("data", None)
 
-    def _on_cleanup(self):
-        self.save_to_disk()
-
     @staticmethod
     def get_valid_filename(file_name):
         """
@@ -138,8 +132,7 @@ class SingleFileStorage(Storage, abc.ABC):
     Storage that can save and load all items from / to a single file
     """
 
-    def __init__(self, rec_dir, plugin):
-        super().__init__(plugin)
+    def __init__(self, rec_dir):
         self._rec_dir = rec_dir
 
     def save_to_disk(self):

@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class ReferenceLocationStorage(SingleFileStorage, Observable):
-    def __init__(self, rec_dir, plugin):
-        super().__init__(rec_dir, plugin)
+    def __init__(self, rec_dir):
+        super().__init__(rec_dir)
         self._reference_locations = {}
         self._load_from_disk()
 

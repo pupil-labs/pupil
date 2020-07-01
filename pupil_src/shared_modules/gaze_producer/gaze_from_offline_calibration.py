@@ -55,20 +55,24 @@ class GazeFromOfflineCalibration(GazeProducerBase):
 
     def _setup_storages(self):
         self._reference_location_storage = model.ReferenceLocationStorage(
-            self.g_pool.rec_dir, plugin=self
+            self.g_pool.rec_dir
         )
         self._calibration_storage = model.CalibrationStorage(
             rec_dir=self.g_pool.rec_dir,
-            plugin=self,
             get_recording_index_range=self._recording_index_range,
             recording_uuid=self._recording_uuid,
         )
         self._gaze_mapper_storage = model.GazeMapperStorage(
             self._calibration_storage,
             rec_dir=self.g_pool.rec_dir,
-            plugin=self,
             get_recording_index_range=self._recording_index_range,
         )
+
+    def cleanup(self):
+        super().cleanup()
+        self._reference_location_storage.save_to_disk()
+        self._calibration_storage.save_to_disk()
+        self._gaze_mapper_storage.save_to_disk()
 
     def _setup_controllers(self):
         self._reference_detection_controller = controller.ReferenceDetectionController(
