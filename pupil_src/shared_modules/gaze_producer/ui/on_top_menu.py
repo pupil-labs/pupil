@@ -19,6 +19,7 @@ class OnTopMenu:
         self._calculate_all_button = None
 
         self._calculate_all_controller = calculate_all_controller
+        self._reference_location_storage = reference_location_storage
 
         reference_location_storage.add_observer(
             "add", self._on_reference_storage_changed
@@ -56,7 +57,7 @@ class OnTopMenu:
 
     @property
     def _calculate_all_button_label(self):
-        if self._calculate_all_controller.does_detect_references:
+        if self._reference_location_storage.is_empty:
             return "Detect References, Calculate All Calibrations and Mappings"
         else:
             return "Calculate All Calibrations and Mappings"
