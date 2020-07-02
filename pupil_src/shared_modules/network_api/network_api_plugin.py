@@ -11,9 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 
 from plugin import Plugin
-from pyglui import ui
 
-from .model import FrameFormat
 from .controller import FramePublisherController
 from .controller import PupilRemoteController
 from .ui import FramePublisherMenu
@@ -39,11 +37,11 @@ class NetworkApiPlugin(Plugin):
         # Frame Publisher setup
         self.__frame_publisher = FramePublisherController(**kwargs)
         self.__frame_publisher.add_observer(
-            "on_frame_publisher_did_start", self.on_frame_publisher_did_start
+            "on_format_changed", self.frame_publisher_announce_current_format
         )
-        self.__frame_publisher.add_observer(
-            "on_frame_publisher_did_stop", self.on_frame_publisher_did_stop
-        )
+
+        # Let existing eye-processes know about current frame publishing format
+        self.frame_publisher_announce_current_format()
 
         # Pupil Remote setup
         self.__pupil_remote = PupilRemoteController(g_pool, **kwargs)
@@ -65,7 +63,7 @@ class NetworkApiPlugin(Plugin):
         }
 
     def cleanup(self):
-        self.__frame_publisher.cleanup()
+        self.frame_publisher_announce_stop()
         self.__frame_publisher = None
         self.__pupil_remote.cleanup()
         self.__pupil_remote = None
@@ -105,16 +103,21 @@ class NetworkApiPlugin(Plugin):
             Any other notification received though the reqrepl port.
         """
         if notification["subject"].startswith("eye_process.started"):
-            # trigger notification
-            self.__frame_publisher.frame_format = self.__frame_publisher.frame_format
+            # Let newly started eye-processes know about current frame publishing format
+            self.frame_publisher_announce_current_format()
         elif notification["subject"] == "frame_publishing.set_format":
             # update format and trigger notification
             self.__frame_publisher.frame_format = notification["format"]
 
-    def on_frame_publisher_did_start(self, format: FrameFormat):
-        self.notify_all({"subject": "frame_publishing.started", "format": format.value})
+    def frame_publisher_announce_current_format(self, *_):
+        self.notify_all(
+            {
+                "subject": "frame_publishing.started",
+                "format": self.__frame_publisher.frame_format.value,
+            }
+        )
 
-    def on_frame_publisher_did_stop(self):
+    def frame_publisher_announce_stop(self):
         self.notify_all({"subject": "frame_publishing.stopped"})
 
     def on_pupil_remote_server_did_start(self, address: str):
