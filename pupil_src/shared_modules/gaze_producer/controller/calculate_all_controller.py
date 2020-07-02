@@ -43,6 +43,9 @@ class CalculateAllController:
         self._calculate_all_calibrations()
 
     def _calculate_all_calibrations(self):
+        if self._calibration_storage.is_empty:
+            self._calibration_storage.add_default_calibration()
+
         for calibration in self._calibration_storage:
             calculation_possible = (
                 self._calibration_controller.is_from_same_recording(calibration)

@@ -40,9 +40,9 @@ class CalibrationStorage(Storage, Observable):
         self._calibrations = []
         self._load_from_disk()
         if not self._calibrations:
-            self._add_default_calibration()
+            self.add_default_calibration()
 
-    def _add_default_calibration(self):
+    def add_default_calibration(self):
         self.add(self.create_default_calibration())
 
     def create_default_calibration(self):
