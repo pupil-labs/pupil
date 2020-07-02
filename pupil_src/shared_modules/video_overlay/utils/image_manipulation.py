@@ -100,7 +100,6 @@ class PupilRenderer(ImageManipulator):
                     f"eye_ball: {eye_ball}\n"
                     f"{type(e)}: {e}"
                 )
-                pass
 
     def render_ellipse(self, image, ellipse, color):
         outline = self.get_ellipse_points(
