@@ -49,7 +49,8 @@ class GazeFromOfflineCalibration(GazeProducerBase):
             "pupil_positions", g_pool.rec_dir, plugin=self
         )
         self._pupil_changed_listener.add_observer(
-            "on_data_changed", self._calculate_all_controller.calculate_all
+            "on_data_changed",
+            self._calculate_all_controller.calculate_all_if_references_available,
         )
 
     def _setup_storages(self):
