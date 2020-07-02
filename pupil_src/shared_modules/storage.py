@@ -63,6 +63,14 @@ class Storage(abc.ABC):
     def __iter__(self):
         return iter(self.items)
 
+    @property
+    def is_empty(self):
+        try:
+            next(iter(self))
+            return False
+        except StopIteration:
+            return True
+
     @abc.abstractmethod
     def add(self, item):
         pass

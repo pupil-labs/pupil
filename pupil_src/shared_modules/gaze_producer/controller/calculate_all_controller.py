@@ -33,21 +33,11 @@ class CalculateAllController:
         current settings. If there are no reference locations in the storage,
         first the current reference detector is run.
         """
-        if self.does_detect_references:
+        if self._reference_location_storage.is_empty:
             task = self._reference_detection_controller.start_detection()
             task.add_observer("on_completed", self._on_reference_detection_completed)
         else:
             self._calculate_all_calibrations()
-
-    @property
-    def does_detect_references(self):
-        """
-        True if the controller would first detect reference locations in calculate_all()
-        """
-        at_least_one_reference_location = any(
-            True for _ in self._reference_location_storage
-        )
-        return not at_least_one_reference_location
 
     def _on_reference_detection_completed(self, _):
         self._calculate_all_calibrations()
