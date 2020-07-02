@@ -33,7 +33,7 @@ class CalibrationStorageUpdater(CalibrationStorage):
         if not calib_dir.is_dir():
             return  # TODO: Raise exception - "calibrations" must be a directory
 
-        for calib_path in sorted(calib_dir.glob("*.plcal")):
+        for calib_path in sorted(calib_dir.glob("[!.]*.plcal")):
             calib_dict = fm.load_object(calib_path)
             version = calib_dict.get("version", None)
             data = calib_dict.get("data", None)

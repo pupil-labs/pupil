@@ -35,7 +35,7 @@ class Vis_Watermark(Visualizer_Plugin_Base):
         self.menu = None
 
         available_files = glob(
-            os.path.join(self.g_pool.user_dir, "*png")
+            os.path.join(self.g_pool.user_dir, "[!.]*png")
         )  # we only look for png's
         self.available_files = [
             f for f in available_files if cv2.imread(f, -1).shape[2] == 4
