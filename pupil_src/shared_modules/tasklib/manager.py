@@ -125,10 +125,8 @@ class UniqueTaskManager(PluginTaskManager):
         UniqueTaskManager._patch_task(task_new, identifier)
         task_duplicated = self._get_duplicated_task(identifier)
         if task_duplicated is not None:
-            logger.debug(
-                f"{self} replacing queued task '{task_duplicated.process.name}' "
-                f"({identifier})"
-            )
+            state = "running" if task_duplicated.running else "queued"
+            logger.debug(f"Replacing {state} task with ID '{identifier}'")
             if task_duplicated.running:
                 task_duplicated.kill(grace_period=None)
             self._tasks.remove(task_duplicated)
