@@ -23,8 +23,6 @@ class FramePublisherController(Observable):
     def on_frame_publisher_did_start(self, format: FrameFormat):
         logger.debug(f"on_frame_publisher_did_start({format})")
 
-    def on_frame_publisher_did_stop(self):
-        logger.debug(f"on_frame_publisher_did_stop")
 
     def __init__(self, format="jpeg", **kwargs):
         self.__frame_format = FrameFormat(format)
@@ -32,9 +30,6 @@ class FramePublisherController(Observable):
 
     def get_init_dict(self):
         return {"format": self.__frame_format.value}
-
-    def cleanup(self):
-        self.on_frame_publisher_did_stop()
 
     @property
     def frame_format(self):

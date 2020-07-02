@@ -41,9 +41,6 @@ class NetworkApiPlugin(Plugin):
         self.__frame_publisher.add_observer(
             "on_frame_publisher_did_start", self.on_frame_publisher_did_start
         )
-        self.__frame_publisher.add_observer(
-            "on_frame_publisher_did_stop", self.on_frame_publisher_did_stop
-        )
 
         # Pupil Remote setup
         self.__pupil_remote = PupilRemoteController(g_pool, **kwargs)
@@ -65,7 +62,7 @@ class NetworkApiPlugin(Plugin):
         }
 
     def cleanup(self):
-        self.__frame_publisher.cleanup()
+        self.frame_publisher_announce_stop()
         self.__frame_publisher = None
         self.__pupil_remote.cleanup()
         self.__pupil_remote = None
@@ -114,7 +111,7 @@ class NetworkApiPlugin(Plugin):
     def on_frame_publisher_did_start(self, format: FrameFormat):
         self.notify_all({"subject": "frame_publishing.started", "format": format.value})
 
-    def on_frame_publisher_did_stop(self):
+    def frame_publisher_announce_stop(self):
         self.notify_all({"subject": "frame_publishing.stopped"})
 
     def on_pupil_remote_server_did_start(self, address: str):
