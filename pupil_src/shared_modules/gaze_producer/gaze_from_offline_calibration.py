@@ -12,10 +12,9 @@ import data_changed
 from gaze_producer import controller, model
 from gaze_producer import ui as plugin_ui
 from gaze_producer.gaze_producer_base import GazeProducerBase
-from observable import Observable
 from plugin_timeline import PluginTimeline
 from pupil_recording import PupilRecording
-from tasklib.manager import PluginTaskManager
+from tasklib.manager import UniqueTaskManager
 
 
 # IMPORTANT: GazeProducerBase needs to be THE LAST in the list of bases, otherwise
@@ -37,7 +36,7 @@ class GazeFromOfflineCalibration(GazeProducerBase):
 
         self.inject_plugin_dependencies()
 
-        self._task_manager = PluginTaskManager(plugin=self)
+        self._task_manager = UniqueTaskManager(plugin=self)
 
         self._recording_uuid = PupilRecording(g_pool.rec_dir).meta_info.recording_uuid
 
