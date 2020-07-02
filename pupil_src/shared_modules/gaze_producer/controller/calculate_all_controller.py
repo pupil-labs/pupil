@@ -46,6 +46,9 @@ class CalculateAllController:
         if self._calibration_storage.is_empty:
             self._calibration_storage.add_default_calibration()
 
+        if self._gaze_mapper_storage.is_empty:
+            self._gaze_mapper_storage.add_default_gaze_mapper()
+
         for calibration in self._calibration_storage:
             calculation_possible = (
                 self._calibration_controller.is_from_same_recording(calibration)
