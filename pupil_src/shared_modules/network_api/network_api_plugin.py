@@ -11,9 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 
 from plugin import Plugin
-from pyglui import ui
 
-from .model import FrameFormat
 from .controller import FramePublisherController
 from .controller import PupilRemoteController
 from .ui import FramePublisherMenu
