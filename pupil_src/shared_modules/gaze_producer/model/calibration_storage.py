@@ -58,7 +58,7 @@ class CalibrationStorage(Storage, Observable):
         )
 
     def __create_prerecorded_calibration(
-        self, result_notification: CalibrationResultNotification
+        self, number: int, result_notification: CalibrationResultNotification
     ):
         timestamp = result_notification.timestamp
 
@@ -68,18 +68,9 @@ class CalibrationStorage(Storage, Observable):
         # for every start
         unique_id = model.Calibration.create_unique_id_from_string(str(timestamp))
 
-        # for creating the new name, we should only take into account
-        # non-imported recorded calibrations, otherwise importing recorded
-        # calibrations could result in different names for existing calibrations
-        prerecorded_calibration_names = [
-            calibration.name
-            for calibration in self.items
-            if not calibration.is_offline_calibration
-            and self._from_same_recording(calibration)
-        ]
-        name = make_unique.by_number_at_end(
-            "Recorded Calibration", prerecorded_calibration_names
-        )
+        name = "Recorded Calibration"
+        if number > 1:
+            name += f" {number}"
 
         return model.Calibration(
             unique_id=unique_id,
@@ -179,6 +170,7 @@ class CalibrationStorage(Storage, Observable):
 
     def _load_recorded_calibrations(self):
         notifications = fm.load_pldata_file(self._rec_dir, "notify")
+        counter = 1
         for topic, data in zip(notifications.topics, notifications.data):
             if topic.startswith("notify."):
                 # Remove "notify." prefix
@@ -201,9 +193,10 @@ class CalibrationStorage(Storage, Observable):
                 logger.debug(str(err))
                 continue
             calibration = self.__create_prerecorded_calibration(
-                result_notification=note
+                number=counter, result_notification=note
             )
             self.add(calibration, overwrite=True)
+            counter += 1
 
     def save_to_disk(self):
         os.makedirs(self._calibration_folder, exist_ok=True)
