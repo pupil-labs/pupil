@@ -42,6 +42,7 @@ def create_task(calibration, all_reference_locations):
     ]
 
     fake_gpool = FakeGPool.from_g_pool(g_pool)
+    fake_gpool.min_calibration_confidence = calibration.minimum_confidence
 
     args = (
         fake_gpool,
@@ -49,7 +50,7 @@ def create_task(calibration, all_reference_locations):
         ref_dicts_in_calib_range,
         pupil_pos_in_calib_range,
     )
-    name = "Create calibration {}".format(calibration.name)
+    name = f"Create calibration {calibration.name}"
     return tasklib.background.create(name, _create_calibration, args=args)
 
 

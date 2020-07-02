@@ -54,20 +54,24 @@ class GazeFromOfflineCalibration(GazeProducerBase):
 
     def _setup_storages(self):
         self._reference_location_storage = model.ReferenceLocationStorage(
-            self.g_pool.rec_dir, plugin=self
+            self.g_pool.rec_dir
         )
         self._calibration_storage = model.CalibrationStorage(
             rec_dir=self.g_pool.rec_dir,
-            plugin=self,
             get_recording_index_range=self._recording_index_range,
             recording_uuid=self._recording_uuid,
         )
         self._gaze_mapper_storage = model.GazeMapperStorage(
             self._calibration_storage,
             rec_dir=self.g_pool.rec_dir,
-            plugin=self,
             get_recording_index_range=self._recording_index_range,
         )
+
+    def cleanup(self):
+        super().cleanup()
+        self._reference_location_storage.save_to_disk()
+        self._calibration_storage.save_to_disk()
+        self._gaze_mapper_storage.save_to_disk()
 
     def _setup_controllers(self):
         self._reference_detection_controller = controller.ReferenceDetectionController(
@@ -202,8 +206,9 @@ class GazeFromOfflineCalibration(GazeProducerBase):
 
     def _index_range_as_str(self, index_range):
         from_index, to_index = index_range
-        return "{} - {}".format(
-            self._index_time_as_str(from_index), self._index_time_as_str(to_index)
+        return (
+            f"{self._index_time_as_str(from_index)} - "
+            f"{self._index_time_as_str(to_index)}"
         )
 
     def _index_time_as_str(self, index):
@@ -212,4 +217,4 @@ class GazeFromOfflineCalibration(GazeProducerBase):
         time = ts - min_ts
         minutes = abs(time // 60)  # abs because it's sometimes -0
         seconds = round(time % 60)
-        return "{:02.0f}:{:02.0f}".format(minutes, seconds)
+        return f"{minutes:02.0f}:{seconds:02.0f}"

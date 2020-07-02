@@ -44,7 +44,7 @@ def create_task(gaze_mapper, calibration):
         gaze_mapper.manual_correction_x,
         gaze_mapper.manual_correction_y,
     )
-    name = "Create gaze mapper {}".format(gaze_mapper.name)
+    name = f"Create gaze mapper {gaze_mapper.name}"
     return tasklib.background.create(
         name, _map_gaze, args=args, pass_shared_memory=True,
     )

@@ -27,7 +27,13 @@ class Video_Overlay(Observable, Plugin):
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        self.manager = OverlayManager(g_pool.rec_dir, self)
+        self.manager = OverlayManager(g_pool.rec_dir)
+
+    def get_init_dict(self):
+        # Save current settings to disk, ensures that the World Video Exporter
+        # loads the most recent settings.
+        self.manager.save_to_disk()
+        return super().get_init_dict()
 
     def recent_events(self, events):
         if "frame" in events:
