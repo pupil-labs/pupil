@@ -20,7 +20,11 @@ import make_unique
 from storage import Storage
 from gaze_producer import model
 from observable import Observable
-from gaze_mapping import default_gazer_class
+from gaze_mapping import (
+    default_gazer_class,
+    user_selectable_gazer_classes,
+    gazer_classes_by_class_name,
+)
 from gaze_mapping.notifications import (
     CalibrationSetupNotification,
     CalibrationResultNotification,
@@ -114,7 +118,14 @@ class CalibrationStorage(Storage, Observable):
                 + "\n".join(f"- {c.name} ({c.unique_id})" for c in self._calibrations)
             )
             return
-
+        registered_gazer_class_names = set(
+            gazer_classes_by_class_name(user_selectable_gazer_classes()).keys()
+        )
+        if calibration.gazer_class_name not in registered_gazer_class_names:
+            logger.warning(
+                f"Did not add calibration {calibration.name} ({calibration.unique_id}) because gaze mapping method ({calibration.gazer_class_name}) is not available."
+            )
+            return
         self._calibrations.append(calibration)
         self._calibrations.sort(key=lambda c: c.name)
 
