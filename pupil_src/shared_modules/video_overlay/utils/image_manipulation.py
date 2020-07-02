@@ -10,9 +10,12 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
+import logging
 
 import cv2
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 class ImageManipulator(metaclass=abc.ABCMeta):
@@ -86,10 +89,17 @@ class PupilRenderer(ImageManipulator):
                     color=(26, 230, 0, 255 * pupil_position["model_confidence"]),
                     thickness=2,
                 )
-            except ValueError:
-                # Happens when converting 'nan' to int
-                # TODO: Investigate why results are sometimes 'nan'
-                pass
+            except Exception as e:
+                # Known issues:
+                #   - Sometimes raises ValueError when some components of the eye_ball
+                #     are 'nan'. TODO: Investigate where the 'nan' comes from.
+                #   - There are reports of negative eye_ball axes, raising cv2.error.
+                #     TODO: Investigate cause in detectors.
+                logger.debug(
+                    "Error rendering 3D eye-ball outline! Skipping...\n"
+                    f"eye_ball: {eye_ball}\n"
+                    f"{type(e)}: {e}"
+                )
 
     def render_ellipse(self, image, ellipse, color):
         outline = self.get_ellipse_points(
