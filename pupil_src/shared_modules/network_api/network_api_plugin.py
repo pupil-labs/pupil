@@ -42,6 +42,9 @@ class NetworkApiPlugin(Plugin):
             "on_format_changed", self.frame_publisher_announce_current_format
         )
 
+        # Let existing eye-processes know about current frame publishing format
+        self.frame_publisher_announce_current_format()
+
         # Pupil Remote setup
         self.__pupil_remote = PupilRemoteController(g_pool, **kwargs)
         self.__pupil_remote.add_observer(
