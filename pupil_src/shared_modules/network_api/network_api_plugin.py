@@ -39,7 +39,7 @@ class NetworkApiPlugin(Plugin):
         # Frame Publisher setup
         self.__frame_publisher = FramePublisherController(**kwargs)
         self.__frame_publisher.add_observer(
-            "on_frame_publisher_did_start", self.on_frame_publisher_did_start
+            "on_format_changed", self.frame_publisher_announce_current_format
         )
 
         # Pupil Remote setup
@@ -102,14 +102,19 @@ class NetworkApiPlugin(Plugin):
             Any other notification received though the reqrepl port.
         """
         if notification["subject"].startswith("eye_process.started"):
-            # trigger notification
-            self.__frame_publisher.frame_format = self.__frame_publisher.frame_format
+            # Let newly started eye-processes know about current frame publishing format
+            self.frame_publisher_announce_current_format()
         elif notification["subject"] == "frame_publishing.set_format":
             # update format and trigger notification
             self.__frame_publisher.frame_format = notification["format"]
 
-    def on_frame_publisher_did_start(self, format: FrameFormat):
-        self.notify_all({"subject": "frame_publishing.started", "format": format.value})
+    def frame_publisher_announce_current_format(self, *_):
+        self.notify_all(
+            {
+                "subject": "frame_publishing.started",
+                "format": self.__frame_publisher.frame_format.value,
+            }
+        )
 
     def frame_publisher_announce_stop(self):
         self.notify_all({"subject": "frame_publishing.stopped"})
