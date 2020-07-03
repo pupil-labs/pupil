@@ -67,6 +67,14 @@ class ScreenMarkerChoreographyPlugin(
     def selection_order(cls) -> float:
         return 1.0
 
+    @staticmethod
+    def get_list_of_markers_to_show(mode: ChoreographyMode) -> list:
+        if ChoreographyMode.CALIBRATION == mode:
+            return [(0.5, 0.5), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
+        if ChoreographyMode.VALIDATION == mode:
+            return [(0.5, 1.0), (1.0, 0.5), (0.5, 0.0), (0.0, 0.5)]
+        raise ValueError(f"Unknown mode {mode}")
+
     def __init__(
         self,
         g_pool,
@@ -269,7 +277,7 @@ class ScreenMarkerChoreographyPlugin(
             )
             return
 
-        self.__current_list_of_markers_to_show = self.__get_list_of_markers_to_show(
+        self.__current_list_of_markers_to_show = self.get_list_of_markers_to_show(
             mode=self.current_mode,
         )
         self.__currently_shown_marker_position = None
@@ -288,14 +296,6 @@ class ScreenMarkerChoreographyPlugin(
         super()._perform_stop()
 
     ### Private
-
-    @staticmethod
-    def __get_list_of_markers_to_show(mode: ChoreographyMode,) -> list:
-        if ChoreographyMode.CALIBRATION == mode:
-            return [(0.5, 0.5), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
-        if ChoreographyMode.VALIDATION == mode:
-            return [(0.5, 1.0), (1.0, 0.5), (0.5, 0.0), (0.0, 0.5)]
-        raise ValueError(f"Unknown mode {mode}")
 
     def _on_window_did_close(self):
         self._signal_should_stop(mode=self.current_mode)
