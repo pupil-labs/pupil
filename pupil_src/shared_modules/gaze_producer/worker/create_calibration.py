@@ -15,7 +15,11 @@ from types import SimpleNamespace
 import player_methods as pm
 import tasklib.background
 from gaze_producer import model
-from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes, CalibrationError
+from gaze_mapping import (
+    gazer_classes_by_class_name,
+    registered_gazer_classes,
+    CalibrationError,
+)
 from methods import normalize
 
 from .fake_gpool import FakeGPool
