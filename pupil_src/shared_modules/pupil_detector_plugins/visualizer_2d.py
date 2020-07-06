@@ -29,11 +29,15 @@ def draw_ellipse(
             arcEnd=360,
             delta=8,
         )
-    except ValueError:
-        # Happens when converting 'nan' to int
-        # TODO: Investigate why results are sometimes 'nan'
-        logger.debug(f"WARN: trying to draw ellipse with 'NaN' data: {ellipse}")
-        return
+    except Exception as e:
+        # Known issues:
+        #   - There are reports of negative eye_ball axes when drawing the 3D eyeball
+        #     outline, which will raise cv2.error. TODO: Investigate cause in detectors.
+        logger.debug(
+            "Error drawing ellipse! Skipping...\n"
+            f"ellipse: {ellipse}\n"
+            f"{type(e)}: {e}"
+        )
 
     draw_polyline(pts, thickness, RGBA(*rgba))
     if draw_center:
@@ -43,6 +47,12 @@ def draw_ellipse(
 
 
 def draw_eyeball_outline(pupil_detection_result_3d):
+    if pupil_detection_result_3d["model_confidence"] <= 0.0:
+        # NOTE: if 'model_confidence' == 0, some values of the 'projected_sphere' might
+        # be 'nan', which will cause cv2.ellipse to crash.
+        # TODO: Fix in detectors.
+        return
+
     draw_ellipse(
         ellipse=pupil_detection_result_3d["projected_sphere"],
         rgba=(0, 0.9, 0.1, pupil_detection_result_3d["model_confidence"]),
