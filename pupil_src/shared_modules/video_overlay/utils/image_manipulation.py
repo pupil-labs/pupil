@@ -76,6 +76,12 @@ class PupilRenderer(ImageManipulator):
         conf = int(pupil_position["confidence"] * 255)
         self.render_ellipse(image, el, color=(0, 0, 255, conf))
 
+        if pupil_position["model_confidence"] <= 0.0:
+            # NOTE: if 'model_confidence' == 0, some values of the 'projected_sphere'
+            # might be 'nan', which will cause cv2.ellipse to crash.
+            # TODO: Fix in detectors.
+            return
+
         eye_ball = pupil_position.get("projected_sphere", None)
         if eye_ball is not None:
             try:
@@ -91,8 +97,6 @@ class PupilRenderer(ImageManipulator):
                 )
             except Exception as e:
                 # Known issues:
-                #   - Sometimes raises ValueError when some components of the eye_ball
-                #     are 'nan'. TODO: Investigate where the 'nan' comes from.
                 #   - There are reports of negative eye_ball axes, raising cv2.error.
                 #     TODO: Investigate cause in detectors.
                 logger.debug(
