@@ -96,6 +96,8 @@ class StorageEditMenu(plugin_ui.SelectAndRefreshMenu, abc.ABC):
         self.render()
 
     def _on_click_delete(self):
+        if self.current_item is None:
+            return
         current_index = self.items.index(self.current_item)
         self._storage.delete(self.current_item)
         current_index = min(current_index, len(self.items) - 1)
