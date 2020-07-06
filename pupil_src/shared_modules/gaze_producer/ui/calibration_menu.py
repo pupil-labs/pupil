@@ -169,6 +169,9 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         super()._on_click_duplicate_button()
 
     def _on_click_delete(self):
+        if self.current_item is None:
+            return
+
         if not self._calibration_controller.is_from_same_recording(self.current_item):
             logger.error("Cannot delete calibrations from other recordings!")
             return
