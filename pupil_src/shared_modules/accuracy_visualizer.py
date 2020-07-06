@@ -26,7 +26,7 @@ from calibration_choreography import (
 )
 from plugin import Plugin
 
-from gaze_mapping import registered_gazer_classes_by_class_name
+from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes
 from gaze_mapping.notifications import (
     CalibrationSetupNotification,
     CalibrationResultNotification,
@@ -80,7 +80,9 @@ class ValidationInput:
         self.__gazer_class = None
         self.__gazer_params = None
 
-    def update(self, gazer_class_name: str, gazer_params=..., pupil_list=..., ref_list=...):
+    def update(
+        self, gazer_class_name: str, gazer_params=..., pupil_list=..., ref_list=...
+    ):
         if (
             self.gazer_class_name is not None
             and self.gazer_class_name != gazer_class_name
@@ -107,7 +109,7 @@ class ValidationInput:
             logger.info("Accuracy visualization is disabled for HMD calibration")
             return None
 
-        gazers_by_name = registered_gazer_classes_by_class_name()
+        gazers_by_name = gazer_classes_by_class_name(registered_gazer_classes())
 
         try:
             gazer_cls = gazers_by_name[gazer_class_name]

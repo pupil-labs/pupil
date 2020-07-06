@@ -20,7 +20,12 @@ import make_unique
 from storage import Storage
 from gaze_producer import model
 from observable import Observable
-from gaze_mapping import default_gazer_class, registered_gazer_labels_by_class_names
+from gaze_mapping import (
+    default_gazer_class,
+    registered_gazer_classes,
+    user_selectable_gazer_classes,
+    gazer_classes_by_class_name,
+)
 from gaze_mapping.notifications import (
     CalibrationSetupNotification,
     CalibrationResultNotification,
@@ -105,7 +110,20 @@ class CalibrationStorage(Storage, Observable):
                 + "\n".join(f"- {c.name} ({c.unique_id})" for c in self._calibrations)
             )
             return
-
+        is_calib_editable = (
+            self._from_same_recording(calibration)
+            and calibration.is_offline_calibration
+        )
+        if is_calib_editable:
+            available_gazer_classes = user_selectable_gazer_classes()
+        else:
+            available_gazer_classes = registered_gazer_classes()
+        gazer_class_names = gazer_classes_by_class_name(available_gazer_classes).keys()
+        if calibration.gazer_class_name not in gazer_class_names:
+            logger.warning(
+                f"Did not add calibration {calibration.name} ({calibration.unique_id}) because gaze mapping method ({calibration.gazer_class_name}) is not available."
+            )
+            return
         self._calibrations.append(calibration)
         self._calibrations.sort(key=lambda c: c.name)
 
