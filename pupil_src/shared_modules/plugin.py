@@ -493,7 +493,7 @@ def import_runtime_plugins(plugin_dir):
                         and issubclass(member, Plugin)
                         and member.__name__ != "Plugin"
                     ):
-                        logger.info("Added: {}".format(member))
+                        logger.debug("Added: {}".format(member))
                         runtime_plugins.append(member)
             except Exception as e:
                 logger.warning("Failed to load '{}'. Reason: '{}' ".format(d, e))
