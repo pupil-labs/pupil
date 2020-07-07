@@ -353,17 +353,13 @@ class Serialized_Dict(object):
         return Serialized_Dict(python_dict=dict_copy)
 
     def _deep_copy_dict(self):
-
         def unpacking_ext_hook(self, code, data):
             if code == self.MSGPACK_EXT_CODE:
                 return type(self)(msgpack_bytes=data)._deep_copy_dict()
             return msgpack.ExtType(code, data)
 
         return msgpack.unpackb(
-            self._ser_data,
-            raw=False,
-            use_list=False,
-            ext_hook=unpacking_ext_hook,
+            self._ser_data, raw=False, use_list=False, ext_hook=unpacking_ext_hook,
         )
 
 

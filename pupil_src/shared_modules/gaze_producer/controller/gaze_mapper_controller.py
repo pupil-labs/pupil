@@ -53,15 +53,15 @@ class GazeMapperController(Observable):
         if calibration is None:
             self._abort_calculation(
                 gaze_mapper,
-                "The calibration was not found for the gaze mapper '{}', "
-                "please select a different calibration!".format(gaze_mapper.name),
+                "The calibration was not found for the gaze mapper "
+                f"'{gaze_mapper.name}', please select a different calibration!",
             )
             return None
         if calibration.params is None:
             self._abort_calculation(
                 gaze_mapper,
-                "You first need to calculate calibration '{}' before calculating the "
-                "mapper '{}'".format(calibration.name, gaze_mapper.name),
+                f"You first need to calculate calibration '{calibration.name}' before "
+                f"calculating the mapper '{gaze_mapper.name}'",
             )
             return None
         try:
@@ -69,8 +69,8 @@ class GazeMapperController(Observable):
         except worker.map_gaze.NotEnoughPupilData:
             self._abort_calculation(gaze_mapper, "There is no pupil data to be mapped!")
             return None
-        self._task_manager.add_task(task)
-        logger.info("Start gaze mapping for '{}'".format(gaze_mapper.name))
+        self._task_manager.add_task(task, identifier=f"{gaze_mapper.unique_id}-mapping")
+        logger.info(f"Start gaze mapping for '{gaze_mapper.name}'")
 
     def _abort_calculation(self, gaze_mapper, error_message):
         logger.error(error_message)
@@ -92,7 +92,7 @@ class GazeMapperController(Observable):
         task = worker.map_gaze.create_task(gaze_mapper, calibration)
 
         def on_yield_gaze(mapped_gaze_ts_and_data):
-            gaze_mapper.status = "Mapping {:.0f}% complete".format(task.progress * 100)
+            gaze_mapper.status = f"Mapping {task.progress * 100:.0f}% complete"
             for timestamp, gaze_datum in mapped_gaze_ts_and_data:
                 gaze_mapper.gaze.append(gaze_datum)
                 gaze_mapper.gaze_ts.append(timestamp)
@@ -153,24 +153,28 @@ class GazeMapperController(Observable):
     def validate_gaze_mapper(self, gaze_mapper):
         def validation_completed(accuracy_and_precision):
             accuracy, precision = accuracy_and_precision
-            gaze_mapper.accuracy_result = "{:.1f}° from {} / {} samples".format(
-                accuracy.result, accuracy.num_used, accuracy.num_total
+            gaze_mapper.accuracy_result = (
+                f"{accuracy.result:.1f}° from {accuracy.num_used} / "
+                f"{accuracy.num_total} samples"
             )
-            gaze_mapper.precision_result = "{:.1f}° from {} / {} samples".format(
-                precision.result, precision.num_used, precision.num_total
+            gaze_mapper.precision_result = (
+                f"{precision.result:.1f}° from {precision.num_used} / "
+                f"{precision.num_total} samples"
             )
 
         calibration = self.get_valid_calibration_or_none(gaze_mapper)
 
         if calibration is None:
             logger.error(
-                f"Could not validate gaze mapper {gaze_mapper.name}; Calibration was not found, please select a different calibration."
+                f"Could not validate gaze mapper {gaze_mapper.name};"
+                " Calibration was not found, please select a different calibration."
             )
             return
 
         if calibration.params is None:
             logger.error(
-                f"Could not validate gaze mapper {gaze_mapper.name}; You first need to calculate calibration '{calibration.name}'"
+                f"Could not validate gaze mapper {gaze_mapper.name};"
+                " You first need to calculate calibration '{calibration.name}'"
             )
             return
 
@@ -179,7 +183,9 @@ class GazeMapperController(Observable):
         )
         task.add_observer("on_completed", validation_completed)
         task.add_observer("on_exception", tasklib.raise_exception)
-        self._task_manager.add_task(task)
+        self._task_manager.add_task(
+            task, identifier=f"{gaze_mapper.unique_id}-validating"
+        )
 
     def get_valid_calibration_or_none(self, gaze_mapper):
         return self._calibration_storage.get_or_none(gaze_mapper.calibration_unique_id)

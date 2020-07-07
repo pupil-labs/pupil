@@ -193,7 +193,6 @@ def service(
             "min_calibration_confidence", 0.8
         )
 
-
         audio.set_audio_mode(
             session_settings.get("audio_mode", audio.get_default_audio_mode())
         )
@@ -226,7 +225,12 @@ def service(
         def handle_notifications(n):
             subject = n["subject"]
             if subject == "start_plugin":
-                g_pool.plugins.add(plugin_by_name[n["name"]], args=n.get("args", {}))
+                try:
+                    g_pool.plugins.add(
+                        plugin_by_name[n["name"]], args=n.get("args", {})
+                    )
+                except KeyError as err:
+                    logger.error(f"Attempt to load unknown plugin: {err}")
             elif subject == "service_process.should_stop":
                 g_pool.service_should_run = False
             elif subject.startswith("meta.should_doc"):
@@ -271,7 +275,6 @@ def service(
                     for gaze_datum in new_gaze_data:
                         gaze_pub.send(gaze_datum)
                         events["gaze"].append(gaze_datum)
-
 
                 for plugin in g_pool.plugins:
                     plugin.recent_events(events=events)

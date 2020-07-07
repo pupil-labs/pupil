@@ -80,6 +80,7 @@ def update_recording(rec_dir: str):
 
     # Update offline calibrations to latest calibration model version
     from gaze_producer.model.legacy import update_offline_calibrations_to_latest_version
+
     update_offline_calibrations_to_latest_version(rec_dir)
 
 

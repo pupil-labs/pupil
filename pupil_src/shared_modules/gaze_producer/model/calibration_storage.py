@@ -20,7 +20,12 @@ import make_unique
 from storage import Storage
 from gaze_producer import model
 from observable import Observable
-from gaze_mapping import default_gazer_class, registered_gazer_labels_by_class_names
+from gaze_mapping import (
+    default_gazer_class,
+    registered_gazer_classes,
+    user_selectable_gazer_classes,
+    gazer_classes_by_class_name,
+)
 from gaze_mapping.notifications import (
     CalibrationSetupNotification,
     CalibrationResultNotification,
@@ -33,8 +38,7 @@ logger = logging.getLogger(__name__)
 class CalibrationStorage(Storage, Observable):
     _calibration_suffix = "plcal"
 
-    def __init__(self, rec_dir, plugin, get_recording_index_range, recording_uuid):
-        super().__init__(plugin)
+    def __init__(self, rec_dir, get_recording_index_range, recording_uuid):
         self._rec_dir = rec_dir
         self._get_recording_index_range = get_recording_index_range
         self._recording_uuid = str(recording_uuid)
@@ -59,7 +63,7 @@ class CalibrationStorage(Storage, Observable):
         )
 
     def __create_prerecorded_calibration(
-        self, result_notification: CalibrationResultNotification
+        self, number: int, result_notification: CalibrationResultNotification
     ):
         timestamp = result_notification.timestamp
 
@@ -68,7 +72,11 @@ class CalibrationStorage(Storage, Observable):
         # the easiest datum that differs between calibrations but is the same
         # for every start
         unique_id = model.Calibration.create_unique_id_from_string(str(timestamp))
-        name = make_unique.by_number_at_end("Recorded Calibration", self.item_names)
+
+        name = "Recorded Calibration"
+        if number > 1:
+            name += f" {number}"
+
         return model.Calibration(
             unique_id=unique_id,
             name=name,
@@ -76,7 +84,7 @@ class CalibrationStorage(Storage, Observable):
             gazer_class_name=result_notification.gazer_class_name,
             frame_index_range=self._get_recording_index_range(),
             minimum_confidence=0.8,
-            is_offline_calibration=True,
+            is_offline_calibration=False,
             status="Not calculated yet",
             calib_params=result_notification.params,
         )
@@ -89,12 +97,31 @@ class CalibrationStorage(Storage, Observable):
         new_calibration.unique_id = model.Calibration.create_new_unique_id()
         return new_calibration
 
-    def add(self, calibration):
-        if any(c.unique_id == calibration.unique_id for c in self._calibrations):
+    def add(self, calibration, overwrite=False):
+        for calib in self._calibrations.copy():
+            if calib.unique_id != calibration.unique_id:
+                continue
+            if overwrite:
+                self._calibrations.remove(calib)
+                break
             logger.warning(
                 f"Did not add calibration {calibration.name} ({calibration.unique_id})"
                 " because it is already in the storage. Currently in storage:\n"
                 + "\n".join(f"- {c.name} ({c.unique_id})" for c in self._calibrations)
+            )
+            return
+        is_calib_editable = (
+            self._from_same_recording(calibration)
+            and calibration.is_offline_calibration
+        )
+        if is_calib_editable:
+            available_gazer_classes = user_selectable_gazer_classes()
+        else:
+            available_gazer_classes = registered_gazer_classes()
+        gazer_class_names = gazer_classes_by_class_name(available_gazer_classes).keys()
+        if calibration.gazer_class_name not in gazer_class_names:
+            logger.warning(
+                f"Did not add calibration {calibration.name} ({calibration.unique_id}) because gaze mapping method ({calibration.gazer_class_name}) is not available."
             )
             return
         self._calibrations.append(calibration)
@@ -161,6 +188,7 @@ class CalibrationStorage(Storage, Observable):
 
     def _load_recorded_calibrations(self):
         notifications = fm.load_pldata_file(self._rec_dir, "notify")
+        counter = 1
         for topic, data in zip(notifications.topics, notifications.data):
             if topic.startswith("notify."):
                 # Remove "notify." prefix
@@ -183,9 +211,10 @@ class CalibrationStorage(Storage, Observable):
                 logger.debug(str(err))
                 continue
             calibration = self.__create_prerecorded_calibration(
-                result_notification=note
+                number=counter, result_notification=note
             )
-            self.add(calibration)
+            self.add(calibration, overwrite=True)
+            counter += 1
 
     def save_to_disk(self):
         os.makedirs(self._calibration_folder, exist_ok=True)

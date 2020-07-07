@@ -32,8 +32,8 @@ def _filter_pupil_list_by_confidence(pupil_list, threshold):
 
 
 def _match_data_batch(pupil_list, ref_list):
-    assert pupil_list
-    assert ref_list
+    assert pupil_list, "No pupil data to match"
+    assert ref_list, "No reference data to match"
     pupil0 = [p for p in pupil_list if p["id"] == 0]
     pupil1 = [p for p in pupil_list if p["id"] == 1]
 
@@ -45,9 +45,9 @@ def _match_data_batch(pupil_list, ref_list):
     num_mono_right = len(matched_pupil0_data[0])
     num_mono_left = len(matched_pupil1_data[0])
 
-    logger.info(f"Collected {num_bino} binocular references.")
-    logger.info(f"Collected {num_mono_right} right eye monocular references.")
-    logger.info(f"Collected {num_mono_left} left eye monocular references.")
+    logger.debug(f"Collected {num_bino} binocular references.")
+    logger.debug(f"Collected {num_mono_right} right eye monocular references.")
+    logger.debug(f"Collected {num_mono_left} left eye monocular references.")
 
     return (
         matched_binocular_data,

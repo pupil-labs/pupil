@@ -44,6 +44,14 @@ class NotEnoughDataError(CalibrationError):
     message = "Not sufficient data available."
 
 
+class NotEnoughPupilDataError(NotEnoughDataError):
+    message = "Not sufficient pupil data available."
+
+
+class NotEnoughReferenceDataError(NotEnoughDataError):
+    message = "Not sufficient reference data available."
+
+
 class FitDidNotConvergeError(CalibrationError):
     message = "Model fit did not converge."
 
@@ -194,18 +202,25 @@ class GazerBase(abc.ABC, Plugin):
             self._announce_calibration_setup(calib_data=calib_data)
             try:
                 self.fit_on_calib_data(calib_data)
-            except CalibrationError:
+            except CalibrationError as err:
                 if raise_calibration_error:
                     raise  # Let offline calibration handle this one!
                 logger.error("Calibration Failed!")
                 self.alive = False
-                self._announce_calibration_failure(reason=CalibrationError.__name__)
+                self._announce_calibration_failure(reason=err.message)
             except Exception as err:
                 import traceback
 
-                self._announce_calibration_failure(reason=err.__class__.__name__)
                 logger.debug(traceback.format_exc())
-                raise CalibrationError() from err
+                if raise_calibration_error:
+                    raise CalibrationError() from err  # Let offline calibration handle this one!
+                logger.error("Calibration Failed!")
+                self.alive = False
+                try:
+                    reason = err.args[0]
+                except (AttributeError, IndexError):
+                    reason = err.__class__.__name__
+                self._announce_calibration_failure(reason=reason)
             else:
                 self._announce_calibration_success()
                 self._announce_calibration_result(params=self.get_params())
@@ -214,8 +229,9 @@ class GazerBase(abc.ABC, Plugin):
         else:
             raise ValueError("Requires either `calib_data` or `params`")
 
-        # used by pupil_data_relay for gaze mapping
-        g_pool.active_gaze_mapping_plugin = self
+        if self.alive:
+            # Used by pupil_data_relay for gaze mapping.
+            g_pool.active_gaze_mapping_plugin = self
 
     def get_init_dict(self):
         return {"params": self.get_params()}
@@ -257,7 +273,9 @@ class GazerBase(abc.ABC, Plugin):
             pupil_data, self.g_pool.min_calibration_confidence
         )
         if not pupil_data:
-            raise NotEnoughDataError
+            raise NotEnoughPupilDataError
+        if not ref_data:
+            raise NotEnoughReferenceDataError
         # match pupil to reference data (left, right, and binocular)
         matches = self.match_pupil_to_ref(pupil_data, ref_data)
         if matches.binocular[0]:

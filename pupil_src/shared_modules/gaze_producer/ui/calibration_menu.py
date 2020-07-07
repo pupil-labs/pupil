@@ -13,7 +13,11 @@ import logging
 from pyglui import ui
 
 from gaze_producer import ui as plugin_ui
-from gaze_mapping import registered_gazer_labels_by_class_names
+from gaze_mapping import (
+    gazer_labels_by_class_names,
+    registered_gazer_classes,
+    user_selectable_gazer_classes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,12 +89,15 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         )
 
     def _create_mapping_method_selector(self, calibration):
+        gazers = user_selectable_gazer_classes()
+        gazers_map = gazer_labels_by_class_names(gazers)
+
         return ui.Selector(
             "gazer_class_name",
             calibration,
             label="Gaze Mapping",
-            labels=list(registered_gazer_labels_by_class_names().values()),
-            selection=list(registered_gazer_labels_by_class_names().keys()),
+            labels=list(gazers_map.values()),
+            selection=list(gazers_map.keys()),
         )
 
     def _create_min_confidence_slider(self, calibration):
@@ -120,8 +127,10 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         )
 
     def _info_text_for_calibration_from_other_recording(self, calibration):
+        gazers = registered_gazer_classes()
         gazer_class_name = calibration.gazer_class_name
-        gazer_label = registered_gazer_labels_by_class_names()[gazer_class_name]
+        gazer_label = gazer_labels_by_class_names(gazers)[gazer_class_name]
+
         if calibration.params:
             return (
                 f"This {gazer_label} calibration was copied from another recording. "
@@ -139,18 +148,39 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         menu.append(ui.Info_Text(self._info_text_for_online_calibration(calibration)))
 
     def _info_text_for_online_calibration(self, calibration):
+        gazers = registered_gazer_classes()
         gazer_class_name = calibration.gazer_class_name
-        gazer_label = registered_gazer_labels_by_class_names()[gazer_class_name]
+        gazer_label = gazer_labels_by_class_names(gazers)[gazer_class_name]
+
         return (
             f"This {gazer_label} calibration was created before or during the "
             "recording. It is ready to be used in gaze mappers."
         )
 
     def _on_click_duplicate_button(self):
-        if self._calibration_controller.is_from_same_recording(self.current_item):
-            super()._on_click_duplicate_button()
-        else:
+        if not self._calibration_controller.is_from_same_recording(self.current_item):
             logger.error("Cannot duplicate calibrations from other recordings!")
+            return
+
+        if not self.current_item.is_offline_calibration:
+            logger.error("Cannot duplicate pre-recorded calibrations!")
+            return
+
+        super()._on_click_duplicate_button()
+
+    def _on_click_delete(self):
+        if self.current_item is None:
+            return
+
+        if not self._calibration_controller.is_from_same_recording(self.current_item):
+            logger.error("Cannot delete calibrations from other recordings!")
+            return
+
+        if not self.current_item.is_offline_calibration:
+            logger.error("Cannot delete pre-recorded calibrations!")
+            return
+
+        super()._on_click_delete()
 
     def _on_name_change(self, new_name):
         self._calibration_storage.rename(self.current_item, new_name)

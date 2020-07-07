@@ -15,7 +15,11 @@ from types import SimpleNamespace
 import player_methods as pm
 import tasklib.background
 from gaze_producer import model
-from gaze_mapping import registered_gazer_classes_by_class_name, CalibrationError
+from gaze_mapping import (
+    gazer_classes_by_class_name,
+    registered_gazer_classes,
+    CalibrationError,
+)
 from methods import normalize
 
 from .fake_gpool import FakeGPool
@@ -42,6 +46,7 @@ def create_task(calibration, all_reference_locations):
     ]
 
     fake_gpool = FakeGPool.from_g_pool(g_pool)
+    fake_gpool.min_calibration_confidence = calibration.minimum_confidence
 
     args = (
         fake_gpool,
@@ -49,7 +54,7 @@ def create_task(calibration, all_reference_locations):
         ref_dicts_in_calib_range,
         pupil_pos_in_calib_range,
     )
-    name = "Create calibration {}".format(calibration.name)
+    name = f"Create calibration {calibration.name}"
     return tasklib.background.create(name, _create_calibration, args=args)
 
 
@@ -67,7 +72,7 @@ def _create_calibration(
     # This is needed to support user-provided gazers
     fake_gpool.import_runtime_plugins()
 
-    gazers_by_name = registered_gazer_classes_by_class_name()
+    gazers_by_name = gazer_classes_by_class_name(registered_gazer_classes())
 
     try:
         gazer_class = gazers_by_name[gazer_class_name]

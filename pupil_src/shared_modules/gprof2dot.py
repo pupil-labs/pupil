@@ -2402,9 +2402,14 @@ class HProfParser(LineParser):
         self.consume()
 
         while not self.lookahead().startswith("CPU"):
-            rank, percent_self, percent_accum, count, traceid, method = (
-                self.lookahead().split()
-            )
+            (
+                rank,
+                percent_self,
+                percent_accum,
+                count,
+                traceid,
+                method,
+            ) = self.lookahead().split()
             self.samples[int(traceid)] = (int(count), method)
             self.consume()
 

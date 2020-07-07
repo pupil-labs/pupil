@@ -272,9 +272,10 @@ class Exporter:
                 logger.warning("Could not make metrics dir {}".format(self.metrics_dir))
                 return
 
-        self.gaze_on_surfaces, self.fixations_on_surfaces = (
-            self._map_gaze_and_fixations()
-        )
+        (
+            self.gaze_on_surfaces,
+            self.fixations_on_surfaces,
+        ) = self._map_gaze_and_fixations()
 
         self._export_surface_visibility()
         self._export_surface_gaze_distribution()

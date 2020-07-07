@@ -188,6 +188,12 @@ class Coord_System(object):
 
     def __init__(self, left, right, bottom, top):
         super(Coord_System, self).__init__()
+        if left == right:
+            left -= 1
+            right += 1
+        if top == bottom:
+            top -= 1
+            bottom += 1
         self.bounds = left, right, bottom, top
 
     def __enter__(self):

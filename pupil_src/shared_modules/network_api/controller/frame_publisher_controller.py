@@ -20,11 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class FramePublisherController(Observable):
-    def on_frame_publisher_did_start(self, format: FrameFormat):
-        logger.debug(f"on_frame_publisher_did_start({format})")
-
-    def on_frame_publisher_did_stop(self):
-        logger.debug(f"on_frame_publisher_did_stop")
+    def on_format_changed(self):
+        logger.debug(f"on_format_changed({self.__frame_format})")
 
     def __init__(self, format="jpeg", **kwargs):
         self.__frame_format = FrameFormat(format)
@@ -33,9 +30,6 @@ class FramePublisherController(Observable):
     def get_init_dict(self):
         return {"format": self.__frame_format.value}
 
-    def cleanup(self):
-        self.on_frame_publisher_did_stop()
-
     @property
     def frame_format(self):
         return self.__frame_format
@@ -43,7 +37,7 @@ class FramePublisherController(Observable):
     @frame_format.setter
     def frame_format(self, value):
         self.__frame_format = FrameFormat(value)
-        self.on_frame_publisher_did_start(format=self.__frame_format)
+        self.on_format_changed()
 
     def create_world_frame_dicts_from_frame(self, frame) -> T.List[dict]:
         if not frame:

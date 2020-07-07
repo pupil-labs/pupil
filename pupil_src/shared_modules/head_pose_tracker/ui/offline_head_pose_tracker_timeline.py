@@ -95,9 +95,10 @@ class DetectionTimeline:
             return RangeElementFrameIdx()
 
     def _on_detection_started(self):
-        self._frame_start, frame_end = (
-            self._general_settings.detection_frame_index_range
-        )
+        (
+            self._frame_start,
+            frame_end,
+        ) = self._general_settings.detection_frame_index_range
         self._frame_count = frame_end - self._frame_start + 1
 
     def _on_storage_changed(self):
@@ -169,9 +170,10 @@ class LocalizationTimeline:
         self.render_parent_timeline()
 
     def _on_localization_started(self):
-        self._frame_start, frame_end = (
-            self._general_settings.localization_frame_index_range
-        )
+        (
+            self._frame_start,
+            frame_end,
+        ) = self._general_settings.localization_frame_index_range
         self._frame_count = frame_end - self._frame_start + 1
 
     def _on_storage_changed(self):

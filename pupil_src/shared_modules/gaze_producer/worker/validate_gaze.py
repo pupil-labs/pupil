@@ -13,7 +13,7 @@ from accuracy_visualizer import Accuracy_Visualizer
 from methods import normalize
 import player_methods as pm
 
-from gaze_mapping import registered_gazer_classes_by_class_name
+from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes
 
 from .fake_gpool import FakeGPool
 
@@ -48,7 +48,7 @@ def create_bg_task(gaze_mapper, calibration, reference_location_storage):
     )
 
     return tasklib.background.create(
-        "validate gaze mapper '{}'".format(gaze_mapper.name), validate, args=args,
+        f"validate gaze mapper '{gaze_mapper.name}'", validate, args=args,
     )
 
 
@@ -61,7 +61,7 @@ def validate(
     refs_in_validation_range,
 ):
     g_pool.import_runtime_plugins()
-    gazers_by_name = registered_gazer_classes_by_class_name()
+    gazers_by_name = gazer_classes_by_class_name(registered_gazer_classes())
     gazer_class = gazers_by_name[gazer_class_name]
 
     pupil_list = pupils_in_validation_range

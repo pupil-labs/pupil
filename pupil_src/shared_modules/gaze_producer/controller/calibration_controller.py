@@ -51,7 +51,9 @@ class CalibrationController(Observable):
         )
         task.add_observer("on_completed", on_calibration_completed)
         task.add_observer("on_exception", tasklib.raise_exception)
-        self._task_manager.add_task(task)
+        self._task_manager.add_task(
+            task, identifier=f"{calibration.unique_id}-calibration"
+        )
         return task
 
     def on_calibration_computed(self, calibration):

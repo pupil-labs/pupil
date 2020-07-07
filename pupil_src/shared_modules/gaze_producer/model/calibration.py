@@ -51,14 +51,6 @@ class Calibration(StorageItem):
         self.__is_offline_calibration = is_offline_calibration
         self.__calib_params = calib_params
 
-        # Assert all properties are consistent
-        try:
-            self.__assert_property_consistency()
-        except ValueError:
-            raise
-        except Exception as err:
-            raise ValueError(str(err))
-
     @property
     def is_offline_calibration(self) -> bool:
         return self.__is_offline_calibration
@@ -79,12 +71,6 @@ class Calibration(StorageItem):
             self.__is_offline_calibration = is_offline_calibration
         if calib_params is not ...:
             self.__calib_params = calib_params
-        try:
-            self.__assert_property_consistency()
-        except ValueError:
-            raise
-        except Exception as err:
-            raise ValueError(str(err))
 
     @staticmethod
     def from_dict(dict_: dict) -> "Calibration":
@@ -98,7 +84,6 @@ class Calibration(StorageItem):
 
     @property
     def as_dict(self) -> dict:
-        self.__assert_property_consistency()  # sanity check
         dict_ = {k: v(self) for (k, v) in self.__schema}
         return dict_
 
@@ -128,12 +113,3 @@ class Calibration(StorageItem):
         ("is_offline_calibration", lambda self: self.__is_offline_calibration),
         ("calib_params", lambda self: self.__calib_params),
     )
-
-    def __assert_property_consistency(self):
-        if self.__is_offline_calibration:
-            pass
-        else:
-            if self.__calib_params is not None:
-                raise ValueError(
-                    f"Unexpected calib_params argument for pre-recorded calibration"
-                )

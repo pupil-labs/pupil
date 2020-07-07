@@ -10,9 +10,12 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
+import logging
 
 import cv2
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 class ImageManipulator(metaclass=abc.ABCMeta):
@@ -73,6 +76,12 @@ class PupilRenderer(ImageManipulator):
         conf = int(pupil_position["confidence"] * 255)
         self.render_ellipse(image, el, color=(0, 0, 255, conf))
 
+        if pupil_position["model_confidence"] <= 0.0:
+            # NOTE: if 'model_confidence' == 0, some values of the 'projected_sphere'
+            # might be 'nan', which will cause cv2.ellipse to crash.
+            # TODO: Fix in detectors.
+            return
+
         eye_ball = pupil_position.get("projected_sphere", None)
         if eye_ball is not None:
             try:
@@ -86,10 +95,15 @@ class PupilRenderer(ImageManipulator):
                     color=(26, 230, 0, 255 * pupil_position["model_confidence"]),
                     thickness=2,
                 )
-            except ValueError:
-                # Happens when converting 'nan' to int
-                # TODO: Investigate why results are sometimes 'nan'
-                pass
+            except Exception as e:
+                # Known issues:
+                #   - There are reports of negative eye_ball axes, raising cv2.error.
+                #     TODO: Investigate cause in detectors.
+                logger.debug(
+                    "Error rendering 3D eye-ball outline! Skipping...\n"
+                    f"eye_ball: {eye_ball}\n"
+                    f"{type(e)}: {e}"
+                )
 
     def render_ellipse(self, image, ellipse, color):
         outline = self.get_ellipse_points(
