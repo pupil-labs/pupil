@@ -32,8 +32,8 @@ def _filter_pupil_list_by_confidence(pupil_list, threshold):
 
 
 def _match_data_batch(pupil_list, ref_list):
-    assert pupil_list
-    assert ref_list
+    assert pupil_list, "No pupil data to match"
+    assert ref_list, "No reference data to match"
     pupil0 = [p for p in pupil_list if p["id"] == 0]
     pupil1 = [p for p in pupil_list if p["id"] == 1]
 
