@@ -225,7 +225,12 @@ def service(
         def handle_notifications(n):
             subject = n["subject"]
             if subject == "start_plugin":
-                g_pool.plugins.add(plugin_by_name[n["name"]], args=n.get("args", {}))
+                try:
+                    g_pool.plugins.add(
+                        plugin_by_name[n["name"]], args=n.get("args", {})
+                    )
+                except KeyError as err:
+                    logger.error(f"Attempt to load unknown plugin: {err}")
             elif subject == "service_process.should_stop":
                 g_pool.service_should_run = False
             elif subject.startswith("meta.should_doc"):
