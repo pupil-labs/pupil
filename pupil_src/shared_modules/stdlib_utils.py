@@ -26,9 +26,13 @@ class sliceable_deque(collections.deque):
     """
     deque subclass with support for slicing.
     """
+
     def __getitem__(self, index):
         if isinstance(index, slice):
-            return type(self)(itertools.islice(self, index.start, index.stop, index.step), maxlen=self.maxlen)
+            return type(self)(
+                itertools.islice(self, index.start, index.stop, index.step),
+                maxlen=self.maxlen,
+            )
         return collections.deque.__getitem__(self, index)
 
 
@@ -39,8 +43,12 @@ Unique_Select = typing.Callable[[Unique_Key, Unique_Key], Unique_Key]
 
 
 class unique(collections.abc.Iterable):
-
-    def __init__(self, it: typing.Iterable, key: Unique_Key_Getter=..., select: Unique_Select=...):
+    def __init__(
+        self,
+        it: typing.Iterable,
+        key: Unique_Key_Getter = ...,
+        select: Unique_Select = ...,
+    ):
         self._it = list(it)
         self._key = key if key is not ... else lambda elem: elem
         self._select = select if select is not ... else lambda x, y: x
