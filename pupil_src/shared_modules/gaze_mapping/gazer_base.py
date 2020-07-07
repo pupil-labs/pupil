@@ -229,8 +229,9 @@ class GazerBase(abc.ABC, Plugin):
         else:
             raise ValueError("Requires either `calib_data` or `params`")
 
-        # used by pupil_data_relay for gaze mapping
-        g_pool.active_gaze_mapping_plugin = self
+        if self.alive:
+            # Used by pupil_data_relay for gaze mapping.
+            g_pool.active_gaze_mapping_plugin = self
 
     def get_init_dict(self):
         return {"params": self.get_params()}
