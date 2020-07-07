@@ -202,12 +202,12 @@ class GazerBase(abc.ABC, Plugin):
             self._announce_calibration_setup(calib_data=calib_data)
             try:
                 self.fit_on_calib_data(calib_data)
-            except CalibrationError:
+            except CalibrationError as err:
                 if raise_calibration_error:
                     raise  # Let offline calibration handle this one!
                 logger.error("Calibration Failed!")
                 self.alive = False
-                self._announce_calibration_failure(reason=CalibrationError.__name__)
+                self._announce_calibration_failure(reason=err.message)
             except Exception as err:
                 import traceback
                 logger.debug(traceback.format_exc())
