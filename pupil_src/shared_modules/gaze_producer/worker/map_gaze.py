@@ -67,11 +67,16 @@ def _map_gaze(
     first_ts = pupil_pos_in_mapping_range[0]["timestamp"]
     last_ts = pupil_pos_in_mapping_range[-1]["timestamp"]
     ts_span = last_ts - first_ts
+    curr_ts = first_ts
 
     for gaze_datum in gazer.map_pupil_to_gaze(pupil_pos_in_mapping_range):
         _apply_manual_correction(gaze_datum, manual_correction_x, manual_correction_y)
 
-        curr_ts = gaze_datum["timestamp"]
+        # gazer.map_pupil_to_gaze does not yield gaze with monotonic timestamps.
+        # Binocular pupil matches are delayed internally. To avoid non-monotonic
+        # progress updates, we use the largest timestamp that has been returned up to
+        # the current point in time.
+        curr_ts = max(curr_ts, gaze_datum["timestamp"])
         shared_memory.progress = (curr_ts - first_ts) / ts_span
 
         result = (curr_ts, fm.Serialized_Dict(gaze_datum))
