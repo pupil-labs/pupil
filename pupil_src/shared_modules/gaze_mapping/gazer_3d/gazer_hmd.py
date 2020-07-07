@@ -23,6 +23,7 @@ from .utils import (
 from gaze_mapping.gazer_base import (
     GazerBase,
     Model,
+    CalibrationError,
     NotEnoughDataError,
     FitDidNotConvergeError,
 )
@@ -46,6 +47,13 @@ _BINOCULAR_PUPIL_NORMAL = slice(11, 14)
 logger = logging.getLogger(__name__)
 
 
+class MissingEyeTranslationsError(CalibrationError):
+    message = (
+        "GazerHMD3D can only be calibrated if it is "
+        "initialised with valid eye translations."
+    )
+
+
 class ModelHMD3D_Binocular(Model3D_Binocular):
     def __init__(self, *, intrinsics, eye_translations):
         self.intrinsics = intrinsics
@@ -53,6 +61,8 @@ class ModelHMD3D_Binocular(Model3D_Binocular):
         self._is_fitted = False
 
     def _fit(self, X, Y):
+        if self.eye_translations is None:
+            raise MissingEyeTranslationsError()
         assert X.shape[1] == _BINOCULAR_FEATURE_COUNT, X
         unprojected_ref_points = Y
 
@@ -109,7 +119,7 @@ class GazerHMD3D(Gazer3D):
     def _gazer_description_text(cls) -> str:
         return "Gaze mapping built specifically for HMD-Eyes."
 
-    def __init__(self, g_pool, *, eye_translations, calib_data=None, params=None):
+    def __init__(self, g_pool, *, eye_translations=None, calib_data=None, params=None):
         self.__eye_translations = eye_translations
         super().__init__(g_pool, calib_data=calib_data, params=params)
 
