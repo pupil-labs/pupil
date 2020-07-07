@@ -44,6 +44,14 @@ class NotEnoughDataError(CalibrationError):
     message = "Not sufficient data available."
 
 
+class NotEnoughPupilDataError(NotEnoughDataError):
+    message = "Not sufficient pupil data available."
+
+
+class NotEnoughReferenceDataError(NotEnoughDataError):
+    message = "Not sufficient reference data available."
+
+
 class FitDidNotConvergeError(CalibrationError):
     message = "Model fit did not converge."
 
@@ -263,7 +271,9 @@ class GazerBase(abc.ABC, Plugin):
             pupil_data, self.g_pool.min_calibration_confidence
         )
         if not pupil_data:
-            raise NotEnoughDataError
+            raise NotEnoughPupilDataError
+        if not ref_data:
+            raise NotEnoughReferenceDataError
         # match pupil to reference data (left, right, and binocular)
         matches = self.match_pupil_to_ref(pupil_data, ref_data)
         if matches.binocular[0]:
