@@ -193,7 +193,6 @@ def service(
             "min_calibration_confidence", 0.8
         )
 
-
         audio.set_audio_mode(
             session_settings.get("audio_mode", audio.get_default_audio_mode())
         )
@@ -271,7 +270,6 @@ def service(
                     for gaze_datum in new_gaze_data:
                         gaze_pub.send(gaze_datum)
                         events["gaze"].append(gaze_datum)
-
 
                 for plugin in g_pool.plugins:
                     plugin.recent_events(events=events)

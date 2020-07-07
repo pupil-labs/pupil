@@ -74,8 +74,7 @@ class Remote_Recorder_Core:
 
         self._attached_rec_states = {}
         self._network = ndsi.Network(
-            formats={ndsi.DataFormat.V3},
-            callbacks=(self.on_event,)
+            formats={ndsi.DataFormat.V3}, callbacks=(self.on_event,)
         )
         self._network.start()
 

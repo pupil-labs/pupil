@@ -117,10 +117,10 @@ class System_Graphs(System_Plugin_Base):
         if "frame" not in events or self.idx != events["frame"].index:
             for p in events["pupil"]:
                 if p["topic"] == "pupil.0.2d":
-                    assert p["id"] == 0 #sanity check
+                    assert p["id"] == 0  # sanity check
                     self.conf0_graph.add(p["confidence"])
                 if p["topic"] == "pupil.1.2d":
-                    assert p["id"] == 1 #sanity check
+                    assert p["id"] == 1  # sanity check
                     self.conf1_graph.add(p["confidence"])
 
         # update wprld fps graph

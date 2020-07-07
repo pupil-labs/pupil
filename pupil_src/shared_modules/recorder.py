@@ -31,7 +31,10 @@ from video_capture.ndsi_backend import NDSI_Source
 from pupil_recording.info import Version
 from pupil_recording.info import RecordingInfoFile
 
-from gaze_mapping.notifications import CalibrationSetupNotification, CalibrationResultNotification
+from gaze_mapping.notifications import (
+    CalibrationSetupNotification,
+    CalibrationResultNotification,
+)
 
 # from scipy.interpolate import UnivariateSpline
 from plugin import System_Plugin_Base
@@ -350,7 +353,10 @@ class Recorder(System_Plugin_Base):
         else:
             self.writer = MPEG_Writer(self.video_path, start_time_synced)
 
-        calibration_data_notification_classes = [CalibrationSetupNotification, CalibrationResultNotification]
+        calibration_data_notification_classes = [
+            CalibrationSetupNotification,
+            CalibrationResultNotification,
+        ]
         writer = PLData_Writer(self.rec_path, "notify")
 
         for note_class in calibration_data_notification_classes:
