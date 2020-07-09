@@ -19,7 +19,9 @@ from network_time_sync import Clock_Sync_Master, Clock_Sync_Follower
 import random
 
 import logging
+import os_utils
 
+os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 

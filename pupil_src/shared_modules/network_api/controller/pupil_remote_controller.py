@@ -16,9 +16,10 @@ import zmq
 import zmq_tools
 from pyre import zhelper
 
+import os_utils
 from observable import Observable
 
-
+os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
 
 
