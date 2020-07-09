@@ -18,7 +18,9 @@ from pyre import zhelper
 from pyglui import ui
 from plugin import Plugin
 import logging
+import os_utils
 
+os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
 
 

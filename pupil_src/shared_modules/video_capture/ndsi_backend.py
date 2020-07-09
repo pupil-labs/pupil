@@ -16,6 +16,7 @@ import ndsi
 from packaging.version import Version
 from pyglui import ui
 
+import os_utils
 from camera_models import load_intrinsics
 
 from .base_backend import Base_Manager, Base_Source, SourceInfo
@@ -28,7 +29,7 @@ try:
 except (ImportError, AssertionError):
     raise Exception("pyndsi version is too old. Please upgrade!") from None
 
-
+os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
 
 # Suppress pyre debug logs (except beacon)
