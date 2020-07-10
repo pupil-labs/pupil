@@ -31,6 +31,20 @@ sudo make install
 sudo ldconfig
 ```
 
+## Custom Version of libusb for 200hz cameras
+
+This is **ONLY** required if you are using 200hz cameras. Otherwise it can be ignored!
+
+1. Build or download fixed binary from release: https://github.com/pupil-labs/libusb/releases/tag/v1.0.21-rc6-fixes
+1. Replace system libusb-1.0.so.0 with this binary. You can find the path of the system library with
+
+    ```sh
+    dpkg -L libusb-1.0-0-dev | grep libusb-1.0.so
+    ```
+
+    Please note that this command gives you the location of `libusb-1.0.so` while you need to replace `libsub-1.0.so.0`, but the required file should be found in the same folder.
+
+
 ## libuvc
 ```sh
 git clone https://github.com/pupil-labs/libuvc
