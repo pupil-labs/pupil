@@ -133,6 +133,7 @@ The build and install the Ceres solver:
 ```sh
 git clone https://ceres-solver.googlesource.com/ceres-solver
 cd ceres-solver
+git checkout 1.14.0
 mkdir build && cd build
 cmake .. -DBUILD_SHARED_LIBS=ON
 make -j3
