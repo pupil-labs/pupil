@@ -98,7 +98,7 @@ This is **ONLY** required if you are using 200hz cameras. Otherwise it can be ig
     dpkg -L libusb-1.0-0-dev | grep libusb-1.0.so
     ```
 
-    Please note that this command gives you the location of `libusb-1.0.so` while you need to replace `libsub-1.0.so.0`, but the required file should be found in the same folder.
+    Please note that this command gives you the location of `libusb-1.0.so` while you need to replace `libusb-1.0.so.0`, but the required file should be found in the same folder.
 
 
 ## libuvc
