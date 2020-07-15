@@ -27,7 +27,7 @@ import file_methods as fm
 import gl_utils
 import player_methods as pm
 from observable import Observable
-from plugin import Analysis_Plugin_Base
+from plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ blink_color = cygl_utils.RGBA(0.9961, 0.3789, 0.5313, 0.8)
 threshold_color = cygl_utils.RGBA(0.9961, 0.8438, 0.3984, 0.8)
 
 
-class Blink_Detection(Analysis_Plugin_Base):
+class Blink_Detection(Plugin):
     """
     This plugin implements a blink detection algorithm, based on sudden drops in the
     pupil detection confidence.

@@ -14,10 +14,10 @@ import abc
 from pyglui import ui
 
 from task_manager import TaskManager
-from plugin import Analysis_Plugin_Base
+from plugin import Plugin
 
 
-class VideoExporter(TaskManager, Analysis_Plugin_Base, abc.ABC):
+class VideoExporter(TaskManager, Plugin, abc.ABC):
     """
     Base for video exporting plugins. Every time the user hits "export",
     the method export_data gets called

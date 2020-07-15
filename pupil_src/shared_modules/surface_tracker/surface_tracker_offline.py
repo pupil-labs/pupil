@@ -26,7 +26,7 @@ import data_changed
 import file_methods
 import gl_utils
 from observable import Observable
-from plugin import Analysis_Plugin_Base
+from plugin import Plugin
 
 from . import background_tasks, offline_utils
 from .cache import Cache
@@ -51,7 +51,7 @@ else:
     mp_context = multiprocessing.get_context()
 
 
-class Surface_Tracker_Offline(Observable, Surface_Tracker, Analysis_Plugin_Base):
+class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
     """
     The Surface_Tracker_Offline does marker based AOI tracking in a recording. All
     marker and surface detections are calculated in the background and cached to reduce
