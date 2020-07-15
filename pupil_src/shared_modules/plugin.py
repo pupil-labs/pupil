@@ -503,11 +503,6 @@ def import_runtime_plugins(plugin_dir):
     return runtime_plugins
 
 
-# Base plugin definitons
-class Visualizer_Plugin_Base(Plugin):
-    pass
-
-
 class Analysis_Plugin_Base(Plugin):
     pass
 
