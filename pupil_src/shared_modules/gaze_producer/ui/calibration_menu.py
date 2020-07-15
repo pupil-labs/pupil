@@ -36,6 +36,9 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
 
         self.menu.collapsed = True
 
+        self._ui_button_duplicate = None
+        self._ui_button_delete = None
+
         calibration_controller.add_observer(
             "on_calibration_computed", self._on_calibration_computed
         )
@@ -72,6 +75,16 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
                 self._create_calculate_button(calibration),
             ]
         )
+
+    def _create_duplicate_button(self):
+        # Save a reference to the created duplicate button
+        self._ui_button_duplicate = super()._create_duplicate_button()
+        return self._ui_button_duplicate
+
+    def _create_delete_button(self):
+        # Save a reference to the created delete button
+        self._ui_button_delete = super()._create_delete_button()
+        return self._ui_button_delete
 
     def _create_name_input(self, calibration):
         return ui.Text_Input(
