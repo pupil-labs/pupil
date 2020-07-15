@@ -158,29 +158,13 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         )
 
     def _on_click_duplicate_button(self):
-        if not self._calibration_controller.is_from_same_recording(self.current_item):
-            logger.error("Cannot duplicate calibrations from other recordings!")
-            return
-
-        if not self.current_item.is_offline_calibration:
-            logger.error("Cannot duplicate pre-recorded calibrations!")
-            return
-
-        super()._on_click_duplicate_button()
+        if self.__check_duplicate_button_click_is_allowed(should_log_reason_as_error=True):
+            super()._on_click_duplicate_button()
 
     def _on_click_delete(self):
-        if self.current_item is None:
-            return
+        if self.__check_delete_button_click_is_allowed(should_log_reason_as_error=True):
+            super()._on_click_delete()
 
-        if not self._calibration_controller.is_from_same_recording(self.current_item):
-            logger.error("Cannot delete calibrations from other recordings!")
-            return
-
-        if not self.current_item.is_offline_calibration:
-            logger.error("Cannot delete pre-recorded calibrations!")
-            return
-
-        super()._on_click_delete()
 
     def _on_name_change(self, new_name):
         self._calibration_storage.rename(self.current_item, new_name)
@@ -204,3 +188,32 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
 
     def _on_calculation_could_not_be_started(self):
         self.render()
+
+    def __check_duplicate_button_click_is_allowed(self, should_log_reason_as_error: bool):
+        if not self._calibration_controller.is_from_same_recording(self.current_item):
+            if should_log_reason_as_error:
+                logger.error("Cannot duplicate calibrations from other recordings!")
+            return False
+
+        if not self.current_item.is_offline_calibration:
+            if should_log_reason_as_error:
+                logger.error("Cannot duplicate pre-recorded calibrations!")
+            return False
+
+        return True
+
+    def __check_delete_button_click_is_allowed(self, should_log_reason_as_error: bool):
+        if self.current_item is None:
+            return False
+
+        if not self._calibration_controller.is_from_same_recording(self.current_item):
+            if should_log_reason_as_error:
+                logger.error("Cannot delete calibrations from other recordings!")
+            return False
+
+        if not self.current_item.is_offline_calibration:
+            if should_log_reason_as_error:
+                logger.error("Cannot delete pre-recorded calibrations!")
+            return False
+        
+        return True
