@@ -503,9 +503,5 @@ def import_runtime_plugins(plugin_dir):
     return runtime_plugins
 
 
-class Producer_Plugin_Base(Plugin):
-    pass
-
-
 class System_Plugin_Base(Plugin):
     pass
