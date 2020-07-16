@@ -171,7 +171,9 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         )
 
     def _on_click_duplicate_button(self):
-        if self.__check_duplicate_button_click_is_allowed(should_log_reason_as_error=True):
+        if self.__check_duplicate_button_click_is_allowed(
+            should_log_reason_as_error=True
+        ):
             super()._on_click_duplicate_button()
 
     def _on_click_delete(self):
@@ -181,9 +183,13 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
     def _on_change_current_item(self, item):
         super()._on_change_current_item(item)
         if self._ui_button_duplicate:
-            self._ui_button_duplicate.read_only = not self.__check_duplicate_button_click_is_allowed(should_log_reason_as_error=False)
+            self._ui_button_duplicate.read_only = not self.__check_duplicate_button_click_is_allowed(
+                should_log_reason_as_error=False
+            )
         if self._ui_button_delete:
-            self._ui_button_delete.read_only = not self.__check_delete_button_click_is_allowed(should_log_reason_as_error=False)
+            self._ui_button_delete.read_only = not self.__check_delete_button_click_is_allowed(
+                should_log_reason_as_error=False
+            )
 
     def _on_name_change(self, new_name):
         self._calibration_storage.rename(self.current_item, new_name)
@@ -208,7 +214,9 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
     def _on_calculation_could_not_be_started(self):
         self.render()
 
-    def __check_duplicate_button_click_is_allowed(self, should_log_reason_as_error: bool):
+    def __check_duplicate_button_click_is_allowed(
+        self, should_log_reason_as_error: bool
+    ):
         if not self._calibration_controller.is_from_same_recording(self.current_item):
             if should_log_reason_as_error:
                 logger.error("Cannot duplicate calibrations from other recordings!")
@@ -234,5 +242,5 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
             if should_log_reason_as_error:
                 logger.error("Cannot delete pre-recorded calibrations!")
             return False
-        
+
         return True

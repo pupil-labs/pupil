@@ -75,9 +75,7 @@ class StorageEditMenu(plugin_ui.SelectAndRefreshMenu, abc.ABC):
         )
 
     def _create_delete_button(self):
-        return ui.Button(
-            label=self.delete_button_label, function=self._on_click_delete
-        )
+        return ui.Button(label=self.delete_button_label, function=self._on_click_delete)
 
     def render_item(self, item, menu):
         self._render_custom_ui(item, menu)
