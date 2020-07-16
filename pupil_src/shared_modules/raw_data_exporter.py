@@ -19,13 +19,13 @@ from pyglui import ui
 
 import csv_utils
 import player_methods as pm
-from plugin import Analysis_Plugin_Base
+from plugin import Plugin
 
 # logging
 logger = logging.getLogger(__name__)
 
 
-class Raw_Data_Exporter(Analysis_Plugin_Base):
+class Raw_Data_Exporter(Plugin):
     """
     pupil_positions.csv
     keys:

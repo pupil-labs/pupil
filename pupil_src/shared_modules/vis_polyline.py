@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from plugin import Visualizer_Plugin_Base
+from plugin import Plugin
 import numpy as np
 
 import cv2
@@ -23,7 +23,7 @@ from scan_path import ScanPathController
 from scan_path.utils import np_denormalize
 
 
-class Vis_Polyline(Visualizer_Plugin_Base, Observable):
+class Vis_Polyline(Plugin, Observable):
     order = 0.9
     uniqueness = "not_unique"
     icon_chr = chr(0xE922)

@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 from player_methods import transparent_image_overlay
-from plugin import Visualizer_Plugin_Base
+from plugin import Plugin
 import numpy as np
 import cv2
 from glob import glob
@@ -24,7 +24,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Vis_Watermark(Visualizer_Plugin_Base):
+class Vis_Watermark(Plugin):
     uniqueness = "not_unique"
     icon_chr = chr(0xEC04)
     icon_font = "pupil_icons"
