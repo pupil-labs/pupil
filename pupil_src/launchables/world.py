@@ -511,7 +511,6 @@ def world(
             f_width, f_height = g_pool.capture.frame_size
             f_width += int(icon_bar_width * g_pool.gui.scale)
             glfw.glfwSetWindowSize(main_window, f_width, f_height)
-            on_resize(main_window, f_width, f_height)
 
         general_settings.append(ui.Button("Reset window size", set_window_size))
         general_settings.append(
