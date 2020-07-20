@@ -341,6 +341,12 @@ class Accuracy_Visualizer(Plugin):
         self.precision = results[1].result
         self.error_lines = results[2]
 
+        if np.isnan(self.accuracy):
+            self.accuracy = None
+
+        if np.isnan(self.precision):
+            self.precision = None
+
         ref_locations = [loc["norm_pos"] for loc in self.recent_input.ref_list]
         if len(ref_locations) >= 3:
             hull = ConvexHull(ref_locations)  # requires at least 3 points
