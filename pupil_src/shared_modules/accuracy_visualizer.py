@@ -335,17 +335,32 @@ class Accuracy_Visualizer(Plugin):
             outlier_threshold=self.outlier_threshold,
             succession_threshold=self.succession_threshold,
         )
-        logger.info("Angular accuracy: {}. Used {} of {} samples.".format(*results[0]))
-        logger.info("Angular precision: {}. Used {} of {} samples.".format(*results[1]))
-        self.accuracy = results[0].result
-        self.precision = results[1].result
-        self.error_lines = results[2]
 
-        if np.isnan(self.accuracy):
+        accuracy = results[0].result
+        if np.isnan(accuracy):
             self.accuracy = None
+            logger.warning(
+                "Not enough data available for angular accuracy calculation."
+            )
+        else:
+            self.accuracy = accuracy
+            logger.info(
+                "Angular accuracy: {}. Used {} of {} samples.".format(*results[0])
+            )
 
-        if np.isnan(self.precision):
+        precision = results[1].result
+        if np.isnan(precision):
             self.precision = None
+            logger.warning(
+                "Not enough data available for angular precision calculation."
+            )
+        else:
+            self.precision = precision
+            logger.info(
+                "Angular precision: {}. Used {} of {} samples.".format(*results[1])
+            )
+
+        self.error_lines = results[2]
 
         ref_locations = [loc["norm_pos"] for loc in self.recent_input.ref_list]
         if len(ref_locations) >= 3:
