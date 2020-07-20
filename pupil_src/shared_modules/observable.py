@@ -141,13 +141,13 @@ def _get_wrapper_and_create_if_not_exists(obj, method_name):
         return observed_method
     elif not inspect.ismethod(observed_method):
         raise TypeError(
-            "Attribute {} of object {} is not a method but {} and, thus, "
-            "cannot be observed!".format(method_name, obj, observed_method)
+            f"Attribute '{method_name}' of object {obj} is not a method but "
+            f"{observed_method} and, thus, cannot be observed!"
         )
     elif _is_classmethod(obj, method_name):
         raise TypeError(
-            "Attribute {} of object {} is a class method and, thus, "
-            "cannot be observed!".format(method_name, obj)
+            f"Attribute '{method_name}' of object {obj} is a class method and, thus, "
+            "cannot be observed!"
         )
     elif _method_was_modified(obj, method_name):
         raise TypeError(
@@ -209,8 +209,8 @@ def _get_wrapper_or_raise_if_not_exists(obj, method_name):
     observable_wrapper = getattr(obj, method_name)
     if not isinstance(observable_wrapper, _ObservableMethodWrapper):
         raise TypeError(
-            "Attribute {} of object {} is not observable. You never added an "
-            "observer to this!".format(method_name, obj)
+            f"Attribute '{method_name}' of object {obj} is not observable. You never "
+            "added an observer to this!"
         )
     return observable_wrapper
 
@@ -265,7 +265,7 @@ class _ObservableMethodWrapper:
             self._observers.remove(observer)
         except ValueError:
             raise ValueError(
-                "No observer {} found that could be removed!".format(observer)
+                f"No observer {observer} found that could be removed!"
             ) from None
 
     def remove_all_observers(self):
