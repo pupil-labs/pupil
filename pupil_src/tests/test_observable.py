@@ -57,6 +57,17 @@ class TestObservabilityOfMethods:
         with pytest.raises(TypeError):
             observable.add_observer("class_method", observer)
 
+    def test_modified_methods_are_not_observable(self, observable, observer):
+        class FakeClass:
+            def fake_method(self):
+                pass
+
+        fake_class_instance = FakeClass()
+        observable.modified_method = fake_class_instance.fake_method
+
+        with pytest.raises(TypeError):
+            observable.add_observer("modified_method", observer)
+
 
 class TestDifferentKindsOfObservers:
     def test_bound_method_without_arguments_can_be_observer(self, observable):

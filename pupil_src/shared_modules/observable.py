@@ -13,6 +13,8 @@ import functools
 import inspect
 import weakref
 
+from attr import has
+
 
 class ObserverError(Exception):
     pass
@@ -147,7 +149,12 @@ def _get_wrapper_and_create_if_not_exists(obj, method_name):
             "Attribute {} of object {} is a class method and, thus, "
             "cannot be observed!".format(method_name, obj)
         )
-    # TODO: Sanity check for observed method
+    elif _method_was_modified(obj, method_name):
+        raise TypeError(
+            f"Attribute '{method_name}' of object {obj} cannot be observed because it "
+            "is not part of the original class definition or has been assigned to a "
+            "method of a different object!"
+        )
     else:
         return _ObservableMethodWrapper(obj, method_name)
 
@@ -158,6 +165,20 @@ def _is_classmethod(obj, method_name):
         return isinstance(method_def, classmethod)
     except (AttributeError, KeyError):
         return False
+
+
+def _method_was_modified(obj, method_name):
+    method_in_original_class = hasattr(obj.__class__, method_name)
+    if not method_in_original_class:
+        return True
+    expected_func = getattr(obj.__class__, method_name)
+    expected_self = obj
+
+    method = getattr(obj, method_name)
+    bound_func = method.__func__
+    bound_self = method.__self__
+
+    return expected_self is not bound_self or expected_func is not bound_func
 
 
 def remove_observer(obj, method_name, observer):
