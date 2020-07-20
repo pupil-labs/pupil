@@ -147,6 +147,7 @@ def _get_wrapper_and_create_if_not_exists(obj, method_name):
             "Attribute {} of object {} is a class method and, thus, "
             "cannot be observed!".format(method_name, obj)
         )
+    # TODO: Sanity check for observed method
     else:
         return _ObservableMethodWrapper(obj, method_name)
 
@@ -195,20 +196,34 @@ def _get_wrapper_or_raise_if_not_exists(obj, method_name):
 
 class _ObservableMethodWrapper:
     def __init__(self, obj, method_name):
-        self._obj = obj
-        self._original_method = getattr(obj, method_name)
+        # the wrapper should not block garbage collection by reference counting for the
+        # observable object. Hence, we need to avoid strong references to the object,
+        # which would lead to cyclic references:
+        #   - The object is only referenced weakly
+        #   - The original wrapped method is only stored as an unbound method
+        self._obj_ref = weakref.ref(obj)
+        self._wrapped_func = getattr(obj.__class__, method_name)
         self._method_name = method_name
         self._observers = []
         self._was_removed = False
         self._patch_method_to_call_wrapper_instead()
 
     def _patch_method_to_call_wrapper_instead(self):
-        functools.update_wrapper(self, self._original_method)
-        setattr(self._obj, self._method_name, self)
+        functools.update_wrapper(self, self._wrapped_func)
+        # functools adds a reference to the wrapped method that we need to delete
+        # to avoid cyclic references
+        self.__wrapped__ = None
+        setattr(self._obj_ref(), self._method_name, self)
 
     def remove_wrapper(self):
-        setattr(self._obj, self._method_name, self._original_method)
+        setattr(obj, self._method_name, self._get_wrapped_bound_method())
         self._was_removed = True
+
+    def _get_wrapped_bound_method(self):
+        obj = self._obj_ref()
+        # see https://stackoverflow.com/a/1015405
+        original_bound_method = self._wrapped_func.__get__(obj, obj.__class__)
+        return original_bound_method
 
     def add_observer(self, observer):
         # Observers that are bound methods are referenced weakly. That means,
@@ -243,8 +258,9 @@ class _ObservableMethodWrapper:
                 "elsewhere and called via this reference after you "
                 "removed the wrapper!"
             )
+        wrapped_bound_method = self._get_wrapped_bound_method()
         try:
-            return self._original_method(*args, **kwargs)
+            return wrapped_bound_method(*args, **kwargs)
         except Exception:
             raise
         finally:

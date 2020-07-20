@@ -9,8 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import pytest
+import gc
 from unittest import mock
+
+import pytest
 
 from observable import Observable, ObserverError
 
@@ -28,6 +30,9 @@ class FakeObservable(Observable):
 
     @classmethod
     def class_method(cls):
+        pass
+
+    def __del__(self):
         pass
 
 
@@ -286,6 +291,28 @@ class TestDeletingObserverObjects:
         observable.bound_method()
         # the fake observer does not get garbage collected because its referenced
         # strongly in the observable
+        mock_function.assert_any_call()
+
+
+@pytest.fixture()
+def disable_generational_garbage_collection():
+    gc_enabled = gc.isenabled()
+    gc.disable()
+    yield
+    if gc_enabled:
+        gc.enable()
+
+
+class TestDeletingObservableObjects:
+    def test_observable_object_can_be_freed_by_reference_counting(
+        self, disable_generational_garbage_collection
+    ):
+        # do not use our fixture `observable` here, for some reason pytest keeps
+        # additional references to the object which makes the following test impossible
+        observable = FakeObservable()
+        with mock.patch.object(FakeObservable, "__del__") as mock_function:
+            observable.add_observer("bound_method", mock.Mock())
+            del observable
         mock_function.assert_any_call()
 
 
