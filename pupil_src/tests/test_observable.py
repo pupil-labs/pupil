@@ -333,16 +333,15 @@ class TestDeletingObserverObjects:
         mock_function.assert_any_call()
 
 
-@pytest.fixture()
-def disable_generational_garbage_collection():
-    gc_enabled = gc.isenabled()
-    gc.disable()
-    yield
-    if gc_enabled:
-        gc.enable()
-
-
 class TestDeletingObservableObjects:
+    @pytest.fixture()
+    def disable_generational_garbage_collection(self):
+        gc_enabled = gc.isenabled()
+        gc.disable()
+        yield
+        if gc_enabled:
+            gc.enable()
+
     def test_observable_object_can_be_freed_by_reference_counting(
         self, disable_generational_garbage_collection
     ):
