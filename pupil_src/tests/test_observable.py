@@ -176,6 +176,34 @@ class TestObserverCalls:
         assert observer1_called and observer2_called and observer3_called
 
 
+class TestWrappedMethodCalls:
+    def test_wrapped_functions_are_called_with_right_arguments(self):
+        mock_function = mock.Mock()
+
+        class FakeObservable(Observable):
+            def method(self, arg1, arg2):
+                mock_function(arg1, arg2)
+
+        observable = FakeObservable()
+        observable.add_observer("method", lambda arg1, arg2: None)
+
+        observable.method(1, 2)
+
+        mock_function.assert_called_once_with(1, 2)
+
+    def test_wrapped_functions_return_values(self):
+        class FakeObservable(Observable):
+            def method(self):
+                return 1
+
+        observable = FakeObservable()
+        observable.add_observer("method", lambda: None)
+
+        ret_val = observable.method()
+
+        assert ret_val == 1
+
+
 class TestRemovingObservers:
     def test_observers_that_are_functions_can_be_removed(self, observable):
         observer = mock.Mock()
