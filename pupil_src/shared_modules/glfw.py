@@ -666,6 +666,12 @@ def glfwGetVideoMode(monitor):
     )
 
 
+def glfwGetWindowContentScale(window):
+    xscale, yscale = c_float(0), c_float(0)
+    _glfw.glfwGetWindowContentScale(window, byref(xscale), byref(yscale))
+    return xscale.value, yscale.value
+
+
 def GetGammaRamp(monitor):
     _glfw.glfwGetGammaRamp.restype = POINTER(GLFWgammaramp)
     c_gamma = _glfw.glfwGetGammaRamp(monitor).contents
