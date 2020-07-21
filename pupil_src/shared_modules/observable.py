@@ -13,8 +13,6 @@ import functools
 import inspect
 import weakref
 
-from attr import has
-
 
 class ObserverError(Exception):
     pass
