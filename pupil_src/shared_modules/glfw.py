@@ -736,7 +736,4 @@ exec(__callback__("Drop"))
 
 
 def getHDPIFactor(window):
-    try:
-        return float(glfwGetFramebufferSize(window)[0] / glfwGetWindowSize(window)[0])
-    except ZeroDivisionError:
-        return 1.0
+    return glfwGetWindowContentScale(window)[0]
