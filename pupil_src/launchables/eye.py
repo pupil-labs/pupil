@@ -434,6 +434,11 @@ def eye(
 
         # load last gui configuration
         g_pool.gui.configuration = session_settings.get("ui_config", {})
+        # If previously selected plugin was not loaded this time, we will have an
+        # expanded menubar without any menu selected. We need to ensure the menubar is
+        # collapsed in this case.
+        if all(submenu.collapsed for submenu in g_pool.menubar.elements):
+            g_pool.menubar.collapsed = True
 
         # set up performance graphs
         pid = os.getpid()

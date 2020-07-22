@@ -607,6 +607,11 @@ def world(
 
         # now that we have a proper window we can load the last gui configuration
         g_pool.gui.configuration = session_settings.get("ui_config", {})
+        # If previously selected plugin was not loaded this time, we will have an
+        # expanded menubar without any menu selected. We need to ensure the menubar is
+        # collapsed in this case.
+        if all(submenu.collapsed for submenu in g_pool.menubar.elements):
+            g_pool.menubar.collapsed = True
 
         # create a timer to control window update frequency
         window_update_timer = timer(1 / 60)
