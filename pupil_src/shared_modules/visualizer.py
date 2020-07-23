@@ -165,6 +165,7 @@ class Visualizer(object):
             # get glfw started
             if self.run_independently:
                 glfwInit()
+                glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
                 self.window = glfwCreateWindow(
                     self.window_size[0], self.window_size[1], self.name, None
                 )
