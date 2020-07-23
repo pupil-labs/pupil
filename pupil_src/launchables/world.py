@@ -314,8 +314,8 @@ def world(
             ("Log_Display", {}),
             ("Dummy_Gaze_Mapper", {}),
             ("Display_Recent_Gaze", {}),
-            # Calibration choreography plugin is added bellow by calling
-            # patch_world_session_settings_with_choreography_plugin
+            # Calibration choreography plugin is added below by calling
+            # patch_loaded_plugins_with_choreography_plugin
             ("Recorder", {}),
             ("NetworkApiPlugin", {}),
             ("Fixation_Detector", {}),
