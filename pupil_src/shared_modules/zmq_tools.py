@@ -153,7 +153,7 @@ class Msg_Streamer(ZMQ_Socket):
         the contents of the iterable in '__raw_data__'
         require exposing the pyhton memoryview interface.
         """
-        assert deprecated is (), "Depracted use of send()"
+        assert deprecated == (), "Depracted use of send()"
         assert "topic" in payload, "`topic` field required in {}".format(payload)
 
         if "__raw_data__" not in payload:
