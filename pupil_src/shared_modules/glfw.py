@@ -102,6 +102,9 @@ GLFW_VERSION_MINOR = 1
 GLFW_VERSION_REVISION = 1
 __version__ = GLFW_VERSION_MAJOR, GLFW_VERSION_MINOR, GLFW_VERSION_REVISION
 
+GLFW_FALSE = 0
+GLFW_TRUE = 1
+
 # --- Input handling definitions ----------------------------------------------
 GLFW_RELEASE = 0
 GLFW_PRESS = 1
