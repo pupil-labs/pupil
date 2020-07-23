@@ -321,6 +321,7 @@ def eye(
 
         # Initialize glfw
         glfw.glfwInit()
+        glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
         if hide_ui:
             glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         title = "Pupil Capture - eye {}".format(eye_id)

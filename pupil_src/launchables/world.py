@@ -448,6 +448,7 @@ def world(
 
         # window and gl setup
         glfw.glfwInit()
+        glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
         if hide_ui:
             glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")

@@ -296,6 +296,7 @@ def player(
         window_name = f"Pupil Player: {meta_info.recording_name} - {rec_dir}"
 
         glfw.glfwInit()
+        glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
         main_window = glfw.glfwCreateWindow(width, height, window_name, None, None)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
         glfw.glfwMakeContextCurrent(main_window)
@@ -768,6 +769,7 @@ def player_drop(
         window_pos = session_settings.get("window_position", window_position_default)
 
         glfw.glfwInit()
+        glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
         glfw.glfwWindowHint(glfw.GLFW_RESIZABLE, 0)
         window = glfw.glfwCreateWindow(w, h, "Pupil Player")
         glfw.glfwWindowHint(glfw.GLFW_RESIZABLE, 1)
