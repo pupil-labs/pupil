@@ -633,7 +633,9 @@ def eye(
 
                     for button, action, mods in user_input.buttons:
                         x, y = glfw.glfwGetCursorPos(main_window)
-                        pos = x * hdpi_factor, y * hdpi_factor
+                        pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                            main_window, x, y, cached_scale=None
+                        )
                         pos = normalize(pos, g_pool.camera_render_size)
                         if g_pool.flip:
                             pos = 1 - pos[0], 1 - pos[1]

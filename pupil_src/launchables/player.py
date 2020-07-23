@@ -640,7 +640,9 @@ def player(
                 for b in user_input.buttons:
                     button, action, mods = b
                     x, y = glfw.glfwGetCursorPos(main_window)
-                    pos = x * hdpi_factor, y * hdpi_factor
+                    pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                        main_window, x, y, cached_scale=None
+                    )
                     pos = normalize(pos, g_pool.camera_render_size)
                     pos = denormalize(pos, g_pool.capture.frame_size)
 
