@@ -743,4 +743,26 @@ exec(__callback__("Drop"))
 
 
 def getHDPIFactor(window):
+    import warnings
+
+    warnings.warn('Deprecated; use "get_content_scale" instead.', DeprecationWarning)
+    return get_content_scale(window)
+
+
+def get_content_scale(window) -> float:
     return glfwGetWindowContentScale(window)[0]
+
+
+def get_framebuffer_scale(window) -> float:
+    window_width = glfwGetWindowSize(window)[0]
+    framebuffer_width = glfwGetFramebufferSize(window)[0]
+
+    try:
+        return float(framebuffer_width / window_width)
+    except ZeroDivisionError:
+        return 1.0
+
+
+def window_coordinate_to_framebuffer_coordinate(window, x, y, cached_scale=None):
+    scale = cached_scale or get_framebuffer_scale(window)
+    return x * scale, y * scale
