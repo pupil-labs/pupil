@@ -208,7 +208,9 @@ def player(
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            x, y = x * hdpi_factor, y * hdpi_factor
+            x, y = glfw.window_coordinate_to_framebuffer_coordinate(
+                window, x, y, cached_scale=None
+            )
             g_pool.gui.update_mouse(x, y)
             pos = x, y
             pos = normalize(pos, g_pool.camera_render_size)
