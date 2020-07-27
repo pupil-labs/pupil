@@ -260,6 +260,14 @@ class TestRemovingObservers:
         # at this point the list of observers is empty
         observable.remove_all_observers("bound_method")
 
+    def test_wrapper_can_be_removed(self, observable):
+        original_method = observable.bound_method
+        observable.add_observer("bound_method", lambda: None)
+        observable.bound_method.remove_wrapper()
+        method_after_removal = observable.bound_method
+
+        assert method_after_removal == original_method
+
 
 class TestExceptionThrowingMethods:
     class FakeException(Exception):

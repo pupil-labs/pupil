@@ -235,7 +235,7 @@ class _ObservableMethodWrapper:
         setattr(self._obj_ref(), self._method_name, self)
 
     def remove_wrapper(self):
-        setattr(obj, self._method_name, self._get_wrapped_bound_method())
+        setattr(self._obj_ref(), self._method_name, self._get_wrapped_bound_method())
         self._was_removed = True
 
     def _get_wrapped_bound_method(self):
