@@ -45,11 +45,17 @@ class Model2D(Model):
         return self._is_fitted
 
     def set_params(self, **params):
+        if params == {}:
+            return
         for key, value in params.items():
             setattr(self._regressor, key, np.asarray(value))
         self._is_fitted = True
 
     def get_params(self):
+        has_coef = hasattr(self._regressor, "coef_")
+        has_intercept = hasattr(self._regressor, "intercept_")
+        if not has_coef or not has_intercept:
+            return {}
         return {
             "coef_": self._regressor.coef_.tolist(),
             "intercept_": self._regressor.intercept_.tolist(),
