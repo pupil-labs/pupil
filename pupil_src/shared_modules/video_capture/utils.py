@@ -468,6 +468,16 @@ def pi_gaze_items(root_dir):
         assert raw_path.exists(), f"The file does not exist at path: {raw_path}"
         return raw_path
 
+    def find_worn_path(timestamps_path):
+        worn_name = timestamps_path.name
+        worn_name = worn_name.replace("gaze", "worn")
+        worn_name = worn_name.replace("_timestamps", "")
+        worn_path = timestamps_path.with_name(worn_name).with_suffix(".raw")
+        if worn_path.exists():
+            return worn_path
+        else:
+            return None
+
     def load_timestamps_data(path):
         timestamps = np.load(str(path))
         return timestamps
@@ -477,6 +487,18 @@ def pi_gaze_items(root_dir):
         raw_data_dtype = raw_data.dtype
         raw_data.shape = (-1, 2)
         return np.asarray(raw_data, dtype=raw_data_dtype)
+
+    def load_worn_data(path):
+        if not (path and path.exists()):
+            return None
+
+        def confidence_from_uint8(uint8: int) -> float:
+            conf = uint8 / 255.0
+            conf = max(0.0, min(conf, 1.0))
+            return float(conf)
+
+        with open(path, "rb") as fh:
+            return [confidence_from_uint8(uint8) for uint8 in fh.read()]
 
     # This pattern will match any filename that:
     # - starts with "gaze ps"
