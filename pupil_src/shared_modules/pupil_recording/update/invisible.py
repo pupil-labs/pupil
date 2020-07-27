@@ -144,14 +144,15 @@ def _convert_gaze(recording: PupilRecording):
         "topic": "gaze.pi",
         "norm_pos": None,
         "timestamp": None,
-        "confidence": 1.0,
+        "confidence": None,
     }
     with fm.PLData_Writer(recording.rec_dir, "gaze") as writer:
-        for ((x, y), ts) in pi_gaze_items(root_dir=recording.rec_dir):
+        for ((x, y), ts, conf) in pi_gaze_items(root_dir=recording.rec_dir):
             template_datum["timestamp"] = ts
             template_datum["norm_pos"] = m.normalize(
                 (x, y), size=(width, height), flip_y=True
             )
+            template_datum["confidence"] = conf
             writer.append(template_datum)
         logger.info(f"Converted {len(writer.ts_queue)} gaze positions.")
 
