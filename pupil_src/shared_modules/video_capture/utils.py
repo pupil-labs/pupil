@@ -492,13 +492,8 @@ def pi_gaze_items(root_dir):
         if not (path and path.exists()):
             return None
 
-        def confidence_from_uint8(uint8: int) -> float:
-            conf = uint8 / 255.0
-            conf = max(0.0, min(conf, 1.0))
-            return float(conf)
-
-        with open(path, "rb") as fh:
-            return [confidence_from_uint8(uint8) for uint8 in fh.read()]
+        confidences = np.fromfile(str(path), "<u1") / 255.0
+        return np.clip(confidences, 0.0, 1.0)
 
     # This pattern will match any filename that:
     # - starts with "gaze ps"
