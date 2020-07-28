@@ -186,11 +186,11 @@ def player(
         # Callback functions
         def on_resize(window, w, h):
             nonlocal window_size
-            nonlocal hdpi_factor
+            nonlocal content_scale
             if w == 0 or h == 0:
                 return
-            hdpi_factor = glfw.getHDPIFactor(window)
-            g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
+            content_scale = glfw.get_content_scale(window)
+            g_pool.gui.scale = g_pool.gui_user_scale * content_scale
             window_size = w, h
             g_pool.camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
             g_pool.gui.update_window(*window_size)
@@ -258,7 +258,7 @@ def player(
 
         icon_bar_width = 50
         window_size = None
-        hdpi_factor = 1.0
+        content_scale = 1.0
 
         # create container for globally scoped vars
         g_pool = SimpleNamespace()
@@ -822,10 +822,10 @@ def player_drop(
         # text = "Please supply a Pupil recording directory as first arg when calling Pupil Player."
 
         def display_string(string, font_size, center_y):
-            x = w / 2 * hdpi_factor
-            y = center_y * hdpi_factor
+            x = w / 2 * content_scale
+            y = center_y * content_scale
 
-            glfont.set_size(font_size * hdpi_factor)
+            glfont.set_size(font_size * content_scale)
 
             glfont.set_blur(10.5)
             glfont.set_color_float((0.0, 0.0, 0.0, 1.0))
@@ -838,7 +838,7 @@ def player_drop(
         while not glfw.glfwWindowShouldClose(window) and not process_was_interrupted:
 
             fb_size = glfw.glfwGetFramebufferSize(window)
-            hdpi_factor = glfw.getHDPIFactor(window)
+            content_scale = glfw.get_content_scale(window)
             gl_utils.adjust_gl_view(*fb_size)
 
             if rec_dir:

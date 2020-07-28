@@ -208,7 +208,7 @@ def world(
         icon_bar_width = 50
         window_size = None
         camera_render_size = None
-        hdpi_factor = 1.0
+        content_scale = 1.0
 
         # g_pool holds variables for this process they are accessible to all plugins
         g_pool = SimpleNamespace()
@@ -329,7 +329,7 @@ def world(
         def on_resize(window, w, h):
             nonlocal window_size
             nonlocal camera_render_size
-            nonlocal hdpi_factor
+            nonlocal content_scale
             if w == 0 or h == 0:
                 return
 
@@ -339,8 +339,8 @@ def world(
             gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
             gl_utils.glClearColor(0, 0, 0, 1)
 
-            hdpi_factor = glfw.getHDPIFactor(window)
-            g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
+            content_scale = glfw.get_content_scale(window)
+            g_pool.gui.scale = g_pool.gui_user_scale * content_scale
             window_size = w, h
             camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
             g_pool.gui.update_window(*window_size)

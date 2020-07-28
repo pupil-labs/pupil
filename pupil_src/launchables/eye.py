@@ -175,7 +175,7 @@ def eye(
 
         icon_bar_width = 50
         window_size = None
-        hdpi_factor = 1.0
+        content_scale = 1.0
 
         # g_pool holds variables for this process
         g_pool = SimpleNamespace()
@@ -234,18 +234,18 @@ def eye(
         # Callback functions
         def on_resize(window, w, h):
             nonlocal window_size
-            nonlocal hdpi_factor
+            nonlocal content_scale
 
             active_window = glfw.glfwGetCurrentContext()
             glfw.glfwMakeContextCurrent(window)
-            hdpi_factor = glfw.getHDPIFactor(window)
-            g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
+            content_scale = glfw.get_content_scale(window)
+            g_pool.gui.scale = g_pool.gui_user_scale * content_scale
             window_size = w, h
             g_pool.camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
             for g in g_pool.graphs:
-                g.scale = hdpi_factor
+                g.scale = content_scale
                 g.adjust_window_size(w, h)
             adjust_gl_view(w, h)
             glfw.glfwMakeContextCurrent(active_window)

@@ -742,13 +742,6 @@ exec(__callback__("Scroll"))
 exec(__callback__("Drop"))
 
 
-def getHDPIFactor(window):
-    import warnings
-
-    warnings.warn('Deprecated; use "get_content_scale" instead.', DeprecationWarning)
-    return get_content_scale(window)
-
-
 def get_content_scale(window) -> float:
     return glfwGetWindowContentScale(window)[0]
 

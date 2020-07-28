@@ -356,7 +356,7 @@ class MarkerWindowController(observable.Observable):
 
     @property
     def __marker_radius(self) -> float:
-        return self.marker_scale * self.__window.hdpi_factor
+        return self.marker_scale * self.__window.content_scale
 
     def __marker_position_on_screen(self, marker_position) -> T.Tuple[float, float]:
         padding = 90 * self.__marker_radius

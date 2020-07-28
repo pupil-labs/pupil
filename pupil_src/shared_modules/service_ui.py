@@ -68,8 +68,8 @@ class Service_UI(System_Plugin_Base):
         # Callback functions
         def on_resize(window, w, h):
             self.window_size = w, h
-            self.hdpi_factor = glfw.getHDPIFactor(window)
-            g_pool.gui.scale = g_pool.gui_user_scale * self.hdpi_factor
+            self.content_scale = glfw.get_content_scale(window)
+            g_pool.gui.scale = g_pool.gui_user_scale * self.content_scale
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
 
