@@ -132,7 +132,7 @@ def player(
         )
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
-            "1.27"
+            "1.28"
         ), "pyglui out of date, please upgrade to newest version"
 
         process_was_interrupted = False
