@@ -355,7 +355,6 @@ def world(
 
             gl_utils.glViewport(0, 0, *window_size)
 
-
             try:
                 clipboard = glfw.glfwGetClipboardString(main_window).decode()
             except AttributeError:  # clipboard is None, might happen on startup
@@ -364,9 +363,7 @@ def world(
             user_input = g_pool.gui.update()
             if user_input.clipboard != clipboard:
                 # only write to clipboard if content changed
-                glfw.glfwSetClipboardString(
-                    main_window, user_input.clipboard.encode()
-                )
+                glfw.glfwSetClipboardString(main_window, user_input.clipboard.encode())
 
             for button, action, mods in user_input.buttons:
                 x, y = glfw.glfwGetCursorPos(main_window)
