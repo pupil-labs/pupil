@@ -95,7 +95,14 @@ class Service_UI(System_Plugin_Base):
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
         def set_scale(new_scale):
+            # Get the current GUI user scale and set the new one
+            old_scale = g_pool.gui_user_scale
             g_pool.gui_user_scale = new_scale
+
+            # If no change is needed - exit early to avoid recursive calls
+            if old_scale == new_scale:
+                return
+
             on_resize(main_window, *self.window_size)
 
         def set_window_size():
