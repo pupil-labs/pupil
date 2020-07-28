@@ -560,8 +560,15 @@ def world(
 
         def set_window_size():
             f_width, f_height = g_pool.capture.frame_size
-            f_width += int(icon_bar_width * g_pool.gui.scale)
-            glfw.glfwSetWindowSize(main_window, f_width, f_height)
+            f_width += int(icon_bar_width * g_pool.gui_user_scale)
+            import platform
+
+            os_name = platform.system()
+            if os_name == "Windows":
+                content_scale = glfw.getHDPIFactor(main_window)
+                f_width *= content_scale
+                f_height *= content_scale
+            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
 
         general_settings.append(ui.Button("Reset window size", set_window_size))
         general_settings.append(
