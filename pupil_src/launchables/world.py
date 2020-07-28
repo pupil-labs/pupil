@@ -349,6 +349,12 @@ def world(
             for p in g_pool.plugins:
                 p.on_window_resize(window, *camera_render_size)
 
+            gl_utils.glViewport(0, 0, *camera_render_size)
+            for p in g_pool.plugins:
+                p.gl_display()
+
+            gl_utils.glViewport(0, 0, *window_size)
+
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
 
