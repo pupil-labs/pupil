@@ -513,6 +513,8 @@ def world(
         g_pool.main_window = main_window
 
         def set_scale(new_scale):
+            if g_pool.gui_user_scale == new_scale:
+                return
             g_pool.gui_user_scale = new_scale
             on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
