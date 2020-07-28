@@ -462,13 +462,7 @@ def world(
 
         def set_scale(new_scale):
             g_pool.gui_user_scale = new_scale
-            window_size = (
-                camera_render_size[0]
-                + int(icon_bar_width * g_pool.gui_user_scale * hdpi_factor),
-                glfw.glfwGetFramebufferSize(main_window)[1],
-            )
-            logger.warning(icon_bar_width * g_pool.gui_user_scale * hdpi_factor)
-            glfw.glfwSetWindowSize(main_window, *window_size)
+            on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
         def reset_restart():
             logger.warning("Resetting all settings and restarting Capture.")
