@@ -408,9 +408,23 @@ def player(
         g_pool.timelines.append(vert_constr)
 
         def set_window_size():
+            # Get current capture frame size
             f_width, f_height = g_pool.capture.frame_size
-            f_width += int(icon_bar_width * g_pool.gui.scale)
-            glfw.glfwSetWindowSize(main_window, f_width, f_height)
+
+            # Get current display scale factor
+            content_scale = glfw.get_content_scale(main_window)
+            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+            display_scale_factor = content_scale / framebuffer_scale
+
+            # Scale the capture frame size by display scale factor
+            f_width *= display_scale_factor
+            f_height *= display_scale_factor
+
+            # Increas the width to account for the added scaled icon bar width
+            f_width += icon_bar_width * g_pool.gui_user_scale * display_scale_factor
+
+            # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
+            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
 
         general_settings = ui.Growing_Menu("General", header_pos="headline")
         general_settings.append(ui.Button("Reset window size", set_window_size))

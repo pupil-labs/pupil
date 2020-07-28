@@ -96,7 +96,20 @@ class Service_UI(System_Plugin_Base):
             on_resize(main_window, *self.window_size)
 
         def set_window_size():
-            glfw.glfwSetWindowSize(main_window, *window_size_default)
+            # Get default window size
+            f_width, f_height = window_size_default
+
+            # Get current display scale factor
+            content_scale = glfw.get_content_scale(main_window)
+            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+            display_scale_factor = content_scale / framebuffer_scale
+
+            # Scale the capture frame size by display scale factor
+            f_width *= display_scale_factor
+            f_height *= display_scale_factor
+
+            # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
+            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
 
         def reset_restart():
             logger.warning("Resetting all settings and restarting Capture.")
