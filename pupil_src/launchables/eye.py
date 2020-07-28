@@ -338,8 +338,29 @@ def eye(
 
         # UI callback functions
         def set_scale(new_scale):
+            # Get the current GUI user scale and set the new one
+            old_scale = g_pool.gui_user_scale
             g_pool.gui_user_scale = new_scale
-            on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
+
+            # If no change is needed - exit early to avoid recursive calls
+            if old_scale == new_scale:
+                return
+
+            # Get the current frame buffer size, so that it remains the same
+            f_width, f_height = glfw.glfwGetFramebufferSize(main_window)
+
+            # Get the display scales
+            content_scale = glfw.get_content_scale(main_window)
+            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+
+            # Apply the difference between the previously scaled icon bar width,
+            # and the currently scaled icon bar width
+            f_width -= icon_bar_width * old_scale * content_scale / framebuffer_scale
+            f_width += icon_bar_width * new_scale * content_scale / framebuffer_scale
+
+            # The frame buffer size will remain the same, but the window size will change
+            # because of the icon bar width differences; need to set the window size here
+            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
 
         # gl_state settings
         basic_gl_setup()
