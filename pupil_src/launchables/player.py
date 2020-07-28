@@ -752,7 +752,7 @@ def player(
         session_window_size = glfw.glfwGetWindowSize(main_window)
         if 0 not in session_window_size:
             f_width, f_height = session_window_size
-            if platform.system() == "Windows":
+            if platform.system() in ("Windows", "Linux"):
                 f_width, f_height = (
                     f_width / content_scale,
                     f_height / content_scale,
