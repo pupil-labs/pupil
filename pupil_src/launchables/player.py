@@ -183,6 +183,49 @@ def player(
 
         plugins = system_plugins + user_plugins
 
+        def consume_events_and_render_buffer():
+            gl_utils.glViewport(0, 0, *g_pool.camera_render_size)
+            g_pool.capture.gl_display()
+            for p in g_pool.plugins:
+                p.gl_display()
+
+            gl_utils.glViewport(0, 0, *window_size)
+
+            try:
+                clipboard = glfw.glfwGetClipboardString(main_window).decode()
+            except AttributeError:  # clipbaord is None, might happen on startup
+                clipboard = ""
+            g_pool.gui.update_clipboard(clipboard)
+            user_input = g_pool.gui.update()
+            if user_input.clipboard and user_input.clipboard != clipboard:
+                # only write to clipboard if content changed
+                glfw.glfwSetClipboardString(main_window, user_input.clipboard.encode())
+
+            for b in user_input.buttons:
+                button, action, mods = b
+                x, y = glfw.glfwGetCursorPos(main_window)
+                pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                    main_window, x, y, cached_scale=None
+                )
+                pos = normalize(pos, g_pool.camera_render_size)
+                pos = denormalize(pos, g_pool.capture.frame_size)
+
+                for plugin in g_pool.plugins:
+                    if plugin.on_click(pos, button, action):
+                        break
+
+            for key, scancode, action, mods in user_input.keys:
+                for plugin in g_pool.plugins:
+                    if plugin.on_key(key, scancode, action, mods):
+                        break
+
+            for char_ in user_input.chars:
+                for plugin in g_pool.plugins:
+                    if plugin.on_char(char_):
+                        break
+
+            glfw.glfwSwapBuffers(main_window)
+
         # Callback functions
         def on_resize(window, w, h):
             nonlocal window_size
@@ -197,6 +240,9 @@ def player(
             g_pool.gui.collect_menus()
             for p in g_pool.plugins:
                 p.on_window_resize(window, *g_pool.camera_render_size)
+
+            # Needed, to update the window buffer while resizing
+            consume_events_and_render_buffer()
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)

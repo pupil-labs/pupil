@@ -73,6 +73,9 @@ class Service_UI(System_Plugin_Base):
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
 
+            # Needed, to update the window buffer while resizing
+            self.update_ui()
+
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
 

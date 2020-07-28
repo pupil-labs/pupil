@@ -126,6 +126,7 @@ def eye(
         from pyglui import ui, graph, cygl
         from pyglui.cygl.utils import draw_points, RGBA, draw_polyline
         from pyglui.cygl.utils import Named_Texture
+        import gl_utils
         from gl_utils import basic_gl_setup, adjust_gl_view, clear_gl_screen
         from gl_utils import make_coord_system_pixel_based
         from gl_utils import make_coord_system_norm_based
@@ -231,6 +232,58 @@ def eye(
             ("Roi", {}),
         ]
 
+        def consume_events_and_render_buffer():
+            glfw.glfwMakeContextCurrent(main_window)
+            clear_gl_screen()
+
+            glViewport(0, 0, *g_pool.camera_render_size)
+            for p in g_pool.plugins:
+                p.gl_display()
+
+            glViewport(0, 0, *window_size)
+            # render graphs
+            fps_graph.draw()
+            cpu_graph.draw()
+
+            # render GUI
+            try:
+                clipboard = glfw.glfwGetClipboardString(main_window).decode()
+            except AttributeError:  # clipboard is None, might happen on startup
+                clipboard = ""
+            g_pool.gui.update_clipboard(clipboard)
+            user_input = g_pool.gui.update()
+            if user_input.clipboard != clipboard:
+                # only write to clipboard if content changed
+                glfw.glfwSetClipboardString(main_window, user_input.clipboard.encode())
+
+            for button, action, mods in user_input.buttons:
+                x, y = glfw.glfwGetCursorPos(main_window)
+                pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                    main_window, x, y, cached_scale=None
+                )
+                pos = normalize(pos, g_pool.camera_render_size)
+                if g_pool.flip:
+                    pos = 1 - pos[0], 1 - pos[1]
+                # Position in img pixels
+                pos = denormalize(pos, g_pool.capture.frame_size)
+
+                for plugin in g_pool.plugins:
+                    if plugin.on_click(pos, button, action):
+                        break
+
+            for key, scancode, action, mods in user_input.keys:
+                for plugin in g_pool.plugins:
+                    if plugin.on_key(key, scancode, action, mods):
+                        break
+
+            for char_ in user_input.chars:
+                for plugin in g_pool.plugins:
+                    if plugin.on_char(char_):
+                        break
+
+            # update screen
+            glfw.glfwSwapBuffers(main_window)
+
         # Callback functions
         def on_resize(window, w, h):
             nonlocal window_size
@@ -249,6 +302,9 @@ def eye(
                 g.adjust_window_size(w, h)
             adjust_gl_view(w, h)
             glfw.glfwMakeContextCurrent(active_window)
+
+            # Needed, to update the window buffer while resizing
+            consume_events_and_render_buffer()
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
@@ -644,58 +700,7 @@ def eye(
             # GL drawing
             if window_should_update():
                 if is_window_visible(main_window):
-                    glfw.glfwMakeContextCurrent(main_window)
-                    clear_gl_screen()
-
-                    glViewport(0, 0, *g_pool.camera_render_size)
-                    for p in g_pool.plugins:
-                        p.gl_display()
-
-                    glViewport(0, 0, *window_size)
-                    # render graphs
-                    fps_graph.draw()
-                    cpu_graph.draw()
-
-                    # render GUI
-                    try:
-                        clipboard = glfw.glfwGetClipboardString(main_window).decode()
-                    except AttributeError:  # clipboard is None, might happen on startup
-                        clipboard = ""
-                    g_pool.gui.update_clipboard(clipboard)
-                    user_input = g_pool.gui.update()
-                    if user_input.clipboard != clipboard:
-                        # only write to clipboard if content changed
-                        glfw.glfwSetClipboardString(
-                            main_window, user_input.clipboard.encode()
-                        )
-
-                    for button, action, mods in user_input.buttons:
-                        x, y = glfw.glfwGetCursorPos(main_window)
-                        pos = glfw.window_coordinate_to_framebuffer_coordinate(
-                            main_window, x, y, cached_scale=None
-                        )
-                        pos = normalize(pos, g_pool.camera_render_size)
-                        if g_pool.flip:
-                            pos = 1 - pos[0], 1 - pos[1]
-                        # Position in img pixels
-                        pos = denormalize(pos, g_pool.capture.frame_size)
-
-                        for plugin in g_pool.plugins:
-                            if plugin.on_click(pos, button, action):
-                                break
-
-                    for key, scancode, action, mods in user_input.keys:
-                        for plugin in g_pool.plugins:
-                            if plugin.on_key(key, scancode, action, mods):
-                                break
-
-                    for char_ in user_input.chars:
-                        for plugin in g_pool.plugins:
-                            if plugin.on_char(char_):
-                                break
-
-                    # update screen
-                    glfw.glfwSwapBuffers(main_window)
+                    consume_events_and_render_buffer()
                 glfw.glfwPollEvents()
 
         # END while running

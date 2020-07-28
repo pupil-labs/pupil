@@ -325,36 +325,12 @@ def world(
             ("System_Graphs", {}),
         ]
 
-        # Callback functions
-        def on_resize(window, w, h):
-            nonlocal window_size
-            nonlocal camera_render_size
-            nonlocal content_scale
-            if w == 0 or h == 0:
-                return
-
-            # Always clear buffers on resize to make sure that the black stripes left/right
-            # are black and not polluted from previous frames. Make sure this is applied on
-            # the whole window and not within glViewport!
-            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
-            gl_utils.glClearColor(0, 0, 0, 1)
-
-            content_scale = glfw.get_content_scale(window)
-            g_pool.gui.scale = g_pool.gui_user_scale * content_scale
-            window_size = w, h
-            camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
-            g_pool.gui.update_window(*window_size)
-            g_pool.gui.collect_menus()
-
-            for p in g_pool.plugins:
-                p.on_window_resize(window, *camera_render_size)
-
+        def consume_events_and_render_buffer():
             gl_utils.glViewport(0, 0, *camera_render_size)
             for p in g_pool.plugins:
                 p.gl_display()
 
             gl_utils.glViewport(0, 0, *window_size)
-
             try:
                 clipboard = glfw.glfwGetClipboardString(main_window).decode()
             except AttributeError:  # clipboard is None, might happen on startup
@@ -388,8 +364,34 @@ def world(
                     if plugin.on_char(char_):
                         break
 
-            gl_utils.glFlush()
             glfw.glfwSwapBuffers(main_window)
+
+        # Callback functions
+        def on_resize(window, w, h):
+            nonlocal window_size
+            nonlocal camera_render_size
+            nonlocal content_scale
+            if w == 0 or h == 0:
+                return
+
+            # Always clear buffers on resize to make sure that the black stripes left/right
+            # are black and not polluted from previous frames. Make sure this is applied on
+            # the whole window and not within glViewport!
+            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClearColor(0, 0, 0, 1)
+
+            content_scale = glfw.get_content_scale(window)
+            g_pool.gui.scale = g_pool.gui_user_scale * content_scale
+            window_size = w, h
+            camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
+            g_pool.gui.update_window(*window_size)
+            g_pool.gui.collect_menus()
+
+            for p in g_pool.plugins:
+                p.on_window_resize(window, *camera_render_size)
+
+            # Needed, to update the window buffer while resizing
+            consume_events_and_render_buffer()
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
