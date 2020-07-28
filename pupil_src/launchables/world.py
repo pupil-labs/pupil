@@ -332,6 +332,13 @@ def world(
             nonlocal hdpi_factor
             if w == 0 or h == 0:
                 return
+
+            # Always clear buffers on resize to make sure that the black stripes left/right
+            # are black and not polluted from previous frames. Make sure this is applied on
+            # the whole window and not within glViewport!
+            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClearColor(0, 0, 0, 1)
+
             hdpi_factor = glfw.getHDPIFactor(window)
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             window_size = w, h
