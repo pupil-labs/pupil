@@ -248,6 +248,7 @@ class Service_UI(System_Plugin_Base):
         if 0 not in session_window_size:
             f_width, f_height = session_window_size
             if platform.system() in ("Windows", "Linux"):
+                content_scale = glfw.get_content_scale(self.g_pool.main_window)
                 f_width, f_height = (
                     f_width / content_scale,
                     f_height / content_scale,
