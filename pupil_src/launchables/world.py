@@ -527,6 +527,10 @@ def world(
             content_scale = glfw.get_content_scale(main_window)
             framebuffer_scale = glfw.get_framebuffer_scale(main_window)
 
+            # Get the unscaled framebuffer size
+            f_width /= framebuffer_scale
+            f_height /= framebuffer_scale
+
             # Apply the difference between the previously scaled icon bar width,
             # and the currently scaled icon bar width
             f_width -= icon_bar_width * old_scale * content_scale / framebuffer_scale
