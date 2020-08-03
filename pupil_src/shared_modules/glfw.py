@@ -104,6 +104,7 @@ __version__ = GLFW_VERSION_MAJOR, GLFW_VERSION_MINOR, GLFW_VERSION_REVISION
 
 GLFW_FALSE = 0
 GLFW_TRUE = 1
+GLFW_DONT_CARE = -1
 
 # --- Input handling definitions ----------------------------------------------
 GLFW_RELEASE = 0
@@ -446,6 +447,7 @@ glfwSetWindowTitle = _glfw.glfwSetWindowTitle
 # glfwGetWindowPos              = _glfw.glfwGetWindowPos
 glfwSetWindowPos = _glfw.glfwSetWindowPos
 # glfwGetWindowSize             = _glfw.glfwGetWindowSize
+glfwSetWindowSizeLimits = _glfw.glfwSetWindowSizeLimits
 glfwSetWindowSize = _glfw.glfwSetWindowSize
 # glfwGetFramebufferSize        = _glfw.glfwGetFramebufferSize
 glfwIconifyWindow = _glfw.glfwIconifyWindow

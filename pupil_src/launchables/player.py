@@ -241,6 +241,15 @@ def player(
             for p in g_pool.plugins:
                 p.on_window_resize(window, *g_pool.camera_render_size)
 
+            # Minimum window size required, otherwise parts of the UI can cause openGL
+            # issues with permanent effects. Depends on the content scale, which can
+            # potentially be dynamically modified, so we re-adjust the size limits every
+            # time here.
+            min_size = int(2 * icon_bar_width * g_pool.gui.scale)
+            glfw.glfwSetWindowSizeLimits(
+                window, min_size, min_size, glfw.GLFW_DONT_CARE, glfw.GLFW_DONT_CARE
+            )
+
             # Needed, to update the window buffer while resizing
             consume_events_and_render_buffer()
 
