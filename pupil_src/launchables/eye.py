@@ -214,7 +214,7 @@ def eye(
         default_capture_name = "UVC_Source"
         default_capture_settings = {
             "preferred_names": preferred_names,
-            "frame_size": (320, 240),
+            "frame_size": (192, 192),
             "frame_rate": 120,
         }
 
