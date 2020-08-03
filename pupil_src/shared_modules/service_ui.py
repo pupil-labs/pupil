@@ -67,6 +67,11 @@ class Service_UI(System_Plugin_Base):
 
         # Callback functions
         def on_resize(window, w, h):
+            # Always clear buffers on resize to make sure that there are no overlapping
+            # artifacts from previous frames.
+            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClearColor(0, 0, 0, 1)
+
             self.window_size = w, h
             self.content_scale = glfw.get_content_scale(window)
             g_pool.gui.scale = g_pool.gui_user_scale * self.content_scale

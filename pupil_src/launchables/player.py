@@ -232,6 +232,12 @@ def player(
             nonlocal content_scale
             if w == 0 or h == 0:
                 return
+
+            # Always clear buffers on resize to make sure that there are no overlapping
+            # artifacts from previous frames.
+            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClearColor(0, 0, 0, 1)
+
             content_scale = glfw.get_content_scale(window)
             g_pool.gui.scale = g_pool.gui_user_scale * content_scale
             window_size = w, h

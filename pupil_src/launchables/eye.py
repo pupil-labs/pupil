@@ -289,6 +289,11 @@ def eye(
             nonlocal window_size
             nonlocal content_scale
 
+            # Always clear buffers on resize to make sure that there are no overlapping
+            # artifacts from previous frames.
+            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClearColor(0, 0, 0, 1)
+
             active_window = glfw.glfwGetCurrentContext()
             glfw.glfwMakeContextCurrent(window)
             content_scale = glfw.get_content_scale(window)

@@ -374,9 +374,8 @@ def world(
             if w == 0 or h == 0:
                 return
 
-            # Always clear buffers on resize to make sure that the black stripes left/right
-            # are black and not polluted from previous frames. Make sure this is applied on
-            # the whole window and not within glViewport!
+            # Always clear buffers on resize to make sure that there are no overlapping
+            # artifacts from previous frames.
             gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
             gl_utils.glClearColor(0, 0, 0, 1)
 
