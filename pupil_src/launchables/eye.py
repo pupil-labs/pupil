@@ -744,6 +744,8 @@ def eye(
             if 0 not in session_window_size:
                 f_width, f_height = session_window_size
                 if platform.system() in ("Windows", "Linux"):
+                    # Store unscaled window size as the operating system will scale the
+                    # windows appropriately during launch on Windows and Linux.
                     f_width, f_height = (
                         f_width / content_scale,
                         f_height / content_scale,
