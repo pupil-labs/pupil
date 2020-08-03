@@ -462,9 +462,9 @@ def eye(
         def set_window_size():
             # Get current capture frame size
             f_width, f_height = g_pool.capture.frame_size
+            # Eye camera resolutions are too small to be used as default window sizes.
+            # We use double their size instead.
             frame_scale_factor = 2
-
-            # Scale the capture frame by a constant scale factor
             f_width *= frame_scale_factor
             f_height *= frame_scale_factor
 
