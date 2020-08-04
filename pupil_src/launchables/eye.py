@@ -214,7 +214,7 @@ def eye(
         default_capture_name = "UVC_Source"
         default_capture_settings = {
             "preferred_names": preferred_names,
-            "frame_size": (320, 240),
+            "frame_size": (192, 192),
             "frame_rate": 120,
         }
 
@@ -399,7 +399,12 @@ def eye(
             glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         title = "Pupil Capture - eye {}".format(eye_id)
 
-        width, height = session_settings.get("window_size", (640 + icon_bar_width, 480))
+        # Pupil Cam1 uses 4:3 resolutions. Pupil Cam2 and Cam3 use 1:1 resolutions.
+        # As all Pupil Core and VR/AR add-ons are shipped with Pupil Cam2 and Cam3
+        # cameras, we adjust the default eye window size to a 1:1 content aspect ratio.
+        # The size of 500 was chosen s.t. the menu still fits.
+        default_window_size = 500 + icon_bar_width, 500
+        width, height = session_settings.get("window_size", default_window_size)
 
         main_window = glfw.glfwCreateWindow(width, height, title, None, None)
         window_pos = session_settings.get("window_position", window_position_default)
@@ -519,7 +524,6 @@ def eye(
         )
         icon.tooltip = "General Settings"
         g_pool.iconbar.append(icon)
-        toggle_general_settings(False)
 
         plugins_to_load = session_settings.get("loaded_plugins", default_plugins)
         if overwrite_cap_settings:
@@ -535,6 +539,8 @@ def eye(
             g_pool.plugins.add(
                 g_pool.plugin_by_name[default_capture_name], default_capture_settings
             )
+
+        toggle_general_settings(True)
 
         g_pool.writer = None
 
