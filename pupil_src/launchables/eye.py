@@ -523,7 +523,6 @@ def eye(
         )
         icon.tooltip = "General Settings"
         g_pool.iconbar.append(icon)
-        toggle_general_settings(False)
 
         plugins_to_load = session_settings.get("loaded_plugins", default_plugins)
         if overwrite_cap_settings:
@@ -539,6 +538,8 @@ def eye(
             g_pool.plugins.add(
                 g_pool.plugin_by_name[default_capture_name], default_capture_settings
             )
+
+        toggle_general_settings(True)
 
         g_pool.writer = None
 
