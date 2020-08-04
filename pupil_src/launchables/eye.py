@@ -298,7 +298,7 @@ def eye(
             glfw.glfwMakeContextCurrent(window)
             content_scale = glfw.get_content_scale(window)
             framebuffer_scale = glfw.get_framebuffer_scale(window)
-            g_pool.gui.scale = g_pool.gui_user_scale * content_scale
+            g_pool.gui.scale = content_scale
             window_size = w, h
             g_pool.camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
             g_pool.gui.update_window(w, h)
@@ -412,36 +412,6 @@ def eye(
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
 
-        # UI callback functions
-        def set_scale(new_scale):
-            # Get the current GUI user scale and set the new one
-            old_scale = g_pool.gui_user_scale
-            g_pool.gui_user_scale = new_scale
-
-            # If no change is needed - exit early to avoid recursive calls
-            if old_scale == new_scale:
-                return
-
-            # Get the current frame buffer size, so that it remains the same
-            f_width, f_height = glfw.glfwGetFramebufferSize(main_window)
-
-            # Get the display scales
-            content_scale = glfw.get_content_scale(main_window)
-            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
-
-            # Get the unscaled framebuffer size
-            f_width /= framebuffer_scale
-            f_height /= framebuffer_scale
-
-            # Apply the difference between the previously scaled icon bar width,
-            # and the currently scaled icon bar width
-            f_width -= icon_bar_width * old_scale * content_scale / framebuffer_scale
-            f_width += icon_bar_width * new_scale * content_scale / framebuffer_scale
-
-            # The frame buffer size will remain the same, but the window size will change
-            # because of the icon bar width differences; need to set the window size here
-            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
-
         # gl_state settings
         basic_gl_setup()
         g_pool.image_tex = Named_Texture()
@@ -449,7 +419,6 @@ def eye(
 
         # setup GUI
         g_pool.gui = ui.UI()
-        g_pool.gui_user_scale = session_settings.get("gui_scale", 1.0)
         g_pool.menubar = ui.Scrolling_Menu(
             "Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos="left"
         )
@@ -460,15 +429,6 @@ def eye(
         g_pool.gui.append(g_pool.iconbar)
 
         general_settings = ui.Growing_Menu("General", header_pos="headline")
-        general_settings.append(
-            ui.Selector(
-                "gui_user_scale",
-                g_pool,
-                setter=set_scale,
-                selection=[0.8, 0.9, 1.0, 1.1, 1.2],
-                label="Interface Size",
-            )
-        )
 
         def set_window_size():
             # Get current capture frame size
@@ -489,7 +449,7 @@ def eye(
             f_height *= display_scale_factor
 
             # Increas the width to account for the added scaled icon bar width
-            f_width += icon_bar_width * g_pool.gui_user_scale * display_scale_factor
+            f_width += icon_bar_width * display_scale_factor
 
             # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
             glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
@@ -743,7 +703,6 @@ def eye(
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         # save session persistent settings
-        session_settings["gui_scale"] = g_pool.gui_user_scale
         session_settings["flip"] = g_pool.flip
         session_settings["display_mode"] = g_pool.display_mode
         session_settings["ui_config"] = g_pool.gui.configuration

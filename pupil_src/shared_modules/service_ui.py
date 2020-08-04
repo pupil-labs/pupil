@@ -59,7 +59,6 @@ class Service_UI(System_Plugin_Base):
         g_pool.main_window = main_window
 
         g_pool.gui = ui.UI()
-        g_pool.gui_user_scale = gui_scale
         g_pool.menubar = ui.Scrolling_Menu(
             "Settings", pos=(0, 0), size=(0, 0), header_pos="headline"
         )
@@ -74,7 +73,7 @@ class Service_UI(System_Plugin_Base):
 
             self.window_size = w, h
             self.content_scale = glfw.get_content_scale(window)
-            g_pool.gui.scale = g_pool.gui_user_scale * self.content_scale
+            g_pool.gui.scale = self.content_scale
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
 
@@ -99,17 +98,6 @@ class Service_UI(System_Plugin_Base):
         def on_scroll(window, x, y):
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
-        def set_scale(new_scale):
-            # Get the current GUI user scale and set the new one
-            old_scale = g_pool.gui_user_scale
-            g_pool.gui_user_scale = new_scale
-
-            # If no change is needed - exit early to avoid recursive calls
-            if old_scale == new_scale:
-                return
-
-            on_resize(main_window, *self.window_size)
-
         def set_window_size():
             # Get default window size
             f_width, f_height = window_size_default
@@ -131,16 +119,6 @@ class Service_UI(System_Plugin_Base):
             glfw.glfwSetWindowShouldClose(main_window, True)
             self.notify_all({"subject": "clear_settings_process.should_start"})
             self.notify_all({"subject": "service_process.should_start", "delay": 2.0})
-
-        g_pool.menubar.append(
-            ui.Selector(
-                "gui_user_scale",
-                g_pool,
-                setter=set_scale,
-                selection=[0.6, 0.8, 1.0, 1.2, 1.4],
-                label="Interface size",
-            )
-        )
 
         g_pool.menubar.append(ui.Button("Reset window size", set_window_size))
 
@@ -245,7 +223,6 @@ class Service_UI(System_Plugin_Base):
     def get_init_dict(self):
         sess = {
             "window_position": glfw.glfwGetWindowPos(self.g_pool.main_window),
-            "gui_scale": self.g_pool.gui_user_scale,
             "ui_config": self.g_pool.gui.configuration,
         }
 
