@@ -297,6 +297,7 @@ def eye(
             active_window = glfw.glfwGetCurrentContext()
             glfw.glfwMakeContextCurrent(window)
             content_scale = glfw.get_content_scale(window)
+            framebuffer_scale = glfw.get_framebuffer_scale(window)
             g_pool.gui.scale = g_pool.gui_user_scale * content_scale
             window_size = w, h
             g_pool.camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
@@ -312,7 +313,7 @@ def eye(
             # issues with permanent effects. Depends on the content scale, which can
             # potentially be dynamically modified, so we re-adjust the size limits every
             # time here.
-            min_size = int(2 * icon_bar_width * g_pool.gui.scale)
+            min_size = int(2 * icon_bar_width * g_pool.gui.scale / framebuffer_scale)
             glfw.glfwSetWindowSizeLimits(
                 window, min_size, min_size, glfw.GLFW_DONT_CARE, glfw.GLFW_DONT_CARE
             )
