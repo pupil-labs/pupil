@@ -381,7 +381,7 @@ def world(
 
             content_scale = glfw.get_content_scale(window)
             framebuffer_scale = glfw.get_framebuffer_scale(window)
-            g_pool.gui.scale = g_pool.gui_user_scale * content_scale
+            g_pool.gui.scale = content_scale
             window_size = w, h
             camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
             g_pool.gui.update_window(*window_size)
@@ -520,35 +520,6 @@ def world(
         cygl.utils.init()
         g_pool.main_window = main_window
 
-        def set_scale(new_scale):
-            # Get the current GUI user scale and set the new one
-            old_scale = g_pool.gui_user_scale
-            g_pool.gui_user_scale = new_scale
-
-            # If no change is needed - exit early to avoid recursive calls
-            if old_scale == new_scale:
-                return
-
-            # Get the current frame buffer size, so that it remains the same
-            f_width, f_height = glfw.glfwGetFramebufferSize(main_window)
-
-            # Get the display scales
-            content_scale = glfw.get_content_scale(main_window)
-            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
-
-            # Get the unscaled framebuffer size
-            f_width /= framebuffer_scale
-            f_height /= framebuffer_scale
-
-            # Apply the difference between the previously scaled icon bar width,
-            # and the currently scaled icon bar width
-            f_width -= icon_bar_width * old_scale * content_scale / framebuffer_scale
-            f_width += icon_bar_width * new_scale * content_scale / framebuffer_scale
-
-            # The frame buffer size will remain the same, but the window size will change
-            # because of the icon bar width differences; need to set the window size here
-            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
-
         def reset_restart():
             logger.warning("Resetting all settings and restarting Capture.")
             glfw.glfwSetWindowShouldClose(main_window, True)
@@ -566,7 +537,6 @@ def world(
 
         # setup GUI
         g_pool.gui = ui.UI()
-        g_pool.gui_user_scale = session_settings.get("gui_scale", 1.0)
         g_pool.menubar = ui.Scrolling_Menu(
             "Settings", pos=(-400, 0), size=(-icon_bar_width, 0), header_pos="left"
         )
@@ -579,15 +549,6 @@ def world(
         g_pool.gui.append(g_pool.quickbar)
 
         general_settings = ui.Growing_Menu("General", header_pos="headline")
-        general_settings.append(
-            ui.Selector(
-                "gui_user_scale",
-                g_pool,
-                setter=set_scale,
-                selection=[0.6, 0.8, 1.0, 1.2, 1.4],
-                label="Interface size",
-            )
-        )
 
         def set_window_size():
             # Get current capture frame size
@@ -603,7 +564,7 @@ def world(
             f_height *= display_scale_factor
 
             # Increas the width to account for the added scaled icon bar width
-            f_width += icon_bar_width * g_pool.gui_user_scale * display_scale_factor
+            f_width += icon_bar_width * display_scale_factor
 
             # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
             glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
@@ -822,7 +783,6 @@ def world(
                 glfw.glfwSwapBuffers(main_window)
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
-        session_settings["gui_scale"] = g_pool.gui_user_scale
         session_settings["ui_config"] = g_pool.gui.configuration
         session_settings["version"] = str(g_pool.version)
         session_settings["eye0_process_alive"] = eye_procs_alive[0].value
