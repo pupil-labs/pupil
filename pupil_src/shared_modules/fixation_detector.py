@@ -49,7 +49,7 @@ import file_methods as fm
 from observable import Observable
 import player_methods as pm
 from methods import denormalize
-from plugin import Analysis_Plugin_Base
+from plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class FixationDetectionMethod(enum.Enum):
     GAZE_3D = "3d gaze"
 
 
-class Fixation_Detector_Base(Analysis_Plugin_Base):
+class Fixation_Detector_Base(Plugin):
     icon_chr = chr(0xEC03)
     icon_font = "pupil_icons"
 
@@ -689,6 +689,7 @@ class Fixation_Detector(Fixation_Detector_Base):
         self.min_duration = min_duration
         self.max_dispersion = max_dispersion
         self.id_counter = 0
+        self.recent_fixation = None
 
     def recent_events(self, events):
         events["fixations"] = []

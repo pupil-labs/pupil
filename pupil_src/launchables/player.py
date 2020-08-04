@@ -132,7 +132,7 @@ def player(
         )
 
         assert VersionFormat(pyglui_version) >= VersionFormat(
-            "1.27"
+            "1.28"
         ), "pyglui out of date, please upgrade to newest version"
 
         process_was_interrupted = False
@@ -183,20 +183,82 @@ def player(
 
         plugins = system_plugins + user_plugins
 
+        def consume_events_and_render_buffer():
+            gl_utils.glViewport(0, 0, *g_pool.camera_render_size)
+            g_pool.capture.gl_display()
+            for p in g_pool.plugins:
+                p.gl_display()
+
+            gl_utils.glViewport(0, 0, *window_size)
+
+            try:
+                clipboard = glfw.glfwGetClipboardString(main_window).decode()
+            except AttributeError:  # clipbaord is None, might happen on startup
+                clipboard = ""
+            g_pool.gui.update_clipboard(clipboard)
+            user_input = g_pool.gui.update()
+            if user_input.clipboard and user_input.clipboard != clipboard:
+                # only write to clipboard if content changed
+                glfw.glfwSetClipboardString(main_window, user_input.clipboard.encode())
+
+            for b in user_input.buttons:
+                button, action, mods = b
+                x, y = glfw.glfwGetCursorPos(main_window)
+                pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                    main_window, x, y, cached_scale=None
+                )
+                pos = normalize(pos, g_pool.camera_render_size)
+                pos = denormalize(pos, g_pool.capture.frame_size)
+
+                for plugin in g_pool.plugins:
+                    if plugin.on_click(pos, button, action):
+                        break
+
+            for key, scancode, action, mods in user_input.keys:
+                for plugin in g_pool.plugins:
+                    if plugin.on_key(key, scancode, action, mods):
+                        break
+
+            for char_ in user_input.chars:
+                for plugin in g_pool.plugins:
+                    if plugin.on_char(char_):
+                        break
+
+            glfw.glfwSwapBuffers(main_window)
+
         # Callback functions
         def on_resize(window, w, h):
             nonlocal window_size
-            nonlocal hdpi_factor
+            nonlocal content_scale
             if w == 0 or h == 0:
                 return
-            hdpi_factor = glfw.getHDPIFactor(window)
-            g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
+
+            # Always clear buffers on resize to make sure that there are no overlapping
+            # artifacts from previous frames.
+            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClearColor(0, 0, 0, 1)
+
+            content_scale = glfw.get_content_scale(window)
+            framebuffer_scale = glfw.get_framebuffer_scale(window)
+            g_pool.gui.scale = content_scale
             window_size = w, h
             g_pool.camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
             g_pool.gui.update_window(*window_size)
             g_pool.gui.collect_menus()
             for p in g_pool.plugins:
                 p.on_window_resize(window, *g_pool.camera_render_size)
+
+            # Minimum window size required, otherwise parts of the UI can cause openGL
+            # issues with permanent effects. Depends on the content scale, which can
+            # potentially be dynamically modified, so we re-adjust the size limits every
+            # time here.
+            min_size = int(2 * icon_bar_width * g_pool.gui.scale / framebuffer_scale)
+            glfw.glfwSetWindowSizeLimits(
+                window, min_size, min_size, glfw.GLFW_DONT_CARE, glfw.GLFW_DONT_CARE
+            )
+
+            # Needed, to update the window buffer while resizing
+            consume_events_and_render_buffer()
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
@@ -208,7 +270,9 @@ def player(
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            x, y = x * hdpi_factor, y * hdpi_factor
+            x, y = glfw.window_coordinate_to_framebuffer_coordinate(
+                window, x, y, cached_scale=None
+            )
             g_pool.gui.update_mouse(x, y)
             pos = x, y
             pos = normalize(pos, g_pool.camera_render_size)
@@ -256,7 +320,7 @@ def player(
 
         icon_bar_width = 50
         window_size = None
-        hdpi_factor = 1.0
+        content_scale = 1.0
 
         # create container for globally scoped vars
         g_pool = SimpleNamespace()
@@ -296,21 +360,12 @@ def player(
         window_name = f"Pupil Player: {meta_info.recording_name} - {rec_dir}"
 
         glfw.glfwInit()
+        glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
         main_window = glfw.glfwCreateWindow(width, height, window_name, None, None)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
         g_pool.main_window = main_window
-
-        def set_scale(new_scale):
-            g_pool.gui_user_scale = new_scale
-            window_size = (
-                g_pool.camera_render_size[0]
-                + int(icon_bar_width * g_pool.gui_user_scale * hdpi_factor),
-                glfw.glfwGetFramebufferSize(main_window)[1],
-            )
-            logger.warning(icon_bar_width * g_pool.gui_user_scale * hdpi_factor)
-            glfw.glfwSetWindowSize(main_window, *window_size)
 
         g_pool.version = app_version
         g_pool.timestamps = g_pool.capture.timestamps
@@ -391,7 +446,6 @@ def player(
             general_settings.collapsed = collapsed
 
         g_pool.gui = ui.UI()
-        g_pool.gui_user_scale = session_settings.get("gui_scale", 1.0)
         g_pool.menubar = ui.Scrolling_Menu(
             "Settings", pos=(-500, 0), size=(-icon_bar_width, 0), header_pos="left"
         )
@@ -411,21 +465,26 @@ def player(
         g_pool.timelines.append(vert_constr)
 
         def set_window_size():
+            # Get current capture frame size
             f_width, f_height = g_pool.capture.frame_size
-            f_width += int(icon_bar_width * g_pool.gui.scale)
-            glfw.glfwSetWindowSize(main_window, f_width, f_height)
+
+            # Get current display scale factor
+            content_scale = glfw.get_content_scale(main_window)
+            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+            display_scale_factor = content_scale / framebuffer_scale
+
+            # Scale the capture frame size by display scale factor
+            f_width *= display_scale_factor
+            f_height *= display_scale_factor
+
+            # Increas the width to account for the added scaled icon bar width
+            f_width += icon_bar_width * display_scale_factor
+
+            # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
+            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
 
         general_settings = ui.Growing_Menu("General", header_pos="headline")
         general_settings.append(ui.Button("Reset window size", set_window_size))
-        general_settings.append(
-            ui.Selector(
-                "gui_user_scale",
-                g_pool,
-                setter=set_scale,
-                selection=[0.8, 0.9, 1.0, 1.1, 1.2] + list(np.arange(1.5, 5.1, 0.5)),
-                label="Interface Size",
-            )
-        )
         general_settings.append(
             ui.Info_Text(f"Minimum Player Version: {meta_info.min_player_version}")
         )
@@ -548,6 +607,11 @@ def player(
         toggle_general_settings(True)
 
         g_pool.gui.configuration = session_settings.get("ui_config", {})
+        # If previously selected plugin was not loaded this time, we will have an
+        # expanded menubar without any menu selected. We need to ensure the menubar is
+        # collapsed in this case.
+        if all(submenu.collapsed for submenu in g_pool.menubar.elements):
+            g_pool.menubar.collapsed = True
 
         # gl_state settings
         gl_utils.basic_gl_setup()
@@ -637,7 +701,9 @@ def player(
                 for b in user_input.buttons:
                     button, action, mods = b
                     x, y = glfw.glfwGetCursorPos(main_window)
-                    pos = x * hdpi_factor, y * hdpi_factor
+                    pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                        main_window, x, y, cached_scale=None
+                    )
                     pos = normalize(pos, g_pool.camera_render_size)
                     pos = denormalize(pos, g_pool.capture.frame_size)
 
@@ -664,14 +730,19 @@ def player(
         session_settings[
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
-        session_settings["gui_scale"] = g_pool.gui_user_scale
         session_settings["ui_config"] = g_pool.gui.configuration
         session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
         session_settings["version"] = str(g_pool.version)
 
         session_window_size = glfw.glfwGetWindowSize(main_window)
         if 0 not in session_window_size:
-            session_settings["window_size"] = session_window_size
+            f_width, f_height = session_window_size
+            if platform.system() in ("Windows", "Linux"):
+                f_width, f_height = (
+                    f_width / content_scale,
+                    f_height / content_scale,
+                )
+            session_settings["window_size"] = int(f_width), int(f_height)
 
         session_settings.close()
 
@@ -768,6 +839,7 @@ def player_drop(
         window_pos = session_settings.get("window_position", window_position_default)
 
         glfw.glfwInit()
+        glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
         glfw.glfwWindowHint(glfw.GLFW_RESIZABLE, 0)
         window = glfw.glfwCreateWindow(w, h, "Pupil Player")
         glfw.glfwWindowHint(glfw.GLFW_RESIZABLE, 1)
@@ -787,10 +859,10 @@ def player_drop(
         # text = "Please supply a Pupil recording directory as first arg when calling Pupil Player."
 
         def display_string(string, font_size, center_y):
-            x = w / 2 * hdpi_factor
-            y = center_y * hdpi_factor
+            x = w / 2 * content_scale
+            y = center_y * content_scale
 
-            glfont.set_size(font_size * hdpi_factor)
+            glfont.set_size(font_size * content_scale)
 
             glfont.set_blur(10.5)
             glfont.set_color_float((0.0, 0.0, 0.0, 1.0))
@@ -803,7 +875,7 @@ def player_drop(
         while not glfw.glfwWindowShouldClose(window) and not process_was_interrupted:
 
             fb_size = glfw.glfwGetFramebufferSize(window)
-            hdpi_factor = glfw.getHDPIFactor(window)
+            content_scale = glfw.get_content_scale(window)
             gl_utils.adjust_gl_view(*fb_size)
 
             if rec_dir:

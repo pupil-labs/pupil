@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from plugin import System_Plugin_Base, Producer_Plugin_Base
+from plugin import System_Plugin_Base
 from pyglui import ui
 from calibration_choreography import CalibrationChoreographyPlugin
 from gaze_mapping.gazer_base import GazerBase
@@ -28,7 +28,6 @@ class Plugin_Manager(System_Plugin_Base):
             Base_Source,
             CalibrationChoreographyPlugin,
             GazerBase,
-            Producer_Plugin_Base,
         )
         self.user_plugins = [
             p

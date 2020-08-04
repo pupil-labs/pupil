@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from glfw import getHDPIFactor, glfwGetCurrentContext, glfwGetCursorPos, GLFW_PRESS
+from glfw import get_content_scale, glfwGetCurrentContext, glfwGetCursorPos, GLFW_PRESS
 from methods import normalize, denormalize
 
 
@@ -60,9 +60,9 @@ class Draggable:
 
 
 def current_mouse_pos(window, camera_render_size, frame_size):
-    hdpi_fac = getHDPIFactor(window)
+    content_scale = get_content_scale(window)
     x, y = glfwGetCursorPos(glfwGetCurrentContext())
-    pos = x * hdpi_fac, y * hdpi_fac
+    pos = x * content_scale, y * content_scale
     pos = normalize(pos, camera_render_size)
     # Position in img pixels
     pos = denormalize(pos, frame_size)

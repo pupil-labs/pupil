@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from plugin import Visualizer_Plugin_Base
+from plugin import Plugin
 import numpy as np
 import cv2
 
@@ -17,7 +17,7 @@ from pyglui import ui
 from methods import denormalize
 
 
-class Vis_Cross(Visualizer_Plugin_Base):
+class Vis_Cross(Plugin):
     uniqueness = "not_unique"
     icon_chr = chr(0xEC13)
     icon_font = "pupil_icons"

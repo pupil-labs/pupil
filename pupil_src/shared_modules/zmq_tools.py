@@ -42,6 +42,8 @@ class ZMQ_handler(logging.Handler):
         try:
             self.socket.send(record_dict)
         except TypeError:
+            # stringify message in case it is not a string yet
+            record_dict["msg"] = str(record_dict["msg"])
             # stringify `exc_info` since it includes unserializable objects
             if record_dict["exc_info"]:  # do not convert if it is None
                 record_dict["exc_info"] = str(record_dict["exc_info"])
@@ -153,7 +155,7 @@ class Msg_Streamer(ZMQ_Socket):
         the contents of the iterable in '__raw_data__'
         require exposing the pyhton memoryview interface.
         """
-        assert deprecated is (), "Depracted use of send()"
+        assert deprecated == (), "Depracted use of send()"
         assert "topic" in payload, "`topic` field required in {}".format(payload)
 
         if "__raw_data__" not in payload:

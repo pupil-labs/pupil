@@ -165,6 +165,7 @@ class Visualizer(object):
             # get glfw started
             if self.run_independently:
                 glfwInit()
+                glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE)
                 self.window = glfwCreateWindow(
                     self.window_size[0], self.window_size[1], self.name, None
                 )
@@ -227,8 +228,9 @@ class Visualizer(object):
             self.input["button"] = None
 
     def on_pos(self, window, x, y):
-        hdpi_factor = getHDPIFactor(window)
-        x, y = x * hdpi_factor, y * hdpi_factor
+        x, y = window_coordinate_to_framebuffer_coordinate(
+            window, x, y, cached_scale=None
+        )
         # self.gui.update_mouse(x,y)
         if self.input["button"] == GLFW_MOUSE_BUTTON_RIGHT:
             old_x, old_y = self.input["mouse"]

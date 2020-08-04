@@ -26,7 +26,7 @@ import player_methods as pm
 import pyglui.cygl.utils as cygl_utils
 import zmq_tools
 from observable import Observable
-from plugin import Producer_Plugin_Base
+from plugin import System_Plugin_Base
 from pyglui import ui
 from pyglui.pyfontstash import fontstash as fs
 from video_capture.utils import VideoSet
@@ -41,7 +41,7 @@ DATA_KEY_CONFIDENCE = "confidence"
 DATA_KEY_DIAMETER = "diameter_3d"
 
 
-class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
+class Pupil_Producer_Base(Observable, System_Plugin_Base):
     uniqueness = "by_base_class"
     order = 0.01
     icon_chr = chr(0xEC12)
