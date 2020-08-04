@@ -86,7 +86,7 @@ class Log_Display(System_Plugin_Base):
         self.alpha = min(self.alpha, 6.0)
 
     def on_window_resize(self, window, w, h):
-        self.window_scale = glfw.getHDPIFactor(window)
+        self.window_scale = glfw.get_content_scale(window)
         self.glfont.set_size(32 * self.window_scale)
         self.window_size = w, h
         self.tex.resize(*self.window_size)

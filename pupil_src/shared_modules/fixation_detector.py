@@ -689,6 +689,7 @@ class Fixation_Detector(Fixation_Detector_Base):
         self.min_duration = min_duration
         self.max_dispersion = max_dispersion
         self.id_counter = 0
+        self.recent_fixation = None
 
     def recent_events(self, events):
         events["fixations"] = []

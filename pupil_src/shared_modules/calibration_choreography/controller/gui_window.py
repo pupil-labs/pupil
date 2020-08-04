@@ -28,9 +28,9 @@ class GUIWindow(Observable):
         return self.__gl_handle
 
     @property
-    def hdpi_factor(self) -> float:
+    def content_scale(self) -> float:
         if self.__gl_handle is not None:
-            return glfw.getHDPIFactor(self.__gl_handle)
+            return glfw.get_content_scale(self.__gl_handle)
         else:
             return 1.0
 

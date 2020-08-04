@@ -49,6 +49,7 @@ class Service_UI(System_Plugin_Base):
         self.texture = np.zeros((1, 1, 3), dtype=np.uint8) + 128
 
         glfw.glfwInit()
+        glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
         if g_pool.hide_ui:
             glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         main_window = glfw.glfwCreateWindow(*window_size, "Pupil Service")
@@ -66,11 +67,19 @@ class Service_UI(System_Plugin_Base):
 
         # Callback functions
         def on_resize(window, w, h):
+            # Always clear buffers on resize to make sure that there are no overlapping
+            # artifacts from previous frames.
+            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClearColor(0, 0, 0, 1)
+
             self.window_size = w, h
-            self.hdpi_factor = glfw.getHDPIFactor(window)
-            g_pool.gui.scale = g_pool.gui_user_scale * self.hdpi_factor
+            self.content_scale = glfw.get_content_scale(window)
+            g_pool.gui.scale = g_pool.gui_user_scale * self.content_scale
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
+
+            # Needed, to update the window buffer while resizing
+            self.update_ui()
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
@@ -82,18 +91,40 @@ class Service_UI(System_Plugin_Base):
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            x, y = x * self.hdpi_factor, y * self.hdpi_factor
+            x, y = glfw.window_coordinate_to_framebuffer_coordinate(
+                window, x, y, cached_scale=None
+            )
             g_pool.gui.update_mouse(x, y)
 
         def on_scroll(window, x, y):
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
         def set_scale(new_scale):
+            # Get the current GUI user scale and set the new one
+            old_scale = g_pool.gui_user_scale
             g_pool.gui_user_scale = new_scale
+
+            # If no change is needed - exit early to avoid recursive calls
+            if old_scale == new_scale:
+                return
+
             on_resize(main_window, *self.window_size)
 
         def set_window_size():
-            glfw.glfwSetWindowSize(main_window, *window_size_default)
+            # Get default window size
+            f_width, f_height = window_size_default
+
+            # Get current display scale factor
+            content_scale = glfw.get_content_scale(main_window)
+            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+            display_scale_factor = content_scale / framebuffer_scale
+
+            # Scale the capture frame size by display scale factor
+            f_width *= display_scale_factor
+            f_height *= display_scale_factor
+
+            # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
+            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
 
         def reset_restart():
             logger.warning("Resetting all settings and restarting Capture.")
@@ -220,7 +251,14 @@ class Service_UI(System_Plugin_Base):
 
         session_window_size = glfw.glfwGetWindowSize(self.g_pool.main_window)
         if 0 not in session_window_size:
-            sess["window_size"] = session_window_size
+            f_width, f_height = session_window_size
+            if platform.system() in ("Windows", "Linux"):
+                content_scale = glfw.get_content_scale(self.g_pool.main_window)
+                f_width, f_height = (
+                    f_width / content_scale,
+                    f_height / content_scale,
+                )
+            sess["window_size"] = int(f_width), int(f_height)
 
         return sess
 

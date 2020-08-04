@@ -102,6 +102,10 @@ GLFW_VERSION_MINOR = 1
 GLFW_VERSION_REVISION = 1
 __version__ = GLFW_VERSION_MAJOR, GLFW_VERSION_MINOR, GLFW_VERSION_REVISION
 
+GLFW_FALSE = 0
+GLFW_TRUE = 1
+GLFW_DONT_CARE = -1
+
 # --- Input handling definitions ----------------------------------------------
 GLFW_RELEASE = 0
 GLFW_PRESS = 1
@@ -323,6 +327,10 @@ GLFW_CONTEXT_ROBUSTNESS = 0x00022005
 GLFW_OPENGL_FORWARD_COMPAT = 0x00022006
 GLFW_OPENGL_DEBUG_CONTEXT = 0x00022007
 GLFW_OPENGL_PROFILE = 0x00022008
+# GLFW_CONTEXT_RELEASE_BEHAVIOR = 0x00022009
+# GLFW_CONTEXT_NO_ERROR = 0x0002200A
+# GLFW_CONTEXT_CREATION_API = 0x0002200B
+GLFW_SCALE_TO_MONITOR = 0x0002200C
 
 # ---
 GLFW_OPENGL_API = 0x00030001
@@ -439,6 +447,7 @@ glfwSetWindowTitle = _glfw.glfwSetWindowTitle
 # glfwGetWindowPos              = _glfw.glfwGetWindowPos
 glfwSetWindowPos = _glfw.glfwSetWindowPos
 # glfwGetWindowSize             = _glfw.glfwGetWindowSize
+glfwSetWindowSizeLimits = _glfw.glfwSetWindowSizeLimits
 glfwSetWindowSize = _glfw.glfwSetWindowSize
 # glfwGetFramebufferSize        = _glfw.glfwGetFramebufferSize
 glfwIconifyWindow = _glfw.glfwIconifyWindow
@@ -666,6 +675,12 @@ def glfwGetVideoMode(monitor):
     )
 
 
+def glfwGetWindowContentScale(window):
+    xscale, yscale = c_float(0), c_float(0)
+    _glfw.glfwGetWindowContentScale(window, byref(xscale), byref(yscale))
+    return xscale.value, yscale.value
+
+
 def GetGammaRamp(monitor):
     _glfw.glfwGetGammaRamp.restype = POINTER(GLFWgammaramp)
     c_gamma = _glfw.glfwGetGammaRamp(monitor).contents
@@ -729,8 +744,20 @@ exec(__callback__("Scroll"))
 exec(__callback__("Drop"))
 
 
-def getHDPIFactor(window):
+def get_content_scale(window) -> float:
+    return glfwGetWindowContentScale(window)[0]
+
+
+def get_framebuffer_scale(window) -> float:
+    window_width = glfwGetWindowSize(window)[0]
+    framebuffer_width = glfwGetFramebufferSize(window)[0]
+
     try:
-        return float(glfwGetFramebufferSize(window)[0] / glfwGetWindowSize(window)[0])
+        return float(framebuffer_width / window_width)
     except ZeroDivisionError:
         return 1.0
+
+
+def window_coordinate_to_framebuffer_coordinate(window, x, y, cached_scale=None):
+    scale = cached_scale or get_framebuffer_scale(window)
+    return x * scale, y * scale

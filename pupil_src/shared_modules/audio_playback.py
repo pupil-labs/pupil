@@ -404,6 +404,8 @@ class Audio_Playback(System_Plugin_Base):
             self.audio_bytes_fifo.append((audio_buffer, audio_playback_time))
 
     def draw_audio(self, width, height, scale):
+        if self.audio_viz_data is None:
+            return
         with gl_utils.Coord_System(*self.xlim, *self.ylim):
             pyglui_utils.draw_bars_buffer(self.audio_viz_data, color=viz_color)
 

@@ -208,7 +208,7 @@ def world(
         icon_bar_width = 50
         window_size = None
         camera_render_size = None
-        hdpi_factor = 1.0
+        content_scale = 1.0
 
         # g_pool holds variables for this process they are accessible to all plugins
         g_pool = SimpleNamespace()
@@ -325,15 +325,63 @@ def world(
             ("System_Graphs", {}),
         ]
 
+        def consume_events_and_render_buffer():
+            gl_utils.glViewport(0, 0, *camera_render_size)
+            for p in g_pool.plugins:
+                p.gl_display()
+
+            gl_utils.glViewport(0, 0, *window_size)
+            try:
+                clipboard = glfw.glfwGetClipboardString(main_window).decode()
+            except AttributeError:  # clipboard is None, might happen on startup
+                clipboard = ""
+            g_pool.gui.update_clipboard(clipboard)
+            user_input = g_pool.gui.update()
+            if user_input.clipboard != clipboard:
+                # only write to clipboard if content changed
+                glfw.glfwSetClipboardString(main_window, user_input.clipboard.encode())
+
+            for button, action, mods in user_input.buttons:
+                x, y = glfw.glfwGetCursorPos(main_window)
+                pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                    main_window, x, y, cached_scale=None
+                )
+                pos = normalize(pos, camera_render_size)
+                # Position in img pixels
+                pos = denormalize(pos, g_pool.capture.frame_size)
+
+                for plugin in g_pool.plugins:
+                    if plugin.on_click(pos, button, action):
+                        break
+
+            for key, scancode, action, mods in user_input.keys:
+                for plugin in g_pool.plugins:
+                    if plugin.on_key(key, scancode, action, mods):
+                        break
+
+            for char_ in user_input.chars:
+                for plugin in g_pool.plugins:
+                    if plugin.on_char(char_):
+                        break
+
+            glfw.glfwSwapBuffers(main_window)
+
         # Callback functions
         def on_resize(window, w, h):
             nonlocal window_size
             nonlocal camera_render_size
-            nonlocal hdpi_factor
+            nonlocal content_scale
             if w == 0 or h == 0:
                 return
-            hdpi_factor = glfw.getHDPIFactor(window)
-            g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
+
+            # Always clear buffers on resize to make sure that there are no overlapping
+            # artifacts from previous frames.
+            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClearColor(0, 0, 0, 1)
+
+            content_scale = glfw.get_content_scale(window)
+            framebuffer_scale = glfw.get_framebuffer_scale(window)
+            g_pool.gui.scale = g_pool.gui_user_scale * content_scale
             window_size = w, h
             camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
             g_pool.gui.update_window(*window_size)
@@ -341,6 +389,18 @@ def world(
 
             for p in g_pool.plugins:
                 p.on_window_resize(window, *camera_render_size)
+
+            # Minimum window size required, otherwise parts of the UI can cause openGL
+            # issues with permanent effects. Depends on the content scale, which can
+            # potentially be dynamically modified, so we re-adjust the size limits every
+            # time here.
+            min_size = int(2 * icon_bar_width * g_pool.gui.scale / framebuffer_scale)
+            glfw.glfwSetWindowSizeLimits(
+                window, min_size, min_size, glfw.GLFW_DONT_CARE, glfw.GLFW_DONT_CARE
+            )
+
+            # Needed, to update the window buffer while resizing
+            consume_events_and_render_buffer()
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
@@ -352,7 +412,9 @@ def world(
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            x, y = x * hdpi_factor, y * hdpi_factor
+            x, y = glfw.window_coordinate_to_framebuffer_coordinate(
+                window, x, y, cached_scale=None
+            )
             g_pool.gui.update_mouse(x, y)
             pos = x, y
             pos = normalize(pos, camera_render_size)
@@ -448,6 +510,7 @@ def world(
 
         # window and gl setup
         glfw.glfwInit()
+        glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
         if hide_ui:
             glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
@@ -458,14 +521,33 @@ def world(
         g_pool.main_window = main_window
 
         def set_scale(new_scale):
+            # Get the current GUI user scale and set the new one
+            old_scale = g_pool.gui_user_scale
             g_pool.gui_user_scale = new_scale
-            window_size = (
-                camera_render_size[0]
-                + int(icon_bar_width * g_pool.gui_user_scale * hdpi_factor),
-                glfw.glfwGetFramebufferSize(main_window)[1],
-            )
-            logger.warning(icon_bar_width * g_pool.gui_user_scale * hdpi_factor)
-            glfw.glfwSetWindowSize(main_window, *window_size)
+
+            # If no change is needed - exit early to avoid recursive calls
+            if old_scale == new_scale:
+                return
+
+            # Get the current frame buffer size, so that it remains the same
+            f_width, f_height = glfw.glfwGetFramebufferSize(main_window)
+
+            # Get the display scales
+            content_scale = glfw.get_content_scale(main_window)
+            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+
+            # Get the unscaled framebuffer size
+            f_width /= framebuffer_scale
+            f_height /= framebuffer_scale
+
+            # Apply the difference between the previously scaled icon bar width,
+            # and the currently scaled icon bar width
+            f_width -= icon_bar_width * old_scale * content_scale / framebuffer_scale
+            f_width += icon_bar_width * new_scale * content_scale / framebuffer_scale
+
+            # The frame buffer size will remain the same, but the window size will change
+            # because of the icon bar width differences; need to set the window size here
+            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
 
         def reset_restart():
             logger.warning("Resetting all settings and restarting Capture.")
@@ -508,9 +590,23 @@ def world(
         )
 
         def set_window_size():
+            # Get current capture frame size
             f_width, f_height = g_pool.capture.frame_size
-            f_width += int(icon_bar_width * g_pool.gui.scale)
-            glfw.glfwSetWindowSize(main_window, f_width, f_height)
+
+            # Get current display scale factor
+            content_scale = glfw.get_content_scale(main_window)
+            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+            display_scale_factor = content_scale / framebuffer_scale
+
+            # Scale the capture frame size by display scale factor
+            f_width *= display_scale_factor
+            f_height *= display_scale_factor
+
+            # Increas the width to account for the added scaled icon bar width
+            f_width += icon_bar_width * g_pool.gui_user_scale * display_scale_factor
+
+            # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
+            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
 
         general_settings.append(ui.Button("Reset window size", set_window_size))
         general_settings.append(
@@ -702,7 +798,9 @@ def world(
 
                 for button, action, mods in user_input.buttons:
                     x, y = glfw.glfwGetCursorPos(main_window)
-                    pos = x * hdpi_factor, y * hdpi_factor
+                    pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                        main_window, x, y, cached_scale=None
+                    )
                     pos = normalize(pos, camera_render_size)
                     # Position in img pixels
                     pos = denormalize(pos, g_pool.capture.frame_size)
@@ -740,7 +838,13 @@ def world(
             session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
             session_window_size = glfw.glfwGetWindowSize(main_window)
             if 0 not in session_window_size:
-                session_settings["window_size"] = session_window_size
+                f_width, f_height = session_window_size
+                if platform.system() in ("Windows", "Linux"):
+                    f_width, f_height = (
+                        f_width / content_scale,
+                        f_height / content_scale,
+                    )
+                session_settings["window_size"] = int(f_width), int(f_height)
 
         session_settings.close()
 
