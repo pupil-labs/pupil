@@ -14,7 +14,7 @@ from unittest import mock
 
 import pytest
 
-from observable import Observable, ObserverError
+from observable import Observable, ObserverError, ReplaceWrapperError
 
 
 class FakeObservable(Observable):
@@ -391,3 +391,15 @@ def test_observers_can_be_observed(observable):
     mock_function.assert_has_calls(
         [mock.call("First"), mock.call("Second")], any_order=False
     )
+
+
+class TestWrapperProtectionDescriptor:
+    def test_wrapped_functions_cannot_be_set(self, observable):
+        observable.add_observer("bound_method", lambda: None)
+        with pytest.raises(ReplaceWrapperError):
+            observable.bound_method = 42
+
+    def test_other_instances_without_wrapper_can_be_set(self, observable):
+        observable.add_observer("bound_method", lambda: None)
+        unwrapped_observable = FakeObservable()
+        unwrapped_observable.bound_method = 42

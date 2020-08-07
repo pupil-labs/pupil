@@ -18,6 +18,10 @@ class ObserverError(Exception):
     pass
 
 
+class ReplaceWrapperError(Exception):
+    pass
+
+
 class Observable:
     """
     An object that allows to add observers to any of its methods. See
@@ -128,6 +132,7 @@ def add_observer(obj, method_name, observer):
     """
     observable = _get_wrapper_and_create_if_not_exists(obj, method_name)
     observable.add_observer(observer)
+    _install_protection_descriptor_if_not_exists(obj, method_name)
 
 
 def _get_wrapper_and_create_if_not_exists(obj, method_name):
@@ -177,6 +182,58 @@ def _method_was_modified(obj, method_name):
     bound_self = method.__self__
 
     return expected_self is not bound_self or expected_func is not bound_func
+
+
+def _install_protection_descriptor_if_not_exists(obj, method_name):
+    type_ = type(obj)
+    already_installed = isinstance(
+        getattr(type_, method_name), _WrapperProtectionDescriptor
+    )
+    if not already_installed:
+        setattr(type_, method_name, _WrapperProtectionDescriptor(type_, method_name))
+
+
+class _WrapperProtectionDescriptor:
+    """
+    Protects wrappers from being replaced which would silently disable observers.
+    Besides this, default python behavior is emulated.
+    """
+
+    def __init__(self, type, name):
+        self.original = getattr(type, name)
+        assert not inspect.isdatadescriptor(self.original)
+        self.name = name
+
+    def __get__(self, obj, type=None):
+        # This is a data discriptor, so it's called first.
+        # Emulate python lookup chain:
+        # 1.) original is data discriptor: Cannot happen, we only allow methods
+        #     (= non-data descriptors) to be wrapped.
+        # 2.) original is in object's __dict__
+        # 3.) original is in object's class or some of its parents: We don't need to
+        #     worry about if it's in the class or some parent, this is covered by
+        #     getattr() in __init__
+        if obj is not None and self.name in obj.__dict__:
+            return obj.__dict__[self.name]
+        else:
+            return self.original.__get__(obj, type)
+
+    def __set__(self, obj, value):
+        instance_method_wrapped = isinstance(
+            getattr(obj, self.name), _ObservableMethodWrapper
+        )
+
+        obj.__dict__[self.name] = value
+
+        # Raise error after the attribute is set. Makes it possible to change the
+        # attribute and ignore the error by catching it
+        if instance_method_wrapped:
+            raise ReplaceWrapperError(
+                f"Cannot set attribute '{self.name}' of object {obj} because it is an "
+                "ObservableMethodWrapper. Replacing it would silently disable observer "
+                "functionality. If you really want to, you can catch and then ignore "
+                "this error."
+            )
 
 
 def remove_observer(obj, method_name, observer):
@@ -235,7 +292,12 @@ class _ObservableMethodWrapper:
         setattr(self._obj_ref(), self._method_name, self)
 
     def remove_wrapper(self):
-        setattr(self._obj_ref(), self._method_name, self._get_wrapped_bound_method())
+        try:
+            setattr(
+                self._obj_ref(), self._method_name, self._get_wrapped_bound_method()
+            )
+        except ReplaceWrapperError:
+            pass
         self._was_removed = True
 
     def _get_wrapped_bound_method(self):
