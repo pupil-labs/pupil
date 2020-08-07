@@ -145,7 +145,7 @@ def _get_wrapper_and_create_if_not_exists(obj, method_name):
     elif not inspect.ismethod(observed_method):
         raise TypeError(
             f"Attribute '{method_name}' of object {obj} is not a method but "
-            f"{observed_method} and, thus, cannot be observed!"
+            f"{type(observed_method)} and, thus, cannot be observed!"
         )
     elif _is_classmethod(obj, method_name):
         raise TypeError(
