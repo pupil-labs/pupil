@@ -49,6 +49,13 @@ class TestObservabilityOfMethods:
     def test_bound_method_is_observable(self, observable, observer):
         observable.add_observer("bound_method", observer)
 
+    def test_bound_method_from_parent_class_is_observable(self, observer):
+        class FakeObservableChild(FakeObservable):
+            pass
+
+        observable_child = FakeObservableChild()
+        observable_child.add_observer("bound_method", observer)
+
     def test_static_method_is_not_observable(self, observable, observer):
         with pytest.raises(TypeError):
             observable.add_observer("static_method", observer)
