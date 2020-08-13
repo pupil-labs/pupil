@@ -98,7 +98,10 @@ class PupilDetectorPlugin(Plugin):
         # this is only revelant when running the 3D detector, for 2D we just ignore the
         # additional parameter
         detection_result = self.detect(
-            frame=frame, internal_raw_2d_data=event.get("internal_2d_raw_data", None)
+            frame=frame,
+            internal_raw_2d_data=event.get("internal_2d_raw_data", None),
+            # TODO: workaround to get 2D data into pye3D for now
+            previous_detection_results=event.get(EVENT_KEY, []),
         )
 
         # if we are running the 2D detector, we might get internal data that we don't
@@ -110,6 +113,8 @@ class PupilDetectorPlugin(Plugin):
             event[EVENT_KEY].append(detection_result)
         else:
             event[EVENT_KEY] = [detection_result]
+
+        self._recent_detection_result = detection_result
 
     @abc.abstractmethod
     def detect(self, frame, pupil_data):

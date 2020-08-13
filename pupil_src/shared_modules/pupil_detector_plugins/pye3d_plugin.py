@@ -26,6 +26,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
     icon_chr = chr(0xEC19)
 
     label = "Pye3D"
+    order = 0.101
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -34,13 +35,15 @@ class Pye3DPlugin(PupilDetectorPlugin):
             g_pool, self.detector.settings["focal_length"]
         )
 
-    def detect(self, frame, pupil_data):
-        for datum in pupil_data:
+    def detect(self, frame, **kwargs):
+        previous_detection_results = kwargs.get("previous_detection_results", [])
+        for datum in previous_detection_results:
             if datum.get("method", "") == "2d c++":
                 datum_2d = datum
                 break
         else:
-            return None
+            # TODO: make this more stable!
+            raise RuntimeError("No 2D detection result! Needed for pye3D!")
 
         datum_2d["raw_edges"] = []
         result = self.detector.update_and_detect(
