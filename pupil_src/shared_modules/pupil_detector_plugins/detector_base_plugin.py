@@ -39,7 +39,7 @@ class PropertyProxy:
 
 class PupilDetectorPlugin(Plugin):
     label = "Unnamed"  # Used in eye -> general settings as selector
-    # Used to select correct detector on set_detection_mapping_mode:
+    # Used to select correct detector on set_pupil_detection_enabled:
     identifier = "unnamed"
     order = 0.1
 
@@ -55,7 +55,7 @@ class PupilDetectorPlugin(Plugin):
         self._notification_handler = {
             "pupil_detector.broadcast_properties": self.handle_broadcast_properties_notification,
             "pupil_detector.set_property": self.handle_set_property_notification,
-            "set_detection_mapping_mode": self.handle_set_detection_mapping_mode_notification,
+            "set_pupil_detection_enabled": self.handle_set_pupil_detection_enabled_notification,
         }
         self._last_frame_size = None
         self._enabled = True
@@ -92,10 +92,19 @@ class PupilDetectorPlugin(Plugin):
                 self.on_resolution_change(self._last_frame_size, frame_size)
             self._last_frame_size = frame_size
 
-        detection_result = self.detect(frame=frame, pupil_data=event.get(EVENT_KEY, []))
-        self._recent_detection_result = detection_result
-        if detection_result is None:
-            return
+        # TODO: The following sections with internal_2d_raw_data are for allowing dual
+        # detectors until pye3d is finished. Then we should cleanup this section!
+
+        # this is only revelant when running the 3D detector, for 2D we just ignore the
+        # additional parameter
+        detection_result = self.detect(
+            frame=frame, internal_raw_2d_data=event.get("internal_2d_raw_data", None)
+        )
+
+        # if we are running the 2D detector, we might get internal data that we don't
+        # want published, so we remove it from the dict
+        if "internal_2d_raw_data" in detection_result:
+            event["internal_2d_raw_data"] = detection_result.pop("internal_2d_raw_data")
 
         if EVENT_KEY in event:
             event[EVENT_KEY].append(detection_result)
@@ -178,9 +187,9 @@ class PupilDetectorPlugin(Plugin):
             logger.error("Invalid property or value")
             logger.debug(traceback.format_exc())
 
-    def handle_set_detection_mapping_mode_notification(self, notification):
-        mode = notification["mode"]
-        self.enabled = mode != "disabled"
+    def handle_set_pupil_detection_enabled_notification(self, notification):
+        is_on = notification["value"]
+        self.enabled = is_on
 
     def namespaced_detector_properties(self) -> dict:
         return self.pupil_detector.get_properties()

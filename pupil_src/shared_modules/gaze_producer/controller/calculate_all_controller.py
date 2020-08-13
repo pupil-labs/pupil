@@ -29,25 +29,22 @@ class CalculateAllController:
 
     def calculate_all(self):
         """
-        (Re)Calculate all calibrations and gaze mappings with their respective
-        current settings. If there are no reference locations in the storage,
-        first the current reference detector is run.
+        Detect reference locations if none available. Then (re)calculate all
+        calibrations and gaze mappers.
         """
-        if self.does_detect_references:
+        if self._reference_location_storage.is_empty:
             task = self._reference_detection_controller.start_detection()
             task.add_observer("on_completed", self._on_reference_detection_completed)
         else:
             self._calculate_all_calibrations()
 
-    @property
-    def does_detect_references(self):
+    def calculate_all_if_references_available(self):
         """
-        True if the controller would first detect reference locations in calculate_all()
+        (Re)calculate all calibrations and gaze mappers if reference locations are
+        available.
         """
-        at_least_one_reference_location = any(
-            True for _ in self._reference_location_storage
-        )
-        return not at_least_one_reference_location
+        if not self._reference_location_storage.is_empty:
+            self._calculate_all_calibrations()
 
     def _on_reference_detection_completed(self, _):
         self._calculate_all_calibrations()
@@ -60,6 +57,8 @@ class CalculateAllController:
             )
             if calculation_possible:
                 task = self._calibration_controller.calculate(calibration)
+                if not task:
+                    continue
                 task.add_observer(
                     "on_completed",
                     self._create_calibration_complete_handler(calibration),

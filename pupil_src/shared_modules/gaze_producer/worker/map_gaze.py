@@ -8,88 +8,79 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from time import time
-
 import file_methods as fm
 import player_methods as pm
 import tasklib
-from calibration_routines import gaze_mapping_plugins
-from types import SimpleNamespace
+from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes
+
+from .fake_gpool import FakeGPool
+
 
 g_pool = None  # set by the plugin
+
+
+class NotEnoughPupilData(ValueError):
+    pass
 
 
 def create_task(gaze_mapper, calibration):
     assert g_pool, "You forgot to set g_pool by the plugin"
     mapping_window = pm.exact_window(g_pool.timestamps, gaze_mapper.mapping_index_range)
     pupil_pos_in_mapping_range = g_pool.pupil_positions.by_ts_window(mapping_window)
+    if not pupil_pos_in_mapping_range:
+        raise NotEnoughPupilData
 
-    fake_gpool = _setup_fake_gpool(
-        g_pool.capture.frame_size,
-        g_pool.capture.intrinsics,
-        calibration.mapping_method,
-        g_pool.rec_dir,
-    )
+    fake_gpool = FakeGPool.from_g_pool(g_pool)
+
+    # Make a copy of params to ensure there are no mappingproxy instances
+    # calibration_params = fm._recursive_deep_copy(calibration.params)
+    calibration_params = calibration.params
 
     args = (
-        calibration.result,
+        calibration.gazer_class_name,
+        calibration_params,
         fake_gpool,
         pupil_pos_in_mapping_range,
         gaze_mapper.manual_correction_x,
         gaze_mapper.manual_correction_y,
     )
-    name = "Create gaze mapper {}".format(gaze_mapper.name)
+    name = f"Create gaze mapper {gaze_mapper.name}"
     return tasklib.background.create(
-        name,
-        _map_gaze,
-        args=args,
-        pass_shared_memory=True,
+        name, _map_gaze, args=args, pass_shared_memory=True,
     )
 
 
-def _setup_fake_gpool(frame_size, intrinsics, detection_mapping_mode, rec_dir):
-    cap = SimpleNamespace()
-    cap.frame_size = frame_size
-    cap.intrinsics = intrinsics
-    pool = SimpleNamespace()
-    pool.capture = cap
-    pool.get_timestamp = time
-    pool.detection_mapping_mode = detection_mapping_mode
-    pool.rec_dir = rec_dir
-    pool.app = "player"
-    return pool
-
-
 def _map_gaze(
-    calibration_result,
+    gazer_class_name,
+    gazer_params,
     fake_gpool,
     pupil_pos_in_mapping_range,
     manual_correction_x,
     manual_correction_y,
     shared_memory,
 ):
-    gaze_mapping_plugins_by_name = {p.__name__: p for p in gaze_mapping_plugins}
-    gaze_mapper_cls = gaze_mapping_plugins_by_name[
-        calibration_result.mapping_plugin_name
-    ]
-    gaze_mapper = gaze_mapper_cls(fake_gpool, **calibration_result.mapper_args)
+    fake_gpool.import_runtime_plugins()
+    gazers_by_name = gazer_classes_by_class_name(registered_gazer_classes())
+    gazer_cls = gazers_by_name[gazer_class_name]
+    gazer = gazer_cls(fake_gpool, params=gazer_params)
 
-    for idx_incoming, pupil_pos in enumerate(pupil_pos_in_mapping_range):
-        mapped_gaze = gaze_mapper.on_pupil_datum(pupil_pos)
+    first_ts = pupil_pos_in_mapping_range[0]["timestamp"]
+    last_ts = pupil_pos_in_mapping_range[-1]["timestamp"]
+    ts_span = last_ts - first_ts
+    curr_ts = first_ts
 
-        output_gaze = []
-        for gaze_datum in mapped_gaze:
-            _apply_manual_correction(
-                gaze_datum, manual_correction_x, manual_correction_y
-            )
-            output_gaze.append(
-                (gaze_datum["timestamp"], fm.Serialized_Dict(gaze_datum))
-            )
+    for gaze_datum in gazer.map_pupil_to_gaze(pupil_pos_in_mapping_range):
+        _apply_manual_correction(gaze_datum, manual_correction_x, manual_correction_y)
 
-        shared_memory.progress = (idx_incoming + 1) / len(pupil_pos_in_mapping_range)
+        # gazer.map_pupil_to_gaze does not yield gaze with monotonic timestamps.
+        # Binocular pupil matches are delayed internally. To avoid non-monotonic
+        # progress updates, we use the largest timestamp that has been returned up to
+        # the current point in time.
+        curr_ts = max(curr_ts, gaze_datum["timestamp"])
+        shared_memory.progress = (curr_ts - first_ts) / ts_span
 
-        if output_gaze:
-            yield output_gaze
+        result = (curr_ts, fm.Serialized_Dict(gaze_datum))
+        yield [result]
 
 
 def _apply_manual_correction(gaze_datum, manual_correction_x, manual_correction_y):

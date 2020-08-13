@@ -10,9 +10,12 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
+import logging
 
 import cv2
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 class ImageManipulator(metaclass=abc.ABCMeta):
@@ -54,42 +57,70 @@ class PupilRenderer(ImageManipulator):
     def apply_to(self, image, parameter, *, is_fake_frame, **kwargs):
         """parameter: boolean indicating if pupil should be rendered"""
         if parameter and not is_fake_frame:
-            pupil_position = self.pupil_getter()
-            if pupil_position:
-                self.render_pupil(image, pupil_position)
+            pupil_pos_2d, pupil_pos_3d = self.pupil_getter()
+            if pupil_pos_2d:
+                self.render_pupil_2d(image, pupil_pos_2d)
+            if pupil_pos_3d:
+                self.render_pupil_3d(image, pupil_pos_3d)
         return image
 
-    def render_pupil(self, image, pupil_position):
+    def render_pupil_2d(self, image, pupil_position):
         el = pupil_position["ellipse"]
-        conf = int(
-            pupil_position.get(
-                "model_confidence", pupil_position.get("confidence", 0.1)
-            )
-            * 255
+
+        conf = int(pupil_position["confidence"] * 255)
+        self.render_ellipse(image, el, color=(255, 127, 0, conf))
+
+    def render_pupil_3d(self, image, pupil_position):
+        el = pupil_position["ellipse"]
+
+        conf = int(pupil_position["confidence"] * 255)
+        self.render_ellipse(image, el, color=(0, 0, 255, conf))
+
+        if pupil_position["model_confidence"] <= 0.0:
+            # NOTE: if 'model_confidence' == 0, some values of the 'projected_sphere'
+            # might be 'nan', which will cause cv2.ellipse to crash.
+            # TODO: Fix in detectors.
+            return
+
+        eye_ball = pupil_position.get("projected_sphere", None)
+        if eye_ball is not None:
+            try:
+                cv2.ellipse(
+                    image,
+                    center=tuple(int(v) for v in eye_ball["center"]),
+                    axes=tuple(int(v / 2) for v in eye_ball["axes"]),
+                    angle=int(eye_ball["angle"]),
+                    startAngle=0,
+                    endAngle=360,
+                    color=(26, 230, 0, 255 * pupil_position["model_confidence"]),
+                    thickness=2,
+                )
+            except Exception as e:
+                # Known issues:
+                #   - There are reports of negative eye_ball axes, raising cv2.error.
+                #     TODO: Investigate cause in detectors.
+                logger.debug(
+                    "Error rendering 3D eye-ball outline! Skipping...\n"
+                    f"eye_ball: {eye_ball}\n"
+                    f"{type(e)}: {e}"
+                )
+
+    def render_ellipse(self, image, ellipse, color):
+        outline = self.get_ellipse_points(
+            ellipse["center"], ellipse["axes"], ellipse["angle"]
         )
-        el_points = self.get_ellipse_points((el["center"], el["axes"], el["angle"]))
-        cv2.polylines(
-            image,
-            [np.asarray(el_points, dtype="i")],
-            True,
-            (0, 0, 255, conf),
-            thickness=1,
-        )
-        cv2.circle(
-            image,
-            (int(el["center"][0]), int(el["center"][1])),
-            5,
-            (0, 0, 255, conf),
-            thickness=-1,
-        )
+        outline = [np.asarray(outline, dtype="i")]
+        cv2.polylines(image, outline, True, color, thickness=1)
+
+        center = (int(ellipse["center"][0]), int(ellipse["center"][1]))
+        cv2.circle(image, center, 5, color, thickness=-1)
 
     @staticmethod
-    def get_ellipse_points(e, num_pts=10):
-        c1 = e[0][0]
-        c2 = e[0][1]
-        a = e[1][0]
-        b = e[1][1]
-        angle = e[2]
+    def get_ellipse_points(center, axes, angle, num_pts=10):
+        c1 = center[0]
+        c2 = center[1]
+        a = axes[0]
+        b = axes[1]
 
         steps = np.linspace(0, 2 * np.pi, num=num_pts, endpoint=False)
         rot = cv2.getRotationMatrix2D((0, 0), -angle, 1)

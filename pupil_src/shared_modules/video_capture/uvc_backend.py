@@ -13,17 +13,20 @@ import enum
 import logging
 import platform
 import re
+import sys
+import tempfile
 import time
+from pathlib import Path
 
 import numpy as np
-from pyglui import cygl
+from pyglui import cygl, ui
 
 import gl_utils
 import uvc
 from camera_models import load_intrinsics
 from version_utils import VersionFormat
 
-from .base_backend import Base_Manager, Base_Source, InitialisationError
+from .base_backend import Base_Manager, Base_Source, InitialisationError, SourceInfo
 from .utils import Check_Frame_Stripes, Exposure_Time
 
 # check versions for our own depedencies as they are fast-changing
@@ -31,7 +34,7 @@ assert VersionFormat(uvc.__version__) >= VersionFormat("0.13")
 
 # logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 class TJSAMP(enum.IntEnum):
@@ -61,10 +64,13 @@ class UVC_Source(Base_Source):
         uvc_controls={},
         check_stripes=True,
         exposure_mode="manual",
+        *args,
+        **kwargs,
     ):
 
-        super().__init__(g_pool)
+        super().__init__(g_pool, *args, **kwargs)
         self.uvc_capture = None
+        self._last_ts = None
         self._restart_in = 3
         assert name or preferred_names or uid
 
@@ -105,16 +111,16 @@ class UVC_Source(Base_Source):
                         uid_for_name = devices_by_name[d_name]["uid"]
                         try:
                             self.uvc_capture = uvc.Capture(uid_for_name)
+                            break
                         except uvc.OpenError:
                             logger.info(
-                                "{} matches {} but is already in use or blocked.".format(
-                                    uid_for_name, name
-                                )
+                                f"{uid_for_name} matches {name} but is already in use "
+                                "or blocked."
                             )
                         except uvc.InitError:
                             logger.error("Camera failed to initialize.")
-                        else:
-                            break
+                if self.uvc_capture:
+                    break
 
         # checkframestripes will be initialized accordingly in configure_capture()
         self.enable_stripe_checks = check_stripes
@@ -124,9 +130,7 @@ class UVC_Source(Base_Source):
 
         # check if we were sucessfull
         if not self.uvc_capture:
-            logger.error(
-                "Init failed. Capture is started in ghost mode. No images will be supplied."
-            )
+            logger.error("Could not connect to device! No images will be supplied.")
             self.name_backup = preferred_names
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
@@ -166,32 +170,94 @@ class UVC_Source(Base_Source):
         ids_present = 0
         ids_to_install = []
         for id in DEV_HW_IDS:
-            cmd_str_query = "PupilDrvInst.exe --vid {} --pid {}".format(id[0], id[1])
-            print("Running ", cmd_str_query)
+            cmd_str_query = f"PupilDrvInst.exe --vid {id[0]} --pid {id[1]}"
+            print(f"Running {cmd_str_query}")
+            logger.debug(f"Running {cmd_str_query}")
             proc = subprocess.Popen(cmd_str_query)
             proc.wait()
             if proc.returncode == 2:
                 ids_present += 1
                 ids_to_install.append(id)
-        cmd_str_inst = 'Start-Process PupilDrvInst.exe -Wait -WorkingDirectory \\"{}\\"  -ArgumentList \'--vid {} --pid {} --desc \\"{}\\" --vendor \\"Pupil Labs\\" --inst\' -Verb runas;'
-        work_dir = os.getcwd()
-        # print('work_dir = ', work_dir)
+
         if ids_present > 0:
-            try:
-                os.mkdir(os.path.join(work_dir, "win_drv"))
-            except FileExistsError:
-                pass
-            cmd_str = ""
-            rmdir_str = "Remove-Item {}\\win_drv -recurse -Force;".format(work_dir)
-            for id in ids_to_install:
-                cmd_str += rmdir_str + cmd_str_inst.format(
-                    work_dir, id[0], id[1], id[2]
-                )
             logger.warning("Updating drivers, please wait...")
-            elevation_cmd = 'powershell.exe -version 5 -Command "{}"'.format(cmd_str)
-            print(elevation_cmd)
-            proc = subprocess.Popen(elevation_cmd)
-            proc.wait()
+
+            # NOTE: libwdi in PupilDrvIns.exe cannot deal with unicode characters in the
+            # temporary path where the drivers will be installed. Check for non-ascii in
+            # the default tempdir location and use C:\Windows\Temp as fallback.
+            temp_path = None  # use default temp_path
+            try:
+                with tempfile.TemporaryDirectory(dir=temp_path) as work_dir:
+                    work_dir.encode("ascii")
+            except UnicodeEncodeError:
+                temp_path = Path("C:\\Windows\\Temp")
+                if not temp_path.exists():
+                    raise RuntimeError(
+                        "Your path to Pupil contains Unicode characters and the "
+                        "default Temp folder location could not be found. Please place "
+                        "Pupil on a path which only contains english characters!"
+                    )
+                logger.debug(
+                    "Detected Unicode characters in working directory! "
+                    "Switching temporary driver install location to C:\\Windows\\Temp"
+                )
+
+            for id in ids_to_install:
+                # Create a new temp dir for every driver so even when experiencing
+                # PermissionErrors, we can just continue installing all necessary
+                # drivers.
+                try:
+                    with tempfile.TemporaryDirectory(dir=temp_path) as work_dir:
+                        # Need to resolve PupilDrvInst.exe location, which is on PATH
+                        # only for running from source. For bundle, the most stable
+                        # solution is to use sys._MEIPASS. Note that Path.cwd() can e.g.
+                        # return wrong results!
+                        if getattr(sys, "frozen", False):
+                            bundle_dir = sys._MEIPASS
+                            driver_exe = Path(bundle_dir) / "PupilDrvInst.exe"
+                            logger.debug(
+                                f"Detected running from bundle."
+                                f" Using full path to PupilDrvInst.exe at: {driver_exe}"
+                            )
+                        else:
+                            driver_exe = "PupilDrvInst.exe"
+                            logger.debug(
+                                f"Detected running from source."
+                                f" Assuming PupilDrvInst.exe is available on PATH!"
+                            )
+
+                        # Using """ here to be able to use both " and ' without escaping
+                        # Note: ArgumentList needs quotes ordered this way (' outer, "
+                        # inner), otherwise it won't work
+                        cmd = (
+                            f"""Start-Process '{driver_exe}' -Wait -Verb runas"""
+                            f""" -WorkingDirectory '{work_dir}'"""
+                            f""" -ArgumentList '--vid {id[0]} --pid {id[1]} --desc "{id[2]}" --vendor "Pupil Labs" --inst'"""
+                        )
+
+                        # We now have strings with both " and ' used for quoting. For
+                        # passing this as command to powershell.exe below, we need to
+                        # wrap the whole string in one set of "". In order for this to
+                        # work, we need to escape all " again:
+                        cmd = cmd.replace('"', '\\"')
+
+                        elevation_cmd = f'powershell.exe -version 5 -Command "{cmd}"'
+
+                        print(elevation_cmd)
+                        logger.debug(elevation_cmd)
+                        subprocess.Popen(elevation_cmd).wait()
+                except PermissionError as e:
+                    # This can be raised when cleaning up the TemporaryDirectory, if the
+                    # process was started from a non-admin shell for a non-admin user
+                    # and has only been elevated for the powershell commands. The files
+                    # then belong to a different user and cannot be deleted. We can
+                    # ignore this, as temp dirs will be cleaned up on shutdown anyways.
+                    logger.warning(
+                        "Pupil was not run as administrator. If the drivers do not "
+                        "work, please try running as administrator again!"
+                    )
+                    logger.debug(e)
+
             logger.warning("Done updating drivers!")
 
     def configure_capture(self, frame_size, frame_rate, uvc_controls):
@@ -382,12 +448,13 @@ class UVC_Source(Base_Source):
                 )
             except (InitialisationError, uvc.InitError):
                 time.sleep(0.02)
-                self.update_menu()
             self._restart_in = int(5 / 0.02)
         else:
             self._restart_in -= 1
 
     def recent_events(self, events):
+        was_online = self.online
+
         try:
             frame = self.uvc_capture.get_frame(0.05)
 
@@ -421,10 +488,21 @@ class UVC_Source(Base_Source):
             if self.ts_offset is not None:
                 # c930 timestamps need to be set here. The camera does not provide valid pts from device
                 frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
-            frame.timestamp -= self.g_pool.timebase.value
-            self._recent_frame = frame
-            events["frame"] = frame
+
+            if self._last_ts is not None and frame.timestamp <= self._last_ts:
+                logger.debug(
+                    "Received non-monotonic timestamps from UVC! Dropping frame."
+                    f" Last: {self._last_ts}, current: {frame.timestamp}"
+                )
+            else:
+                self._last_ts = frame.timestamp
+                frame.timestamp -= self.g_pool.timebase.value
+                self._recent_frame = frame
+                events["frame"] = frame
             self._restart_in = 3
+
+        if was_online != self.online:
+            self.update_menu()
 
     def _get_uvc_controls(self):
         d = {}
@@ -451,7 +529,7 @@ class UVC_Source(Base_Source):
         if self.uvc_capture:
             return self.uvc_capture.name
         else:
-            return "Ghost capture"
+            return "(disconnected)"
 
     @property
     def frame_size(self):
@@ -563,19 +641,14 @@ class UVC_Source(Base_Source):
     def online(self):
         return bool(self.uvc_capture)
 
-    def deinit_ui(self):
-        self.remove_menu()
-
-    def init_ui(self):
-        self.add_menu()
-        self.menu.label = "Local USB Source: {}".format(self.name)
-        self.update_menu()
-
-    def update_menu(self):
-        del self.menu[:]
-        from pyglui import ui
-
+    def ui_elements(self):
         ui_elements = []
+
+        if self.uvc_capture is None:
+            ui_elements.append(ui.Info_Text("Local USB: camera disconnected!"))
+            return ui_elements
+
+        ui_elements.append(ui.Info_Text(f"Camera: {self.name} @ Local USB"))
 
         # lets define some  helper functions:
         def gui_load_defaults():
@@ -596,12 +669,6 @@ class UVC_Source(Base_Source):
             self.frame_rate = new_rate
             self.update_menu()
 
-        if self.uvc_capture is None:
-            ui_elements.append(ui.Info_Text("Capture initialization failed."))
-            self.menu.extend(ui_elements)
-            return
-
-        ui_elements.append(ui.Info_Text("{} Controls".format(self.name)))
         sensor_control = ui.Growing_Menu(label="Sensor Settings")
         sensor_control.append(
             ui.Info_Text("Do not change these during calibration or recording!")
@@ -791,7 +858,8 @@ class UVC_Source(Base_Source):
                     label="Check Stripes",
                 )
             )
-        self.menu.extend(ui_elements)
+
+        return ui_elements
 
     def cleanup(self):
         self.devices.cleanup()
@@ -830,13 +898,7 @@ class UVC_Source(Base_Source):
 
 
 class UVC_Manager(Base_Manager):
-    """Manages local USB sources
-
-    Attributes:
-        check_intervall (float): Intervall in which to look for new UVC devices
-    """
-
-    gui_name = "Local USB"
+    """Manages local USB sources."""
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -846,46 +908,38 @@ class UVC_Manager(Base_Manager):
             "eye1": ["ID1"],
             "world": ["ID2", "Logitech"],
         }
+        # Do not show RealSense cameras in selection, since they are not supported
+        # anymore in Pupil Capture since v1.22 and won't work.
+        self.ignore_patterns = ["RealSense"]
 
-    def get_init_dict(self):
-        return {}
+    def get_devices(self):
+        self.devices.update()
+        if len(self.devices) == 0:
+            return []
+        else:
+            return [SourceInfo(label="Local USB", manager=self, key="usb")]
 
-    def init_ui(self):
-        self.add_menu()
-
-        from pyglui import ui
-
-        self.add_auto_select_button()
-        ui_elements = []
-        ui_elements.append(ui.Info_Text("Local UVC sources"))
-
-        def dev_selection_list():
-            default = (None, "Select to activate")
-            self.devices.update()
-            dev_pairs = [default] + [
-                (d["uid"], d["name"])
-                for d in self.devices
-                if "RealSense" not in d["name"]
-            ]
-            return zip(*dev_pairs)
-
-        # TODO: potential race condition through selection_getter. Should ensure that
-        # current selection will always be present in the list returned by the
-        # selection_getter. Highly unlikely though as this needs to happen between
-        # having clicked the Selector and the next redraw.
-        # See https://github.com/pupil-labs/pyglui/pull/112/commits/587818e9556f14bfedd8ff8d093107358745c29b
-        ui_elements.append(
-            ui.Selector(
-                "selected_source",
-                selection_getter=dev_selection_list,
-                getter=lambda: None,
-                setter=self.activate,
-                label="Activate source",
+    def get_cameras(self):
+        self.devices.update()
+        return [
+            SourceInfo(
+                label=f"{device['name']} @ Local USB",
+                manager=self,
+                key=f"cam.{device['uid']}",
             )
-        )
-        self.menu.extend(ui_elements)
+            for device in self.devices
+            if not any(pattern in device["name"] for pattern in self.ignore_patterns)
+        ]
 
-    def activate(self, source_uid):
+    def activate(self, key):
+        if key == "usb":
+            self.notify_all({"subject": "backend.uvc.auto_activate_source"})
+            return
+
+        source_uid = key[4:]
+        self.activate_source(source_uid)
+
+    def activate_source(self, source_uid):
         if not source_uid:
             return
 
@@ -916,29 +970,45 @@ class UVC_Manager(Base_Manager):
                 }
             )
 
+    def on_notify(self, notification):
+        """Starts appropriate UVC sources.
+
+        Emits notifications:
+            ``backend.uvc.auto_activate_source``: All UVC managers should auto activate a source
+            ``start_(eye_)plugin``: Starts UVC sources
+
+        Reacts to notifications:
+            ``backend.uvc.auto_activate_source``: Auto activate best source for process
+        """
+        if notification["subject"] == "backend.uvc.auto_activate_source":
+            self.auto_activate_source()
+
     def auto_activate_source(self):
+        logger.debug("Auto activating USB source.")
+        self.devices.update()
         if not self.devices or len(self.devices) == 0:
             logger.warning("No default device is available.")
             return
 
-        cam_ids = self.cam_selection_lut[self.g_pool.process]
+        name_patterns = self.cam_selection_lut[self.g_pool.process]
+        matching_cams = [
+            device
+            for device in self.devices
+            if any(pattern in device["name"] for pattern in name_patterns)
+        ]
 
-        for cam_id in cam_ids:
-            try:
-                source_id = next(d["uid"] for d in self.devices if cam_id in d["name"])
-                self.activate(source_id)
-                break
-            except StopIteration:
-                source_id = None
-        else:
-            logger.warning("The default device is not found.")
+        if not matching_cams:
+            logger.warning("Could not find default device.")
+            return
 
-    def deinit_ui(self):
-        self.remove_menu()
+        # Sorting cams by bus_number increases chances of selecting only cams from the
+        # same headset when having multiple headsets connected. Note that two headsets
+        # might have the same bus_number when they share an internal USB bus.
+        cam = min(
+            matching_cams, key=lambda device: device.get("bus_number", float("inf"))
+        )
+        self.activate_source(cam["uid"])
 
     def cleanup(self):
         self.devices.cleanup()
         self.devices = None
-
-    def recent_events(self, events):
-        pass

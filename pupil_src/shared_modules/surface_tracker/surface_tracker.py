@@ -74,6 +74,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self._edit_surf_verts = []
         self._last_mouse_pos = (0.0, 0.0)
         self.gui = gui.GUI(self)
+        self._ui_heatmap_mode_selector = None
 
         if not isinstance(marker_detector_mode, MarkerDetectorMode):
             # Here we ensure that we pass a proper MarkerDetectorMode
@@ -161,20 +162,19 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             self._per_surface_ui(surface)
 
     def _update_ui_visualization_menu(self):
+        self._ui_heatmap_mode_selector = ui.Selector(
+            "heatmap_mode",
+            self.gui,
+            label="Heatmap Mode",
+            labels=[e.value for e in self.supported_heatmap_modes],
+            selection=[e for e in self.supported_heatmap_modes],
+        )
         self.menu.append(ui.Info_Text(self.ui_info_text))
         self.menu.append(
             ui.Switch("show_marker_ids", self.gui, label="Show Marker IDs")
         )
         self.menu.append(ui.Switch("show_heatmap", self.gui, label="Show Heatmap"))
-        self.menu.append(
-            ui.Selector(
-                "heatmap_mode",
-                self.gui,
-                label="Heatmap Mode",
-                labels=[e.value for e in self.supported_heatmap_modes],
-                selection=[e for e in self.supported_heatmap_modes],
-            )
-        )
+        self.menu.append(self._ui_heatmap_mode_selector)
 
     def _update_ui_custom(self):
         pass
@@ -560,4 +560,5 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         self.remove_menu()
 
     def cleanup(self):
+        self._ui_heatmap_mode_selector = None
         self.save_surface_definitions_to_file()

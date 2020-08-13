@@ -25,11 +25,11 @@ def service(
     version,
     preferred_remote_port,
     hide_ui,
+    debug,
 ):
     """Maps pupil to gaze data, can run various plug-ins.
 
     Reacts to notifications:
-       ``set_detection_mapping_mode``: Sets detection method
        ``start_plugin``: Starts given plugin with the given arguments
        ``eye_process.started``: Sets the detection method eye process
        ``service_process.should_stop``: Stops the service process
@@ -37,7 +37,6 @@ def service(
     Emits notifications:
         ``eye_process.should_start``
         ``eye_process.should_stop``
-        ``set_detection_mapping_mode``
         ``service_process.started``
         ``service_process.stopped``
         ``launcher_process.should_stop``
@@ -93,18 +92,17 @@ def service(
         import audio
         from uvc import get_time_monotonic
 
-        # trigger pupil detector cpp build:
-        import pupil_detectors
-
-        del pupil_detectors
-
         # Plug-ins
         from plugin import Plugin, Plugin_List, import_runtime_plugins
-        from calibration_routines import calibration_plugins, gaze_mapping_plugins
-        from pupil_remote import Pupil_Remote
+        from calibration_choreography import (
+            available_calibration_choreography_plugins,
+            patch_loaded_plugins_with_choreography_plugin,
+        )
+        from gaze_mapping import registered_gazer_classes
+        from network_api import NetworkApiPlugin
         from pupil_groups import Pupil_Groups
-        from frame_publisher import Frame_Publisher
         from blink_detection import Blink_Detection
+        from fixation_detector import Fixation_Detector
         from service_ui import Service_UI
         from background_helper import IPC_Logging_Task_Proxy
 
@@ -124,9 +122,11 @@ def service(
 
         logger.info("Application Version: {}".format(version))
         logger.info("System Info: {}".format(get_system_info()))
+        logger.debug(f"Debug flag: {debug}")
 
         # g_pool holds variables for this process they are accesible to all plugins
         g_pool = SimpleNamespace()
+        g_pool.debug = debug
         g_pool.app = "service"
         g_pool.user_dir = user_dir
         g_pool.version = version
@@ -153,23 +153,24 @@ def service(
         user_launchable_plugins = [
             Service_UI,
             Pupil_Groups,
-            Pupil_Remote,
-            Frame_Publisher,
+            NetworkApiPlugin,
             Blink_Detection,
         ] + runtime_plugins
         plugin_by_index = (
             runtime_plugins
-            + calibration_plugins
-            + gaze_mapping_plugins
+            + available_calibration_choreography_plugins()
+            + registered_gazer_classes()
             + user_launchable_plugins
         )
         name_by_index = [pupil_datum.__name__ for pupil_datum in plugin_by_index]
         plugin_by_name = dict(zip(name_by_index, plugin_by_index))
         default_plugins = [
             ("Service_UI", {}),
-            ("Dummy_Gaze_Mapper", {}),
-            ("HMD_Calibration", {}),
-            ("Pupil_Remote", {}),
+            # Calibration choreography plugin is added bellow by calling
+            # patch_world_session_settings_with_choreography_plugin
+            ("NetworkApiPlugin", {}),
+            ("Blink_Detection", {}),
+            ("Fixation_Detector", {}),
         ]
         g_pool.plugin_by_name = plugin_by_name
 
@@ -191,24 +192,27 @@ def service(
         g_pool.min_calibration_confidence = session_settings.get(
             "min_calibration_confidence", 0.8
         )
-        g_pool.detection_mapping_mode = session_settings.get(
-            "detection_mapping_mode", "2d"
-        )
-        g_pool.active_calibration_plugin = None
-        g_pool.active_gaze_mapping_plugin = None
 
-        audio.audio_mode = session_settings.get("audio_mode", audio.default_audio_mode)
+        audio.set_audio_mode(
+            session_settings.get("audio_mode", audio.get_default_audio_mode())
+        )
 
         ipc_pub.notify({"subject": "service_process.started"})
         logger.warning("Process started.")
         g_pool.service_should_run = True
 
-        # plugins that are loaded based on user settings from previous session
-        g_pool.plugins = Plugin_List(
-            g_pool, session_settings.get("loaded_plugins", default_plugins)
-        )
+        loaded_plugins = session_settings.get("loaded_plugins", default_plugins)
 
-        # NOTE: The Pupil_Remote plugin fails to load when the port is already in use
+        # Resolve the active calibration choreography plugin
+        loaded_plugins = patch_loaded_plugins_with_choreography_plugin(
+            loaded_plugins, app=g_pool.app
+        )
+        session_settings["loaded_plugins"] = loaded_plugins
+
+        # plugins that are loaded based on user settings from previous session
+        g_pool.plugins = Plugin_List(g_pool, loaded_plugins)
+
+        # NOTE: The NetworkApiPlugin plugin fails to load when the port is already in use
         # and will set this variable to false. Then we should not even start the eye
         # processes. Otherwise we would have to wait for their initialization before
         # attempting cleanup in Service.
@@ -220,25 +224,13 @@ def service(
 
         def handle_notifications(n):
             subject = n["subject"]
-            if subject == "set_detection_mapping_mode":
-                if n["mode"] == "2d":
-                    if (
-                        "Vector_Gaze_Mapper"
-                        in g_pool.active_gaze_mapping_plugin.class_name
-                    ):
-                        logger.warning(
-                            "The gaze mapper is not supported in 2d mode. Please recalibrate."
-                        )
-                        g_pool.plugins.add(plugin_by_name["Dummy_Gaze_Mapper"])
-                g_pool.detection_mapping_mode = n["mode"]
-            elif subject == "start_plugin":
-                g_pool.plugins.add(plugin_by_name[n["name"]], args=n.get("args", {}))
-            elif subject == "eye_process.started":
-                n = {
-                    "subject": "set_detection_mapping_mode",
-                    "mode": g_pool.detection_mapping_mode,
-                }
-                ipc_pub.notify(n)
+            if subject == "start_plugin":
+                try:
+                    g_pool.plugins.add(
+                        plugin_by_name[n["name"]], args=n.get("args", {})
+                    )
+                except KeyError as err:
+                    logger.error(f"Attempt to load unknown plugin: {err}")
             elif subject == "service_process.should_stop":
                 g_pool.service_should_run = False
             elif subject.startswith("meta.should_doc"):
@@ -263,20 +255,27 @@ def service(
             {"subject": "service_process.ui.should_update", "initial_delay": 1 / 40}
         )
 
+        g_pool.active_gaze_mapping_plugin = None
+
         # Event loop
         while g_pool.service_should_run and not process_was_interrupted:
             socks = dict(poller.poll())
             if pupil_sub.socket in socks:
                 topic, pupil_datum = pupil_sub.recv()
-                new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(
-                    pupil_datum
-                )
-                for gaze_datum in new_gaze_data:
-                    gaze_pub.send(gaze_datum)
 
                 events = {}
-                events["gaze"] = new_gaze_data
                 events["pupil"] = [pupil_datum]
+
+                if g_pool.active_gaze_mapping_plugin:
+                    new_gaze_data = g_pool.active_gaze_mapping_plugin.map_pupil_to_gaze(
+                        [pupil_datum]
+                    )
+                    events["gaze"] = []
+
+                    for gaze_datum in new_gaze_data:
+                        gaze_pub.send(gaze_datum)
+                        events["gaze"].append(gaze_datum)
+
                 for plugin in g_pool.plugins:
                     plugin.recent_events(events=events)
 
@@ -296,8 +295,7 @@ def service(
         session_settings[
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
-        session_settings["detection_mapping_mode"] = g_pool.detection_mapping_mode
-        session_settings["audio_mode"] = audio.audio_mode
+        session_settings["audio_mode"] = audio.get_audio_mode()
         session_settings.close()
 
         # de-init all running plugins
@@ -335,12 +333,13 @@ def service_profiled(
     version,
     preferred_remote_port,
     hide_ui,
+    debug,
 ):
     import cProfile, subprocess, os
     from .service import service
 
     cProfile.runctx(
-        "service(timebase,eye_procs_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port,hide_ui)",
+        "service(timebase,eye_procs_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port,hide_ui,debug)",
         {
             "timebase": timebase,
             "eye_procs_alive": eye_procs_alive,
@@ -351,6 +350,7 @@ def service_profiled(
             "version": version,
             "preferred_remote_port": preferred_remote_port,
             "hide_ui": hide_ui,
+            "debug": debug,
         },
         locals(),
         "service.pstats",

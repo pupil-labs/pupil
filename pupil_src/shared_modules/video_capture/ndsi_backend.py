@@ -9,23 +9,33 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import time
 import logging
-from packaging.version import Version
+import time
 
 import ndsi
+from packaging.version import Version
+from pyglui import ui
 
-from .base_backend import Base_Source, Base_Manager
+import os_utils
 from camera_models import load_intrinsics
+
+from .base_backend import Base_Manager, Base_Source, SourceInfo
 
 try:
     from ndsi import __version__
 
-    assert Version(__version__) >= Version("1.0.dev0")
+    assert Version(__version__) >= Version("1.3")
     from ndsi import __protocol_version__
 except (ImportError, AssertionError):
-    raise Exception("pyndsi version is to old. Please upgrade") from None
+    raise Exception("pyndsi version is too old. Please upgrade!") from None
+
+os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
+
+# Suppress pyre debug logs (except beacon)
+logger.debug("Suppressing pyre debug logs (except zbeacon)")
+logging.getLogger("pyre").setLevel(logging.WARNING)
+logging.getLogger("pyre.zbeacon").setLevel(logging.DEBUG)
 
 
 class NDSI_Source(Base_Source):
@@ -41,42 +51,45 @@ class NDSI_Source(Base_Source):
         g_pool,
         frame_size,
         frame_rate,
-        network=None,
         source_id=None,
         host_name=None,
         sensor_name=None,
+        *args,
+        **kwargs,
     ):
-        super().__init__(g_pool)
+        super().__init__(g_pool, *args, **kwargs)
         self.sensor = None
         self._source_id = source_id
         self._sensor_name = sensor_name
         self._host_name = host_name
         self._frame_size = frame_size
         self._frame_rate = frame_rate
-        self.has_ui = False
+        self.ui_initialized = False
         self.control_id_ui_mapping = {}
         self.get_frame_timeout = 100  # ms
         self.ghost_mode_timeout = 10  # sec
         self._initial_refresh = True
         self.last_update = self.g_pool.get_timestamp()
 
+        manager = next((p for p in g_pool.plugins if isinstance(p, NDSI_Manager)), None)
+        if not manager:
+            logger.error("Error connecting to Pupil Mobile: NDSI Manager not found!")
+            return
+
+        network = manager.network
         if not network:
-            logger.debug(
-                "No network reference provided. Capture is started "
-                + "in ghost mode. No images will be supplied."
-            )
+            logger.error("Error connecting to Pupil Mobile: No NDSI network!")
             return
 
         self.recover(network)
 
         if not self.sensor or not self.sensor.supports_data_subscription:
-            logger.error(
-                "Init failed. Capture is started in ghost mode. "
-                + "No images will be supplied."
-            )
+            logger.error("Could not connect to device! No images will be supplied.")
             self.cleanup()
 
-        logger.debug("NDSI Source Sensor: %s" % self.sensor)
+        logger.warning(
+            "Make sure to enable the Time_Sync plugin for recording with Pupil Mobile!"
+        )
 
     def recover(self, network):
         logger.debug(
@@ -142,6 +155,13 @@ class NDSI_Source(Base_Source):
                 )
             except ndsi.StreamError:
                 frame = None
+            except ndsi.sensor.NotDataSubSupportedError:
+                # NOTE: This (most likely) is a race-condition in NDSI initialization
+                # that is waiting to be fixed for Pupil Mobile. It happens rarely and
+                # can be solved by simply reconnecting the headset to the mobile phone.
+                # Preventing traceback logfloods here and displaying more helpful
+                # message to the user.
+                logger.warning("Connection problem! Please reconnect headset to phone!")
             except Exception:
                 frame = None
                 import traceback
@@ -156,13 +176,13 @@ class NDSI_Source(Base_Source):
             elif (
                 self.g_pool.get_timestamp() - self.last_update > self.ghost_mode_timeout
             ):
-                logger.info("Entering ghost mode")
+                logger.info("Device disconnected.")
                 if self.online:
                     self.sensor.unlink()
                 self.sensor = None
                 self._source_id = None
                 self._initial_refresh = True
-                self.update_control_menu()
+                self.update_menu()
                 self.last_update = self.g_pool.get_timestamp()
         else:
             time.sleep(self.get_frame_timeout / 1e3)
@@ -179,15 +199,16 @@ class NDSI_Source(Base_Source):
             logger.warning("Error {}".format(event["error_str"]))
             if "control_id" in event and event["control_id"] in self.sensor.controls:
                 logger.debug(str(self.sensor.controls[event["control_id"]]))
-        elif self.has_ui and (
+        elif self.ui_initialized and (
             event["control_id"] not in self.control_id_ui_mapping
             or event["changes"].get("dtype") == "strmapping"
             or event["changes"].get("dtype") == "intmapping"
         ):
-            self.update_control_menu()
+            self.update_menu()
 
     # local notifications
     def on_notify(self, notification):
+        super().on_notify(notification)
         subject = notification["subject"]
         if subject.startswith("remote_recording.") and self.online:
             if "should_start" in subject and self.online:
@@ -246,21 +267,12 @@ class NDSI_Source(Base_Source):
         return settings
 
     def init_ui(self):
-        self.add_menu()
-        self.menu.label = "NDSI Source: {} @ {}".format(
-            self._sensor_name, self._host_name
-        )
-
-        from pyglui import ui
-
-        self.has_ui = True
-        self.uvc_menu = ui.Growing_Menu("UVC Controls")
-        self.update_control_menu()
+        super().init_ui()
+        self.ui_initialized = True
 
     def deinit_ui(self):
-        self.uvc_menu = None
-        self.remove_menu()
-        self.has_ui = False
+        self.ui_initialized = False
+        super().deinit_ui()
 
     def add_controls_to_menu(self, menu, controls):
         from pyglui import ui
@@ -327,26 +339,18 @@ class NDSI_Source(Base_Source):
                 import traceback as tb
 
                 tb.print_exc()
-        if len(menu) == 0:
-            menu.append(ui.Info_Text("No {} settings found".format(menu.label)))
         return menu
 
-    def update_control_menu(self):
-        if not self.has_ui:
-            return
-        from pyglui import ui
+    def ui_elements(self):
 
-        del self.menu[:]
-        del self.uvc_menu[:]
-        self.control_id_ui_mapping = {}
+        ui_elements = []
+        ui_elements.append(
+            ui.Info_Text(f"Camera: {self._sensor_name} @ {self._host_name}")
+        )
+
         if not self.sensor:
-            self.menu.append(
-                ui.Info_Text(
-                    ("Sensor %s @ %s not available. " + "Running in ghost mode.")
-                    % (self._sensor_name, self._host_name)
-                )
-            )
-            return
+            ui_elements.append(ui.Info_Text("Camera disconnected!"))
+            return ui_elements
 
         uvc_controls = []
         other_controls = []
@@ -356,13 +360,21 @@ class NDSI_Source(Base_Source):
             else:
                 other_controls.append(entry)
 
-        self.add_controls_to_menu(self.menu, other_controls)
-        self.add_controls_to_menu(self.uvc_menu, uvc_controls)
-        self.menu.append(self.uvc_menu)
+        uvc_menu = ui.Growing_Menu("UVC Controls")
+        self.control_id_ui_mapping = {}
+        if other_controls:
+            self.add_controls_to_menu(ui_elements, other_controls)
+        if uvc_controls:
+            self.add_controls_to_menu(uvc_menu, uvc_controls)
+        else:
+            uvc_menu.append(ui.Info_Text("No UVC settings found."))
+        ui_elements.append(uvc_menu)
 
-        self.menu.append(
+        ui_elements.append(
             ui.Button("Reset to default values", self.sensor.reset_all_control_values)
         )
+
+        return ui_elements
 
     def cleanup(self):
         if self.online:
@@ -371,115 +383,58 @@ class NDSI_Source(Base_Source):
 
 
 class NDSI_Manager(Base_Manager):
-    """Enumerates and activates Pupil Mobile video sources
-
-    Attributes:
-        network (ndsi.Network): NDSI Network backend
-        selected_host (unicode): Selected host uuid
-    """
-
-    gui_name = "Pupil Mobile"
+    """Enumerates and activates NDSI video sources"""
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
         self.network = ndsi.Network(
-            formats={ndsi.DataFormat.V3, ndsi.DataFormat.V4},
-            callbacks=(self.on_event,)
+            formats={ndsi.DataFormat.V3, ndsi.DataFormat.V4}, callbacks=(self.on_event,)
         )
         self.network.start()
-        self.selected_host = None
         self._recover_in = 3
         self._rejoin_in = 400
-        self.should_select_host = None
         self.cam_selection_lut = {
             "eye0": ["ID0", "PI right"],
             "eye1": ["ID1", "PI left"],
             "world": ["ID2", "Logitech", "PI world"],
         }
-        logger.warning("Make sure the `time_sync` plugin is loaded!")
 
     def cleanup(self):
         self.network.stop()
 
-    def init_ui(self):
-        self.add_menu()
-        self.re_build_ndsi_menu()
-
-    def deinit_ui(self):
-        self.remove_menu()
-
-    def view_host(self, host_uuid):
-        if self.selected_host != host_uuid:
-            self.selected_host = host_uuid
-            self.re_build_ndsi_menu()
-
-    def host_selection_list(self):
-        devices = {
-            s["host_uuid"]: s["host_name"]  # removes duplicates
+    def get_devices(self):
+        # store hosts in dict to remove duplicates from multiple sensors
+        active_hosts = {
+            s["host_uuid"]: s["host_name"]
             for s in self.network.sensors.values()
+            if s["sensor_type"] == "video"
         }
-
-        if devices:
-            return list(devices.keys()), list(devices.values())
-        else:
-            return [None], ["No hosts found"]
-
-    def source_selection_list(self):
-        default = (None, "Select to activate")
-        sources = [default] + [
-            (s["sensor_uuid"], s["sensor_name"])
-            for s in self.network.sensors.values()
-            if (s["sensor_type"] == "video" and s["host_uuid"] == self.selected_host)
+        return [
+            SourceInfo(label=host_name, manager=self, key=f"host.{host_uuid}")
+            for host_uuid, host_name in active_hosts.items()
         ]
-        return zip(*sources)
 
-    def re_build_ndsi_menu(self):
-        del self.menu[1:]
-        from pyglui import ui
-
-        ui_elements = []
-        ui_elements.append(ui.Info_Text("Remote Pupil Mobile sources"))
-        ui_elements.append(
-            ui.Info_Text("Pupil Mobile Commspec v{}".format(__protocol_version__))
-        )
-
-        host_sel, host_sel_labels = self.host_selection_list()
-        ui_elements.append(
-            ui.Selector(
-                "selected_host",
-                self,
-                selection=host_sel,
-                labels=host_sel_labels,
-                setter=self.view_host,
-                label="Remote host",
+    def get_cameras(self):
+        return [
+            SourceInfo(
+                label=f"{s['sensor_name']} @ PM {s['host_name']}",
+                manager=self,
+                key=f"sensor.{s['sensor_uuid']}",
             )
-        )
+            for s in self.network.sensors.values()
+            if s["sensor_type"] == "video"
+        ]
 
-        self.menu.extend(ui_elements)
-        self.add_auto_select_button()
-
-        if not self.selected_host:
-            return
-        ui_elements = []
-
-        host_menu = ui.Growing_Menu("Remote Host Information")
-        ui_elements.append(host_menu)
-
-        src_sel, src_sel_labels = self.source_selection_list()
-        host_menu.append(
-            ui.Selector(
-                "selected_source",
-                selection=src_sel,
-                labels=src_sel_labels,
-                getter=lambda: None,
-                setter=self.activate,
-                label="Source",
+    def activate(self, key):
+        source_type, uid = key.split(".", maxsplit=1)
+        if source_type == "host":
+            self.notify_all(
+                {"subject": "backend.ndsi.auto_activate_source", "host_uid": uid}
             )
-        )
+        elif source_type == "sensor":
+            self.activate_source(source_uid=uid)
 
-        self.menu.extend(ui_elements)
-
-    def activate(self, source_uid):
+    def activate_source(self, source_uid):
         if not source_uid:
             return
         settings = {
@@ -487,40 +442,44 @@ class NDSI_Manager(Base_Manager):
             "frame_rate": self.g_pool.capture.frame_rate,
             "source_id": source_uid,
         }
-        self.activate_source(settings)
-
-    def auto_select_manager(self):
-        super().auto_select_manager()
-        self.notify_all(
-            {
-                "subject": "backend.ndsi_do_select_host",
-                "target_host": self.selected_host,
-                "delay": 0.4,
-            }
-        )
-
-    def auto_activate_source(self):
-        if not self.selected_host:
-            return
-
-        src_sel, src_sel_labels = self.source_selection_list()
-        if len(src_sel) < 2:  # "Select to Activate" is always presenet as first element
-            logger.warning("No device is available on the remote host.")
-            return
-
-        cam_ids = self.cam_selection_lut[self.g_pool.process]
-
-        for cam_id in cam_ids:
-            try:
-                source_id = next(
-                    src_sel[i] for i, lab in enumerate(src_sel_labels) if cam_id in lab
-                )
-                self.activate(source_id)
-                break
-            except StopIteration:
-                source_id = None
+        if self.g_pool.process == "world":
+            self.notify_all(
+                {"subject": "start_plugin", "name": "NDSI_Source", "args": settings}
+            )
         else:
+            self.notify_all(
+                {
+                    "subject": "start_eye_plugin",
+                    "target": self.g_pool.process,
+                    "name": "NDSI_Source",
+                    "args": settings,
+                }
+            )
+
+    def auto_activate_source(self, host_uid):
+        host_sensors = [
+            sensor
+            for sensor in self.network.sensors.values()
+            if (sensor["sensor_type"] == "video" and sensor["host_uuid"] == host_uid)
+        ]
+
+        if not host_sensors:
+            logger.warning("No devices available on the remote host.")
+            return
+
+        name_patterns = self.cam_selection_lut[self.g_pool.process]
+        matching_cams = [
+            sensor
+            for sensor in host_sensors
+            if any(pattern in sensor["sensor_name"] for pattern in name_patterns)
+        ]
+
+        if not matching_cams:
             logger.warning("The default device was not found on the remote host.")
+            return
+
+        cam = matching_cams[0]
+        self.activate_source(cam["sensor_uuid"])
 
     def poll_events(self):
         while self.network.has_events:
@@ -542,6 +501,7 @@ class NDSI_Manager(Base_Manager):
             if self._rejoin_in <= 0:
                 logger.debug("Rejoining network...")
                 self.network.rejoin()
+                # frame-timeout independent timer
                 self._rejoin_in = int(10 * 1e3 / self.g_pool.capture.get_frame_timeout)
             else:
                 self._rejoin_in -= 1
@@ -550,42 +510,27 @@ class NDSI_Manager(Base_Manager):
         if event["subject"] == "detach":
             logger.debug("detached: %s" % event)
             sensors = [s for s in self.network.sensors.values()]
-            if self.selected_host == event["host_uuid"]:
-                if sensors:
-                    self.selected_host = sensors[0]["host_uuid"]
-                else:
-                    self.selected_host = None
-                self.re_build_ndsi_menu()
 
         elif event["subject"] == "attach":
             if event["sensor_type"] == "video":
                 logger.debug("attached: {}".format(event))
                 self.notify_all({"subject": "backend.ndsi_source_found"})
 
-            if not self.selected_host and not self.should_select_host:
-                self.selected_host = event["host_uuid"]
-            elif self.should_select_host and event["sensor_type"] == "video":
-                self.select_host(self.should_select_host)
-
-            self.re_build_ndsi_menu()
-
-    def activate_source(self, settings={}):
-        settings["network"] = self.network
-        self.g_pool.plugins.add(NDSI_Source, args=settings)
-
     def recover(self):
-        self.g_pool.capture.recover(self.network)
+        if isinstance(self.g_pool.capture, NDSI_Source):
+            self.g_pool.capture.recover(self.network)
 
     def on_notify(self, n):
-        """Provides UI for the capture selection
+        """Starts appropriate NDSI sources.
 
         Reacts to notification:
             ``backend.ndsi_source_found``: Check if recovery is possible
-            ``backend.ndsi_do_select_host``: Switches to selected host from other process
+            ``backend.ndsi.auto_activate_source``: Auto activate best source for process
 
         Emmits notifications:
-            ``backend.ndsi_source_found``
-            ``backend.ndsi_do_select_host`
+            ``backend.ndsi_source_found``: New NDSI source available
+            ``backend.ndsi.auto_activate_source``: All NDSI managers should auto activate a source
+            ``start_(eye_)plugin``: Starts NDSI sources
         """
 
         super().on_notify(n)
@@ -597,20 +542,5 @@ class NDSI_Manager(Base_Manager):
         ):
             self.recover()
 
-        if n["subject"].startswith("backend.ndsi_do_select_host"):
-            self.select_host(n["target_host"])
-
-    def select_host(self, selected_host):
-        host_sel, _ = self.host_selection_list()
-        if selected_host in host_sel:
-            self.view_host(selected_host)
-            self.should_select_host = None
-            self.re_build_ndsi_menu()
-            src_sel, _ = self.source_selection_list()
-            # "Select to Activate" is always presenet as first element
-            if len(src_sel) >= 2:
-                self.auto_activate_source()
-
-        else:
-            self.should_select_host = selected_host
-
+        if n["subject"] == "backend.ndsi.auto_activate_source":
+            self.auto_activate_source(n["host_uid"])

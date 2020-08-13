@@ -8,10 +8,18 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import collections
+import functools
 import logging
+import re
+import typing as T
+from itertools import chain
 
 import cv2
 import numpy as np
+
+import file_methods as fm
+import player_methods as pm
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +47,9 @@ class Bisector(object):
                     " timestamp in `data_ts`"
                 )
             )
-        elif not data:
-            self.data = []
-            self.data_ts = np.asarray([])
+        elif not len(data):
+            self.data = np.array([], dtype=object)
+            self.data_ts = np.array([])
             self.sorted_idc = []
         else:
             self.data_ts = np.asarray(data_ts)
@@ -50,7 +58,14 @@ class Bisector(object):
             # Find correct order once and reorder both lists in-place
             self.sorted_idc = np.argsort(self.data_ts)
             self.data_ts = self.data_ts[self.sorted_idc]
-            self.data = self.data[self.sorted_idc].tolist()
+            self.data = self.data[self.sorted_idc]
+
+    def copy(self):
+        copy = type(self)()
+        copy.data = self.data.copy()
+        copy.data_ts = self.data_ts.copy()
+        copy.sorted_idc = self.sorted_idc.copy()
+        return copy
 
     def by_ts(self, ts):
         """
@@ -87,7 +102,7 @@ class Bisector(object):
         return iter(self.data)
 
     def __bool__(self):
-        return bool(self.data)
+        return bool(len(self.data))
 
     @property
     def timestamps(self):
@@ -105,7 +120,7 @@ class Mutable_Bisector(Bisector):
     def insert(self, timestamp, datum):
         insert_idx = np.searchsorted(self.data_ts, timestamp)
         self.data_ts = np.insert(self.data_ts, insert_idx, timestamp)
-        self.data.insert(insert_idx, datum)
+        self.data = np.insert(self.data, insert_idx, datum)
 
 
 class Affiliator(Bisector):
@@ -128,6 +143,213 @@ class Affiliator(Bisector):
             "start_ts": self.data_ts[start_idx:stop_idx],
             "stop_ts": self.stop_ts[start_idx:stop_idx],
         }
+
+
+class PupilTopic:
+    WildcardKey = type(...)
+    EyeIdFilterKey = T.Union[WildcardKey, int, str, T.Iterable[int], T.Iterable[str]]
+    DetectorTagFilterKey = T.Union[WildcardKey, str, T.Iterable[str]]
+
+    _FORMAT_STRING_V1 = "pupil.{eye_id}"
+    _FORMAT_STRING_V2 = "pupil.{eye_id}.{detector_tag}"
+
+    _MATCH_FORMAT_STRING_V1 = r"^pupil\.(?P<eye_id>{eye_id})$"
+    _MATCH_FORMAT_STRING_V2 = (
+        r"^pupil\.(?P<eye_id>{eye_id})\.(?P<detector_tag>{detector_tag})$"
+    )
+
+    _legacy_method_to_detector_tag = {
+        "2d c++": "2d",
+        "3d c++": "3d",
+    }
+
+    @staticmethod
+    def create(topic: str, pupil_datum: dict) -> str:
+        regex_v1 = PupilTopic._match_regex_v1()
+        match_v1 = re.match(regex_v1, topic)
+        if match_v1:
+            detector_tag = pupil_datum["method"]
+            if detector_tag in PupilTopic._legacy_method_to_detector_tag:
+                detector_tag = PupilTopic._legacy_method_to_detector_tag[detector_tag]
+            return PupilTopic._FORMAT_STRING_V2.format(
+                eye_id=match_v1.group("eye_id"), detector_tag=detector_tag,
+            )
+        regex_v2 = PupilTopic._match_regex_v2()
+        match_v2 = re.match(regex_v2, topic)
+        if match_v2:
+            return PupilTopic._FORMAT_STRING_V2.format(
+                eye_id=match_v2.group("eye_id"),
+                detector_tag=match_v2.group("detector_tag"),
+            )
+        raise ValueError(f'Invalid pupil topic: "{topic}"')
+
+    @staticmethod
+    def match(topic: str, eye_id=None, detector_tag=None):
+        eye_id = PupilTopic._canonical_subpattern(eye_id)
+        detector_tag = PupilTopic._canonical_subpattern(detector_tag)
+        regex_v2 = PupilTopic._match_regex_v2(eye_id=eye_id, detector_tag=detector_tag)
+        return re.match(regex_v2, topic)
+
+    @staticmethod
+    def _canonical_subpattern(key) -> str:
+        if isinstance(key, slice) and key != slice(None, None, None):
+            raise ValueError("Only unconstrained slices (`:`, `::`) allowed")
+        elif key is None or key is ... or isinstance(key, slice):
+            return None
+        elif isinstance(key, str) or isinstance(key, int):
+            return str(key)
+        else:
+            return f'({"|".join(map(str, key))})'
+
+    @staticmethod
+    @functools.lru_cache(128)
+    def _match_regex_v2(
+        eye_id: T.Optional[str] = None, detector_tag: T.Optional[str] = None
+    ):
+        if eye_id is None:
+            eye_id = "[01]"
+
+        if detector_tag is None:
+            detector_tag = r"[^\.]+"
+
+        pattern = PupilTopic._MATCH_FORMAT_STRING_V2.format(
+            eye_id=eye_id, detector_tag=detector_tag,
+        )
+
+        return re.compile(pattern)
+
+    @staticmethod
+    @functools.lru_cache(32)
+    def _match_regex_v1(eye_id: T.Optional[str] = None):
+        if eye_id is None:
+            eye_id = "[01]"
+
+        pattern = PupilTopic._MATCH_FORMAT_STRING_V1.format(eye_id=eye_id,)
+
+        return re.compile(pattern)
+
+
+class PupilDataBisector:
+    def __init__(self, data: T.Optional[fm.PLData] = None, bisectors=None):
+        if bisectors is not None:
+            self._bisectors = bisectors
+        else:
+            if data is None:
+                data = fm.PLData([], [], [])
+            self._bisectors = self._bisectors_from_data(data)
+
+    def _bisectors_from_data(self, data: fm.PLData):
+        _bisectors = {}
+        for pupil_topic, data in self._group_data_by_pupil_topic(data).items():
+            assert pupil_topic not in _bisectors
+            assert len(data.topics) == len(data.data) == len(data.timestamps)
+            bisector = pm.Bisector(data.data, data.timestamps)
+            _bisectors[pupil_topic] = bisector
+        return _bisectors
+
+    def init_dict_for_window(self, ts_window):
+        init_dict = collections.defaultdict(list)
+        for topic, bisector in self._bisectors.items():
+            _init_dict = bisector.init_dict_for_window(ts_window)
+            for key, values in _init_dict.items():
+                init_dict[key].extend(values)
+            topics = [topic] * len(_init_dict["data"])
+            init_dict["topics"].extend(topics)
+
+        return init_dict
+
+    @staticmethod
+    def from_init_dict(init_dict):
+        data = fm.PLData(init_dict["data"], init_dict["data_ts"], init_dict["topics"])
+        return PupilDataBisector(data)
+
+    @functools.lru_cache(32)
+    def __getitem__(
+        self, key: T.Tuple[PupilTopic.EyeIdFilterKey, PupilTopic.DetectorTagFilterKey]
+    ) -> pm.Bisector:
+        bisectors = [
+            B for topic, B in self._bisectors.items() if PupilTopic.match(topic, *key)
+        ]
+        return self.combine_bisectors(bisectors)
+
+    def by_ts_window(self, ts_window):
+        bisectors = self._bisectors.values()
+        init_dicts = [b.init_dict_for_window(ts_window) for b in bisectors]
+        bisectors = [pm.Bisector(**init_dict) for init_dict in init_dicts]
+        combined = self.combine_bisectors(bisectors)
+        return combined
+
+    def by_ts(self, ts):
+        # Returns datum for first bisector that contains it
+        # TODO: Might require rework depending on where/how it is used
+        for bisector in self._bisectors.values():
+            try:
+                return bisector.by_ts(ts)
+            except ValueError:
+                continue
+        raise ValueError
+
+    def __bool__(self):
+        return any(self._bisectors.values())
+
+    @staticmethod
+    def combine_bisectors(bisectors: T.Iterable[pm.Bisector]) -> pm.Bisector:
+        data = list(chain.from_iterable(b.data for b in bisectors))
+        data_ts = list(chain.from_iterable(b.data_ts for b in bisectors))
+        return pm.Bisector(data, data_ts)
+
+    @classmethod
+    def load_from_file(cls, dir_path, filename) -> "PupilDataBisector":
+        data = fm.load_pldata_file(dir_path, filename)
+        return cls(data=data)
+
+    def save_to_file(self, dir_path, filename):
+        with fm.PLData_Writer(dir_path, filename) as writer:
+            for topic, bisector in self._bisectors.items():
+                for timestamp, datum in zip(bisector.timestamps, bisector.data):
+                    writer.append_serialized(timestamp, topic, datum.serialized)
+
+    ### PRIVATE
+
+    @staticmethod
+    def _group_data_by_pupil_topic(data: fm.PLData) -> T.Dict[str, fm.PLData]:
+        assert len(data.topics) == len(data.data) == len(data.timestamps)
+        data_by_topic = collections.defaultdict(lambda: fm.PLData([], [], []))
+        for raw_topic, datum, ts in zip(data.topics, data.data, data.timestamps):
+            pupil_topic = PupilTopic.create(raw_topic, datum)
+            data_by_topic[pupil_topic].data.append(datum)
+            data_by_topic[pupil_topic].timestamps.append(ts)
+            data_by_topic[pupil_topic].topics.append(raw_topic)
+        return data_by_topic
+
+
+class PupilDataCollector:
+    def __init__(self):
+        self._collection = collections.defaultdict(dict)
+
+    def append(self, topic, datum, timestamp):
+        pupil_topic = PupilTopic.create(topic, datum)
+        self._collection[pupil_topic][timestamp] = datum
+
+    def clear(self):
+        self._collection.clear()
+
+    def as_pupil_data_bisector(self) -> PupilDataBisector:
+        bisectors = {}
+        for topic, timestamps_data in self._collection.items():
+            timestamps = list(timestamps_data.keys())
+            data = list(timestamps_data.values())
+            bisector = Bisector(data, timestamps)
+            bisectors[topic] = bisector
+        pupil_data_bisector = PupilDataBisector(bisectors=bisectors)
+        return pupil_data_bisector
+
+    def count_collected(self, eye_id=None, detector_tag=None):
+        num_collected = 0
+        for topic, values in self._collection.items():
+            if PupilTopic.match(topic, eye_id, detector_tag):
+                num_collected += len(values)
+        return num_collected
 
 
 def find_closest(target, source):

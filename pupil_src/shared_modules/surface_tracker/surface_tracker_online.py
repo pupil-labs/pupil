@@ -61,7 +61,7 @@ class Surface_Tracker_Online(Surface_Tracker):
 
     @property
     def supported_heatmap_modes(self):
-        return [Heatmap_Mode.WITHIN_SURFACE, Heatmap_Mode.ACROSS_SURFACES]
+        return [Heatmap_Mode.WITHIN_SURFACE]
 
     def _update_ui_custom(self):
         def set_freeze_scene(val):
@@ -95,6 +95,8 @@ class Surface_Tracker_Online(Surface_Tracker):
         )
 
     def recent_events(self, events):
+        if self._ui_heatmap_mode_selector is not None:
+            self._ui_heatmap_mode_selector.read_only = True
         if self.freeze_scene:
             # If frozen, we overwrite the frame event with the last frame we have saved
             current_frame = events.get("frame")
@@ -131,7 +133,14 @@ class Surface_Tracker_Online(Surface_Tracker):
 
     def _update_surface_heatmaps(self):
         for surface in self.surfaces:
-            surface.update_heatmap(surface.gaze_history)
+            gaze_on_surf = surface.gaze_history
+            gaze_on_surf = (
+                g
+                for g in gaze_on_surf
+                if g["confidence"] >= self.g_pool.min_data_confidence
+            )
+            gaze_on_surf = list(gaze_on_surf)
+            surface.update_heatmap(gaze_on_surf)
 
     def _update_surface_gaze_history(self, events, world_timestamp):
         surfaces_gaze_dict = {

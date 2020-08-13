@@ -8,26 +8,27 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-
-import collections
+import abc
 import logging
 import os
+import typing as T
+from contextlib import contextmanager
 from itertools import chain
 
 import numpy as np
 import OpenGL.GL as gl
-import pyglui.cygl.utils as cygl_utils
 import zmq
-from pyglui import ui
-from pyglui.pyfontstash import fontstash as fs
 
 import data_changed
 import file_methods as fm
 import gl_utils
 import player_methods as pm
+import pyglui.cygl.utils as cygl_utils
 import zmq_tools
 from observable import Observable
-from plugin import Producer_Plugin_Base
+from plugin import System_Plugin_Base
+from pyglui import ui
+from pyglui.pyfontstash import fontstash as fs
 from video_capture.utils import VideoSet
 
 logger = logging.getLogger(__name__)
@@ -36,12 +37,28 @@ COLOR_LEGEND_EYE_RIGHT = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.0)
 COLOR_LEGEND_EYE_LEFT = cygl_utils.RGBA(0.668, 0.6133, 0.9453, 1.0)
 NUMBER_SAMPLES_TIMELINE = 4000
 
+DATA_KEY_CONFIDENCE = "confidence"
+DATA_KEY_DIAMETER = "diameter_3d"
 
-class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
+
+class Pupil_Producer_Base(Observable, System_Plugin_Base):
     uniqueness = "by_base_class"
     order = 0.01
     icon_chr = chr(0xEC12)
     icon_font = "pupil_icons"
+
+    @classmethod
+    @abc.abstractmethod
+    def plugin_menu_label(cls) -> str:
+        raise NotImplementedError()
+
+    @classmethod
+    def pupil_data_source_selection_label(cls) -> str:
+        return cls.plugin_menu_label()
+
+    @classmethod
+    def pupil_data_source_selection_order(cls) -> float:
+        return float("inf")
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -63,9 +80,15 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             for p in self.g_pool.plugin_by_name.values()
             if issubclass(p, Pupil_Producer_Base)
         ]
-        pupil_producer_plugins.sort(key=lambda p: p.__name__)
+        pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_label())
+        pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_order())
+        pupil_producer_labels = [
+            p.pupil_data_source_selection_label() for p in pupil_producer_plugins
+        ]
 
+        self.menu.label = self.plugin_menu_label()
         self.menu_icon.order = 0.29
+        self.menu_icon.tooltip = "Pupil Data"
 
         def open_plugin(p):
             self.notify_all({"subject": "start_plugin", "name": p.__name__})
@@ -77,21 +100,29 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
                 setter=open_plugin,
                 getter=lambda: self.__class__,
                 selection=pupil_producer_plugins,
-                labels=[p.__name__.replace("_", " ") for p in pupil_producer_plugins],
-                label="Pupil Producers",
+                labels=pupil_producer_labels,
+                label="Data Source",
             )
         )
 
         self.cache = {}
-        self.cache_pupil_timeline_data("diameter")
-        self.cache_pupil_timeline_data("confidence")
+        self.cache_pupil_timeline_data(DATA_KEY_DIAMETER, detector_tag="3d")
+        self.cache_pupil_timeline_data(
+            DATA_KEY_CONFIDENCE,
+            detector_tag="2d",
+            ylim=(0.0, 1.0),
+            fallback_detector_tag="3d",
+        )
 
         self.glfont = fs.Context()
         self.glfont.add_font("opensans", ui.get_opensans_font_path())
         self.glfont.set_font("opensans")
 
         self.dia_timeline = ui.Timeline(
-            "Pupil Diameter [px]", self.draw_pupil_diameter, self.draw_dia_legend
+            label="Pupil Diameter 3D",
+            draw_data_callback=self.draw_pupil_diameter,
+            draw_label_callback=self.draw_dia_legend,
+            content_height=40.0,
         )
         self.conf_timeline = ui.Timeline(
             "Pupil Confidence", self.draw_pupil_conf, self.draw_conf_legend
@@ -100,8 +131,13 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         self.g_pool.user_timelines.append(self.conf_timeline)
 
     def _refresh_timelines(self):
-        self.cache_pupil_timeline_data("diameter")
-        self.cache_pupil_timeline_data("confidence")
+        self.cache_pupil_timeline_data(DATA_KEY_DIAMETER, detector_tag="3d")
+        self.cache_pupil_timeline_data(
+            DATA_KEY_CONFIDENCE,
+            detector_tag="2d",
+            ylim=(0.0, 1.0),
+            fallback_detector_tag="3d",
+        )
         self.dia_timeline.refresh()
         self.conf_timeline.refresh()
 
@@ -118,7 +154,13 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             window = pm.enclosing_window(self.g_pool.timestamps, frm_idx)
             events["pupil"] = self.g_pool.pupil_positions.by_ts_window(window)
 
-    def cache_pupil_timeline_data(self, key):
+    def cache_pupil_timeline_data(
+        self,
+        key: str,
+        detector_tag: str,
+        ylim=None,
+        fallback_detector_tag: T.Optional[str] = None,
+    ):
         world_start_stop_ts = [self.g_pool.timestamps[0], self.g_pool.timestamps[-1]]
         if not self.g_pool.pupil_positions:
             self.cache[key] = {
@@ -130,7 +172,11 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
         else:
             ts_data_pairs_right_left = [], []
             for eye_id in (0, 1):
-                pupil_positions = self.g_pool.pupil_positions_by_id[eye_id]
+                pupil_positions = self.g_pool.pupil_positions[eye_id, detector_tag]
+                if not pupil_positions and fallback_detector_tag is not None:
+                    pupil_positions = self.g_pool.pupil_positions[
+                        eye_id, fallback_detector_tag
+                    ]
                 if pupil_positions:
                     t0, t1 = (
                         pupil_positions.timestamps[0],
@@ -151,22 +197,34 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
                         )
                         ts_data_pairs_right_left[eye_id].append(ts_data_pair)
 
-            # max_val must not be 0, else gl will crash
-            all_pupil_data_chained = chain.from_iterable(ts_data_pairs_right_left)
-            max_val = max((pd[1] for pd in all_pupil_data_chained)) or 1
+            if ylim is None:
+                # max_val must not be 0, else gl will crash
+                all_pupil_data_chained = chain.from_iterable(ts_data_pairs_right_left)
+                try:
+                    # Outlier removal based on:
+                    # https://en.wikipedia.org/wiki/Outlier#Tukey's_fences
+                    min_val, max_val = np.quantile(
+                        [pd[1] for pd in all_pupil_data_chained], [0.25, 0.75]
+                    )
+                    iqr = max_val - min_val
+                    min_val -= 1.5 * iqr
+                    max_val += 1.5 * iqr
+                    ylim = min_val, max_val
+                except IndexError:  # no pupil data available
+                    ylim = 0.0, 1.0
 
             self.cache[key] = {
                 "right": ts_data_pairs_right_left[0],
                 "left": ts_data_pairs_right_left[1],
                 "xlim": world_start_stop_ts,
-                "ylim": [0, max_val],
+                "ylim": ylim,
             }
 
     def draw_pupil_diameter(self, width, height, scale):
-        self.draw_pupil_data("diameter", width, height, scale)
+        self.draw_pupil_data(DATA_KEY_DIAMETER, width, height, scale)
 
     def draw_pupil_conf(self, width, height, scale):
-        self.draw_pupil_data("confidence", width, height, scale)
+        self.draw_pupil_data(DATA_KEY_CONFIDENCE, width, height, scale)
 
     def draw_pupil_data(self, key, width, height, scale):
         right = self.cache[key]["right"]
@@ -181,21 +239,23 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
     def draw_dia_legend(self, width, height, scale):
         self.draw_legend(self.dia_timeline.label, width, height, scale)
 
+        ylim = self.cache[DATA_KEY_DIAMETER]["ylim"]
+        ylim_legend_text = f"Range: {ylim[0]:.1f} - {ylim[1]:.1f} mm"
+        ylim_legend_pos = 26.0 * scale
+        with self._legend_font(scale) as font:
+            font.draw_text(width, ylim_legend_pos, ylim_legend_text)
+
     def draw_conf_legend(self, width, height, scale):
         self.draw_legend(self.conf_timeline.label, width, height, scale)
 
     def draw_legend(self, label, width, height, scale):
-        self.glfont.push_state()
-        self.glfont.set_align_string(v_align="right", h_align="top")
-        self.glfont.set_size(15.0 * scale)
-        self.glfont.draw_text(width, 0, label)
-
         legend_height = 13.0 * scale
         pad = 10 * scale
-        self.glfont.draw_text(width / 2, legend_height, "left")
-        self.glfont.draw_text(width, legend_height, "right")
 
-        self.glfont.pop_state()
+        with self._legend_font(scale) as font:
+            font.draw_text(width, 0, label)
+            font.draw_text(width / 2, legend_height, "left")
+            font.draw_text(width, legend_height, "right")
 
         cygl_utils.draw_polyline(
             [(pad, 1.5 * legend_height), (width / 4, 1.5 * legend_height)],
@@ -213,60 +273,57 @@ class Pupil_Producer_Base(Observable, Producer_Plugin_Base):
             thickness=4.0 * scale,
         )
 
-    def create_pupil_positions_by_id(self, ts_to_datum, ts_to_topic):
-        topic_data_ts = (
-            (ts_to_topic[ts], datum, ts) for ts, datum in ts_to_datum.items()
-        )
-        return self.create_pupil_positions_by_id_iterative(topic_data_ts)
-
-    def create_pupil_positions_by_id_iterative(self, topic_data_ts):
-        id0_id1_data = collections.deque(), collections.deque()
-        id0_id1_time = collections.deque(), collections.deque()
-
-        for topic, datum, timestamp in topic_data_ts:
-            eye_id = int(topic[-1])  # use topic to identify eye
-            assert eye_id == datum["id"]
-            id0_id1_data[eye_id].append(datum)
-            id0_id1_time[eye_id].append(timestamp)
-
-        bisector_id0 = pm.Bisector(id0_id1_data[0], id0_id1_time[0])
-        bisector_id1 = pm.Bisector(id0_id1_data[1], id0_id1_time[1])
-        return (bisector_id0, bisector_id1)
+    @contextmanager
+    def _legend_font(self, scale):
+        self.glfont.push_state()
+        try:
+            self.glfont.set_align_string(v_align="right", h_align="top")
+            self.glfont.set_size(15.0 * scale)
+            yield self.glfont
+        finally:
+            self.glfont.pop_state()
 
 
 class Pupil_From_Recording(Pupil_Producer_Base):
+    @classmethod
+    def plugin_menu_label(cls) -> str:
+        return "Pupil Data From Recording"
+
+    @classmethod
+    def pupil_data_source_selection_order(cls) -> float:
+        return 1.0
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
-        pupil_data_file = fm.load_pldata_file(g_pool.rec_dir, "pupil")
-        g_pool.pupil_positions = pm.Bisector(
-            pupil_data_file.data, pupil_data_file.timestamps
-        )
-        g_pool.pupil_positions_by_id = self.create_pupil_positions_by_id_iterative(
-            zip(
-                pupil_data_file.topics, pupil_data_file.data, pupil_data_file.timestamps
-            )
-        )
-
+        pupil_data = pm.PupilDataBisector.load_from_file(g_pool.rec_dir, "pupil")
+        g_pool.pupil_positions = pupil_data
         self._pupil_changed_announcer.announce_existing()
         logger.debug("pupil positions changed")
 
     def init_ui(self):
         super().init_ui()
-        self.menu.label = "Pupil Data From Recording"
-        self.menu.append(
-            ui.Info_Text("Currently, pupil positions are loaded from the recording.")
-        )
+        self.menu.append(ui.Info_Text("Using pupil data recorded by Pupil Capture."))
 
 
 class Offline_Pupil_Detection(Pupil_Producer_Base):
     """docstring for Offline_Pupil_Detection"""
 
-    session_data_version = 3
+    session_data_version = 4
     session_data_name = "offline_pupil"
+
+    @classmethod
+    def plugin_menu_label(cls) -> str:
+        return "Post-Hoc Pupil Detection"
+
+    @classmethod
+    def pupil_data_source_selection_order(cls) -> float:
+        return 2.0
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
+        self._detection_paused = False
+
         zmq_ctx = zmq.Context()
         self.data_sub = zmq_tools.Msg_Receiver(
             zmq_ctx,
@@ -284,35 +341,24 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             assert session_meta_data.get("version") == self.session_data_version
         except (AssertionError, FileNotFoundError):
             session_meta_data = {}
-            session_meta_data["detection_method"] = "3d"
             session_meta_data["detection_status"] = ["unknown", "unknown"]
-        self.detection_method = session_meta_data["detection_method"]
+
         self.detection_status = session_meta_data["detection_status"]
 
-        pupil = fm.load_pldata_file(self.data_dir, self.session_data_name)
-        ts_data_zip = zip(pupil.timestamps, pupil.data)
-        ts_topic_zip = zip(pupil.timestamps, pupil.topics)
-        self.pupil_positions = collections.OrderedDict(ts_data_zip)
-        self.id_topics = collections.OrderedDict(ts_topic_zip)
+        self._pupil_data_store = pm.PupilDataCollector()
+        pupil_data_from_cache = pm.PupilDataBisector.load_from_file(
+            self.data_dir, self.session_data_name
+        )
+        self.publish_existing(pupil_data_from_cache)
 
+        # Start offline pupil detection if not complete yet:
         self.eye_video_loc = [None, None]
         self.eye_frame_num = [0, 0]
-        for topic in self.id_topics.values():
-            eye_id = int(topic[-1])
-            self.eye_frame_num[eye_id] += 1
-
-        self.pause_switch = None
-        self.detection_paused = False
 
         # start processes
         for eye_id in range(2):
             if self.detection_status[eye_id] != "complete":
                 self.start_eye_process(eye_id)
-
-        # either we did not start them or they failed to start (mono setup etc)
-        # either way we are done and can publish
-        if self.eye_video_loc == [None, None]:
-            self.correlate_publish()
 
     def start_eye_process(self, eye_id):
         potential_locs = [
@@ -347,6 +393,16 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.eye_video_loc[eye_id] = video_loc
         self.detection_status[eye_id] = "Detecting..."
 
+    @property
+    def detection_progress(self) -> float:
+        total = sum(self.eye_frame_num)
+        # TODO: Figure out the number of frames independent of 3d detection
+        detected = self._pupil_data_store.count_collected(detector_tag="3d")
+        if total:
+            return min(detected / total, 1.0,)
+        else:
+            return 0.0
+
     def stop_eye_process(self, eye_id):
         self.notify_all({"subject": "eye_process.should_stop", "eye_id": eye_id})
         self.eye_video_loc[eye_id] = None
@@ -360,9 +416,9 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 # pupil data only has one remaining frame
                 payload_serialized = next(remaining_frames)
                 pupil_datum = fm.Serialized_Dict(msgpack_bytes=payload_serialized)
-                assert int(topic[-1]) == pupil_datum["id"]
-                self.pupil_positions[pupil_datum["timestamp"]] = pupil_datum
-                self.id_topics[pupil_datum["timestamp"]] = topic
+                assert pm.PupilTopic.match(topic, eye_id=pupil_datum["id"])
+                timestamp = pupil_datum["timestamp"]
+                self._pupil_data_store.append(topic, pupil_datum, timestamp)
             else:
                 payload = self.data_sub.deserialize_payload(*remaining_frames)
                 if payload["subject"] == "file_source.video_finished":
@@ -373,20 +429,17 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                             self.stop_eye_process(eyeid)
                             break
                     if self.eye_video_loc == [None, None]:
-                        self.correlate_publish()
-        total = sum(self.eye_frame_num)
-        self.menu_icon.indicator_stop = (
-            len(self.pupil_positions) / total if total else 0.0
-        )
+                        data = self._pupil_data_store.as_pupil_data_bisector()
+                        self.publish_new(pupil_data_bisector=data)
 
-    def correlate_publish(self):
-        self.g_pool.pupil_positions = pm.Bisector(
-            tuple(self.pupil_positions.values()), tuple(self.pupil_positions.keys())
-        )
-        self.g_pool.pupil_positions_by_id = self.create_pupil_positions_by_id(
-            self.pupil_positions, self.id_topics
-        )
+        self.menu_icon.indicator_stop = self.detection_progress
 
+    def publish_existing(self, pupil_data_bisector):
+        self.g_pool.pupil_positions = pupil_data_bisector
+        self._pupil_changed_announcer.announce_existing()
+
+    def publish_new(self, pupil_data_bisector):
+        self.g_pool.pupil_positions = pupil_data_bisector
         self._pupil_changed_announcer.announce_new()
         logger.debug("pupil positions changed")
         self.save_offline_data()
@@ -394,7 +447,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     def on_notify(self, notification):
         super().on_notify(notification)
         if notification["subject"] == "eye_process.started":
-            self.set_detection_mapping_mode(self.detection_method)
+            pass
         elif notification["subject"] == "eye_process.stopped":
             self.eye_video_loc[notification["eye_id"]] = None
 
@@ -406,16 +459,8 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.save_offline_data()
 
     def save_offline_data(self):
-        topic_data_ts = (
-            (self.id_topics[ts], datum, ts)
-            for ts, datum in self.pupil_positions.items()
-        )
-        with fm.PLData_Writer(self.data_dir, "offline_pupil") as writer:
-            for topic, datum, timestamp in topic_data_ts:
-                writer.append_serialized(timestamp, topic, datum.serialized)
-
+        self.g_pool.pupil_positions.save_to_file(self.data_dir, "offline_pupil")
         session_data = {}
-        session_data["detection_method"] = self.detection_method
         session_data["detection_status"] = self.detection_status
         session_data["version"] = self.session_data_version
         cache_path = os.path.join(self.data_dir, "offline_pupil.meta")
@@ -423,9 +468,9 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         logger.info("Cached detected pupil data to {}".format(cache_path))
 
     def redetect(self):
-        self.pupil_positions.clear()  # delete previously detected pupil positions
-        self.id_topics.clear()
-        self.g_pool.pupil_positions = pm.Bisector([], [])
+        self._pupil_data_store.clear()
+        self.g_pool.pupil_positions = self._pupil_data_store.as_pupil_data_bisector()
+        self._pupil_changed_announcer.announce_new()
         self.detection_finished_flag = False
         self.detection_paused = False
         for eye_id in range(2):
@@ -440,27 +485,9 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                     }
                 )
 
-    def set_detection_mapping_mode(self, new_mode):
-        n = {"subject": "set_detection_mapping_mode", "mode": new_mode}
-        self.notify_all(n)
-        self.redetect()
-        self.detection_method = new_mode
-
     def init_ui(self):
         super().init_ui()
-        self.menu.label = "Offline Pupil Detector"
-        self.menu.append(
-            ui.Info_Text("Detects pupil positions from the recording's eye videos.")
-        )
-        self.menu.append(
-            ui.Selector(
-                "detection_method",
-                self,
-                label="Detection Method",
-                selection=["2d", "3d"],
-                setter=self.set_detection_mapping_mode,
-            )
-        )
+        self.menu.append(ui.Info_Text("Detect pupil positions from eye videos."))
         self.menu.append(ui.Switch("detection_paused", self, label="Pause detection"))
         self.menu.append(ui.Button("Redetect", self.redetect))
         self.menu.append(
@@ -480,14 +507,10 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             )
         )
 
-        def detection_progress():
-            total = sum(self.eye_frame_num)
-            return 100 * len(self.pupil_positions) / total if total else 0.0
-
         progress_slider = ui.Slider(
             "detection_progress",
             label="Detection Progress",
-            getter=detection_progress,
+            getter=lambda: 100 * self.detection_progress,
             setter=lambda _: _,
         )
         progress_slider.display_format = "%3.0f%%"

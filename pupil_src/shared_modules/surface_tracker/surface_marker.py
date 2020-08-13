@@ -74,7 +74,7 @@ def create_surface_marker_uid(
 
 
 def _parse_surface_marker_uid_components(
-    uid: Surface_Marker_UID
+    uid: Surface_Marker_UID,
 ) -> typing.Tuple[Surface_Marker_Type, typing.Optional[str], Surface_Marker_TagID]:
     components = str(uid).split(":")
     if len(components) == 2:
@@ -284,7 +284,7 @@ class Surface_Marker(_Surface_Marker_Raw, Surface_Base_Marker):
 
     @staticmethod
     def from_apriltag_v3_detection(
-        detection: Apriltag_V3_Detection
+        detection: Apriltag_V3_Detection,
     ) -> "Surface_Marker":
         cls = _Apriltag_V3_Marker_Detection
         raw_marker = cls(

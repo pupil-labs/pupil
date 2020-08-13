@@ -18,7 +18,9 @@ from pyre import zhelper
 from pyglui import ui
 from plugin import Plugin
 import logging
+import os_utils
 
+os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
 
 
@@ -386,16 +388,12 @@ class Hololens_Relay(Plugin):
 
             init_2d = mode == b"2"
             if init_2d:
-                detection_mode = "2d"
                 calib_method = "HMD_Calibration"
             else:
-                detection_mode = "3d"
                 calib_method = "HMD_Calibration_3D"
 
             ipc_pub.notify({"subject": "start_plugin", "name": calib_method})
-            ipc_pub.notify(
-                {"subject": "set_detection_mapping_mode", "mode": detection_mode}
-            )
+            ipc_pub.notify({"subject": "set_pupil_detection_enabled", "value": True})
             ipc_pub.notify(
                 {
                     "subject": "eye_process.should_start.{}".format(0),

@@ -10,13 +10,13 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 from player_methods import transparent_circle
-from plugin import Visualizer_Plugin_Base
+from plugin import Plugin
 from pyglui import ui
 
 from methods import denormalize
 
 
-class Vis_Circle(Visualizer_Plugin_Base):
+class Vis_Circle(Plugin):
     uniqueness = "not_unique"
     icon_chr = chr(0xE061)
     icon_font = "pupil_icons"

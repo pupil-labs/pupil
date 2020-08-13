@@ -296,6 +296,8 @@ def launcher():
                             eye_id,
                             n.get("overwrite_cap_settings"),
                             parsed_args.hide_ui,
+                            parsed_args.debug,
+                            n.get("pub_socket_hwm"),
                         ),
                     ).start()
                 elif "notify.player_process.should_start" in topic:
@@ -309,6 +311,7 @@ def launcher():
                             ipc_push_url,
                             user_dir,
                             app_version,
+                            parsed_args.debug,
                         ),
                     ).start()
                 elif "notify.world_process.should_start" in topic:
@@ -325,6 +328,7 @@ def launcher():
                             app_version,
                             parsed_args.port,
                             parsed_args.hide_ui,
+                            parsed_args.debug,
                         ),
                     ).start()
                 elif "notify.clear_settings_process.should_start" in topic:
@@ -345,6 +349,7 @@ def launcher():
                             app_version,
                             parsed_args.port,
                             parsed_args.hide_ui,
+                            parsed_args.debug,
                         ),
                     ).start()
                 elif "notify.player_drop_process.should_start" in topic:
@@ -358,6 +363,7 @@ def launcher():
                             ipc_push_url,
                             user_dir,
                             app_version,
+                            parsed_args.debug,
                         ),
                     ).start()
                 elif "notify.circle_detector_process.should_start" in topic:

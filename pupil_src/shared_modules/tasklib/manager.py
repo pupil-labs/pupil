@@ -10,6 +10,9 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import tasklib.background
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class PluginTaskManager:
@@ -28,8 +31,7 @@ class PluginTaskManager:
     """
 
     def __init__(self, plugin):
-        self._recently_added_tasks = []
-        self._running_tasks = []
+        self._tasks = []
         plugin.add_observer("recent_events", self.on_recent_events)
         plugin.add_observer("cleanup", self.on_cleanup)
 
@@ -84,7 +86,7 @@ class PluginTaskManager:
             kwargs,
             patches,
         )
-        self._recently_added_tasks.append(task)
+        self._tasks.append(task)
         return task
 
     def add_task(self, task):
@@ -95,36 +97,46 @@ class PluginTaskManager:
         Similarly to create_task(), you don't need to start the task before adding
         it, but you can if you want.
         """
-        self._recently_added_tasks.append(task)
+        self._tasks.append(task)
 
     def on_recent_events(self, _):
-        self._start_recently_added_tasks()
-        self._update_running_tasks()
+        for task in self._tasks.copy():
+            if not task.started:
+                task.start()
+            if task.running:
+                task.update()
+            if task.ended:
+                self._tasks.remove(task)
 
     def on_cleanup(self):
         self._kill_all_running_tasks()
-        self._recently_added_tasks = []
-        self._running_tasks = []
-
-    def _start_recently_added_tasks(self):
-        for task in self._recently_added_tasks:
-            # we test because the user might have already started it manually
-            if not task.started:
-                task.start()
-            self._recently_added_tasks.remove(task)
-            self._running_tasks.append(task)
-
-    def _update_running_tasks(self):
-        for task in self._running_tasks:
-            if task.ended:
-                self._running_tasks.remove(task)
-            else:
-                task.update()
+        self._tasks = []
 
     def _kill_all_running_tasks(self, grace_period_per_task=None):
-        for task in self._running_tasks:
-            # the test is for tasks that terminate between the last update and this
-            # method call, i.e. for tasks that had no chance to get removed from
-            # self._running_tasks
+        for task in self._tasks:
             if task.running:
                 task.kill(grace_period=grace_period_per_task)
+
+
+class UniqueTaskManager(PluginTaskManager):
+    """TaskManager ensuring tasks are unique by identifier"""
+
+    def add_task(self, task_new, identifier: str):
+        UniqueTaskManager._patch_task(task_new, identifier)
+        task_duplicated = self._get_duplicated_task(identifier)
+        if task_duplicated is not None:
+            state = "running" if task_duplicated.running else "queued"
+            logger.debug(f"Replacing {state} task with ID '{identifier}'")
+            if task_duplicated.running:
+                task_duplicated.kill(grace_period=None)
+            self._tasks.remove(task_duplicated)
+        super().add_task(task_new)
+
+    def _get_duplicated_task(self, identifier):
+        for task_prev in self._tasks:
+            if task_prev._unique_task_identifier == identifier:
+                return task_prev
+
+    @staticmethod
+    def _patch_task(task, identifier: str):
+        task._unique_task_identifier = identifier

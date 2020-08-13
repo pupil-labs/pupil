@@ -9,11 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import importlib
+import logging
 import os
 import sys
-import importlib
+import types
 from time import time
-import logging
+
+from OpenGL.GL import glGetError
+from OpenGL.GLU import gluErrorString
 
 logger = logging.getLogger(__name__)
 """
@@ -52,6 +56,9 @@ class Plugin(object):
 
     def __init__(self, g_pool):
         self.g_pool = g_pool
+
+        if getattr(g_pool, "debug", False):
+            self.__monkeypatch_gl_display_error_checking()
 
     def init_ui(self):
         """
@@ -223,20 +230,20 @@ class Plugin(object):
         """
         return self.__class__.__name__
 
-    @property
-    def base_class(self):
+    @classmethod
+    def base_class(cls):
         """
-        rightmost base class of this instance's class
+        rightmost base class of this class
         this way you can inherit from muliple classes and use the rightmost as your plugin group classifier
         """
-        return self.__class__.__bases__[-1]
+        return cls.__bases__[-1]
 
-    @property
-    def base_class_name(self):
+    @classmethod
+    def base_class_name(cls):
         """
-        base class name of this instance's class
+        base class name of this class
         """
-        return self.base_class.__name__
+        return cls.base_class().__name__
 
     @property
     def pretty_class_name(self):
@@ -292,6 +299,31 @@ class Plugin(object):
         self.menu = None
         self.menu_icon = None
 
+    def __monkeypatch_gl_display_error_checking(self):
+        # Monkeypatch gl_display functions to include error checking. This is because we
+        # often receive OpenGL errors as results of buggy pyglui code that gets called
+        # in gl_display. Since pyglui does not check glGetError(), we run into these
+        # errors at other places at the code when e.g. using pyopengl. By checking after
+        # every plugin we can at least partially localize the error!
+
+        # Take gl_display function prototype from class, i.e. not bound to an
+        # instance. This will return potentially overwritten implementations
+        # from child classes.
+        unpatched_gl_display = self.__class__.gl_display
+
+        # Create wrapper method including a glGetError check
+        def wrapper(_self):
+            unpatched_gl_display(_self)
+            err = glGetError()
+            if err != 0:
+                logger.error(
+                    f"Encountered OpenGL Error in Plugin '{_self.class_name}'!"
+                    f" Error code: {err}, msg: {gluErrorString(err)}"
+                )
+
+        # Bind wrapper to current instance
+        self.gl_display = types.MethodType(wrapper, self)
+
 
 # Plugin manager classes and fns
 class Plugin_List(object):
@@ -322,12 +354,15 @@ class Plugin_List(object):
                 expanded_initializers.append((plugin_by_name[name], name, args))
             except KeyError:
                 logger.debug(f"Plugin {name} failed to load, not available for import.")
+
+        expanded_initializers.sort(key=lambda data: data[0].order)
+
         # only add plugins that won't be replaced by newer plugins
         for i, (plugin, name, args) in enumerate(expanded_initializers):
             for new_plugin, new_name, _ in expanded_initializers[i + 1 :]:
                 if (
                     new_plugin.uniqueness == "by_base_class"
-                    and plugin.__bases__[-1] == new_plugin.__bases__[-1]
+                    and plugin.base_class() == new_plugin.base_class()
                 ) or (new_plugin.uniqueness == "by_class" and plugin == new_plugin):
                     logger.debug(
                         f"Skipping initialization of plugin {name} because it will be"
@@ -347,33 +382,15 @@ class Plugin_List(object):
     def __str__(self):
         return "Plugin List: {}".format(self._plugins)
 
-    def add(self, new_plugin, args={}):
+    def add(self, new_plugin_cls, args={}):
         """
         add a plugin instance to the list.
         """
-        if new_plugin.uniqueness == "by_base_class":
-            for p in self._plugins:
-                if p.base_class == new_plugin.__bases__[-1]:
-                    replc_str = "Plugin {} of base class {} will be replaced by {}."
-                    logger.debug(
-                        replc_str.format(p, p.base_class_name, new_plugin.__name__)
-                    )
-                    p.alive = False
-                    self.clean()
+        self._find_and_remove_duplicates(new_plugin_cls)
 
-        elif new_plugin.uniqueness == "by_class":
-            for p in self._plugins:
-                if p.this_class == new_plugin:
-                    logger.warning(
-                        "Plugin '{}' is already loaded . Did not add it.".format(
-                            new_plugin.__name__
-                        )
-                    )
-                    return
-
-        plugin_instance = new_plugin(self.g_pool, **args)
+        plugin_instance = new_plugin_cls(self.g_pool, **args)
         if not plugin_instance.alive:
-            logger.warning("plugin failed to initialize")
+            logger.warning(f"Plugin {new_plugin_cls.__name__} failed to initialize")
             return
 
         self._plugins.append(plugin_instance)
@@ -381,6 +398,42 @@ class Plugin_List(object):
 
         if self.g_pool.app in ("capture", "player"):
             plugin_instance.init_ui()
+
+    def _find_and_remove_duplicates(self, new_plugin_cls):
+        for duplicate in self._duplicates(new_plugin_cls):
+            self._remove_duplicated_instance(duplicate)
+
+    def _duplicates(self, new_plugin_cls):
+        if new_plugin_cls.uniqueness == "by_base_class":
+            yield from self._duplicates_by_rule(
+                self._has_same_base_class, new_plugin_cls
+            )
+        elif new_plugin_cls.uniqueness == "by_class":
+            yield from self._duplicates_by_rule(self._is_same_class, new_plugin_cls)
+
+    def _duplicates_by_rule(self, is_duplicate_rule, new_plugin_cls):
+        duplicates = (
+            old_plugin_inst
+            for old_plugin_inst in self._plugins
+            if is_duplicate_rule(old_plugin_inst, new_plugin_cls)
+        )
+        yield from duplicates
+
+    def _remove_duplicated_instance(self, duplicated_plugin_inst):
+        name = duplicated_plugin_inst.pretty_class_name
+        uniq = duplicated_plugin_inst.uniqueness
+        message = f"Replacing {name} due to '{uniq}' uniqueness"
+        logger.debug(message)
+        duplicated_plugin_inst.alive = False
+        self.clean()
+
+    @staticmethod
+    def _has_same_base_class(old_plugin_inst, new_plugin_cls):
+        return old_plugin_inst.base_class() == new_plugin_cls.base_class()
+
+    @staticmethod
+    def _is_same_class(old_plugin_inst, new_plugin_cls):
+        return old_plugin_inst.this_class == new_plugin_cls
 
     def clean(self):
         """
@@ -440,29 +493,15 @@ def import_runtime_plugins(plugin_dir):
                         and issubclass(member, Plugin)
                         and member.__name__ != "Plugin"
                     ):
-                        logger.info("Added: {}".format(member))
+                        logger.debug("Added: {}".format(member))
                         runtime_plugins.append(member)
             except Exception as e:
                 logger.warning("Failed to load '{}'. Reason: '{}' ".format(d, e))
+                import traceback
+
+                logger.debug(traceback.format_exc())
     return runtime_plugins
 
 
-# Base plugin definitons
-class Visualizer_Plugin_Base(Plugin):
-    pass
-
-
-class Analysis_Plugin_Base(Plugin):
-    pass
-
-
-class Producer_Plugin_Base(Plugin):
-    pass
-
-
 class System_Plugin_Base(Plugin):
-    pass
-
-
-class Experimental_Plugin_Base(Plugin):
     pass

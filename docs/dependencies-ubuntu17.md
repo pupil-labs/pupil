@@ -17,7 +17,7 @@ sudo apt install -y pkg-config git cmake build-essential nasm wget python3-setup
 Install ffmpeg3 from jonathonf's ppa:
 
 ```sh
-sudo add-apt-repository ppa:jonathonf/ffmpeg-3
+sudo add-apt-repository ppa:jonathonf/ffmpeg-4
 sudo apt-get update
 sudo apt install -y libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libavresample-dev ffmpeg libav-tools x264 x265 libportaudio2 portaudio19-dev
 ```
@@ -52,7 +52,21 @@ The following errors were commonly reported:
 
 * `ImportError: No module named 'cv2'`
 
-  When you see this error, **do not install opencv-python via pip!** If you did so, uninstall it again! The error appears if the above requisites were not met. Delete the build folder, recheck the requisites and try again.
+  When you see this error, Python cannot find the bindings from your OpenCV installation.
+  
+  **We do NOT (!) recommend to install `opencv-python` via pip in that case!** 
+  
+  Installing `opencv-python` will install another full (potentially different) version of opencv to your machine, so we are not recommending this setup.
+  When you compile opencv with `-DBUILD_opencv_python3=ON` as we advise above, you should have the `cv2` package available for import in Python as this will install compatible Python bindings already.
+
+  However, you might run into these problems when using a virtual environment, as your virtual environment cannot by default access Python packages that were installed from `apt`.
+  In that case there are 2 options:
+  
+  1. Symlink or copy the Python bindings into your virtualenv. See e.g. [step 4 of this stackoverflow post](https://stackoverflow.com/a/37190408) for reference.
+  2. Create your virtualenv with the [`--system-site-packages`](https://virtualenv.pypa.io/en/latest/userguide/#the-system-site-packages-option) option, which will enable access to system-installed Python packages.
+
+  If you are still experiencing this issue, delete the OpenCV build folder, recheck the requirements and build and try again.
+
 
 * `ImportError: */detector_2d.*.so: undefined symbol: *ellipse*InputOutputArray*RotatedRect*Scalar*`
   
@@ -78,7 +92,14 @@ sudo ldconfig
 This is **ONLY** required if you are using 200hz cameras. Otherwise it can be ignored!
 
 1. Build or download fixed binary from release: https://github.com/pupil-labs/libusb/releases/tag/v1.0.21-rc6-fixes
-1. Replace system libusb-1.0.so.0 with this binary.
+1. Replace system libusb-1.0.so.0 with this binary. You can find the path of the system library with
+
+    ```sh
+    dpkg -L libusb-1.0-0-dev | grep libusb-1.0.so
+    ```
+
+    Please note that this command gives you the location of `libusb-1.0.so` while you need to replace `libusb-1.0.so.0`, but the required file should be found in the same folder.
+
 
 ## libuvc
 ```sh
@@ -119,6 +140,7 @@ The build and install the Ceres solver:
 ```sh
 git clone https://ceres-solver.googlesource.com/ceres-solver
 cd ceres-solver
+git checkout 1.14.0
 mkdir build && cd build
 cmake .. -DBUILD_SHARED_LIBS=ON
 make -j3
@@ -130,7 +152,7 @@ sudo ldconfig
 
 ### Install Python Libraries
 
-We recommend using a virtual environment with a valid installation of Python 3.6 or higher.
+We recommend using a [virtual environment](https://docs.python.org/3/tutorial/venv.html) for running Pupil.
 
 ```sh
 # Upgrade pip to latest version. This is necessary for some dependencies.
@@ -145,6 +167,7 @@ pip install psutil
 pip install pyaudio
 pip install pyopengl
 pip install pyzmq
+pip install scikit-learn
 pip install scipy
 pip install git+https://github.com/zeromq/pyre
 
@@ -154,9 +177,9 @@ pip install git+https://github.com/pupil-labs/PyAV
 pip install git+https://github.com/pupil-labs/pyuvc
 pip install git+https://github.com/pupil-labs/pyndsi
 pip install git+https://github.com/pupil-labs/pyglui
-pip install git+https://github.com/pupil-labs/nslr
-pip install git+https://github.com/pupil-labs/nslr-hmm
 ```
+
+**NOTE**: If you get the error `ImportError: No module named 'cv2'` when trying to run Pupil, please refer to the section [OpenCV Troubleshooting](#opencv-troubleshooting) above.
 
 ## Next Steps
 

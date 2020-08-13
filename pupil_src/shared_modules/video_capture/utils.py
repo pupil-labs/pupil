@@ -8,12 +8,12 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import glob
 import logging
 import os
 import pathlib as pl
+import typing as T
 from pathlib import Path
-from typing import Iterator, Sequence
+
 
 import av
 import cv2
@@ -169,39 +169,46 @@ class Check_Frame_Stripes(object):
             return None
 
 
+class InvalidContainerError(RuntimeError):
+    pass
+
+
 class Video:
     def __init__(self, path: str) -> None:
         self.path = path
         self.ts = None
         self._pts = None
-        self._is_valid = self.check_valid()
+        self._is_valid = None  # calculated on demand
 
     @property
     def is_valid(self):
+        if self._is_valid is None:
+            try:
+                self.load_container()
+                self._is_valid = True
+            except InvalidContainerError:
+                self._is_valid = False
         return self._is_valid
 
-    def check_valid(self):
+    def load_container(self):
         try:
-            cont = av.open(self.path)
+            cont = self._open_container()
             # Three failure scenarios:
             # 1. Broken video -> AVError
             # 2. decode() does not yield anything
             # 3. decode() yields None
             first_frame = next(cont.decode(video=0), None)
             if first_frame is None:
-                raise av.AVError("Video does not contain any frames")
-        except av.AVError:
-            return False
+                raise InvalidContainerError("Container does not contain frames")
+        except av.AVError as averr:
+            raise InvalidContainerError from averr
         else:
             cont.seek(0)
-            self.cont = cont
-            return True
+            return cont
 
-    def load_valid_container(self):
-        if self.is_valid:
-            return self.cont
-        else:
-            return None
+    def _open_container(self):
+        cont = av.open(self.path)
+        return cont
 
     def load_ts(self):
         try:
@@ -211,10 +218,11 @@ class Video:
             return
         self.ts = self._fix_negative_time_jumps(self.ts)
 
-    def load_pts(self):
-        packets = self.cont.demux(video=0)
+    def load_pts(self, container):
+        packets = container.demux(video=0)
         # last pts is invalid
         self._pts = np.array([packet.pts for packet in packets][:-1])
+        return self._pts
 
     @property
     def name(self) -> str:
@@ -271,7 +279,6 @@ class VideoSet:
         self.fill_gaps = fill_gaps
         self.video_exts = set(VIDEO_EXTS) - {"fake"}
         self._videos = sorted(self.fetch_videos(), key=lambda v: v.path)
-        self._containers = [vid.load_valid_container() for vid in self.videos]
 
     def is_empty(self) -> bool:
         try:
@@ -284,25 +291,20 @@ class VideoSet:
             )
 
     @property
-    def videos(self) -> Sequence[Video]:
+    def videos(self) -> T.List[Video]:
         return self._videos
 
-    @property
-    def containers(self) -> Sequence[Video]:
-        return self._containers
+    def get_container(self, index) -> T.Optional[av.container.input.InputContainer]:
+        return self.videos[index].load_container()
 
     @property
     def lookup_loc(self) -> str:
         return os.path.join(self.rec, f"{self.name}_lookup.npy")
 
-    def fetch_videos(self) -> Iterator[Video]:
-        # If self.fill_gaps, we return all videos
-        # else we skip the broken videos
+    def fetch_videos(self) -> T.Iterator[Video]:
         for ext in self.video_exts:
             for loc in Path(self.rec).glob(f"{self.name}*.{ext}"):
-                vid = Video(str(loc))
-                if self.fill_gaps or vid.is_valid:
-                    yield vid
+                yield Video(str(loc))
 
     def build_lookup(self, fallback_timestamps=None):
         """
@@ -348,17 +350,16 @@ class VideoSet:
 
         lookup = self._setup_lookup(loaded_ts)
         for container_idx, vid in enumerate(self.videos):
-            if not vid.is_valid:
-                # For invalid videos, we still try to load the timestamps (might be empty)
-                lookup_mask = np.isin(lookup.timestamp, vid.timestamps)
-                lookup.container_frame_idx[lookup_mask] = np.arange(vid.timestamps.size)
-            else:
+            try:
+                container = vid.load_container()
+
                 # NOTE: For unknown reasons we sometimes have more timestamps than
                 # frames. We don't know how to match non-matching timestamps and
                 # pts, so we might introduce a systematic bias when fixing this! The
                 # idea is to keep only data for timestamps that were recorded, but
                 # leave frames blank if we don't have frame information.
-                npts = vid.pts.size
+                vid_pts = vid.load_pts(container)
+                npts = vid_pts.size
                 ntime = vid.timestamps.size
                 if npts < ntime:
                     logger.warning(
@@ -372,12 +373,18 @@ class VideoSet:
                     )
                 data_size = min(npts, ntime)
                 vid_timestamps = vid.timestamps[:data_size]
-                vid_pts = vid.pts[:data_size]
+                vid_pts = vid_pts[:data_size]
 
                 lookup_mask = np.isin(lookup.timestamp, vid_timestamps)
                 lookup.container_frame_idx[lookup_mask] = np.arange(vid_timestamps.size)
                 lookup.container_idx[lookup_mask] = container_idx
                 lookup.pts[lookup_mask] = vid_pts
+
+            except InvalidContainerError:
+                # For invalid videos, we still try to load the timestamps (might be empty)
+                lookup_mask = np.isin(lookup.timestamp, vid.timestamps)
+                lookup.container_frame_idx[lookup_mask] = np.arange(vid.timestamps.size)
+
         self.lookup = lookup
         np.save(self.lookup_loc, self.lookup)
         # filter gaps (after saving!)

@@ -120,7 +120,7 @@ def _update_recording_to_old_style_v1_16(rec_dir):
     elif rec_version >= VersionFormat("0.3"):
         update_recording_v03_to_v074(rec_dir)
     else:
-        logger.Error("This recording is too old. Sorry.")
+        logger.error("This recording is too old. Sorry.")
         return
 
     # Incremental format updates

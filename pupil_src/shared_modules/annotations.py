@@ -20,7 +20,7 @@ from pyglui import ui
 import file_methods as fm
 import player_methods as pm
 import zmq_tools
-from plugin import Analysis_Plugin_Base, Plugin
+from plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
@@ -222,7 +222,7 @@ class Annotation_Capture(AnnotationPlugin):
         events["annotation"] = recent_annotation_data
 
 
-class Annotation_Player(AnnotationPlugin, Analysis_Plugin_Base):
+class Annotation_Player(AnnotationPlugin, Plugin):
     """
     Pupil Player plugin to view, edit, and add annotations.
     """

@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import collections
 import collections.abc
+import copy
 import logging
 import os
 import pickle
@@ -310,6 +311,9 @@ class Serialized_Dict(object):
         self._deser()
         return self._data.copy()
 
+    def __deepcopy__(self, memo=None):
+        return _recursive_deep_copy(self)
+
     def has_key(self, k):
         self._deser()
         return k in self._data
@@ -343,6 +347,35 @@ class Serialized_Dict(object):
     def __iter__(self):
         self._deser()
         return iter(self._data)
+
+    def _deep_copy_serialized_dict(self):
+        dict_copy = self._deep_copy_dict()
+        return Serialized_Dict(python_dict=dict_copy)
+
+    def _deep_copy_dict(self):
+        def unpacking_ext_hook(self, code, data):
+            if code == self.MSGPACK_EXT_CODE:
+                return type(self)(msgpack_bytes=data)._deep_copy_dict()
+            return msgpack.ExtType(code, data)
+
+        return msgpack.unpackb(
+            self._ser_data, raw=False, use_list=False, ext_hook=unpacking_ext_hook,
+        )
+
+
+def _recursive_deep_copy(item):
+
+    if isinstance(item, collections.abc.Mapping):
+        _item_dict = {k: _recursive_deep_copy(v) for k, v in item.items()}
+        if isinstance(item, types.MappingProxyType):
+            return _item_dict
+        else:
+            return type(item)(_item_dict)
+
+    if isinstance(item, collections.abc.Sequence) and not isinstance(item, str):
+        return type(item)([_recursive_deep_copy(el) for el in item])
+
+    return copy.deepcopy(item)
 
 
 def bench_save():

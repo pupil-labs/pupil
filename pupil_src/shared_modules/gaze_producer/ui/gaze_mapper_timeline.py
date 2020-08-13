@@ -74,8 +74,8 @@ class GazeMapperTimeline:
         color = (
             [0.3, 0.5, 0.5, alpha]
             # [136 / 255, 92 / 255, 197 / 255, alpha*1.0]
-            if gaze_mapper.calculate_complete
-            else [0.66 * 0.7, 0.86 * 0.7, 0.46 * 0.7, alpha*0.8]
+            if not gaze_mapper.empty()
+            else [0.66 * 0.7, 0.86 * 0.7, 0.46 * 0.7, alpha * 0.8]
         )
         return RangeElementFrameIdx(from_idx, to_idx, color_rgba=color, height=10)
 

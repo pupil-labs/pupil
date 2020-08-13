@@ -13,6 +13,11 @@ import logging
 from pyglui import ui
 
 from gaze_producer import ui as plugin_ui
+from gaze_mapping import (
+    gazer_labels_by_class_names,
+    registered_gazer_classes,
+    user_selectable_gazer_classes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +36,15 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
 
         self.menu.collapsed = True
 
+        self._ui_button_duplicate = None
+        self._ui_button_delete = None
+
         calibration_controller.add_observer(
             "on_calibration_computed", self._on_calibration_computed
+        )
+        calibration_controller.add_observer(
+            "on_calculation_could_not_be_started",
+            self._on_calculation_could_not_be_started,
         )
 
     def _item_label(self, calibration):
@@ -64,6 +76,16 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
             ]
         )
 
+    def _create_duplicate_button(self):
+        # Save a reference to the created duplicate button
+        self._ui_button_duplicate = super()._create_duplicate_button()
+        return self._ui_button_duplicate
+
+    def _create_delete_button(self):
+        # Save a reference to the created delete button
+        self._ui_button_delete = super()._create_delete_button()
+        return self._ui_button_delete
+
     def _create_name_input(self, calibration):
         return ui.Text_Input(
             "name", calibration, label="Name", setter=self._on_name_change
@@ -80,11 +102,15 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         )
 
     def _create_mapping_method_selector(self, calibration):
+        gazers = user_selectable_gazer_classes()
+        gazers_map = gazer_labels_by_class_names(gazers)
+
         return ui.Selector(
-            "mapping_method",
+            "gazer_class_name",
             calibration,
-            label="Mapping Method",
-            selection=["2d", "3d"],
+            label="Gaze Mapping",
+            labels=list(gazers_map.values()),
+            selection=list(gazers_map.keys()),
         )
 
     def _create_min_confidence_slider(self, calibration):
@@ -102,7 +128,7 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
 
     def _create_calculate_button(self, calibration):
         return ui.Button(
-            label="Recalculate" if calibration.result else "Calculate",
+            label="Recalculate" if calibration.params else "Calculate",
             function=self._on_click_calculate,
         )
 
@@ -114,12 +140,14 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         )
 
     def _info_text_for_calibration_from_other_recording(self, calibration):
-        if calibration.result:
+        gazers = registered_gazer_classes()
+        gazer_class_name = calibration.gazer_class_name
+        gazer_label = gazer_labels_by_class_names(gazers)[gazer_class_name]
+
+        if calibration.params:
             return (
-                "This {} calibration was copied from another recording. "
-                "It is ready to be used in gaze mappers.".format(
-                    calibration.mapping_method.upper()
-                )
+                f"This {gazer_label} calibration was copied from another recording. "
+                "It is ready to be used in gaze mappers."
             )
         else:
             return (
@@ -133,18 +161,35 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         menu.append(ui.Info_Text(self._info_text_for_online_calibration(calibration)))
 
     def _info_text_for_online_calibration(self, calibration):
+        gazers = registered_gazer_classes()
+        gazer_class_name = calibration.gazer_class_name
+        gazer_label = gazer_labels_by_class_names(gazers)[gazer_class_name]
+
         return (
-            "This {} calibration was created before or during the recording. "
-            "It is ready to be used in gaze mappers.".format(
-                calibration.mapping_method.upper()
-            )
+            f"This {gazer_label} calibration was created before or during the "
+            "recording. It is ready to be used in gaze mappers."
         )
 
     def _on_click_duplicate_button(self):
-        if self._calibration_controller.is_from_same_recording(self.current_item):
+        if self.__check_duplicate_button_click_is_allowed(
+            should_log_reason_as_error=True
+        ):
             super()._on_click_duplicate_button()
-        else:
-            logger.error("Cannot duplicate calibrations from other recordings!")
+
+    def _on_click_delete(self):
+        if self.__check_delete_button_click_is_allowed(should_log_reason_as_error=True):
+            super()._on_click_delete()
+
+    def _on_change_current_item(self, item):
+        super()._on_change_current_item(item)
+        if self._ui_button_duplicate:
+            self._ui_button_duplicate.read_only = not self.__check_duplicate_button_click_is_allowed(
+                should_log_reason_as_error=False
+            )
+        if self._ui_button_delete:
+            self._ui_button_delete.read_only = not self.__check_delete_button_click_is_allowed(
+                should_log_reason_as_error=False
+            )
 
     def _on_name_change(self, new_name):
         self._calibration_storage.rename(self.current_item, new_name)
@@ -165,3 +210,37 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
         if calibration == self.current_item:
             # mostly to change button "calculate" -> "recalculate"
             self.render()
+
+    def _on_calculation_could_not_be_started(self):
+        self.render()
+
+    def __check_duplicate_button_click_is_allowed(
+        self, should_log_reason_as_error: bool
+    ):
+        if not self._calibration_controller.is_from_same_recording(self.current_item):
+            if should_log_reason_as_error:
+                logger.error("Cannot duplicate calibrations from other recordings!")
+            return False
+
+        if not self.current_item.is_offline_calibration:
+            if should_log_reason_as_error:
+                logger.error("Cannot duplicate pre-recorded calibrations!")
+            return False
+
+        return True
+
+    def __check_delete_button_click_is_allowed(self, should_log_reason_as_error: bool):
+        if self.current_item is None:
+            return False
+
+        if not self._calibration_controller.is_from_same_recording(self.current_item):
+            if should_log_reason_as_error:
+                logger.error("Cannot delete calibrations from other recordings!")
+            return False
+
+        if not self.current_item.is_offline_calibration:
+            if should_log_reason_as_error:
+                logger.error("Cannot delete pre-recorded calibrations!")
+            return False
+
+        return True

@@ -9,28 +9,115 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import numpy as np
-from scipy.spatial import ConvexHull
+import logging
+from collections import namedtuple
+import typing as T
 
 import OpenGL.GL as gl
-from glfw import *
-
+import numpy as np
 from pyglui import ui
 from pyglui.cygl.utils import draw_points_norm, draw_polyline_norm, RGBA
+from scipy.spatial import ConvexHull
 
+from calibration_choreography import (
+    ChoreographyAction,
+    ChoreographyMode,
+    ChoreographyNotification,
+)
 from plugin import Plugin
-from calibration_routines.calibrate import closest_matches_monocular
 
-from collections import namedtuple
+from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes
+from gaze_mapping.notifications import (
+    CalibrationSetupNotification,
+    CalibrationResultNotification,
+)
+from gaze_mapping.utils import closest_matches_monocular
 
-# logging
-import logging
 
 logger = logging.getLogger(__name__)
 
 Calculation_Result = namedtuple(
     "Calculation_Result", ["result", "num_used", "num_total"]
 )
+
+
+class ValidationInput:
+    def __init__(self):
+        self.clear()
+
+    @property
+    def gazer_class(self) -> T.Optional[T.Any]:
+        return self.__gazer_class
+
+    @property
+    def gazer_params(self) -> T.Optional[T.Any]:
+        return self.__gazer_params
+
+    @property
+    def gazer_class_name(self) -> T.Optional[str]:
+        return self.__gazer_class.__name__ if self.__gazer_class is not None else None
+
+    @property
+    def pupil_list(self) -> T.Optional[T.Any]:
+        return self.__pupil_list
+
+    @property
+    def ref_list(self) -> T.Optional[T.Any]:
+        return self.__ref_list
+
+    @property
+    def is_complete(self) -> bool:
+        return None not in (
+            self.pupil_list,
+            self.ref_list,
+            self.gazer_class,
+            self.gazer_params,
+        )
+
+    def clear(self):
+        self.__pupil_list = None
+        self.__ref_list = None
+        self.__gazer_class = None
+        self.__gazer_params = None
+
+    def update(
+        self, gazer_class_name: str, gazer_params=..., pupil_list=..., ref_list=...
+    ):
+        if (
+            self.gazer_class_name is not None
+            and self.gazer_class_name != gazer_class_name
+        ):
+            logger.debug(
+                f'Overwriting gazer_class_name from "{self.gazer_class_name}" to "{gazer_class_name}" and resetting the input.'
+            )
+            self.clear()
+
+        self.__gazer_class = self.__gazer_class_from_name(gazer_class_name)
+
+        if gazer_params is not ...:
+            self.__gazer_params = gazer_params
+
+        if pupil_list is not ...:
+            self.__pupil_list = pupil_list
+
+        if ref_list is not ...:
+            self.__ref_list = ref_list
+
+    @staticmethod
+    def __gazer_class_from_name(gazer_class_name: str) -> T.Optional[T.Any]:
+        if "HMD" in gazer_class_name:
+            logger.info("Accuracy visualization is disabled for HMD calibration")
+            return None
+
+        gazers_by_name = gazer_classes_by_class_name(registered_gazer_classes())
+
+        try:
+            gazer_cls = gazers_by_name[gazer_class_name]
+        except KeyError:
+            logger.error(f'Unknown gazer "{gazer_class_name}"')
+            return None
+
+        return gazer_cls
 
 
 class Accuracy_Visualizer(Plugin):
@@ -57,8 +144,9 @@ class Accuracy_Visualizer(Plugin):
         self.accuracy = None
         self.precision = None
         self.error_lines = None
-        self.recent_input = None
-        self.recent_labels = None
+
+        self.recent_input = ValidationInput()
+
         # .5 degrees, used to remove outliers from precision calculation
         self.succession_threshold = np.cos(np.deg2rad(0.5))
         self._outlier_threshold = outlier_threshold  # in degrees
@@ -172,59 +260,129 @@ class Accuracy_Visualizer(Plugin):
         )
 
     def on_notify(self, notification):
-        if notification["subject"] in (
-            "calibration.calibration_data",
-            "accuracy_test.data",
-        ):
-            if "hmd" in notification.get("calibration_method", ""):
-                logger.error(
-                    "Accuracy visualization is disabled for 3d hmd calibration"
-                )
-                return
-            self.recent_input = notification["pupil_list"]
-            self.recent_labels = notification["ref_list"]
-            if self.recent_input and self.recent_labels:
-                self.recalculate()
-            else:
-                logger.error(
-                    "Did not collect enough data to estimate gaze mapping accuracy."
-                )
+        if self.__handle_calibration_setup_notification(notification):
+            return
 
-        elif notification["subject"] == "accuracy_visualizer.outlier_threshold_changed":
-            if self.recent_input and self.recent_labels:
+        if self.__handle_calibration_result_notification(notification):
+            return
+
+        if self.__handle_validation_data_notification(notification):
+            return
+
+        if notification["subject"] == "accuracy_visualizer.outlier_threshold_changed":
+            if self.recent_input.is_complete:
                 self.recalculate()
-            else:
-                pass
+
+    def __handle_calibration_setup_notification(self, note_dict: dict) -> bool:
+        try:
+            note = CalibrationSetupNotification.from_dict(note_dict)
+        except ValueError:
+            return False
+
+        self.recent_input.update(
+            gazer_class_name=note.gazer_class_name,
+            pupil_list=note.calib_data["pupil_list"],
+            ref_list=note.calib_data["ref_list"],
+        )
+        return True
+
+    def __handle_calibration_result_notification(self, note_dict: dict) -> bool:
+        try:
+            note = CalibrationResultNotification.from_dict(note_dict)
+        except ValueError:
+            return False
+
+        self.recent_input.update(
+            gazer_class_name=note.gazer_class_name, gazer_params=note.params,
+        )
+
+        self.recalculate()
+        return True
+
+    def __handle_validation_data_notification(self, note_dict: dict) -> bool:
+        try:
+            note = ChoreographyNotification.from_dict(note_dict)
+            assert note.mode == ChoreographyMode.VALIDATION
+            assert note.action == ChoreographyAction.DATA
+        except (AssertionError, ValueError):
+            return False
+
+        self.recent_input.clear()
+        self.recent_input.update(
+            gazer_class_name=note_dict["gazer_class_name"],
+            gazer_params=note_dict["gazer_params"],
+            pupil_list=note_dict["pupil_list"],
+            ref_list=note_dict["ref_list"],
+        )
+
+        self.recalculate()
+        return True
 
     def recalculate(self):
-        assert self.recent_input and self.recent_labels
-        prediction = self.g_pool.active_gaze_mapping_plugin.map_batch(self.recent_input)
+        if not self.recent_input.is_complete:
+            logger.info(
+                "Did not collect enough data to estimate gaze mapping accuracy."
+            )
+            return
+
         results = self.calc_acc_prec_errlines(
-            prediction,
-            self.recent_labels,
-            self.g_pool.capture.intrinsics,
-            self.outlier_threshold,
-            self.succession_threshold,
+            gazer_class=self.recent_input.gazer_class,
+            g_pool=self.g_pool,
+            gazer_params=self.recent_input.gazer_params,
+            pupil_list=self.recent_input.pupil_list,
+            ref_list=self.recent_input.ref_list,
+            intrinsics=self.g_pool.capture.intrinsics,
+            outlier_threshold=self.outlier_threshold,
+            succession_threshold=self.succession_threshold,
         )
-        logger.info("Angular accuracy: {}. Used {} of {} samples.".format(*results[0]))
-        logger.info("Angular precision: {}. Used {} of {} samples.".format(*results[1]))
-        self.accuracy = results[0].result
-        self.precision = results[1].result
+
+        accuracy = results[0].result
+        if np.isnan(accuracy):
+            self.accuracy = None
+            logger.warning(
+                "Not enough data available for angular accuracy calculation."
+            )
+        else:
+            self.accuracy = accuracy
+            logger.info(
+                "Angular accuracy: {}. Used {} of {} samples.".format(*results[0])
+            )
+
+        precision = results[1].result
+        if np.isnan(precision):
+            self.precision = None
+            logger.warning(
+                "Not enough data available for angular precision calculation."
+            )
+        else:
+            self.precision = precision
+            logger.info(
+                "Angular precision: {}. Used {} of {} samples.".format(*results[1])
+            )
+
         self.error_lines = results[2]
 
-        ref_locations = [loc["norm_pos"] for loc in self.recent_labels]
+        ref_locations = [loc["norm_pos"] for loc in self.recent_input.ref_list]
         if len(ref_locations) >= 3:
             hull = ConvexHull(ref_locations)  # requires at least 3 points
             self.calibration_area = hull.points[hull.vertices, :]
 
     @staticmethod
     def calc_acc_prec_errlines(
-        gaze_pos,
-        ref_pos,
+        g_pool,
+        gazer_class,
+        gazer_params,
+        pupil_list,
+        ref_list,
         intrinsics,
         outlier_threshold,
         succession_threshold=np.cos(np.deg2rad(0.5)),
     ):
+        gazer = gazer_class(g_pool, params=gazer_params)
+
+        gaze_pos = gazer.map_pupil_to_gaze(pupil_list)
+        ref_pos = ref_list
+
         width, height = intrinsics.resolution
 
         # reuse closest_matches_monocular to correlate one label to each prediction

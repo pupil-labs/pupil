@@ -17,7 +17,9 @@ from zmq_tools import Msg_Dispatcher, Msg_Receiver
 import msgpack as serializer
 
 import logging
+import os_utils
 
+os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
 
 

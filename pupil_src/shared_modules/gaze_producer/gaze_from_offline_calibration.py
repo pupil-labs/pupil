@@ -12,25 +12,31 @@ import data_changed
 from gaze_producer import controller, model
 from gaze_producer import ui as plugin_ui
 from gaze_producer.gaze_producer_base import GazeProducerBase
-from observable import Observable
 from plugin_timeline import PluginTimeline
 from pupil_recording import PupilRecording
-from tasklib.manager import PluginTaskManager
+from tasklib.manager import UniqueTaskManager
 
 
 # IMPORTANT: GazeProducerBase needs to be THE LAST in the list of bases, otherwise
 # uniqueness by base class does not work
 class GazeFromOfflineCalibration(GazeProducerBase):
-    pretty_class_name = "Gaze From Offline Calibration"
     icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"
+
+    @classmethod
+    def plugin_menu_label(cls) -> str:
+        return "Post-Hoc Gaze Calibration"
+
+    @classmethod
+    def gaze_data_source_selection_order(cls) -> float:
+        return 2.0
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
 
         self.inject_plugin_dependencies()
 
-        self._task_manager = PluginTaskManager(plugin=self)
+        self._task_manager = UniqueTaskManager(plugin=self)
 
         self._recording_uuid = PupilRecording(g_pool.rec_dir).meta_info.recording_uuid
 
@@ -43,25 +49,30 @@ class GazeFromOfflineCalibration(GazeProducerBase):
             "pupil_positions", g_pool.rec_dir, plugin=self
         )
         self._pupil_changed_listener.add_observer(
-            "on_data_changed", self._calculate_all_controller.calculate_all
+            "on_data_changed",
+            self._calculate_all_controller.calculate_all_if_references_available,
         )
 
     def _setup_storages(self):
         self._reference_location_storage = model.ReferenceLocationStorage(
-            self.g_pool.rec_dir, plugin=self
+            self.g_pool.rec_dir
         )
         self._calibration_storage = model.CalibrationStorage(
             rec_dir=self.g_pool.rec_dir,
-            plugin=self,
             get_recording_index_range=self._recording_index_range,
             recording_uuid=self._recording_uuid,
         )
         self._gaze_mapper_storage = model.GazeMapperStorage(
             self._calibration_storage,
             rec_dir=self.g_pool.rec_dir,
-            plugin=self,
             get_recording_index_range=self._recording_index_range,
         )
+
+    def cleanup(self):
+        super().cleanup()
+        self._reference_location_storage.save_to_disk()
+        self._calibration_storage.save_to_disk()
+        self._gaze_mapper_storage.save_to_disk()
 
     def _setup_controllers(self):
         self._reference_detection_controller = controller.ReferenceDetectionController(
@@ -165,11 +176,10 @@ class GazeFromOfflineCalibration(GazeProducerBase):
 
         from gaze_producer.worker import validate_gaze
 
-        validate_gaze.file_source = self.g_pool.capture
+        validate_gaze.g_pool = self.g_pool
 
     def init_ui(self):
         super().init_ui()
-        self.menu.label = "Gaze From Offline Calibration"
         self._on_top_menu.render(self.menu)
         self._reference_location_menu.render()
         self.menu.append(self._reference_location_menu.menu)
@@ -197,8 +207,9 @@ class GazeFromOfflineCalibration(GazeProducerBase):
 
     def _index_range_as_str(self, index_range):
         from_index, to_index = index_range
-        return "{} - {}".format(
-            self._index_time_as_str(from_index), self._index_time_as_str(to_index)
+        return (
+            f"{self._index_time_as_str(from_index)} - "
+            f"{self._index_time_as_str(to_index)}"
         )
 
     def _index_time_as_str(self, index):
@@ -207,4 +218,4 @@ class GazeFromOfflineCalibration(GazeProducerBase):
         time = ts - min_ts
         minutes = abs(time // 60)  # abs because it's sometimes -0
         seconds = round(time % 60)
-        return "{:02.0f}:{:02.0f}".format(minutes, seconds)
+        return f"{minutes:02.0f}:{seconds:02.0f}"

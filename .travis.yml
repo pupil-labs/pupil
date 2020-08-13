@@ -4,17 +4,31 @@
 # There's a docker image pupillabs/pupil-docker-ubuntu:latest which contains all
 # required dependencies for the test-suite to run.
 
-os: minimal
-services: docker
+jobs:
+  include:
+    - name: pytest
+      os: minimal
+      services: docker
+      before_install:
+        - docker pull pupillabs/pupil-docker-ubuntu:latest
+        - chmod +x ./.travis/*.sh
+      script:
+        - >
+          docker run --rm
+          -v `pwd`:/repo
+          -w /repo
+          pupillabs/pupil-docker-ubuntu:latest
+          /bin/bash /repo/.travis/run_tests.sh
 
-before_install:
-  - docker pull pupillabs/pupil-docker-ubuntu:latest
-  - chmod +x ./.travis/*.sh
-
-script:
-  - >
-    docker run --rm
-    -v `pwd`:/repo
-    -w /repo
-    pupillabs/pupil-docker-ubuntu:latest
-    /bin/bash /repo/.travis/run_tests.sh
+    - name: black formatting check
+      language: python
+      before_script:
+        - pip install -U pip
+        - pip install black
+      script:
+        - >
+          black . --check --exclude pupil_src/tests || (
+            echo -e "\033[0;31m PLEASE RUN THE BLACK FORMATTER ON YOUR CODE: \033[0m" &&
+            echo "See https://github.com/psf/black for details" &&
+            false
+          )

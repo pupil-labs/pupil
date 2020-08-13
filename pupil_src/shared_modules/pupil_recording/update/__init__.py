@@ -78,6 +78,11 @@ def update_recording(rec_dir: str):
     # compiling large lookup tables when they are needed
     _generate_all_lookup_tables(rec_dir)
 
+    # Update offline calibrations to latest calibration model version
+    from gaze_producer.model.legacy import update_offline_calibrations_to_latest_version
+
+    update_offline_calibrations_to_latest_version(rec_dir)
+
 
 def _assert_compatible_meta_version(rec_dir: str):
     # This will throw InvalidRecordingException if we cannot open the recording due

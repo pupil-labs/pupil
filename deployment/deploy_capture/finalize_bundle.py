@@ -13,23 +13,11 @@ import os
 import pathlib
 import platform
 import shutil
-import sys
 from subprocess import call
 
 from version import get_tag_commit, pupil_version, write_version_file
 
 if platform.system() == "Darwin":
-
-    def get_size(start_path="."):
-        total_size = 0
-        for dirpath, dirnames, filenames in os.walk(start_path):
-            for f in filenames:
-                fp = os.path.join(dirpath, f)
-                # skip if it is symbolic link
-                if not os.path.islink(fp):
-                    total_size += os.path.getsize(fp)
-
-        return total_size
 
     print("starting version stript:")
     write_version_file("dist/Pupil Capture.app/Contents/MacOS")
@@ -38,49 +26,10 @@ if platform.system() == "Darwin":
     shutil.rmtree("dist/Pupil Capture")
     print("removed the non-app dist bundle")
 
-    bundle_name = "pupil_capture_mac_os_x64_%s" % get_tag_commit()
-    bundle_dmg_name = "Install Pupil Capture"
     src_dir = "dist"
-    bundle_app_dir = os.path.join(src_dir, "Pupil Capture.app/")
-
     for DS_Store in pathlib.Path(src_dir).rglob(".DS_Store"):
         print(f"Deleting {DS_Store}")
         DS_Store.unlink()
-
-    print("Codesigning now")
-    sign = "Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
-    if (
-        call(
-            (
-                "codesign "
-                "--force "
-                "--verify "
-                "--verbose "
-                f"-s '{sign}' "
-                f"--deep '{bundle_app_dir}'"
-            ),
-            shell=True,
-        )
-        != 0
-    ):
-        print(Exception("Codesinging  failed"))
-    # if call("spctl --assess --type execute '%s'"%bundle_app_dir,shell=True) != 0:
-    # print Exception("Codesing verification  failed")
-    call("ln -s /Applications/ %s/Applications" % src_dir, shell=True)
-
-    volumen_size = get_size(src_dir)
-
-    call(
-        (
-            f"hdiutil create  "
-            f"-volname '{bundle_dmg_name}' "
-            f"-srcfolder {src_dir} "
-            f"-format UDZO "
-            f"-size {volumen_size}b "
-            f"'{bundle_name}.dmg'"
-        ),
-        shell=True,
-    )
 
 elif platform.system() == "Windows":
     write_version_file(os.path.join("dist", "Pupil Capture"))
