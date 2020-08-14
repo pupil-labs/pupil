@@ -31,6 +31,11 @@ For discussion or questions on Windows head over to our [#pupil Discord channel]
 ## 7-Zip
 Install [7-zip](http://www.7-zip.org/download.html) to extract files.
 
+## Git
+Install [Git](https://git-scm.com/download/win) to clone the Pupil source code repository in the end.
+
+**NOTE:** If you run Pupil from source, it needs to be downloaded via git. Downloading only the source code won't work, as Pupil infers its version from the last git tag when not running from bundle.
+
 ## Python
 
 You will need a **64 bit version** of Python 3.6, e.g. download [Python 3.6.8](https://www.python.org/ftp/python/3.6.8/python-3.6.8-amd64.exe). If you install any other version, make sure to install the **64 bit version!**
