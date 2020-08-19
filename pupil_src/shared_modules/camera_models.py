@@ -152,89 +152,9 @@ pre_recorded_calibrations = {
 }
 
 
-def load_intrinsics(directory, cam_name, resolution):
-    """
-    Loads a pre-recorded intrinsics calibration for the given camera and resolution. If no pre-recorded calibration is available we fall back on default values.
-    :param directory: The directory in which to look for the intrinsincs file
-    :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'
-    :param resolution: Camera resolution given as a tuple.
-    :return: Camera Model Object
-    """
-    file_path = os.path.join(
-        directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
-    )
-    try:
-        calib_dict = load_object(file_path, allow_legacy=False)
-
-        if calib_dict["version"] < __version__:
-            logger.warning("Deprecated camera calibration found.")
-            logger.info(
-                "Please recalibrate using the Camera Intrinsics Estimation calibration."
-            )
-            os.rename(
-                file_path, "{}.deprecated.v{}".format(file_path, calib_dict["version"])
-            )
-
-        intrinsics = calib_dict[str(resolution)]
-        logger.info("Previously recorded calibration found and loaded!")
-    except Exception:
-        logger.info(
-            "No user calibration found for camera {} at resolution {}".format(
-                cam_name, resolution
-            )
-        )
-
-        if (
-            cam_name in pre_recorded_calibrations
-            and str(resolution) in pre_recorded_calibrations[cam_name]
-        ):
-            logger.info("Loading pre-recorded calibration")
-            intrinsics = pre_recorded_calibrations[cam_name][str(resolution)]
-        else:
-            logger.info("No pre-recorded calibration available")
-            logger.warning("Loading dummy calibration")
-            return Dummy_Camera(resolution, cam_name)
-
-    if intrinsics["cam_type"] == "fisheye":
-        return Fisheye_Dist_Camera(
-            intrinsics["camera_matrix"], intrinsics["dist_coefs"], resolution, cam_name
-        )
-    else:
-        return Radial_Dist_Camera(
-            intrinsics["camera_matrix"], intrinsics["dist_coefs"], resolution, cam_name
-        )
-
-
-def save_intrinsics(directory, cam_name, resolution, intrinsics):
-    """
-    Saves camera intrinsics calibration to a file. For each unique camera name we maintain a single file containing all calibrations associated with this camera name.
-    :param directory: Directory to which the intrinsics file will be written
-    :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'
-    :param resolution: Camera resolution given as a tuple. This needs to match the resolution the calibration has been computed with.
-    :param intrinsics: The camera intrinsics dictionary.
-    :return:
-    """
-    # Try to load previous camera calibrations
-    save_path = os.path.join(
-        directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
-    )
-    try:
-        calib_dict = load_object(save_path, allow_legacy=False)
-    except Exception:
-        calib_dict = {}
-
-    calib_dict["version"] = __version__
-    calib_dict[str(resolution)] = intrinsics
-
-    save_object(calib_dict, save_path)
-    logger.info(
-        "Calibration for camera {} at resolution {} saved to {}".format(
-            cam_name, resolution, save_path
-        )
-    )
-
-
 class Camera_Model(abc.ABC):
+    cam_type = ...  # overwrite in subclasses, used for saving/loading
+
     def __init__(self, K, D, resolution, name):
         self.K = np.array(K)
         self.D = np.array(D)
@@ -299,12 +219,120 @@ class Camera_Model(abc.ABC):
     def save(self, directory: str, custom_name: typing.Optional[str] = None):
         ...
 
+    subclass_by_cam_type = dict()
+
+    def __init_subclass__(cls, *args, **kwargs):
+        super().__init_subclass__(*args, **kwargs)
+        # register subclasses by cam_type
+        if cls.cam_type == ...:
+            raise NotImplementedError("Subclass needs to define 'cam_type'!")
+        if cls.cam_type in Camera_Model.subclass_by_cam_type:
+            raise ValueError(
+                f"Error trying to register camera model {cls}: Camera model with"
+                f" cam_type '{cls.cam_type}' already exists:"
+                f" {Camera_Model.subclass_by_cam_type[cls.cam_type]}"
+            )
+        Camera_Model.subclass_by_cam_type[cls.cam_type] = cls
+
+    def save(self, directory, custom_name=None):
+        """
+        Saves the current calibration to corresponding camera's calibrations file. For
+        each unique camera name we maintain a single file containing all calibrations
+        associated with this camera name.
+        :param directory: save location
+        :return:
+        """
+        cam_name = custom_name or self.name
+        intrinsics = {
+            "camera_matrix": self.K.tolist(),
+            "dist_coefs": self.D.tolist(),
+            "resolution": self.resolution,
+            "cam_type": self.cam_type,
+        }
+        # Try to load previous camera calibrations
+        save_path = os.path.join(
+            directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
+        )
+        try:
+            calib_dict = load_object(save_path, allow_legacy=False)
+        except Exception:
+            calib_dict = {}
+
+        calib_dict["version"] = __version__
+        calib_dict[str(self.resolution)] = intrinsics
+
+        save_object(calib_dict, save_path)
+        logger.info(
+            f"Calibration for camera {cam_name} at resolution {self.resolution} saved"
+            f" to {save_path}"
+        )
+
+    @staticmethod
+    def from_file(directory, cam_name, resolution):
+        """
+        Loads a pre-recorded intrinsics calibration for the given camera and resolution. If no pre-recorded calibration is available we fall back on default values.
+        :param directory: The directory in which to look for the intrinsincs file
+        :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'
+        :param resolution: Camera resolution given as a tuple.
+        :return: Camera Model Object
+        """
+        file_path = os.path.join(
+            directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
+        )
+        try:
+            calib_dict = load_object(file_path, allow_legacy=False)
+
+            if calib_dict["version"] < __version__:
+                logger.warning("Deprecated camera calibration found.")
+                logger.info(
+                    "Please recalibrate using the Camera Intrinsics Estimation calibration."
+                )
+                os.rename(
+                    file_path,
+                    "{}.deprecated.v{}".format(file_path, calib_dict["version"]),
+                )
+
+            intrinsics = calib_dict[str(resolution)]
+            logger.info("Previously recorded calibration found and loaded!")
+        except Exception:
+            logger.info(
+                "No user calibration found for camera {} at resolution {}".format(
+                    cam_name, resolution
+                )
+            )
+
+            if (
+                cam_name in pre_recorded_calibrations
+                and str(resolution) in pre_recorded_calibrations[cam_name]
+            ):
+                logger.info("Loading pre-recorded calibration")
+                intrinsics = pre_recorded_calibrations[cam_name][str(resolution)]
+            else:
+                logger.info("No pre-recorded calibration available")
+                logger.warning("Loading dummy calibration")
+                return Dummy_Camera(resolution, cam_name)
+
+        cam_type = intrinsics["cam_type"]
+        if cam_type not in Camera_Model.subclass_by_cam_type:
+            logger.warning(
+                f"Trying to load unknown camera type intrinsics: {cam_type}! Using "
+                " dummy intrinsics!"
+            )
+            return Dummy_Camera(resolution, cam_name)
+
+        camera_model_class = Camera_Model.subclass_by_cam_type[cam_type]
+        return camera_model_class(
+            intrinsics["camera_matrix"], intrinsics["dist_coefs"], resolution, cam_name
+        )
+
 
 class Fisheye_Dist_Camera(Camera_Model):
     """ Camera model assuming a lense with fisheye distortion.
         Provides functionality to make use of a fisheye camera calibration.
         The implementation of cv2.fisheye is buggy and some functions had to be customized.
     """
+
+    cam_type = "fisheye"
 
     def undistort(self, img):
         """
@@ -462,27 +490,13 @@ class Fisheye_Dist_Camera(Camera_Model):
         )
         return res
 
-    def save(self, directory, custom_name=None):
-        """
-        Saves the current calibration to corresponding camera's calibrations file
-        :param directory: save directory
-        :return:
-        """
-        intrinsics = {
-            "camera_matrix": self.K.tolist(),
-            "dist_coefs": self.D.tolist(),
-            "resolution": self.resolution,
-            "cam_type": "fisheye",
-        }
-        save_intrinsics(
-            directory, custom_name or self.name, self.resolution, intrinsics
-        )
-
 
 class Radial_Dist_Camera(Camera_Model):
     """ Camera model assuming a lense with radial distortion (this is the defaut model in opencv).
         Provides functionality to make use of a pinhole camera calibration that is also compensating for lense distortion
     """
+
+    cam_type = "radial"
 
     def undistort(self, img):
         """
@@ -596,27 +610,13 @@ class Radial_Dist_Camera(Camera_Model):
         )
         return res
 
-    def save(self, directory, custom_name=None):
-        """
-        Saves the current calibration to corresponding camera's calibrations file
-        :param directory: save location
-        :return:
-        """
-        intrinsics = {
-            "camera_matrix": self.K.tolist(),
-            "dist_coefs": self.D.tolist(),
-            "resolution": self.resolution,
-            "cam_type": "radial",
-        }
-        save_intrinsics(
-            directory, custom_name or self.name, self.resolution, intrinsics
-        )
-
 
 class Dummy_Camera(Radial_Dist_Camera):
     """
     Dummy Camera model assuming no lense distortion and idealized camera intrinsics.
     """
+
+    cam_type = "dummy"
 
     def __init__(self, resolution, name):
         camera_matrix = [
@@ -626,19 +626,3 @@ class Dummy_Camera(Radial_Dist_Camera):
         ]
         dist_coefs = [[0.0, 0.0, 0.0, 0.0, 0.0]]
         super().__init__(camera_matrix, dist_coefs, resolution, name)
-
-    def save(self, directory, custom_name=None):
-        """
-        Saves the current calibration to corresponding camera's calibrations file
-        :param directory: save location
-        :return:
-        """
-        intrinsics = {
-            "camera_matrix": self.K.tolist(),
-            "dist_coefs": self.D.tolist(),
-            "resolution": self.resolution,
-            "cam_type": "dummy",
-        }
-        save_intrinsics(
-            directory, custom_name or self.name, self.resolution, intrinsics
-        )

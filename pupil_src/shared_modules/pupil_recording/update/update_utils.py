@@ -51,7 +51,7 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
         )
         break
 
-    intrinsics = cm.load_intrinsics(rec_dir, camera_hint, frame_size)
+    intrinsics = cm.Camera_Model.from_file(rec_dir, camera_hint, frame_size)
     intrinsics.save(rec_dir, "world")
 
 
