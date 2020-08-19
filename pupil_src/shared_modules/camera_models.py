@@ -22,9 +22,9 @@ from file_methods import load_object, save_object
 logger = logging.getLogger(__name__)
 __version__ = 1
 
-# These are world camera intrinsics that we recorded. They are estimates and generalize
-# our setup. Its always better to estimate intrinsics for each camera again.
-default_world_intrinsics = {
+# These are camera intrinsics that we recorded. They are estimates and generalize our
+# setup. Its always better to estimate intrinsics for each camera again.
+default_intrinsics = {
     "Pupil Cam1 ID2": {
         "(640, 480)": {
             "dist_coefs": [
@@ -151,6 +151,73 @@ default_world_intrinsics = {
         }
     },
 }
+
+# Add measured intrinsics for the eyes (once for each ID for easy lookup)
+for eye_id in (0, 1):
+    default_intrinsics.update(
+        {
+            f"Pupil Cam1 ID{eye_id}": {
+                "(320, 240)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [338.456035, 0.0, 160],
+                        [0.0, 339.871543, 120],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+                "(640, 480)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [670.785555, 0.0, 320],
+                        [0.0, 670.837798, 240],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+            },
+            f"Pupil Cam2 ID{eye_id}": {
+                "(192, 192)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [282.976877, 0.0, 96],
+                        [0.0, 283.561467, 96],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+                "(400, 400)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [561.471804, 0.0, 200],
+                        [0.0, 562.494105, 200],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+            },
+            f"Pupil Cam3 ID{eye_id}": {
+                "(192, 192)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [140.0, 0.0, 96],
+                        [0.0, 140.0, 96],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+                "(400, 400)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [278.50, 0.0, 200],
+                        [0.0, 278.55, 200],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+            },
+        }
+    )
 
 
 class Camera_Model(abc.ABC):
@@ -305,11 +372,11 @@ class Camera_Model(abc.ABC):
             )
 
             if (
-                cam_name in default_world_intrinsics
-                and str(resolution) in default_world_intrinsics[cam_name]
+                cam_name in default_intrinsics
+                and str(resolution) in default_intrinsics[cam_name]
             ):
                 logger.info("Loading default intrinsics!")
-                intrinsics = default_world_intrinsics[cam_name][str(resolution)]
+                intrinsics = default_intrinsics[cam_name][str(resolution)]
             else:
                 logger.warning(
                     "No default intrinsics available! Loading dummy intrinsics!"

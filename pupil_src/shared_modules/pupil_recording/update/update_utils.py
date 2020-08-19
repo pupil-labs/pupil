@@ -31,7 +31,7 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
     # Make sure the default value always correlates to the frame size of BrokenStream
     frame_size = (1280, 720)
     # TODO: Due to the naming conventions for multipart-recordings, we can't
-    # easily lookup 'any' video name in the default_world_intrinsics, since it
+    # easily lookup 'any' video name in the default_intrinsics, since it
     # might be a multipart recording. Therefore we need to compute a hint here
     # for the lookup. This could be improved.
     camera_hint = ""
@@ -41,7 +41,7 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
         except av.AVError:
             continue
 
-        for camera in cm.default_world_intrinsics:
+        for camera in cm.default_intrinsics:
             if camera in video.name:
                 camera_hint = camera
                 break
