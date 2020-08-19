@@ -522,7 +522,7 @@ def pi_gaze_items(root_dir):
             )
             conf_data = None
 
-        if conf_data is not None:
+        if conf_data is None:
             conf_data = (1.0 for _ in range(len(timestamps)))
 
         yield from zip(raw_data, timestamps, conf_data)
