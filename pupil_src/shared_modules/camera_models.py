@@ -250,7 +250,7 @@ class Camera_Model(abc.ABC):
             "resolution": self.resolution,
             "cam_type": self.cam_type,
         }
-        # Try to load previous camera intrinsics
+        # Try to load previously recorded camera intrinsics
         save_path = os.path.join(
             directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
         )
@@ -272,7 +272,7 @@ class Camera_Model(abc.ABC):
     def from_file(directory, cam_name, resolution):
         """
         Loads recorded intrinsics for the given camera and resolution. If no recorded
-        intrinsics are available we fall back on default values.
+        intrinsics are available we fall back to default values.
         :param directory: The directory in which to look for the intrinsincs file
         :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'
         :param resolution: Camera resolution given as a tuple.
@@ -311,8 +311,9 @@ class Camera_Model(abc.ABC):
                 logger.info("Loading default intrinsics!")
                 intrinsics = default_world_intrinsics[cam_name][str(resolution)]
             else:
-                logger.info("No default intrinsics available!")
-                logger.warning("Loading dummy intrinsics!")
+                logger.warning(
+                    "No default intrinsics available! Loading dummy intrinsics!"
+                )
                 return Dummy_Camera(resolution, cam_name)
 
         cam_type = intrinsics["cam_type"]
