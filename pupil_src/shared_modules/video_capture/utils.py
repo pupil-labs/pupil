@@ -515,14 +515,14 @@ def pi_gaze_items(root_dir):
             timestamps = timestamps[:size]
 
         conf_data = load_worn_data(find_worn_path(timestamps_path))
-        if conf_data and len(conf_data) != len(timestamps):
+        if conf_data is not None and len(conf_data) != len(timestamps):
             logger.warning(
                 f"There is a mismatch between the number of confidence data ({len(conf_data)}) "
                 f"and the number of timestamps ({len(timestamps)})! Not using confidence data."
             )
             conf_data = None
 
-        if not conf_data:
+        if conf_data is not None:
             conf_data = (1.0 for _ in range(len(timestamps)))
 
         yield from zip(raw_data, timestamps, conf_data)
