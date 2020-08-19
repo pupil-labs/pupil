@@ -235,13 +235,17 @@ def save_intrinsics(directory, cam_name, resolution, intrinsics):
 
 
 class Camera_Model(abc.ABC):
-    @abc.abstractmethod
-    def update_camera_matrix(self, camera_matrix: np.ndarray):
-        ...
+    def __init__(self, K, D, resolution, name):
+        self.K = np.array(K)
+        self.D = np.array(D)
+        self.resolution = resolution
+        self.name = name
 
-    @abc.abstractmethod
-    def update_dist_coefs(self, dist_coefs: np.ndarray):
-        ...
+    def update_camera_matrix(self, camera_matrix):
+        self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
+
+    def update_dist_coefs(self, dist_coefs):
+        self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
 
     @abc.abstractmethod
     def undistort(self, img: np.ndarray) -> np.ndarray:
@@ -269,13 +273,15 @@ class Camera_Model(abc.ABC):
     ) -> np.ndarray:
         ...
 
-    @abc.abstractmethod
-    def undistort_points_on_image_plane(self, points: np.ndarray) -> np.ndarray:
-        ...
+    def undistort_points_on_image_plane(self, points):
+        points = self.unprojectPoints(points, use_distortion=True)
+        points = self.projectPoints(points, use_distortion=False)
+        return points
 
-    @abc.abstractmethod
-    def distort_points_on_image_plane(self, points: np.ndarray) -> np.ndarray:
-        ...
+    def distort_points_on_image_plane(self, points):
+        points = self.unprojectPoints(points, use_distortion=False)
+        points = self.projectPoints(points, use_distortion=True)
+        return points
 
     @abc.abstractmethod
     def solvePnP(
@@ -299,18 +305,6 @@ class Fisheye_Dist_Camera(Camera_Model):
         Provides functionality to make use of a fisheye camera calibration.
         The implementation of cv2.fisheye is buggy and some functions had to be customized.
     """
-
-    def __init__(self, K, D, resolution, name):
-        self.K = np.array(K)
-        self.D = np.array(D)
-        self.resolution = resolution
-        self.name = name
-
-    def update_camera_matrix(self, camera_matrix):
-        self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
-
-    def update_dist_coefs(self, dist_coefs):
-        self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
 
     def undistort(self, img):
         """
@@ -433,16 +427,6 @@ class Fisheye_Dist_Camera(Camera_Model):
     def undistort_points_to_ideal_point_coordinates(self, points):
         return cv2.fisheye.undistortPoints(points, self.K, self.D)
 
-    def undistort_points_on_image_plane(self, points):
-        points = self.unprojectPoints(points, use_distortion=True)
-        points = self.projectPoints(points, use_distortion=False)
-        return points
-
-    def distort_points_on_image_plane(self, points):
-        points = self.unprojectPoints(points, use_distortion=False)
-        points = self.projectPoints(points, use_distortion=True)
-        return points
-
     def solvePnP(
         self,
         uv3d,
@@ -463,8 +447,9 @@ class Fisheye_Dist_Camera(Camera_Model):
         if uv3d.shape[1] != xy.shape[1]:
             raise ValueError("the number of 3d points and 2d points are not the same")
 
+        # opencv cannot handle solvePnP correctly for fisheye distorted cameras, so we
+        # undistort manually and call solvePnP without distortion
         xy_undist = self.undistort_points_on_image_plane(xy)
-
         res = cv2.solvePnP(
             uv3d,
             xy_undist,
@@ -498,18 +483,6 @@ class Radial_Dist_Camera(Camera_Model):
     """ Camera model assuming a lense with radial distortion (this is the defaut model in opencv).
         Provides functionality to make use of a pinhole camera calibration that is also compensating for lense distortion
     """
-
-    def __init__(self, K, D, resolution, name):
-        self.K = np.array(K)
-        self.D = np.array(D)
-        self.resolution = resolution
-        self.name = name
-
-    def update_camera_matrix(self, camera_matrix):
-        self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
-
-    def update_dist_coefs(self, dist_coefs):
-        self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
 
     def undistort(self, img):
         """
@@ -590,16 +563,6 @@ class Radial_Dist_Camera(Camera_Model):
 
     def undistort_points_to_ideal_point_coordinates(self, points):
         return cv2.undistortPoints(points, self.K, self.D)
-
-    def undistort_points_on_image_plane(self, points):
-        points = self.unprojectPoints(points, use_distortion=True)
-        points = self.projectPoints(points, use_distortion=False)
-        return points
-
-    def distort_points_on_image_plane(self, points):
-        points = self.unprojectPoints(points, use_distortion=False)
-        points = self.projectPoints(points, use_distortion=True)
-        return points
 
     def solvePnP(
         self,
