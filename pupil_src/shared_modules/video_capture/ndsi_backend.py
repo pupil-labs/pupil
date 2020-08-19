@@ -17,7 +17,7 @@ from packaging.version import Version
 from pyglui import ui
 
 import os_utils
-from camera_models import load_intrinsics
+from camera_models import Camera_Model
 
 from .base_backend import Base_Manager, Base_Source, SourceInfo
 
@@ -221,7 +221,7 @@ class NDSI_Source(Base_Source):
     @property
     def intrinsics(self):
         if self._intrinsics is None or self._intrinsics.resolution != self.frame_size:
-            self._intrinsics = load_intrinsics(
+            self._intrinsics = Camera_Model.from_file(
                 self.g_pool.user_dir, self.name, self.frame_size
             )
         return self._intrinsics

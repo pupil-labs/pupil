@@ -21,9 +21,9 @@ import av
 import numpy as np
 from scipy.interpolate import interp1d
 
-import camera_models as cm
 import csv_utils
 import file_methods as fm
+from camera_models import Camera_Model
 from version_utils import VersionFormat
 
 from .. import Version
@@ -507,7 +507,7 @@ def update_recording_v111_v113(rec_dir):
         f = world_video.streams.video[0].format
         resolution = f.width, f.height
 
-        intrinsics = cm.load_intrinsics(rec_dir, "world", resolution)
+        intrinsics = Camera_Model.from_file(rec_dir, "world", resolution)
 
         DEPRECATED_SQUARE_MARKER_KEY = "realtime_square_marker_surfaces"
         if DEPRECATED_SQUARE_MARKER_KEY not in surface_definitions_dict:
