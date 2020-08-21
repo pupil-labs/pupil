@@ -55,12 +55,40 @@ class Detector3DPlugin(PupilDetectorPlugin):
         self, g_pool=None, namespaced_properties=None, detector_3d: Detector3D = None
     ):
         super().__init__(g_pool=g_pool)
-        self.detector_3d = detector_3d or Detector3D(namespaced_properties or {})
+        detector = detector_3d or Detector3D(namespaced_properties or {})
+        self._initialize(detector)
+
+    @property
+    def detector_3d(self):
+        return self._detector_internal
+
+    def _initialize(self, detector: Detector3D):
+        # initialize plugin with a detector instance, safe to call multiple times
+        self._detector_internal = detector
         self.proxy = PropertyProxy(self.detector_3d)
-        # debug window
-        self.debugVisualizer3D = Eye_Visualizer(g_pool, self.detector_3d.focal_length())
+        self.debugVisualizer3D = Eye_Visualizer(
+            self.g_pool, self.detector_3d.focal_length()
+        )
+        self._last_focal_length = self.detector_3d.focal_length()
+        if self.ui_available:
+            # ui was wrapped around old detector, need to re-init for new one
+            self._reinit_ui()
+
+    def _process_focal_length_changes(self):
+        focal_length = self.g_pool.capture.intrinsics.focal_length
+        if focal_length != self._last_focal_length:
+            logger.debug(
+                f"Focal length change detected: {focal_length}."
+                " Re-initializing 3D detector."
+            )
+            # reinitialize detector with same properties but updated focal length
+            properties = self.detector_3d.get_properties()
+            new_detector = Detector3D(properties=properties, focal_length=focal_length)
+            self._initialize(new_detector)
 
     def detect(self, frame, **kwargs):
+        self._process_focal_length_changes()
+
         # convert roi-plugin to detector roi
         roi = Roi(*self.g_pool.roi.bounds)
 
@@ -96,6 +124,10 @@ class Detector3DPlugin(PupilDetectorPlugin):
 
     def init_ui(self):
         super().init_ui()
+        self._reinit_ui()
+
+    def _reinit_ui(self):
+        self.menu.elements.clear()
         self.menu.label = self.pretty_class_name
         self.menu.append(
             ui.Info_Text(
