@@ -66,9 +66,22 @@ class Detector3DPlugin(PupilDetectorPlugin):
         # initialize plugin with a detector instance, safe to call multiple times
         self._detector_internal = detector
         self.proxy = PropertyProxy(self.detector_3d)
+
+        # In case of re-initialization, we need to close the debug window or else we
+        # leak the opengl window. We can open the new one again afterwards.
+        try:
+            debug_window_was_open = self.is_debug_window_open
+        except AttributeError:
+            # debug window does not exist yet
+            debug_window_was_open = False
+        if debug_window_was_open:
+            self.debug_window_close()
         self.debugVisualizer3D = Eye_Visualizer(
             self.g_pool, self.detector_3d.focal_length()
         )
+        if debug_window_was_open:
+            self.debug_window_open()
+
         self._last_focal_length = self.detector_3d.focal_length()
         if self.ui_available:
             # ui was wrapped around old detector, need to re-init for new one
