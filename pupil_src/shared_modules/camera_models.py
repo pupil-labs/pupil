@@ -235,6 +235,12 @@ class Camera_Model(abc.ABC):
     def update_dist_coefs(self, dist_coefs):
         self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
 
+    @property
+    def focal_length(self):
+        fx = self.K[0, 0]
+        fy = self.K[1, 1]
+        return (fx + fy) / 2
+
     @abc.abstractmethod
     def undistort(self, img: np.ndarray) -> np.ndarray:
         ...
