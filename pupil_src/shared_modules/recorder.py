@@ -286,9 +286,9 @@ class Recorder(System_Plugin_Base):
             frame = self.g_pool.capture._recent_frame
             if frame is None:
                 logger.error(
-                    "Recording a Pupil Mobile stream requires a connection. "
-                    "Aborting recording. "
-                    "Try turning down camera resolution and/or frame rate."
+                    "Your connection does not seem to be stable enough for "
+                    "recording Pupil Mobile via WiFi. We recommend recording "
+                    "on the phone."
                 )
                 return
             if abs(frame.timestamp - start_time_synced) > TIMESTAMP_ERROR_THRESHOLD:
