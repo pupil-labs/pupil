@@ -356,7 +356,7 @@ class Camera_Model(abc.ABC):
             if intrinsics_dict["version"] < __version__:
                 logger.warning("Deprecated camera intrinsics found.")
                 logger.info(
-                    "Please recalculate the camera intrinsics using the Camera "
+                    "Please recalculate the camera intrinsics using the Camera"
                     " Intrinsics Estimation."
                 )
                 os.rename(
@@ -365,12 +365,11 @@ class Camera_Model(abc.ABC):
                 )
 
             intrinsics = intrinsics_dict[str(resolution)]
-            logger.info("Previously recorded intrinsics found and loaded!")
+            logger.info("Loading previously recorded intrinsics!")
         except Exception:
-            logger.info(
-                "No recorded intrinsics found for camera {} at resolution {}".format(
-                    cam_name, resolution
-                )
+            logger.debug(
+                f"No recorded intrinsics found for camera {cam_name} at resolution"
+                f" {resolution}"
             )
 
             if (
@@ -381,7 +380,15 @@ class Camera_Model(abc.ABC):
                 intrinsics = default_intrinsics[cam_name][str(resolution)]
             else:
                 logger.warning(
-                    "No default intrinsics available! Loading dummy intrinsics!"
+                    f"No camera intrinsics available for camera {cam_name} at"
+                    f" resolution {resolution}!"
+                )
+                logger.warning(
+                    "Loading dummy intrinsics, which might decrease accuracy!"
+                )
+                logger.warning(
+                    "Consider selecting a different resolution, or running the Camera"
+                    " Instrinsics Estimation!"
                 )
                 return Dummy_Camera(resolution, cam_name)
 
