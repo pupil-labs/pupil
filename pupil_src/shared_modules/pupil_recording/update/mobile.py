@@ -14,18 +14,19 @@ import re
 import uuid
 from pathlib import Path
 
-from .. import Version
 from ..info import RecordingInfoFile
 from ..info import recording_info_utils as utils
 from ..recording import PupilRecording
 from ..recording_utils import InvalidRecordingException
 from . import update_utils
 
+from version_utils import parse_version
+
 # NOTE: Due to Pupil Mobile not having a data format version, we are using the software
 # version here. The idea is to use Major.Minor specifically. This means that the
 # software version of Pupil Mobile should can be increased in the patch version part
 # only if this won't need additional update methods here.
-NEXT_UNSUPPORTED_VERSION = Version("1.3")
+NEXT_UNSUPPORTED_VERSION = parse_version("1.3")
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ def transform_mobile_to_corresponding_new_style(rec_dir: str) -> RecordingInfoFi
     logger.info("Transform Pupil Mobile to new style recording...")
     info_csv = utils.read_info_csv_file(rec_dir)
 
-    mobile_version = Version(info_csv["Capture Software Version"])
+    mobile_version = parse_version(info_csv["Capture Software Version"])
 
     if mobile_version >= NEXT_UNSUPPORTED_VERSION:
         raise InvalidRecordingException(

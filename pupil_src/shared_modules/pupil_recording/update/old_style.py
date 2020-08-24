@@ -26,7 +26,6 @@ import file_methods as fm
 from camera_models import Camera_Model
 from version_utils import parse_version
 
-from .. import Version
 from ..info import RecordingInfoFile
 from ..info import recording_info_utils as rec_info_utils
 from ..recording_utils import InvalidRecordingException
@@ -79,7 +78,7 @@ def _generate_pprf_2_0_info_file(rec_dir):
     # Create a recording info file with the new format,
     # fill out the information, validate, and return.
     new_info_file = RecordingInfoFile.create_empty_file(
-        rec_dir, fixed_version=Version("2.0")
+        rec_dir, fixed_version=parse_version("2.0")
     )
     new_info_file.recording_uuid = recording_uuid
     new_info_file.start_time_system_s = start_time_system_s
