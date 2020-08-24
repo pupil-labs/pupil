@@ -28,7 +28,6 @@ from file_methods import PLData_Writer, load_object
 from methods import get_system_info, timer
 from video_capture.ndsi_backend import NDSI_Source
 
-from pupil_recording.info import Version
 from pupil_recording.info import RecordingInfoFile
 
 from gaze_mapping.notifications import (
