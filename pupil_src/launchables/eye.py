@@ -141,7 +141,7 @@ def eye(
         # helpers/utils
         from uvc import get_time_monotonic
         from file_methods import Persistent_Dict
-        from version_utils import VersionFormat
+        from version_utils import parse_version
         from methods import normalize, denormalize, timer
         from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicTimestampError
         from ndsi import H264Writer
@@ -362,7 +362,7 @@ def eye(
         session_settings = Persistent_Dict(
             os.path.join(g_pool.user_dir, "user_settings_eye{}".format(eye_id))
         )
-        if VersionFormat(session_settings.get("version", "0.0")) != g_pool.version:
+        if parse_version(session_settings.get("version", "0.0")) != g_pool.version:
             logger.info(
                 "Session setting are from a different version of this app. I will not use those."
             )

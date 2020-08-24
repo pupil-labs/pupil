@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from packaging.version import Version
+from packaging.version import Version  # TODO: Should this use version_utils._Version ?
 
 from .info import RecordingInfoFile
 from .recording import PupilRecording
