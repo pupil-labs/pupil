@@ -5,7 +5,7 @@
 
 from subprocess import check_output, CalledProcessError, STDOUT
 import os, sys
-import distutils.version
+import packaging.version
 import typing as T
 
 import logging
@@ -34,11 +34,11 @@ def get_tag_commit() -> T.Optional[T.AnyStr]:
         return None
 
 
-_Version = distutils.version.LooseVersion
+_Version = T.Union[packaging.version.LegacyVersion, packaging.version.Version]
 
 
 def parse_version(vstring) -> _Version:
-    return distutils.version.LooseVersion(vstring)
+    return packaging.version.parse(vstring)
 
 
 def pupil_version() -> _Version:
