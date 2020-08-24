@@ -12,7 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import logging
 import os
-import typing
+import typing as T
 
 import cv2
 import numpy as np
@@ -255,8 +255,8 @@ class Camera_Model(abc.ABC):
     def projectPoints(
         self,
         object_points,
-        rvec: typing.Optional[np.ndarray] = None,
-        tvec: typing.Optional[np.ndarray] = None,
+        rvec: T.Optional[np.ndarray] = None,
+        tvec: T.Optional[np.ndarray] = None,
         use_distortion: bool = True,
     ):
         ...
@@ -284,8 +284,8 @@ class Camera_Model(abc.ABC):
         xy,
         flags: int = cv2.SOLVEPNP_ITERATIVE,
         useExtrinsicGuess: bool = False,
-        rvec: typing.Optional[np.ndarray] = None,
-        tvec: typing.Optional[np.ndarray] = None,
+        rvec: T.Optional[np.ndarray] = None,
+        tvec: T.Optional[np.ndarray] = None,
     ):
         ...
 
@@ -338,14 +338,16 @@ class Camera_Model(abc.ABC):
         )
 
     @staticmethod
-    def from_file(directory, cam_name, resolution):
+    def from_file(
+        directory: str, cam_name: str, resolution: T.Tuple[int]
+    ) -> "Camera_Model":
         """
         Loads recorded intrinsics for the given camera and resolution. If no recorded
-        intrinsics are available we fall back to default values.
-        :param directory: The directory in which to look for the intrinsincs file
-        :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'
-        :param resolution: Camera resolution given as a tuple.
-        :return: Camera Model Object
+        intrinsics are available we fall back to default values. If no default values
+        are available, we use dummy intrinsics.
+        :param directory: The directory in which to look for the intrinsincs file.
+        :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'.
+        :param resolution: Camera resolution.
         """
         file_path = os.path.join(
             directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
@@ -365,33 +367,44 @@ class Camera_Model(abc.ABC):
                 )
 
             intrinsics = intrinsics_dict[str(resolution)]
-            logger.info("Loading previously recorded intrinsics!")
+            logger.info("Loading previously recorded intrinsics...")
+            return Camera_Model._from_raw_intrinsics(cam_name, resolution, intrinsics)
         except Exception:
             logger.debug(
                 f"No recorded intrinsics found for camera {cam_name} at resolution"
                 f" {resolution}"
             )
+            return Camera_Model.from_default(cam_name, resolution)
 
-            if (
-                cam_name in default_intrinsics
-                and str(resolution) in default_intrinsics[cam_name]
-            ):
-                logger.info("Loading default intrinsics!")
-                intrinsics = default_intrinsics[cam_name][str(resolution)]
-            else:
-                logger.warning(
-                    f"No camera intrinsics available for camera {cam_name} at"
-                    f" resolution {resolution}!"
-                )
-                logger.warning(
-                    "Loading dummy intrinsics, which might decrease accuracy!"
-                )
-                logger.warning(
-                    "Consider selecting a different resolution, or running the Camera"
-                    " Instrinsics Estimation!"
-                )
-                return Dummy_Camera(resolution, cam_name)
+    @staticmethod
+    def from_default(cam_name: str, resolution: T.Tuple[int]) -> "Camera_Model":
+        """
+        Loads default intrinsics for the given camera and resolution. If no default
+        values are available, we use dummy intrinsics.
+        :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'.
+        :param resolution: Camera resolution.
+        """
+        if (
+            cam_name in default_intrinsics
+            and str(resolution) in default_intrinsics[cam_name]
+        ):
+            logger.info("Loading default intrinsics!")
+            intrinsics = default_intrinsics[cam_name][str(resolution)]
+            return Camera_Model._from_raw_intrinsics(cam_name, resolution, intrinsics)
+        else:
+            logger.warning(
+                f"No camera intrinsics available for camera {cam_name} at"
+                f" resolution {resolution}!"
+            )
+            logger.warning("Loading dummy intrinsics, which might decrease accuracy!")
+            logger.warning(
+                "Consider selecting a different resolution, or running the Camera"
+                " Instrinsics Estimation!"
+            )
+            return Dummy_Camera(resolution, cam_name)
 
+    @staticmethod
+    def _from_raw_intrinsics(cam_name, resolution, intrinsics):
         cam_type = intrinsics["cam_type"]
         if cam_type not in Camera_Model.subclass_by_cam_type:
             logger.warning(
