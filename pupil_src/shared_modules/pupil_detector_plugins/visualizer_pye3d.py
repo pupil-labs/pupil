@@ -57,7 +57,7 @@ class Eye_Visualizer(Visualizer):
         temp[3, 3] *= scale
         return temp
 
-    def get_image_space_matrix(self, scale=1.):
+    def get_image_space_matrix(self, scale=1.0):
         temp = self.get_adjusted_pixel_space_matrix(scale)
         temp[1, 1] *= -1  # image origin is top left
         temp[0, 3] = -self.image_width / 2.0
@@ -162,7 +162,9 @@ class Eye_Visualizer(Visualizer):
 
             vertices = list(
                 zip(
-                    np.clip((np.asarray(result["debug_info"]["angles"]) - 10 ) / 40.0 , 0, 1),
+                    np.clip(
+                        (np.asarray(result["debug_info"]["angles"]) - 10) / 40.0, 0, 1
+                    ),
                     np.clip(
                         np.log10(np.array(result["debug_info"]["residuals"])) + 2,
                         0.1,
@@ -190,7 +192,7 @@ class Eye_Visualizer(Visualizer):
 
         glPushMatrix()
         glMatrixMode(GL_MODELVIEW)
-        glColor4f(1.0, 0., 0., 0.1)
+        glColor4f(1.0, 0.0, 0.0, 0.1)
         glLineWidth(1.0)
         for line in result["debug_info"]["Dierkes_lines"][::4]:
             glBegin(GL_LINES)
