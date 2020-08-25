@@ -28,7 +28,7 @@ from . import update_utils
 
 logger = logging.getLogger(__name__)
 
-NEWEST_SUPPORTED_VERSION = Version("1.2")
+NEWEST_SUPPORTED_VERSION = Version("1.3")
 
 
 def transform_invisible_to_corresponding_new_style(rec_dir: str):
@@ -144,14 +144,15 @@ def _convert_gaze(recording: PupilRecording):
         "topic": "gaze.pi",
         "norm_pos": None,
         "timestamp": None,
-        "confidence": 1.0,
+        "confidence": None,
     }
     with fm.PLData_Writer(recording.rec_dir, "gaze") as writer:
-        for ((x, y), ts) in pi_gaze_items(root_dir=recording.rec_dir):
+        for ((x, y), ts, conf) in pi_gaze_items(root_dir=recording.rec_dir):
             template_datum["timestamp"] = ts
             template_datum["norm_pos"] = m.normalize(
                 (x, y), size=(width, height), flip_y=True
             )
+            template_datum["confidence"] = conf
             writer.append(template_datum)
         logger.info(f"Converted {len(writer.ts_queue)} gaze positions.")
 

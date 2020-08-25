@@ -22,7 +22,7 @@ import av
 import numpy as np
 from pyglui import ui
 
-from camera_models import load_intrinsics
+from camera_models import Camera_Model
 from pupil_recording import PupilRecording
 
 from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
@@ -245,7 +245,7 @@ class File_Source(Playback_Source, Base_Source):
         self.buffering = buffered_decoding
         # Load video split for first frame
         self.reset_video()
-        self._intrinsics = load_intrinsics(rec, set_name, self.frame_size)
+        self._intrinsics = Camera_Model.from_file(rec, set_name, self.frame_size)
 
         self.show_plugin_menu = show_plugin_menu
 

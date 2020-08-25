@@ -28,8 +28,6 @@ from glob import glob
 
 import numpy as np
 
-from camera_models import load_intrinsics
-
 from .base_backend import (
     Base_Manager,
     Base_Source,

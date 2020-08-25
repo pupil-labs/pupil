@@ -468,6 +468,16 @@ def pi_gaze_items(root_dir):
         assert raw_path.exists(), f"The file does not exist at path: {raw_path}"
         return raw_path
 
+    def find_worn_path(timestamps_path):
+        worn_name = timestamps_path.name
+        worn_name = worn_name.replace("gaze", "worn")
+        worn_name = worn_name.replace("_timestamps", "")
+        worn_path = timestamps_path.with_name(worn_name).with_suffix(".raw")
+        if worn_path.exists():
+            return worn_path
+        else:
+            return None
+
     def load_timestamps_data(path):
         timestamps = np.load(str(path))
         return timestamps
@@ -477,6 +487,13 @@ def pi_gaze_items(root_dir):
         raw_data_dtype = raw_data.dtype
         raw_data.shape = (-1, 2)
         return np.asarray(raw_data, dtype=raw_data_dtype)
+
+    def load_worn_data(path):
+        if not (path and path.exists()):
+            return None
+
+        confidences = np.fromfile(str(path), "<u1") / 255.0
+        return np.clip(confidences, 0.0, 1.0)
 
     # This pattern will match any filename that:
     # - starts with "gaze ps"
@@ -496,4 +513,16 @@ def pi_gaze_items(root_dir):
             size = min(len(raw_data), len(timestamps))
             raw_data = raw_data[:size]
             timestamps = timestamps[:size]
-        yield from zip(raw_data, timestamps)
+
+        conf_data = load_worn_data(find_worn_path(timestamps_path))
+        if conf_data is not None and len(conf_data) != len(timestamps):
+            logger.warning(
+                f"There is a mismatch between the number of confidence data ({len(conf_data)}) "
+                f"and the number of timestamps ({len(timestamps)})! Not using confidence data."
+            )
+            conf_data = None
+
+        if conf_data is None:
+            conf_data = (1.0 for _ in range(len(timestamps)))
+
+        yield from zip(raw_data, timestamps, conf_data)
