@@ -501,7 +501,7 @@ def pi_gaze_items(root_dir):
     # - is followed by one or more digits
     # - ends with "_timestamps.npy"
     gaze_timestamp_paths = match_contents_by_name_pattern(
-        pl.Path(root_dir), "^gaze ps[0-9]+_timestamps.npy$"
+        pl.Path(root_dir), r"^gaze ps[0-9]+_timestamps.npy$"
     )
 
     for timestamps_path in gaze_timestamp_paths:
