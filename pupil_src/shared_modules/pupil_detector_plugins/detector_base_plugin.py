@@ -117,7 +117,7 @@ class PupilDetectorPlugin(Plugin):
         self._recent_detection_result = detection_result
 
     @abc.abstractmethod
-    def detect(self, frame, pupil_data):
+    def detect(self, frame, **kwargs):
         pass
 
     def on_notify(self, notification):
