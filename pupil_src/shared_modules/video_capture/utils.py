@@ -500,7 +500,7 @@ def pi_gaze_items(root_dir):
     # - starts with "gaze ps"
     # - is followed by one or more digits
     # - ends with "_timestamps.npy"
-    gaze_timestamp_paths = match_contents_by_name_pattern(
+    gaze_timestamp_paths = matched_files_by_name_pattern(
         pl.Path(root_dir), r"^gaze ps[0-9]+_timestamps.npy$"
     )
 
@@ -531,7 +531,7 @@ def pi_gaze_items(root_dir):
         yield from zip(raw_data, timestamps, conf_data)
 
 
-def match_contents_by_name_pattern(parent_dir: Path, name_pattern) -> T.List[Path]:
+def matched_files_by_name_pattern(parent_dir: Path, name_pattern: str) -> T.List[Path]:
     # Get all non-recursive directory contents
     contents = filter(Path.is_file, parent_dir.iterdir())
     # Filter content that matches the name by regex pattern
