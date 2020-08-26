@@ -533,6 +533,6 @@ def pi_gaze_items(root_dir):
 
 def match_contents_by_name_pattern(parent_dir: Path, name_pattern) -> T.List[Path]:
     # Get all non-recursive directory contents
-    contents = parent_dir.absolute().glob("*")
+    contents = filter(Path.is_file, parent_dir.iterdir())
     # Filter content that matches the name by regex pattern
     return [c for c in contents if re.match(name_pattern, c.name) is not None]
