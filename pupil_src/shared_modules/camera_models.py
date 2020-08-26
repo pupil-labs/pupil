@@ -153,6 +153,10 @@ default_intrinsics = {
 }
 
 # Add measured intrinsics for the eyes (once for each ID for easy lookup)
+# TODO: From these intrinsics only the focal lengths were measured. The principal points
+# are just default values (half the resolution) and there's no distortion model for now.
+# At some later point we should measure the full intrinsics and replace existing
+# intrinsics with a recording upgrade.
 for eye_id in (0, 1):
     default_intrinsics.update(
         {
