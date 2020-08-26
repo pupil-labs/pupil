@@ -32,9 +32,9 @@ from .visualizer_3d import Eye_Visualizer
 
 logger = logging.getLogger(__name__)
 
-if VersionFormat(pupil_detectors.__version__) < VersionFormat("1.0.5"):
+if VersionFormat(pupil_detectors.__version__) < VersionFormat("1.1.1"):
     msg = (
-        f"This version of Pupil requires pupil_detectors >= 1.0.5."
+        f"This version of Pupil requires pupil_detectors >= 1.1.1."
         f" You are running with pupil_detectors == {pupil_detectors.__version__}."
         f" Please upgrade to a newer version!"
     )
