@@ -95,12 +95,18 @@ class GazeMapperMenu(plugin_ui.StorageEditMenu):
             labels.append("[Invalid Calibration]")
             selection.append(gaze_mapper.calibration_unique_id)
 
+        def calibration_setter(calibration_unique_id):
+            self._gaze_mapper_controller.set_calibration_unique_id(
+                gaze_mapper, calibration_unique_id
+            )
+
         return ui.Selector(
             "calibration_unique_id",
             gaze_mapper,
             label="Calibration",
             selection=selection,
             labels=labels,
+            setter=calibration_setter,
         )
 
     def _create_mapping_range_selector(self, gaze_mapper):
