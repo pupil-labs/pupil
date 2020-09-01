@@ -11,8 +11,9 @@ See COPYING and COPYING.LESSER for license details.
 
 import uuid
 
-from . import RecordingInfoFile, Version
+from . import RecordingInfoFile
 from . import recording_info_utils as utils
+from version_utils import parse_version, ParsedVersion
 
 
 class _RecordingInfoFile_2_0(RecordingInfoFile):
@@ -20,12 +21,12 @@ class _RecordingInfoFile_2_0(RecordingInfoFile):
     # RecordingInfo
 
     @property
-    def meta_version(self) -> Version:
-        return Version("2.0")
+    def meta_version(self) -> ParsedVersion:
+        return parse_version("2.0")
 
     @property
-    def min_player_version(self) -> Version:
-        return Version("1.16")
+    def min_player_version(self) -> ParsedVersion:
+        return parse_version("1.16")
 
     @property
     def recording_uuid(self) -> uuid.UUID:

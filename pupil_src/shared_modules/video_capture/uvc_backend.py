@@ -24,13 +24,13 @@ from pyglui import cygl, ui
 import gl_utils
 import uvc
 from camera_models import Camera_Model
-from version_utils import VersionFormat
+from version_utils import parse_version
 
 from .base_backend import Base_Manager, Base_Source, InitialisationError, SourceInfo
 from .utils import Check_Frame_Stripes, Exposure_Time
 
 # check versions for our own depedencies as they are fast-changing
-assert VersionFormat(uvc.__version__) >= VersionFormat("0.13")
+assert parse_version(uvc.__version__) >= parse_version("0.13")
 
 # logging
 logger = logging.getLogger(__name__)

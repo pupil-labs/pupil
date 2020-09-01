@@ -118,10 +118,10 @@ def world(
 
         # display
         import glfw
-        from version_utils import VersionFormat
+        from version_utils import parse_version
         from pyglui import ui, cygl, __version__ as pyglui_version
 
-        assert VersionFormat(pyglui_version) >= VersionFormat(
+        assert parse_version(pyglui_version) >= parse_version(
             "1.27"
         ), "pyglui out of date, please upgrade to newest version"
         from pyglui.cygl.utils import Named_Texture
@@ -441,7 +441,7 @@ def world(
         session_settings = Persistent_Dict(
             os.path.join(g_pool.user_dir, "user_settings_world")
         )
-        if VersionFormat(session_settings.get("version", "0.0")) != g_pool.version:
+        if parse_version(session_settings.get("version", "0.0")) != g_pool.version:
             logger.info(
                 "Session setting are from a different version of this app. I will not use those."
             )

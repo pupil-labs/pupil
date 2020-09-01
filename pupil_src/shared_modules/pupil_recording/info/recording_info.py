@@ -18,11 +18,10 @@ import os
 import typing as T
 import uuid
 
-from version_utils import get_version
+from version_utils import get_version, parse_version, ParsedVersion
 
-from .. import Version
 
-__all__ = ["RecordingInfo", "RecordingInfoFile", "RecordingInfoInvalidError", "Version"]
+__all__ = ["RecordingInfo", "RecordingInfoFile", "RecordingInfoInvalidError"]
 
 
 logger = logging.getLogger(__name__)
@@ -72,12 +71,12 @@ class RecordingInfo(collections.abc.MutableMapping):
 
     @property
     @abc.abstractmethod
-    def meta_version(self) -> Version:
+    def meta_version(self) -> ParsedVersion:
         pass
 
     @property
     @abc.abstractmethod
-    def min_player_version(self) -> Version:
+    def min_player_version(self) -> ParsedVersion:
         pass
 
     @property
@@ -377,11 +376,11 @@ class RecordingInfoFile(RecordingInfo):
         return os.path.isfile(file_path)
 
     @staticmethod
-    def detect_recording_info_file_version(rec_dir: str) -> Version:
+    def detect_recording_info_file_version(rec_dir: str) -> ParsedVersion:
         file_path = RecordingInfoFile._info_file_path(rec_dir=rec_dir)
         with open(file_path, "r") as file:
             read_dict = RecordingInfoFile._read_dict_from_file(file=file)
-        return Version(read_dict["meta_version"])
+        return parse_version(read_dict["meta_version"])
 
     @staticmethod
     def read_file_from_recording(rec_dir: str) -> "RecordingInfoFile":
@@ -403,7 +402,7 @@ class RecordingInfoFile(RecordingInfo):
                 info_file_path = RecordingInfoFile._info_file_path(rec_dir)
                 with open(info_file_path, "r") as f:
                     info_dict = RecordingInfoFile._read_dict_from_file(f)
-                min_player_version = Version(info_dict["min_player_version"])
+                min_player_version = parse_version(info_dict["min_player_version"])
             except Exception as e:
                 # Catching BaseException since at this point we don't know anything
                 logger.error(
@@ -415,9 +414,7 @@ class RecordingInfoFile(RecordingInfo):
                     f"Recording is too new to be opened with this version of Player!"
                 )
 
-            # TODO: get_version() returns a LooseVersion, but we are using
-            # packaging.Version now, need to adjust this across the codebase
-            if min_player_version > Version(get_version().vstring):
+            if min_player_version > get_version():
                 raise RecordingInfoInvalidError(
                     f"This recording requires Player version >= {min_player_version}!"
                 )
@@ -440,7 +437,7 @@ class RecordingInfoFile(RecordingInfo):
 
     @staticmethod
     def create_empty_file(
-        rec_dir: str, fixed_version: T.Optional[Version] = None
+        rec_dir: str, fixed_version: T.Optional[ParsedVersion] = None
     ) -> "RecordingInfoFile":
         """
         Creates a new `RecordingInfoFile` instance using the latest meta format version,
@@ -483,7 +480,7 @@ class RecordingInfoFile(RecordingInfo):
     _info_file_versions = {}
 
     @classmethod
-    def register_child_class(cls, version: Version, child_class: type):
+    def register_child_class(cls, version: ParsedVersion, child_class: type):
         """Use this to register interface implementations for specific versions."""
         # NOTE: This is dependency inversion to avoids circular imports, because we
         # don't need to know our child classes.
@@ -491,7 +488,7 @@ class RecordingInfoFile(RecordingInfo):
         cls._info_file_versions[version] = child_class
 
     @classmethod
-    def get_latest_info_file_version(cls) -> Version:
+    def get_latest_info_file_version(cls) -> ParsedVersion:
         if not cls._info_file_versions:
             raise ValueError(
                 "RecordingInfoFile not correctly initialized! No templates registered."

@@ -19,22 +19,23 @@ import file_methods as fm
 import methods as m
 from video_capture.utils import pi_gaze_items
 
-from .. import Version
 from ..info import RecordingInfoFile
 from ..info import recording_info_utils as utils
 from ..recording import PupilRecording
 from ..recording_utils import InvalidRecordingException
 from . import update_utils
 
+from version_utils import parse_version
+
 logger = logging.getLogger(__name__)
 
-NEWEST_SUPPORTED_VERSION = Version("1.3")
+NEWEST_SUPPORTED_VERSION = parse_version("1.3")
 
 
 def transform_invisible_to_corresponding_new_style(rec_dir: str):
     logger.info("Transform Pupil Invisible to new style recording...")
     info_json = utils.read_info_json_file(rec_dir)
-    pi_version = Version(info_json["data_format_version"])
+    pi_version = parse_version(info_json["data_format_version"])
 
     if pi_version > NEWEST_SUPPORTED_VERSION:
         raise InvalidRecordingException(
@@ -86,7 +87,7 @@ def _generate_pprf_2_1_info_file(rec_dir: str) -> RecordingInfoFile:
 
     # Create a recording info file with the new format,
     # fill out the information, validate, and return.
-    new_info_file = RecordingInfoFile.create_empty_file(rec_dir, Version("2.1"))
+    new_info_file = RecordingInfoFile.create_empty_file(rec_dir, parse_version("2.1"))
     new_info_file.recording_uuid = recording_uuid
     new_info_file.start_time_system_ns = start_time_system_ns
     new_info_file.start_time_synced_ns = start_time_synced_ns
