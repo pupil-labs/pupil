@@ -17,10 +17,11 @@ import uuid
 import csv_utils
 from methods import get_system_info
 
-from .recording_info import RecordingInfoFile, Version
+from .recording_info import RecordingInfoFile
+from version_utils import parse_version, ParsedVersion
 
 
-def string_from_recording_version(value: Version) -> str:
+def string_from_recording_version(value: ParsedVersion) -> str:
     return str(value)  # TODO: Make sure this conversion is correct
 
 
@@ -53,7 +54,7 @@ def default_system_info(info) -> str:
 
 
 def validator_version_string(value: str):
-    _ = Version(value)
+    _ = parse_version(value)
 
 
 def validator_uuid_string(value: str):

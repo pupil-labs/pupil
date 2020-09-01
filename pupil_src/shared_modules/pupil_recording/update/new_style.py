@@ -15,13 +15,13 @@ from pathlib import Path
 
 import camera_models as cm
 import file_methods as fm
-from version_utils import get_version
+from version_utils import get_version, parse_version
 
-from .. import Version
 from ..info import RecordingInfoFile
 from ..recording import PupilRecording
 from ..recording_utils import InvalidRecordingException
 from . import invisible
+
 
 logger = logging.getLogger(__name__)
 
@@ -31,18 +31,16 @@ def recording_update_to_latest_new_style(rec_dir: str):
     check_min_player_version(info_file)
 
     # incremental upgrade ...
-    if info_file.meta_version < Version("2.1"):
+    if info_file.meta_version < parse_version("2.1"):
         info_file = update_newstyle_20_21(rec_dir)
-    if info_file.meta_version < Version("2.2"):
+    if info_file.meta_version < parse_version("2.2"):
         info_file = update_newstyle_21_22(rec_dir)
     if info_file.meta_version < Version("2.3"):
         info_file = update_newstyle_22_23(rec_dir)
 
 
 def check_min_player_version(info_file: RecordingInfoFile):
-    # TODO: get_version() returns a LooseVersion, but we are using packaging.Version
-    # now, need to adjust this across the codebase
-    if info_file.min_player_version > Version(get_version().vstring):
+    if info_file.min_player_version > get_version():
         player_out_of_date = (
             "Recording requires a newer version of Player: "
             f"{info_file.min_player_version}"
@@ -86,7 +84,7 @@ def update_newstyle_20_21(rec_dir: str):
         invisible._convert_gaze(PupilRecording(rec_dir))
         # Bump info file version to 2.1
         new_info_file = RecordingInfoFile.create_empty_file(
-            rec_dir, fixed_version=Version("2.1")
+            rec_dir, fixed_version=parse_version("2.1")
         )
         new_info_file.update_writeable_properties_from(info_file)
         info_file = new_info_file
@@ -99,7 +97,7 @@ def update_newstyle_21_22(rec_dir: str):
     # Used to make Pupil v2.0 recordings backwards incompatible with v1.x
     old_info_file = RecordingInfoFile.read_file_from_recording(rec_dir)
     new_info_file = RecordingInfoFile.create_empty_file(
-        rec_dir, fixed_version=Version("2.2")
+        rec_dir, fixed_version=parse_version("2.2")
     )
     new_info_file.update_writeable_properties_from(old_info_file)
     new_info_file.save_file()

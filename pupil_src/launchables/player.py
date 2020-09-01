@@ -83,7 +83,7 @@ def player(
         from video_capture import File_Source
 
         # helpers/utils
-        from version_utils import VersionFormat
+        from version_utils import parse_version
         from methods import normalize, denormalize, delta_t, get_system_info
         import player_methods as pm
         from pupil_recording import PupilRecording
@@ -131,7 +131,7 @@ def player(
             InvalidRecordingException,
         )
 
-        assert VersionFormat(pyglui_version) >= VersionFormat(
+        assert parse_version(pyglui_version) >= parse_version(
             "1.28"
         ), "pyglui out of date, please upgrade to newest version"
 
@@ -346,7 +346,7 @@ def player(
         session_settings = Persistent_Dict(
             os.path.join(user_dir, "user_settings_player")
         )
-        if VersionFormat(session_settings.get("version", "0.0")) != app_version:
+        if parse_version(session_settings.get("version", "0.0")) != app_version:
             logger.info(
                 "Session setting are a different version of this app. I will not use those."
             )
@@ -793,7 +793,7 @@ def player_drop(
         import glfw
         import gl_utils
         from OpenGL.GL import glClearColor
-        from version_utils import VersionFormat
+        from version_utils import parse_version
         from file_methods import Persistent_Dict
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
@@ -830,7 +830,7 @@ def player_drop(
         session_settings = Persistent_Dict(
             os.path.join(user_dir, "user_settings_player")
         )
-        if VersionFormat(session_settings.get("version", "0.0")) != app_version:
+        if parse_version(session_settings.get("version", "0.0")) != app_version:
             logger.info(
                 "Session setting are from a  different version of this app. I will not use those."
             )

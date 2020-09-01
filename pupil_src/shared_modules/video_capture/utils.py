@@ -13,6 +13,7 @@ import os
 import pathlib as pl
 import typing as T
 from pathlib import Path
+import re
 
 
 import av
@@ -468,6 +469,16 @@ def pi_gaze_items(root_dir):
         assert raw_path.exists(), f"The file does not exist at path: {raw_path}"
         return raw_path
 
+    def find_worn_path(timestamps_path):
+        worn_name = timestamps_path.name
+        worn_name = worn_name.replace("gaze", "worn")
+        worn_name = worn_name.replace("_timestamps", "")
+        worn_path = timestamps_path.with_name(worn_name).with_suffix(".raw")
+        if worn_path.exists():
+            return worn_path
+        else:
+            return None
+
     def load_timestamps_data(path):
         timestamps = np.load(str(path))
         return timestamps
@@ -478,13 +489,22 @@ def pi_gaze_items(root_dir):
         raw_data.shape = (-1, 2)
         return np.asarray(raw_data, dtype=raw_data_dtype)
 
+    def load_worn_data(path):
+        if not (path and path.exists()):
+            return None
+
+        confidences = np.fromfile(str(path), "<u1") / 255.0
+        return np.clip(confidences, 0.0, 1.0)
+
     # This pattern will match any filename that:
     # - starts with "gaze ps"
     # - is followed by one or more digits
-    # - is followed by "_timestamps.npy"
-    gaze_timestamp_pattern = "gaze ps[0-9]*_timestamps.npy"
+    # - ends with "_timestamps.npy"
+    gaze_timestamp_paths = matched_files_by_name_pattern(
+        pl.Path(root_dir), r"^gaze ps[0-9]+_timestamps.npy$"
+    )
 
-    for timestamps_path in pl.Path(root_dir).glob(gaze_timestamp_pattern):
+    for timestamps_path in gaze_timestamp_paths:
         raw_path = find_raw_path(timestamps_path)
         timestamps = load_timestamps_data(timestamps_path)
         raw_data = load_raw_data(raw_path)
@@ -496,4 +516,23 @@ def pi_gaze_items(root_dir):
             size = min(len(raw_data), len(timestamps))
             raw_data = raw_data[:size]
             timestamps = timestamps[:size]
-        yield from zip(raw_data, timestamps)
+
+        conf_data = load_worn_data(find_worn_path(timestamps_path))
+        if conf_data is not None and len(conf_data) != len(timestamps):
+            logger.warning(
+                f"There is a mismatch between the number of confidence data ({len(conf_data)}) "
+                f"and the number of timestamps ({len(timestamps)})! Not using confidence data."
+            )
+            conf_data = None
+
+        if conf_data is None:
+            conf_data = (1.0 for _ in range(len(timestamps)))
+
+        yield from zip(raw_data, timestamps, conf_data)
+
+
+def matched_files_by_name_pattern(parent_dir: Path, name_pattern: str) -> T.List[Path]:
+    # Get all non-recursive directory contents
+    contents = filter(Path.is_file, parent_dir.iterdir())
+    # Filter content that matches the name by regex pattern
+    return [c for c in contents if re.match(name_pattern, c.name) is not None]

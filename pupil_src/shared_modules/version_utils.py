@@ -5,15 +5,15 @@
 
 from subprocess import check_output, CalledProcessError, STDOUT
 import os, sys
-from distutils.version import LooseVersion as VersionFormat
-
+import packaging.version
+import typing as T
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def get_tag_commit():
+def get_tag_commit() -> T.Optional[T.AnyStr]:
     """
     returns string: 'tag'-'commits since tag'-'7 digit commit id'
     """
@@ -34,7 +34,18 @@ def get_tag_commit():
         return None
 
 
-def pupil_version():
+ParsedVersion = T.Union[packaging.version.LegacyVersion, packaging.version.Version]
+
+
+def parse_version(vstring) -> ParsedVersion:
+    return packaging.version.parse(vstring)
+
+
+def pupil_version() -> ParsedVersion:
+    return parse_version(pupil_version_string())
+
+
+def pupil_version_string() -> str:
     """
     [major].[minor].[trailing-untagged-commits]
     """
@@ -58,23 +69,23 @@ def get_version():
     if getattr(sys, "frozen", False):
         version_file = os.path.join(sys._MEIPASS, "_version_string_")
         with open(version_file, "r") as f:
-            version = f.read()
+            version_string = f.read()
     else:
-        version = pupil_version()
-    version = VersionFormat(version)
-    logger.debug("Running version: {}".format(version))
-    return version
+        version_string = pupil_version_string()
+    logger.debug(f"Running version: {version_string}")
+    return parse_version(version_string)
 
 
 def write_version_file(target_dir):
-    version = pupil_version()
-    print("Current version of Pupil: ", version)
+    version_string = pupil_version_string()
+    print(f"Current version of Pupil: {version_string}")
 
-    with open(os.path.join(target_dir, "_version_string_"), "w") as f:
-        f.write(version)
-    print("Wrote version into: {}".format(os.path.join(target_dir, "_version_string_")))
+    version_file = os.path.join(target_dir, "_version_string_")
+    with open(version_file, "w") as f:
+        f.write(version_string)
+    print(f"Wrote version into: {version_file}")
 
 
 if __name__ == "__main__":
     print(get_tag_commit())
-    print(pupil_version())
+    print(pupil_version_string())

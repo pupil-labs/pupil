@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import logging
-from distutils.version import LooseVersion as VersionFormat
+from version_utils import parse_version
 
 import pupil_detectors
 from pupil_detectors import Detector3D, DetectorBase, Roi
@@ -32,7 +32,7 @@ from .visualizer_3d import Eye_Visualizer
 
 logger = logging.getLogger(__name__)
 
-if VersionFormat(pupil_detectors.__version__) < VersionFormat("1.1.1"):
+if parse_version(pupil_detectors.__version__) < parse_version("1.1.1"):
     msg = (
         f"This version of Pupil requires pupil_detectors >= 1.1.1."
         f" You are running with pupil_detectors == {pupil_detectors.__version__}."
