@@ -18,7 +18,7 @@ import os
 import typing as T
 import uuid
 
-from version_utils import get_version, parse_version, SemanticVersion
+from version_utils import get_version, parse_version, ParsedVersion
 
 
 __all__ = ["RecordingInfo", "RecordingInfoFile", "RecordingInfoInvalidError"]
@@ -71,12 +71,12 @@ class RecordingInfo(collections.abc.MutableMapping):
 
     @property
     @abc.abstractmethod
-    def meta_version(self) -> SemanticVersion:
+    def meta_version(self) -> ParsedVersion:
         pass
 
     @property
     @abc.abstractmethod
-    def min_player_version(self) -> SemanticVersion:
+    def min_player_version(self) -> ParsedVersion:
         pass
 
     @property
@@ -376,7 +376,7 @@ class RecordingInfoFile(RecordingInfo):
         return os.path.isfile(file_path)
 
     @staticmethod
-    def detect_recording_info_file_version(rec_dir: str) -> SemanticVersion:
+    def detect_recording_info_file_version(rec_dir: str) -> ParsedVersion:
         file_path = RecordingInfoFile._info_file_path(rec_dir=rec_dir)
         with open(file_path, "r") as file:
             read_dict = RecordingInfoFile._read_dict_from_file(file=file)
@@ -437,7 +437,7 @@ class RecordingInfoFile(RecordingInfo):
 
     @staticmethod
     def create_empty_file(
-        rec_dir: str, fixed_version: T.Optional[SemanticVersion] = None
+        rec_dir: str, fixed_version: T.Optional[ParsedVersion] = None
     ) -> "RecordingInfoFile":
         """
         Creates a new `RecordingInfoFile` instance using the latest meta format version,
@@ -480,7 +480,7 @@ class RecordingInfoFile(RecordingInfo):
     _info_file_versions = {}
 
     @classmethod
-    def register_child_class(cls, version: SemanticVersion, child_class: type):
+    def register_child_class(cls, version: ParsedVersion, child_class: type):
         """Use this to register interface implementations for specific versions."""
         # NOTE: This is dependency inversion to avoids circular imports, because we
         # don't need to know our child classes.
@@ -488,7 +488,7 @@ class RecordingInfoFile(RecordingInfo):
         cls._info_file_versions[version] = child_class
 
     @classmethod
-    def get_latest_info_file_version(cls) -> SemanticVersion:
+    def get_latest_info_file_version(cls) -> ParsedVersion:
         if not cls._info_file_versions:
             raise ValueError(
                 "RecordingInfoFile not correctly initialized! No templates registered."

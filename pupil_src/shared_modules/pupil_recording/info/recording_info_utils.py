@@ -18,10 +18,10 @@ import csv_utils
 from methods import get_system_info
 
 from .recording_info import RecordingInfoFile
-from version_utils import parse_version, SemanticVersion
+from version_utils import parse_version, ParsedVersion
 
 
-def string_from_recording_version(value: SemanticVersion) -> str:
+def string_from_recording_version(value: ParsedVersion) -> str:
     return str(value)  # TODO: Make sure this conversion is correct
 
 

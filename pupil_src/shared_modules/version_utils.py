@@ -34,14 +34,14 @@ def get_tag_commit() -> T.Optional[T.AnyStr]:
         return None
 
 
-SemanticVersion = T.Union[packaging.version.LegacyVersion, packaging.version.Version]
+ParsedVersion = T.Union[packaging.version.LegacyVersion, packaging.version.Version]
 
 
-def parse_version(vstring) -> SemanticVersion:
+def parse_version(vstring) -> ParsedVersion:
     return packaging.version.parse(vstring)
 
 
-def pupil_version() -> SemanticVersion:
+def pupil_version() -> ParsedVersion:
     return parse_version(pupil_version_string())
 
 

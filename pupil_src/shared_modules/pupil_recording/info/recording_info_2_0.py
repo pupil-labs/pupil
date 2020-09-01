@@ -13,7 +13,7 @@ import uuid
 
 from . import RecordingInfoFile
 from . import recording_info_utils as utils
-from version_utils import parse_version, SemanticVersion
+from version_utils import parse_version, ParsedVersion
 
 
 class _RecordingInfoFile_2_0(RecordingInfoFile):
@@ -21,11 +21,11 @@ class _RecordingInfoFile_2_0(RecordingInfoFile):
     # RecordingInfo
 
     @property
-    def meta_version(self) -> SemanticVersion:
+    def meta_version(self) -> ParsedVersion:
         return parse_version("2.0")
 
     @property
-    def min_player_version(self) -> SemanticVersion:
+    def min_player_version(self) -> ParsedVersion:
         return parse_version("1.16")
 
     @property
