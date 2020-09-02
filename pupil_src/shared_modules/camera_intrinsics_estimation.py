@@ -277,7 +277,7 @@ class Camera_Intrinsics_Estimation(Plugin):
                     (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, max_iter, eps),
                 )
                 camera_model = Fisheye_Dist_Camera(
-                    camera_matrix, dist_coefs, img_shape, self.g_pool.capture.name
+                    self.g_pool.capture.name, img_shape, camera_matrix, dist_coefs
                 )
             elif self.dist_mode == "Radial":
                 rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(
@@ -288,7 +288,7 @@ class Camera_Intrinsics_Estimation(Plugin):
                     None,
                 )
                 camera_model = Radial_Dist_Camera(
-                    camera_matrix, dist_coefs, img_shape, self.g_pool.capture.name
+                    self.g_pool.capture.name, img_shape, camera_matrix, dist_coefs
                 )
             else:
                 raise ValueError("Unkown distortion model: {}".format(self.dist_mode))

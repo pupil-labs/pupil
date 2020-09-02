@@ -9,10 +9,12 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import pytest
+import gc
 from unittest import mock
 
-from observable import Observable, ObserverError
+import pytest
+
+from observable import Observable, ObserverError, ReplaceWrapperError
 
 
 class FakeObservable(Observable):
@@ -30,6 +32,9 @@ class FakeObservable(Observable):
     def class_method(cls):
         pass
 
+    def __del__(self):
+        pass
+
 
 @pytest.fixture()
 def observable():
@@ -44,6 +49,13 @@ class TestObservabilityOfMethods:
     def test_bound_method_is_observable(self, observable, observer):
         observable.add_observer("bound_method", observer)
 
+    def test_bound_method_from_parent_class_is_observable(self, observer):
+        class FakeObservableChild(FakeObservable):
+            pass
+
+        observable_child = FakeObservableChild()
+        observable_child.add_observer("bound_method", observer)
+
     def test_static_method_is_not_observable(self, observable, observer):
         with pytest.raises(TypeError):
             observable.add_observer("static_method", observer)
@@ -51,6 +63,17 @@ class TestObservabilityOfMethods:
     def test_class_method_is_not_observable(self, observable, observer):
         with pytest.raises(TypeError):
             observable.add_observer("class_method", observer)
+
+    def test_modified_methods_are_not_observable(self, observable, observer):
+        class FakeClass:
+            def fake_method(self):
+                pass
+
+        fake_class_instance = FakeClass()
+        observable.modified_method = fake_class_instance.fake_method
+
+        with pytest.raises(TypeError):
+            observable.add_observer("modified_method", observer)
 
 
 class TestDifferentKindsOfObservers:
@@ -160,6 +183,34 @@ class TestObserverCalls:
         assert observer1_called and observer2_called and observer3_called
 
 
+class TestWrappedMethodCalls:
+    def test_wrapped_functions_are_called_with_right_arguments(self):
+        mock_function = mock.Mock()
+
+        class FakeObservable(Observable):
+            def method(self, arg1, arg2):
+                mock_function(arg1, arg2)
+
+        observable = FakeObservable()
+        observable.add_observer("method", lambda arg1, arg2: None)
+
+        observable.method(1, 2)
+
+        mock_function.assert_called_once_with(1, 2)
+
+    def test_wrapped_functions_return_values(self):
+        class FakeObservable(Observable):
+            def method(self):
+                return 1
+
+        observable = FakeObservable()
+        observable.add_observer("method", lambda: None)
+
+        ret_val = observable.method()
+
+        assert ret_val == 1
+
+
 class TestRemovingObservers:
     def test_observers_that_are_functions_can_be_removed(self, observable):
         observer = mock.Mock()
@@ -215,6 +266,14 @@ class TestRemovingObservers:
         observable.remove_all_observers("bound_method")
         # at this point the list of observers is empty
         observable.remove_all_observers("bound_method")
+
+    def test_wrapper_can_be_removed(self, observable):
+        original_method = observable.bound_method
+        observable.add_observer("bound_method", lambda: None)
+        observable.bound_method.remove_wrapper()
+        method_after_removal = observable.bound_method
+
+        assert method_after_removal == original_method
 
 
 class TestExceptionThrowingMethods:
@@ -289,6 +348,27 @@ class TestDeletingObserverObjects:
         mock_function.assert_any_call()
 
 
+class TestDeletingObservableObjects:
+    @pytest.fixture()
+    def disable_generational_garbage_collection(self):
+        gc_enabled = gc.isenabled()
+        gc.disable()
+        yield
+        if gc_enabled:
+            gc.enable()
+
+    def test_observable_object_can_be_freed_by_reference_counting(
+        self, disable_generational_garbage_collection
+    ):
+        # do not use our fixture `observable` here, for some reason pytest keeps
+        # additional references to the object which makes the following test impossible
+        observable = FakeObservable()
+        with mock.patch.object(FakeObservable, "__del__") as mock_function:
+            observable.add_observer("bound_method", mock.Mock())
+            del observable
+        mock_function.assert_any_call()
+
+
 def test_observers_can_be_observed(observable):
     # This test is more delicate than it might seem at first sight.
     # When adding the first observer, the method is replaced by a wrapper of the
@@ -318,3 +398,15 @@ def test_observers_can_be_observed(observable):
     mock_function.assert_has_calls(
         [mock.call("First"), mock.call("Second")], any_order=False
     )
+
+
+class TestWrapperProtectionDescriptor:
+    def test_wrapped_functions_cannot_be_set(self, observable):
+        observable.add_observer("bound_method", lambda: None)
+        with pytest.raises(ReplaceWrapperError):
+            observable.bound_method = 42
+
+    def test_other_instances_without_wrapper_can_be_set(self, observable):
+        observable.add_observer("bound_method", lambda: None)
+        unwrapped_observable = FakeObservable()
+        unwrapped_observable.bound_method = 42
