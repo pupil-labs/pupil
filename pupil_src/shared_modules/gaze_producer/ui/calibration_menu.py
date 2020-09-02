@@ -183,12 +183,16 @@ class CalibrationMenu(plugin_ui.StorageEditMenu):
     def _on_change_current_item(self, item):
         super()._on_change_current_item(item)
         if self._ui_button_duplicate:
-            self._ui_button_duplicate.read_only = not self.__check_duplicate_button_click_is_allowed(
-                should_log_reason_as_error=False
+            self._ui_button_duplicate.read_only = (
+                not self.__check_duplicate_button_click_is_allowed(
+                    should_log_reason_as_error=False
+                )
             )
         if self._ui_button_delete:
-            self._ui_button_delete.read_only = not self.__check_delete_button_click_is_allowed(
-                should_log_reason_as_error=False
+            self._ui_button_delete.read_only = (
+                not self.__check_delete_button_click_is_allowed(
+                    should_log_reason_as_error=False
+                )
             )
 
     def _on_name_change(self, new_name):

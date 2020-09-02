@@ -521,7 +521,7 @@ class Recorder(System_Plugin_Base):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-           either volunatily or forced.
+        either volunatily or forced.
         """
         if self.running:
             self.stop()

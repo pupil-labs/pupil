@@ -145,7 +145,7 @@ class Msg_Streamer(ZMQ_Socket):
 
     def send(self, payload, deprecated=()):
         """Send a message with topic, payload
-`
+
         Topic is a unicode string. It will be sent as utf-8 encoded byte array.
         Payload is a python dict. It will be sent as a msgpack serialized dict.
 

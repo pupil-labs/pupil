@@ -82,8 +82,8 @@ class SingleMarkerChoreographyPlugin(
     MonitorSelectionMixin, CalibrationChoreographyPlugin
 ):
     """Calibrate using a single marker.
-       Move your head for example in a spiral motion while gazing
-       at the marker to quickly sample a wide range gaze angles.
+    Move your head for example in a spiral motion while gazing
+    at the marker to quickly sample a wide range gaze angles.
     """
 
     label = "Single Marker Calibration"

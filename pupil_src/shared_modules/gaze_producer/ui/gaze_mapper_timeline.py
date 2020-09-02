@@ -49,7 +49,8 @@ class GazeMapperTimeline:
             "publish_all_enabled_mappers", self._on_publish_enabled_mappers
         )
         self._gaze_mapper_controller.add_observer(
-            "set_calibration_unique_id", self._on_calibration_unique_id_changed,
+            "set_calibration_unique_id",
+            self._on_calibration_unique_id_changed,
         )
 
         self._calibration_controller.add_observer(

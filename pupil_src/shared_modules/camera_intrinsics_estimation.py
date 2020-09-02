@@ -45,8 +45,8 @@ def on_resize(window, w, h):
 
 class Camera_Intrinsics_Estimation(Plugin):
     """Camera_Intrinsics_Calibration
-        This method is not a gaze calibration.
-        This method is used to calculate camera intrinsics.
+    This method is not a gaze calibration.
+    This method is used to calculate camera intrinsics.
     """
 
     icon_chr = chr(0xEC06)

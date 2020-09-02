@@ -60,7 +60,7 @@ else:
 
 def patch_pyre_zhelper_cdll():
     """Fixes https://github.com/pupil-labs/pupil/issues/1919
-    
+
     When running the v2.0 bundle on macOS 10.14, `ctypes.CDLL("libSystem.dylib")` fails
     to load which is required by pyre.zhelper. `libSystem.dylib` is not part of the
     bundle on purpose, as `ctypes.CDLL` is usually able to fallback to the system-

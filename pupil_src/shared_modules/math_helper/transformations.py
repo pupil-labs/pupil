@@ -1307,9 +1307,7 @@ def quaternion_matrix(quaternion):
 
 
 def quaternion_rotation_matrix(quaternion):
-    """Return rotation matrix from quaternion.
-
-    """
+    """Return rotation matrix from quaternion."""
     return quaternion_matrix(quaternion)[:3, :3]
 
 

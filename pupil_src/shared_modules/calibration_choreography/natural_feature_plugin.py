@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
     """Calibrate using natural features in a scene.
-        Features are selected by a user by clicking on
+    Features are selected by a user by clicking on
     """
 
     label = "Natural Feature Calibration"
