@@ -36,9 +36,9 @@ from player_methods import is_pupil_rec_dir
 
 def get_recording_dirs(data_dir):
     """
-        You can supply a data folder or any folder
-        - all folders within will be checked for necessary files
-        - in order to make a visualization
+    You can supply a data folder or any folder
+    - all folders within will be checked for necessary files
+    - in order to make a visualization
     """
     if is_pupil_rec_dir(data_dir):
         yield data_dir

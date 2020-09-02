@@ -80,8 +80,8 @@ class NetworkApiPlugin(Plugin):
     def recent_events(self, events):
         frame = events.get("frame")
         if frame:
-            world_frame_dicts = self.__frame_publisher.create_world_frame_dicts_from_frame(
-                frame
+            world_frame_dicts = (
+                self.__frame_publisher.create_world_frame_dicts_from_frame(frame)
             )
             if world_frame_dicts:
                 events["frame.world"] = world_frame_dicts

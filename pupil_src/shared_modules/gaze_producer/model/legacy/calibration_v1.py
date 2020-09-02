@@ -114,7 +114,10 @@ def _gazer_class_and_params_from_gaze_mapper_result(gaze_mapper_result):
 
         if gaze_mapper_args is not None:
             assert set(gaze_mapper_args.keys()).issuperset(
-                {"eye_camera_to_world_matrix0", "eye_camera_to_world_matrix1",}
+                {
+                    "eye_camera_to_world_matrix0",
+                    "eye_camera_to_world_matrix1",
+                }
             )  # sanity check
             gazer_params = {"binocular_model": gaze_mapper_args}
 
@@ -123,7 +126,9 @@ def _gazer_class_and_params_from_gaze_mapper_result(gaze_mapper_result):
 
         if gaze_mapper_args is not None:
             assert set(gaze_mapper_args.keys()).issuperset(
-                {"eye_camera_to_world_matrix",}
+                {
+                    "eye_camera_to_world_matrix",
+                }
             )  # sanity check
             # Since there is no way to know which eye the mapper belongs to,
             # we use the arguments as the parameters for both eye models.

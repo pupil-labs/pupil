@@ -213,8 +213,8 @@ def update_recording_v086_to_v087(rec_dir):
 
     def _clamp_norm_point(pos):
         """realisitic numbers for norm pos should be in this range.
-            Grossly bigger or smaller numbers are results bad exrapolation
-            and can cause overflow erorr when denormalized and cast as int32.
+        Grossly bigger or smaller numbers are results bad exrapolation
+        and can cause overflow erorr when denormalized and cast as int32.
         """
         return min(100.0, max(-100.0, pos[0])), min(100.0, max(-100.0, pos[1]))
 
@@ -666,7 +666,12 @@ def update_recording_v04_to_v074(rec_dir):
     pupil_by_ts = dict([(p["timestamp"], p) for p in pupil_list])
 
     for datum in gaze_array:
-        ts, confidence, x, y, = datum
+        (
+            ts,
+            confidence,
+            x,
+            y,
+        ) = datum
         gaze_list.append(
             {
                 "timestamp": ts,

@@ -42,7 +42,10 @@ def draw_ellipse(
     draw_polyline(pts, thickness, RGBA(*rgba))
     if draw_center:
         draw_points(
-            [ellipse["center"]], size=20, color=RGBA(*rgba), sharpness=1.0,
+            [ellipse["center"]],
+            size=20,
+            color=RGBA(*rgba),
+            sharpness=1.0,
         )
 
 

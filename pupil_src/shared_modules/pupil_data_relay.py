@@ -14,8 +14,7 @@ import zmq_tools
 
 
 class Pupil_Data_Relay(System_Plugin_Base):
-    """
-    """
+    """"""
 
     def __init__(self, g_pool):
         super().__init__(g_pool)

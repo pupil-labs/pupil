@@ -17,12 +17,12 @@ import itertools
 
 class Cache(list):
     """Cache list is a list of False
-        [False,False,False]
-        with update() 'False' can be overwritten with a result (anything not 'False')
-        self.visited_ranges show ranges where the cache content is False
-        self.positive_ranges show ranges where the cache does not evaluate as 'False' using eval_fn
-        this allows to use ranges a a way of showing where no caching has happed (default) or whatever you do with eval_fn
-        self.complete indicated that the cache list has no unknowns aka False
+    [False,False,False]
+    with update() 'False' can be overwritten with a result (anything not 'False')
+    self.visited_ranges show ranges where the cache content is False
+    self.positive_ranges show ranges where the cache does not evaluate as 'False' using eval_fn
+    this allows to use ranges a a way of showing where no caching has happed (default) or whatever you do with eval_fn
+    self.complete indicated that the cache list has no unknowns aka False
     """
 
     def __init__(self, init_list):

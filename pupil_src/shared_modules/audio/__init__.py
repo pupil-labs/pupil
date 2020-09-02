@@ -41,8 +41,7 @@ def get_audio_mode():
 
 
 def set_audio_mode(new_mode):
-    """a save way to set the audio mode
-    """
+    """a save way to set the audio mode"""
     if new_mode in get_audio_mode_list():
         global _audio_mode
         _audio_mode = new_mode

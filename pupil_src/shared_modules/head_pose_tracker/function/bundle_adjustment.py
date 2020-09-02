@@ -44,7 +44,7 @@ class BundleAdjustment:
         self._frame_ids = []
 
     def calculate(self, initial_guess_result):
-        """ run bundle adjustment given the initial guess and then check the result of
+        """run bundle adjustment given the initial guess and then check the result of
         markers_3d_model
         """
 
@@ -126,8 +126,8 @@ class BundleAdjustment:
         return initial_guess_array, bounds, sparsity_matrix
 
     def _calculate_bounds(self, eps=np.finfo(np.float).eps, scale=np.inf):
-        """ calculate the lower and upper bounds on independent variables
-            fix the first marker at the origin of the coordinate system
+        """calculate the lower and upper bounds on independent variables
+        fix the first marker at the origin of the coordinate system
         """
         camera_extrinsics_lower_bound = np.full(self._camera_extrinsics_shape, -scale)
         camera_extrinsics_upper_bound = np.full(self._camera_extrinsics_shape, scale)
@@ -256,7 +256,7 @@ class BundleAdjustment:
         return bundle_adjustment_result
 
     def _function_compute_residuals(self, variables):
-        """ Function which computes the vector of residuals,
+        """Function which computes the vector of residuals,
         i.e., the minimization proceeds with respect to params
         """
         camera_extrinsics_array, marker_extrinsics_array = self._get_extrinsics_arrays(
@@ -274,7 +274,7 @@ class BundleAdjustment:
         return residuals.ravel()
 
     def _get_extrinsics_arrays(self, variables):
-        """ reshape 1-dimensional vector into the original shape of
+        """reshape 1-dimensional vector into the original shape of
         camera_extrinsics_array and marker_extrinsics_array
         """
 
@@ -310,7 +310,7 @@ class BundleAdjustment:
         return markers_points_2d_projected
 
     def _find_failed_indices(self, residuals, thres_frame=8, thres_marker=8):
-        """ find out those frame_indices and marker_indices which cause large
+        """find out those frame_indices and marker_indices which cause large
         reprojection errors
         """
 

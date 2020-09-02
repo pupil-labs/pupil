@@ -328,8 +328,8 @@ class Plugin(object):
 # Plugin manager classes and fns
 class Plugin_List(object):
     """This is the Plugin Manager
-        It is a self sorting list with a few functions to manage adding and
-        removing Plugins and lacking most other list methods.
+    It is a self sorting list with a few functions to manage adding and
+    removing Plugins and lacking most other list methods.
     """
 
     def __init__(self, g_pool, plugin_initializers):

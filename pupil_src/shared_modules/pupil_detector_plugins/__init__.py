@@ -22,7 +22,7 @@ def available_detector_plugins() -> T.Tuple[
     PupilDetectorPlugin, PupilDetectorPlugin, T.List[PupilDetectorPlugin]
 ]:
     """Load and list available plugins, including default
-    
+
     Returns tuple of default2D, default3D, and list of all detectors.
     """
 
