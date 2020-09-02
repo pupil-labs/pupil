@@ -503,6 +503,7 @@ def eye(
         toggle_general_settings(True)
 
         g_pool.writer = None
+        g_pool.rec_path = None
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -567,12 +568,12 @@ def eye(
                         break
                 elif subject == "recording.started":
                     if notification["record_eye"] and g_pool.capture.online:
-                        record_path = notification["rec_path"]
+                        g_pool.rec_path = notification["rec_path"]
                         raw_mode = notification["compression"]
                         start_time_synced = notification["start_time_synced"]
-                        logger.info("Will save eye video to: {}".format(record_path))
+                        logger.info(f"Will save eye video to: {g_pool.rec_path}")
                         video_path = os.path.join(
-                            record_path, "eye{}.mp4".format(eye_id)
+                            g_pool.rec_path, "eye{}.mp4".format(eye_id)
                         )
                         if raw_mode and frame and g_pool.capture.jpeg_support:
                             g_pool.writer = JPEG_Writer(video_path, start_time_synced)
@@ -592,7 +593,13 @@ def eye(
                             g_pool.writer.release()
                         except RuntimeError:
                             logger.error("No eye video recorded")
-                        g_pool.writer = None
+                        else:
+                            # TODO: wrap recording logic into plugin
+                            g_pool.capture.intrinsics.save(
+                                g_pool.rec_path, custom_name=f"eye{eye_id}"
+                            )
+                        finally:
+                            g_pool.writer = None
                 elif subject.startswith("meta.should_doc"):
                     ipc_socket.notify(
                         {

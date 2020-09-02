@@ -299,6 +299,13 @@ class Plugin(object):
         self.menu = None
         self.menu_icon = None
 
+    @property
+    def ui_available(self):
+        try:
+            return self.menu is not None
+        except AttributeError:
+            return False
+
     def __monkeypatch_gl_display_error_checking(self):
         # Monkeypatch gl_display functions to include error checking. This is because we
         # often receive OpenGL errors as results of buggy pyglui code that gets called

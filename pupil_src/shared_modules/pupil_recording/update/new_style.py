@@ -10,8 +10,10 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
+import re
 from pathlib import Path
 
+import camera_models as cm
 import file_methods as fm
 from version_utils import get_version, parse_version
 
@@ -33,6 +35,8 @@ def recording_update_to_latest_new_style(rec_dir: str):
         info_file = update_newstyle_20_21(rec_dir)
     if info_file.meta_version < parse_version("2.2"):
         info_file = update_newstyle_21_22(rec_dir)
+    if info_file.meta_version < parse_version("2.3"):
+        info_file = update_newstyle_22_23(rec_dir)
 
 
 def check_min_player_version(info_file: RecordingInfoFile):
@@ -94,6 +98,45 @@ def update_newstyle_21_22(rec_dir: str):
     old_info_file = RecordingInfoFile.read_file_from_recording(rec_dir)
     new_info_file = RecordingInfoFile.create_empty_file(
         rec_dir, fixed_version=parse_version("2.2")
+    )
+    new_info_file.update_writeable_properties_from(old_info_file)
+    new_info_file.save_file()
+    return new_info_file
+
+
+def update_newstyle_22_23(rec_dir: str):
+    # Pupil detectors now use eye camera intrinsics. Previously we did not include those
+    # in the recording, so now the dummy intrinsics would be used. These do not have an
+    # appropriate focal length value for the 3D pupil detector. Instead we will just add
+    # all default intrinsics for Cam1 and Cam2 eye cameras to the recording. The correct
+    # one will be picked according to the resolution later on. This isnot optimal, if
+    # the recording uses Cam3, but there is no way of inferring this and we just assume
+    # the probability that it is Cam2 is much higher.
+
+    # Make sure we don't overwrite any existing eye intrinsics, although there should be
+    # none at this point, except if someone copied them over from a later recording into
+    # an un-updated recording!
+    if any((Path(rec_dir) / f"eye{eye_id}.intrinsics").exists() for eye_id in (0, 1)):
+        logger.error(
+            "Found recorded eye intrinsics! These must have been copied over manually!"
+            " Will not patch eye intrinsics automatically!"
+        )
+    else:
+        for cam, data in cm.default_intrinsics.items():
+            match = re.match(r"Pupil Cam[12] ID(?P<eye_id>[01])", cam)
+            if match is None:
+                continue
+
+            eye_id = match.group("eye_id")
+            for resolution in data.keys():
+                logger.info(f"Patching eye intrinsics for {cam}{resolution}.")
+                intrinsics = cm.Camera_Model.from_default(cam, resolution)
+                intrinsics.save(rec_dir, f"eye{eye_id}")
+
+    # update info file
+    old_info_file = RecordingInfoFile.read_file_from_recording(rec_dir)
+    new_info_file = RecordingInfoFile.create_empty_file(
+        rec_dir, fixed_version=parse_version("2.3")
     )
     new_info_file.update_writeable_properties_from(old_info_file)
     new_info_file.save_file()
