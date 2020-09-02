@@ -156,11 +156,11 @@ default_world_intrinsics = {
 class Camera_Model(abc.ABC):
     cam_type = ...  # overwrite in subclasses, used for saving/loading
 
-    def __init__(self, K, D, resolution, name):
+    def __init__(self, name, resolution, K, D):
+        self.name = name
+        self.resolution = resolution
         self.K = np.array(K)
         self.D = np.array(D)
-        self.resolution = resolution
-        self.name = name
 
     def update_camera_matrix(self, camera_matrix):
         self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
@@ -310,7 +310,7 @@ class Camera_Model(abc.ABC):
                 logger.warning(
                     "No default intrinsics available! Loading dummy intrinsics!"
                 )
-                return Dummy_Camera(resolution, cam_name)
+                return Dummy_Camera(cam_name, resolution)
 
         cam_type = intrinsics["cam_type"]
         if cam_type not in Camera_Model.subclass_by_cam_type:
@@ -318,11 +318,11 @@ class Camera_Model(abc.ABC):
                 f"Trying to load unknown camera type intrinsics: {cam_type}! Using "
                 " dummy intrinsics!"
             )
-            return Dummy_Camera(resolution, cam_name)
+            return Dummy_Camera(cam_name, resolution)
 
         camera_model_class = Camera_Model.subclass_by_cam_type[cam_type]
         return camera_model_class(
-            intrinsics["camera_matrix"], intrinsics["dist_coefs"], resolution, cam_name
+            cam_name, resolution, intrinsics["camera_matrix"], intrinsics["dist_coefs"]
         )
 
 
@@ -625,11 +625,11 @@ class Dummy_Camera(Radial_Dist_Camera):
 
     cam_type = "dummy"
 
-    def __init__(self, resolution, name):
-        camera_matrix = [
+    def __init__(self, name, resolution, K=None, D=None):
+        camera_matrix = K or [
             [1000, 0.0, resolution[0] / 2.0],
             [0.0, 1000, resolution[1] / 2.0],
             [0.0, 0.0, 1.0],
         ]
-        dist_coefs = [[0.0, 0.0, 0.0, 0.0, 0.0]]
-        super().__init__(camera_matrix, dist_coefs, resolution, name)
+        dist_coefs = D or [[0.0, 0.0, 0.0, 0.0, 0.0]]
+        super().__init__(name, resolution, camera_matrix, dist_coefs)
