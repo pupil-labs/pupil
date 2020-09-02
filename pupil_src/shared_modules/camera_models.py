@@ -216,10 +216,6 @@ class Camera_Model(abc.ABC):
     ):
         ...
 
-    @abc.abstractmethod
-    def save(self, directory: str, custom_name: typing.Optional[str] = None):
-        ...
-
     subclass_by_cam_type = dict()
 
     def __init_subclass__(cls, *args, **kwargs):
