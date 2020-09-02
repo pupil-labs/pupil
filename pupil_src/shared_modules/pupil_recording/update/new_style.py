@@ -35,7 +35,7 @@ def recording_update_to_latest_new_style(rec_dir: str):
         info_file = update_newstyle_20_21(rec_dir)
     if info_file.meta_version < parse_version("2.2"):
         info_file = update_newstyle_21_22(rec_dir)
-    if info_file.meta_version < Version("2.3"):
+    if info_file.meta_version < parse_version("2.3"):
         info_file = update_newstyle_22_23(rec_dir)
 
 
@@ -136,7 +136,7 @@ def update_newstyle_22_23(rec_dir: str):
     # update info file
     old_info_file = RecordingInfoFile.read_file_from_recording(rec_dir)
     new_info_file = RecordingInfoFile.create_empty_file(
-        rec_dir, fixed_version=Version("2.3")
+        rec_dir, fixed_version=parse_version("2.3")
     )
     new_info_file.update_writeable_properties_from(old_info_file)
     new_info_file.save_file()
