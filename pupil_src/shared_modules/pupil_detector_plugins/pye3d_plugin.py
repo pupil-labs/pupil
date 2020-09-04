@@ -58,9 +58,6 @@ class Pye3DPlugin(PupilDetectorPlugin):
 
         return result
 
-    def customize_menu(self):
-        pass
-
     @classmethod
     def parse_pretty_class_name(cls) -> str:
         return "Pye3D Detector"
