@@ -293,7 +293,8 @@ class Accuracy_Visualizer(Plugin):
             return False
 
         self.recent_input.update(
-            gazer_class_name=note.gazer_class_name, gazer_params=note.params,
+            gazer_class_name=note.gazer_class_name,
+            gazer_params=note.params,
         )
 
         self.recalculate()

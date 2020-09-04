@@ -172,7 +172,8 @@ class PupilTopic:
             if detector_tag in PupilTopic._legacy_method_to_detector_tag:
                 detector_tag = PupilTopic._legacy_method_to_detector_tag[detector_tag]
             return PupilTopic._FORMAT_STRING_V2.format(
-                eye_id=match_v1.group("eye_id"), detector_tag=detector_tag,
+                eye_id=match_v1.group("eye_id"),
+                detector_tag=detector_tag,
             )
         regex_v2 = PupilTopic._match_regex_v2()
         match_v2 = re.match(regex_v2, topic)
@@ -213,7 +214,8 @@ class PupilTopic:
             detector_tag = r"[^\.]+"
 
         pattern = PupilTopic._MATCH_FORMAT_STRING_V2.format(
-            eye_id=eye_id, detector_tag=detector_tag,
+            eye_id=eye_id,
+            detector_tag=detector_tag,
         )
 
         return re.compile(pattern)
@@ -224,7 +226,9 @@ class PupilTopic:
         if eye_id is None:
             eye_id = "[01]"
 
-        pattern = PupilTopic._MATCH_FORMAT_STRING_V1.format(eye_id=eye_id,)
+        pattern = PupilTopic._MATCH_FORMAT_STRING_V1.format(
+            eye_id=eye_id,
+        )
 
         return re.compile(pattern)
 

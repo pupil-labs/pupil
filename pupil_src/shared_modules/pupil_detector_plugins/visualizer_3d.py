@@ -83,25 +83,25 @@ class Eye_Visualizer(Visualizer):
         self, circle_normal, circle_center, circle_scale=1.0
     ):
         """
-            OpenGL matrix convention for typical GL software
-            with positive Y=up and positive Z=rearward direction
-            RT = right
-            UP = up
-            BK = back
-            POS = position/translation
-            US = uniform scale
+        OpenGL matrix convention for typical GL software
+        with positive Y=up and positive Z=rearward direction
+        RT = right
+        UP = up
+        BK = back
+        POS = position/translation
+        US = uniform scale
 
-            float transform[16];
+        float transform[16];
 
-            [0] [4] [8 ] [12]
-            [1] [5] [9 ] [13]
-            [2] [6] [10] [14]
-            [3] [7] [11] [15]
+        [0] [4] [8 ] [12]
+        [1] [5] [9 ] [13]
+        [2] [6] [10] [14]
+        [3] [7] [11] [15]
 
-            [RT.x] [UP.x] [BK.x] [POS.x]
-            [RT.y] [UP.y] [BK.y] [POS.y]
-            [RT.z] [UP.z] [BK.z] [POS.Z]
-            [    ] [    ] [    ] [US   ]
+        [RT.x] [UP.x] [BK.x] [POS.x]
+        [RT.y] [UP.y] [BK.y] [POS.y]
+        [RT.z] [UP.z] [BK.z] [POS.Z]
+        [    ] [    ] [    ] [US   ]
         """
         temp = self.get_anthropomorphic_matrix()
         right = temp[:3, 0]
@@ -132,17 +132,14 @@ class Eye_Visualizer(Visualizer):
         direction = result["circle"][1]
         pupil_radius = result["circle"][2]
 
-        status = (
-            " Eyeball center : X: %.2fmm Y: %.2fmm Z: %.2fmm\n Pupil direction:  X: %.2f Y: %.2f Z: %.2f\n Pupil Diameter: %.2fmm\n  "
-            % (
-                eye[0][0],
-                eye[0][1],
-                eye[0][2],
-                direction[0],
-                direction[1],
-                direction[2],
-                pupil_radius * 2,
-            )
+        status = " Eyeball center : X: %.2fmm Y: %.2fmm Z: %.2fmm\n Pupil direction:  X: %.2f Y: %.2f Z: %.2f\n Pupil Diameter: %.2fmm\n  " % (
+            eye[0][0],
+            eye[0][1],
+            eye[0][2],
+            direction[0],
+            direction[1],
+            direction[2],
+            pupil_radius * 2,
         )
 
         self.glfont.push_state()

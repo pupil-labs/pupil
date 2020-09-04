@@ -38,7 +38,11 @@ class _SerializedNamedTupleMixin:
 
     @classmethod
     def _assert_static_property_matches_dict(
-        cls, dict_: dict, key_name: str, key_type: T.Any, field_name: str = None,
+        cls,
+        dict_: dict,
+        key_name: str,
+        key_type: T.Any,
+        field_name: str = None,
     ):
         field_name = field_name if field_name is not None else key_name
         defaults = cls._field_defaults

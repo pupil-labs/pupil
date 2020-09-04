@@ -23,14 +23,14 @@ from pyglui import cygl, ui
 
 import gl_utils
 import uvc
-from camera_models import load_intrinsics
-from version_utils import VersionFormat
+from camera_models import Camera_Model
+from version_utils import parse_version
 
 from .base_backend import Base_Manager, Base_Source, InitialisationError, SourceInfo
 from .utils import Check_Frame_Stripes, Exposure_Time
 
 # check versions for our own depedencies as they are fast-changing
-assert VersionFormat(uvc.__version__) >= VersionFormat("0.13")
+assert parse_version(uvc.__version__) >= parse_version("0.13")
 
 # logging
 logger = logging.getLogger(__name__)
@@ -135,7 +135,7 @@ class UVC_Source(Base_Source):
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
             self.exposure_time_backup = None
-            self._intrinsics = load_intrinsics(
+            self._intrinsics = Camera_Model.from_file(
                 self.g_pool.user_dir, self.name, self.frame_size
             )
         else:
@@ -556,7 +556,7 @@ class UVC_Source(Base_Source):
         self.uvc_capture.frame_size = size
         self.frame_size_backup = size
 
-        self._intrinsics = load_intrinsics(
+        self._intrinsics = Camera_Model.from_file(
             self.g_pool.user_dir, self.name, self.frame_size
         )
 

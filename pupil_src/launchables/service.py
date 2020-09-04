@@ -88,7 +88,7 @@ def service(
         # helpers/utils
         from file_methods import Persistent_Dict
         from methods import delta_t, get_system_info
-        from version_utils import VersionFormat
+        from version_utils import parse_version
         import audio
         from uvc import get_time_monotonic
 
@@ -183,7 +183,7 @@ def service(
         session_settings = Persistent_Dict(
             os.path.join(g_pool.user_dir, "user_settings_service")
         )
-        if session_settings.get("version", VersionFormat("0.0")) < g_pool.version:
+        if parse_version(session_settings.get("version", "0.0")) < g_pool.version:
             logger.info(
                 "Session setting are from older version of this app. I will not use those."
             )

@@ -103,7 +103,7 @@ class Raw_Data_Exporter(Plugin):
         gaze_normal1_x - x normal of the visual axis for eye 1 in the world camera coordinate system (not avaible for monocular setups.). The visual axis goes through the eye ball center and the object thats looked at.
         gaze_normal1_y - y normal of the visual axis for eye 1
         gaze_normal1_z - z normal of the visual axis for eye 1
-        """
+    """
 
     icon_chr = chr(0xE873)
     icon_font = "pupil_icons"

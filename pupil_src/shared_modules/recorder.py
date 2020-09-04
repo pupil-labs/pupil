@@ -28,7 +28,6 @@ from file_methods import PLData_Writer, load_object
 from methods import get_system_info, timer
 from video_capture.ndsi_backend import NDSI_Source
 
-from pupil_recording.info import Version
 from pupil_recording.info import RecordingInfoFile
 
 from gaze_mapping.notifications import (
@@ -286,8 +285,9 @@ class Recorder(System_Plugin_Base):
             frame = self.g_pool.capture._recent_frame
             if frame is None:
                 logger.error(
-                    "Recording a Pupil Mobile stream requires a connection!"
-                    " Aborting recording."
+                    "Your connection does not seem to be stable enough for "
+                    "recording Pupil Mobile via WiFi. We recommend recording "
+                    "on the phone."
                 )
                 return
             if abs(frame.timestamp - start_time_synced) > TIMESTAMP_ERROR_THRESHOLD:
@@ -521,7 +521,7 @@ class Recorder(System_Plugin_Base):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-           either volunatily or forced.
+        either volunatily or forced.
         """
         if self.running:
             self.stop()

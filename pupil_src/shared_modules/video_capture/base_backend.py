@@ -76,7 +76,11 @@ class Base_Source(Plugin):
         return "Video Source"
 
     def __init__(
-        self, g_pool, *, source_mode: T.Optional[SourceMode] = None, **kwargs,
+        self,
+        g_pool,
+        *,
+        source_mode: T.Optional[SourceMode] = None,
+        **kwargs,
     ):
         super().__init__(g_pool)
         self.g_pool.capture = self

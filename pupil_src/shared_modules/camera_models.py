@@ -12,7 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import logging
 import os
-import typing
+import typing as T
 
 import cv2
 import numpy as np
@@ -22,8 +22,9 @@ from file_methods import load_object, save_object
 logger = logging.getLogger(__name__)
 __version__ = 1
 
-# these are calibration we recorded. They are estimates and generalize our setup. Its always better to calibrate each camera.
-pre_recorded_calibrations = {
+# These are camera intrinsics that we recorded. They are estimates and generalize our
+# setup. Its always better to estimate intrinsics for each camera again.
+default_intrinsics = {
     "Pupil Cam1 ID2": {
         "(640, 480)": {
             "dist_coefs": [
@@ -151,97 +152,98 @@ pre_recorded_calibrations = {
     },
 }
 
-
-def load_intrinsics(directory, cam_name, resolution):
-    """
-    Loads a pre-recorded intrinsics calibration for the given camera and resolution. If no pre-recorded calibration is available we fall back on default values.
-    :param directory: The directory in which to look for the intrinsincs file
-    :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'
-    :param resolution: Camera resolution given as a tuple.
-    :return: Camera Model Object
-    """
-    file_path = os.path.join(
-        directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
-    )
-    try:
-        calib_dict = load_object(file_path, allow_legacy=False)
-
-        if calib_dict["version"] < __version__:
-            logger.warning("Deprecated camera calibration found.")
-            logger.info(
-                "Please recalibrate using the Camera Intrinsics Estimation calibration."
-            )
-            os.rename(
-                file_path, "{}.deprecated.v{}".format(file_path, calib_dict["version"])
-            )
-
-        intrinsics = calib_dict[str(resolution)]
-        logger.info("Previously recorded calibration found and loaded!")
-    except Exception:
-        logger.info(
-            "No user calibration found for camera {} at resolution {}".format(
-                cam_name, resolution
-            )
-        )
-
-        if (
-            cam_name in pre_recorded_calibrations
-            and str(resolution) in pre_recorded_calibrations[cam_name]
-        ):
-            logger.info("Loading pre-recorded calibration")
-            intrinsics = pre_recorded_calibrations[cam_name][str(resolution)]
-        else:
-            logger.info("No pre-recorded calibration available")
-            logger.warning("Loading dummy calibration")
-            return Dummy_Camera(resolution, cam_name)
-
-    if intrinsics["cam_type"] == "fisheye":
-        return Fisheye_Dist_Camera(
-            intrinsics["camera_matrix"], intrinsics["dist_coefs"], resolution, cam_name
-        )
-    else:
-        return Radial_Dist_Camera(
-            intrinsics["camera_matrix"], intrinsics["dist_coefs"], resolution, cam_name
-        )
-
-
-def save_intrinsics(directory, cam_name, resolution, intrinsics):
-    """
-    Saves camera intrinsics calibration to a file. For each unique camera name we maintain a single file containing all calibrations associated with this camera name.
-    :param directory: Directory to which the intrinsics file will be written
-    :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'
-    :param resolution: Camera resolution given as a tuple. This needs to match the resolution the calibration has been computed with.
-    :param intrinsics: The camera intrinsics dictionary.
-    :return:
-    """
-    # Try to load previous camera calibrations
-    save_path = os.path.join(
-        directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
-    )
-    try:
-        calib_dict = load_object(save_path, allow_legacy=False)
-    except Exception:
-        calib_dict = {}
-
-    calib_dict["version"] = __version__
-    calib_dict[str(resolution)] = intrinsics
-
-    save_object(calib_dict, save_path)
-    logger.info(
-        "Calibration for camera {} at resolution {} saved to {}".format(
-            cam_name, resolution, save_path
-        )
+# Add measured intrinsics for the eyes (once for each ID for easy lookup)
+# TODO: From these intrinsics only the focal lengths were measured. The principal points
+# are just default values (half the resolution) and there's no distortion model for now.
+# At some later point we should measure the full intrinsics and replace existing
+# intrinsics with a recording upgrade.
+for eye_id in (0, 1):
+    default_intrinsics.update(
+        {
+            f"Pupil Cam1 ID{eye_id}": {
+                "(320, 240)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [338.456035, 0.0, 160],
+                        [0.0, 339.871543, 120],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+                "(640, 480)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [670.785555, 0.0, 320],
+                        [0.0, 670.837798, 240],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+            },
+            f"Pupil Cam2 ID{eye_id}": {
+                "(192, 192)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [282.976877, 0.0, 96],
+                        [0.0, 283.561467, 96],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+                "(400, 400)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [561.471804, 0.0, 200],
+                        [0.0, 562.494105, 200],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+            },
+            f"Pupil Cam3 ID{eye_id}": {
+                "(192, 192)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [140.0, 0.0, 96],
+                        [0.0, 140.0, 96],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+                "(400, 400)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [278.50, 0.0, 200],
+                        [0.0, 278.55, 200],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+            },
+        }
     )
 
 
 class Camera_Model(abc.ABC):
-    @abc.abstractmethod
-    def update_camera_matrix(self, camera_matrix: np.ndarray):
-        ...
+    cam_type = ...  # overwrite in subclasses, used for saving/loading
 
-    @abc.abstractmethod
-    def update_dist_coefs(self, dist_coefs: np.ndarray):
-        ...
+    def __init__(self, name, resolution, K, D):
+        self.name = name
+        self.resolution = resolution
+        self.K = np.array(K)
+        self.D = np.array(D)
+
+    def update_camera_matrix(self, camera_matrix):
+        self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
+
+    def update_dist_coefs(self, dist_coefs):
+        self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
+
+    @property
+    def focal_length(self):
+        fx = self.K[0, 0]
+        fy = self.K[1, 1]
+        return (fx + fy) / 2
 
     @abc.abstractmethod
     def undistort(self, img: np.ndarray) -> np.ndarray:
@@ -257,8 +259,8 @@ class Camera_Model(abc.ABC):
     def projectPoints(
         self,
         object_points,
-        rvec: typing.Optional[np.ndarray] = None,
-        tvec: typing.Optional[np.ndarray] = None,
+        rvec: T.Optional[np.ndarray] = None,
+        tvec: T.Optional[np.ndarray] = None,
         use_distortion: bool = True,
     ):
         ...
@@ -269,13 +271,15 @@ class Camera_Model(abc.ABC):
     ) -> np.ndarray:
         ...
 
-    @abc.abstractmethod
-    def undistort_points_on_image_plane(self, points: np.ndarray) -> np.ndarray:
-        ...
+    def undistort_points_on_image_plane(self, points):
+        points = self.unprojectPoints(points, use_distortion=True)
+        points = self.projectPoints(points, use_distortion=False)
+        return points
 
-    @abc.abstractmethod
-    def distort_points_on_image_plane(self, points: np.ndarray) -> np.ndarray:
-        ...
+    def distort_points_on_image_plane(self, points):
+        points = self.unprojectPoints(points, use_distortion=False)
+        points = self.projectPoints(points, use_distortion=True)
+        return points
 
     @abc.abstractmethod
     def solvePnP(
@@ -284,33 +288,149 @@ class Camera_Model(abc.ABC):
         xy,
         flags: int = cv2.SOLVEPNP_ITERATIVE,
         useExtrinsicGuess: bool = False,
-        rvec: typing.Optional[np.ndarray] = None,
-        tvec: typing.Optional[np.ndarray] = None,
+        rvec: T.Optional[np.ndarray] = None,
+        tvec: T.Optional[np.ndarray] = None,
     ):
         ...
 
-    @abc.abstractmethod
-    def save(self, directory: str, custom_name: typing.Optional[str] = None):
-        ...
+    subclass_by_cam_type = dict()
+
+    def __init_subclass__(cls, *args, **kwargs):
+        super().__init_subclass__(*args, **kwargs)
+        # register subclasses by cam_type
+        if cls.cam_type == ...:
+            raise NotImplementedError("Subclass needs to define 'cam_type'!")
+        if cls.cam_type in Camera_Model.subclass_by_cam_type:
+            raise ValueError(
+                f"Error trying to register camera model {cls}: Camera model with"
+                f" cam_type '{cls.cam_type}' already exists:"
+                f" {Camera_Model.subclass_by_cam_type[cls.cam_type]}"
+            )
+        Camera_Model.subclass_by_cam_type[cls.cam_type] = cls
+
+    def save(self, directory, custom_name=None):
+        """
+        Saves the current intrinsics to corresponding camera's intrinsics file. For each
+        unique camera name we maintain a single file containing all intrinsics
+        associated with this camera name.
+        :param directory: save location
+        :return:
+        """
+        cam_name = custom_name or self.name
+        intrinsics = {
+            "camera_matrix": self.K.tolist(),
+            "dist_coefs": self.D.tolist(),
+            "resolution": self.resolution,
+            "cam_type": self.cam_type,
+        }
+        # Try to load previously recorded camera intrinsics
+        save_path = os.path.join(
+            directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
+        )
+        try:
+            intrinsics_dict = load_object(save_path, allow_legacy=False)
+        except Exception:
+            intrinsics_dict = {}
+
+        intrinsics_dict["version"] = __version__
+        intrinsics_dict[str(self.resolution)] = intrinsics
+
+        save_object(intrinsics_dict, save_path)
+        logger.info(
+            f"Intrinsics for camera {cam_name} at resolution {self.resolution} saved"
+            f" to {save_path}"
+        )
+
+    @staticmethod
+    def from_file(
+        directory: str, cam_name: str, resolution: T.Tuple[int]
+    ) -> "Camera_Model":
+        """
+        Loads recorded intrinsics for the given camera and resolution. If no recorded
+        intrinsics are available we fall back to default values. If no default values
+        are available, we use dummy intrinsics.
+        :param directory: The directory in which to look for the intrinsincs file.
+        :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'.
+        :param resolution: Camera resolution.
+        """
+        file_path = os.path.join(
+            directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
+        )
+        try:
+            intrinsics_dict = load_object(file_path, allow_legacy=False)
+
+            if intrinsics_dict["version"] < __version__:
+                logger.warning("Deprecated camera intrinsics found.")
+                logger.info(
+                    "Please recalculate the camera intrinsics using the Camera"
+                    " Intrinsics Estimation."
+                )
+                os.rename(
+                    file_path,
+                    "{}.deprecated.v{}".format(file_path, intrinsics_dict["version"]),
+                )
+
+            intrinsics = intrinsics_dict[str(resolution)]
+            logger.info("Loading previously recorded intrinsics...")
+            return Camera_Model._from_raw_intrinsics(cam_name, resolution, intrinsics)
+        except Exception:
+            logger.debug(
+                f"No recorded intrinsics found for camera {cam_name} at resolution"
+                f" {resolution}"
+            )
+            return Camera_Model.from_default(cam_name, resolution)
+
+    @staticmethod
+    def from_default(cam_name: str, resolution: T.Tuple[int]) -> "Camera_Model":
+        """
+        Loads default intrinsics for the given camera and resolution. If no default
+        values are available, we use dummy intrinsics.
+        :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'.
+        :param resolution: Camera resolution.
+        """
+        if (
+            cam_name in default_intrinsics
+            and str(resolution) in default_intrinsics[cam_name]
+        ):
+            logger.info("Loading default intrinsics!")
+            intrinsics = default_intrinsics[cam_name][str(resolution)]
+            return Camera_Model._from_raw_intrinsics(cam_name, resolution, intrinsics)
+        else:
+            logger.warning(
+                f"No camera intrinsics available for camera {cam_name} at"
+                f" resolution {resolution}!"
+            )
+            logger.warning("Loading dummy intrinsics, which might decrease accuracy!")
+            logger.warning(
+                "Consider selecting a different resolution, or running the Camera"
+                " Instrinsics Estimation!"
+            )
+            return Dummy_Camera(cam_name, resolution)
+
+    @staticmethod
+    def _from_raw_intrinsics(cam_name, resolution, intrinsics):
+        cam_type = intrinsics["cam_type"]
+        if cam_type not in Camera_Model.subclass_by_cam_type:
+            logger.warning(
+                f"Trying to load unknown camera type intrinsics: {cam_type}! Using "
+                " dummy intrinsics!"
+            )
+            return Dummy_Camera(cam_name, resolution)
+
+        camera_model_class = Camera_Model.subclass_by_cam_type[cam_type]
+        return camera_model_class(
+            cam_name, resolution, intrinsics["camera_matrix"], intrinsics["dist_coefs"]
+        )
 
 
 class Fisheye_Dist_Camera(Camera_Model):
-    """ Camera model assuming a lense with fisheye distortion.
-        Provides functionality to make use of a fisheye camera calibration.
-        The implementation of cv2.fisheye is buggy and some functions had to be customized.
+    """
+    Camera model assuming a lense with fisheye distortion. Provides functionality to
+    make use of a fisheye camera model. The implementation of cv2.fisheye is buggy and
+    some functions had to be customized.
     """
 
-    def __init__(self, K, D, resolution, name):
-        self.K = np.array(K)
-        self.D = np.array(D)
-        self.resolution = resolution
-        self.name = name
-
-    def update_camera_matrix(self, camera_matrix):
-        self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
-
-    def update_dist_coefs(self, dist_coefs):
-        self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
+    cam_type = "fisheye"
 
     def undistort(self, img):
         """
@@ -341,9 +461,9 @@ class Fisheye_Dist_Camera(Camera_Model):
 
     def unprojectPoints(self, pts_2d, use_distortion=True, normalize=False):
         """
-        Undistorts points according to the camera model.
-        cv2.fisheye.undistortPoints does *NOT* perform the same unprojection step the original cv2.unprojectPoints does.
-        Thus we implement this function ourselves.
+        Undistorts points according to the camera model. cv2.fisheye.undistortPoints
+        does *NOT* perform the same unprojection step the original cv2.unprojectPoints
+        does. Thus we implement this function ourselves.
         :param pts_2d, shape: Nx2
         :return: Array of unprojected 3d points, shape: Nx3
         """
@@ -395,8 +515,10 @@ class Fisheye_Dist_Camera(Camera_Model):
         """
         Projects a set of points onto the camera plane as defined by the camera model.
         :param object_points: Set of 3D world points
-        :param rvec: Set of vectors describing the rotation of the camera when recording the corresponding object point
-        :param tvec: Set of vectors describing the translation of the camera when recording the corresponding object point
+        :param rvec: Set of vectors describing the rotation of the camera when recording
+            the corresponding object point
+        :param tvec: Set of vectors describing the translation of the camera when
+            recording the corresponding object point
         :return: Projected 2D points
         """
         skew = 0
@@ -433,16 +555,6 @@ class Fisheye_Dist_Camera(Camera_Model):
     def undistort_points_to_ideal_point_coordinates(self, points):
         return cv2.fisheye.undistortPoints(points, self.K, self.D)
 
-    def undistort_points_on_image_plane(self, points):
-        points = self.unprojectPoints(points, use_distortion=True)
-        points = self.projectPoints(points, use_distortion=False)
-        return points
-
-    def distort_points_on_image_plane(self, points):
-        points = self.unprojectPoints(points, use_distortion=False)
-        points = self.projectPoints(points, use_distortion=True)
-        return points
-
     def solvePnP(
         self,
         uv3d,
@@ -463,8 +575,9 @@ class Fisheye_Dist_Camera(Camera_Model):
         if uv3d.shape[1] != xy.shape[1]:
             raise ValueError("the number of 3d points and 2d points are not the same")
 
+        # opencv cannot handle solvePnP correctly for fisheye distorted cameras, so we
+        # undistort manually and call solvePnP without distortion
         xy_undist = self.undistort_points_on_image_plane(xy)
-
         res = cv2.solvePnP(
             uv3d,
             xy_undist,
@@ -477,46 +590,22 @@ class Fisheye_Dist_Camera(Camera_Model):
         )
         return res
 
-    def save(self, directory, custom_name=None):
-        """
-        Saves the current calibration to corresponding camera's calibrations file
-        :param directory: save directory
-        :return:
-        """
-        intrinsics = {
-            "camera_matrix": self.K.tolist(),
-            "dist_coefs": self.D.tolist(),
-            "resolution": self.resolution,
-            "cam_type": "fisheye",
-        }
-        save_intrinsics(
-            directory, custom_name or self.name, self.resolution, intrinsics
-        )
-
 
 class Radial_Dist_Camera(Camera_Model):
-    """ Camera model assuming a lense with radial distortion (this is the defaut model in opencv).
-        Provides functionality to make use of a pinhole camera calibration that is also compensating for lense distortion
+    """
+    Camera model assuming a lense with radial distortion (this is the defaut model in
+    opencv). Provides functionality to make use of a pinhole camera model that is also
+    compensating for lense distortion
     """
 
-    def __init__(self, K, D, resolution, name):
-        self.K = np.array(K)
-        self.D = np.array(D)
-        self.resolution = resolution
-        self.name = name
-
-    def update_camera_matrix(self, camera_matrix):
-        self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
-
-    def update_dist_coefs(self, dist_coefs):
-        self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
+    cam_type = "radial"
 
     def undistort(self, img):
         """
-                Undistortes an image based on the camera model.
-                :param img: Distorted input image
-                :return: Undistorted image
-                """
+        Undistortes an image based on the camera model.
+        :param img: Distorted input image
+        :return: Undistorted image
+        """
         undist_img = cv2.undistort(img, self.K, self.D)
         return undist_img
 
@@ -555,8 +644,10 @@ class Radial_Dist_Camera(Camera_Model):
         """
         Projects a set of points onto the camera plane as defined by the camera model.
         :param object_points: Set of 3D world points
-        :param rvec: Set of vectors describing the rotation of the camera when recording the corresponding object point
-        :param tvec: Set of vectors describing the translation of the camera when recording the corresponding object point
+        :param rvec: Set of vectors describing the rotation of the camera when recording
+            the corresponding object point
+        :param tvec: Set of vectors describing the translation of the camera when
+            recording the corresponding object point
         :return: Projected 2D points
         """
         input_dim = object_points.ndim
@@ -591,16 +682,6 @@ class Radial_Dist_Camera(Camera_Model):
     def undistort_points_to_ideal_point_coordinates(self, points):
         return cv2.undistortPoints(points, self.K, self.D)
 
-    def undistort_points_on_image_plane(self, points):
-        points = self.unprojectPoints(points, use_distortion=True)
-        points = self.projectPoints(points, use_distortion=False)
-        return points
-
-    def distort_points_on_image_plane(self, points):
-        points = self.unprojectPoints(points, use_distortion=False)
-        points = self.projectPoints(points, use_distortion=True)
-        return points
-
     def solvePnP(
         self,
         uv3d,
@@ -633,49 +714,19 @@ class Radial_Dist_Camera(Camera_Model):
         )
         return res
 
-    def save(self, directory, custom_name=None):
-        """
-        Saves the current calibration to corresponding camera's calibrations file
-        :param directory: save location
-        :return:
-        """
-        intrinsics = {
-            "camera_matrix": self.K.tolist(),
-            "dist_coefs": self.D.tolist(),
-            "resolution": self.resolution,
-            "cam_type": "radial",
-        }
-        save_intrinsics(
-            directory, custom_name or self.name, self.resolution, intrinsics
-        )
-
 
 class Dummy_Camera(Radial_Dist_Camera):
     """
     Dummy Camera model assuming no lense distortion and idealized camera intrinsics.
     """
 
-    def __init__(self, resolution, name):
-        camera_matrix = [
+    cam_type = "dummy"
+
+    def __init__(self, name, resolution, K=None, D=None):
+        camera_matrix = K or [
             [1000, 0.0, resolution[0] / 2.0],
             [0.0, 1000, resolution[1] / 2.0],
             [0.0, 0.0, 1.0],
         ]
-        dist_coefs = [[0.0, 0.0, 0.0, 0.0, 0.0]]
-        super().__init__(camera_matrix, dist_coefs, resolution, name)
-
-    def save(self, directory, custom_name=None):
-        """
-        Saves the current calibration to corresponding camera's calibrations file
-        :param directory: save location
-        :return:
-        """
-        intrinsics = {
-            "camera_matrix": self.K.tolist(),
-            "dist_coefs": self.D.tolist(),
-            "resolution": self.resolution,
-            "cam_type": "dummy",
-        }
-        save_intrinsics(
-            directory, custom_name or self.name, self.resolution, intrinsics
-        )
+        dist_coefs = D or [[0.0, 0.0, 0.0, 0.0, 0.0]]
+        super().__init__(name, resolution, camera_matrix, dist_coefs)

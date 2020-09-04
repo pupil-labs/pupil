@@ -38,7 +38,7 @@ def timer(dt):
 
 
 def delta_t():
-    """ return time between each call like so:
+    """return time between each call like so:
 
     tick = delta_t()
     def get_dt():
@@ -134,7 +134,7 @@ def equalize(image, image_lower=0.0, image_upper=255.0):
 
 def erase_specular(image, lower_threshold=0.0, upper_threshold=150.0):
     """erase_specular: removes specular reflections
-            within given threshold using a binary mask (hi_mask)
+    within given threshold using a binary mask (hi_mask)
     """
     thresh = cv2.inRange(image, np.asarray(float(lower_threshold)), np.asarray(256.0))
 

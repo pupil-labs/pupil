@@ -65,7 +65,9 @@ class Calibration(StorageItem):
         return self.calib_params
 
     def update(
-        self, is_offline_calibration: bool = ..., calib_params: T.Optional[T.Any] = ...,
+        self,
+        is_offline_calibration: bool = ...,
+        calib_params: T.Optional[T.Any] = ...,
     ):
         if is_offline_calibration is not ...:
             self.__is_offline_calibration = is_offline_calibration

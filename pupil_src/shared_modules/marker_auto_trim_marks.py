@@ -311,8 +311,7 @@ class Marker_Auto_Trim_Marks(Plugin):
             self.gl_display_cache_bars()
 
     def gl_display_cache_bars(self):
-        """
-        """
+        """"""
         padding = 20.0
         frame_max = len(
             self.g_pool.timestamps

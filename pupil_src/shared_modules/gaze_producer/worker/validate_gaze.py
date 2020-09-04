@@ -48,7 +48,9 @@ def create_bg_task(gaze_mapper, calibration, reference_location_storage):
     )
 
     return tasklib.background.create(
-        f"validate gaze mapper '{gaze_mapper.name}'", validate, args=args,
+        f"validate gaze mapper '{gaze_mapper.name}'",
+        validate,
+        args=args,
     )
 
 

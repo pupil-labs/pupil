@@ -399,7 +399,10 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         # TODO: Figure out the number of frames independent of 3d detection
         detected = self._pupil_data_store.count_collected(detector_tag="3d")
         if total:
-            return min(detected / total, 1.0,)
+            return min(
+                detected / total,
+                1.0,
+            )
         else:
             return 0.0
 

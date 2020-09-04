@@ -10,8 +10,8 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import platform, sys, os, time, traceback
-from distutils.version import LooseVersion as VersionFormat
 import subprocess as sp
+from version_utils import parse_version
 
 import logging
 
@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 os_name = platform.system()
 if os_name == "Darwin":
-    mac_version = VersionFormat(platform.mac_ver()[0])
-    min_version = VersionFormat("10.11.0")
+    mac_version = parse_version(platform.mac_ver()[0])
+    min_version = parse_version("10.11.0")
 
 if os_name == "Darwin" and mac_version >= min_version:
 
@@ -60,7 +60,7 @@ else:
 
 def patch_pyre_zhelper_cdll():
     """Fixes https://github.com/pupil-labs/pupil/issues/1919
-    
+
     When running the v2.0 bundle on macOS 10.14, `ctypes.CDLL("libSystem.dylib")` fails
     to load which is required by pyre.zhelper. `libSystem.dylib` is not part of the
     bundle on purpose, as `ctypes.CDLL` is usually able to fallback to the system-

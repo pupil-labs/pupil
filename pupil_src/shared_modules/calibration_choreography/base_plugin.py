@@ -297,7 +297,8 @@ class CalibrationChoreographyPlugin(Plugin):
     def on_choreography_started(self, mode: ChoreographyMode):
         self.notify_all(
             ChoreographyNotification(
-                mode=mode, action=ChoreographyAction.STARTED,
+                mode=mode,
+                action=ChoreographyAction.STARTED,
             ).to_dict()
         )
 
@@ -452,8 +453,7 @@ class CalibrationChoreographyPlugin(Plugin):
             )
 
     def deinit_ui(self):
-        """Gets called when the plugin get terminated, either voluntarily or forced.
-        """
+        """Gets called when the plugin get terminated, either voluntarily or forced."""
         if self.is_active:
             self._perform_stop()
         self.remove_menu()
