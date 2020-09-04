@@ -356,7 +356,12 @@ def player(
         width += icon_bar_width
         width, height = session_settings.get("window_size", (width, height))
 
-        window_pos = session_settings.get("window_position", window_position_default)
+        window_position_manager = gl_utils.WindowPositionManager()
+        window_pos = window_position_manager.new_window_position(
+            default_position=window_position_default,
+            previous_position=session_settings.get("window_position", None),
+        )
+
         window_name = f"Pupil Player: {meta_info.recording_name} - {rec_dir}"
 
         glfw.glfwInit()
@@ -836,7 +841,12 @@ def player_drop(
             )
             session_settings.clear()
         w, h = session_settings.get("window_size", (1280, 720))
-        window_pos = session_settings.get("window_position", window_position_default)
+
+        window_position_manager = gl_utils.WindowPositionManager()
+        window_pos = window_position_manager.new_window_position(
+            default_position=window_position_default,
+            previous_position=session_settings.get("window_position", None),
+        )
 
         glfw.glfwInit()
         glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)

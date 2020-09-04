@@ -40,13 +40,19 @@ class Service_UI(System_Plugin_Base):
         self,
         g_pool,
         window_size=window_size_default,
-        window_position=window_position_default,
+        window_position=None,
         gui_scale=1.0,
         ui_config={},
     ):
         super().__init__(g_pool)
 
         self.texture = np.zeros((1, 1, 3), dtype=np.uint8) + 128
+
+        window_position_manager = gl_utils.WindowPositionManager()
+        window_position = window_position_manager.new_window_position(
+            default_position=window_position_default,
+            previous_position=window_position,
+        )
 
         glfw.glfwInit()
         glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)

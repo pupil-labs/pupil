@@ -514,7 +514,11 @@ def world(
         if hide_ui:
             glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
-        window_pos = session_settings.get("window_position", window_position_default)
+        window_position_manager = gl_utils.WindowPositionManager()
+        window_pos = window_position_manager.new_window_position(
+            default_position=window_position_default,
+            previous_position=session_settings.get("window_position", None),
+        )
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
