@@ -58,6 +58,18 @@ class Pye3DPlugin(PupilDetectorPlugin):
 
         return result
 
+    def on_notify(self, notification):
+        super().on_notify(notification)
+
+        subject = notification["subject"]
+        if subject == "pupil_detector.3d.reset_model":
+            if "id" not in notification:
+                # simply apply to all eye processes
+                self.reset_model()
+            elif notification["id"] == self.g_pool.eye_id:
+                # filter for specific eye processes
+                self.reset_model()
+
     @classmethod
     def parse_pretty_class_name(cls) -> str:
         return "Pye3D Detector"
