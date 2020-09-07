@@ -26,6 +26,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
     icon_chr = chr(0xEC19)
 
     label = "Pye3D"
+    identifier = "3d"
     order = 0.101
 
     def __init__(self, g_pool):
@@ -52,7 +53,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
 
         eye_id = self.g_pool.eye_id
         result["timestamp"] = frame.timestamp
-        result["topic"] = f"pupil.{eye_id}"
+        result["topic"] = f"pupil.{eye_id}.{self.identifier}"
         result["id"] = eye_id
         result["method"] = "3d c++"
 
