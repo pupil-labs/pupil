@@ -48,18 +48,20 @@ class Service_UI(System_Plugin_Base):
 
         self.texture = np.zeros((1, 1, 3), dtype=np.uint8) + 128
 
-        window_position_manager = gl_utils.WindowPositionManager()
-        window_position = window_position_manager.new_window_position(
-            default_position=window_position_default,
-            previous_position=window_position,
-        )
-
         glfw.glfwInit()
         glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
         if g_pool.hide_ui:
             glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         main_window = glfw.glfwCreateWindow(*window_size, "Pupil Service")
+
+        window_position_manager = gl_utils.WindowPositionManager()
+        window_position = window_position_manager.new_window_position(
+            window=main_window,
+            default_position=window_position_default,
+            previous_position=window_position,
+        )
         glfw.glfwSetWindowPos(main_window, *window_position)
+
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
         g_pool.main_window = main_window
