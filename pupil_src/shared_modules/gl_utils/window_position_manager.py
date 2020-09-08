@@ -31,15 +31,20 @@ class WindowPositionManager:
         os_name = platform.system()
 
         if os_name == "Darwin":
+            # The OS handle re-positioning windows with invalid positions
             return previous_position
+
         elif os_name == "Linux":
+            # The OS handle re-positioning windows with invalid positions
             return previous_position
+
         elif os_name == "Windows":
             monitors = glfw.glfwGetMonitors()
             if any(_is_point_within_monitor(m, previous_position) for m in monitors):
                 return previous_position
             else:
                 return default_position
+
         else:
             raise NotImplementedError(f"Unsupported system: {os_name}")
 
