@@ -790,3 +790,46 @@ def get_framebuffer_scale(window) -> float:
 def window_coordinate_to_framebuffer_coordinate(window, x, y, cached_scale=None):
     scale = cached_scale or get_framebuffer_scale(window)
     return x * scale, y * scale
+
+
+def get_window_content_rect(window) -> _Rectangle:
+    x, y = glfwGetWindowPos(window)
+    w, h = glfwGetWindowSize(window)
+    return _Rectangle(x=x, y=y, width=w, height=h)
+
+
+def get_window_frame_rect(window) -> _Rectangle:
+    content_rect = get_window_content_rect(window)
+    frame_edges = glfwGetWindowFrameSize(window)
+    return _Rectangle(
+        x=content_rect.x - frame_edges.left,
+        y=content_rect.y - frame_edges.top,
+        width=content_rect.width + frame_edges.left + frame_edges.right,
+        height=content_rect.height + frame_edges.top + frame_edges.bottom,
+    )
+
+
+def get_window_title_bar_rect(window) -> _Rectangle:
+    frame_rect = get_window_frame_rect(window)
+    frame_edges = glfwGetWindowFrameSize(window)
+    return _Rectangle(
+        x=frame_rect.x, y=frame_rect.y, width=frame_rect.width, height=frame_edges.top
+    )
+
+
+def rectangle_intersection(r1: _Rectangle, r2: _Rectangle) -> T.Optional[_Rectangle]:
+    in_min_x = max(r1.x, r2.x)
+    in_min_y = max(r1.y, r2.y)
+
+    in_max_x = min(r1.x + r1.width, r2.x + r2.width)
+    in_max_y = min(r1.y + r1.height, r2.y + r2.height)
+
+    if in_min_x < in_max_x and in_min_y < in_max_y:
+        return _Rectangle(
+            x=in_min_x,
+            y=in_min_y,
+            width=in_max_x - in_min_x,
+            height=in_max_y - in_min_y,
+        )
+    else:
+        return None
