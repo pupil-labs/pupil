@@ -21,6 +21,7 @@ class WindowPositionManager:
 
     @staticmethod
     def new_window_position(
+        window,
         default_position: T.Tuple[int, int],
         previous_position: T.Optional[T.Tuple[int, int]],
     ) -> T.Tuple[int, int]:
@@ -39,8 +40,15 @@ class WindowPositionManager:
             return previous_position
 
         elif os_name == "Windows":
-            monitors = glfw.glfwGetMonitors()
-            if any(_is_point_within_monitor(m, previous_position) for m in monitors):
+
+            def validate_previous_position(monitor) -> bool:
+                return _will_window_be_visible_in_monitor(
+                    window=window,
+                    monitor=monitor,
+                    window_position=previous_position,
+                )
+
+            if any(validate_previous_position(m) for m in glfw.glfwGetMonitors()):
                 return previous_position
             else:
                 return default_position
@@ -49,10 +57,16 @@ class WindowPositionManager:
             raise NotImplementedError(f"Unsupported system: {os_name}")
 
 
-def _is_point_within_monitor(monitor, point) -> bool:
-    x, y, w, h = glfw.glfwGetMonitorWorkarea(monitor)
+def _will_window_be_visible_in_monitor(
+    window, monitor, window_position, min_visible_width=10, min_visible_height=5
+) -> bool:
+    monitor_rect = glfw.glfwGetMonitorWorkarea(monitor)
+    title_bar_rect = glfw.get_window_title_bar_rect(window)
+    visible_rect = glfw.rectangle_intersection(monitor_rect, title_bar_rect)
+    return (
+        visible_rect is not None
+        and min_visible_width <= visible_rect.width
+        and min_visible_height <= visible_rect.height
+    )
 
-    is_within_horizontally = x <= point[0] < x + w
-    is_within_vertically = y <= point[1] < y + h
 
-    return is_within_horizontally and is_within_vertically
