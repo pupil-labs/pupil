@@ -236,9 +236,10 @@ def eye(
             glfw.glfwMakeContextCurrent(main_window)
             clear_gl_screen()
 
-            glViewport(0, 0, *g_pool.camera_render_size)
-            for p in g_pool.plugins:
-                p.gl_display()
+            if 0 <= g_pool.camera_render_size[0] and g_pool.camera_render_size[1]:
+                glViewport(0, 0, *g_pool.camera_render_size)
+                for p in g_pool.plugins:
+                    p.gl_display()
 
             glViewport(0, 0, *window_size)
             # render graphs
