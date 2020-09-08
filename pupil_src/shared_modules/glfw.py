@@ -34,6 +34,7 @@
 # -----------------------------------------------------------------------------
 
 import sys, os
+import collections
 import ctypes
 from ctypes import (
     c_int,
@@ -52,6 +53,7 @@ import platform
 from ctypes.util import find_library
 
 import logging
+import typing as T
 
 logger = logging.getLogger(__name__)
 
@@ -625,6 +627,9 @@ def glfwGetFramebufferSize(window):
     return width.value, height.value
 
 
+_Rectangle = collections.namedtuple("_Rectangle", ["x", "y", "width", "height"])
+
+
 def glfwGetMonitors():
     count = c_int(0)
     _glfw.glfwGetMonitors.restype = POINTER(POINTER(GLFWmonitor))
@@ -657,12 +662,14 @@ def glfwGetMonitorPos(monitor):
     return xpos.value, ypos.value
 
 
-def glfwGetMonitorWorkarea(monitor):
+def glfwGetMonitorWorkarea(monitor) -> _Rectangle:
     xpos, ypos, width, height = c_int(0), c_int(0), c_int(0), c_int(0)
     _glfw.glfwGetMonitorWorkarea(
         monitor, byref(xpos), byref(ypos), byref(width), byref(height)
     )
-    return xpos.value, ypos.value, width.value, height.value
+    return _Rectangle(
+        x=xpos.value, y=ypos.value, width=width.value, height=height.value
+    )
 
 
 def glfwGetMonitorPhysicalSize(monitor):
