@@ -58,7 +58,7 @@ class WindowPositionManager:
 
 
 def _will_window_be_visible_in_monitor(
-    window, monitor, window_position, min_visible_width=10, min_visible_height=5
+    window, monitor, window_position, min_visible_width=30, min_visible_height=20
 ) -> bool:
     # Get the current window size and edges, and monitor rect
     window_size = glfw.glfwGetWindowSize(window)
