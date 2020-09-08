@@ -453,6 +453,7 @@ glfwSetWindowPos = _glfw.glfwSetWindowPos
 glfwSetWindowSizeLimits = _glfw.glfwSetWindowSizeLimits
 glfwSetWindowSize = _glfw.glfwSetWindowSize
 # glfwGetFramebufferSize        = _glfw.glfwGetFramebufferSize
+# glfwGetWindowFrameSize          = _glfw.glfwGetWindowFrameSize
 glfwIconifyWindow = _glfw.glfwIconifyWindow
 glfwRestoreWindow = _glfw.glfwRestoreWindow
 glfwShowWindow = _glfw.glfwShowWindow
@@ -628,6 +629,18 @@ def glfwGetFramebufferSize(window):
 
 
 _Rectangle = collections.namedtuple("_Rectangle", ["x", "y", "width", "height"])
+_Margins = collections.namedtuple("_Margins", ["left", "top", "right", "bottom"])
+
+
+def glfwGetWindowFrameSize(window) -> _Margins:
+    """"""
+    left, top, right, bottom = c_int(0), c_int(0), c_int(0), c_int(0)
+    _glfw.glfwGetWindowFrameSize(
+        window, byref(left), byref(top), byref(right), byref(bottom)
+    )
+    return _Margins(
+        left=left.value, top=top.value, right=right.value, bottom=bottom.value
+    )
 
 
 def glfwGetMonitors():
