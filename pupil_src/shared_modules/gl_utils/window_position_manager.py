@@ -60,13 +60,26 @@ class WindowPositionManager:
 def _will_window_be_visible_in_monitor(
     window, monitor, window_position, min_visible_width=10, min_visible_height=5
 ) -> bool:
+    # Get the current window size and edges, and monitor rect
+    window_size = glfw.glfwGetWindowSize(window)
+    window_edges = glfw.glfwGetWindowFrameSize(window)
     monitor_rect = glfw.glfwGetMonitorWorkarea(monitor)
-    title_bar_rect = glfw.get_window_title_bar_rect(window)
+
+    # Calculate what the title bar rect would be
+    # if the proposed `window_position` would be the actual window position
+    title_bar_rect = glfw._Rectangle(
+        x=window_position[0] - window_edges.left,
+        y=window_position[1] - window_edges.top,
+        width=window_size[0] + window_edges.left + window_edges.right,
+        height=window_edges.top,
+    )
+
+    # Calculate the part of the title bar that is visible in the monitor, if any
     visible_rect = glfw.rectangle_intersection(monitor_rect, title_bar_rect)
+
+    # Return true if the visible title bar rect is big enough
     return (
         visible_rect is not None
         and min_visible_width <= visible_rect.width
         and min_visible_height <= visible_rect.height
     )
-
-
