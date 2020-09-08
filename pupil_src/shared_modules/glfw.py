@@ -424,6 +424,7 @@ glfwGetVersionString.restype = c_char_p
 glfwGetPrimaryMonitor = _glfw.glfwGetPrimaryMonitor
 glfwGetPrimaryMonitor.restype = POINTER(GLFWmonitor)
 # glfwGetMonitorPos               = _glfw.glfwGetMonitorPos
+# glfwGetMonitorWorkarea          = _glfw.glfwGetMonitorWorkarea
 # glfwGetMonitorPhysicalSize      = _glfw.glfwGetMonitorPhysicalSize
 glfwGetMonitorName = _glfw.glfwGetMonitorName
 glfwGetMonitorName.restype = c_char_p
@@ -654,6 +655,14 @@ def glfwGetMonitorPos(monitor):
     xpos, ypos = c_int(0), c_int(0)
     _glfw.glfwGetMonitorPos(monitor, byref(xpos), byref(ypos))
     return xpos.value, ypos.value
+
+
+def glfwGetMonitorWorkarea(monitor):
+    xpos, ypos, width, height = c_int(0), c_int(0), c_int(0), c_int(0)
+    _glfw.glfwGetMonitorWorkarea(
+        monitor, byref(xpos), byref(ypos), byref(width), byref(height)
+    )
+    return xpos.value, ypos.value, width.value, height.value
 
 
 def glfwGetMonitorPhysicalSize(monitor):
