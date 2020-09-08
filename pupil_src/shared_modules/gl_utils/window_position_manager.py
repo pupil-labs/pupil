@@ -35,6 +35,19 @@ class WindowPositionManager:
         elif os_name == "Linux":
             return previous_position
         elif os_name == "Windows":
-            return previous_position
+            monitors = glfw.glfwGetMonitors()
+            if any(_is_point_within_monitor(m, previous_position) for m in monitors):
+                return previous_position
+            else:
+                return default_position
         else:
             raise NotImplementedError(f"Unsupported system: {os_name}")
+
+
+def _is_point_within_monitor(monitor, point) -> bool:
+    x, y, w, h = glfw.glfwGetMonitorWorkarea(monitor)
+
+    is_within_horizontally = x <= point[0] < x + w
+    is_within_vertically = y <= point[1] < y + h
+
+    return is_within_horizontally and is_within_vertically
