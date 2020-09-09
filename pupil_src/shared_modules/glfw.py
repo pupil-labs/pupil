@@ -520,6 +520,35 @@ __c_callbacks__ = {}
 __py_callbacks__ = {}
 
 
+_Margins = T.NamedTuple(
+    "_Margins", [("left", int), ("top", int), ("right", int), ("bottom", int)]
+)
+
+
+_Rectangle_Tuple = T.NamedTuple(
+    "_Rectangle", [("x", int), ("y", int), ("width", int), ("height", int)]
+)
+
+
+class _Rectangle(_Rectangle_Tuple):
+    def intersection(self, other: "_Rectangle") -> T.Optional["_Rectangle"]:
+        in_min_x = max(self.x, other.x)
+        in_min_y = max(self.y, other.y)
+
+        in_max_x = min(self.x + self.width, other.x + other.width)
+        in_max_y = min(self.y + self.height, other.y + other.height)
+
+        if in_min_x < in_max_x and in_min_y < in_max_y:
+            return _Rectangle(
+                x=in_min_x,
+                y=in_min_y,
+                width=in_max_x - in_min_x,
+                height=in_max_y - in_min_y,
+            )
+        else:
+            return None
+
+
 def glfwGetError():
     _glfwGetError = _glfw.glfwGetError
     _glfwGetError.argtypes = [POINTER(c_char_p)]
@@ -625,14 +654,6 @@ def glfwGetFramebufferSize(window):
     width, height = c_int(0), c_int(0)
     _glfw.glfwGetFramebufferSize(window, byref(width), byref(height))
     return width.value, height.value
-
-
-_Rectangle = T.NamedTuple(
-    "_Rectangle", [("x", int), ("y", int), ("width", int), ("height", int)]
-)
-_Margins = T.NamedTuple(
-    "_Margins", [("left", int), ("top", int), ("right", int), ("bottom", int)]
-)
 
 
 def glfwGetWindowFrameSize(window) -> _Margins:
@@ -818,21 +839,3 @@ def get_window_title_bar_rect(window) -> _Rectangle:
     return _Rectangle(
         x=frame_rect.x, y=frame_rect.y, width=frame_rect.width, height=frame_edges.top
     )
-
-
-def rectangle_intersection(r1: _Rectangle, r2: _Rectangle) -> T.Optional[_Rectangle]:
-    in_min_x = max(r1.x, r2.x)
-    in_min_y = max(r1.y, r2.y)
-
-    in_max_x = min(r1.x + r1.width, r2.x + r2.width)
-    in_max_y = min(r1.y + r1.height, r2.y + r2.height)
-
-    if in_min_x < in_max_x and in_min_y < in_max_y:
-        return _Rectangle(
-            x=in_min_x,
-            y=in_min_y,
-            width=in_max_x - in_min_x,
-            height=in_max_y - in_min_y,
-        )
-    else:
-        return None

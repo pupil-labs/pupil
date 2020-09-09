@@ -75,7 +75,7 @@ def _will_window_be_visible_in_monitor(
     )
 
     # Calculate the part of the title bar that is visible in the monitor, if any
-    visible_rect = glfw.rectangle_intersection(monitor_rect, title_bar_rect)
+    visible_rect = title_bar_rect.intersection(monitor_rect)
 
     # Return true if the visible title bar rect is big enough
     return (
