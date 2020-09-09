@@ -34,7 +34,6 @@
 # -----------------------------------------------------------------------------
 
 import sys, os
-import collections
 import ctypes
 from ctypes import (
     c_int,
@@ -628,8 +627,12 @@ def glfwGetFramebufferSize(window):
     return width.value, height.value
 
 
-_Rectangle = collections.namedtuple("_Rectangle", ["x", "y", "width", "height"])
-_Margins = collections.namedtuple("_Margins", ["left", "top", "right", "bottom"])
+_Rectangle = T.NamedTuple(
+    "_Rectangle", [("x", int), ("y", int), ("width", int), ("height", int)]
+)
+_Margins = T.NamedTuple(
+    "_Margins", [("left", int), ("top", int), ("right", int), ("bottom", int)]
+)
 
 
 def glfwGetWindowFrameSize(window) -> _Margins:
