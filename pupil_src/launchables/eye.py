@@ -236,7 +236,7 @@ def eye(
             glfw.glfwMakeContextCurrent(main_window)
             clear_gl_screen()
 
-            if 0 <= g_pool.camera_render_size[0] and g_pool.camera_render_size[1]:
+            if all(c > 0 for c in g_pool.camera_render_size):
                 glViewport(0, 0, *g_pool.camera_render_size)
                 for p in g_pool.plugins:
                     p.gl_display()
