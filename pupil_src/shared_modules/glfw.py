@@ -520,17 +520,19 @@ __c_callbacks__ = {}
 __py_callbacks__ = {}
 
 
-_Margins = T.NamedTuple(
-    "_Margins", [("left", int), ("top", int), ("right", int), ("bottom", int)]
-)
+class _Margins(T.NamedTuple):
+    left: int
+    top: int
+    right: int
+    bottom: int
 
 
-_Rectangle_Tuple = T.NamedTuple(
-    "_Rectangle", [("x", int), ("y", int), ("width", int), ("height", int)]
-)
+class _Rectangle(T.NamedTuple):
+    x: int
+    y: int
+    width: int
+    height: int
 
-
-class _Rectangle(_Rectangle_Tuple):
     def intersection(self, other: "_Rectangle") -> T.Optional["_Rectangle"]:
         in_min_x = max(self.x, other.x)
         in_min_y = max(self.y, other.y)
