@@ -52,6 +52,7 @@ import platform
 from ctypes.util import find_library
 
 import logging
+import typing as T
 
 logger = logging.getLogger(__name__)
 
@@ -424,6 +425,7 @@ glfwGetVersionString.restype = c_char_p
 glfwGetPrimaryMonitor = _glfw.glfwGetPrimaryMonitor
 glfwGetPrimaryMonitor.restype = POINTER(GLFWmonitor)
 # glfwGetMonitorPos               = _glfw.glfwGetMonitorPos
+# glfwGetMonitorWorkarea          = _glfw.glfwGetMonitorWorkarea
 # glfwGetMonitorPhysicalSize      = _glfw.glfwGetMonitorPhysicalSize
 glfwGetMonitorName = _glfw.glfwGetMonitorName
 glfwGetMonitorName.restype = c_char_p
@@ -450,6 +452,7 @@ glfwSetWindowPos = _glfw.glfwSetWindowPos
 glfwSetWindowSizeLimits = _glfw.glfwSetWindowSizeLimits
 glfwSetWindowSize = _glfw.glfwSetWindowSize
 # glfwGetFramebufferSize        = _glfw.glfwGetFramebufferSize
+# glfwGetWindowFrameSize          = _glfw.glfwGetWindowFrameSize
 glfwIconifyWindow = _glfw.glfwIconifyWindow
 glfwRestoreWindow = _glfw.glfwRestoreWindow
 glfwShowWindow = _glfw.glfwShowWindow
@@ -515,6 +518,37 @@ __windows__ = []
 # This is to prevent garbage collection on callbacks
 __c_callbacks__ = {}
 __py_callbacks__ = {}
+
+
+class _Margins(T.NamedTuple):
+    left: int
+    top: int
+    right: int
+    bottom: int
+
+
+class _Rectangle(T.NamedTuple):
+    x: int
+    y: int
+    width: int
+    height: int
+
+    def intersection(self, other: "_Rectangle") -> T.Optional["_Rectangle"]:
+        in_min_x = max(self.x, other.x)
+        in_min_y = max(self.y, other.y)
+
+        in_max_x = min(self.x + self.width, other.x + other.width)
+        in_max_y = min(self.y + self.height, other.y + other.height)
+
+        if in_min_x < in_max_x and in_min_y < in_max_y:
+            return _Rectangle(
+                x=in_min_x,
+                y=in_min_y,
+                width=in_max_x - in_min_x,
+                height=in_max_y - in_min_y,
+            )
+        else:
+            return None
 
 
 def glfwGetError():
@@ -624,6 +658,17 @@ def glfwGetFramebufferSize(window):
     return width.value, height.value
 
 
+def glfwGetWindowFrameSize(window) -> _Margins:
+    """"""
+    left, top, right, bottom = c_int(0), c_int(0), c_int(0), c_int(0)
+    _glfw.glfwGetWindowFrameSize(
+        window, byref(left), byref(top), byref(right), byref(bottom)
+    )
+    return _Margins(
+        left=left.value, top=top.value, right=right.value, bottom=bottom.value
+    )
+
+
 def glfwGetMonitors():
     count = c_int(0)
     _glfw.glfwGetMonitors.restype = POINTER(POINTER(GLFWmonitor))
@@ -654,6 +699,16 @@ def glfwGetMonitorPos(monitor):
     xpos, ypos = c_int(0), c_int(0)
     _glfw.glfwGetMonitorPos(monitor, byref(xpos), byref(ypos))
     return xpos.value, ypos.value
+
+
+def glfwGetMonitorWorkarea(monitor) -> _Rectangle:
+    xpos, ypos, width, height = c_int(0), c_int(0), c_int(0), c_int(0)
+    _glfw.glfwGetMonitorWorkarea(
+        monitor, byref(xpos), byref(ypos), byref(width), byref(height)
+    )
+    return _Rectangle(
+        x=xpos.value, y=ypos.value, width=width.value, height=height.value
+    )
 
 
 def glfwGetMonitorPhysicalSize(monitor):
@@ -761,3 +816,28 @@ def get_framebuffer_scale(window) -> float:
 def window_coordinate_to_framebuffer_coordinate(window, x, y, cached_scale=None):
     scale = cached_scale or get_framebuffer_scale(window)
     return x * scale, y * scale
+
+
+def get_window_content_rect(window) -> _Rectangle:
+    x, y = glfwGetWindowPos(window)
+    w, h = glfwGetWindowSize(window)
+    return _Rectangle(x=x, y=y, width=w, height=h)
+
+
+def get_window_frame_rect(window) -> _Rectangle:
+    content_rect = get_window_content_rect(window)
+    frame_edges = glfwGetWindowFrameSize(window)
+    return _Rectangle(
+        x=content_rect.x - frame_edges.left,
+        y=content_rect.y - frame_edges.top,
+        width=content_rect.width + frame_edges.left + frame_edges.right,
+        height=content_rect.height + frame_edges.top + frame_edges.bottom,
+    )
+
+
+def get_window_title_bar_rect(window) -> _Rectangle:
+    frame_rect = get_window_frame_rect(window)
+    frame_edges = glfwGetWindowFrameSize(window)
+    return _Rectangle(
+        x=frame_rect.x, y=frame_rect.y, width=frame_rect.width, height=frame_edges.top
+    )
