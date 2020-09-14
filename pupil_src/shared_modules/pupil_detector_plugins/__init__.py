@@ -13,7 +13,6 @@ import traceback
 import typing as T
 
 from .detector_2d_plugin import Detector2DPlugin
-from .detector_3d_plugin import Detector3DPlugin
 from .detector_base_plugin import PupilDetectorPlugin, EVENT_KEY
 
 logger = logging.getLogger(__name__)
@@ -29,9 +28,9 @@ def available_detector_plugins() -> T.Tuple[
     Returns tuple of default2D, default3D, and list of all detectors.
     """
 
-    all_plugins = [Detector2DPlugin, Detector3DPlugin]
+    all_plugins = [Detector2DPlugin]
     default2D = Detector2DPlugin
-    default3D = Detector3DPlugin
+    default3D = None
 
     try:
         from .pye3d_plugin import Pye3DPlugin
