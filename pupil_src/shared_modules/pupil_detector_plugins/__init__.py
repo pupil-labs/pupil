@@ -42,4 +42,7 @@ def available_detector_plugins() -> T.Tuple[
         all_plugins.append(Pye3DPlugin)
         default3D = Pye3DPlugin
 
+    if default3D is None:
+        logger.warning("No 3D pupil detector is available!")
+
     return default2D, default3D, all_plugins
