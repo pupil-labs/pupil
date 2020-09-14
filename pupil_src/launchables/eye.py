@@ -290,14 +290,15 @@ def eye(
             nonlocal window_size
             nonlocal content_scale
 
-            framebuffer_size = glfw.glfwGetFramebufferSize(window)
-            is_minimized = any(c <= 0 for c in framebuffer_size)
+            is_minimized = bool(glfw.glfwGetWindowAttrib(window, glfw.GLFW_ICONIFIED))
 
-            if not is_minimized:
-                # Always clear buffers on resize to make sure that there are no overlapping
-                # artifacts from previous frames.
-                gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
-                gl_utils.glClearColor(0, 0, 0, 1)
+            if is_minimized:
+                return
+
+            # Always clear buffers on resize to make sure that there are no overlapping
+            # artifacts from previous frames.
+            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClearColor(0, 0, 0, 1)
 
             active_window = glfw.glfwGetCurrentContext()
             glfw.glfwMakeContextCurrent(window)
