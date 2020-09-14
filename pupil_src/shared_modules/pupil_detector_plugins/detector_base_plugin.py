@@ -98,11 +98,6 @@ class PupilDetectorPlugin(Plugin):
             previous_detection_results=event.get(EVENT_KEY, []),
         )
 
-        # if we are running the 2D detector, we might get internal data that we don't
-        # want published, so we remove it from the dict
-        if "internal_2d_raw_data" in detection_result:
-            event["internal_2d_raw_data"] = detection_result.pop("internal_2d_raw_data")
-
         if EVENT_KEY in event:
             event[EVENT_KEY].append(detection_result)
         else:

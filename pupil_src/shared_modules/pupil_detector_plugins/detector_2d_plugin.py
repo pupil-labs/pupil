@@ -69,6 +69,11 @@ class Detector2DPlugin(PupilDetectorPlugin):
         result["topic"] = f"pupil.{eye_id}.{self.identifier}"
         result["id"] = eye_id
         result["method"] = "2d c++"
+
+        # remove internal raw data that was used with the 3D detector
+        if "internal_2d_raw_data" in result:
+            del result["internal_2d_raw_data"]
+
         return result
 
     @property
