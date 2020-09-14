@@ -291,7 +291,7 @@ def eye(
             nonlocal content_scale
 
             framebuffer_size = glfw.glfwGetFramebufferSize(window)
-            is_minimized = framebuffer_size is not None and 0 in framebuffer_size
+            is_minimized = any(c <= 0 for c in framebuffer_size)
 
             if not is_minimized:
                 # Always clear buffers on resize to make sure that there are no overlapping
