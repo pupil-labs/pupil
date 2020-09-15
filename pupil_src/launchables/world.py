@@ -737,6 +737,10 @@ def world(
             if "audio_packets" in events:
                 del events["audio_packets"]
             del events["dt"]  # no need to send this
+            if "software_timestamp" in events:
+                del events["software_timestamp"]
+            if "hardware_timestamp" in events:
+                del events["hardware_timestamp"]
             for data in events.values():
                 assert isinstance(data, (list, tuple))
                 for d in data:
