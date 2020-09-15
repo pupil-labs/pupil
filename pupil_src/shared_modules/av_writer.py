@@ -108,6 +108,8 @@ class AV_Writer(abc.ABC):
         """
 
         self.timestamps = []
+        self._hardware_timestamps = []
+        self._software_timestamps = []
         self.start_time = start_time_synced
         self.last_video_pts = float("-inf")
 
@@ -143,7 +145,9 @@ class AV_Writer(abc.ABC):
 
         self.closed = False
 
-    def write_video_frame(self, input_frame):
+    def write_video_frame(
+        self, input_frame, hardware_timestamp=..., software_timestamp=...
+    ):
         """
         Write a frame to the video_stream.
 
@@ -201,6 +205,8 @@ class AV_Writer(abc.ABC):
 
         self.last_video_pts = pts
         self.timestamps.append(ts)
+        self._hardware_timestamps.append(hardware_timestamp)
+        self._software_timestamps.append(software_timestamp)
 
     def close(self, timestamp_export_format="npy"):
         """Close writer, triggering stream and timestamp save."""
@@ -223,6 +229,29 @@ class AV_Writer(abc.ABC):
             write_timestamps(
                 self.output_file_path, self.timestamps, timestamp_export_format
             )
+            import pathlib
+
+            output_path = pathlib.Path(self.output_file_path)
+
+            if len(self._software_timestamps) > 0:
+                software_timestamps_path = output_path.with_name(
+                    output_path.stem + "_software"
+                ).with_suffix(output_path.suffix)
+                write_timestamps(
+                    str(software_timestamps_path),
+                    self._software_timestamps,
+                    timestamp_export_format,
+                )
+
+            if len(self._hardware_timestamps) > 0:
+                hardware_timestamps_path = output_path.with_name(
+                    output_path.stem + "_hardware"
+                ).with_suffix(output_path.suffix)
+                write_timestamps(
+                    str(hardware_timestamps_path),
+                    self._hardware_timestamps,
+                    timestamp_export_format,
+                )
 
     def release(self):
         """Close writer, triggering stream and timestamp save."""
