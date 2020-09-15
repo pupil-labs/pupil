@@ -457,6 +457,8 @@ class UVC_Source(Base_Source):
 
         try:
             frame = self.uvc_capture.get_frame(0.05)
+            software_timestamp = uvc.get_time_monotonic()
+            hardware_timestamp = frame.timestamp
 
             if np.isclose(frame.timestamp, 0):
                 # sometimes (probably only on windows) after disconnections, the first frame has 0 ts
@@ -487,7 +489,7 @@ class UVC_Source(Base_Source):
         else:
             if self.ts_offset is not None:
                 # c930 timestamps need to be set here. The camera does not provide valid pts from device
-                frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
+                frame.timestamp = software_timestamp + self.ts_offset
 
             if self._last_ts is not None and frame.timestamp <= self._last_ts:
                 logger.debug(
@@ -499,6 +501,8 @@ class UVC_Source(Base_Source):
                 frame.timestamp -= self.g_pool.timebase.value
                 self._recent_frame = frame
                 events["frame"] = frame
+                events["hardware_timestamp"] = hardware_timestamp
+                events["software_timestamp"] = software_timestamp
             self._restart_in = 3
 
         if was_online != self.online:
