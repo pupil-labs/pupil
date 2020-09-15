@@ -439,7 +439,7 @@ class Recorder(System_Plugin_Base):
 
         if self.running:
             for key, data in events.items():
-                if key not in ("dt", "depth_frame") and not key.startswith("frame"):
+                if key not in ("dt", "depth_frame", "software_timestamp", "hardware_timestamp") and not key.startswith("frame"):
                     try:
                         writer = self.pldata_writers[key]
                     except KeyError:
@@ -449,7 +449,7 @@ class Recorder(System_Plugin_Base):
             if "frame" in events:
                 frame = events["frame"]
                 try:
-                    self.writer.write_video_frame(frame)
+                    self.writer.write_video_frame(frame, hardware_timestamp=events["hardware_timestamp"], software_timestamp=events["software_timestamp"])
                     self.frame_count += 1
                 except NonMonotonicTimestampError as e:
                     logger.error(
