@@ -690,7 +690,11 @@ def eye(
 
                 if g_pool.writer:
                     try:
-                        g_pool.writer.write_video_frame(frame)
+                        g_pool.writer.write_video_frame(
+                            frame,
+                            hardware_timestamp=event["hardware_timestamp"],
+                            software_timestamp=event["software_timestamp"],
+                        )
                     except NonMonotonicTimestampError as e:
                         logger.error(
                             "Recorder received non-monotonic timestamp!"
