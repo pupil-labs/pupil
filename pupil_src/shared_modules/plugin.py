@@ -299,6 +299,13 @@ class Plugin(object):
         self.menu = None
         self.menu_icon = None
 
+    @property
+    def ui_available(self):
+        try:
+            return self.menu is not None
+        except AttributeError:
+            return False
+
     def __monkeypatch_gl_display_error_checking(self):
         # Monkeypatch gl_display functions to include error checking. This is because we
         # often receive OpenGL errors as results of buggy pyglui code that gets called
@@ -328,8 +335,8 @@ class Plugin(object):
 # Plugin manager classes and fns
 class Plugin_List(object):
     """This is the Plugin Manager
-        It is a self sorting list with a few functions to manage adding and
-        removing Plugins and lacking most other list methods.
+    It is a self sorting list with a few functions to manage adding and
+    removing Plugins and lacking most other list methods.
     """
 
     def __init__(self, g_pool, plugin_initializers):

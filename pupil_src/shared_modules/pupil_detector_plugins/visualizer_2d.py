@@ -33,16 +33,24 @@ def draw_ellipse(
         # Known issues:
         #   - There are reports of negative eye_ball axes when drawing the 3D eyeball
         #     outline, which will raise cv2.error. TODO: Investigate cause in detectors.
+        #   - There was a case where all values in the ellipse where 'NaN', which raises
+        #     ValueError: cannot convert float NaN to integer. TODO: Investigate how we
+        #     even got here, since calls to this function are confidence-gated!
         logger.debug(
             "Error drawing ellipse! Skipping...\n"
-            f"ellipse: {ellipse}\n"
-            f"{type(e)}: {e}"
+            f"Ellipse: {ellipse}\n"
+            f"Color: {rgba}\n"
+            f"Error: {type(e)}: {e}"
         )
+        return
 
     draw_polyline(pts, thickness, RGBA(*rgba))
     if draw_center:
         draw_points(
-            [ellipse["center"]], size=20, color=RGBA(*rgba), sharpness=1.0,
+            [ellipse["center"]],
+            size=20,
+            color=RGBA(*rgba),
+            sharpness=1.0,
         )
 
 

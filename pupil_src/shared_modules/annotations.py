@@ -29,7 +29,7 @@ def create_annotation(label, timestamp, duration=0.0, **custom_fields):
     """
     Returns a dictionary in the format needed to send annotations
     to an annotation plugin via the ICP.
-    
+
     See python/remote_annotations.py in pupil-helpers for an example.
 
     :param custom_fields:

@@ -9,9 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from . import RecordingInfoFile, Version
+from . import RecordingInfoFile
 from .recording_info_2_0 import _RecordingInfoFile_2_0
 from . import recording_info_utils as utils
+from version_utils import parse_version, ParsedVersion
 
 
 class _RecordingInfoFile_2_1(_RecordingInfoFile_2_0):
@@ -23,8 +24,8 @@ class _RecordingInfoFile_2_1(_RecordingInfoFile_2_0):
     # meta version 2.0 have to be re-transformed.
 
     @property
-    def meta_version(self) -> Version:
-        return Version("2.1")
+    def meta_version(self) -> ParsedVersion:
+        return parse_version("2.1")
 
     @property
     def _private_key_schema(self) -> RecordingInfoFile._KeyValueSchema:

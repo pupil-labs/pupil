@@ -216,7 +216,7 @@ class Object(object):
 
 class Call(Object):
     """A call between functions.
-    
+
     There should be at most one call object for every pair of functions.
     """
 
@@ -1694,7 +1694,7 @@ class AXEParser(Parser):
 
 class CallgrindParser(LineParser):
     """Parser for valgrind's callgrind tool.
-    
+
     See also:
     - http://valgrind.org/docs/manual/cl-format.html
     """
@@ -2134,7 +2134,7 @@ class PerfParser(LineParser):
 
 class OprofileParser(LineParser):
     """Parser for oprofile callgraph output.
-    
+
     See also:
     - http://oprofile.sourceforge.net/doc/opreport.html#opreport-callgraph
     """
@@ -2305,7 +2305,7 @@ class OprofileParser(LineParser):
 
 class HProfParser(LineParser):
     """Parser for java hprof output
-    
+
     See also:
     - http://java.sun.com/developer/technicalArticles/Programming/HPROF.html
     """
@@ -2531,8 +2531,7 @@ class SysprofParser(XmlParser):
 
 
 class XPerfParser(Parser):
-    """Parser for CSVs generted by XPerf, from Microsoft Windows Performance Tools.
-    """
+    """Parser for CSVs generted by XPerf, from Microsoft Windows Performance Tools."""
 
     def __init__(self, stream):
         Parser.__init__(self)

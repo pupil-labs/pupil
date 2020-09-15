@@ -155,7 +155,7 @@ class RoiModel(Observable):
 
     def on_changed(self) -> None:
         """Called when the model changes.
-        
+
         Observe this method to be notified of any changes.
         """
         pass
@@ -188,7 +188,10 @@ class Roi(Plugin):
     outline_color = cygl_rgba(0.8, 0.8, 0.8, 0.9)
 
     def __init__(
-        self, g_pool, frame_size: Vec2 = (0, 0), bounds: Bounds = (0, 0, 0, 0),
+        self,
+        g_pool,
+        frame_size: Vec2 = (0, 0),
+        bounds: Bounds = (0, 0, 0, 0),
     ) -> None:
         super().__init__(g_pool)
         self.model = RoiModel(frame_size)

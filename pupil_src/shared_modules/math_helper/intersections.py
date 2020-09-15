@@ -14,8 +14,7 @@ import numpy as np
 
 
 def nearest_intersection_points(line0, line1):
-    """ Calculates the two nearst points, and its distance to each other on line0 and line1.
-    """
+    """Calculates the two nearst points, and its distance to each other on line0 and line1."""
 
     p1 = line0[0]
     p2 = line0[1]
@@ -61,8 +60,7 @@ def nearest_intersection_points(line0, line1):
 
 
 def nearest_intersection(line0, line1):
-    """ Calculates the nearest intersection point, and the shortest distance of line0 and line1.
-    """
+    """Calculates the nearest intersection point, and the shortest distance of line0 and line1."""
     Pa, Pb, intersection_dist = nearest_intersection_points(line0, line1)
 
     if Pa is not None:

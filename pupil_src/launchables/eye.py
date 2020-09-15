@@ -141,7 +141,7 @@ def eye(
         # helpers/utils
         from uvc import get_time_monotonic
         from file_methods import Persistent_Dict
-        from version_utils import VersionFormat
+        from version_utils import parse_version
         from methods import normalize, denormalize, timer
         from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicTimestampError
         from ndsi import H264Writer
@@ -236,9 +236,10 @@ def eye(
             glfw.glfwMakeContextCurrent(main_window)
             clear_gl_screen()
 
-            glViewport(0, 0, *g_pool.camera_render_size)
-            for p in g_pool.plugins:
-                p.gl_display()
+            if all(c > 0 for c in g_pool.camera_render_size):
+                glViewport(0, 0, *g_pool.camera_render_size)
+                for p in g_pool.plugins:
+                    p.gl_display()
 
             glViewport(0, 0, *window_size)
             # render graphs
@@ -288,6 +289,11 @@ def eye(
         def on_resize(window, w, h):
             nonlocal window_size
             nonlocal content_scale
+
+            is_minimized = bool(glfw.glfwGetWindowAttrib(window, glfw.GLFW_ICONIFIED))
+
+            if is_minimized:
+                return
 
             # Always clear buffers on resize to make sure that there are no overlapping
             # artifacts from previous frames.
@@ -362,7 +368,7 @@ def eye(
         session_settings = Persistent_Dict(
             os.path.join(g_pool.user_dir, "user_settings_eye{}".format(eye_id))
         )
-        if VersionFormat(session_settings.get("version", "0.0")) != g_pool.version:
+        if parse_version(session_settings.get("version", "0.0")) != g_pool.version:
             logger.info(
                 "Session setting are from a different version of this app. I will not use those."
             )
@@ -407,8 +413,15 @@ def eye(
         width, height = session_settings.get("window_size", default_window_size)
 
         main_window = glfw.glfwCreateWindow(width, height, title, None, None)
-        window_pos = session_settings.get("window_position", window_position_default)
+
+        window_position_manager = gl_utils.WindowPositionManager()
+        window_pos = window_position_manager.new_window_position(
+            window=main_window,
+            default_position=window_position_default,
+            previous_position=session_settings.get("window_position", None),
+        )
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
+
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
 
@@ -503,6 +516,7 @@ def eye(
         toggle_general_settings(True)
 
         g_pool.writer = None
+        g_pool.rec_path = None
 
         # Register callbacks main_window
         glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -567,12 +581,12 @@ def eye(
                         break
                 elif subject == "recording.started":
                     if notification["record_eye"] and g_pool.capture.online:
-                        record_path = notification["rec_path"]
+                        g_pool.rec_path = notification["rec_path"]
                         raw_mode = notification["compression"]
                         start_time_synced = notification["start_time_synced"]
-                        logger.info("Will save eye video to: {}".format(record_path))
+                        logger.info(f"Will save eye video to: {g_pool.rec_path}")
                         video_path = os.path.join(
-                            record_path, "eye{}.mp4".format(eye_id)
+                            g_pool.rec_path, "eye{}.mp4".format(eye_id)
                         )
                         if raw_mode and frame and g_pool.capture.jpeg_support:
                             g_pool.writer = JPEG_Writer(video_path, start_time_synced)
@@ -592,7 +606,13 @@ def eye(
                             g_pool.writer.release()
                         except RuntimeError:
                             logger.error("No eye video recorded")
-                        g_pool.writer = None
+                        else:
+                            # TODO: wrap recording logic into plugin
+                            g_pool.capture.intrinsics.save(
+                                g_pool.rec_path, custom_name=f"eye{eye_id}"
+                            )
+                        finally:
+                            g_pool.writer = None
                 elif subject.startswith("meta.should_doc"):
                     ipc_socket.notify(
                         {

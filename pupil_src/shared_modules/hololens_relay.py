@@ -464,6 +464,6 @@ class Hololens_Relay(Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-           This happens either voluntarily or forced.
+        This happens either voluntarily or forced.
         """
         self.stop_server()

@@ -18,6 +18,10 @@ class ObserverError(Exception):
     pass
 
 
+class ReplaceWrapperError(Exception):
+    pass
+
+
 class Observable:
     """
     An object that allows to add observers to any of its methods. See
@@ -128,6 +132,7 @@ def add_observer(obj, method_name, observer):
     """
     observable = _get_wrapper_and_create_if_not_exists(obj, method_name)
     observable.add_observer(observer)
+    _install_protection_descriptor_if_not_exists(obj, method_name)
 
 
 def _get_wrapper_and_create_if_not_exists(obj, method_name):
@@ -139,13 +144,19 @@ def _get_wrapper_and_create_if_not_exists(obj, method_name):
         return observed_method
     elif not inspect.ismethod(observed_method):
         raise TypeError(
-            "Attribute {} of object {} is not a method but {} and, thus, "
-            "cannot be observed!".format(method_name, obj, observed_method)
+            f"Attribute '{method_name}' of object {obj} is not a method but "
+            f"{type(observed_method)} and, thus, cannot be observed!"
         )
     elif _is_classmethod(obj, method_name):
         raise TypeError(
-            "Attribute {} of object {} is a class method and, thus, "
-            "cannot be observed!".format(method_name, obj)
+            f"Attribute '{method_name}' of object {obj} is a class method and, thus, "
+            "cannot be observed!"
+        )
+    elif _method_was_modified(obj, method_name):
+        raise TypeError(
+            f"Attribute '{method_name}' of object {obj} cannot be observed because it "
+            "is not part of the original class definition or has been assigned to a "
+            "method of a different object!"
         )
     else:
         return _ObservableMethodWrapper(obj, method_name)
@@ -157,6 +168,72 @@ def _is_classmethod(obj, method_name):
         return isinstance(method_def, classmethod)
     except (AttributeError, KeyError):
         return False
+
+
+def _method_was_modified(obj, method_name):
+    method_in_original_class = hasattr(obj.__class__, method_name)
+    if not method_in_original_class:
+        return True
+    expected_func = getattr(obj.__class__, method_name)
+    expected_self = obj
+
+    method = getattr(obj, method_name)
+    bound_func = method.__func__
+    bound_self = method.__self__
+
+    return expected_self is not bound_self or expected_func is not bound_func
+
+
+def _install_protection_descriptor_if_not_exists(obj, method_name):
+    type_ = type(obj)
+    already_installed = isinstance(
+        getattr(type_, method_name), _WrapperProtectionDescriptor
+    )
+    if not already_installed:
+        setattr(type_, method_name, _WrapperProtectionDescriptor(type_, method_name))
+
+
+class _WrapperProtectionDescriptor:
+    """
+    Protects wrappers from being replaced which would silently disable observers.
+    Besides this, default python behavior is emulated.
+    """
+
+    def __init__(self, type, name):
+        self.original = getattr(type, name)
+        assert not inspect.isdatadescriptor(self.original)
+        self.name = name
+
+    def __get__(self, obj, type=None):
+        # This is a data discriptor, so it's called first.
+        # Emulate python lookup chain:
+        # 1.) original is data discriptor: Cannot happen, we only allow methods
+        #     (= non-data descriptors) to be wrapped.
+        # 2.) original is in object's __dict__
+        # 3.) original is in object's class or some of its parents: We don't need to
+        #     worry about if it's in the class or some parent, this is covered by
+        #     getattr() in __init__
+        if obj is not None and self.name in obj.__dict__:
+            return obj.__dict__[self.name]
+        else:
+            return self.original.__get__(obj, type)
+
+    def __set__(self, obj, value):
+        instance_method_wrapped = isinstance(
+            getattr(obj, self.name), _ObservableMethodWrapper
+        )
+
+        obj.__dict__[self.name] = value
+
+        # Raise error after the attribute is set. Makes it possible to change the
+        # attribute and ignore the error by catching it
+        if instance_method_wrapped:
+            raise ReplaceWrapperError(
+                f"Cannot set attribute '{self.name}' of object {obj} because it is an "
+                "ObservableMethodWrapper. Replacing it would silently disable observer "
+                "functionality. If you really want to, you can catch and then ignore "
+                "this error."
+            )
 
 
 def remove_observer(obj, method_name, observer):
@@ -187,28 +264,47 @@ def _get_wrapper_or_raise_if_not_exists(obj, method_name):
     observable_wrapper = getattr(obj, method_name)
     if not isinstance(observable_wrapper, _ObservableMethodWrapper):
         raise TypeError(
-            "Attribute {} of object {} is not observable. You never added an "
-            "observer to this!".format(method_name, obj)
+            f"Attribute '{method_name}' of object {obj} is not observable. You never "
+            "added an observer to this!"
         )
     return observable_wrapper
 
 
 class _ObservableMethodWrapper:
     def __init__(self, obj, method_name):
-        self._obj = obj
-        self._original_method = getattr(obj, method_name)
+        # the wrapper should not block garbage collection by reference counting for the
+        # observable object. Hence, we need to avoid strong references to the object,
+        # which would lead to cyclic references:
+        #   - The object is only referenced weakly
+        #   - The original wrapped method is only stored as an unbound method
+        self._obj_ref = weakref.ref(obj)
+        self._wrapped_func = getattr(obj.__class__, method_name)
         self._method_name = method_name
         self._observers = []
         self._was_removed = False
         self._patch_method_to_call_wrapper_instead()
 
     def _patch_method_to_call_wrapper_instead(self):
-        functools.update_wrapper(self, self._original_method)
-        setattr(self._obj, self._method_name, self)
+        functools.update_wrapper(self, self._wrapped_func)
+        # functools adds a reference to the wrapped method that we need to delete
+        # to avoid cyclic references
+        self.__wrapped__ = None
+        setattr(self._obj_ref(), self._method_name, self)
 
     def remove_wrapper(self):
-        setattr(self._obj, self._method_name, self._original_method)
+        try:
+            setattr(
+                self._obj_ref(), self._method_name, self._get_wrapped_bound_method()
+            )
+        except ReplaceWrapperError:
+            pass
         self._was_removed = True
+
+    def _get_wrapped_bound_method(self):
+        obj = self._obj_ref()
+        # see https://stackoverflow.com/a/1015405
+        original_bound_method = self._wrapped_func.__get__(obj, obj.__class__)
+        return original_bound_method
 
     def add_observer(self, observer):
         # Observers that are bound methods are referenced weakly. That means,
@@ -229,7 +325,7 @@ class _ObservableMethodWrapper:
             self._observers.remove(observer)
         except ValueError:
             raise ValueError(
-                "No observer {} found that could be removed!".format(observer)
+                f"No observer {observer} found that could be removed!"
             ) from None
 
     def remove_all_observers(self):
@@ -243,8 +339,9 @@ class _ObservableMethodWrapper:
                 "elsewhere and called via this reference after you "
                 "removed the wrapper!"
             )
+        wrapped_bound_method = self._get_wrapped_bound_method()
         try:
-            return self._original_method(*args, **kwargs)
+            return wrapped_bound_method(*args, **kwargs)
         except Exception:
             raise
         finally:

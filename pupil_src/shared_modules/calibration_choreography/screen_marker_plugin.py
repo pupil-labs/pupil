@@ -188,8 +188,8 @@ class ScreenMarkerChoreographyPlugin(
         if isinstance(state, MarkerWindowStateIdle):
             assert self.__currently_shown_marker_position is None  # Sanity check
             if self.__current_list_of_markers_to_show:
-                self.__currently_shown_marker_position = self.__current_list_of_markers_to_show.pop(
-                    0
+                self.__currently_shown_marker_position = (
+                    self.__current_list_of_markers_to_show.pop(0)
                 )
                 logger.debug(
                     f"Moving screen marker to site at {self.__currently_shown_marker_position}"

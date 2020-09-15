@@ -43,7 +43,7 @@ def calc_perimeter(corners):
 
 def dedupliciate_markers(marker_old, marker_new):
     """Deduplicate markers by returning marker with bigger perimeter
-    
+
     This heuristic is useful to remove "echos", i.e. markers that are being detected
     within the scene video preview instead of the scene itself.
     """

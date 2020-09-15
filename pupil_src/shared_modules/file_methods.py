@@ -359,7 +359,10 @@ class Serialized_Dict(object):
             return msgpack.ExtType(code, data)
 
         return msgpack.unpackb(
-            self._ser_data, raw=False, use_list=False, ext_hook=unpacking_ext_hook,
+            self._ser_data,
+            raw=False,
+            use_list=False,
+            ext_hook=unpacking_ext_hook,
         )
 
 

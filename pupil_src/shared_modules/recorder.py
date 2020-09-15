@@ -28,7 +28,6 @@ from file_methods import PLData_Writer, load_object
 from methods import get_system_info, timer
 from video_capture.ndsi_backend import NDSI_Source
 
-from pupil_recording.info import Version
 from pupil_recording.info import RecordingInfoFile
 
 from gaze_mapping.notifications import (
@@ -334,7 +333,7 @@ class Recorder(System_Plugin_Base):
         self.meta_info.recording_software_name = (
             RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
         )
-        self.meta_info.recording_software_version = self.g_pool.version.vstring
+        self.meta_info.recording_software_version = str(self.g_pool.version)
         self.meta_info.recording_name = self.session_name
         self.meta_info.start_time_synced_s = start_time_synced
         self.meta_info.start_time_system_s = self.start_time
@@ -522,7 +521,7 @@ class Recorder(System_Plugin_Base):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-           either volunatily or forced.
+        either volunatily or forced.
         """
         if self.running:
             self.stop()

@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import logging
-from distutils.version import LooseVersion as VersionFormat
+from version_utils import parse_version
 
 import pupil_detectors
 from pupil_detectors import Detector3D, DetectorBase, Roi
@@ -32,9 +32,9 @@ from .visualizer_3d import Eye_Visualizer
 
 logger = logging.getLogger(__name__)
 
-if VersionFormat(pupil_detectors.__version__) < VersionFormat("1.0.5"):
+if parse_version(pupil_detectors.__version__) < parse_version("1.1.1"):
     msg = (
-        f"This version of Pupil requires pupil_detectors >= 1.0.5."
+        f"This version of Pupil requires pupil_detectors >= 1.1.1."
         f" You are running with pupil_detectors == {pupil_detectors.__version__}."
         f" Please upgrade to a newer version!"
     )
@@ -55,12 +55,53 @@ class Detector3DPlugin(PupilDetectorPlugin):
         self, g_pool=None, namespaced_properties=None, detector_3d: Detector3D = None
     ):
         super().__init__(g_pool=g_pool)
-        self.detector_3d = detector_3d or Detector3D(namespaced_properties or {})
+        detector = detector_3d or Detector3D(namespaced_properties or {})
+        self._initialize(detector)
+
+    @property
+    def detector_3d(self):
+        return self._detector_internal
+
+    def _initialize(self, detector: Detector3D):
+        # initialize plugin with a detector instance, safe to call multiple times
+        self._detector_internal = detector
         self.proxy = PropertyProxy(self.detector_3d)
-        # debug window
-        self.debugVisualizer3D = Eye_Visualizer(g_pool, self.detector_3d.focal_length())
+
+        # In case of re-initialization, we need to close the debug window or else we
+        # leak the opengl window. We can open the new one again afterwards.
+        try:
+            debug_window_was_open = self.is_debug_window_open
+        except AttributeError:
+            # debug window does not exist yet
+            debug_window_was_open = False
+        if debug_window_was_open:
+            self.debug_window_close()
+        self.debugVisualizer3D = Eye_Visualizer(
+            self.g_pool, self.detector_3d.focal_length()
+        )
+        if debug_window_was_open:
+            self.debug_window_open()
+
+        self._last_focal_length = self.detector_3d.focal_length()
+        if self.ui_available:
+            # ui was wrapped around old detector, need to re-init for new one
+            self._reinit_ui()
+
+    def _process_focal_length_changes(self):
+        focal_length = self.g_pool.capture.intrinsics.focal_length
+        if focal_length != self._last_focal_length:
+            logger.debug(
+                f"Focal length change detected: {focal_length}."
+                " Re-initializing 3D detector."
+            )
+            # reinitialize detector with same properties but updated focal length
+            properties = self.detector_3d.get_properties()
+            new_detector = Detector3D(properties=properties, focal_length=focal_length)
+            self._initialize(new_detector)
 
     def detect(self, frame, **kwargs):
+        self._process_focal_length_changes()
+
         # convert roi-plugin to detector roi
         roi = Roi(*self.g_pool.roi.bounds)
 
@@ -96,6 +137,10 @@ class Detector3DPlugin(PupilDetectorPlugin):
 
     def init_ui(self):
         super().init_ui()
+        self._reinit_ui()
+
+    def _reinit_ui(self):
+        self.menu.elements.clear()
         self.menu.label = self.pretty_class_name
         self.menu.append(
             ui.Info_Text(

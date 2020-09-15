@@ -83,7 +83,7 @@ def player(
         from video_capture import File_Source
 
         # helpers/utils
-        from version_utils import VersionFormat
+        from version_utils import parse_version
         from methods import normalize, denormalize, delta_t, get_system_info
         import player_methods as pm
         from pupil_recording import PupilRecording
@@ -131,7 +131,7 @@ def player(
             InvalidRecordingException,
         )
 
-        assert VersionFormat(pyglui_version) >= VersionFormat(
+        assert parse_version(pyglui_version) >= parse_version(
             "1.28"
         ), "pyglui out of date, please upgrade to newest version"
 
@@ -346,7 +346,7 @@ def player(
         session_settings = Persistent_Dict(
             os.path.join(user_dir, "user_settings_player")
         )
-        if VersionFormat(session_settings.get("version", "0.0")) != app_version:
+        if parse_version(session_settings.get("version", "0.0")) != app_version:
             logger.info(
                 "Session setting are a different version of this app. I will not use those."
             )
@@ -356,13 +356,20 @@ def player(
         width += icon_bar_width
         width, height = session_settings.get("window_size", (width, height))
 
-        window_pos = session_settings.get("window_position", window_position_default)
         window_name = f"Pupil Player: {meta_info.recording_name} - {rec_dir}"
 
         glfw.glfwInit()
         glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
         main_window = glfw.glfwCreateWindow(width, height, window_name, None, None)
+
+        window_position_manager = gl_utils.WindowPositionManager()
+        window_pos = window_position_manager.new_window_position(
+            window=main_window,
+            default_position=window_position_default,
+            previous_position=session_settings.get("window_position", None),
+        )
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
+
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
         g_pool.main_window = main_window
@@ -793,7 +800,7 @@ def player_drop(
         import glfw
         import gl_utils
         from OpenGL.GL import glClearColor
-        from version_utils import VersionFormat
+        from version_utils import parse_version
         from file_methods import Persistent_Dict
         from pyglui.pyfontstash import fontstash
         from pyglui.ui import get_roboto_font_path
@@ -830,13 +837,12 @@ def player_drop(
         session_settings = Persistent_Dict(
             os.path.join(user_dir, "user_settings_player")
         )
-        if VersionFormat(session_settings.get("version", "0.0")) != app_version:
+        if parse_version(session_settings.get("version", "0.0")) != app_version:
             logger.info(
                 "Session setting are from a  different version of this app. I will not use those."
             )
             session_settings.clear()
         w, h = session_settings.get("window_size", (1280, 720))
-        window_pos = session_settings.get("window_position", window_position_default)
 
         glfw.glfwInit()
         glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
@@ -845,7 +851,15 @@ def player_drop(
         glfw.glfwWindowHint(glfw.GLFW_RESIZABLE, 1)
 
         glfw.glfwMakeContextCurrent(window)
+
+        window_position_manager = gl_utils.WindowPositionManager()
+        window_pos = window_position_manager.new_window_position(
+            window=window,
+            default_position=window_position_default,
+            previous_position=session_settings.get("window_position", None),
+        )
         glfw.glfwSetWindowPos(window, window_pos[0], window_pos[1])
+
         glfw.glfwSetDropCallback(window, on_drop)
 
         glfont = fontstash.Context()

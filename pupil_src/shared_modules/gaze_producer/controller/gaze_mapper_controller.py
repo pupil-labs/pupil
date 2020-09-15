@@ -47,6 +47,9 @@ class GazeMapperController(Observable):
     def set_validation_range_from_current_trim_marks(self, gaze_mapper):
         gaze_mapper.validation_index_range = self._get_current_trim_mark_range()
 
+    def set_calibration_unique_id(self, gaze_mapper, calibration_unique_id):
+        gaze_mapper.calibration_unique_id = calibration_unique_id
+
     def calculate(self, gaze_mapper):
         self._reset_gaze_mapper_results(gaze_mapper)
         calibration = self.get_valid_calibration_or_none(gaze_mapper)

@@ -118,10 +118,10 @@ def world(
 
         # display
         import glfw
-        from version_utils import VersionFormat
+        from version_utils import parse_version
         from pyglui import ui, cygl, __version__ as pyglui_version
 
-        assert VersionFormat(pyglui_version) >= VersionFormat(
+        assert parse_version(pyglui_version) >= parse_version(
             "1.27"
         ), "pyglui out of date, please upgrade to newest version"
         from pyglui.cygl.utils import Named_Texture
@@ -441,7 +441,7 @@ def world(
         session_settings = Persistent_Dict(
             os.path.join(g_pool.user_dir, "user_settings_world")
         )
-        if VersionFormat(session_settings.get("version", "0.0")) != g_pool.version:
+        if parse_version(session_settings.get("version", "0.0")) != g_pool.version:
             logger.info(
                 "Session setting are from a different version of this app. I will not use those."
             )
@@ -514,8 +514,15 @@ def world(
         if hide_ui:
             glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
         main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
-        window_pos = session_settings.get("window_position", window_position_default)
+
+        window_position_manager = gl_utils.WindowPositionManager()
+        window_pos = window_position_manager.new_window_position(
+            window=main_window,
+            default_position=window_position_default,
+            previous_position=session_settings.get("window_position", None),
+        )
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
+
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
         g_pool.main_window = main_window

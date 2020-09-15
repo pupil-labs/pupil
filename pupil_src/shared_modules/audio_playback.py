@@ -26,10 +26,10 @@ from pyglui import ui
 import gl_utils
 from audio_utils import Audio_Viz_Transform, NoAudioLoadedError, load_audio
 from plugin import System_Plugin_Base
-from version_utils import VersionFormat
+from version_utils import parse_version
 
 
-assert VersionFormat(av.__version__) >= VersionFormat("0.4.4")
+assert parse_version(av.__version__) >= parse_version("0.4.4")
 
 
 logger = logging.getLogger(__name__)
@@ -191,7 +191,8 @@ class Audio_Playback(System_Plugin_Base):
         self.filter_graph_list[-2].link_to(self.filter_graph_list[-1])
         self.filter_graph_list.append(
             self.filter_graph.add(
-                "aresample", "osf={}".format(self.audio.stream.format.packed.name),
+                "aresample",
+                "osf={}".format(self.audio.stream.format.packed.name),
             )
         )
         self.filter_graph_list[-2].link_to(self.filter_graph_list[-1])
@@ -421,7 +422,12 @@ class Audio_Playback(System_Plugin_Base):
 
         self.menu.append(
             ui.Slider(
-                "req_audio_volume", self, step=0.05, min=0.0, max=1.0, label="Volume",
+                "req_audio_volume",
+                self,
+                step=0.05,
+                min=0.0,
+                max=1.0,
+                label="Volume",
             )
         )
         self.menu.append(

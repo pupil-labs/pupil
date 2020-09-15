@@ -12,7 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import logging
 import os
-import typing
+import typing as T
 
 import cv2
 import numpy as np
@@ -22,9 +22,9 @@ from file_methods import load_object, save_object
 logger = logging.getLogger(__name__)
 __version__ = 1
 
-# These are world camera intrinsics that we recorded. They are estimates and generalize
-# our setup. Its always better to estimate intrinsics for each camera again.
-default_world_intrinsics = {
+# These are camera intrinsics that we recorded. They are estimates and generalize our
+# setup. Its always better to estimate intrinsics for each camera again.
+default_intrinsics = {
     "Pupil Cam1 ID2": {
         "(640, 480)": {
             "dist_coefs": [
@@ -152,21 +152,98 @@ default_world_intrinsics = {
     },
 }
 
+# Add measured intrinsics for the eyes (once for each ID for easy lookup)
+# TODO: From these intrinsics only the focal lengths were measured. The principal points
+# are just default values (half the resolution) and there's no distortion model for now.
+# At some later point we should measure the full intrinsics and replace existing
+# intrinsics with a recording upgrade.
+for eye_id in (0, 1):
+    default_intrinsics.update(
+        {
+            f"Pupil Cam1 ID{eye_id}": {
+                "(320, 240)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [338.456035, 0.0, 160],
+                        [0.0, 339.871543, 120],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+                "(640, 480)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [670.785555, 0.0, 320],
+                        [0.0, 670.837798, 240],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+            },
+            f"Pupil Cam2 ID{eye_id}": {
+                "(192, 192)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [282.976877, 0.0, 96],
+                        [0.0, 283.561467, 96],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+                "(400, 400)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [561.471804, 0.0, 200],
+                        [0.0, 562.494105, 200],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+            },
+            f"Pupil Cam3 ID{eye_id}": {
+                "(192, 192)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [140.0, 0.0, 96],
+                        [0.0, 140.0, 96],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+                "(400, 400)": {
+                    "dist_coefs": [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                    "camera_matrix": [
+                        [278.50, 0.0, 200],
+                        [0.0, 278.55, 200],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "cam_type": "radial",
+                },
+            },
+        }
+    )
+
 
 class Camera_Model(abc.ABC):
     cam_type = ...  # overwrite in subclasses, used for saving/loading
 
-    def __init__(self, K, D, resolution, name):
+    def __init__(self, name, resolution, K, D):
+        self.name = name
+        self.resolution = resolution
         self.K = np.array(K)
         self.D = np.array(D)
-        self.resolution = resolution
-        self.name = name
 
     def update_camera_matrix(self, camera_matrix):
         self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
 
     def update_dist_coefs(self, dist_coefs):
         self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
+
+    @property
+    def focal_length(self):
+        fx = self.K[0, 0]
+        fy = self.K[1, 1]
+        return (fx + fy) / 2
 
     @abc.abstractmethod
     def undistort(self, img: np.ndarray) -> np.ndarray:
@@ -182,8 +259,8 @@ class Camera_Model(abc.ABC):
     def projectPoints(
         self,
         object_points,
-        rvec: typing.Optional[np.ndarray] = None,
-        tvec: typing.Optional[np.ndarray] = None,
+        rvec: T.Optional[np.ndarray] = None,
+        tvec: T.Optional[np.ndarray] = None,
         use_distortion: bool = True,
     ):
         ...
@@ -211,13 +288,9 @@ class Camera_Model(abc.ABC):
         xy,
         flags: int = cv2.SOLVEPNP_ITERATIVE,
         useExtrinsicGuess: bool = False,
-        rvec: typing.Optional[np.ndarray] = None,
-        tvec: typing.Optional[np.ndarray] = None,
+        rvec: T.Optional[np.ndarray] = None,
+        tvec: T.Optional[np.ndarray] = None,
     ):
-        ...
-
-    @abc.abstractmethod
-    def save(self, directory: str, custom_name: typing.Optional[str] = None):
         ...
 
     subclass_by_cam_type = dict()
@@ -269,14 +342,16 @@ class Camera_Model(abc.ABC):
         )
 
     @staticmethod
-    def from_file(directory, cam_name, resolution):
+    def from_file(
+        directory: str, cam_name: str, resolution: T.Tuple[int]
+    ) -> "Camera_Model":
         """
         Loads recorded intrinsics for the given camera and resolution. If no recorded
-        intrinsics are available we fall back to default values.
-        :param directory: The directory in which to look for the intrinsincs file
-        :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'
-        :param resolution: Camera resolution given as a tuple.
-        :return: Camera Model Object
+        intrinsics are available we fall back to default values. If no default values
+        are available, we use dummy intrinsics.
+        :param directory: The directory in which to look for the intrinsincs file.
+        :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'.
+        :param resolution: Camera resolution.
         """
         file_path = os.path.join(
             directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
@@ -287,7 +362,7 @@ class Camera_Model(abc.ABC):
             if intrinsics_dict["version"] < __version__:
                 logger.warning("Deprecated camera intrinsics found.")
                 logger.info(
-                    "Please recalculate the camera intrinsics using the Camera "
+                    "Please recalculate the camera intrinsics using the Camera"
                     " Intrinsics Estimation."
                 )
                 os.rename(
@@ -296,37 +371,55 @@ class Camera_Model(abc.ABC):
                 )
 
             intrinsics = intrinsics_dict[str(resolution)]
-            logger.info("Previously recorded intrinsics found and loaded!")
+            logger.info("Loading previously recorded intrinsics...")
+            return Camera_Model._from_raw_intrinsics(cam_name, resolution, intrinsics)
         except Exception:
-            logger.info(
-                "No recorded intrinsics found for camera {} at resolution {}".format(
-                    cam_name, resolution
-                )
+            logger.debug(
+                f"No recorded intrinsics found for camera {cam_name} at resolution"
+                f" {resolution}"
             )
+            return Camera_Model.from_default(cam_name, resolution)
 
-            if (
-                cam_name in default_world_intrinsics
-                and str(resolution) in default_world_intrinsics[cam_name]
-            ):
-                logger.info("Loading default intrinsics!")
-                intrinsics = default_world_intrinsics[cam_name][str(resolution)]
-            else:
-                logger.warning(
-                    "No default intrinsics available! Loading dummy intrinsics!"
-                )
-                return Dummy_Camera(resolution, cam_name)
+    @staticmethod
+    def from_default(cam_name: str, resolution: T.Tuple[int]) -> "Camera_Model":
+        """
+        Loads default intrinsics for the given camera and resolution. If no default
+        values are available, we use dummy intrinsics.
+        :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'.
+        :param resolution: Camera resolution.
+        """
+        if (
+            cam_name in default_intrinsics
+            and str(resolution) in default_intrinsics[cam_name]
+        ):
+            logger.info("Loading default intrinsics!")
+            intrinsics = default_intrinsics[cam_name][str(resolution)]
+            return Camera_Model._from_raw_intrinsics(cam_name, resolution, intrinsics)
+        else:
+            logger.warning(
+                f"No camera intrinsics available for camera {cam_name} at"
+                f" resolution {resolution}!"
+            )
+            logger.warning("Loading dummy intrinsics, which might decrease accuracy!")
+            logger.warning(
+                "Consider selecting a different resolution, or running the Camera"
+                " Instrinsics Estimation!"
+            )
+            return Dummy_Camera(cam_name, resolution)
 
+    @staticmethod
+    def _from_raw_intrinsics(cam_name, resolution, intrinsics):
         cam_type = intrinsics["cam_type"]
         if cam_type not in Camera_Model.subclass_by_cam_type:
             logger.warning(
                 f"Trying to load unknown camera type intrinsics: {cam_type}! Using "
                 " dummy intrinsics!"
             )
-            return Dummy_Camera(resolution, cam_name)
+            return Dummy_Camera(cam_name, resolution)
 
         camera_model_class = Camera_Model.subclass_by_cam_type[cam_type]
         return camera_model_class(
-            intrinsics["camera_matrix"], intrinsics["dist_coefs"], resolution, cam_name
+            cam_name, resolution, intrinsics["camera_matrix"], intrinsics["dist_coefs"]
         )
 
 
@@ -629,11 +722,11 @@ class Dummy_Camera(Radial_Dist_Camera):
 
     cam_type = "dummy"
 
-    def __init__(self, resolution, name):
-        camera_matrix = [
+    def __init__(self, name, resolution, K=None, D=None):
+        camera_matrix = K or [
             [1000, 0.0, resolution[0] / 2.0],
             [0.0, 1000, resolution[1] / 2.0],
             [0.0, 0.0, 1.0],
         ]
-        dist_coefs = [[0.0, 0.0, 0.0, 0.0, 0.0]]
-        super().__init__(camera_matrix, dist_coefs, resolution, name)
+        dist_coefs = D or [[0.0, 0.0, 0.0, 0.0, 0.0]]
+        super().__init__(name, resolution, camera_matrix, dist_coefs)

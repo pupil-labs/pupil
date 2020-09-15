@@ -24,9 +24,8 @@ from scipy.interpolate import interp1d
 import csv_utils
 import file_methods as fm
 from camera_models import Camera_Model
-from version_utils import VersionFormat
+from version_utils import parse_version
 
-from .. import Version
 from ..info import RecordingInfoFile
 from ..info import recording_info_utils as rec_info_utils
 from ..recording_utils import InvalidRecordingException
@@ -79,7 +78,7 @@ def _generate_pprf_2_0_info_file(rec_dir):
     # Create a recording info file with the new format,
     # fill out the information, validate, and return.
     new_info_file = RecordingInfoFile.create_empty_file(
-        rec_dir, fixed_version=Version("2.0")
+        rec_dir, fixed_version=parse_version("2.0")
     )
     new_info_file.recording_uuid = recording_uuid
     new_info_file.start_time_system_s = start_time_system_s
@@ -106,60 +105,60 @@ def _update_recording_to_old_style_v1_16(rec_dir):
     rec_version = _read_rec_version_legacy(meta_info)
 
     # Convert python2 to python3
-    if rec_version <= VersionFormat("0.8.7"):
+    if rec_version <= parse_version("0.8.7"):
         update_recording_bytes_to_unicode(rec_dir)
 
-    if rec_version >= VersionFormat("0.7.4"):
+    if rec_version >= parse_version("0.7.4"):
         pass
-    elif rec_version >= VersionFormat("0.7.3"):
+    elif rec_version >= parse_version("0.7.3"):
         update_recording_v073_to_v074(rec_dir)
-    elif rec_version >= VersionFormat("0.5"):
+    elif rec_version >= parse_version("0.5"):
         update_recording_v05_to_v074(rec_dir)
-    elif rec_version >= VersionFormat("0.4"):
+    elif rec_version >= parse_version("0.4"):
         update_recording_v04_to_v074(rec_dir)
-    elif rec_version >= VersionFormat("0.3"):
+    elif rec_version >= parse_version("0.3"):
         update_recording_v03_to_v074(rec_dir)
     else:
         logger.error("This recording is too old. Sorry.")
         return
 
     # Incremental format updates
-    if rec_version < VersionFormat("0.8.2"):
+    if rec_version < parse_version("0.8.2"):
         update_recording_v074_to_v082(rec_dir)
-    if rec_version < VersionFormat("0.8.3"):
+    if rec_version < parse_version("0.8.3"):
         update_recording_v082_to_v083(rec_dir)
-    if rec_version < VersionFormat("0.8.6"):
+    if rec_version < parse_version("0.8.6"):
         update_recording_v083_to_v086(rec_dir)
-    if rec_version < VersionFormat("0.8.7"):
+    if rec_version < parse_version("0.8.7"):
         update_recording_v086_to_v087(rec_dir)
-    if rec_version < VersionFormat("0.9.1"):
+    if rec_version < parse_version("0.9.1"):
         update_recording_v087_to_v091(rec_dir)
-    if rec_version < VersionFormat("0.9.3"):
+    if rec_version < parse_version("0.9.3"):
         update_recording_v091_to_v093(rec_dir)
-    if rec_version < VersionFormat("0.9.4"):
+    if rec_version < parse_version("0.9.4"):
         update_recording_v093_to_v094(rec_dir)
-    if rec_version < VersionFormat("0.9.13"):
+    if rec_version < parse_version("0.9.13"):
         update_recording_v094_to_v0913(rec_dir)
-    if rec_version < VersionFormat("1.3"):
+    if rec_version < parse_version("1.3"):
         update_recording_v0913_to_v13(rec_dir)
-    if rec_version < VersionFormat("1.4"):
+    if rec_version < parse_version("1.4"):
         update_recording_v13_v14(rec_dir)
 
-    if rec_version < VersionFormat("1.8"):
+    if rec_version < parse_version("1.8"):
         update_recording_v14_v18(rec_dir)
-    if rec_version < VersionFormat("1.9"):
+    if rec_version < parse_version("1.9"):
         update_recording_v18_v19(rec_dir)
-    if rec_version < VersionFormat("1.11"):
+    if rec_version < parse_version("1.11"):
         update_recording_v19_v111(rec_dir)
-    if rec_version < VersionFormat("1.13"):
+    if rec_version < parse_version("1.13"):
         update_recording_v111_v113(rec_dir)
-    if rec_version < VersionFormat("1.14"):
+    if rec_version < parse_version("1.14"):
         update_recording_v113_v114(rec_dir)
-    if rec_version < VersionFormat("1.16"):
+    if rec_version < parse_version("1.16"):
         update_recording_v114_v116(rec_dir)
 
     # How to extend:
-    # if rec_version < VersionFormat('FUTURE FORMAT'):
+    # if rec_version < parse_version('FUTURE FORMAT'):
     #    update_recording_v081_to_FUTURE(rec_dir)
 
 
@@ -214,8 +213,8 @@ def update_recording_v086_to_v087(rec_dir):
 
     def _clamp_norm_point(pos):
         """realisitic numbers for norm pos should be in this range.
-            Grossly bigger or smaller numbers are results bad exrapolation
-            and can cause overflow erorr when denormalized and cast as int32.
+        Grossly bigger or smaller numbers are results bad exrapolation
+        and can cause overflow erorr when denormalized and cast as int32.
         """
         return min(100.0, max(-100.0, pos[0])), min(100.0, max(-100.0, pos[1]))
 
@@ -667,7 +666,12 @@ def update_recording_v04_to_v074(rec_dir):
     pupil_by_ts = dict([(p["timestamp"], p) for p in pupil_list])
 
     for datum in gaze_array:
-        ts, confidence, x, y, = datum
+        (
+            ts,
+            confidence,
+            x,
+            y,
+        ) = datum
         gaze_list.append(
             {
                 "timestamp": ts,
@@ -725,12 +729,11 @@ def update_recording_v03_to_v074(rec_dir):
 
 
 def _read_rec_version_legacy(meta_info):
-    version = meta_info.get(
+    version_string = meta_info.get(
         "Data Format Version", meta_info["Capture Software Version"]
     )
-    version = "".join(
-        [c for c in version if c in "1234567890.-"]
+    version_string = "".join(
+        [c for c in version_string if c in "1234567890.-"]
     )  # strip letters in case of legacy version format
-    version = VersionFormat(version)
-    logger.debug("Recording version: {}".format(version))
-    return version
+    logger.debug(f"Recording version: {version_string}")
+    return parse_version(version_string)

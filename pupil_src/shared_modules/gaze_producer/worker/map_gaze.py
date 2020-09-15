@@ -46,7 +46,10 @@ def create_task(gaze_mapper, calibration):
     )
     name = f"Create gaze mapper {gaze_mapper.name}"
     return tasklib.background.create(
-        name, _map_gaze, args=args, pass_shared_memory=True,
+        name,
+        _map_gaze,
+        args=args,
+        pass_shared_memory=True,
     )
 
 

@@ -48,6 +48,10 @@ class GazeMapperTimeline:
         self._gaze_mapper_controller.add_observer(
             "publish_all_enabled_mappers", self._on_publish_enabled_mappers
         )
+        self._gaze_mapper_controller.add_observer(
+            "set_calibration_unique_id",
+            self._on_calibration_unique_id_changed,
+        )
 
         self._calibration_controller.add_observer(
             "set_calibration_range_from_current_trim_marks",
@@ -119,4 +123,7 @@ class GazeMapperTimeline:
 
     def _on_calibration_deleted(self, _):
         # the deleted calibration might be used by one of the gaze mappers
+        self.render_parent_timeline()
+
+    def _on_calibration_unique_id_changed(self, _1, _2):
         self.render_parent_timeline()
