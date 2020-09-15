@@ -236,9 +236,10 @@ def eye(
             glfw.glfwMakeContextCurrent(main_window)
             clear_gl_screen()
 
-            glViewport(0, 0, *g_pool.camera_render_size)
-            for p in g_pool.plugins:
-                p.gl_display()
+            if all(c > 0 for c in g_pool.camera_render_size):
+                glViewport(0, 0, *g_pool.camera_render_size)
+                for p in g_pool.plugins:
+                    p.gl_display()
 
             glViewport(0, 0, *window_size)
             # render graphs
@@ -288,6 +289,11 @@ def eye(
         def on_resize(window, w, h):
             nonlocal window_size
             nonlocal content_scale
+
+            is_minimized = bool(glfw.glfwGetWindowAttrib(window, glfw.GLFW_ICONIFIED))
+
+            if is_minimized:
+                return
 
             # Always clear buffers on resize to make sure that there are no overlapping
             # artifacts from previous frames.
