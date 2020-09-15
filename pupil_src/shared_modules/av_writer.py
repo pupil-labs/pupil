@@ -145,9 +145,7 @@ class AV_Writer(abc.ABC):
 
         self.closed = False
 
-    def write_video_frame(
-        self, input_frame, hardware_timestamp=..., software_timestamp=...
-    ):
+    def write_video_frame(self, input_frame, hardware_timestamp, software_timestamp):
         """
         Write a frame to the video_stream.
 
