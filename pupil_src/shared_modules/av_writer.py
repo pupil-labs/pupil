@@ -227,29 +227,46 @@ class AV_Writer(abc.ABC):
             write_timestamps(
                 self.output_file_path, self.timestamps, timestamp_export_format
             )
-            import pathlib
 
-            output_path = pathlib.Path(self.output_file_path)
+            import time
+            import datetime
+
+            start_date_timestamp = time.mktime(datetime.datetime.now().timetuple())
+            start_date_timestamp -= self.timestamps[-1] - self.timestamps[0]
+            start_date_timestamp = int(start_date_timestamp)
+
+            def _experiment_timestamps_file_path(timestamps_source_name: str):
+                import pathlib
+                import platform
+
+                output_dir = pathlib.Path(self.output_file_path).parent
+                file_suffix = pathlib.Path(self.output_file_path).suffix
+                process_name = pathlib.Path(self.output_file_path).stem
+
+                os_name = platform.system()
+
+                file_name_components = [
+                    os_name,
+                    start_date_timestamp,
+                    process_name,
+                    timestamps_source_name,
+                ]
+
+                file_name = "_".join(str(c) for c in file_name_components).lower()
+
+                return pathlib.Path(output_dir).joinpath(file_name).with_suffix(".npy")
 
             if len(self._software_timestamps) > 0:
-                software_timestamps_path = output_path.with_name(
-                    output_path.stem + "_software"
-                ).with_suffix(output_path.suffix)
-                write_timestamps(
-                    str(software_timestamps_path),
-                    self._software_timestamps,
-                    timestamp_export_format,
+                software_timestamps_path = _experiment_timestamps_file_path(
+                    timestamps_source_name="software",
                 )
+                np.save(software_timestamps_path, self._software_timestamps)
 
             if len(self._hardware_timestamps) > 0:
-                hardware_timestamps_path = output_path.with_name(
-                    output_path.stem + "_hardware"
-                ).with_suffix(output_path.suffix)
-                write_timestamps(
-                    str(hardware_timestamps_path),
-                    self._hardware_timestamps,
-                    timestamp_export_format,
+                hardware_timestamps_path = _experiment_timestamps_file_path(
+                    timestamps_source_name="hardware",
                 )
+                np.save(hardware_timestamps_path, self._hardware_timestamps)
 
     def release(self):
         """Close writer, triggering stream and timestamp save."""
