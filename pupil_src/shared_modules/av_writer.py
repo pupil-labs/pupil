@@ -228,22 +228,20 @@ class AV_Writer(abc.ABC):
                 self.output_file_path, self.timestamps, timestamp_export_format
             )
 
-            import time
-            import datetime
-
-            start_date_timestamp = time.mktime(datetime.datetime.now().timetuple())
-            start_date_timestamp -= self.timestamps[-1] - self.timestamps[0]
-            start_date_timestamp = int(start_date_timestamp)
-
             def _experiment_timestamps_file_path(timestamps_source_name: str):
                 import pathlib
                 import platform
 
-                output_dir = pathlib.Path(self.output_file_path).parent
-                file_suffix = pathlib.Path(self.output_file_path).suffix
-                process_name = pathlib.Path(self.output_file_path).stem
+                import time
+                import datetime
 
                 os_name = platform.system()
+                start_date_timestamp = datetime.datetime.now().strftime(
+                    "%Y-%m-%d-%H-%M"
+                )
+
+                output_dir = pathlib.Path(self.output_file_path).parent
+                process_name = pathlib.Path(self.output_file_path).stem
 
                 file_name_components = [
                     os_name,
