@@ -15,6 +15,7 @@ import logging
 import collections
 import multiprocessing as mp
 import os
+import time
 import typing as T
 from fractions import Fraction
 
@@ -108,6 +109,7 @@ class AV_Writer(abc.ABC):
         """
 
         self.timestamps = []
+        self._last_frame_written = float("-inf")
         self._hardware_timestamps = []
         self._software_timestamps = []
         self.start_time = start_time_synced
@@ -154,6 +156,16 @@ class AV_Writer(abc.ABC):
         if self.closed:
             logger.warning("Container was closed already!")
             return
+
+        self._hardware_timestamps.append(hardware_timestamp)
+        self._software_timestamps.append(software_timestamp)
+
+        now  = time.perf_counter()
+        time_since_last_frame_written = now - self._last_frame_written
+        minimum_time_between_writing_frames = 1 / 10
+        if time_since_last_frame_written < minimum_time_between_writing_frames:
+            return
+        self._last_frame_written = now
 
         if not self.configured:
             self.video_stream.height = input_frame.height
@@ -203,8 +215,6 @@ class AV_Writer(abc.ABC):
 
         self.last_video_pts = pts
         self.timestamps.append(ts)
-        self._hardware_timestamps.append(hardware_timestamp)
-        self._software_timestamps.append(software_timestamp)
 
     def close(self, timestamp_export_format="npy"):
         """Close writer, triggering stream and timestamp save."""
