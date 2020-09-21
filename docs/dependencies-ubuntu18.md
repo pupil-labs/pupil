@@ -7,7 +7,7 @@ Most of this works via **apt**! Just copy paste into the terminal and listen to 
 ## General Dependencies
 
 ```sh
-sudo apt install -y pkg-config git cmake build-essential nasm wget python3-setuptools libusb-1.0-0-dev  python3-dev python3-pip python3-numpy python3-scipy libglew-dev libglfw3-dev libtbb-dev
+sudo apt install -y pkg-config git cmake build-essential nasm wget python3-setuptools libusb-1.0-0-dev  python3-dev python3-pip python3-numpy python3-scipy libglew-dev libtbb-dev
 
 # ffmpeg >= 3.2
 sudo apt install -y libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libavresample-dev ffmpeg x264 x265 libportaudio2 portaudio19-dev
@@ -18,6 +18,21 @@ sudo apt install -y python3-opencv libopencv-dev
 # 3D Eye model dependencies
 sudo apt install -y libgoogle-glog-dev libatlas-base-dev libeigen3-dev
 sudo apt install -y libceres-dev
+```
+
+## glfw
+Pupil requires glfw v3.3.2, which you can install from source with:
+```sh
+sudo apt install xorg-dev
+git clone https://github.com/glfw/glfw
+cd glfw
+git checkout 3.3.2
+mkdir build
+cd build
+cmake -DBUILD_SHARED_LIBS=ON ..
+make
+sudo make install
+sudo ldconfig
 ```
 
 ## Turbojpeg

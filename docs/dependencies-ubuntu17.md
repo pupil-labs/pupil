@@ -9,7 +9,22 @@ Pupil requires Python 3.6 or higher. Please check this [resource](https://askubu
 
 ```sh
 sudo apt-get update
-sudo apt install -y pkg-config git cmake build-essential nasm wget python3-setuptools libusb-1.0-0-dev  python3-dev python3-pip python3-numpy python3-scipy libglew-dev libglfw3-dev libtbb-dev
+sudo apt install -y pkg-config git cmake build-essential nasm wget python3-setuptools libusb-1.0-0-dev  python3-dev python3-pip python3-numpy python3-scipy libglew-dev libtbb-dev
+```
+
+## glfw
+Pupil requires glfw v3.3.2, which you can install from source with:
+```sh
+sudo apt install xorg-dev
+git clone https://github.com/glfw/glfw
+cd glfw
+git checkout 3.3.2
+mkdir build
+cd build
+cmake -DBUILD_SHARED_LIBS=ON ..
+make
+sudo make install
+sudo ldconfig
 ```
 
 ## ffmpeg3
