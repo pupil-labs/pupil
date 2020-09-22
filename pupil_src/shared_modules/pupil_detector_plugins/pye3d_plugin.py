@@ -47,9 +47,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
             raise RuntimeError("No 2D detection result! Needed for pye3D!")
 
         datum_2d["raw_edges"] = []
-        result = self.detector.update_and_detect(
-            datum_2d, frame.gray, debug_toggle=self.is_debug_window_open
-        )
+        result = self.detector.update_and_detect(datum_2d, frame.gray, debug=True)
 
         eye_id = self.g_pool.eye_id
         result["timestamp"] = frame.timestamp
@@ -123,5 +121,5 @@ class Pye3DPlugin(PupilDetectorPlugin):
     def debug_window_update(self):
         if self.is_debug_window_open:
             self.debugVisualizer3D.update_window(
-                self.g_pool, self.detector.debug_result
+                self.g_pool, self._recent_detection_result
             )

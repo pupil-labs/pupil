@@ -226,6 +226,29 @@ class Eye_Visualizer(Visualizer):
             alpha=1.0,
         )
 
+        bins = np.array(result["debug_info"]["bins"])
+        print(bins)
+        m = np.max(bins)
+        if m > 0:
+            bins = bins / m
+        px_per_bin = result["debug_info"]["px_per_bin"]
+        w, h = bins.shape
+        for row in range(h):
+            for col in range(w):
+
+                x0 = col * px_per_bin
+                x1 = (col + 1) * px_per_bin
+                y0 = row * px_per_bin
+                y1 = (row + 1) * px_per_bin
+
+                glColor4f(1, 0, 0, bins[row, col])
+                glBegin(GL_QUADS)
+                glVertex3f(x0, y0, 0)
+                glVertex3f(x0, y1, 0)
+                glVertex3f(x1, y1, 0)
+                glVertex3f(x1, y0, 0)
+                glEnd()
+
         glLoadMatrixf(self.get_adjusted_pixel_space_matrix(15))
         self.draw_frustum(self.image_width, self.image_height, self.focal_length)
         glLoadMatrixf(self.get_anthropomorphic_matrix())
