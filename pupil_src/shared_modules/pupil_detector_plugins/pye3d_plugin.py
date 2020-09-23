@@ -12,6 +12,8 @@ import logging
 
 from pye3d.detector_3d import Detector3D
 from pyglui import ui
+from matplotlib import pyplot as plt
+import pyqtgraph as pq
 
 from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_2d import draw_eyeball_outline, draw_pupil_outline
@@ -36,6 +38,9 @@ class Pye3DPlugin(PupilDetectorPlugin):
             g_pool, self.detector.settings["focal_length"]
         )
 
+        self.data = []
+        self.ts = []
+
     def detect(self, frame, **kwargs):
         previous_detection_results = kwargs.get("previous_detection_results", [])
         for datum in previous_detection_results:
@@ -54,6 +59,23 @@ class Pye3DPlugin(PupilDetectorPlugin):
         result["topic"] = f"pupil.{eye_id}.{self.identifier}"
         result["id"] = eye_id
         result["method"] = "3d c++"
+
+        if result["confidence"] > 0.6:
+            hist = 400
+            self.data.append(result["diameter_3d"])
+            self.ts.append(frame.timestamp)
+            self.data = self.data[-hist:]
+            self.ts = self.ts[-hist:]
+
+        global plotWidget
+        try:
+            plotWidget
+        except NameError:
+            plotWidget = pq.plot(title=f"Test {self.g_pool.eye_id}")
+
+        plotWidget.clear()
+        plotWidget.plot(self.ts, self.data)
+        plotWidget.setYRange(0.5, 4.5)
 
         return result
 
