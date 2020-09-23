@@ -5,9 +5,6 @@ import contextlib
 
 import OpenGL.GL as gl
 import glfw
-from gl_utils import adjust_gl_view
-from gl_utils import basic_gl_setup
-from gl_utils import clear_gl_screen
 import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 import gl_utils
 
@@ -114,7 +111,7 @@ class GUIWindow(Observable):
 
         # gl_state settings
         with self._switch_to_current_context():
-            basic_gl_setup()
+            gl_utils.basic_gl_setup()
             glfw.GLFW.glfwSwapInterval(0)
 
         if is_fullscreen:
@@ -148,7 +145,7 @@ class GUIWindow(Observable):
             return
 
         with self._switch_to_current_context():
-            clear_gl_screen()
+            gl_utils.clear_gl_screen()
 
             gl.glMatrixMode(gl.GL_PROJECTION)
             gl.glLoadIdentity()
@@ -163,7 +160,7 @@ class GUIWindow(Observable):
 
     def on_resize(self, gl_handle, w, h):
         with self._switch_to_current_context():
-            adjust_gl_view(w, h)
+            gl_utils.adjust_gl_view(w, h)
 
     def on_key(self, gl_handle, key, scancode, action, mods):
         if action == glfw.GLFW.GLFW_PRESS:
