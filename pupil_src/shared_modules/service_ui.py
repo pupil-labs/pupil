@@ -80,7 +80,7 @@ class Service_UI(System_Plugin_Base):
             gl_utils.glClearColor(0, 0, 0, 1)
 
             self.window_size = w, h
-            self.content_scale = glfw.get_content_scale(window)
+            self.content_scale = gl_utils.get_content_scale(window)
             g_pool.gui.scale = self.content_scale
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
@@ -98,7 +98,7 @@ class Service_UI(System_Plugin_Base):
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            x, y = glfw.window_coordinate_to_framebuffer_coordinate(
+            x, y = gl_utils.window_coordinate_to_framebuffer_coordinate(
                 window, x, y, cached_scale=None
             )
             g_pool.gui.update_mouse(x, y)
@@ -111,8 +111,8 @@ class Service_UI(System_Plugin_Base):
             f_width, f_height = window_size_default
 
             # Get current display scale factor
-            content_scale = glfw.get_content_scale(main_window)
-            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+            content_scale = gl_utils.get_content_scale(main_window)
+            framebuffer_scale = gl_utils.get_framebuffer_scale(main_window)
             display_scale_factor = content_scale / framebuffer_scale
 
             # Scale the capture frame size by display scale factor
@@ -238,7 +238,7 @@ class Service_UI(System_Plugin_Base):
         if 0 not in session_window_size:
             f_width, f_height = session_window_size
             if platform.system() in ("Windows", "Linux"):
-                content_scale = glfw.get_content_scale(self.g_pool.main_window)
+                content_scale = gl_utils.get_content_scale(self.g_pool.main_window)
                 f_width, f_height = (
                     f_width / content_scale,
                     f_height / content_scale,

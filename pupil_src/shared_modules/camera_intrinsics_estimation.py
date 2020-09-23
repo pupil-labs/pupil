@@ -26,6 +26,7 @@ from pyglui.cygl.utils import draw_polyline, draw_points, RGBA, draw_gl_texture
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from glfw import *
+import gl_utils
 
 from plugin import Plugin
 

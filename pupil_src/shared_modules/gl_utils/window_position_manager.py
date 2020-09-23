@@ -13,6 +13,7 @@ import platform
 import typing as T
 
 import glfw
+import gl_utils
 
 
 class WindowPositionManager:
@@ -62,12 +63,12 @@ def _will_window_be_visible_in_monitor(
 ) -> bool:
     # Get the current window size and edges, and monitor rect
     window_size = glfw.glfwGetWindowSize(window)
-    window_edges = glfw.glfwGetWindowFrameSize(window)
-    monitor_rect = glfw.glfwGetMonitorWorkarea(monitor)
+    window_edges = gl_utils.get_window_frame_size_margins(window)
+    monitor_rect = gl_utils.get_monitor_workarea_rect(monitor)
 
     # Calculate what the title bar rect would be
     # if the proposed `window_position` would be the actual window position
-    title_bar_rect = glfw._Rectangle(
+    title_bar_rect = gl_utils._Rectangle(
         x=window_position[0] - window_edges.left,
         y=window_position[1] - window_edges.top,
         width=window_size[0] + window_edges.left + window_edges.right,

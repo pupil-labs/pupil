@@ -259,7 +259,7 @@ def eye(
 
             for button, action, mods in user_input.buttons:
                 x, y = glfw.glfwGetCursorPos(main_window)
-                pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                pos = gl_utils.window_coordinate_to_framebuffer_coordinate(
                     main_window, x, y, cached_scale=None
                 )
                 pos = normalize(pos, g_pool.camera_render_size)
@@ -302,8 +302,8 @@ def eye(
 
             active_window = glfw.glfwGetCurrentContext()
             glfw.glfwMakeContextCurrent(window)
-            content_scale = glfw.get_content_scale(window)
-            framebuffer_scale = glfw.get_framebuffer_scale(window)
+            content_scale = gl_utils.get_content_scale(window)
+            framebuffer_scale = gl_utils.get_framebuffer_scale(window)
             g_pool.gui.scale = content_scale
             window_size = w, h
             g_pool.camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
@@ -340,7 +340,7 @@ def eye(
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            x, y = glfw.window_coordinate_to_framebuffer_coordinate(
+            x, y = gl_utils.window_coordinate_to_framebuffer_coordinate(
                 window, x, y, cached_scale=None
             )
             g_pool.gui.update_mouse(x, y)
@@ -453,8 +453,8 @@ def eye(
             f_height *= frame_scale_factor
 
             # Get current display scale factor
-            content_scale = glfw.get_content_scale(main_window)
-            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+            content_scale = gl_utils.get_content_scale(main_window)
+            framebuffer_scale = gl_utils.get_framebuffer_scale(main_window)
             display_scale_factor = content_scale / framebuffer_scale
 
             # Scale the capture frame size by display scale factor

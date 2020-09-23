@@ -343,7 +343,7 @@ def world(
 
             for button, action, mods in user_input.buttons:
                 x, y = glfw.glfwGetCursorPos(main_window)
-                pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                pos = gl_utils.window_coordinate_to_framebuffer_coordinate(
                     main_window, x, y, cached_scale=None
                 )
                 pos = normalize(pos, camera_render_size)
@@ -379,8 +379,8 @@ def world(
             gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
             gl_utils.glClearColor(0, 0, 0, 1)
 
-            content_scale = glfw.get_content_scale(window)
-            framebuffer_scale = glfw.get_framebuffer_scale(window)
+            content_scale = gl_utils.get_content_scale(window)
+            framebuffer_scale = gl_utils.get_framebuffer_scale(window)
             g_pool.gui.scale = content_scale
             window_size = w, h
             camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
@@ -412,7 +412,7 @@ def world(
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            x, y = glfw.window_coordinate_to_framebuffer_coordinate(
+            x, y = gl_utils.window_coordinate_to_framebuffer_coordinate(
                 window, x, y, cached_scale=None
             )
             g_pool.gui.update_mouse(x, y)
@@ -562,8 +562,8 @@ def world(
             f_width, f_height = g_pool.capture.frame_size
 
             # Get current display scale factor
-            content_scale = glfw.get_content_scale(main_window)
-            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+            content_scale = gl_utils.get_content_scale(main_window)
+            framebuffer_scale = gl_utils.get_framebuffer_scale(main_window)
             display_scale_factor = content_scale / framebuffer_scale
 
             # Scale the capture frame size by display scale factor
@@ -766,7 +766,7 @@ def world(
 
                 for button, action, mods in user_input.buttons:
                     x, y = glfw.glfwGetCursorPos(main_window)
-                    pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                    pos = gl_utils.window_coordinate_to_framebuffer_coordinate(
                         main_window, x, y, cached_scale=None
                     )
                     pos = normalize(pos, camera_render_size)

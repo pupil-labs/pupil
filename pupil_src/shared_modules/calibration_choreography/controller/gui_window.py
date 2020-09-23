@@ -8,6 +8,7 @@ import glfw
 from gl_utils import adjust_gl_view
 from gl_utils import basic_gl_setup
 from gl_utils import clear_gl_screen
+import gl_utils
 
 from pyglui.cygl.utils import draw_polyline
 
@@ -30,7 +31,7 @@ class GUIWindow(Observable):
     @property
     def content_scale(self) -> float:
         if self.__gl_handle is not None:
-            return glfw.get_content_scale(self.__gl_handle)
+            return gl_utils.get_content_scale(self.__gl_handle)
         else:
             return 1.0
 

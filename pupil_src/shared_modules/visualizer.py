@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 from glfw import *
+import gl_utils
 from OpenGL.GL import *
 from platform import system
 
@@ -228,7 +229,7 @@ class Visualizer(object):
             self.input["button"] = None
 
     def on_pos(self, window, x, y):
-        x, y = window_coordinate_to_framebuffer_coordinate(
+        x, y = gl_utils.window_coordinate_to_framebuffer_coordinate(
             window, x, y, cached_scale=None
         )
         # self.gui.update_mouse(x,y)
