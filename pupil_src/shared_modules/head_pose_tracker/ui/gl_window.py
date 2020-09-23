@@ -62,10 +62,11 @@ class GLWindow(Observable, abc.ABC):
         return trackball
 
     def _glfw_init(self):
-        glfw.glfwInit()
-        window = glfw.glfwCreateWindow(
-            title="Head Pose Tracker Visualizer", share=glfw.glfwGetCurrentContext()
+        gl_utils.legacy_glfw_init()
         glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_SCALE_TO_MONITOR, glfw.GLFW.GLFW_TRUE)
+        window = gl_utils.legacy_glfw_create_window(
+            title="Head Pose Tracker Visualizer",
+            share=glfw.GLFW.glfwGetCurrentContext(),
         )
         return window
 
@@ -79,13 +80,19 @@ class GLWindow(Observable, abc.ABC):
         glfw.GLFW.glfwMakeContextCurrent(active_window)
 
     def _register_callbacks(self, window):
-        glfw.glfwSetWindowSizeCallback(window, self._on_set_window_size)
-        glfw.glfwSetWindowPosCallback(window, self._on_set_window_pos)
-        glfw.glfwSetFramebufferSizeCallback(window, self._on_set_frame_buffer_size)
-        glfw.glfwSetMouseButtonCallback(window, self._on_set_mouse_button)
-        glfw.glfwSetCursorPosCallback(window, self._on_set_cursor_pos)
-        glfw.glfwSetScrollCallback(window, self._on_set_scroll)
-        glfw.glfwSetWindowCloseCallback(window, self._on_set_window_close)
+        gl_utils.legacy_glfw_set_window_size_callback(window, self._on_set_window_size)
+        gl_utils.legacy_glfw_set_window_pos_callback(window, self._on_set_window_pos)
+        gl_utils.legacy_glfw_set_framebuffer_size_callback(
+            window, self._on_set_frame_buffer_size
+        )
+        gl_utils.legacy_glfw_set_mouse_button_callback(
+            window, self._on_set_mouse_button
+        )
+        gl_utils.legacy_glfw_set_cursor_pos_callback(window, self._on_set_cursor_pos)
+        gl_utils.legacy_glfw_set_scroll_callback(window, self._on_set_scroll)
+        gl_utils.legacy_glfw_set_window_close_callback(
+            window, self._on_set_window_close
+        )
 
     def _set_initial_window_state(self):
         glfw.GLFW.glfwSetWindowPos(
@@ -135,7 +142,7 @@ class GLWindow(Observable, abc.ABC):
         self._glfw_deinit(self._window)
 
     def _glfw_deinit(self, window):
-        glfw.glfwDestroyWindow(window)
+        gl_utils.legacy_glfw_destroy_window(window)
         self._window = None
 
     def _on_gl_display(self):

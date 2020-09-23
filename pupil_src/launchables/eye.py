@@ -408,7 +408,7 @@ def eye(
             general_settings.collapsed = collapsed
 
         # Initialize glfw
-        glfw.glfwInit()
+        gl_utils.legacy_glfw_init()
         glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_SCALE_TO_MONITOR, glfw.GLFW.GLFW_TRUE)
         if hide_ui:
             glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_VISIBLE, 0)  # hide window
@@ -421,7 +421,9 @@ def eye(
         default_window_size = 500 + icon_bar_width, 500
         width, height = session_settings.get("window_size", default_window_size)
 
-        main_window = glfw.glfwCreateWindow(width, height, title, None, None)
+        main_window = gl_utils.legacy_glfw_create_window(
+            width, height, title, None, None
+        )
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(
@@ -528,14 +530,16 @@ def eye(
         g_pool.rec_path = None
 
         # Register callbacks main_window
-        glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
-        glfw.glfwSetWindowIconifyCallback(main_window, on_iconify)
-        glfw.glfwSetKeyCallback(main_window, on_window_key)
-        glfw.glfwSetCharCallback(main_window, on_window_char)
-        glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
-        glfw.glfwSetCursorPosCallback(main_window, on_pos)
-        glfw.glfwSetScrollCallback(main_window, on_scroll)
-        glfw.glfwSetDropCallback(main_window, on_drop)
+        gl_utils.legacy_glfw_set_framebuffer_size_callback(main_window, on_resize)
+        gl_utils.legacy_glfw_set_window_iconify_callback(main_window, on_iconify)
+        gl_utils.legacy_glfw_set_key_callback(main_window, on_window_key)
+        gl_utils.legacy_glfw_set_char_callback(main_window, on_window_char)
+        gl_utils.legacy_glfw_set_mouse_button_callback(
+            main_window, on_window_mouse_button
+        )
+        gl_utils.legacy_glfw_set_cursor_pos_callback(main_window, on_pos)
+        gl_utils.legacy_glfw_set_scroll_callback(main_window, on_scroll)
+        gl_utils.legacy_glfw_set_drop_callback(main_window, on_drop)
 
         # load last gui configuration
         g_pool.gui.configuration = session_settings.get("ui_config", {})
@@ -760,7 +764,7 @@ def eye(
             plugin.alive = False
         g_pool.plugins.clean()
 
-        glfw.glfwDestroyWindow(main_window)
+        gl_utils.legacy_glfw_destroy_window(main_window)
         g_pool.gui.terminate()
         glfw.GLFW.glfwTerminate()
         logger.info("Process shutting down.")

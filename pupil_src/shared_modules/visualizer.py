@@ -157,7 +157,7 @@ class Visualizer(object):
 
     def close_window(self):
         if self.window:
-            glfwDestroyWindow(self.window)
+            gl_utils.legacy_glfw_destroy_window(self.window)
             self.window = None
 
     def open_window(self):
@@ -166,15 +166,15 @@ class Visualizer(object):
 
             # get glfw started
             if self.run_independently:
-                glfwInit()
-                self.window = glfwCreateWindow(
+                gl_utils.legacy_glfw_init()
                 glfw.GLFW.glfwWindowHint(
                     glfw.GLFW.GLFW_SCALE_TO_MONITOR, glfw.GLFW.GLFW_TRUE
                 )
+                self.window = gl_utils.legacy_glfw_create_window(
                     self.window_size[0], self.window_size[1], self.name, None
                 )
             else:
-                self.window = glfwCreateWindow(
+                self.window = gl_utils.legacy_glfw_create_window(
                     self.window_size[0],
                     self.window_size[1],
                     self.name,
@@ -190,13 +190,19 @@ class Visualizer(object):
                 self.window, window_position_default[0], window_position_default[1]
             )
             # Register callbacks window
-            glfwSetFramebufferSizeCallback(self.window, self.on_resize)
-            glfwSetWindowIconifyCallback(self.window, self.on_iconify)
-            glfwSetKeyCallback(self.window, self.on_window_key)
-            glfwSetCharCallback(self.window, self.on_window_char)
-            glfwSetMouseButtonCallback(self.window, self.on_window_mouse_button)
-            glfwSetCursorPosCallback(self.window, self.on_pos)
-            glfwSetScrollCallback(self.window, self.on_scroll)
+            gl_utils.legacy_glfw_set_framebuffer_size_callback(
+                self.window, self.on_resize
+            )
+            gl_utils.legacy_glfw_set_window_iconify_callback(
+                self.window, self.on_iconify
+            )
+            gl_utils.legacy_glfw_set_key_callback(self.window, self.on_window_key)
+            gl_utils.legacy_glfw_set_char_callback(self.window, self.on_window_char)
+            gl_utils.legacy_glfw_set_mouse_button_callback(
+                self.window, self.on_window_mouse_button
+            )
+            gl_utils.legacy_glfw_set_cursor_pos_callback(self.window, self.on_pos)
+            gl_utils.legacy_glfw_set_scroll_callback(self.window, self.on_scroll)
 
             # get glfw started
             if self.run_independently:

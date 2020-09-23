@@ -57,7 +57,7 @@ class GUIMonitor:
 
     @property
     def current_video_mode(self) -> "GUIMonitor.VideoMode":
-        gl_video_mode = glfwGetVideoMode(self.__gl_handle)
+        gl_video_mode = gl_utils.legacy_glfw_get_video_mode(self.__gl_handle)
         return GUIMonitor.VideoMode(*gl_video_mode)
 
     @property

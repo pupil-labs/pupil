@@ -191,14 +191,14 @@ class Camera_Intrinsics_Estimation(Plugin):
                         "Monitor at index %s no longer availalbe using default" % idx
                     )
                     self.monitor_idx = 0
-                mode = glfwGetVideoMode(monitor)
                     monitor = glfw.GLFW.glfwGetMonitors()[self.monitor_idx]
+                mode = gl_utils.legacy_glfw_get_video_mode(monitor)
                 height, width = mode[0], mode[1]
             else:
                 monitor = None
                 height, width = 640, 480
 
-            self._window = glfwCreateWindow(
+            self._window = gl_utils.legacy_glfw_create_window(
                 height,
                 width,
                 "Calibration",
@@ -210,10 +210,12 @@ class Camera_Intrinsics_Estimation(Plugin):
                 glfw.GLFW.glfwSetWindowPos(self._window, 200, 31)
 
             # Register callbacks
-            glfwSetFramebufferSizeCallback(self._window, on_resize)
-            glfwSetKeyCallback(self._window, self.on_window_key)
-            glfwSetWindowCloseCallback(self._window, self.on_close)
-            glfwSetMouseButtonCallback(self._window, self.on_window_mouse_button)
+            gl_utils.legacy_glfw_set_framebuffer_size_callback(self._window, on_resize)
+            gl_utils.legacy_glfw_set_key_callback(self._window, self.on_window_key)
+            gl_utils.legacy_glfw_set_window_close_callback(self._window, self.on_close)
+            gl_utils.legacy_glfw_set_mouse_button_callback(
+                self._window, self.on_window_mouse_button
+            )
 
             on_resize(self._window, *glfw.GLFW.glfwGetFramebufferSize(self._window))
 
@@ -242,7 +244,7 @@ class Camera_Intrinsics_Estimation(Plugin):
     def close_window(self):
         self.window_should_close = False
         if self._window:
-            glfwDestroyWindow(self._window)
+            gl_utils.legacy_glfw_destroy_window(self._window)
             self._window = None
 
     def calculate(self):

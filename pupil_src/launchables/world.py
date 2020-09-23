@@ -516,11 +516,13 @@ def world(
         )
 
         # window and gl setup
-        glfw.glfwInit()
+        gl_utils.legacy_glfw_init()
         glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_SCALE_TO_MONITOR, glfw.GLFW.GLFW_TRUE)
         if hide_ui:
-        main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
             glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_VISIBLE, 0)  # hide window
+        main_window = gl_utils.legacy_glfw_create_window(
+            width, height, "Pupil Capture - World"
+        )
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(
@@ -662,13 +664,15 @@ def world(
             )
 
         # Register callbacks main_window
-        glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
-        glfw.glfwSetKeyCallback(main_window, on_window_key)
-        glfw.glfwSetCharCallback(main_window, on_window_char)
-        glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
-        glfw.glfwSetCursorPosCallback(main_window, on_pos)
-        glfw.glfwSetScrollCallback(main_window, on_scroll)
-        glfw.glfwSetDropCallback(main_window, on_drop)
+        gl_utils.legacy_glfw_set_framebuffer_size_callback(main_window, on_resize)
+        gl_utils.legacy_glfw_set_key_callback(main_window, on_window_key)
+        gl_utils.legacy_glfw_set_char_callback(main_window, on_window_char)
+        gl_utils.legacy_glfw_set_mouse_button_callback(
+            main_window, on_window_mouse_button
+        )
+        gl_utils.legacy_glfw_set_cursor_pos_callback(main_window, on_pos)
+        gl_utils.legacy_glfw_set_scroll_callback(main_window, on_scroll)
+        gl_utils.legacy_glfw_set_drop_callback(main_window, on_drop)
 
         # gl_state settings
         gl_utils.basic_gl_setup()
@@ -831,8 +835,8 @@ def world(
         g_pool.plugins.clean()
 
         g_pool.gui.terminate()
-        glfw.glfwDestroyWindow(main_window)
-        glfw.glfwTerminate()
+        gl_utils.legacy_glfw_destroy_window(main_window)
+        glfw.GLFW.glfwTerminate()
 
     except Exception:
         import traceback

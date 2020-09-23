@@ -49,11 +49,11 @@ class Service_UI(System_Plugin_Base):
 
         self.texture = np.zeros((1, 1, 3), dtype=np.uint8) + 128
 
-        glfw.glfwInit()
+        gl_utils.legacy_glfw_init()
         glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_SCALE_TO_MONITOR, glfw.GLFW.GLFW_TRUE)
         if g_pool.hide_ui:
-        main_window = glfw.glfwCreateWindow(*window_size, "Pupil Service")
             glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_VISIBLE, 0)  # hide window
+        main_window = gl_utils.legacy_glfw_create_window(*window_size, "Pupil Service")
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_position = window_position_manager.new_window_position(
@@ -166,12 +166,12 @@ class Service_UI(System_Plugin_Base):
         g_pool.menubar.append(ui.Button("Restart with default settings", reset_restart))
 
         # Register callbacks main_window
-        glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
-        glfw.glfwSetKeyCallback(main_window, on_window_key)
-        glfw.glfwSetCharCallback(main_window, on_window_char)
-        glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
-        glfw.glfwSetCursorPosCallback(main_window, on_pos)
-        glfw.glfwSetScrollCallback(main_window, on_scroll)
+        gl_utils.legacy_glfw_set_framebuffer_size_callback(main_window, on_resize)
+        gl_utils.legacy_glfw_set_key_callback(main_window, on_window_key)
+        gl_utils.legacy_glfw_set_char_callback(main_window, on_window_char)
+        gl_utils.legacy_glfw_set_mouse_button_callback(main_window, on_window_mouse_button)
+        gl_utils.legacy_glfw_set_cursor_pos_callback(main_window, on_pos)
+        gl_utils.legacy_glfw_set_scroll_callback(main_window, on_scroll)
         g_pool.gui.configuration = ui_config
         gl_utils.basic_gl_setup()
 
@@ -222,7 +222,7 @@ class Service_UI(System_Plugin_Base):
         self.g_pool.gui.remove(self.g_pool.menubar)
 
         self.g_pool.gui.terminate()
-        glfw.glfwDestroyWindow(self.g_pool.main_window)
+        gl_utils.legacy_glfw_destroy_window(self.g_pool.main_window)
         glfw.GLFW.glfwTerminate()
 
         del self.g_pool.gui
