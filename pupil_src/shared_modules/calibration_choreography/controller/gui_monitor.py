@@ -1,12 +1,8 @@
 import collections
 import typing as T
 
-from glfw import (
-    glfwGetMonitors,
-    glfwGetMonitorName,
-    glfwGetPrimaryMonitor,
-    glfwGetVideoMode,
-)
+import glfw
+import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 
 try:
     from typing import OrderedDict as T_OrderedDict  # Python 3.7.2
@@ -37,7 +33,7 @@ class GUIMonitor:
 
     def __init__(self, index, gl_handle):
         self.__gl_handle = gl_handle
-        self.__name = glfwGetMonitorName(gl_handle).decode("utf-8")
+        self.__name = glfw.GLFW.glfwGetMonitorName(gl_handle).decode("utf-8")
         self.__index = index
 
     @property
@@ -70,7 +66,7 @@ class GUIMonitor:
 
     @staticmethod
     def currently_connected_monitors() -> T.List["GUIMonitor"]:
-        return [GUIMonitor(i, h) for i, h in enumerate(glfwGetMonitors())]
+        return [GUIMonitor(i, h) for i, h in enumerate(glfw.GLFW.glfwGetMonitors())]
 
     @staticmethod
     def currently_connected_monitors_by_name() -> T_OrderedDict[str, "GUIMonitor"]:
@@ -80,7 +76,7 @@ class GUIMonitor:
 
     @staticmethod
     def primary_monitor() -> "GUIMonitor":
-        gl_handle = glfwGetPrimaryMonitor()
+        gl_handle = glfw.GLFW.glfwGetPrimaryMonitor()
         return GUIMonitor(0, gl_handle)
 
     @staticmethod

@@ -12,11 +12,11 @@ See COPYING and COPYING.LESSER for license details.
 from plugin import System_Plugin_Base
 from pyglui.cygl.utils import Render_Target, push_ortho, pop_ortho
 import logging
-from glfw import glfwGetFramebufferSize, glfwGetCurrentContext
 import zmq_tools
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 import glfw
+import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 import gl_utils
 
 
@@ -67,7 +67,9 @@ class Log_Display(System_Plugin_Base):
         self.glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
         self.glfont.set_align_string(v_align="center", h_align="middle")
 
-        self.window_size = glfwGetFramebufferSize(glfwGetCurrentContext())
+        self.window_size = glfw.GLFW.glfwGetFramebufferSize(
+            glfw.GLFW.glfwGetCurrentContext()
+        )
         self.tex = Render_Target(*self.window_size)
 
         self._socket = zmq_tools.Msg_Receiver(

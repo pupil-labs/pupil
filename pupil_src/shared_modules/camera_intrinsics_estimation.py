@@ -25,7 +25,9 @@ from pyglui import ui
 from pyglui.cygl.utils import draw_polyline, draw_points, RGBA, draw_gl_texture
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-from glfw import *
+
+import glfw
+import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 import gl_utils
 
 from plugin import Plugin
@@ -38,10 +40,10 @@ logger = logging.getLogger(__name__)
 
 # window calbacks
 def on_resize(window, w, h):
-    active_window = glfwGetCurrentContext()
-    glfwMakeContextCurrent(window)
+    active_window = glfw.GLFW.glfwGetCurrentContext()
+    glfw.GLFW.glfwMakeContextCurrent(window)
     adjust_gl_view(w, h)
-    glfwMakeContextCurrent(active_window)
+    glfw.GLFW.glfwMakeContextCurrent(active_window)
 
 
 class Camera_Intrinsics_Estimation(Plugin):
@@ -103,7 +105,9 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.menu.label = "Camera Intrinsics Estimation"
 
         def get_monitors_idx_list():
-            monitors = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+            monitors = [
+                glfw.GLFW.glfwGetMonitorName(m) for m in glfw.GLFW.glfwGetMonitors()
+            ]
             return range(len(monitors)), monitors
 
         if self.monitor_idx not in get_monitors_idx_list()[0]:
@@ -181,14 +185,14 @@ class Camera_Intrinsics_Estimation(Plugin):
         if not self._window:
             if self.fullscreen:
                 try:
-                    monitor = glfwGetMonitors()[self.monitor_idx]
+                    monitor = glfw.GLFW.glfwGetMonitors()[self.monitor_idx]
                 except Exception:
                     logger.warning(
                         "Monitor at index %s no longer availalbe using default" % idx
                     )
                     self.monitor_idx = 0
-                    monitor = glfwGetMonitors()[self.monitor_idx]
                 mode = glfwGetVideoMode(monitor)
+                    monitor = glfw.GLFW.glfwGetMonitors()[self.monitor_idx]
                 height, width = mode[0], mode[1]
             else:
                 monitor = None
@@ -199,11 +203,11 @@ class Camera_Intrinsics_Estimation(Plugin):
                 width,
                 "Calibration",
                 monitor=monitor,
-                share=glfwGetCurrentContext(),
+                share=glfw.GLFW.glfwGetCurrentContext(),
             )
             if not self.fullscreen:
                 # move to y = 31 for windows os
-                glfwSetWindowPos(self._window, 200, 31)
+                glfw.GLFW.glfwSetWindowPos(self._window, 200, 31)
 
             # Register callbacks
             glfwSetFramebufferSizeCallback(self._window, on_resize)
@@ -211,23 +215,23 @@ class Camera_Intrinsics_Estimation(Plugin):
             glfwSetWindowCloseCallback(self._window, self.on_close)
             glfwSetMouseButtonCallback(self._window, self.on_window_mouse_button)
 
-            on_resize(self._window, *glfwGetFramebufferSize(self._window))
+            on_resize(self._window, *glfw.GLFW.glfwGetFramebufferSize(self._window))
 
             # gl_state settings
-            active_window = glfwGetCurrentContext()
-            glfwMakeContextCurrent(self._window)
+            active_window = glfw.GLFW.glfwGetCurrentContext()
+            glfw.GLFW.glfwMakeContextCurrent(self._window)
             basic_gl_setup()
-            glfwMakeContextCurrent(active_window)
+            glfw.GLFW.glfwMakeContextCurrent(active_window)
 
             self.clicks_to_close = 5
 
     def on_window_key(self, window, key, scancode, action, mods):
-        if action == GLFW_PRESS:
-            if key == GLFW_KEY_ESCAPE:
+        if action == glfw.GLFW.GLFW_PRESS:
+            if key == glfw.GLFW.GLFW_KEY_ESCAPE:
                 self.on_close()
 
     def on_window_mouse_button(self, window, button, action, mods):
-        if action == GLFW_PRESS:
+        if action == glfw.GLFW.GLFW_PRESS:
             self.clicks_to_close -= 1
         if self.clicks_to_close == 0:
             self.on_close()
@@ -357,14 +361,14 @@ class Camera_Intrinsics_Estimation(Plugin):
             gl.glPopMatrix()
 
     def gl_display_in_window(self):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(self._window)
+        active_window = glfw.GLFW.glfwGetCurrentContext()
+        glfw.GLFW.glfwMakeContextCurrent(self._window)
 
         clear_gl_screen()
 
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
-        p_window_size = glfwGetWindowSize(self._window)
+        p_window_size = glfw.GLFW.glfwGetWindowSize(self._window)
         r = p_window_size[0] / 15.0
         # compensate for radius of marker
         gl.glOrtho(-r, p_window_size[0] + r, p_window_size[1] + r, -r, -1, 1)
@@ -387,8 +391,8 @@ class Camera_Intrinsics_Estimation(Plugin):
                 "Touch {} more times to close window.".format(self.clicks_to_close),
             )
 
-        glfwSwapBuffers(self._window)
-        glfwMakeContextCurrent(active_window)
+        glfw.GLFW.glfwSwapBuffers(self._window)
+        glfw.GLFW.glfwMakeContextCurrent(active_window)
 
     def get_init_dict(self):
         return {"monitor_idx": self.monitor_idx}

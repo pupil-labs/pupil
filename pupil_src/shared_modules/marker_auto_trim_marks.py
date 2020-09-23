@@ -22,7 +22,9 @@ from pyglui import ui
 from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup, cvmat_to_glmat
 from pyglui.cygl.utils import RGBA, draw_points, draw_polyline
 from OpenGL.GL import *
-from glfw import *
+
+import glfw
+import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 
 import numpy as np
 from itertools import groupby
