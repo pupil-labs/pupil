@@ -103,7 +103,7 @@ def legacy_glfw_set_window_pos_callback(window, callback=None):
         callback=callback,
         key="window_pos_fun",
         c_func_type=ctypes.CFUNCTYPE(
-            None, ctypes.POINTER(glfw._GLFWmonitor), ctypes.c_int
+            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_int, ctypes.c_int
         ),
         glfw_callback_setter=glfw.GLFW.glfwSetWindowPosCallback,
     )
@@ -126,9 +126,7 @@ def legacy_glfw_set_window_close_callback(window, callback=None):
         window=window,
         callback=callback,
         key="window_close_fun",
-        c_func_type=ctypes.CFUNCTYPE(
-            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_int, ctypes.c_int
-        ),
+        c_func_type=ctypes.CFUNCTYPE(None, ctypes.POINTER(glfw._GLFWwindow)),
         glfw_callback_setter=glfw.GLFW.glfwSetWindowCloseCallback,
     )
 
@@ -139,7 +137,7 @@ def legacy_glfw_set_window_iconify_callback(window, callback=None):
         callback=callback,
         key="window_iconify_fun",
         c_func_type=ctypes.CFUNCTYPE(
-            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_int, ctypes.c_int
+            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_int
         ),
         glfw_callback_setter=glfw.GLFW.glfwSetWindowIconifyCallback,
     )
@@ -163,7 +161,12 @@ def legacy_glfw_set_key_callback(window, callback=None):
         callback=callback,
         key="key_fun",
         c_func_type=ctypes.CFUNCTYPE(
-            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_int, ctypes.c_int
+            None,
+            ctypes.POINTER(glfw._GLFWwindow),
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
         ),
         glfw_callback_setter=glfw.GLFW.glfwSetKeyCallback,
     )
@@ -175,7 +178,7 @@ def legacy_glfw_set_char_callback(window, callback=None):
         callback=callback,
         key="char_fun",
         c_func_type=ctypes.CFUNCTYPE(
-            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_int, ctypes.c_int
+            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_int
         ),
         glfw_callback_setter=glfw.GLFW.glfwSetCharCallback,
     )
@@ -187,7 +190,11 @@ def legacy_glfw_set_mouse_button_callback(window, callback=None):
         callback=callback,
         key="mouse_button_fun",
         c_func_type=ctypes.CFUNCTYPE(
-            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_int, ctypes.c_int
+            None,
+            ctypes.POINTER(glfw._GLFWwindow),
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
         ),
         glfw_callback_setter=glfw.GLFW.glfwSetMouseButtonCallback,
     )
@@ -199,7 +206,7 @@ def legacy_glfw_set_cursor_pos_callback(window, callback=None):
         callback=callback,
         key="cursor_pos_fun",
         c_func_type=ctypes.CFUNCTYPE(
-            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_int, ctypes.c_int
+            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_double, ctypes.c_double
         ),
         glfw_callback_setter=glfw.GLFW.glfwSetCursorPosCallback,
     )
@@ -211,7 +218,7 @@ def legacy_glfw_set_scroll_callback(window, callback=None):
         callback=callback,
         key="scroll_fun",
         c_func_type=ctypes.CFUNCTYPE(
-            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_int, ctypes.c_int
+            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_double, ctypes.c_double
         ),
         glfw_callback_setter=glfw.GLFW.glfwSetScrollCallback,
     )
@@ -223,7 +230,10 @@ def legacy_glfw_set_drop_callback(window, callback=None):
         callback=callback,
         key="drop_fun",
         c_func_type=ctypes.CFUNCTYPE(
-            None, ctypes.POINTER(glfw._GLFWwindow), ctypes.c_int, ctypes.c_int
+            None,
+            ctypes.POINTER(glfw._GLFWwindow),
+            ctypes.c_int,
+            ctypes.POINTER(ctypes.c_char_p),
         ),
         glfw_callback_setter=glfw.GLFW.glfwSetDropCallback,
     )
