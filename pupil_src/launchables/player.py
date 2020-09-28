@@ -193,20 +193,18 @@ def player(
             gl_utils.glViewport(0, 0, *window_size)
 
             try:
-                clipboard = glfw.GLFW.glfwGetClipboardString(main_window).decode()
+                clipboard = glfw.get_clipboard_string(main_window).decode()
             except AttributeError:  # clipbaord is None, might happen on startup
                 clipboard = ""
             g_pool.gui.update_clipboard(clipboard)
             user_input = g_pool.gui.update()
             if user_input.clipboard and user_input.clipboard != clipboard:
                 # only write to clipboard if content changed
-                glfw.GLFW.glfwSetClipboardString(
-                    main_window, user_input.clipboard.encode()
-                )
+                glfw.set_clipboard_string(main_window, user_input.clipboard.encode())
 
             for b in user_input.buttons:
                 button, action, mods = b
-                x, y = glfw.GLFW.glfwGetCursorPos(main_window)
+                x, y = glfw.get_cursor_pos(main_window)
                 pos = gl_utils.window_coordinate_to_framebuffer_coordinate(
                     main_window, x, y, cached_scale=None
                 )
@@ -227,7 +225,7 @@ def player(
                     if plugin.on_char(char_):
                         break
 
-            glfw.GLFW.glfwSwapBuffers(main_window)
+            glfw.swap_buffers(main_window)
 
         # Callback functions
         def on_resize(window, w, h):
@@ -256,12 +254,12 @@ def player(
             # potentially be dynamically modified, so we re-adjust the size limits every
             # time here.
             min_size = int(2 * icon_bar_width * g_pool.gui.scale / framebuffer_scale)
-            glfw.GLFW.glfwSetWindowSizeLimits(
+            glfw.set_window_size_limits(
                 window,
                 min_size,
                 min_size,
-                glfw.GLFW.GLFW_DONT_CARE,
-                glfw.GLFW.GLFW_DONT_CARE,
+                glfw.DONT_CARE,
+                glfw.DONT_CARE,
             )
 
             # Needed, to update the window buffer while resizing
@@ -310,7 +308,7 @@ def player(
             ipc_pub.notify(
                 {"subject": "player_drop_process.should_start", "rec_dir": rec_dir}
             )
-            glfw.GLFW.glfwSetWindowShouldClose(g_pool.main_window, True)
+            glfw.set_window_should_close(g_pool.main_window, True)
 
         tick = delta_t()
 
@@ -366,7 +364,7 @@ def player(
         window_name = f"Pupil Player: {meta_info.recording_name} - {rec_dir}"
 
         gl_utils.legacy_glfw_init()
-        glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_SCALE_TO_MONITOR, glfw.GLFW.GLFW_TRUE)
+        glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         main_window = gl_utils.legacy_glfw_create_window(
             width, height, window_name, None, None
         )
@@ -377,9 +375,9 @@ def player(
             default_position=window_position_default,
             previous_position=session_settings.get("window_position", None),
         )
-        glfw.GLFW.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
+        glfw.set_window_pos(main_window, window_pos[0], window_pos[1])
 
-        glfw.GLFW.glfwMakeContextCurrent(main_window)
+        glfw.make_context_current(main_window)
         cygl.utils.init()
         g_pool.main_window = main_window
 
@@ -442,7 +440,7 @@ def player(
 
         def reset_restart():
             logger.warning("Resetting all settings and restarting Player.")
-            glfw.GLFW.glfwSetWindowShouldClose(main_window, True)
+            glfw.set_window_should_close(main_window, True)
             ipc_pub.notify({"subject": "clear_settings_process.should_start"})
             ipc_pub.notify(
                 {
@@ -497,7 +495,7 @@ def player(
             f_width += icon_bar_width * display_scale_factor
 
             # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
-            glfw.GLFW.glfwSetWindowSize(main_window, int(f_width), int(f_height))
+            glfw.set_window_size(main_window, int(f_width), int(f_height))
 
         general_settings = ui.Growing_Menu("General", header_pos="headline")
         general_settings.append(ui.Button("Reset window size", set_window_size))
@@ -636,7 +634,7 @@ def player(
         g_pool.image_tex = Named_Texture()
 
         # trigger on_resize
-        on_resize(main_window, *glfw.GLFW.glfwGetFramebufferSize(main_window))
+        on_resize(main_window, *glfw.get_framebuffer_size(main_window))
 
         def handle_notifications(n):
             subject = n["subject"]
@@ -661,10 +659,7 @@ def player(
                             }
                         )
 
-        while (
-            not glfw.GLFW.glfwWindowShouldClose(main_window)
-            and not process_was_interrupted
-        ):
+        while not glfw.window_should_close(main_window) and not process_was_interrupted:
 
             # fetch newest notifications
             new_notifications = []
@@ -693,8 +688,8 @@ def player(
             # check if a plugin need to be destroyed
             g_pool.plugins.clean()
 
-            glfw.GLFW.glfwMakeContextCurrent(main_window)
-            glfw.GLFW.glfwPollEvents()
+            glfw.make_context_current(main_window)
+            glfw.poll_events()
             # render visual feedback from loaded plugins
             if gl_utils.is_window_visible(main_window):
 
@@ -706,20 +701,20 @@ def player(
                 gl_utils.glViewport(0, 0, *window_size)
 
                 try:
-                    clipboard = glfw.GLFW.glfwGetClipboardString(main_window).decode()
+                    clipboard = glfw.get_clipboard_string(main_window).decode()
                 except AttributeError:  # clipbaord is None, might happen on startup
                     clipboard = ""
                 g_pool.gui.update_clipboard(clipboard)
                 user_input = g_pool.gui.update()
                 if user_input.clipboard and user_input.clipboard != clipboard:
                     # only write to clipboard if content changed
-                    glfw.GLFW.glfwSetClipboardString(
+                    glfw.set_clipboard_string(
                         main_window, user_input.clipboard.encode()
                     )
 
                 for b in user_input.buttons:
                     button, action, mods = b
-                    x, y = glfw.GLFW.glfwGetCursorPos(main_window)
+                    x, y = glfw.get_cursor_pos(main_window)
                     pos = gl_utils.window_coordinate_to_framebuffer_coordinate(
                         main_window, x, y, cached_scale=None
                     )
@@ -742,7 +737,7 @@ def player(
 
                 # present frames at appropriate speed
                 g_pool.seek_control.wait(events["frame"].timestamp)
-                glfw.GLFW.glfwSwapBuffers(main_window)
+                glfw.swap_buffers(main_window)
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["min_data_confidence"] = g_pool.min_data_confidence
@@ -750,10 +745,10 @@ def player(
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
         session_settings["ui_config"] = g_pool.gui.configuration
-        session_settings["window_position"] = glfw.GLFW.glfwGetWindowPos(main_window)
+        session_settings["window_position"] = glfw.get_window_pos(main_window)
         session_settings["version"] = str(g_pool.version)
 
-        session_window_size = glfw.GLFW.glfwGetWindowSize(main_window)
+        session_window_size = glfw.get_window_size(main_window)
         if 0 not in session_window_size:
             f_width, f_height = session_window_size
             if platform.system() in ("Windows", "Linux"):
@@ -858,12 +853,12 @@ def player_drop(
         w, h = session_settings.get("window_size", (1280, 720))
 
         gl_utils.legacy_glfw_init()
-        glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_SCALE_TO_MONITOR, glfw.GLFW.GLFW_TRUE)
-        glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_RESIZABLE, 0)
+        glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
+        glfw.window_hint(glfw.RESIZABLE, 0)
         window = gl_utils.legacy_glfw_create_window(w, h, "Pupil Player")
-        glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_RESIZABLE, 1)
+        glfw.window_hint(glfw.RESIZABLE, 1)
 
-        glfw.GLFW.glfwMakeContextCurrent(window)
+        glfw.make_context_current(window)
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(
@@ -871,7 +866,7 @@ def player_drop(
             default_position=window_position_default,
             previous_position=session_settings.get("window_position", None),
         )
-        glfw.GLFW.glfwSetWindowPos(window, window_pos[0], window_pos[1])
+        glfw.set_window_pos(window, window_pos[0], window_pos[1])
 
         gl_utils.legacy_glfw_set_drop_callback(window, on_drop)
 
@@ -899,11 +894,9 @@ def player_drop(
             glfont.set_color_float((1.0, 1.0, 1.0, 1.0))
             glfont.draw_text(x, y, string)
 
-        while (
-            not glfw.GLFW.glfwWindowShouldClose(window) and not process_was_interrupted
-        ):
+        while not glfw.window_should_close(window) and not process_was_interrupted:
 
-            fb_size = glfw.GLFW.glfwGetFramebufferSize(window)
+            fb_size = glfw.get_framebuffer_size(window)
             content_scale = gl_utils.get_content_scale(window)
             gl_utils.adjust_gl_view(*fb_size)
 
@@ -931,7 +924,7 @@ def player_drop(
                 center_y = 288 + tip_font_size * idx * 1.2
                 display_string(line, font_size=tip_font_size, center_y=center_y)
 
-            glfw.GLFW.glfwSwapBuffers(window)
+            glfw.swap_buffers(window)
 
             if rec_dir:
                 try:
@@ -950,11 +943,11 @@ def player_drop(
                         tip = err.reason
                     rec_dir = None
                 else:
-                    glfw.GLFW.glfwSetWindowShouldClose(window, True)
+                    glfw.set_window_should_close(window, True)
 
-            glfw.GLFW.glfwPollEvents()
+            glfw.poll_events()
 
-        session_settings["window_position"] = glfw.GLFW.glfwGetWindowPos(window)
+        session_settings["window_position"] = glfw.get_window_pos(window)
         session_settings.close()
         gl_utils.legacy_glfw_destroy_window(window)
         if rec_dir:

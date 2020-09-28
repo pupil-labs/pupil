@@ -290,12 +290,12 @@ class Roi(Plugin):
         if not self.has_frame or self.model.is_invalid():
             return False
 
-        if action == glfw.GLFW.GLFW_PRESS:
+        if action == glfw.PRESS:
             clicked_handle = self.get_handle_at(pos)
             if clicked_handle != self.active_handle:
                 self.active_handle = clicked_handle
                 return True
-        elif action == glfw.GLFW.GLFW_RELEASE:
+        elif action == glfw.RELEASE:
             if self.active_handle != Handle.NONE:
                 self.active_handle = Handle.NONE
                 return True

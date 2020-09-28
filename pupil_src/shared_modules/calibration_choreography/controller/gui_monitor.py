@@ -33,7 +33,7 @@ class GUIMonitor:
 
     def __init__(self, index, gl_handle):
         self.__gl_handle = gl_handle
-        self.__name = glfw.GLFW.glfwGetMonitorName(gl_handle).decode("utf-8")
+        self.__name = glfw.get_monitor_name(gl_handle).decode("utf-8")
         self.__index = index
 
     @property
@@ -66,7 +66,7 @@ class GUIMonitor:
 
     @staticmethod
     def currently_connected_monitors() -> T.List["GUIMonitor"]:
-        return [GUIMonitor(i, h) for i, h in enumerate(glfw.GLFW.glfwGetMonitors())]
+        return [GUIMonitor(i, h) for i, h in enumerate(glfw.get_monitors())]
 
     @staticmethod
     def currently_connected_monitors_by_name() -> T_OrderedDict[str, "GUIMonitor"]:
@@ -76,7 +76,7 @@ class GUIMonitor:
 
     @staticmethod
     def primary_monitor() -> "GUIMonitor":
-        gl_handle = glfw.GLFW.glfwGetPrimaryMonitor()
+        gl_handle = glfw.get_primary_monitor()
         return GUIMonitor(0, gl_handle)
 
     @staticmethod

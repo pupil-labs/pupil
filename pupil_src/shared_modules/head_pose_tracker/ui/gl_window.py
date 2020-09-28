@@ -63,21 +63,21 @@ class GLWindow(Observable, abc.ABC):
 
     def _glfw_init(self):
         gl_utils.legacy_glfw_init()
-        glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_SCALE_TO_MONITOR, glfw.GLFW.GLFW_TRUE)
+        glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         window = gl_utils.legacy_glfw_create_window(
             title="Head Pose Tracker Visualizer",
-            share=glfw.GLFW.glfwGetCurrentContext(),
+            share=glfw.get_current_context(),
         )
         return window
 
     @staticmethod
     def _gl_state_settings(window):
-        active_window = glfw.GLFW.glfwGetCurrentContext()
-        glfw.GLFW.glfwMakeContextCurrent(window)
+        active_window = glfw.get_current_context()
+        glfw.make_context_current(window)
         gl_utils.basic_gl_setup()
         gl_utils.make_coord_system_norm_based()
-        glfw.GLFW.glfwSwapInterval(0)
-        glfw.GLFW.glfwMakeContextCurrent(active_window)
+        glfw.swap_interval(0)
+        glfw.make_context_current(active_window)
 
     def _register_callbacks(self, window):
         gl_utils.legacy_glfw_set_window_size_callback(window, self._on_set_window_size)
@@ -95,10 +95,8 @@ class GLWindow(Observable, abc.ABC):
         )
 
     def _set_initial_window_state(self):
-        glfw.GLFW.glfwSetWindowPos(
-            self._window, *self._general_settings.window_position
-        )
-        glfw.GLFW.glfwSetWindowSize(self._window, *self._general_settings.window_size)
+        glfw.set_window_pos(self._window, *self._general_settings.window_position)
+        glfw.set_window_size(self._window, *self._general_settings.window_size)
 
     def _on_set_window_size(self, window, w, h):
         self._general_settings.window_size = (w, h)
@@ -108,16 +106,16 @@ class GLWindow(Observable, abc.ABC):
 
     def _on_set_frame_buffer_size(self, window, w, h):
         self._trackball.set_window_size(w, h)
-        active_window = glfw.GLFW.glfwGetCurrentContext()
-        glfw.GLFW.glfwMakeContextCurrent(window)
+        active_window = glfw.get_current_context()
+        glfw.make_context_current(window)
         gl_utils.adjust_gl_view(w, h)
-        glfw.GLFW.glfwMakeContextCurrent(active_window)
+        glfw.make_context_current(active_window)
 
     def _on_set_mouse_button(self, window, button, action, mods):
-        if action == glfw.GLFW.GLFW_PRESS:
+        if action == glfw.PRESS:
             self._input["down"] = True
-            self._input["mouse"] = glfw.GLFW.glfwGetCursorPos(window)
-        elif action == glfw.GLFW.GLFW_RELEASE:
+            self._input["mouse"] = glfw.get_cursor_pos(window)
+        elif action == glfw.RELEASE:
             self._input["down"] = False
 
     def _on_set_cursor_pos(self, window, x, y):
@@ -149,17 +147,17 @@ class GLWindow(Observable, abc.ABC):
         if not self._window:
             return
 
-        active_window = glfw.GLFW.glfwGetCurrentContext()
-        glfw.GLFW.glfwMakeContextCurrent(self._window)
+        active_window = glfw.get_current_context()
+        glfw.make_context_current(self._window)
         self._init_3d_window()
         self._trackball.push()
 
         self._render()
 
         self._trackball.pop()
-        glfw.GLFW.glfwSwapBuffers(self._window)
-        glfw.GLFW.glfwMakeContextCurrent(active_window)
-        glfw.GLFW.glfwPollEvents()
+        glfw.swap_buffers(self._window)
+        glfw.make_context_current(active_window)
+        glfw.poll_events()
 
     @staticmethod
     def _init_3d_window():

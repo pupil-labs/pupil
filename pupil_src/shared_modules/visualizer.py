@@ -49,21 +49,21 @@ class Visualizer(object):
 
     def begin_update_window(self):
         if self.window:
-            if glfw.GLFW.glfwWindowShouldClose(self.window):
+            if glfw.window_should_close(self.window):
                 self.close_window()
                 return
 
-            self.other_window = glfw.GLFW.glfwGetCurrentContext()
-            glfw.GLFW.glfwMakeContextCurrent(self.window)
+            self.other_window = glfw.get_current_context()
+            glfw.make_context_current(self.window)
 
     def update_window(self):
         pass
 
     def end_update_window(self):
         if self.window:
-            glfw.GLFW.glfwSwapBuffers(self.window)
-            glfw.GLFW.glfwPollEvents()
-        glfw.GLFW.glfwMakeContextCurrent(self.other_window)
+            glfw.swap_buffers(self.window)
+            glfw.poll_events()
+        glfw.make_context_current(self.other_window)
 
     ############## DRAWING FUNCTIONS ##############################
 
@@ -167,9 +167,7 @@ class Visualizer(object):
             # get glfw started
             if self.run_independently:
                 gl_utils.legacy_glfw_init()
-                glfw.GLFW.glfwWindowHint(
-                    glfw.GLFW.GLFW_SCALE_TO_MONITOR, glfw.GLFW.GLFW_TRUE
-                )
+                glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
                 self.window = gl_utils.legacy_glfw_create_window(
                     self.window_size[0], self.window_size[1], self.name, None
                 )
@@ -179,14 +177,14 @@ class Visualizer(object):
                     self.window_size[1],
                     self.name,
                     None,
-                    share=glfw.GLFW.glfwGetCurrentContext(),
+                    share=glfw.get_current_context(),
                 )
 
-            self.other_window = glfw.GLFW.glfwGetCurrentContext()
+            self.other_window = glfw.get_current_context()
 
-            glfw.GLFW.glfwMakeContextCurrent(self.window)
-            glfw.GLFW.glfwSwapInterval(0)
-            glfw.GLFW.glfwSetWindowPos(
+            glfw.make_context_current(self.window)
+            glfw.swap_interval(0)
+            glfw.set_window_pos(
                 self.window, window_position_default[0], window_position_default[1]
             )
             # Register callbacks window
@@ -215,8 +213,8 @@ class Visualizer(object):
             self.glfont.add_font("opensans", get_opensans_font_path())
             self.glfont.set_size(18)
             self.glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
-            self.on_resize(self.window, *glfw.GLFW.glfwGetFramebufferSize(self.window))
-            glfw.GLFW.glfwMakeContextCurrent(self.other_window)
+            self.on_resize(self.window, *glfw.get_framebuffer_size(self.window))
+            glfw.make_context_current(self.other_window)
 
     ############ window callbacks #################
     def on_resize(self, window, w, h):
@@ -224,17 +222,17 @@ class Visualizer(object):
         w = max(w, 1)
 
         self.window_size = (w, h)
-        active_window = glfw.GLFW.glfwGetCurrentContext()
-        glfw.GLFW.glfwMakeContextCurrent(window)
+        active_window = glfw.get_current_context()
+        glfw.make_context_current(window)
         self.adjust_gl_view(w, h)
-        glfw.GLFW.glfwMakeContextCurrent(active_window)
+        glfw.make_context_current(active_window)
 
     def on_window_mouse_button(self, window, button, action, mods):
         # self.gui.update_button(button,action,mods)
-        if action == glfw.GLFW.GLFW_PRESS:
+        if action == glfw.PRESS:
             self.input["button"] = button
-            self.input["mouse"] = glfw.GLFW.glfwGetCursorPos(window)
-        if action == glfw.GLFW.GLFW_RELEASE:
+            self.input["mouse"] = glfw.get_cursor_pos(window)
+        if action == glfw.RELEASE:
             self.input["button"] = None
 
     def on_pos(self, window, x, y):
@@ -242,11 +240,11 @@ class Visualizer(object):
             window, x, y, cached_scale=None
         )
         # self.gui.update_mouse(x,y)
-        if self.input["button"] == glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT:
+        if self.input["button"] == glfw.MOUSE_BUTTON_RIGHT:
             old_x, old_y = self.input["mouse"]
             self.trackball.drag_to(x - old_x, y - old_y)
             self.input["mouse"] = x, y
-        if self.input["button"] == glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT:
+        if self.input["button"] == glfw.MOUSE_BUTTON_LEFT:
             old_x, old_y = self.input["mouse"]
             self.trackball.pan_to(x - old_x, y - old_y)
             self.input["mouse"] = x, y

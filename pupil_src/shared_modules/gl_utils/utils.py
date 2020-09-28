@@ -103,8 +103,8 @@ OpenGL.error._ErrorChecker.glCheckError = custom_gl_error_handling
 
 
 def is_window_visible(window):
-    visible = glfw.GLFW.glfwGetWindowAttrib(window, glfw.GLFW.GLFW_VISIBLE)
-    iconified = glfw.GLFW.glfwGetWindowAttrib(window, glfw.GLFW.GLFW_ICONIFIED)
+    visible = glfw.get_window_attrib(window, glfw.VISIBLE)
+    iconified = glfw.get_window_attrib(window, glfw.ICONIFIED)
     return visible and not iconified
 
 
@@ -258,12 +258,12 @@ class _Rectangle(T.NamedTuple):
 
 def get_content_scale(window) -> float:
     # TODO: Explicitly rename to `get_content_scale_x`
-    return glfw.GLFW.glfwGetWindowContentScale(window)[0]
+    return glfw.get_window_content_scale(window)[0]
 
 
 def get_framebuffer_scale(window) -> float:
-    window_width = glfw.GLFW.glfwGetWindowSize(window)[0]
-    framebuffer_width = glfw.GLFW.glfwGetFramebufferSize(window)[0]
+    window_width = glfw.get_window_size(window)[0]
+    framebuffer_width = glfw.get_framebuffer_size(window)[0]
 
     try:
         return float(framebuffer_width / window_width)
@@ -277,18 +277,18 @@ def window_coordinate_to_framebuffer_coordinate(window, x, y, cached_scale=None)
 
 
 def get_monitor_workarea_rect(monitor) -> _Rectangle:
-    x, y, w, h = glfw.GLFW.glfwGetMonitorWorkarea(monitor)
+    x, y, w, h = glfw.get_monitor_workarea(monitor)
     return _Rectangle(x=x, y=y, width=w, height=h)
 
 
 def get_window_content_rect(window) -> _Rectangle:
-    x, y = glfw.GLFW.glfwGetWindowPos(window)
-    w, h = glfw.GLFW.glfwGetWindowSize(window)
+    x, y = glfw.get_window_pos(window)
+    w, h = glfw.get_window_size(window)
     return _Rectangle(x=x, y=y, width=w, height=h)
 
 
 def get_window_frame_size_margins(window) -> _Margins:
-    left, top, right, bottom = glfw.GLFW.glfwGetWindowFrameSize(window)
+    left, top, right, bottom = glfw.get_window_frame_size(window)
     return _Margins(left=left, top=top, right=right, bottom=bottom)
 
 

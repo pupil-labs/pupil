@@ -81,10 +81,8 @@ class Vis_Watermark(Plugin):
         if not frame:
             return
         if self.drag_offset is not None:
-            pos = glfw.GLFW.glfwGetCursorPos(glfw.GLFW.glfwGetCurrentContext())
-            pos = normalize(
-                pos, glfw.GLFW.glfwGetWindowSize(glfw.GLFW.glfwGetCurrentContext())
-            )
+            pos = glfw.get_cursor_pos(glfw.get_current_context())
+            pos = normalize(pos, glfw.get_window_size(glfw.get_current_context()))
             pos = denormalize(
                 pos, (frame.img.shape[1], frame.img.shape[0])
             )  # Position in img pixels

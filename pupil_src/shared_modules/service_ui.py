@@ -50,9 +50,9 @@ class Service_UI(System_Plugin_Base):
         self.texture = np.zeros((1, 1, 3), dtype=np.uint8) + 128
 
         gl_utils.legacy_glfw_init()
-        glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_SCALE_TO_MONITOR, glfw.GLFW.GLFW_TRUE)
+        glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if g_pool.hide_ui:
-            glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_VISIBLE, 0)  # hide window
+            glfw.window_hint(glfw.VISIBLE, 0)  # hide window
         main_window = gl_utils.legacy_glfw_create_window(*window_size, "Pupil Service")
 
         window_position_manager = gl_utils.WindowPositionManager()
@@ -61,9 +61,9 @@ class Service_UI(System_Plugin_Base):
             default_position=window_position_default,
             previous_position=window_position,
         )
-        glfw.GLFW.glfwSetWindowPos(main_window, *window_position)
+        glfw.set_window_pos(main_window, *window_position)
 
-        glfw.GLFW.glfwMakeContextCurrent(main_window)
+        glfw.make_context_current(main_window)
         cygl.utils.init()
         g_pool.main_window = main_window
 
@@ -121,11 +121,11 @@ class Service_UI(System_Plugin_Base):
             f_height *= display_scale_factor
 
             # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
-            glfw.GLFW.glfwSetWindowSize(main_window, int(f_width), int(f_height))
+            glfw.set_window_size(main_window, int(f_width), int(f_height))
 
         def reset_restart():
             logger.warning("Resetting all settings and restarting Capture.")
-            glfw.GLFW.glfwSetWindowShouldClose(main_window, True)
+            glfw.set_window_should_close(main_window, True)
             self.notify_all({"subject": "clear_settings_process.should_start"})
             self.notify_all({"subject": "service_process.should_start", "delay": 2.0})
 
@@ -169,13 +169,15 @@ class Service_UI(System_Plugin_Base):
         gl_utils.legacy_glfw_set_framebuffer_size_callback(main_window, on_resize)
         gl_utils.legacy_glfw_set_key_callback(main_window, on_window_key)
         gl_utils.legacy_glfw_set_char_callback(main_window, on_window_char)
-        gl_utils.legacy_glfw_set_mouse_button_callback(main_window, on_window_mouse_button)
+        gl_utils.legacy_glfw_set_mouse_button_callback(
+            main_window, on_window_mouse_button
+        )
         gl_utils.legacy_glfw_set_cursor_pos_callback(main_window, on_pos)
         gl_utils.legacy_glfw_set_scroll_callback(main_window, on_scroll)
         g_pool.gui.configuration = ui_config
         gl_utils.basic_gl_setup()
 
-        on_resize(g_pool.main_window, *glfw.GLFW.glfwGetFramebufferSize(main_window))
+        on_resize(g_pool.main_window, *glfw.get_framebuffer_size(main_window))
 
     def on_notify(self, notification):
         if notification["subject"] == "service_process.ui.should_update":
@@ -185,25 +187,23 @@ class Service_UI(System_Plugin_Base):
             self.update_ui()
 
     def update_ui(self):
-        if not glfw.GLFW.glfwWindowShouldClose(self.g_pool.main_window):
+        if not glfw.window_should_close(self.g_pool.main_window):
             gl_utils.glViewport(0, 0, *self.window_size)
-            glfw.GLFW.glfwPollEvents()
+            glfw.poll_events()
             self.gl_display()
             try:
-                clipboard = glfw.GLFW.glfwGetClipboardString(
-                    self.g_pool.main_window
-                ).decode()
+                clipboard = glfw.get_clipboard_string(self.g_pool.main_window).decode()
             except AttributeError:  # clipbaord is None, might happen on startup
                 clipboard = ""
             self.g_pool.gui.update_clipboard(clipboard)
             user_input = self.g_pool.gui.update()
             if user_input.clipboard and user_input.clipboard != clipboard:
                 # only write to clipboard if content changed
-                glfw.GLFW.glfwSetClipboardString(
+                glfw.set_clipboard_string(
                     self.g_pool.main_window, user_input.clipboard.encode()
                 )
 
-            glfw.GLFW.glfwSwapBuffers(self.g_pool.main_window)
+            glfw.swap_buffers(self.g_pool.main_window)
         else:
             self.notify_all({"subject": "service_process.should_stop"})
 
@@ -216,14 +216,14 @@ class Service_UI(System_Plugin_Base):
 
     def cleanup(self):
         if not self.g_pool.hide_ui:
-            glfw.GLFW.glfwRestoreWindow(self.g_pool.main_window)
+            glfw.restore_window(self.g_pool.main_window)
 
         del self.g_pool.menubar[:]
         self.g_pool.gui.remove(self.g_pool.menubar)
 
         self.g_pool.gui.terminate()
         gl_utils.legacy_glfw_destroy_window(self.g_pool.main_window)
-        glfw.GLFW.glfwTerminate()
+        glfw.terminate()
 
         del self.g_pool.gui
         del self.g_pool.main_window
@@ -231,11 +231,11 @@ class Service_UI(System_Plugin_Base):
 
     def get_init_dict(self):
         sess = {
-            "window_position": glfw.GLFW.glfwGetWindowPos(self.g_pool.main_window),
+            "window_position": glfw.get_window_pos(self.g_pool.main_window),
             "ui_config": self.g_pool.gui.configuration,
         }
 
-        session_window_size = glfw.GLFW.glfwGetWindowSize(self.g_pool.main_window)
+        session_window_size = glfw.get_window_size(self.g_pool.main_window)
         if 0 not in session_window_size:
             f_width, f_height = session_window_size
             if platform.system() in ("Windows", "Linux"):

@@ -333,19 +333,17 @@ def world(
 
             gl_utils.glViewport(0, 0, *window_size)
             try:
-                clipboard = glfw.GLFW.glfwGetClipboardString(main_window).decode()
+                clipboard = glfw.get_clipboard_string(main_window).decode()
             except AttributeError:  # clipboard is None, might happen on startup
                 clipboard = ""
             g_pool.gui.update_clipboard(clipboard)
             user_input = g_pool.gui.update()
             if user_input.clipboard != clipboard:
                 # only write to clipboard if content changed
-                glfw.GLFW.glfwSetClipboardString(
-                    main_window, user_input.clipboard.encode()
-                )
+                glfw.set_clipboard_string(main_window, user_input.clipboard.encode())
 
             for button, action, mods in user_input.buttons:
-                x, y = glfw.GLFW.glfwGetCursorPos(main_window)
+                x, y = glfw.get_cursor_pos(main_window)
                 pos = gl_utils.window_coordinate_to_framebuffer_coordinate(
                     main_window, x, y, cached_scale=None
                 )
@@ -367,7 +365,7 @@ def world(
                     if plugin.on_char(char_):
                         break
 
-            glfw.GLFW.glfwSwapBuffers(main_window)
+            glfw.swap_buffers(main_window)
 
         # Callback functions
         def on_resize(window, w, h):
@@ -398,12 +396,12 @@ def world(
             # potentially be dynamically modified, so we re-adjust the size limits every
             # time here.
             min_size = int(2 * icon_bar_width * g_pool.gui.scale / framebuffer_scale)
-            glfw.GLFW.glfwSetWindowSizeLimits(
+            glfw.set_window_size_limits(
                 window,
                 min_size,
                 min_size,
-                glfw.GLFW.GLFW_DONT_CARE,
-                glfw.GLFW.GLFW_DONT_CARE,
+                glfw.DONT_CARE,
+                glfw.DONT_CARE,
             )
 
             # Needed, to update the window buffer while resizing
@@ -517,9 +515,9 @@ def world(
 
         # window and gl setup
         gl_utils.legacy_glfw_init()
-        glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_SCALE_TO_MONITOR, glfw.GLFW.GLFW_TRUE)
+        glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if hide_ui:
-            glfw.GLFW.glfwWindowHint(glfw.GLFW.GLFW_VISIBLE, 0)  # hide window
+            glfw.window_hint(glfw.VISIBLE, 0)  # hide window
         main_window = gl_utils.legacy_glfw_create_window(
             width, height, "Pupil Capture - World"
         )
@@ -530,15 +528,15 @@ def world(
             default_position=window_position_default,
             previous_position=session_settings.get("window_position", None),
         )
-        glfw.GLFW.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
+        glfw.set_window_pos(main_window, window_pos[0], window_pos[1])
 
-        glfw.GLFW.glfwMakeContextCurrent(main_window)
+        glfw.make_context_current(main_window)
         cygl.utils.init()
         g_pool.main_window = main_window
 
         def reset_restart():
             logger.warning("Resetting all settings and restarting Capture.")
-            glfw.GLFW.glfwSetWindowShouldClose(main_window, True)
+            glfw.set_window_should_close(main_window, True)
             ipc_pub.notify({"subject": "clear_settings_process.should_start"})
             ipc_pub.notify({"subject": "world_process.should_start", "delay": 2.0})
 
@@ -583,7 +581,7 @@ def world(
             f_width += icon_bar_width * display_scale_factor
 
             # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
-            glfw.GLFW.glfwSetWindowSize(main_window, int(f_width), int(f_height))
+            glfw.set_window_size(main_window, int(f_width), int(f_height))
 
         general_settings.append(ui.Button("Reset window size", set_window_size))
         general_settings.append(
@@ -695,7 +693,7 @@ def world(
             return next(window_update_timer)
 
         # trigger setup of window and gl sizes
-        on_resize(main_window, *glfw.GLFW.glfwGetFramebufferSize(main_window))
+        on_resize(main_window, *glfw.get_framebuffer_size(main_window))
 
         if session_settings.get("eye1_process_alive", True):
             launch_eye_process(1, delay=0.6)
@@ -706,10 +704,7 @@ def world(
         logger.warning("Process started.")
 
         # Event loop
-        while (
-            not glfw.GLFW.glfwWindowShouldClose(main_window)
-            and not process_was_interrupted
-        ):
+        while not glfw.window_should_close(main_window) and not process_was_interrupted:
 
             # fetch newest notifications
             new_notifications = []
@@ -754,9 +749,9 @@ def world(
                 for d in data:
                     ipc_pub.send(d)
 
-            glfw.GLFW.glfwMakeContextCurrent(main_window)
+            glfw.make_context_current(main_window)
             # render visual feedback from loaded plugins
-            glfw.GLFW.glfwPollEvents()
+            glfw.poll_events()
             if window_should_update() and gl_utils.is_window_visible(main_window):
 
                 gl_utils.glViewport(0, 0, *camera_render_size)
@@ -765,19 +760,19 @@ def world(
 
                 gl_utils.glViewport(0, 0, *window_size)
                 try:
-                    clipboard = glfw.GLFW.glfwGetClipboardString(main_window).decode()
+                    clipboard = glfw.get_clipboard_string(main_window).decode()
                 except AttributeError:  # clipboard is None, might happen on startup
                     clipboard = ""
                 g_pool.gui.update_clipboard(clipboard)
                 user_input = g_pool.gui.update()
                 if user_input.clipboard != clipboard:
                     # only write to clipboard if content changed
-                    glfw.GLFW.glfwSetClipboardString(
+                    glfw.set_clipboard_string(
                         main_window, user_input.clipboard.encode()
                     )
 
                 for button, action, mods in user_input.buttons:
-                    x, y = glfw.GLFW.glfwGetCursorPos(main_window)
+                    x, y = glfw.get_cursor_pos(main_window)
                     pos = gl_utils.window_coordinate_to_framebuffer_coordinate(
                         main_window, x, y, cached_scale=None
                     )
@@ -799,7 +794,7 @@ def world(
                         if plugin.on_char(char_):
                             break
 
-                glfw.GLFW.glfwSwapBuffers(main_window)
+                glfw.swap_buffers(main_window)
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["ui_config"] = g_pool.gui.configuration
@@ -813,11 +808,9 @@ def world(
         session_settings["audio_mode"] = audio.get_audio_mode()
 
         if not hide_ui:
-            glfw.GLFW.glfwRestoreWindow(main_window)  # need to do this for windows os
-            session_settings["window_position"] = glfw.GLFW.glfwGetWindowPos(
-                main_window
-            )
-            session_window_size = glfw.GLFW.glfwGetWindowSize(main_window)
+            glfw.restore_window(main_window)  # need to do this for windows os
+            session_settings["window_position"] = glfw.get_window_pos(main_window)
+            session_window_size = glfw.get_window_size(main_window)
             if 0 not in session_window_size:
                 f_width, f_height = session_window_size
                 if platform.system() in ("Windows", "Linux"):
@@ -836,7 +829,7 @@ def world(
 
         g_pool.gui.terminate()
         gl_utils.legacy_glfw_destroy_window(main_window)
-        glfw.GLFW.glfwTerminate()
+        glfw.terminate()
 
     except Exception:
         import traceback

@@ -67,9 +67,7 @@ class Log_Display(System_Plugin_Base):
         self.glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
         self.glfont.set_align_string(v_align="center", h_align="middle")
 
-        self.window_size = glfw.GLFW.glfwGetFramebufferSize(
-            glfw.GLFW.glfwGetCurrentContext()
-        )
+        self.window_size = glfw.get_framebuffer_size(glfw.get_current_context())
         self.tex = Render_Target(*self.window_size)
 
         self._socket = zmq_tools.Msg_Receiver(

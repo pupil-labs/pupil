@@ -401,7 +401,7 @@ class GUI:
                 return
 
     def _on_click_menu_buttons(self, action, pos):
-        if action == glfw.GLFW.GLFW_PRESS:
+        if action == glfw.PRESS:
             for surface in reversed(self.tracker.surfaces):
 
                 if not surface.detected:
@@ -439,17 +439,11 @@ class GUI:
                 )
                 for idx, corner in enumerate(img_corners):
                     dist = np.linalg.norm(corner - pos)
-                    if (
-                        action == glfw.GLFW.GLFW_PRESS
-                        and dist < self.button_click_radius
-                    ):
+                    if action == glfw.PRESS and dist < self.button_click_radius:
                         self.tracker._edit_surf_verts.append((surface, idx))
                         # click event consumed; give a chance for other surfaces' corners to react to it
                         was_event_consumed = True
-                    elif (
-                        action == glfw.GLFW.GLFW_RELEASE
-                        and self.tracker._edit_surf_verts
-                    ):
+                    elif action == glfw.RELEASE and self.tracker._edit_surf_verts:
                         self.tracker.notify_all(
                             {
                                 "subject": "surface_tracker.surfaces_changed",
@@ -463,7 +457,7 @@ class GUI:
         return was_event_consumed
 
     def _on_click_marker_toggles(self, action, pos):
-        if action == glfw.GLFW.GLFW_PRESS:
+        if action == glfw.PRESS:
             for surface in self._edit_surf_markers:
                 if not surface.detected:
                     continue
@@ -570,10 +564,10 @@ class Surface_Window:
                 win_w,
                 "Reference Surface: " + self.surface.name,
                 monitor=monitor,
-                share=glfw.GLFW.glfwGetCurrentContext(),
+                share=glfw.get_current_context(),
             )
 
-            glfw.GLFW.glfwSetWindowPos(
+            glfw.set_window_pos(
                 self._window,
                 self.window_position_default[0],
                 self.window_position_default[1],
@@ -583,7 +577,9 @@ class Surface_Window:
             self.input = {"down": False, "mouse": (0, 0)}
 
             # Register callbacks
-            gl_utils.legacy_glfw_set_framebuffer_size_callback(self._window, self.on_resize)
+            gl_utils.legacy_glfw_set_framebuffer_size_callback(
+                self._window, self.on_resize
+            )
             gl_utils.legacy_glfw_set_key_callback(self._window, self.on_window_key)
             gl_utils.legacy_glfw_set_window_close_callback(self._window, self.on_close)
             gl_utils.legacy_glfw_set_mouse_button_callback(
@@ -592,20 +588,18 @@ class Surface_Window:
             gl_utils.legacy_glfw_set_cursor_pos_callback(self._window, self.on_pos)
             gl_utils.legacy_glfw_set_scroll_callback(self._window, self.on_scroll)
 
-            self.on_resize(
-                self._window, *glfw.GLFW.glfwGetFramebufferSize(self._window)
-            )
+            self.on_resize(self._window, *glfw.get_framebuffer_size(self._window))
 
             # gl_state settings
-            active_window = glfw.GLFW.glfwGetCurrentContext()
-            glfw.GLFW.glfwMakeContextCurrent(self._window)
+            active_window = glfw.get_current_context()
+            glfw.make_context_current(self._window)
             gl_utils.basic_gl_setup()
             gl_utils.make_coord_system_norm_based()
 
             # refresh speed settings
-            glfw.GLFW.glfwSwapInterval(0)
+            glfw.swap_interval(0)
 
-            glfw.GLFW.glfwMakeContextCurrent(active_window)
+            glfw.make_context_current(active_window)
 
     def close_window(self):
         if self._window:
@@ -621,8 +615,8 @@ class Surface_Window:
         here we map a selected surface onto a separate window.
         """
         if self._window and self.surface.detected:
-            active_window = glfw.GLFW.glfwGetCurrentContext()
-            glfw.GLFW.glfwMakeContextCurrent(self._window)
+            active_window = glfw.get_current_context()
+            glfw.make_context_current(self._window)
             gl_utils.clear_gl_screen()
 
             # cv uses 3x3 gl uses 4x4 transformation matrices
@@ -654,8 +648,8 @@ class Surface_Window:
 
             self.draw_recent_pupil_positions()
 
-            glfw.GLFW.glfwSwapBuffers(self._window)
-            glfw.GLFW.glfwMakeContextCurrent(active_window)
+            glfw.swap_buffers(self._window)
+            glfw.make_context_current(active_window)
 
     def draw_recent_pupil_positions(self):
         try:
@@ -673,24 +667,24 @@ class Surface_Window:
 
     def on_resize(self, window, w, h):
         self.trackball.set_window_size(w, h)
-        active_window = glfw.GLFW.glfwGetCurrentContext()
-        glfw.GLFW.glfwMakeContextCurrent(window)
+        active_window = glfw.get_current_context()
+        glfw.make_context_current(window)
         gl_utils.adjust_gl_view(w, h)
-        glfw.GLFW.glfwMakeContextCurrent(active_window)
+        glfw.make_context_current(active_window)
 
     def on_window_key(self, window, key, scancode, action, mods):
-        if action == glfw.GLFW.GLFW_PRESS:
-            if key == glfw.GLFW.GLFW_KEY_ESCAPE:
+        if action == glfw.PRESS:
+            if key == glfw.KEY_ESCAPE:
                 self.on_close()
 
     def on_close(self, window=None):
         self.close_window()
 
     def on_window_mouse_button(self, window, button, action, mods):
-        if action == glfw.GLFW.GLFW_PRESS:
+        if action == glfw.PRESS:
             self.input["down"] = True
-            self.input["mouse"] = glfw.GLFW.glfwGetCursorPos(window)
-        if action == glfw.GLFW.GLFW_RELEASE:
+            self.input["mouse"] = glfw.get_cursor_pos(window)
+        if action == glfw.RELEASE:
             self.input["down"] = False
 
     def on_pos(self, window, x, y):

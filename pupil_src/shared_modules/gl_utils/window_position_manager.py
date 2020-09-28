@@ -50,7 +50,7 @@ class WindowPositionManager:
                     window_position=previous_position,
                 )
 
-            if any(validate_previous_position(m) for m in glfw.GLFW.glfwGetMonitors()):
+            if any(validate_previous_position(m) for m in glfw.get_monitors()):
                 return previous_position
             else:
                 return default_position
@@ -63,7 +63,7 @@ def _will_window_be_visible_in_monitor(
     window, monitor, window_position, min_visible_width=30, min_visible_height=20
 ) -> bool:
     # Get the current window size and edges, and monitor rect
-    window_size = glfw.GLFW.glfwGetWindowSize(window)
+    window_size = glfw.get_window_size(window)
     window_edges = gl_utils.get_window_frame_size_margins(window)
     monitor_rect = gl_utils.get_monitor_workarea_rect(monitor)
 

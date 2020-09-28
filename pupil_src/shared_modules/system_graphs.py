@@ -74,7 +74,7 @@ class System_Graphs(System_Plugin_Base):
         self.on_window_resize(self.g_pool.main_window)
 
     def on_window_resize(self, window, *args):
-        fb_size = glfw.GLFW.glfwGetFramebufferSize(window)
+        fb_size = glfw.get_framebuffer_size(window)
         content_scale = gl_utils.get_content_scale(window)
 
         self.cpu_graph.scale = content_scale

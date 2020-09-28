@@ -103,7 +103,7 @@ class ReferenceEditController:
             self._seek_to_frame(prev_ref.frame_index)
 
     def _on_click(self, pos, button, action):
-        if action == glfw.GLFW.GLFW_PRESS:
+        if action == glfw.PRESS:
             self._add_or_delete_ref_on_click(pos)
 
     def _add_or_delete_ref_on_click(self, pos):
