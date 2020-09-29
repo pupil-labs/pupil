@@ -362,8 +362,7 @@ def eye(
         def on_scroll(window, x, y):
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
-        def on_drop(window, count, paths):
-            paths = [paths[x].decode("utf-8") for x in range(count)]
+        def on_drop(window, paths):
             for plugin in g_pool.plugins:
                 if plugin.on_drop(paths):
                     break

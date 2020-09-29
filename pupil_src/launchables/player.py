@@ -288,8 +288,7 @@ def player(
         def on_scroll(window, x, y):
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
-        def on_drop(window, count, paths):
-            paths = [paths[x].decode("utf-8") for x in range(count)]
+        def on_drop(window, paths):
             for path in paths:
                 try:
                     assert_valid_recording_type(path)
@@ -825,9 +824,9 @@ def player_drop(
 
         signal.signal(signal.SIGINT, interrupt_handler)
 
-        def on_drop(window, count, paths):
+        def on_drop(window, paths):
             nonlocal rec_dir
-            rec_dir = paths[0].decode("utf-8")
+            rec_dir = paths[0]
 
         if rec_dir:
             try:
