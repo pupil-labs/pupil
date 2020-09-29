@@ -559,12 +559,12 @@ class Surface_Window:
             win_h = 640
             win_w = int(win_h / surface_aspect_ratio)
 
-            self._window = gl_utils.legacy_glfw_create_window(
+            self._window = glfw.create_window(
                 win_h,
                 win_w,
                 "Reference Surface: " + self.surface.name,
-                monitor=monitor,
-                share=glfw.get_current_context(),
+                monitor,
+                glfw.get_current_context(),
             )
 
             glfw.set_window_pos(
@@ -577,16 +577,12 @@ class Surface_Window:
             self.input = {"down": False, "mouse": (0, 0)}
 
             # Register callbacks
-            gl_utils.legacy_glfw_set_framebuffer_size_callback(
-                self._window, self.on_resize
-            )
-            gl_utils.legacy_glfw_set_key_callback(self._window, self.on_window_key)
-            gl_utils.legacy_glfw_set_window_close_callback(self._window, self.on_close)
-            gl_utils.legacy_glfw_set_mouse_button_callback(
-                self._window, self.on_window_mouse_button
-            )
-            gl_utils.legacy_glfw_set_cursor_pos_callback(self._window, self.on_pos)
-            gl_utils.legacy_glfw_set_scroll_callback(self._window, self.on_scroll)
+            glfw.set_framebuffer_size_callback(self._window, self.on_resize)
+            glfw.set_key_callback(self._window, self.on_window_key)
+            glfw.set_window_close_callback(self._window, self.on_close)
+            glfw.set_mouse_button_callback(self._window, self.on_window_mouse_button)
+            glfw.set_cursor_pos_callback(self._window, self.on_pos)
+            glfw.set_scroll_callback(self._window, self.on_scroll)
 
             self.on_resize(self._window, *glfw.get_framebuffer_size(self._window))
 
@@ -603,7 +599,7 @@ class Surface_Window:
 
     def close_window(self):
         if self._window:
-            gl_utils.legacy_glfw_destroy_window(self._window)
+            glfw.destroy_window(self._window)
             self._window = None
             self.window_should_close = False
 

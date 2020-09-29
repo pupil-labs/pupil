@@ -363,11 +363,9 @@ def player(
 
         window_name = f"Pupil Player: {meta_info.recording_name} - {rec_dir}"
 
-        gl_utils.legacy_glfw_init()
+        glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
-        main_window = gl_utils.legacy_glfw_create_window(
-            width, height, window_name, None, None
-        )
+        main_window = glfw.create_window(width, height, window_name, None, None)
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(
@@ -610,15 +608,13 @@ def player(
         )
 
         # Register callbacks main_window
-        gl_utils.legacy_glfw_set_framebuffer_size_callback(main_window, on_resize)
-        gl_utils.legacy_glfw_set_key_callback(main_window, on_window_key)
-        gl_utils.legacy_glfw_set_char_callback(main_window, on_window_char)
-        gl_utils.legacy_glfw_set_mouse_button_callback(
-            main_window, on_window_mouse_button
-        )
-        gl_utils.legacy_glfw_set_cursor_pos_callback(main_window, on_pos)
-        gl_utils.legacy_glfw_set_scroll_callback(main_window, on_scroll)
-        gl_utils.legacy_glfw_set_drop_callback(main_window, on_drop)
+        glfw.set_framebuffer_size_callback(main_window, on_resize)
+        glfw.set_key_callback(main_window, on_window_key)
+        glfw.set_char_callback(main_window, on_window_char)
+        glfw.set_mouse_button_callback(main_window, on_window_mouse_button)
+        glfw.set_cursor_pos_callback(main_window, on_pos)
+        glfw.set_scroll_callback(main_window, on_scroll)
+        glfw.set_drop_callback(main_window, on_drop)
 
         toggle_general_settings(True)
 
@@ -766,7 +762,7 @@ def player(
         g_pool.plugins.clean()
 
         g_pool.gui.terminate()
-        gl_utils.legacy_glfw_destroy_window(main_window)
+        glfw.destroy_window(main_window)
 
     except Exception:
         import traceback
@@ -852,10 +848,10 @@ def player_drop(
             session_settings.clear()
         w, h = session_settings.get("window_size", (1280, 720))
 
-        gl_utils.legacy_glfw_init()
+        glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         glfw.window_hint(glfw.RESIZABLE, 0)
-        window = gl_utils.legacy_glfw_create_window(w, h, "Pupil Player")
+        window = glfw.create_window(w, h, "Pupil Player", None, None)
         glfw.window_hint(glfw.RESIZABLE, 1)
 
         glfw.make_context_current(window)
@@ -868,7 +864,7 @@ def player_drop(
         )
         glfw.set_window_pos(window, window_pos[0], window_pos[1])
 
-        gl_utils.legacy_glfw_set_drop_callback(window, on_drop)
+        glfw.set_drop_callback(window, on_drop)
 
         glfont = fontstash.Context()
         glfont.add_font("roboto", get_roboto_font_path())
@@ -949,7 +945,7 @@ def player_drop(
 
         session_settings["window_position"] = glfw.get_window_pos(window)
         session_settings.close()
-        gl_utils.legacy_glfw_destroy_window(window)
+        glfw.destroy_window(window)
         if rec_dir:
             ipc_pub.notify(
                 {"subject": "player_process.should_start", "rec_dir": rec_dir}

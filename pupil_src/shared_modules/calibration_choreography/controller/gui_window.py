@@ -86,21 +86,17 @@ class GUIWindow(Observable):
         # windows you might experience a black screen for up to 1 sec when creating
         # a blank window directly in fullscreen mode. By creating it windowed and
         # then switching to fullscreen it will stay white the entire time.
-        self.__gl_handle = gl_utils.legacy_glfw_create_window(
-            *size, title, share=glfw.get_current_context()
+        self.__gl_handle = glfw.create_window(
+            *size, title, None, glfw.get_current_context()
         )
 
         if not is_fullscreen:
             glfw.set_window_pos(self.__gl_handle, *position)
 
         # Register callbacks
-        gl_utils.legacy_glfw_set_framebuffer_size_callback(
-            self.__gl_handle, self.on_resize
-        )
-        gl_utils.legacy_glfw_set_key_callback(self.__gl_handle, self.on_key)
-        gl_utils.legacy_glfw_set_mouse_button_callback(
-            self.__gl_handle, self.on_mouse_button
-        )
+        glfw.set_framebuffer_size_callback(self.__gl_handle, self.on_resize)
+        glfw.set_key_callback(self.__gl_handle, self.on_key)
+        glfw.set_mouse_button_callback(self.__gl_handle, self.on_mouse_button)
         self.on_resize(self.__gl_handle, *glfw.get_framebuffer_size(self.__gl_handle))
 
         # gl_state settings
@@ -109,7 +105,7 @@ class GUIWindow(Observable):
             glfw.swap_interval(0)
 
         if is_fullscreen:
-            # Switch to full screen here. See NOTE above at legacy_glfw_create_window().
+            # Switch to full screen here. See NOTE above at glfw.create_window().
             glfw.set_window_monitor(
                 self.__gl_handle,
                 gui_monitor.unsafe_handle,
@@ -124,7 +120,7 @@ class GUIWindow(Observable):
             return
         with self._switch_to_current_context():
             glfw.set_input_mode(self.__gl_handle, glfw.CURSOR, glfw.CURSOR_NORMAL)
-            gl_utils.legacy_glfw_destroy_window(self.__gl_handle)
+            glfw.destroy_window(self.__gl_handle)
         self.__gl_handle = None
 
     @contextlib.contextmanager

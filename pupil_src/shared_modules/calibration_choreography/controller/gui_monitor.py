@@ -57,8 +57,15 @@ class GUIMonitor:
 
     @property
     def current_video_mode(self) -> "GUIMonitor.VideoMode":
-        gl_video_mode = gl_utils.legacy_glfw_get_video_mode(self.__gl_handle)
-        return GUIMonitor.VideoMode(*gl_video_mode)
+        gl_video_mode = glfw.get_video_mode(self.__gl_handle)
+        return GUIMonitor.VideoMode(
+            width=gl_video_mode.width,
+            height=gl_video_mode.height,
+            red_bits=gl_video_mode.red_bits,
+            green_bits=gl_video_mode.green_bits,
+            blue_bits=gl_video_mode.blue_bits,
+            refresh_rate=gl_video_mode.refresh_rate,
+        )
 
     @property
     def is_available(self) -> bool:

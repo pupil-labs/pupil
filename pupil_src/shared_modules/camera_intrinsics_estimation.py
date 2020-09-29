@@ -190,30 +190,28 @@ class Camera_Intrinsics_Estimation(Plugin):
                     )
                     self.monitor_idx = 0
                     monitor = glfw.get_monitors()[self.monitor_idx]
-                mode = gl_utils.legacy_glfw_get_video_mode(monitor)
-                height, width = mode[0], mode[1]
+                mode = glfw.get_video_mode(monitor)
+                height, width = mode.height, mode.width
             else:
                 monitor = None
                 height, width = 640, 480
 
-            self._window = gl_utils.legacy_glfw_create_window(
+            self._window = glfw.create_window(
                 height,
                 width,
                 "Calibration",
-                monitor=monitor,
-                share=glfw.get_current_context(),
+                monitor,
+                glfw.get_current_context(),
             )
             if not self.fullscreen:
                 # move to y = 31 for windows os
                 glfw.set_window_pos(self._window, 200, 31)
 
             # Register callbacks
-            gl_utils.legacy_glfw_set_framebuffer_size_callback(self._window, on_resize)
-            gl_utils.legacy_glfw_set_key_callback(self._window, self.on_window_key)
-            gl_utils.legacy_glfw_set_window_close_callback(self._window, self.on_close)
-            gl_utils.legacy_glfw_set_mouse_button_callback(
-                self._window, self.on_window_mouse_button
-            )
+            glfw.set_framebuffer_size_callback(self._window, on_resize)
+            glfw.set_key_callback(self._window, self.on_window_key)
+            glfw.set_window_close_callback(self._window, self.on_close)
+            glfw.set_mouse_button_callback(self._window, self.on_window_mouse_button)
 
             on_resize(self._window, *glfw.get_framebuffer_size(self._window))
 
@@ -242,7 +240,7 @@ class Camera_Intrinsics_Estimation(Plugin):
     def close_window(self):
         self.window_should_close = False
         if self._window:
-            gl_utils.legacy_glfw_destroy_window(self._window)
+            glfw.destroy_window(self._window)
             self._window = None
 
     def calculate(self):

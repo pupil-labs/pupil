@@ -514,12 +514,12 @@ def world(
         )
 
         # window and gl setup
-        gl_utils.legacy_glfw_init()
+        glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window
-        main_window = gl_utils.legacy_glfw_create_window(
-            width, height, "Pupil Capture - World"
+        main_window = glfw.create_window(
+            width, height, "Pupil Capture - World", None, None
         )
 
         window_position_manager = gl_utils.WindowPositionManager()
@@ -662,15 +662,13 @@ def world(
             )
 
         # Register callbacks main_window
-        gl_utils.legacy_glfw_set_framebuffer_size_callback(main_window, on_resize)
-        gl_utils.legacy_glfw_set_key_callback(main_window, on_window_key)
-        gl_utils.legacy_glfw_set_char_callback(main_window, on_window_char)
-        gl_utils.legacy_glfw_set_mouse_button_callback(
-            main_window, on_window_mouse_button
-        )
-        gl_utils.legacy_glfw_set_cursor_pos_callback(main_window, on_pos)
-        gl_utils.legacy_glfw_set_scroll_callback(main_window, on_scroll)
-        gl_utils.legacy_glfw_set_drop_callback(main_window, on_drop)
+        glfw.set_framebuffer_size_callback(main_window, on_resize)
+        glfw.set_key_callback(main_window, on_window_key)
+        glfw.set_char_callback(main_window, on_window_char)
+        glfw.set_mouse_button_callback(main_window, on_window_mouse_button)
+        glfw.set_cursor_pos_callback(main_window, on_pos)
+        glfw.set_scroll_callback(main_window, on_scroll)
+        glfw.set_drop_callback(main_window, on_drop)
 
         # gl_state settings
         gl_utils.basic_gl_setup()
@@ -828,7 +826,7 @@ def world(
         g_pool.plugins.clean()
 
         g_pool.gui.terminate()
-        gl_utils.legacy_glfw_destroy_window(main_window)
+        glfw.destroy_window(main_window)
         glfw.terminate()
 
     except Exception:
