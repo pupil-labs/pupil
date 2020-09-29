@@ -16,7 +16,6 @@ import socket
 import numpy as np
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 import gl_utils
 from pyglui import ui, cygl
 from plugin import System_Plugin_Base

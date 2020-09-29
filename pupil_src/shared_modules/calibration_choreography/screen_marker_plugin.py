@@ -17,7 +17,6 @@ from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup
 import OpenGL.GL as gl
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 from circle_detector import CircleTracker
 from platform import system
 

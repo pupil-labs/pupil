@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 import gl_utils
 from OpenGL.GL import *
 from platform import system

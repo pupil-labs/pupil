@@ -12,7 +12,6 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import psutil
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 import gl_utils
 from pyglui import ui, graph
 from pyglui.cygl.utils import RGBA, mix_smooth

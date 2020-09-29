@@ -2,7 +2,6 @@ import collections
 import typing as T
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 
 try:
     from typing import OrderedDict as T_OrderedDict  # Python 3.7.2

@@ -118,7 +118,6 @@ def world(
 
         # display
         import glfw
-        import glfw.GLFW  # TODO: Remove when switching to pyglfw API
         from version_utils import parse_version
         from pyglui import ui, cygl, __version__ as pyglui_version
 

@@ -13,7 +13,6 @@ import platform
 import typing as T
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 import gl_utils
 
 

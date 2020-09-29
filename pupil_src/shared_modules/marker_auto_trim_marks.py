@@ -24,7 +24,6 @@ from pyglui.cygl.utils import RGBA, draw_points, draw_polyline
 from OpenGL.GL import *
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 
 import numpy as np
 from itertools import groupby

@@ -21,7 +21,6 @@ import pyglui.cygl.utils as pyglui_utils
 
 import gl_utils
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 
 from .surface_marker import Surface_Marker_Type
 

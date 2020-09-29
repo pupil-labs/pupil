@@ -19,7 +19,6 @@ from OpenGL.GL import *
 from OpenGL.GLU import gluPerspective, gluErrorString
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 
 # OpenGL.FULL_LOGGING = True
 OpenGL.ERROR_LOGGING = False

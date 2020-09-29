@@ -16,7 +16,6 @@ import OpenGL.GL as gl
 
 import gl_utils
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 from observable import Observable
 
 # FOR SMOOTH RENDERING

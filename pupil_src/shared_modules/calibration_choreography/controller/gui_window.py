@@ -5,7 +5,6 @@ import contextlib
 
 import OpenGL.GL as gl
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 import gl_utils
 
 from pyglui.cygl.utils import draw_polyline

@@ -19,7 +19,6 @@ from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 from methods import denormalize, normalize
 from observable import Observable
 from plugin import Plugin

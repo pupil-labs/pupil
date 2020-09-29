@@ -14,7 +14,6 @@ import logging
 import numpy as np
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 import tasklib
 from gaze_producer import model, worker
 from observable import Observable

@@ -18,7 +18,6 @@ import os
 from pyglui import ui
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 from methods import normalize, denormalize
 import logging
 

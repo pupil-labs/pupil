@@ -123,7 +123,6 @@ def eye(
 
         # display
         import glfw
-        import glfw.GLFW  # TODO: Remove when switching to pyglfw API
         from pyglui import ui, graph, cygl
         from pyglui.cygl.utils import draw_points, RGBA, draw_polyline
         from pyglui.cygl.utils import Named_Texture

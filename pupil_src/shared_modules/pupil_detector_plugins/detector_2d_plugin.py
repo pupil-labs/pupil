@@ -15,7 +15,6 @@ from pyglui import ui
 from pyglui.cygl.utils import draw_gl_texture
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 from gl_utils import (
     adjust_gl_view,
     basic_gl_setup,

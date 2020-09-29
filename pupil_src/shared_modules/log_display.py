@@ -16,7 +16,6 @@ import zmq_tools
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 import gl_utils
 
 

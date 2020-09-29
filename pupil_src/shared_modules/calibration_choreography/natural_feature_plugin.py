@@ -16,7 +16,6 @@ import cv2
 import numpy as np
 
 import glfw
-import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 
 from methods import normalize
 from pyglui import ui

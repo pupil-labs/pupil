@@ -71,7 +71,6 @@ def player(
 
         # display
         import glfw
-        import glfw.GLFW  # TODO: Remove when switching to pyglfw API
 
         # check versions for our own depedencies as they are fast-changing
         from pyglui import __version__ as pyglui_version
@@ -801,7 +800,6 @@ def player_drop(
 
     try:
         import glfw
-        import glfw.GLFW  # TODO: Remove when switching to pyglfw API
         import gl_utils
         from OpenGL.GL import glClearColor
         from version_utils import parse_version
