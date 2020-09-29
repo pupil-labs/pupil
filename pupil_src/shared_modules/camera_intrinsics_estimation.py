@@ -190,7 +190,7 @@ class Camera_Intrinsics_Estimation(Plugin):
                     self.monitor_idx = 0
                     monitor = glfw.get_monitors()[self.monitor_idx]
                 mode = glfw.get_video_mode(monitor)
-                height, width = mode.height, mode.width
+                height, width = mode.size.height, mode.size.width
             else:
                 monitor = None
                 height, width = 640, 480

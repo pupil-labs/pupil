@@ -58,11 +58,11 @@ class GUIMonitor:
     def current_video_mode(self) -> "GUIMonitor.VideoMode":
         gl_video_mode = glfw.get_video_mode(self.__gl_handle)
         return GUIMonitor.VideoMode(
-            width=gl_video_mode.width,
-            height=gl_video_mode.height,
-            red_bits=gl_video_mode.red_bits,
-            green_bits=gl_video_mode.green_bits,
-            blue_bits=gl_video_mode.blue_bits,
+            width=gl_video_mode.size.width,
+            height=gl_video_mode.size.height,
+            red_bits=gl_video_mode.bits.red,
+            green_bits=gl_video_mode.bits.green,
+            blue_bits=gl_video_mode.bits.blue,
             refresh_rate=gl_video_mode.refresh_rate,
         )
 
