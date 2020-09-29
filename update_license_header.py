@@ -42,7 +42,6 @@ excludes = [
     "transformations.py",
     "libuvcc*",
     ".gitignore",
-    "glfw.py",
     "version_utils.py",
     "update_license_header.py",
 ]
