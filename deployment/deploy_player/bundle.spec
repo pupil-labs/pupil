@@ -9,6 +9,7 @@ import platform
 import sys
 
 import numpy
+import pkg_resources
 from PyInstaller.utils.hooks import collect_submodules
 
 hidden_imports = []
@@ -21,6 +22,7 @@ hidden_imports += collect_submodules("pyglui")
 hidden_imports += collect_submodules("pupil_apriltags")
 hidden_imports += collect_submodules("sklearn")
 
+import glfw
 import pupil_apriltags
 from pyglui import ui
 
@@ -31,6 +33,12 @@ def apriltag_relative_path(absolute_path):
     """Returns pupil_apriltags/lib/*"""
     return os.path.join(*absolute_path.parts[-3:])
 
+
+glfw_name = glfw._glfw._name
+glfw_path = pathlib.Path(glfw_name)
+if not glfw_path.exists():
+    glfw_path = pathlib.Path(pkg_resources.resource_filename("glfw", glfw_name))
+glfw_binaries = [(glfw_path.name, str(glfw_path), "BINARY")]
 
 if platform.system() == "Darwin":
     sys.path.append(".")
@@ -75,6 +83,7 @@ if platform.system() == "Darwin":
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         apriltag_libs,
+        glfw_binaries,
         strip=None,
         upx=True,
         name="Pupil Player",
@@ -138,6 +147,7 @@ elif platform.system() == "Linux":
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         apriltag_libs,
+        glfw_binaries,
         strip=True,
         upx=True,
         name="pupil_player",
@@ -202,6 +212,7 @@ elif platform.system() == "Windows":
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         apriltag_libs,
+        glfw_binaries,
         vc_redist_libs,
         np_dll_list,
         strip=None,

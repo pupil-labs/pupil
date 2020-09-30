@@ -9,6 +9,7 @@ import platform
 import sys
 
 import numpy
+import pkg_resources
 from PyInstaller.utils.hooks import collect_submodules
 
 hidden_imports = []
@@ -20,7 +21,14 @@ if platform.system() != "Windows":
 hidden_imports += collect_submodules("pyglui")
 hidden_imports += collect_submodules("sklearn")
 
+import glfw
 from pyglui import ui
+
+glfw_name = glfw._glfw._name
+glfw_path = pathlib.Path(glfw_name)
+if not glfw_path.exists():
+    glfw_path = pathlib.Path(pkg_resources.resource_filename("glfw", glfw_name))
+glfw_binaries = [(glfw_path.name, str(glfw_path), "BINARY")]
 
 if platform.system() == "Darwin":
     sys.path.append(".")
@@ -58,6 +66,7 @@ if platform.system() == "Darwin":
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
+        glfw_binaries,
         strip=None,
         upx=True,
         name="Pupil Service",
@@ -115,6 +124,7 @@ elif platform.system() == "Linux":
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
+        glfw_binaries,
         strip=True,
         upx=True,
         name="pupil_service",
@@ -178,6 +188,7 @@ elif platform.system() == "Windows":
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
+        glfw_binaries,
         np_dll_list,
         vc_redist_libs,
         strip=False,

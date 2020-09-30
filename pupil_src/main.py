@@ -42,10 +42,22 @@ if parsed_args.version:
     print(version_message)
     sys.exit()
 
+
+def set_bundled_glfw_environ_var():
+    import pathlib
+
+    meipass = pathlib.Path(sys._MEIPASS)
+    lib_path = next(meipass.glob("*glfw*"), None)
+    os.environ["PYGLFW_LIBRARY"] = str(lib_path)
+
+
 if running_from_bundle:
     # Specifiy user dir.
     folder_name = "pupil_{}_settings".format(parsed_args.app)
     user_dir = os.path.expanduser(os.path.join("~", folder_name))
+
+    # set libglfw env variable to prevent endless version check loop within pyglfw
+    set_bundled_glfw_environ_var()
 else:
     # Specifiy user dir.
     user_dir = os.path.join(pupil_base_dir, "{}_settings".format(parsed_args.app))
