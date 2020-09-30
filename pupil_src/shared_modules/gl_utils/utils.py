@@ -256,7 +256,6 @@ class _Rectangle(T.NamedTuple):
 
 
 def get_content_scale(window) -> float:
-    # TODO: Explicitly rename to `get_content_scale_x`
     return glfw.get_window_content_scale(window)[0]
 
 
