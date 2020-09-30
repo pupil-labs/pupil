@@ -1,7 +1,15 @@
 # -*- mode: python -*-
 
 
-import platform, sys, os, os.path, zmq, glob, numpy, pathlib
+import glob
+import os
+import os.path
+import pathlib
+import platform
+import sys
+
+import numpy
+import zmq
 from PyInstaller.utils.hooks import collect_submodules
 
 hidden_imports = []
@@ -14,8 +22,8 @@ hidden_imports += collect_submodules("pyglui")
 hidden_imports += collect_submodules("pupil_apriltags")
 hidden_imports += collect_submodules("sklearn")
 
-from pyglui import ui
 import pupil_apriltags
+from pyglui import ui
 
 apriltag_lib_path = pathlib.Path(pupil_apriltags.__file__).parent
 
@@ -137,7 +145,9 @@ elif platform.system() == "Linux":
     )
 
 elif platform.system() == "Windows":
-    import sys, os, os.path
+    import os
+    import os.path
+    import sys
 
     np_path = os.path.dirname(numpy.__file__)
     np_dlls = glob.glob(np_path + "/core/*.dll")
