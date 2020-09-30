@@ -64,7 +64,6 @@ if platform.system() == "Darwin":
         a.binaries - libSystem,
         a.zipfiles,
         a.datas,
-        [("libglfw.dylib", "/usr/local/lib/libglfw.dylib", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
