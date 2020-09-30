@@ -9,7 +9,6 @@ import platform
 import sys
 
 import numpy
-import zmq
 from PyInstaller.utils.hooks import collect_submodules
 
 hidden_imports = []
