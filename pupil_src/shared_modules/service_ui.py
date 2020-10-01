@@ -190,7 +190,8 @@ class Service_UI(System_Plugin_Base):
             self.gl_display()
             try:
                 clipboard = glfw.get_clipboard_string(self.g_pool.main_window).decode()
-            except AttributeError:  # clipbaord is None, might happen on startup
+            except (AttributeError, glfw.GLFWError):
+                # clipbaord is None, might happen on startup
                 clipboard = ""
             self.g_pool.gui.update_clipboard(clipboard)
             user_input = self.g_pool.gui.update()

@@ -249,7 +249,8 @@ def eye(
             # render GUI
             try:
                 clipboard = glfw.get_clipboard_string(main_window).decode()
-            except AttributeError:  # clipboard is None, might happen on startup
+            except (AttributeError, glfw.GLFWError):
+                # clipboard is None, might happen on startup
                 clipboard = ""
             g_pool.gui.update_clipboard(clipboard)
             user_input = g_pool.gui.update()

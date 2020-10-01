@@ -193,7 +193,8 @@ def player(
 
             try:
                 clipboard = glfw.get_clipboard_string(main_window).decode()
-            except AttributeError:  # clipbaord is None, might happen on startup
+            except (AttributeError, glfw.GLFWError):
+                # clipbaord is None, might happen on startup
                 clipboard = ""
             g_pool.gui.update_clipboard(clipboard)
             user_input = g_pool.gui.update()
@@ -696,7 +697,8 @@ def player(
 
                 try:
                     clipboard = glfw.get_clipboard_string(main_window).decode()
-                except AttributeError:  # clipbaord is None, might happen on startup
+                except (AttributeError, glfw.GLFWError):
+                    # clipbaord is None, might happen on startup
                     clipboard = ""
                 g_pool.gui.update_clipboard(clipboard)
                 user_input = g_pool.gui.update()
