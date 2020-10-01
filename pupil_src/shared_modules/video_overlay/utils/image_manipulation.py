@@ -18,6 +18,10 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+def float_to_int(value: float) -> int:
+    return int(value) if np.isfinite(value) else 0
+
+
 class ImageManipulator(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def apply_to(self, image, parameter, **kwargs):
@@ -73,7 +77,9 @@ class PupilRenderer(ImageManipulator):
     def render_pupil_3d(self, image, pupil_position):
         el = pupil_position["ellipse"]
 
-        conf = int(pupil_position["confidence"] * 255)
+        conf = pupil_position["confidence"] * 255
+        conf = float_to_int(conf)
+
         self.render_ellipse(image, el, color=(0, 0, 255, conf))
 
         if pupil_position["model_confidence"] <= 0.0:
@@ -112,7 +118,8 @@ class PupilRenderer(ImageManipulator):
         outline = [np.asarray(outline, dtype="i")]
         cv2.polylines(image, outline, True, color, thickness=1)
 
-        center = (int(ellipse["center"][0]), int(ellipse["center"][1]))
+        center = ellipse["center"]
+        center = (float_to_int(center[0]), float_to_int(center[1]))
         cv2.circle(image, center, 5, color, thickness=-1)
 
     @staticmethod
