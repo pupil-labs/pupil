@@ -12,11 +12,10 @@ import logging
 
 from pye3d.detector_3d import Detector3D
 from pyglui import ui
-from matplotlib import pyplot as plt
 import pyqtgraph as pq
 
 from .detector_base_plugin import PupilDetectorPlugin
-from .visualizer_2d import draw_eyeball_outline, draw_pupil_outline
+from .visualizer_2d import draw_eyeball_outline, draw_pupil_outline, draw_ellipse
 from .visualizer_pye3d import Eye_Visualizer
 
 logger = logging.getLogger(__name__)
@@ -109,8 +108,26 @@ class Pye3DPlugin(PupilDetectorPlugin):
     def gl_display(self):
         self.debug_window_update()
         if self._recent_detection_result:
-            draw_eyeball_outline(self._recent_detection_result)
-            draw_pupil_outline(self._recent_detection_result)
+            # draw_eyeball_outline(self._recent_detection_result)
+            # draw_pupil_outline(self._recent_detection_result)
+            result = self._recent_detection_result
+            debug_info = result["debug_info"]
+
+            draw_ellipse(
+                ellipse=debug_info["projected_ultra_long_term"],
+                rgba=(0.5, 0, 0, 1),
+                thickness=2,
+            )
+            draw_ellipse(
+                ellipse=debug_info["projected_long_term"],
+                rgba=(0.8, 0.8, 0, 1),
+                thickness=2,
+            )
+            draw_ellipse(
+                ellipse=debug_info["projected_short_term"],
+                rgba=(0, 1, 0, 1),
+                thickness=2,
+            )
 
     def cleanup(self):
         self.debug_window_close()  # if we change detectors, be sure debug window is also closed
