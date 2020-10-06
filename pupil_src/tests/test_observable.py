@@ -64,16 +64,26 @@ class TestObservabilityOfMethods:
         with pytest.raises(TypeError):
             observable.add_observer("class_method", observer)
 
-    def test_modified_methods_are_not_observable(self, observable, observer):
+    def test_monkey_patched_methods_are_observable(self, observable, observer):
         class FakeClass:
             def fake_method(self):
                 pass
 
         fake_class_instance = FakeClass()
-        observable.modified_method = fake_class_instance.fake_method
+        observable.bound_method = fake_class_instance.fake_method
 
-        with pytest.raises(TypeError):
-            observable.add_observer("modified_method", observer)
+        observable.add_observer("bound_method", observer)
+
+    def test_new_methods_are_observable(self, observable, observer):
+        class FakeClass:
+            def fake_method(self):
+                pass
+
+        fake_class_instance = FakeClass()
+        # new_method is not part of FakeObservable
+        observable.new_method = fake_class_instance.fake_method
+
+        observable.add_observer("new_method", observer)
 
 
 class TestDifferentKindsOfObservers:
@@ -182,6 +192,19 @@ class TestObserverCalls:
         # no guarantees for the actual order!
         assert observer1_called and observer2_called and observer3_called
 
+    def test_observers_of_monkey_patched_methods_are_called(self, observable):
+        observer = mock.Mock()
+
+        class FakeClass:
+            def fake_method(self, arg1, arg2):
+                pass
+
+        fake_object = FakeClass()
+        observable.bound_method_with_arguments = fake_object.fake_method
+        observable.add_observer("bound_method_with_arguments", observer)
+        observable.bound_method_with_arguments(1, "test")
+        observer.assert_called_once_with(1, "test")
+
 
 class TestWrappedMethodCalls:
     def test_wrapped_functions_are_called_with_right_arguments(self):
@@ -209,6 +232,25 @@ class TestWrappedMethodCalls:
         ret_val = observable.method()
 
         assert ret_val == 1
+
+    def test_wrapped_monkey_patched_functions_are_called_with_right_arguments(
+        self, observable
+    ):
+        mock_function = mock.Mock()
+
+        class FakeClass:
+            # we choose a name that is also in FakeObservable to check that the
+            # two methods are not confused with each other
+            def bound_method_with_arguments(self, arg1, arg2):
+                mock_function(arg1, arg2)
+
+        fake_object = FakeClass()
+        observable.bound_method_with_arguments = fake_object.bound_method_with_arguments
+        observable.add_observer("bound_method_with_arguments", lambda arg1, arg2: None)
+
+        observable.bound_method_with_arguments(1, 2)
+
+        mock_function.assert_called_once_with(1, 2)
 
 
 class TestRemovingObservers:
