@@ -202,7 +202,7 @@ def player(
             user_input = g_pool.gui.update()
             if user_input.clipboard and user_input.clipboard != clipboard:
                 # only write to clipboard if content changed
-                glfw.set_clipboard_string(main_window, user_input.clipboard.encode())
+                glfw.set_clipboard_string(main_window, user_input.clipboard)
 
             for b in user_input.buttons:
                 button, action, mods = b
@@ -706,9 +706,7 @@ def player(
                 user_input = g_pool.gui.update()
                 if user_input.clipboard and user_input.clipboard != clipboard:
                     # only write to clipboard if content changed
-                    glfw.set_clipboard_string(
-                        main_window, user_input.clipboard.encode()
-                    )
+                    glfw.set_clipboard_string(main_window, user_input.clipboard)
 
                 for b in user_input.buttons:
                     button, action, mods = b
