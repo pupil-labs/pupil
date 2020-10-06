@@ -97,15 +97,9 @@ class Eye_Overlay(Observable, Plugin):
         return overlay
 
     def _video_path_for_eye(self, eye_id: int) -> str:
-        rec_dir = self.g_pool.rec_dir
-
-        # Create eye video file filter for eye_id
-        file_filter = PupilRecording.FileFilter(rec_dir)
-        file_filter = file_filter.eye_id(eye_id)
-        file_filter = file_filter.videos()
-
         # Get all eye videos for eye_id
-        eye_videos = list(file_filter)
+        recording = PupilRecording(self.g_pool.rec_dir)
+        eye_videos = list(recording.files().videos().eye_id(eye_id))
 
         if eye_videos:
             return str(eye_videos[0])
