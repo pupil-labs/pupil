@@ -12,6 +12,9 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import psutil
 import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 import gl_utils
 from pyglui import ui, graph
 from pyglui.cygl.utils import RGBA, mix_smooth

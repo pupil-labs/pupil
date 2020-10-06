@@ -16,6 +16,9 @@ import zmq_tools
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 import gl_utils
 
 

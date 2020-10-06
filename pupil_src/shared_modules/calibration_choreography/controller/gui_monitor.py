@@ -3,6 +3,8 @@ import typing as T
 
 import glfw
 
+glfw.ERROR_REPORTING = "raise"
+
 try:
     from typing import OrderedDict as T_OrderedDict  # Python 3.7.2
 except ImportError:

@@ -25,6 +25,8 @@ from OpenGL.GL import *
 
 import glfw
 
+glfw.ERROR_REPORTING = "raise"
+
 import numpy as np
 from itertools import groupby
 

@@ -118,6 +118,9 @@ def world(
 
         # display
         import glfw
+
+        glfw.ERROR_REPORTING = "raise"
+
         from version_utils import parse_version
         from pyglui import ui, cygl, __version__ as pyglui_version
 

@@ -16,6 +16,9 @@ import socket
 import numpy as np
 
 import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 import gl_utils
 from pyglui import ui, cygl
 from plugin import System_Plugin_Base

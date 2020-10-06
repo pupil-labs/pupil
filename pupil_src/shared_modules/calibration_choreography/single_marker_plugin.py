@@ -28,6 +28,8 @@ import OpenGL.GL as gl
 
 import glfw
 
+glfw.ERROR_REPORTING = "raise"
+
 from .mixin import MonitorSelectionMixin
 from .controller import (
     GUIMonitor,

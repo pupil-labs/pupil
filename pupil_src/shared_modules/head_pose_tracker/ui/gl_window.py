@@ -16,6 +16,9 @@ import OpenGL.GL as gl
 
 import gl_utils
 import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 from observable import Observable
 
 # FOR SMOOTH RENDERING

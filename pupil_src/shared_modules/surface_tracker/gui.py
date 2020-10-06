@@ -22,6 +22,8 @@ import pyglui.cygl.utils as pyglui_utils
 import gl_utils
 import glfw
 
+glfw.ERROR_REPORTING = "raise"
+
 from .surface_marker import Surface_Marker_Type
 
 

@@ -10,6 +10,8 @@ See COPYING and COPYING.LESSER for license details.
 """
 import glfw
 
+glfw.ERROR_REPORTING = "raise"
+
 import gl_utils
 from methods import normalize, denormalize
 

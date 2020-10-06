@@ -13,6 +13,9 @@ import platform
 import typing as T
 
 import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 import gl_utils
 
 

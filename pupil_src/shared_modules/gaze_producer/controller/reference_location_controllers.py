@@ -14,6 +14,9 @@ import logging
 import numpy as np
 
 import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 import tasklib
 from gaze_producer import model, worker
 from observable import Observable

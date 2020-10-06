@@ -20,6 +20,8 @@ from OpenGL.GLU import gluPerspective, gluErrorString
 
 import glfw
 
+glfw.ERROR_REPORTING = "raise"
+
 # OpenGL.FULL_LOGGING = True
 OpenGL.ERROR_LOGGING = False
 

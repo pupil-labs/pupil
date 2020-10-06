@@ -123,6 +123,9 @@ def eye(
 
         # display
         import glfw
+
+        glfw.ERROR_REPORTING = "raise"
+
         from pyglui import ui, graph, cygl
         from pyglui.cygl.utils import draw_points, RGBA, draw_polyline
         from pyglui.cygl.utils import Named_Texture

@@ -72,6 +72,8 @@ def player(
         # display
         import glfw
 
+        glfw.ERROR_REPORTING = "raise"
+
         # check versions for our own depedencies as they are fast-changing
         from pyglui import __version__ as pyglui_version
 
@@ -801,6 +803,9 @@ def player_drop(
 
     try:
         import glfw
+
+        glfw.ERROR_REPORTING = "raise"
+
         import gl_utils
         from OpenGL.GL import glClearColor
         from version_utils import parse_version

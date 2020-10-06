@@ -17,6 +17,8 @@ import numpy as np
 
 import glfw
 
+glfw.ERROR_REPORTING = "raise"
+
 from methods import normalize
 from pyglui import ui
 from pyglui.cygl.utils import draw_points_norm, RGBA
