@@ -18,6 +18,10 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+def float_to_int(value: float) -> int:
+    return int(value) if np.isfinite(value) else 0
+
+
 class ImageManipulator(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def apply_to(self, image, parameter, **kwargs):
@@ -67,14 +71,20 @@ class PupilRenderer(ImageManipulator):
     def render_pupil_2d(self, image, pupil_position):
         el = pupil_position["ellipse"]
 
-        conf = int(pupil_position["confidence"] * 255)
-        self.render_ellipse(image, el, color=(255, 127, 0, conf))
+        conf = pupil_position["confidence"] * 255
+        conf = float_to_int(conf)
+
+        if conf > 0:
+            self.render_ellipse(image, el, color=(255, 127, 0, conf))
 
     def render_pupil_3d(self, image, pupil_position):
         el = pupil_position["ellipse"]
 
-        conf = int(pupil_position["confidence"] * 255)
-        self.render_ellipse(image, el, color=(0, 0, 255, conf))
+        conf = pupil_position["confidence"] * 255
+        conf = float_to_int(conf)
+
+        if conf > 0:
+            self.render_ellipse(image, el, color=(0, 0, 255, conf))
 
         if pupil_position["model_confidence"] <= 0.0:
             # NOTE: if 'model_confidence' == 0, some values of the 'projected_sphere'
@@ -106,6 +116,13 @@ class PupilRenderer(ImageManipulator):
                 )
 
     def render_ellipse(self, image, ellipse, color):
+        if not all(np.isfinite(ellipse["center"])):
+            return
+        if not all(np.isfinite(ellipse["axes"])):
+            return
+        if not np.isfinite(ellipse["angle"]):
+            return
+
         outline = self.get_ellipse_points(
             ellipse["center"], ellipse["axes"], ellipse["angle"]
         )
