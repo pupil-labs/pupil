@@ -71,8 +71,11 @@ class PupilRenderer(ImageManipulator):
     def render_pupil_2d(self, image, pupil_position):
         el = pupil_position["ellipse"]
 
-        conf = int(pupil_position["confidence"] * 255)
-        self.render_ellipse(image, el, color=(255, 127, 0, conf))
+        conf = pupil_position["confidence"] * 255
+        conf = float_to_int(conf)
+
+        if conf > 0:
+            self.render_ellipse(image, el, color=(255, 127, 0, conf))
 
     def render_pupil_3d(self, image, pupil_position):
         el = pupil_position["ellipse"]
@@ -80,7 +83,8 @@ class PupilRenderer(ImageManipulator):
         conf = pupil_position["confidence"] * 255
         conf = float_to_int(conf)
 
-        self.render_ellipse(image, el, color=(0, 0, 255, conf))
+        if conf > 0:
+            self.render_ellipse(image, el, color=(0, 0, 255, conf))
 
         if pupil_position["model_confidence"] <= 0.0:
             # NOTE: if 'model_confidence' == 0, some values of the 'projected_sphere'
@@ -112,14 +116,20 @@ class PupilRenderer(ImageManipulator):
                 )
 
     def render_ellipse(self, image, ellipse, color):
+        if not all(np.isfinite(ellipse["center"])):
+            return
+        if not all(np.isfinite(ellipse["axes"])):
+            return
+        if not np.isfinite(ellipse["angle"]):
+            return
+
         outline = self.get_ellipse_points(
             ellipse["center"], ellipse["axes"], ellipse["angle"]
         )
         outline = [np.asarray(outline, dtype="i")]
         cv2.polylines(image, outline, True, color, thickness=1)
 
-        center = ellipse["center"]
-        center = (float_to_int(center[0]), float_to_int(center[1]))
+        center = (int(ellipse["center"][0]), int(ellipse["center"][1]))
         cv2.circle(image, center, 5, color, thickness=-1)
 
     @staticmethod
