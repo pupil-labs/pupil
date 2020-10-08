@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import functools
 import inspect
+import types
 import weakref
 
 
@@ -172,6 +173,10 @@ def _install_protection_descriptor_if_not_exists(wrapper):
     wrapped_method = wrapper.get_wrapped_bound_method()
     cls_ = type(wrapped_method.__self__)
     name = wrapped_method.__func__.__name__
+    # this can happen when the method was artificially created like, for example, in
+    # test_wrapped_monkey_patched_methods_not_referenced_elsewhere_are_called
+    if not hasattr(cls_, name):
+        return
     already_installed = isinstance(getattr(cls_, name), _WrapperProtectionDescriptor)
     if not already_installed:
         setattr(cls_, name, _WrapperProtectionDescriptor(cls_, name))
@@ -256,18 +261,28 @@ def _get_wrapper_or_raise_if_not_exists(obj, method_name):
 
 class _ObservableMethodWrapper:
     def __init__(self, obj, method_name):
-        wrapped_method = getattr(obj, method_name)
-
         # the wrapper should not block garbage collection by reference counting for the
         # observable object. Hence, we need to avoid strong references to the object,
-        # which would lead to cyclic references. Consequently, the object the wrapper
-        # belongs to and the original wrapped method are only referenced weakly
+        # which would lead to cyclic references:
+        #   - The object is only referenced weakly. This is ok, because the wrapper
+        #     only needs to function as long as the object exists, so there is no need
+        #     to keep it alive with a strong reference.
+        #   - The original wrapped method is only stored as an unbound method
+        #   - In case the originally wrapped method was monkey patched, we also need to
+        #     store the object it belongs to. This object we have to reference strongly
+        #     as the wrapper might be (or become) the only object referencing it. This
+        #     likely causes cyclic references hindering fast garbage collection in many
+        #     cases, but it cannot be avoided.
         self._obj_ref = weakref.ref(obj)
-        # deref_by_name=False because otherwise we would get the wrapper when
-        # dereferencing
-        self._wrapped_method_ref = _WeakReferenceToMethod(
-            wrapped_method, deref_by_name=False
-        )
+
+        wrapped_method = getattr(obj, method_name)
+        wrapped_method_self = wrapped_method.__self__
+        if wrapped_method_self is obj:
+            self._wrapped_method_self = None
+        else:
+            self._wrapped_method_self = wrapped_method_self
+        self._wrapped_method_func = wrapped_method.__func__
+
         self._method_name = method_name
         self._observers = []
         self._was_removed = False
@@ -294,7 +309,11 @@ class _ObservableMethodWrapper:
         self._was_removed = True
 
     def get_wrapped_bound_method(self):
-        return self._wrapped_method_ref.deref_method()
+        if self._wrapped_method_self is None:
+            wrapped_method_self = self._obj_ref()
+        else:
+            wrapped_method_self = self._wrapped_method_self
+        return types.MethodType(self._wrapped_method_func, wrapped_method_self)
 
     def add_observer(self, observer):
         # Observers that are bound methods are referenced weakly. That means,
@@ -305,9 +324,7 @@ class _ObservableMethodWrapper:
         # referenced strongly. Otherwise, lambdas or callables would get garbage
         # collected instantly.
         if inspect.ismethod(observer):
-            # deref_by_name=True to allow observers to be observed
-            # (see test case test_observers_can_be_observed for a longer explanation)
-            observer_ref = _WeakReferenceToMethod(observer, deref_by_name=True)
+            observer_ref = _WeakReferenceToMethodByName(observer)
         else:
             observer_ref = _StrongReferenceToCallable(observer)
         self._observers.append(observer_ref)
@@ -371,25 +388,20 @@ class _StrongReferenceToCallable:
         return self._observer == other_observer
 
 
-class _WeakReferenceToMethod:
+class _WeakReferenceToMethodByName:
     # One cannot create weakrefs to bound class methods directly, because Python
     # returns a new reference each time some method is accessed and that reference
     # gets deleted instantly with weakref (see https://stackoverflow.com/a/19443624
     # for more details).
     # That's why we store two weak refs, one to the method's object and one to the
-    # unbound class method. Later, we can get the "actual" method via getattr or by
-    # using the descriptor interface
-    def __init__(self, method, deref_by_name):
-        """
-        Args:
-            method: Bound method being referenced.
-            deref_by_name (bool): If True, the method is dereferenced by its name, i.e.
-                if the method was replaced in the meantime by a different one, you would
-                get the new one when dereferencing. If False, you always get the original method even if it was replaced (if it still exists in memory).
-        """
+    # unbound class method. Later, we can get the "actual" method via getattr.
+    # The method is dereferenced by its name, i.e. if the method was replaced in the
+    # meantime by a different one, you would get the new one when dereferencing.
+    # This is to allow observers to be observed (see test case
+    # test_observers_can_be_observed for a longer explanation)
+    def __init__(self, method):
         self._obj_ref = weakref.ref(method.__self__)
         self._func_ref = weakref.ref(method.__func__)
-        self._deref_by_name = deref_by_name
         # Sanity check. Try to dereference method, to make sure that the arguments
         # are valid. Otherwise, in some cases (e.g. methods starting with '__')
         # trying to call the method will fail with _ReferenceNoLongerValidError,
@@ -419,15 +431,11 @@ class _WeakReferenceToMethod:
         func_deref = self._func_ref()
         if obj_deref is None or func_deref is None:
             raise _ReferenceNoLongerValidError
-        if self._deref_by_name:
-            # see https://stackoverflow.com/a/6975682)
-            try:
-                deref_method = getattr(obj_deref, func_deref.__name__)
-            except AttributeError:
-                raise _ReferenceNoLongerValidError from None
-        else:
-            # see https://stackoverflow.com/a/1015405
-            deref_method = func_deref.__get__(obj_deref, obj_deref.__class__)
+        # see https://stackoverflow.com/a/6975682)
+        try:
+            deref_method = getattr(obj_deref, func_deref.__name__)
+        except AttributeError:
+            raise _ReferenceNoLongerValidError from None
         return deref_method
 
     @staticmethod

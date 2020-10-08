@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import gc
+import types
 from unittest import mock
 
 import pytest
@@ -252,6 +253,52 @@ class TestWrappedMethodCalls:
 
         mock_function.assert_called_once_with(1, 2)
 
+    def test_wrapped_monkey_patched_methods_not_referenced_elsewhere_are_called_part1(
+        self, observable
+    ):
+        mock_function = mock.Mock()
+
+        def patch(obj):
+            def fake_method(self):
+                mock_function()
+
+            obj.bound_method = types.MethodType(fake_method, obj)
+
+        patch(observable)
+
+        # This tests that observer wrappers reference the wrapped method strongly.
+        # If it is only referenced weakly, it will get garbage collected as soon as
+        # the wrapper replaces obj.bound_method. At this point, obj.bound_method is
+        # the only reference to this instance of fake_method, because it was only
+        # defined inside patch(), which just ended.
+        observable.add_observer("bound_method", lambda: None)
+        observable.bound_method()
+
+        mock_function.assert_called_once()
+
+    def test_wrapped_monkey_patched_methods_not_referenced_elsewhere_are_called_part2(
+        self, observable
+    ):
+        mock_function = mock.Mock()
+
+        def patch(obj):
+            class FakeClass:
+                def fake_method(self):
+                    mock_function()
+
+            fake_object = FakeClass()
+            obj.bound_method = fake_object.fake_method
+
+        patch(observable)
+
+        # Similarly to part 1 of this test, the monkey patched method is now only
+        # referenced in observable. What's different is that in this part also the
+        # class the method belongs to is at risk of being garbage collected.
+        observable.add_observer("bound_method", lambda: None)
+        observable.bound_method()
+
+        mock_function.assert_called_once()
+
 
 class TestRemovingObservers:
     def test_observers_that_are_functions_can_be_removed(self, observable):
@@ -443,7 +490,18 @@ def test_observers_can_be_observed(observable):
 
 
 class TestWrapperProtectionDescriptor:
-    def test_wrapped_functions_cannot_be_set(self, observable):
+    def test_wrappers_of_methods_cannot_be_set(self, observable):
+        observable.add_observer("bound_method", lambda: None)
+        with pytest.raises(ReplaceWrapperError):
+            observable.bound_method = 42
+
+    def test_wrappers_of_monkey_patched_methods_cannot_be_set(self, observable):
+        class FakeClass:
+            def fake_method(self):
+                pass
+
+        fake_object = FakeClass()
+        observable.bound_method = fake_object.fake_method
         observable.add_observer("bound_method", lambda: None)
         with pytest.raises(ReplaceWrapperError):
             observable.bound_method = 42
