@@ -14,6 +14,18 @@ from .surface_marker_detector import MarkerDetectorController
 
 
 class marker_detection_callable(MarkerDetectorController):
+    @classmethod
+    def from_detector(cls, detector: MarkerDetectorController, marker_min_perimeter):
+        return cls(
+            marker_detector_mode=detector.marker_detector_mode,
+            marker_min_perimeter=marker_min_perimeter,
+            square_marker_inverted_markers=detector.inverted_markers,
+            square_marker_use_online_mode=False,
+            apriltag_nthreads=detector._apriltag_nthreads,
+            apriltag_quad_decimate=detector.apriltag_quad_decimate,
+            apriltag_decode_sharpening=detector.apriltag_decode_sharpening,
+        )
+
     def __call__(self, frame):
         return self.detect_markers(gray_img=frame.gray, frame_index=frame.index)
 
