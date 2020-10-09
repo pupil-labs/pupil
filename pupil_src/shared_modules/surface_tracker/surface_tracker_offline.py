@@ -15,6 +15,7 @@ import multiprocessing
 import os
 import platform
 import time
+import typing as T
 
 import cv2
 import numpy as np
@@ -49,6 +50,12 @@ if platform.system() == "Darwin":
     mp_context = multiprocessing.get_context("fork")
 else:
     mp_context = multiprocessing.get_context()
+
+
+class _CacheRelevantDetectorParams(T.NamedTuple):
+    inverted_markers: bool
+    quad_decimate: float
+    sharpening: float
 
 
 class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
