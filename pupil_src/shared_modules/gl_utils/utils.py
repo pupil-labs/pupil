@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 import math
+import typing as T
 
 import numpy as np
 import OpenGL
@@ -18,6 +19,8 @@ from OpenGL.GL import *
 from OpenGL.GLU import gluPerspective, gluErrorString
 
 import glfw
+
+glfw.ERROR_REPORTING = "raise"
 
 # OpenGL.FULL_LOGGING = True
 OpenGL.ERROR_LOGGING = False
@@ -34,6 +37,16 @@ __all__ = [
     "cvmat_to_glmat",
     "is_window_visible",
     "Coord_System",
+    "_Margins",
+    "_Rectangle",
+    "get_content_scale",
+    "get_framebuffer_scale",
+    "window_coordinate_to_framebuffer_coordinate",
+    "get_monitor_workarea_rect",
+    "get_window_content_rect",
+    "get_window_frame_size_margins",
+    "get_window_frame_rect",
+    "get_window_title_bar_rect",
 ]
 
 
@@ -91,8 +104,8 @@ OpenGL.error._ErrorChecker.glCheckError = custom_gl_error_handling
 
 
 def is_window_visible(window):
-    visible = glfw.glfwGetWindowAttrib(window, glfw.GLFW_VISIBLE)
-    iconified = glfw.glfwGetWindowAttrib(window, glfw.GLFW_ICONIFIED)
+    visible = glfw.get_window_attrib(window, glfw.VISIBLE)
+    iconified = glfw.get_window_attrib(window, glfw.ICONIFIED)
     return visible and not iconified
 
 
@@ -211,3 +224,88 @@ class Coord_System(object):
         glPopMatrix()
         glMatrixMode(GL_MODELVIEW)
         glPopMatrix()
+
+
+class _Margins(T.NamedTuple):
+    left: int
+    top: int
+    right: int
+    bottom: int
+
+
+class _Rectangle(T.NamedTuple):
+    x: int
+    y: int
+    width: int
+    height: int
+
+    def intersection(self, other: "_Rectangle") -> T.Optional["_Rectangle"]:
+        in_min_x = max(self.x, other.x)
+        in_min_y = max(self.y, other.y)
+
+        in_max_x = min(self.x + self.width, other.x + other.width)
+        in_max_y = min(self.y + self.height, other.y + other.height)
+
+        if in_min_x < in_max_x and in_min_y < in_max_y:
+            return _Rectangle(
+                x=in_min_x,
+                y=in_min_y,
+                width=in_max_x - in_min_x,
+                height=in_max_y - in_min_y,
+            )
+        else:
+            return None
+
+
+def get_content_scale(window) -> float:
+    return glfw.get_window_content_scale(window)[0]
+
+
+def get_framebuffer_scale(window) -> float:
+    window_width = glfw.get_window_size(window)[0]
+    framebuffer_width = glfw.get_framebuffer_size(window)[0]
+
+    try:
+        return float(framebuffer_width / window_width)
+    except ZeroDivisionError:
+        return 1.0
+
+
+def window_coordinate_to_framebuffer_coordinate(window, x, y, cached_scale=None):
+    scale = cached_scale or get_framebuffer_scale(window)
+    return x * scale, y * scale
+
+
+def get_monitor_workarea_rect(monitor) -> _Rectangle:
+    x, y, w, h = glfw.get_monitor_workarea(monitor)
+    return _Rectangle(x=x, y=y, width=w, height=h)
+
+
+def get_window_content_rect(window) -> _Rectangle:
+    x, y = glfw.get_window_pos(window)
+    w, h = glfw.get_window_size(window)
+    return _Rectangle(x=x, y=y, width=w, height=h)
+
+
+def get_window_frame_size_margins(window) -> _Margins:
+    left, top, right, bottom = glfw.get_window_frame_size(window)
+    return _Margins(left=left, top=top, right=right, bottom=bottom)
+
+
+def get_window_frame_rect(window) -> _Rectangle:
+    content_rect = get_window_content_rect(window)
+    frame_edges = get_window_frame_size_margins(window)
+    return _Rectangle(
+        x=content_rect.x - frame_edges.left,
+        y=content_rect.y - frame_edges.top,
+        width=content_rect.width + frame_edges.left + frame_edges.right,
+        height=content_rect.height + frame_edges.top + frame_edges.bottom,
+    )
+
+
+def get_window_title_bar_rect(window) -> _Rectangle:
+    frame_rect = get_window_frame_rect(window)
+    frame_edges = get_window_frame_size_margins(window)
+    return _Rectangle(
+        x=frame_rect.x, y=frame_rect.y, width=frame_rect.width, height=frame_edges.top
+    )

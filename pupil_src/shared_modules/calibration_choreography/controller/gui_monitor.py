@@ -1,12 +1,9 @@
 import collections
 import typing as T
 
-from glfw import (
-    glfwGetMonitors,
-    glfwGetMonitorName,
-    glfwGetPrimaryMonitor,
-    glfwGetVideoMode,
-)
+import glfw
+
+glfw.ERROR_REPORTING = "raise"
 
 try:
     from typing import OrderedDict as T_OrderedDict  # Python 3.7.2
@@ -37,7 +34,7 @@ class GUIMonitor:
 
     def __init__(self, index, gl_handle):
         self.__gl_handle = gl_handle
-        self.__name = glfwGetMonitorName(gl_handle).decode("utf-8")
+        self.__name = glfw.get_monitor_name(gl_handle).decode("utf-8")
         self.__index = index
 
     @property
@@ -61,8 +58,15 @@ class GUIMonitor:
 
     @property
     def current_video_mode(self) -> "GUIMonitor.VideoMode":
-        gl_video_mode = glfwGetVideoMode(self.__gl_handle)
-        return GUIMonitor.VideoMode(*gl_video_mode)
+        gl_video_mode = glfw.get_video_mode(self.__gl_handle)
+        return GUIMonitor.VideoMode(
+            width=gl_video_mode.size.width,
+            height=gl_video_mode.size.height,
+            red_bits=gl_video_mode.bits.red,
+            green_bits=gl_video_mode.bits.green,
+            blue_bits=gl_video_mode.bits.blue,
+            refresh_rate=gl_video_mode.refresh_rate,
+        )
 
     @property
     def is_available(self) -> bool:
@@ -70,7 +74,7 @@ class GUIMonitor:
 
     @staticmethod
     def currently_connected_monitors() -> T.List["GUIMonitor"]:
-        return [GUIMonitor(i, h) for i, h in enumerate(glfwGetMonitors())]
+        return [GUIMonitor(i, h) for i, h in enumerate(glfw.get_monitors())]
 
     @staticmethod
     def currently_connected_monitors_by_name() -> T_OrderedDict[str, "GUIMonitor"]:
@@ -80,7 +84,7 @@ class GUIMonitor:
 
     @staticmethod
     def primary_monitor() -> "GUIMonitor":
-        gl_handle = glfwGetPrimaryMonitor()
+        gl_handle = glfw.get_primary_monitor()
         return GUIMonitor(0, gl_handle)
 
     @staticmethod

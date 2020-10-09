@@ -14,6 +14,9 @@ import logging
 import numpy as np
 
 import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 import tasklib
 from gaze_producer import model, worker
 from observable import Observable
@@ -102,7 +105,7 @@ class ReferenceEditController:
             self._seek_to_frame(prev_ref.frame_index)
 
     def _on_click(self, pos, button, action):
-        if action == glfw.GLFW_PRESS:
+        if action == glfw.PRESS:
             self._add_or_delete_ref_on_click(pos)
 
     def _add_or_delete_ref_on_click(self, pos):

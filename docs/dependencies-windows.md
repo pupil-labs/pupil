@@ -68,6 +68,7 @@ pip install pyopengl
 pip install pyzmq
 pip install scikit-learn
 pip install scipy
+pip install glfw
 pip install win_inet_pton
 pip install git+https://github.com/zeromq/pyre
 
@@ -120,12 +121,6 @@ The following steps require you to store dynamic libraries in the `pupil_externa
 - Download GLEW Windows binaries from [sourceforge](http://glew.sourceforge.net/)
 - Unzip GLEW in your work dir
 - Copy `glew32.dll` to `pupil_external`
-
-#### GLFW
-
-- Download GLFW Windows binaries from [glfw.org](http://www.glfw.org/download.html)
-- Unzip GLFW to your work dir
-- Copy `glfw3.dll` from `lib-vc2015` to `pupil_external`
 
 #### FFMPEG
 

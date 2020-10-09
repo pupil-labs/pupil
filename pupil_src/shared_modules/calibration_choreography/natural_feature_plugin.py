@@ -15,10 +15,13 @@ import typing as T
 import cv2
 import numpy as np
 
+import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 from methods import normalize
 from pyglui import ui
 from pyglui.cygl.utils import draw_points_norm, RGBA
-from glfw import GLFW_PRESS
 import audio
 
 from .controller import GUIMonitor
@@ -114,7 +117,7 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
             )
 
     def on_click(self, pos, button, action):
-        if action == GLFW_PRESS and self.is_active:
+        if action == glfw.PRESS and self.is_active:
             self.__feature_tracker.reset(pos)
             self.__number_of_ref_points_gathered_from_last_click = 0
             return True  # click consumed

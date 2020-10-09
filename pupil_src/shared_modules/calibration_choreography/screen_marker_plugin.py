@@ -15,7 +15,11 @@ import cv2
 import numpy as np
 from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup
 import OpenGL.GL as gl
-from glfw import *
+
+import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 from circle_detector import CircleTracker
 from platform import system
 

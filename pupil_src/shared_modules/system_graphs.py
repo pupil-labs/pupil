@@ -12,6 +12,10 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import psutil
 import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
+import gl_utils
 from pyglui import ui, graph
 from pyglui.cygl.utils import RGBA, mix_smooth
 from plugin import System_Plugin_Base
@@ -72,8 +76,8 @@ class System_Graphs(System_Plugin_Base):
         self.on_window_resize(self.g_pool.main_window)
 
     def on_window_resize(self, window, *args):
-        fb_size = glfw.glfwGetFramebufferSize(window)
-        content_scale = glfw.get_content_scale(window)
+        fb_size = glfw.get_framebuffer_size(window)
+        content_scale = gl_utils.get_content_scale(window)
 
         self.cpu_graph.scale = content_scale
         self.fps_graph.scale = content_scale

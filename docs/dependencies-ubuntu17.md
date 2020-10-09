@@ -9,7 +9,7 @@ Pupil requires Python 3.6 or higher. Please check this [resource](https://askubu
 
 ```sh
 sudo apt-get update
-sudo apt install -y pkg-config git cmake build-essential nasm wget python3-setuptools libusb-1.0-0-dev  python3-dev python3-pip python3-numpy python3-scipy libglew-dev libglfw3-dev libtbb-dev
+sudo apt install -y pkg-config git cmake build-essential nasm wget python3-setuptools libusb-1.0-0-dev  python3-dev python3-pip python3-numpy python3-scipy libglew-dev libtbb-dev
 ```
 
 ## ffmpeg3
@@ -169,6 +169,7 @@ pip install pyopengl
 pip install pyzmq
 pip install scikit-learn
 pip install scipy
+pip install glfw
 pip install git+https://github.com/zeromq/pyre
 
 pip install pupil-apriltags
