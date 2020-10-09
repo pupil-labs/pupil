@@ -12,7 +12,6 @@ import logging
 
 from pye3d.detector_3d import Detector3D
 from pyglui import ui
-import pyqtgraph as pq
 
 from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_2d import draw_eyeball_outline, draw_pupil_outline, draw_ellipse
@@ -37,9 +36,6 @@ class Pye3DPlugin(PupilDetectorPlugin):
             g_pool, self.detector.settings["focal_length"]
         )
 
-        self.data = []
-        self.ts = []
-
     def detect(self, frame, **kwargs):
         previous_detection_results = kwargs.get("previous_detection_results", [])
         for datum in previous_detection_results:
@@ -51,30 +47,15 @@ class Pye3DPlugin(PupilDetectorPlugin):
             raise RuntimeError("No 2D detection result! Needed for pye3D!")
 
         datum_2d["raw_edges"] = []
-        result = self.detector.update_and_detect(datum_2d, frame.gray, debug=True)
+        result = self.detector.update_and_detect(
+            datum_2d, frame.gray, debug=self.is_debug_window_open
+        )
 
         eye_id = self.g_pool.eye_id
         result["timestamp"] = frame.timestamp
         result["topic"] = f"pupil.{eye_id}.{self.identifier}"
         result["id"] = eye_id
         result["method"] = "3d c++"
-
-        if result["confidence"] > 0.6:
-            hist = 400
-            self.data.append(result["diameter_3d"])
-            self.ts.append(frame.timestamp)
-            self.data = self.data[-hist:]
-            self.ts = self.ts[-hist:]
-
-        global plotWidget
-        try:
-            plotWidget
-        except NameError:
-            plotWidget = pq.plot(title=f"Test {self.g_pool.eye_id}")
-
-        plotWidget.clear()
-        plotWidget.plot(self.ts, self.data)
-        plotWidget.setYRange(0.5, 4.5)
 
         return result
 
@@ -107,27 +88,31 @@ class Pye3DPlugin(PupilDetectorPlugin):
 
     def gl_display(self):
         self.debug_window_update()
-        if self._recent_detection_result:
-            # draw_eyeball_outline(self._recent_detection_result)
-            # draw_pupil_outline(self._recent_detection_result)
-            result = self._recent_detection_result
-            debug_info = result["debug_info"]
+        result = self._recent_detection_result
+        if result is not None:
+            if not self.is_debug_window_open:
+                # normal drawing
+                draw_eyeball_outline(result)
+                draw_pupil_outline(result)
 
-            draw_ellipse(
-                ellipse=debug_info["projected_ultra_long_term"],
-                rgba=(0.5, 0, 0, 1),
-                thickness=2,
-            )
-            draw_ellipse(
-                ellipse=debug_info["projected_long_term"],
-                rgba=(0.8, 0.8, 0, 1),
-                thickness=2,
-            )
-            draw_ellipse(
-                ellipse=debug_info["projected_short_term"],
-                rgba=(0, 1, 0, 1),
-                thickness=2,
-            )
+            elif "debug_info" in result:
+                # debug drawing
+                debug_info = result["debug_info"]
+                draw_ellipse(
+                    ellipse=debug_info["projected_ultra_long_term"],
+                    rgba=(0.5, 0, 0, 1),
+                    thickness=2,
+                )
+                draw_ellipse(
+                    ellipse=debug_info["projected_long_term"],
+                    rgba=(0.8, 0.8, 0, 1),
+                    thickness=2,
+                )
+                draw_ellipse(
+                    ellipse=debug_info["projected_short_term"],
+                    rgba=(0, 1, 0, 1),
+                    thickness=2,
+                )
 
     def cleanup(self):
         self.debug_window_close()  # if we change detectors, be sure debug window is also closed
