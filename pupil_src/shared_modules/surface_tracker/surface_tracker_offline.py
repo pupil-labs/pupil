@@ -225,15 +225,11 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
 
         if self.cache_filler is not None:
             self.cache_filler.cancel()
+
         self.cache_filler = background_tasks.background_video_processor(
             self.g_pool.capture.source_path,
-            offline_utils.marker_detection_callable(
-                marker_detector_mode=self.marker_detector.marker_detector_mode,
-                marker_min_perimeter=self.CACHE_MIN_MARKER_PERIMETER,
-                square_marker_inverted_markers=self.inverted_markers,
-                square_marker_use_online_mode=False,
-                apriltag_quad_decimate=self.quad_decimate,
-                apriltag_decode_sharpening=self.sharpening,
+            offline_utils.marker_detection_callable.from_detector(
+                self.marker_detector, self.CACHE_MIN_MARKER_PERIMETER
             ),
             list(self.marker_cache),
             self.cache_seek_idx,
