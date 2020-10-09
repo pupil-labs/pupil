@@ -173,9 +173,12 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
             logger.debug("Restored previous marker cache.")
 
     def _set_detector_params(self, params: _CacheRelevantDetectorParams):
-        self.inverted_markers = params.inverted_markers
-        self.quad_decimate = params.quad_decimate
-        self.sharpening = params.sharpening
+        self.marker_detector._marker_detector_mode = params.mode
+        self.marker_detector._square_marker_inverted_markers = params.inverted_markers
+        self.marker_detector._apriltag_quad_decimate = params.quad_decimate
+        self.marker_detector._apriltag_decode_sharpening = params.sharpening
+        self.marker_detector.init_detector()
+
     @staticmethod
     def _cache_relevant_params_from_cache(
         previous_cache,
@@ -613,7 +616,9 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
             self.marker_cache_unfiltered
         )
         marker_cache_file["version"] = self.MARKER_CACHE_VERSION
-        marker_cache_file["inverted_markers"] = self.inverted_markers
-        marker_cache_file["quad_decimate"] = self.quad_decimate
-        marker_cache_file["sharpening"] = self.sharpening
+
+        current_config = self._cache_relevant_params_from_controller()
+        marker_cache_file["inverted_markers"] = current_config.inverted_markers
+        marker_cache_file["quad_decimate"] = current_config.quad_decimate
+        marker_cache_file["sharpening"] = current_config.sharpening
         marker_cache_file.save()
