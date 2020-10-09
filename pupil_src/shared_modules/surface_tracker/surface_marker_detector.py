@@ -13,7 +13,6 @@ import abc
 import enum
 import logging
 import typing as T
-from collections import namedtuple
 
 import square_marker_detect
 import pupil_apriltags
@@ -47,11 +46,10 @@ class ApriltagFamily(enum.Enum):
     tagStandard52h13 = "tagStandard52h13"
 
 
-# TODO: Use T.NamedTuple as soon as we increase Python version requirement to 3.6.1+
-_MarkerDetectorMode = namedtuple("_MarkerDetectorMode", ["marker_type", "family"])
+class MarkerDetectorMode(T.NamedTuple):
+    marker_type: Surface_Marker_Type
+    family: T.Optional[str]
 
-
-class MarkerDetectorMode(_MarkerDetectorMode):
     @classmethod
     def all_supported_cases(cls) -> T.Set["MarkerDetectorMode"]:
         all_square = {cls(MarkerType.SQUARE_MARKER, None)}
