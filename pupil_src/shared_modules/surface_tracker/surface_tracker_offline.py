@@ -53,6 +53,7 @@ else:
 
 
 class _CacheRelevantDetectorParams(T.NamedTuple):
+    mode: MarkerDetectorMode
     inverted_markers: bool
     quad_decimate: float
     sharpening: float
@@ -190,6 +191,7 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
             return
 
         return _CacheRelevantDetectorParams(
+            mode=mode,
             inverted_markers=previous_cache.get("inverted_markers", False),
             quad_decimate=previous_cache.get("quad_decimate", APRILTAG_HIGH_RES_ON),
             sharpening=previous_cache.get("sharpening", APRILTAG_SHARPENING_ON),
@@ -197,6 +199,7 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
 
     def _cache_relevant_params_from_controller(self) -> _CacheRelevantDetectorParams:
         return _CacheRelevantDetectorParams(
+            mode=self.marker_detector.marker_detector_mode,
             inverted_markers=self.marker_detector.inverted_markers,
             quad_decimate=self.marker_detector.apriltag_quad_decimate,
             sharpening=self.marker_detector.apriltag_decode_sharpening,
