@@ -142,21 +142,23 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
             self.marker_detector.marker_detector_mode = marker_detector_mode
 
     def _init_marker_cache(self):
-        previous_cache = file_methods.Persistent_Dict(
+        previous_cache_config = file_methods.Persistent_Dict(
             os.path.join(self.g_pool.rec_dir, "square_marker_cache")
         )
-        version = previous_cache.get("version", 0)
-        cache = previous_cache.get("marker_cache_unfiltered", None)
+        version = previous_cache_config.get("version", 0)
         self._set_detector_params_from_previous_cache(previous_cache)
+        cached_markers_unfiltered = previous_cache_config.get(
+            "marker_cache_unfiltered", None
+        )
 
-        if cache is None:
+        if cached_markers_unfiltered is None:
             self._recalculate_marker_cache()
         elif version != self.MARKER_CACHE_VERSION:
             logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
             self._recalculate_marker_cache()
         else:
             marker_cache_unfiltered = []
-            for markers in cache:
+            for markers in cached_markers_unfiltered:
                 # Loaded markers are either False, [] or a list of dictionaries. We
                 # need to convert the dictionaries into Surface_Marker objects.
                 if markers:
