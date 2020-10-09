@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 
-from pye3d.detector_3d import Detector3D
+from pye3d.detector_3d import Detector3D, CameraModel
 from pyglui import ui
 
 from .detector_base_plugin import PupilDetectorPlugin
@@ -29,14 +29,44 @@ class Pye3DPlugin(PupilDetectorPlugin):
     identifier = "3d"
     order = 0.101
 
-    def __init__(self, g_pool):
-        super().__init__(g_pool)
-        self.detector = Detector3D()
-        self.debugVisualizer3D = Eye_Visualizer(
-            g_pool, self.detector.settings["focal_length"]
+    def __init__(self, g_pool=None):
+        super().__init__(g_pool=g_pool)
+        self.camera = CameraModel(
+            focal_length=self.g_pool.capture.intrinsics.focal_length,
+            resolution=self.g_pool.capture.intrinsics.resolution,
         )
+        self.detector = Detector3D(camera=self.camera)
+        self.debugVisualizer3D = Eye_Visualizer(self.g_pool, self.camera.focal_length)
+
+    def _process_camera_changes(self):
+        camera = CameraModel(
+            focal_length=self.g_pool.capture.intrinsics.focal_length,
+            resolution=self.g_pool.capture.intrinsics.resolution,
+        )
+        if self.camera == camera:
+            return
+
+        logger.debug(f"Camera model change detected: {camera}. Resetting 3D detector.")
+        self.camera = camera
+        self.detector.reset_camera(self.camera)
+
+        # Debug window also depends on focal_length, need to replace it with a new
+        # instance. Make sure debug window is closed at this point or we leak the opengl
+        # window.
+        debug_window_was_opened = self.is_debug_window_open
+        self.debug_window_close()
+        self.debugVisualizer3D = Eye_Visualizer(self.g_pool, self.camera.focal_length)
+        if debug_window_was_opened:
+            self.debug_window_open()
+
+    def on_resolution_change(self, old_size, new_size):
+        # TODO: the logic for old 2D/3D resetting does not fit here anymore, but was
+        # included in the PupilDetectorPlugin base class. This needs some cleaning up.
+        pass
 
     def detect(self, frame, **kwargs):
+        self._process_camera_changes()
+
         previous_detection_results = kwargs.get("previous_detection_results", [])
         for datum in previous_detection_results:
             if datum.get("method", "") == "2d c++":
@@ -80,7 +110,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
         self.menu.label = self.pretty_class_name
 
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))
-        self.menu.append(ui.Button("Open debug window", self.debug_window_toggle))
+        self.menu.append(ui.Button("Toggle debug window", self.debug_window_toggle))
 
         # self.menu.append(
         #     ui.Switch(TODO, label="Freeze model")
