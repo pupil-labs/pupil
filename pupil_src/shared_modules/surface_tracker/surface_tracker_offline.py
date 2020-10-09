@@ -146,7 +146,6 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
             os.path.join(self.g_pool.rec_dir, "square_marker_cache")
         )
         version = previous_cache_config.get("version", 0)
-        self._set_detector_params_from_previous_cache(previous_cache)
         cached_markers_unfiltered = previous_cache_config.get(
             "marker_cache_unfiltered", None
         )
@@ -172,12 +171,20 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
             self._recalculate_marker_cache(previous_state=marker_cache_unfiltered)
             logger.debug("Restored previous marker cache.")
 
-    def _set_detector_params_from_previous_cache(self, previous_cache):
-        self.inverted_markers = previous_cache.get("inverted_markers", False)
-        self.quad_decimate = previous_cache.get("quad_decimate", APRILTAG_HIGH_RES_ON)
-        self.sharpening = previous_cache.get("sharpening", APRILTAG_SHARPENING_ON)
+    def _set_detector_params(self, params: _CacheRelevantDetectorParams):
+        self.inverted_markers = params.inverted_markers
+        self.quad_decimate = params.quad_decimate
+        self.sharpening = params.sharpening
+
+    def _cache_relevant_params_from_controller(self) -> _CacheRelevantDetectorParams:
+        return _CacheRelevantDetectorParams(
+            inverted_markers=self.marker_detector.inverted_markers,
+            quad_decimate=self.marker_detector.apriltag_quad_decimate,
+            sharpening=self.marker_detector.apriltag_decode_sharpening,
+        )
 
     def _recalculate_marker_cache(self, previous_state=None):
+        self._set_detector_params(self._cache_relevant_params_from_controller())
         if previous_state is None:
             previous_state = [None for _ in self.g_pool.timestamps]
 
