@@ -77,7 +77,6 @@ class Pye3DPlugin(PupilDetectorPlugin):
             # could we return in that case?
             raise RuntimeError("No 2D detection result! Needed for pye3D!")
 
-        datum_2d["raw_edges"] = []
         result = self.detector.update_and_detect(
             datum_2d, frame.gray, debug=self.is_debug_window_open
         )
