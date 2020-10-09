@@ -73,7 +73,8 @@ class Pye3DPlugin(PupilDetectorPlugin):
                 datum_2d = datum
                 break
         else:
-            # TODO: make this more stable!
+            # TODO: Should we handle this more gracefully? Can this even happen? What
+            # could we return in that case?
             raise RuntimeError("No 2D detection result! Needed for pye3D!")
 
         datum_2d["raw_edges"] = []
