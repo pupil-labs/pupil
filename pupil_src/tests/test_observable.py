@@ -520,6 +520,18 @@ class TestWrapperProtectionDescriptor:
         with pytest.raises(ReplaceWrapperError):
             observable.bound_method = 42
 
+    def test_wrappers_not_in_class_cannot_be_set(self, observable):
+        def fake_method(self):
+            pass
+
+        observable.bound_method = types.MethodType(fake_method, observable)
+        observable.add_observer("bound_method", lambda: None)
+
+        # fake_method is not part of FakeObservable, so the installation of the
+        # protection descriptor needs to account for that
+        with pytest.raises(ReplaceWrapperError):
+            observable.bound_method = 42
+
     def test_other_instances_without_wrapper_can_be_set(self, observable):
         observable.add_observer("bound_method", lambda: None)
         unwrapped_observable = FakeObservable()

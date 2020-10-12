@@ -174,11 +174,14 @@ def _install_protection_descriptor_if_not_exists(wrapper):
     wrapped_method = wrapper.get_wrapped_bound_method()
     cls_ = type(wrapped_method.__self__)
     name = wrapped_method.__func__.__name__
-    # this can happen when the method was artificially created like, for example, in
-    # test_wrapped_monkey_patched_methods_not_referenced_elsewhere_are_called
-    if not hasattr(cls_, name):
-        return
-    already_installed = isinstance(getattr(cls_, name), _WrapperProtectionDescriptor)
+    if hasattr(cls_, name):
+        already_installed = isinstance(
+            getattr(cls_, name), _WrapperProtectionDescriptor
+        )
+    else:
+        # this can happen when the method was artificially created like, for example, in
+        # test_wrapped_monkey_patched_methods_not_referenced_elsewhere_are_called
+        already_installed = False
     if not already_installed:
         setattr(cls_, name, _WrapperProtectionDescriptor(cls_, name))
 
@@ -190,7 +193,7 @@ class _WrapperProtectionDescriptor:
     """
 
     def __init__(self, type, name):
-        self.original = getattr(type, name)
+        self.original = getattr(type, name, None)
         assert not inspect.isdatadescriptor(self.original)
         self.name = name
 
@@ -203,10 +206,19 @@ class _WrapperProtectionDescriptor:
         # 3.) original is in object's class or some of its parents: We don't need to
         #     worry about if it's in the class or some parent, this is covered by
         #     getattr() in __init__
+        # 4.) if there is no original we raise the correct AttributeError
         if obj is not None and self.name in obj.__dict__:
             return obj.__dict__[self.name]
-        else:
+        elif self.original is not None:
             return self.original.__get__(obj, type)
+        elif type is None:
+            raise AttributeError(
+                f"type object '{obj.__name__}' has no attribute '{self.name}'"
+            )
+        else:
+            raise AttributeError(
+                f"'{type.__name__}' object has no attribute '{self.name}'"
+            )
 
     def __set__(self, obj, value):
         instance_method_wrapped = isinstance(
