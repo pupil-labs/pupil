@@ -62,7 +62,7 @@ class Observable:
         Args:
             method_name (String): The name of a bound method to which the observer
                 will be added. Unbound methods (i.e. static and class methods) are NOT
-                supported.
+                supported. Additionally, private methods are not supported.
             observer (Callable): Will be called every time the method is invoked.
 
         Raises:
@@ -70,7 +70,8 @@ class Observable:
                 the class
             TypeError: The attribute specified by method_name is
                 1) no method, or
-                2) a class or static method.
+                2) a class or static method, or
+                3) a private method.
 
         """
         add_observer(self, method_name, observer)
@@ -407,10 +408,17 @@ class _WeakReferenceToMethodByName:
         # trying to call the method will fail with _ReferenceNoLongerValidError,
         # and the observer will get silently removed. This check ensures that
         # the method is valid on creation.
-        _ = self.deref_method()
+        try:
+            _ = self._deref_method()
+        except _ReferenceNoLongerValidError:
+            raise TypeError(
+                f"The method {method} cannot be an observer, because it cannot be "
+                "referenced by its name. Most likely, you tried to add a private method"
+                " (starting with __) for which name mangling prevents referencing."
+            )
 
     def __call__(self, *args, **kwargs):
-        method = self.deref_method()
+        method = self._deref_method()
         return method(*args, **kwargs)
 
     def __eq__(self, other):
@@ -426,7 +434,7 @@ class _WeakReferenceToMethodByName:
         else:
             return False
 
-    def deref_method(self):
+    def _deref_method(self):
         obj_deref = self._obj_ref()
         func_deref = self._func_ref()
         if obj_deref is None or func_deref is None:
